@@ -156,6 +156,16 @@ def pipelineCallImage : List (RiscV.Instruction 64) :=
    .addi 30 30 (BitVec.ofNat 64 8), .addi 4 3 0,
    .jalr 0 1 0]
 
+def pipelineCallLinkedImage : Option (List (RiscV.Instruction 64)) :=
+  pipelineCallPipeline.callLinkedFunctions.map (fun entries =>
+    entries.flatMap (fun item =>
+      let (_, _, _, code, _) := item
+      code))
+
+theorem pipelineCallLinkedImage_shape :
+    pipelineCallLinkedImage = some pipelineCallImage := by
+  native_decide
+
 theorem pipelineCall_word_semantics :
     (do
       let (_, main) ←
@@ -172,6 +182,16 @@ theorem pipelineCall_compiled_execution :
       (RiscV.writeRegister (RiscV.zeroState 64) 1 100) =
       some [BitVec.ofNat 64 41] := by
   native_decide
+
+theorem pipelineCall_generated_compiled_execution :
+    (do
+      let image ← pipelineCallLinkedImage
+      RiscV.executeFunctionAt 120 (0 : RiscV.Word 64) 8 100 []
+        image [4] []
+        (RiscV.writeRegister (RiscV.zeroState 64) 1 100)) =
+      some [BitVec.ofNat 64 41] := by
+  rw [pipelineCallLinkedImage_shape]
+  exact pipelineCall_compiled_execution
 
 def pipelineCallSourceFunctions :
     List (FunName × List VarName × Prog (RiscV.Word 64)) :=

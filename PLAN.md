@@ -232,6 +232,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add a two-pass Word function linker that derives return signatures,
   computes byte-addressed function layout, resolves call labels, and
   re-emits the final linked artifacts.
+- [x] Relate the generated linked call artifact to its executable image and
+  prove execution of that generated image, rather than only a hand-written
+  instruction list.
 - [x] Give ordinary linked calls a stack-preserved `x1` link register and
   reserve `x30` as the downward-growing stack pointer; lower no-destination
   calls as true tail calls.

@@ -173,6 +173,39 @@ theorem pipelineCall_compiled_execution :
       some [BitVec.ofNat 64 41] := by
   native_decide
 
+def pipelineCallSourceFunctions :
+    List (FunName × List VarName × Prog (RiscV.Word 64)) :=
+  [("id", ["x"], .return (.var .local "x"))]
+
+def pipelineCallSourceMain : Prog (RiscV.Word 64) :=
+  .decCall "result" .one "id"
+    [.const (BitVec.ofNat 64 41)]
+    (.return (.var .local "result"))
+
+theorem pipelineCall_source_semantics :
+    (evalPanProgWithCalls pipelineCallSourceFunctions 20 (fun _ => none)
+      pipelineCallSourceMain).map (fun result => result.2) =
+      some [BitVec.ofNat 64 41] := by
+  native_decide
+
+theorem pipelineCall_source_word_machine_agreement :
+    (evalPanProgWithCalls pipelineCallSourceFunctions 20 (fun _ => none)
+      pipelineCallSourceMain).map (fun result => result.2) =
+        some [BitVec.ofNat 64 41] ∧
+      (do
+        let (_, main) ←
+          RiscV.lookupWordFunction 2 pipelineCallPipeline.pipeline.word
+        let (_, values) ←
+          RiscV.evalWordFunctionWithCalls pipelineCallPipeline.pipeline.word
+            30 (RiscV.zeroState 64) main
+        pure values) = some [BitVec.ofNat 64 41] ∧
+      RiscV.executeFunctionAt 120 (0 : RiscV.Word 64) 8 100 []
+        pipelineCallImage [4] []
+        (RiscV.writeRegister (RiscV.zeroState 64) 1 100) =
+        some [BitVec.ofNat 64 41] := by
+  exact ⟨pipelineCall_source_semantics, pipelineCall_word_semantics,
+    pipelineCall_compiled_execution⟩
+
 /-!
 The first compositional bridge between the Loop and Word semantic states.
 Only the destination register is observed here; the full state relation will

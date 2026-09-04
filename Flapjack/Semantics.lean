@@ -90,6 +90,90 @@ def evalPanStateProg [Add α] [Mul α] (locals : VarName → Option α) :
       else pure (locals', firstResult)
   | _ => none
 
+def lookupPanFunction :
+    FunName → List (FunName × List VarName × Prog α) →
+      Option (List VarName × Prog α)
+  | _, [] => none
+  | name, (candidate, parameters, body) :: functions =>
+      if name == candidate then some (parameters, body)
+      else lookupPanFunction name functions
+
+def evalPanExps [Add α] [Mul α] (locals : VarName → Option α) :
+    List (Exp α) → Option (List α)
+  | [] => some []
+  | expression :: expressions => do
+      let value ← evalPanExp locals expression
+      let values ← evalPanExps locals expressions
+      pure (value :: values)
+
+def bindPanParameters (parameters : List VarName) (values : List α) :
+    Option (VarName → Option α) :=
+  if parameters.length != values.length then none
+  else
+    some ((parameters.zip values).foldl
+      (fun locals (name, value) => updatePanLocal locals name value) (fun _ => none))
+
+/-!
+Call-aware executable semantics for the handler-free source fragment.  The
+full Pancake semantics has memory, exceptions, clock accounting, and FFI
+effects; those are intentionally separate interfaces below.  Keeping this
+fragment explicit prevents the source-to-artifact call regression from
+silently using the older evaluator, which deliberately rejects calls.
+-/
+mutual
+  def evalPanCallWithCalls [Add α] [Mul α]
+      (functions : List (FunName × List VarName × Prog α)) :
+      Nat → (VarName → Option α) → Prog α →
+        Option ((VarName → Option α) × List α)
+    | 0, _, _ => none
+    | fuel + 1, locals, .call info function arguments => do
+        let values ← evalPanExps locals arguments
+        let (parameters, body) ← lookupPanFunction function functions
+        let calleeLocals ← bindPanParameters parameters values
+        let result ← evalPanProgWithCalls functions fuel calleeLocals body
+        match info with
+        | none => pure (locals, result.2)
+        | some (none, none) => pure (locals, [])
+        | some (some (.local, name), none) =>
+            match result.2 with
+            | [value] => pure (updatePanLocal locals name value, [])
+            | _ => none
+        | _ => none
+    | _, _, _ => none
+    termination_by fuel _ _ => fuel
+
+  def evalPanProgWithCalls [Add α] [Mul α]
+      (functions : List (FunName × List VarName × Prog α)) :
+      Nat → (VarName → Option α) → Prog α →
+        Option ((VarName → Option α) × List α)
+    | 0, _, _ => none
+    | fuel + 1, locals, .skip => some (locals, [])
+    | fuel + 1, locals, .assign .local name value => do
+        let value ← evalPanExp locals value
+        pure (updatePanLocal locals name value, [])
+    | fuel + 1, locals, .return value => do
+        let value ← evalPanExp locals value
+        pure (locals, [value])
+    | fuel + 1, locals, .seq first second => do
+        let (locals', firstResult) ←
+          evalPanProgWithCalls functions fuel locals first
+        if firstResult.isEmpty then
+          evalPanProgWithCalls functions fuel locals' second
+        else
+          pure (locals', firstResult)
+    | fuel + 1, locals, .call info function arguments =>
+        evalPanCallWithCalls functions fuel locals
+          (.call info function arguments)
+    | fuel + 1, locals,
+        .decCall name _ function arguments body => do
+        let (locals', values) ←
+          evalPanCallWithCalls functions fuel locals
+            (.call (some (some (.local, name), none)) function arguments)
+        evalPanProgWithCalls functions fuel locals' body
+    | _, _, _ => none
+    termination_by fuel _ _ => fuel
+end
+
 def evalCrepStateProg [Add α] [Mul α] (locals : Nat → Option α) :
     CrepProg α → Option ((Nat → Option α) × List α)
   | .skip => some (locals, [])

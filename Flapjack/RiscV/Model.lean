@@ -108,6 +108,8 @@ inductive Instruction (width : Nat) where
   | addi (destination source : Fin 32) (immediate : Word width)
   | loadByte (destination address : Fin 32)
   | storeByte (source address : Fin 32)
+  | load32 (destination address : Fin 32)
+  | store32 (source address : Fin 32)
   deriving Repr
 
 def zeroState (width : Nat) [NeZero width] : State width :=
@@ -135,6 +137,26 @@ def readByte (state : State width) (address : Word width) : BitVec 8 :=
 
 def writeByte (state : State width) (address : Word width) (value : BitVec 8) : State width :=
   { state with memory := fun current => if current = address then value else state.memory current }
+
+def byteAddress (address : Word width) (offset : Nat) : Word width :=
+  address + BitVec.ofNat width offset
+
+def readWord32 (state : State width) (address : Word width) : Word width :=
+  let byte0 := (readByte state (byteAddress address 0)).toNat
+  let byte1 := (readByte state (byteAddress address 1)).toNat
+  let byte2 := (readByte state (byteAddress address 2)).toNat
+  let byte3 := (readByte state (byteAddress address 3)).toNat
+  BitVec.ofNat width (byte0 + 256 * byte1 + 256 ^ 2 * byte2 + 256 ^ 3 * byte3)
+
+def writeWord32 (state : State width) (address : Word width) (value : Word width) : State width :=
+  let byte0 := BitVec.ofNat 8 (value.toNat % 256)
+  let byte1 := BitVec.ofNat 8 (value.toNat / 256 % 256)
+  let byte2 := BitVec.ofNat 8 (value.toNat / 256 ^ 2 % 256)
+  let byte3 := BitVec.ofNat 8 (value.toNat / 256 ^ 3 % 256)
+  let state := writeByte state (byteAddress address 0) byte0
+  let state := writeByte state (byteAddress address 1) byte1
+  let state := writeByte state (byteAddress address 2) byte2
+  writeByte state (byteAddress address 3) byte3
 
 def nextPc (state : State width) : Word width := state.pc + 4
 
@@ -165,6 +187,14 @@ def execute (state : State width) : Instruction width → State width
       let address := readRegister state address
       let value := BitVec.ofNat 8 (readRegister state source).toNat
       writeByte { state with pc := nextPc state } address value
+  | .load32 destination address =>
+      let address := readRegister state address
+      writeRegister { state with pc := nextPc state } destination
+        (readWord32 state address)
+  | .store32 source address =>
+      let address := readRegister state address
+      writeWord32 { state with pc := nextPc state } address
+        (readRegister state source)
 
 def accessAligned (access : AccessType) (address : Word width) (alignment : Nat) :
     Option ExceptionType :=
@@ -187,7 +217,9 @@ theorem accessAligned_aligned (access : AccessType) (address : Word width)
 
 theorem execute_pc_advance (state : State width) (instruction : Instruction width) :
     (execute state instruction).pc = state.pc + 4 := by
-  cases instruction <;> simp [execute, nextPc, writeRegister, writeByte] <;> split <;> rfl
+  cases instruction <;>
+    simp [execute, nextPc, writeRegister, writeByte, writeWord32] <;>
+    split <;> rfl
 
 theorem execute_addi_zero_preserved (state : State width) (source : Fin 32)
     (immediate : Word width) :
@@ -199,7 +231,8 @@ theorem execute_zeroRegister_preserved [NeZero width] (state : State width)
     ZeroRegister (execute state instruction) := by
   change state.registers 0 = 0 at zero
   cases instruction <;>
-    simp [ZeroRegister, execute, nextPc, writeRegister, writeByte, readRegister] <;>
+    simp [ZeroRegister, execute, nextPc, writeRegister, writeByte, writeWord32,
+      readRegister] <;>
     try split <;> simp_all [eq_comm]
   all_goals change state.registers 0 = 0
   all_goals exact zero

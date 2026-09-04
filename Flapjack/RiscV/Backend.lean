@@ -54,6 +54,14 @@ def wordInstToInstruction [NeZero width] :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (.storeByte source address)
+  | .mem .load32 destination address => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (.load32 destination address)
+  | .mem .store32 source address => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (.store32 source address)
   | _ => none
 
 def wordProgToRiscV [NeZero width] :
@@ -125,6 +133,14 @@ def evalWordFunction [NeZero width] (state : State width) :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (execute state (.storeByte source address), [])
+  | .inst (.mem .load32 destination address) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.load32 destination address), [])
+  | .inst (.mem .store32 source address) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.store32 source address), [])
   | .seq first second => do
       let (state, firstReturns) ← evalWordFunction state first
       let (state, secondReturns) ← evalWordFunction state second
@@ -153,6 +169,14 @@ def evalWordProg [NeZero width] (state : State width) :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (execute state (.storeByte source address))
+  | .inst (.mem .load32 destination address) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.load32 destination address))
+  | .inst (.mem .store32 source address) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.store32 source address))
   | .seq first second => do
       let state ← evalWordProg state first
       evalWordProg state second
@@ -209,6 +233,18 @@ theorem compileWordStoreByte_sound [NeZero width] (state : State width) :
       some (execute state (.storeByte 1 2)) := by
   simp [evalWordProg, registerOfNat, execute, writeRegister, writeByte,
     readByte, nextPc]
+
+theorem compileWordLoad32_sound [NeZero width] (state : State width) :
+    evalWordProg state (.inst (.mem .load32 1 2)) =
+      some (execute state (.load32 1 2)) := by
+  simp [evalWordProg, registerOfNat, execute, writeRegister, readWord32,
+    readByte, byteAddress, nextPc]
+
+theorem compileWordStore32_sound [NeZero width] (state : State width) :
+    evalWordProg state (.inst (.mem .store32 1 2)) =
+      some (execute state (.store32 1 2)) := by
+  simp [evalWordProg, registerOfNat, execute, writeWord32, writeByte,
+    byteAddress, nextPc]
 
 theorem wordFunctionToRiscV_return_add [NeZero width] :
     wordFunctionToRiscV

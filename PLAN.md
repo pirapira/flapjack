@@ -120,6 +120,8 @@ definitions, pass ordering, examples, and proof obligations.
   function artifact stage for the currently supported straight-line fragment.
 - [x] Port byte load/store transitions from the HOL RISC-V model and connect
   the Word load8/store8 operations to them with evaluator agreement.
+- [x] Add little-endian 32-bit load/store transitions and connect the Word
+  load32/store32 operations to them with evaluator agreement.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

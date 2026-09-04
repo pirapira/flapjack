@@ -151,7 +151,26 @@ example :
     checkProg (α := Nat) checkerContext
       (.assign .local "missing" (.const 7)) =
       staticError (.scope "unknown local variable: missing") := by
-  simp [checkProg, staticError, checkerContext, lookupInfo]
+  simp [checkProg, staticError, staticBind, checkerContext, lookupInfo]
+
+example :
+    staticResultErrorMessage (checkProg (α := Nat) checkerContext
+      (.seq (.annot "location" "body")
+        (.assign .local "missing" (.const 7)))) =
+      some "unknown local variable: missing" := by
+  native_decide
+
+example :
+    staticResultLocation (checkProg (α := Nat) checkerContext
+      (.seq (.annot "location" "body") (.skip))) = some "AT body: " := by
+  native_decide
+
+example :
+    staticResultErrorMessage (checkProg (α := Nat) checkerContext
+      (.ite (.const 1) (.annot "location" "then")
+        (.assign .local "missing" (.const 7)))) =
+      some "unknown local variable: missing" := by
+  native_decide
 
 example :
     checkProg (α := Nat) checkerContext

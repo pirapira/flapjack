@@ -68,6 +68,17 @@ def staticResultOk (result : StaticResult α) : Bool :=
   | Except.ok _ => true
   | Except.error _ => false
 
+def statErrMessage : StatErr → String
+  | .scope message => message
+  | .warning message => message
+  | .general message => message
+  | .shape message => message
+
+def staticResultErrorMessage (result : StaticResult α) : Option String :=
+  match result.1 with
+  | Except.ok _ => none
+  | Except.error error => some (statErrMessage error)
+
 inductive Based where
   | based
   | notBased
@@ -147,6 +158,11 @@ structure ProgReturn where
   variableDelta : InfoMap LocalInfo
   currentLocation : String
   deriving Repr
+
+def staticResultLocation (result : StaticResult ProgReturn) : Option String :=
+  match result.1 with
+  | Except.ok value => some value.currentLocation
+  | Except.error _ => none
 
 inductive ScopedId where
   | variable
@@ -479,13 +495,15 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       staticBind (checkProg context first) (fun firstResult =>
         if firstResult.exitsFunction then
           (Except.ok firstResult, [.warning "statement after function exit is unreachable"])
-        else staticBind (checkProg context second) (fun secondResult =>
+        else staticBind (checkProg
+          { context with location := firstResult.currentLocation } second) (fun secondResult =>
           staticOk secondResult))
   | .ite condition thenBranch elseBranch =>
       staticBind (checkExp context condition) (fun conditionResult =>
         if shapedBasedIsWord conditionResult.shapedBased then
           staticBind (checkProg context thenBranch) (fun thenResult =>
-            staticBind (checkProg context elseBranch) (fun elseResult =>
+            staticBind (checkProg
+              { context with location := thenResult.currentLocation } elseBranch) (fun elseResult =>
               progOk .condExitLast
                 (thenResult.exitsFunction && elseResult.exitsFunction)
                 (thenResult.exitsLoop && elseResult.exitsLoop) context.location))
@@ -598,7 +616,9 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
             progOk .otherLast false false context.location
           else staticError (.shape "shared-memory operands are not words")))
   | .tick => progOk .otherLast false false context.location
-  | .annot _ _ => progOk .otherLast false false context.location
+  | .annot tag text =>
+      let location := if tag == "location" then "AT " ++ text ++ ": " else context.location
+      progOk .invisLast false false location
 termination_by program => sizeOf program
 decreasing_by
   all_goals first | sizeOf_list_dec | decreasing_trivial

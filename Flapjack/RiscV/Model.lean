@@ -106,6 +106,8 @@ inductive Instruction (width : Nat) where
   | or (destination sourceLeft sourceRight : Fin 32)
   | xor (destination sourceLeft sourceRight : Fin 32)
   | addi (destination source : Fin 32) (immediate : Word width)
+  | branchEq (sourceLeft sourceRight : Fin 32) (offset : Word width)
+  | branchNe (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | loadByte (destination address : Fin 32)
   | storeByte (source address : Fin 32)
   | load32 (destination address : Fin 32)
@@ -231,6 +233,12 @@ def execute (state : State width) : Instruction width → State width
   | .addi destination source immediate =>
       writeRegister { state with pc := nextPc state } destination
         (readRegister state source + immediate)
+  | .branchEq sourceLeft sourceRight offset =>
+      { state with pc := (if readRegister state sourceLeft == readRegister state sourceRight then
+          state.pc + offset else nextPc state) }
+  | .branchNe sourceLeft sourceRight offset =>
+      { state with pc := (if readRegister state sourceLeft == readRegister state sourceRight then
+          nextPc state else state.pc + offset) }
   | .loadByte destination address =>
       let address := readRegister state address
       let value := BitVec.ofNat width (readByte state address).toNat
@@ -275,11 +283,35 @@ theorem accessAligned_aligned (access : AccessType) (address : Word width)
     accessAligned access address alignment = none := by
   simp [accessAligned, aligned_address]
 
-theorem execute_pc_advance (state : State width) (instruction : Instruction width) :
+def Instruction.isBranch : Instruction width → Bool
+  | .branchEq _ _ _ | .branchNe _ _ _ => true
+  | _ => false
+
+theorem execute_pc_advance (state : State width) (instruction : Instruction width)
+    (not_branch : instruction.isBranch = false) :
     (execute state instruction).pc = state.pc + 4 := by
   cases instruction <;>
-    simp [execute, nextPc, writeRegister, writeByte, writeWord32, writeWordValue_pc] <;>
-    split <;> rfl
+    simp [Instruction.isBranch, execute, nextPc, writeRegister, writeByte,
+      writeWord32, writeWordValue_pc] at not_branch ⊢
+  all_goals split <;> rfl
+
+theorem execute_branchEq_pc (state : State width) (sourceLeft sourceRight : Fin 32)
+    (offset : Word width) :
+    (execute state (.branchEq sourceLeft sourceRight offset)).pc =
+      if readRegister state sourceLeft == readRegister state sourceRight then
+        state.pc + offset
+      else
+        state.pc + 4 := by
+  simp [execute, nextPc]
+
+theorem execute_branchNe_pc (state : State width) (sourceLeft sourceRight : Fin 32)
+    (offset : Word width) :
+    (execute state (.branchNe sourceLeft sourceRight offset)).pc =
+      if readRegister state sourceLeft == readRegister state sourceRight then
+        state.pc + 4
+      else
+        state.pc + offset := by
+  simp [execute, nextPc]
 
 theorem execute_addi_zero_preserved (state : State width) (source : Fin 32)
     (immediate : Word width) :

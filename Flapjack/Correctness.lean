@@ -1255,6 +1255,40 @@ theorem loopToWord_seq_evaluation_decomposition [NeZero width]
       | raised middleLoop exception =>
           simp [evalLoopProg, hfirst] at hloop
 
+theorem loopToWord_seq_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (first second : LoopProg (RiscV.Word width))
+    (finalLoop : LoopState (RiscV.Word width))
+    (finalWord : RiscV.State width)
+    (hloop :
+      evalLoopProg 2 loopState (.seq first second) =
+        some (.normal finalLoop))
+    (hword :
+      RiscV.evalWordProg state (loopToWordProg context (.seq first second)) =
+        some finalWord)
+    (hfirst :
+      ∀ middleLoop middleWord,
+        evalLoopProg 1 loopState first = some (.normal middleLoop) →
+        RiscV.evalWordProg state (loopToWordProg context first) =
+          some middleWord →
+        loopLocalsMappedToRiscV context middleLoop.locals middleWord)
+    (hsecond :
+      ∀ middleLoop middleWord,
+        loopLocalsMappedToRiscV context middleLoop.locals middleWord →
+        ∀ finalLoop finalWord,
+          evalLoopProg 1 middleLoop second = some (.normal finalLoop) →
+          RiscV.evalWordProg middleWord (loopToWordProg context second) =
+            some finalWord →
+          loopLocalsMappedToRiscV context finalLoop.locals finalWord) :
+    loopLocalsMappedToRiscV context finalLoop.locals finalWord := by
+  rcases loopToWord_seq_evaluation_decomposition context loopState state
+      first second finalLoop finalWord hloop hword with
+    ⟨middleLoop, middleWord, hfirst_loop, hsecond_loop,
+      hfirst_word, hsecond_word⟩
+  exact hsecond middleLoop middleWord
+    (hfirst middleLoop middleWord hfirst_loop hfirst_word)
+    finalLoop finalWord hsecond_loop hsecond_word
+
 theorem loopToWord_binop_assign_agreement_of_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (operator : BinOp)

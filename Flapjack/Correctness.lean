@@ -1417,6 +1417,77 @@ theorem loopToWord_div_assign_preserves_mapped_locals [NeZero width]
       hdestination_nonzero, hregister_nonalias]
     exact hregister_value
 
+theorem loopToWord_locValue_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (destination source : Nat)
+    (destinationRegister sourceRegister : Fin 32)
+    (sourceValue : RiscV.Word width)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hsource : loopState.locals source = some sourceValue)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hsource_register :
+      RiscV.registerOfNat (wordFindVar context source) =
+        some sourceRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0)
+    (hnoalias :
+      ∀ name, name ≠ destination →
+        ∀ register,
+          RiscV.registerOfNat (wordFindVar context name) = some register →
+            register ≠ destinationRegister) :
+    ∀ resultState,
+      RiscV.evalWordProg state
+        (loopToWordProg context (.locValue destination source)) =
+        some resultState →
+      loopLocalsMappedToRiscV context
+        (updateLoopLocal loopState.locals destination sourceValue) resultState := by
+  intro resultState hresult
+  rcases hlocals source sourceValue hsource with
+    ⟨mappedSourceRegister, hsource_map, hsource_value⟩
+  have hsource_map_eq : mappedSourceRegister = sourceRegister := by
+    simpa [hsource_register] using hsource_map.symm
+  subst mappedSourceRegister
+  have hdestination_lt : wordFindVar context destination < 32 :=
+    RiscV.registerOfNat_some_lt hdestination
+  have hsource_lt : wordFindVar context source < 32 :=
+    RiscV.registerOfNat_some_lt hsource_register
+  have hdestination_fin :
+      (⟨wordFindVar context destination, hdestination_lt⟩ : Fin 32) =
+        destinationRegister := by
+    have h := hdestination
+    simp [RiscV.registerOfNat, hdestination_lt] at h
+    exact h
+  have hsource_fin :
+      (⟨wordFindVar context source, hsource_lt⟩ : Fin 32) =
+        sourceRegister := by
+    have h := hsource_register
+    simp [RiscV.registerOfNat, hsource_lt] at h
+    exact h
+  simp [loopToWordProg, RiscV.evalWordProg,
+    RiscV.wordExpToInstructions, RiscV.wordExpToInstruction,
+    RiscV.executeInstructions, RiscV.registerOfNat, hdestination_lt,
+    hsource_lt, hdestination_fin, hsource_fin] at hresult
+  subst resultState
+  intro name current hcurrent
+  by_cases hname : name = destination
+  · subst name
+    simp [updateLoopLocal] at hcurrent
+    subst current
+    refine ⟨destinationRegister, hdestination, ?_⟩
+    simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+      hdestination_nonzero, hsource_value]
+    exact hsource_value
+  · have hcurrent' : loopState.locals name = some current := by
+      simpa [updateLoopLocal, hname] using hcurrent
+    rcases hlocals name current hcurrent' with
+      ⟨register, hregister, hregister_value⟩
+    refine ⟨register, hregister, ?_⟩
+    have hregister_nonalias := hnoalias name hname register hregister
+    simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+      hdestination_nonzero, hregister_nonalias]
+    exact hregister_value
+
 theorem loopToWord_binop_assign_agreement_of_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (operator : BinOp)

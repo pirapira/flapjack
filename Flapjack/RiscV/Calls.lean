@@ -121,4 +121,12 @@ theorem wordFunctionToRiscVWithCalls_shape [NeZero width] :
   simp [wordFunctionToRiscVWithCalls, wordCallToRiscV,
     wordRegisterMoves, lookupWordCallTarget, registerOfNat]
 
+theorem wordFunctionToRiscVWithCalls_addCarry [NeZero width] :
+    wordFunctionToRiscVWithCalls
+      ({ targets := [] } : WordCallContext width)
+      ((.inst (.arith (.addCarry 5 6 2 3 4))) : WordProg (Word width)) =
+      some ([.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+        .sltu 31 5 31, .or 6 6 31], []) := by
+  simp [wordFunctionToRiscVWithCalls, wordArithToInstructions, registerOfNat]
+
 end Flapjack.RiscV

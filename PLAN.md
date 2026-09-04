@@ -158,6 +158,8 @@ definitions, pass ordering, examples, and proof obligations.
   emitted constant-return artifact.
 - [x] Lower register-based equality and inequality conditionals to RISC-V,
   including generated branch offsets and a PC-aware code executor.
+- [x] Prove concrete taken and fall-through conditional execution paths for
+  the generated RISC-V artifact under the fixed-width x0 invariant.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

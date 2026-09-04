@@ -111,8 +111,8 @@ def evalLoopCondition [BEq α] [OfNat α 0] [AndOp α] [LT α]
   | .notEqual => some (left != right)
   | .lower | .less => some (decide (left < right))
   | .notLower | .notLess => some (decide (¬ left < right))
-  | .test => some (AndOp.and left right != 0)
-  | .notTest => some (AndOp.and left right == 0)
+  | .test => some (AndOp.and left right == 0)
+  | .notTest => some (AndOp.and left right != 0)
 
 mutual
   def evalLoopProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

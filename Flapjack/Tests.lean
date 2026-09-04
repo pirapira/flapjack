@@ -1370,10 +1370,10 @@ example : evalLoopCondition .less (3 : Nat) 5 = some true := by
 example : evalLoopCondition .notLess (5 : Nat) 3 = some true := by
   native_decide
 
-example : evalLoopCondition .test (5 : Nat) 1 = some true := by
+example : evalLoopCondition .test (5 : Nat) 2 = some true := by
   native_decide
 
-example : evalLoopCondition .notTest (5 : Nat) 2 = some true := by
+example : evalLoopCondition .notTest (5 : Nat) 1 = some true := by
   native_decide
 
 example :

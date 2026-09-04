@@ -93,6 +93,8 @@ local/register observation, under the explicit architectural x0 invariant.
 It also checks a complete constant multiplication through the composed RV64
 pipeline against the source evaluator; this exercises the context-aware
 register mapping for the HOL `LongMul` operation.
+The correctness module separately proves the corresponding generic
+Loop-to-Word destination-register agreement.
 Word-level function-table call semantics are in
 [`Flapjack/WordSemantics.lean`](Flapjack/WordSemantics.lean).
 That module also exposes a fuel-bounded Word FFI evaluator whose host handler

@@ -173,4 +173,21 @@ theorem loopToWord_add_assign_register_agreement [NeZero width]
     RiscV.registerOfNat, RiscV.execute, RiscV.writeRegister,
     RiscV.readRegister, RiscV.nextPc, updateLoopLocal, hzero]
 
+theorem loopToWord_longMul_register_agreement [NeZero width]
+    (state : RiscV.State width) :
+    (evalLoopProg 1 (loopRegisterState state)
+      (.arith (.longMul 1 1 2 3))).bind (fun result =>
+        match result with
+        | .normal state => state.locals 1
+        | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg ({ vars := [] } : WordContext)
+          (.arith (.longMul 1 1 2 3)))).map
+        (fun state => RiscV.readRegister state 1) := by
+  simp [evalLoopProg, loopRegisterState, loopToWordProg, wordArith,
+    wordFindVar, lookupNatInfo, RiscV.evalWordProg,
+    RiscV.wordArithToInstructions, RiscV.executeInstructions,
+    RiscV.registerOfNat, RiscV.execute, RiscV.writeRegister,
+    RiscV.readRegister, RiscV.nextPc, updateLoopLocal]
+
 end Flapjack

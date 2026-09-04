@@ -184,6 +184,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add homogeneous BitVec shift instances for the Word semantic bridge.
 - [x] Prove the first Loop-to-Word state-observation agreements for constant
   and register-register ADD assignments, with the RISC-V x0 invariant explicit.
+- [x] Prove a generic Loop-to-Word register-observation agreement for
+  context-mapped `LongMul`.
 - [x] Exercise that harness on an artifact produced by the composed
   Pancake-to-RISC-V pipeline for a two-parameter addition function.
 - [x] Connect Word full-word stores to function artifacts and prove a

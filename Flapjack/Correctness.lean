@@ -265,6 +265,29 @@ theorem pipelineCall_source_word_machine_agreement :
     pipelineCall_compiled_execution⟩
 
 /-!
+This is the first pass-composed semantic bridge.  It relates a Pancake
+constant return to the result of the actual `compileProg` and
+`loopCompileProg` passes, using the executable Loop evaluator.  The fixed fuel
+bound is sufficient for the generated temporary-assignment sequence and is
+deliberately explicit until a general fuel monotonicity theorem is available.
+-/
+theorem compilePanToLoop_return_const_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (compileContext : CompileContext α) (loopContext : LoopContext α)
+    (live : List Nat) (state : LoopState α) (value : α) :
+    (evalLoopProg 12 state
+      (loopCompileProg loopContext live
+        (compileProg compileContext (.return (.const value))))).map loopResultValues =
+      evalPanProg (fun _ => none) (.return (.const value)) := by
+  simp [compileProg, compileExp, loopCompileProg, loopCompileExp,
+    loopCompileExp.loopCompileExps, loopCompileExps, loopNestedSeq,
+    loopTempNames, loopAssignTemps, evalLoopProg, evalLoopExp,
+    loopReadLocals, updateLoopLocal, loopResultValues, evalPanProg,
+    evalPanExp]
+
+/-!
 The first compositional bridge between the Loop and Word semantic states.
 Only the destination register is observed here; the full state relation will
 add globals, memory, live-register preservation, and control results as the

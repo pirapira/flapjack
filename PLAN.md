@@ -290,6 +290,8 @@ definitions, pass ordering, examples, and proof obligations.
   sequence, conditional, loop-repeat, and control-result cases.
 - [x] Derive the direct successful-evaluation global-state corollary used by
   downstream Loop result-state proofs.
+- [x] Prove the first source-to-Crepe-to-Loop semantic bridge for compiled
+  constant returns using the executable Loop evaluator.
 - [x] Establish reusable Loop state-transition lemmas for the modeled
   assignment, load/store (including byte and 32-bit forms), shared-memory,
   `locValue`, global, return, and control-result cases.

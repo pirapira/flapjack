@@ -95,6 +95,67 @@ mutual
 end
 
 /-!
+Fuel-bounded execution for Word loops.  The ordinary backend evaluator treats
+loop/control-flow constructors as outside its single-instruction API; this
+companion evaluator gives the lowered `WordProg.loop` the same control-result
+shape as Loop's repeat semantics.
+-/
+inductive WordLoopResult (width : Nat) [NeZero width] where
+  | normal (state : State width)
+  | broke (state : State width) (label : Nat)
+  | continued (state : State width) (label : Nat)
+
+mutual
+  def evalWordLoopProg [NeZero width] :
+      Nat → State width → WordProg (Word width) → Option (WordLoopResult width)
+    | 0, _, _ => none
+    | fuel + 1, state, .seq first second => do
+        let result ← evalWordLoopProg fuel state first
+        match result with
+        | .normal state => evalWordLoopProg fuel state second
+        | result => some result
+    | fuel + 1, state, .ite operator condition rightValue thenBranch elseBranch => do
+        let choose ← evalWordCondition state operator condition rightValue
+        if choose then evalWordLoopProg fuel state thenBranch
+        else evalWordLoopProg fuel state elseBranch
+    | fuel + 1, state, .loop _ body _ =>
+        evalWordLoopRepeat fuel state body
+    | fuel + 1, state, .break label => some (.broke state label)
+    | fuel + 1, state, .continue label => some (.continued state label)
+    | fuel + 1, state, program =>
+        (evalWordProg state program).map (.normal ·)
+
+  def evalWordLoopRepeat [NeZero width] :
+      Nat → State width → WordProg (Word width) → Option (WordLoopResult width)
+    | 0, _, _ => none
+    | fuel + 1, state, body => do
+        let result ← evalWordLoopProg fuel state body
+        match result with
+        | .normal state => evalWordLoopRepeat fuel state body
+        | .continued state 0 => evalWordLoopRepeat fuel state body
+        | .broke state 0 => some (.normal state)
+        | result => some result
+end
+
+theorem evalWordLoopProg_break [NeZero width] (state : State width) (label : Nat) :
+    evalWordLoopProg 1 state (.break label) =
+      some (.broke state label) := by
+  simp [evalWordLoopProg]
+
+theorem evalWordLoopProg_continue [NeZero width] (state : State width) (label : Nat) :
+    evalWordLoopProg 1 state (.continue label) =
+      some (.continued state label) := by
+  simp [evalWordLoopProg]
+
+theorem evalWordLoopProg_loop_break [NeZero width]
+    (state : State width) (label : Nat) :
+    evalWordLoopProg 3 state (.loop [] (.break label) []) =
+      if label = 0 then some (.normal state) else some (.broke state label) := by
+  cases label with
+  | zero => simp [evalWordLoopProg, evalWordLoopRepeat]
+  | succ label => simp [evalWordLoopProg, evalWordLoopRepeat]
+
+/-!
 Control-result semantics for Word calls with exception handlers.  The older
 `evalWordFunctionWithCalls` API intentionally models only successful calls;
 this companion API keeps the normal/return/raise distinction needed by the

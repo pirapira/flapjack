@@ -291,6 +291,8 @@ definitions, pass ordering, examples, and proof obligations.
   relation needed by conditional and loop simulations.
 - [x] Prove conditional branch simulation for fuel-2 Loop programs, including
   the compiler-generated post-conditional tick.
+- [x] Add fuel-bounded Word loop execution with explicit break and continue
+  control results, plus basic loop-control regression theorems.
 - [x] Prove the one-step global-state projection invariant for every Loop
   constructor under the no-global-writes syntactic side condition.
 - [x] Lift the global-state projection invariant to arbitrary fuel, including

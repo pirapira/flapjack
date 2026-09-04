@@ -80,6 +80,42 @@ def evalWordExp [NeZero width] (state : State width) :
         | .xor => readRegister state left ^^^ readRegister state right)
   | _ => none
 
+def wordFunctionToRiscV [NeZero width] :
+    WordProg (Word width) → Option (List (Instruction width) × List (Fin 32))
+  | .skip => some ([], [])
+  | .assign name value => do
+      let instruction ← wordExpToInstruction name value
+      pure ([instruction], [])
+  | .seq first second => do
+      let (firstCode, firstReturns) ← wordFunctionToRiscV first
+      let (secondCode, secondReturns) ← wordFunctionToRiscV second
+      pure (firstCode ++ secondCode,
+        if secondReturns.isEmpty then firstReturns else secondReturns)
+  | .return _ values => do
+      let values ← values.mapM registerOfNat
+      pure ([], values)
+  | _ => none
+
+def evalWordFunction [NeZero width] (state : State width) :
+    WordProg (Word width) → Option (State width × List (Word width))
+  | .skip => some (state, [])
+  | .assign name value => do
+      let destination ← registerOfNat name
+      let value ← evalWordExp state value
+      pure (writeRegister { state with pc := nextPc state } destination value, [])
+  | .seq first second => do
+      let (state, firstReturns) ← evalWordFunction state first
+      let (state, secondReturns) ← evalWordFunction state second
+      pure (state, if secondReturns.isEmpty then firstReturns else secondReturns)
+  | .return _ values => do
+      let values ← values.mapM (fun name => do
+        let register ← registerOfNat name
+        pure (readRegister state register))
+      pure (state, values)
+  | _ => none
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
 def evalWordProg [NeZero width] (state : State width) :
     WordProg (Word width) → Option (State width)
   | .skip => some state
@@ -131,6 +167,21 @@ theorem compileWordAdd_zeroState [NeZero width] :
       some (executeInstructions (zeroState width) [.addi 1 0 7]) := by
   simp [evalWordProg, evalWordExp, executeInstructions, registerOfNat,
     execute, writeRegister, nextPc, ZeroRegister, zeroState, readRegister]
+
+theorem wordFunctionToRiscV_return_add [NeZero width] :
+    wordFunctionToRiscV
+        ((.seq (.assign 1 (.op .add [.var 2, .var 3])) (.return 0 [1])) :
+          WordProg (Word width)) =
+      some ([.add 1 2 3], [1]) := by
+  simp [wordFunctionToRiscV, wordExpToInstruction, registerOfNat]
+
+theorem evalWordFunction_return_add [NeZero width] (state : State width) :
+    evalWordFunction state
+        (.seq (.assign 1 (.op .add [.var 2, .var 3])) (.return 0 [1])) =
+      some (execute state (.add 1 2 3),
+        [readRegister (execute state (.add 1 2 3)) 1]) := by
+  simp [evalWordFunction, evalWordExp, registerOfNat, execute,
+    writeRegister, nextPc, readRegister]
 
 def compileWordAdd [NeZero width] (destination left right : Nat) :
     Option (List (Instruction width)) :=

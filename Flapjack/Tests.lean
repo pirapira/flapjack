@@ -496,6 +496,13 @@ example [NeZero width] (state : Flapjack.RiscV.State width)
         | .xor => .xor 1 2 3)) := by
   exact Flapjack.RiscV.compileWordBinOp_sound state operator
 
+example [NeZero width] :
+    Flapjack.RiscV.wordFunctionToRiscV
+        ((.seq (.assign 1 (.op .add [.var 2, .var 3])) (.return 0 [1])) :
+          WordProg (Flapjack.RiscV.Word width)) =
+      some ([.add 1 2 3], [1]) := by
+  exact Flapjack.RiscV.wordFunctionToRiscV_return_add
+
 example :
     panSimpProg (.seq (.skip : Prog Nat) (.return (.const 7))) =
       .return (.const 7) := by

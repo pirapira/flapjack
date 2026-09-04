@@ -42,6 +42,8 @@ The initial RISC-V target vocabulary, register/memory primitives, and
 The first Word-to-RISC-V selector and its straight-line soundness theorem are
 in [`Flapjack/RiscV/Backend.lean`](Flapjack/RiscV/Backend.lean), with the HOL
 notice in [`Flapjack/RiscV/COPYRIGHT`](Flapjack/RiscV/COPYRIGHT).
+The selector’s function artifact records both emitted instructions and return
+registers for the supported straight-line fragment.
 
 Build it with:
 

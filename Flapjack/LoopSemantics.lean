@@ -11,10 +11,10 @@ execution total and gives later preservation proofs a structurally recursive
 induction principle.
 
 The base evaluator intentionally returns `none` for operations whose state
-model is not ported yet, such as calls, FFI, and division. Shared memory is
-modeled against the executable memory map below, while call-aware and FFI
-environment bridges are provided separately so their external state contracts
-remain explicit.
+model is not ported yet, such as calls and FFI. Shared memory is modeled
+against the executable memory map below, while call-aware and FFI environment
+bridges are provided separately so their external state contracts remain
+explicit. Division follows the HOL rule and fails on a zero divisor.
 -/
 
 namespace Flapjack
@@ -131,7 +131,8 @@ mutual
     | fuel + 1, state, .arith (.div destination dividend divisor) => do
         let dividend ← state.locals dividend
         let divisor ← state.locals divisor
-        pure (.normal { state with
+        if divisor == 0 then none
+        else pure (.normal { state with
           locals := updateLoopLocal state.locals destination (dividend / divisor) })
     | fuel + 1, state, .load32 address destination => do
         let address ← state.locals address
@@ -417,6 +418,19 @@ theorem evalLoopProg_store [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] 
     evalLoopProg 1 state (.store address value) =
       some (.normal { state with memory := updateLoopMemory state.memory addressValue valueValue }) := by
   simp [evalLoopProg, haddress, hvalue]
+
+theorem evalLoopProg_div [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (destination dividend divisor : Nat)
+    (dividendValue divisorValue : α)
+    (hdividend : state.locals dividend = some dividendValue)
+    (hdivisor : state.locals divisor = some divisorValue)
+    (hnonzero : (divisorValue == 0) = false) :
+    evalLoopProg 1 state (.arith (.div destination dividend divisor)) =
+      some (.normal { state with
+        locals := updateLoopLocal state.locals destination (dividendValue / divisorValue) }) := by
+  simp [evalLoopProg, hdividend, hdivisor, hnonzero]
 
 theorem evalLoopProg_setGlobal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

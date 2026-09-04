@@ -1306,6 +1306,20 @@ example :
   native_decide
 
 example :
+    (evalLoopProg 1 loopDivisionState (.arith (.div 3 1 2))).map
+      (fun result => match result with
+        | .normal state => state.locals 3
+        | _ => none) = some (some 7) := by
+  native_decide
+
+example :
+    (evalLoopProg 1
+      { loopDivisionState with locals := fun name =>
+          if name = 1 then some 42 else if name = 2 then some 0 else none }
+      (.arith (.div 3 1 2))).isNone = true := by
+  native_decide
+
+example :
     evalLoopExp emptyLoopState
       (.op .add [.const 6, .crepOp .mul [.const 5, .const 6]]) = some 36 := by
   native_decide

@@ -43,7 +43,8 @@ The first Word-to-RISC-V selector and its straight-line soundness theorem are
 in [`Flapjack/RiscV/Backend.lean`](Flapjack/RiscV/Backend.lean), with the HOL
 notice in [`Flapjack/RiscV/COPYRIGHT`](Flapjack/RiscV/COPYRIGHT).
 The selector’s function artifact records both emitted instructions and return
-registers for the supported straight-line fragment.
+registers for the supported straight-line fragment, and the pipeline exposes
+an end-to-end Pancake-to-artifact wrapper for that fragment.
 
 Build it with:
 

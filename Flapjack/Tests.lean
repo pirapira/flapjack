@@ -588,6 +588,16 @@ example [NeZero width] :
     RiscV.wordExpToInstruction, RiscV.registerOfNat]
 
 example :
+    let result := compileFlapjackRiscV (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+      [.function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .return (.const (BitVec.ofNat 64 7)), returnShape := .one }]
+    result.functions.length = 1 &&
+      result.functions.all (fun (_, _, artifact) => artifact.isSome) := by
+  native_decide
+
+example :
     let result := compileFlapjack (α := Nat) .rv64i 1 id
       [.decl .one "g" (.const 7), .function
         { name := "main", inline := false, exported := true, params := [],

@@ -127,6 +127,8 @@ definitions, pass ordering, examples, and proof obligations.
   wrongly shaped returns.
 - [x] Extend Pancake/Crepe executable semantics to store32/storeByte and prove
   preservation for constant store-then-load programs.
+- [x] Exercise the concrete composed compiler from a Pancake `main` through
+  the option-valued RISC-V artifact boundary.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

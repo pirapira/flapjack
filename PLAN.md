@@ -164,6 +164,8 @@ definitions, pass ordering, examples, and proof obligations.
   resulting conditional function artifact.
 - [x] Port unsigned `Lower`/`NotLower` Word conditions to RISC-V `BLTU`/`BGEU`
   and prove their PC transitions.
+- [x] Port signed `Less`/`NotLess` Word conditions to RISC-V `BLT`/`BGE` with
+  explicit two's-complement ordering and concrete execution proofs.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

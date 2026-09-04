@@ -29,8 +29,10 @@ The initial Word IR and Loop-to-Word lowering are in
 [`Flapjack/Word.lean`](Flapjack/Word.lean); its backend subdirectory carries
 the HOL notice at [`Flapjack/Word/COPYRIGHT`](Flapjack/Word/COPYRIGHT).
 The initial RISC-V target vocabulary, register/memory primitives, and
-`ADD`/`ADDI` transition slice are in [`Flapjack/RiscV/Model.lean`](Flapjack/RiscV/Model.lean),
-with the HOL notice in [`Flapjack/RiscV/COPYRIGHT`](Flapjack/RiscV/COPYRIGHT).
+`ADD`/`ADDI` transition slice are in [`Flapjack/RiscV/Model.lean`](Flapjack/RiscV/Model.lean).
+The first Word-to-RISC-V selector and its straight-line soundness theorem are
+in [`Flapjack/RiscV/Backend.lean`](Flapjack/RiscV/Backend.lean), with the HOL
+notice in [`Flapjack/RiscV/COPYRIGHT`](Flapjack/RiscV/COPYRIGHT).
 
 Build it with:
 

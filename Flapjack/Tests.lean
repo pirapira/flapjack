@@ -8,6 +8,7 @@ import Flapjack.Loop
 import Flapjack.CrepToLoop
 import Flapjack.LoopAnalysis
 import Flapjack.Word
+import Flapjack.RiscV.Backend
 
 namespace Flapjack
 
@@ -459,5 +460,20 @@ example :
 example :
     loopAccVars (LoopProg.assign 1 (.op .add [.var 2, .const 0])) [] = [2, 1] := by
   native_decide
+
+example [NeZero width] :
+    Flapjack.RiscV.compileWordAdd (width := width) 1 2 3 =
+      some [.add 1 2 3] := by
+  simp [Flapjack.RiscV.compileWordAdd, Flapjack.RiscV.wordProgToRiscV,
+    Flapjack.RiscV.wordExpToInstruction, Flapjack.RiscV.registerOfNat]
+
+example [NeZero width] (state : Flapjack.RiscV.State width)
+    (zero : Flapjack.RiscV.readRegister state 0 = 0) :
+    Flapjack.RiscV.evalWordProg state
+        (.assign 1 (.const (7 : Flapjack.RiscV.Word width))) =
+      some (Flapjack.RiscV.execute state (.addi 1 0 7)) := by
+  simp [Flapjack.RiscV.evalWordProg, Flapjack.RiscV.evalWordExp,
+    Flapjack.RiscV.registerOfNat, Flapjack.RiscV.execute,
+    Flapjack.RiscV.writeRegister, Flapjack.RiscV.nextPc, zero]
 
 end Flapjack

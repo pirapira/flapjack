@@ -75,7 +75,7 @@ definitions, pass ordering, examples, and proof obligations.
   through fresh Crepe locals.
 - [x] Begin the RISC-V target-model port with HOL-derived architectural
   vocabulary, parameterized words, register/memory primitives, and alignment
-  traps; preserve the HOL copyright notice in `Pancake/RiscV/COPYRIGHT`.
+  traps; preserve the HOL copyright notice in `Flapjack/RiscV/COPYRIGHT`.
 - [x] Add executable `ADD`/`ADDI` transitions with PC-advance and
   zero-register preservation theorems.
 - [x] Add executable deterministic semantics and preservation theorems for
@@ -99,6 +99,8 @@ definitions, pass ordering, examples, and proof obligations.
   calls, exceptions, returns, shared memory, and FFI.
 - [x] Add the initial Word IR and Loop-to-Word lowering for register mapping,
   expressions, memory instructions, loops, calls, returns, and FFI.
+- [x] Add a partial Word-to-RISC-V instruction selector for constants, moves,
+  and addition, with a straight-line semantic soundness theorem.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
@@ -106,7 +108,7 @@ definitions, pass ordering, examples, and proof obligations.
 ## First implementation slice
 
 The initial Lean commit implements stage 1's core in
-`Pancake/Language.lean`: shapes, polymorphic expressions, programs, function
+`Flapjack/Language.lean`: shapes, polymorphic expressions, programs, function
 and declaration syntax, `nestedSeq`, and shape sizing. The next slice should
 port the nested-recursion measure and variable-use helpers, then the
 static-checker data types and shape-context operations from

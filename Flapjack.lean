@@ -6,6 +6,7 @@ import Flapjack.PanToCrep
 import Flapjack.Compile
 import Flapjack.Semantics
 import Flapjack.RiscV.Model
+import Flapjack.RiscV.Backend
 import Flapjack.Loop
 import Flapjack.CrepToLoop
 import Flapjack.LoopAnalysis

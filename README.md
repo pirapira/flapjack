@@ -37,6 +37,7 @@ The first Loop data-flow analyses are in
 The first fuel-bounded Loop evaluator and its control-result semantics,
 including a call-aware recursive function-table bridge, are in
 [`Flapjack/LoopSemantics.lean`](Flapjack/LoopSemantics.lean).
+That module also exposes an explicit host-handler boundary for FFI effects.
 The initial Word IR and Loop-to-Word lowering are in
 [`Flapjack/Word.lean`](Flapjack/Word.lean); its backend subdirectory carries
 the HOL notice at [`Flapjack/Word/COPYRIGHT`](Flapjack/Word/COPYRIGHT).

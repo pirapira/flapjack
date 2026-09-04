@@ -10,10 +10,11 @@ locals, globals, and memory are finite-map-shaped functions.  Fuel makes loop
 execution total and gives later preservation proofs a structurally recursive
 induction principle.
 
-The evaluator intentionally returns `none` for operations whose state model is
-not ported yet, such as calls, FFI, division, and shared-memory primitives.
-Those cases are kept visible rather than silently assigned an unrelated
-meaning.
+The base evaluator intentionally returns `none` for operations whose state
+model is not ported yet, such as calls, FFI, and division. Shared memory is
+modeled against the executable memory map below, while call-aware and FFI
+environment bridges are provided separately so their external state contracts
+remain explicit.
 -/
 
 namespace Flapjack
@@ -318,6 +319,59 @@ mutual
         match result with
         | .normal state => evalLoopRepeatWithFunctions functions fuel state body
         | .continued state 0 => evalLoopRepeatWithFunctions functions fuel state body
+        | .broke state 0 => some (.normal state)
+        | result => some result
+    termination_by fuel _ _ => fuel
+end
+
+/-!
+An explicit host boundary for foreign calls. The handler receives the four
+word arguments named by the Loop instruction and may update the Loop state or
+reject the call. Control-flow recursion is fuel-bounded; ordinary operations
+continue to use the base evaluator above.
+-/
+mutual
+  def evalLoopFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (handler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
+      Nat → LoopState α → LoopProg α → Option (LoopResult α)
+    | 0, _, _ => none
+    | fuel + 1, state, .ffi function configuration configurationLength array arrayLength _ => do
+        let configuration ← state.locals configuration
+        let configurationLength ← state.locals configurationLength
+        let array ← state.locals array
+        let arrayLength ← state.locals arrayLength
+        let state ← handler function configuration configurationLength array arrayLength state
+        pure (.normal state)
+    | fuel + 1, state, .seq first second => do
+        let result ← evalLoopFfi handler fuel state first
+        match result with
+        | .normal state => evalLoopFfi handler fuel state second
+        | result => some result
+    | fuel + 1, state, .ite operator condition right thenBranch elseBranch _ => do
+        let left ← state.locals condition
+        let right ← match right with
+          | .imm value => some value
+          | .reg name => state.locals name
+        let choose ← evalLoopCondition operator left right
+        if choose then evalLoopFfi handler fuel state thenBranch
+        else evalLoopFfi handler fuel state elseBranch
+    | fuel + 1, state, .loop _ body _ => evalLoopFfiRepeat handler fuel state body
+    | fuel + 1, state, program => evalLoopProg (fuel + 1) state program
+    termination_by fuel _ _ => fuel
+
+  def evalLoopFfiRepeat [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (handler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
+      Nat → LoopState α → LoopProg α → Option (LoopResult α)
+    | 0, _, _ => none
+    | fuel + 1, state, body => do
+        let result ← evalLoopFfi handler fuel state body
+        match result with
+        | .normal state => evalLoopFfiRepeat handler fuel state body
+        | .continued state 0 => evalLoopFfiRepeat handler fuel state body
         | .broke state 0 => some (.normal state)
         | result => some result
     termination_by fuel _ _ => fuel

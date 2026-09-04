@@ -903,6 +903,20 @@ def loopSharedMemoryTestState : LoopState Nat :=
     globals := fun _ => none
     memory := fun _ => none }
 
+def loopFfiTestState : LoopState Nat :=
+  { locals := fun name =>
+      if name = 1 then some 10 else if name = 2 then some 1
+      else if name = 3 then some 20 else if name = 4 then some 2 else none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+def loopFfiTestHandler : FunName → Nat → Nat → Nat → Nat → LoopState Nat →
+    Option (LoopState Nat) := fun function configuration configurationLength array arrayLength state =>
+  if function == "sum" then
+    let value := configuration + configurationLength + array + arrayLength
+    some { state with locals := updateLoopLocal state.locals 5 value }
+  else none
+
 example :
     (evalLoopProg 10 loopSharedMemoryTestState
       (.seq
@@ -911,6 +925,14 @@ example :
         match result with
         | .normal state => state.locals 3
         | _ => none) = some (some 42) := by
+  native_decide
+
+example :
+    (evalLoopFfi loopFfiTestHandler 10 loopFfiTestState
+      (.ffi "sum" 1 2 3 4 [])).map (fun result =>
+        match result with
+        | .normal state => state.locals 5
+        | _ => none) = some (some 33) := by
   native_decide
 
 example :

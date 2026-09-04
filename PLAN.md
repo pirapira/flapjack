@@ -197,6 +197,8 @@ definitions, pass ordering, examples, and proof obligations.
   handling.
 - [x] Add Loop shared-memory load/store semantics for all modeled widths,
   using the executable memory state.
+- [x] Add an explicit fuel-bounded Loop FFI environment bridge with evaluated
+  word arguments and host-controlled state updates.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

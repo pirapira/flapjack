@@ -233,6 +233,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
   multiplication (`MULHU`) followed by low-half multiplication (`MUL`),
   including the target's high-destination/source non-aliasing precondition.
+- [x] Port register-addressed `WordProg.shareInst` memory lowering for all
+  currently modeled HOL word load/store operators, including evaluator and
+  call-aware selector coverage.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [x] Establish reusable Loop state-transition lemmas for the modeled

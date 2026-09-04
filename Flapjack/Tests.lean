@@ -987,6 +987,20 @@ example [NeZero width] :
         .jalr 1 31 0, .addi 4 10 0], [4]) := by
   exact RiscV.wordFunctionToRiscVWithCalls_shape
 
+example [NeZero width] :
+    RiscV.wordFunctionToRiscV
+        ((.shareInst .load 1 (.var 2)) : WordProg (RiscV.Word width)) =
+      some ([.loadWord 1 2], []) := by
+  simp [RiscV.wordFunctionToRiscV, RiscV.wordInstToInstruction,
+    RiscV.registerOfNat]
+
+example [NeZero width] :
+    RiscV.wordFunctionToRiscVWithCalls
+        ({ targets := [] } : RiscV.WordCallContext width)
+        ((.shareInst .load32 5 (.var 6)) : WordProg (RiscV.Word width)) =
+      some ([.load32 5 6], []) := by
+  exact RiscV.wordFunctionToRiscVWithCalls_shareInst
+
 def selectedLinkedCallCode : List (RiscV.Instruction 64) :=
   match RiscV.wordFunctionToRiscVWithCalls
       { targets := [(7, (32 : RiscV.Word 64), [2], [10])] }

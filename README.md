@@ -51,7 +51,10 @@ including the architectural divide-by-zero results; Word division selects
 `DIVU` in the current target slice.
 The Word arithmetic selector also includes the HOL two-instruction `LongMul`
 lowering (`MULHU` followed by `MUL`) and the six-instruction `AddCarry`
-lowering.
+lowering. `WordProg.shareInst` with a register-valued address now lowers the
+six HOL memory operators to the corresponding RISC-V load/store instruction;
+the same cases are available in the executable evaluator and call-aware
+function selector.
 The first Word-to-RISC-V selector, PC-aware code runner, and soundness lemmas
 for the supported straight-line and register/zero-conditional fragments are
 in [`Flapjack/RiscV/Backend.lean`](Flapjack/RiscV/Backend.lean). Equality,

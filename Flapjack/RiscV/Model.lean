@@ -110,6 +110,7 @@ inductive Instruction (width : Nat) where
   | sll (destination sourceLeft sourceRight : Fin 32)
   | srl (destination sourceLeft sourceRight : Fin 32)
   | sra (destination sourceLeft sourceRight : Fin 32)
+  | sltu (destination sourceLeft sourceRight : Fin 32)
   | divU (destination sourceLeft sourceRight : Fin 32)
   | remU (destination sourceLeft sourceRight : Fin 32)
   | branchEq (sourceLeft sourceRight : Fin 32) (offset : Word width)
@@ -272,6 +273,9 @@ def execute (state : State width) : Instruction width → State width
       writeRegister { state with pc := nextPc state } destination
         (BitVec.sshiftRight (readRegister state sourceLeft)
           (shiftAmount (readRegister state sourceRight)))
+  | .sltu destination sourceLeft sourceRight =>
+      writeRegister { state with pc := nextPc state } destination
+        (if readRegister state sourceLeft < readRegister state sourceRight then 1 else 0)
   | .divU destination sourceLeft sourceRight =>
       let divisor := readRegister state sourceRight
       writeRegister { state with pc := nextPc state } destination
@@ -366,6 +370,13 @@ theorem execute_pc_advance (state : State width) (instruction : Instruction widt
     simp [Instruction.isBranch, execute, nextPc, writeRegister, writeByte,
       writeWord32, writeWordValue_pc] at not_branch ⊢
   all_goals split <;> rfl
+
+theorem execute_sltu (state : State width) (destination sourceLeft sourceRight : Fin 32) :
+    readRegister (execute state (.sltu destination sourceLeft sourceRight)) destination =
+      if destination = 0 then readRegister state destination
+      else if readRegister state sourceLeft < readRegister state sourceRight then 1 else 0 := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, readRegister, h]
 
 theorem execute_branchEq_pc (state : State width) (sourceLeft sourceRight : Fin 32)
     (offset : Word width) :

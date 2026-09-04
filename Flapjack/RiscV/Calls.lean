@@ -50,6 +50,9 @@ def wordFunctionToRiscVWithCalls [NeZero width]
   | .assign name value => do
       let instruction ← wordExpToInstruction name value
       pure ([instruction], [])
+  | .inst (.arith operation) => do
+      let instructions ← wordArithToInstructions operation
+      pure (instructions, [])
   | .inst instruction => do
       let instruction ← wordInstToInstruction instruction
       pure ([instruction], [])

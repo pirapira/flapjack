@@ -228,6 +228,8 @@ definitions, pass ordering, examples, and proof obligations.
   the result through a fuel-bounded arithmetic-program regression.
 - [x] Port unsigned RISC-V `DIVU`/`REMU`, including their divide-by-zero
   behavior, and select `DIVU` for Word division.
+- [x] Port the HOL RISC-V `AddCarry` lowering through Word instruction
+  selection and execution, including its reserved `x31` scratch contract.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [x] Establish reusable Loop state-transition lemmas for the modeled

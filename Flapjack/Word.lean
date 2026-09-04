@@ -32,6 +32,7 @@ inductive WordRegImm (α : Type u) where
 inductive WordArith where
   | longMul (destinationLeft destinationRight sourceLeft sourceRight : Nat)
   | longDiv (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)
+  | addCarry (destination resultCarry sourceLeft sourceRight carryIn : Nat)
   | div (destination dividend divisor : Nat)
   deriving Repr
 
@@ -181,6 +182,15 @@ def loopToWordProg [OfNat α 1] (context : WordContext) :
       match wordCompileExp context value with
       | some value => .assign (wordFindVar context name) value
       | none => .skip
+  | .primitive [result, resultCarry] .addCarry [left, right, carryIn] =>
+      /- The scratch registers 1 and 3 are the same reserved temporaries as
+         CakeML's loop_to_word pass.  The corresponding correctness theorem
+         requires mapped program variables not to alias either register. -/
+      .seq (.assign 1 (.var (wordFindVar context carryIn)))
+        (.seq (.inst (.arith (.addCarry 3 1 (wordFindVar context left)
+          (wordFindVar context right) 1)))
+          (.seq (.assign (wordFindVar context resultCarry) (.var 1))
+            (.assign (wordFindVar context result) (.var 3))))
   | .primitive _ _ _ => .skip
   | .arith operation => .inst (.arith (wordArith operation))
   | .store address value =>

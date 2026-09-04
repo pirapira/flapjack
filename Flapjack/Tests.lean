@@ -893,6 +893,38 @@ example :
   native_decide
 
 example [NeZero width] :
+    RiscV.wordArithToInstructions (width := width) (.addCarry 5 6 2 3 4) =
+      some [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+        .sltu 31 5 31, .or 6 6 31] := by
+  exact RiscV.wordArithToInstructions_addCarry
+
+example [NeZero width] :
+    RiscV.wordArithToInstructions (width := width) (.addCarry 31 6 2 3 4) = none := by
+  simp [RiscV.wordArithToInstructions]
+
+example :
+    RiscV.executeFunction 20 (0 : RiscV.Word 8) [2, 3, 4]
+      [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+        .sltu 31 5 31, .or 6 6 31] [5, 6]
+      [BitVec.ofNat 8 255, 1, 1] (RiscV.zeroState 8) = some [1, 1] := by
+  native_decide
+
+example :
+    RiscV.executeFunction 20 (0 : RiscV.Word 8) [2, 3, 4]
+      [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+        .sltu 31 5 31, .or 6 6 31] [5, 6] [10, 20, 7]
+      (RiscV.zeroState 8) = some [31, 0] := by
+  native_decide
+
+example :
+    loopToWordProg ({ vars := [] } : WordContext)
+      (.primitive [7, 8] .addCarry [2, 3, 4]) =
+      .seq (.assign 1 (.var 4))
+        (.seq (.inst (.arith (.addCarry 3 1 2 3 1)))
+          (.seq (.assign 8 (.var 1)) (.assign 7 (.var 3)))) := by
+  simp [loopToWordProg, wordFindVar, lookupNatInfo]
+
+example [NeZero width] :
     RiscV.wordArithToInstruction (width := width) (.div 1 2 3) =
       some (.divU 1 2 3) := by
   exact RiscV.wordArithToInstruction_div

@@ -66,11 +66,32 @@ def wordArithToInstruction [NeZero width] :
         pure (.mul destination sourceLeft sourceRight)
       else none
   | .longDiv _ _ _ _ _ => none
+  | .addCarry _ _ _ _ _ => none
   | .div destination dividend divisor => do
       let destination ← registerOfNat destination
       let dividend ← registerOfNat dividend
       let divisor ← registerOfNat divisor
       pure (.divU destination dividend divisor)
+
+def wordArithToInstructions [NeZero width] :
+    WordArith → Option (List (Instruction width))
+  | .addCarry destination resultCarry sourceLeft sourceRight carryIn => do
+      if [destination, resultCarry, sourceLeft, sourceRight, carryIn].any (· == 31) then
+        none
+      else
+        let destination ← registerOfNat destination
+        let resultCarry ← registerOfNat resultCarry
+        let sourceLeft ← registerOfNat sourceLeft
+        let sourceRight ← registerOfNat sourceRight
+        let carryIn ← registerOfNat carryIn
+        pure [
+          .sltu 31 0 carryIn,
+          .add destination sourceLeft sourceRight,
+          .sltu resultCarry destination sourceRight,
+          .add destination destination 31,
+          .sltu 31 destination 31,
+          .or resultCarry resultCarry 31]
+  | operation => (wordArithToInstruction operation).map (fun instruction => [instruction])
 
 def wordInstToInstruction [NeZero width] :
     WordInst → Option (Instruction width)
@@ -109,6 +130,7 @@ def wordProgToRiscV [NeZero width] :
       let value ← registerOfNat value
       let address ← registerOfNat address
       pure [.storeWord value address]
+  | .inst (.arith operation) => wordArithToInstructions operation
   | .inst instruction =>
       (wordInstToInstruction instruction).map (fun instruction => [instruction])
   | .seq first second => do
@@ -339,6 +361,9 @@ def wordFunctionToRiscV [NeZero width] :
   | .assign name value => do
       let instruction ← wordExpToInstruction name value
       pure ([instruction], [])
+  | .inst (.arith operation) => do
+      let instructions ← wordArithToInstructions operation
+      pure (instructions, [])
   | .inst instruction => do
       let instruction ← wordInstToInstruction instruction
       pure ([instruction], [])
@@ -415,8 +440,8 @@ def evalWordFunction [NeZero width] (state : State width) :
       pure (writeRegister { state with pc := nextPc state } destination value, [])
   | .tick => pure (execute state (.addi 0 0 0), [])
   | .inst (.arith operation) => do
-      let instruction ← wordArithToInstruction operation
-      pure (execute state instruction, [])
+      let instructions ← wordArithToInstructions operation
+      pure (executeInstructions state instructions, [])
   | .inst (.mem .load8 destination address) => do
       let destination ← registerOfNat destination
       let address ← registerOfNat address
@@ -466,8 +491,8 @@ def evalWordProg [NeZero width] (state : State width) :
       pure (writeRegister { state with pc := nextPc state } destination value)
   | .tick => pure (execute state (.addi 0 0 0))
   | .inst (.arith operation) => do
-      let instruction ← wordArithToInstruction operation
-      pure (execute state instruction)
+      let instructions ← wordArithToInstructions operation
+      pure (executeInstructions state instructions)
   | .inst (.mem .load8 destination address) => do
       let destination ← registerOfNat destination
       let address ← registerOfNat address
@@ -635,7 +660,8 @@ theorem wordArithToInstruction_longMul [NeZero width] :
 theorem compileWordLongMul_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.arith (.longMul 1 1 2 3))) =
       some (execute state (.mul 1 2 3)) := by
-  simp [evalWordProg, wordArithToInstruction, registerOfNat]
+  simp [evalWordProg, wordArithToInstructions, wordArithToInstruction,
+    executeInstructions, registerOfNat]
 
 theorem wordArithToInstruction_div [NeZero width] :
     wordArithToInstruction (width := width) (.div 1 2 3) =
@@ -645,7 +671,22 @@ theorem wordArithToInstruction_div [NeZero width] :
 theorem compileWordDiv_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.arith (.div 1 2 3))) =
       some (execute state (.divU 1 2 3)) := by
-  simp [evalWordProg, wordArithToInstruction, registerOfNat]
+  simp [evalWordProg, wordArithToInstructions, wordArithToInstruction,
+    executeInstructions, registerOfNat]
+
+theorem wordArithToInstructions_addCarry [NeZero width] :
+    wordArithToInstructions (width := width) (.addCarry 5 6 2 3 4) =
+      some [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+        .sltu 31 5 31, .or 6 6 31] := by
+  simp [wordArithToInstructions, registerOfNat]
+
+theorem compileWordAddCarry_sound [NeZero width] (state : State width) :
+    evalWordProg state (.inst (.arith (.addCarry 5 6 2 3 4))) =
+      some (executeInstructions state
+        [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+          .sltu 31 5 31, .or 6 6 31]) := by
+  simp [evalWordProg, wordArithToInstructions, executeInstructions,
+    registerOfNat]
 
 def compileWordAdd [NeZero width] (destination left right : Nat) :
     Option (List (Instruction width)) :=

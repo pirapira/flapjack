@@ -322,6 +322,8 @@ definitions, pass ordering, examples, and proof obligations.
   variable evaluation whenever the source local is present.
 - [x] Prove the one-parameter call-boundary case: fresh Loop local binding
   agrees with cleared-and-bound Word registers under the mapped-local relation.
+- [x] Prove that every source slot in the pipeline's `name ↦ name + 2`
+  context is found with its mapped register name.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
 - [x] Add an end-to-end declaration-call regression from Pancake through

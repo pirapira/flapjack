@@ -69,6 +69,22 @@ def pipelineWordFunctions [OfNat α 1]
       { vars := slots.map (fun name => (name, name + 2)) }
     (label, parameters.map (fun name => name + 2), loopToWordProg context body))
 
+theorem lookupNatInfo_map_add_two_of_mem (slots : List Nat) (name : Nat)
+    (hname : name ∈ slots) :
+    lookupNatInfo name (slots.map (fun value => (value, value + 2))) =
+      some (name + 2) := by
+  induction slots with
+  | nil => simp at hname
+  | cons head tail ih =>
+      simp only [List.mem_cons] at hname
+      rcases hname with rfl | hname
+      · simp [lookupNatInfo]
+      · by_cases heq : head == name
+        · have : head = name := by simpa using heq
+          subst head
+          simp [lookupNatInfo]
+        · simp [lookupNatInfo, heq, ih hname]
+
 def pipelinePrependInitializers (initializers : List (Prog α)) :
     List (Decl α) → List (Decl α)
   | [] => []

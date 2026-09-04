@@ -209,6 +209,8 @@ definitions, pass ordering, examples, and proof obligations.
   tails after a definite function exit.
 - [x] Add a library-level end-to-end correctness theorem for the composed
   RV64 Pancake-to-RISC-V addition pipeline, parameterized over inputs.
+- [x] Add a composed RV64 Pancake-to-RISC-V multiplication artifact shape and
+  executable correctness theorem, including context-aware LongMul operands.
 - [x] Add a fuel-bounded Word function-table evaluator with nested calls,
   return-register assignment, tail calls, and memory-state propagation.
 - [x] Add the first RISC-V call-sequence selector and execute its linked

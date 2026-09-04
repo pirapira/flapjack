@@ -92,12 +92,17 @@ def wordRegImm (context : WordContext) : RegImm α → WordRegImm α
   | .imm value => .imm value
   | .reg name => .reg (wordFindVar context name)
 
-def wordArith : LoopArith → WordArith
+def wordArith (context : WordContext) : LoopArith → WordArith
   | .longMul left right sourceLeft sourceRight =>
-      .longMul left right sourceLeft sourceRight
+      .longMul (wordFindVar context left) (wordFindVar context right)
+        (wordFindVar context sourceLeft) (wordFindVar context sourceRight)
   | .longDiv left right sourceLeft sourceRight quotient =>
-      .longDiv left right sourceLeft sourceRight quotient
-  | .div destination dividend divisor => .div destination dividend divisor
+      .longDiv (wordFindVar context left) (wordFindVar context right)
+        (wordFindVar context sourceLeft) (wordFindVar context sourceRight)
+        (wordFindVar context quotient)
+  | .div destination dividend divisor =>
+      .div (wordFindVar context destination) (wordFindVar context dividend)
+        (wordFindVar context divisor)
 
 def wordMemOp : CrepMemOp → Option WordMemOp
   | .load => some .load
@@ -194,7 +199,7 @@ def loopToWordProg [OfNat α 1] (context : WordContext) :
           (.seq (.assign (wordFindVar context resultCarry) (.var 1))
             (.assign (wordFindVar context result) (.var 3))))
   | .primitive _ _ _ => .skip
-  | .arith operation => .inst (.arith (wordArith operation))
+  | .arith operation => .inst (.arith (wordArith context operation))
   | .store address value =>
       match wordCompileExp context address with
       | some address => .store address (wordFindVar context value)

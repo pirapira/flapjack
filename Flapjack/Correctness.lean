@@ -69,6 +69,55 @@ theorem compiledPipelineAdd_correct (left right : RiscV.Word 64) :
     pipelineAddSource, pipelineAddLocals, evalPanProg, evalPanExp]
   exact RiscV.executeFunction_add_general left right
 
+def pipelineMulDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "mul", inline := false, exported := false, params := [],
+      body := .return (.panOp .mul
+        [.const (BitVec.ofNat 64 2), .const (BitVec.ofNat 64 3)]),
+      returnShape := .one }]
+
+def pipelineMulPipeline : FlapjackRiscVResult 64 :=
+  compileFlapjackRiscV (width := 64) .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+    pipelineMulDeclarations
+
+def pipelineMulLinkedFunctions := pipelineMulPipeline.linkedFunctions
+
+theorem pipelineMulFunctions_shape :
+    pipelineMulPipeline.functions =
+      [(1, [], some ([.addi 3 0 (BitVec.ofNat 64 2),
+        .addi 4 0 (BitVec.ofNat 64 3), .mulHU 5 3 4, .mul 5 3 4,
+        .addi 6 5 0], [6]))] := by
+  native_decide
+
+theorem pipelineMulLinkedFunctions_shape :
+    pipelineMulLinkedFunctions =
+      some [(1, 0, [],
+        [.addi 3 0 (BitVec.ofNat 64 2), .addi 4 0 (BitVec.ofNat 64 3),
+          .mulHU 5 3 4, .mul 5 3 4, .addi 6 5 0], [6])] := by
+  change RiscV.linkRiscVFunctions 0 pipelineMulPipeline.functions = _
+  rw [pipelineMulFunctions_shape]
+  rfl
+
+def compiledPipelineMulRun : Option (List (RiscV.Word 64)) :=
+  match pipelineMulLinkedFunctions with
+  | some [(_, entry, parameters, code, returns)] =>
+      match parameters.mapM RiscV.registerOfNat with
+      | some parameters =>
+          RiscV.executeFunction 10 entry parameters code returns []
+            (RiscV.zeroState 64)
+      | none => none
+  | _ => none
+
+def pipelineMulSource : Prog (RiscV.Word 64) :=
+  .return (.panOp .mul
+    [.const (BitVec.ofNat 64 2), .const (BitVec.ofNat 64 3)])
+
+theorem compiledPipelineMul_correct :
+    compiledPipelineMulRun =
+      evalPanProg (fun _ => none) pipelineMulSource := by
+  native_decide
+
 /-!
 The first compositional bridge between the Loop and Word semantic states.
 Only the destination register is observed here; the full state relation will

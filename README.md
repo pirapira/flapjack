@@ -90,6 +90,9 @@ pipeline is in [`Flapjack/Correctness.lean`](Flapjack/Correctness.lean).
 That module now also contains the first compositional Loop-to-Word agreements:
 constant and register-register ADD assignments are related at the destination
 local/register observation, under the explicit architectural x0 invariant.
+It also checks a complete constant multiplication through the composed RV64
+pipeline against the source evaluator; this exercises the context-aware
+register mapping for the HOL `LongMul` operation.
 Word-level function-table call semantics are in
 [`Flapjack/WordSemantics.lean`](Flapjack/WordSemantics.lean).
 That module also exposes a fuel-bounded Word FFI evaluator whose host handler

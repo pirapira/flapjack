@@ -201,6 +201,8 @@ definitions, pass ordering, examples, and proof obligations.
   word arguments and host-controlled state updates.
 - [x] Preserve a static-check success while diagnosing unreachable sequence
   tails after a definite function exit.
+- [x] Add a library-level end-to-end correctness theorem for the composed
+  RV64 Pancake-to-RISC-V addition pipeline, parameterized over inputs.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

@@ -56,6 +56,8 @@ The selector’s function artifact records both emitted instructions and return
 registers for the supported straight-line fragment. `executeFunction` in the
 backend initializes parameter registers and collects return registers; the
 pipeline exposes an end-to-end Pancake-to-artifact wrapper for that fragment.
+The first library-level source-to-RISC-V correctness theorem for this composed
+pipeline is in [`Flapjack/Correctness.lean`](Flapjack/Correctness.lean).
 
 Build it with:
 

@@ -83,7 +83,7 @@ inductive ExceptionType where
 structure SynchronousTrap (width : Nat) where
   badAddress : Option (Word width)
   trap : ExceptionType
-  deriving Repr
+  deriving DecidableEq, Repr
 
 inductive TransferControl (width : Nat) where
   | branchTo (address : Word width)
@@ -124,7 +124,7 @@ inductive Instruction (width : Nat) where
   | store32 (source address : Fin 32)
   | loadWord (destination address : Fin 32)
   | storeWord (source address : Fin 32)
-  deriving Repr
+  deriving DecidableEq, Repr
 
 def zeroState (width : Nat) [NeZero width] : State width :=
   { pc := 0

@@ -14,6 +14,7 @@ import Flapjack.LoopAnalysis
 import Flapjack.LoopSemantics
 import Flapjack.Word
 import Flapjack.RiscV.Backend
+import Flapjack.Correctness
 
 namespace Flapjack
 
@@ -826,30 +827,18 @@ example :
         | none => false) := by
   native_decide
 
-def compiledPipelineAddRun : Option (List (RiscV.Word 64)) :=
-  let result := compileFlapjackRiscV (width := 64) .rv64i
-    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
-    [.function
-      { name := "add", inline := false, exported := false,
-        params := [("left", .one), ("right", .one)],
-        body := .return (.op .add
-          [.var .local "left", .var .local "right"]), returnShape := .one }]
-  match result.functions with
-  | [(_, parameters, some (code, returns))] =>
-      match parameters.mapM RiscV.registerOfNat with
-      | some parameters =>
-          RiscV.executeFunction 10 (0 : RiscV.Word 64) parameters code returns
-            [7, 8] (RiscV.zeroState 64)
-      | none => none
-  | _ => none
-
-example : compiledPipelineAddRun = some [15] := by
+example : compiledPipelineAddRun 7 8 = some [15] := by
   native_decide
 
 example :
     RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]
       [.add 5 2 3] [5] [7, 8] (RiscV.zeroState 64) = some [15] := by
   exact RiscV.executeFunction_add
+
+example (left right : RiscV.Word 64) :
+    RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]
+      [.add 5 2 3] [5] [left, right] (RiscV.zeroState 64) = some [left + right] := by
+  exact RiscV.executeFunction_add_general left right
 
 example [NeZero width] :
     RiscV.wordFunctionToRiscV

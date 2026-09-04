@@ -225,6 +225,12 @@ theorem executeFunction_add :
       (zeroState 64) = some [15] := by
   native_decide
 
+theorem executeFunction_add_general (left right : Word 64) :
+    executeFunction 10 (0 : Word 64) [2, 3] [.add 5 2 3] [5] [left, right]
+      (zeroState 64) = some [left + right] := by
+  simp [executeFunction, executeCode, execute, writeRegister, readRegister,
+    nextPc, zeroState]
+
 theorem executeFunction_storeLoad :
     executeFunction 20 (0 : Word 64) []
       [.addi 1 0 100, .addi 2 0 42, .storeWord 2 1, .loadWord 3 1]

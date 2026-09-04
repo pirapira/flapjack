@@ -129,6 +129,8 @@ inductive Instruction (width : Nat) where
   | slli (destination source : Fin 32) (amount : Word width)
   | srli (destination source : Fin 32) (amount : Word width)
   | srai (destination source : Fin 32) (amount : Word width)
+  | slt (destination sourceLeft sourceRight : Fin 32)
+  | slti (destination source : Fin 32) (immediate : Word width)
   | sltu (destination sourceLeft sourceRight : Fin 32)
   | divU (destination sourceLeft sourceRight : Fin 32)
   | remU (destination sourceLeft sourceRight : Fin 32)
@@ -336,6 +338,13 @@ def execute (state : State width) : Instruction width → State width
   | .srai destination source amount =>
       writeRegister { state with pc := nextPc state } destination
         (BitVec.sshiftRight (readRegister state source) (shiftAmount amount))
+  | .slt destination sourceLeft sourceRight =>
+      writeRegister { state with pc := nextPc state } destination
+        (if signedLess (readRegister state sourceLeft) (readRegister state sourceRight)
+        then 1 else 0)
+  | .slti destination source immediate =>
+      writeRegister { state with pc := nextPc state } destination
+        (if signedLess (readRegister state source) immediate then 1 else 0)
   | .sltu destination sourceLeft sourceRight =>
       writeRegister { state with pc := nextPc state } destination
         (if readRegister state sourceLeft < readRegister state sourceRight then 1 else 0)
@@ -477,6 +486,22 @@ theorem execute_loadHalfSigned (state : State width) (destination address : Fin 
     readRegister (execute state (.loadHalfSigned destination address)) destination =
       if destination = 0 then readRegister state destination
       else readHalfSigned state (readRegister state address) := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, readRegister, h]
+
+theorem execute_slt (state : State width) (destination sourceLeft sourceRight : Fin 32) :
+    readRegister (execute state (.slt destination sourceLeft sourceRight)) destination =
+      if destination = 0 then readRegister state destination
+      else if signedLess (readRegister state sourceLeft) (readRegister state sourceRight)
+        then 1 else 0 := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, readRegister, h]
+
+theorem execute_slti (state : State width) (destination source : Fin 32)
+    (immediate : Word width) :
+    readRegister (execute state (.slti destination source immediate)) destination =
+      if destination = 0 then readRegister state destination
+      else if signedLess (readRegister state source) immediate then 1 else 0 := by
   by_cases h : destination = 0 <;>
     simp [execute, writeRegister, readRegister, h]
 

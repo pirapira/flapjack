@@ -17,11 +17,12 @@ Core structured statement lowering and top-level function assembly are in
 [`Flapjack/Compile.lean`](Flapjack/Compile.lean).
 The first executable local/memory semantics and preservation lemmas are in
 [`Flapjack/Semantics.lean`](Flapjack/Semantics.lean).
-The Loop intermediate language and the initial Crepe-to-Loop structural
-lowering are in [`Flapjack/Loop.lean`](Flapjack/Loop.lean) and
-[`Flapjack/CrepToLoop.lean`](Flapjack/CrepToLoop.lean). The latter keeps the
-Loop vocabulary aligned with CakeML while making conversions that require
-temporary allocation or control-flow lowering explicit as `Fail`.
+The Loop intermediate language and Crepe-to-Loop compiler are in
+[`Flapjack/Loop.lean`](Flapjack/Loop.lean) and
+[`Flapjack/CrepToLoop.lean`](Flapjack/CrepToLoop.lean). The compiler now
+threads fresh temporaries through expression lowering and handles the main
+memory, control-flow, call, exception, return, shared-memory, and FFI
+equations; the earlier structural helper remains available for comparison.
 The first Loop data-flow analyses are in
 [`Flapjack/LoopAnalysis.lean`](Flapjack/LoopAnalysis.lean).
 The initial RISC-V target vocabulary, register/memory primitives, and

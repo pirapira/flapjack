@@ -246,6 +246,10 @@ def assignmentContext : CompileContext Nat :=
   { vars := [("x", (.one, [0]))], functions := [], exceptions := [], maxVar := 0,
     bytesInWord := 1 }
 
+def loopContext : LoopContext Nat :=
+  { vars := [], functions := [("f", (64, 0))], maxVar := 2,
+    target := .rv64i }
+
 def identityFunction : FunDecl Nat :=
   { name := "identity", inline := false, exported := false, params := [("x", .one)],
     body := .return (.var .local "x"), returnShape := .one }
@@ -402,6 +406,28 @@ example :
     lowerLoopProg (CrepProg.store (.const (α := Nat) 0) (.const 7)) =
       (.fail : LoopProg Nat) := by
   simp [lowerLoopProg]
+
+example :
+    (loopCompileExp loopContext 3 [] (.load32 (.const (α := Nat) 8))).code =
+      [.assign 3 (.const 8), .load32 3 3] := by
+  simp [loopCompileExp]
+
+example :
+    loopCompileProg loopContext []
+      (.return [(.const (α := Nat) 7)]) =
+      .seq (.seq (.assign 3 (.const 7)) .skip) (.return [3]) := by
+  simp [loopCompileProg, loopCompileExp, loopCompileExp.loopCompileExps,
+    loopCompileExps, loopNestedSeq,
+    loopTempNames, loopAssignTemps, loopContext]
+
+example :
+    loopCompileProg loopContext []
+        (.store32 (.const (α := Nat) 8) (.const 255)) =
+      .seq .skip
+        (.seq (.assign 3 (.const 8))
+          (.seq (.assign 4 (.const 255)) (.store32 3 4))) := by
+  simp [loopCompileProg, loopCompileExp, loopCompileExps, loopNestedSeq,
+    loopContext]
 
 example :
     loopVarsOfExp ((LoopExp.op .add [.var 1, .load (.var 2)]) : LoopExp Nat) =

@@ -94,6 +94,9 @@ definitions, pass ordering, examples, and proof obligations.
   cases.
 - [x] Port Loop variable-use, assigned-variable, and accumulated-variable
   analyses as executable list-based prerequisites for liveness.
+- [x] Port the temporary-threaded Crepe-to-Loop expression and program
+  equations for materialized loads, comparisons, memory, control flow,
+  calls, exceptions, returns, shared memory, and FFI.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

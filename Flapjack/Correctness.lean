@@ -277,12 +277,14 @@ theorem pipelineCall_source_word_machine_agreement :
           RiscV.evalWordFunctionWithCalls pipelineCallPipeline.pipeline.word
             30 (RiscV.zeroState 64) main
         pure values) = some [BitVec.ofNat 64 41] ∧
-      RiscV.executeFunctionAt 120 (0 : RiscV.Word 64) 8 100 []
-        pipelineCallImage [4] []
-        (RiscV.writeRegister (RiscV.zeroState 64) 1 100) =
+      (do
+        let image ← pipelineCallLinkedImage
+        RiscV.executeFunctionAt 120 (0 : RiscV.Word 64) 8 100 []
+          image [4] []
+          (RiscV.writeRegister (RiscV.zeroState 64) 1 100)) =
         some [BitVec.ofNat 64 41] := by
   exact ⟨pipelineCall_source_semantics, pipelineCall_word_semantics,
-    pipelineCall_compiled_execution⟩
+    pipelineCall_generated_compiled_execution⟩
 
 /-!
 This is the first pass-composed semantic bridge.  It relates a Pancake

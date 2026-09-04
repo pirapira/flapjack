@@ -85,6 +85,15 @@ theorem lookupNatInfo_map_add_two_of_mem (slots : List Nat) (name : Nat)
           simp [lookupNatInfo]
         · simp [lookupNatInfo, heq, ih hname]
 
+def pipelineWordContext (slots : List Nat) : WordContext :=
+  { vars := slots.map (fun name => (name, name + 2)) }
+
+theorem wordFindVar_pipelineWordContext_of_mem (slots : List Nat) (name : Nat)
+    (hname : name ∈ slots) :
+    wordFindVar (pipelineWordContext slots) name = name + 2 := by
+  simp [pipelineWordContext, wordFindVar,
+    lookupNatInfo_map_add_two_of_mem slots name hname]
+
 def pipelinePrependInitializers (initializers : List (Prog α)) :
     List (Decl α) → List (Decl α)
   | [] => []

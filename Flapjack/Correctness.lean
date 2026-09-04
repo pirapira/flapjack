@@ -824,6 +824,26 @@ def loopLocalsMappedToRiscV [NeZero width] (context : WordContext)
       RiscV.registerOfNat (wordFindVar context name) = some register ∧
         RiscV.readRegister state register = value
 
+theorem pipelineWordContext_register_nonalias
+    (slots : List Nat) (name destination : Nat)
+    (hname : name ∈ slots) (hdestination : destination ∈ slots)
+    (hneq : name ≠ destination)
+    (nameRegister destinationRegister : Fin 32)
+    (hname_register :
+      RiscV.registerOfNat
+        (wordFindVar (pipelineWordContext slots) name) = some nameRegister)
+    (hdestination_register :
+      RiscV.registerOfNat
+        (wordFindVar (pipelineWordContext slots) destination) =
+        some destinationRegister) :
+    nameRegister ≠ destinationRegister := by
+  intro heq
+  have hnames := RiscV.registerOfNat_injective hname_register
+    hdestination_register heq
+  rw [wordFindVar_pipelineWordContext_of_mem slots name hname,
+    wordFindVar_pipelineWordContext_of_mem slots destination hdestination] at hnames
+  exact hneq (Nat.add_right_cancel hnames)
+
 theorem loopToWordExp_var_agreement_of_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (name : Nat)

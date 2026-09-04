@@ -27,6 +27,28 @@ theorem registerOfNat_some_lt {name : Nat} {register : Fin 32}
   simp only [registerOfNat] at h
   split at h <;> simp_all
 
+theorem registerOfNat_injective {left right : Nat}
+    {leftRegister rightRegister : Fin 32}
+    (hleft : registerOfNat left = some leftRegister)
+    (hright : registerOfNat right = some rightRegister)
+    (hsame : leftRegister = rightRegister) : left = right := by
+  have hleft_lt := registerOfNat_some_lt hleft
+  have hright_lt := registerOfNat_some_lt hright
+  have hleft_fin :
+      (⟨left, hleft_lt⟩ : Fin 32) = leftRegister := by
+    have h := hleft
+    simp [registerOfNat, hleft_lt] at h
+    exact h
+  have hright_fin :
+      (⟨right, hright_lt⟩ : Fin 32) = rightRegister := by
+    have h := hright
+    simp [registerOfNat, hright_lt] at h
+    exact h
+  have hfin :
+      (⟨left, hleft_lt⟩ : Fin 32) = (⟨right, hright_lt⟩ : Fin 32) :=
+    hleft_fin.trans (hsame.trans hright_fin.symm)
+  exact congrArg Fin.val hfin
+
 def wordExpToInstruction [NeZero width] (destination : Nat) :
     WordExp (Word width) → Option (Instruction width)
   | .const value => do

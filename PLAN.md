@@ -344,6 +344,8 @@ definitions, pass ordering, examples, and proof obligations.
   ordering, and HOL zero-test comparisons with immediate/register operands.
 - [x] Prove Loop slot-analysis insertion helpers preserve duplicate-freeness,
   supporting later derivation of register non-aliasing invariants.
+- [x] Prove RISC-V `registerOfNat` injectivity and derive pipeline-specific
+  non-aliasing for distinct mapped source slots.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
 - [x] Add an end-to-end declaration-call regression from Pancake through

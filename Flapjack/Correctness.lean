@@ -1076,6 +1076,83 @@ theorem loopToWord_binop_assign_preserves_mapped_locals [NeZero width]
         hdestination_nonzero, hregister_nonalias]
       exact hregister_value
 
+theorem loopToWord_shift_assign_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (operator : Shift)
+    (destination left right : Nat) (destinationRegister : Fin 32)
+    (leftValue rightValue : RiscV.Word width)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hleft : loopState.locals left = some leftValue)
+    (hright : loopState.locals right = some rightValue)
+    (hright_bounded : rightValue.toNat < width)
+    (hoperator : operator = .lsl ∨ operator = .lsr)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0)
+    (hnoalias :
+      ∀ name, name ≠ destination →
+        ∀ register,
+          RiscV.registerOfNat (wordFindVar context name) = some register →
+            register ≠ destinationRegister) :
+    ∀ resultState,
+      RiscV.evalWordProg state
+        (loopToWordProg context
+          (.assign destination (.shift operator (.var left) (.var right)))) =
+        some resultState →
+      loopLocalsMappedToRiscV context
+        (updateLoopLocal loopState.locals destination
+          (match operator with
+          | .lsl => ShiftLeft.shiftLeft leftValue rightValue
+          | .lsr => ShiftRight.shiftRight leftValue rightValue
+          | .asr => leftValue
+          | .ror => leftValue)) resultState := by
+  rcases hoperator with rfl | rfl
+  all_goals
+    intro resultState hresult
+    rcases hlocals left leftValue hleft with
+      ⟨leftRegister, hleft_register, hleft_value⟩
+    rcases hlocals right rightValue hright with
+      ⟨rightRegister, hright_register, hright_value⟩
+    have hleft_value' : state.registers leftRegister = leftValue := by
+      exact hleft_value
+    have hright_value' : state.registers rightRegister = rightValue := by
+      exact hright_value
+    have hright_amount :
+        RiscV.shiftAmount rightValue = rightValue.toNat := by
+      simp [RiscV.shiftAmount, Nat.mod_eq_of_lt hright_bounded]
+    have hshiftLeft (x y : RiscV.Word width) :
+        ShiftLeft.shiftLeft x y = x <<< y.toNat := by
+      rfl
+    have hshiftRight (x y : RiscV.Word width) :
+        ShiftRight.shiftRight x y = x >>> y.toNat := by
+      rfl
+    simp [loopToWordProg, wordCompileExp,
+      wordCompileExp.wordCompileExpList] at hresult
+    simp [RiscV.evalWordProg, RiscV.wordExpToInstructions,
+      RiscV.wordExpToInstruction, RiscV.executeInstructions,
+      hdestination, hleft_register, hright_register] at hresult
+    subst resultState
+    intro name current hcurrent
+    by_cases hname : name = destination
+    · subst name
+      simp [updateLoopLocal] at hcurrent
+      subst current
+      refine ⟨destinationRegister, hdestination, ?_⟩
+      simp [updateLoopLocal, RiscV.execute, RiscV.writeRegister,
+        RiscV.readRegister, hdestination_nonzero, hleft_register,
+        hright_register, hleft_value', hright_value', hright_amount,
+        hshiftLeft, hshiftRight]
+    · have hcurrent' : loopState.locals name = some current := by
+        simpa [updateLoopLocal, hname] using hcurrent
+      rcases hlocals name current hcurrent' with
+        ⟨register, hregister, hregister_value⟩
+      refine ⟨register, hregister, ?_⟩
+      have hregister_nonalias := hnoalias name hname register hregister
+      simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+        hdestination_nonzero, hregister_nonalias]
+      exact hregister_value
+
 theorem loopToWord_binop_assign_agreement_of_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (operator : BinOp)

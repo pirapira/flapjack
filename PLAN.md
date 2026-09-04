@@ -328,6 +328,8 @@ definitions, pass ordering, examples, and proof obligations.
   explicit call-boundary state-agreement theorem.
 - [x] Prove mapped-local preservation across compiled register-register
   ADD/SUB/AND/OR/XOR assignments, including unchanged non-destination locals.
+- [x] Prove mapped-local preservation across compiled LSL/LSR assignments,
+  with the explicit bounded shift-count agreement.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
 - [x] Add an end-to-end declaration-call regression from Pancake through

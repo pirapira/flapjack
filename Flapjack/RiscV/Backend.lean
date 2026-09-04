@@ -35,6 +35,10 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
       let destination ← registerOfNat destination
       let source ← registerOfNat source
       pure (.addi destination source 0)
+  | .op .add [.var source, .const value] => do
+      let destination ← registerOfNat destination
+      let source ← registerOfNat source
+      pure (.addi destination source value)
   | .op operator [.var left, .var right] => do
       let destination ← registerOfNat destination
       let left ← registerOfNat left
@@ -126,6 +130,30 @@ def wordInstToInstruction [NeZero width] :
       let address ← registerOfNat address
       pure (.storeWord source address)
 
+def executeInstructions [NeZero width] (state : State width) :
+    List (Instruction width) → State width
+  | [] => state
+  | instruction :: instructions =>
+      executeInstructions (execute state instruction) instructions
+
+def wordShareInstToInstructions [NeZero width] (operator : WordMemOp)
+    (name : Nat) : WordExp (Word width) → Option (List (Instruction width))
+  | .var address => do
+      let instruction ← wordInstToInstruction (.mem operator name address)
+      pure [instruction]
+  | expression => do
+      if name == 31 then none
+      else
+        let address ← wordExpToInstruction 31 expression
+        let instruction ← wordInstToInstruction (.mem operator name 31)
+        pure [address, instruction]
+
+def evalWordShareInst [NeZero width] (state : State width)
+    (operator : WordMemOp) (name : Nat) (address : WordExp (Word width)) :
+    Option (State width) := do
+  let instructions ← wordShareInstToInstructions operator name address
+  pure (executeInstructions state instructions)
+
 def wordProgToRiscV [NeZero width] :
     WordProg (Word width) → Option (List (Instruction width))
   | .skip => some []
@@ -135,9 +163,8 @@ def wordProgToRiscV [NeZero width] :
       let value ← registerOfNat value
       let address ← registerOfNat address
       pure [.storeWord value address]
-  | .shareInst operator name (.var address) => do
-      let instruction ← wordInstToInstruction (.mem operator name address)
-      pure [instruction]
+  | .shareInst operator name address =>
+      wordShareInstToInstructions operator name address
   | .inst (.arith operation) => wordArithToInstructions operation
   | .inst instruction =>
       (wordInstToInstruction instruction).map (fun instruction => [instruction])
@@ -174,12 +201,6 @@ def wordProgToRiscV [NeZero width] :
   | _ => none
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
-
-def executeInstructions [NeZero width] (state : State width) :
-    List (Instruction width) → State width
-  | [] => state
-  | instruction :: instructions =>
-      executeInstructions (execute state instruction) instructions
 
 /-!
 `executeInstructions` is useful for straight-line code, but it deliberately
@@ -379,9 +400,9 @@ def wordFunctionToRiscV [NeZero width] :
       let value ← registerOfNat value
       let address ← registerOfNat address
       pure ([.storeWord value address], [])
-  | .shareInst operator name (.var address) => do
-      let instruction ← wordInstToInstruction (.mem operator name address)
-      pure ([instruction], [])
+  | .shareInst operator name address => do
+      let instructions ← wordShareInstToInstructions operator name address
+      pure (instructions, [])
   | .tick => pure ([.addi 0 0 0], [])
   | .ite operator condition rightValue thenBranch elseBranch => do
       let condition ← registerOfNat condition
@@ -481,9 +502,9 @@ def evalWordFunction [NeZero width] (state : State width) :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (execute state (.storeWord source address), [])
-  | .shareInst operator name (.var address) => do
-      let instruction ← wordInstToInstruction (.mem operator name address)
-      pure (execute state instruction, [])
+  | .shareInst operator name address => do
+      let state ← evalWordShareInst state operator name address
+      pure (state, [])
   | .ite operator condition rightValue thenBranch elseBranch => do
       let choose ← evalWordCondition state operator condition rightValue
       if choose then evalWordFunction state thenBranch
@@ -543,9 +564,8 @@ def evalWordProg [NeZero width] (state : State width) :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (execute state (.loadWord destination address))
-  | .shareInst operator name (.var address) => do
-      let instruction ← wordInstToInstruction (.mem operator name address)
-      pure (execute state instruction)
+  | .shareInst operator name address =>
+      evalWordShareInst state operator name address
   | .ite operator condition rightValue thenBranch elseBranch => do
       let choose ← evalWordCondition state operator condition rightValue
       if choose then evalWordProg state thenBranch
@@ -649,24 +669,46 @@ theorem compileWordStoreWord_sound [NeZero width] (state : State width) :
 theorem wordShareInstToRiscV_load [NeZero width] :
     wordProgToRiscV (width := width)
         (.shareInst .load 1 (.var 2)) = some [.loadWord 1 2] := by
-  simp [wordProgToRiscV, wordInstToInstruction, registerOfNat]
+  simp [wordProgToRiscV, wordShareInstToInstructions, wordInstToInstruction,
+    registerOfNat]
 
 theorem wordShareInstToRiscV_store8 [NeZero width] :
     wordProgToRiscV (width := width)
         (.shareInst .store8 1 (.var 2)) = some [.storeByte 1 2] := by
-  simp [wordProgToRiscV, wordInstToInstruction, registerOfNat]
+  simp [wordProgToRiscV, wordShareInstToInstructions, wordInstToInstruction,
+    registerOfNat]
+
+theorem wordShareInstToRiscV_add_offset [NeZero width] :
+    wordProgToRiscV (width := width)
+        (.shareInst .load32 1 (.op .add [.var 2, .const (4 : Word width)])) =
+      some [.addi 31 2 4, .load32 1 31] := by
+  simp [wordProgToRiscV, wordShareInstToInstructions, wordExpToInstruction,
+    wordInstToInstruction, registerOfNat]
 
 theorem compileWordShareInstLoad_sound [NeZero width] (state : State width) :
     evalWordProg state (.shareInst .load 1 (.var 2)) =
       some (execute state (.loadWord 1 2)) := by
-  simp [evalWordProg, wordInstToInstruction, registerOfNat, execute,
-    writeRegister, readWordValue, readByte, byteAddress, nextPc]
+  simp [evalWordProg, evalWordShareInst, wordShareInstToInstructions,
+    wordInstToInstruction, registerOfNat, execute,
+    executeInstructions, writeRegister, readWordValue, readByte, byteAddress,
+    nextPc]
 
 theorem compileWordShareInstStore32_sound [NeZero width] (state : State width) :
     evalWordProg state (.shareInst .store32 1 (.var 2)) =
       some (execute state (.store32 1 2)) := by
-  simp [evalWordProg, wordInstToInstruction, registerOfNat, execute,
-    writeWord32, writeByte, byteAddress, nextPc]
+  simp [evalWordProg, evalWordShareInst, wordShareInstToInstructions,
+    wordInstToInstruction, registerOfNat, execute,
+    executeInstructions, writeWord32, writeByte, byteAddress, nextPc]
+
+theorem compileWordShareInstLoadOffset_sound [NeZero width] (state : State width) :
+    evalWordProg state
+        (.shareInst .load32 1
+          (.op .add [.var 2, .const (4 : Word width)])) =
+      some (executeInstructions state [.addi 31 2 4, .load32 1 31]) := by
+  simp [evalWordProg, evalWordShareInst, wordShareInstToInstructions,
+    wordExpToInstruction, wordInstToInstruction, registerOfNat,
+    executeInstructions, execute, writeRegister, readWord32, readByte,
+    byteAddress, nextPc]
 
 theorem wordFunctionToRiscV_return_add [NeZero width] :
     wordFunctionToRiscV

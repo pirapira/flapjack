@@ -991,8 +991,8 @@ example [NeZero width] :
     RiscV.wordFunctionToRiscV
         ((.shareInst .load 1 (.var 2)) : WordProg (RiscV.Word width)) =
       some ([.loadWord 1 2], []) := by
-  simp [RiscV.wordFunctionToRiscV, RiscV.wordInstToInstruction,
-    RiscV.registerOfNat]
+  simp [RiscV.wordFunctionToRiscV, RiscV.wordShareInstToInstructions,
+    RiscV.wordInstToInstruction, RiscV.registerOfNat]
 
 example [NeZero width] :
     RiscV.wordFunctionToRiscVWithCalls

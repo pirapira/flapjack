@@ -312,6 +312,8 @@ definitions, pass ordering, examples, and proof obligations.
   truncation at the memory boundary.
 - [x] Add context-mapped agreements for shared-memory halfword loads and
   stores, including the first little-endian byte observation.
+- [ ] Lift the one-step mapped expression agreements to a reusable
+  context-indexed assignment simulation lemma.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
 - [x] Add an end-to-end declaration-call regression from Pancake through

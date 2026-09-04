@@ -170,6 +170,8 @@ definitions, pass ordering, examples, and proof obligations.
   with an explicit dead-condition-register contract and execution proofs.
 - [x] Lower Loop-to-Word `Tick` to an architectural `ADDI x0,x0,0` so
   generated conditional function artifacts can cross the RISC-V boundary.
+- [x] Lower function-level conditionals with recursively compiled return
+  branches, requiring both branches to expose the same return-register layout.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

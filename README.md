@@ -47,7 +47,8 @@ in [`Flapjack/RiscV/Backend.lean`](Flapjack/RiscV/Backend.lean). Equality,
 signed ordering, and unsigned ordering branches are modeled; the remaining
 bit-test conditions use the condition register as a dead temporary, and the
 Loop-to-Word ticks use an `ADDI x0,x0,0` no-op, and the remaining Word
-instructions are still explicitly partial. The HOL notice is in
+instructions are still explicitly partial. Function-level conditionals with
+matching branch return layouts now cross this artifact boundary. The HOL notice is in
 [`Flapjack/RiscV/COPYRIGHT`](Flapjack/RiscV/COPYRIGHT).
 The selector’s function artifact records both emitted instructions and return
 registers for the supported straight-line fragment, and the pipeline exposes

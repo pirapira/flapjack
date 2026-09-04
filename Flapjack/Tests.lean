@@ -639,6 +639,18 @@ example [NeZero width] :
 
 example [NeZero width] :
     RiscV.wordFunctionToRiscV
+        ((.ite .equal 1 (.reg 2)
+          (.seq (.assign 3 (.const 1)) (.return 0 [3]))
+          (.seq (.assign 3 (.const 2)) (.return 0 [3]))) :
+          WordProg (RiscV.Word width)) =
+      some ([.branchNe 1 2 (BitVec.ofNat width 12),
+        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8),
+        .addi 3 0 2], [3]) := by
+  simp [RiscV.wordFunctionToRiscV, RiscV.wordProgToRiscV,
+    RiscV.wordExpToInstruction, RiscV.registerOfNat]
+
+example [NeZero width] :
+    RiscV.wordFunctionToRiscV
         ((.seq
           (.ite .equal 1 (.reg 2)
             (.assign 3 (.const 1)) (.assign 3 (.const 2)))
@@ -776,6 +788,19 @@ example :
         { name := "main", inline := false, exported := false, params := [],
           body := .return (.panOp .mul [.const (BitVec.ofNat 64 2),
             .const (BitVec.ofNat 64 3)]), returnShape := .one }]
+    result.functions.length = 1 &&
+      result.functions.all (fun (_, _, artifact) => artifact.isSome) := by
+  native_decide
+
+example :
+    let result := compileFlapjackRiscV (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+      [.function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .ite (.cmp .equal (.const (BitVec.ofNat 64 1))
+            (.const (BitVec.ofNat 64 1)))
+            (.return (.const (BitVec.ofNat 64 7)))
+            (.return (.const (BitVec.ofNat 64 8))), returnShape := .one }]
     result.functions.length = 1 &&
       result.functions.all (fun (_, _, artifact) => artifact.isSome) := by
   native_decide

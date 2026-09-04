@@ -266,9 +266,32 @@ def wordFunctionToRiscV [NeZero width] :
       pure ([instruction], [])
   | .tick => pure ([.addi 0 0 0], [])
   | .ite operator condition rightValue thenBranch elseBranch => do
-      let code ← wordProgToRiscV
-        (.ite operator condition rightValue thenBranch elseBranch)
-      pure (code, [])
+      let condition ← registerOfNat condition
+      let right ← match rightValue with
+        | .reg right => registerOfNat right
+        | .imm value => if value == 0 then pure 0 else none
+      let (thenCode, thenReturns) ← wordFunctionToRiscV thenBranch
+      let (elseCode, elseReturns) ← wordFunctionToRiscV elseBranch
+      if thenReturns != elseReturns then none
+      else
+        let falseOffset : Word width :=
+          BitVec.ofNat width (8 + 4 * thenCode.length)
+        let endOffset : Word width :=
+          BitVec.ofNat width (4 + 4 * elseCode.length)
+        let branchFalse ← match operator with
+          | .equal => pure (.branchNe condition right falseOffset)
+          | .notEqual => pure (.branchEq condition right falseOffset)
+          | .less => pure (.branchGe condition right falseOffset)
+          | .notLess => pure (.branchLt condition right falseOffset)
+          | .lower => pure (.branchGeU condition right falseOffset)
+          | .notLower => pure (.branchLtU condition right falseOffset)
+          | .test => pure (.branchNe condition 0 falseOffset)
+          | .notTest => pure (.branchEq condition 0 falseOffset)
+        let prelude := match operator with
+          | .test | .notTest => [.and condition condition right]
+          | _ => []
+        pure (prelude ++ [branchFalse] ++ thenCode ++
+          [.branchEq 0 0 endOffset] ++ elseCode, thenReturns)
   | .seq first second => do
       let (firstCode, firstReturns) ← wordFunctionToRiscV first
       let (secondCode, secondReturns) ← wordFunctionToRiscV second

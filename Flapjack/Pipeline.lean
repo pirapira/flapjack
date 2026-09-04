@@ -3,6 +3,7 @@ import Flapjack.Compile
 import Flapjack.CrepToLoop
 import Flapjack.Word
 import Flapjack.RiscV.Backend
+import Flapjack.RiscV.Loops
 import Flapjack.RiscV.Link
 
 /-!
@@ -110,7 +111,7 @@ def pipelineRiscVFunctions [NeZero width]
     (functions : List (Nat × List Nat × WordProg (RiscV.Word width))) :
     List (Nat × List Nat × Option (List (RiscV.Instruction width) × List (Fin 32))) :=
   functions.map (fun (label, parameters, body) =>
-    (label, parameters, RiscV.wordFunctionToRiscV body))
+    (label, parameters, RiscV.wordFunctionToRiscVWithLoops body))
 
 structure FlapjackPipelineResult (α : Type u) where
   simplified : List (Decl α)

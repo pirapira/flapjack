@@ -841,8 +841,10 @@ example [NeZero width] :
         [(0, [], ((.seq (.assign 1 (.op .add [.var 2, .var 3]))
           (.return 0 [1])) : WordProg (RiscV.Word width)))] =
       [(0, [], some ([.add 1 2 3], [1]))] := by
-  simp [pipelineRiscVFunctions, RiscV.wordFunctionToRiscV,
-    RiscV.wordExpToInstruction, RiscV.registerOfNat]
+  simp [pipelineRiscVFunctions, RiscV.wordFunctionToRiscVWithLoops,
+    RiscV.wordFunctionToRiscVWithLoopsAux, RiscV.wordControlInstructions,
+    RiscV.wordFunctionToRiscV, RiscV.wordExpToInstruction,
+    RiscV.registerOfNat]
 
 example [NeZero width] (state : RiscV.State width) (value : RiscV.Word width)
     (zero : RiscV.ZeroRegister state) :

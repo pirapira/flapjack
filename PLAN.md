@@ -295,6 +295,8 @@ definitions, pass ordering, examples, and proof obligations.
   control results, plus basic loop-control regression theorems.
 - [x] Exercise the actual Loop-to-Word loop lowering through the Word loop
   evaluator, including its generated entry and exit ticks.
+- [x] Add layout-aware RISC-V lowering for Word loops, resolving generated
+  break and continue jumps and wiring it into the default pipeline.
 - [x] Prove the one-step global-state projection invariant for every Loop
   constructor under the no-global-writes syntactic side condition.
 - [x] Lift the global-state projection invariant to arbitrary fuel, including

@@ -924,6 +924,158 @@ theorem loopBindParameters_single_parameter_agreement [NeZero width]
   · exact loopLocalsMappedToRiscV_single_parameter context state name value register
       hregister hregister_nonzero
 
+theorem loopToWord_binop_assign_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (operator : BinOp)
+    (destination left right : Nat) (destinationRegister : Fin 32)
+    (leftValue rightValue : RiscV.Word width)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hleft : loopState.locals left = some leftValue)
+    (hright : loopState.locals right = some rightValue)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0)
+    (hnoalias :
+      ∀ name, name ≠ destination →
+        ∀ register,
+          RiscV.registerOfNat (wordFindVar context name) = some register →
+            register ≠ destinationRegister) :
+    ∀ resultState,
+      RiscV.evalWordProg state
+        (loopToWordProg context
+          (.assign destination (.op operator [.var left, .var right]))) =
+        some resultState →
+      loopLocalsMappedToRiscV context
+        (updateLoopLocal loopState.locals destination
+          (evalLoopBinOp operator leftValue rightValue)) resultState := by
+  intro resultState hresult
+  rcases hlocals left leftValue hleft with
+    ⟨leftRegister, hleft_register, hleft_value⟩
+  rcases hlocals right rightValue hright with
+    ⟨rightRegister, hright_register, hright_value⟩
+  have hleft_value' : state.registers leftRegister = leftValue := by
+    exact hleft_value
+  have hright_value' : state.registers rightRegister = rightValue := by
+    exact hright_value
+  have hand (x y : RiscV.Word width) :
+      AndOp.and x y = x &&& y := by
+    change x.and y = x &&& y
+    exact BitVec.and_eq x y
+  have hor (x y : RiscV.Word width) :
+      OrOp.or x y = x ||| y := by
+    change x.or y = x ||| y
+    exact BitVec.or_eq x y
+  have hxor (x y : RiscV.Word width) :
+      HXor.hXor x y = x ^^^ y := by
+    rfl
+  cases operator <;>
+    simp [loopToWordProg, wordCompileExp,
+      wordCompileExp.wordCompileExpList] at hresult <;>
+    simp [RiscV.evalWordProg, RiscV.wordExpToInstructions,
+      RiscV.wordExpToInstruction, RiscV.executeInstructions,
+      hdestination, hleft_register, hright_register] at hresult
+  · subst resultState
+    intro name current hcurrent
+    by_cases hname : name = destination
+    · subst name
+      have hvalue : evalLoopBinOp .add leftValue rightValue = current := by
+        simpa [updateLoopLocal, evalLoopBinOp] using hcurrent
+      subst current
+      refine ⟨destinationRegister, hdestination, ?_⟩
+      simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+        hdestination_nonzero, hleft_register, hright_register,
+        hleft_value', hright_value', evalLoopBinOp]
+    · have hcurrent' : loopState.locals name = some current := by
+        simpa [updateLoopLocal, hname] using hcurrent
+      rcases hlocals name current hcurrent' with
+        ⟨register, hregister, hregister_value⟩
+      refine ⟨register, hregister, ?_⟩
+      have hregister_nonalias := hnoalias name hname register hregister
+      simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+        hdestination_nonzero, hregister_nonalias]
+      exact hregister_value
+  · subst resultState
+    intro name current hcurrent
+    by_cases hname : name = destination
+    · subst name
+      have hvalue : evalLoopBinOp .sub leftValue rightValue = current := by
+        simpa [updateLoopLocal, evalLoopBinOp] using hcurrent
+      subst current
+      refine ⟨destinationRegister, hdestination, ?_⟩
+      simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+        hdestination_nonzero, hleft_register, hright_register,
+        hleft_value', hright_value', evalLoopBinOp]
+    · have hcurrent' : loopState.locals name = some current := by
+        simpa [updateLoopLocal, hname] using hcurrent
+      rcases hlocals name current hcurrent' with
+        ⟨register, hregister, hregister_value⟩
+      refine ⟨register, hregister, ?_⟩
+      have hregister_nonalias := hnoalias name hname register hregister
+      simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+        hdestination_nonzero, hregister_nonalias]
+      exact hregister_value
+  · subst resultState
+    intro name current hcurrent
+    by_cases hname : name = destination
+    · subst name
+      have hvalue : evalLoopBinOp .and leftValue rightValue = current := by
+        simpa [updateLoopLocal, evalLoopBinOp] using hcurrent
+      subst current
+      refine ⟨destinationRegister, hdestination, ?_⟩
+      simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+        hdestination_nonzero, hleft_register, hright_register,
+        hleft_value', hright_value', hand, evalLoopBinOp]
+    · have hcurrent' : loopState.locals name = some current := by
+        simpa [updateLoopLocal, hname] using hcurrent
+      rcases hlocals name current hcurrent' with
+        ⟨register, hregister, hregister_value⟩
+      refine ⟨register, hregister, ?_⟩
+      have hregister_nonalias := hnoalias name hname register hregister
+      simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+        hdestination_nonzero, hregister_nonalias]
+      exact hregister_value
+  · subst resultState
+    intro name current hcurrent
+    by_cases hname : name = destination
+    · subst name
+      have hvalue : evalLoopBinOp .or leftValue rightValue = current := by
+        simpa [updateLoopLocal, evalLoopBinOp] using hcurrent
+      subst current
+      refine ⟨destinationRegister, hdestination, ?_⟩
+      simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+        hdestination_nonzero, hleft_register, hright_register,
+        hleft_value', hright_value', hor, evalLoopBinOp]
+    · have hcurrent' : loopState.locals name = some current := by
+        simpa [updateLoopLocal, hname] using hcurrent
+      rcases hlocals name current hcurrent' with
+        ⟨register, hregister, hregister_value⟩
+      refine ⟨register, hregister, ?_⟩
+      have hregister_nonalias := hnoalias name hname register hregister
+      simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+        hdestination_nonzero, hregister_nonalias]
+      exact hregister_value
+  · subst resultState
+    intro name current hcurrent
+    by_cases hname : name = destination
+    · subst name
+      have hvalue : evalLoopBinOp .xor leftValue rightValue = current := by
+        simpa [updateLoopLocal, evalLoopBinOp] using hcurrent
+      subst current
+      refine ⟨destinationRegister, hdestination, ?_⟩
+      simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+        hdestination_nonzero, hleft_register, hright_register,
+        hleft_value', hright_value', hxor, evalLoopBinOp]
+    · have hcurrent' : loopState.locals name = some current := by
+        simpa [updateLoopLocal, hname] using hcurrent
+      rcases hlocals name current hcurrent' with
+        ⟨register, hregister, hregister_value⟩
+      refine ⟨register, hregister, ?_⟩
+      have hregister_nonalias := hnoalias name hname register hregister
+      simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+        hdestination_nonzero, hregister_nonalias]
+      exact hregister_value
+
 theorem loopToWord_binop_assign_agreement_of_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (operator : BinOp)

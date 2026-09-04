@@ -521,27 +521,35 @@ theorem loopToWord_loadByte_register_agreement_mapped [NeZero width]
       RiscV.readByte state addressValue = byteValue)
     (hdestination_nonzero : destinationRegister ≠ 0) :
     (evalLoopProg 1 (loopRegisterStateMappedWithMemory context state memory)
-      (.loadByte address destination)).bind (fun result =>
+      (.shMem .load8 destination (.var address))).bind (fun result =>
         match result with
         | .normal state => state.locals destination
         | _ => none) =
       (RiscV.evalWordProg state
-        (loopToWordProg context (.loadByte address destination))).map
+        (loopToWordProg context
+          (.shMem .load8 destination (.var address)))).map
         (fun state => RiscV.readRegister state destinationRegister) := by
   have hzero : state.registers 0 = (0 : RiscV.Word width) := by
     exact zero
-  simp [evalLoopProg, evalLoopExp, loopRegisterStateMappedWithMemory,
-    loopRegisterStateMapped, loopToWordProg, wordMemOp, wordCompileExp,
-    RiscV.evalWordProg, RiscV.evalWordShareInst,
-    RiscV.wordShareInstToInstructions, RiscV.wordInstToInstruction,
-    RiscV.executeInstructions, RiscV.execute, RiscV.writeRegister,
-    RiscV.readRegister, RiscV.nextPc, updateLoopLocal, haddress,
-    hdestination, haddress_value, hmemory, hmachine,
+  have haddress_eval :
+      evalLoopExp (loopRegisterStateMappedWithMemory context state memory)
+        (.var address) = some addressValue := by
+    simp [evalLoopExp, loopRegisterStateMappedWithMemory,
+      loopRegisterStateMapped, haddress, haddress_value]
+  rw [evalLoopProg_shMem_load
+    (loopRegisterStateMappedWithMemory context state memory) .load8
+    destination (.var address) addressValue
+    (BitVec.ofNat width byteValue.toNat) (by simp) haddress_eval hmemory]
+  simp [loopRegisterStateMappedWithMemory, loopRegisterStateMapped,
+    loopToWordProg, wordMemOp, wordCompileExp, RiscV.evalWordProg,
+    RiscV.evalWordShareInst, RiscV.wordShareInstToInstructions,
+    RiscV.wordInstToInstruction, RiscV.executeInstructions, RiscV.execute,
+    RiscV.writeRegister, RiscV.readRegister, RiscV.nextPc,
+    updateLoopLocal, haddress, hdestination, haddress_value, hmachine,
     hdestination_nonzero, hzero]
   have haddress_value' : state.registers addressRegister = addressValue := by
     exact haddress_value
-  rw [haddress_value', hmemory, hmachine]
-  simp [updateLoopLocal]
+  rw [haddress_value', hmachine]
 
 theorem loopToWord_storeByte_memory_agreement_mapped [NeZero width]
     (context : WordContext) (state : RiscV.State width)
@@ -557,22 +565,38 @@ theorem loopToWord_storeByte_memory_agreement_mapped [NeZero width]
     (hvalue_value :
       RiscV.readRegister state valueRegister = valueValue) :
     (evalLoopProg 1 (loopRegisterStateMappedWithMemory context state memory)
-      (.storeByte address value)).bind (fun result =>
+      (.shMem .store8 value (.var address))).bind (fun result =>
         match result with
         | .normal state =>
             (state.memory addressValue).map
               (fun value => BitVec.ofNat width (value.toNat % 256))
         | _ => none) =
       (RiscV.evalWordProg state
-        (loopToWordProg context (.storeByte address value))).map
+        (loopToWordProg context
+          (.shMem .store8 value (.var address)))).map
         (fun state =>
           BitVec.ofNat width
             (RiscV.readByte state addressValue).toNat) := by
-  simp [evalLoopProg, loopRegisterStateMappedWithMemory,
-    loopRegisterStateMapped, loopToWordProg, RiscV.evalWordProg,
-    RiscV.execute, RiscV.writeByte, RiscV.readByte,
-    RiscV.nextPc, haddress, hvalue, haddress_value, hvalue_value,
-    updateLoopMemory]
+  have haddress_eval :
+      evalLoopExp (loopRegisterStateMappedWithMemory context state memory)
+        (.var address) = some addressValue := by
+    simp [evalLoopExp, loopRegisterStateMappedWithMemory,
+      loopRegisterStateMapped, haddress, haddress_value]
+  have hvalue_eval :
+      (loopRegisterStateMappedWithMemory context state memory).locals value =
+        some valueValue := by
+    simp [loopRegisterStateMappedWithMemory, loopRegisterStateMapped,
+      hvalue, hvalue_value]
+  rw [evalLoopProg_shMem_store
+    (loopRegisterStateMappedWithMemory context state memory) .store8
+    value (.var address) addressValue valueValue
+    (by simp) haddress_eval hvalue_eval]
+  simp [loopRegisterStateMappedWithMemory, loopRegisterStateMapped,
+    loopToWordProg, wordMemOp, wordCompileExp, RiscV.evalWordProg,
+    RiscV.evalWordShareInst, RiscV.wordShareInstToInstructions,
+    RiscV.wordInstToInstruction, RiscV.executeInstructions, RiscV.execute,
+    RiscV.writeByte, RiscV.readByte, RiscV.byteAddress, RiscV.nextPc,
+    haddress, hvalue, haddress_value, hvalue_value, updateLoopMemory]
   apply BitVec.eq_of_toNat_eq
   simp [BitVec.toNat_setWidth, BitVec.toNat_ofNat, Nat.mod_mod]
 

@@ -308,7 +308,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Correct and prove context mapping for both operands of Loop `locValue`
   assignments in the Loop-to-Word/RISC-V bridge.
 - [x] Add context-mapped Loop-to-Word/RISC-V agreements for byte loads and
-  stores, including zero-extension and byte truncation at the memory boundary.
+  stores in the emitted shared-memory form, including zero-extension and byte
+  truncation at the memory boundary.
 - [x] Add context-mapped agreements for shared-memory halfword loads and
   stores, including the first little-endian byte observation.
 - [x] Extend Loop condition and expression evaluation to all comparison

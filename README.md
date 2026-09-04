@@ -42,9 +42,11 @@ the HOL notice at [`Flapjack/Word/COPYRIGHT`](Flapjack/Word/COPYRIGHT).
 The initial RISC-V target vocabulary, register/memory primitives, and
 `ADD`/`ADDI` transition slice are in [`Flapjack/RiscV/Model.lean`](Flapjack/RiscV/Model.lean).
 The first Word-to-RISC-V selector, PC-aware code runner, and soundness lemmas
-for the supported straight-line and register-conditional fragments are in
-[`Flapjack/RiscV/Backend.lean`](Flapjack/RiscV/Backend.lean), with the HOL
-notice in [`Flapjack/RiscV/COPYRIGHT`](Flapjack/RiscV/COPYRIGHT).
+for the supported straight-line and register/zero-conditional fragments are
+in [`Flapjack/RiscV/Backend.lean`](Flapjack/RiscV/Backend.lean). Equality,
+signed ordering, and unsigned ordering branches are modeled; the remaining
+Word instructions are still explicitly partial. The HOL notice is in
+[`Flapjack/RiscV/COPYRIGHT`](Flapjack/RiscV/COPYRIGHT).
 The selector’s function artifact records both emitted instructions and return
 registers for the supported straight-line fragment, and the pipeline exposes
 an end-to-end Pancake-to-artifact wrapper for that fragment.

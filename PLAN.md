@@ -402,6 +402,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add structured control-result support for scoped declarations, stores,
   conditionals, while loops, break/continue, and shared-memory operations,
   with executable store/load and loop regressions.
+- [x] Enforce structure-context well-formedness for structured loads, matching
+  the source evaluator's shape-validation rule.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

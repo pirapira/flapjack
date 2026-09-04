@@ -1821,8 +1821,16 @@ example :
         some (.rStruct [.word 1, .word 2]) else none)
       0 100 8 (.load (.comb [.one, .one]) (.const 4)) =
       some (.rStruct [.word 1, .word 2]) := by
-  simp [evalPanValueExp, panValueShape, panShapeMatches,
+  simp [evalPanValueExp, isWfShape, isWfShape.isWfShapeList,
+    panValueShape, panShapeMatches,
     panShapeMatches.panShapeListMatches]
+
+example :
+    evalPanValueExp (α := Nat) []
+      (fun _ => none) (fun _ => none)
+      (fun address => if address == 4 then some (.word 2) else none)
+      0 100 8 (.load (.named "Unknown") (.const 4)) = none := by
+  simp [evalPanValueExp, isWfShape, panValueShape, panShapeMatches]
 
 example :
     (evalPanValueProg (α := Nat) [] 0 100 8
@@ -1890,7 +1898,8 @@ example :
       (fun result => match result with
         | .returned _ _ _ [PanValue.word value] => some value
         | _ => none) = some (some 9) := by
-  simp [evalPanValueProgWithCallsAndFfi, evalPanValueExp,
+  simp [evalPanValueProgWithCallsAndFfi, evalPanValueExp, isWfShape,
+    isWfShape.isWfShapeList,
     evalPanValueExps, evalPanValueExp.evalPanValueExps,
     structuredNoFfi, updatePanValueMap, updatePanValueMemory,
     panValueShape, panShapeMatches]

@@ -94,7 +94,9 @@ def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
         baseAddress topAddress bytesInWord address
       let .word address := address | none
       let value ← memory address
-      if panShapeMatches (panValueShape structs value) shape then some value else none
+      if isWfShape structs shape && panShapeMatches (panValueShape structs value) shape then
+        some value
+      else none
   | .load32 address | .loadByte address => do
       let address ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord address

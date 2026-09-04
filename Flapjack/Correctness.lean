@@ -1442,6 +1442,15 @@ theorem loopToWord_ite_preserves_mapped_locals [NeZero width]
           exact loopToWord_tick_preserves_mapped_locals context finalLoop.locals
             middleWord (hthen finalLoop middleWord hthen_loop hthen_word) finalWord htick
 
+theorem loopToWord_loop_break_exec [NeZero width] (state : RiscV.State width) :
+    RiscV.evalWordLoopProg 6 state
+        (loopToWordProg ({ vars := [] } : WordContext)
+          (.loop [] (.break 0) [])) =
+      some (.normal (RiscV.execute (RiscV.execute state (.addi 0 0 0))
+        (.addi 0 0 0))) := by
+  simp [loopToWordProg, RiscV.evalWordLoopProg, RiscV.evalWordLoopRepeat,
+    RiscV.evalWordProg, RiscV.execute, RiscV.writeRegister, RiscV.nextPc]
+
 theorem loopToWord_div_assign_preserves_mapped_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (destination dividend divisor : Nat)

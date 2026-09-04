@@ -52,6 +52,15 @@ definitions, pass ordering, examples, and proof obligations.
    - Add regression programs and differential checks against CakeML/HOL where
      practical.
 
+## Progress
+
+- [x] Initialize Lake with a pinned Lean 4.33.1 toolchain.
+- [x] Port the core `panLang` syntax, shape sizing, and nested sequencing.
+- [x] Port nested-recursion local/global expression variable-use helpers.
+- [x] Port static-checker data types, structural shape validation, and
+  declaration-level shape validation.
+- [ ] Port full expression/program checking and diagnostics.
+
 ## First implementation slice
 
 The initial Lean commit implements stage 1's core in
@@ -59,7 +68,9 @@ The initial Lean commit implements stage 1's core in
 and declaration syntax, `nestedSeq`, and shape sizing. The next slice should
 port the nested-recursion measure and variable-use helpers, then the
 static-checker data types and shape-context operations from
-`panStaticScript.sml`, followed by a small executable checker.
+`panStaticScript.sml`, followed by a small executable checker. The static
+data/context layer and expression variable-use helpers are now implemented;
+full checking remains the next increment.
 
 ## Verification workflow
 

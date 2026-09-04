@@ -142,4 +142,82 @@ def nestedSeq : List (Prog α) → Prog α
   | [] => .skip
   | statement :: statements => .seq statement (nestedSeq statements)
 
+def expLocalVars : Exp α → List VarName
+  | .const _ => []
+  | .var .local name => [name]
+  | .var .global _ => []
+  | .rStruct fields => expLocalVarsList fields
+  | .rField _ value => expLocalVars value
+  | .nStruct _ fields => expLocalVarsFieldList fields
+  | .nField _ value => expLocalVars value
+  | .load _ address => expLocalVars address
+  | .load32 address => expLocalVars address
+  | .loadByte address => expLocalVars address
+  | .op _ args => expLocalVarsList args
+  | .panOp _ args => expLocalVarsList args
+  | .cmp _ left right => expLocalVars left ++ expLocalVars right
+  | .shift _ left right => expLocalVars left ++ expLocalVars right
+  | .baseAddr => []
+  | .topAddr => []
+  | .bytesInWord => []
+
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+where
+  expLocalVarsList (expressions : List (Exp α)) : List VarName :=
+    match expressions with
+    | [] => []
+    | expression :: expressions => expLocalVars expression ++ expLocalVarsList expressions
+  termination_by sizeOf expressions
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  expLocalVarsFieldList (fields : List (FieldName × Exp α)) : List VarName :=
+    match fields with
+    | [] => []
+    | (_, expression) :: fields => expLocalVars expression ++ expLocalVarsFieldList fields
+  termination_by sizeOf fields
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def expGlobalVars : Exp α → List VarName
+  | .const _ => []
+  | .var .local _ => []
+  | .var .global name => [name]
+  | .rStruct fields => expGlobalVarsList fields
+  | .rField _ value => expGlobalVars value
+  | .nStruct _ fields => expGlobalVarsFieldList fields
+  | .nField _ value => expGlobalVars value
+  | .load _ address => expGlobalVars address
+  | .load32 address => expGlobalVars address
+  | .loadByte address => expGlobalVars address
+  | .op _ args => expGlobalVarsList args
+  | .panOp _ args => expGlobalVarsList args
+  | .cmp _ left right => expGlobalVars left ++ expGlobalVars right
+  | .shift _ left right => expGlobalVars left ++ expGlobalVars right
+  | .baseAddr => []
+  | .topAddr => []
+  | .bytesInWord => []
+
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+where
+  expGlobalVarsList (expressions : List (Exp α)) : List VarName :=
+    match expressions with
+    | [] => []
+    | expression :: expressions => expGlobalVars expression ++ expGlobalVarsList expressions
+  termination_by sizeOf expressions
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  expGlobalVarsFieldList (fields : List (FieldName × Exp α)) : List VarName :=
+    match fields with
+    | [] => []
+    | (_, expression) :: fields => expGlobalVars expression ++ expGlobalVarsFieldList fields
+  termination_by sizeOf fields
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
 end Pancake

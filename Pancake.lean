@@ -1,5 +1,6 @@
 import Pancake.Language
 import Pancake.Tests
+import Pancake.Static
 
 /-!
 # Pancake in Lean

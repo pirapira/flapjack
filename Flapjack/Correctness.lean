@@ -1,5 +1,6 @@
 import Flapjack.Pipeline
 import Flapjack.Semantics
+import Flapjack.PanValues
 import Flapjack.LoopSemantics
 import Flapjack.RiscV.Backend
 import Flapjack.WordSemantics
@@ -374,6 +375,20 @@ theorem pipelineCall_source_semantics :
       some [BitVec.ofNat 64 41] := by
   native_decide
 
+def pipelineStructuredNoFfi : PanValueFfiHandler (RiscV.Word 64) :=
+  fun _ _ _ _ _ _ => none
+
+theorem pipelineCall_structured_source_semantics :
+    (evalPanValueProgWithCallsAndFfi (α := RiscV.Word 64) []
+      pipelineCallSourceFunctions pipelineStructuredNoFfi
+      0 (BitVec.ofNat 64 100) 8 20
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      pipelineCallSourceMain).map (fun result =>
+        match result with
+        | .returned _ _ _ [PanValue.word value] => some value
+        | _ => none) = some (some (BitVec.ofNat 64 41)) := by
+  native_decide
+
 def pipelineHandlerSourceFunctions :
     List (FunName × List VarName × Prog (RiscV.Word 64)) :=
   [("raise", [], .raise "E" (.const (BitVec.ofNat 64 7)))]
@@ -430,6 +445,25 @@ theorem pipelineFfi_call_source_semantics :
         match result with
         | .returned _ values => values
         | _ => []) = some [BitVec.ofNat 64 42] := by
+  native_decide
+
+def pipelineStructuredFfiHandler :
+    PanValueFfiHandler (RiscV.Word 64) :=
+  fun function configuration _ array _ locals =>
+    if function == "inc" then
+      some (updatePanValueMap locals "result"
+        (.word (configuration + array + 1)))
+    else none
+
+theorem pipelineFfi_structured_call_source_semantics :
+    (evalPanValueProgWithCallsAndFfi (α := RiscV.Word 64) []
+      pipelineFfiCallFunctions pipelineStructuredFfiHandler
+      0 (BitVec.ofNat 64 100) 8 50
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      pipelineFfiCallMain).map (fun result =>
+        match result with
+        | .returned _ _ _ [PanValue.word value] => some value
+        | _ => none) = some (some (BitVec.ofNat 64 42)) := by
   native_decide
 
 theorem pipelineCall_source_word_machine_agreement :

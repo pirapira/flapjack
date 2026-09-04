@@ -404,6 +404,8 @@ definitions, pass ordering, examples, and proof obligations.
   with executable store/load and loop regressions.
 - [x] Enforce structure-context well-formedness for structured loads, matching
   the source evaluator's shape-validation rule.
+- [x] Connect the structured source evaluator to end-to-end declaration-call
+  and FFI-call correctness fixtures.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

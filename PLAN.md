@@ -424,6 +424,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Extend the flat source evaluator with fuel-bounded calls, scoped
   declaration calls, caught exceptions, loops, primitive dispatch, and FFI.
 - [x] Split the regression suite into focused modules under `Flapjack/Test`.
+- [x] Split the RISC-V regression suite further into backend and flat-memory
+  modules as the source-memory adapter grew.
 - [x] Prove a pass-composed Crepe/flat-source structured store/load
   correctness bridge for flattened record payloads.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem

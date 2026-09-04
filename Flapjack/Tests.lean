@@ -1,5 +1,6 @@
 import Flapjack.Test.Basics
 import Flapjack.Test.Compile
+import Flapjack.Test.RiscVMemory
 import Flapjack.Test.RiscV
 import Flapjack.Test.Pipeline
 import Flapjack.Test.Calls

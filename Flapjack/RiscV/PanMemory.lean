@@ -95,4 +95,213 @@ def panRiscVStore32 [NeZero width]
       (byteAddress address 3) byte3
   else none
 
+def evalPanRiscVFlatExp [NeZero width]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue (Word width)))
+    (domain : PanMemoryDomain (Word width))
+    (memory : PanFlatMemory (Word width))
+    (baseAddress topAddress bytesInWord : Word width) :
+    Exp (Word width) → Option (PanValue (Word width))
+  | .const value => some (.word value)
+  | .var .local name => locals name
+  | .var .global name => globals name
+  | .rStruct fields =>
+      (evalPanRiscVFlatExps structs locals globals domain memory
+        baseAddress topAddress bytesInWord fields).map .rStruct
+  | .rField index expression => do
+      let value ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord expression
+      match value with
+      | .rStruct fields => fields[index]?
+      | _ => none
+  | .nStruct name fields => do
+      let info ← lookupInfo name structs
+      let values ← evalPanRiscVFlatFields structs locals globals domain memory
+        baseAddress topAddress bytesInWord fields
+      if panValueFieldsHaveShapes structs info.fields values then
+        pure (.nStruct name values)
+      else none
+  | .nField name expression => do
+      let value ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord expression
+      match value with
+      | .nStruct structName fields =>
+          if (lookupInfo structName structs).isSome then
+            lookupPanValueField name fields
+          else none
+      | _ => none
+  | .load shape address => do
+      let address ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord address
+      let .word address := address | none
+      panFlatLoad structs domain memory bytesInWord address shape
+  | .load32 address => do
+      let address ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord address
+      let .word address := address | none
+      (panRiscVRead32 domain memory bytesInWord address).map .word
+  | .loadByte address => do
+      let address ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord address
+      let .word address := address | none
+      (panRiscVReadByte domain memory bytesInWord address).map .word
+  | .op operator arguments => do
+      let values ← evalPanRiscVFlatExps structs locals globals domain memory
+        baseAddress topAddress bytesInWord arguments
+      match values with
+      | [.word left, .word right] =>
+          some (.word (evalPanBinOp operator left right))
+      | _ => none
+  | .panOp .mul arguments => do
+      let values ← evalPanRiscVFlatExps structs locals globals domain memory
+        baseAddress topAddress bytesInWord arguments
+      match values with
+      | [.word left, .word right] => some (.word (left * right))
+      | _ => none
+  | .cmp operator left right => do
+      let left ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord left
+      let right ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord right
+      match left, right with
+      | .word left, .word right =>
+          some (.word (evalPanCmp operator left right))
+      | _, _ => none
+  | .shift operator left right => do
+      let left ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord left
+      let right ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord right
+      match left, right with
+      | .word left, .word right =>
+          (evalPanShift operator left right).map .word
+      | _, _ => none
+  | .baseAddr => some (.word baseAddress)
+  | .topAddr => some (.word topAddress)
+  | .bytesInWord => some (.word bytesInWord)
+termination_by expression => sizeOf expression
+where
+  evalPanRiscVFlatExps [NeZero width]
+      (structs : StructContext)
+      (locals globals : VarName → Option (PanValue (Word width)))
+      (domain : PanMemoryDomain (Word width))
+      (memory : PanFlatMemory (Word width))
+      (baseAddress topAddress bytesInWord : Word width) :
+      List (Exp (Word width)) → Option (List (PanValue (Word width)))
+    | [] => some []
+    | expression :: expressions => do
+        let value ← evalPanRiscVFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord expression
+        let values ← evalPanRiscVFlatExps structs locals globals domain memory
+          baseAddress topAddress bytesInWord expressions
+        pure (value :: values)
+    termination_by expressions => sizeOf expressions
+
+  evalPanRiscVFlatFields [NeZero width]
+      (structs : StructContext)
+      (locals globals : VarName → Option (PanValue (Word width)))
+      (domain : PanMemoryDomain (Word width))
+      (memory : PanFlatMemory (Word width))
+      (baseAddress topAddress bytesInWord : Word width) :
+      List (FieldName × Exp (Word width)) →
+        Option (List (FieldName × PanValue (Word width)))
+    | [] => some []
+    | (name, expression) :: fields => do
+        let value ← evalPanRiscVFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord expression
+        let values ← evalPanRiscVFlatFields structs locals globals domain memory
+          baseAddress topAddress bytesInWord fields
+        pure ((name, value) :: values)
+    termination_by fields => sizeOf fields
+
+def evalPanRiscVFlatProg [NeZero width]
+    (structs : StructContext)
+    (baseAddress topAddress bytesInWord : Word width)
+    (locals globals : VarName → Option (PanValue (Word width)))
+    (domain : PanMemoryDomain (Word width))
+    (memory : PanFlatMemory (Word width)) :
+    Prog (Word width) →
+      Option ((VarName → Option (PanValue (Word width))) ×
+        (VarName → Option (PanValue (Word width))) ×
+        PanFlatMemory (Word width) × List (PanValue (Word width)))
+  | .skip => some (locals, globals, memory, [])
+  | .dec name shape value body => do
+      let value ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord value
+      if panShapeMatches (panValueShape structs value) shape then
+        let oldValue := locals name
+        let result ← evalPanRiscVFlatProg structs baseAddress topAddress bytesInWord
+          (updatePanValueMap locals name value) globals domain memory body
+        pure (restorePanValueLocal result.1 name oldValue,
+          result.2.1, result.2.2.1, result.2.2.2)
+      else none
+  | .assign .local name value => do
+      let value ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord value
+      pure (updatePanValueMap locals name value, globals, memory, [])
+  | .assign .global name value => do
+      let value ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord value
+      pure (locals, updatePanValueMap globals name value, memory, [])
+  | .store address value => do
+      let address ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord address
+      let value ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord value
+      let .word address := address | none
+      let memory ← panFlatStore domain memory bytesInWord address value
+      pure (locals, globals, memory, [])
+  | .store32 address value => do
+      let address ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord address
+      let value ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord value
+      let .word address := address | none
+      let .word value := value | none
+      let memory ← panRiscVStore32 domain memory bytesInWord address value
+      pure (locals, globals, memory, [])
+  | .storeByte address value => do
+      let address ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord address
+      let value ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord value
+      let .word address := address | none
+      let .word value := value | none
+      let memory ← panRiscVStoreByte domain memory bytesInWord address value
+      pure (locals, globals, memory, [])
+  | .seq first second => do
+      let result ← evalPanRiscVFlatProg structs baseAddress topAddress bytesInWord
+        locals globals domain memory first
+      if result.2.2.2.isEmpty then
+        evalPanRiscVFlatProg structs baseAddress topAddress bytesInWord
+          result.1 result.2.1 domain result.2.2.1 second
+      else pure result
+  | .ite condition thenBranch elseBranch => do
+      let condition ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord condition
+      let .word condition := condition | none
+      if condition != 0 then
+        evalPanRiscVFlatProg structs baseAddress topAddress bytesInWord
+          locals globals domain memory thenBranch
+      else
+        evalPanRiscVFlatProg structs baseAddress topAddress bytesInWord
+          locals globals domain memory elseBranch
+  | .return value => do
+      let value ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord value
+      pure (locals, globals, memory, [value])
+  | .tick | .annot _ _ => some (locals, globals, memory, [])
+  | _ => none
+termination_by program => sizeOf program
+
+def evalPanRiscVFlatResult [NeZero width]
+    (structs : StructContext)
+    (baseAddress topAddress bytesInWord : Word width)
+    (locals globals : VarName → Option (PanValue (Word width)))
+    (domain : PanMemoryDomain (Word width))
+    (memory : PanFlatMemory (Word width)) (program : Prog (Word width)) :
+    Option (List (PanValue (Word width))) :=
+  (evalPanRiscVFlatProg structs baseAddress topAddress bytesInWord
+    locals globals domain memory program).map (fun result => result.2.2.2)
+
 end Flapjack.RiscV

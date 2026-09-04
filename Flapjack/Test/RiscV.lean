@@ -5,42 +5,6 @@ namespace Flapjack
 
 open RiscV
 
-def riscvFlatTestDomain : PanMemoryDomain (RiscV.Word 64) :=
-  fun address => address == 8
-
-def riscvFlatTestMemory : PanFlatMemory (RiscV.Word 64) :=
-  fun address =>
-    if address == 8 then some (BitVec.ofNat 64 67305985) else none
-
-def riscvFlatZeroMemory : PanFlatMemory (RiscV.Word 64) :=
-  fun address => if address == 8 then some 0 else none
-
-example :
-    panRiscVReadByte riscvFlatTestDomain riscvFlatTestMemory
-      (BitVec.ofNat 64 8) (BitVec.ofNat 64 9) =
-      some (BitVec.ofNat 64 2) := by
-  native_decide
-
-example :
-    panRiscVRead32 riscvFlatTestDomain riscvFlatTestMemory
-      (BitVec.ofNat 64 8) (BitVec.ofNat 64 8) =
-      some (BitVec.ofNat 64 67305985) := by
-  native_decide
-
-example :
-    (do
-      let memory ← panRiscVStore32 riscvFlatTestDomain riscvFlatZeroMemory
-        (BitVec.ofNat 64 8) (BitVec.ofNat 64 8) (BitVec.ofNat 64 67305985)
-      panRiscVRead32 riscvFlatTestDomain memory
-        (BitVec.ofNat 64 8) (BitVec.ofNat 64 8)) =
-      some (BitVec.ofNat 64 67305985) := by
-  native_decide
-
-example :
-    panRiscVRead32 riscvFlatTestDomain riscvFlatTestMemory
-      (BitVec.ofNat 64 8) (BitVec.ofNat 64 2) = none := by
-  native_decide
-
 example [NeZero width] :
     Flapjack.RiscV.compileWordAdd (width := width) 1 2 3 =
       some [.add 1 2 3] := by

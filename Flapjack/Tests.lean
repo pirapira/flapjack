@@ -11,6 +11,7 @@ import Flapjack.RiscV.Model
 import Flapjack.Loop
 import Flapjack.CrepToLoop
 import Flapjack.LoopAnalysis
+import Flapjack.LoopSemantics
 import Flapjack.Word
 import Flapjack.RiscV.Backend
 
@@ -750,5 +751,28 @@ example :
         (.return (.panOp .mul [.const (α := Nat) 6, .const 7])) := by
   exact compile_pan_mul_const_preserves_semantics crepContext 6 7
     (fun _ => none) (fun _ => none)
+
+def emptyLoopState : LoopState Nat :=
+  { locals := fun _ => none, globals := fun _ => none, memory := fun _ => none }
+
+def loopResultValues : LoopResult α → List α
+  | .returned _ values => values
+  | _ => []
+
+example :
+    evalLoopExp emptyLoopState
+      (.op .add [.const 6, .crepOp .mul [.const 5, .const 6]]) = some 36 := by
+  native_decide
+
+example :
+    (evalLoopProg 10 emptyLoopState
+      (.seq (.assign 0 (.const 42)) (.return [0]))).map loopResultValues =
+      some [42] := by
+  native_decide
+
+example :
+    (evalLoopProg 10 emptyLoopState
+      (.loop [] (.break 0) [])).map loopResultValues = some [] := by
+  native_decide
 
 end Flapjack

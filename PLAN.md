@@ -148,6 +148,8 @@ definitions, pass ordering, examples, and proof obligations.
   the base RV32I/RV64I target slice.
 - [x] Extend Pancake/Crepe executable expression semantics with `PanOp.mul` and
   prove constant multiplication preservation through `pan_to_crep`.
+- [x] Add a fuel-bounded Loop state/control-result evaluator for assignments,
+  memory, returns, break/continue, conditionals, and loop execution.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Add a structurally recursive loop evaluator and loop preservation theorem.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem

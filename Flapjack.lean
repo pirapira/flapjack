@@ -14,6 +14,7 @@ import Flapjack.RiscV.Backend
 import Flapjack.Loop
 import Flapjack.CrepToLoop
 import Flapjack.LoopAnalysis
+import Flapjack.LoopSemantics
 import Flapjack.Word
 
 /-!

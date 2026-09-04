@@ -68,6 +68,17 @@ def evalLoopShift [ShiftLeft α] [ShiftRight α]
   | .lsr => some (ShiftRight.shiftRight left right)
   | .asr | .ror => none
 
+def evalLoopCmp [BEq α] [OfNat α 0] [OfNat α 1] [AndOp α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (operator : Cmp) (left right : α) : α :=
+  match operator with
+  | .equal => if left == right then 1 else 0
+  | .notEqual => if left == right then 0 else 1
+  | .lower | .less => if left < right then 1 else 0
+  | .notLower | .notLess => if left < right then 0 else 1
+  | .test => if AndOp.and left right == 0 then 1 else 0
+  | .notTest => if AndOp.and left right == 0 then 0 else 1
+
 def evalLoopExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]
@@ -90,12 +101,7 @@ def evalLoopExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .cmp operator left right => do
       let left ← evalLoopExp state left
       let right ← evalLoopExp state right
-      match operator with
-      | .equal => pure (if left == right then 1 else 0)
-      | .notEqual => pure (if left == right then 0 else 1)
-      | .lower => pure (if left < right then 1 else 0)
-      | .notLower => pure (if left < right then 0 else 1)
-      | _ => none
+      pure (evalLoopCmp operator left right)
   | .shift operator left right => do
       let left ← evalLoopExp state left
       let right ← evalLoopExp state right
@@ -402,6 +408,17 @@ theorem evalLoopProg_assign [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     evalLoopProg 1 state (.assign name expression) =
       some (.normal { state with locals := updateLoopLocal state.locals name value }) := by
   simp [evalLoopProg, hvalue]
+
+theorem evalLoopExp_cmp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (operator : Cmp) (left right : LoopExp α)
+    (leftValue rightValue : α)
+    (hleft : evalLoopExp state left = some leftValue)
+    (hright : evalLoopExp state right = some rightValue) :
+    evalLoopExp state (.cmp operator left right) =
+      some (evalLoopCmp operator leftValue rightValue) := by
+  simp [evalLoopExp, hleft, hright]
 
 theorem evalLoopProg_load32 [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

@@ -232,8 +232,8 @@ definitions, pass ordering, examples, and proof obligations.
   remaining operations and control-flow invariants.
 - [x] Establish reusable Loop state-transition lemmas for the modeled
   assignment, load/store, global, return, and control-result cases.
-- [x] Extend Loop condition evaluation to all comparison constructors,
-  including test/not-test, while retaining target-level ordering semantics.
+- [x] Extend Loop condition and expression evaluation to all comparison
+  constructors, including HOL's zero-test convention for test/not-test.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

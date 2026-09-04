@@ -1376,6 +1376,18 @@ example : evalLoopCondition .test (5 : Nat) 2 = some true := by
 example : evalLoopCondition .notTest (5 : Nat) 1 = some true := by
   native_decide
 
+example : evalLoopExp emptyLoopState (.cmp .less (.const (3 : Nat)) (.const 5)) =
+    some 1 := by
+  native_decide
+
+example : evalLoopExp emptyLoopState (.cmp .test (.const (5 : Nat)) (.const 2)) =
+    some 1 := by
+  native_decide
+
+example : evalLoopExp emptyLoopState (.cmp .notTest (.const (5 : Nat)) (.const 1)) =
+    some 1 := by
+  native_decide
+
 example :
     (evalLoopProg 10 emptyLoopState
       (.seq (.assign 0 (.const 42)) (.return [0]))).map loopResultValues =

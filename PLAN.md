@@ -386,6 +386,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Extend direct source memory semantics with structural `if` execution.
 - [x] Add source equality-condition evaluation for local variables and a
   conditional-program regression.
+- [x] Extend memory-backed source equality conditions through fuel-bounded
+  conditional execution and add a load-based regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

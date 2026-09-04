@@ -64,6 +64,9 @@ The initial explicit RISC-V call convention is in
 [`Flapjack/RiscV/Calls.lean`](Flapjack/RiscV/Calls.lean); function-label
 linking and label resolution are in
 [`Flapjack/RiscV/Link.lean`](Flapjack/RiscV/Link.lean).
+The linker now performs a provisional signature/layout pass followed by a
+label-resolving code-generation pass for handler-free Word calls, and the
+tests execute a linked multi-function image through `JALR`.
 The composed pipeline now exposes its linked function table on
 `FlapjackRiscVResult.linkedFunctions`.
 

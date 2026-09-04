@@ -905,6 +905,36 @@ example :
         (fun state => RiscV.readRegister state 4) = some 42 := by
   native_decide
 
+def linkedWordCallFunctions :
+    List (Nat × List Nat × WordProg (RiscV.Word 64)) :=
+  [(7, [2], .return 0 [2]),
+   (8, [6], .seq
+      (.call (some ([4], [])) (some 7) [6] none)
+      (.return 0 [4]))]
+
+example :
+    RiscV.linkWordFunctions (0 : RiscV.Word 64) linkedWordCallFunctions =
+      some [
+        (7, 0, [2], [.jalr 0 1 0], [2]),
+        (8, 4, [6],
+          [.addi 2 6 0, .addi 31 0 0, .jalr 1 31 0,
+            .addi 4 2 0, .jalr 0 1 0], [4])] := by
+  simp [RiscV.linkWordFunctions, RiscV.wordFunctionTargetSignatures,
+    RiscV.compileLinkedWordFunction, RiscV.wordFunctionReturnNames,
+    RiscV.wordFunctionToRiscVWithCalls, RiscV.wordCallToRiscV,
+    RiscV.wordRegisterMoves, RiscV.lookupWordCallTarget,
+    RiscV.registerOfNat, RiscV.linkRiscVFunctions,
+    RiscV.linkRiscVFunctionsAt, linkedWordCallFunctions]
+
+def linkedWordCallImage : List (RiscV.Instruction 64) :=
+  [.jalr 0 1 0, .addi 2 6 0, .addi 31 0 0, .jalr 1 31 0,
+    .addi 4 2 0, .jalr 0 1 0]
+
+example :
+    RiscV.executeFunctionAt 50 (0 : RiscV.Word 64) 4 20 [6]
+      linkedWordCallImage [4] [41] (RiscV.zeroState 64) = some [41] := by
+  native_decide
+
 example :
     (RiscV.evalWordFunctionWithCalls
       [(7, [2], (.return 0 [2] : WordProg (RiscV.Word 64)))] 10

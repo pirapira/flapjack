@@ -152,6 +152,8 @@ definitions, pass ordering, examples, and proof obligations.
   memory, returns, break/continue, conditionals, and loop execution.
 - [x] Prove the first Crepe-to-Loop semantic bridge for constant return
   lowering through the generated temporary assignment.
+- [x] Extend that bridge through Crepe `mul`/Loop `longMul` expansion and
+  preserve the returned product.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Add a structurally recursive loop evaluator and loop preservation theorem.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem

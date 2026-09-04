@@ -777,4 +777,12 @@ example :
         loopResultValues = some [7] := by
   exact evalLoopCompile_return_const loopContext [] emptyLoopState 7
 
+example :
+    Option.map loopResultValues
+      (evalLoopProg 20 emptyLoopState
+      (loopCompileProg loopContext []
+          (.return [(.crepOp .mul [.const (α := Nat) 6, .const 7])]))) =
+      some [42] := by
+  native_decide
+
 end Flapjack

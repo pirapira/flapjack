@@ -382,6 +382,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Integrate fuel-bounded source memory semantics for `while` loops, with
   verified immediate termination for false conditions.
 - [x] Extend direct source memory semantics with structural `if` execution.
+- [x] Add source equality-condition evaluation for local variables and a
+  conditional-program regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

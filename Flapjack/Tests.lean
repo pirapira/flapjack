@@ -1725,4 +1725,17 @@ example :
       some [42] := by
   native_decide
 
+example :
+    evalPanCondition (α := Nat)
+        (fun name => if name == "x" then some 7 else none)
+        (.cmp .equal (.var .local "x") (.const 7)) = some true := by
+  native_decide
+
+example :
+    evalPanProg (α := Nat)
+        (fun name => if name == "x" then some 7 else none)
+        (.ite (.cmp .equal (.var .local "x") (.const 7))
+          (.return (.const 1)) (.return (.const 0))) = some [1] := by
+  native_decide
+
 end Flapjack

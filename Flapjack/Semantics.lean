@@ -27,6 +27,20 @@ def evalPanExp [Add α] [Mul α]
   | _ => none
 termination_by structural expression
 
+def evalPanCondition [BEq α] [OfNat α 0] [Add α] [Mul α]
+    (locals : VarName → Option α) : Exp α → Option Bool
+  | .cmp .equal left right => do
+      let left ← evalPanExp locals left
+      let right ← evalPanExp locals right
+      pure (left == right)
+  | .cmp .notEqual left right => do
+      let left ← evalPanExp locals left
+      let right ← evalPanExp locals right
+      pure (left != right)
+  | expression => do
+      let value ← evalPanExp locals expression
+      pure (value != 0)
+
 def evalCrepExp [Add α] [Mul α]
     (locals : Nat → Option α) (expression : CrepExp α) : Option α :=
   match expression with
@@ -59,9 +73,9 @@ def evalPanProg [BEq α] [OfNat α 0] [Add α] [Mul α]
       let firstResult ← evalPanProg locals first
       if firstResult.isEmpty then evalPanProg locals second else pure firstResult
   | .ite condition thenBranch elseBranch => do
-      let condition ← evalPanExp locals condition
-      if condition == 0 then evalPanProg locals elseBranch
-      else evalPanProg locals thenBranch
+      let condition ← evalPanCondition locals condition
+      if condition then evalPanProg locals thenBranch
+      else evalPanProg locals elseBranch
   | _ => none
 
 def evalCrepProg [Add α] [Mul α] (locals : Nat → Option α) : CrepProg α → Option (List α)

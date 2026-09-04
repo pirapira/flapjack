@@ -48,6 +48,9 @@ The initial RISC-V target vocabulary, register/memory primitives, and
 The model also includes HOL-aligned unsigned `DIVU`/`REMU` transitions,
 including the architectural divide-by-zero results; Word division selects
 `DIVU` in the current target slice.
+The Word arithmetic selector also includes the HOL two-instruction `LongMul`
+lowering (`MULHU` followed by `MUL`) and the six-instruction `AddCarry`
+lowering.
 The first Word-to-RISC-V selector, PC-aware code runner, and soundness lemmas
 for the supported straight-line and register/zero-conditional fragments are
 in [`Flapjack/RiscV/Backend.lean`](Flapjack/RiscV/Backend.lean). Equality,

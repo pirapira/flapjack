@@ -59,12 +59,7 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
 def wordArithToInstruction [NeZero width] :
     WordArith → Option (Instruction width)
   | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
-      if destinationLeft = destinationRight then do
-        let destination ← registerOfNat destinationLeft
-        let sourceLeft ← registerOfNat sourceLeft
-        let sourceRight ← registerOfNat sourceRight
-        pure (.mul destination sourceLeft sourceRight)
-      else none
+      none
   | .longDiv _ _ _ _ _ => none
   | .addCarry _ _ _ _ _ => none
   | .div destination dividend divisor => do
@@ -75,6 +70,13 @@ def wordArithToInstruction [NeZero width] :
 
 def wordArithToInstructions [NeZero width] :
     WordArith → Option (List (Instruction width))
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight => do
+      let destinationLeft ← registerOfNat destinationLeft
+      let destinationRight ← registerOfNat destinationRight
+      let sourceLeft ← registerOfNat sourceLeft
+      let sourceRight ← registerOfNat sourceRight
+      pure [.mulHU destinationLeft sourceLeft sourceRight,
+        .mul destinationRight sourceLeft sourceRight]
   | .addCarry destination resultCarry sourceLeft sourceRight carryIn => do
       if [destination, resultCarry, sourceLeft, sourceRight, carryIn].any (· == 31) then
         none
@@ -654,12 +656,17 @@ theorem evalWordFunction_return_const [NeZero width] (state : State width)
 
 theorem wordArithToInstruction_longMul [NeZero width] :
     wordArithToInstruction (width := width) (.longMul 1 1 2 3) =
-      some (.mul 1 2 3) := by
-  simp [wordArithToInstruction, registerOfNat]
+      none := by
+  simp [wordArithToInstruction]
+
+theorem wordArithToInstructions_longMul [NeZero width] :
+    wordArithToInstructions (width := width) (.longMul 1 2 3 4) =
+      some [.mulHU 1 3 4, .mul 2 3 4] := by
+  simp [wordArithToInstructions, registerOfNat]
 
 theorem compileWordLongMul_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.arith (.longMul 1 1 2 3))) =
-      some (execute state (.mul 1 2 3)) := by
+      some (executeInstructions state [.mulHU 1 2 3, .mul 1 2 3]) := by
   simp [evalWordProg, wordArithToInstructions, wordArithToInstruction,
     executeInstructions, registerOfNat]
 
@@ -719,7 +726,7 @@ example [NeZero width] :
 
 example [NeZero width] :
     wordInstToInstruction (width := width) (.arith (.longMul 1 1 2 3)) =
-      some (.mul 1 2 3) := by
+      none := by
   simp [wordInstToInstruction, wordArithToInstruction, registerOfNat]
 
 end Flapjack.RiscV

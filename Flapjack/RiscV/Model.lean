@@ -107,6 +107,7 @@ inductive Instruction (width : Nat) where
   | xor (destination sourceLeft sourceRight : Fin 32)
   | addi (destination source : Fin 32) (immediate : Word width)
   | mul (destination sourceLeft sourceRight : Fin 32)
+  | mulHU (destination sourceLeft sourceRight : Fin 32)
   | sll (destination sourceLeft sourceRight : Fin 32)
   | srl (destination sourceLeft sourceRight : Fin 32)
   | sra (destination sourceLeft sourceRight : Fin 32)
@@ -261,6 +262,11 @@ def execute (state : State width) : Instruction width → State width
   | .mul destination sourceLeft sourceRight =>
       writeRegister { state with pc := nextPc state } destination
         (readRegister state sourceLeft * readRegister state sourceRight)
+  | .mulHU destination sourceLeft sourceRight =>
+      writeRegister { state with pc := nextPc state } destination
+        (BitVec.ofNat width
+          ((readRegister state sourceLeft).toNat *
+            (readRegister state sourceRight).toNat / 2 ^ width))
   | .sll destination sourceLeft sourceRight =>
       writeRegister { state with pc := nextPc state } destination
         (BitVec.shiftLeft (readRegister state sourceLeft)
@@ -375,6 +381,15 @@ theorem execute_sltu (state : State width) (destination sourceLeft sourceRight :
     readRegister (execute state (.sltu destination sourceLeft sourceRight)) destination =
       if destination = 0 then readRegister state destination
       else if readRegister state sourceLeft < readRegister state sourceRight then 1 else 0 := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, readRegister, h]
+
+theorem execute_mulHU (state : State width) (destination sourceLeft sourceRight : Fin 32) :
+    readRegister (execute state (.mulHU destination sourceLeft sourceRight)) destination =
+      if destination = 0 then readRegister state destination
+      else BitVec.ofNat width
+        ((readRegister state sourceLeft).toNat *
+          (readRegister state sourceRight).toNat / 2 ^ width) := by
   by_cases h : destination = 0 <;>
     simp [execute, writeRegister, readRegister, h]
 

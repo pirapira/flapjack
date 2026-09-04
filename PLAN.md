@@ -230,6 +230,8 @@ definitions, pass ordering, examples, and proof obligations.
   behavior, and select `DIVU` for Word division.
 - [x] Port the HOL RISC-V `AddCarry` lowering through Word instruction
   selection and execution, including its reserved `x31` scratch contract.
+- [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
+  multiplication (`MULHU`) followed by low-half multiplication (`MUL`).
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [x] Establish reusable Loop state-transition lemmas for the modeled

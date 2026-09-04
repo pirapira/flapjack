@@ -51,8 +51,9 @@ instructions are still explicitly partial. Function-level conditionals with
 matching branch return layouts now cross this artifact boundary. The HOL notice is in
 [`Flapjack/RiscV/COPYRIGHT`](Flapjack/RiscV/COPYRIGHT).
 The selector’s function artifact records both emitted instructions and return
-registers for the supported straight-line fragment, and the pipeline exposes
-an end-to-end Pancake-to-artifact wrapper for that fragment.
+registers for the supported straight-line fragment. `executeFunction` in the
+backend initializes parameter registers and collects return registers; the
+pipeline exposes an end-to-end Pancake-to-artifact wrapper for that fragment.
 
 Build it with:
 

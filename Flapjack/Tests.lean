@@ -827,6 +827,11 @@ example :
   native_decide
 
 example :
+    RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]
+      [.add 5 2 3] [5] [7, 8] (RiscV.zeroState 64) = some [15] := by
+  exact RiscV.executeFunction_add
+
+example :
     let result := compileFlapjackRiscV (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
       [.function

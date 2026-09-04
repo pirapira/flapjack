@@ -164,11 +164,30 @@ def executeCode [NeZero width] :
         | some instruction => executeCode fuel start code (execute state instruction)
         | none => if index = code.length then some state else none
 
+def executeFunction [NeZero width]
+    (fuel : Nat) (start : Word width)
+    (parameters : List (Fin 32)) (code : List (Instruction width))
+    (returns : List (Fin 32)) (arguments : List (Word width))
+    (state : State width) : Option (List (Word width)) :=
+  if parameters.length != arguments.length then none
+  else
+    let initialized :=
+      (parameters.zip arguments).foldl
+        (fun state (register, value) => writeRegister state register value)
+        { state with pc := start }
+    (executeCode fuel start code initialized).map
+      (fun state => returns.map (readRegister state))
+
 theorem executeCode_conditional_equal :
     (executeCode 10 (0 : Word 32)
       [.branchNe 1 2 (BitVec.ofNat 32 12),
         .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2]
       (zeroState 32)).map (fun state => readRegister state 3) = some 1 := by
+  native_decide
+
+theorem executeFunction_add :
+    executeFunction 10 (0 : Word 64) [2, 3] [.add 5 2 3] [5] [7, 8]
+      (zeroState 64) = some [15] := by
   native_decide
 
 theorem executeCode_conditional_notEqual :

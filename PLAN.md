@@ -59,7 +59,10 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port nested-recursion local/global expression variable-use helpers.
 - [x] Port static-checker data types, structural shape validation, and
   declaration-level shape validation.
+- [x] Port the Crepe IR and executable expression lowering used by
+  `pan_to_crep`.
 - [ ] Port full expression/program checking and diagnostics.
+- [ ] Port statement lowering and the first pass-level correctness theorem.
 
 ## First implementation slice
 
@@ -70,7 +73,9 @@ port the nested-recursion measure and variable-use helpers, then the
 static-checker data types and shape-context operations from
 `panStaticScript.sml`, followed by a small executable checker. The static
 data/context layer and expression variable-use helpers are now implemented;
-full checking remains the next increment.
+full checking and statement lowering remain the next increments. The Crepe IR
+and expression-lowering foundation is now implemented in `Pancake/Crepe.lean`
+and `Pancake/PanToCrep.lean`.
 
 ## Verification workflow
 

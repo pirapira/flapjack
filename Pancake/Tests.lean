@@ -1,5 +1,6 @@
 import Pancake.Language
 import Pancake.Static
+import Pancake.PanToCrep
 
 namespace Pancake
 
@@ -49,5 +50,32 @@ example : validateDecl pairContext (.decl .one "answer" (.const 42)) = true := b
 
 example : validateDecl pairContext (.decl (.named "Missing") "bad" (.const 0)) = false := by
   native_decide
+
+def crepContext : CompileContext Nat :=
+  { vars := [("pair", (.comb [.one, .one], [0, 1]))], maxVar := 1, bytesInWord := 1 }
+
+example :
+    compileExp crepContext (Exp.var .local "pair") =
+      ([.var 0, .var 1], .comb [.one, .one]) := by
+  simp [compileExp, crepContext, lookupInfo]
+
+example :
+    compileExp crepContext (Exp.rField 1 (Exp.var .local "pair")) =
+      ([.var 1], .one) := by
+  simp [compileExp, compileField, crepContext, lookupInfo]
+
+example :
+    compileExp crepContext (Exp.const (α := Nat) 7) = ([.const 7], .one) := by
+  simp [compileExp]
+
+example :
+    loadShape (0 : Nat) 4 2 (.var 3) =
+      [.load (.var 3), .load (.op .add [.var 3, .const 4])] := by
+  simp [loadShape]
+
+example :
+    cexpHeads ([ [.var 0], [.var 1] ] : List (List (CrepExp Nat))) =
+      some [.var 0, .var 1] := by
+  rfl
 
 end Pancake

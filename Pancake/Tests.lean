@@ -222,8 +222,16 @@ example :
 
 example :
     compileProg callContext (.raise "E" (.const (α := Nat) 0)) =
-      .raise 9 := by
-  simp [compileProg, callContext, crepContext, lookupInfo]
+      .seq (.dec 2 (.const 0) (.seq (.storeGlob 0 (.var 2)) .skip)) (.raise 9) := by
+  simp [compileProg, compileExp, freshNames, nestedDecs, storeGlobals, crepNestedSeq,
+    callContext, crepContext, lookupInfo]
+
+example :
+    compileProg assignmentContext
+      (.primitive "x" .addCarry [.const (α := Nat) 3]) =
+      .dec 1 (.const 3) (.primitive [0] .addCarry [1]) := by
+  simp [compileProg, compileExp, compileArgs, freshNames, nestedDecs,
+    assignmentContext, lookupInfo]
 
 example :
     evalCrepProg (fun _ => none) (compileProg crepContext (.return (.const (α := Nat) 7))) =

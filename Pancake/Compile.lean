@@ -22,6 +22,9 @@ termination_by structural expressions
 def allocatedNames (context : CompileContext α) (shape : Shape) : List Nat :=
   (List.range (Shape.shapeSize shape)).map (fun offset => context.maxVar + 1 + offset)
 
+def freshNames (context : CompileContext α) (count start : Nat) : List Nat :=
+  (List.range count).map (fun offset => context.maxVar + start + offset)
+
 def functionReturnNames (context : CompileContext α) (function : FunName) : List Nat :=
   match lookupInfo function context.functions with
   | some (_, shape) => allocatedNames context shape
@@ -72,13 +75,23 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
           else .skip
       | _, _ => .skip
   | .assign .global _ _ => .skip
-  | .primitive name operator _ =>
+  | .primitive name operator arguments =>
       match lookupInfo name context.vars with
-      | some (_, names) => .primitive names operator []
+      | some (_, names) =>
+          let compiledArgs := compileArgs context arguments
+          let temporaries := freshNames context compiledArgs.length 1
+          nestedDecs temporaries compiledArgs (.primitive names operator temporaries)
       | none => .skip
   | .store address value =>
       match compileExp context address, compileExp context value with
-      | (address :: _, _), (value :: _, _) => .store address value
+      | (address :: _, _), (values, shape) =>
+          let addressTemporary := context.maxVar + 1
+          let temporaries := freshNames context values.length 2
+          if values.length = Shape.shapeSize shape then
+            nestedDecs (addressTemporary :: temporaries) (address :: values)
+              (crepNestedSeq (stores (.var addressTemporary) (temporaries.map .var)
+                0 context.bytesInWord))
+          else .skip
       | _, _ => .skip
   | .store32 address value =>
       match compileExp context address, compileExp context value with
@@ -126,9 +139,18 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
       nestedDecs names (names.map (fun _ => .const 0))
         (.seq call (compileProg nextContext body))
   | .extCall _ _ _ _ _ => .skip
-  | .raise exception _ =>
+  | .raise exception value =>
       match lookupInfo exception context.exceptions with
-      | some code => .raise code
+      | some code =>
+          let compiled := compileExp context value
+          let temporaries := freshNames context compiled.1.length 1
+          if compiled.1.length = Shape.shapeSize compiled.2 then
+            .seq
+              (nestedDecs temporaries compiled.1
+                (crepNestedSeq (storeGlobals 0 context.bytesInWord
+                  (temporaries.map .var))))
+              (.raise code)
+          else .skip
       | none => .skip
   | .return value => .return (compileExp context value).1
   | .shMemLoad _ _ _ _ => .skip

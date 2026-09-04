@@ -206,6 +206,25 @@ theorem pipelineHandler_source_semantics :
         | _ => []) = some [BitVec.ofNat 64 7] := by
   native_decide
 
+def pipelineFfiHandler :
+    FunName → RiscV.Word 64 → RiscV.Word 64 → RiscV.Word 64 → RiscV.Word 64 →
+      (VarName → Option (RiscV.Word 64)) →
+      Option (VarName → Option (RiscV.Word 64)) :=
+  fun function configuration _ array _ locals =>
+    if function == "inc" then
+      some (updatePanLocal locals "result" (configuration + array + 1))
+    else none
+
+def pipelineFfiSource : Prog (RiscV.Word 64) :=
+  .extCall "inc"
+    (.const (BitVec.ofNat 64 41)) (.const (BitVec.ofNat 64 0))
+    (.const (BitVec.ofNat 64 0)) (.const (BitVec.ofNat 64 0))
+
+theorem pipelineFfi_source_semantics :
+    (evalPanFfiProg pipelineFfiHandler (fun _ => none) pipelineFfiSource).map
+      (fun locals => locals "result") = some (some (BitVec.ofNat 64 42)) := by
+  native_decide
+
 theorem pipelineCall_source_word_machine_agreement :
     (evalPanProgWithCalls pipelineCallSourceFunctions 20 (fun _ => none)
       pipelineCallSourceMain).map (fun result => result.2) =

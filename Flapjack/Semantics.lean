@@ -256,6 +256,44 @@ mutual
     termination_by fuel _ _ => fuel
 end
 
+/-!
+The source-level foreign-call boundary.  The host handler is deliberately an
+argument of the evaluator: Pancake's FFI effects are not determined by the
+pure compiler, so the semantic theorem must quantify over this environment.
+-/
+def evalPanExtCall [Add α] [Mul α]
+    (handler : FunName → α → α → α → α →
+      (VarName → Option α) → Option (VarName → Option α))
+    (locals : VarName → Option α) (function : FunName)
+    (configuration configurationLength array arrayLength : Exp α) :
+    Option (VarName → Option α) := do
+  let configuration ← evalPanExp locals configuration
+  let configurationLength ← evalPanExp locals configurationLength
+  let array ← evalPanExp locals array
+  let arrayLength ← evalPanExp locals arrayLength
+  handler function configuration configurationLength array arrayLength locals
+
+def evalPanFfiProg [Add α] [Mul α]
+    (handler : FunName → α → α → α → α →
+      (VarName → Option α) → Option (VarName → Option α))
+    (locals : VarName → Option α) : Prog α → Option (VarName → Option α)
+  | .extCall function configuration configurationLength array arrayLength =>
+      evalPanExtCall handler locals function configuration configurationLength array arrayLength
+  | .seq first second => do
+      let locals ← evalPanFfiProg handler locals first
+      evalPanFfiProg handler locals second
+  | _ => none
+
+theorem evalPanExtCall_single [Add α] [Mul α]
+    (handler : FunName → α → α → α → α →
+      (VarName → Option α) → Option (VarName → Option α))
+    (locals : VarName → Option α) (function : FunName)
+    (configuration configurationLength array arrayLength : Exp α) :
+    evalPanFfiProg handler locals
+      (.extCall function configuration configurationLength array arrayLength) =
+      evalPanExtCall handler locals function configuration configurationLength array arrayLength := by
+  simp [evalPanFfiProg]
+
 def evalCrepStateProg [Add α] [Mul α] (locals : Nat → Option α) :
     CrepProg α → Option ((Nat → Option α) × List α)
   | .skip => some (locals, [])

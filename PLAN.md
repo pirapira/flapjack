@@ -291,6 +291,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add handler-aware source control-result semantics for the supported
   expression/call fragment, including exception matching, handler-variable
   binding, and a concrete raised-call regression.
+- [x] Add an explicit source-level FFI handler boundary with evaluated
+  arguments, caller-local state threading, and a concrete host-update
+  regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

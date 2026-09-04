@@ -101,6 +101,13 @@ theorem compileWordAdd_sound [NeZero width] (state : State width) :
   simp [evalWordProg, evalWordExp, executeInstructions, registerOfNat,
     execute, writeRegister, nextPc]
 
+theorem compileWordAdd_zeroState [NeZero width] :
+    evalWordProg (zeroState width)
+        (.assign 1 (.const (7 : Word width))) =
+      some (executeInstructions (zeroState width) [.addi 1 0 7]) := by
+  simp [evalWordProg, evalWordExp, executeInstructions, registerOfNat,
+    execute, writeRegister, nextPc, ZeroRegister, zeroState, readRegister]
+
 def compileWordAdd [NeZero width] (destination left right : Nat) :
     Option (List (Instruction width)) :=
   wordProgToRiscV (.assign destination (.op .add [.var left, .var right]))

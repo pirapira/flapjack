@@ -476,4 +476,8 @@ example [NeZero width] (state : Flapjack.RiscV.State width)
     Flapjack.RiscV.registerOfNat, Flapjack.RiscV.execute,
     Flapjack.RiscV.writeRegister, Flapjack.RiscV.nextPc, zero]
 
+example [NeZero width] :
+    Flapjack.RiscV.ZeroRegister (Flapjack.RiscV.zeroState width) := by
+  exact Flapjack.RiscV.zeroState_zeroRegister
+
 end Flapjack

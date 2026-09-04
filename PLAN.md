@@ -102,6 +102,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add a partial Word-to-RISC-V instruction selector for constants, moves,
   and the register-register ADD/SUB/AND/OR/XOR fragment, with a straight-line
   semantic soundness theorem.
+- [x] Make the RISC-V x0 invariant explicit and prove that the instruction
+  transition preserves it.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

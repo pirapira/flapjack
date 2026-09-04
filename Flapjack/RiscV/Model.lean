@@ -120,6 +120,9 @@ def aligned (address : Word width) (alignment : Nat) : Bool :=
 def readRegister (state : State width) (register : Fin 32) : Word width :=
   state.registers register
 
+def ZeroRegister (state : State width) : Prop :=
+  readRegister state 0 = 0
+
 def writeRegister (state : State width) (register : Fin 32) (value : Word width) : State width :=
   if register = 0 then state
   else { state with registers := fun current => if current = register then value else state.registers current }
@@ -179,5 +182,16 @@ theorem execute_addi_zero_preserved (state : State width) (source : Fin 32)
     (immediate : Word width) :
     readRegister (execute state (.addi 0 source immediate)) 0 = readRegister state 0 := by
   simp [execute, nextPc, writeRegister, readRegister]
+
+theorem execute_zeroRegister_preserved [NeZero width] (state : State width)
+    (instruction : Instruction width) (zero : ZeroRegister state) :
+    ZeroRegister (execute state instruction) := by
+  change state.registers 0 = 0 at zero
+  cases instruction <;>
+    simp [ZeroRegister, execute, nextPc, writeRegister, readRegister] <;>
+    split <;> simp_all [eq_comm]
+
+theorem zeroState_zeroRegister [NeZero width] : ZeroRegister (zeroState width) := by
+  simp [ZeroRegister, zeroState, readRegister]
 
 end Flapjack.RiscV

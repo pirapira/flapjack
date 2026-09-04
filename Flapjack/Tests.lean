@@ -1154,6 +1154,19 @@ example :
         result.1.registers 3) = some 9 := by
   native_decide
 
+example :
+    (RiscV.evalWordFunctionWithHandlers
+      [(7, [2], (.seq (.assign 4 (.const (9 : RiscV.Word 64)))
+        (.raise 4) : WordProg (RiscV.Word 64)))] 10
+      (RiscV.zeroState 64)
+      (.call (some ([3], [])) (some 7) [2]
+        (some (5, (.return 0 [5] : WordProg (RiscV.Word 64)))))).map
+        (fun result =>
+          match result with
+          | .returned state values => (RiscV.readRegister state 5, values)
+          | _ => (0, [])) = some (9, [9]) := by
+  native_decide
+
 def wordFfiTestState : RiscV.State 64 :=
   RiscV.writeRegister
     (RiscV.writeRegister

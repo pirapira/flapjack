@@ -95,6 +95,89 @@ mutual
 end
 
 /-!
+Control-result semantics for Word calls with exception handlers.  The older
+`evalWordFunctionWithCalls` API intentionally models only successful calls;
+this companion API keeps the normal/return/raise distinction needed by the
+handler-preserving `loop_to_word` lowering.
+-/
+inductive WordControlResult (width : Nat) [NeZero width] where
+  | normal (state : State width)
+  | returned (state : State width) (values : List (Word width))
+  | raised (state : State width) (exception : Word width)
+
+mutual
+  def evalWordCallWithHandlers [NeZero width]
+      (functions : List (Nat × List Nat × WordProg (Word width))) :
+      Nat → State width → Option (List Nat × List Nat) → Option Nat → List Nat →
+        Option (Nat × WordProg (Word width)) → Option (WordControlResult width)
+    | 0, _, _, _, _, _ => none
+    | fuel + 1, state, returns, target, arguments, handler => do
+        let target ← target
+        let (parameters, body) ← lookupWordFunction target functions
+        let values ← readWordRegisters state arguments
+        let calleeState ← bindWordRegisters state parameters values
+        let result ← evalWordFunctionWithHandlers functions fuel calleeState body
+        let returnedState := match result with
+          | .normal calleeState => { state with
+              memory := calleeState.memory
+              privilege := calleeState.privilege
+              mode := calleeState.mode }
+          | .returned calleeState _ => { state with
+              memory := calleeState.memory
+              privilege := calleeState.privilege
+              mode := calleeState.mode }
+          | .raised calleeState _ => { state with
+              memory := calleeState.memory
+              privilege := calleeState.privilege
+              mode := calleeState.mode }
+        match result with
+        | .normal _ => some (.normal returnedState)
+        | .returned _ values =>
+            match returns with
+            | none => some (.returned returnedState values)
+            | some (names, _) => do
+                let state ← assignWordRegisters returnedState names values
+                some (.normal state)
+        | .raised _ exception =>
+            match handler with
+            | none => some (.raised returnedState exception)
+            | some (name, handlerBody) => do
+                let name ← registerOfNat name
+                evalWordFunctionWithHandlers functions fuel
+                  (writeRegister returnedState name exception) handlerBody
+    termination_by fuel _ _ _ _ _ => fuel
+
+  def evalWordFunctionWithHandlers [NeZero width]
+      (functions : List (Nat × List Nat × WordProg (Word width))) :
+      Nat → State width → WordProg (Word width) → Option (WordControlResult width)
+    | 0, _, _ => none
+    | fuel + 1, state, .call returns target arguments handler =>
+        evalWordCallWithHandlers functions fuel state returns target arguments handler
+    | fuel + 1, state, .seq first second => do
+        let result ← evalWordFunctionWithHandlers functions fuel state first
+        match result with
+        | .normal state => evalWordFunctionWithHandlers functions fuel state second
+        | result => some result
+    | fuel + 1, state, .ite operator condition rightValue thenBranch elseBranch => do
+        let choose ← evalWordCondition state operator condition rightValue
+        if choose then evalWordFunctionWithHandlers functions fuel state thenBranch
+        else evalWordFunctionWithHandlers functions fuel state elseBranch
+    | fuel + 1, state, .raise exception => do
+        let exception ← registerOfNat exception
+        pure (.raised state (readRegister state exception))
+    | fuel + 1, state, .return _ values => do
+        let values ← values.mapM (fun name => do
+          let register ← registerOfNat name
+          pure (readRegister state register))
+        pure (.returned state values)
+    | fuel + 1, state, program => do
+        let (state, values) ← evalWordFunction state program
+        if values.isEmpty then some (.normal state)
+        else some (.returned state values)
+    termination_by fuel _ _ => fuel
+end
+
+/-!
 An explicit host boundary for Word-level foreign calls.  The compiler keeps
 the four FFI argument registers and the live-register list in the IR; the
 target model cannot determine their external effect, so the handler is part

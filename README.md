@@ -93,6 +93,9 @@ Word-level function-table call semantics are in
 That module also exposes a fuel-bounded Word FFI evaluator whose host handler
 is explicit in the semantic interface; target code generation for FFI remains
 staged until the external calling convention is fixed.
+It also exposes a control-result evaluator for handler-aware calls, making the
+normal, returned, and raised paths explicit and testing exception-handler
+resumption independently of target calling-convention lowering.
 The initial explicit RISC-V call convention is in
 [`Flapjack/RiscV/Calls.lean`](Flapjack/RiscV/Calls.lean); function-label
 linking and label resolution are in

@@ -116,6 +116,8 @@ definitions, pass ordering, examples, and proof obligations.
   semantic soundness theorem.
 - [x] Make the RISC-V x0 invariant explicit and prove that the instruction
   transition preserves it.
+- [x] Connect the composed Word pipeline to a typed, option-valued RISC-V
+  function artifact stage for the currently supported straight-line fragment.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

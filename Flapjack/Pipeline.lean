@@ -2,6 +2,7 @@ import Flapjack.PanGlobals
 import Flapjack.Compile
 import Flapjack.CrepToLoop
 import Flapjack.Word
+import Flapjack.RiscV.Backend
 
 /-!
 An executable composition of the currently ported Pancake passes.
@@ -9,8 +10,9 @@ An executable composition of the currently ported Pancake passes.
 The result keeps each intermediate representation visible so the eventual
 simulation theorem can be proved pass by pass. This composition covers the
 front-end normalization and structure/global passes, Pancake-to-Crepe,
-Crepe-to-Loop, and Loop-to-Word. Target instruction selection remains partial
-and is intentionally separate in `Flapjack.RiscV.Backend`.
+Crepe-to-Loop, and Loop-to-Word. The typed RISC-V artifact boundary is also
+exposed, while instruction selection remains partial in
+`Flapjack.RiscV.Backend`.
 -/
 
 namespace Flapjack
@@ -75,6 +77,12 @@ def pipelinePrependInitializers (initializers : List (Prog α)) :
   | declaration :: declarations =>
       declaration :: pipelinePrependInitializers initializers declarations
 
+def pipelineRiscVFunctions [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (RiscV.Word width))) :
+    List (Nat × List Nat × Option (List (RiscV.Instruction width) × List (Fin 32))) :=
+  functions.map (fun (label, parameters, body) =>
+    (label, parameters, RiscV.wordFunctionToRiscV body))
+
 structure FlapjackPipelineResult (α : Type u) where
   simplified : List (Decl α)
   structured : List (Decl α)
@@ -101,6 +109,21 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     crepe := crepe
     loop := loop
     word := word }
+
+structure FlapjackRiscVResult (width : Nat) [NeZero width] where
+  pipeline : FlapjackPipelineResult (RiscV.Word width)
+  functions : List (Nat × List Nat ×
+    Option (List (RiscV.Instruction width) × List (Fin 32)))
+
+def compileFlapjackRiscV [NeZero width] [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width)
+    (declarations : List (Decl (RiscV.Word width))) : FlapjackRiscVResult width :=
+  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  { pipeline := pipeline
+    functions := pipelineRiscVFunctions pipeline.word }
 
 theorem compileFlapjack_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (architecture : RiscV.Architecture) (bytesInWord : α) (fromNat : Nat → α) :

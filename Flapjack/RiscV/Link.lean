@@ -53,6 +53,35 @@ def wordFunctionReturnNames [NeZero width] :
           if thenReturns == elseReturns then some thenReturns else none
       | _, _ => none
   | _ => none
+  termination_by program => sizeOf program
+
+def lookupWordFunctionBody [NeZero width] (label : Nat) :
+    List (Nat × List Nat × WordProg (Word width)) →
+      Option (WordProg (Word width))
+  | [] => none
+  | (candidate, _, body) :: functions =>
+      if label == candidate then some body
+      else lookupWordFunctionBody label functions
+
+def wordFunctionReturnNamesWithCalls [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width))) :
+    WordProg (Word width) → Option (List Nat)
+  | .call (some ([], _)) (some label) _ none => do
+      let body ← lookupWordFunctionBody label functions
+      wordFunctionReturnNames body
+  | .call none (some label) _ none => do
+      let body ← lookupWordFunctionBody label functions
+      wordFunctionReturnNames body
+  | .seq first second =>
+      match wordFunctionReturnNamesWithCalls functions first with
+      | some values => some values
+      | none => wordFunctionReturnNamesWithCalls functions second
+  | .ite _ _ _ thenBranch elseBranch => do
+      let thenReturns ← wordFunctionReturnNamesWithCalls functions thenBranch
+      let elseReturns ← wordFunctionReturnNamesWithCalls functions elseBranch
+      if thenReturns == elseReturns then some thenReturns else none
+  | .return _ values => some values
+  | _ => none
 termination_by program => sizeOf program
 
 def compileLinkedWordFunction [NeZero width]
@@ -62,6 +91,21 @@ def compileLinkedWordFunction [NeZero width]
   let (label, parameters, body) := function
   let (code, returns) ← wordFunctionToRiscVWithCalls context body
   pure (label, parameters, some (code ++ [.jalr 0 1 0], returns))
+
+def wordFunctionTargetSignaturesAux [NeZero width]
+    (allFunctions : List (Nat × List Nat × WordProg (Word width))) :
+    List (Nat × List Nat × WordProg (Word width)) →
+      Option (List (Nat × Word width × List Nat × List Nat))
+  | [] => some []
+  | (label, parameters, body) :: functions => do
+      let returns ← wordFunctionReturnNamesWithCalls allFunctions body
+      let rest ← wordFunctionTargetSignaturesAux allFunctions functions
+      pure ((label, 0, parameters, returns) :: rest)
+
+def wordFunctionTargetSignaturesWithCalls [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width))) :
+      Option (List (Nat × Word width × List Nat × List Nat)) :=
+  wordFunctionTargetSignaturesAux functions functions
 
 def wordFunctionTargetSignatures [NeZero width] :
     List (Nat × List Nat × WordProg (Word width)) →
@@ -75,7 +119,7 @@ def wordFunctionTargetSignatures [NeZero width] :
 def linkWordFunctions [NeZero width]
     (start : Word width)
     (functions : List (Nat × List Nat × WordProg (Word width))) := do
-  let signatures ← wordFunctionTargetSignatures functions
+  let signatures ← wordFunctionTargetSignaturesWithCalls functions
   let provisionalContext : WordCallContext width := { targets := signatures }
   let provisional ← functions.mapM (compileLinkedWordFunction provisionalContext)
   let linked :

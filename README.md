@@ -110,11 +110,19 @@ The initial explicit RISC-V call convention is in
 linking and label resolution are in
 [`Flapjack/RiscV/Link.lean`](Flapjack/RiscV/Link.lean).
 The linker now performs a provisional signature/layout pass followed by a
-label-resolving code-generation pass for handler-free Word calls, and the
-tests execute a linked multi-function image through `JALR`.
+label-resolving code-generation pass for handler-free Word calls. Ordinary
+calls save and restore the `x1` link register through reserved
+downward-growing stack pointer `x30`, while calls without result destinations
+use a true tail call; the tests execute a linked multi-function image through
+`JALR`.
 The composed pipeline now exposes its linked function table on
 `FlapjackRiscVResult.linkedFunctions` and its call-aware table on
 `FlapjackRiscVResult.callLinkedFunctions`.
+
+The first library-level source-to-RISC-V correctness theorems are in
+[`Flapjack/Correctness.lean`](Flapjack/Correctness.lean). They include
+concrete RV64 addition, multiplication, and a declaration-call regression
+that checks the Word call semantics against execution of the linked image.
 
 Build it with:
 

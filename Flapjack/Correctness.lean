@@ -2,6 +2,7 @@ import Flapjack.Pipeline
 import Flapjack.Semantics
 import Flapjack.LoopSemantics
 import Flapjack.RiscV.Backend
+import Flapjack.WordSemantics
 
 /-!
 Initial end-to-end correctness theorem for the executable Flapjack pipeline.
@@ -116,6 +117,60 @@ def pipelineMulSource : Prog (RiscV.Word 64) :=
 theorem compiledPipelineMul_correct :
     compiledPipelineMulRun =
       evalPanProg (fun _ => none) pipelineMulSource := by
+  native_decide
+
+/-!
+The first end-to-end call regression. The source program uses a declaration
+call rather than an unbound low-level call, so the static front end allocates
+the result local and the call-aware linker can recover the callee's return
+layout. The concrete image also checks the ordinary-call link register
+save/restore sequence.
+-/
+def pipelineCallDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "id", inline := false, exported := false,
+      params := [("x", .one)],
+      body := .return (.var .local "x"), returnShape := .one },
+   .function
+    { name := "main", inline := false, exported := true,
+      params := [],
+      body := .decCall "result" .one "id"
+        [.const (BitVec.ofNat 64 41)]
+        (.return (.var .local "result")), returnShape := .one }]
+
+def pipelineCallPipeline : FlapjackRiscVResult 64 :=
+  compileFlapjackRiscV (width := 64) .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+    pipelineCallDeclarations
+
+theorem pipelineCallLinkedFunctions_available :
+    pipelineCallPipeline.callLinkedFunctions.isSome := by
+  native_decide
+
+def pipelineCallImage : List (RiscV.Instruction 64) :=
+  [.addi 4 2 0, .jalr 0 1 0,
+   .addi 3 0 0, .addi 4 0 (BitVec.ofNat 64 41),
+   .addi 2 4 0, .addi 30 30 (0 - BitVec.ofNat 64 8),
+   .storeWord 1 30, .addi 31 0 0, .jalr 1 31 0,
+   .addi 3 4 0, .loadWord 1 30,
+   .addi 30 30 (BitVec.ofNat 64 8), .addi 4 3 0,
+   .jalr 0 1 0]
+
+theorem pipelineCall_word_semantics :
+    (do
+      let (_, main) ←
+        RiscV.lookupWordFunction 2 pipelineCallPipeline.pipeline.word
+      let (_, values) ←
+        RiscV.evalWordFunctionWithCalls pipelineCallPipeline.pipeline.word
+          30 (RiscV.zeroState 64) main
+      pure values) = some [BitVec.ofNat 64 41] := by
+  native_decide
+
+theorem pipelineCall_compiled_execution :
+    RiscV.executeFunctionAt 120 (0 : RiscV.Word 64) 8 100 []
+      pipelineCallImage [4] []
+      (RiscV.writeRegister (RiscV.zeroState 64) 1 100) =
+      some [BitVec.ofNat 64 41] := by
   native_decide
 
 /-!

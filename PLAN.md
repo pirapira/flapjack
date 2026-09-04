@@ -226,6 +226,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add a two-pass Word function linker that derives return signatures,
   computes byte-addressed function layout, resolves call labels, and
   re-emits the final linked artifacts.
+- [x] Give ordinary linked calls a stack-preserved `x1` link register and
+  reserve `x30` as the downward-growing stack pointer; lower no-destination
+  calls as true tail calls.
 - [x] Expose linked RISC-V function artifacts directly from the composed
   pipeline result.
 - [x] Expose the call-aware two-pass linked artifacts alongside the original
@@ -275,6 +278,8 @@ definitions, pass ordering, examples, and proof obligations.
   assignment, load/store, global, return, and control-result cases.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
+- [x] Add an end-to-end declaration-call regression from Pancake through
+  Loop, Word, call-aware linking, Word semantics, and RV64 execution.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

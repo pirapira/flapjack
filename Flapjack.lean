@@ -12,6 +12,7 @@ import Flapjack.Compile
 import Flapjack.Semantics
 import Flapjack.PanValues
 import Flapjack.RiscV.Model
+import Flapjack.RiscV.PanSemantics
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Calls
 import Flapjack.RiscV.Link

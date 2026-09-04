@@ -199,18 +199,21 @@ def updatePanValueMemory [BEq α] (memory : α → Option (PanValue α))
     (address : α) (value : PanValue α) : α → Option (PanValue α) :=
   updatePanValueMap memory address value
 
+abbrev PanPrimitiveHandler (α : Type u) :=
+  PrimOp → List (PanValue α) → Option (PanValue α)
+
 def restorePanValueLocal [BEq String]
     (locals : VarName → Option (PanValue α)) (name : VarName)
     (oldValue : Option (PanValue α)) : VarName → Option (PanValue α) :=
   fun current => if current == name then oldValue else locals current
 
-def evalPanValueProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+def evalPanValueProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]
     (structs : StructContext)
     (baseAddress topAddress bytesInWord : α)
     (locals globals : VarName → Option (PanValue α))
-    (memory : α → Option (PanValue α)) :
+    (memory : α → Option (PanValue α)) (primitive : PanPrimitiveHandler α) :
     Prog α →
     Option ((VarName → Option (PanValue α)) ×
       (VarName → Option (PanValue α)) ×
@@ -221,8 +224,8 @@ def evalPanValueProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
         baseAddress topAddress bytesInWord value
       if panShapeMatches (panValueShape structs value) shape then
         let oldValue := locals name
-        let result ← evalPanValueProg structs baseAddress topAddress bytesInWord
-          (updatePanValueMap locals name value) globals memory body
+        let result ← evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
+          (updatePanValueMap locals name value) globals memory primitive body
         pure (restorePanValueLocal result.1 name oldValue,
           result.2.1, result.2.2.1, result.2.2.2)
       else none
@@ -234,6 +237,14 @@ def evalPanValueProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let value ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord value
       pure (locals, updatePanValueMap globals name value, memory, [])
+  | .primitive name operator arguments => do
+      let values ← evalPanValueExps structs locals globals memory
+        baseAddress topAddress bytesInWord arguments
+      let value ← primitive operator values
+      let oldValue ← locals name
+      if panShapeMatches (panValueShape structs value) (panValueShape structs oldValue) then
+        pure (updatePanValueMap locals name value, globals, memory, [])
+      else none
   | .store address value => do
       let address ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord address
@@ -254,22 +265,22 @@ def evalPanValueProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
         baseAddress topAddress bytesInWord value
       pure (locals, globals, memory, [value])
   | .seq first second => do
-      let result ← evalPanValueProg structs baseAddress topAddress bytesInWord
-        locals globals memory first
+      let result ← evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
+        locals globals memory primitive first
       if result.2.2.2.isEmpty then
-        evalPanValueProg structs baseAddress topAddress bytesInWord
-          result.1 result.2.1 result.2.2.1 second
+        evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
+          result.1 result.2.1 result.2.2.1 primitive second
       else pure result
   | .ite condition thenBranch elseBranch => do
       let condition ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord condition
       let .word condition := condition | none
       if condition != 0 then
-        evalPanValueProg structs baseAddress topAddress bytesInWord
-          locals globals memory thenBranch
+        evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
+          locals globals memory primitive thenBranch
       else
-        evalPanValueProg structs baseAddress topAddress bytesInWord
-          locals globals memory elseBranch
+        evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
+          locals globals memory primitive elseBranch
   | .shMemLoad _ kind name address => do
       let address ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord address
@@ -289,6 +300,20 @@ def evalPanValueProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .tick | .annot _ _ => some (locals, globals, memory, [])
   | _ => none
 termination_by program => sizeOf program
+
+def evalPanValueProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (structs : StructContext)
+    (baseAddress topAddress bytesInWord : α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) :
+    Prog α →
+    Option ((VarName → Option (PanValue α)) ×
+      (VarName → Option (PanValue α)) ×
+      (α → Option (PanValue α)) × List (PanValue α)) :=
+  evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
+    locals globals memory (fun _ _ => none)
 
 inductive PanValueControlResult (α : Type u) where
   | normal (locals globals : VarName → Option (PanValue α))

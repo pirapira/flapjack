@@ -406,6 +406,9 @@ definitions, pass ordering, examples, and proof obligations.
   the source evaluator's shape-validation rule.
 - [x] Connect the structured source evaluator to end-to-end declaration-call
   and FFI-call correctness fixtures.
+- [x] Add an explicit source primitive-handler interface with a RISC-V
+  `AddCarry` implementation and executable structured-evaluator regression.
+- [x] Split the regression suite into focused modules under `Flapjack/Test`.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

@@ -127,6 +127,8 @@ structure FlapjackRiscVResult (width : Nat) [NeZero width] where
     Option (List (RiscV.Instruction width) × List (Fin 32)))
   linkedFunctions : Option (List (Nat × RiscV.Word width × List Nat ×
     List (RiscV.Instruction width) × List (Fin 32)))
+  callLinkedFunctions : Option (List (Nat × RiscV.Word width × List Nat ×
+    List (RiscV.Instruction width) × List (Fin 32)))
 
 def compileFlapjackRiscV [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
@@ -138,7 +140,8 @@ def compileFlapjackRiscV [NeZero width] [BEq (RiscV.Word width)]
   let functions := pipelineRiscVFunctions pipeline.word
   { pipeline := pipeline
     functions := functions
-    linkedFunctions := RiscV.linkRiscVFunctions 0 functions }
+    linkedFunctions := RiscV.linkRiscVFunctions 0 functions
+    callLinkedFunctions := RiscV.linkWordFunctions 0 pipeline.word }
 
 def compileFlapjackRiscVChecked [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]

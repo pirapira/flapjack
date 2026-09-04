@@ -68,7 +68,8 @@ The linker now performs a provisional signature/layout pass followed by a
 label-resolving code-generation pass for handler-free Word calls, and the
 tests execute a linked multi-function image through `JALR`.
 The composed pipeline now exposes its linked function table on
-`FlapjackRiscVResult.linkedFunctions`.
+`FlapjackRiscVResult.linkedFunctions` and its call-aware table on
+`FlapjackRiscVResult.callLinkedFunctions`.
 
 Build it with:
 

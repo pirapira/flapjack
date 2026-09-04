@@ -216,6 +216,8 @@ definitions, pass ordering, examples, and proof obligations.
   re-emits the final linked artifacts.
 - [x] Expose linked RISC-V function artifacts directly from the composed
   pipeline result.
+- [x] Expose the call-aware two-pass linked artifacts alongside the original
+  straight-line artifact table, preserving the first correctness theorem.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

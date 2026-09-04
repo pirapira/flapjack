@@ -178,6 +178,7 @@ def executeFunction [NeZero width]
     (executeCode fuel start code initialized).map
       (fun state => returns.map (readRegister state))
 
+
 theorem executeCode_conditional_equal :
     (executeCode 10 (0 : Word 32)
       [.branchNe 1 2 (BitVec.ofNat 32 12),
@@ -188,6 +189,12 @@ theorem executeCode_conditional_equal :
 theorem executeFunction_add :
     executeFunction 10 (0 : Word 64) [2, 3] [.add 5 2 3] [5] [7, 8]
       (zeroState 64) = some [15] := by
+  native_decide
+
+theorem executeFunction_storeLoad :
+    executeFunction 20 (0 : Word 64) []
+      [.addi 1 0 100, .addi 2 0 42, .storeWord 2 1, .loadWord 3 1]
+      [3] [] (zeroState 64) = some [42] := by
   native_decide
 
 theorem executeCode_conditional_notEqual :
@@ -283,6 +290,10 @@ def wordFunctionToRiscV [NeZero width] :
   | .inst instruction => do
       let instruction ← wordInstToInstruction instruction
       pure ([instruction], [])
+  | .store (.var address) value => do
+      let value ← registerOfNat value
+      let address ← registerOfNat address
+      pure ([.storeWord value address], [])
   | .tick => pure ([.addi 0 0 0], [])
   | .ite operator condition rightValue thenBranch elseBranch => do
       let condition ← registerOfNat condition

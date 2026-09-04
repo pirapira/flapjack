@@ -831,6 +831,23 @@ example :
       [.add 5 2 3] [5] [7, 8] (RiscV.zeroState 64) = some [15] := by
   exact RiscV.executeFunction_add
 
+example [NeZero width] :
+    RiscV.wordFunctionToRiscV
+        ((.seq (.assign 1 (.const (BitVec.ofNat width 100)))
+          (.seq (.assign 2 (.const (BitVec.ofNat width 42)))
+            (.seq (.store (.var 1) 2) (.seq (.inst (.mem .load 3 1))
+              (.return 0 [3]))))) : WordProg (RiscV.Word width)) =
+      some ([.addi 1 0 (BitVec.ofNat width 100),
+        .addi 2 0 (BitVec.ofNat width 42), .storeWord 2 1, .loadWord 3 1], [3]) := by
+  simp [RiscV.wordFunctionToRiscV, RiscV.wordExpToInstruction,
+    RiscV.wordInstToInstruction, RiscV.registerOfNat]
+
+example :
+    RiscV.executeFunction 20 (0 : RiscV.Word 64) []
+      [.addi 1 0 100, .addi 2 0 42, .storeWord 2 1, .loadWord 3 1]
+      [3] [] (RiscV.zeroState 64) = some [42] := by
+  exact RiscV.executeFunction_storeLoad
+
 example :
     let result := compileFlapjackRiscV (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)

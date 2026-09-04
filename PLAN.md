@@ -178,6 +178,8 @@ definitions, pass ordering, examples, and proof obligations.
   RISC-V registers from x2 and remapping parameter metadata consistently.
 - [x] Add an executable RISC-V function harness that initializes parameter
   registers and collects declared return registers, with an `ADD` proof.
+- [x] Exercise that harness on an artifact produced by the composed
+  Pancake-to-RISC-V pipeline for a two-parameter addition function.
 - [x] Connect Word full-word stores to function artifacts and prove a
   store/load function through the RISC-V byte-memory model.
 - [ ] Port complete program checking, context transitions, and diagnostics.

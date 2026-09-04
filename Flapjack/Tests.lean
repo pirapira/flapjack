@@ -826,6 +826,26 @@ example :
         | none => false) := by
   native_decide
 
+def compiledPipelineAddRun : Option (List (RiscV.Word 64)) :=
+  let result := compileFlapjackRiscV (width := 64) .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+    [.function
+      { name := "add", inline := false, exported := false,
+        params := [("left", .one), ("right", .one)],
+        body := .return (.op .add
+          [.var .local "left", .var .local "right"]), returnShape := .one }]
+  match result.functions with
+  | [(_, parameters, some (code, returns))] =>
+      match parameters.mapM RiscV.registerOfNat with
+      | some parameters =>
+          RiscV.executeFunction 10 (0 : RiscV.Word 64) parameters code returns
+            [7, 8] (RiscV.zeroState 64)
+      | none => none
+  | _ => none
+
+example : compiledPipelineAddRun = some [15] := by
+  native_decide
+
 example :
     RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]
       [.add 5 2 3] [5] [7, 8] (RiscV.zeroState 64) = some [15] := by

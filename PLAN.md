@@ -296,6 +296,8 @@ definitions, pass ordering, examples, and proof obligations.
   regression.
 - [x] Compose the source FFI boundary with nested calls and declaration-call
   result assignment in a fuel-bounded source regression.
+- [x] Compose the source FFI boundary with the source call evaluator, allowing
+  host effects inside a callee before declaration-call result propagation.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

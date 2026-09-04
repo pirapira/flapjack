@@ -343,4 +343,135 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
+def shapedBasedMatchesShape (context : StructContext) (shape : Shape)
+    (shaped : ShapedBased) : Bool :=
+  match shapedBasedFromShape context shape with
+  | some expected => shapedBasedSameShape expected shaped
+  | none => false
+
+def progOk (last : LastStmt) (exitsFunction exitsLoop : Bool) (location : String) :
+    StaticResult ProgReturn :=
+  staticOk
+    { exitsFunction := exitsFunction, exitsLoop := exitsLoop, last := last,
+      variableDelta := [], currentLocation := location }
+
+def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgReturn
+  | .skip => progOk .invisLast false false context.location
+  | .dec name shape value body =>
+      if !isWfShape context.structs shape then
+        staticError (.shape "local declaration has an invalid shape")
+      else
+        staticBind (checkExp context value) (fun result =>
+          if shapedBasedMatchesShape context.structs shape result.shapedBased then
+            let nextContext := { context with
+              locals := (name, { shapedBased := result.shapedBased }) :: context.locals }
+            checkProg nextContext body
+          else staticError (.shape "local declaration shape does not match"))
+  | .assign .local name value =>
+      match lookupInfo name context.locals with
+      | none => staticError (.scope ("unknown local variable: " ++ name))
+      | some info =>
+          staticBind (checkExp context value) (fun result =>
+            if shapedBasedSameShape info.shapedBased result.shapedBased then
+              progOk .otherLast false false context.location
+            else staticError (.shape "local assignment shape does not match"))
+  | .assign .global name value =>
+      match lookupInfo name context.globals with
+      | none => staticError (.scope ("unknown global variable: " ++ name))
+      | some info =>
+          staticBind (checkExp context value) (fun result =>
+            if shapedBasedMatchesShape context.structs info.shape result.shapedBased then
+              progOk .otherLast false false context.location
+            else staticError (.shape "global assignment shape does not match"))
+  | .primitive name _ arguments =>
+      match lookupInfo name context.locals with
+      | none => staticError (.scope ("unknown primitive destination: " ++ name))
+      | some _ =>
+          if arguments.isEmpty then
+            progOk .otherLast false false context.location
+          else staticError (.general "primitive argument checking is not implemented")
+  | .store address value =>
+      staticBind (checkExp context address) (fun addressResult =>
+        staticBind (checkExp context value) (fun valueResult =>
+          if shapedBasedIsWord addressResult.shapedBased &&
+              shapedBasedIsWord valueResult.shapedBased then
+            progOk .otherLast false false context.location
+          else staticError (.shape "store operands are not words")))
+  | .store32 address value =>
+      staticBind (checkExp context address) (fun addressResult =>
+        staticBind (checkExp context value) (fun valueResult =>
+          if shapedBasedIsWord addressResult.shapedBased &&
+              shapedBasedIsWord valueResult.shapedBased then
+            progOk .otherLast false false context.location
+          else staticError (.shape "store32 operands are not words")))
+  | .storeByte address value =>
+      staticBind (checkExp context address) (fun addressResult =>
+        staticBind (checkExp context value) (fun valueResult =>
+          if shapedBasedIsWord addressResult.shapedBased &&
+              shapedBasedIsWord valueResult.shapedBased then
+            progOk .otherLast false false context.location
+          else staticError (.shape "storeByte operands are not words")))
+  | .seq first second =>
+      staticBind (checkProg context first) (fun firstResult =>
+        if firstResult.exitsFunction then
+          staticOk firstResult
+        else staticBind (checkProg context second) (fun secondResult =>
+          staticOk secondResult))
+  | .ite condition thenBranch elseBranch =>
+      staticBind (checkExp context condition) (fun conditionResult =>
+        if shapedBasedIsWord conditionResult.shapedBased then
+          staticBind (checkProg context thenBranch) (fun thenResult =>
+            staticBind (checkProg context elseBranch) (fun elseResult =>
+              progOk .condExitLast
+                (thenResult.exitsFunction && elseResult.exitsFunction)
+                (thenResult.exitsLoop && elseResult.exitsLoop) context.location))
+        else staticError (.shape "condition is not a word"))
+  | .while condition body =>
+      staticBind (checkExp context condition) (fun conditionResult =>
+        if shapedBasedIsWord conditionResult.shapedBased then
+          let loopContext := { context with inLoop := true }
+          staticBind (checkProg loopContext body) (fun _ =>
+            progOk .otherLast false false context.location)
+        else staticError (.shape "while condition is not a word"))
+  | .break =>
+      if context.inLoop then progOk .breakLast false true context.location
+      else staticError (.general "break used outside a loop")
+  | .continue =>
+      if context.inLoop then progOk .contLast false true context.location
+      else staticError (.general "continue used outside a loop")
+  | .call _ _ _ => staticError (.general "call checking is not implemented")
+  | .decCall _ _ _ _ _ => staticError (.general "declaration-call checking is not implemented")
+  | .extCall _ _ _ _ _ => staticError (.general "foreign-call checking is not implemented")
+  | .raise exception value =>
+      match lookupInfo exception context.exceptions with
+      | none => staticError (.scope ("unknown exception: " ++ exception))
+      | some shape =>
+          staticBind (checkExp context value) (fun result =>
+            if shapedBasedMatchesShape context.structs shape result.shapedBased then
+              progOk .raiseLast true false context.location
+            else staticError (.shape "raised exception value has the wrong shape"))
+  | .return value =>
+      staticBind (checkExp context value) (fun _ =>
+        progOk .retLast true false context.location)
+  | .shMemLoad _ _ name address =>
+      match lookupInfo name context.locals with
+      | none => staticError (.scope ("unknown shared-memory destination: " ++ name))
+      | some _ =>
+          staticBind (checkExp context address) (fun result =>
+            if shapedBasedIsWord result.shapedBased then
+              progOk .otherLast false false context.location
+            else staticError (.shape "shared-memory address is not a word"))
+  | .shMemStore _ address value =>
+      staticBind (checkExp context address) (fun addressResult =>
+        staticBind (checkExp context value) (fun valueResult =>
+          if shapedBasedIsWord addressResult.shapedBased &&
+              shapedBasedIsWord valueResult.shapedBased then
+            progOk .otherLast false false context.location
+          else staticError (.shape "shared-memory operands are not words")))
+  | .tick => progOk .otherLast false false context.location
+  | .annot _ _ => progOk .otherLast false false context.location
+termination_by program => sizeOf program
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial
+
 end Pancake

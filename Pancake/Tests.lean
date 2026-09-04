@@ -85,6 +85,39 @@ example :
     checkerContext, pairContext]
 
 example :
+    checkProg (α := Nat) checkerContext (.return (.const 7)) =
+      progOk .retLast true false "" := by
+  simp [checkProg, checkExp, staticOk, staticBind, checkerContext]
+
+example :
+    checkProg (α := Nat) checkerContext
+      (.assign .local "x" (.const 7)) =
+      progOk .otherLast false false "" := by
+  simp [checkProg, checkExp, staticOk, staticBind, checkerContext, lookupInfo,
+    shapedBasedSameShape]
+
+example :
+    checkProg (α := Nat) checkerContext
+      (.assign .local "missing" (.const 7)) =
+      staticError (.scope "unknown local variable: missing") := by
+  simp [checkProg, staticError, checkerContext, lookupInfo]
+
+example :
+    checkProg (α := Nat) checkerContext
+      (.break) =
+      staticError (.general "break used outside a loop") := by
+  simp [checkProg, staticError, checkerContext]
+
+example :
+    checkProg (α := Nat) checkerContext
+      (.dec "y" .one (.const 7) (.return (.var .local "y"))) =
+      progOk .retLast true false "" := by
+  simp [checkProg, checkExp, staticOk, staticBind, isWfShape,
+    shapedBasedMatchesShape,
+    shapedBasedFromShape, shapedBasedSameShape, checkerContext, pairContext,
+    lookupInfo]
+
+example :
     checkExp (α := Nat)
       checkerContext
       (Exp.nStruct "Pair" [("left", .const 1), ("right", .const 2)]) =

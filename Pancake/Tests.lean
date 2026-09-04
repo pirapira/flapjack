@@ -265,6 +265,13 @@ example :
     crepContext, lookupInfo]
 
 example :
+    compileProg callContext
+      (.call (some (none, some ("E", "missing", .skip))) "f" []) =
+      .call (some ([2], some (9, .seq .skip .skip))) "f" [] := by
+  simp [compileProg, compileArgs, functionReturnNames, allocatedNames, compileProg,
+    callContext, crepContext, lookupInfo]
+
+example :
     compileProg callContext (.raise "E" (.const (α := Nat) 0)) =
       .seq (.dec 2 (.const 0) (.seq (.storeGlob 0 (.var 2)) .skip)) (.raise 9) := by
   simp [compileProg, compileExp, freshNames, nestedDecs, storeGlobals, crepNestedSeq,

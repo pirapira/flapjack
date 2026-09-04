@@ -118,18 +118,29 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
       match info with
       | none => .call none function args
       | some (destination, handler) =>
-          match handler with
-          | some _ => .skip
-          | none =>
-              match destination with
-              | none => .call (some (functionReturnNames context function, none)) function args
-              | some (kind, name) =>
-                  match kind with
-                  | .local =>
-                      match lookupInfo name context.vars with
-                      | some (_, names) => .call (some (names, none)) function args
-                      | none => .call none function args
-                  | .global => .call none function args
+          let returnNames :=
+            match destination with
+            | none => functionReturnNames context function
+            | some (kind, name) =>
+                match kind with
+                | .local =>
+                    match lookupInfo name context.vars with
+                    | some (_, names) => names
+                    | none => []
+                | .global => []
+          let compiledHandler :=
+            match handler with
+            | none => none
+            | some (exception, handlerVar, handlerProgram) =>
+                match lookupInfo exception context.exceptions with
+                | none => none
+                | some code =>
+                    let handlerSetup :=
+                      match lookupInfo handlerVar context.vars with
+                      | some (_, names) => assignRet context.bytesInWord names
+                      | none => .skip
+                    some (code, .seq handlerSetup (compileProg context handlerProgram))
+          .call (some (returnNames, compiledHandler)) function args
   | .decCall name shape function arguments body =>
       let names := allocatedNames context shape
       let nextContext := { context with

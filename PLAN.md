@@ -83,6 +83,8 @@ definitions, pass ordering, examples, and proof obligations.
   assignment state updates.
 - [x] Extend the initial lowering with handler-free calls, local return
   destinations, declaration calls, and mapped exceptions.
+- [x] Lower calls with known exception handlers to Crepe continuation metadata
+  and compile the handler body.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

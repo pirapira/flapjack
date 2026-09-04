@@ -307,6 +307,8 @@ definitions, pass ordering, examples, and proof obligations.
   lowering and RISC-V architectural execution.
 - [x] Add an end-to-end source full-word store/load regression through the
   composed pipeline and RISC-V byte-memory execution.
+- [x] Promote the composed full-word store/load regression to a library-level
+  source-memory versus compiled-RISC-V correctness theorem.
 - [x] Prove generic fuel-inductive Loop/Word repeat preservation for normal,
   break, and continue control results.
 - [x] Prove the one-step global-state projection invariant for every Loop

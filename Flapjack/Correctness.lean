@@ -182,6 +182,39 @@ theorem compiledPipelineBitwise_correct :
       evalPanProg (fun _ => none) pipelineBitwiseSource := by
   native_decide
 
+def pipelineStoreLoadDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "storeLoad", inline := false, exported := true, params := [],
+      body := .seq
+        (.store (.const (BitVec.ofNat 64 100))
+          (.const (BitVec.ofNat 64 42)))
+        (.return (.load .one (.const (BitVec.ofNat 64 100)))),
+      returnShape := .one }]
+
+def pipelineStoreLoadPipeline : FlapjackRiscVResult 64 :=
+  compileFlapjackRiscV (width := 64) .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+    pipelineStoreLoadDeclarations
+
+def compiledPipelineStoreLoadRun : Option (List (RiscV.Word 64)) :=
+  match pipelineStoreLoadPipeline.functions with
+  | [(_, _, some (code, returns))] =>
+      RiscV.executeFunction 200 (0 : RiscV.Word 64) [] code returns []
+        (RiscV.zeroState 64)
+  | _ => none
+
+def pipelineStoreLoadSource : Prog (RiscV.Word 64) :=
+  .seq
+    (.store (.const (BitVec.ofNat 64 100))
+      (.const (BitVec.ofNat 64 42)))
+    (.return (.load .one (.const (BitVec.ofNat 64 100))))
+
+theorem compiledPipelineStoreLoad_correct :
+    compiledPipelineStoreLoadRun =
+      evalPanMemResult (fun _ => none) (fun _ => none)
+        pipelineStoreLoadSource := by
+  native_decide
+
 def pipelineIteDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function
     { name := "ite", inline := false, exported := false, params := [],

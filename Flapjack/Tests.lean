@@ -7,6 +7,7 @@ import Flapjack.Static
 import Flapjack.PanToCrep
 import Flapjack.Compile
 import Flapjack.Semantics
+import Flapjack.PanValues
 import Flapjack.RiscV.Model
 import Flapjack.Loop
 import Flapjack.CrepToLoop
@@ -1776,5 +1777,59 @@ example :
     evalPanExp (α := Nat) (fun _ => none)
       (.shift .lsl (.const 3) (.const 2)) = some 12 := by
   native_decide
+
+example :
+    evalPanValueExp (α := Nat) []
+      (fun _ => none) (fun _ => none) (fun _ => none) 0 100 8
+      (.rField 1 (.rStruct [.const 3, .const 5])) = some (.word 5) := by
+  simp [evalPanValueExp, evalPanValueExp.evalPanValueExps]
+
+def structuredValueTestContext : StructContext :=
+  [("Pair", { fields := [("left", .one), ("right", .one)], size := 2 })]
+
+example :
+    evalPanValueExp (α := Nat) structuredValueTestContext
+      (fun _ => none) (fun _ => none) (fun _ => none) 0 100 8
+      (.nField "right"
+        (.nStruct "Pair" [("left", .const 3), ("right", .const 5)])) =
+      some (.word 5) := by
+  simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+    evalPanValueExp.evalPanValueFields, structuredValueTestContext,
+    panValueFieldsHaveShapes, panValueShape, panShapeMatches,
+    panShapeMatches.panShapeListMatches, lookupInfo, lookupPanValueField]
+
+example :
+    evalPanValueExp (α := Nat) structuredValueTestContext
+      (fun _ => none) (fun _ => none) (fun _ => none) 0 100 8
+      (.nStruct "Pair" [("left", .const 3),
+        ("right", .rStruct [.const 4, .const 5])]) = none := by
+  simp [evalPanValueExp, evalPanValueExp.evalPanValueFields,
+    evalPanValueExp.evalPanValueExps, structuredValueTestContext,
+    panValueFieldsHaveShapes, panValueShape, panShapeMatches,
+    panShapeMatches.panShapeListMatches, lookupInfo]
+
+example :
+    evalPanValueExp (α := Nat) []
+      (fun _ => none) (fun name => if name == "g" then some (.word 11) else none)
+      (fun _ => none) 0 100 8 (.var .global "g") = some (.word 11) := by
+  simp [evalPanValueExp]
+
+example :
+    evalPanValueExp (α := Nat) []
+      (fun _ => none) (fun _ => none)
+      (fun address => if address == 4 then
+        some (.rStruct [.word 1, .word 2]) else none)
+      0 100 8 (.load (.comb [.one, .one]) (.const 4)) =
+      some (.rStruct [.word 1, .word 2]) := by
+  simp [evalPanValueExp, panValueShape, panShapeMatches,
+    panShapeMatches.panShapeListMatches]
+
+example :
+    (evalPanValueProg (α := Nat) [] 0 100 8
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      (.seq (.assign .local "x" (.const 9))
+        (.return (.var .local "x")))).map
+      (fun result => result.2.2.2) = some [PanValue.word 9] := by
+  simp [evalPanValueProg, evalPanValueExp, updatePanValueMap]
 
 end Flapjack

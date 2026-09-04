@@ -393,6 +393,9 @@ definitions, pass ordering, examples, and proof obligations.
   Nat regressions.
 - [x] Close the constant binary-expression RISC-V selector gap and prove
   end-to-end RV64 subtraction and bitwise pipeline regressions.
+- [x] Add the first structured source-value evaluator, preserving words,
+  raw/named records, field projection, globals, shaped loads, and stateful
+  local/global/memory updates with executable regressions.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

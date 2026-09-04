@@ -10,6 +10,7 @@ import Flapjack.Crepe
 import Flapjack.PanToCrep
 import Flapjack.Compile
 import Flapjack.Semantics
+import Flapjack.PanValues
 import Flapjack.RiscV.Model
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Calls

@@ -135,7 +135,10 @@ definitions, pass ordering, examples, and proof obligations.
   diagnostics instead of compiling malformed declaration lists.
 - [x] Extend the RISC-V backend with full-word byte-fold memory operations and
   prove evaluator agreement for register-based Word stores.
+- [x] Add fuel-bounded conditional and sequencing semantics for Pancake and
+  Crepe and prove preservation for a constant conditional program.
 - [ ] Port complete program checking, context transitions, and diagnostics.
+- [ ] Add a structurally recursive loop evaluator and loop preservation theorem.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

@@ -181,7 +181,7 @@ def evalCrepMemProg [BEq α] [Add α] (locals : Nat → Option α)
       if firstResult.isEmpty then evalCrepMemProg locals' memory' second
       else pure (locals', memory', firstResult)
   | _ => none
-where
+  where
   evalCrepMemExps [BEq α] [Add α] (locals : Nat → Option α)
       (memory : α → Option α) : List (CrepExp α) → Option (List α)
     | [] => some []
@@ -189,6 +189,91 @@ where
         let value ← evalCrepMemExp locals memory expression
         let values ← evalCrepMemExps locals memory expressions
         pure (value :: values)
+
+def evalPanMemProgFuel [BEq α] [Add α] [OfNat α 0]
+    (fuel : Nat) (locals : VarName → Option α) (memory : α → Option α) :
+    Prog α → Option ((VarName → Option α) × (α → Option α) × List α) :=
+  fun program =>
+    match fuel, program with
+    | _, .skip => some (locals, memory, [])
+    | 0, _ => none
+    | fuel + 1, .dec name _ value body => do
+        let value ← evalPanMemExp locals memory value
+        evalPanMemProgFuel fuel (updatePanLocal locals name value) memory body
+    | fuel + 1, .assign .local name value => do
+        let value ← evalPanMemExp locals memory value
+        pure (updatePanLocal locals name value, memory, [])
+    | fuel + 1, .store address value => do
+        let address ← evalPanMemExp locals memory address
+        let value ← evalPanMemExp locals memory value
+        pure (locals, updateMemory memory address value, [])
+    | fuel + 1, .store32 address value | fuel + 1, .storeByte address value => do
+        let address ← evalPanMemExp locals memory address
+        let value ← evalPanMemExp locals memory value
+        pure (locals, updateMemory memory address value, [])
+    | fuel + 1, .return value => do
+        let value ← evalPanMemExp locals memory value
+        pure (locals, memory, [value])
+    | fuel + 1, .seq first second => do
+        let (locals', memory', firstResult) ←
+          evalPanMemProgFuel fuel locals memory first
+        if firstResult.isEmpty then
+          evalPanMemProgFuel fuel locals' memory' second
+        else
+          pure (locals', memory', firstResult)
+    | fuel + 1, .ite condition thenBranch elseBranch => do
+        let condition ← evalPanMemExp locals memory condition
+        if condition == 0 then
+          evalPanMemProgFuel fuel locals memory elseBranch
+        else
+          evalPanMemProgFuel fuel locals memory thenBranch
+    | fuel + 1, .while _ _ => none
+    | _, _ => none
+termination_by fuel => fuel
+
+def evalCrepMemProgFuel [BEq α] [Add α] [OfNat α 0]
+    (fuel : Nat) (locals : Nat → Option α) (memory : α → Option α) :
+    CrepProg α → Option ((Nat → Option α) × (α → Option α) × List α) :=
+  fun program =>
+    match fuel, program with
+    | _, .skip => some (locals, memory, [])
+    | 0, _ => none
+    | fuel + 1, .dec name value body => do
+        let value ← evalCrepMemExp locals memory value
+        evalCrepMemProgFuel fuel (updateCrepLocal locals name value) memory body
+    | fuel + 1, .assign name value => do
+        let value ← evalCrepMemExp locals memory value
+        pure (updateCrepLocal locals name value, memory, [])
+    | fuel + 1, .store address value => do
+        let address ← evalCrepMemExp locals memory address
+        let value ← evalCrepMemExp locals memory value
+        pure (locals, updateMemory memory address value, [])
+    | fuel + 1, .store32 address value | fuel + 1, .storeByte address value => do
+        let address ← evalCrepMemExp locals memory address
+        let value ← evalCrepMemExp locals memory value
+        pure (locals, updateMemory memory address value, [])
+    | fuel + 1, .storeGlob address value => do
+        let value ← evalCrepMemExp locals memory value
+        pure (locals, updateMemory memory address value, [])
+    | fuel + 1, .return values => do
+        let values ← evalCrepMemProg.evalCrepMemExps locals memory values
+        pure (locals, memory, values)
+    | fuel + 1, .seq first second => do
+        let (locals', memory', firstResult) ←
+          evalCrepMemProgFuel fuel locals memory first
+        if firstResult.isEmpty then
+          evalCrepMemProgFuel fuel locals' memory' second
+        else
+          pure (locals', memory', firstResult)
+    | fuel + 1, .ite condition thenBranch elseBranch => do
+        let condition ← evalCrepMemExp locals memory condition
+        if condition == 0 then
+          evalCrepMemProgFuel fuel locals memory elseBranch
+        else
+          evalCrepMemProgFuel fuel locals memory thenBranch
+    | fuel + 1, .while _ _ => none
+    | _, _ => none
+termination_by fuel => fuel
 
 def evalPanMemResult [BEq α] [Add α] (locals : VarName → Option α)
     (memory : α → Option α) (program : Prog α) : Option (List α) :=
@@ -289,5 +374,32 @@ theorem compile_storeByte_loadByte_const_preserves_semantics
   simp [compileProg, compileExp, evalCrepMemResult, evalPanMemResult,
     evalCrepMemProg, evalPanMemProg, evalCrepMemProg.evalCrepMemExps,
     evalCrepMemExp, evalPanMemExp, updateMemory, updateCrepLocal]
+
+theorem compile_ite_const_preserves_semantics
+    [BEq α] [OfNat α 0] [Add α]
+    (fuel : Nat) (context : CompileContext α)
+    (condition thenValue elseValue : α)
+    (locals : VarName → Option α) (compiledLocals : Nat → Option α)
+    (memory : α → Option α) :
+    (evalCrepMemProgFuel fuel compiledLocals memory
+        (compileProg context
+          (.ite (.const condition)
+            (.return (.const thenValue))
+            (.return (.const elseValue))))).map (fun result => result.2.2) =
+      (evalPanMemProgFuel fuel locals memory
+        (.ite (.const condition)
+          (.return (.const thenValue))
+          (.return (.const elseValue)))).map (fun result => result.2.2) := by
+  cases fuel with
+  | zero =>
+      simp [compileProg, compileExp, evalCrepMemProgFuel, evalPanMemProgFuel]
+  | succ fuel =>
+      simp [compileProg, compileExp, evalCrepMemProgFuel, evalPanMemProgFuel,
+        evalCrepMemExp, evalPanMemExp]
+      split <;>
+        cases fuel <;>
+          simp [evalCrepMemProgFuel, evalPanMemProgFuel,
+            evalCrepMemProg.evalCrepMemExps, evalCrepMemExp, evalCrepExp,
+            evalPanMemExp]
 
 end Flapjack

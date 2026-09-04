@@ -7,6 +7,7 @@ import Flapjack.Test.Calls
 import Flapjack.Test.Loops
 import Flapjack.Test.Primitive
 import Flapjack.Test.Allocator
+import Flapjack.RiscV.Correctness
 import Flapjack.Test.Structured
 
 /-!

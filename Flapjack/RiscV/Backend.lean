@@ -688,6 +688,22 @@ theorem compileWordAddCarry_sound [NeZero width] (state : State width) :
   simp [evalWordProg, wordArithToInstructions, executeInstructions,
     registerOfNat]
 
+theorem wordFunctionToRiscV_addCarry [NeZero width] :
+    wordFunctionToRiscV
+      ((.inst (.arith (.addCarry 5 6 2 3 4))) : WordProg (Word width)) =
+      some ([.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+        .sltu 31 5 31, .or 6 6 31], []) := by
+  simp [wordFunctionToRiscV, wordArithToInstructions, registerOfNat]
+
+theorem evalWordFunction_addCarry [NeZero width] (state : State width) :
+    evalWordFunction state
+      ((.inst (.arith (.addCarry 5 6 2 3 4))) : WordProg (Word width)) =
+      some (executeInstructions state
+        [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+          .sltu 31 5 31, .or 6 6 31], []) := by
+  simp [evalWordFunction, wordArithToInstructions, executeInstructions,
+    registerOfNat]
+
 def compileWordAdd [NeZero width] (destination left right : Nat) :
     Option (List (Instruction width)) :=
   wordProgToRiscV (.assign destination (.op .add [.var left, .var right]))

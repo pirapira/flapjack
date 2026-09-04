@@ -349,4 +349,246 @@ def evalPanFlatProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   evalPanFlatProgWithPrimitive structs baseAddress topAddress bytesInWord
     locals globals domain memory (fun _ _ => none)
 
+inductive PanFlatControlResult (α : Type u) where
+  | normal (locals globals : VarName → Option (PanValue α))
+      (memory : PanFlatMemory α)
+  | returned (locals globals : VarName → Option (PanValue α))
+      (memory : PanFlatMemory α) (values : List (PanValue α))
+  | raised (locals globals : VarName → Option (PanValue α))
+      (memory : PanFlatMemory α) (exception : ExceptionId)
+      (value : PanValue α)
+  | broke (locals globals : VarName → Option (PanValue α))
+      (memory : PanFlatMemory α)
+  | continued (locals globals : VarName → Option (PanValue α))
+      (memory : PanFlatMemory α)
+
+abbrev PanFlatFfiHandler (α : Type u) :=
+  FunName → α → α → α → α →
+    (VarName → Option (PanValue α)) →
+      Option (VarName → Option (PanValue α))
+
+def restorePanFlatControlLocal [BEq String]
+    (name : VarName) (oldValue : Option (PanValue α)) :
+    PanFlatControlResult α → PanFlatControlResult α
+  | .normal locals globals memory =>
+      .normal (restorePanValueLocal locals name oldValue) globals memory
+  | .returned locals globals memory values =>
+      .returned (restorePanValueLocal locals name oldValue) globals memory values
+  | .raised locals globals memory exception value =>
+      .raised (restorePanValueLocal locals name oldValue) globals memory exception value
+  | .broke locals globals memory =>
+      .broke (restorePanValueLocal locals name oldValue) globals memory
+  | .continued locals globals memory =>
+      .continued (restorePanValueLocal locals name oldValue) globals memory
+
+mutual
+  def evalPanFlatCallWithPrimitiveAndFfi
+      [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (structs : StructContext)
+      (functions : List (FunName × List VarName × Prog α))
+      (ffi : PanFlatFfiHandler α) (primitive : PanPrimitiveHandler α)
+      (baseAddress topAddress bytesInWord : α)
+      (domain : PanMemoryDomain α) :
+      Nat → (VarName → Option (PanValue α)) →
+        (VarName → Option (PanValue α)) → PanFlatMemory α →
+        Option (Option (VarKind × VarName) ×
+          Option (ExceptionId × VarName × Prog α)) → FunName → List (Exp α) →
+        Option (PanFlatControlResult α)
+    | 0, _, _, _, _, _, _ => none
+    | fuel + 1, locals, globals, memory, info, function, arguments => do
+        let values ← evalPanFlatExps structs locals globals domain memory
+          baseAddress topAddress bytesInWord arguments
+        let (parameters, body) ← lookupPanFunction function functions
+        let calleeLocals ← bindPanValueParameters parameters values
+        let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+          baseAddress topAddress bytesInWord domain fuel calleeLocals globals memory body
+        match result with
+        | .normal _ calleeGlobals calleeMemory =>
+            pure (.normal locals calleeGlobals calleeMemory)
+        | .returned _ calleeGlobals calleeMemory values =>
+            match info with
+            | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
+            | some (destination, _) => do
+                let locals ← assignPanValueCallResult locals destination values
+                pure (.normal locals calleeGlobals calleeMemory)
+        | .raised _ calleeGlobals calleeMemory exception value =>
+            match info with
+            | some (_, some (caught, handlerVariable, handlerProgram)) =>
+                if caught == exception then
+                  evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+                    baseAddress topAddress bytesInWord domain fuel
+                    (updatePanValueMap locals handlerVariable value)
+                    calleeGlobals calleeMemory handlerProgram
+                else pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
+            | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
+        | .broke _ calleeGlobals calleeMemory =>
+            pure (.broke (fun _ => none) calleeGlobals calleeMemory)
+        | .continued _ calleeGlobals calleeMemory =>
+            pure (.continued (fun _ => none) calleeGlobals calleeMemory)
+    termination_by fuel _ _ _ _ _ _ => fuel
+
+  def evalPanFlatProgFuelWithPrimitiveAndFfi
+      [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (structs : StructContext)
+      (functions : List (FunName × List VarName × Prog α))
+      (ffi : PanFlatFfiHandler α) (primitive : PanPrimitiveHandler α)
+      (baseAddress topAddress bytesInWord : α)
+      (domain : PanMemoryDomain α) :
+      Nat → (VarName → Option (PanValue α)) →
+        (VarName → Option (PanValue α)) → PanFlatMemory α → Prog α →
+        Option (PanFlatControlResult α)
+    | 0, _, _, _, _ => none
+    | fuel + 1, locals, globals, memory, .skip =>
+        some (.normal locals globals memory)
+    | fuel + 1, locals, globals, memory, .dec name shape value body => do
+        let value ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord value
+        if panShapeMatches (panValueShape structs value) shape then
+          let oldValue := locals name
+          let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+            baseAddress topAddress bytesInWord domain fuel
+            (updatePanValueMap locals name value) globals memory body
+          pure (restorePanFlatControlLocal name oldValue result)
+        else none
+    | fuel + 1, locals, globals, memory, .assign .local name value => do
+        let value ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord value
+        pure (.normal (updatePanValueMap locals name value) globals memory)
+    | fuel + 1, locals, globals, memory, .assign .global name value => do
+        let value ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord value
+        pure (.normal locals (updatePanValueMap globals name value) memory)
+    | fuel + 1, locals, globals, memory, .primitive name operator arguments => do
+        let values ← evalPanFlatExps structs locals globals domain memory
+          baseAddress topAddress bytesInWord arguments
+        let value ← primitive operator values
+        let oldValue ← locals name
+        if panShapeMatches (panValueShape structs value) (panValueShape structs oldValue) then
+          pure (.normal (updatePanValueMap locals name value) globals memory)
+        else none
+    | fuel + 1, locals, globals, memory, .store address value => do
+        let address ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord address
+        let value ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord value
+        let .word address := address | none
+        let memory ← panFlatStore domain memory bytesInWord address value
+        pure (.normal locals globals memory)
+    | fuel + 1, locals, globals, memory, .seq first second => do
+        let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+          baseAddress topAddress bytesInWord domain fuel locals globals memory first
+        match result with
+        | .normal locals globals memory =>
+            evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+              baseAddress topAddress bytesInWord domain fuel locals globals memory second
+        | result => pure result
+    | fuel + 1, locals, globals, memory, .ite condition thenBranch elseBranch => do
+        let condition ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord condition
+        let .word condition := condition | none
+        if condition != 0 then
+          evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+            baseAddress topAddress bytesInWord domain fuel locals globals memory thenBranch
+        else
+          evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+            baseAddress topAddress bytesInWord domain fuel locals globals memory elseBranch
+    | fuel + 1, locals, globals, memory, .call info function arguments =>
+        evalPanFlatCallWithPrimitiveAndFfi structs functions ffi primitive
+          baseAddress topAddress bytesInWord domain fuel locals globals memory info function arguments
+    | fuel + 1, locals, globals, memory, .decCall name shape function arguments body => do
+        let oldValue := locals name
+        let result ← evalPanFlatCallWithPrimitiveAndFfi structs functions ffi primitive
+          baseAddress topAddress bytesInWord domain fuel locals globals memory
+          (some (some (.local, name), none)) function arguments
+        match result with
+        | .normal locals globals memory =>
+            if let some value := locals name then
+              if panShapeMatches (panValueShape structs value) shape then
+                let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+                  baseAddress topAddress bytesInWord domain fuel locals globals memory body
+                pure (restorePanFlatControlLocal name oldValue result)
+              else none
+            else none
+        | result => pure result
+    | fuel + 1, locals, globals, memory, .extCall function configuration configurationLength array arrayLength => do
+        let configuration ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord configuration
+        let configurationLength ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord configurationLength
+        let array ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord array
+        let arrayLength ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord arrayLength
+        let .word configuration := configuration | none
+        let .word configurationLength := configurationLength | none
+        let .word array := array | none
+        let .word arrayLength := arrayLength | none
+        let locals ← ffi function configuration configurationLength array arrayLength locals
+        pure (.normal locals globals memory)
+    | fuel + 1, locals, globals, memory, .while condition body => do
+        let evaluatedCondition ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord condition
+        let .word conditionValue := evaluatedCondition | none
+        if conditionValue == 0 then
+          pure (.normal locals globals memory)
+        else
+          let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+            baseAddress topAddress bytesInWord domain fuel locals globals memory body
+          match result with
+          | .normal locals globals memory | .continued locals globals memory =>
+              evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+                baseAddress topAddress bytesInWord domain fuel locals globals memory
+                (.while condition body)
+          | .broke locals globals memory => pure (.normal locals globals memory)
+          | result => pure result
+    | fuel + 1, locals, globals, memory, .break =>
+        pure (.broke locals globals memory)
+    | fuel + 1, locals, globals, memory, .continue =>
+        pure (.continued locals globals memory)
+    | fuel + 1, locals, globals, memory, .raise exception value => do
+        let value ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord value
+        pure (.raised locals globals memory exception value)
+    | fuel + 1, locals, globals, memory, .return value => do
+        let value ← evalPanFlatExp structs locals globals domain memory
+          baseAddress topAddress bytesInWord value
+        pure (.returned locals globals memory [value])
+    | fuel + 1, locals, globals, memory, .tick | fuel + 1, locals, globals, memory, .annot _ _ =>
+        pure (.normal locals globals memory)
+    | _, _, _, _, _ => none
+    termination_by fuel _ _ _ _ => fuel
+end
+
+def evalPanFlatProgWithPrimitiveAndFfi
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (ffi : PanFlatFfiHandler α) (primitive : PanPrimitiveHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (domain : PanMemoryDomain α) (memory : PanFlatMemory α) (program : Prog α) :
+    Option (PanFlatControlResult α) :=
+  evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+    baseAddress topAddress bytesInWord domain fuel locals globals memory program
+
+def evalPanFlatProgWithCallsAndFfi
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (ffi : PanFlatFfiHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (domain : PanMemoryDomain α) (memory : PanFlatMemory α) (program : Prog α) :
+    Option (PanFlatControlResult α) :=
+  evalPanFlatProgWithPrimitiveAndFfi structs functions ffi (fun _ _ => none)
+    baseAddress topAddress bytesInWord fuel locals globals domain memory program
+
 end Flapjack

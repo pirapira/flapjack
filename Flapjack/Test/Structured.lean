@@ -141,6 +141,91 @@ def structuredCallTestFunctions : List (FunName × List VarName × Prog Nat) :=
 def structuredNoFfi : PanValueFfiHandler Nat :=
   fun _ _ _ _ _ _ => none
 
+def flatCallTestFunctions : List (FunName × List VarName × Prog Nat) :=
+  [("id", ["x"], .return (.var .local "x"))]
+
+def flatNoFfi : PanFlatFfiHandler Nat :=
+  fun _ _ _ _ _ _ => none
+
+example :
+    (evalPanFlatProgWithCallsAndFfi (α := Nat) [] flatCallTestFunctions flatNoFfi
+      0 100 1 20 (fun _ => none) (fun _ => none) (fun _ => true) (fun _ => none)
+      (.call (some (some (.local, "result"), none)) "id" [.const 7])).map
+      (fun result => match result with
+        | .normal locals _ _ => locals "result"
+        | _ => none) = some (some (.word 7)) := by
+  simp [evalPanFlatProgWithCallsAndFfi,
+    evalPanFlatProgWithPrimitiveAndFfi, evalPanFlatProgFuelWithPrimitiveAndFfi,
+    evalPanFlatCallWithPrimitiveAndFfi, evalPanFlatExps,
+    evalPanFlatExp, evalPanFlatExp.evalPanFlatExps, flatCallTestFunctions, flatNoFfi,
+    bindPanValueParameters, assignPanValueCallResult, updatePanValueMap,
+    lookupPanFunction]
+
+def flatFailFunctions : List (FunName × List VarName × Prog Nat) :=
+  [("fail", [], .raise "E" (.const 9))]
+
+example :
+    (evalPanFlatProgWithCallsAndFfi (α := Nat) [] flatFailFunctions flatNoFfi
+      0 100 1 20 (fun _ => none) (fun _ => none) (fun _ => true) (fun _ => none)
+      (.call (some (none, some ("E", "caught",
+        .return (.var .local "caught")))) "fail" [])).map
+      (fun result => match result with
+        | .returned _ _ _ [PanValue.word value] => some value
+        | _ => none) = some (some 9) := by
+  simp [evalPanFlatProgWithCallsAndFfi,
+    evalPanFlatProgWithPrimitiveAndFfi, evalPanFlatProgFuelWithPrimitiveAndFfi,
+    evalPanFlatCallWithPrimitiveAndFfi, evalPanFlatExp, evalPanFlatExps,
+    evalPanFlatExp.evalPanFlatExps,
+    flatFailFunctions, flatNoFfi, bindPanValueParameters,
+    updatePanValueMap, lookupPanFunction]
+
+example :
+    (evalPanFlatProgWithCallsAndFfi (α := Nat) [] flatCallTestFunctions flatNoFfi
+      0 100 1 20 (fun name => if name == "result" then some (.word 99) else none)
+      (fun _ => none) (fun _ => true) (fun _ => none)
+      (.decCall "result" .one "id" [.const 7]
+        (.return (.var .local "result")))).map
+      (fun result => match result with
+        | .returned locals _ _ [PanValue.word value] => (locals "result", value)
+        | _ => (none, 0)) = some (some (.word 99), 7) := by
+  simp [evalPanFlatProgWithCallsAndFfi,
+    evalPanFlatProgWithPrimitiveAndFfi, evalPanFlatProgFuelWithPrimitiveAndFfi,
+    evalPanFlatCallWithPrimitiveAndFfi, evalPanFlatExp, evalPanFlatExps,
+    evalPanFlatExp.evalPanFlatExps,
+    flatCallTestFunctions, flatNoFfi, bindPanValueParameters,
+    assignPanValueCallResult, updatePanValueMap, restorePanFlatControlLocal,
+    restorePanValueLocal,
+    lookupPanFunction, panValueShape, panShapeMatches]
+
+def flatTestFfi : PanFlatFfiHandler Nat :=
+  fun function configuration _ array _ locals =>
+    if function == "host" then
+      some (updatePanValueMap locals "out" (.word (configuration + array)))
+    else none
+
+example :
+    (evalPanFlatProgWithCallsAndFfi (α := Nat) [] [] flatTestFfi
+      0 100 1 20 (fun _ => none) (fun _ => none) (fun _ => true) (fun _ => none)
+      (.extCall "host" (.const 2) (.const 1) (.const 5) (.const 1))).map
+      (fun result => match result with
+        | .normal locals _ _ => locals "out"
+        | _ => none) = some (some (.word 7)) := by
+  simp [evalPanFlatProgWithCallsAndFfi,
+    evalPanFlatProgWithPrimitiveAndFfi, evalPanFlatProgFuelWithPrimitiveAndFfi,
+    evalPanFlatExp, evalPanFlatExps, evalPanFlatExp.evalPanFlatExps, flatTestFfi,
+    updatePanValueMap]
+
+example :
+    (evalPanFlatProgWithCallsAndFfi (α := Nat) [] [] flatNoFfi
+      0 100 1 8 (fun _ => none) (fun _ => none) (fun _ => true) (fun _ => none)
+      (.while (.const 0) .break)).map
+      (fun result => match result with
+        | .normal _ _ _ => true
+        | _ => false) = some true := by
+  simp [evalPanFlatProgWithCallsAndFfi,
+    evalPanFlatProgWithPrimitiveAndFfi, evalPanFlatProgFuelWithPrimitiveAndFfi,
+    evalPanFlatExp, flatNoFfi]
+
 example :
     (evalPanValueProgWithCallsAndFfi (α := Nat) []
       structuredCallTestFunctions structuredNoFfi 0 100 8 20

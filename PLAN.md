@@ -411,6 +411,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port CakeML's flat structured-memory load/store model, including
   consecutive word offsets, `Comb`/`Named` reconstruction, flattening, and
   failed-domain behavior.
+- [x] Extend the flat source evaluator with fuel-bounded calls, scoped
+  declaration calls, caught exceptions, loops, primitive dispatch, and FFI.
 - [x] Split the regression suite into focused modules under `Flapjack/Test`.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

@@ -107,6 +107,9 @@ inductive Instruction (width : Nat) where
   | xor (destination sourceLeft sourceRight : Fin 32)
   | addi (destination source : Fin 32) (immediate : Word width)
   | mul (destination sourceLeft sourceRight : Fin 32)
+  | sll (destination sourceLeft sourceRight : Fin 32)
+  | srl (destination sourceLeft sourceRight : Fin 32)
+  | sra (destination sourceLeft sourceRight : Fin 32)
   | branchEq (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | branchNe (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | loadByte (destination address : Fin 32)
@@ -215,6 +218,8 @@ theorem writeWordValue_registers (state : State width) (address value : Word wid
 
 def nextPc (state : State width) : Word width := state.pc + 4
 
+def shiftAmount (value : Word width) : Nat := value.toNat % width
+
 def execute (state : State width) : Instruction width → State width
   | .add destination sourceLeft sourceRight =>
       writeRegister { state with pc := nextPc state } destination
@@ -237,6 +242,18 @@ def execute (state : State width) : Instruction width → State width
   | .mul destination sourceLeft sourceRight =>
       writeRegister { state with pc := nextPc state } destination
         (readRegister state sourceLeft * readRegister state sourceRight)
+  | .sll destination sourceLeft sourceRight =>
+      writeRegister { state with pc := nextPc state } destination
+        (BitVec.shiftLeft (readRegister state sourceLeft)
+          (shiftAmount (readRegister state sourceRight)))
+  | .srl destination sourceLeft sourceRight =>
+      writeRegister { state with pc := nextPc state } destination
+        (BitVec.ushiftRight (readRegister state sourceLeft)
+          (shiftAmount (readRegister state sourceRight)))
+  | .sra destination sourceLeft sourceRight =>
+      writeRegister { state with pc := nextPc state } destination
+        (BitVec.sshiftRight (readRegister state sourceLeft)
+          (shiftAmount (readRegister state sourceRight)))
   | .branchEq sourceLeft sourceRight offset =>
       { state with pc := (if readRegister state sourceLeft == readRegister state sourceRight then
           state.pc + offset else nextPc state) }

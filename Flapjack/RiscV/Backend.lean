@@ -4,10 +4,11 @@ import Flapjack.RiscV.Model
 /-!
 The first executable Word-to-RISC-V instruction-selection slice.
 
-This is intentionally a partial compiler.  It covers the straight-line Word
+This is intentionally a partial compiler. It covers the straight-line Word
 fragment made of `skip`, assignments, sequencing, constants, register reads,
-and addition.  The option-valued interface makes the current boundary
-explicit while the remaining Word instructions are ported.
+binary arithmetic, shifts, and selected memory operations. The option-valued
+interface makes the current boundary explicit while the remaining Word
+instructions are ported.
 -/
 
 namespace Flapjack.RiscV
@@ -42,6 +43,15 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
         | .and => .and destination left right
         | .or => .or destination left right
         | .xor => .xor destination left right)
+  | .shift operator (.var left) (.var right) => do
+      let destination ← registerOfNat destination
+      let left ← registerOfNat left
+      let right ← registerOfNat right
+      match operator with
+      | .lsl => pure (.sll destination left right)
+      | .lsr => pure (.srl destination left right)
+      | .asr => pure (.sra destination left right)
+      | .ror => none
   | _ => none
 
 def wordArithToInstruction [NeZero width] :
@@ -123,6 +133,17 @@ def evalWordExp [NeZero width] (state : State width) :
         | .and => readRegister state left &&& readRegister state right
         | .or => readRegister state left ||| readRegister state right
         | .xor => readRegister state left ^^^ readRegister state right)
+  | .shift operator (.var left) (.var right) => do
+      let left ← registerOfNat left
+      let right ← registerOfNat right
+      match operator with
+      | .lsl => pure (BitVec.shiftLeft (readRegister state left)
+          (shiftAmount (readRegister state right)))
+      | .lsr => pure (BitVec.ushiftRight (readRegister state left)
+          (shiftAmount (readRegister state right)))
+      | .asr => pure (BitVec.sshiftRight (readRegister state left)
+          (shiftAmount (readRegister state right)))
+      | .ror => none
   | _ => none
 
 def wordFunctionToRiscV [NeZero width] :

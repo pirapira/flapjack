@@ -143,6 +143,9 @@ definitions, pass ordering, examples, and proof obligations.
   Crepe and prove preservation for a constant conditional program.
 - [x] Port the RISC-V low-word multiplication path for HOL `CrepOp.mul` and
   `LoopArith.longMul`, with intermediate and end-to-end tests.
+- [x] Port RISC-V register shifts (`SLL`, `SRL`, and `SRA`) with masked shift
+  amounts and backend selection tests; leave `ROR` explicit as unsupported by
+  the base RV32I/RV64I target slice.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Add a structurally recursive loop evaluator and loop preservation theorem.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem

@@ -698,4 +698,38 @@ example :
           body := .return (.const 0), returnShape := .one }]) = false := by
   native_decide
 
+example [NeZero width] :
+    RiscV.wordExpToInstruction (width := width) 1
+      (.shift .lsl (.var 2) (.var 3)) =
+      some (.sll 1 2 3) := by
+  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+
+example [NeZero width] :
+    RiscV.wordExpToInstruction (width := width) 1
+      (.shift .lsr (.var 2) (.var 3)) =
+      some (.srl 1 2 3) := by
+  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+
+example [NeZero width] :
+    RiscV.wordExpToInstruction (width := width) 1
+      (.shift .asr (.var 2) (.var 3)) =
+      some (.sra 1 2 3) := by
+  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+
+example [NeZero width] :
+    RiscV.wordExpToInstruction (width := width) 1
+      (.shift .ror (.var 2) (.var 3)) = none := by
+  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+
+example [NeZero width] (state : RiscV.State width) :
+    RiscV.evalWordProg state
+        (.assign 1 (.shift .asr (.var 2) (.var 3))) =
+      some (RiscV.execute state (.sra 1 2 3)) := by
+  simp [RiscV.evalWordProg, RiscV.evalWordExp, RiscV.registerOfNat,
+    RiscV.execute, RiscV.writeRegister, RiscV.nextPc, RiscV.shiftAmount]
+
+example :
+    RiscV.shiftAmount (BitVec.ofNat 64 65) = 1 := by
+  native_decide
+
 end Flapjack

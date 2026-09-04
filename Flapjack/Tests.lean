@@ -516,6 +516,26 @@ example [NeZero width] :
       some ([.add 1 2 3], [1]) := by
   exact Flapjack.RiscV.wordFunctionToRiscV_return_add
 
+example [NeZero width] :
+    RiscV.wordProgToRiscV
+        ((.ite .equal 1 (.reg 2)
+          (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
+          WordProg (RiscV.Word width)) =
+      some [.branchNe 1 2 (BitVec.ofNat width 12),
+        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+  simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
+    RiscV.registerOfNat]
+
+example [NeZero width] :
+    RiscV.wordProgToRiscV
+        ((.ite .notEqual 1 (.reg 2)
+          (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
+          WordProg (RiscV.Word width)) =
+      some [.branchEq 1 2 (BitVec.ofNat width 12),
+        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+  simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
+    RiscV.registerOfNat]
+
 example :
     panSimpProg (.seq (.skip : Prog Nat) (.return (.const 7))) =
       .return (.const 7) := by

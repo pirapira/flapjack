@@ -108,6 +108,21 @@ def wordProgToRiscV [NeZero width] :
       let first ← wordProgToRiscV first
       let second ← wordProgToRiscV second
       pure (first ++ second)
+  | .ite operator condition (.reg right) thenBranch elseBranch => do
+      let condition ← registerOfNat condition
+      let right ← registerOfNat right
+      let thenCode ← wordProgToRiscV thenBranch
+      let elseCode ← wordProgToRiscV elseBranch
+      let falseOffset : Word width :=
+        BitVec.ofNat width (8 + 4 * thenCode.length)
+      let endOffset : Word width :=
+        BitVec.ofNat width (4 + 4 * elseCode.length)
+      let branchFalse ← match operator with
+        | .equal => pure (.branchNe condition right falseOffset)
+        | .notEqual => pure (.branchEq condition right falseOffset)
+        | _ => none
+      pure ([branchFalse] ++ thenCode ++
+        [.branchEq 0 0 endOffset] ++ elseCode)
   | _ => none
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial

@@ -480,4 +480,16 @@ example [NeZero width] :
     Flapjack.RiscV.ZeroRegister (Flapjack.RiscV.zeroState width) := by
   exact Flapjack.RiscV.zeroState_zeroRegister
 
+example [NeZero width] (state : Flapjack.RiscV.State width)
+    (operator : BinOp) :
+    Flapjack.RiscV.evalWordProg state
+        (.assign 1 (.op operator [.var 2, .var 3])) =
+      some (Flapjack.RiscV.execute state (match operator with
+        | .add => .add 1 2 3
+        | .sub => .sub 1 2 3
+        | .and => .and 1 2 3
+        | .or => .or 1 2 3
+        | .xor => .xor 1 2 3)) := by
+  exact Flapjack.RiscV.compileWordBinOp_sound state operator
+
 end Flapjack

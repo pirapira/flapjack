@@ -101,6 +101,30 @@ theorem compileWordAdd_sound [NeZero width] (state : State width) :
   simp [evalWordProg, evalWordExp, executeInstructions, registerOfNat,
     execute, writeRegister, nextPc]
 
+theorem wordExpToInstruction_binOp [NeZero width] (operator : BinOp) :
+    wordExpToInstruction (width := width) 1 (.op operator [.var 2, .var 3]) =
+      some (match operator with
+        | .add => .add 1 2 3
+        | .sub => .sub 1 2 3
+        | .and => .and 1 2 3
+        | .or => .or 1 2 3
+        | .xor => .xor 1 2 3) := by
+  cases operator <;> simp [wordExpToInstruction, registerOfNat]
+
+theorem compileWordBinOp_sound [NeZero width] (state : State width)
+    (operator : BinOp) :
+    evalWordProg state
+        (.assign 1 (.op operator [.var 2, .var 3])) =
+      some (execute state (match operator with
+        | .add => .add 1 2 3
+        | .sub => .sub 1 2 3
+        | .and => .and 1 2 3
+        | .or => .or 1 2 3
+        | .xor => .xor 1 2 3)) := by
+  cases operator <;>
+    simp [evalWordProg, evalWordExp, registerOfNat, execute,
+      writeRegister, nextPc]
+
 theorem compileWordAdd_zeroState [NeZero width] :
     evalWordProg (zeroState width)
         (.assign 1 (.const (7 : Word width))) =

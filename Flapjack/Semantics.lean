@@ -11,7 +11,8 @@ already lowered by `compileProg`.
 
 namespace Flapjack
 
-def evalPanExp [Add α] (locals : VarName → Option α) (expression : Exp α) : Option α :=
+def evalPanExp [Add α] [Mul α]
+    (locals : VarName → Option α) (expression : Exp α) : Option α :=
   match expression with
   | .const value => some value
   | .var .local name => locals name
@@ -19,10 +20,15 @@ def evalPanExp [Add α] (locals : VarName → Option α) (expression : Exp α) :
       let left ← evalPanExp locals left
       let right ← evalPanExp locals right
       pure (left + right)
+  | .panOp .mul [left, right] => do
+      let left ← evalPanExp locals left
+      let right ← evalPanExp locals right
+      pure (left * right)
   | _ => none
 termination_by structural expression
 
-def evalCrepExp [Add α] (locals : Nat → Option α) (expression : CrepExp α) : Option α :=
+def evalCrepExp [Add α] [Mul α]
+    (locals : Nat → Option α) (expression : CrepExp α) : Option α :=
   match expression with
   | .const value => some value
   | .var name => locals name
@@ -30,17 +36,22 @@ def evalCrepExp [Add α] (locals : Nat → Option α) (expression : CrepExp α) 
       let left ← evalCrepExp locals left
       let right ← evalCrepExp locals right
       pure (left + right)
+  | .crepOp .mul [left, right] => do
+      let left ← evalCrepExp locals left
+      let right ← evalCrepExp locals right
+      pure (left * right)
   | _ => none
 termination_by structural expression
 
-def evalCrepExps [Add α] (locals : Nat → Option α) : List (CrepExp α) → Option (List α)
+def evalCrepExps [Add α] [Mul α] (locals : Nat → Option α) :
+    List (CrepExp α) → Option (List α)
   | [] => some []
   | expression :: expressions => do
       let value ← evalCrepExp locals expression
       let values ← evalCrepExps locals expressions
       pure (value :: values)
 
-def evalPanProg [Add α] (locals : VarName → Option α) : Prog α → Option (List α)
+def evalPanProg [Add α] [Mul α] (locals : VarName → Option α) : Prog α → Option (List α)
   | .skip => some []
   | .return expression => (evalPanExp locals expression).map (fun value => [value])
   | .seq first second => do
@@ -48,7 +59,7 @@ def evalPanProg [Add α] (locals : VarName → Option α) : Prog α → Option (
       if firstResult.isEmpty then evalPanProg locals second else pure firstResult
   | _ => none
 
-def evalCrepProg [Add α] (locals : Nat → Option α) : CrepProg α → Option (List α)
+def evalCrepProg [Add α] [Mul α] (locals : Nat → Option α) : CrepProg α → Option (List α)
   | .skip => some []
   | .return expressions => evalCrepExps locals expressions
   | .seq first second => do
@@ -64,7 +75,7 @@ def updateCrepLocal (locals : Nat → Option α) (name : Nat) (value : α) :
     Nat → Option α :=
   fun current => if current = name then some value else locals current
 
-def evalPanStateProg [Add α] (locals : VarName → Option α) :
+def evalPanStateProg [Add α] [Mul α] (locals : VarName → Option α) :
     Prog α → Option ((VarName → Option α) × List α)
   | .skip => some (locals, [])
   | .assign .local name value => do
@@ -79,7 +90,7 @@ def evalPanStateProg [Add α] (locals : VarName → Option α) :
       else pure (locals', firstResult)
   | _ => none
 
-def evalCrepStateProg [Add α] (locals : Nat → Option α) :
+def evalCrepStateProg [Add α] [Mul α] (locals : Nat → Option α) :
     CrepProg α → Option ((Nat → Option α) × List α)
   | .skip => some (locals, [])
   | .assign name value => do
@@ -97,7 +108,7 @@ def evalCrepStateProg [Add α] (locals : Nat → Option α) :
 def updateMemory [BEq α] (memory : α → Option α) (address value : α) : α → Option α :=
   fun current => if current == address then some value else memory current
 
-def evalPanMemExp [BEq α] [Add α]
+def evalPanMemExp [BEq α] [Add α] [Mul α]
     (locals : VarName → Option α) (memory : α → Option α) : Exp α → Option α
   | .const value => some value
   | .var .local name => locals name
@@ -108,10 +119,14 @@ def evalPanMemExp [BEq α] [Add α]
       let left ← evalPanMemExp locals memory left
       let right ← evalPanMemExp locals memory right
       pure (left + right)
+  | .panOp .mul [left, right] => do
+      let left ← evalPanMemExp locals memory left
+      let right ← evalPanMemExp locals memory right
+      pure (left * right)
   | _ => none
 termination_by expression => sizeOf expression
 
-def evalCrepMemExp [BEq α] [Add α]
+def evalCrepMemExp [BEq α] [Add α] [Mul α]
     (locals : Nat → Option α) (memory : α → Option α) : CrepExp α → Option α
   | .const value => some value
   | .var name => locals name
@@ -122,10 +137,14 @@ def evalCrepMemExp [BEq α] [Add α]
       let left ← evalCrepMemExp locals memory left
       let right ← evalCrepMemExp locals memory right
       pure (left + right)
+  | .crepOp .mul [left, right] => do
+      let left ← evalCrepMemExp locals memory left
+      let right ← evalCrepMemExp locals memory right
+      pure (left * right)
   | _ => none
 termination_by expression => sizeOf expression
 
-def evalPanMemProg [BEq α] [Add α] (locals : VarName → Option α)
+def evalPanMemProg [BEq α] [Add α] [Mul α] (locals : VarName → Option α)
     (memory : α → Option α) : Prog α →
     Option ((VarName → Option α) × (α → Option α) × List α)
   | .skip => some (locals, memory, [])
@@ -152,7 +171,7 @@ def evalPanMemProg [BEq α] [Add α] (locals : VarName → Option α)
       else pure (locals', memory', firstResult)
   | _ => none
 
-def evalCrepMemProg [BEq α] [Add α] (locals : Nat → Option α)
+def evalCrepMemProg [BEq α] [Add α] [Mul α] (locals : Nat → Option α)
     (memory : α → Option α) : CrepProg α →
     Option ((Nat → Option α) × (α → Option α) × List α)
   | .skip => some (locals, memory, [])
@@ -182,7 +201,7 @@ def evalCrepMemProg [BEq α] [Add α] (locals : Nat → Option α)
       else pure (locals', memory', firstResult)
   | _ => none
   where
-  evalCrepMemExps [BEq α] [Add α] (locals : Nat → Option α)
+  evalCrepMemExps [BEq α] [Add α] [Mul α] (locals : Nat → Option α)
       (memory : α → Option α) : List (CrepExp α) → Option (List α)
     | [] => some []
     | expression :: expressions => do
@@ -190,7 +209,7 @@ def evalCrepMemProg [BEq α] [Add α] (locals : Nat → Option α)
         let values ← evalCrepMemExps locals memory expressions
         pure (value :: values)
 
-def evalPanMemProgFuel [BEq α] [Add α] [OfNat α 0]
+def evalPanMemProgFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
     (fuel : Nat) (locals : VarName → Option α) (memory : α → Option α) :
     Prog α → Option ((VarName → Option α) × (α → Option α) × List α) :=
   fun program =>
@@ -231,7 +250,7 @@ def evalPanMemProgFuel [BEq α] [Add α] [OfNat α 0]
     | _, _ => none
 termination_by fuel => fuel
 
-def evalCrepMemProgFuel [BEq α] [Add α] [OfNat α 0]
+def evalCrepMemProgFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
     (fuel : Nat) (locals : Nat → Option α) (memory : α → Option α) :
     CrepProg α → Option ((Nat → Option α) × (α → Option α) × List α) :=
   fun program =>
@@ -275,15 +294,15 @@ def evalCrepMemProgFuel [BEq α] [Add α] [OfNat α 0]
     | _, _ => none
 termination_by fuel => fuel
 
-def evalPanMemResult [BEq α] [Add α] (locals : VarName → Option α)
+def evalPanMemResult [BEq α] [Add α] [Mul α] (locals : VarName → Option α)
     (memory : α → Option α) (program : Prog α) : Option (List α) :=
   (evalPanMemProg locals memory program).map (fun result => result.2.2)
 
-def evalCrepMemResult [BEq α] [Add α] (locals : Nat → Option α)
+def evalCrepMemResult [BEq α] [Add α] [Mul α] (locals : Nat → Option α)
     (memory : α → Option α) (program : CrepProg α) : Option (List α) :=
   (evalCrepMemProg locals memory program).map (fun result => result.2.2)
 
-theorem compile_return_const_preserves_semantics [BEq α] [OfNat α 0] [Add α]
+theorem compile_return_const_preserves_semantics [BEq α] [OfNat α 0] [Add α] [Mul α]
     (context : CompileContext α) (locals : VarName → Option α)
     (compiledLocals : Nat → Option α) (value : α) :
     evalCrepProg compiledLocals (compileProg context (.return (.const value))) =
@@ -291,14 +310,14 @@ theorem compile_return_const_preserves_semantics [BEq α] [OfNat α 0] [Add α]
   simp [compileProg, evalCrepProg, evalCrepExps, evalCrepExp, evalPanProg, evalPanExp,
     compileExp]
 
-theorem compile_skip_preserves_semantics [BEq α] [OfNat α 0] [Add α]
+theorem compile_skip_preserves_semantics [BEq α] [OfNat α 0] [Add α] [Mul α]
     (context : CompileContext α) (locals : VarName → Option α)
     (compiledLocals : Nat → Option α) :
     evalCrepProg compiledLocals (compileProg context (.skip : Prog α)) =
       evalPanProg locals (.skip : Prog α) := by
   simp [compileProg, evalCrepProg, evalPanProg]
 
-theorem compile_local_var_preserves_semantics [BEq α] [OfNat α 0] [Add α]
+theorem compile_local_var_preserves_semantics [BEq α] [OfNat α 0] [Add α] [Mul α]
     (context : CompileContext α) (name : VarName) (slot : Nat)
     (lookup : lookupInfo name context.vars = some (.one, [slot]))
     (locals : VarName → Option α) (compiledLocals : Nat → Option α)
@@ -310,7 +329,7 @@ theorem compile_local_var_preserves_semantics [BEq α] [OfNat α 0] [Add α]
     simp [evalCrepExps, evalCrepExp, evalPanExp, environment_agrees, h]
 
 theorem compile_local_assign_return_const_preserves_semantics
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [Add α] [Mul α]
     (context : CompileContext α) (name : VarName) (slot : Nat) (value : α)
     (lookup : lookupInfo name context.vars = some (.one, [slot]))
     (locals : VarName → Option α) (compiledLocals : Nat → Option α) :
@@ -327,7 +346,7 @@ theorem compile_local_assign_return_const_preserves_semantics
     updatePanLocal, updateCrepLocal, distinctLists]
 
 theorem compile_store_load_const_preserves_semantics
-    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α] [Mul α]
     (context : CompileContext α) (address value : α)
     (locals : VarName → Option α) (compiledLocals : Nat → Option α)
     (memory : α → Option α) :
@@ -344,7 +363,7 @@ theorem compile_store_load_const_preserves_semantics
     evalCrepMemExp, evalPanMemExp, updateMemory, updateCrepLocal, loadShape]
 
 theorem compile_store32_load32_const_preserves_semantics
-    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α] [Mul α]
     (context : CompileContext α) (address value : α)
     (locals : VarName → Option α) (compiledLocals : Nat → Option α)
     (memory : α → Option α) :
@@ -360,7 +379,7 @@ theorem compile_store32_load32_const_preserves_semantics
     evalCrepMemExp, evalPanMemExp, updateMemory, updateCrepLocal]
 
 theorem compile_storeByte_loadByte_const_preserves_semantics
-    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α] [Mul α]
     (context : CompileContext α) (address value : α)
     (locals : VarName → Option α) (compiledLocals : Nat → Option α)
     (memory : α → Option α) :
@@ -376,7 +395,7 @@ theorem compile_storeByte_loadByte_const_preserves_semantics
     evalCrepMemExp, evalPanMemExp, updateMemory, updateCrepLocal]
 
 theorem compile_ite_const_preserves_semantics
-    [BEq α] [OfNat α 0] [Add α]
+    [BEq α] [OfNat α 0] [Add α] [Mul α]
     (fuel : Nat) (context : CompileContext α)
     (condition thenValue elseValue : α)
     (locals : VarName → Option α) (compiledLocals : Nat → Option α)
@@ -401,5 +420,18 @@ theorem compile_ite_const_preserves_semantics
           simp [evalCrepMemProgFuel, evalPanMemProgFuel,
             evalCrepMemProg.evalCrepMemExps, evalCrepMemExp, evalCrepExp,
             evalPanMemExp]
+
+theorem compile_pan_mul_const_preserves_semantics
+    [BEq α] [OfNat α 0] [Add α] [Mul α]
+    (context : CompileContext α) (left right : α)
+    (locals : VarName → Option α) (compiledLocals : Nat → Option α) :
+    evalCrepProg compiledLocals
+        (compileProg context
+          (.return (.panOp .mul [.const left, .const right]))) =
+      evalPanProg locals
+        (.return (.panOp .mul [.const left, .const right])) := by
+  simp [compileProg, compileExp, compileExp.compileExpList, cexpHeads,
+    compilePanOp, evalCrepProg, evalCrepExps, evalCrepExp, evalPanProg,
+    evalPanExp]
 
 end Flapjack

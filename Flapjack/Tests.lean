@@ -732,4 +732,23 @@ example :
     RiscV.shiftAmount (BitVec.ofNat 64 65) = 1 := by
   native_decide
 
+example :
+    evalPanExp (fun _ => none)
+      (.panOp .mul [.const (α := Nat) 6, .const 7]) = some 42 := by
+  native_decide
+
+example :
+    evalCrepExp (fun _ => none)
+      (.crepOp .mul [.const (α := Nat) 6, .const 7]) = some 42 := by
+  native_decide
+
+example :
+    evalCrepProg (fun _ => none)
+        (compileProg crepContext
+          (.return (.panOp .mul [.const (α := Nat) 6, .const 7]))) =
+      evalPanProg (fun _ => none)
+        (.return (.panOp .mul [.const (α := Nat) 6, .const 7])) := by
+  exact compile_pan_mul_const_preserves_semantics crepContext 6 7
+    (fun _ => none) (fun _ => none)
+
 end Flapjack

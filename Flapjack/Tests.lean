@@ -1087,6 +1087,18 @@ example :
         .addi 3 0 1, .branchEq 0 0 8, .addi 3 0 2], [3]) := by
   native_decide
 
+example [NeZero width] :
+    RiscV.wordFunctionToRiscVWithCalls
+        ({ targets := [] } : RiscV.WordCallContext width)
+        ((.shareInst .load32 5
+          (.op .add [.var 6, .const (4 : RiscV.Word width)])) :
+          WordProg (RiscV.Word width)) =
+      some ([.addi 31 6 4, .load32 5 31], []) := by
+  simp [RiscV.wordFunctionToRiscVWithCalls,
+    RiscV.wordShareInstToInstructions, RiscV.wordExpToInstructions,
+    RiscV.wordExpToInstruction, RiscV.wordInstToInstruction,
+    RiscV.registerOfNat]
+
 def selectedLinkedCallCode : List (RiscV.Instruction 64) :=
   match RiscV.wordFunctionToRiscVWithCalls
       { targets := [(7, (32 : RiscV.Word 64), [2], [10])] }

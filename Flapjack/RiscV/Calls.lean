@@ -56,13 +56,12 @@ def wordFunctionToRiscVWithCalls [NeZero width]
   | .inst instruction => do
       let instruction ← wordInstToInstruction instruction
       pure ([instruction], [])
-  | .store (.var address) value => do
-      let value ← registerOfNat value
-      let address ← registerOfNat address
-      pure ([.storeWord value address], [])
-  | .shareInst operator name (.var address) => do
-      let instruction ← wordInstToInstruction (.mem operator name address)
-      pure ([instruction], [])
+  | .store address value => do
+      let instructions ← wordStoreToInstructions address value
+      pure (instructions, [])
+  | .shareInst operator name address => do
+      let instructions ← wordShareInstToInstructions operator name address
+      pure (instructions, [])
   | .tick => pure ([.addi 0 0 0], [])
   | .call (some (destinations, _)) (some label) arguments none => do
       let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
@@ -132,6 +131,7 @@ theorem wordFunctionToRiscVWithCalls_shareInst [NeZero width] :
       ({ targets := [] } : WordCallContext width)
       ((.shareInst .load32 5 (.var 6)) : WordProg (Word width)) =
       some ([.load32 5 6], []) := by
-  simp [wordFunctionToRiscVWithCalls, wordInstToInstruction, registerOfNat]
+  simp [wordFunctionToRiscVWithCalls, wordShareInstToInstructions,
+    wordExpToInstructions, wordInstToInstruction, registerOfNat]
 
 end Flapjack.RiscV

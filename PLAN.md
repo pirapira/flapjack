@@ -280,6 +280,8 @@ definitions, pass ordering, examples, and proof obligations.
   selectors, with executable evaluator agreement.
 - [x] Port unsigned RISC-V halfword (`LHU`/`SH`) memory operations through the
   model, Word IR, selector, evaluator, and executable round-trip regression.
+- [x] Prove model-level register agreements for unsigned RISC-V division and
+  remainder, including the HOL/RISC-V zero-divisor results.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [x] Prove the one-step global-state projection invariant for every Loop

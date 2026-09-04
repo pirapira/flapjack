@@ -186,6 +186,79 @@ def loopRegisterState [NeZero width] (state : RiscV.State width) :
     globals := fun _ => none
     memory := fun _ => none }
 
+def loopRegisterStateMapped [NeZero width] (context : WordContext)
+    (state : RiscV.State width) : LoopState (RiscV.Word width) :=
+  { locals := fun name =>
+      (RiscV.registerOfNat (wordFindVar context name)).map
+        (RiscV.readRegister state)
+    globals := fun _ => none
+    memory := fun _ => none }
+
+/-!
+This is the first context-parametric Loop-to-Word state observation. The
+source local and its mapped register need not have the same numeric name; the
+only required premise is that the mapped destination is a valid RISC-V
+register. It is the base case needed before extending the relation to
+expression evaluation and sequencing.
+-/
+theorem loopToWord_const_assign_register_agreement_mapped [NeZero width]
+    (context : WordContext) (state : RiscV.State width)
+    (destination : Nat) (value : RiscV.Word width) (register : Fin 32)
+    (zero : RiscV.ZeroRegister state)
+    (hregister :
+      RiscV.registerOfNat (wordFindVar context destination) = some register)
+    (hregister_nonzero : register ≠ 0) :
+    (evalLoopProg 1 (loopRegisterStateMapped context state)
+      (.assign destination (.const value))).bind (fun result =>
+        match result with
+        | .normal state => state.locals destination
+        | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg context
+          (.assign destination (.const value)))).map
+        (fun state => RiscV.readRegister state register) := by
+  have hzero : state.registers 0 = (0 : RiscV.Word width) := by
+    exact zero
+  simp [evalLoopProg, evalLoopExp, loopRegisterStateMapped,
+    loopToWordProg, wordCompileExp, RiscV.evalWordProg,
+    RiscV.wordExpToInstructions, RiscV.wordExpToInstruction,
+    RiscV.executeInstructions, RiscV.execute,
+    RiscV.writeRegister, RiscV.readRegister, RiscV.nextPc,
+    updateLoopLocal, hregister, hregister_nonzero, hzero]
+
+theorem loopToWord_add_assign_register_agreement_mapped [NeZero width]
+    (context : WordContext) (state : RiscV.State width)
+    (destination left right : Nat) (destinationRegister leftRegister rightRegister : Fin 32)
+    (zero : RiscV.ZeroRegister state)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hleft :
+      RiscV.registerOfNat (wordFindVar context left) = some leftRegister)
+    (hright :
+      RiscV.registerOfNat (wordFindVar context right) = some rightRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0) :
+    (evalLoopProg 1 (loopRegisterStateMapped context state)
+      (.assign destination (.op .add [.var left, .var right]))).bind
+        (fun result =>
+          match result with
+          | .normal state => state.locals destination
+          | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg context
+          (.assign destination (.op .add [.var left, .var right])))).map
+        (fun state => RiscV.readRegister state destinationRegister) := by
+  have hzero : state.registers 0 = (0 : RiscV.Word width) := by
+    exact zero
+  simp [evalLoopProg, evalLoopExp, evalLoopBinOp,
+    loopRegisterStateMapped, loopToWordProg, wordCompileExp,
+    wordCompileExp.wordCompileExpList,
+    RiscV.evalWordProg, RiscV.wordExpToInstructions,
+    RiscV.wordExpToInstruction, RiscV.executeInstructions,
+    RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+    RiscV.nextPc, updateLoopLocal, hdestination, hleft, hright,
+    hdestination_nonzero, hzero]
+
 theorem loopToWord_const_assign_register_agreement [NeZero width]
     (state : RiscV.State width) (zero : RiscV.ZeroRegister state)
     (value : RiscV.Word width) :

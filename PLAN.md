@@ -399,6 +399,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Extend the structured evaluator with fuel-bounded declaration calls,
   caller-local result binding, matching exception handlers, and an explicit
   structured FFI boundary with executable regressions.
+- [x] Add structured control-result support for scoped declarations, stores,
+  conditionals, while loops, break/continue, and shared-memory operations,
+  with executable store/load and loop regressions.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

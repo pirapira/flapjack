@@ -1882,4 +1882,40 @@ example :
     evalPanValueExp, evalPanValueExps, evalPanValueExp.evalPanValueExps,
     structuredTestFfi, updatePanValueMap]
 
+example :
+    (evalPanValueProgWithCallsAndFfi (α := Nat) [] [] structuredNoFfi
+      0 100 8 8 (fun _ => none) (fun _ => none) (fun _ => none)
+      (.seq (.store (.const 4) (.const 9))
+        (.return (.load .one (.const 4))))).map
+      (fun result => match result with
+        | .returned _ _ _ [PanValue.word value] => some value
+        | _ => none) = some (some 9) := by
+  simp [evalPanValueProgWithCallsAndFfi, evalPanValueExp,
+    evalPanValueExps, evalPanValueExp.evalPanValueExps,
+    structuredNoFfi, updatePanValueMap, updatePanValueMemory,
+    panValueShape, panShapeMatches]
+
+example :
+    (evalPanValueProgWithCallsAndFfi (α := Nat) [] [] structuredNoFfi
+      0 100 8 5 (fun _ => none) (fun _ => none) (fun _ => none)
+      (.while (.const 0) (.break))).map
+      (fun result => match result with
+        | .normal _ _ _ => true
+        | _ => false) = some true := by
+  simp [evalPanValueProgWithCallsAndFfi, evalPanValueExp,
+    structuredNoFfi]
+
+example :
+    (evalPanValueProgWithCallsAndFfi (α := Nat) [] [] structuredNoFfi
+      0 100 8 8 (fun _ => none) (fun _ => none) (fun _ => none)
+      (.dec "scoped" .one (.const 9)
+        (.return (.var .local "scoped")))).map
+      (fun result => match result with
+        | .returned locals _ _ [PanValue.word value] =>
+            (locals "scoped", value)
+        | _ => (none, 0)) = some (none, 9) := by
+  simp [evalPanValueProgWithCallsAndFfi, evalPanValueExp,
+    structuredNoFfi, updatePanValueMap, restorePanValueLocal,
+    restorePanValueControlLocal, panValueShape, panShapeMatches]
+
 end Flapjack

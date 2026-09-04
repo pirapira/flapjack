@@ -51,6 +51,20 @@ def loopInsertAll : List Nat → List Nat → List Nat
   | [], names => names
   | name :: rest, names => loopInsert name (loopInsertAll rest names)
 
+theorem loopInsert_nodup (name : Nat) (names : List Nat)
+    (hnames : names.Nodup) : (loopInsert name names).Nodup := by
+  by_cases hname : name ∈ names
+  · simp [loopInsert, hname, hnames]
+  · simp [loopInsert, hname, hnames]
+
+theorem loopInsertAll_nodup (added names : List Nat)
+    (hnames : names.Nodup) : (loopInsertAll added names).Nodup := by
+  induction added generalizing names with
+  | nil => exact hnames
+  | cons name rest ih =>
+      exact loopInsert_nodup name (loopInsertAll rest names)
+        (ih names hnames)
+
 def loopAccVars : LoopProg α → List Nat → List Nat
   | .seq first second, names => loopAccVars first (loopAccVars second names)
   | .break _, names => names

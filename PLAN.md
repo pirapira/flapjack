@@ -342,6 +342,8 @@ definitions, pass ordering, examples, and proof obligations.
   preservation across both successful components.
 - [x] Prove mapped Loop/Word condition agreement for equality, unsigned
   ordering, and HOL zero-test comparisons with immediate/register operands.
+- [x] Prove Loop slot-analysis insertion helpers preserve duplicate-freeness,
+  supporting later derivation of register non-aliasing invariants.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
 - [x] Add an end-to-end declaration-call regression from Pancake through

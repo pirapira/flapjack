@@ -4,6 +4,7 @@ import Flapjack.PanStructs
 import Flapjack.PanGlobals
 import Flapjack.Pipeline
 import Flapjack.Correctness
+import Flapjack.FlatCorrectness
 import Flapjack.Tests
 import Flapjack.Static
 import Flapjack.Crepe

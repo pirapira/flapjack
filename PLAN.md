@@ -282,6 +282,8 @@ definitions, pass ordering, examples, and proof obligations.
   model, Word IR, selector, evaluator, and executable round-trip regression.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
+- [x] Prove the one-step global-state projection invariant for every Loop
+  constructor under the no-global-writes syntactic side condition.
 - [x] Establish reusable Loop state-transition lemmas for the modeled
   assignment, load/store (including byte and 32-bit forms), shared-memory,
   `locValue`, global, return, and control-result cases.

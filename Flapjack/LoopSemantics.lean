@@ -284,6 +284,54 @@ mutual
         | result => pure result
 end
 
+/-!
+At one unit of fuel, every executable Loop instruction either leaves the
+global map unchanged or produces no result.  The syntactic side condition
+rules out the one constructor that can update globals.  Stating the result as
+a projection equality makes it compose cleanly with `Option.map` and later
+fuel-inductive proofs.
+-/
+theorem evalLoopProg_one_global_projection [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (program : LoopProg α)
+    (hprogram : loopNoGlobalWrites program = true) :
+    (evalLoopProg 1 state program).map
+        (fun result => (loopResultState result).globals) =
+      (evalLoopProg 1 state program).map (fun _ => state.globals) := by
+  cases program with
+  | arith operation =>
+      cases operation with
+      | longMul left right sourceLeft sourceRight =>
+          by_cases h : left = right <;>
+            simp [evalLoopProg, loopResultState, Function.comp_def, h]
+      | longDiv left right sourceLeft sourceRight quotient =>
+          simp [evalLoopProg, loopResultState]
+      | div destination dividend divisor =>
+          cases hdividend : state.locals dividend with
+          | none => simp [evalLoopProg, loopResultState, hdividend]
+          | some dividendValue =>
+              cases hdivisor : state.locals divisor with
+              | none => simp [evalLoopProg, loopResultState, hdividend, hdivisor]
+              | some divisorValue =>
+                  by_cases hzero : (divisorValue == 0) = true
+                  · simp [evalLoopProg, loopResultState, hdividend, hdivisor, hzero]
+                  · simp [evalLoopProg, loopResultState, hdividend, hdivisor, hzero]
+  | ite operator condition right thenBranch elseBranch live =>
+      cases right <;>
+        simp [evalLoopProg, loopNoGlobalWrites, loopResultState, Function.comp_def]
+  | loop liveIn body liveOut =>
+      simp [evalLoopProg, evalLoopRepeat, loopNoGlobalWrites, loopResultState,
+        Function.comp_def]
+  | shMem operator name address =>
+      cases operator <;>
+        simp [evalLoopProg, loopNoGlobalWrites, loopResultState, Function.comp_def]
+  | setGlobal address value =>
+      simp [loopNoGlobalWrites] at hprogram
+  | _ =>
+      simp [evalLoopProg, loopNoGlobalWrites, loopResultState, Function.comp_def]
+
 def lookupLoopFunction : Nat → List (Nat × List Nat × LoopProg α) →
     Option (List Nat × LoopProg α)
   | _, [] => none

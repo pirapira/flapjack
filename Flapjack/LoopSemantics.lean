@@ -37,6 +37,20 @@ def loopResultState : LoopResult α → LoopState α
   | .continued state _ => state
   | .raised state _ => state
 
+theorem option_bind_result_state_globals
+    (values : Option β) (continuation : β → Option (LoopResult α))
+    (global : α → Option α)
+    (hcontinuation : ∀ value result,
+      continuation value = some result → (loopResultState result).globals = global)
+    (result : LoopResult α)
+    (heval : values.bind continuation = some result) :
+    (loopResultState result).globals = global := by
+  cases hvalues : values with
+  | none => simp [hvalues] at heval
+  | some value =>
+      apply hcontinuation value result
+      simpa [hvalues] using heval
+
 /-- Syntactic approximation of Loop programs that do not update globals. -/
 def loopNoGlobalWrites : LoopProg α → Bool
   | .setGlobal _ _ => false

@@ -285,6 +285,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Establish reusable Loop state-transition lemmas for the modeled
   assignment, load/store (including byte and 32-bit forms), shared-memory,
   `locValue`, global, return, and control-result cases.
+- [x] Isolate successful option-bind result-state invariants for use in the
+  fuel-bounded Loop preservation induction.
 - [x] Add context-mapped Loop-to-Word register agreements for assignments
   and read-only 32-bit loads, plus the low-byte memory observation for
   `store32`, with explicit byte-fold memory premises.

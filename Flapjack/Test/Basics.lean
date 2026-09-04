@@ -8,6 +8,7 @@ import Flapjack.PanToCrep
 import Flapjack.Compile
 import Flapjack.Semantics
 import Flapjack.PanValues
+import Flapjack.PanMemory
 import Flapjack.RiscV.Model
 import Flapjack.RiscV.PanSemantics
 import Flapjack.Loop

@@ -7,6 +7,80 @@ open RiscV
 def structuredValueTestContext : StructContext :=
   [("Pair", { fields := [("left", .one), ("right", .one)], size := 2 })]
 
+def flatPairDomain : PanMemoryDomain Nat :=
+  fun address => address == 10 || address == 11
+
+def flatPairMemory : PanFlatMemory Nat :=
+  fun address => if address == 10 then some 3
+    else if address == 11 then some 5 else none
+
+example : panValueWords (.rStruct [.word (3 : Nat), .word 5]) = [3, 5] := by
+  rfl
+
+example :
+    panFlatLoad structuredValueTestContext flatPairDomain flatPairMemory 1 10
+      (.comb [.one, .one]) =
+      some (.rStruct [.word 3, .word 5]) := by
+  simp [panFlatLoad, panFlatLoadFuel, panFlatLoadFuel.panFlatLoadListFuel,
+    panFlatLoadFuel.panFlatLoadFieldsFuel, flatPairDomain, flatPairMemory,
+    panFlatReadWord, panOffset, panStructContextFuel, panShapeFieldsFuel,
+    panShapeFuel, panShapeFuel.panShapeListFuel, shapeSizeWithContext,
+    isWfShape, isWfShape.isWfShapeList, lookupInfo, structuredValueTestContext]
+
+example :
+    panFlatLoad structuredValueTestContext flatPairDomain flatPairMemory 1 10
+      (.named "Pair") =
+      some (.nStruct "Pair" [("left", .word 3), ("right", .word 5)]) := by
+  simp [panFlatLoad, panFlatLoadFuel, panFlatLoadFuel.panFlatLoadListFuel,
+    panFlatLoadFuel.panFlatLoadFieldsFuel, flatPairDomain, flatPairMemory,
+    panFlatReadWord, panOffset, panStructContextFuel, panShapeFieldsFuel,
+    panShapeFuel, panShapeFuel.panShapeListFuel, shapeSizeWithContext,
+    isWfShape, isWfShape.isWfShapeList, lookupInfo, structuredValueTestContext]
+
+example :
+    panFlatLoad structuredValueTestContext
+      (fun address => address == 10) flatPairMemory 1 10
+      (.comb [.one, .one]) = none := by
+  simp [panFlatLoad, panFlatLoadFuel, panFlatLoadFuel.panFlatLoadListFuel,
+    panFlatLoadFuel.panFlatLoadFieldsFuel, flatPairMemory, panFlatReadWord,
+    panOffset, panStructContextFuel, panShapeFieldsFuel, panShapeFuel,
+    panShapeFuel.panShapeListFuel, shapeSizeWithContext, isWfShape,
+    isWfShape.isWfShapeList, lookupInfo]
+
+example :
+    (panFlatStore flatPairDomain (fun _ => none) 1 10
+      (.rStruct [.word (3 : Nat), .word 5])).bind
+      (fun memory => panFlatLoad structuredValueTestContext flatPairDomain memory
+        1 10 (.comb [.one, .one])) =
+      some (.rStruct [.word 3, .word 5]) := by
+  simp [panFlatStore, panFlatStoreWords, panFlatStoreWord, panValueWords,
+    panValueFuel, panValueFuel.panValueListFuel, panValueWordsFuel,
+    panValueWordsFuel.panValueWordsListFuel,
+    panOffset, panFlatLoad, panFlatLoadFuel,
+    panFlatLoadFuel.panFlatLoadListFuel, panFlatLoadFuel.panFlatLoadFieldsFuel,
+    flatPairDomain, panFlatReadWord, panStructContextFuel, panShapeFieldsFuel,
+    panShapeFuel, panShapeFuel.panShapeListFuel, shapeSizeWithContext,
+    isWfShape, isWfShape.isWfShapeList, lookupInfo, updatePanValueMap]
+
+example :
+    (evalPanFlatProg (α := Nat) structuredValueTestContext 0 100 1
+      (fun _ => none) (fun _ => none) flatPairDomain (fun _ => none)
+      (.seq (.store (.const 10)
+        (.rStruct [.const 3, .const 5]))
+        (.return (.load (.comb [.one, .one]) (.const 10))))).map
+      (fun result => result.2.2.2) =
+      some [PanValue.rStruct [.word 3, .word 5]] := by
+  simp [evalPanFlatProg, evalPanFlatProgWithPrimitive, evalPanFlatExp,
+    evalPanFlatExp.evalPanFlatExps, evalPanFlatExps, panFlatStore,
+    panFlatStoreWords, panFlatStoreWord, panValueWords, panValueWordsFuel,
+    panValueFuel, panValueFuel.panValueListFuel, panValueWordsFuel,
+    panValueWordsFuel.panValueWordsListFuel, panOffset, panFlatLoad,
+    panFlatLoadFuel, panFlatLoadFuel.panFlatLoadListFuel,
+    panFlatLoadFuel.panFlatLoadFieldsFuel, flatPairDomain, panFlatReadWord,
+    panStructContextFuel, panShapeFieldsFuel, panShapeFuel,
+    panShapeFuel.panShapeListFuel, shapeSizeWithContext, isWfShape,
+    isWfShape.isWfShapeList, lookupInfo, updatePanValueMap]
+
 example :
     evalPanValueExp (α := Nat) structuredValueTestContext
       (fun _ => none) (fun _ => none) (fun _ => none) 0 100 8

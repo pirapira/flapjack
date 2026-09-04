@@ -199,6 +199,8 @@ definitions, pass ordering, examples, and proof obligations.
   using the executable memory state.
 - [x] Add an explicit fuel-bounded Loop FFI environment bridge with evaluated
   word arguments and host-controlled state updates.
+- [x] Preserve a static-check success while diagnosing unreachable sequence
+  tails after a definite function exit.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

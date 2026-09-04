@@ -1060,6 +1060,13 @@ example :
   native_decide
 
 example :
+    (staticCheck (α := Nat)
+      [.function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .seq (.return (.const 7)) .skip, returnShape := .one }]).2.length = 1 := by
+  native_decide
+
+example :
     staticResultOk (staticCheck (α := Nat)
       [.function
         { name := "f", inline := false, exported := false, params := [],

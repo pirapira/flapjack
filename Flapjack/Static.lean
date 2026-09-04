@@ -478,7 +478,7 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
   | .seq first second =>
       staticBind (checkProg context first) (fun firstResult =>
         if firstResult.exitsFunction then
-          staticOk firstResult
+          (Except.ok firstResult, [.warning "statement after function exit is unreachable"])
         else staticBind (checkProg context second) (fun secondResult =>
           staticOk secondResult))
   | .ite condition thenBranch elseBranch =>

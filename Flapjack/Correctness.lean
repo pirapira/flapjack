@@ -824,6 +824,20 @@ def loopLocalsMappedToRiscV [NeZero width] (context : WordContext)
       RiscV.registerOfNat (wordFindVar context name) = some register ∧
         RiscV.readRegister state register = value
 
+theorem loopToWordExp_var_agreement_of_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (name : Nat)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hvalue : ∃ value, loopState.locals name = some value) :
+    evalLoopExp loopState (.var name) =
+      (wordCompileExp context (.var name)).bind
+        (RiscV.evalWordExp state) := by
+  obtain ⟨value, hvalue⟩ := hvalue
+  rcases hlocals name value hvalue with
+    ⟨register, hregister, hregister_value⟩
+  simp [evalLoopExp, wordCompileExp, RiscV.evalWordExp,
+    hvalue, hregister, hregister_value]
+
 theorem loopLocalsMappedToRiscV_update [NeZero width]
     (context : WordContext) (locals : Nat → Option (RiscV.Word width))
     (state : RiscV.State width) (destination : Nat)

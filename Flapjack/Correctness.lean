@@ -164,13 +164,39 @@ def pipelineCompareItePipeline : FlapjackRiscVResult 64 :=
     (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
     pipelineCompareIteDeclarations
 
+theorem pipelineCompareIteFunctions_shape :
+    pipelineCompareItePipeline.functions =
+      [(1, [2, 3], some (
+        [.addi 5 2 0, .addi 6 3 0,
+         .branchNe 5 6 (BitVec.ofNat 64 12),
+         .addi 5 0 1, .branchEq 0 0 (BitVec.ofNat 64 8),
+         .addi 5 0 0, .addi 0 0 0, .addi 7 5 0,
+         .branchEq 7 0 (BitVec.ofNat 64 12),
+         .addi 5 0 7, .branchEq 0 0 (BitVec.ofNat 64 8),
+         .addi 5 0 8], [5]))] := by
+  native_decide
+
+theorem pipelineCompareIteLinkedFunctions_shape :
+    pipelineCompareItePipeline.linkedFunctions =
+      some [(1, 0, [2, 3],
+        [.addi 5 2 0, .addi 6 3 0,
+         .branchNe 5 6 (BitVec.ofNat 64 12),
+         .addi 5 0 1, .branchEq 0 0 (BitVec.ofNat 64 8),
+         .addi 5 0 0, .addi 0 0 0, .addi 7 5 0,
+         .branchEq 7 0 (BitVec.ofNat 64 12),
+         .addi 5 0 7, .branchEq 0 0 (BitVec.ofNat 64 8),
+         .addi 5 0 8], [5])] := by
+  change RiscV.linkRiscVFunctions 0 pipelineCompareItePipeline.functions = _
+  rw [pipelineCompareIteFunctions_shape]
+  rfl
+
 def compiledPipelineCompareIteRun
     (left right : RiscV.Word 64) : Option (List (RiscV.Word 64)) :=
   match pipelineCompareItePipeline.linkedFunctions with
   | some [(_, entry, parameters, code, returns)] =>
       match parameters.mapM RiscV.registerOfNat with
       | some parameters =>
-          RiscV.executeFunction 80 entry parameters code returns
+          RiscV.executeFunction 20 entry parameters code returns
             [left, right] (RiscV.zeroState 64)
       | none => none
   | _ => none

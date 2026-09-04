@@ -55,6 +55,9 @@ and `XORI`, as well as subtraction by an immediate via `ADDI`; immediate
 HOL’s multi-instruction rotate-right lowering is also selected for immediate
 and register shift counts, using `x31` as a reserved scratch register and
 rejecting source/destination aliases with that register.
+The Word evaluator now implements immediate ROR and the backend proves that
+the emitted immediate sequence agrees with that evaluator at the destination
+register, including the target’s masked shift-count normalization.
 Nonzero immediate conditional operands use the corresponding HOL `ORI` or
 `ANDI` scratch materialization; conditions that would clobber `x31` are
 rejected in this partial target boundary.

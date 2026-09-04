@@ -102,7 +102,7 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
         let destination ← registerOfNat destination
         let left ← registerOfNat left
         let amount := shiftAmount amount
-        pure [.srli 31 left (BitVec.ofNat width amount),
+        pure [.srli 31 left amount,
           .slli destination left (BitVec.ofNat width ((width - amount) % width)),
           .or destination destination 31]
   | expression => (wordExpToInstruction destination expression).map (fun instruction => [instruction])
@@ -341,6 +341,10 @@ def executeFunctionAt [NeZero width]
     (executeCodeUntil fuel start returnAddress code initialized).map
       (fun state => returns.map (readRegister state))
 
+def rotateRight [NeZero width] (value : Word width) (amount : Nat) : Word width :=
+  BitVec.ushiftRight value (amount % width) |||
+    BitVec.shiftLeft value ((width - amount % width) % width)
+
 
 theorem executeCode_conditional_equal :
     (executeCode 10 (0 : Word 32)
@@ -454,14 +458,15 @@ def evalWordExp [NeZero width] (state : State width) :
           (shiftAmount (readRegister state right)))
       | .asr => pure (BitVec.sshiftRight (readRegister state left)
           (shiftAmount (readRegister state right)))
-      | .ror => none
+      | .ror => pure (rotateRight (readRegister state left)
+          (shiftAmount (readRegister state right)))
   | .shift operator (.var left) (.const amount) => do
       let left ← registerOfNat left
       match operator with
       | .lsl => pure (BitVec.shiftLeft (readRegister state left) (shiftAmount amount))
       | .lsr => pure (BitVec.ushiftRight (readRegister state left) (shiftAmount amount))
       | .asr => pure (BitVec.sshiftRight (readRegister state left) (shiftAmount amount))
-      | .ror => none
+      | .ror => pure (rotateRight (readRegister state left) (shiftAmount amount))
   | _ => none
 
 def wordFunctionToRiscV [NeZero width] :
@@ -698,6 +703,49 @@ theorem compileWordShiftAsr_sound [NeZero width] (state : State width) :
       some (execute state (.sra 1 2 3)) := by
   simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
     registerOfNat, executeInstructions_single]
+
+theorem evalWordExp_rotateRight_immediate [NeZero width] (state : State width)
+    (amount : Word width) :
+    evalWordExp state (.shift .ror (.var 2) (.const amount)) =
+      some (rotateRight (readRegister state 2) (shiftAmount amount)) := by
+  simp [evalWordExp, rotateRight, registerOfNat]
+
+theorem shiftAmount_ofNat_of_lt [NeZero width] {amount : Nat} (h : amount < width) :
+    shiftAmount (BitVec.ofNat width amount) = amount := by
+  unfold shiftAmount
+  rw [BitVec.toNat_ofNat]
+  have hpow : width ≤ 2 ^ width := by
+    have haux : ∀ n : Nat, n ≤ 2 ^ n := by
+      intro n
+      induction n with
+      | zero => simp
+      | succ n ih =>
+          cases n with
+          | zero => simp
+          | succ n =>
+              rw [Nat.pow_succ]
+              calc
+                n + 2 ≤ (n + 1) * 2 := by omega
+                _ ≤ 2 ^ (n + 1) * 2 := Nat.mul_le_mul_right 2 ih
+    exact haux width
+  rw [Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le h hpow), Nat.mod_eq_of_lt h]
+
+theorem compileWordRotateRight_immediate_sound [NeZero width] (state : State width)
+    (amount : Word width) :
+    (evalWordProg state
+      (.assign 1 (.shift .ror (.var 2) (.const amount)))).map
+        (fun state => readRegister state 1) =
+      evalWordExp state (.shift .ror (.var 2) (.const amount)) := by
+  have amount_lt : shiftAmount amount < width :=
+    Nat.mod_lt _ (Nat.pos_of_ne_zero (NeZero.ne width))
+  have complement_lt : (width - shiftAmount amount) % width < width :=
+    Nat.mod_lt _ (Nat.pos_of_ne_zero (NeZero.ne width))
+  simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+    evalWordExp, rotateRight, registerOfNat, executeInstructions,
+    execute, writeRegister, readRegister, nextPc,
+    shiftAmount_ofNat_of_lt amount_lt,
+    shiftAmount_ofNat_of_lt complement_lt,
+    Nat.mod_eq_of_lt amount_lt, BitVec.or_comm]
 
 theorem compileWordAdd_zeroState [NeZero width] :
     evalWordProg (zeroState width)

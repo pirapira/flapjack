@@ -144,8 +144,7 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the RISC-V low-word multiplication path for HOL `CrepOp.mul` and
   `LoopArith.longMul`, with intermediate and end-to-end tests.
 - [x] Port RISC-V register shifts (`SLL`, `SRL`, and `SRA`) with masked shift
-  amounts and backend selection tests; leave `ROR` explicit as unsupported by
-  the base RV32I/RV64I target slice.
+  amounts, plus the HOL scratch-register lowering for `ROR`.
 - [x] Extend Pancake/Crepe executable expression semantics with `PanOp.mul` and
   prove constant multiplication preservation through `pan_to_crep`.
 - [x] Add a fuel-bounded Loop state/control-result evaluator for assignments,
@@ -236,6 +235,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the HOL RISC-V rotate-right lowering as a scratch-register
   instruction sequence, including immediate and register-count forms and the
   reserved `x31` alias contract.
+- [x] Extend Word-level ROR evaluation and prove immediate ROR compiler
+  agreement at the destination-register observation boundary, including
+  immediate shift-count normalization.
 - [x] Lower nonzero immediate RISC-V conditional operands using HOL-aligned
   `ORI`/`ANDI` scratch materialization, with an explicit `x31` condition guard.
 - [x] Thread the immediate-condition and multi-instruction expression

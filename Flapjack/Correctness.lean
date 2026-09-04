@@ -335,6 +335,73 @@ theorem loopToWord_load32_register_agreement_mapped [NeZero width]
   rw [haddress_value', hmemory, hmachine]
   simp [updateLoopLocal]
 
+theorem loopToWord_store32_memory_agreement_mapped [NeZero width]
+    (context : WordContext) (state : RiscV.State width)
+    (memory : RiscV.Word width → Option (RiscV.Word width))
+    (address value : Nat) (addressRegister valueRegister : Fin 32)
+    (addressValue valueValue : RiscV.Word width)
+    (haddress :
+      RiscV.registerOfNat (wordFindVar context address) = some addressRegister)
+    (hvalue :
+      RiscV.registerOfNat (wordFindVar context value) = some valueRegister)
+    (haddress_value :
+      RiscV.readRegister state addressRegister = addressValue)
+    (hvalue_value :
+      RiscV.readRegister state valueRegister = valueValue)
+    (width_ge_8 : 8 ≤ width) :
+    (evalLoopProg 1 (loopRegisterStateMappedWithMemory context state memory)
+      (.store32 address value)).bind (fun result =>
+        match result with
+        | .normal state =>
+            (state.memory addressValue).map
+              (fun value => BitVec.ofNat width (value.toNat % 256))
+        | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg context (.store32 address value))).map
+        (fun state =>
+          BitVec.ofNat width
+            (RiscV.readByte state (RiscV.byteAddress addressValue 0)).toNat) := by
+  have hwidth0 : width ≠ 0 := NeZero.ne width
+  have h2 : (BitVec.ofNat width 2) ≠ 0 := by
+    intro h
+    have h' := congrArg BitVec.toNat h
+    have hpow : 2 ^ 2 ≤ 2 ^ width :=
+      Nat.pow_le_pow_right (by decide) (by omega)
+    have hpow' : 4 ≤ 2 ^ width := by
+      simpa using hpow
+    have hlt : (2 : Nat) < 2 ^ width :=
+      Nat.lt_of_lt_of_le (by decide : (2 : Nat) < 4) hpow'
+    have h'' : (2 : Nat) = 0 := by
+      simpa [BitVec.toNat_ofNat,
+        Nat.mod_eq_of_lt hlt] using h'
+    omega
+  have h3 : (BitVec.ofNat width 3) ≠ 0 := by
+    intro h
+    have h' := congrArg BitVec.toNat h
+    have hpow : 2 ^ 2 ≤ 2 ^ width :=
+      Nat.pow_le_pow_right (by decide) (by omega)
+    have hpow' : 4 ≤ 2 ^ width := by
+      simpa using hpow
+    have hlt : (3 : Nat) < 2 ^ width :=
+      Nat.lt_of_lt_of_le (by decide : (3 : Nat) < 4) hpow'
+    have h'' : (3 : Nat) = 0 := by
+      simpa [BitVec.toNat_ofNat,
+        Nat.mod_eq_of_lt hlt] using h'
+    omega
+  simp [evalLoopProg, loopRegisterStateMappedWithMemory,
+    loopRegisterStateMapped, loopToWordProg, RiscV.evalWordProg,
+    RiscV.execute, RiscV.writeWord32, RiscV.writeByte,
+    RiscV.readByte, RiscV.byteAddress, RiscV.nextPc,
+    haddress, hvalue, haddress_value, hvalue_value, updateLoopMemory]
+  split <;> rename_i h
+  · exact (h3 h).elim
+  · split <;> rename_i h'
+    · exact (h2 h').elim
+    · have hvalue_byte : BitVec.toNat valueValue % 256 < 2 ^ 8 := by
+        have hmod := Nat.mod_lt (BitVec.toNat valueValue) (by decide : 0 < 256)
+        simpa using hmod
+      rw [BitVec.setWidth_ofNat_of_le_of_lt (by omega : 8 ≤ width) hvalue_byte]
+
 theorem loopToWord_const_assign_register_agreement [NeZero width]
     (state : RiscV.State width) (zero : RiscV.ZeroRegister state)
     (value : RiscV.Word width) :

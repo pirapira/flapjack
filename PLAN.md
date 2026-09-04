@@ -281,7 +281,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Establish reusable Loop state-transition lemmas for the modeled
   assignment, load/store, global, return, and control-result cases.
 - [x] Add context-mapped Loop-to-Word register agreements for assignments
-  and read-only 32-bit loads, with explicit byte-fold memory premises.
+  and read-only 32-bit loads, plus the low-byte memory observation for
+  `store32`, with explicit byte-fold memory premises.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
 - [x] Add an end-to-end declaration-call regression from Pancake through

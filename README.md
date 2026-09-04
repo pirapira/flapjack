@@ -25,6 +25,9 @@ memory, control-flow, call, exception, return, shared-memory, and FFI
 equations; the earlier structural helper remains available for comparison.
 The first Loop data-flow analyses are in
 [`Flapjack/LoopAnalysis.lean`](Flapjack/LoopAnalysis.lean).
+The initial Word IR and Loop-to-Word lowering are in
+[`Flapjack/Word.lean`](Flapjack/Word.lean); its backend subdirectory carries
+the HOL notice at [`Flapjack/Word/COPYRIGHT`](Flapjack/Word/COPYRIGHT).
 The initial RISC-V target vocabulary, register/memory primitives, and
 `ADD`/`ADDI` transition slice are in [`Flapjack/RiscV/Model.lean`](Flapjack/RiscV/Model.lean),
 with the HOL notice in [`Flapjack/RiscV/COPYRIGHT`](Flapjack/RiscV/COPYRIGHT).

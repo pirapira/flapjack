@@ -7,6 +7,7 @@ import Flapjack.RiscV.Model
 import Flapjack.Loop
 import Flapjack.CrepToLoop
 import Flapjack.LoopAnalysis
+import Flapjack.Word
 
 namespace Flapjack
 
@@ -250,6 +251,9 @@ def loopContext : LoopContext Nat :=
   { vars := [], functions := [("f", (64, 0))], maxVar := 2,
     target := .rv64i }
 
+def wordContext : WordContext :=
+  { vars := [(3, 2), (4, 3)] }
+
 def identityFunction : FunDecl Nat :=
   { name := "identity", inline := false, exported := false, params := [("x", .one)],
     body := .return (.var .local "x"), returnShape := .one }
@@ -428,6 +432,20 @@ example :
           (.seq (.assign 4 (.const 255)) (.store32 3 4))) := by
   simp [loopCompileProg, loopCompileExp, loopCompileExps, loopNestedSeq,
     loopContext]
+
+example :
+    loopToWordExp (LoopExp.baseAddr : LoopExp Nat) = some (.lookup .currHeap) := by
+  simp [loopToWordExp]
+
+example :
+    loopToWordProg wordContext (.assign 3 (.const (α := Nat) 7)) =
+      .assign 2 (.const 7) := by
+  simp [loopToWordProg, wordCompileExp, wordFindVar, lookupNatInfo, wordContext]
+
+example :
+    loopToWordProg wordContext (.seq (.load32 3 4) (.store32 3 4)) =
+      .seq (.inst (.mem .load32 3 2)) (.inst (.mem .store32 3 2)) := by
+  simp [loopToWordProg, wordFindVar, lookupNatInfo, wordContext]
 
 example :
     loopVarsOfExp ((LoopExp.op .add [.var 1, .load (.var 2)]) : LoopExp Nat) =

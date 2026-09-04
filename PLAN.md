@@ -97,6 +97,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the temporary-threaded Crepe-to-Loop expression and program
   equations for materialized loads, comparisons, memory, control flow,
   calls, exceptions, returns, shared memory, and FFI.
+- [x] Add the initial Word IR and Loop-to-Word lowering for register mapping,
+  expressions, memory instructions, loops, calls, returns, and FFI.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

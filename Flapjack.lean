@@ -9,6 +9,7 @@ import Flapjack.RiscV.Model
 import Flapjack.Loop
 import Flapjack.CrepToLoop
 import Flapjack.LoopAnalysis
+import Flapjack.Word
 
 /-!
 # Flapjack in Lean

@@ -677,6 +677,19 @@ theorem compileWordLongMul_sound [NeZero width] (state : State width) :
   simp [evalWordProg, wordArithToInstructions, wordArithToInstruction,
     executeInstructions, registerOfNat]
 
+theorem wordFunctionToRiscV_longMul [NeZero width] :
+    wordFunctionToRiscV
+      ((.inst (.arith (.longMul 5 6 2 3))) : WordProg (Word width)) =
+      some ([.mulHU 5 2 3, .mul 6 2 3], []) := by
+  simp [wordFunctionToRiscV, wordArithToInstructions, registerOfNat]
+
+theorem evalWordFunction_longMul [NeZero width] (state : State width) :
+    evalWordFunction state
+      ((.inst (.arith (.longMul 5 6 2 3))) : WordProg (Word width)) =
+      some (executeInstructions state [.mulHU 5 2 3, .mul 6 2 3], []) := by
+  simp [evalWordFunction, wordArithToInstructions, executeInstructions,
+    registerOfNat]
+
 theorem wordArithToInstruction_div [NeZero width] :
     wordArithToInstruction (width := width) (.div 1 2 3) =
       some (.divU 1 2 3) := by

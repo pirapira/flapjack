@@ -38,8 +38,9 @@ The first fuel-bounded Loop evaluator and its control-result semantics,
 including a call-aware recursive function-table bridge, are in
 [`Flapjack/LoopSemantics.lean`](Flapjack/LoopSemantics.lean).
 That module also exposes an explicit host-handler boundary for FFI effects.
-Its executable arithmetic fragment includes word division; long division and
-the remaining target-specific arithmetic cases are still staged separately.
+Its executable arithmetic fragment includes word division and the RISC-V
+LongMul lowering; long division and the remaining target-specific arithmetic
+cases are still staged separately.
 The initial Word IR and Loop-to-Word lowering are in
 [`Flapjack/Word.lean`](Flapjack/Word.lean); its backend subdirectory carries
 the HOL notice at [`Flapjack/Word/COPYRIGHT`](Flapjack/Word/COPYRIGHT).

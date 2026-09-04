@@ -824,6 +824,42 @@ def loopLocalsMappedToRiscV [NeZero width] (context : WordContext)
       RiscV.registerOfNat (wordFindVar context name) = some register ∧
         RiscV.readRegister state register = value
 
+theorem loopLocalsMappedToRiscV_update [NeZero width]
+    (context : WordContext) (locals : Nat → Option (RiscV.Word width))
+    (state : RiscV.State width) (destination : Nat)
+    (destinationRegister : Fin 32) (value : RiscV.Word width)
+    (hlocals : loopLocalsMappedToRiscV context locals state)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0)
+    (hnoalias :
+      ∀ name, name ≠ destination →
+        ∀ register,
+          RiscV.registerOfNat (wordFindVar context name) = some register →
+            register ≠ destinationRegister) :
+    loopLocalsMappedToRiscV context (updateLoopLocal locals destination value)
+      (RiscV.writeRegister state destinationRegister value) := by
+  intro name current hcurrent
+  by_cases hname : name = destination
+  · subst name
+    have hvalue : value = current := by
+      simpa [updateLoopLocal] using hcurrent
+    subst current
+    refine ⟨destinationRegister, hdestination, ?_⟩
+    simp [RiscV.writeRegister, RiscV.readRegister, hdestination_nonzero]
+  · have hcurrent' : locals name = some current := by
+      simpa [updateLoopLocal, hname] using hcurrent
+    rcases hlocals name current hcurrent' with
+      ⟨register, hregister, hregister_value⟩
+    refine ⟨register, hregister, ?_⟩
+    have hregister_nonalias := hnoalias name hname register hregister
+    simp only [RiscV.readRegister, RiscV.writeRegister,
+      if_neg hdestination_nonzero]
+    simp only [if_neg hregister_nonalias]
+    change RiscV.readRegister state register = current
+    exact hregister_value
+
 theorem loopToWord_binop_assign_agreement_of_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (operator : BinOp)

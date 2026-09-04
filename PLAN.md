@@ -316,6 +316,8 @@ definitions, pass ordering, examples, and proof obligations.
   context-indexed assignment simulation lemma.
 - [x] Add reusable mapped LSL/LSR assignment simulation with an explicit
   source shift-count bound matching the RISC-V masking convention.
+- [x] Prove preservation of the mapped-local relation across a destination
+  update and corresponding non-aliasing RISC-V register write.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
 - [x] Add an end-to-end declaration-call regression from Pancake through

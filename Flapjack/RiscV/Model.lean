@@ -142,6 +142,8 @@ inductive Instruction (width : Nat) where
   | jalr (destination source : Fin 32) (offset : Word width)
   | loadByte (destination address : Fin 32)
   | storeByte (source address : Fin 32)
+  | loadHalf (destination address : Fin 32)
+  | storeHalf (source address : Fin 32)
   | load32 (destination address : Fin 32)
   | store32 (source address : Fin 32)
   | loadWord (destination address : Fin 32)
@@ -184,6 +186,11 @@ def readWord32 (state : State width) (address : Word width) : Word width :=
   let byte3 := (readByte state (byteAddress address 3)).toNat
   BitVec.ofNat width (byte0 + 256 * byte1 + 256 ^ 2 * byte2 + 256 ^ 3 * byte3)
 
+def readWord16 (state : State width) (address : Word width) : Word width :=
+  let byte0 := (readByte state (byteAddress address 0)).toNat
+  let byte1 := (readByte state (byteAddress address 1)).toNat
+  BitVec.ofNat width (byte0 + 256 * byte1)
+
 def writeWord32 (state : State width) (address : Word width) (value : Word width) : State width :=
   let byte0 := BitVec.ofNat 8 (value.toNat % 256)
   let byte1 := BitVec.ofNat 8 (value.toNat / 256 % 256)
@@ -193,6 +200,12 @@ def writeWord32 (state : State width) (address : Word width) (value : Word width
   let state := writeByte state (byteAddress address 1) byte1
   let state := writeByte state (byteAddress address 2) byte2
   writeByte state (byteAddress address 3) byte3
+
+def writeWord16 (state : State width) (address : Word width) (value : Word width) : State width :=
+  let byte0 := BitVec.ofNat 8 (value.toNat % 256)
+  let byte1 := BitVec.ofNat 8 (value.toNat / 256 % 256)
+  let state := writeByte state (byteAddress address 0) byte0
+  writeByte state (byteAddress address 1) byte1
 
 def readWordValue (state : State width) (address : Word width) : Word width :=
   BitVec.ofNat width
@@ -364,6 +377,14 @@ def execute (state : State width) : Instruction width → State width
       let address := readRegister state address
       let value := BitVec.ofNat 8 (readRegister state source).toNat
       writeByte { state with pc := nextPc state } address value
+  | .loadHalf destination address =>
+      let address := readRegister state address
+      writeRegister { state with pc := nextPc state } destination
+        (readWord16 state address)
+  | .storeHalf source address =>
+      let address := readRegister state address
+      writeWord16 { state with pc := nextPc state } address
+        (readRegister state source)
   | .load32 destination address =>
       let address := readRegister state address
       writeRegister { state with pc := nextPc state } destination
@@ -410,7 +431,7 @@ theorem execute_pc_advance (state : State width) (instruction : Instruction widt
     (execute state instruction).pc = state.pc + 4 := by
   cases instruction <;>
     simp [Instruction.isBranch, execute, nextPc, writeRegister, writeByte,
-      writeWord32, writeWordValue_pc] at not_branch ⊢
+      writeWord16, writeWord32, writeWordValue_pc] at not_branch ⊢
   all_goals split <;> rfl
 
 theorem execute_sltu (state : State width) (destination sourceLeft sourceRight : Fin 32) :

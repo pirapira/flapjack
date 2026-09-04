@@ -1076,6 +1076,27 @@ example [NeZero width] :
       some ([.load32 5 6], []) := by
   exact RiscV.wordFunctionToRiscVWithCalls_shareInst
 
+example [NeZero width] :
+    RiscV.wordFunctionToRiscVWithCalls
+        ({ targets := [] } : RiscV.WordCallContext width)
+        ((.shareInst .load16 5 (.var 6)) : WordProg (RiscV.Word width)) =
+      some ([.loadHalf 5 6], []) := by
+  simp [RiscV.wordFunctionToRiscVWithCalls,
+    RiscV.wordShareInstToInstructions, RiscV.wordInstToInstruction,
+    RiscV.registerOfNat]
+
+def halfwordRoundTripState : RiscV.State 64 :=
+  RiscV.writeRegister
+    (RiscV.writeRegister (RiscV.zeroState 64) 2 16) 3
+      (BitVec.ofNat 64 0xBEEF)
+
+example :
+    (RiscV.evalWordFunction halfwordRoundTripState
+      (.seq (.inst (.mem .store16 3 2)) (.inst (.mem .load16 1 2)))).map
+        (fun result => RiscV.readRegister result.1 1) =
+      some (BitVec.ofNat 64 0xBEEF) := by
+  native_decide
+
 example :
     RiscV.wordFunctionToRiscVWithCalls (width := 8)
         ({ targets := [] } : RiscV.WordCallContext 8)

@@ -39,9 +39,11 @@ inductive WordArith where
 inductive WordMemOp where
   | load
   | load8
+  | load16
   | load32
   | store
   | store8
+  | store16
   | store32
   deriving DecidableEq, Repr
 
@@ -100,12 +102,12 @@ def wordArith : LoopArith → WordArith
 def wordMemOp : CrepMemOp → Option WordMemOp
   | .load => some .load
   | .load8 => some .load8
+  | .load16 => some .load16
   | .load32 => some .load32
   | .store => some .store
   | .store8 => some .store8
+  | .store16 => some .store16
   | .store32 => some .store32
-  | .load16 => none
-  | .store16 => none
 
 def loopToWordExp [OfNat α 1] : LoopExp α → Option (WordExp α)
   | .const value => some (.const value)

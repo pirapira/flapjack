@@ -110,6 +110,8 @@ inductive Instruction (width : Nat) where
   | sll (destination sourceLeft sourceRight : Fin 32)
   | srl (destination sourceLeft sourceRight : Fin 32)
   | sra (destination sourceLeft sourceRight : Fin 32)
+  | divU (destination sourceLeft sourceRight : Fin 32)
+  | remU (destination sourceLeft sourceRight : Fin 32)
   | branchEq (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | branchNe (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | branchLt (sourceLeft sourceRight : Fin 32) (offset : Word width)
@@ -270,6 +272,18 @@ def execute (state : State width) : Instruction width → State width
       writeRegister { state with pc := nextPc state } destination
         (BitVec.sshiftRight (readRegister state sourceLeft)
           (shiftAmount (readRegister state sourceRight)))
+  | .divU destination sourceLeft sourceRight =>
+      let divisor := readRegister state sourceRight
+      writeRegister { state with pc := nextPc state } destination
+        (if divisor == 0 then BitVec.ofNat width (2 ^ width - 1)
+        else BitVec.ofNat width
+          (readRegister state sourceLeft).toNat / divisor.toNat)
+  | .remU destination sourceLeft sourceRight =>
+      let divisor := readRegister state sourceRight
+      writeRegister { state with pc := nextPc state } destination
+        (if divisor == 0 then readRegister state sourceLeft
+        else BitVec.ofNat width
+          ((readRegister state sourceLeft).toNat % divisor.toNat))
   | .branchEq sourceLeft sourceRight offset =>
       { state with pc := (if readRegister state sourceLeft == readRegister state sourceRight then
           state.pc + offset else nextPc state) }

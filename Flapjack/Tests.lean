@@ -852,6 +852,32 @@ example :
       [.add 5 2 3] [5] [7, 8] (RiscV.zeroState 64) = some [15] := by
   exact RiscV.executeFunction_add
 
+example :
+    RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]
+      [.divU 5 2 3] [5] [42, 6] (RiscV.zeroState 64) = some [7] := by
+  native_decide
+
+example :
+    RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]
+      [.remU 5 2 3] [5] [43, 6] (RiscV.zeroState 64) = some [1] := by
+  native_decide
+
+example :
+    RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]
+      [.divU 5 2 3] [5] [42, 0] (RiscV.zeroState 64) =
+        some [BitVec.ofNat 64 (2 ^ 64 - 1)] := by
+  native_decide
+
+example :
+    RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]
+      [.remU 5 2 3] [5] [42, 0] (RiscV.zeroState 64) = some [42] := by
+  native_decide
+
+example [NeZero width] :
+    RiscV.wordArithToInstruction (width := width) (.div 1 2 3) =
+      some (.divU 1 2 3) := by
+  exact RiscV.wordArithToInstruction_div
+
 example (left right : RiscV.Word 64) :
     RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]
       [.add 5 2 3] [5] [left, right] (RiscV.zeroState 64) = some [left + right] := by

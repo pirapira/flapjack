@@ -65,7 +65,12 @@ def wordArithToInstruction [NeZero width] :
         let sourceRight ← registerOfNat sourceRight
         pure (.mul destination sourceLeft sourceRight)
       else none
-  | .longDiv _ _ _ _ _ | .div _ _ _ => none
+  | .longDiv _ _ _ _ _ => none
+  | .div destination dividend divisor => do
+      let destination ← registerOfNat destination
+      let dividend ← registerOfNat dividend
+      let divisor ← registerOfNat divisor
+      pure (.divU destination dividend divisor)
 
 def wordInstToInstruction [NeZero width] :
     WordInst → Option (Instruction width)
@@ -630,6 +635,16 @@ theorem wordArithToInstruction_longMul [NeZero width] :
 theorem compileWordLongMul_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.arith (.longMul 1 1 2 3))) =
       some (execute state (.mul 1 2 3)) := by
+  simp [evalWordProg, wordArithToInstruction, registerOfNat]
+
+theorem wordArithToInstruction_div [NeZero width] :
+    wordArithToInstruction (width := width) (.div 1 2 3) =
+      some (.divU 1 2 3) := by
+  simp [wordArithToInstruction, registerOfNat]
+
+theorem compileWordDiv_sound [NeZero width] (state : State width) :
+    evalWordProg state (.inst (.arith (.div 1 2 3))) =
+      some (execute state (.divU 1 2 3)) := by
   simp [evalWordProg, wordArithToInstruction, registerOfNat]
 
 def compileWordAdd [NeZero width] (destination left right : Nat) :

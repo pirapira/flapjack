@@ -45,6 +45,9 @@ The initial Word IR and Loop-to-Word lowering are in
 the HOL notice at [`Flapjack/Word/COPYRIGHT`](Flapjack/Word/COPYRIGHT).
 The initial RISC-V target vocabulary, register/memory primitives, and
 `ADD`/`ADDI` transition slice are in [`Flapjack/RiscV/Model.lean`](Flapjack/RiscV/Model.lean).
+The model also includes HOL-aligned unsigned `DIVU`/`REMU` transitions,
+including the architectural divide-by-zero results; Word division selects
+`DIVU` in the current target slice.
 The first Word-to-RISC-V selector, PC-aware code runner, and soundness lemmas
 for the supported straight-line and register/zero-conditional fragments are
 in [`Flapjack/RiscV/Backend.lean`](Flapjack/RiscV/Backend.lean). Equality,

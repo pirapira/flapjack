@@ -501,6 +501,78 @@ theorem loopToWord_load32_register_agreement_mapped [NeZero width]
   rw [haddress_value', hmemory, hmachine]
   simp [updateLoopLocal]
 
+theorem loopToWord_loadByte_register_agreement_mapped [NeZero width]
+    (context : WordContext) (state : RiscV.State width)
+    (memory : RiscV.Word width → Option (RiscV.Word width))
+    (address destination : Nat) (addressRegister destinationRegister : Fin 32)
+    (addressValue value : RiscV.Word width) (byteValue : BitVec 8)
+    (zero : RiscV.ZeroRegister state)
+    (haddress :
+      RiscV.registerOfNat (wordFindVar context address) = some addressRegister)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (haddress_value :
+      RiscV.readRegister state addressRegister = addressValue)
+    (hmemory :
+      memory addressValue =
+        some (BitVec.ofNat width byteValue.toNat))
+    (hmachine :
+      RiscV.readByte state addressValue = byteValue)
+    (hdestination_nonzero : destinationRegister ≠ 0) :
+    (evalLoopProg 1 (loopRegisterStateMappedWithMemory context state memory)
+      (.loadByte address destination)).bind (fun result =>
+        match result with
+        | .normal state => state.locals destination
+        | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg context (.loadByte address destination))).map
+        (fun state => RiscV.readRegister state destinationRegister) := by
+  have hzero : state.registers 0 = (0 : RiscV.Word width) := by
+    exact zero
+  simp [evalLoopProg, loopRegisterStateMappedWithMemory,
+    loopRegisterStateMapped, loopToWordProg, RiscV.evalWordProg,
+    RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+    RiscV.nextPc, updateLoopLocal, haddress, hdestination,
+    haddress_value, hmemory, hmachine, hdestination_nonzero, hzero]
+  have haddress_value' : state.registers addressRegister = addressValue := by
+    exact haddress_value
+  rw [haddress_value', hmemory, hmachine]
+  simp [updateLoopLocal]
+
+theorem loopToWord_storeByte_memory_agreement_mapped [NeZero width]
+    (context : WordContext) (state : RiscV.State width)
+    (memory : RiscV.Word width → Option (RiscV.Word width))
+    (address value : Nat) (addressRegister valueRegister : Fin 32)
+    (addressValue valueValue : RiscV.Word width)
+    (haddress :
+      RiscV.registerOfNat (wordFindVar context address) = some addressRegister)
+    (hvalue :
+      RiscV.registerOfNat (wordFindVar context value) = some valueRegister)
+    (haddress_value :
+      RiscV.readRegister state addressRegister = addressValue)
+    (hvalue_value :
+      RiscV.readRegister state valueRegister = valueValue) :
+    (evalLoopProg 1 (loopRegisterStateMappedWithMemory context state memory)
+      (.storeByte address value)).bind (fun result =>
+        match result with
+        | .normal state =>
+            (state.memory addressValue).map
+              (fun value => BitVec.ofNat width (value.toNat % 256))
+        | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg context (.storeByte address value))).map
+        (fun state =>
+          BitVec.ofNat width
+            (RiscV.readByte state addressValue).toNat) := by
+  simp [evalLoopProg, loopRegisterStateMappedWithMemory,
+    loopRegisterStateMapped, loopToWordProg, RiscV.evalWordProg,
+    RiscV.execute, RiscV.writeByte, RiscV.readByte,
+    RiscV.nextPc, haddress, hvalue, haddress_value, hvalue_value,
+    updateLoopMemory]
+  apply BitVec.eq_of_toNat_eq
+  simp [BitVec.toNat_setWidth, BitVec.toNat_ofNat, Nat.mod_mod]
+
 theorem loopToWord_store32_memory_agreement_mapped [NeZero width]
     (context : WordContext) (state : RiscV.State width)
     (memory : RiscV.Word width → Option (RiscV.Word width))

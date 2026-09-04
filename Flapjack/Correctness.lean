@@ -1370,6 +1370,78 @@ theorem loopToWord_condition_agreement_of_locals [NeZero width]
           hcondition_register, hright_register, hcondition_value,
         hright_value, hand]
 
+theorem loopToWord_ite_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (operator : Cmp) (condition : Nat)
+    (right : RegImm (RiscV.Word width))
+    (thenBranch elseBranch : LoopProg (RiscV.Word width))
+    (live : List Nat) (leftValue rightValue : RiscV.Word width)
+    (choose : Bool)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hleft : loopState.locals condition = some leftValue)
+    (hright : (match right with
+      | .imm value => some value
+      | .reg name => loopState.locals name) = some rightValue)
+    (hchooseLoop : evalLoopCondition operator leftValue rightValue = some choose)
+    (hchooseWord : RiscV.evalWordCondition state operator
+        (wordFindVar context condition) (wordRegImm context right) = some choose)
+    (hthen : ∀ middleLoop middleWord,
+      evalLoopProg 1 loopState thenBranch = some (.normal middleLoop) →
+      RiscV.evalWordProg state (loopToWordProg context thenBranch) = some middleWord →
+      loopLocalsMappedToRiscV context middleLoop.locals middleWord)
+    ( helse : ∀ middleLoop middleWord,
+      evalLoopProg 1 loopState elseBranch = some (.normal middleLoop) →
+      RiscV.evalWordProg state (loopToWordProg context elseBranch) = some middleWord →
+      loopLocalsMappedToRiscV context middleLoop.locals middleWord) :
+    ∀ finalLoop finalWord,
+      evalLoopProg 2 loopState
+          (.ite operator condition right thenBranch elseBranch live) =
+        some (.normal finalLoop) →
+      RiscV.evalWordProg state
+          (loopToWordProg context
+            (.ite operator condition right thenBranch elseBranch live)) =
+        some finalWord →
+      loopLocalsMappedToRiscV context finalLoop.locals finalWord := by
+  cases choose with
+  | false =>
+      intro finalLoop finalWord hloop hword
+      have helse_loop :
+          evalLoopProg 1 loopState elseBranch = some (.normal finalLoop) := by
+        cases right <;> simp_all [evalLoopProg, hchooseLoop]
+      cases hmiddle : RiscV.evalWordProg state (loopToWordProg context elseBranch) with
+      | none =>
+          cases right <;>
+            simp_all [loopToWordProg, RiscV.evalWordProg, hmiddle]
+      | some middleWord =>
+          have helse_word :
+              RiscV.evalWordProg state (loopToWordProg context elseBranch) =
+                some middleWord := hmiddle
+          have htick : RiscV.evalWordProg middleWord
+              (.tick : WordProg (RiscV.Word width)) = some finalWord := by
+            cases right <;>
+              simp_all [loopToWordProg, RiscV.evalWordProg, hmiddle]
+          exact loopToWord_tick_preserves_mapped_locals context finalLoop.locals
+            middleWord (helse finalLoop middleWord helse_loop helse_word) finalWord htick
+  | true =>
+      intro finalLoop finalWord hloop hword
+      have hthen_loop :
+          evalLoopProg 1 loopState thenBranch = some (.normal finalLoop) := by
+        cases right <;> simp_all [evalLoopProg, hchooseLoop]
+      cases hmiddle : RiscV.evalWordProg state (loopToWordProg context thenBranch) with
+      | none =>
+          cases right <;>
+            simp_all [loopToWordProg, RiscV.evalWordProg, hmiddle]
+      | some middleWord =>
+          have hthen_word :
+              RiscV.evalWordProg state (loopToWordProg context thenBranch) =
+                some middleWord := hmiddle
+          have htick : RiscV.evalWordProg middleWord
+              (.tick : WordProg (RiscV.Word width)) = some finalWord := by
+            cases right <;>
+              simp_all [loopToWordProg, RiscV.evalWordProg, hmiddle]
+          exact loopToWord_tick_preserves_mapped_locals context finalLoop.locals
+            middleWord (hthen finalLoop middleWord hthen_loop hthen_word) finalWord htick
+
 theorem loopToWord_div_assign_preserves_mapped_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (destination dividend divisor : Nat)

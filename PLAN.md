@@ -289,6 +289,8 @@ definitions, pass ordering, examples, and proof obligations.
   remaining operations and control-flow invariants.
 - [x] Prove that compiler-generated RISC-V ticks preserve the mapped-local
   relation needed by conditional and loop simulations.
+- [x] Prove conditional branch simulation for fuel-2 Loop programs, including
+  the compiler-generated post-conditional tick.
 - [x] Prove the one-step global-state projection invariant for every Loop
   constructor under the no-global-writes syntactic side condition.
 - [x] Lift the global-state projection invariant to arbitrary fuel, including

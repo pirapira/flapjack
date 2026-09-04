@@ -221,6 +221,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.
+- [x] Extend the Loop evaluator with executable word division and preserve
+  the result through a fuel-bounded arithmetic-program regression.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem

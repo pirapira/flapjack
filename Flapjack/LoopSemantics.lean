@@ -110,7 +110,7 @@ def evalLoopCondition [BEq α] (operator : Cmp) (left right : α) : Option Bool 
   | _ => none
 
 mutual
-  def evalLoopProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+  def evalLoopProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
       [LT α] [DecidableRel (fun left right : α => left < right)]
       : Nat → LoopState α → LoopProg α → Option (LoopResult α)
@@ -128,6 +128,11 @@ mutual
           pure (.normal { state with
             locals := updateLoopLocal state.locals left value })
         else none
+    | fuel + 1, state, .arith (.div destination dividend divisor) => do
+        let dividend ← state.locals dividend
+        let divisor ← state.locals divisor
+        pure (.normal { state with
+          locals := updateLoopLocal state.locals destination (dividend / divisor) })
     | fuel + 1, state, .load32 address destination => do
         let address ← state.locals address
         let value ← state.memory address
@@ -200,11 +205,10 @@ mutual
     | _, _, .fail => none
     | _, _, .primitive _ _ _
     | _, _, .arith (.longDiv _ _ _ _ _)
-    | _, _, .arith (.div _ _ _)
     | _, _, .call _ _ _ _
     | _, _, .ffi _ _ _ _ _ _ => none
 
-  def evalLoopRepeat [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+  def evalLoopRepeat [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
       [LT α] [DecidableRel (fun left right : α => left < right)]
       : Nat → LoopState α → LoopProg α → Option (LoopResult α)
@@ -245,7 +249,7 @@ the function table through callees and handlers, so recursive call graphs are
 bounded by the same fuel used for ordinary Loop execution.
 -/
 mutual
-  def evalLoopCall [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+  def evalLoopCall [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
       [LT α] [DecidableRel (fun left right : α => left < right)]
       (functions : List (Nat × List Nat × LoopProg α)) :
@@ -282,7 +286,7 @@ mutual
         | .continued _ label => some (.continued state label)
     termination_by fuel _ _ _ _ _ => fuel
 
-  def evalLoopProgWithFunctions [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+  def evalLoopProgWithFunctions [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
       [LT α] [DecidableRel (fun left right : α => left < right)]
       (functions : List (Nat × List Nat × LoopProg α)) :
@@ -308,7 +312,7 @@ mutual
     | fuel + 1, state, program => evalLoopProg (fuel + 1) state program
     termination_by fuel _ _ => fuel
 
-  def evalLoopRepeatWithFunctions [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+  def evalLoopRepeatWithFunctions [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
       [LT α] [DecidableRel (fun left right : α => left < right)]
       (functions : List (Nat × List Nat × LoopProg α)) :
@@ -331,7 +335,7 @@ reject the call. Control-flow recursion is fuel-bounded; ordinary operations
 continue to use the base evaluator above.
 -/
 mutual
-  def evalLoopFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+  def evalLoopFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
       [LT α] [DecidableRel (fun left right : α => left < right)]
       (handler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
@@ -361,7 +365,7 @@ mutual
     | fuel + 1, state, program => evalLoopProg (fuel + 1) state program
     termination_by fuel _ _ => fuel
 
-  def evalLoopFfiRepeat [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+  def evalLoopFfiRepeat [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
       [LT α] [DecidableRel (fun left right : α => left < right)]
       (handler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
@@ -377,14 +381,14 @@ mutual
     termination_by fuel _ _ => fuel
 end
 
-theorem evalLoopProg_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+theorem evalLoopProg_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]
     (state : LoopState α) :
     evalLoopProg 1 state (.skip : LoopProg α) = some (.normal state) := by
   simp [evalLoopProg]
 
-theorem evalLoopProg_assign_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+theorem evalLoopProg_assign_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]
     (state : LoopState α) (name : Nat) (value : α) :
@@ -392,7 +396,7 @@ theorem evalLoopProg_assign_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
       some (.normal { state with locals := updateLoopLocal state.locals name value }) := by
   simp [evalLoopProg, evalLoopExp]
 
-theorem evalLoopCompile_return_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+theorem evalLoopCompile_return_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]
     (context : LoopContext α) (live : List Nat) (state : LoopState α) (value : α) :

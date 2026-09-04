@@ -1249,6 +1249,17 @@ example :
 def emptyLoopState : LoopState Nat :=
   { locals := fun _ => none, globals := fun _ => none, memory := fun _ => none }
 
+def loopDivisionState : LoopState Nat :=
+  { locals := fun name =>
+      if name = 1 then some 42 else if name = 2 then some 6 else none
+    globals := fun _ => none, memory := fun _ => none }
+
+example :
+    (evalLoopProg 10 loopDivisionState
+      (.seq (.arith (.div 3 1 2)) (.return [3]))).map loopResultValues =
+      some [7] := by
+  native_decide
+
 example :
     evalLoopExp emptyLoopState
       (.op .add [.const 6, .crepOp .mul [.const 5, .const 6]]) = some 36 := by

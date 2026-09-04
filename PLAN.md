@@ -238,6 +238,8 @@ definitions, pass ordering, examples, and proof obligations.
   reserved `x31` alias contract.
 - [x] Lower nonzero immediate RISC-V conditional operands using HOL-aligned
   `ORI`/`ANDI` scratch materialization, with an explicit `x31` condition guard.
+- [x] Thread the immediate-condition and multi-instruction expression
+  lowering through the call-aware RISC-V function selector.
 - [x] Port the HOL RISC-V `AddCarry` lowering through Word instruction
   selection and execution, including its reserved `x31` scratch contract.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

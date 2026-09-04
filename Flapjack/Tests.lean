@@ -1076,6 +1076,17 @@ example [NeZero width] :
       some ([.load32 5 6], []) := by
   exact RiscV.wordFunctionToRiscVWithCalls_shareInst
 
+example :
+    RiscV.wordFunctionToRiscVWithCalls (width := 8)
+        ({ targets := [] } : RiscV.WordCallContext 8)
+        ((.seq
+          (.ite .equal 1 (.imm 7)
+            (.assign 3 (.const 1)) (.assign 3 (.const 2)))
+          (.return 0 [3])) : WordProg (RiscV.Word 8)) =
+      some ([.ori 31 0 7, .branchNe 1 31 12,
+        .addi 3 0 1, .branchEq 0 0 8, .addi 3 0 2], [3]) := by
+  native_decide
+
 def selectedLinkedCallCode : List (RiscV.Instruction 64) :=
   match RiscV.wordFunctionToRiscVWithCalls
       { targets := [(7, (32 : RiscV.Word 64), [2], [10])] }

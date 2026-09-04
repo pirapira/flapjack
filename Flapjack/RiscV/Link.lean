@@ -52,6 +52,10 @@ def wordFunctionReturnNames [NeZero width] :
       | some thenReturns, some elseReturns =>
           if thenReturns == elseReturns then some thenReturns else none
       | _, _ => none
+  | .loop _ body _ =>
+      match wordFunctionReturnNames body with
+      | some values => some values
+      | none => some []
   | _ => none
   termination_by program => sizeOf program
 
@@ -80,6 +84,10 @@ def wordFunctionReturnNamesWithCalls [NeZero width]
       let thenReturns ← wordFunctionReturnNamesWithCalls functions thenBranch
       let elseReturns ← wordFunctionReturnNamesWithCalls functions elseBranch
       if thenReturns == elseReturns then some thenReturns else none
+  | .loop _ body _ =>
+      match wordFunctionReturnNamesWithCalls functions body with
+      | some values => some values
+      | none => some []
   | .return _ values => some values
   | _ => none
 termination_by program => sizeOf program
@@ -89,7 +97,7 @@ def compileLinkedWordFunction [NeZero width]
     (function : Nat × List Nat × WordProg (Word width)) :
     Option (Nat × List Nat × Option (List (Instruction width) × List (Fin 32))) := do
   let (label, parameters, body) := function
-  let (code, returns) ← wordFunctionToRiscVWithCalls context body
+  let (code, returns) ← wordFunctionToRiscVWithCallsAndLoops context body
   pure (label, parameters, some (code ++ [.jalr 0 1 0], returns))
 
 def wordFunctionTargetSignaturesAux [NeZero width]

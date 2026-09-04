@@ -1,4 +1,4 @@
-import Flapjack.RiscV.Backend
+import Flapjack.RiscV.Loops
 
 /-!
 RISC-V call-sequence selection for the first Flapjack calling convention.
@@ -140,6 +140,80 @@ def wordFunctionToRiscVWithCalls [NeZero width]
   | _ => none
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
+
+mutual
+  def wordFunctionToRiscVWithCallsAndLoopsAux [NeZero width]
+      (context : WordCallContext width) :
+      WordProg (Word width) →
+        Option (List (WordControlInstruction width) × List (Fin 32))
+    | .break 0 => some ([.breakJump], [])
+    | .continue 0 => some ([.continueJump], [])
+    | .loop _ body _ => do
+        let (bodyCode, bodyReturns) ←
+          wordFunctionToRiscVWithCallsAndLoopsAux context body
+        if !bodyReturns.isEmpty then none
+        else
+          let bodyCode ← resolveWordLoopBody bodyCode
+          pure (bodyCode.map .instruction ++
+            [.instruction (.jal 0 (0 - BitVec.ofNat width (4 * bodyCode.length)))], [])
+    | .ite operator condition rightValue thenBranch elseBranch => do
+        let (branchLeft, right, prelude) ←
+          wordConditionOperands operator condition rightValue
+        let (thenCode, thenReturns) ←
+          wordFunctionToRiscVWithCallsAndLoopsAux context thenBranch
+        let (elseCode, elseReturns) ←
+          wordFunctionToRiscVWithCallsAndLoopsAux context elseBranch
+        if thenReturns != elseReturns then none
+        else
+          let falseOffset : Word width :=
+            BitVec.ofNat width (8 + 4 * thenCode.length)
+          let endOffset : Word width :=
+            BitVec.ofNat width (4 + 4 * elseCode.length)
+          let branchFalse ← match operator with
+            | .equal => pure (.branchNe branchLeft right falseOffset)
+            | .notEqual => pure (.branchEq branchLeft right falseOffset)
+            | .less => pure (.branchGe branchLeft right falseOffset)
+            | .notLess => pure (.branchLt branchLeft right falseOffset)
+            | .lower => pure (.branchGeU branchLeft right falseOffset)
+            | .notLower => pure (.branchLtU branchLeft right falseOffset)
+            | .test => pure (.branchNe branchLeft right falseOffset)
+            | .notTest => pure (.branchEq branchLeft right falseOffset)
+          pure (prelude.map .instruction ++
+            [.instruction branchFalse] ++ thenCode ++
+            [.instruction (.branchEq 0 0 endOffset)] ++ elseCode, thenReturns)
+    | .seq first second => do
+        let (firstCode, firstReturns) ←
+          wordFunctionToRiscVWithCallsAndLoopsAux context first
+        if !firstReturns.isEmpty then
+          pure (firstCode, firstReturns)
+        else
+          let (secondCode, secondReturns) ←
+            wordFunctionToRiscVWithCallsAndLoopsAux context second
+          pure (firstCode ++ secondCode, secondReturns)
+    | program => do
+        let (code, returns) ← wordFunctionToRiscVWithCalls context program
+        pure (code.map .instruction, returns)
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+end
+
+def wordFunctionToRiscVWithCallsAndLoops [NeZero width]
+    (context : WordCallContext width) :
+    WordProg (Word width) → Option (List (Instruction width) × List (Fin 32)) :=
+  fun program => do
+    let (code, returns) ← wordFunctionToRiscVWithCallsAndLoopsAux context program
+    let code ← wordControlInstructions code
+    pure (code, returns)
+
+theorem wordFunctionToRiscVWithCallsAndLoops_break [NeZero width]
+    (context : WordCallContext width) :
+    wordFunctionToRiscVWithCallsAndLoops context
+        ((.loop [] (.break 0) []) : WordProg (Word width)) =
+      some ([.jal 0 (BitVec.ofNat width 8),
+        .jal 0 (0 - BitVec.ofNat width 4)], []) := by
+  simp [wordFunctionToRiscVWithCallsAndLoops,
+    wordFunctionToRiscVWithCallsAndLoopsAux, resolveWordLoopBody,
+    resolveWordLoopBodyAux, wordControlInstructions]
 
 theorem wordCallToRiscV_shape [NeZero width]
     (entry : Word width) :

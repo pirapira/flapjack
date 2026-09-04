@@ -915,6 +915,131 @@ theorem loopToWord_tick_preserves_mapped_locals [NeZero width]
   · simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister, hzero]
     exact hregister_value
 
+def loopResultMappedToRiscV [NeZero width] (context : WordContext) :
+    LoopResult (RiscV.Word width) → RiscV.WordLoopResult width → Prop
+  | .normal loopState, .normal state =>
+      loopLocalsMappedToRiscV context loopState.locals state
+  | .broke loopState loopLabel, .broke state wordLabel =>
+      loopLabel = wordLabel ∧
+        loopLocalsMappedToRiscV context loopState.locals state
+  | .continued loopState loopLabel, .continued state wordLabel =>
+      loopLabel = wordLabel ∧
+        loopLocalsMappedToRiscV context loopState.locals state
+  | _, _ => False
+
+theorem loopRepeat_mapped_locals [NeZero width]
+    (context : WordContext) (body : LoopProg (RiscV.Word width))
+    (wordBody : WordProg (RiscV.Word width))
+    (hbody : ∀ fuel loopState state loopResult wordResult,
+      loopLocalsMappedToRiscV context loopState.locals state →
+      evalLoopProg fuel loopState body = some loopResult →
+      RiscV.evalWordLoopProg fuel state wordBody = some wordResult →
+      loopResultMappedToRiscV context loopResult wordResult) :
+    ∀ fuel loopState state loopResult wordResult,
+      loopLocalsMappedToRiscV context loopState.locals state →
+      evalLoopRepeat fuel loopState body = some loopResult →
+      RiscV.evalWordLoopRepeat fuel state wordBody = some wordResult →
+      loopResultMappedToRiscV context loopResult wordResult := by
+  intro fuel
+  induction fuel with
+  | zero =>
+      intro loopState state loopResult wordResult hlocals hloop hword
+      simp [evalLoopRepeat, RiscV.evalWordLoopRepeat] at hloop
+  | succ fuel ih =>
+      intro loopState state loopResult wordResult hlocals hloop hword
+      cases hbodyLoop : evalLoopProg fuel loopState body with
+      | none =>
+          simp [evalLoopRepeat, hbodyLoop] at hloop
+      | some loopBodyResult =>
+          cases hbodyWord : RiscV.evalWordLoopProg fuel state wordBody with
+          | none =>
+              simp [RiscV.evalWordLoopRepeat, hbodyWord] at hword
+          | some wordBodyResult =>
+              have hbodyResult := hbody fuel loopState state
+                loopBodyResult wordBodyResult hlocals hbodyLoop hbodyWord
+              cases loopBodyResult with
+              | normal middleLoop =>
+                  cases wordBodyResult with
+                  | normal middleWord =>
+                      have hlocals' :
+                          loopLocalsMappedToRiscV context middleLoop.locals middleWord :=
+                        hbodyResult
+                      apply ih middleLoop middleWord loopResult wordResult hlocals'
+                      · simpa [evalLoopRepeat, hbodyLoop] using hloop
+                      · simpa [RiscV.evalWordLoopRepeat, hbodyWord] using hword
+                  | broke middleWord label | continued middleWord label =>
+                      exact False.elim (by simpa [loopResultMappedToRiscV] using hbodyResult)
+              | broke middleLoop label =>
+                  cases wordBodyResult with
+                  | normal middleWord | continued middleWord wordLabel =>
+                      exact False.elim (by simpa [loopResultMappedToRiscV] using hbodyResult)
+                  | broke middleWord wordLabel =>
+                      have hlabel : label = wordLabel := by
+                        exact hbodyResult.1
+                      have hlocals' :
+                          loopLocalsMappedToRiscV context middleLoop.locals middleWord :=
+                        hbodyResult.2
+                      by_cases hzero : label = 0
+                      · have hwordLabel : wordLabel = 0 := by
+                          exact hlabel.symm.trans hzero
+                        subst label
+                        subst wordLabel
+                        have hloop' :
+                            some (.normal middleLoop) = some loopResult := by
+                          simpa [evalLoopRepeat, hbodyLoop] using hloop
+                        have hword' :
+                            some (.normal middleWord) = some wordResult := by
+                          simpa [RiscV.evalWordLoopRepeat, hbodyWord] using hword
+                        cases hloop'
+                        cases hword'
+                        exact hlocals'
+                      · have hwordLabel : wordLabel ≠ 0 := by
+                          intro hwordZero
+                          apply hzero
+                          simpa [hwordZero] using hlabel
+                        have hloop' :
+                            some (.broke middleLoop label) = some loopResult := by
+                          simpa [evalLoopRepeat, hbodyLoop, hzero] using hloop
+                        have hword' :
+                            some (.broke middleWord wordLabel) = some wordResult := by
+                          simpa [RiscV.evalWordLoopRepeat, hbodyWord, hwordLabel] using hword
+                        cases hloop'
+                        cases hword'
+                        exact ⟨hlabel, hlocals'⟩
+              | continued middleLoop label =>
+                  cases wordBodyResult with
+                  | normal middleWord | broke middleWord wordLabel =>
+                      exact False.elim (by simpa [loopResultMappedToRiscV] using hbodyResult)
+                  | continued middleWord wordLabel =>
+                      have hlabel : label = wordLabel := by
+                        exact hbodyResult.1
+                      have hlocals' :
+                          loopLocalsMappedToRiscV context middleLoop.locals middleWord :=
+                        hbodyResult.2
+                      by_cases hzero : label = 0
+                      · have hwordLabel : wordLabel = 0 := by
+                          exact hlabel.symm.trans hzero
+                        subst label
+                        subst wordLabel
+                        apply ih middleLoop middleWord loopResult wordResult hlocals'
+                        · simpa [evalLoopRepeat, hbodyLoop] using hloop
+                        · simpa [RiscV.evalWordLoopRepeat, hbodyWord] using hword
+                      · have hwordLabel : wordLabel ≠ 0 := by
+                          intro hwordZero
+                          apply hzero
+                          simpa [hwordZero] using hlabel
+                        have hloop' :
+                            some (.continued middleLoop label) = some loopResult := by
+                          simpa [evalLoopRepeat, hbodyLoop, hzero] using hloop
+                        have hword' :
+                            some (.continued middleWord wordLabel) = some wordResult := by
+                          simpa [RiscV.evalWordLoopRepeat, hbodyWord, hwordLabel] using hword
+                        cases hloop'
+                        cases hword'
+                        exact ⟨hlabel, hlocals'⟩
+              | returned middleLoop values | raised middleLoop exception =>
+                  exact False.elim (by simpa [loopResultMappedToRiscV] using hbodyResult)
+
 theorem bindWordRegisters_single_parameter [NeZero width]
     (context : WordContext) (state : RiscV.State width)
     (name : Nat) (value : RiscV.Word width) (register : Fin 32)

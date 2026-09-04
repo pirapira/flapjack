@@ -297,6 +297,10 @@ definitions, pass ordering, examples, and proof obligations.
   evaluator, including its generated entry and exit ticks.
 - [x] Add layout-aware RISC-V lowering for Word loops, resolving generated
   break and continue jumps and wiring it into the default pipeline.
+- [x] Extend call-aware RISC-V lowering and linked return-signature derivation
+  to retain loop-containing Word functions.
+- [x] Prove generic fuel-inductive Loop/Word repeat preservation for normal,
+  break, and continue control results.
 - [x] Prove the one-step global-state projection invariant for every Loop
   constructor under the no-global-writes syntactic side condition.
 - [x] Lift the global-state projection invariant to arbitrary fuel, including

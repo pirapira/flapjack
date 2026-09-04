@@ -1162,11 +1162,38 @@ example :
     RiscV.wordFunctionTargetSignaturesAux,
     RiscV.wordFunctionReturnNamesWithCalls, RiscV.lookupWordFunctionBody,
     RiscV.compileLinkedWordFunction, RiscV.wordFunctionReturnNames,
+    RiscV.wordFunctionToRiscVWithCallsAndLoops,
+    RiscV.wordFunctionToRiscVWithCallsAndLoopsAux,
+    RiscV.wordControlInstructions, RiscV.resolveWordLoopBody,
+    RiscV.resolveWordLoopBodyAux,
     RiscV.wordFunctionToRiscVWithCalls, RiscV.wordCallToRiscVWithStack,
     RiscV.wordCallToRiscV,
     RiscV.wordRegisterMoves, RiscV.lookupWordCallTarget,
     RiscV.registerOfNat, RiscV.linkRiscVFunctions,
     RiscV.linkRiscVFunctionsAt, linkedWordCallFunctions]
+
+def linkedWordLoopFunctions :
+    List (Nat × List Nat × WordProg (RiscV.Word 64)) :=
+  [(7, [], (.loop [] (.break 0) []))]
+
+example :
+    RiscV.linkWordFunctions (0 : RiscV.Word 64) linkedWordLoopFunctions =
+      some [(7, 0, [],
+        [.jal 0 (BitVec.ofNat 64 8),
+         .jal 0 (0 - BitVec.ofNat 64 4), .jalr 0 1 0], [])] := by
+  simp [RiscV.linkWordFunctions, RiscV.wordFunctionTargetSignatures,
+    RiscV.wordFunctionTargetSignaturesWithCalls,
+    RiscV.wordFunctionTargetSignaturesAux,
+    RiscV.wordFunctionReturnNamesWithCalls, RiscV.lookupWordFunctionBody,
+    RiscV.compileLinkedWordFunction, RiscV.wordFunctionReturnNames,
+    RiscV.wordFunctionToRiscVWithCallsAndLoops,
+    RiscV.wordFunctionToRiscVWithCallsAndLoopsAux,
+    RiscV.wordControlInstructions, RiscV.resolveWordLoopBody,
+    RiscV.resolveWordLoopBodyAux, RiscV.wordFunctionToRiscVWithCalls,
+    RiscV.wordCallToRiscVWithStack, RiscV.wordCallToRiscV,
+    RiscV.wordRegisterMoves, RiscV.lookupWordCallTarget,
+    RiscV.registerOfNat, RiscV.linkRiscVFunctions,
+    RiscV.linkRiscVFunctionsAt, linkedWordLoopFunctions]
 
 def linkedWordCallImage : List (RiscV.Instruction 64) :=
   [.jalr 0 1 0, .addi 2 6 0,

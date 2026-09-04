@@ -1747,4 +1747,34 @@ example :
       (fun result => result.2.2) = some [1] := by
   native_decide
 
+example :
+    evalPanExp (α := Nat) (fun _ => none)
+      (.op .sub [.const 9, .const 4]) = some 5 := by
+  native_decide
+
+example :
+    evalPanExp (α := Nat) (fun _ => none)
+      (.op .and [.const 5, .const 3]) = some 1 := by
+  native_decide
+
+example :
+    evalPanExp (α := Nat) (fun _ => none)
+      (.op .xor [.const 5, .const 3]) = some 6 := by
+  native_decide
+
+example :
+    evalPanExp (α := Nat) (fun _ => none)
+      (.cmp .lower (.const 3) (.const 5)) = some 1 := by
+  native_decide
+
+example :
+    evalPanCondition (α := Nat) (fun _ => none)
+      (.cmp .notLower (.const 5) (.const 3)) = some true := by
+  native_decide
+
+example :
+    evalPanExp (α := Nat) (fun _ => none)
+      (.shift .lsl (.const 3) (.const 2)) = some 12 := by
+  native_decide
+
 end Flapjack

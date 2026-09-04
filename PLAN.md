@@ -388,6 +388,9 @@ definitions, pass ordering, examples, and proof obligations.
   conditional-program regression.
 - [x] Extend memory-backed source equality conditions through fuel-bounded
   conditional execution and add a load-based regression.
+- [x] Extend scalar source expression semantics to subtraction, bitwise
+  operations, all comparison constructors, and logical shifts, with executable
+  Nat regressions.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

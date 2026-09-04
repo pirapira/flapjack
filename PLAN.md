@@ -182,6 +182,8 @@ definitions, pass ordering, examples, and proof obligations.
   Pancake-to-RISC-V pipeline for a two-parameter addition function.
 - [x] Connect Word full-word stores to function artifacts and prove a
   store/load function through the RISC-V byte-memory model.
+- [x] Port the direct RISC-V `JAL` PC-transfer/link-register transition as
+  the machine-model foundation for later function calls.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

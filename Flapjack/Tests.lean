@@ -868,6 +868,11 @@ example :
       [3] [] (RiscV.zeroState 64) = some [42] := by
   exact RiscV.executeFunction_storeLoad
 
+example [NeZero width] (state : RiscV.State width)
+    (offset : RiscV.Word width) :
+    (RiscV.execute state (.jal 1 offset)).pc = state.pc + offset := by
+  exact RiscV.execute_jal_pc state 1 offset
+
 example :
     let result := compileFlapjackRiscV (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)

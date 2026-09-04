@@ -116,6 +116,7 @@ inductive Instruction (width : Nat) where
   | branchGe (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | branchLtU (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | branchGeU (sourceLeft sourceRight : Fin 32) (offset : Word width)
+  | jal (destination : Fin 32) (offset : Word width)
   | loadByte (destination address : Fin 32)
   | storeByte (source address : Fin 32)
   | load32 (destination address : Fin 32)
@@ -288,6 +289,8 @@ def execute (state : State width) : Instruction width → State width
   | .branchGeU sourceLeft sourceRight offset =>
       { state with pc := (if readRegister state sourceLeft < readRegister state sourceRight then
           nextPc state else state.pc + offset) }
+  | .jal destination offset =>
+      writeRegister { state with pc := state.pc + offset } destination (nextPc state)
   | .loadByte destination address =>
       let address := readRegister state address
       let value := BitVec.ofNat width (readByte state address).toNat
@@ -334,7 +337,7 @@ theorem accessAligned_aligned (access : AccessType) (address : Word width)
 
 def Instruction.isBranch : Instruction width → Bool
   | .branchEq _ _ _ | .branchNe _ _ _ | .branchLt _ _ _ | .branchGe _ _ _
-  | .branchLtU _ _ _ | .branchGeU _ _ _ => true
+  | .branchLtU _ _ _ | .branchGeU _ _ _ | .jal _ _ => true
   | _ => false
 
 theorem execute_pc_advance (state : State width) (instruction : Instruction width)
@@ -380,6 +383,19 @@ theorem execute_branchGe_pc (state : State width) (sourceLeft sourceRight : Fin 
       else
         state.pc + offset := by
   simp [execute, nextPc]
+
+theorem execute_jal_pc (state : State width) (destination : Fin 32)
+    (offset : Word width) :
+    (execute state (.jal destination offset)).pc = state.pc + offset := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, h]
+
+theorem execute_jal_link (state : State width) (destination : Fin 32)
+    (offset : Word width) :
+    readRegister (execute state (.jal destination offset)) destination =
+        if destination = 0 then readRegister state destination else nextPc state := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, readRegister, nextPc, h, eq_comm]
 
 theorem execute_branchLtU_pc (state : State width) (sourceLeft sourceRight : Fin 32)
     (offset : Word width) :

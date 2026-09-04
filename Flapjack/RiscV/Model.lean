@@ -112,6 +112,8 @@ inductive Instruction (width : Nat) where
   | sra (destination sourceLeft sourceRight : Fin 32)
   | branchEq (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | branchNe (sourceLeft sourceRight : Fin 32) (offset : Word width)
+  | branchLtU (sourceLeft sourceRight : Fin 32) (offset : Word width)
+  | branchGeU (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | loadByte (destination address : Fin 32)
   | storeByte (source address : Fin 32)
   | load32 (destination address : Fin 32)
@@ -260,6 +262,12 @@ def execute (state : State width) : Instruction width → State width
   | .branchNe sourceLeft sourceRight offset =>
       { state with pc := (if readRegister state sourceLeft == readRegister state sourceRight then
           nextPc state else state.pc + offset) }
+  | .branchLtU sourceLeft sourceRight offset =>
+      { state with pc := (if readRegister state sourceLeft < readRegister state sourceRight then
+          state.pc + offset else nextPc state) }
+  | .branchGeU sourceLeft sourceRight offset =>
+      { state with pc := (if readRegister state sourceLeft < readRegister state sourceRight then
+          nextPc state else state.pc + offset) }
   | .loadByte destination address =>
       let address := readRegister state address
       let value := BitVec.ofNat width (readByte state address).toNat
@@ -305,7 +313,7 @@ theorem accessAligned_aligned (access : AccessType) (address : Word width)
   simp [accessAligned, aligned_address]
 
 def Instruction.isBranch : Instruction width → Bool
-  | .branchEq _ _ _ | .branchNe _ _ _ => true
+  | .branchEq _ _ _ | .branchNe _ _ _ | .branchLtU _ _ _ | .branchGeU _ _ _ => true
   | _ => false
 
 theorem execute_pc_advance (state : State width) (instruction : Instruction width)
@@ -329,6 +337,24 @@ theorem execute_branchNe_pc (state : State width) (sourceLeft sourceRight : Fin 
     (offset : Word width) :
     (execute state (.branchNe sourceLeft sourceRight offset)).pc =
       if readRegister state sourceLeft == readRegister state sourceRight then
+        state.pc + 4
+      else
+        state.pc + offset := by
+  simp [execute, nextPc]
+
+theorem execute_branchLtU_pc (state : State width) (sourceLeft sourceRight : Fin 32)
+    (offset : Word width) :
+    (execute state (.branchLtU sourceLeft sourceRight offset)).pc =
+      if readRegister state sourceLeft < readRegister state sourceRight then
+        state.pc + offset
+      else
+        state.pc + 4 := by
+  simp [execute, nextPc]
+
+theorem execute_branchGeU_pc (state : State width) (sourceLeft sourceRight : Fin 32)
+    (offset : Word width) :
+    (execute state (.branchGeU sourceLeft sourceRight offset)).pc =
+      if readRegister state sourceLeft < readRegister state sourceRight then
         state.pc + 4
       else
         state.pc + offset := by

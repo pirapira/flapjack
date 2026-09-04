@@ -5,11 +5,11 @@ import Flapjack.RiscV.Model
 The first executable Word-to-RISC-V instruction-selection slice.
 
 This is intentionally a partial compiler. It covers the Word fragment made of
-`skip`, assignments, sequencing, register-based equality conditionals,
-constants, register reads, binary arithmetic, shifts, and selected memory
-operations. Immediate-zero conditions use the architectural x0 register. The
-option-valued interface makes the current boundary explicit while the
-remaining Word instructions are ported.
+`skip`, assignments, sequencing, register-based equality and unsigned-order
+conditionals, constants, register reads, binary arithmetic, shifts, and
+selected memory operations. Immediate-zero conditions use the architectural
+x0 register. The option-valued interface makes the current boundary explicit
+while the remaining Word instructions are ported.
 -/
 
 namespace Flapjack.RiscV
@@ -123,6 +123,8 @@ def wordProgToRiscV [NeZero width] :
       let branchFalse ← match operator with
         | .equal => pure (.branchNe condition right falseOffset)
         | .notEqual => pure (.branchEq condition right falseOffset)
+        | .lower => pure (.branchGeU condition right falseOffset)
+        | .notLower => pure (.branchLtU condition right falseOffset)
         | _ => none
       pure ([branchFalse] ++ thenCode ++
         [.branchEq 0 0 endOffset] ++ elseCode)
@@ -167,6 +169,22 @@ theorem executeCode_conditional_notEqual :
         .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2]
       (writeRegister (zeroState 32) 1 9)).map
         (fun state => readRegister state 3) = some 1 := by
+  native_decide
+
+theorem executeCode_conditional_lower :
+    (executeCode 10 (0 : Word 32)
+      [.branchGeU 1 2 (BitVec.ofNat 32 12),
+        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2]
+      (writeRegister (writeRegister (zeroState 32) 1 1) 2 2)).map
+        (fun state => readRegister state 3) = some 1 := by
+  native_decide
+
+theorem executeCode_conditional_notLower :
+    (executeCode 10 (0 : Word 32)
+      [.branchLtU 1 2 (BitVec.ofNat 32 12),
+        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2]
+      (writeRegister (writeRegister (zeroState 32) 1 1) 2 2)).map
+        (fun state => readRegister state 3) = some 2 := by
   native_decide
 
 def evalWordExp [NeZero width] (state : State width) :
@@ -233,6 +251,8 @@ def evalWordCondition [NeZero width] (state : State width)
   match operator with
   | .equal => pure (left == right)
   | .notEqual => pure (left != right)
+  | .lower => pure (decide (left < right))
+  | .notLower => pure (decide (¬ left < right))
   | _ => none
 
 def evalWordFunction [NeZero width] (state : State width) :

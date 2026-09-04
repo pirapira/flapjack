@@ -162,6 +162,8 @@ definitions, pass ordering, examples, and proof obligations.
   the generated RISC-V artifact under the fixed-width x0 invariant.
 - [x] Connect immediate-zero Word conditions to RISC-V x0 and test the
   resulting conditional function artifact.
+- [x] Port unsigned `Lower`/`NotLower` Word conditions to RISC-V `BLTU`/`BGEU`
+  and prove their PC transitions.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

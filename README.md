@@ -13,6 +13,9 @@ data/context layer plus shape-aware core expression and structured-program
 checkers in [`Flapjack/Static.lean`](Flapjack/Static.lean), as well as
 the Crepe IR and expression lowerer in [`Flapjack/Crepe.lean`](Flapjack/Crepe.lean)
 and [`Flapjack/PanToCrep.lean`](Flapjack/PanToCrep.lean).
+The first HOL `pan_simp` normalization pass is in
+[`Flapjack/PanSimp.lean`](Flapjack/PanSimp.lean); the HOL notice for the
+front-end port is in [`Flapjack/COPYRIGHT`](Flapjack/COPYRIGHT).
 Core structured statement lowering and top-level function assembly are in
 [`Flapjack/Compile.lean`](Flapjack/Compile.lean).
 The first executable local/memory semantics and preservation lemmas are in

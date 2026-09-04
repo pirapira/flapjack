@@ -1,4 +1,5 @@
 import Flapjack.Language
+import Flapjack.PanSimp
 import Flapjack.Tests
 import Flapjack.Static
 import Flapjack.Crepe

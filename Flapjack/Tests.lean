@@ -1,4 +1,5 @@
 import Flapjack.Language
+import Flapjack.PanSimp
 import Flapjack.Static
 import Flapjack.PanToCrep
 import Flapjack.Compile
@@ -491,5 +492,18 @@ example [NeZero width] (state : Flapjack.RiscV.State width)
         | .or => .or 1 2 3
         | .xor => .xor 1 2 3)) := by
   exact Flapjack.RiscV.compileWordBinOp_sound state operator
+
+example :
+    panSimpProg (.seq (.skip : Prog Nat) (.return (.const 7))) =
+      .return (.const 7) := by
+  simp [panSimpProg, seqAssoc, retToTail, smartSeq]
+
+example :
+    panSimpProg
+        ((.seq
+          (.call (some (some (.local, "result"), none)) "f" [])
+          (.return (.var .local "result"))) : Prog Nat) =
+      (.call none "f" [] : Prog Nat) := by
+  simp [panSimpProg, seqAssoc, retToTail, seqCallRet, smartSeq]
 
 end Flapjack

@@ -99,6 +99,8 @@ definitions, pass ordering, examples, and proof obligations.
   calls, exceptions, returns, shared memory, and FFI.
 - [x] Add the initial Word IR and Loop-to-Word lowering for register mapping,
   expressions, memory instructions, loops, calls, returns, and FFI.
+- [x] Port the HOL `pan_simp` sequence-association and tail-call normalization
+  pass, including recursive call-handler traversal.
 - [x] Add a partial Word-to-RISC-V instruction selector for constants, moves,
   and the register-register ADD/SUB/AND/OR/XOR fragment, with a straight-line
   semantic soundness theorem.

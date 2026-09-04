@@ -1,6 +1,7 @@
 import Flapjack.Language
 import Flapjack.PanSimp
 import Flapjack.PanStructs
+import Flapjack.PanGlobals
 import Flapjack.Static
 import Flapjack.PanToCrep
 import Flapjack.Compile
@@ -523,5 +524,23 @@ example :
   simp [structCompileExp, structCompileExp.structCompileFields,
     structCompileExp.structCompileExps, structOldExpShape, structFindFieldIndex,
     structSelectFields, lookupInfo]
+
+def globalTestContext : GlobalPassContext Nat :=
+  { globals := [("g", (.one, 8))]
+    globalsSize := 1
+    maxGlobalsSize := 16
+    bytesInWord := 1
+    fromNat := id }
+
+example :
+    globalCompileExp globalTestContext (.var .global "g") =
+      .load .one (.op .sub [.topAddr, .const 8]) := by
+  simp [globalCompileExp, globalTestContext, lookupInfo]
+
+example :
+    globalCompileProg globalTestContext
+        (.assign .global "g" (.const 7)) =
+      .store (.op .sub [.topAddr, .const 8]) (.const 7) := by
+  simp [globalCompileProg, globalCompileExp, globalTestContext, lookupInfo]
 
 end Flapjack

@@ -1,6 +1,7 @@
 import Flapjack.Language
 import Flapjack.PanSimp
 import Flapjack.PanStructs
+import Flapjack.PanGlobals
 import Flapjack.Tests
 import Flapjack.Static
 import Flapjack.Crepe

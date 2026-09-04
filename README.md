@@ -18,6 +18,8 @@ The first HOL `pan_simp` normalization pass is in
 front-end port is in [`Flapjack/COPYRIGHT`](Flapjack/COPYRIGHT).
 Named-structure elimination is in
 [`Flapjack/PanStructs.lean`](Flapjack/PanStructs.lean).
+The global heap-rewriting core is in
+[`Flapjack/PanGlobals.lean`](Flapjack/PanGlobals.lean).
 Core structured statement lowering and top-level function assembly are in
 [`Flapjack/Compile.lean`](Flapjack/Compile.lean).
 The first executable local/memory semantics and preservation lemmas are in

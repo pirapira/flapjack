@@ -103,6 +103,8 @@ definitions, pass ordering, examples, and proof obligations.
   pass, including recursive call-handler traversal.
 - [x] Port the core `pan_structs` named-shape, field-reordering, expression,
   statement, and declaration transformations.
+- [x] Port the context-sensitive `pan_globals` expression and statement core,
+  including heap-relative global loads/stores and adjusted `TopAddr`.
 - [x] Add a partial Word-to-RISC-V instruction selector for constants, moves,
   and the register-register ADD/SUB/AND/OR/XOR fragment, with a straight-line
   semantic soundness theorem.

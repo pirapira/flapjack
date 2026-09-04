@@ -899,6 +899,24 @@ example [NeZero width] :
   exact RiscV.wordArithToInstructions_addCarry
 
 example [NeZero width] :
+    RiscV.wordExpToInstruction (width := width) 1
+        (.op .and [.var 2, .const (15 : RiscV.Word width)]) =
+      some (.andi 1 2 15) := by
+  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+
+example [NeZero width] :
+    RiscV.wordExpToInstruction (width := width) 1
+        (.op .sub [.var 2, .const (4 : RiscV.Word width)]) =
+      some (.addi 1 2 (0 - 4)) := by
+  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+
+example :
+    RiscV.executeFunction 10 (0 : RiscV.Word 8) [2]
+      [.andi 5 2 15, .ori 6 5 16, .xori 7 6 3] [7] [BitVec.ofNat 8 10]
+      (RiscV.zeroState 8) = some [25] := by
+  native_decide
+
+example [NeZero width] :
     RiscV.wordArithToInstructions (width := width) (.longMul 1 2 3 4) =
       some [.mulHU 1 3 4, .mul 2 3 4] := by
   exact RiscV.wordArithToInstructions_longMul

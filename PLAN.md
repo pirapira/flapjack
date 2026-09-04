@@ -228,6 +228,9 @@ definitions, pass ordering, examples, and proof obligations.
   the result through a fuel-bounded arithmetic-program regression.
 - [x] Port unsigned RISC-V `DIVU`/`REMU`, including their divide-by-zero
   behavior, and select `DIVU` for Word division.
+- [x] Add immediate RISC-V bitwise transitions (`ANDI`, `ORI`, `XORI`) and
+  select them for normalized Word expressions, with subtract-immediate via
+  `ADDI`.
 - [x] Port the HOL RISC-V `AddCarry` lowering through Word instruction
   selection and execution, including its reserved `x31` scratch contract.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

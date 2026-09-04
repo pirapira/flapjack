@@ -106,6 +106,9 @@ inductive Instruction (width : Nat) where
   | or (destination sourceLeft sourceRight : Fin 32)
   | xor (destination sourceLeft sourceRight : Fin 32)
   | addi (destination source : Fin 32) (immediate : Word width)
+  | andi (destination source : Fin 32) (immediate : Word width)
+  | ori (destination source : Fin 32) (immediate : Word width)
+  | xori (destination source : Fin 32) (immediate : Word width)
   | mul (destination sourceLeft sourceRight : Fin 32)
   | mulHU (destination sourceLeft sourceRight : Fin 32)
   | sll (destination sourceLeft sourceRight : Fin 32)
@@ -259,6 +262,15 @@ def execute (state : State width) : Instruction width → State width
   | .addi destination source immediate =>
       writeRegister { state with pc := nextPc state } destination
         (readRegister state source + immediate)
+  | .andi destination source immediate =>
+      writeRegister { state with pc := nextPc state } destination
+        (readRegister state source &&& immediate)
+  | .ori destination source immediate =>
+      writeRegister { state with pc := nextPc state } destination
+        (readRegister state source ||| immediate)
+  | .xori destination source immediate =>
+      writeRegister { state with pc := nextPc state } destination
+        (readRegister state source ^^^ immediate)
   | .mul destination sourceLeft sourceRight =>
       writeRegister { state with pc := nextPc state } destination
         (readRegister state sourceLeft * readRegister state sourceRight)

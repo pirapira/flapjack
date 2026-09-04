@@ -39,6 +39,22 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
       let destination ← registerOfNat destination
       let source ← registerOfNat source
       pure (.addi destination source value)
+  | .op .sub [.var source, .const value] => do
+      let destination ← registerOfNat destination
+      let source ← registerOfNat source
+      pure (.addi destination source (0 - value))
+  | .op .and [.var source, .const value] => do
+      let destination ← registerOfNat destination
+      let source ← registerOfNat source
+      pure (.andi destination source value)
+  | .op .or [.var source, .const value] => do
+      let destination ← registerOfNat destination
+      let source ← registerOfNat source
+      pure (.ori destination source value)
+  | .op .xor [.var source, .const value] => do
+      let destination ← registerOfNat destination
+      let source ← registerOfNat source
+      pure (.xori destination source value)
   | .op operator [.var left, .var right] => do
       let destination ← registerOfNat destination
       let left ← registerOfNat left

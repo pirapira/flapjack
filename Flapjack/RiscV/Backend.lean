@@ -44,11 +44,25 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
         | .xor => .xor destination left right)
   | _ => none
 
+def wordInstToInstruction [NeZero width] :
+    WordInst → Option (Instruction width)
+  | .mem .load8 destination address => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (.loadByte destination address)
+  | .mem .store8 source address => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (.storeByte source address)
+  | _ => none
+
 def wordProgToRiscV [NeZero width] :
     WordProg (Word width) → Option (List (Instruction width))
   | .skip => some []
   | .assign name value =>
       (wordExpToInstruction name value).map (fun instruction => [instruction])
+  | .inst instruction =>
+      (wordInstToInstruction instruction).map (fun instruction => [instruction])
   | .seq first second => do
       let first ← wordProgToRiscV first
       let second ← wordProgToRiscV second
@@ -103,6 +117,14 @@ def evalWordFunction [NeZero width] (state : State width) :
       let destination ← registerOfNat name
       let value ← evalWordExp state value
       pure (writeRegister { state with pc := nextPc state } destination value, [])
+  | .inst (.mem .load8 destination address) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadByte destination address), [])
+  | .inst (.mem .store8 source address) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeByte source address), [])
   | .seq first second => do
       let (state, firstReturns) ← evalWordFunction state first
       let (state, secondReturns) ← evalWordFunction state second
@@ -123,6 +145,14 @@ def evalWordProg [NeZero width] (state : State width) :
       let destination ← registerOfNat name
       let value ← evalWordExp state value
       pure (writeRegister { state with pc := nextPc state } destination value)
+  | .inst (.mem .load8 destination address) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadByte destination address))
+  | .inst (.mem .store8 source address) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeByte source address))
   | .seq first second => do
       let state ← evalWordProg state first
       evalWordProg state second
@@ -167,6 +197,18 @@ theorem compileWordAdd_zeroState [NeZero width] :
       some (executeInstructions (zeroState width) [.addi 1 0 7]) := by
   simp [evalWordProg, evalWordExp, executeInstructions, registerOfNat,
     execute, writeRegister, nextPc, ZeroRegister, zeroState, readRegister]
+
+theorem compileWordLoadByte_sound [NeZero width] (state : State width) :
+    evalWordProg state (.inst (.mem .load8 1 2)) =
+      some (execute state (.loadByte 1 2)) := by
+  simp [evalWordProg, registerOfNat, execute, writeRegister, writeByte,
+    readByte, nextPc]
+
+theorem compileWordStoreByte_sound [NeZero width] (state : State width) :
+    evalWordProg state (.inst (.mem .store8 1 2)) =
+      some (execute state (.storeByte 1 2)) := by
+  simp [evalWordProg, registerOfNat, execute, writeRegister, writeByte,
+    readByte, nextPc]
 
 theorem wordFunctionToRiscV_return_add [NeZero width] :
     wordFunctionToRiscV

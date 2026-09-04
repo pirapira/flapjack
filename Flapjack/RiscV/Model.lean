@@ -5,9 +5,10 @@ The first Lean target-model slice for Flapjack's RISC-V backend.
 
 The HOL reference is
 `HOL/examples/l3-machine-code/riscv/model/riscv.sml`. This file ports the
-architectural vocabulary and the executable register/memory primitives used
-by later instruction and compiler-correctness layers. It intentionally does
-not claim to be the complete RISC-V transition system yet.
+architectural vocabulary and executable register, byte-memory, and
+straight-line instruction primitives used by later instruction and
+compiler-correctness layers. It intentionally does not claim to be the
+complete RISC-V transition system yet.
 -/
 
 namespace Flapjack.RiscV
@@ -105,6 +106,8 @@ inductive Instruction (width : Nat) where
   | or (destination sourceLeft sourceRight : Fin 32)
   | xor (destination sourceLeft sourceRight : Fin 32)
   | addi (destination source : Fin 32) (immediate : Word width)
+  | loadByte (destination address : Fin 32)
+  | storeByte (source address : Fin 32)
   deriving Repr
 
 def zeroState (width : Nat) [NeZero width] : State width :=
@@ -154,6 +157,14 @@ def execute (state : State width) : Instruction width → State width
   | .addi destination source immediate =>
       writeRegister { state with pc := nextPc state } destination
         (readRegister state source + immediate)
+  | .loadByte destination address =>
+      let address := readRegister state address
+      let value := BitVec.ofNat width (readByte state address).toNat
+      writeRegister { state with pc := nextPc state } destination value
+  | .storeByte source address =>
+      let address := readRegister state address
+      let value := BitVec.ofNat 8 (readRegister state source).toNat
+      writeByte { state with pc := nextPc state } address value
 
 def accessAligned (access : AccessType) (address : Word width) (alignment : Nat) :
     Option ExceptionType :=
@@ -176,7 +187,7 @@ theorem accessAligned_aligned (access : AccessType) (address : Word width)
 
 theorem execute_pc_advance (state : State width) (instruction : Instruction width) :
     (execute state instruction).pc = state.pc + 4 := by
-  cases instruction <;> simp [execute, nextPc, writeRegister] <;> split <;> rfl
+  cases instruction <;> simp [execute, nextPc, writeRegister, writeByte] <;> split <;> rfl
 
 theorem execute_addi_zero_preserved (state : State width) (source : Fin 32)
     (immediate : Word width) :
@@ -188,8 +199,10 @@ theorem execute_zeroRegister_preserved [NeZero width] (state : State width)
     ZeroRegister (execute state instruction) := by
   change state.registers 0 = 0 at zero
   cases instruction <;>
-    simp [ZeroRegister, execute, nextPc, writeRegister, readRegister] <;>
-    split <;> simp_all [eq_comm]
+    simp [ZeroRegister, execute, nextPc, writeRegister, writeByte, readRegister] <;>
+    try split <;> simp_all [eq_comm]
+  all_goals change state.registers 0 = 0
+  all_goals exact zero
 
 theorem zeroState_zeroRegister [NeZero width] : ZeroRegister (zeroState width) := by
   simp [ZeroRegister, zeroState, readRegister]

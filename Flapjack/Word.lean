@@ -79,7 +79,7 @@ structure WordContext where
 def wordFindVar (context : WordContext) (name : Nat) : Nat :=
   match lookupNatInfo name context.vars with
   | some value => value
-  | none => 0
+  | none => name
 
 def wordMapVars (context : WordContext) : List Nat → List Nat
   | [] => []

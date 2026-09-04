@@ -107,6 +107,8 @@ definitions, pass ordering, examples, and proof obligations.
   including heap-relative global loads/stores and adjusted `TopAddr`.
 - [x] Add global declaration address collection and explicit initializer
   programs for composing the global pass with later compiler stages.
+- [x] Compose the ported front-end, global, Crepe, Loop, and Word passes in an
+  executable pipeline that exposes every intermediate artifact.
 - [x] Add a partial Word-to-RISC-V instruction selector for constants, moves,
   and the register-register ADD/SUB/AND/OR/XOR fragment, with a straight-line
   semantic soundness theorem.

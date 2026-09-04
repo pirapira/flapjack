@@ -2,6 +2,7 @@ import Flapjack.Language
 import Flapjack.PanSimp
 import Flapjack.PanStructs
 import Flapjack.PanGlobals
+import Flapjack.Pipeline
 import Flapjack.Static
 import Flapjack.PanToCrep
 import Flapjack.Compile
@@ -551,5 +552,22 @@ example :
     result.context.globalsSize = 1 := by
   simp [globalCompileTop, globalCollect, globalAddress, globalCompileDecls,
     globalCompileInitializers, globalCompileProg, globalCompileExp, lookupInfo]
+
+example :
+    let result := compileFlapjack (α := Nat) .rv64i 1 id
+      [.function
+        { name := "main", inline := false, exported := true, params := [],
+          body := .return (.const 7), returnShape := .one }]
+    result.simplified.length = 1 ∧ result.structured.length = 1 ∧
+      result.crepe.length = 1 ∧ result.loop.length = 1 ∧ result.word.length = 1 := by
+  simp [compileFlapjack, panSimpDecls, structCompileTop, structGetNames,
+    structCompileDecls, globalCompileTop, globalCollect, globalCompileDecls,
+    globalCompileInitializers, pipelineCrepeContext, pipelineExceptionCodes,
+    pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
+    pipelineWordFunctions,
+    compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
+    compileProg, loopCompileProg, loopCompileExp, loopCompileExp.loopCompileExps,
+    loopCompileExps, loopNestedSeq, loopTempNames, wordFindVar, lookupInfo,
+    lookupNatInfo]
 
 end Flapjack

@@ -309,6 +309,8 @@ definitions, pass ordering, examples, and proof obligations.
   assignments in the Loop-to-Word/RISC-V bridge.
 - [x] Add context-mapped Loop-to-Word/RISC-V agreements for byte loads and
   stores, including zero-extension and byte truncation at the memory boundary.
+- [x] Add context-mapped agreements for shared-memory halfword loads and
+  stores, including the first little-endian byte observation.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
 - [x] Add an end-to-end declaration-call regression from Pancake through

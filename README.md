@@ -41,6 +41,8 @@ That module also exposes an explicit host-handler boundary for FFI effects.
 Its executable arithmetic fragment includes word division and the RISC-V
 LongMul lowering; long division and the remaining target-specific arithmetic
 cases are still staged separately.
+The Loop semantics additionally provides a unified call-and-FFI evaluator so
+callee bodies and caller continuations can cross both explicit environments.
 The initial Word IR and Loop-to-Word lowering are in
 [`Flapjack/Word.lean`](Flapjack/Word.lean); its backend subdirectory carries
 the HOL notice at [`Flapjack/Word/COPYRIGHT`](Flapjack/Word/COPYRIGHT).

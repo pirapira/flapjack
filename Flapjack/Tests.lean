@@ -1295,6 +1295,18 @@ example :
   native_decide
 
 example :
+    (evalLoopProgWithCallsAndFfi
+      [(7, [1], (.return [1] : LoopProg Nat))]
+      loopFfiTestHandler 20 loopFfiTestState
+      (.seq
+        (.call (some ([6], [])) (some 7) [1] none)
+        (.ffi "sum" 1 2 3 4 []))).map (fun result =>
+        match result with
+        | .normal state => state.locals 5
+        | _ => none) = some (some 33) := by
+  native_decide
+
+example :
     (evalLoopProgWithFunctions
       [(7, [1], (.return [1] : LoopProg Nat))] 10 loopCallTestState
       (.call (some ([3], [])) (some 7) [1] none)).map (fun result =>

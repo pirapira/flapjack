@@ -412,6 +412,103 @@ mutual
     termination_by fuel _ _ => fuel
 end
 
+/-!
+Combined call/FFI semantics.  The individual bridges above are useful for
+isolated tests, but a compiler correctness proof needs callees to be able to
+perform foreign calls and callers to continue after either effect.  This
+evaluator keeps both environments explicit while retaining the same fuel
+bound and control-result interface.
+-/
+mutual
+  def evalLoopCallWithCallsAndFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (functions : List (Nat × List Nat × LoopProg α))
+      (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
+      Nat → LoopState α → Option (List Nat × List Nat) → Option Nat → List Nat →
+        Option (Nat × LoopProg α × LoopProg α × List Nat) → Option (LoopResult α)
+    | 0, _, _, _, _, _ => none
+    | fuel + 1, state, returns, target, arguments, handler => do
+        let target ← target
+        let (parameters, body) ← lookupLoopFunction target functions
+        let values ← loopReadLocals state.locals arguments
+        let locals ← loopBindParameters parameters values (fun _ => none)
+        let calleeState := { state with locals := locals }
+        let result ← evalLoopProgWithCallsAndFfi functions ffiHandler fuel calleeState body
+        match result with
+        | .returned _ values =>
+            match returns with
+            | none => some (.returned state values)
+            | some (names, _) => do
+                let locals ← loopAssignValues state.locals names values
+                match handler with
+                | none => some (.normal { state with locals := locals })
+                | some (_, _, normal, _) =>
+                    evalLoopProgWithCallsAndFfi functions ffiHandler fuel
+                      { state with locals := locals } normal
+        | .raised _ exception =>
+            match handler with
+            | none => some (.raised state exception)
+            | some (name, exceptionBody, _, _) =>
+                evalLoopProgWithCallsAndFfi functions ffiHandler fuel
+                  { state with locals := updateLoopLocal state.locals name exception }
+                  exceptionBody
+        | .normal _ => some (.normal state)
+        | .broke _ label => some (.broke state label)
+        | .continued _ label => some (.continued state label)
+    termination_by fuel _ _ _ _ _ => fuel
+
+  def evalLoopProgWithCallsAndFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (functions : List (Nat × List Nat × LoopProg α))
+      (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
+      Nat → LoopState α → LoopProg α → Option (LoopResult α)
+    | 0, _, _ => none
+    | fuel + 1, state, .call returns target arguments handler =>
+        evalLoopCallWithCallsAndFfi functions ffiHandler fuel state returns target arguments handler
+    | fuel + 1, state, .ffi function configuration configurationLength array arrayLength _ => do
+        let configuration ← state.locals configuration
+        let configurationLength ← state.locals configurationLength
+        let array ← state.locals array
+        let arrayLength ← state.locals arrayLength
+        let state ← ffiHandler function configuration configurationLength array arrayLength state
+        pure (.normal state)
+    | fuel + 1, state, .seq first second => do
+        let result ← evalLoopProgWithCallsAndFfi functions ffiHandler fuel state first
+        match result with
+        | .normal state => evalLoopProgWithCallsAndFfi functions ffiHandler fuel state second
+        | result => some result
+    | fuel + 1, state, .ite operator condition right thenBranch elseBranch _ => do
+        let left ← state.locals condition
+        let right ← match right with
+          | .imm value => some value
+          | .reg name => state.locals name
+        let choose ← evalLoopCondition operator left right
+        if choose then evalLoopProgWithCallsAndFfi functions ffiHandler fuel state thenBranch
+        else evalLoopProgWithCallsAndFfi functions ffiHandler fuel state elseBranch
+    | fuel + 1, state, .loop _ body _ =>
+        evalLoopRepeatWithCallsAndFfi functions ffiHandler fuel state body
+    | fuel + 1, state, program => evalLoopProg (fuel + 1) state program
+    termination_by fuel _ _ => fuel
+
+  def evalLoopRepeatWithCallsAndFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (functions : List (Nat × List Nat × LoopProg α))
+      (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
+      Nat → LoopState α → LoopProg α → Option (LoopResult α)
+    | 0, _, _ => none
+    | fuel + 1, state, body => do
+        let result ← evalLoopProgWithCallsAndFfi functions ffiHandler fuel state body
+        match result with
+        | .normal state => evalLoopRepeatWithCallsAndFfi functions ffiHandler fuel state body
+        | .continued state 0 => evalLoopRepeatWithCallsAndFfi functions ffiHandler fuel state body
+        | .broke state 0 => some (.normal state)
+        | result => some result
+    termination_by fuel _ _ => fuel
+end
+
 theorem evalLoopProg_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]

@@ -878,6 +878,33 @@ example :
       some [.addi 2 6 0, .addi 31 0 32, .jalr 1 31 0, .addi 4 10 0] := by
   native_decide
 
+example [NeZero width] :
+    RiscV.wordFunctionToRiscVWithCalls
+      { targets := [(7, BitVec.ofNat width 32, [2], [10])] }
+      (.seq
+        (.call (some ([4], [])) (some 7) [6] none)
+        (.return 0 [4])) =
+      some ([.addi 2 6 0, .addi 31 0 (BitVec.ofNat width 32),
+        .jalr 1 31 0, .addi 4 10 0], [4]) := by
+  exact RiscV.wordFunctionToRiscVWithCalls_shape
+
+def selectedLinkedCallCode : List (RiscV.Instruction 64) :=
+  match RiscV.wordFunctionToRiscVWithCalls
+      { targets := [(7, (32 : RiscV.Word 64), [2], [10])] }
+      (.seq
+        (.call (some ([4], [])) (some 7) [6] none)
+        (.return 0 [4])) with
+  | some (code, _) => code ++
+      [.addi 0 0 0, .addi 0 0 0, .addi 0 0 0, .addi 0 0 0,
+        .addi 10 2 1, .jalr 0 1 0]
+  | none => []
+
+example :
+    (RiscV.executeCodeUntil 30 (0 : RiscV.Word 64) 16 selectedLinkedCallCode
+      (RiscV.writeRegister (RiscV.zeroState 64) 6 41)).map
+        (fun state => RiscV.readRegister state 4) = some 42 := by
+  native_decide
+
 example :
     (RiscV.evalWordFunctionWithCalls
       [(7, [2], (.return 0 [2] : WordProg (RiscV.Word 64)))] 10

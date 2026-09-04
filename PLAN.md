@@ -209,6 +209,8 @@ definitions, pass ordering, examples, and proof obligations.
   argument-move, `JALR`, return, and result-move convention.
 - [x] Add RISC-V function-artifact linking by byte length and resolve Word
   call labels to linked entry addresses.
+- [x] Add recursive Word call instruction selection for handler-free calls,
+  using linked callee signatures and the explicit call convention.
 - [x] Expose linked RISC-V function artifacts directly from the composed
   pipeline result.
 - [ ] Port complete program checking, context transitions, and diagnostics.

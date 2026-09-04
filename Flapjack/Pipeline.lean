@@ -3,6 +3,7 @@ import Flapjack.Compile
 import Flapjack.CrepToLoop
 import Flapjack.Word
 import Flapjack.RiscV.Backend
+import Flapjack.RiscV.Link
 
 /-!
 An executable composition of the currently ported Pancake passes.
@@ -124,6 +125,8 @@ structure FlapjackRiscVResult (width : Nat) [NeZero width] where
   pipeline : FlapjackPipelineResult (RiscV.Word width)
   functions : List (Nat × List Nat ×
     Option (List (RiscV.Instruction width) × List (Fin 32)))
+  linkedFunctions : Option (List (Nat × RiscV.Word width × List Nat ×
+    List (RiscV.Instruction width) × List (Fin 32)))
 
 def compileFlapjackRiscV [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
@@ -132,8 +135,10 @@ def compileFlapjackRiscV [NeZero width] [BEq (RiscV.Word width)]
     (fromNat : Nat → RiscV.Word width)
     (declarations : List (Decl (RiscV.Word width))) : FlapjackRiscVResult width :=
   let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let functions := pipelineRiscVFunctions pipeline.word
   { pipeline := pipeline
-    functions := pipelineRiscVFunctions pipeline.word }
+    functions := functions
+    linkedFunctions := RiscV.linkRiscVFunctions 0 functions }
 
 def compileFlapjackRiscVChecked [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]

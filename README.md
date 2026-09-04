@@ -64,6 +64,8 @@ The initial explicit RISC-V call convention is in
 [`Flapjack/RiscV/Calls.lean`](Flapjack/RiscV/Calls.lean); function-label
 linking and label resolution are in
 [`Flapjack/RiscV/Link.lean`](Flapjack/RiscV/Link.lean).
+The composed pipeline now exposes its linked function table on
+`FlapjackRiscVResult.linkedFunctions`.
 
 Build it with:
 

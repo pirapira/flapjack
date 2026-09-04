@@ -32,11 +32,16 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
       let destination ← registerOfNat destination
       let source ← registerOfNat source
       pure (.addi destination source 0)
-  | .op .add [.var left, .var right] => do
+  | .op operator [.var left, .var right] => do
       let destination ← registerOfNat destination
       let left ← registerOfNat left
       let right ← registerOfNat right
-      pure (.add destination left right)
+      pure (match operator with
+        | .add => .add destination left right
+        | .sub => .sub destination left right
+        | .and => .and destination left right
+        | .or => .or destination left right
+        | .xor => .xor destination left right)
   | _ => none
 
 def wordProgToRiscV [NeZero width] :
@@ -64,10 +69,15 @@ def evalWordExp [NeZero width] (state : State width) :
   | .var name => do
       let register ← registerOfNat name
       pure (readRegister state register)
-  | .op .add [.var left, .var right] => do
+  | .op operator [.var left, .var right] => do
       let left ← registerOfNat left
       let right ← registerOfNat right
-      pure (readRegister state left + readRegister state right)
+      pure (match operator with
+        | .add => readRegister state left + readRegister state right
+        | .sub => readRegister state left - readRegister state right
+        | .and => readRegister state left &&& readRegister state right
+        | .or => readRegister state left ||| readRegister state right
+        | .xor => readRegister state left ^^^ readRegister state right)
   | _ => none
 
 def evalWordProg [NeZero width] (state : State width) :
@@ -98,5 +108,10 @@ def compileWordAdd [NeZero width] (destination left right : Nat) :
 example [NeZero width] :
     compileWordAdd (width := width) 1 2 3 = some [.add 1 2 3] := by
   simp [compileWordAdd, wordProgToRiscV, wordExpToInstruction, registerOfNat]
+
+example [NeZero width] :
+    wordExpToInstruction (width := width) 1 (.op .xor [.var 2, .var 3]) =
+      some (.xor 1 2 3) := by
+  simp [wordExpToInstruction, registerOfNat]
 
 end Flapjack.RiscV

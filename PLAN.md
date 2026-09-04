@@ -100,7 +100,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add the initial Word IR and Loop-to-Word lowering for register mapping,
   expressions, memory instructions, loops, calls, returns, and FFI.
 - [x] Add a partial Word-to-RISC-V instruction selector for constants, moves,
-  and addition, with a straight-line semantic soundness theorem.
+  and the register-register ADD/SUB/AND/OR/XOR fragment, with a straight-line
+  semantic soundness theorem.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

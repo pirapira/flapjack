@@ -100,6 +100,10 @@ structure State (width : Nat) where
 
 inductive Instruction (width : Nat) where
   | add (destination sourceLeft sourceRight : Fin 32)
+  | sub (destination sourceLeft sourceRight : Fin 32)
+  | and (destination sourceLeft sourceRight : Fin 32)
+  | or (destination sourceLeft sourceRight : Fin 32)
+  | xor (destination sourceLeft sourceRight : Fin 32)
   | addi (destination source : Fin 32) (immediate : Word width)
   deriving Repr
 
@@ -132,6 +136,18 @@ def execute (state : State width) : Instruction width → State width
   | .add destination sourceLeft sourceRight =>
       writeRegister { state with pc := nextPc state } destination
         (readRegister state sourceLeft + readRegister state sourceRight)
+  | .sub destination sourceLeft sourceRight =>
+      writeRegister { state with pc := nextPc state } destination
+        (readRegister state sourceLeft - readRegister state sourceRight)
+  | .and destination sourceLeft sourceRight =>
+      writeRegister { state with pc := nextPc state } destination
+        (readRegister state sourceLeft &&& readRegister state sourceRight)
+  | .or destination sourceLeft sourceRight =>
+      writeRegister { state with pc := nextPc state } destination
+        (readRegister state sourceLeft ||| readRegister state sourceRight)
+  | .xor destination sourceLeft sourceRight =>
+      writeRegister { state with pc := nextPc state } destination
+        (readRegister state sourceLeft ^^^ readRegister state sourceRight)
   | .addi destination source immediate =>
       writeRegister { state with pc := nextPc state } destination
         (readRegister state source + immediate)

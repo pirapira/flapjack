@@ -425,6 +425,8 @@ definitions, pass ordering, examples, and proof obligations.
   declaration calls, caught exceptions, loops, primitive dispatch, and FFI.
 - [x] Add a handler-parameterized Loop evaluator for primitive dispatch and
   connect its RISC-V AddCarry handler to an executable Loop-to-Word agreement.
+- [x] Prove a structured AddCarry source program through the composed
+  Pancake/Crepe/Loop/Word straight-line RISC-V artifact.
 - [x] Split the regression suite into focused modules under `Flapjack/Test`.
 - [x] Split the RISC-V regression suite further into backend and flat-memory
   modules as the source-memory adapter grew.

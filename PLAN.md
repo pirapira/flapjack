@@ -236,6 +236,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the HOL RISC-V rotate-right lowering as a scratch-register
   instruction sequence, including immediate and register-count forms and the
   reserved `x31` alias contract.
+- [x] Lower nonzero immediate RISC-V conditional operands using HOL-aligned
+  `ORI`/`ANDI` scratch materialization, with an explicit `x31` condition guard.
 - [x] Port the HOL RISC-V `AddCarry` lowering through Word instruction
   selection and execution, including its reserved `x31` scratch contract.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

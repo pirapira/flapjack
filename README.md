@@ -55,6 +55,9 @@ and `XORI`, as well as subtraction by an immediate via `ADDI`; immediate
 HOL’s multi-instruction rotate-right lowering is also selected for immediate
 and register shift counts, using `x31` as a reserved scratch register and
 rejecting source/destination aliases with that register.
+Nonzero immediate conditional operands use the corresponding HOL `ORI` or
+`ANDI` scratch materialization; conditions that would clobber `x31` are
+rejected in this partial target boundary.
 The Word arithmetic selector also includes the HOL two-instruction `LongMul`
 lowering (`MULHU` followed by `MUL`) and the six-instruction `AddCarry`
 lowering. `WordProg.shareInst` with a register-valued address, or a supported

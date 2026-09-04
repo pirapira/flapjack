@@ -571,6 +571,49 @@ example [NeZero width] :
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
+example :
+    RiscV.wordProgToRiscV (width := 8)
+        ((.ite .equal 1 (.imm 7)
+          (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
+          WordProg (RiscV.Word 8)) =
+      some [.ori 31 0 7, .branchNe 1 31 12,
+        .addi 3 0 1, .branchEq 0 0 8, .addi 3 0 2] := by
+  native_decide
+
+example :
+    RiscV.wordProgToRiscV (width := 8)
+        ((.ite .test 1 (.imm 3)
+          (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
+          WordProg (RiscV.Word 8)) =
+      some [.andi 31 1 3, .branchNe 31 0 12,
+        .addi 3 0 1, .branchEq 0 0 8, .addi 3 0 2] := by
+  native_decide
+
+example :
+    RiscV.wordProgToRiscV (width := 8)
+        ((.ite .equal 31 (.imm 7)
+          (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
+          WordProg (RiscV.Word 8)) = none := by
+  native_decide
+
+example :
+    RiscV.wordFunctionToRiscV (width := 8)
+        ((.seq
+          (.ite .equal 1 (.imm 7)
+            (.assign 3 (.const 1)) (.assign 3 (.const 2)))
+          (.return 0 [3])) : WordProg (RiscV.Word 8)) =
+      some ([.ori 31 0 7, .branchNe 1 31 12,
+        .addi 3 0 1, .branchEq 0 0 8, .addi 3 0 2], [3]) := by
+  native_decide
+
+example :
+    (RiscV.executeCode 20 (0 : RiscV.Word 8)
+      [.ori 31 0 7, .branchNe 1 31 12,
+        .addi 3 0 1, .branchEq 0 0 8, .addi 3 0 2]
+      (RiscV.writeRegister (RiscV.zeroState 8) 1 7)).map
+        (fun state => RiscV.readRegister state 3) = some 1 := by
+  native_decide
+
 example [NeZero width] :
     RiscV.wordProgToRiscV
         ((.ite .lower 1 (.reg 2)

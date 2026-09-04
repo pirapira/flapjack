@@ -7,10 +7,11 @@ The first executable Word-to-RISC-V instruction-selection slice.
 This is intentionally a partial compiler. It covers the Word fragment made of
 `skip`, assignments, sequencing, equality/order/bit-test conditionals,
 constants, register reads, binary arithmetic, shifts, and selected memory
-operations. Immediate-zero conditions use the architectural x0 register. Bit
-tests reuse the condition register as the `AND` destination, so that register
-is dead after the condition. The option-valued interface makes the current
-boundary explicit while the remaining Word instructions are ported.
+operations. Zero conditions use the architectural x0 register; nonzero
+immediate conditions materialize their operand in the reserved x31 scratch
+register. Bit tests use either `AND` or `ANDI` and branch on the resulting
+temporary. The option-valued interface makes the current boundary explicit
+while the remaining Word instructions are ported.
 -/
 
 namespace Flapjack.RiscV
@@ -209,6 +210,30 @@ def wordStoreToInstructions [NeZero width] (address : WordExp (Word width))
     (value : Nat) : Option (List (Instruction width)) :=
   wordShareInstToInstructions .store value address
 
+@[simp] def wordConditionOperands [NeZero width] (operator : Cmp) (condition : Nat)
+    (rightValue : WordRegImm (Word width)) :
+    Option (Fin 32 × Fin 32 × List (Instruction width)) := do
+  let condition ← registerOfNat condition
+  match rightValue with
+  | .reg right =>
+      let right ← registerOfNat right
+      match operator with
+      | .test | .notTest => pure (condition, 0, [.and condition condition right])
+      | _ => pure (condition, right, [])
+  | .imm value =>
+      if value == 0 then
+        match operator with
+        | .test | .notTest => pure (condition, 0, [.and condition condition 0])
+        | _ => pure (condition, 0, [])
+      else if condition == 31 then
+        none
+      else
+        match operator with
+        | .test | .notTest =>
+            pure (31, 0, [.andi 31 condition value])
+        | _ =>
+            pure (condition, 31, [.ori 31 0 value])
+
 def wordProgToRiscV [NeZero width] :
     WordProg (Word width) → Option (List (Instruction width))
   | .skip => some []
@@ -227,10 +252,8 @@ def wordProgToRiscV [NeZero width] :
       pure (first ++ second)
   | .tick => some [.addi 0 0 0]
   | .ite operator condition rightValue thenBranch elseBranch => do
-      let condition ← registerOfNat condition
-      let right ← match rightValue with
-        | .reg right => registerOfNat right
-        | .imm value => if value == 0 then pure 0 else none
+      let (branchLeft, right, prelude) ←
+        wordConditionOperands operator condition rightValue
       let thenCode ← wordProgToRiscV thenBranch
       let elseCode ← wordProgToRiscV elseBranch
       let falseOffset : Word width :=
@@ -238,17 +261,14 @@ def wordProgToRiscV [NeZero width] :
       let endOffset : Word width :=
         BitVec.ofNat width (4 + 4 * elseCode.length)
       let branchFalse ← match operator with
-        | .equal => pure (.branchNe condition right falseOffset)
-        | .notEqual => pure (.branchEq condition right falseOffset)
-        | .less => pure (.branchGe condition right falseOffset)
-        | .notLess => pure (.branchLt condition right falseOffset)
-        | .lower => pure (.branchGeU condition right falseOffset)
-        | .notLower => pure (.branchLtU condition right falseOffset)
-        | .test => pure (.branchNe condition 0 falseOffset)
-        | .notTest => pure (.branchEq condition 0 falseOffset)
-      let prelude := match operator with
-        | .test | .notTest => [.and condition condition right]
-        | _ => []
+        | .equal => pure (.branchNe branchLeft right falseOffset)
+        | .notEqual => pure (.branchEq branchLeft right falseOffset)
+        | .less => pure (.branchGe branchLeft right falseOffset)
+        | .notLess => pure (.branchLt branchLeft right falseOffset)
+        | .lower => pure (.branchGeU branchLeft right falseOffset)
+        | .notLower => pure (.branchLtU branchLeft right falseOffset)
+        | .test => pure (.branchNe branchLeft right falseOffset)
+        | .notTest => pure (.branchEq branchLeft right falseOffset)
       pure (prelude ++ [branchFalse] ++ thenCode ++
         [.branchEq 0 0 endOffset] ++ elseCode)
   | _ => none
@@ -464,10 +484,8 @@ def wordFunctionToRiscV [NeZero width] :
       pure (instructions, [])
   | .tick => pure ([.addi 0 0 0], [])
   | .ite operator condition rightValue thenBranch elseBranch => do
-      let condition ← registerOfNat condition
-      let right ← match rightValue with
-        | .reg right => registerOfNat right
-        | .imm value => if value == 0 then pure 0 else none
+      let (branchLeft, right, prelude) ←
+        wordConditionOperands operator condition rightValue
       let (thenCode, thenReturns) ← wordFunctionToRiscV thenBranch
       let (elseCode, elseReturns) ← wordFunctionToRiscV elseBranch
       if thenReturns != elseReturns then none
@@ -477,17 +495,14 @@ def wordFunctionToRiscV [NeZero width] :
         let endOffset : Word width :=
           BitVec.ofNat width (4 + 4 * elseCode.length)
         let branchFalse ← match operator with
-          | .equal => pure (.branchNe condition right falseOffset)
-          | .notEqual => pure (.branchEq condition right falseOffset)
-          | .less => pure (.branchGe condition right falseOffset)
-          | .notLess => pure (.branchLt condition right falseOffset)
-          | .lower => pure (.branchGeU condition right falseOffset)
-          | .notLower => pure (.branchLtU condition right falseOffset)
-          | .test => pure (.branchNe condition 0 falseOffset)
-          | .notTest => pure (.branchEq condition 0 falseOffset)
-        let prelude := match operator with
-          | .test | .notTest => [.and condition condition right]
-          | _ => []
+          | .equal => pure (.branchNe branchLeft right falseOffset)
+          | .notEqual => pure (.branchEq branchLeft right falseOffset)
+          | .less => pure (.branchGe branchLeft right falseOffset)
+          | .notLess => pure (.branchLt branchLeft right falseOffset)
+          | .lower => pure (.branchGeU branchLeft right falseOffset)
+          | .notLower => pure (.branchLtU branchLeft right falseOffset)
+          | .test => pure (.branchNe branchLeft right falseOffset)
+          | .notTest => pure (.branchEq branchLeft right falseOffset)
         pure (prelude ++ [branchFalse] ++ thenCode ++
           [.branchEq 0 0 endOffset] ++ elseCode, thenReturns)
   | .seq first second => do

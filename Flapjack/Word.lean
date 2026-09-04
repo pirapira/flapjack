@@ -190,14 +190,15 @@ def loopToWordProg [OfNat α 1] (context : WordContext) :
       | some value => .assign (wordFindVar context name) value
       | none => .skip
   | .primitive [result, resultCarry] .addCarry [left, right, carryIn] =>
-      /- The scratch registers 1 and 3 are the same reserved temporaries as
-         CakeML's loop_to_word pass.  The corresponding correctness theorem
-         requires mapped program variables not to alias either register. -/
-      .seq (.assign 1 (.var (wordFindVar context carryIn)))
-        (.seq (.inst (.arith (.addCarry 3 1 (wordFindVar context left)
-          (wordFindVar context right) 1)))
-          (.seq (.assign (wordFindVar context resultCarry) (.var 1))
-            (.assign (wordFindVar context result) (.var 3))))
+      /- Keep the carry input explicit at this boundary.  CakeML's
+         loop_to_word pass lowers this to virtual scratch registers 1 and 3,
+         but Flapjack has not yet ported the subsequent word allocator.  The
+         RISC-V instruction selector can lower this five-register Word
+         operation directly using its architectural x31 scratch, preserving
+         the x1 link register for call-aware code. -/
+      .inst (.arith (.addCarry (wordFindVar context result)
+        (wordFindVar context resultCarry) (wordFindVar context left)
+        (wordFindVar context right) (wordFindVar context carryIn)))
   | .primitive _ _ _ => .skip
   | .arith operation => .inst (.arith (wordArith context operation))
   | .store address value =>

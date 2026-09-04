@@ -273,6 +273,11 @@ definitions, pass ordering, examples, and proof obligations.
   address scratch register, with evaluator agreement and pipeline coverage.
 - [x] Port the HOL RISC-V `AddCarry` lowering through Word instruction
   selection and execution, including its reserved `x31` scratch contract.
+- [x] Keep Loop-to-Word `AddCarry` as a five-register operation until
+  instruction selection, and prove a structured primitive through the
+  call-linked RISC-V artifact without clobbering the `x1` link register.
+- [ ] Port the CakeML Word register allocator and its RISC-V reserved-register
+  contracts before claiming general call-aware allocation correctness.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
   multiplication (`MULHU`) followed by low-half multiplication (`MUL`),
   including the target's high-destination/source non-aliasing precondition.

@@ -30,6 +30,15 @@ def primitivePipelineRun : Option (List (RiscV.Word 64)) :=
       | none => none
   | _ => none
 
+def primitivePipelineCallLinkedRun : Option (List (RiscV.Word 64)) :=
+  match primitivePipeline.callLinkedFunctions with
+  | some [(_, _, parameters, code, returns)] =>
+      let returnAddress := BitVec.ofNat 64 (4 * code.length)
+      RiscV.executeFunctionAt 300 0 0 returnAddress
+        (parameters.mapM RiscV.registerOfNat |>.getD []) code returns []
+        (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
+  | _ => none
+
 def primitivePipelineSource : Prog (RiscV.Word 64) :=
   .dec "result" (.comb [.one, .one])
     (.rStruct [.const 0, .const 0])
@@ -58,6 +67,10 @@ theorem primitivePipeline_correct :
           match result.2.2.2 with
           | [.word value] => [value]
           | _ => []) := by
+  native_decide
+
+theorem primitivePipeline_call_link_correct :
+    primitivePipelineCallLinkedRun = some [BitVec.ofNat 64 3] := by
   native_decide
 
 end Flapjack

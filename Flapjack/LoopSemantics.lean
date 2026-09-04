@@ -332,6 +332,171 @@ theorem evalLoopProg_one_global_projection [BEq α] [OfNat α 0] [OfNat α 1]
   | _ =>
       simp [evalLoopProg, loopNoGlobalWrites, loopResultState, Function.comp_def]
 
+theorem evalLoopProg_global_projection [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (fuel : Nat) (state : LoopState α) (program : LoopProg α)
+    (hprogram : loopNoGlobalWrites program = true) :
+    (evalLoopProg fuel state program).map
+        (fun result => (loopResultState result).globals) =
+      (evalLoopProg fuel state program).map (fun _ => state.globals) := by
+  induction fuel using Nat.strongRecOn generalizing state program with
+  | _ fuel ih =>
+      cases fuel with
+      | zero => rfl
+      | succ fuel =>
+          cases program with
+          | arith operation =>
+              cases operation with
+              | longMul left right sourceLeft sourceRight =>
+                  by_cases h : left = right <;>
+                    simp [evalLoopProg, loopResultState, Function.comp_def, h]
+              | longDiv left right sourceLeft sourceRight quotient =>
+                  simp [evalLoopProg, loopResultState]
+              | div destination dividend divisor =>
+                  cases hdividend : state.locals dividend with
+                  | none => simp [evalLoopProg, loopResultState, hdividend]
+                  | some dividendValue =>
+                      cases hdivisor : state.locals divisor with
+                      | none => simp [evalLoopProg, loopResultState, hdividend, hdivisor]
+                      | some divisorValue =>
+                          by_cases hzero : (divisorValue == 0) = true
+                          · simp [evalLoopProg, loopResultState, hdividend, hdivisor, hzero]
+                          · simp [evalLoopProg, loopResultState, hdividend, hdivisor, hzero]
+          | setGlobal address value =>
+              simp [loopNoGlobalWrites] at hprogram
+          | shMem operator name address =>
+              cases operator <;>
+                simp [evalLoopProg, loopResultState, Function.comp_def]
+          | mark body =>
+              have hbody : loopNoGlobalWrites body = true := by
+                simpa [loopNoGlobalWrites] using hprogram
+              exact ih fuel (by omega) state body hbody
+          | loop liveIn body liveOut =>
+              have hbody : loopNoGlobalWrites body = true := by
+                simpa [loopNoGlobalWrites] using hprogram
+              have repeatInvariant : ∀ (bound : Nat),
+                  (∀ m, m < bound + 1 → ∀ state : LoopState α,
+                    (evalLoopProg m state body).map
+                        (fun result => (loopResultState result).globals) =
+                      (evalLoopProg m state body).map (fun _ => state.globals)) →
+                  ∀ state : LoopState α,
+                    (evalLoopRepeat bound state body).map
+                        (fun result => (loopResultState result).globals) =
+                      (evalLoopRepeat bound state body).map (fun _ => state.globals) := by
+                intro bound progIH
+                induction bound using Nat.strongRecOn with
+                | _ bound ihRepeat =>
+                    intro repeatState
+                    cases bound with
+                    | zero => rfl
+                    | succ bound =>
+                        cases hbodyEval : evalLoopProg bound repeatState body with
+                        | none => simp [evalLoopRepeat, hbodyEval]
+                        | some result =>
+                            have hresult : (loopResultState result).globals = repeatState.globals := by
+                              have h := progIH bound (by omega) repeatState
+                              rw [hbodyEval] at h
+                              simpa using h
+                            have progIH' : ∀ m, m < bound + 1 → ∀ state : LoopState α,
+                                (evalLoopProg m state body).map
+                                    (fun result => (loopResultState result).globals) =
+                                  (evalLoopProg m state body).map (fun _ => state.globals) := by
+                              intro m hm
+                              exact progIH m (by omega)
+                            cases result with
+                            | normal nextState =>
+                                have hnext := ihRepeat bound (by omega) progIH' nextState
+                                have hnormal : nextState.globals = repeatState.globals := by
+                                  simpa [loopResultState] using hresult
+                                simp [evalLoopRepeat, hbodyEval, hnext, hnormal]
+                            | returned nextState values =>
+                                simp [evalLoopRepeat, hbodyEval, hresult]
+                            | broke nextState label =>
+                                cases label with
+                                | zero =>
+                                    have hnormal : nextState.globals = repeatState.globals := by
+                                      simpa [loopResultState] using hresult
+                                    simp [evalLoopRepeat, hbodyEval, hnormal, loopResultState]
+                                | succ label => simp [evalLoopRepeat, hbodyEval, hresult]
+                            | continued nextState label =>
+                                cases label with
+                                | zero =>
+                                    have hnext := ihRepeat bound (by omega) progIH' nextState
+                                    have hnormal : nextState.globals = repeatState.globals := by
+                                      simpa [loopResultState] using hresult
+                                    simp [evalLoopRepeat, hbodyEval, hnext, hnormal]
+                                | succ label => simp [evalLoopRepeat, hbodyEval, hresult]
+                            | raised nextState exception =>
+                                simp [evalLoopRepeat, hbodyEval, hresult]
+              simpa [evalLoopProg] using
+                repeatInvariant fuel (fun m hm repeatState =>
+                  ih m hm repeatState body hbody) state
+          | seq first second =>
+              have hseq : loopNoGlobalWrites first = true ∧
+                  loopNoGlobalWrites second = true := by
+                simpa [loopNoGlobalWrites] using hprogram
+              cases hfirstEval : evalLoopProg fuel state first with
+              | none => simp [evalLoopProg, hfirstEval]
+              | some result =>
+                  have hresult : (loopResultState result).globals = state.globals := by
+                    have h := ih fuel (by omega) state first hseq.1
+                    rw [hfirstEval] at h
+                    simpa using h
+                  cases result with
+                  | normal nextState =>
+                      have hnext := ih fuel (by omega) nextState second hseq.2
+                      have hnormal : nextState.globals = state.globals := by
+                        simpa [loopResultState] using hresult
+                      simpa [evalLoopProg, hfirstEval, hnormal] using hnext
+                  | returned nextState values =>
+                      simp [evalLoopProg, hfirstEval, hresult]
+                  | broke nextState label =>
+                      simp [evalLoopProg, hfirstEval, hresult]
+                  | continued nextState label =>
+                      simp [evalLoopProg, hfirstEval, hresult]
+                  | raised nextState exception =>
+                      simp [evalLoopProg, hfirstEval, hresult]
+          | ite operator condition right thenBranch elseBranch live =>
+              have hbranches : loopNoGlobalWrites thenBranch = true ∧
+                  loopNoGlobalWrites elseBranch = true := by
+                simpa [loopNoGlobalWrites] using hprogram
+              cases right with
+              | imm right =>
+                  cases hleft : state.locals condition with
+                  | none => simp [evalLoopProg, hleft]
+                  | some left =>
+                      cases hchoose : evalLoopCondition operator left right with
+                      | none => simp [evalLoopProg, hleft, hchoose]
+                      | some choose =>
+                          cases choose with
+                          | false =>
+                              have hbranch := ih fuel (by omega) state elseBranch hbranches.2
+                              simpa [evalLoopProg, hleft, hchoose] using hbranch
+                          | true =>
+                              have hbranch := ih fuel (by omega) state thenBranch hbranches.1
+                              simpa [evalLoopProg, hleft, hchoose] using hbranch
+              | reg name =>
+                  cases hleft : state.locals condition with
+                  | none => simp [evalLoopProg, hleft]
+                  | some left =>
+                      cases hright : state.locals name with
+                      | none => simp [evalLoopProg, hleft, hright]
+                      | some right =>
+                          cases hchoose : evalLoopCondition operator left right with
+                          | none => simp [evalLoopProg, hleft, hright, hchoose]
+                          | some choose =>
+                              cases choose with
+                              | false =>
+                                  have hbranch := ih fuel (by omega) state elseBranch hbranches.2
+                                  simpa [evalLoopProg, hleft, hright, hchoose] using hbranch
+                              | true =>
+                                  have hbranch := ih fuel (by omega) state thenBranch hbranches.1
+                                  simpa [evalLoopProg, hleft, hright, hchoose] using hbranch
+          | _ =>
+              simp [evalLoopProg, loopNoGlobalWrites, loopResultState, Function.comp_def]
+
 def lookupLoopFunction : Nat → List (Nat × List Nat × LoopProg α) →
     Option (List Nat × LoopProg α)
   | _, [] => none

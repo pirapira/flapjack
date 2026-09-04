@@ -286,6 +286,8 @@ definitions, pass ordering, examples, and proof obligations.
   remaining operations and control-flow invariants.
 - [x] Prove the one-step global-state projection invariant for every Loop
   constructor under the no-global-writes syntactic side condition.
+- [x] Lift the global-state projection invariant to arbitrary fuel, including
+  sequence, conditional, loop-repeat, and control-result cases.
 - [x] Establish reusable Loop state-transition lemmas for the modeled
   assignment, load/store (including byte and 32-bit forms), shared-memory,
   `locValue`, global, return, and control-result cases.

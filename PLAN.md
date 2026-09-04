@@ -300,6 +300,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add context-mapped Loop-to-Word register agreements for assignments
   and read-only 32-bit loads, plus the low-byte memory observation for
   `store32`, with explicit byte-fold memory premises.
+- [x] Generalize the context-mapped Loop-to-Word assignment agreement to all
+  register-register binary operations, including BitVec bitwise compatibility.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
 - [x] Add an end-to-end declaration-call regression from Pancake through

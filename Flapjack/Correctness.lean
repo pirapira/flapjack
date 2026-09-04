@@ -379,6 +379,46 @@ theorem loopToWord_add_assign_register_agreement_mapped [NeZero width]
     RiscV.nextPc, updateLoopLocal, hdestination, hleft, hright,
     hdestination_nonzero, hzero]
 
+theorem loopToWord_binop_assign_register_agreement_mapped [NeZero width]
+    (context : WordContext) (state : RiscV.State width)
+    (operator : BinOp) (destination left right : Nat)
+    (destinationRegister leftRegister rightRegister : Fin 32)
+    (zero : RiscV.ZeroRegister state)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) = some destinationRegister)
+    (hleft :
+      RiscV.registerOfNat (wordFindVar context left) = some leftRegister)
+    (hright :
+      RiscV.registerOfNat (wordFindVar context right) = some rightRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0) :
+    (evalLoopProg 1 (loopRegisterStateMapped context state)
+      (.assign destination (.op operator [.var left, .var right]))).bind
+        (fun result =>
+          match result with
+          | .normal state => state.locals destination
+          | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg context
+          (.assign destination (.op operator [.var left, .var right])))).map
+        (fun state => RiscV.readRegister state destinationRegister) := by
+  have hzero : state.registers 0 = (0 : RiscV.Word width) := by
+    exact zero
+  have hand (x y : RiscV.Word width) : AndOp.and x y = x &&& y := by
+    change x.and y = x &&& y
+    exact BitVec.and_eq x y
+  have hor (x y : RiscV.Word width) : OrOp.or x y = x ||| y := by
+    change x.or y = x ||| y
+    exact BitVec.or_eq x y
+  cases operator <;>
+    simp [evalLoopProg, evalLoopExp, evalLoopBinOp,
+      loopRegisterStateMapped, loopToWordProg, wordCompileExp,
+      wordCompileExp.wordCompileExpList,
+      RiscV.evalWordProg, RiscV.wordExpToInstructions,
+      RiscV.wordExpToInstruction, RiscV.executeInstructions,
+      RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+      RiscV.nextPc, updateLoopLocal, hdestination, hleft, hright,
+      hdestination_nonzero, hzero, hand, hor]
+
 theorem loopToWord_load32_register_agreement_mapped [NeZero width]
     (context : WordContext) (state : RiscV.State width)
     (memory : RiscV.Word width → Option (RiscV.Word width))

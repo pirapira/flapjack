@@ -52,6 +52,9 @@ including the architectural divide-by-zero results; Word division selects
 The model and selector also cover the immediate bitwise forms `ANDI`, `ORI`,
 and `XORI`, as well as subtraction by an immediate via `ADDI`; immediate
 `SLLI`, `SRLI`, and `SRAI` shifts are also modeled and selected.
+HOL’s multi-instruction rotate-right lowering is also selected for immediate
+and register shift counts, using `x31` as a reserved scratch register and
+rejecting source/destination aliases with that register.
 The Word arithmetic selector also includes the HOL two-instruction `LongMul`
 lowering (`MULHU` followed by `MUL`) and the six-instruction `AddCarry`
 lowering. `WordProg.shareInst` with a register-valued address, or a supported

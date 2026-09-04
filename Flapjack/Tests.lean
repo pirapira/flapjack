@@ -512,8 +512,10 @@ example [NeZero width] (state : Flapjack.RiscV.State width)
     Flapjack.RiscV.evalWordProg state
         (.assign 1 (.const (7 : Flapjack.RiscV.Word width))) =
       some (Flapjack.RiscV.execute state (.addi 1 0 7)) := by
-  simp [Flapjack.RiscV.evalWordProg, Flapjack.RiscV.evalWordExp,
-    Flapjack.RiscV.registerOfNat, Flapjack.RiscV.execute,
+  simp [Flapjack.RiscV.evalWordProg, Flapjack.RiscV.wordExpToInstructions,
+    Flapjack.RiscV.wordExpToInstruction, Flapjack.RiscV.evalWordExp,
+    Flapjack.RiscV.registerOfNat, Flapjack.RiscV.executeInstructions,
+    Flapjack.RiscV.execute,
     Flapjack.RiscV.writeRegister, Flapjack.RiscV.nextPc, zero]
 
 example [NeZero width] :
@@ -1341,6 +1343,37 @@ example [NeZero width] :
     RiscV.wordExpToInstruction (width := width) 1
       (.shift .ror (.var 2) (.var 3)) = none := by
   simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+
+example :
+    RiscV.wordExpToInstructions (width := 8) 1
+      (.shift .ror (.var 2) (.const (3 : RiscV.Word 8))) =
+      some [.srli 31 2 3, .slli 1 2 5, .or 1 1 31] := by
+  native_decide
+
+example :
+    RiscV.wordExpToInstructions (width := 8) 1
+      (.shift .ror (.var 2) (.var 3)) =
+      some [.ori 31 0 8, .sub 31 31 3, .sll 31 2 31,
+        .srl 1 2 3, .or 1 1 31] := by
+  native_decide
+
+example :
+    RiscV.wordExpToInstructions (width := 8) 31
+      (.shift .ror (.var 2) (.const (3 : RiscV.Word 8))) = none := by
+  native_decide
+
+example :
+    RiscV.executeFunction 20 (0 : RiscV.Word 8) [2]
+      [.srli 31 2 1, .slli 1 2 7, .or 1 1 31] [1]
+      [129] (RiscV.zeroState 8) = some [192] := by
+  native_decide
+
+example :
+    RiscV.executeFunction 30 (0 : RiscV.Word 8) [2, 3]
+      [.ori 31 0 8, .sub 31 31 3, .sll 31 2 31,
+        .srl 1 2 3, .or 1 1 31] [1]
+      [129, 1] (RiscV.zeroState 8) = some [192] := by
+  native_decide
 
 example [NeZero width] (state : RiscV.State width) :
     RiscV.evalWordProg state

@@ -233,6 +233,9 @@ definitions, pass ordering, examples, and proof obligations.
   `ADDI`.
 - [x] Add immediate RISC-V shift transitions (`SLLI`, `SRLI`, `SRAI`) and
   select them for normalized Word shift expressions.
+- [x] Port the HOL RISC-V rotate-right lowering as a scratch-register
+  instruction sequence, including immediate and register-count forms and the
+  reserved `x31` alias contract.
 - [x] Port the HOL RISC-V `AddCarry` lowering through Word instruction
   selection and execution, including its reserved `x31` scratch contract.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

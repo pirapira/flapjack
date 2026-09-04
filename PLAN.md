@@ -64,6 +64,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the Crepe IR and executable expression lowering used by
   `pan_to_crep`.
 - [x] Port core structured statement lowering and initial pass equations.
+- [x] Add parameter-slot allocation and top-level function/declaration
+  assembly for the Pancake-to-Crepe pass.
 - [x] Add executable deterministic semantics and preservation theorems for
   the supported constant/return/sequence fragment, including scalar local
   assignment state updates.

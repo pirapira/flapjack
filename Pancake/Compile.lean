@@ -27,6 +27,30 @@ def functionReturnNames (context : CompileContext α) (function : FunName) : Lis
   | some (_, shape) => allocatedNames context shape
   | none => []
 
+structure CompiledFunction (α : Type u) where
+  name : FunName
+  params : List Nat
+  body : CrepProg α
+  returnShape : Shape
+  deriving Repr
+
+def compileParamVars : List (VarName × Shape) → Nat →
+    InfoMap (Shape × List Nat) × List Nat × Nat
+  | [], offset => ([], [], offset)
+  | (name, shape) :: params, offset =>
+      let names := (List.range (Shape.shapeSize shape)).map (fun index => offset + index)
+      let (restVars, restNames, nextOffset) := compileParamVars params
+        (offset + Shape.shapeSize shape)
+      ((name, (shape, names)) :: restVars, names ++ restNames, nextOffset)
+termination_by params => sizeOf params
+
+def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape)
+  | [] => []
+  | .function declaration :: declarations =>
+      (declaration.name, (declaration.params, declaration.returnShape)) ::
+        functionInfos declarations
+  | _ :: declarations => functionInfos declarations
+
 def compileProg [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (program : Prog α) : CrepProg α :=
   match program with
@@ -113,6 +137,28 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
   | .annot _ _ => .skip
 
 termination_by structural program
+
+def compileFunDecl [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (declaration : FunDecl α) : CompiledFunction α :=
+  let (vars, params, maxVar) := compileParamVars declaration.params 0
+  let functionContext := { context with vars := vars, maxVar := maxVar }
+  { name := declaration.name, params := params,
+    body := compileProg functionContext declaration.body,
+    returnShape := declaration.returnShape }
+
+def compileFunctions [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) : List (Decl α) → List (CompiledFunction α)
+  | [] => []
+  | .function declaration :: declarations =>
+      compileFunDecl context declaration :: compileFunctions context declarations
+  | _ :: declarations => compileFunctions context declarations
+termination_by declarations => sizeOf declarations
+
+def compileToCrepe [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α)) :
+    List (CompiledFunction α) :=
+  let context := { context with functions := functionInfos declarations }
+  compileFunctions context declarations
 
 theorem compileProg_skip [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) : compileProg context .skip = .skip := by

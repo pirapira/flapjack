@@ -147,6 +147,31 @@ def assignmentContext : CompileContext Nat :=
   { vars := [("x", (.one, [0]))], functions := [], exceptions := [], maxVar := 0,
     bytesInWord := 1 }
 
+def identityFunction : FunDecl Nat :=
+  { name := "identity", inline := false, exported := false, params := [("x", .one)],
+    body := .return (.var .local "x"), returnShape := .one }
+
+def constantFunction : FunDecl Nat :=
+  { name := "constant", inline := false, exported := false, params := [],
+    body := .return (.const 7), returnShape := .one }
+
+example :
+    (compileFunDecl assignmentContext identityFunction).params = [0] := by
+  simp [compileFunDecl, compileParamVars, identityFunction]
+
+example :
+    (compileFunDecl assignmentContext identityFunction).body =
+      .return [.var 0] := by
+  simp [compileFunDecl, compileParamVars, identityFunction, compileProg, compileExp,
+    lookupInfo]
+
+example :
+    (compileToCrepe assignmentContext [.function constantFunction]).head?.map
+        CompiledFunction.body =
+      some (.return [.const 7]) := by
+  simp [compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
+    functionInfos, constantFunction, compileProg, compileExp]
+
 example :
     compileExp crepContext (Exp.var .local "pair") =
       ([.var 0, .var 1], .comb [.one, .one]) := by

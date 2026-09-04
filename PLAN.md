@@ -305,6 +305,8 @@ definitions, pass ordering, examples, and proof obligations.
   architectural code runner.
 - [x] Add an end-to-end source `while` regression through Loop/Word loop
   lowering and RISC-V architectural execution.
+- [x] Add an end-to-end source full-word store/load regression through the
+  composed pipeline and RISC-V byte-memory execution.
 - [x] Prove generic fuel-inductive Loop/Word repeat preservation for normal,
   break, and continue control results.
 - [x] Prove the one-step global-state projection invariant for every Loop

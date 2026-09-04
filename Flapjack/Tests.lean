@@ -733,10 +733,21 @@ example [NeZero width] :
 
 example [NeZero width] (state : RiscV.State width) :
     RiscV.evalWordProg state
+        (.assign 1 (.shift .lsl (.var 2) (.var 3))) =
+      some (RiscV.execute state (.sll 1 2 3)) := by
+  exact RiscV.compileWordShiftLsl_sound state
+
+example [NeZero width] (state : RiscV.State width) :
+    RiscV.evalWordProg state
+        (.assign 1 (.shift .lsr (.var 2) (.var 3))) =
+      some (RiscV.execute state (.srl 1 2 3)) := by
+  exact RiscV.compileWordShiftLsr_sound state
+
+example [NeZero width] (state : RiscV.State width) :
+    RiscV.evalWordProg state
         (.assign 1 (.shift .asr (.var 2) (.var 3))) =
       some (RiscV.execute state (.sra 1 2 3)) := by
-  simp [RiscV.evalWordProg, RiscV.evalWordExp, RiscV.registerOfNat,
-    RiscV.execute, RiscV.writeRegister, RiscV.nextPc, RiscV.shiftAmount]
+  exact RiscV.compileWordShiftAsr_sound state
 
 example :
     RiscV.shiftAmount (BitVec.ofNat 64 65) = 1 := by

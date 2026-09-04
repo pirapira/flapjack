@@ -276,6 +276,27 @@ theorem compileWordBinOp_sound [NeZero width] (state : State width)
     simp [evalWordProg, evalWordExp, registerOfNat, execute,
       writeRegister, nextPc]
 
+theorem compileWordShiftLsl_sound [NeZero width] (state : State width) :
+    evalWordProg state
+        (.assign 1 (.shift .lsl (.var 2) (.var 3))) =
+      some (execute state (.sll 1 2 3)) := by
+  simp [evalWordProg, evalWordExp, registerOfNat, execute,
+    writeRegister, nextPc, shiftAmount]
+
+theorem compileWordShiftLsr_sound [NeZero width] (state : State width) :
+    evalWordProg state
+        (.assign 1 (.shift .lsr (.var 2) (.var 3))) =
+      some (execute state (.srl 1 2 3)) := by
+  simp [evalWordProg, evalWordExp, registerOfNat, execute,
+    writeRegister, nextPc, shiftAmount]
+
+theorem compileWordShiftAsr_sound [NeZero width] (state : State width) :
+    evalWordProg state
+        (.assign 1 (.shift .asr (.var 2) (.var 3))) =
+      some (execute state (.sra 1 2 3)) := by
+  simp [evalWordProg, evalWordExp, registerOfNat, execute,
+    writeRegister, nextPc, shiftAmount]
+
 theorem compileWordAdd_zeroState [NeZero width] :
     evalWordProg (zeroState width)
         (.assign 1 (.const (7 : Word width))) =

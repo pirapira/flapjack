@@ -58,6 +58,8 @@ backend initializes parameter registers and collects return registers; the
 pipeline exposes an end-to-end Pancake-to-artifact wrapper for that fragment.
 The first library-level source-to-RISC-V correctness theorem for this composed
 pipeline is in [`Flapjack/Correctness.lean`](Flapjack/Correctness.lean).
+Word-level function-table call semantics are in
+[`Flapjack/WordSemantics.lean`](Flapjack/WordSemantics.lean).
 
 Build it with:
 

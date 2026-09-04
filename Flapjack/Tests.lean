@@ -15,6 +15,7 @@ import Flapjack.LoopSemantics
 import Flapjack.Word
 import Flapjack.RiscV.Backend
 import Flapjack.Correctness
+import Flapjack.WordSemantics
 
 namespace Flapjack
 
@@ -839,6 +840,14 @@ example (left right : RiscV.Word 64) :
     RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]
       [.add 5 2 3] [5] [left, right] (RiscV.zeroState 64) = some [left + right] := by
   exact RiscV.executeFunction_add_general left right
+
+example :
+    (RiscV.evalWordFunctionWithCalls
+      [(7, [2], (.return 0 [2] : WordProg (RiscV.Word 64)))] 10
+      (RiscV.writeRegister (RiscV.zeroState 64) 2 9)
+      (.call (some ([3], [])) (some 7) [2] none)).map (fun result =>
+        result.1.registers 3) = some 9 := by
+  native_decide
 
 example [NeZero width] :
     RiscV.wordFunctionToRiscV

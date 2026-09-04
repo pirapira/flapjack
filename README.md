@@ -60,6 +60,9 @@ The first library-level source-to-RISC-V correctness theorem for this composed
 pipeline is in [`Flapjack/Correctness.lean`](Flapjack/Correctness.lean).
 Word-level function-table call semantics are in
 [`Flapjack/WordSemantics.lean`](Flapjack/WordSemantics.lean).
+The initial explicit RISC-V call convention is in
+[`Flapjack/RiscV/Calls.lean`](Flapjack/RiscV/Calls.lean); function-label
+linking remains a subsequent backend layer.
 
 Build it with:
 

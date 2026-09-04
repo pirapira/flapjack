@@ -205,6 +205,8 @@ definitions, pass ordering, examples, and proof obligations.
   RV64 Pancake-to-RISC-V addition pipeline, parameterized over inputs.
 - [x] Add a fuel-bounded Word function-table evaluator with nested calls,
   return-register assignment, tail calls, and memory-state propagation.
+- [x] Add the first RISC-V call-sequence selector and execute its linked
+  argument-move, `JALR`, return, and result-move convention.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

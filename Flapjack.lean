@@ -12,6 +12,7 @@ import Flapjack.Compile
 import Flapjack.Semantics
 import Flapjack.RiscV.Model
 import Flapjack.RiscV.Backend
+import Flapjack.RiscV.Calls
 import Flapjack.WordSemantics
 import Flapjack.Loop
 import Flapjack.CrepToLoop

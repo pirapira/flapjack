@@ -14,6 +14,7 @@ import Flapjack.LoopAnalysis
 import Flapjack.LoopSemantics
 import Flapjack.Word
 import Flapjack.RiscV.Backend
+import Flapjack.RiscV.Calls
 import Flapjack.Correctness
 import Flapjack.WordSemantics
 
@@ -840,6 +841,22 @@ example (left right : RiscV.Word 64) :
     RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]
       [.add 5 2 3] [5] [left, right] (RiscV.zeroState 64) = some [left + right] := by
   exact RiscV.executeFunction_add_general left right
+
+def linkedCallCode : List (RiscV.Instruction 64) :=
+  [.addi 2 6 0, .addi 31 0 32, .jalr 1 31 0, .addi 4 10 0,
+    .addi 0 0 0, .addi 0 0 0, .addi 0 0 0, .addi 0 0 0,
+    .addi 10 2 1, .jalr 0 1 0]
+
+example :
+    RiscV.wordCallToRiscV (32 : RiscV.Word 64) [2] [10] [6] [4] =
+      some [.addi 2 6 0, .addi 31 0 32, .jalr 1 31 0, .addi 4 10 0] := by
+  exact RiscV.wordCallToRiscV_shape 32
+
+example :
+    (RiscV.executeCodeUntil 30 (0 : RiscV.Word 64) 16 linkedCallCode
+      (RiscV.writeRegister (RiscV.zeroState 64) 6 41)).map
+        (fun state => RiscV.readRegister state 4) = some 42 := by
+  native_decide
 
 example :
     (RiscV.evalWordFunctionWithCalls

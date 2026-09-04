@@ -194,6 +194,12 @@ def loopRegisterStateMapped [NeZero width] (context : WordContext)
     globals := fun _ => none
     memory := fun _ => none }
 
+def loopRegisterStateMappedWithMemory [NeZero width] (context : WordContext)
+    (state : RiscV.State width)
+    (memory : RiscV.Word width → Option (RiscV.Word width)) :
+    LoopState (RiscV.Word width) :=
+  { loopRegisterStateMapped context state with memory := memory }
+
 /-!
 This is the first context-parametric Loop-to-Word state observation. The
 source local and its mapped register need not have the same numeric name; the
@@ -258,6 +264,43 @@ theorem loopToWord_add_assign_register_agreement_mapped [NeZero width]
     RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
     RiscV.nextPc, updateLoopLocal, hdestination, hleft, hright,
     hdestination_nonzero, hzero]
+
+theorem loopToWord_load32_register_agreement_mapped [NeZero width]
+    (context : WordContext) (state : RiscV.State width)
+    (memory : RiscV.Word width → Option (RiscV.Word width))
+    (address destination : Nat) (addressRegister destinationRegister : Fin 32)
+    (addressValue value : RiscV.Word width)
+    (zero : RiscV.ZeroRegister state)
+    (haddress :
+      RiscV.registerOfNat (wordFindVar context address) = some addressRegister)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (haddress_value :
+      RiscV.readRegister state addressRegister = addressValue)
+    (hmemory : memory addressValue = some value)
+    (hmachine : RiscV.readWord32 state addressValue = value)
+    (hdestination_nonzero : destinationRegister ≠ 0) :
+    (evalLoopProg 1 (loopRegisterStateMappedWithMemory context state memory)
+      (.load32 address destination)).bind (fun result =>
+        match result with
+        | .normal state => state.locals destination
+        | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg context (.load32 address destination))).map
+        (fun state => RiscV.readRegister state destinationRegister) := by
+  have hzero : state.registers 0 = (0 : RiscV.Word width) := by
+    exact zero
+  simp [evalLoopProg, loopRegisterStateMappedWithMemory,
+    loopRegisterStateMapped, loopToWordProg, wordCompileExp,
+    RiscV.evalWordProg, RiscV.execute, RiscV.writeRegister,
+    RiscV.readRegister, RiscV.nextPc,
+    updateLoopLocal, haddress, hdestination, haddress_value,
+    hmemory, hmachine, hdestination_nonzero, hzero]
+  have haddress_value' : state.registers addressRegister = addressValue := by
+    exact haddress_value
+  rw [haddress_value', hmemory, hmachine]
+  simp [updateLoopLocal]
 
 theorem loopToWord_const_assign_register_agreement [NeZero width]
     (state : RiscV.State width) (zero : RiscV.ZeroRegister state)

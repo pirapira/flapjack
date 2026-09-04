@@ -62,7 +62,8 @@ Word-level function-table call semantics are in
 [`Flapjack/WordSemantics.lean`](Flapjack/WordSemantics.lean).
 The initial explicit RISC-V call convention is in
 [`Flapjack/RiscV/Calls.lean`](Flapjack/RiscV/Calls.lean); function-label
-linking remains a subsequent backend layer.
+linking and label resolution are in
+[`Flapjack/RiscV/Link.lean`](Flapjack/RiscV/Link.lean).
 
 Build it with:
 

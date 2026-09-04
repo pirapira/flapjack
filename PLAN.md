@@ -207,6 +207,8 @@ definitions, pass ordering, examples, and proof obligations.
   return-register assignment, tail calls, and memory-state propagation.
 - [x] Add the first RISC-V call-sequence selector and execute its linked
   argument-move, `JALR`, return, and result-move convention.
+- [x] Add RISC-V function-artifact linking by byte length and resolve Word
+  call labels to linked entry addresses.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

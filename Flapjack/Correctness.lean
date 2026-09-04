@@ -809,4 +809,80 @@ theorem loopToWord_longMul_register_agreement [NeZero width]
     RiscV.registerOfNat, RiscV.execute, RiscV.writeRegister,
     RiscV.readRegister, RiscV.nextPc, updateLoopLocal]
 
+/-!
+The local relation used by the HOL loop_to_word proof is represented here as
+a direct register witness.  This theorem lifts the constructor-specific
+mapped binop observations above to an arbitrary Loop local environment:
+every source local has a mapped RISC-V register carrying the same word, and
+the destination mapping is required to be writable.
+-/
+def loopLocalsMappedToRiscV [NeZero width] (context : WordContext)
+    (locals : Nat → Option (RiscV.Word width))
+    (state : RiscV.State width) : Prop :=
+  ∀ name value, locals name = some value →
+    ∃ register,
+      RiscV.registerOfNat (wordFindVar context name) = some register ∧
+        RiscV.readRegister state register = value
+
+theorem loopToWord_binop_assign_agreement_of_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (operator : BinOp)
+    (destination left right : Nat) (destinationRegister : Fin 32)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hleft_present : ∃ value, loopState.locals left = some value)
+    (hright_present : ∃ value, loopState.locals right = some value)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0) :
+    (evalLoopProg 1 loopState
+      (.assign destination (.op operator [.var left, .var right]))).bind
+        (fun result =>
+          match result with
+          | .normal state => state.locals destination
+          | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg context
+          (.assign destination (.op operator [.var left, .var right])))).map
+        (fun state => RiscV.readRegister state destinationRegister) := by
+  cases hleft : loopState.locals left with
+  | none =>
+      obtain ⟨value, hvalue⟩ := hleft_present
+      simp [hleft] at hvalue
+  | some leftValue =>
+      cases hright : loopState.locals right with
+      | none =>
+          obtain ⟨value, hvalue⟩ := hright_present
+          simp [hright] at hvalue
+      | some rightValue =>
+          rcases hlocals left leftValue hleft with
+            ⟨leftRegister, hleft_register, hleft_value⟩
+          rcases hlocals right rightValue hright with
+            ⟨rightRegister, hright_register, hright_value⟩
+          have hleft_value' : state.registers leftRegister = leftValue := by
+            exact hleft_value
+          have hright_value' : state.registers rightRegister = rightValue := by
+            exact hright_value
+          have hand (x y : RiscV.Word width) :
+              AndOp.and x y = x &&& y := by
+            change x.and y = x &&& y
+            exact BitVec.and_eq x y
+          have hor (x y : RiscV.Word width) :
+              OrOp.or x y = x ||| y := by
+            change x.or y = x ||| y
+            exact BitVec.or_eq x y
+          have hxor (x y : RiscV.Word width) :
+              HXor.hXor x y = x ^^^ y := by
+            rfl
+          cases operator <;>
+            simp [evalLoopProg, evalLoopExp, evalLoopBinOp, loopToWordProg,
+              wordCompileExp, wordCompileExp.wordCompileExpList,
+              RiscV.evalWordProg, RiscV.wordExpToInstructions,
+              RiscV.wordExpToInstruction, RiscV.executeInstructions,
+              RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+              RiscV.nextPc, updateLoopLocal, hleft, hright,
+              hleft_register, hright_register, hleft_value, hright_value,
+              hleft_value', hright_value',
+              hdestination, hdestination_nonzero, hand, hor, hxor]
+
 end Flapjack

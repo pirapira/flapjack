@@ -4,11 +4,12 @@ import Flapjack.RiscV.Model
 /-!
 The first executable Word-to-RISC-V instruction-selection slice.
 
-This is intentionally a partial compiler. It covers the straight-line Word
-fragment made of `skip`, assignments, sequencing, constants, register reads,
-binary arithmetic, shifts, and selected memory operations. The option-valued
-interface makes the current boundary explicit while the remaining Word
-instructions are ported.
+This is intentionally a partial compiler. It covers the Word fragment made of
+`skip`, assignments, sequencing, register-based equality conditionals,
+constants, register reads, binary arithmetic, shifts, and selected memory
+operations. Immediate-zero conditions use the architectural x0 register. The
+option-valued interface makes the current boundary explicit while the
+remaining Word instructions are ported.
 -/
 
 namespace Flapjack.RiscV
@@ -108,9 +109,11 @@ def wordProgToRiscV [NeZero width] :
       let first ← wordProgToRiscV first
       let second ← wordProgToRiscV second
       pure (first ++ second)
-  | .ite operator condition (.reg right) thenBranch elseBranch => do
+  | .ite operator condition rightValue thenBranch elseBranch => do
       let condition ← registerOfNat condition
-      let right ← registerOfNat right
+      let right ← match rightValue with
+        | .reg right => registerOfNat right
+        | .imm value => if value == 0 then pure 0 else none
       let thenCode ← wordProgToRiscV thenBranch
       let elseCode ← wordProgToRiscV elseBranch
       let falseOffset : Word width :=
@@ -203,9 +206,9 @@ def wordFunctionToRiscV [NeZero width] :
   | .inst instruction => do
       let instruction ← wordInstToInstruction instruction
       pure ([instruction], [])
-  | .ite operator condition (.reg right) thenBranch elseBranch => do
+  | .ite operator condition rightValue thenBranch elseBranch => do
       let code ← wordProgToRiscV
-        (.ite operator condition (.reg right) thenBranch elseBranch)
+        (.ite operator condition rightValue thenBranch elseBranch)
       pure (code, [])
   | .seq first second => do
       let (firstCode, firstReturns) ← wordFunctionToRiscV first
@@ -215,6 +218,21 @@ def wordFunctionToRiscV [NeZero width] :
   | .return _ values => do
       let values ← values.mapM registerOfNat
       pure ([], values)
+  | _ => none
+
+def evalWordCondition [NeZero width] (state : State width)
+    (operator : Cmp) (condition : Nat) (rightValue : WordRegImm (Word width)) :
+    Option Bool := do
+  let condition ← registerOfNat condition
+  let left := readRegister state condition
+  let right ← match rightValue with
+    | .reg right => do
+        let right ← registerOfNat right
+        pure (readRegister state right)
+    | .imm value => pure value
+  match operator with
+  | .equal => pure (left == right)
+  | .notEqual => pure (left != right)
   | _ => none
 
 def evalWordFunction [NeZero width] (state : State width) :
@@ -247,13 +265,8 @@ def evalWordFunction [NeZero width] (state : State width) :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (execute state (.store32 source address), [])
-  | .ite operator condition (.reg right) thenBranch elseBranch => do
-      let condition ← registerOfNat condition
-      let right ← registerOfNat right
-      let choose ← match operator with
-        | .equal => pure (readRegister state condition == readRegister state right)
-        | .notEqual => pure (readRegister state condition != readRegister state right)
-        | _ => none
+  | .ite operator condition rightValue thenBranch elseBranch => do
+      let choose ← evalWordCondition state operator condition rightValue
       if choose then evalWordFunction state thenBranch
       else evalWordFunction state elseBranch
   | .seq first second => do
@@ -299,13 +312,8 @@ def evalWordProg [NeZero width] (state : State width) :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (execute state (.store32 source address))
-  | .ite operator condition (.reg right) thenBranch elseBranch => do
-      let condition ← registerOfNat condition
-      let right ← registerOfNat right
-      let choose ← match operator with
-        | .equal => pure (readRegister state condition == readRegister state right)
-        | .notEqual => pure (readRegister state condition != readRegister state right)
-        | _ => none
+  | .ite operator condition rightValue thenBranch elseBranch => do
+      let choose ← evalWordCondition state operator condition rightValue
       if choose then evalWordProg state thenBranch
       else evalWordProg state elseBranch
   | .seq first second => do

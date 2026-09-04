@@ -78,6 +78,8 @@ definitions, pass ordering, examples, and proof obligations.
   traps; preserve the HOL copyright notice in `Flapjack/RiscV/COPYRIGHT`.
 - [x] Add executable `ADD`/`ADDI` transitions with PC-advance and
   zero-register preservation theorems.
+- [x] Port HOL's signed `LB`/`LH` load value paths alongside the existing
+  unsigned byte/halfword operations, with destination-register theorems.
 - [x] Add executable deterministic semantics and preservation theorems for
   the supported constant/return/sequence fragment, including scalar local
   assignment state updates.

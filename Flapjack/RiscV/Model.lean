@@ -141,8 +141,10 @@ inductive Instruction (width : Nat) where
   | jal (destination : Fin 32) (offset : Word width)
   | jalr (destination source : Fin 32) (offset : Word width)
   | loadByte (destination address : Fin 32)
+  | loadByteSigned (destination address : Fin 32)
   | storeByte (source address : Fin 32)
   | loadHalf (destination address : Fin 32)
+  | loadHalfSigned (destination address : Fin 32)
   | storeHalf (source address : Fin 32)
   | load32 (destination address : Fin 32)
   | store32 (source address : Fin 32)
@@ -190,6 +192,12 @@ def readWord16 (state : State width) (address : Word width) : Word width :=
   let byte0 := (readByte state (byteAddress address 0)).toNat
   let byte1 := (readByte state (byteAddress address 1)).toNat
   BitVec.ofNat width (byte0 + 256 * byte1)
+
+def readByteSigned (state : State width) (address : Word width) : Word width :=
+  BitVec.signExtend width (readByte state address)
+
+def readHalfSigned (state : State width) (address : Word width) : Word width :=
+  BitVec.signExtend width (BitVec.extractLsb 15 0 (readWord16 state address))
 
 def writeWord32 (state : State width) (address : Word width) (value : Word width) : State width :=
   let byte0 := BitVec.ofNat 8 (value.toNat % 256)
@@ -373,6 +381,10 @@ def execute (state : State width) : Instruction width → State width
       let address := readRegister state address
       let value := BitVec.ofNat width (readByte state address).toNat
       writeRegister { state with pc := nextPc state } destination value
+  | .loadByteSigned destination address =>
+      let address := readRegister state address
+      writeRegister { state with pc := nextPc state } destination
+        (readByteSigned state address)
   | .storeByte source address =>
       let address := readRegister state address
       let value := BitVec.ofNat 8 (readRegister state source).toNat
@@ -381,6 +393,10 @@ def execute (state : State width) : Instruction width → State width
       let address := readRegister state address
       writeRegister { state with pc := nextPc state } destination
         (readWord16 state address)
+  | .loadHalfSigned destination address =>
+      let address := readRegister state address
+      writeRegister { state with pc := nextPc state } destination
+        (readHalfSigned state address)
   | .storeHalf source address =>
       let address := readRegister state address
       writeWord16 { state with pc := nextPc state } address
@@ -447,6 +463,20 @@ theorem execute_mulHU (state : State width) (destination sourceLeft sourceRight 
       else BitVec.ofNat width
         ((readRegister state sourceLeft).toNat *
           (readRegister state sourceRight).toNat / 2 ^ width) := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, readRegister, h]
+
+theorem execute_loadByteSigned (state : State width) (destination address : Fin 32) :
+    readRegister (execute state (.loadByteSigned destination address)) destination =
+      if destination = 0 then readRegister state destination
+      else readByteSigned state (readRegister state address) := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, readRegister, h]
+
+theorem execute_loadHalfSigned (state : State width) (destination address : Fin 32) :
+    readRegister (execute state (.loadHalfSigned destination address)) destination =
+      if destination = 0 then readRegister state destination
+      else readHalfSigned state (readRegister state address) := by
   by_cases h : destination = 0 <;>
     simp [execute, writeRegister, readRegister, h]
 

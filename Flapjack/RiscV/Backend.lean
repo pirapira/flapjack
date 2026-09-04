@@ -151,6 +151,21 @@ def executeCode [NeZero width] :
         | some instruction => executeCode fuel start code (execute state instruction)
         | none => if index = code.length then some state else none
 
+theorem executeCode_conditional_equal :
+    (executeCode 10 (0 : Word 32)
+      [.branchNe 1 2 (BitVec.ofNat 32 12),
+        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2]
+      (zeroState 32)).map (fun state => readRegister state 3) = some 1 := by
+  native_decide
+
+theorem executeCode_conditional_notEqual :
+    (executeCode 10 (0 : Word 32)
+      [.branchEq 1 2 (BitVec.ofNat 32 12),
+        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2]
+      (writeRegister (zeroState 32) 1 9)).map
+        (fun state => readRegister state 3) = some 1 := by
+  native_decide
+
 def evalWordExp [NeZero width] (state : State width) :
     WordExp (Word width) → Option (Word width)
   | .const value => some value

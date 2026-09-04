@@ -396,6 +396,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add the first structured source-value evaluator, preserving words,
   raw/named records, field projection, globals, shaped loads, and stateful
   local/global/memory updates with executable regressions.
+- [x] Extend the structured evaluator with fuel-bounded declaration calls,
+  caller-local result binding, matching exception handlers, and an explicit
+  structured FFI boundary with executable regressions.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

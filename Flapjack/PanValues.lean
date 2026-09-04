@@ -178,6 +178,17 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
+def evalPanValueExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (expressions : List (Exp α)) : Option (List (PanValue α)) :=
+  evalPanValueExp.evalPanValueExps structs locals globals memory
+    baseAddress topAddress bytesInWord expressions
+
 def updatePanValueMap [BEq γ] (values : γ → Option α)
     (name : γ) (value : α) : γ → Option α :=
   fun current => if current == name then some value else values current
@@ -276,6 +287,174 @@ def evalPanValueProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .tick | .annot _ _ => some (locals, globals, memory, [])
   | _ => none
 termination_by program => sizeOf program
+
+inductive PanValueControlResult (α : Type u) where
+  | normal (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α))
+  | returned (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (values : List (PanValue α))
+  | raised (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (exception : ExceptionId)
+      (value : PanValue α)
+
+def bindPanValueParameters (parameters : List VarName)
+    (values : List (PanValue α)) :
+    Option (VarName → Option (PanValue α)) :=
+  if parameters.length != values.length then none
+  else
+    some ((parameters.zip values).foldl
+      (fun locals (name, value) => updatePanValueMap locals name value)
+      (fun _ => none))
+
+def assignPanValueCallResult
+    (locals : VarName → Option (PanValue α))
+    (destination : Option (VarKind × VarName))
+    (values : List (PanValue α)) :
+    Option (VarName → Option (PanValue α)) :=
+  match destination, values with
+  | none, [] => some locals
+  | some (.local, name), [value] => some (updatePanValueMap locals name value)
+  | _, _ => none
+
+abbrev PanValueFfiHandler (α : Type u) :=
+  FunName → α → α → α → α →
+    (VarName → Option (PanValue α)) →
+      Option (VarName → Option (PanValue α))
+
+def evalPanValueExtCall [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (structs : StructContext) (handler : PanValueFfiHandler α)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Exp α) :
+    Option ((VarName → Option (PanValue α)) ×
+      (VarName → Option (PanValue α)) × (α → Option (PanValue α))) := do
+  let configuration ← evalPanValueExp structs locals globals memory
+    baseAddress topAddress bytesInWord configuration
+  let configurationLength ← evalPanValueExp structs locals globals memory
+    baseAddress topAddress bytesInWord configurationLength
+  let array ← evalPanValueExp structs locals globals memory
+    baseAddress topAddress bytesInWord array
+  let arrayLength ← evalPanValueExp structs locals globals memory
+    baseAddress topAddress bytesInWord arrayLength
+  let .word configuration := configuration | none
+  let .word configurationLength := configurationLength | none
+  let .word array := array | none
+  let .word arrayLength := arrayLength | none
+  let locals ← handler function configuration configurationLength array arrayLength locals
+  pure (locals, globals, memory)
+
+/-!
+Fuel-bounded structured source semantics for calls, exceptions, and FFI.  This
+is the structured-value counterpart of the scalar control-result evaluator in
+`Semantics.lean`; unlike the earlier state evaluator, it keeps caller and
+callee state separate and propagates matching exception handlers.
+-/
+mutual
+  def evalPanValueCallWithCallsAndFfi
+      [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (structs : StructContext)
+      (functions : List (FunName × List VarName × Prog α))
+      (handler : PanValueFfiHandler α)
+      (baseAddress topAddress bytesInWord : α) :
+      Nat → (VarName → Option (PanValue α)) →
+        (VarName → Option (PanValue α)) → (α → Option (PanValue α)) →
+        Option (Option (VarKind × VarName) ×
+          Option (ExceptionId × VarName × Prog α)) → FunName → List (Exp α) →
+        Option (PanValueControlResult α)
+    | 0, _, _, _, _, _, _ => none
+    | fuel + 1, locals, globals, memory, info, function, arguments => do
+        let values ← evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord arguments
+        let (parameters, body) ← lookupPanFunction function functions
+        let calleeLocals ← bindPanValueParameters parameters values
+        let result ← evalPanValueProgWithCallsAndFfi structs functions handler
+          baseAddress topAddress bytesInWord fuel calleeLocals globals memory body
+        match result with
+        | .normal _ _ _ => pure (.normal locals globals memory)
+        | .returned _ _ _ values =>
+            match info with
+            | none => pure (.returned locals globals memory values)
+            | some (destination, _) => do
+                let locals ← assignPanValueCallResult locals destination values
+                pure (.normal locals globals memory)
+        | .raised _ _ _ exception value =>
+            match info with
+            | some (_, some (caught, handlerVariable, handlerProgram)) =>
+                if caught == exception then
+                  evalPanValueProgWithCallsAndFfi structs functions handler
+                    baseAddress topAddress bytesInWord fuel
+                    (updatePanValueMap locals handlerVariable value) globals memory
+                    handlerProgram
+                else pure (.raised locals globals memory exception value)
+            | _ => pure (.raised locals globals memory exception value)
+    termination_by fuel _ _ _ _ _ _ => fuel
+
+  def evalPanValueProgWithCallsAndFfi
+      [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (structs : StructContext)
+      (functions : List (FunName × List VarName × Prog α))
+      (handler : PanValueFfiHandler α)
+      (baseAddress topAddress bytesInWord : α) :
+      Nat → (VarName → Option (PanValue α)) →
+        (VarName → Option (PanValue α)) → (α → Option (PanValue α)) →
+        Prog α → Option (PanValueControlResult α)
+    | 0, _, _, _, _ => none
+    | fuel + 1, locals, globals, memory, .skip =>
+        some (.normal locals globals memory)
+    | fuel + 1, locals, globals, memory, .assign .local name value => do
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        pure (.normal (updatePanValueMap locals name value) globals memory)
+    | fuel + 1, locals, globals, memory, .assign .global name value => do
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        pure (.normal locals (updatePanValueMap globals name value) memory)
+    | fuel + 1, locals, globals, memory, .seq first second => do
+        let result ← evalPanValueProgWithCallsAndFfi structs functions handler
+          baseAddress topAddress bytesInWord fuel locals globals memory first
+        match result with
+        | .normal locals globals memory =>
+            evalPanValueProgWithCallsAndFfi structs functions handler
+              baseAddress topAddress bytesInWord fuel locals globals memory second
+        | result => pure result
+    | fuel + 1, locals, globals, memory, .call info function arguments =>
+        evalPanValueCallWithCallsAndFfi structs functions handler
+          baseAddress topAddress bytesInWord fuel locals globals memory info function arguments
+    | fuel + 1, locals, globals, memory,
+        .decCall name _ function arguments body => do
+        let result ← evalPanValueCallWithCallsAndFfi structs functions handler
+          baseAddress topAddress bytesInWord fuel locals globals memory
+          (some (some (.local, name), none)) function arguments
+        match result with
+        | .normal locals globals memory =>
+            evalPanValueProgWithCallsAndFfi structs functions handler
+              baseAddress topAddress bytesInWord fuel locals globals memory body
+        | result => pure result
+    | fuel + 1, locals, globals, memory,
+        .extCall function configuration configurationLength array arrayLength => do
+        let (locals, globals, memory) ← evalPanValueExtCall structs handler
+          locals globals memory baseAddress topAddress bytesInWord function
+          configuration configurationLength array arrayLength
+        pure (.normal locals globals memory)
+    | fuel + 1, locals, globals, memory, .raise exception value => do
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        pure (.raised locals globals memory exception value)
+    | fuel + 1, locals, globals, memory, .return value => do
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        pure (.returned locals globals memory [value])
+    | _, _, _, _, _ => none
+    termination_by fuel _ _ _ _ => fuel
+end
 
 theorem evalPanValueExp_rField_word
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

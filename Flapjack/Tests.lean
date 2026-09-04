@@ -1832,4 +1832,54 @@ example :
       (fun result => result.2.2.2) = some [PanValue.word 9] := by
   simp [evalPanValueProg, evalPanValueExp, updatePanValueMap]
 
+def structuredCallTestFunctions : List (FunName × List VarName × Prog Nat) :=
+  [("id", ["x"], .return (.var .local "x"))]
+
+def structuredNoFfi : PanValueFfiHandler Nat :=
+  fun _ _ _ _ _ _ => none
+
+example :
+    (evalPanValueProgWithCallsAndFfi (α := Nat) []
+      structuredCallTestFunctions structuredNoFfi 0 100 8 20
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      (.call (some (some (.local, "result"), none)) "id" [.const 7])).map
+      (fun result => match result with
+        | .normal locals _ _ => locals "result"
+        | _ => none) = some (some (.word 7)) := by
+  simp [evalPanValueProgWithCallsAndFfi, evalPanValueCallWithCallsAndFfi,
+    evalPanValueExp, evalPanValueExps, evalPanValueExp.evalPanValueExps,
+    structuredCallTestFunctions, structuredNoFfi, bindPanValueParameters,
+    assignPanValueCallResult, updatePanValueMap, lookupPanFunction]
+
+example :
+    (evalPanValueProgWithCallsAndFfi (α := Nat) []
+      [("fail", [], .raise "E" (.const 9))] structuredNoFfi 0 100 8 20
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      (.call (some (none, some ("E", "caught",
+        .return (.var .local "caught")))) "fail" [])).map
+      (fun result => match result with
+        | .returned _ _ _ [PanValue.word value] => some value
+        | _ => none) = some (some 9) := by
+  simp [evalPanValueProgWithCallsAndFfi, evalPanValueCallWithCallsAndFfi,
+    evalPanValueExp, evalPanValueExps, evalPanValueExp.evalPanValueExps,
+    structuredNoFfi, bindPanValueParameters, assignPanValueCallResult,
+    updatePanValueMap, lookupPanFunction]
+
+def structuredTestFfi : PanValueFfiHandler Nat :=
+  fun function configuration _ array _ locals =>
+    if function == "host" then
+      some (updatePanValueMap locals "out" (.word (configuration + array)))
+    else none
+
+example :
+    (evalPanValueProgWithCallsAndFfi (α := Nat) [] [] structuredTestFfi
+      0 100 8 20 (fun _ => none) (fun _ => none) (fun _ => none)
+      (.extCall "host" (.const 2) (.const 1) (.const 5) (.const 1))).map
+      (fun result => match result with
+        | .normal locals _ _ => locals "out"
+        | _ => none) = some (some (.word 7)) := by
+  simp [evalPanValueProgWithCallsAndFfi, evalPanValueExtCall,
+    evalPanValueExp, evalPanValueExps, evalPanValueExp.evalPanValueExps,
+    structuredTestFfi, updatePanValueMap]
+
 end Flapjack

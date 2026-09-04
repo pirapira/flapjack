@@ -1327,7 +1327,95 @@ theorem loopToWord_condition_agreement_of_locals [NeZero width]
       rcases hoperator with rfl | rfl | rfl | rfl | rfl | rfl <;>
         simp [evalLoopCondition, RiscV.evalWordCondition, wordRegImm,
           hcondition_register, hright_register, hcondition_value,
-          hright_value, hand]
+        hright_value, hand]
+
+theorem loopToWord_div_assign_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (destination dividend divisor : Nat)
+    (destinationRegister : Fin 32)
+    (dividendValue divisorValue : RiscV.Word width)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hdividend : loopState.locals dividend = some dividendValue)
+    (hdivisor : loopState.locals divisor = some divisorValue)
+    (hdivisor_nonzero : divisorValue ≠ 0)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0)
+    (hnoalias :
+      ∀ name, name ≠ destination →
+        ∀ register,
+          RiscV.registerOfNat (wordFindVar context name) = some register →
+            register ≠ destinationRegister) :
+    ∀ resultState,
+      RiscV.evalWordProg state
+        (loopToWordProg context (.arith (.div destination dividend divisor))) =
+        some resultState →
+      loopLocalsMappedToRiscV context
+        (updateLoopLocal loopState.locals destination
+          (dividendValue / divisorValue)) resultState := by
+  intro resultState hresult
+  rcases hlocals dividend dividendValue hdividend with
+    ⟨dividendRegister, hdividend_register, hdividend_value⟩
+  rcases hlocals divisor divisorValue hdivisor with
+    ⟨divisorRegister, hdivisor_register, hdivisor_value⟩
+  have hdestination_lt : wordFindVar context destination < 32 :=
+    RiscV.registerOfNat_some_lt hdestination
+  have hdividend_lt : wordFindVar context dividend < 32 :=
+    RiscV.registerOfNat_some_lt hdividend_register
+  have hdivisor_lt : wordFindVar context divisor < 32 :=
+    RiscV.registerOfNat_some_lt hdivisor_register
+  have hdestination_fin :
+      (⟨wordFindVar context destination, hdestination_lt⟩ : Fin 32) =
+        destinationRegister := by
+    have h := hdestination
+    simp [RiscV.registerOfNat, hdestination_lt] at h
+    exact h
+  have hdividend_fin :
+      (⟨wordFindVar context dividend, hdividend_lt⟩ : Fin 32) =
+        dividendRegister := by
+    have h := hdividend_register
+    simp [RiscV.registerOfNat, hdividend_lt] at h
+    exact h
+  have hdivisor_fin :
+      (⟨wordFindVar context divisor, hdivisor_lt⟩ : Fin 32) =
+        divisorRegister := by
+    have h := hdivisor_register
+    simp [RiscV.registerOfNat, hdivisor_lt] at h
+    exact h
+  simp [loopToWordProg, wordArith] at hresult
+  simp [RiscV.evalWordProg, RiscV.wordArithToInstructions,
+    RiscV.wordArithToInstruction, RiscV.executeInstructions,
+    RiscV.registerOfNat, hdestination_lt, hdividend_lt, hdivisor_lt,
+    hdestination_fin, hdividend_fin, hdivisor_fin] at hresult
+  subst resultState
+  intro name current hcurrent
+  by_cases hname : name = destination
+  · subst name
+    simp [updateLoopLocal] at hcurrent
+    subst current
+    refine ⟨destinationRegister, hdestination, ?_⟩
+    have hdividend_value' :
+        state.registers dividendRegister = dividendValue := by
+      exact hdividend_value
+    have hdivisor_value' :
+        state.registers divisorRegister = divisorValue := by
+      exact hdivisor_value
+    simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+      hdestination_nonzero, hdividend_register, hdivisor_register,
+      hdividend_value', hdivisor_value', hdivisor_nonzero,
+      BitVec.udiv_def]
+    intro hzero
+    exact (hdivisor_nonzero hzero).elim
+  · have hcurrent' : loopState.locals name = some current := by
+      simpa [updateLoopLocal, hname] using hcurrent
+    rcases hlocals name current hcurrent' with
+      ⟨register, hregister, hregister_value⟩
+    refine ⟨register, hregister, ?_⟩
+    have hregister_nonalias := hnoalias name hname register hregister
+    simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+      hdestination_nonzero, hregister_nonalias]
+    exact hregister_value
 
 theorem loopToWord_binop_assign_agreement_of_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))

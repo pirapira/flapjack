@@ -81,6 +81,10 @@ def checkerCallContext : Context :=
   { checkerContext with
     functions := [("f", { returnShape := .one, params := [] })] }
 
+def checkerArgContext : Context :=
+  { checkerContext with
+    functions := [("f", { returnShape := .one, params := [("arg", .one)] })] }
+
 example :
     checkExp (α := Nat) checkerContext (.var .local "x") =
       staticOk { shapedBased := .word .trusted } := by
@@ -141,25 +145,38 @@ example :
 example :
     checkProg (α := Nat) checkerCallContext (.call none "f" []) =
       progOk .tailLast true false "" := by
-  simp [checkProg, checkerCallContext, checkerContext, lookupInfo]
+  simp [checkProg, checkProg.checkCallArgs, checkCallInfo,
+    staticOk, staticBind,
+    functionArgumentsMatch, checkerCallContext, checkerContext, lookupInfo]
 
 example :
     checkProg (α := Nat) checkerCallContext
       (.call (some (none, none)) "f" []) =
       progOk .otherLast false false "" := by
-  simp [checkProg, checkerCallContext, checkerContext, lookupInfo]
+  simp [checkProg, checkProg.checkCallArgs, checkCallInfo, checkCallDestination,
+    staticOk, staticBind,
+    functionArgumentsMatch, checkerCallContext, checkerContext, lookupInfo]
 
 example :
     checkProg (α := Nat) checkerCallContext
       (.call (some (some (.local, "x"), none)) "f" []) =
       progOk .otherLast false false "" := by
-  simp [checkProg, checkerCallContext, checkerContext, lookupInfo,
-    shapedBasedMatchesShape, shapedBasedFromShape, shapedBasedSameShape]
+  simp [checkProg, checkProg.checkCallArgs, checkCallInfo, checkCallDestination,
+    staticOk, staticBind, functionArgumentsMatch, checkerCallContext, checkerContext,
+    lookupInfo, shapedBasedMatchesShape, shapedBasedFromShape, shapedBasedSameShape]
 
 example :
     checkProg (α := Nat) checkerCallContext (.call none "missing" []) =
       staticError (.scope "unknown function: missing") := by
   simp [checkProg, checkerCallContext, checkerContext, lookupInfo, staticError]
+
+example :
+    checkProg (α := Nat) checkerArgContext
+      (.call none "f" [.const 1]) =
+      progOk .tailLast true false "" := by
+  simp [checkProg, checkProg.checkCallArgs, checkExp, checkCallInfo, staticOk, staticBind,
+    functionArgumentsMatch, shapedBasedMatchesShape, shapedBasedFromShape,
+    shapedBasedSameShape, checkerArgContext, checkerContext, lookupInfo]
 
 example :
     checkExp (α := Nat)

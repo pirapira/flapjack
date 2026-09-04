@@ -360,11 +360,48 @@ def shapedBasedMatchesShape (context : StructContext) (shape : Shape)
   | some expected => shapedBasedSameShape expected shaped
   | none => false
 
+def functionArgumentsMatch (context : StructContext) :
+    List (VarName × Shape) → List ShapedBased → Bool
+  | [], [] => true
+  | (_, shape) :: parameters, argument :: arguments =>
+      shapedBasedMatchesShape context shape argument &&
+        functionArgumentsMatch context parameters arguments
+  | _, _ => false
+
 def progOk (last : LastStmt) (exitsFunction exitsLoop : Bool) (location : String) :
     StaticResult ProgReturn :=
   staticOk
     { exitsFunction := exitsFunction, exitsLoop := exitsLoop, last := last,
       variableDelta := [], currentLocation := location }
+
+def checkCallDestination [BEq String] (context : Context) (returnShape : Shape)
+    : Option (VarKind × VarName) → StaticResult ProgReturn
+  | none => progOk .otherLast false false context.location
+  | some (kind, name) =>
+      match kind with
+      | .local =>
+          match lookupInfo name context.locals with
+          | some localInfo =>
+              if shapedBasedMatchesShape context.structs returnShape localInfo.shapedBased then
+                progOk .otherLast false false context.location
+              else staticError (.shape "call destination shape does not match")
+          | none => staticError (.scope ("unknown call destination: " ++ name))
+      | .global =>
+          match lookupInfo name context.globals with
+          | some globalInfo =>
+              if shapesSame globalInfo.shape returnShape then
+                progOk .otherLast false false context.location
+              else staticError (.shape "global call destination shape does not match")
+          | none => staticError (.scope ("unknown call destination: " ++ name))
+
+def checkCallInfo [BEq String] (context : Context) (returnShape : Shape)
+    : Option (Option (VarKind × VarName) ×
+        Option (ExceptionId × VarName × Prog α)) → StaticResult ProgReturn
+  | none => progOk .tailLast true false context.location
+  | some (destination, handler) =>
+      match handler with
+      | some _ => staticError (.general "exception-handler checking is not implemented")
+      | none => checkCallDestination context returnShape destination
 
 def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgReturn
   | .skip => progOk .invisLast false false context.location
@@ -455,34 +492,10 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
       | none => staticError (.scope ("unknown function: " ++ function))
       | some functionInfo =>
           let returnShape := functionInfo.returnShape
-          if !arguments.isEmpty then
-            staticError (.general "function argument checking is not implemented")
-          else
-            match info with
-            | none => progOk .tailLast true false context.location
-            | some (destination, handler) =>
-                match handler with
-                | some _ => staticError (.general "exception-handler checking is not implemented")
-                | none =>
-                    match destination with
-                    | none => progOk .otherLast false false context.location
-                    | some (kind, name) =>
-                        match kind with
-                        | .local =>
-                            match lookupInfo name context.locals with
-                            | some localInfo =>
-                                if shapedBasedMatchesShape context.structs returnShape
-                                    localInfo.shapedBased then
-                                  progOk .otherLast false false context.location
-                                else staticError (.shape "call destination shape does not match")
-                            | none => staticError (.scope ("unknown call destination: " ++ name))
-                        | .global =>
-                            match lookupInfo name context.globals with
-                            | some globalInfo =>
-                                if shapesSame globalInfo.shape returnShape then
-                                  progOk .otherLast false false context.location
-                                else staticError (.shape "global call destination shape does not match")
-                            | none => staticError (.scope ("unknown call destination: " ++ name))
+          staticBind (checkCallArgs context arguments) (fun argumentResult =>
+            if !functionArgumentsMatch context.structs functionInfo.params argumentResult.shapedBased then
+              staticError (.shape "function argument shapes do not match")
+            else checkCallInfo context returnShape info)
   | .decCall _ _ _ _ _ => staticError (.general "declaration-call checking is not implemented")
   | .extCall _ _ _ _ _ => staticError (.general "foreign-call checking is not implemented")
   | .raise exception value =>
@@ -516,5 +529,16 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
 termination_by program => sizeOf program
 decreasing_by
   all_goals first | sizeOf_list_dec | decreasing_trivial
+where
+  checkCallArgs [BEq String] (context : Context) :
+      List (Exp α) → StaticResult ExpsReturn
+    | [] => staticOk { shapedBased := [] }
+    | expression :: expressions =>
+        staticBind (checkExp context expression) (fun result =>
+          staticBind (checkCallArgs context expressions) (fun rest =>
+            staticOk { shapedBased := result.shapedBased :: rest.shapedBased }))
+  termination_by expressions => sizeOf expressions
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
 
 end Pancake

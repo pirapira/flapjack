@@ -6,6 +6,7 @@ import Flapjack.Test.Pipeline
 import Flapjack.Test.Calls
 import Flapjack.Test.Loops
 import Flapjack.Test.Primitive
+import Flapjack.Test.Allocator
 import Flapjack.Test.Structured
 
 /-!

@@ -2,6 +2,7 @@ import Flapjack.PanGlobals
 import Flapjack.Compile
 import Flapjack.CrepToLoop
 import Flapjack.Word
+import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Loops
 import Flapjack.RiscV.Link
@@ -69,6 +70,22 @@ def pipelineWordFunctions [OfNat α 1]
     let context : WordContext :=
       { vars := slots.map (fun name => (name, name + 2)) }
     (label, parameters.map (fun name => name + 2), loopToWordProg context body))
+
+/-!
+An allocation-aware variant of the Word-function boundary.  The historical
+`pipelineWordFunctions` definition remains available for existing artifact
+equations; this variant makes register exhaustion explicit and uses the
+reserved-register-aware allocator before instruction selection.
+-/
+def pipelineWordFunctionsAllocated [OfNat α 1]
+    : List (Nat × List Nat × LoopProg α) →
+      Option (List (Nat × List Nat × WordProg α))
+  | [] => some []
+  | (label, parameters, body) :: functions => do
+      let slots := loopAccVars body parameters
+      let context ← wordAllocateContext slots
+      let rest ← pipelineWordFunctionsAllocated functions
+      pure ((label, wordMapVars context parameters, loopToWordProg context body) :: rest)
 
 theorem lookupNatInfo_map_add_two_of_mem (slots : List Nat) (name : Nat)
     (hname : name ∈ slots) :

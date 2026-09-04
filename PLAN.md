@@ -276,8 +276,10 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Keep Loop-to-Word `AddCarry` as a five-register operation until
   instruction selection, and prove a structured primitive through the
   call-linked RISC-V artifact without clobbering the `x1` link register.
-- [ ] Port the CakeML Word register allocator and its RISC-V reserved-register
-  contracts before claiming general call-aware allocation correctness.
+- [x] Add an executable Option-valued Word allocator boundary that preserves
+  existing low-numbered mappings and rejects reserved-register exhaustion.
+- [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
+  RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
   multiplication (`MULHU`) followed by low-half multiplication (`MUL`),
   including the target's high-destination/source non-aliasing precondition.

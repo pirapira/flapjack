@@ -30,6 +30,24 @@ def functionReturnNames (context : CompileContext α) (function : FunName) : Lis
   | some (_, shape) => allocatedNames context shape
   | none => []
 
+def loadMemOp : OpSize → CrepMemOp
+  | .op8 => .load8
+  | .opW => .load
+  | .op32 => .load32
+  | .op16 => .load16
+
+def storeMemOp : OpSize → CrepMemOp
+  | .op8 => .store8
+  | .opW => .store
+  | .op32 => .store32
+  | .op16 => .store16
+
+def firstCompiledExp [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (expression : Exp α) : Option (CrepExp α) :=
+  match compileExp context expression with
+  | (compiled :: _, .one) => some compiled
+  | _ => none
+
 structure CompiledFunction (α : Type u) where
   name : FunName
   params : List Nat
@@ -149,7 +167,20 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
       let call := .call (some (names, none)) function (compileArgs context arguments)
       nestedDecs names (names.map (fun _ => .const 0))
         (.seq call (compileProg nextContext body))
-  | .extCall _ _ _ _ _ => .skip
+  | .extCall function configuration configurationLength array arrayLength =>
+      match firstCompiledExp context configuration,
+          firstCompiledExp context configurationLength,
+          firstCompiledExp context array,
+          firstCompiledExp context arrayLength with
+      | some configuration, some configurationLength, some array, some arrayLength =>
+          let configurationName := context.maxVar + 1
+          let configurationLengthName := context.maxVar + 2
+          let arrayName := context.maxVar + 3
+          let arrayLengthName := context.maxVar + 4
+          let names := [configurationName, configurationLengthName, arrayName, arrayLengthName]
+          nestedDecs names [configuration, configurationLength, array, arrayLength]
+            (.extCall function configurationName configurationLengthName arrayName arrayLengthName)
+      | _, _, _, _ => .skip
   | .raise exception value =>
       match lookupInfo exception context.exceptions with
       | some code =>
@@ -164,8 +195,17 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
           else .skip
       | none => .skip
   | .return value => .return (compileExp context value).1
-  | .shMemLoad _ _ _ _ => .skip
-  | .shMemStore _ _ _ => .skip
+  | .shMemLoad size .local name address =>
+      match lookupInfo name context.vars, firstCompiledExp context address with
+      | some (_, destination :: _), some address => .shMem (loadMemOp size) destination address
+      | _, _ => .skip
+  | .shMemLoad _ .global _ _ => .skip
+  | .shMemStore size address value =>
+      match firstCompiledExp context address, firstCompiledExp context value with
+      | some address, some value =>
+          let temporary := context.maxVar + 1
+          nestedDecs [temporary] [value] (.shMem (storeMemOp size) temporary address)
+      | _, _ => .skip
   | .tick => .tick
   | .annot _ _ => .skip
 

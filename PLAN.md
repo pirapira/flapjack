@@ -87,6 +87,8 @@ definitions, pass ordering, examples, and proof obligations.
   destinations, declaration calls, and mapped exceptions.
 - [x] Lower calls with known exception handlers to Crepe continuation metadata
   and compile the handler body.
+- [x] Lower foreign calls and shared-memory operations through explicit Crepe
+  temporaries and memory-operation mappings.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

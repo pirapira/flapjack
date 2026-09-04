@@ -302,6 +302,30 @@ example :
     assignmentContext, lookupInfo]
 
 example :
+    compileProg assignmentContext
+      (.extCall "ffi" (.const 1) (.const 2) (.const 3) (.const 4)) =
+      .dec 1 (.const 1)
+        (.dec 2 (.const 2)
+          (.dec 3 (.const 3)
+            (.dec 4 (.const 4) (.extCall "ffi" 1 2 3 4)))) := by
+  simp [compileProg, firstCompiledExp, compileExp, nestedDecs,
+    assignmentContext]
+
+example :
+    compileProg assignmentContext
+      (.shMemLoad .op8 .local "x" (.const 10)) =
+      .shMem .load8 0 (.const 10) := by
+  simp [compileProg, firstCompiledExp, compileExp, loadMemOp,
+    assignmentContext, lookupInfo]
+
+example :
+    compileProg assignmentContext
+      (.shMemStore .op8 (.const 10) (.const 7)) =
+      .dec 1 (.const 7) (.shMem .store8 1 (.const 10)) := by
+  simp [compileProg, firstCompiledExp, compileExp, storeMemOp, nestedDecs,
+    assignmentContext]
+
+example :
     evalCrepProg (fun _ => none) (compileProg crepContext (.return (.const (α := Nat) 7))) =
       some [7] := by
   simp [compileProg, evalCrepProg, evalCrepExps, evalCrepExp, compileExp]

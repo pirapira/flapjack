@@ -58,6 +58,15 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
       let destination ← registerOfNat destination
       let source ← registerOfNat source
       pure (.addi destination source 0)
+  | .op operator [.const left, .const right] => do
+      let destination ← registerOfNat destination
+      let value := match operator with
+        | .add => left + right
+        | .sub => left - right
+        | .and => left &&& right
+        | .or => left ||| right
+        | .xor => left ^^^ right
+      pure (.addi destination 0 value)
   | .op .add [.var source, .const value] => do
       let destination ← registerOfNat destination
       let source ← registerOfNat source

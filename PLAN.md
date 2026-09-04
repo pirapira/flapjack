@@ -391,6 +391,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Extend scalar source expression semantics to subtraction, bitwise
   operations, all comparison constructors, and logical shifts, with executable
   Nat regressions.
+- [x] Close the constant binary-expression RISC-V selector gap and prove
+  end-to-end RV64 subtraction and bitwise pipeline regressions.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

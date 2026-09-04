@@ -119,6 +119,68 @@ theorem compiledPipelineMul_correct :
       evalPanProg (fun _ => none) pipelineMulSource := by
   native_decide
 
+def pipelineSubDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "sub", inline := false, exported := false, params := [],
+      body := .return (.op .sub
+        [.const (BitVec.ofNat 64 9), .const (BitVec.ofNat 64 4)]),
+      returnShape := .one }]
+
+def pipelineSubPipeline : FlapjackRiscVResult 64 :=
+  compileFlapjackRiscV (width := 64) .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+    pipelineSubDeclarations
+
+def compiledPipelineSubRun : Option (List (RiscV.Word 64)) :=
+  match pipelineSubPipeline.linkedFunctions with
+  | some [(_, entry, parameters, code, returns)] =>
+      match parameters.mapM RiscV.registerOfNat with
+      | some parameters =>
+          RiscV.executeFunction 10 entry parameters code returns []
+            (RiscV.zeroState 64)
+      | none => none
+  | _ => none
+
+def pipelineSubSource : Prog (RiscV.Word 64) :=
+  .return (.op .sub
+    [.const (BitVec.ofNat 64 9), .const (BitVec.ofNat 64 4)])
+
+theorem compiledPipelineSub_correct :
+    compiledPipelineSubRun =
+      evalPanProg (fun _ => none) pipelineSubSource := by
+  native_decide
+
+def pipelineBitwiseDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "bitwise", inline := false, exported := false, params := [],
+      body := .return (.op .and
+        [.const (BitVec.ofNat 64 13), .const (BitVec.ofNat 64 7)]),
+      returnShape := .one }]
+
+def pipelineBitwisePipeline : FlapjackRiscVResult 64 :=
+  compileFlapjackRiscV (width := 64) .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+    pipelineBitwiseDeclarations
+
+def compiledPipelineBitwiseRun : Option (List (RiscV.Word 64)) :=
+  match pipelineBitwisePipeline.linkedFunctions with
+  | some [(_, entry, parameters, code, returns)] =>
+      match parameters.mapM RiscV.registerOfNat with
+      | some parameters =>
+          RiscV.executeFunction 10 entry parameters code returns []
+            (RiscV.zeroState 64)
+      | none => none
+  | _ => none
+
+def pipelineBitwiseSource : Prog (RiscV.Word 64) :=
+  .return (.op .and
+    [.const (BitVec.ofNat 64 13), .const (BitVec.ofNat 64 7)])
+
+theorem compiledPipelineBitwise_correct :
+    compiledPipelineBitwiseRun =
+      evalPanProg (fun _ => none) pipelineBitwiseSource := by
+  native_decide
+
 def pipelineIteDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function
     { name := "ite", inline := false, exported := false, params := [],

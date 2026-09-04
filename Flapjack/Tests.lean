@@ -910,10 +910,22 @@ example [NeZero width] :
       some (.addi 1 2 (0 - 4)) := by
   simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
 
+example [NeZero width] :
+    RiscV.wordExpToInstruction (width := width) 1
+        (.shift .lsr (.var 2) (.const (3 : RiscV.Word width))) =
+      some (.srli 1 2 3) := by
+  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+
 example :
     RiscV.executeFunction 10 (0 : RiscV.Word 8) [2]
       [.andi 5 2 15, .ori 6 5 16, .xori 7 6 3] [7] [BitVec.ofNat 8 10]
       (RiscV.zeroState 8) = some [25] := by
+  native_decide
+
+example :
+    RiscV.executeFunction 10 (0 : RiscV.Word 8) [2]
+      [.slli 5 2 2, .srli 6 5 1, .srai 7 6 1] [7] [BitVec.ofNat 8 10]
+      (RiscV.zeroState 8) = some [10] := by
   native_decide
 
 example [NeZero width] :

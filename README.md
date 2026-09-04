@@ -50,7 +50,8 @@ The model also includes HOL-aligned unsigned `DIVU`/`REMU` transitions,
 including the architectural divide-by-zero results; Word division selects
 `DIVU` in the current target slice.
 The model and selector also cover the immediate bitwise forms `ANDI`, `ORI`,
-and `XORI`, as well as subtraction by an immediate via `ADDI`.
+and `XORI`, as well as subtraction by an immediate via `ADDI`; immediate
+`SLLI`, `SRLI`, and `SRAI` shifts are also modeled and selected.
 The Word arithmetic selector also includes the HOL two-instruction `LongMul`
 lowering (`MULHU` followed by `MUL`) and the six-instruction `AddCarry`
 lowering. `WordProg.shareInst` with a register-valued address, or a supported

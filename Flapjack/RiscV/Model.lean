@@ -114,6 +114,9 @@ inductive Instruction (width : Nat) where
   | sll (destination sourceLeft sourceRight : Fin 32)
   | srl (destination sourceLeft sourceRight : Fin 32)
   | sra (destination sourceLeft sourceRight : Fin 32)
+  | slli (destination source : Fin 32) (amount : Word width)
+  | srli (destination source : Fin 32) (amount : Word width)
+  | srai (destination source : Fin 32) (amount : Word width)
   | sltu (destination sourceLeft sourceRight : Fin 32)
   | divU (destination sourceLeft sourceRight : Fin 32)
   | remU (destination sourceLeft sourceRight : Fin 32)
@@ -291,6 +294,15 @@ def execute (state : State width) : Instruction width → State width
       writeRegister { state with pc := nextPc state } destination
         (BitVec.sshiftRight (readRegister state sourceLeft)
           (shiftAmount (readRegister state sourceRight)))
+  | .slli destination source amount =>
+      writeRegister { state with pc := nextPc state } destination
+        (BitVec.shiftLeft (readRegister state source) (shiftAmount amount))
+  | .srli destination source amount =>
+      writeRegister { state with pc := nextPc state } destination
+        (BitVec.ushiftRight (readRegister state source) (shiftAmount amount))
+  | .srai destination source amount =>
+      writeRegister { state with pc := nextPc state } destination
+        (BitVec.sshiftRight (readRegister state source) (shiftAmount amount))
   | .sltu destination sourceLeft sourceRight =>
       writeRegister { state with pc := nextPc state } destination
         (if readRegister state sourceLeft < readRegister state sourceRight then 1 else 0)

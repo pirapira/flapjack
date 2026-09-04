@@ -74,6 +74,14 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
       | .lsr => pure (.srl destination left right)
       | .asr => pure (.sra destination left right)
       | .ror => none
+  | .shift operator (.var left) (.const amount) => do
+      let destination ← registerOfNat destination
+      let left ← registerOfNat left
+      match operator with
+      | .lsl => pure (.slli destination left amount)
+      | .lsr => pure (.srli destination left amount)
+      | .asr => pure (.srai destination left amount)
+      | .ror => none
   | _ => none
 
 def wordArithToInstruction [NeZero width] :
@@ -399,6 +407,13 @@ def evalWordExp [NeZero width] (state : State width) :
           (shiftAmount (readRegister state right)))
       | .asr => pure (BitVec.sshiftRight (readRegister state left)
           (shiftAmount (readRegister state right)))
+      | .ror => none
+  | .shift operator (.var left) (.const amount) => do
+      let left ← registerOfNat left
+      match operator with
+      | .lsl => pure (BitVec.shiftLeft (readRegister state left) (shiftAmount amount))
+      | .lsr => pure (BitVec.ushiftRight (readRegister state left) (shiftAmount amount))
+      | .asr => pure (BitVec.sshiftRight (readRegister state left) (shiftAmount amount))
       | .ror => none
   | _ => none
 

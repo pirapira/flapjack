@@ -4,6 +4,7 @@ import Pancake.Static
 import Pancake.Crepe
 import Pancake.PanToCrep
 import Pancake.Compile
+import Pancake.Semantics
 
 /-!
 # Pancake in Lean

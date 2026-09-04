@@ -2,6 +2,7 @@ import Pancake.Language
 import Pancake.Static
 import Pancake.PanToCrep
 import Pancake.Compile
+import Pancake.Semantics
 
 namespace Pancake
 
@@ -91,5 +92,10 @@ example :
     compileProg crepContext (.seq .skip (.tick : Prog Nat)) =
       .seq .skip .tick := by
   simp [compileProg]
+
+example :
+    evalCrepProg (fun _ => none) (compileProg crepContext (.return (.const (α := Nat) 7))) =
+      some [7] := by
+  simp [compileProg, evalCrepProg, evalCrepExps, evalCrepExp, compileExp]
 
 end Pancake

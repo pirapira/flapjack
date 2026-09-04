@@ -8,6 +8,8 @@ data/context layer in [`Pancake/Static.lean`](Pancake/Static.lean), as well as
 the Crepe IR and expression lowerer in [`Pancake/Crepe.lean`](Pancake/Crepe.lean)
 and [`Pancake/PanToCrep.lean`](Pancake/PanToCrep.lean).
 Core structured statement lowering is in [`Pancake/Compile.lean`](Pancake/Compile.lean).
+The first executable semantics and preservation lemmas are in
+[`Pancake/Semantics.lean`](Pancake/Semantics.lean).
 
 Build it with:
 

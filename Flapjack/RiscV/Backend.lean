@@ -188,6 +188,10 @@ def wordFunctionToRiscV [NeZero width] :
   | .inst instruction => do
       let instruction ← wordInstToInstruction instruction
       pure ([instruction], [])
+  | .ite operator condition (.reg right) thenBranch elseBranch => do
+      let code ← wordProgToRiscV
+        (.ite operator condition (.reg right) thenBranch elseBranch)
+      pure (code, [])
   | .seq first second => do
       let (firstCode, firstReturns) ← wordFunctionToRiscV first
       let (secondCode, secondReturns) ← wordFunctionToRiscV second

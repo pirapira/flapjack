@@ -536,6 +536,17 @@ example [NeZero width] :
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
+example [NeZero width] :
+    RiscV.wordFunctionToRiscV
+        ((.seq
+          (.ite .equal 1 (.reg 2)
+            (.assign 3 (.const 1)) (.assign 3 (.const 2)))
+          (.return 0 [3])) : WordProg (RiscV.Word width)) =
+      some ([.branchNe 1 2 (BitVec.ofNat width 12),
+        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2], [3]) := by
+  simp [RiscV.wordFunctionToRiscV, RiscV.wordProgToRiscV,
+    RiscV.wordExpToInstruction, RiscV.registerOfNat]
+
 example :
     (RiscV.executeCode 10 (0 : RiscV.Word 32)
       [.branchNe 1 2 (BitVec.ofNat 32 12),

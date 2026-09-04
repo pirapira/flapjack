@@ -63,7 +63,8 @@ definitions, pass ordering, examples, and proof obligations.
   `pan_to_crep`.
 - [x] Port core structured statement lowering and initial pass equations.
 - [x] Add executable deterministic semantics and preservation theorems for
-  the supported constant/return/sequence fragment.
+  the supported constant/return/sequence fragment, including scalar local
+  assignment state updates.
 - [x] Extend the initial lowering with handler-free calls, local return
   destinations, declaration calls, and mapped exceptions.
 - [ ] Port full expression/program checking and diagnostics.

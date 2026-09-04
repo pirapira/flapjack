@@ -56,6 +56,44 @@ def evalCrepProg [Add α] (locals : Nat → Option α) : CrepProg α → Option 
       if firstResult.isEmpty then evalCrepProg locals second else pure firstResult
   | _ => none
 
+def updatePanLocal (locals : VarName → Option α) (name : VarName) (value : α) :
+    VarName → Option α :=
+  fun current => if current == name then some value else locals current
+
+def updateCrepLocal (locals : Nat → Option α) (name : Nat) (value : α) :
+    Nat → Option α :=
+  fun current => if current = name then some value else locals current
+
+def evalPanStateProg [Add α] (locals : VarName → Option α) :
+    Prog α → Option ((VarName → Option α) × List α)
+  | .skip => some (locals, [])
+  | .assign .local name value => do
+      let value ← evalPanExp locals value
+      pure (updatePanLocal locals name value, [])
+  | .return value => do
+      let value ← evalPanExp locals value
+      pure (locals, [value])
+  | .seq first second => do
+      let (locals', firstResult) ← evalPanStateProg locals first
+      if firstResult.isEmpty then evalPanStateProg locals' second
+      else pure (locals', firstResult)
+  | _ => none
+
+def evalCrepStateProg [Add α] (locals : Nat → Option α) :
+    CrepProg α → Option ((Nat → Option α) × List α)
+  | .skip => some (locals, [])
+  | .assign name value => do
+      let value ← evalCrepExp locals value
+      pure (updateCrepLocal locals name value, [])
+  | .return values => do
+      let values ← evalCrepExps locals values
+      pure (locals, values)
+  | .seq first second => do
+      let (locals', firstResult) ← evalCrepStateProg locals first
+      if firstResult.isEmpty then evalCrepStateProg locals' second
+      else pure (locals', firstResult)
+  | _ => none
+
 theorem compile_return_const_preserves_semantics [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (locals : VarName → Option α)
     (compiledLocals : Nat → Option α) (value : α) :
@@ -81,5 +119,22 @@ theorem compile_local_var_preserves_semantics [BEq α] [OfNat α 0] [Add α]
   rw [compileExp_local_var context name .one [slot] lookup]
   cases h : locals name <;>
     simp [evalCrepExps, evalCrepExp, evalPanExp, environment_agrees, h]
+
+theorem compile_local_assign_return_const_preserves_semantics
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (name : VarName) (slot : Nat) (value : α)
+    (lookup : lookupInfo name context.vars = some (.one, [slot]))
+    (locals : VarName → Option α) (compiledLocals : Nat → Option α) :
+    (evalCrepStateProg compiledLocals
+        (compileProg context
+          (.seq (.assign .local name (.const value))
+            (.return (.var .local name))))).map Prod.snd =
+      (evalPanStateProg locals
+        (.seq (.assign .local name (.const value))
+          (.return (.var .local name)))).map Prod.snd := by
+  simp [compileProg, compileExp, crepNestedSeq, lookup,
+    compileExp_local_var context name .one [slot] lookup,
+    evalCrepStateProg, evalPanStateProg, evalCrepExp, evalCrepExps, evalPanExp,
+    updatePanLocal, updateCrepLocal]
 
 end Pancake

@@ -60,6 +60,10 @@ def crepContext : CompileContext Nat :=
 def callContext : CompileContext Nat :=
   { crepContext with functions := [("f", ([], .one))], exceptions := [("E", 9)] }
 
+def assignmentContext : CompileContext Nat :=
+  { vars := [("x", (.one, [0]))], functions := [], exceptions := [], maxVar := 0,
+    bytesInWord := 1 }
+
 example :
     compileExp crepContext (Exp.var .local "pair") =
       ([.var 0, .var 1], .comb [.one, .one]) := by
@@ -117,5 +121,15 @@ example :
     evalCrepProg (fun _ => none) (compileProg crepContext (.return (.const (α := Nat) 7))) =
       some [7] := by
   simp [compileProg, evalCrepProg, evalCrepExps, evalCrepExp, compileExp]
+
+example :
+    (evalCrepStateProg (fun _ => none)
+        (compileProg assignmentContext
+          (.seq (.assign .local "x" (.const 7))
+            (.return (.var .local "x"))))).map Prod.snd =
+      some [7] := by
+  simp [compileProg, compileExp, crepNestedSeq, evalCrepStateProg, evalCrepExp, evalCrepExps,
+    updateCrepLocal, assignmentContext,
+    lookupInfo]
 
 end Pancake

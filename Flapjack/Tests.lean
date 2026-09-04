@@ -1357,6 +1357,21 @@ example :
   native_decide
 
 example :
+    evalLoopProg 1 emptyLoopState (.break 7) =
+      some (.broke emptyLoopState 7) := by
+  exact evalLoopProg_break emptyLoopState 7
+
+example :
+    evalLoopProg 1 emptyLoopState (.continue 8) =
+      some (.continued emptyLoopState 8) := by
+  exact evalLoopProg_continue emptyLoopState 8
+
+example :
+    evalLoopProg 1 emptyLoopState (.tick) =
+      some (.normal emptyLoopState) := by
+  exact evalLoopProg_tick emptyLoopState
+
+example :
     (evalLoopProg 10 emptyLoopState
       (.loop [] (.break 0) [])).map loopResultValues = some [] := by
   native_decide

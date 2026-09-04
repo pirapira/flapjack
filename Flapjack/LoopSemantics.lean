@@ -388,6 +388,74 @@ theorem evalLoopProg_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [
     evalLoopProg 1 state (.skip : LoopProg α) = some (.normal state) := by
   simp [evalLoopProg]
 
+theorem evalLoopProg_assign [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (name : Nat) (expression : LoopExp α) (value : α)
+    (hvalue : evalLoopExp state expression = some value) :
+    evalLoopProg 1 state (.assign name expression) =
+      some (.normal { state with locals := updateLoopLocal state.locals name value }) := by
+  simp [evalLoopProg, hvalue]
+
+theorem evalLoopProg_load32 [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (address destination : Nat) (addressValue value : α)
+    (haddress : state.locals address = some addressValue)
+    (hvalue : state.memory addressValue = some value) :
+    evalLoopProg 1 state (.load32 address destination) =
+      some (.normal { state with locals := updateLoopLocal state.locals destination value }) := by
+  simp [evalLoopProg, haddress, hvalue]
+
+theorem evalLoopProg_store [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (address : LoopExp α) (value : Nat)
+    (addressValue valueValue : α)
+    (haddress : evalLoopExp state address = some addressValue)
+    (hvalue : state.locals value = some valueValue) :
+    evalLoopProg 1 state (.store address value) =
+      some (.normal { state with memory := updateLoopMemory state.memory addressValue valueValue }) := by
+  simp [evalLoopProg, haddress, hvalue]
+
+theorem evalLoopProg_setGlobal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (address : α) (expression : LoopExp α) (value : α)
+    (hvalue : evalLoopExp state expression = some value) :
+    evalLoopProg 1 state (.setGlobal address expression) =
+      some (.normal { state with globals := updateLoopGlobal state.globals address value }) := by
+  simp [evalLoopProg, hvalue]
+
+theorem evalLoopProg_return [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (names : List Nat) (values : List α)
+    (hvalues : loopReadLocals state.locals names = some values) :
+    evalLoopProg 1 state (.return names) = some (.returned state values) := by
+  simp [evalLoopProg, hvalues]
+
+theorem evalLoopProg_break [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (label : Nat) :
+    evalLoopProg 1 state (.break label) = some (.broke state label) := by
+  simp [evalLoopProg]
+
+theorem evalLoopProg_continue [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (label : Nat) :
+    evalLoopProg 1 state (.continue label) = some (.continued state label) := by
+  simp [evalLoopProg]
+
+theorem evalLoopProg_tick [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) :
+    evalLoopProg 1 state (.tick) = some (.normal state) := by
+  simp [evalLoopProg]
+
 theorem evalLoopProg_assign_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]

@@ -230,6 +230,8 @@ definitions, pass ordering, examples, and proof obligations.
   behavior, and select `DIVU` for Word division.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
+- [x] Establish reusable Loop state-transition lemmas for the modeled
+  assignment, load/store, global, return, and control-result cases.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

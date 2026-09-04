@@ -151,6 +151,52 @@ theorem compiledPipelineIte_correct :
       evalPanProg (fun _ => none) pipelineIteSource := by
   native_decide
 
+def pipelineCompareIteDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "compareIte", inline := false, exported := false,
+      params := [("left", .one), ("right", .one)],
+      body := .ite (.cmp .equal (.var .local "left") (.var .local "right"))
+        (.return (.const (BitVec.ofNat 64 7)))
+        (.return (.const (BitVec.ofNat 64 8))), returnShape := .one }]
+
+def pipelineCompareItePipeline : FlapjackRiscVResult 64 :=
+  compileFlapjackRiscV (width := 64) .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+    pipelineCompareIteDeclarations
+
+def compiledPipelineCompareIteRun
+    (left right : RiscV.Word 64) : Option (List (RiscV.Word 64)) :=
+  match pipelineCompareItePipeline.linkedFunctions with
+  | some [(_, entry, parameters, code, returns)] =>
+      match parameters.mapM RiscV.registerOfNat with
+      | some parameters =>
+          RiscV.executeFunction 80 entry parameters code returns
+            [left, right] (RiscV.zeroState 64)
+      | none => none
+  | _ => none
+
+def pipelineCompareIteSource (left right : RiscV.Word 64) : Prog (RiscV.Word 64) :=
+  .ite (.cmp .equal (.var .local "left") (.var .local "right"))
+    (.return (.const (BitVec.ofNat 64 7)))
+    (.return (.const (BitVec.ofNat 64 8)))
+
+def pipelineCompareIteLocals (left right : RiscV.Word 64) :
+    VarName → Option (RiscV.Word 64) :=
+  fun name => if name == "left" then some left
+    else if name == "right" then some right else none
+
+theorem compiledPipelineCompareIte_equal_correct :
+    compiledPipelineCompareIteRun (BitVec.ofNat 64 9) (BitVec.ofNat 64 9) =
+      evalPanProg (pipelineCompareIteLocals 9 9)
+        (pipelineCompareIteSource 9 9) := by
+  native_decide
+
+theorem compiledPipelineCompareIte_unequal_correct :
+    compiledPipelineCompareIteRun (BitVec.ofNat 64 9) (BitVec.ofNat 64 10) =
+      evalPanProg (pipelineCompareIteLocals 9 10)
+        (pipelineCompareIteSource 9 10) := by
+  native_decide
+
 /-!
 The first end-to-end call regression. The source program uses a declaration
 call rather than an unbound low-level call, so the static front end allocates

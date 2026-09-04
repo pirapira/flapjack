@@ -369,6 +369,8 @@ definitions, pass ordering, examples, and proof obligations.
   execution, with a combined source/Word/machine agreement theorem.
 - [x] Add an end-to-end conditional compiler-correctness theorem from source
   `if` through the linked RV64 artifact and architectural execution.
+- [x] Exercise the same theorem shape with parameter-dependent equality
+  branches on both equal and unequal RV64 inputs.
 - [x] Add handler-aware source control-result semantics for the supported
   expression/call fragment, including exception matching, handler-variable
   binding, and a concrete raised-call regression.

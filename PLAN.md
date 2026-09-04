@@ -191,6 +191,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add the first call-aware Loop semantic bridge: function lookup,
   argument binding, return assignment, tail-call propagation, and handler
   entry for top-level calls.
+- [x] Extend call-aware Loop evaluation through nested and recursive function
+  bodies with fuel decreasing across the call graph.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

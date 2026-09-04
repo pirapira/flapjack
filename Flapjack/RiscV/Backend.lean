@@ -62,6 +62,14 @@ def wordInstToInstruction [NeZero width] :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (.store32 source address)
+  | .mem .load destination address => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (.loadWord destination address)
+  | .mem .store source address => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (.storeWord source address)
   | _ => none
 
 def wordProgToRiscV [NeZero width] :
@@ -69,6 +77,10 @@ def wordProgToRiscV [NeZero width] :
   | .skip => some []
   | .assign name value =>
       (wordExpToInstruction name value).map (fun instruction => [instruction])
+  | .store (.var address) value => do
+      let value ← registerOfNat value
+      let address ← registerOfNat address
+      pure [.storeWord value address]
   | .inst instruction =>
       (wordInstToInstruction instruction).map (fun instruction => [instruction])
   | .seq first second => do
@@ -137,6 +149,10 @@ def evalWordFunction [NeZero width] (state : State width) :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (execute state (.load32 destination address), [])
+  | .store (.var address) value => do
+      let value ← registerOfNat value
+      let address ← registerOfNat address
+      pure (execute state (.storeWord value address), [])
   | .inst (.mem .store32 source address) => do
       let source ← registerOfNat source
       let address ← registerOfNat address
@@ -173,6 +189,10 @@ def evalWordProg [NeZero width] (state : State width) :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (execute state (.load32 destination address))
+  | .store (.var address) value => do
+      let value ← registerOfNat value
+      let address ← registerOfNat address
+      pure (execute state (.storeWord value address))
   | .inst (.mem .store32 source address) => do
       let source ← registerOfNat source
       let address ← registerOfNat address
@@ -245,6 +265,12 @@ theorem compileWordStore32_sound [NeZero width] (state : State width) :
       some (execute state (.store32 1 2)) := by
   simp [evalWordProg, registerOfNat, execute, writeWord32, writeByte,
     byteAddress, nextPc]
+
+theorem compileWordStoreWord_sound [NeZero width] (state : State width) :
+    evalWordProg state (.store (.var 2) 1) =
+      some (execute state (.storeWord 1 2)) := by
+  simp [evalWordProg, evalWordExp, registerOfNat, execute, writeWordValue,
+    writeByte, byteAddress, nextPc]
 
 theorem wordFunctionToRiscV_return_add [NeZero width] :
     wordFunctionToRiscV

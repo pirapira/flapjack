@@ -110,6 +110,8 @@ inductive Instruction (width : Nat) where
   | storeByte (source address : Fin 32)
   | load32 (destination address : Fin 32)
   | store32 (source address : Fin 32)
+  | loadWord (destination address : Fin 32)
+  | storeWord (source address : Fin 32)
   deriving Repr
 
 def zeroState (width : Nat) [NeZero width] : State width :=
@@ -158,6 +160,56 @@ def writeWord32 (state : State width) (address : Word width) (value : Word width
   let state := writeByte state (byteAddress address 2) byte2
   writeByte state (byteAddress address 3) byte3
 
+def readWordValue (state : State width) (address : Word width) : Word width :=
+  BitVec.ofNat width
+    ((List.range (width / 8)).foldl
+      (fun total offset =>
+        total + 256 ^ offset *
+          (readByte state (byteAddress address offset)).toNat) 0)
+
+def writeWordValue (state : State width) (address : Word width) (value : Word width) :
+    State width :=
+  (List.range (width / 8)).foldl
+    (fun state offset =>
+      writeByte state (byteAddress address offset)
+        (BitVec.ofNat 8 (value.toNat / 256 ^ offset % 256))) state
+
+theorem foldWriteBytes_pc (state : State width) (address value : Word width)
+    (offsets : List Nat) :
+    (offsets.foldl
+      (fun state offset =>
+        writeByte state (byteAddress address offset)
+          (BitVec.ofNat 8 (value.toNat / 256 ^ offset % 256))) state).pc =
+      state.pc := by
+  induction offsets generalizing state with
+  | nil => rfl
+  | cons offset offsets induction =>
+      simp only [List.foldl]
+      rw [induction]
+      rfl
+
+theorem foldWriteBytes_registers (state : State width) (address value : Word width)
+    (offsets : List Nat) :
+    (offsets.foldl
+      (fun state offset =>
+        writeByte state (byteAddress address offset)
+          (BitVec.ofNat 8 (value.toNat / 256 ^ offset % 256))) state).registers =
+      state.registers := by
+  induction offsets generalizing state with
+  | nil => rfl
+  | cons offset offsets induction =>
+      simp only [List.foldl]
+      rw [induction]
+      rfl
+
+theorem writeWordValue_pc (state : State width) (address value : Word width) :
+    (writeWordValue state address value).pc = state.pc := by
+  exact foldWriteBytes_pc state address value (List.range (width / 8))
+
+theorem writeWordValue_registers (state : State width) (address value : Word width) :
+    (writeWordValue state address value).registers = state.registers := by
+  exact foldWriteBytes_registers state address value (List.range (width / 8))
+
 def nextPc (state : State width) : Word width := state.pc + 4
 
 def execute (state : State width) : Instruction width → State width
@@ -195,6 +247,14 @@ def execute (state : State width) : Instruction width → State width
       let address := readRegister state address
       writeWord32 { state with pc := nextPc state } address
         (readRegister state source)
+  | .loadWord destination address =>
+      let address := readRegister state address
+      writeRegister { state with pc := nextPc state } destination
+        (readWordValue state address)
+  | .storeWord source address =>
+      let address := readRegister state address
+      writeWordValue { state with pc := nextPc state } address
+        (readRegister state source)
 
 def accessAligned (access : AccessType) (address : Word width) (alignment : Nat) :
     Option ExceptionType :=
@@ -218,7 +278,7 @@ theorem accessAligned_aligned (access : AccessType) (address : Word width)
 theorem execute_pc_advance (state : State width) (instruction : Instruction width) :
     (execute state instruction).pc = state.pc + 4 := by
   cases instruction <;>
-    simp [execute, nextPc, writeRegister, writeByte, writeWord32] <;>
+    simp [execute, nextPc, writeRegister, writeByte, writeWord32, writeWordValue_pc] <;>
     split <;> rfl
 
 theorem execute_addi_zero_preserved (state : State width) (source : Fin 32)
@@ -232,7 +292,7 @@ theorem execute_zeroRegister_preserved [NeZero width] (state : State width)
   change state.registers 0 = 0 at zero
   cases instruction <;>
     simp [ZeroRegister, execute, nextPc, writeRegister, writeByte, writeWord32,
-      readRegister] <;>
+      writeWordValue_registers, readRegister] <;>
     try split <;> simp_all [eq_comm]
   all_goals change state.registers 0 = 0
   all_goals exact zero

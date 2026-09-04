@@ -598,6 +598,20 @@ example :
   native_decide
 
 example :
+    staticResultOk (compileFlapjackChecked (α := Nat) .rv64i 1 id
+      [.function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .return (.const 7), returnShape := .one }]) = true := by
+  native_decide
+
+example :
+    staticResultOk (compileFlapjackChecked (α := Nat) .rv64i 1 id
+      [.function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .skip, returnShape := .one }]) = false := by
+  native_decide
+
+example :
     let result := compileFlapjack (α := Nat) .rv64i 1 id
       [.decl .one "g" (.const 7), .function
         { name := "main", inline := false, exported := true, params := [],

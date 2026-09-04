@@ -110,6 +110,13 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     loop := loop
     word := word }
 
+def compileFlapjackChecked [BEq String] [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
+    (fromNat : Nat → α) (declarations : List (Decl α)) :
+    StaticResult (FlapjackPipelineResult α) :=
+  staticBind (staticCheck declarations) (fun _ =>
+    staticOk (compileFlapjack architecture bytesInWord fromNat declarations))
+
 structure FlapjackRiscVResult (width : Nat) [NeZero width] where
   pipeline : FlapjackPipelineResult (RiscV.Word width)
   functions : List (Nat × List Nat ×
@@ -124,6 +131,16 @@ def compileFlapjackRiscV [NeZero width] [BEq (RiscV.Word width)]
   let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
   { pipeline := pipeline
     functions := pipelineRiscVFunctions pipeline.word }
+
+def compileFlapjackRiscVChecked [NeZero width] [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width)
+    (declarations : List (Decl (RiscV.Word width))) :
+    StaticResult (FlapjackRiscVResult width) :=
+  staticBind (staticCheck declarations) (fun _ =>
+    staticOk (compileFlapjackRiscV architecture bytesInWord fromNat declarations))
 
 theorem compileFlapjack_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (architecture : RiscV.Architecture) (bytesInWord : α) (fromNat : Nat → α) :

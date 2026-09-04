@@ -129,6 +129,8 @@ definitions, pass ordering, examples, and proof obligations.
   preservation for constant store-then-load programs.
 - [x] Exercise the concrete composed compiler from a Pancake `main` through
   the option-valued RISC-V artifact boundary.
+- [x] Integrate static checking into checked compiler entry points that return
+  diagnostics instead of compiling malformed declaration lists.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

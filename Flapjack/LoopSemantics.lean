@@ -439,6 +439,26 @@ theorem evalLoopProg_seq_broke [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul 
       some (.broke middle label) := by
   simp [evalLoopProg, hfirst]
 
+theorem evalLoopProg_seq_continued [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (fuel : Nat) (state : LoopState α) (first second : LoopProg α)
+    (middle : LoopState α) (label : Nat)
+    (hfirst : evalLoopProg fuel state first = some (.continued middle label)) :
+    evalLoopProg (fuel + 1) state (.seq first second) =
+      some (.continued middle label) := by
+  simp [evalLoopProg, hfirst]
+
+theorem evalLoopProg_seq_raised [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (fuel : Nat) (state : LoopState α) (first second : LoopProg α)
+    (middle : LoopState α) (exception : α)
+    (hfirst : evalLoopProg fuel state first = some (.raised middle exception)) :
+    evalLoopProg (fuel + 1) state (.seq first second) =
+      some (.raised middle exception) := by
+  simp [evalLoopProg, hfirst]
+
 theorem evalLoopProg_ite_true [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]
@@ -460,6 +480,35 @@ theorem evalLoopProg_ite_true [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul �
       simp [evalLoopProg, hleft, hchoose, hthen]
   | reg name =>
       simp [evalLoopProg, hleft, hright, hchoose, hthen]
+
+theorem evalLoopProg_ite_false [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (fuel : Nat) (state : LoopState α) (operator : Cmp) (condition : Nat)
+    (right : RegImm α) (thenBranch elseBranch : LoopProg α) (live : List Nat)
+    (leftValue rightValue : α) (result : LoopResult α)
+    (hleft : state.locals condition = some leftValue)
+    (hright : (match right with
+      | .imm value => some value
+      | .reg name => state.locals name) = some rightValue)
+    (hchoose : evalLoopCondition operator leftValue rightValue = some false)
+    ( helse : evalLoopProg fuel state elseBranch = some result) :
+    evalLoopProg (fuel + 1) state
+        (.ite operator condition right thenBranch elseBranch live) = some result := by
+  cases right with
+  | imm value =>
+      have hvalue : value = rightValue := Option.some.inj hright
+      subst hvalue
+      simp [evalLoopProg, hleft, hchoose, helse]
+  | reg name =>
+      simp [evalLoopProg, hleft, hright, hchoose, helse]
+
+theorem evalLoopRepeat_break_zero [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (fuel : Nat) (state : LoopState α) :
+    evalLoopRepeat (fuel + 2) state (.break 0) = some (.normal state) := by
+  simp [evalLoopRepeat, evalLoopProg]
 
 theorem evalLoopExp_cmp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

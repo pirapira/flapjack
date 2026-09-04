@@ -141,6 +141,8 @@ definitions, pass ordering, examples, and proof obligations.
   assignments, including regression tests for both cases.
 - [x] Add fuel-bounded conditional and sequencing semantics for Pancake and
   Crepe and prove preservation for a constant conditional program.
+- [x] Port the RISC-V low-word multiplication path for HOL `CrepOp.mul` and
+  `LoopArith.longMul`, with intermediate and end-to-end tests.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Add a structurally recursive loop evaluator and loop preservation theorem.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem

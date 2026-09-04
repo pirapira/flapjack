@@ -123,8 +123,20 @@ def loopCompileExp [OfNat α 0] [OfNat α 1]
         nextTemp := result.nextTemp, live := result.live }
   | .crepOp operator arguments =>
       let result := loopCompileExps context tmp live arguments
-      { code := result.code, expression := .crepOp operator result.expressions,
-        nextTemp := result.nextTemp, live := result.live }
+      match operator, result.expressions with
+      | .mul, [left, right] =>
+          let leftTemp := result.nextTemp
+          let rightTemp := leftTemp + 1
+          let destination := rightTemp + 1
+          { code := result.code ++
+              [.assign leftTemp left, .assign rightTemp right,
+               .arith (.longMul destination destination leftTemp rightTemp)]
+            expression := .var destination
+            nextTemp := destination + 1
+            live := destination :: leftTemp :: rightTemp :: result.live }
+      | _, _ =>
+          { code := result.code, expression := .crepOp operator result.expressions,
+            nextTemp := result.nextTemp, live := result.live }
   | .cmp operator left right =>
       let leftResult := loopCompileExp context tmp live left
       let rightResult := loopCompileExp context leftResult.nextTemp leftResult.live right

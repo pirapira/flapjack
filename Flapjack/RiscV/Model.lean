@@ -106,6 +106,7 @@ inductive Instruction (width : Nat) where
   | or (destination sourceLeft sourceRight : Fin 32)
   | xor (destination sourceLeft sourceRight : Fin 32)
   | addi (destination source : Fin 32) (immediate : Word width)
+  | mul (destination sourceLeft sourceRight : Fin 32)
   | branchEq (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | branchNe (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | loadByte (destination address : Fin 32)
@@ -233,6 +234,9 @@ def execute (state : State width) : Instruction width → State width
   | .addi destination source immediate =>
       writeRegister { state with pc := nextPc state } destination
         (readRegister state source + immediate)
+  | .mul destination sourceLeft sourceRight =>
+      writeRegister { state with pc := nextPc state } destination
+        (readRegister state sourceLeft * readRegister state sourceRight)
   | .branchEq sourceLeft sourceRight offset =>
       { state with pc := (if readRegister state sourceLeft == readRegister state sourceRight then
           state.pc + offset else nextPc state) }

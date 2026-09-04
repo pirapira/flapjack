@@ -44,8 +44,20 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
         | .xor => .xor destination left right)
   | _ => none
 
+def wordArithToInstruction [NeZero width] :
+    WordArith → Option (Instruction width)
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      if destinationLeft = destinationRight then do
+        let destination ← registerOfNat destinationLeft
+        let sourceLeft ← registerOfNat sourceLeft
+        let sourceRight ← registerOfNat sourceRight
+        pure (.mul destination sourceLeft sourceRight)
+      else none
+  | .longDiv _ _ _ _ _ | .div _ _ _ => none
+
 def wordInstToInstruction [NeZero width] :
     WordInst → Option (Instruction width)
+  | .arith operation => wordArithToInstruction operation
   | .mem .load8 destination address => do
       let destination ← registerOfNat destination
       let address ← registerOfNat address
@@ -70,7 +82,6 @@ def wordInstToInstruction [NeZero width] :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (.storeWord source address)
-  | _ => none
 
 def wordProgToRiscV [NeZero width] :
     WordProg (Word width) → Option (List (Instruction width))
@@ -120,6 +131,9 @@ def wordFunctionToRiscV [NeZero width] :
   | .assign name value => do
       let instruction ← wordExpToInstruction name value
       pure ([instruction], [])
+  | .inst instruction => do
+      let instruction ← wordInstToInstruction instruction
+      pure ([instruction], [])
   | .seq first second => do
       let (firstCode, firstReturns) ← wordFunctionToRiscV first
       let (secondCode, secondReturns) ← wordFunctionToRiscV second
@@ -137,6 +151,9 @@ def evalWordFunction [NeZero width] (state : State width) :
       let destination ← registerOfNat name
       let value ← evalWordExp state value
       pure (writeRegister { state with pc := nextPc state } destination value, [])
+  | .inst (.arith operation) => do
+      let instruction ← wordArithToInstruction operation
+      pure (execute state instruction, [])
   | .inst (.mem .load8 destination address) => do
       let destination ← registerOfNat destination
       let address ← registerOfNat address
@@ -177,6 +194,9 @@ def evalWordProg [NeZero width] (state : State width) :
       let destination ← registerOfNat name
       let value ← evalWordExp state value
       pure (writeRegister { state with pc := nextPc state } destination value)
+  | .inst (.arith operation) => do
+      let instruction ← wordArithToInstruction operation
+      pure (execute state instruction)
   | .inst (.mem .load8 destination address) => do
       let destination ← registerOfNat destination
       let address ← registerOfNat address
@@ -287,6 +307,16 @@ theorem evalWordFunction_return_add [NeZero width] (state : State width) :
   simp [evalWordFunction, evalWordExp, registerOfNat, execute,
     writeRegister, nextPc, readRegister]
 
+theorem wordArithToInstruction_longMul [NeZero width] :
+    wordArithToInstruction (width := width) (.longMul 1 1 2 3) =
+      some (.mul 1 2 3) := by
+  simp [wordArithToInstruction, registerOfNat]
+
+theorem compileWordLongMul_sound [NeZero width] (state : State width) :
+    evalWordProg state (.inst (.arith (.longMul 1 1 2 3))) =
+      some (execute state (.mul 1 2 3)) := by
+  simp [evalWordProg, wordArithToInstruction, registerOfNat]
+
 def compileWordAdd [NeZero width] (destination left right : Nat) :
     Option (List (Instruction width)) :=
   wordProgToRiscV (.assign destination (.op .add [.var left, .var right]))
@@ -299,5 +329,10 @@ example [NeZero width] :
     wordExpToInstruction (width := width) 1 (.op .xor [.var 2, .var 3]) =
       some (.xor 1 2 3) := by
   simp [wordExpToInstruction, registerOfNat]
+
+example [NeZero width] :
+    wordInstToInstruction (width := width) (.arith (.longMul 1 1 2 3)) =
+      some (.mul 1 2 3) := by
+  simp [wordInstToInstruction, wordArithToInstruction, registerOfNat]
 
 end Flapjack.RiscV

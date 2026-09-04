@@ -598,6 +598,28 @@ example [NeZero width] :
   simp [pipelineRiscVFunctions, RiscV.wordFunctionToRiscV,
     RiscV.wordExpToInstruction, RiscV.registerOfNat]
 
+def loopProgLongMulFingerprint : LoopProg α → Option (Nat × Nat × Nat × Nat)
+  | .arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) =>
+      some (destinationLeft, destinationRight, sourceLeft, sourceRight)
+  | _ => none
+
+example :
+    (loopCompileExp loopContext 3 []
+      (.crepOp .mul [.var 0, .var 1])).code.map loopProgLongMulFingerprint =
+      [none, none, some (5, 5, 3, 4)] := by
+  native_decide
+
+example :
+    let result := compileFlapjackRiscV (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+      [.function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .return (.panOp .mul [.const (BitVec.ofNat 64 2),
+            .const (BitVec.ofNat 64 3)]), returnShape := .one }]
+    result.functions.length = 1 &&
+      result.functions.all (fun (_, _, artifact) => artifact.isSome) := by
+  native_decide
+
 example :
     let result := compileFlapjackRiscV (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)

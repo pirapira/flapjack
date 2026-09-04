@@ -299,6 +299,8 @@ definitions, pass ordering, examples, and proof obligations.
   break and continue jumps and wiring it into the default pipeline.
 - [x] Extend call-aware RISC-V lowering and linked return-signature derivation
   to retain loop-containing Word functions.
+- [x] Execute a lowered RISC-V loop with a generated break jump through the
+  architectural code runner.
 - [x] Prove generic fuel-inductive Loop/Word repeat preservation for normal,
   break, and continue control results.
 - [x] Prove the one-step global-state projection invariant for every Loop

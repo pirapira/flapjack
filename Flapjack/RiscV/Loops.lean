@@ -116,4 +116,13 @@ theorem wordFunctionToRiscVWithLoops_continue [NeZero width] :
   simp [wordFunctionToRiscVWithLoops, wordFunctionToRiscVWithLoopsAux,
     resolveWordLoopBody, resolveWordLoopBodyAux, wordControlInstructions]
 
+theorem execute_lowered_loop_break :
+    (wordFunctionToRiscVWithLoops
+        ((.loop [] (.break 0) []) : WordProg (Word 64))).bind
+        (fun result =>
+          (executeCode 10 (0 : Word 64) result.1 (zeroState 64)).map
+            (fun state => state.pc)) =
+      some (BitVec.ofNat 64 8) := by
+  native_decide
+
 end Flapjack.RiscV

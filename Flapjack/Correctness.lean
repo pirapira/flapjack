@@ -1289,6 +1289,46 @@ theorem loopToWord_seq_preserves_mapped_locals [NeZero width]
     (hfirst middleLoop middleWord hfirst_loop hfirst_word)
     finalLoop finalWord hsecond_loop hsecond_word
 
+theorem loopToWord_condition_agreement_of_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (operator : Cmp) (condition : Nat)
+    (right : RegImm (RiscV.Word width))
+    (leftValue rightValue : RiscV.Word width)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hleft : loopState.locals condition = some leftValue)
+    (hright : (match right with
+      | .imm value => some value
+      | .reg name => loopState.locals name) = some rightValue)
+    (hoperator : operator = .equal ∨ operator = .notEqual ∨
+      operator = .lower ∨ operator = .notLower ∨
+      operator = .test ∨ operator = .notTest) :
+    evalLoopCondition operator leftValue rightValue =
+      RiscV.evalWordCondition state operator (wordFindVar context condition)
+        (wordRegImm context right) := by
+  rcases hlocals condition leftValue hleft with
+    ⟨conditionRegister, hcondition_register, hcondition_value⟩
+  have hand (x y : RiscV.Word width) :
+      AndOp.and x y = x &&& y := by
+    change x.and y = x &&& y
+    exact BitVec.and_eq x y
+  cases right with
+  | imm immediate =>
+      have hright_value : immediate = rightValue := by
+        simpa using hright
+      subst rightValue
+      rcases hoperator with rfl | rfl | rfl | rfl | rfl | rfl <;>
+        simp [evalLoopCondition, RiscV.evalWordCondition, wordRegImm,
+          hcondition_register, hcondition_value, hand]
+  | reg name =>
+      have hright_local : loopState.locals name = some rightValue := by
+        simpa using hright
+      rcases hlocals name rightValue hright_local with
+        ⟨rightRegister, hright_register, hright_value⟩
+      rcases hoperator with rfl | rfl | rfl | rfl | rfl | rfl <;>
+        simp [evalLoopCondition, RiscV.evalWordCondition, wordRegImm,
+          hcondition_register, hright_register, hcondition_value,
+          hright_value, hand]
+
 theorem loopToWord_binop_assign_agreement_of_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (operator : BinOp)

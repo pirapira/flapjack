@@ -336,6 +336,8 @@ definitions, pass ordering, examples, and proof obligations.
   through matching intermediate Loop and machine states.
 - [x] Add the compositional sequence simulation rule that chains mapped-local
   preservation across both successful components.
+- [x] Prove mapped Loop/Word condition agreement for equality, unsigned
+  ordering, and HOL zero-test comparisons with immediate/register operands.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
 - [x] Add an end-to-end declaration-call regression from Pancake through

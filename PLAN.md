@@ -236,6 +236,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port register-addressed and simple offset-addressed `WordProg.shareInst`
   memory lowering for all currently modeled HOL word load/store operators,
   including evaluator and call-aware selector coverage.
+- [x] Reuse the normalized address materialization for ordinary `WordProg.store`
+  operations, covering the store form emitted by global rewriting.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [x] Establish reusable Loop state-transition lemmas for the modeled

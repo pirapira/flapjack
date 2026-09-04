@@ -1064,7 +1064,8 @@ example [NeZero width] :
               (.return 0 [3]))))) : WordProg (RiscV.Word width)) =
       some ([.addi 1 0 (BitVec.ofNat width 100),
         .addi 2 0 (BitVec.ofNat width 42), .storeWord 2 1, .loadWord 3 1], [3]) := by
-  simp [RiscV.wordFunctionToRiscV, RiscV.wordExpToInstruction,
+  simp [RiscV.wordFunctionToRiscV, RiscV.wordStoreToInstructions,
+    RiscV.wordShareInstToInstructions, RiscV.wordExpToInstruction,
     RiscV.wordInstToInstruction, RiscV.registerOfNat]
 
 example :

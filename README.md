@@ -68,6 +68,9 @@ The selector’s function artifact records both emitted instructions and return
 registers for the supported straight-line fragment. `executeFunction` in the
 backend initializes parameter registers and collects return registers; the
 pipeline exposes an end-to-end Pancake-to-artifact wrapper for that fragment.
+Normalized ordinary `WordProg.store` operations use the same register or
+register-plus-constant address materialization as `shareInst`; global
+`TopAddr`/pseudo-store resolution remains a later target-configuration step.
 The first library-level source-to-RISC-V correctness theorem for this composed
 pipeline is in [`Flapjack/Correctness.lean`](Flapjack/Correctness.lean).
 Word-level function-table call semantics are in

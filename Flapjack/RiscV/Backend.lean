@@ -154,15 +154,17 @@ def evalWordShareInst [NeZero width] (state : State width)
   let instructions ← wordShareInstToInstructions operator name address
   pure (executeInstructions state instructions)
 
+def wordStoreToInstructions [NeZero width] (address : WordExp (Word width))
+    (value : Nat) : Option (List (Instruction width)) :=
+  wordShareInstToInstructions .store value address
+
 def wordProgToRiscV [NeZero width] :
     WordProg (Word width) → Option (List (Instruction width))
   | .skip => some []
   | .assign name value =>
       (wordExpToInstruction name value).map (fun instruction => [instruction])
-  | .store (.var address) value => do
-      let value ← registerOfNat value
-      let address ← registerOfNat address
-      pure [.storeWord value address]
+  | .store address value =>
+      wordStoreToInstructions address value
   | .shareInst operator name address =>
       wordShareInstToInstructions operator name address
   | .inst (.arith operation) => wordArithToInstructions operation
@@ -396,10 +398,9 @@ def wordFunctionToRiscV [NeZero width] :
   | .inst instruction => do
       let instruction ← wordInstToInstruction instruction
       pure ([instruction], [])
-  | .store (.var address) value => do
-      let value ← registerOfNat value
-      let address ← registerOfNat address
-      pure ([.storeWord value address], [])
+  | .store address value => do
+      let instructions ← wordStoreToInstructions address value
+      pure (instructions, [])
   | .shareInst operator name address => do
       let instructions ← wordShareInstToInstructions operator name address
       pure (instructions, [])
@@ -490,10 +491,9 @@ def evalWordFunction [NeZero width] (state : State width) :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (execute state (.loadWord destination address), [])
-  | .store (.var address) value => do
-      let value ← registerOfNat value
-      let address ← registerOfNat address
-      pure (execute state (.storeWord value address), [])
+  | .store address value => do
+      let state ← evalWordShareInst state .store value address
+      pure (state, [])
   | .inst (.mem .store32 source address) => do
       let source ← registerOfNat source
       let address ← registerOfNat address
@@ -548,10 +548,8 @@ def evalWordProg [NeZero width] (state : State width) :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (execute state (.load32 destination address))
-  | .store (.var address) value => do
-      let value ← registerOfNat value
-      let address ← registerOfNat address
-      pure (execute state (.storeWord value address))
+  | .store address value =>
+      evalWordShareInst state .store value address
   | .inst (.mem .store32 source address) => do
       let source ← registerOfNat source
       let address ← registerOfNat address
@@ -663,8 +661,11 @@ theorem compileWordStore32_sound [NeZero width] (state : State width) :
 theorem compileWordStoreWord_sound [NeZero width] (state : State width) :
     evalWordProg state (.store (.var 2) 1) =
       some (execute state (.storeWord 1 2)) := by
-  simp [evalWordProg, evalWordExp, registerOfNat, execute, writeWordValue,
-    writeByte, byteAddress, nextPc]
+  simp [evalWordProg, evalWordShareInst, wordStoreToInstructions,
+    wordShareInstToInstructions,
+    wordInstToInstruction, evalWordExp, registerOfNat, executeInstructions,
+    execute,
+    writeWordValue, writeByte, byteAddress, nextPc]
 
 theorem wordShareInstToRiscV_load [NeZero width] :
     wordProgToRiscV (width := width)
@@ -684,6 +685,14 @@ theorem wordShareInstToRiscV_add_offset [NeZero width] :
       some [.addi 31 2 4, .load32 1 31] := by
   simp [wordProgToRiscV, wordShareInstToInstructions, wordExpToInstruction,
     wordInstToInstruction, registerOfNat]
+
+theorem wordStoreToRiscV_add_offset [NeZero width] :
+    wordProgToRiscV (width := width)
+        (.store (.op .add [.var 2, .const (8 : Word width)]) 1) =
+      some [.addi 31 2 8, .storeWord 1 31] := by
+  simp [wordProgToRiscV, wordStoreToInstructions,
+    wordShareInstToInstructions, wordExpToInstruction, wordInstToInstruction,
+    registerOfNat]
 
 theorem compileWordShareInstLoad_sound [NeZero width] (state : State width) :
     evalWordProg state (.shareInst .load 1 (.var 2)) =

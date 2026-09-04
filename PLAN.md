@@ -101,6 +101,8 @@ definitions, pass ordering, examples, and proof obligations.
   expressions, memory instructions, loops, calls, returns, and FFI.
 - [x] Port the HOL `pan_simp` sequence-association and tail-call normalization
   pass, including recursive call-handler traversal.
+- [x] Port the core `pan_structs` named-shape, field-reordering, expression,
+  statement, and declaration transformations.
 - [x] Add a partial Word-to-RISC-V instruction selector for constants, moves,
   and the register-register ADD/SUB/AND/OR/XOR fragment, with a straight-line
   semantic soundness theorem.

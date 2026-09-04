@@ -1,5 +1,6 @@
 import Flapjack.Language
 import Flapjack.PanSimp
+import Flapjack.PanStructs
 import Flapjack.Static
 import Flapjack.PanToCrep
 import Flapjack.Compile
@@ -505,5 +506,22 @@ example :
           (.return (.var .local "result"))) : Prog Nat) =
       (.call none "f" [] : Prog Nat) := by
   simp [panSimpProg, seqAssoc, retToTail, seqCallRet, smartSeq]
+
+example :
+    structCompileShape
+        [("pair", { fields := [("left", .one), ("right", .one)], size := 2 })]
+        (.named "pair") = .comb [.one, .one] := by
+  simp [structCompileShape, structCompileShapeFuel, lookupInfo]
+
+example :
+    structCompileExp
+        { structs := [("pair", { fields := [("left", .one), ("right", .one)], size := 2 })]
+          locals := [("p", .named "pair")]
+          globals := [] }
+        (.nField "right" (.nStruct "pair" [("right", .const 7), ("left", .const 3)])) =
+      .rField 1 (.rStruct [.const 3, .const 7]) := by
+  simp [structCompileExp, structCompileExp.structCompileFields,
+    structCompileExp.structCompileExps, structOldExpShape, structFindFieldIndex,
+    structSelectFields, lookupInfo]
 
 end Flapjack

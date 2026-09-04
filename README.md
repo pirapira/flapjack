@@ -16,6 +16,8 @@ and [`Flapjack/PanToCrep.lean`](Flapjack/PanToCrep.lean).
 The first HOL `pan_simp` normalization pass is in
 [`Flapjack/PanSimp.lean`](Flapjack/PanSimp.lean); the HOL notice for the
 front-end port is in [`Flapjack/COPYRIGHT`](Flapjack/COPYRIGHT).
+Named-structure elimination is in
+[`Flapjack/PanStructs.lean`](Flapjack/PanStructs.lean).
 Core structured statement lowering and top-level function assembly are in
 [`Flapjack/Compile.lean`](Flapjack/Compile.lean).
 The first executable local/memory semantics and preservation lemmas are in

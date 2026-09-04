@@ -497,6 +497,19 @@ theorem evalLoopProg_global_projection [BEq α] [OfNat α 0] [OfNat α 1]
           | _ =>
               simp [evalLoopProg, loopNoGlobalWrites, loopResultState, Function.comp_def]
 
+theorem evalLoopProg_result_globals [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (fuel : Nat) (state : LoopState α) (program : LoopProg α)
+    (hprogram : loopNoGlobalWrites program = true)
+    (result : LoopResult α)
+    (heval : evalLoopProg fuel state program = some result) :
+    (loopResultState result).globals = state.globals := by
+  have hprojection := evalLoopProg_global_projection fuel state program hprogram
+  rw [heval] at hprojection
+  simpa using hprojection
+
 def lookupLoopFunction : Nat → List (Nat × List Nat × LoopProg α) →
     Option (List Nat × LoopProg α)
   | _, [] => none

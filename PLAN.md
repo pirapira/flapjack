@@ -47,6 +47,9 @@ definitions, pass ordering, examples, and proof obligations.
 
 5. **Target and end-to-end correctness**
    - Port the word-level/target interface and one concrete backend first.
+   - Use `/home/zksecurity/HOL/examples/l3-machine-code/riscv/model/riscv.sml`
+     as the RISC-V architectural reference; copy `/home/zksecurity/HOL/COPYRIGHT`
+     into the Lean RISC-V model subdirectory when that port starts.
    - Connect the compiled result to a Lean execution model and prove the
      end-to-end compiler-correctness statement.
    - Add regression programs and differential checks against CakeML/HOL where
@@ -66,6 +69,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port core structured statement lowering and initial pass equations.
 - [x] Add parameter-slot allocation and top-level function/declaration
   assembly for the Pancake-to-Crepe pass.
+- [x] Materialize primitive arguments and multi-word store/exception payloads
+  through fresh Crepe locals.
 - [x] Add executable deterministic semantics and preservation theorems for
   the supported constant/return/sequence fragment, including scalar local
   assignment state updates.

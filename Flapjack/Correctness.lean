@@ -894,6 +894,27 @@ theorem loopLocalsMappedToRiscV_update [NeZero width]
     change RiscV.readRegister state register = current
     exact hregister_value
 
+theorem loopToWord_tick_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (locals : Nat → Option (RiscV.Word width))
+    (state : RiscV.State width)
+    (hlocals : loopLocalsMappedToRiscV context locals state) :
+    ∀ resultState,
+      RiscV.evalWordProg state (.tick : WordProg (RiscV.Word width)) =
+        some resultState →
+      loopLocalsMappedToRiscV context locals resultState := by
+  intro resultState hresult
+  simp [RiscV.evalWordProg] at hresult
+  subst resultState
+  intro name value hvalue
+  rcases hlocals name value hvalue with
+    ⟨register, hregister, hregister_value⟩
+  refine ⟨register, hregister, ?_⟩
+  by_cases hzero : register = 0
+  · subst register
+    exact hregister_value
+  · simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister, hzero]
+    exact hregister_value
+
 theorem bindWordRegisters_single_parameter [NeZero width]
     (context : WordContext) (state : RiscV.State width)
     (name : Nat) (value : RiscV.Word width) (register : Fin 32)

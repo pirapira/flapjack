@@ -287,6 +287,8 @@ definitions, pass ordering, examples, and proof obligations.
   remainder, including the HOL/RISC-V zero-divisor results.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
+- [x] Prove that compiler-generated RISC-V ticks preserve the mapped-local
+  relation needed by conditional and loop simulations.
 - [x] Prove the one-step global-state projection invariant for every Loop
   constructor under the no-global-writes syntactic side condition.
 - [x] Lift the global-state projection invariant to arbitrary fuel, including

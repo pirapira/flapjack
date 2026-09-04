@@ -105,6 +105,8 @@ definitions, pass ordering, examples, and proof obligations.
   statement, and declaration transformations.
 - [x] Port the context-sensitive `pan_globals` expression and statement core,
   including heap-relative global loads/stores and adjusted `TopAddr`.
+- [x] Add global declaration address collection and explicit initializer
+  programs for composing the global pass with later compiler stages.
 - [x] Add a partial Word-to-RISC-V instruction selector for constants, moves,
   and the register-register ADD/SUB/AND/OR/XOR fragment, with a straight-line
   semantic soundness theorem.

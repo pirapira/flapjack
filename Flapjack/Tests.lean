@@ -543,4 +543,13 @@ example :
       .store (.op .sub [.topAddr, .const 8]) (.const 7) := by
   simp [globalCompileProg, globalCompileExp, globalTestContext, lookupInfo]
 
+example :
+    let result := globalCompileTop (α := Nat) 1 id
+      [.decl .one "g" (.const 7), .function
+        { name := "main", inline := false, exported := true, params := [],
+          body := .return (.var .global "g"), returnShape := .one }]
+    result.context.globalsSize = 1 := by
+  simp [globalCompileTop, globalCollect, globalAddress, globalCompileDecls,
+    globalCompileInitializers, globalCompileProg, globalCompileExp, lookupInfo]
+
 end Flapjack

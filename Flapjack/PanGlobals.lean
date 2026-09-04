@@ -18,6 +18,11 @@ structure GlobalPassContext (α : Type u) where
   bytesInWord : α
   fromNat : Nat → α
 
+structure GlobalCompiledProgram (α : Type u) where
+  initializers : List (Prog α)
+  declarations : List (Decl α)
+  context : GlobalPassContext α
+
 def globalAddress [Add α] [Mul α] (context : GlobalPassContext α) (shape : Shape) : α :=
   context.globalsSize + context.bytesInWord * context.fromNat (Shape.shapeSize shape)
 
@@ -112,6 +117,54 @@ where
   termination_by expressions => sizeOf expressions
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
+def globalCollect [Add α] [Mul α] (context : GlobalPassContext α) :
+    List (Decl α) → GlobalPassContext α
+  | [] => context
+  | .decl shape name _ :: declarations =>
+      let address := globalAddress context shape
+      globalCollect { context with
+        globals := (name, (shape, address)) :: context.globals
+        globalsSize := address } declarations
+  | _ :: declarations => globalCollect context declarations
+
+def globalCompileDecls [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) : List (Decl α) → List (Decl α)
+  | [] => []
+  | .function declaration :: declarations =>
+      .function { declaration with body := globalCompileProg context declaration.body } ::
+        globalCompileDecls context declarations
+  | .exnDecl exception shape :: declarations =>
+      .exnDecl exception shape :: globalCompileDecls context declarations
+  | _ :: declarations => globalCompileDecls context declarations
+
+def globalCompileInitializers [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) : List (Decl α) → List (Prog α)
+  | [] => []
+  | .decl shape name value :: declarations =>
+      let initializer :=
+        match lookupInfo name context.globals with
+        | some (_, address) =>
+            .store (.op .sub [.topAddr, .const address])
+              (globalCompileExp context value)
+        | none => .skip
+      initializer :: globalCompileInitializers context declarations
+  | _ :: declarations => globalCompileInitializers context declarations
+
+def globalCompileTop [BEq String] [Add α] [Mul α]
+    (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α)) :
+    GlobalCompiledProgram α :=
+  let initial : GlobalPassContext α :=
+    { globals := []
+      globalsSize := fromNat 0
+      maxGlobalsSize := fromNat 0
+      bytesInWord := bytesInWord
+      fromNat := fromNat }
+  let collected := globalCollect initial declarations
+  let context := { collected with maxGlobalsSize := collected.globalsSize }
+  { initializers := globalCompileInitializers context declarations
+    declarations := globalCompileDecls context declarations
+    context := context }
+
 @[simp] theorem globalCompileExp_local [BEq String]
     (context : GlobalPassContext α) (name : VarName) :
     globalCompileExp context (.var .local name) = .var .local name := by
@@ -129,5 +182,12 @@ theorem globalCompileProg_seq [BEq String] [Add α] [Mul α]
     globalCompileProg context (.seq first second) =
       .seq (globalCompileProg context first) (globalCompileProg context second) := by
   simp [globalCompileProg]
+
+theorem globalCollect_decl [Add α] [Mul α]
+    (context : GlobalPassContext α) (shape : Shape) (name : String)
+    (value : Exp α) :
+    (globalCollect context [.decl shape name value]).globalsSize =
+      globalAddress context shape := by
+  simp [globalCollect]
 
 end Flapjack

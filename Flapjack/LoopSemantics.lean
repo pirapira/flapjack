@@ -531,6 +531,66 @@ def loopAssignValues (locals : Nat → Option α) (names : List Nat)
     some ((names.zip values).foldl
       (fun locals (name, value) => updateLoopLocal locals name value) locals)
 
+abbrev LoopPrimitiveHandler (α : Type u) :=
+  PrimOp → List α → Option (List α)
+
+/-!
+Loop's primitive boundary is supplied by the target/source environment.  The
+ordinary evaluator deliberately remains pure and handler-free; this companion
+recurses through the control-flow constructors while delegating only the
+primitive instruction itself to the explicit handler.
+-/
+mutual
+  def evalLoopProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+      [ShiftRight α] [LT α]
+      [DecidableRel (fun left right : α => left < right)]
+      (primitive : LoopPrimitiveHandler α) :
+      Nat → LoopState α → LoopProg α → Option (LoopResult α)
+    | 0, _, _ => none
+    | fuel + 1, state, .primitive destinations operator arguments => do
+        let arguments ← loopReadLocals state.locals arguments
+        let values ← primitive operator arguments
+        let locals ← loopAssignValues state.locals destinations values
+        pure (.normal { state with locals := locals })
+    | fuel + 1, state, .seq first second => do
+        let result ← evalLoopProgWithPrimitive primitive fuel state first
+        match result with
+        | .normal state => evalLoopProgWithPrimitive primitive fuel state second
+        | result => pure result
+    | fuel + 1, state, .ite operator condition right thenBranch elseBranch live => do
+        let left ← state.locals condition
+        let right ← match right with
+          | .imm value => some value
+          | .reg name => state.locals name
+        let choose ← evalLoopCondition operator left right
+        if choose then
+          evalLoopProgWithPrimitive primitive fuel state thenBranch
+        else
+          evalLoopProgWithPrimitive primitive fuel state elseBranch
+    | fuel + 1, state, .loop liveIn body liveOut =>
+        evalLoopRepeatWithPrimitive primitive fuel state body
+    | fuel + 1, state, .mark body =>
+        evalLoopProgWithPrimitive primitive fuel state body
+    | fuel + 1, state, program =>
+        evalLoopProg (fuel + 1) state program
+
+  def evalLoopRepeatWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+      [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+      [ShiftLeft α] [ShiftRight α] [LT α]
+      [DecidableRel (fun left right : α => left < right)]
+      (primitive : LoopPrimitiveHandler α) :
+      Nat → LoopState α → LoopProg α → Option (LoopResult α)
+    | 0, _, _ => none
+    | fuel + 1, state, body => do
+        let result ← evalLoopProgWithPrimitive primitive fuel state body
+        match result with
+        | .normal state => evalLoopRepeatWithPrimitive primitive fuel state body
+        | .continued state 0 => evalLoopRepeatWithPrimitive primitive fuel state body
+        | .broke state 0 => pure (.normal state)
+        | result => pure result
+end
+
 /-!
 The call-aware evaluator is mutually recursive with call dispatch. It carries
 the function table through callees and handlers, so recursive call graphs are

@@ -29,6 +29,83 @@ def loopFfiTestHandler : FunName → Nat → Nat → Nat → Nat → LoopState N
     some { state with locals := updateLoopLocal state.locals 5 value }
   else none
 
+def loopAddCarryState : LoopState (RiscV.Word 64) :=
+  { locals := fun name =>
+      if name == 2 then some (BitVec.ofNat 64 1)
+      else if name == 3 then some (BitVec.ofNat 64 2)
+      else if name == 4 then some (BitVec.ofNat 64 0)
+      else none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+example :
+    (evalLoopProgWithPrimitive RiscV.loopPrimitiveHandler 1
+      loopAddCarryState (.primitive [5, 6] .addCarry [2, 3, 4])).map
+        (fun result => ((loopResultState result).locals 5,
+          (loopResultState result).locals 6)) =
+      some (some (BitVec.ofNat 64 3), some (BitVec.ofNat 64 0)) := by
+  native_decide
+
+def loopAddCarryMachineState : RiscV.State 64 :=
+  RiscV.writeRegister
+    (RiscV.writeRegister
+      (RiscV.writeRegister (RiscV.zeroState 64) 2 1) 3 2) 4 0
+
+example :
+    (evalLoopProgWithPrimitive RiscV.loopPrimitiveHandler 1
+      loopAddCarryState (.primitive [5, 6] .addCarry [2, 3, 4])).map
+        (fun result => ((loopResultState result).locals 5,
+          (loopResultState result).locals 6)) =
+      (RiscV.evalWordFunction loopAddCarryMachineState
+        (loopToWordProg ({ vars := [] } : WordContext)
+          (.primitive [5, 6] .addCarry [2, 3, 4]))).map
+        (fun result => (some (RiscV.readRegister result.1 5),
+          some (RiscV.readRegister result.1 6))) := by
+  native_decide
+
+def addCarrySourceLocals : VarName → Option (PanValue (RiscV.Word 64)) :=
+  fun name =>
+    if name == "result" then
+      some (.rStruct [.word 0, .word 0])
+    else none
+
+def addCarrySource : Prog (RiscV.Word 64) :=
+  .primitive "result" .addCarry
+    [.const 1, .const 2, .const 0]
+
+def addCarryCompileContext : CompileContext (RiscV.Word 64) :=
+  { vars := [("result", (.comb [.one, .one], [0, 1]))]
+    functions := []
+    exceptions := []
+    maxVar := 1
+    bytesInWord := 8 }
+
+def addCarryLoopContext : LoopContext (RiscV.Word 64) :=
+  { vars := []
+    functions := []
+    maxVar := 1
+    target := .rv64i }
+
+def addCarryCompiledLoop : LoopProg (RiscV.Word 64) :=
+  loopCompileProg addCarryLoopContext []
+    (compileProg addCarryCompileContext addCarrySource)
+
+example :
+    (evalPanValueProgWithPrimitive (α := RiscV.Word 64) [] 0 100 8
+      addCarrySourceLocals (fun _ => none) (fun _ => none)
+      RiscV.panPrimitiveHandler addCarrySource).map
+        (fun result =>
+          match result.1 "result" with
+          | some (.rStruct [.word left, .word carry]) =>
+              (some left, some carry)
+          | _ => (none, none)) =
+      (evalLoopProgWithPrimitive RiscV.loopPrimitiveHandler 20
+        { locals := fun _ => none, globals := fun _ => none,
+          memory := fun _ => none } addCarryCompiledLoop).map
+        (fun result => ((loopResultState result).locals 0,
+          (loopResultState result).locals 1)) := by
+  native_decide
+
 example :
     (evalLoopProg 10 loopSharedMemoryTestState
       (.seq

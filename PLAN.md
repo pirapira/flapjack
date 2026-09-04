@@ -423,6 +423,8 @@ definitions, pass ordering, examples, and proof obligations.
   failed-domain behavior.
 - [x] Extend the flat source evaluator with fuel-bounded calls, scoped
   declaration calls, caught exceptions, loops, primitive dispatch, and FFI.
+- [x] Add a handler-parameterized Loop evaluator for primitive dispatch and
+  connect its RISC-V AddCarry handler to an executable Loop-to-Word agreement.
 - [x] Split the regression suite into focused modules under `Flapjack/Test`.
 - [x] Split the RISC-V regression suite further into backend and flat-memory
   modules as the source-memory adapter grew.

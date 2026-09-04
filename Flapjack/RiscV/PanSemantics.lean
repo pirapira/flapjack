@@ -1,4 +1,5 @@
 import Flapjack.PanValues
+import Flapjack.LoopSemantics
 import Flapjack.RiscV.Model
 
 /-!
@@ -24,6 +25,13 @@ def panPrimitiveHandler [NeZero width] :
   | .addCarry, [.word left, .word right, .word carry] =>
       let (result, carryOut) := addCarryWords left right carry
       some (.rStruct [.word result, .word carryOut])
+  | _, _ => none
+
+def loopPrimitiveHandler [NeZero width] :
+    LoopPrimitiveHandler (Word width)
+  | .addCarry, [left, right, carry] =>
+      let (result, carryOut) := addCarryWords left right carry
+      some [result, carryOut]
   | _, _ => none
 
 theorem addCarryWords_no_overflow [NeZero width]

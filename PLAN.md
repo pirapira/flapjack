@@ -193,6 +193,8 @@ definitions, pass ordering, examples, and proof obligations.
   entry for top-level calls.
 - [x] Extend call-aware Loop evaluation through nested and recursive function
   bodies with fuel decreasing across the call graph.
+- [x] Add Loop shared-memory load/store semantics for all modeled widths,
+  using the executable memory state.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

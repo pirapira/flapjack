@@ -897,6 +897,22 @@ def loopCallTestState : LoopState Nat :=
     globals := fun _ => none
     memory := fun _ => none }
 
+def loopSharedMemoryTestState : LoopState Nat :=
+  { locals := fun name =>
+      if name = 1 then some 100 else if name = 2 then some 42 else none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+example :
+    (evalLoopProg 10 loopSharedMemoryTestState
+      (.seq
+        (.shMem .store 2 (.var 1))
+        (.shMem .load 3 (.var 1)))).map (fun result =>
+        match result with
+        | .normal state => state.locals 3
+        | _ => none) = some (some 42) := by
+  native_decide
+
 example :
     (evalLoopProgWithFunctions
       [(7, [1], (.return [1] : LoopProg Nat))] 10 loopCallTestState

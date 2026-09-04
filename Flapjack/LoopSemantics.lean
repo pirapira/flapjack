@@ -183,13 +183,23 @@ mutual
         let value ← state.locals source
         pure (.normal { state with
           locals := updateLoopLocal state.locals destination value })
+    | fuel + 1, state, .shMem operator name address => do
+        let address ← evalLoopExp state address
+        match operator with
+        | .load | .load8 | .load16 | .load32 => do
+            let value ← state.memory address
+            pure (.normal { state with
+              locals := updateLoopLocal state.locals name value })
+        | .store | .store8 | .store16 | .store32 => do
+            let value ← state.locals name
+            pure (.normal { state with
+              memory := updateLoopMemory state.memory address value })
     | fuel + 1, state, .tick => some (.normal state)
     | fuel + 1, state, .mark body => evalLoopProg fuel state body
     | _, _, .fail => none
     | _, _, .primitive _ _ _
     | _, _, .arith (.longDiv _ _ _ _ _)
     | _, _, .arith (.div _ _ _)
-    | _, _, .shMem _ _ _
     | _, _, .call _ _ _ _
     | _, _, .ffi _ _ _ _ _ _ => none
 

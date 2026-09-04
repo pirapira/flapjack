@@ -63,6 +63,18 @@ def pipelineWordFunctions [OfNat α 1]
   functions.map (fun (label, parameters, body) =>
     (label, parameters, loopToWordProg { vars := [] } body))
 
+def pipelinePrependInitializers (initializers : List (Prog α)) :
+    List (Decl α) → List (Decl α)
+  | [] => []
+  | .function declaration :: declarations =>
+      if declaration.name = "main" then
+        .function { declaration with body :=
+          (.seq (nestedSeq initializers) declaration.body) } :: declarations
+      else
+        .function declaration :: pipelinePrependInitializers initializers declarations
+  | declaration :: declarations =>
+      declaration :: pipelinePrependInitializers initializers declarations
+
 structure FlapjackPipelineResult (α : Type u) where
   simplified : List (Decl α)
   structured : List (Decl α)
@@ -79,7 +91,8 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   let structured := structCompileTop simplified
   let globals := globalCompileTop bytesInWord fromNat structured
   let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
-  let crepe := compileToCrepe crepeContext globals.declarations
+  let declarations := pipelinePrependInitializers globals.initializers globals.declarations
+  let crepe := compileToCrepe crepeContext declarations
   let loop := pipelineLoopFunctions architecture 1 crepe
   let word := pipelineWordFunctions loop
   { simplified := simplified
@@ -95,6 +108,6 @@ theorem compileFlapjack_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α
   simp [compileFlapjack, panSimpDecls, structCompileTop, structGetNames,
     structCompileDecls, globalCompileTop, globalCollect, globalCompileDecls,
     globalCompileInitializers, pipelineCrepeContext, pipelineFunctionInfos,
-    pipelineLoopFunctions, pipelineWordFunctions]
+    pipelineLoopFunctions, pipelineWordFunctions, pipelinePrependInitializers]
 
 end Flapjack

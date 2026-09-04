@@ -571,7 +571,23 @@ example :
     structCompileDecls, globalCompileTop, globalCollect, globalCompileDecls,
     globalCompileInitializers, pipelineCrepeContext, pipelineExceptionCodes,
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
-    pipelineWordFunctions,
+    pipelineWordFunctions, pipelinePrependInitializers,
+    compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
+    compileProg, loopCompileProg, loopCompileExp, loopCompileExp.loopCompileExps,
+    loopCompileExps, loopNestedSeq, loopTempNames, wordFindVar, lookupInfo,
+    lookupNatInfo]
+
+example :
+    let result := compileFlapjack (α := Nat) .rv64i 1 id
+      [.decl .one "g" (.const 7), .function
+        { name := "main", inline := false, exported := true, params := [],
+          body := .return (.var .global "g"), returnShape := .one }]
+    result.globals.initializers.length = 1 ∧ result.crepe.length = 1 := by
+  simp [compileFlapjack, panSimpDecls, structCompileTop, structGetNames,
+    structCompileDecls, globalCompileTop, globalCollect, globalCompileDecls,
+    globalCompileInitializers, pipelineCrepeContext, pipelineExceptionCodes,
+    pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
+    pipelineWordFunctions, pipelinePrependInitializers,
     compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
     compileProg, loopCompileProg, loopCompileExp, loopCompileExp.loopCompileExps,
     loopCompileExps, loopNestedSeq, loopTempNames, wordFindVar, lookupInfo,

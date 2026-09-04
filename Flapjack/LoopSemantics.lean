@@ -409,6 +409,54 @@ theorem evalLoopProg_assign [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       some (.normal { state with locals := updateLoopLocal state.locals name value }) := by
   simp [evalLoopProg, hvalue]
 
+theorem evalLoopExp_var [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (name : Nat) (value : α)
+    (hvalue : state.locals name = some value) :
+    evalLoopExp state (.var name) = some value := by
+  simp [evalLoopExp, hvalue]
+
+theorem evalLoopExp_load [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (address value : α) (expression : LoopExp α)
+    (haddress : evalLoopExp state expression = some address)
+    (hvalue : state.memory address = some value) :
+    evalLoopExp state (.load expression) = some value := by
+  simp [evalLoopExp, haddress, hvalue]
+
+theorem evalLoopExp_binOp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (operator : BinOp) (left right : LoopExp α)
+    (leftValue rightValue : α)
+    (hleft : evalLoopExp state left = some leftValue)
+    (hright : evalLoopExp state right = some rightValue) :
+    evalLoopExp state (.op operator [left, right]) =
+      some (evalLoopBinOp operator leftValue rightValue) := by
+  simp [evalLoopExp, hleft, hright, evalLoopBinOp]
+
+theorem evalLoopExp_mul [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (left right : LoopExp α) (leftValue rightValue : α)
+    (hleft : evalLoopExp state left = some leftValue)
+    (hright : evalLoopExp state right = some rightValue) :
+    evalLoopExp state (.crepOp .mul [left, right]) = some (leftValue * rightValue) := by
+  simp [evalLoopExp, hleft, hright]
+
+theorem evalLoopExp_shift [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (operator : Shift) (left right : LoopExp α)
+    (leftValue rightValue : α) (value : α)
+    (hleft : evalLoopExp state left = some leftValue)
+    (hright : evalLoopExp state right = some rightValue)
+    (hvalue : evalLoopShift operator leftValue rightValue = some value) :
+    evalLoopExp state (.shift operator left right) = some value := by
+  simp [evalLoopExp, hleft, hright, hvalue]
+
 theorem evalLoopProg_seq_normal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]

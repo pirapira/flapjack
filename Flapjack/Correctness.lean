@@ -885,4 +885,69 @@ theorem loopToWord_binop_assign_agreement_of_locals [NeZero width]
               hleft_value', hright_value',
               hdestination, hdestination_nonzero, hand, hor, hxor]
 
+theorem loopToWord_shift_assign_agreement_of_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (operator : Shift)
+    (destination left right : Nat) (destinationRegister : Fin 32)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hleft_present : ∃ value, loopState.locals left = some value)
+    (hright_present : ∃ value, loopState.locals right = some value)
+    (hright_bounded :
+      ∀ value, loopState.locals right = some value → value.toNat < width)
+    (hoperator : operator = .lsl ∨ operator = .lsr)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0) :
+    (evalLoopProg 1 loopState
+      (.assign destination (.shift operator (.var left) (.var right)))).bind
+        (fun result =>
+          match result with
+          | .normal state => state.locals destination
+          | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg context
+          (.assign destination (.shift operator (.var left) (.var right))))).map
+        (fun state => RiscV.readRegister state destinationRegister) := by
+  cases hleft : loopState.locals left with
+  | none =>
+      obtain ⟨value, hvalue⟩ := hleft_present
+      simp [hleft] at hvalue
+  | some leftValue =>
+      cases hright : loopState.locals right with
+      | none =>
+          obtain ⟨value, hvalue⟩ := hright_present
+          simp [hright] at hvalue
+      | some rightValue =>
+          rcases hlocals left leftValue hleft with
+            ⟨leftRegister, hleft_register, hleft_value⟩
+          rcases hlocals right rightValue hright with
+            ⟨rightRegister, hright_register, hright_value⟩
+          have hleft_value' : state.registers leftRegister = leftValue := by
+            exact hleft_value
+          have hright_value' : state.registers rightRegister = rightValue := by
+            exact hright_value
+          have hright_amount :
+              RiscV.shiftAmount rightValue = rightValue.toNat := by
+            simp [RiscV.shiftAmount,
+              Nat.mod_eq_of_lt (hright_bounded rightValue hright)]
+          have hshiftLeft (x y : RiscV.Word width) :
+              ShiftLeft.shiftLeft x y = x <<< y.toNat := by
+            rfl
+          have hshiftRight (x y : RiscV.Word width) :
+              ShiftRight.shiftRight x y = x >>> y.toNat := by
+            rfl
+          rcases hoperator with rfl | rfl <;>
+            simp [evalLoopProg, evalLoopExp, evalLoopShift, loopToWordProg,
+              wordCompileExp, wordCompileExp.wordCompileExpList,
+              RiscV.evalWordProg, RiscV.wordExpToInstructions,
+              RiscV.wordExpToInstruction, RiscV.executeInstructions,
+              RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+              RiscV.nextPc, updateLoopLocal, hleft, hright,
+              hleft_register, hright_register, hleft_value, hright_value,
+              hleft_value', hright_value', hdestination,
+              hdestination_nonzero, hright_amount,
+              hshiftLeft, hshiftRight,
+              RiscV.bitVecWordShiftLeft, RiscV.bitVecWordShiftRight]
+
 end Flapjack

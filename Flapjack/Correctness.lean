@@ -1,5 +1,6 @@
 import Flapjack.Pipeline
 import Flapjack.Semantics
+import Flapjack.LoopSemantics
 import Flapjack.RiscV.Backend
 
 /-!
@@ -67,5 +68,60 @@ theorem compiledPipelineAdd_correct (left right : RiscV.Word 64) :
   simp [compiledPipelineAddRun, pipelineAddLinkedFunctions_shape,
     pipelineAddSource, pipelineAddLocals, evalPanProg, evalPanExp]
   exact RiscV.executeFunction_add_general left right
+
+/-!
+The first compositional bridge between the Loop and Word semantic states.
+Only the destination register is observed here; the full state relation will
+add globals, memory, live-register preservation, and control results as the
+remaining Word operations are ported.
+-/
+def loopRegisterState [NeZero width] (state : RiscV.State width) :
+    LoopState (RiscV.Word width) :=
+  { locals := fun name =>
+      (RiscV.registerOfNat name).map (RiscV.readRegister state)
+    globals := fun _ => none
+    memory := fun _ => none }
+
+theorem loopToWord_const_assign_register_agreement [NeZero width]
+    (state : RiscV.State width) (zero : RiscV.ZeroRegister state)
+    (value : RiscV.Word width) :
+    (evalLoopProg 1 (loopRegisterState state)
+      (.assign 1 (.const value))).bind (fun result =>
+        match result with
+        | .normal state => state.locals 1
+        | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg ({ vars := [] } : WordContext)
+          (.assign 1 (.const value)))).map
+        (fun state => RiscV.readRegister state 1) := by
+  have hzero : state.registers 0 = (0 : RiscV.Word width) := by
+    exact zero
+  simp [evalLoopProg, evalLoopExp, loopRegisterState, loopToWordProg, loopToWordExp,
+    wordCompileExp, wordFindVar, lookupNatInfo,
+    RiscV.evalWordProg, RiscV.wordExpToInstructions,
+    RiscV.wordExpToInstruction, RiscV.executeInstructions,
+    RiscV.registerOfNat, RiscV.execute, RiscV.writeRegister,
+    RiscV.readRegister, RiscV.nextPc, updateLoopLocal, hzero]
+
+theorem loopToWord_add_assign_register_agreement [NeZero width]
+    (state : RiscV.State width) (zero : RiscV.ZeroRegister state) :
+    (evalLoopProg 1 (loopRegisterState state)
+      (.assign 1 (.op .add [.var 2, .var 3]))).bind (fun result =>
+        match result with
+        | .normal state => state.locals 1
+        | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg ({ vars := [] } : WordContext)
+          (.assign 1 (.op .add [.var 2, .var 3])))).map
+        (fun state => RiscV.readRegister state 1) := by
+  have hzero : state.registers 0 = (0 : RiscV.Word width) := by
+    exact zero
+  simp [evalLoopProg, evalLoopExp, evalLoopBinOp, loopRegisterState,
+    loopToWordProg, wordCompileExp, wordCompileExp.wordCompileExpList,
+    wordFindVar, lookupNatInfo,
+    RiscV.evalWordProg, RiscV.wordExpToInstructions,
+    RiscV.wordExpToInstruction, RiscV.executeInstructions,
+    RiscV.registerOfNat, RiscV.execute, RiscV.writeRegister,
+    RiscV.readRegister, RiscV.nextPc, updateLoopLocal, hzero]
 
 end Flapjack

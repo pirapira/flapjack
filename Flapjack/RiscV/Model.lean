@@ -15,6 +15,18 @@ namespace Flapjack.RiscV
 
 abbrev Word (width : Nat) := BitVec width
 
+/-!
+The Loop semantics uses homogeneous shift typeclasses.  BitVec exposes its
+architectural shifts through heterogeneous instances because the shift count
+is itself a BitVec, so provide the corresponding homogeneous views for the
+Word-level Loop-to-Word bridge.
+-/
+instance bitVecWordShiftLeft : ShiftLeft (Word width) :=
+  ⟨fun value amount => value <<< amount.toNat⟩
+
+instance bitVecWordShiftRight : ShiftRight (Word width) :=
+  ⟨fun value amount => value >>> amount.toNat⟩
+
 inductive AccessType where
   | read
   | write

@@ -59,6 +59,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port nested-recursion local/global expression variable-use helpers.
 - [x] Port static-checker data types, structural shape validation, and
   declaration-level shape validation.
+- [x] Add a shape-aware executable checker for core expressions and
+  diagnostics.
 - [x] Port the Crepe IR and executable expression lowering used by
   `pan_to_crep`.
 - [x] Port core structured statement lowering and initial pass equations.
@@ -67,7 +69,7 @@ definitions, pass ordering, examples, and proof obligations.
   assignment state updates.
 - [x] Extend the initial lowering with handler-free calls, local return
   destinations, declaration calls, and mapped exceptions.
-- [ ] Port full expression/program checking and diagnostics.
+- [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

@@ -53,6 +53,56 @@ example : validateDecl pairContext (.decl .one "answer" (.const 42)) = true := b
 example : validateDecl pairContext (.decl (.named "Missing") "bad" (.const 0)) = false := by
   native_decide
 
+def checkerContext : Context :=
+  { locals := [("x", { shapedBased := .word .trusted }),
+      ("pair", { shapedBased := .struct [.word .trusted, .word .trusted] })],
+    globals := [("g", { shape := .one })], functions := [], exceptions := [],
+    structs := pairContext, scope := .topLevel, inLoop := false, reachable := .isReach,
+    last := .otherLast, location := "" }
+
+example :
+    checkExp (α := Nat) checkerContext (.var .local "x") =
+      staticOk { shapedBased := .word .trusted } := by
+  simp [checkExp, staticOk, checkerContext, pairContext, lookupInfo]
+
+example :
+    checkExp (α := Nat) checkerContext (Exp.rField 1 (Exp.var .local "pair")) =
+      staticOk { shapedBased := .word .trusted } := by
+  simp [checkExp, staticOk, staticBind, shapedBasedFieldAt,
+    shapedBasedFieldAt.shapedBasedFieldAtList,
+    checkerContext, pairContext, lookupInfo]
+
+example :
+    checkExp (α := Nat) checkerContext (Exp.op .add [.const 1, .const 2]) =
+      staticOk { shapedBased := .word .notBased } := by
+  simp [checkExp, checkExp.checkExps, staticOk, staticBind,
+    shapedBasedIsWord, checkerContext, pairContext]
+
+example :
+    checkExp (α := Nat) checkerContext (Exp.op .add [.const 1]) =
+      staticError (.general "invalid binary operator arity") := by
+  simp [checkExp, checkExp.checkExps, staticOk, staticBind,
+    checkerContext, pairContext]
+
+example :
+    checkExp (α := Nat)
+      checkerContext
+      (Exp.nStruct "Pair" [("left", .const 1), ("right", .const 2)]) =
+      staticOk { shapedBased := (.named "Pair"
+        [("left", .word .notBased), ("right", .word .notBased)]) } := by
+  simp [checkExp, checkExp.checkNamedExps, staticOk, staticBind,
+    shapedBasedFieldsMatch, shapedBasedFromShape, shapedBasedSameShape,
+    checkerContext, pairContext, lookupInfo]
+
+example :
+    (checkExp (α := Nat)
+      checkerContext
+      (Exp.nStruct "Pair" [("left", .const 1)])) =
+      staticError (.shape "named struct fields do not match") := by
+  simp [checkExp, checkExp.checkNamedExps, staticOk, staticBind,
+    shapedBasedFieldsMatch, shapedBasedFromShape, shapedBasedSameShape,
+    checkerContext, pairContext, lookupInfo]
+
 def crepContext : CompileContext Nat :=
   { vars := [("pair", (.comb [.one, .one], [0, 1]))], functions := [], exceptions := [],
     maxVar := 1, bytesInWord := 1 }

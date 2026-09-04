@@ -52,6 +52,25 @@ def loopReadLocals (locals : Nat → Option α) : List Nat → Option (List α)
       let values ← loopReadLocals locals names
       pure (value :: values)
 
+theorem updateLoopLocal_same (locals : Nat → Option α) (name : Nat) (value : α) :
+    updateLoopLocal locals name value name = some value := by
+  simp [updateLoopLocal]
+
+theorem updateLoopLocal_other (locals : Nat → Option α) (name current : Nat) (value : α)
+    (different : current ≠ name) :
+    updateLoopLocal locals name value current = locals current := by
+  simp [updateLoopLocal, different]
+
+theorem loopReadLocals_append (locals : Nat → Option α) (names rest : List Nat) :
+    loopReadLocals locals (names ++ rest) = (do
+      let values ← loopReadLocals locals names
+      let suffix ← loopReadLocals locals rest
+      pure (values ++ suffix)) := by
+  induction names with
+  | nil => simp [loopReadLocals]
+  | cons name names ih =>
+      simp [loopReadLocals, ih, List.cons_append, Option.bind_assoc]
+
 def evalLoopBinOp [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     (operator : BinOp) (left right : α) : α :=
   match operator with

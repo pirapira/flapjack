@@ -418,7 +418,8 @@ def evalCrepMemExp [BEq α] [Add α] [Mul α]
   | _ => none
 termination_by expression => sizeOf expression
 
-def evalPanMemProg [BEq α] [Add α] [Mul α] (locals : VarName → Option α)
+def evalPanMemProg [BEq α] [Add α] [Mul α] [OfNat α 0]
+    (locals : VarName → Option α)
     (memory : α → Option α) : Prog α →
     Option ((VarName → Option α) × (α → Option α) × List α)
   | .skip => some (locals, memory, [])
@@ -443,6 +444,12 @@ def evalPanMemProg [BEq α] [Add α] [Mul α] (locals : VarName → Option α)
       let (locals', memory', firstResult) ← evalPanMemProg locals memory first
       if firstResult.isEmpty then evalPanMemProg locals' memory' second
       else pure (locals', memory', firstResult)
+  | .ite condition thenBranch elseBranch => do
+      let condition ← evalPanMemExp locals memory condition
+      if condition == 0 then
+        evalPanMemProg locals memory elseBranch
+      else
+        evalPanMemProg locals memory thenBranch
   | _ => none
 
 def evalCrepMemProg [BEq α] [Add α] [Mul α] (locals : Nat → Option α)
@@ -622,7 +629,8 @@ def evalCrepMemProgFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
     | _, _ => none
 termination_by fuel => fuel
 
-def evalPanMemResult [BEq α] [Add α] [Mul α] (locals : VarName → Option α)
+def evalPanMemResult [BEq α] [Add α] [Mul α] [OfNat α 0]
+    (locals : VarName → Option α)
     (memory : α → Option α) (program : Prog α) : Option (List α) :=
   (evalPanMemProg locals memory program).map (fun result => result.2.2)
 

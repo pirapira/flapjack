@@ -89,7 +89,15 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
       match lookupInfo name context.vars, compileExp context value with
       | some (_, names), (expressions, _) =>
           if names.length = expressions.length then
-            crepNestedSeq (names.zipWith (fun name expression => .assign name expression) expressions)
+            if distinctLists names (expressions.flatMap crepExpVars) then
+              crepNestedSeq
+                (names.zipWith (fun name expression => .assign name expression) expressions)
+            else
+              let temporaries := freshNames context names.length 1
+              nestedDecs temporaries expressions
+                (crepNestedSeq
+                  (names.zipWith (fun name temporary => .assign name (.var temporary))
+                    temporaries))
           else .skip
       | _, _ => .skip
   | .assign .global _ _ => .skip

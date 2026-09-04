@@ -324,7 +324,7 @@ theorem compile_local_assign_return_const_preserves_semantics
   simp [compileProg, compileExp, crepNestedSeq, lookup,
     compileExp_local_var context name .one [slot] lookup,
     evalCrepStateProg, evalPanStateProg, evalCrepExp, evalCrepExps, evalPanExp,
-    updatePanLocal, updateCrepLocal]
+    updatePanLocal, updateCrepLocal, distinctLists]
 
 theorem compile_store_load_const_preserves_semantics
     [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]

@@ -137,6 +137,8 @@ definitions, pass ordering, examples, and proof obligations.
   prove evaluator agreement for register-based Word stores.
 - [x] Port equality and inequality branch instructions from the HOL RISC-V
   vocabulary and prove their conditional PC transitions.
+- [x] Match HOL `pan_to_crep` for `BytesInWord` and alias-sensitive local
+  assignments, including regression tests for both cases.
 - [x] Add fuel-bounded conditional and sequencing semantics for Pancake and
   Crepe and prove preservation for a constant conditional program.
 - [ ] Port complete program checking, context transitions, and diagnostics.

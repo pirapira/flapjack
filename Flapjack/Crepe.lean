@@ -63,6 +63,30 @@ inductive CrepProg (α : Type u) where
   | tick
   deriving Repr
 
+def crepExpVars : CrepExp α → List Nat
+  | .const _ => []
+  | .var name => [name]
+  | .load address | .load32 address | .loadByte address => crepExpVars address
+  | .loadGlob _ => []
+  | .op _ expressions | .crepOp _ expressions => crepExpVarsList expressions
+  | .cmp _ left right | .shift _ left right => crepExpVars left ++ crepExpVars right
+  | .baseAddr | .topAddr => []
+termination_by expression => sizeOf expression
+where
+  crepExpVarsList : List (CrepExp α) → List Nat
+    | [] => []
+    | expression :: expressions => crepExpVars expression ++ crepExpVarsList expressions
+  termination_by expressions => sizeOf expressions
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def distinctLists (left right : List Nat) : Bool :=
+  left.all (fun name => !right.contains name)
+
+@[simp] theorem crepExpVars_const (value : α) :
+    crepExpVars (.const value) = [] := by
+  simp [crepExpVars]
+
 def loadShape [BEq α] [OfNat α 0] [Add α]
     (address stride : α) (count : Nat) (value : CrepExp α) : List (CrepExp α) :=
   match count with

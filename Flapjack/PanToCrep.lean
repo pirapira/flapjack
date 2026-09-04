@@ -86,7 +86,7 @@ def compileExp [BEq α] [OfNat α 0] [Add α]
       | _, _ => ([.const 0], .one)
   | .baseAddr => ([.baseAddr], .one)
   | .topAddr => ([.topAddr], .one)
-  | .bytesInWord => ([.const 0], .one)
+  | .bytesInWord => ([.const context.bytesInWord], .one)
 
 termination_by expression => sizeOf expression
 decreasing_by
@@ -112,5 +112,10 @@ theorem compileExp_local_var [BEq α] [OfNat α 0] [Add α]
     (lookup : lookupInfo name context.vars = some (shape, names)) :
     compileExp context (.var .local name) = (names.map .var, shape) := by
   simp [compileExp, lookup]
+
+theorem compileExp_bytesInWord [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) :
+    compileExp context .bytesInWord = ([.const context.bytesInWord], .one) := by
+  simp [compileExp]
 
 end Flapjack

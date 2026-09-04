@@ -300,6 +300,17 @@ example :
   simp [compileExp]
 
 example :
+    compileExp crepContext (Exp.bytesInWord : Exp Nat) = ([.const 1], .one) := by
+  simp [compileExp, crepContext]
+
+example :
+    compileProg assignmentContext
+      (.assign .local "x" (.var .local "x")) =
+      .dec 1 (.var 0) (.seq (.assign 0 (.var 1)) .skip) := by
+  simp [compileProg, compileExp, freshNames, nestedDecs, crepNestedSeq,
+    assignmentContext, lookupInfo, distinctLists, crepExpVars]
+
+example :
     loadShape (0 : Nat) 4 2 (.var 3) =
       [.load (.var 3), .load (.op .add [.var 3, .const 4])] := by
   simp [loadShape]
@@ -390,7 +401,7 @@ example :
       some [7] := by
   simp [compileProg, compileExp, crepNestedSeq, evalCrepStateProg, evalCrepExp, evalCrepExps,
     updateCrepLocal, assignmentContext,
-    lookupInfo]
+    lookupInfo, distinctLists]
 
 example :
     evalCrepMemResult (fun _ => none) (fun _ => none)

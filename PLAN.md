@@ -150,6 +150,8 @@ definitions, pass ordering, examples, and proof obligations.
   prove constant multiplication preservation through `pan_to_crep`.
 - [x] Add a fuel-bounded Loop state/control-result evaluator for assignments,
   memory, returns, break/continue, conditionals, and loop execution.
+- [x] Prove the first Crepe-to-Loop semantic bridge for constant return
+  lowering through the generated temporary assignment.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Add a structurally recursive loop evaluator and loop preservation theorem.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem

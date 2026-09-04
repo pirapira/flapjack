@@ -755,10 +755,6 @@ example :
 def emptyLoopState : LoopState Nat :=
   { locals := fun _ => none, globals := fun _ => none, memory := fun _ => none }
 
-def loopResultValues : LoopResult α → List α
-  | .returned _ values => values
-  | _ => []
-
 example :
     evalLoopExp emptyLoopState
       (.op .add [.const 6, .crepOp .mul [.const 5, .const 6]]) = some 36 := by
@@ -774,5 +770,11 @@ example :
     (evalLoopProg 10 emptyLoopState
       (.loop [] (.break 0) [])).map loopResultValues = some [] := by
   native_decide
+
+example :
+    (evalLoopProg 12 emptyLoopState
+      (loopCompileProg loopContext [] (.return [(.const (α := Nat) 7)]))).map
+        loopResultValues = some [7] := by
+  exact evalLoopCompile_return_const loopContext [] emptyLoopState 7
 
 end Flapjack

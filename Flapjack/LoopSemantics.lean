@@ -1,4 +1,4 @@
-import Flapjack.Loop
+import Flapjack.CrepToLoop
 
 /-!
 Executable semantics for the first Loop fragment.
@@ -28,6 +28,10 @@ inductive LoopResult (α : Type u) where
   | broke (state : LoopState α) (label : Nat)
   | continued (state : LoopState α) (label : Nat)
   | raised (state : LoopState α) (exception : α)
+
+def loopResultValues : LoopResult α → List α
+  | .returned _ values => values
+  | _ => []
 def updateLoopLocal (locals : Nat → Option α) (name : Nat) (value : α) :
     Nat → Option α :=
   fun current => if current = name then some value else locals current
@@ -185,5 +189,15 @@ theorem evalLoopProg_assign_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
     evalLoopProg 1 state (.assign name (.const value)) =
       some (.normal { state with locals := updateLoopLocal state.locals name value }) := by
   simp [evalLoopProg, evalLoopExp]
+
+theorem evalLoopCompile_return_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    (context : LoopContext α) (live : List Nat) (state : LoopState α) (value : α) :
+    (evalLoopProg 12 state
+      (loopCompileProg context live (.return [(.const value)]))).map loopResultValues =
+      some [value] := by
+  simp [loopCompileProg, loopCompileExp, loopCompileExp.loopCompileExps,
+    loopCompileExps, loopNestedSeq, loopTempNames, loopAssignTemps,
+    evalLoopProg, evalLoopExp, loopReadLocals, updateLoopLocal,
+    loopResultValues]
 
 end Flapjack

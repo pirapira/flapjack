@@ -294,6 +294,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add an explicit source-level FFI handler boundary with evaluated
   arguments, caller-local state threading, and a concrete host-update
   regression.
+- [x] Compose the source FFI boundary with nested calls and declaration-call
+  result assignment in a fuel-bounded source regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

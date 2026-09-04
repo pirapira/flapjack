@@ -225,6 +225,27 @@ theorem pipelineFfi_source_semantics :
       (fun locals => locals "result") = some (some (BitVec.ofNat 64 42)) := by
   native_decide
 
+def pipelineFfiCallFunctions :
+    List (FunName × List VarName × Prog (RiscV.Word 64)) :=
+  [("ffiId", ["x"],
+      .seq
+        (.extCall "inc" (.var .local "x") (.const 0)
+          (.const 0) (.const 0))
+        (.return (.var .local "result")))]
+
+def pipelineFfiCallMain : Prog (RiscV.Word 64) :=
+  .decCall "answer" .one "ffiId"
+    [.const (BitVec.ofNat 64 41)]
+    (.return (.var .local "answer"))
+
+theorem pipelineFfi_call_source_semantics :
+    (evalPanProgWithCallsAndFfi pipelineFfiCallFunctions pipelineFfiHandler 50
+      (fun _ => none) pipelineFfiCallMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = some [BitVec.ofNat 64 42] := by
+  native_decide
+
 theorem pipelineCall_source_word_machine_agreement :
     (evalPanProgWithCalls pipelineCallSourceFunctions 20 (fun _ => none)
       pipelineCallSourceMain).map (fun result => result.2) =

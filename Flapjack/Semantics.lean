@@ -261,9 +261,12 @@ The source-level foreign-call boundary.  The host handler is deliberately an
 argument of the evaluator: Pancake's FFI effects are not determined by the
 pure compiler, so the semantic theorem must quantify over this environment.
 -/
+abbrev PanFfiHandler (α : Type u) :=
+  FunName → α → α → α → α →
+    (VarName → Option α) → Option (VarName → Option α)
+
 def evalPanExtCall [Add α] [Mul α]
-    (handler : FunName → α → α → α → α →
-      (VarName → Option α) → Option (VarName → Option α))
+    (handler : PanFfiHandler α)
     (locals : VarName → Option α) (function : FunName)
     (configuration configurationLength array arrayLength : Exp α) :
     Option (VarName → Option α) := do
@@ -274,8 +277,7 @@ def evalPanExtCall [Add α] [Mul α]
   handler function configuration configurationLength array arrayLength locals
 
 def evalPanFfiProg [Add α] [Mul α]
-    (handler : FunName → α → α → α → α →
-      (VarName → Option α) → Option (VarName → Option α))
+    (handler : PanFfiHandler α)
     (locals : VarName → Option α) : Prog α → Option (VarName → Option α)
   | .extCall function configuration configurationLength array arrayLength =>
       evalPanExtCall handler locals function configuration configurationLength array arrayLength
@@ -285,14 +287,82 @@ def evalPanFfiProg [Add α] [Mul α]
   | _ => none
 
 theorem evalPanExtCall_single [Add α] [Mul α]
-    (handler : FunName → α → α → α → α →
-      (VarName → Option α) → Option (VarName → Option α))
+    (handler : PanFfiHandler α)
     (locals : VarName → Option α) (function : FunName)
     (configuration configurationLength array arrayLength : Exp α) :
     evalPanFfiProg handler locals
       (.extCall function configuration configurationLength array arrayLength) =
       evalPanExtCall handler locals function configuration configurationLength array arrayLength := by
   simp [evalPanFfiProg]
+
+mutual
+  def evalPanCallWithCallsAndFfi [Add α] [Mul α]
+      (functions : List (FunName × List VarName × Prog α))
+      (handler : PanFfiHandler α) :
+      Nat → (VarName → Option α) →
+        Option (Option (VarKind × VarName) ×
+          Option (ExceptionId × VarName × Prog α)) → FunName → List (Exp α) →
+        Option (PanControlResult α)
+    | 0, _, _, _, _ => none
+    | fuel + 1, locals, info, function, arguments => do
+        let values ← evalPanExps locals arguments
+        let (parameters, body) ← lookupPanFunction function functions
+        let calleeLocals ← bindPanParameters parameters values
+        let result ← evalPanProgWithCallsAndFfi functions handler fuel calleeLocals body
+        match result with
+        | .normal _ => pure (.normal locals)
+        | .returned _ values =>
+            match info with
+            | none => pure (.returned locals values)
+            | some (destination, _) => do
+                let locals ← assignPanCallResult locals destination values
+                pure (.normal locals)
+        | .raised _ exception value =>
+            match info with
+            | some (_, some (caught, handlerVariable, handlerProgram)) =>
+                if caught == exception then
+                  evalPanProgWithCallsAndFfi functions handler fuel
+                    (updatePanLocal locals handlerVariable value) handlerProgram
+                else pure (.raised locals exception value)
+            | _ => pure (.raised locals exception value)
+    termination_by fuel _ _ _ _ => fuel
+
+  def evalPanProgWithCallsAndFfi [Add α] [Mul α]
+      (functions : List (FunName × List VarName × Prog α))
+      (handler : PanFfiHandler α) :
+      Nat → (VarName → Option α) → Prog α → Option (PanControlResult α)
+    | 0, _, _ => none
+    | fuel + 1, locals, .skip => some (.normal locals)
+    | fuel + 1, locals, .assign .local name value => do
+        let value ← evalPanExp locals value
+        pure (.normal (updatePanLocal locals name value))
+    | fuel + 1, locals, .seq first second => do
+        let result ← evalPanProgWithCallsAndFfi functions handler fuel locals first
+        match result with
+        | .normal locals => evalPanProgWithCallsAndFfi functions handler fuel locals second
+        | result => pure result
+    | fuel + 1, locals, .call info function arguments =>
+        evalPanCallWithCallsAndFfi functions handler fuel locals info function arguments
+    | fuel + 1, locals, .decCall name _ function arguments body => do
+        let result ← evalPanCallWithCallsAndFfi functions handler fuel locals
+          (some (some (.local, name), none)) function arguments
+        match result with
+        | .normal locals => evalPanProgWithCallsAndFfi functions handler fuel locals body
+        | result => pure result
+    | fuel + 1, locals,
+        .extCall function configuration configurationLength array arrayLength => do
+        let locals ← evalPanExtCall handler locals function configuration
+          configurationLength array arrayLength
+        pure (.normal locals)
+    | fuel + 1, locals, .raise exception value => do
+        let value ← evalPanExp locals value
+        pure (.raised locals exception value)
+    | fuel + 1, locals, .return value => do
+        let value ← evalPanExp locals value
+        pure (.returned locals [value])
+    | _, _, _ => none
+    termination_by fuel _ _ => fuel
+end
 
 def evalCrepStateProg [Add α] [Mul α] (locals : Nat → Option α) :
     CrepProg α → Option ((Nat → Option α) × List α)

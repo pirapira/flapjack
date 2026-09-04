@@ -537,6 +537,23 @@ example [NeZero width] :
     RiscV.registerOfNat]
 
 example :
+    (RiscV.executeCode 10 (0 : RiscV.Word 32)
+      [.branchNe 1 2 (BitVec.ofNat 32 12),
+        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2]
+      (RiscV.zeroState 32)).map (fun state => RiscV.readRegister state 3) =
+      some 1 := by
+  native_decide
+
+example :
+    (RiscV.executeCode 10 (0 : RiscV.Word 32)
+      [.branchEq 1 2 (BitVec.ofNat 32 12),
+        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2]
+      (RiscV.zeroState 32)).map
+        (fun state => RiscV.readRegister state 3) =
+      some 2 := by
+  native_decide
+
+example :
     panSimpProg (.seq (.skip : Prog Nat) (.return (.const 7))) =
       .return (.const 7) := by
   simp [panSimpProg, seqAssoc, retToTail, smartSeq]

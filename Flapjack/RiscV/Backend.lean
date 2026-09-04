@@ -133,6 +133,24 @@ def executeInstructions [NeZero width] (state : State width) :
   | instruction :: instructions =>
       executeInstructions (execute state instruction) instructions
 
+/-!
+`executeInstructions` is useful for straight-line code, but it deliberately
+does not interpret branch targets.  This runner treats `start` as the address
+of the first instruction and follows the architectural program counter.
+Execution stops when the PC reaches the first byte after the code.
+-/
+def executeCode [NeZero width] :
+    Nat → Word width → List (Instruction width) → State width → Option (State width)
+  | 0, _, _, _ => none
+  | fuel + 1, start, code, state =>
+      let byteOffset := (state.pc - start).toNat
+      if byteOffset % 4 ≠ 0 then none
+      else
+        let index := byteOffset / 4
+        match code[index]? with
+        | some instruction => executeCode fuel start code (execute state instruction)
+        | none => if index = code.length then some state else none
+
 def evalWordExp [NeZero width] (state : State width) :
     WordExp (Word width) → Option (Word width)
   | .const value => some value
@@ -210,6 +228,15 @@ def evalWordFunction [NeZero width] (state : State width) :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (execute state (.store32 source address), [])
+  | .ite operator condition (.reg right) thenBranch elseBranch => do
+      let condition ← registerOfNat condition
+      let right ← registerOfNat right
+      let choose ← match operator with
+        | .equal => pure (readRegister state condition == readRegister state right)
+        | .notEqual => pure (readRegister state condition != readRegister state right)
+        | _ => none
+      if choose then evalWordFunction state thenBranch
+      else evalWordFunction state elseBranch
   | .seq first second => do
       let (state, firstReturns) ← evalWordFunction state first
       let (state, secondReturns) ← evalWordFunction state second
@@ -253,6 +280,15 @@ def evalWordProg [NeZero width] (state : State width) :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (execute state (.store32 source address))
+  | .ite operator condition (.reg right) thenBranch elseBranch => do
+      let condition ← registerOfNat condition
+      let right ← registerOfNat right
+      let choose ← match operator with
+        | .equal => pure (readRegister state condition == readRegister state right)
+        | .notEqual => pure (readRegister state condition != readRegister state right)
+        | _ => none
+      if choose then evalWordProg state thenBranch
+      else evalWordProg state elseBranch
   | .seq first second => do
       let state ← evalWordProg state first
       evalWordProg state second

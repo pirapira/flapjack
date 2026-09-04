@@ -156,8 +156,13 @@ definitions, pass ordering, examples, and proof obligations.
   preserve the returned product.
 - [x] Prove RISC-V instruction-selection and evaluator agreement for the
   emitted constant-return artifact.
+- [x] Lower register-based equality and inequality conditionals to RISC-V,
+  including generated branch offsets and a PC-aware code executor.
 - [ ] Port complete program checking, context transitions, and diagnostics.
-- [ ] Add a structurally recursive loop evaluator and loop preservation theorem.
+- [x] Add a fuel-bounded, structurally recursive loop evaluator for the
+  currently modeled Loop fragment.
+- [ ] Prove the complete Loop state-preservation theorem, including the
+  remaining operations and control-flow invariants.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

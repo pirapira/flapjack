@@ -3,6 +3,7 @@ import Pancake.Tests
 import Pancake.Static
 import Pancake.Crepe
 import Pancake.PanToCrep
+import Pancake.Compile
 
 /-!
 # Pancake in Lean

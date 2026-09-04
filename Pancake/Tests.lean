@@ -1,6 +1,7 @@
 import Pancake.Language
 import Pancake.Static
 import Pancake.PanToCrep
+import Pancake.Compile
 
 namespace Pancake
 
@@ -77,5 +78,18 @@ example :
     cexpHeads ([ [.var 0], [.var 1] ] : List (List (CrepExp Nat))) =
       some [.var 0, .var 1] := by
   rfl
+
+example : compileProg crepContext .skip = (.skip : CrepProg Nat) := by
+  simp [compileProg]
+
+example :
+    compileProg crepContext (.return (.const (α := Nat) 7)) =
+      .return [.const 7] := by
+  simp [compileProg, compileExp]
+
+example :
+    compileProg crepContext (.seq .skip (.tick : Prog Nat)) =
+      .seq .skip .tick := by
+  simp [compileProg]
 
 end Pancake

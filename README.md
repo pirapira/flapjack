@@ -7,6 +7,7 @@ The Lean library currently contains the core Pancake syntax in
 data/context layer in [`Pancake/Static.lean`](Pancake/Static.lean), as well as
 the Crepe IR and expression lowerer in [`Pancake/Crepe.lean`](Pancake/Crepe.lean)
 and [`Pancake/PanToCrep.lean`](Pancake/PanToCrep.lean).
+Core structured statement lowering is in [`Pancake/Compile.lean`](Pancake/Compile.lean).
 
 Build it with:
 

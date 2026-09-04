@@ -269,6 +269,8 @@ definitions, pass ordering, examples, and proof obligations.
   lowering through the call-aware RISC-V function selector.
 - [x] Thread normalized register and offset-addressed memory lowering through
   the call-aware RISC-V function selector.
+- [x] Lower Word expression-level full-word loads through the reserved
+  address scratch register, with evaluator agreement and pipeline coverage.
 - [x] Port the HOL RISC-V `AddCarry` lowering through Word instruction
   selection and execution, including its reserved `x31` scratch contract.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

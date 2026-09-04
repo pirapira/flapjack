@@ -873,6 +873,18 @@ example [NeZero width] (state : RiscV.State width)
     (RiscV.execute state (.jal 1 offset)).pc = state.pc + offset := by
   exact RiscV.execute_jal_pc state 1 offset
 
+example [NeZero width] (state : RiscV.State width) (source : Fin 32)
+    (offset : RiscV.Word width) :
+    (RiscV.execute state (.jalr 1 source offset)).pc =
+      RiscV.jalrTarget (RiscV.readRegister state source) offset := by
+  exact RiscV.execute_jalr_pc state 1 source offset
+
+example :
+    (RiscV.execute
+      (RiscV.writeRegister (RiscV.zeroState 64) 2 (100 : RiscV.Word 64))
+      (.jalr 1 2 3)).pc = 102 := by
+  native_decide
+
 example :
     let result := compileFlapjackRiscV (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)

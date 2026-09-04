@@ -117,6 +117,7 @@ inductive Instruction (width : Nat) where
   | branchLtU (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | branchGeU (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | jal (destination : Fin 32) (offset : Word width)
+  | jalr (destination source : Fin 32) (offset : Word width)
   | loadByte (destination address : Fin 32)
   | storeByte (source address : Fin 32)
   | load32 (destination address : Fin 32)
@@ -291,6 +292,10 @@ def execute (state : State width) : Instruction width → State width
           nextPc state else state.pc + offset) }
   | .jal destination offset =>
       writeRegister { state with pc := state.pc + offset } destination (nextPc state)
+  | .jalr destination source offset =>
+      writeRegister { state with
+        pc := (readRegister state source + offset) &&& BitVec.ofNat width (2 ^ width - 2) }
+        destination (nextPc state)
   | .loadByte destination address =>
       let address := readRegister state address
       let value := BitVec.ofNat width (readByte state address).toNat
@@ -337,7 +342,7 @@ theorem accessAligned_aligned (access : AccessType) (address : Word width)
 
 def Instruction.isBranch : Instruction width → Bool
   | .branchEq _ _ _ | .branchNe _ _ _ | .branchLt _ _ _ | .branchGe _ _ _
-  | .branchLtU _ _ _ | .branchGeU _ _ _ | .jal _ _ => true
+  | .branchLtU _ _ _ | .branchGeU _ _ _ | .jal _ _ | .jalr _ _ _ => true
   | _ => false
 
 theorem execute_pc_advance (state : State width) (instruction : Instruction width)
@@ -394,6 +399,23 @@ theorem execute_jal_link (state : State width) (destination : Fin 32)
     (offset : Word width) :
     readRegister (execute state (.jal destination offset)) destination =
         if destination = 0 then readRegister state destination else nextPc state := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, readRegister, nextPc, h, eq_comm]
+
+def jalrTarget (base offset : Word width) : Word width :=
+  (base + offset) &&& BitVec.ofNat width (2 ^ width - 2)
+
+theorem execute_jalr_pc (state : State width) (destination source : Fin 32)
+    (offset : Word width) :
+    (execute state (.jalr destination source offset)).pc =
+      jalrTarget (readRegister state source) offset := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, jalrTarget, h]
+
+theorem execute_jalr_link (state : State width) (destination source : Fin 32)
+    (offset : Word width) :
+    readRegister (execute state (.jalr destination source offset)) destination =
+      if destination = 0 then readRegister state destination else nextPc state := by
   by_cases h : destination = 0 <;>
     simp [execute, writeRegister, readRegister, nextPc, h, eq_comm]
 

@@ -184,6 +184,8 @@ definitions, pass ordering, examples, and proof obligations.
   store/load function through the RISC-V byte-memory model.
 - [x] Port the direct RISC-V `JAL` PC-transfer/link-register transition as
   the machine-model foundation for later function calls.
+- [x] Port the direct RISC-V `JALR` register-target transition, including
+  link-register behavior and the architectural low-bit clear.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

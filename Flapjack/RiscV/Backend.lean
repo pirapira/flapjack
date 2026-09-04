@@ -294,9 +294,11 @@ def wordFunctionToRiscV [NeZero width] :
           [.branchEq 0 0 endOffset] ++ elseCode, thenReturns)
   | .seq first second => do
       let (firstCode, firstReturns) ← wordFunctionToRiscV first
-      let (secondCode, secondReturns) ← wordFunctionToRiscV second
-      pure (firstCode ++ secondCode,
-        if secondReturns.isEmpty then firstReturns else secondReturns)
+      if !firstReturns.isEmpty then
+        pure (firstCode, firstReturns)
+      else
+        let (secondCode, secondReturns) ← wordFunctionToRiscV second
+        pure (firstCode ++ secondCode, secondReturns)
   | .return _ values => do
       let values ← values.mapM registerOfNat
       pure ([], values)
@@ -359,8 +361,11 @@ def evalWordFunction [NeZero width] (state : State width) :
       else evalWordFunction state elseBranch
   | .seq first second => do
       let (state, firstReturns) ← evalWordFunction state first
-      let (state, secondReturns) ← evalWordFunction state second
-      pure (state, if secondReturns.isEmpty then firstReturns else secondReturns)
+      if !firstReturns.isEmpty then
+        pure (state, firstReturns)
+      else
+        let (state, secondReturns) ← evalWordFunction state second
+        pure (state, secondReturns)
   | .return _ values => do
       let values ← values.mapM (fun name => do
         let register ← registerOfNat name

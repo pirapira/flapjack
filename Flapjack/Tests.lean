@@ -639,6 +639,21 @@ example [NeZero width] :
 
 example [NeZero width] :
     RiscV.wordFunctionToRiscV
+        ((.seq (.return 0 [1]) (.assign 2 (.const 9))) :
+          WordProg (RiscV.Word width)) =
+      some ([], [1]) := by
+  simp [RiscV.wordFunctionToRiscV, RiscV.wordExpToInstruction,
+    RiscV.registerOfNat]
+
+example [NeZero width] (state : RiscV.State width) :
+    RiscV.evalWordFunction state
+        ((.seq (.return 0 [1]) (.assign 2 (.const 9))) :
+          WordProg (RiscV.Word width)) =
+      some (state, [RiscV.readRegister state 1]) := by
+  simp [RiscV.evalWordFunction, RiscV.registerOfNat]
+
+example [NeZero width] :
+    RiscV.wordFunctionToRiscV
         ((.ite .equal 1 (.reg 2)
           (.seq (.assign 3 (.const 1)) (.return 0 [3]))
           (.seq (.assign 3 (.const 2)) (.return 0 [3]))) :

@@ -172,6 +172,8 @@ definitions, pass ordering, examples, and proof obligations.
   generated conditional function artifacts can cross the RISC-V boundary.
 - [x] Lower function-level conditionals with recursively compiled return
   branches, requiring both branches to expose the same return-register layout.
+- [x] Preserve terminal function returns when compiling or evaluating a
+  sequence with unreachable trailing code.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

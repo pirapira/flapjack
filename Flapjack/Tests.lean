@@ -886,6 +886,13 @@ example :
   native_decide
 
 example :
+    RiscV.executeFunctionAt 20 (0 : RiscV.Word 64) 16 4 []
+      [.addi 0 0 0, .addi 0 0 0, .addi 0 0 0, .addi 0 0 0,
+        .addi 10 0 42, .jalr 0 1 0] [10] []
+      (RiscV.writeRegister (RiscV.zeroState 64) 1 4) = some [42] := by
+  exact RiscV.executeFunctionAt_jalr_return
+
+example :
     let result := compileFlapjackRiscV (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
       [.function

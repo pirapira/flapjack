@@ -186,6 +186,8 @@ definitions, pass ordering, examples, and proof obligations.
   the machine-model foundation for later function calls.
 - [x] Port the direct RISC-V `JALR` register-target transition, including
   link-register behavior and the architectural low-bit clear.
+- [x] Add a return-address-aware RISC-V function runner and execute a callee
+  returning through `JALR x0, ra, 0`.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

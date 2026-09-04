@@ -164,6 +164,26 @@ def executeCode [NeZero width] :
         | some instruction => executeCode fuel start code (execute state instruction)
         | none => if index = code.length then some state else none
 
+/-!
+Run code until it reaches a caller-supplied return address. Unlike
+`executeCode`, this permits a function body to return with `JALR` before the
+physical end of a linked code image.
+-/
+def executeCodeUntil [NeZero width] :
+    Nat → Word width → Word width → List (Instruction width) → State width → Option (State width)
+  | 0, _, _, _, _ => none
+  | fuel + 1, start, returnAddress, code, state =>
+      if state.pc = returnAddress then some state
+      else
+        let byteOffset := (state.pc - start).toNat
+        if byteOffset % 4 ≠ 0 then none
+        else
+          let index := byteOffset / 4
+          match code[index]? with
+          | some instruction =>
+              executeCodeUntil fuel start returnAddress code (execute state instruction)
+          | none => none
+
 def executeFunction [NeZero width]
     (fuel : Nat) (start : Word width)
     (parameters : List (Fin 32)) (code : List (Instruction width))
@@ -176,6 +196,20 @@ def executeFunction [NeZero width]
         (fun state (register, value) => writeRegister state register value)
         { state with pc := start }
     (executeCode fuel start code initialized).map
+      (fun state => returns.map (readRegister state))
+
+def executeFunctionAt [NeZero width]
+    (fuel : Nat) (start entry returnAddress : Word width)
+    (parameters : List (Fin 32)) (code : List (Instruction width))
+    (returns : List (Fin 32)) (arguments : List (Word width))
+    (state : State width) : Option (List (Word width)) :=
+  if parameters.length != arguments.length then none
+  else
+    let initialized :=
+      (parameters.zip arguments).foldl
+        (fun state (register, value) => writeRegister state register value)
+        { state with pc := entry }
+    (executeCodeUntil fuel start returnAddress code initialized).map
       (fun state => returns.map (readRegister state))
 
 
@@ -195,6 +229,13 @@ theorem executeFunction_storeLoad :
     executeFunction 20 (0 : Word 64) []
       [.addi 1 0 100, .addi 2 0 42, .storeWord 2 1, .loadWord 3 1]
       [3] [] (zeroState 64) = some [42] := by
+  native_decide
+
+theorem executeFunctionAt_jalr_return :
+    executeFunctionAt 20 (0 : Word 64) 16 4 []
+      [.addi 0 0 0, .addi 0 0 0, .addi 0 0 0, .addi 0 0 0,
+        .addi 10 0 42, .jalr 0 1 0] [10] []
+      (writeRegister (zeroState 64) 1 4) = some [42] := by
   native_decide
 
 theorem executeCode_conditional_notEqual :

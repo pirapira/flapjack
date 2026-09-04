@@ -81,6 +81,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add executable deterministic semantics and preservation theorems for
   the supported constant/return/sequence fragment, including scalar local
   assignment state updates.
+- [x] Add local-plus-memory semantics and a store/load preservation theorem
+  for the scalar compiler fragment.
 - [x] Extend the initial lowering with handler-free calls, local return
   destinations, declaration calls, and mapped exceptions.
 - [x] Lower calls with known exception handlers to Crepe continuation metadata

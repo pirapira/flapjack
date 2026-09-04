@@ -11,7 +11,7 @@ the Crepe IR and expression lowerer in [`Pancake/Crepe.lean`](Pancake/Crepe.lean
 and [`Pancake/PanToCrep.lean`](Pancake/PanToCrep.lean).
 Core structured statement lowering and top-level function assembly are in
 [`Pancake/Compile.lean`](Pancake/Compile.lean).
-The first executable semantics and preservation lemmas are in
+The first executable local/memory semantics and preservation lemmas are in
 [`Pancake/Semantics.lean`](Pancake/Semantics.lean).
 The initial RISC-V target vocabulary, register/memory primitives, and
 `ADD`/`ADDI` transition slice are in

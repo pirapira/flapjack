@@ -299,4 +299,14 @@ example :
     updateCrepLocal, assignmentContext,
     lookupInfo]
 
+example :
+    evalCrepMemResult (fun _ => none) (fun _ => none)
+      (compileProg assignmentContext
+        (.seq (.store (.const 10) (.const 7))
+          (.return (.load .one (.const 10))))) =
+      some [7] := by
+  simp [compileProg, compileExp, freshNames, nestedDecs, stores, crepNestedSeq,
+    loadShape, evalCrepMemResult, evalCrepMemProg, evalCrepMemProg.evalCrepMemExps,
+    evalCrepMemExp, updateMemory, updateCrepLocal, assignmentContext]
+
 end Pancake

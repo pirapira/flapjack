@@ -270,6 +270,8 @@ definitions, pass ordering, examples, and proof obligations.
   including evaluator and call-aware selector coverage.
 - [x] Reuse the normalized address materialization for ordinary `WordProg.store`
   operations, covering the store form emitted by global rewriting.
+- [x] Lower `WordProg.locValue` through the plain and call-aware RISC-V
+  selectors, with executable evaluator agreement.
 - [x] Port unsigned RISC-V halfword (`LHU`/`SH`) memory operations through the
   model, Word IR, selector, evaluator, and executable round-trip regression.
 - [ ] Prove the complete Loop state-preservation theorem, including the

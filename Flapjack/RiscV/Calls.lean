@@ -89,6 +89,9 @@ def wordFunctionToRiscVWithCalls [NeZero width]
   | .shareInst operator name address => do
       let instructions ← wordShareInstToInstructions operator name address
       pure (instructions, [])
+  | .locValue destination source => do
+      let instructions ← wordExpToInstructions destination (.var source)
+      pure (instructions, [])
   | .tick => pure ([.addi 0 0 0], [])
   | .call (some ([], _)) (some label) arguments none => do
       let (entry, parameters, returns) ← lookupWordCallTarget label context.targets

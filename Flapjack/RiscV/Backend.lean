@@ -251,6 +251,8 @@ def wordProgToRiscV [NeZero width] :
       wordStoreToInstructions address value
   | .shareInst operator name address =>
       wordShareInstToInstructions operator name address
+  | .locValue destination source =>
+      wordExpToInstructions destination (.var source)
   | .inst (.arith operation) => wordArithToInstructions operation
   | .inst instruction =>
       (wordInstToInstruction instruction).map (fun instruction => [instruction])
@@ -495,6 +497,9 @@ def wordFunctionToRiscV [NeZero width] :
   | .shareInst operator name address => do
       let instructions ← wordShareInstToInstructions operator name address
       pure (instructions, [])
+  | .locValue destination source => do
+      let instructions ← wordExpToInstructions destination (.var source)
+      pure (instructions, [])
   | .tick => pure ([.addi 0 0 0], [])
   | .ite operator condition rightValue thenBranch elseBranch => do
       let (branchLeft, right, prelude) ←
@@ -598,6 +603,9 @@ def evalWordFunction [NeZero width] (state : State width) :
   | .shareInst operator name address => do
       let state ← evalWordShareInst state operator name address
       pure (state, [])
+  | .locValue destination source => do
+      let instructions ← wordExpToInstructions destination (.var source)
+      pure (executeInstructions state instructions, [])
   | .ite operator condition rightValue thenBranch elseBranch => do
       let choose ← evalWordCondition state operator condition rightValue
       if choose then evalWordFunction state thenBranch
@@ -664,6 +672,9 @@ def evalWordProg [NeZero width] (state : State width) :
       pure (execute state (.loadWord destination address))
   | .shareInst operator name address =>
       evalWordShareInst state operator name address
+  | .locValue destination source => do
+      let instructions ← wordExpToInstructions destination (.var source)
+      pure (executeInstructions state instructions)
   | .ite operator condition rightValue thenBranch elseBranch => do
       let choose ← evalWordCondition state operator condition rightValue
       if choose then evalWordProg state thenBranch
@@ -682,6 +693,27 @@ theorem compileWordAdd_sound [NeZero width] (state : State width) :
   simp [evalWordProg, wordExpToInstructions, wordExpToInstruction, evalWordExp,
     executeInstructions, registerOfNat,
     execute, writeRegister, nextPc]
+
+theorem wordFunctionToRiscV_locValue [NeZero width] :
+    wordFunctionToRiscV
+        ((.locValue 4 2) : WordProg (Word width)) =
+      some ([.addi 4 2 0], []) := by
+  simp [wordFunctionToRiscV, wordExpToInstructions,
+    wordExpToInstruction, registerOfNat]
+
+theorem evalWordFunction_locValue [NeZero width] (state : State width) :
+    evalWordFunction state
+        ((.locValue 4 2) : WordProg (Word width)) =
+      some (execute state (.addi 4 2 0), []) := by
+  simp [evalWordFunction, wordExpToInstructions,
+    wordExpToInstruction, executeInstructions, registerOfNat]
+
+theorem compileWordLocValue_sound [NeZero width] (state : State width) :
+    evalWordProg state
+        ((.locValue 4 2) : WordProg (Word width)) =
+      some (executeInstructions state [.addi 4 2 0]) := by
+  simp [evalWordProg, wordExpToInstructions,
+    wordExpToInstruction, executeInstructions, registerOfNat]
 
 theorem wordExpToInstruction_binOp [NeZero width] (operator : BinOp) :
     wordExpToInstruction (width := width) 1 (.op operator [.var 2, .var 3]) =

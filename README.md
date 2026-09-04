@@ -13,6 +13,11 @@ Core structured statement lowering and top-level function assembly are in
 [`Pancake/Compile.lean`](Pancake/Compile.lean).
 The first executable local/memory semantics and preservation lemmas are in
 [`Pancake/Semantics.lean`](Pancake/Semantics.lean).
+The Loop intermediate language and the initial Crepe-to-Loop structural
+lowering are in [`Pancake/Loop.lean`](Pancake/Loop.lean) and
+[`Pancake/CrepToLoop.lean`](Pancake/CrepToLoop.lean). The latter keeps the
+Loop vocabulary aligned with CakeML while making conversions that require
+temporary allocation or control-flow lowering explicit as `Fail`.
 The initial RISC-V target vocabulary, register/memory primitives, and
 `ADD`/`ADDI` transition slice are in
 [`Pancake/RiscV/Model.lean`](Pancake/RiscV/Model.lean), with the HOL notice in

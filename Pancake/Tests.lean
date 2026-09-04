@@ -4,6 +4,8 @@ import Pancake.PanToCrep
 import Pancake.Compile
 import Pancake.Semantics
 import Pancake.RiscV.Model
+import Pancake.Loop
+import Pancake.CrepToLoop
 
 namespace Pancake
 
@@ -346,8 +348,23 @@ example :
         (.seq (.store (.const 10) (.const 7))
           (.return (.load .one (.const 10))))) =
       some [7] := by
-  simp [compileProg, compileExp, freshNames, nestedDecs, stores, crepNestedSeq,
+    simp [compileProg, compileExp, freshNames, nestedDecs, stores, crepNestedSeq,
     loadShape, evalCrepMemResult, evalCrepMemProg, evalCrepMemProg.evalCrepMemExps,
     evalCrepMemExp, updateMemory, updateCrepLocal, assignmentContext]
+
+example :
+    lowerLoopExp (CrepExp.cmp .equal (.var 0) (.const (α := Nat) 1)) =
+      .cmp .equal (.var 0) (.const 1) := by
+  simp [lowerLoopExp]
+
+example :
+    lowerLoopProg (CrepProg.seq .skip (.tick : CrepProg Nat)) =
+      .seq .skip .tick := by
+  simp [lowerLoopProg]
+
+example :
+    lowerLoopProg (CrepProg.store (.const (α := Nat) 0) (.const 7)) =
+      (.fail : LoopProg Nat) := by
+  simp [lowerLoopProg]
 
 end Pancake

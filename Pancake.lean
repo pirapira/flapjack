@@ -6,6 +6,8 @@ import Pancake.PanToCrep
 import Pancake.Compile
 import Pancake.Semantics
 import Pancake.RiscV.Model
+import Pancake.Loop
+import Pancake.CrepToLoop
 
 /-!
 # Pancake in Lean

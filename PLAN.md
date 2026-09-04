@@ -89,6 +89,9 @@ definitions, pass ordering, examples, and proof obligations.
   and compile the handler body.
 - [x] Lower foreign calls and shared-memory operations through explicit Crepe
   temporaries and memory-operation mappings.
+- [x] Port the Loop intermediate-language vocabulary and begin Crepe-to-Loop
+  lowering, with structural expression preservation and explicit unsupported
+  cases.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

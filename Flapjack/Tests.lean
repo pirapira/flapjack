@@ -770,6 +770,46 @@ example :
   native_decide
 
 example :
+    evalLoopExp emptyLoopState
+      (.op .sub [.const 9, .const 4]) = some 5 := by
+  native_decide
+
+example :
+    evalLoopExp emptyLoopState
+      (.op .and [.const 13, .const 6]) = some 4 := by
+  native_decide
+
+example :
+    evalLoopExp emptyLoopState
+      (.op .or [.const 8, .const 3]) = some 11 := by
+  native_decide
+
+example :
+    evalLoopExp emptyLoopState
+      (.op .xor [.const 13, .const 6]) = some 11 := by
+  native_decide
+
+example :
+    evalLoopExp emptyLoopState
+      (.shift .lsl (.const 3) (.const 2)) = some 12 := by
+  native_decide
+
+example :
+    evalLoopExp emptyLoopState
+      (.shift .lsr (.const 13) (.const 2)) = some 3 := by
+  native_decide
+
+example :
+    evalLoopExp emptyLoopState
+      (.cmp .lower (.const 3) (.const 5)) = some 1 := by
+  native_decide
+
+example :
+    evalLoopExp emptyLoopState
+      (.cmp .notLower (.const 5) (.const 3)) = some 1 := by
+  native_decide
+
+example :
     (evalLoopProg 10 emptyLoopState
       (.seq (.assign 0 (.const 42)) (.return [0]))).map loopResultValues =
       some [42] := by

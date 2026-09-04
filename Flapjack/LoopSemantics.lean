@@ -51,7 +51,25 @@ def loopReadLocals (locals : Nat → Option α) : List Nat → Option (List α)
       let values ← loopReadLocals locals names
       pure (value :: values)
 
+def evalLoopBinOp [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    (operator : BinOp) (left right : α) : α :=
+  match operator with
+  | .add => left + right
+  | .sub => left - right
+  | .and => AndOp.and left right
+  | .or => OrOp.or left right
+  | .xor => HXor.hXor left right
+
+def evalLoopShift [ShiftLeft α] [ShiftRight α]
+    (operator : Shift) (left right : α) : Option α :=
+  match operator with
+  | .lsl => some (ShiftLeft.shiftLeft left right)
+  | .lsr => some (ShiftRight.shiftRight left right)
+  | .asr | .ror => none
+
 def evalLoopExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
     (state : LoopState α) (expression : LoopExp α) : Option α :=
   match expression with
   | .const value => some value
@@ -60,10 +78,10 @@ def evalLoopExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .load address => do
       let address ← evalLoopExp state address
       state.memory address
-  | .op .add [left, right] => do
+  | .op operator [left, right] => do
       let left ← evalLoopExp state left
       let right ← evalLoopExp state right
-      pure (left + right)
+      pure (evalLoopBinOp operator left right)
   | .crepOp .mul [left, right] => do
       let left ← evalLoopExp state left
       let right ← evalLoopExp state right
@@ -74,7 +92,13 @@ def evalLoopExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       match operator with
       | .equal => pure (if left == right then 1 else 0)
       | .notEqual => pure (if left == right then 0 else 1)
+      | .lower => pure (if left < right then 1 else 0)
+      | .notLower => pure (if left < right then 0 else 1)
       | _ => none
+  | .shift operator left right => do
+      let left ← evalLoopExp state left
+      let right ← evalLoopExp state right
+      evalLoopShift operator left right
   | _ => none
 termination_by structural expression
 
@@ -86,6 +110,8 @@ def evalLoopCondition [BEq α] (operator : Cmp) (left right : α) : Option Bool 
 
 mutual
   def evalLoopProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
       : Nat → LoopState α → LoopProg α → Option (LoopResult α)
     | 0, _, _ => none
     | fuel + 1, state, .skip => some (.normal state)
@@ -168,6 +194,8 @@ mutual
     | _, _, .ffi _ _ _ _ _ _ => none
 
   def evalLoopRepeat [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
       : Nat → LoopState α → LoopProg α → Option (LoopResult α)
     | 0, _, _ => none
     | fuel + 1, state, body => do
@@ -180,17 +208,23 @@ mutual
 end
 
 theorem evalLoopProg_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
     (state : LoopState α) :
     evalLoopProg 1 state (.skip : LoopProg α) = some (.normal state) := by
   simp [evalLoopProg]
 
 theorem evalLoopProg_assign_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
     (state : LoopState α) (name : Nat) (value : α) :
     evalLoopProg 1 state (.assign name (.const value)) =
       some (.normal { state with locals := updateLoopLocal state.locals name value }) := by
   simp [evalLoopProg, evalLoopExp]
 
 theorem evalLoopCompile_return_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
     (context : LoopContext α) (live : List Nat) (state : LoopState α) (value : α) :
     (evalLoopProg 12 state
       (loopCompileProg context live (.return [(.const value)]))).map loopResultValues =

@@ -139,6 +139,10 @@ def evalPanMemProg [BEq α] [Add α] (locals : VarName → Option α)
       let address ← evalPanMemExp locals memory address
       let value ← evalPanMemExp locals memory value
       pure (locals, updateMemory memory address value, [])
+  | .store32 address value | .storeByte address value => do
+      let address ← evalPanMemExp locals memory address
+      let value ← evalPanMemExp locals memory value
+      pure (locals, updateMemory memory address value, [])
   | .return value => do
       let value ← evalPanMemExp locals memory value
       pure (locals, memory, [value])
@@ -159,6 +163,10 @@ def evalCrepMemProg [BEq α] [Add α] (locals : Nat → Option α)
       let value ← evalCrepMemExp locals memory value
       pure (updateCrepLocal locals name value, memory, [])
   | .store address value => do
+      let address ← evalCrepMemExp locals memory address
+      let value ← evalCrepMemExp locals memory value
+      pure (locals, updateMemory memory address value, [])
+  | .store32 address value | .storeByte address value => do
       let address ← evalCrepMemExp locals memory address
       let value ← evalCrepMemExp locals memory value
       pure (locals, updateMemory memory address value, [])
@@ -249,5 +257,37 @@ theorem compile_store_load_const_preserves_semantics
     evalCrepMemResult, evalPanMemResult, evalCrepMemProg, evalPanMemProg,
     evalCrepMemProg.evalCrepMemExps,
     evalCrepMemExp, evalPanMemExp, updateMemory, updateCrepLocal, loadShape]
+
+theorem compile_store32_load32_const_preserves_semantics
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : α)
+    (locals : VarName → Option α) (compiledLocals : Nat → Option α)
+    (memory : α → Option α) :
+    evalCrepMemResult compiledLocals memory
+        (compileProg context
+          (.seq (.store32 (.const address) (.const value))
+            (.return (.load32 (.const address))))) =
+      evalPanMemResult locals memory
+        (.seq (.store32 (.const address) (.const value))
+          (.return (.load32 (.const address)))) := by
+  simp [compileProg, compileExp, evalCrepMemResult, evalPanMemResult,
+    evalCrepMemProg, evalPanMemProg, evalCrepMemProg.evalCrepMemExps,
+    evalCrepMemExp, evalPanMemExp, updateMemory, updateCrepLocal]
+
+theorem compile_storeByte_loadByte_const_preserves_semantics
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (address value : α)
+    (locals : VarName → Option α) (compiledLocals : Nat → Option α)
+    (memory : α → Option α) :
+    evalCrepMemResult compiledLocals memory
+        (compileProg context
+          (.seq (.storeByte (.const address) (.const value))
+            (.return (.loadByte (.const address))))) =
+      evalPanMemResult locals memory
+        (.seq (.storeByte (.const address) (.const value))
+          (.return (.loadByte (.const address)))) := by
+  simp [compileProg, compileExp, evalCrepMemResult, evalPanMemResult,
+    evalCrepMemProg, evalPanMemProg, evalCrepMemProg.evalCrepMemExps,
+    evalCrepMemExp, evalPanMemExp, updateMemory, updateCrepLocal]
 
 end Flapjack

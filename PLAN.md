@@ -125,6 +125,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add declaration-level static checking: structure discovery, global and
   exception environments, function headers, duplicate checks, and missing or
   wrongly shaped returns.
+- [x] Extend Pancake/Crepe executable semantics to store32/storeByte and prove
+  preservation for constant store-then-load programs.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

@@ -83,6 +83,7 @@ def checkerContext : Context :=
   { locals := [("x", { shapedBased := .word .trusted }),
       ("pair", { shapedBased := .struct [.word .trusted, .word .trusted] })],
     globals := [("g", { shape := .one })], functions := [], exceptions := [],
+    expectedReturn := none,
     structs := pairContext, scope := .topLevel, inLoop := false, reachable := .isReach,
     last := .otherLast, location := "" }
 
@@ -601,5 +602,43 @@ example :
     compileProg, loopCompileProg, loopCompileExp, loopCompileExp.loopCompileExps,
     loopCompileExps, loopNestedSeq, loopTempNames, wordFindVar, lookupInfo,
     lookupNatInfo]
+
+example :
+    staticResultOk (staticCheck (α := Nat)
+      [.function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .return (.const 7), returnShape := .one }]) = true := by
+  native_decide
+
+example :
+    staticResultOk (staticCheck (α := Nat)
+      [.function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .return (.rStruct []), returnShape := .one }]) = false := by
+  native_decide
+
+example :
+    staticResultOk (staticCheck (α := Nat)
+      [.function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .skip, returnShape := .one }]) = false := by
+  native_decide
+
+example :
+    staticResultOk (staticCheck (α := Nat)
+      [.function
+        { name := "f", inline := false, exported := false, params := [],
+          body := .return (.const 0), returnShape := .one },
+       .function
+        { name := "f", inline := false, exported := false, params := [],
+          body := .return (.const 1), returnShape := .one }]) = false := by
+  native_decide
+
+example :
+    staticResultOk (staticCheck (α := Nat)
+      [.decl .one "g" (.rStruct []), .function
+        { name := "main", inline := false, exported := false, params := [],
+          body := .return (.const 0), returnShape := .one }]) = false := by
+  native_decide
 
 end Flapjack

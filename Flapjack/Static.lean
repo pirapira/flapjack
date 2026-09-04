@@ -3,9 +3,9 @@ import Flapjack.Language
 /-!
 Static-checker data and shape-context operations.
 
-This module is the first executable part of the front end after the AST. It
-ports the small, reusable pieces of CakeML's `panStatic` theory; full
-expression/program checking is intentionally layered on top of these types.
+This module is the executable front-end checker. It ports the reusable
+pieces of CakeML's `panStatic` theory together with declaration-level
+context construction and function-body validation.
 -/
 
 namespace Flapjack
@@ -122,6 +122,7 @@ structure Context where
   locals : InfoMap LocalInfo
   globals : InfoMap GlobalInfo
   functions : InfoMap FuncInfo
+  expectedReturn : Option Shape
   exceptions : InfoMap Shape
   structs : StructContext
   scope : Scope
@@ -573,8 +574,14 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               progOk .raiseLast true false context.location
             else staticError (.shape "raised exception value has the wrong shape"))
   | .return value =>
-      staticBind (checkExp context value) (fun _ =>
-        progOk .retLast true false context.location)
+      staticBind (checkExp context value) (fun result =>
+        match context.expectedReturn with
+        | none => progOk .retLast true false context.location
+        | some shape =>
+            if shapedBasedMatchesShape context.structs shape result.shapedBased then
+              progOk .retLast true false context.location
+            else
+              staticError (.shape "return expression has the wrong shape"))
   | .shMemLoad _ _ name address =>
       match lookupInfo name context.locals with
       | none => staticError (.scope ("unknown shared-memory destination: " ++ name))
@@ -604,7 +611,173 @@ where
           staticBind (checkCallArgs context expressions) (fun rest =>
             staticOk { shapedBased := result.shapedBased :: rest.shapedBased }))
   termination_by expressions => sizeOf expressions
-  decreasing_by
-    all_goals first | sizeOf_list_dec | decreasing_trivial
+    decreasing_by
+      all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def firstRepeat [BEq α] : List α → Option α
+  | [] => none
+  | value :: values =>
+      if values.any (fun candidate => candidate == value) then some value
+      else firstRepeat values
+
+def checkShape [BEq String] (context : StructContext) (shape : Shape) :
+    StaticResult Unit :=
+  if isWfShape context shape then
+    staticOk ()
+  else
+    staticError (.scope "shape refers to an unknown or invalid structure")
+
+def checkShapeFields [BEq String] (context : StructContext)
+    (fields : List (FieldName × Shape)) : StaticResult Unit :=
+  if isWfFields context fields then
+    staticOk ()
+  else
+    staticError (.scope "structure field has an unknown or invalid shape")
+
+def localInfosFromParams [BEq String] (context : StructContext) :
+    List (VarName × Shape) → InfoMap LocalInfo
+  | [] => []
+  | (name, shape) :: params =>
+      let shaped := (shapedBasedFromShape context shape).getD (.word .trusted)
+      (name, { shapedBased := shaped }) :: localInfosFromParams context params
+
+structure StaticDeclContext where
+  functions : InfoMap FuncInfo
+  globals : InfoMap GlobalInfo
+  exceptions : InfoMap Shape
+  deriving Repr
+
+def staticCheckNames [BEq String] (context : StructContext) :
+    List (Decl α) → StaticResult StructContext
+  | [] => staticOk context
+  | .name name fields :: declarations =>
+      if (lookupInfo name context).isSome then
+        staticError (.scope ("structure is redeclared: " ++ name))
+      else
+        match firstRepeat (fields.map Prod.fst) with
+        | some field =>
+            staticError (.scope ("structure field is redeclared: " ++ field))
+        | none =>
+            staticBind (checkShapeFields context fields) (fun _ =>
+              let info : StructInfo :=
+                { fields := fields
+                  size := shapeSizeWithContext context (.comb (fields.map Prod.snd)) }
+              staticBind (staticCheckNames ((name, info) :: context) declarations)
+                (fun result => staticOk result))
+  | _ :: declarations => staticCheckNames context declarations
+termination_by declarations => sizeOf declarations
+
+def staticCheckFunctionHeader [BEq String] (context : StructContext)
+    (declaration : FunDecl α) : StaticResult Unit :=
+  if declaration.name = "main" then
+    if !declaration.params.isEmpty then
+      staticError (.general "main function has arguments")
+    else if declaration.exported then
+      staticError (.general "main function is exported")
+    else if !shapesSame declaration.returnShape .one then
+      staticError (.shape "main function must return one word")
+    else
+      staticOk ()
+  else if (firstRepeat (declaration.params.map Prod.fst)).isSome then
+    staticError (.scope ("function parameter is redeclared: " ++ declaration.name))
+  else if declaration.exported && declaration.params.length > 4 then
+    staticError (.general ("exported function has more than four arguments: " ++
+      declaration.name))
+  else if declaration.exported &&
+      !declaration.params.all (fun (_, shape) => shapesSame shape .one) then
+    staticError (.shape "exported function parameters must be words")
+  else if declaration.exported && !shapesSame declaration.returnShape .one then
+    staticError (.shape "exported function must return one word")
+  else if !isWfShape context declaration.returnShape ||
+      !declaration.params.all (fun (_, shape) => isWfShape context shape) then
+    staticError (.shape ("function has an unknown or invalid parameter/return shape: " ++
+      declaration.name))
+  else if shapeSizeWithContext context declaration.returnShape > 32 then
+    staticError (.shape ("function returns more than 32 words: " ++ declaration.name))
+  else
+    staticOk ()
+
+def staticCheckDecls [BEq String] (structs : StructContext) :
+    StaticDeclContext → List (Decl α) → StaticResult StaticDeclContext
+  | context, [] => staticOk context
+  | context, .name _ _ :: declarations =>
+      staticCheckDecls structs context declarations
+  | context, .exnDecl exception shape :: declarations =>
+      if (lookupInfo exception context.exceptions).isSome then
+        staticError (.scope ("exception is redeclared: " ++ exception))
+      else
+        staticBind (checkShape structs shape) (fun _ =>
+          staticCheckDecls structs
+            { context with exceptions := (exception, shape) :: context.exceptions }
+            declarations)
+  | context, .decl shape name value :: declarations =>
+      if (lookupInfo name context.globals).isSome then
+        staticError (.scope ("global variable is redeclared: " ++ name))
+      else
+        staticBind (checkShape structs shape) (fun _ =>
+          let checkingContext : Context :=
+            { locals := []
+              globals := context.globals
+              functions := []
+              expectedReturn := none
+              exceptions := context.exceptions
+              structs := structs
+              scope := .declScope name
+              inLoop := false
+              reachable := .isReach
+              last := .invisLast
+              location := "" }
+          staticBind (checkExp checkingContext value) (fun result =>
+            if shapedBasedMatchesShape structs shape result.shapedBased then
+              staticCheckDecls structs
+                { context with globals := (name, { shape := shape }) :: context.globals }
+                declarations
+            else
+              staticError (.shape ("global initializer has the wrong shape: " ++ name))))
+  | context, .function declaration :: declarations =>
+      if (lookupInfo declaration.name context.functions).isSome then
+        staticError (.scope ("function is redeclared: " ++ declaration.name))
+      else
+        staticBind (staticCheckFunctionHeader structs declaration) (fun _ =>
+          staticCheckDecls structs
+            { context with functions :=
+                (declaration.name,
+                  { returnShape := declaration.returnShape
+                    params := declaration.params }) :: context.functions }
+            declarations)
+termination_by _ declarations => declarations.length
+decreasing_by
+  all_goals decreasing_trivial
+
+def staticCheckProgs [BEq String] (structs : StructContext)
+    (context : StaticDeclContext) : List (Decl α) → StaticResult Unit
+  | [] => staticOk ()
+  | .function declaration :: declarations =>
+      let checkingContext : Context :=
+        { locals := localInfosFromParams structs declaration.params
+          globals := context.globals
+          functions := context.functions
+          expectedReturn := some declaration.returnShape
+          exceptions := context.exceptions
+          structs := structs
+          scope := .funScope declaration.name ""
+          inLoop := false
+          reachable := .isReach
+          last := .invisLast
+          location := "" }
+      staticBind (checkProg checkingContext declaration.body) (fun result =>
+        if result.exitsFunction then
+          staticCheckProgs structs context declarations
+        else
+          staticError (.general ("missing return statement in function: " ++
+            declaration.name)))
+  | _ :: declarations => staticCheckProgs structs context declarations
+termination_by declarations => declarations.length
+
+def staticCheck [BEq String] (declarations : List (Decl α)) : StaticResult Unit :=
+  staticBind (staticCheckNames (α := α) [] declarations) (fun structs =>
+    staticBind (staticCheckDecls structs
+      { functions := [], globals := [], exceptions := [] } declarations)
+      (fun context => staticCheckProgs structs context declarations))
 
 end Flapjack

@@ -2,7 +2,7 @@
 
 Flapjack is beginning as a Lean 4 port of the formally verified Pancake
 compiler. It is an early-stage project: the current Lean code covers the
-front-end syntax and checking foundations, the first Pancake-to-Crepe and
+front-end syntax and declaration-level checking foundations, the first Pancake-to-Crepe and
 Crepe-to-Loop compiler slices, executable semantic fragments, and an initial
 RISC-V model. The CakeML HOL development is included as the `cakeml`
 submodule; its Pancake sources are in [`cakeml/pancake`](cakeml/pancake).

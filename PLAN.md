@@ -122,6 +122,9 @@ definitions, pass ordering, examples, and proof obligations.
   the Word load8/store8 operations to them with evaluator agreement.
 - [x] Add little-endian 32-bit load/store transitions and connect the Word
   load32/store32 operations to them with evaluator agreement.
+- [x] Add declaration-level static checking: structure discovery, global and
+  exception environments, function headers, duplicate checks, and missing or
+  wrongly shaped returns.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

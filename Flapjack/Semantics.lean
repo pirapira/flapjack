@@ -1,15 +1,15 @@
-import Pancake.Compile
+import Flapjack.Compile
 
 /-!
 Deterministic semantics for the currently supported compiler fragment.
 
-The full Pancake semantics will add memory, calls, exceptions, and loop state.
+The full Flapjack semantics will add memory, calls, exceptions, and loop state.
 This first relation is deliberately small but executable: it is enough to
 state semantic preservation for constants and the core return/sequence cases
 already lowered by `compileProg`.
 -/
 
-namespace Pancake
+namespace Flapjack
 
 def evalPanExp [Add α] (locals : VarName → Option α) (expression : Exp α) : Option α :=
   match expression with
@@ -250,4 +250,4 @@ theorem compile_store_load_const_preserves_semantics
     evalCrepMemProg.evalCrepMemExps,
     evalCrepMemExp, evalPanMemExp, updateMemory, updateCrepLocal, loadShape]
 
-end Pancake
+end Flapjack

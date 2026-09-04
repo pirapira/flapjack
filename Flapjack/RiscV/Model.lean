@@ -1,7 +1,7 @@
 import Std
 
 /-!
-The first Lean target-model slice for Pancake's RISC-V backend.
+The first Lean target-model slice for Flapjack's RISC-V backend.
 
 The HOL reference is
 `HOL/examples/l3-machine-code/riscv/model/riscv.sml`. This file ports the
@@ -10,7 +10,7 @@ by later instruction and compiler-correctness layers. It intentionally does
 not claim to be the complete RISC-V transition system yet.
 -/
 
-namespace Pancake.RiscV
+namespace Flapjack.RiscV
 
 abbrev Word (width : Nat) := BitVec width
 
@@ -164,4 +164,4 @@ theorem execute_addi_zero_preserved (state : State width) (source : Fin 32)
     readRegister (execute state (.addi 0 source immediate)) 0 = readRegister state 0 := by
   simp [execute, nextPc, writeRegister, readRegister]
 
-end Pancake.RiscV
+end Flapjack.RiscV

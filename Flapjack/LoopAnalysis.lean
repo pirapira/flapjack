@@ -1,4 +1,4 @@
-import Pancake.CrepToLoop
+import Flapjack.CrepToLoop
 
 /-!
 Structural analyses for the Loop language. These are the list-based
@@ -6,7 +6,7 @@ counterparts of CakeML's `loop_live` inputs; a later pass can replace the
 lists with a finite-set representation without changing the syntax layer.
 -/
 
-namespace Pancake
+namespace Flapjack
 
 def loopVarsOfExp : LoopExp α → List Nat
   | .const _ => []
@@ -110,4 +110,4 @@ theorem loopAccVars_skip (names : List Nat) :
     loopAccVars (.skip : LoopProg α) names = names := by
   rfl
 
-end Pancake
+end Flapjack

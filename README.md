@@ -1,29 +1,32 @@
-This project is an ongoing port of the Pancake compiler to Lean. The CakeML
-HOL development is included as the `cakeml` submodule; its Pancake sources are
-in [`cakeml/pancake`](cakeml/pancake).
+# Flapjack
+
+Flapjack is beginning as a Lean 4 port of the formally verified Pancake
+compiler. It is an early-stage project: the current Lean code covers the
+front-end syntax and checking foundations, the first Pancake-to-Crepe and
+Crepe-to-Loop compiler slices, executable semantic fragments, and an initial
+RISC-V model. The CakeML HOL development is included as the `cakeml`
+submodule; its Pancake sources are in [`cakeml/pancake`](cakeml/pancake).
 
 The Lean library currently contains the core Pancake syntax in
-[`Pancake/Language.lean`](Pancake/Language.lean) and the static-checker
+[`Flapjack/Language.lean`](Flapjack/Language.lean) and the static-checker
 data/context layer plus shape-aware core expression and structured-program
-checkers in
-[`Pancake/Static.lean`](Pancake/Static.lean), as well as
-the Crepe IR and expression lowerer in [`Pancake/Crepe.lean`](Pancake/Crepe.lean)
-and [`Pancake/PanToCrep.lean`](Pancake/PanToCrep.lean).
+checkers in [`Flapjack/Static.lean`](Flapjack/Static.lean), as well as
+the Crepe IR and expression lowerer in [`Flapjack/Crepe.lean`](Flapjack/Crepe.lean)
+and [`Flapjack/PanToCrep.lean`](Flapjack/PanToCrep.lean).
 Core structured statement lowering and top-level function assembly are in
-[`Pancake/Compile.lean`](Pancake/Compile.lean).
+[`Flapjack/Compile.lean`](Flapjack/Compile.lean).
 The first executable local/memory semantics and preservation lemmas are in
-[`Pancake/Semantics.lean`](Pancake/Semantics.lean).
+[`Flapjack/Semantics.lean`](Flapjack/Semantics.lean).
 The Loop intermediate language and the initial Crepe-to-Loop structural
-lowering are in [`Pancake/Loop.lean`](Pancake/Loop.lean) and
-[`Pancake/CrepToLoop.lean`](Pancake/CrepToLoop.lean). The latter keeps the
+lowering are in [`Flapjack/Loop.lean`](Flapjack/Loop.lean) and
+[`Flapjack/CrepToLoop.lean`](Flapjack/CrepToLoop.lean). The latter keeps the
 Loop vocabulary aligned with CakeML while making conversions that require
 temporary allocation or control-flow lowering explicit as `Fail`.
 The first Loop data-flow analyses are in
-[`Pancake/LoopAnalysis.lean`](Pancake/LoopAnalysis.lean).
+[`Flapjack/LoopAnalysis.lean`](Flapjack/LoopAnalysis.lean).
 The initial RISC-V target vocabulary, register/memory primitives, and
-`ADD`/`ADDI` transition slice are in
-[`Pancake/RiscV/Model.lean`](Pancake/RiscV/Model.lean), with the HOL notice in
-[`Pancake/RiscV/COPYRIGHT`](Pancake/RiscV/COPYRIGHT).
+`ADD`/`ADDI` transition slice are in [`Flapjack/RiscV/Model.lean`](Flapjack/RiscV/Model.lean),
+with the HOL notice in [`Flapjack/RiscV/COPYRIGHT`](Flapjack/RiscV/COPYRIGHT).
 
 Build it with:
 

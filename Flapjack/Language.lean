@@ -1,12 +1,12 @@
 /-!
-The core Pancake syntax.
+The core Flapjack syntax.
 
 This is the initial Lean counterpart of CakeML's `panLang` theory. Identifiers
 are represented by `String`, while expressions remain polymorphic in their
 word-value type, matching the polymorphic HOL AST.
 -/
 
-namespace Pancake
+namespace Flapjack
 
 abbrev StructName := String
 abbrev FieldName := String
@@ -220,4 +220,4 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
-end Pancake
+end Flapjack

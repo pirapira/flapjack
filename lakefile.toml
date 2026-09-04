@@ -1,6 +1,6 @@
-name = "Pancake"
+name = "Flapjack"
 version = "0.1.0"
-defaultTargets = ["Pancake"]
+defaultTargets = ["Flapjack"]
 
 [[lean_lib]]
-name = "Pancake"
+name = "Flapjack"

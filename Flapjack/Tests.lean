@@ -1,14 +1,14 @@
-import Pancake.Language
-import Pancake.Static
-import Pancake.PanToCrep
-import Pancake.Compile
-import Pancake.Semantics
-import Pancake.RiscV.Model
-import Pancake.Loop
-import Pancake.CrepToLoop
-import Pancake.LoopAnalysis
+import Flapjack.Language
+import Flapjack.Static
+import Flapjack.PanToCrep
+import Flapjack.Compile
+import Flapjack.Semantics
+import Flapjack.RiscV.Model
+import Flapjack.Loop
+import Flapjack.CrepToLoop
+import Flapjack.LoopAnalysis
 
-namespace Pancake
+namespace Flapjack
 
 open RiscV
 
@@ -88,6 +88,17 @@ def checkerArgContext : Context :=
   { checkerContext with
     functions := [("f", { returnShape := .one, params := [("arg", .one)] })] }
 
+def checkerPrimitiveContext : Context :=
+  { checkerContext with
+    locals := ("carry", { shapedBased := .struct [.word .notBased, .word .notBased] }) ::
+      checkerContext.locals }
+
+def checkerHandlerContext : Context :=
+  { checkerCallContext with
+    locals := ("exceptionValue", { shapedBased := .word .trusted }) ::
+      checkerCallContext.locals,
+    exceptions := [("E", .one)] }
+
 example :
     checkExp (α := Nat) checkerContext (.var .local "x") =
       staticOk { shapedBased := .word .trusted } := by
@@ -148,7 +159,7 @@ example :
 example :
     checkProg (α := Nat) checkerCallContext (.call none "f" []) =
       progOk .tailLast true false "" := by
-  simp [checkProg, checkProg.checkCallArgs, checkCallInfo,
+  simp [checkProg, checkProg.checkCallArgs,
     staticOk, staticBind,
     functionArgumentsMatch, checkerCallContext, checkerContext, lookupInfo]
 
@@ -156,7 +167,7 @@ example :
     checkProg (α := Nat) checkerCallContext
       (.call (some (none, none)) "f" []) =
       progOk .otherLast false false "" := by
-  simp [checkProg, checkProg.checkCallArgs, checkCallInfo, checkCallDestination,
+  simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
     staticOk, staticBind,
     functionArgumentsMatch, checkerCallContext, checkerContext, lookupInfo]
 
@@ -164,7 +175,7 @@ example :
     checkProg (α := Nat) checkerCallContext
       (.call (some (some (.local, "x"), none)) "f" []) =
       progOk .otherLast false false "" := by
-  simp [checkProg, checkProg.checkCallArgs, checkCallInfo, checkCallDestination,
+  simp [checkProg, checkProg.checkCallArgs, checkCallDestination,
     staticOk, staticBind, functionArgumentsMatch, checkerCallContext, checkerContext,
     lookupInfo, shapedBasedMatchesShape, shapedBasedFromShape, shapedBasedSameShape]
 
@@ -177,9 +188,33 @@ example :
     checkProg (α := Nat) checkerArgContext
       (.call none "f" [.const 1]) =
       progOk .tailLast true false "" := by
-  simp [checkProg, checkProg.checkCallArgs, checkExp, checkCallInfo, staticOk, staticBind,
+  simp [checkProg, checkProg.checkCallArgs, checkExp, staticOk, staticBind,
     functionArgumentsMatch, shapedBasedMatchesShape, shapedBasedFromShape,
     shapedBasedSameShape, checkerArgContext, checkerContext, lookupInfo]
+
+example :
+    staticResultOk (checkProg (α := Nat) checkerPrimitiveContext
+      (.primitive "carry" .addCarry [.const 1, .const 2, .const 0])) =
+      true := by
+  native_decide
+
+example :
+    staticResultOk (checkProg (α := Nat) checkerHandlerContext
+      (.call (some (none, some ("E", "exceptionValue", .skip))) "f" [])) =
+      true := by
+  native_decide
+
+example :
+    staticResultOk (checkProg (α := Nat) checkerCallContext
+      (.decCall "result" .one "f" [] .skip)) =
+      true := by
+  native_decide
+
+example :
+    staticResultOk (checkProg (α := Nat) checkerContext
+      (.extCall "ffi" (.const 1) (.const 2) (.const 3) (.const 4))) =
+      true := by
+  native_decide
 
 example :
     checkExp (α := Nat)
@@ -381,4 +416,4 @@ example :
     loopAccVars (LoopProg.assign 1 (.op .add [.var 2, .const 0])) [] = [2, 1] := by
   native_decide
 
-end Pancake
+end Flapjack

@@ -1,6 +1,6 @@
-import Pancake.Loop
-import Pancake.Static
-import Pancake.RiscV.Model
+import Flapjack.Loop
+import Flapjack.Static
+import Flapjack.RiscV.Model
 
 /-!
 Initial Crepe-to-Loop lowering for the direct executable fragment. This keeps
@@ -9,7 +9,7 @@ condition materialization, liveness, and arithmetic expansion are subsequent
 passes.
 -/
 
-namespace Pancake
+namespace Flapjack
 
 structure LoopContext (α : Type u) where
   vars : InfoMap Nat
@@ -71,4 +71,4 @@ theorem lowerLoopProg_seq (first second : CrepProg α) :
       .seq (lowerLoopProg first) (lowerLoopProg second) := by
   simp [lowerLoopProg]
 
-end Pancake
+end Flapjack

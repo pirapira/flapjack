@@ -1,4 +1,4 @@
-# Pancake Lean port plan
+# Flapjack: Pancake Lean port plan
 
 ## Goal
 

@@ -1,7 +1,7 @@
-import Pancake.PanToCrep
+import Flapjack.PanToCrep
 
 /-!
-Core statement lowering from Pancake to Crepe.
+Core statement lowering from Flapjack to Crepe.
 
 This is the structured-local/control-flow portion of `pan_to_crep`. The
 function is intentionally extraction-friendly: malformed shape lengths and
@@ -9,7 +9,7 @@ front-end constructs whose runtime environments are not ported yet lower to
 `Skip`, matching the reference pass's defensive fallback style.
 -/
 
-namespace Pancake
+namespace Flapjack
 
 def compileArgs [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (expressions : List (Exp α)) : List (CrepExp α) :=
@@ -248,4 +248,4 @@ theorem compileProg_return [BEq α] [OfNat α 0] [Add α]
     compileProg context (.return value) = .return (compileExp context value).1 := by
   simp [compileProg]
 
-end Pancake
+end Flapjack

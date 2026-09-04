@@ -1,14 +1,14 @@
-import Pancake.Language
+import Flapjack.Language
 
 /-!
 The Crepe intermediate language.
 
-Crepe is Pancake after structured locals have been flattened into word-sized
+Crepe is Flapjack after structured locals have been flattened into word-sized
 locals. This mirrors `cakeml/pancake/crepLangScript.sml`; target-specific word
 operations remain abstract in the polymorphic value type.
 -/
 
-namespace Pancake
+namespace Flapjack
 
 inductive CrepOp where
   | mul
@@ -100,4 +100,4 @@ def assignRet [OfNat α 0] [Add α] (wordStride : α) (names : List Nat) : CrepP
   crepNestedSeq (names.zipWith (fun name value => .assign name value)
     (loadGlobals (0 : α) wordStride names.length))
 
-end Pancake
+end Flapjack

@@ -1,4 +1,4 @@
-import Pancake.Language
+import Flapjack.Language
 
 /-!
 Static-checker data and shape-context operations.
@@ -8,7 +8,7 @@ ports the small, reusable pieces of CakeML's `panStatic` theory; full
 expression/program checking is intentionally layered on top of these types.
 -/
 
-namespace Pancake
+namespace Flapjack
 
 structure StructInfo where
   fields : List (FieldName × Shape)
@@ -59,16 +59,21 @@ inductive StatErr where
   | warning (message : String)
   | general (message : String)
   | shape (message : String)
-  deriving DecidableEq, Repr
+  deriving Repr
 
 abbrev StaticResult (α : Type u) := Except StatErr α × List StatErr
+
+def staticResultOk (result : StaticResult α) : Bool :=
+  match result.1 with
+  | Except.ok _ => true
+  | Except.error _ => false
 
 inductive Based where
   | based
   | notBased
   | trusted
   | notTrusted
-  deriving DecidableEq, Repr
+  deriving Repr
 
 inductive ShapedBased where
   | word (basedness : Based)
@@ -222,6 +227,12 @@ where
         shapedBasedSameShape left right && shapedBasedSameShapes lefts rights
     | _, _ => false
 
+@[simp] theorem shapedBasedSameShape_struct_words :
+    shapedBasedSameShape
+      (.struct [.word .notBased, .word .notBased])
+      (.struct [.word .notBased, .word .notBased]) = true := by
+  rfl
+
 def shapesSame : Shape → Shape → Bool
   | .one, .one => true
   | .comb left, .comb right => shapesSameList left right
@@ -310,10 +321,10 @@ def checkExp [BEq String] (context : Context) : Exp α → StaticResult ExpRetur
         else staticError (.shape "operator operand is not a word"))
   | .panOp _ expressions =>
       staticBind (checkExps context expressions) (fun result =>
-        if expressions.length != 2 then staticError (.general "invalid Pancake operator arity")
+        if expressions.length != 2 then staticError (.general "invalid Flapjack operator arity")
         else if result.shapedBased.all shapedBasedIsWord then
           staticOk { shapedBased := .word .notBased }
-        else staticError (.shape "Pancake operand is not a word"))
+        else staticError (.shape "Flapjack operand is not a word"))
   | .cmp _ left right =>
       staticBind (checkExp context left) (fun leftResult =>
         staticBind (checkExp context right) (fun rightResult =>
@@ -368,6 +379,16 @@ def functionArgumentsMatch (context : StructContext) :
         functionArgumentsMatch context parameters arguments
   | _, _ => false
 
+def checkPrimitiveArgs [BEq String] (_context : Context) (operator : PrimOp)
+    (arguments : List ShapedBased) : StaticResult ShapedBased :=
+  match operator with
+  | .addCarry =>
+      if arguments.length != 3 then
+        staticError (.general "AddCarry expects three arguments")
+      else if arguments.all shapedBasedIsWord then
+        staticOk (.struct [.word .notBased, .word .notBased])
+      else staticError (.shape "AddCarry operand is not a word")
+
 def progOk (last : LastStmt) (exitsFunction exitsLoop : Bool) (location : String) :
     StaticResult ProgReturn :=
   staticOk
@@ -393,15 +414,6 @@ def checkCallDestination [BEq String] (context : Context) (returnShape : Shape)
                 progOk .otherLast false false context.location
               else staticError (.shape "global call destination shape does not match")
           | none => staticError (.scope ("unknown call destination: " ++ name))
-
-def checkCallInfo [BEq String] (context : Context) (returnShape : Shape)
-    : Option (Option (VarKind × VarName) ×
-        Option (ExceptionId × VarName × Prog α)) → StaticResult ProgReturn
-  | none => progOk .tailLast true false context.location
-  | some (destination, handler) =>
-      match handler with
-      | some _ => staticError (.general "exception-handler checking is not implemented")
-      | none => checkCallDestination context returnShape destination
 
 def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgReturn
   | .skip => progOk .invisLast false false context.location
@@ -434,10 +446,13 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
   | .primitive name _ arguments =>
       match lookupInfo name context.locals with
       | none => staticError (.scope ("unknown primitive destination: " ++ name))
-      | some _ =>
-          if arguments.isEmpty then
-            progOk .otherLast false false context.location
-          else staticError (.general "primitive argument checking is not implemented")
+      | some destinationInfo =>
+          staticBind (checkCallArgs context arguments) (fun argumentResult =>
+            staticBind (checkPrimitiveArgs context .addCarry argumentResult.shapedBased)
+              (fun resultShape =>
+                if shapedBasedSameShape destinationInfo.shapedBased resultShape then
+                  progOk .otherLast false false context.location
+                else staticError (.shape "primitive result shape does not match")))
   | .store address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>
@@ -495,9 +510,60 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
           staticBind (checkCallArgs context arguments) (fun argumentResult =>
             if !functionArgumentsMatch context.structs functionInfo.params argumentResult.shapedBased then
               staticError (.shape "function argument shapes do not match")
-            else checkCallInfo context returnShape info)
-  | .decCall _ _ _ _ _ => staticError (.general "declaration-call checking is not implemented")
-  | .extCall _ _ _ _ _ => staticError (.general "foreign-call checking is not implemented")
+            else
+              match info with
+              | none => progOk .tailLast true false context.location
+              | some (destination, none) => checkCallDestination context returnShape destination
+              | some (destination, some (exception, handlerVariable, handlerProgram)) =>
+                  match lookupInfo exception context.exceptions,
+                      lookupInfo handlerVariable context.locals with
+                  | none, _ => staticError (.scope ("unknown exception: " ++ exception))
+                  | _, none => staticError (.scope
+                      ("unknown exception handler variable: " ++ handlerVariable))
+                  | some exceptionShape, some handlerInfo =>
+                      if !shapedBasedMatchesShape context.structs exceptionShape
+                          handlerInfo.shapedBased then
+                        staticError (.shape "exception handler variable shape does not match")
+                      else
+                        let handlerShaped :=
+                          (shapedBasedFromShape context.structs exceptionShape).getD
+                            handlerInfo.shapedBased
+                        let handlerContext := { context with locals :=
+                          (handlerVariable, { shapedBased := handlerShaped }) :: context.locals }
+                        staticBind (checkProg handlerContext handlerProgram) (fun _ =>
+                          checkCallDestination context returnShape destination))
+  | .decCall name shape function arguments body =>
+      if (lookupInfo name context.locals).isSome ||
+          (lookupInfo name context.globals).isSome then
+        staticError (.scope ("local declaration redeclares: " ++ name))
+      else if !isWfShape context.structs shape then
+        staticError (.shape "declaration-call result has an invalid shape")
+      else
+        match lookupInfo function context.functions with
+        | none => staticError (.scope ("unknown function: " ++ function))
+        | some functionInfo =>
+            staticBind (checkCallArgs context arguments) (fun argumentResult =>
+              if !functionArgumentsMatch context.structs functionInfo.params
+                  argumentResult.shapedBased then
+                staticError (.shape "function argument shapes do not match")
+              else if !shapesSame shape functionInfo.returnShape then
+                staticError (.shape "declaration-call result shape does not match")
+              else
+                match shapedBasedFromShape context.structs shape with
+                | none => staticError (.scope "invalid declaration-call result shape")
+                | some shaped =>
+                    let nextContext := { context with locals :=
+                      (name, { shapedBased := shaped }) :: context.locals }
+                    staticBind (checkProg nextContext body) (fun result =>
+                      staticOk { result with variableDelta := [] }))
+  | .extCall function configuration configurationLength array arrayLength =>
+      staticBind (checkCallArgs context
+        [configuration, configurationLength, array, arrayLength])
+        (fun argumentResult =>
+          if argumentResult.shapedBased.all
+              (shapedBasedMatchesShape context.structs .one) then
+            progOk .otherLast false false context.location
+          else staticError (.shape ("foreign-call argument is not a word: " ++ function)))
   | .raise exception value =>
       match lookupInfo exception context.exceptions with
       | none => staticError (.scope ("unknown exception: " ++ exception))
@@ -541,4 +607,4 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
-end Pancake
+end Flapjack

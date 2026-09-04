@@ -1,15 +1,15 @@
-import Pancake.Crepe
-import Pancake.Static
+import Flapjack.Crepe
+import Flapjack.Static
 
 /-!
-Executable expression lowering from Pancake to Crepe.
+Executable expression lowering from Flapjack to Crepe.
 
 This is the expression part of CakeML's `pan_to_crep` pass. Invalid or
 ill-shaped inputs follow CakeML's extraction-friendly fallback behavior and
 produce a zero constant.
 -/
 
-namespace Pancake
+namespace Flapjack
 
 structure CompileContext (α : Type u) where
   vars : InfoMap (Shape × List Nat)
@@ -113,4 +113,4 @@ theorem compileExp_local_var [BEq α] [OfNat α 0] [Add α]
     compileExp context (.var .local name) = (names.map .var, shape) := by
   simp [compileExp, lookup]
 
-end Pancake
+end Flapjack

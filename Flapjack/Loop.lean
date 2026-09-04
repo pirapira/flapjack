@@ -1,4 +1,4 @@
-import Pancake.Crepe
+import Flapjack.Crepe
 
 /-!
 The Loop intermediate language used after Crepe lowering. The constructors
@@ -6,7 +6,7 @@ follow CakeML's `loopLangScript.sml`; target-specific instruction selection is
 kept for the later RISC-V layer.
 -/
 
-namespace Pancake
+namespace Flapjack
 
 inductive LoopExp (α : Type u) where
   | const (value : α)
@@ -67,4 +67,4 @@ def loopNestedSeq : List (LoopProg α) → LoopProg α
   | [] => .skip
   | statement :: statements => .seq statement (loopNestedSeq statements)
 
-end Pancake
+end Flapjack

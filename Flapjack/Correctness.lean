@@ -188,6 +188,24 @@ theorem pipelineCall_source_semantics :
       some [BitVec.ofNat 64 41] := by
   native_decide
 
+def pipelineHandlerSourceFunctions :
+    List (FunName × List VarName × Prog (RiscV.Word 64)) :=
+  [("raise", [], .raise "E" (.const (BitVec.ofNat 64 7)))]
+
+def pipelineHandlerSourceMain : Prog (RiscV.Word 64) :=
+  .call
+    (some (none, some ("E", "exception",
+      .return (.var .local "exception"))))
+    "raise" []
+
+theorem pipelineHandler_source_semantics :
+    (evalPanProgWithHandlers pipelineHandlerSourceFunctions 20 (fun _ => none)
+      pipelineHandlerSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = some [BitVec.ofNat 64 7] := by
+  native_decide
+
 theorem pipelineCall_source_word_machine_agreement :
     (evalPanProgWithCalls pipelineCallSourceFunctions 20 (fun _ => none)
       pipelineCallSourceMain).map (fun result => result.2) =

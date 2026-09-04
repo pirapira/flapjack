@@ -174,6 +174,88 @@ mutual
     termination_by fuel _ _ => fuel
 end
 
+/-!
+Control-result semantics for the same source fragment.  This is the source
+counterpart of the Loop and Word handler evaluators: a callee's locals do not
+escape, successful return values are assigned to an explicitly local call
+destination, and a matching exception handler resumes with the exception
+value bound in its handler variable.
+-/
+inductive PanControlResult (α : Type u) where
+  | normal (locals : VarName → Option α)
+  | returned (locals : VarName → Option α) (values : List α)
+  | raised (locals : VarName → Option α) (exception : ExceptionId) (value : α)
+
+def assignPanCallResult (locals : VarName → Option α)
+    (destination : Option (VarKind × VarName)) (values : List α) :
+    Option (VarName → Option α) :=
+  match destination, values with
+  | none, [] => some locals
+  | some (.local, name), [value] => some (updatePanLocal locals name value)
+  | _, _ => none
+
+mutual
+  def evalPanCallWithHandlers [Add α] [Mul α]
+      (functions : List (FunName × List VarName × Prog α)) :
+      Nat → (VarName → Option α) →
+        Option (Option (VarKind × VarName) ×
+          Option (ExceptionId × VarName × Prog α)) → FunName → List (Exp α) →
+        Option (PanControlResult α)
+    | 0, _, _, _, _ => none
+    | fuel + 1, locals, info, function, arguments => do
+        let values ← evalPanExps locals arguments
+        let (parameters, body) ← lookupPanFunction function functions
+        let calleeLocals ← bindPanParameters parameters values
+        let result ← evalPanProgWithHandlers functions fuel calleeLocals body
+        match result with
+        | .normal _ => pure (.normal locals)
+        | .returned _ values =>
+            match info with
+            | none => pure (.returned locals values)
+            | some (destination, _) => do
+                let locals ← assignPanCallResult locals destination values
+                pure (.normal locals)
+        | .raised _ exception value =>
+            match info with
+            | some (_, some (caught, handlerVariable, handlerProgram)) =>
+                if caught == exception then
+                  evalPanProgWithHandlers functions fuel
+                    (updatePanLocal locals handlerVariable value) handlerProgram
+                else pure (.raised locals exception value)
+            | _ => pure (.raised locals exception value)
+    termination_by fuel _ _ _ _ => fuel
+
+  def evalPanProgWithHandlers [Add α] [Mul α]
+      (functions : List (FunName × List VarName × Prog α)) :
+      Nat → (VarName → Option α) → Prog α → Option (PanControlResult α)
+    | 0, _, _ => none
+    | fuel + 1, locals, .skip => some (.normal locals)
+    | fuel + 1, locals, .assign .local name value => do
+        let value ← evalPanExp locals value
+        pure (.normal (updatePanLocal locals name value))
+    | fuel + 1, locals, .seq first second => do
+        let result ← evalPanProgWithHandlers functions fuel locals first
+        match result with
+        | .normal locals => evalPanProgWithHandlers functions fuel locals second
+        | result => pure result
+    | fuel + 1, locals, .call info function arguments =>
+        evalPanCallWithHandlers functions fuel locals info function arguments
+    | fuel + 1, locals, .decCall name _ function arguments body => do
+        let result ← evalPanCallWithHandlers functions fuel locals
+          (some (some (.local, name), none)) function arguments
+        match result with
+        | .normal locals => evalPanProgWithHandlers functions fuel locals body
+        | result => pure result
+    | fuel + 1, locals, .raise exception value => do
+        let value ← evalPanExp locals value
+        pure (.raised locals exception value)
+    | fuel + 1, locals, .return value => do
+        let value ← evalPanExp locals value
+        pure (.returned locals [value])
+    | _, _, _ => none
+    termination_by fuel _ _ => fuel
+end
+
 def evalCrepStateProg [Add α] [Mul α] (locals : Nat → Option α) :
     CrepProg α → Option ((Nat → Option α) × List α)
   | .skip => some (locals, [])

@@ -328,6 +328,30 @@ theorem evalWordFunction_return_add [NeZero width] (state : State width) :
   simp [evalWordFunction, evalWordExp, registerOfNat, execute,
     writeRegister, nextPc, readRegister]
 
+theorem wordFunctionToRiscV_return_const [NeZero width] (value : Word width) :
+    wordFunctionToRiscV
+        ((.seq (.assign 1 (.const value)) (.return 0 [1])) :
+          WordProg (Word width)) =
+      some ([.addi 1 0 value], [1]) := by
+  simp [wordFunctionToRiscV, wordExpToInstruction, registerOfNat]
+
+theorem evalWordFunction_return_const [NeZero width] (state : State width)
+    (value : Word width) (zero : ZeroRegister state) :
+    evalWordFunction state
+        ((.seq (.assign 1 (.const value)) (.return 0 [1])) :
+          WordProg (Word width)) =
+      some (execute state (.addi 1 0 value),
+        [readRegister (execute state (.addi 1 0 value)) 1]) := by
+  simp [evalWordFunction, evalWordExp, registerOfNat, execute,
+    writeRegister, nextPc, readRegister]
+  constructor
+  · funext current
+    by_cases h : current = 1
+    · subst current
+      simpa [ZeroRegister, readRegister] using zero
+    · simp [h]
+  · simpa [ZeroRegister, readRegister] using zero
+
 theorem wordArithToInstruction_longMul [NeZero width] :
     wordArithToInstruction (width := width) (.longMul 1 1 2 3) =
       some (.mul 1 2 3) := by

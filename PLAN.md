@@ -154,6 +154,8 @@ definitions, pass ordering, examples, and proof obligations.
   lowering through the generated temporary assignment.
 - [x] Extend that bridge through Crepe `mul`/Loop `longMul` expansion and
   preserve the returned product.
+- [x] Prove RISC-V instruction-selection and evaluator agreement for the
+  emitted constant-return artifact.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Add a structurally recursive loop evaluator and loop preservation theorem.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem

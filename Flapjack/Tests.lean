@@ -599,6 +599,15 @@ example [NeZero width] :
   simp [pipelineRiscVFunctions, RiscV.wordFunctionToRiscV,
     RiscV.wordExpToInstruction, RiscV.registerOfNat]
 
+example [NeZero width] (state : RiscV.State width) (value : RiscV.Word width)
+    (zero : RiscV.ZeroRegister state) :
+    RiscV.evalWordFunction state
+        ((.seq (.assign 1 (.const value)) (.return 0 [1])) :
+          WordProg (RiscV.Word width)) =
+      some (RiscV.execute state (.addi 1 0 value),
+        [RiscV.readRegister (RiscV.execute state (.addi 1 0 value)) 1]) := by
+  exact RiscV.evalWordFunction_return_const state value zero
+
 def loopProgLongMulFingerprint : LoopProg α → Option (Nat × Nat × Nat × Nat)
   | .arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) =>
       some (destinationLeft, destinationRight, sourceLeft, sourceRight)

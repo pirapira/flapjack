@@ -367,6 +367,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add an end-to-end declaration-call regression from Pancake through
   source semantics, Loop, Word, call-aware linking, Word semantics, and RV64
   execution, with a combined source/Word/machine agreement theorem.
+- [x] Add an end-to-end conditional compiler-correctness theorem from source
+  `if` through the linked RV64 artifact and architectural execution.
 - [x] Add handler-aware source control-result semantics for the supported
   expression/call fragment, including exception matching, handler-variable
   binding, and a concrete raised-call regression.

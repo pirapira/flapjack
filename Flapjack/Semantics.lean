@@ -51,12 +51,17 @@ def evalCrepExps [Add α] [Mul α] (locals : Nat → Option α) :
       let values ← evalCrepExps locals expressions
       pure (value :: values)
 
-def evalPanProg [Add α] [Mul α] (locals : VarName → Option α) : Prog α → Option (List α)
+def evalPanProg [BEq α] [OfNat α 0] [Add α] [Mul α]
+    (locals : VarName → Option α) : Prog α → Option (List α)
   | .skip => some []
   | .return expression => (evalPanExp locals expression).map (fun value => [value])
   | .seq first second => do
       let firstResult ← evalPanProg locals first
       if firstResult.isEmpty then evalPanProg locals second else pure firstResult
+  | .ite condition thenBranch elseBranch => do
+      let condition ← evalPanExp locals condition
+      if condition == 0 then evalPanProg locals elseBranch
+      else evalPanProg locals thenBranch
   | _ => none
 
 def evalCrepProg [Add α] [Mul α] (locals : Nat → Option α) : CrepProg α → Option (List α)

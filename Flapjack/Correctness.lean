@@ -119,6 +119,38 @@ theorem compiledPipelineMul_correct :
       evalPanProg (fun _ => none) pipelineMulSource := by
   native_decide
 
+def pipelineIteDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "ite", inline := false, exported := false, params := [],
+      body := .ite (.const (BitVec.ofNat 64 1))
+        (.return (.const (BitVec.ofNat 64 7)))
+        (.return (.const (BitVec.ofNat 64 8))), returnShape := .one }]
+
+def pipelineItePipeline : FlapjackRiscVResult 64 :=
+  compileFlapjackRiscV (width := 64) .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+    pipelineIteDeclarations
+
+def compiledPipelineIteRun : Option (List (RiscV.Word 64)) :=
+  match pipelineItePipeline.linkedFunctions with
+  | some [(_, entry, parameters, code, returns)] =>
+      match parameters.mapM RiscV.registerOfNat with
+      | some parameters =>
+          RiscV.executeFunction 40 entry parameters code returns []
+            (RiscV.zeroState 64)
+      | none => none
+  | _ => none
+
+def pipelineIteSource : Prog (RiscV.Word 64) :=
+  .ite (.const (BitVec.ofNat 64 1))
+    (.return (.const (BitVec.ofNat 64 7)))
+    (.return (.const (BitVec.ofNat 64 8)))
+
+theorem compiledPipelineIte_correct :
+    compiledPipelineIteRun =
+      evalPanProg (fun _ => none) pipelineIteSource := by
+  native_decide
+
 /-!
 The first end-to-end call regression. The source program uses a declaration
 call rather than an unbound low-level call, so the static front end allocates

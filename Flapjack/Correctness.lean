@@ -1208,6 +1208,53 @@ theorem loopToWord_const_assign_preserves_mapped_locals [NeZero width]
       hdestination_nonzero, hregister_nonalias]
     exact hregister_value
 
+theorem loopToWord_seq_evaluation_decomposition [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (first second : LoopProg (RiscV.Word width))
+    (finalLoop : LoopState (RiscV.Word width))
+    (finalWord : RiscV.State width)
+    (hloop :
+      evalLoopProg 2 loopState (.seq first second) =
+        some (.normal finalLoop))
+    (hword :
+      RiscV.evalWordProg state (loopToWordProg context (.seq first second)) =
+        some finalWord) :
+    ∃ middleLoop middleWord,
+      evalLoopProg 1 loopState first = some (.normal middleLoop) ∧
+        evalLoopProg 1 middleLoop second = some (.normal finalLoop) ∧
+        RiscV.evalWordProg state (loopToWordProg context first) =
+          some middleWord ∧
+        RiscV.evalWordProg middleWord (loopToWordProg context second) =
+          some finalWord := by
+  cases hfirst : evalLoopProg 1 loopState first with
+  | none =>
+      simp [evalLoopProg, hfirst] at hloop
+  | some firstResult =>
+      cases firstResult with
+      | normal middleLoop =>
+          have hsecond :
+              evalLoopProg 1 middleLoop second = some (.normal finalLoop) := by
+            simpa [evalLoopProg, hfirst] using hloop
+          cases hwordFirst :
+              RiscV.evalWordProg state (loopToWordProg context first) with
+          | none =>
+              simp [loopToWordProg, RiscV.evalWordProg, hwordFirst] at hword
+          | some middleWord =>
+              have hwordSecond :
+                  RiscV.evalWordProg middleWord
+                    (loopToWordProg context second) = some finalWord := by
+                simpa [loopToWordProg, RiscV.evalWordProg, hwordFirst] using hword
+              exact ⟨middleLoop, middleWord, rfl, hsecond,
+                rfl, hwordSecond⟩
+      | returned middleLoop values =>
+          simp [evalLoopProg, hfirst] at hloop
+      | broke middleLoop label =>
+          simp [evalLoopProg, hfirst] at hloop
+      | continued middleLoop label =>
+          simp [evalLoopProg, hfirst] at hloop
+      | raised middleLoop exception =>
+          simp [evalLoopProg, hfirst] at hloop
+
 theorem loopToWord_binop_assign_agreement_of_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (operator : BinOp)

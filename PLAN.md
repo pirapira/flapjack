@@ -332,6 +332,8 @@ definitions, pass ordering, examples, and proof obligations.
   with the explicit bounded shift-count agreement.
 - [x] Prove mapped-local preservation across compiled constant assignments,
   carrying the architectural x0 invariant.
+- [x] Prove successful two-step Loop/Word sequence evaluation decomposes
+  through matching intermediate Loop and machine states.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
 - [x] Add an end-to-end declaration-call regression from Pancake through

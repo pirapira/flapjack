@@ -231,7 +231,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the HOL RISC-V `AddCarry` lowering through Word instruction
   selection and execution, including its reserved `x31` scratch contract.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
-  multiplication (`MULHU`) followed by low-half multiplication (`MUL`).
+  multiplication (`MULHU`) followed by low-half multiplication (`MUL`),
+  including the target's high-destination/source non-aliasing precondition.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [x] Establish reusable Loop state-transition lemmas for the modeled

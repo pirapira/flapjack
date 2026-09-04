@@ -904,6 +904,10 @@ example [NeZero width] :
   exact RiscV.wordArithToInstructions_longMul
 
 example [NeZero width] :
+    RiscV.wordArithToInstructions (width := width) (.longMul 3 2 3 4) = none := by
+  exact RiscV.wordArithToInstructions_longMul_alias
+
+example [NeZero width] :
     RiscV.wordArithToInstructions (width := width) (.addCarry 31 6 2 3 4) = none := by
   simp [RiscV.wordArithToInstructions]
 

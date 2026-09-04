@@ -71,12 +71,15 @@ def wordArithToInstruction [NeZero width] :
 def wordArithToInstructions [NeZero width] :
     WordArith → Option (List (Instruction width))
   | .longMul destinationLeft destinationRight sourceLeft sourceRight => do
-      let destinationLeft ← registerOfNat destinationLeft
-      let destinationRight ← registerOfNat destinationRight
-      let sourceLeft ← registerOfNat sourceLeft
-      let sourceRight ← registerOfNat sourceRight
-      pure [.mulHU destinationLeft sourceLeft sourceRight,
-        .mul destinationRight sourceLeft sourceRight]
+      if destinationLeft = sourceLeft || destinationLeft = sourceRight then
+        none
+      else
+        let destinationLeft ← registerOfNat destinationLeft
+        let destinationRight ← registerOfNat destinationRight
+        let sourceLeft ← registerOfNat sourceLeft
+        let sourceRight ← registerOfNat sourceRight
+        pure [.mulHU destinationLeft sourceLeft sourceRight,
+          .mul destinationRight sourceLeft sourceRight]
   | .addCarry destination resultCarry sourceLeft sourceRight carryIn => do
       if [destination, resultCarry, sourceLeft, sourceRight, carryIn].any (· == 31) then
         none
@@ -663,6 +666,10 @@ theorem wordArithToInstructions_longMul [NeZero width] :
     wordArithToInstructions (width := width) (.longMul 1 2 3 4) =
       some [.mulHU 1 3 4, .mul 2 3 4] := by
   simp [wordArithToInstructions, registerOfNat]
+
+theorem wordArithToInstructions_longMul_alias [NeZero width] :
+    wordArithToInstructions (width := width) (.longMul 3 2 3 4) = none := by
+  simp [wordArithToInstructions]
 
 theorem compileWordLongMul_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.arith (.longMul 1 1 2 3))) =

@@ -207,6 +207,93 @@ mutual
         | result => pure result
 end
 
+def lookupLoopFunction : Nat → List (Nat × List Nat × LoopProg α) →
+    Option (List Nat × LoopProg α)
+  | _, [] => none
+  | label, (candidate, parameters, body) :: functions =>
+      if label == candidate then some (parameters, body)
+      else lookupLoopFunction label functions
+
+def loopBindParameters (parameters : List Nat) (values : List α)
+    (locals : Nat → Option α) : Option (Nat → Option α) :=
+  if parameters.length != values.length then none
+  else
+    some ((parameters.zip values).foldl
+      (fun locals (name, value) => updateLoopLocal locals name value) locals)
+
+def loopAssignValues (locals : Nat → Option α) (names : List Nat)
+    (values : List α) : Option (Nat → Option α) :=
+  if names.length != values.length then none
+  else
+    some ((names.zip values).foldl
+      (fun locals (name, value) => updateLoopLocal locals name value) locals)
+
+/-!
+The call-aware evaluator is an incremental bridge around the original Loop
+evaluator. It handles calls at the current program/sequence level and uses the
+call-free evaluator for a callee body; this already exposes function-label,
+argument, return, tail-call, and exception-handler state transitions while
+leaving recursive call graphs for the next simulation slice.
+-/
+def evalLoopCall [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (functions : List (Nat × List Nat × LoopProg α)) (fuel : Nat)
+    (state : LoopState α) (returns : Option (List Nat × List Nat))
+    (target : Option Nat) (arguments : List Nat)
+    (handler : Option (Nat × LoopProg α × LoopProg α × List Nat)) :
+    Option (LoopResult α) := do
+  let target ← target
+  let (parameters, body) ← lookupLoopFunction target functions
+  let values ← loopReadLocals state.locals arguments
+  let locals ← loopBindParameters parameters values (fun _ => none)
+  let calleeState := { state with locals := locals }
+  let result ← evalLoopProg fuel calleeState body
+  match result with
+  | .returned _ values =>
+      match returns with
+      | none => some (.returned state values)
+      | some (names, _) => do
+          let locals ← loopAssignValues state.locals names values
+          match handler with
+          | none => some (.normal { state with locals := locals })
+          | some (_, _, normal, _) =>
+              evalLoopProg fuel { state with locals := locals } normal
+  | .raised _ exception =>
+      match handler with
+      | none => some (.raised state exception)
+      | some (name, exceptionBody, _, _) =>
+          evalLoopProg fuel
+            { state with locals := updateLoopLocal state.locals name exception }
+            exceptionBody
+  | .normal _ => some (.normal state)
+  | .broke _ label => some (.broke state label)
+  | .continued _ label => some (.continued state label)
+
+def evalLoopProgWithFunctions [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (functions : List (Nat × List Nat × LoopProg α)) :
+    Nat → LoopState α → LoopProg α → Option (LoopResult α)
+  | 0, _, _ => none
+  | fuel + 1, state, .call returns target arguments handler =>
+      evalLoopCall functions fuel state returns target arguments handler
+  | fuel + 1, state, .seq first second => do
+      let result ← evalLoopProgWithFunctions functions fuel state first
+      match result with
+      | .normal state => evalLoopProgWithFunctions functions fuel state second
+      | result => some result
+  | fuel + 1, state, .ite operator condition right thenBranch elseBranch _ => do
+      let left ← state.locals condition
+      let right ← match right with
+        | .imm value => some value
+        | .reg name => state.locals name
+      let choose ← evalLoopCondition operator left right
+      if choose then evalLoopProgWithFunctions functions fuel state thenBranch
+      else evalLoopProgWithFunctions functions fuel state elseBranch
+  | fuel + 1, state, program => evalLoopProg (fuel + 1) state program
+termination_by fuel _ _ => fuel
+
 theorem evalLoopProg_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]

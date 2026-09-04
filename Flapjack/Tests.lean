@@ -892,6 +892,36 @@ example :
       (RiscV.writeRegister (RiscV.zeroState 64) 1 4) = some [42] := by
   exact RiscV.executeFunctionAt_jalr_return
 
+def loopCallTestState : LoopState Nat :=
+  { locals := fun name => if name = 1 then some 9 else none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+example :
+    (evalLoopProgWithFunctions
+      [(7, [1], (.return [1] : LoopProg Nat))] 10 loopCallTestState
+      (.call (some ([3], [])) (some 7) [1] none)).map (fun result =>
+        match result with
+        | .normal state => state.locals 3
+        | _ => none) = some (some 9) := by
+  native_decide
+
+example :
+    (evalLoopProgWithFunctions
+      [(8, [1], (.return [1] : LoopProg Nat))] 10 loopCallTestState
+      (.call none (some 8) [1] none)).map loopResultValues = some [9] := by
+  native_decide
+
+example :
+    (evalLoopProgWithFunctions
+      [(9, [1], (.raise 1 : LoopProg Nat))] 10 loopCallTestState
+      (.call (some ([3], [])) (some 9) [1]
+        (some (4, .assign 3 (.var 4), .skip, [])))).map (fun result =>
+        match result with
+        | .normal state => state.locals 3
+        | _ => none) = some (some 9) := by
+  native_decide
+
 example :
     let result := compileFlapjackRiscV (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)

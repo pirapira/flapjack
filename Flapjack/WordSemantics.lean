@@ -94,4 +94,59 @@ mutual
     termination_by fuel _ _ => fuel
 end
 
+/-!
+An explicit host boundary for Word-level foreign calls.  The compiler keeps
+the four FFI argument registers and the live-register list in the IR; the
+target model cannot determine their external effect, so the handler is part
+of the semantic environment.  Ordinary Word programs continue to use the
+backend evaluator, while sequences and conditionals recurse through this
+boundary.
+-/
+mutual
+  def evalWordFfi [NeZero width]
+      (handler : FunName → Word width → Word width → Word width → Word width →
+        State width → Option (State width)) :
+      Nat → State width → WordProg (Word width) →
+        Option (State width × List (Word width))
+    | 0, _, _ => none
+    | fuel + 1, state,
+        .ffi function configuration configurationLength array arrayLength _ => do
+        let configuration ← registerOfNat configuration
+        let configurationLength ← registerOfNat configurationLength
+        let array ← registerOfNat array
+        let arrayLength ← registerOfNat arrayLength
+        let state ← handler function (readRegister state configuration)
+          (readRegister state configurationLength) (readRegister state array)
+          (readRegister state arrayLength) state
+        pure (state, [])
+    | fuel + 1, state, .seq first second => do
+        let result ← evalWordFfi handler fuel state first
+        if !result.2.isEmpty then some result
+        else evalWordFfi handler fuel result.1 second
+    | fuel + 1, state, .ite operator condition rightValue thenBranch elseBranch => do
+        let choose ← evalWordCondition state operator condition rightValue
+        if choose then evalWordFfi handler fuel state thenBranch
+        else evalWordFfi handler fuel state elseBranch
+    | fuel + 1, state, program => evalWordFunction state program
+    termination_by fuel _ _ => fuel
+end
+
+theorem evalWordFfi_single [NeZero width]
+    (handler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (state : State width) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (live : List Nat) :
+    evalWordFfi handler 1 state
+        (.ffi function configuration configurationLength array arrayLength live) = (do
+      let configuration ← registerOfNat configuration
+      let configurationLength ← registerOfNat configurationLength
+      let array ← registerOfNat array
+      let arrayLength ← registerOfNat arrayLength
+      let state ← handler function (readRegister state configuration)
+        (readRegister state configurationLength) (readRegister state array)
+        (readRegister state arrayLength) state
+      pure (state, [])) := by
+  simp [evalWordFfi]
+
 end Flapjack.RiscV

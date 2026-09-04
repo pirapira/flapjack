@@ -1154,6 +1154,27 @@ example :
         result.1.registers 3) = some 9 := by
   native_decide
 
+def wordFfiTestState : RiscV.State 64 :=
+  RiscV.writeRegister
+    (RiscV.writeRegister
+      (RiscV.writeRegister
+        (RiscV.writeRegister (RiscV.zeroState 64) 1 10) 2 1) 3 20) 4 2
+
+def wordFfiTestHandler : FunName → RiscV.Word 64 → RiscV.Word 64 →
+    RiscV.Word 64 → RiscV.Word 64 → RiscV.State 64 →
+    Option (RiscV.State 64) := fun function configuration configurationLength array
+    arrayLength state =>
+  if function == "sum" then
+    some (RiscV.writeRegister state 5
+      (configuration + configurationLength + array + arrayLength))
+  else none
+
+example :
+    (RiscV.evalWordFfi wordFfiTestHandler 10 wordFfiTestState
+      (.ffi "sum" 1 2 3 4 [])).map (fun result =>
+        RiscV.readRegister result.1 5) = some 33 := by
+  native_decide
+
 example [NeZero width] :
     RiscV.wordFunctionToRiscV
         ((.seq (.assign 1 (.const (BitVec.ofNat width 100)))

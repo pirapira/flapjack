@@ -87,6 +87,9 @@ The first library-level source-to-RISC-V correctness theorem for this composed
 pipeline is in [`Flapjack/Correctness.lean`](Flapjack/Correctness.lean).
 Word-level function-table call semantics are in
 [`Flapjack/WordSemantics.lean`](Flapjack/WordSemantics.lean).
+That module also exposes a fuel-bounded Word FFI evaluator whose host handler
+is explicit in the semantic interface; target code generation for FFI remains
+staged until the external calling convention is fixed.
 The initial explicit RISC-V call convention is in
 [`Flapjack/RiscV/Calls.lean`](Flapjack/RiscV/Calls.lean); function-label
 linking and label resolution are in

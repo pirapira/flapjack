@@ -64,6 +64,8 @@ definitions, pass ordering, examples, and proof obligations.
   declaration-level shape validation.
 - [x] Add a shape-aware executable checker for core expressions and
   diagnostics.
+- [x] Check scoped tail/handler-free calls and local return destinations for
+  the initial zero-argument call subset.
 - [x] Port the Crepe IR and executable expression lowering used by
   `pan_to_crep`.
 - [x] Port core structured statement lowering and initial pass equations.

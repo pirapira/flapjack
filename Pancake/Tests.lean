@@ -73,6 +73,10 @@ def checkerContext : Context :=
     structs := pairContext, scope := .topLevel, inLoop := false, reachable := .isReach,
     last := .otherLast, location := "" }
 
+def checkerCallContext : Context :=
+  { checkerContext with
+    functions := [("f", { returnShape := .one, params := [] })] }
+
 example :
     checkExp (α := Nat) checkerContext (.var .local "x") =
       staticOk { shapedBased := .word .trusted } := by
@@ -129,6 +133,29 @@ example :
     shapedBasedMatchesShape,
     shapedBasedFromShape, shapedBasedSameShape, checkerContext, pairContext,
     lookupInfo]
+
+example :
+    checkProg (α := Nat) checkerCallContext (.call none "f" []) =
+      progOk .tailLast true false "" := by
+  simp [checkProg, checkerCallContext, checkerContext, lookupInfo]
+
+example :
+    checkProg (α := Nat) checkerCallContext
+      (.call (some (none, none)) "f" []) =
+      progOk .otherLast false false "" := by
+  simp [checkProg, checkerCallContext, checkerContext, lookupInfo]
+
+example :
+    checkProg (α := Nat) checkerCallContext
+      (.call (some (some (.local, "x"), none)) "f" []) =
+      progOk .otherLast false false "" := by
+  simp [checkProg, checkerCallContext, checkerContext, lookupInfo,
+    shapedBasedMatchesShape, shapedBasedFromShape, shapedBasedSameShape]
+
+example :
+    checkProg (α := Nat) checkerCallContext (.call none "missing" []) =
+      staticError (.scope "unknown function: missing") := by
+  simp [checkProg, checkerCallContext, checkerContext, lookupInfo, staticError]
 
 example :
     checkExp (α := Nat)

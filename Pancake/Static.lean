@@ -222,6 +222,17 @@ where
         shapedBasedSameShape left right && shapedBasedSameShapes lefts rights
     | _, _ => false
 
+def shapesSame : Shape → Shape → Bool
+  | .one, .one => true
+  | .comb left, .comb right => shapesSameList left right
+  | .named left, .named right => left == right
+  | _, _ => false
+where
+  shapesSameList : List Shape → List Shape → Bool
+    | [], [] => true
+    | left :: lefts, right :: rights => shapesSame left right && shapesSameList lefts rights
+    | _, _ => false
+
 def shapedBasedFieldsMatch (context : StructContext)
     : List (FieldName × Shape) → List (FieldName × ShapedBased) → Bool
   | [], [] => true
@@ -439,7 +450,39 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
   | .continue =>
       if context.inLoop then progOk .contLast false true context.location
       else staticError (.general "continue used outside a loop")
-  | .call _ _ _ => staticError (.general "call checking is not implemented")
+  | .call info function arguments =>
+      match lookupInfo function context.functions with
+      | none => staticError (.scope ("unknown function: " ++ function))
+      | some functionInfo =>
+          let returnShape := functionInfo.returnShape
+          if !arguments.isEmpty then
+            staticError (.general "function argument checking is not implemented")
+          else
+            match info with
+            | none => progOk .tailLast true false context.location
+            | some (destination, handler) =>
+                match handler with
+                | some _ => staticError (.general "exception-handler checking is not implemented")
+                | none =>
+                    match destination with
+                    | none => progOk .otherLast false false context.location
+                    | some (kind, name) =>
+                        match kind with
+                        | .local =>
+                            match lookupInfo name context.locals with
+                            | some localInfo =>
+                                if shapedBasedMatchesShape context.structs returnShape
+                                    localInfo.shapedBased then
+                                  progOk .otherLast false false context.location
+                                else staticError (.shape "call destination shape does not match")
+                            | none => staticError (.scope ("unknown call destination: " ++ name))
+                        | .global =>
+                            match lookupInfo name context.globals with
+                            | some globalInfo =>
+                                if shapesSame globalInfo.shape returnShape then
+                                  progOk .otherLast false false context.location
+                                else staticError (.shape "global call destination shape does not match")
+                            | none => staticError (.scope ("unknown call destination: " ++ name))
   | .decCall _ _ _ _ _ => staticError (.general "declaration-call checking is not implemented")
   | .extCall _ _ _ _ _ => staticError (.general "foreign-call checking is not implemented")
   | .raise exception value =>

@@ -483,7 +483,7 @@ def evalCrepMemProg [BEq α] [Add α] [Mul α] (locals : Nat → Option α)
         let values ← evalCrepMemExps locals memory expressions
         pure (value :: values)
 
-def evalPanMemProgFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
+def evalPanMemProgFuelBase [BEq α] [Add α] [Mul α] [OfNat α 0]
     (fuel : Nat) (locals : VarName → Option α) (memory : α → Option α) :
     Prog α → Option ((VarName → Option α) × (α → Option α) × List α) :=
   fun program =>
@@ -492,7 +492,7 @@ def evalPanMemProgFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
     | 0, _ => none
     | fuel + 1, .dec name _ value body => do
         let value ← evalPanMemExp locals memory value
-        evalPanMemProgFuel fuel (updatePanLocal locals name value) memory body
+        evalPanMemProgFuelBase fuel (updatePanLocal locals name value) memory body
     | fuel + 1, .assign .local name value => do
         let value ← evalPanMemExp locals memory value
         pure (updatePanLocal locals name value, memory, [])
@@ -509,20 +509,74 @@ def evalPanMemProgFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
         pure (locals, memory, [value])
     | fuel + 1, .seq first second => do
         let (locals', memory', firstResult) ←
-          evalPanMemProgFuel fuel locals memory first
+          evalPanMemProgFuelBase fuel locals memory first
         if firstResult.isEmpty then
-          evalPanMemProgFuel fuel locals' memory' second
+          evalPanMemProgFuelBase fuel locals' memory' second
         else
           pure (locals', memory', firstResult)
     | fuel + 1, .ite condition thenBranch elseBranch => do
         let condition ← evalPanMemExp locals memory condition
         if condition == 0 then
-          evalPanMemProgFuel fuel locals memory elseBranch
+          evalPanMemProgFuelBase fuel locals memory elseBranch
         else
-          evalPanMemProgFuel fuel locals memory thenBranch
+          evalPanMemProgFuelBase fuel locals memory thenBranch
     | fuel + 1, .while _ _ => none
     | _, _ => none
 termination_by fuel => fuel
+
+mutual
+  def evalPanMemProgFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
+      : Nat → (VarName → Option α) → (α → Option α) → Prog α →
+        Option ((VarName → Option α) × (α → Option α) × List α)
+    | _, locals, memory, .skip => some (locals, memory, [])
+    | 0, _, _, _ => none
+    | fuel + 1, locals, memory, .dec name _ value body => do
+        let value ← evalPanMemExp locals memory value
+        evalPanMemProgFuel fuel (updatePanLocal locals name value) memory body
+    | fuel + 1, locals, memory, .seq first second => do
+        let (locals', memory', firstResult) ←
+          evalPanMemProgFuel fuel locals memory first
+        if firstResult.isEmpty then
+          evalPanMemProgFuel fuel locals' memory' second
+        else
+          pure (locals', memory', firstResult)
+    | fuel + 1, locals, memory, .ite condition thenBranch elseBranch => do
+        let condition ← evalPanMemExp locals memory condition
+        if condition == 0 then
+          evalPanMemProgFuel fuel locals memory elseBranch
+        else
+          evalPanMemProgFuel fuel locals memory thenBranch
+    | fuel + 1, locals, memory, .while condition body =>
+        evalPanMemWhileFuel fuel locals memory condition body
+    | fuel, locals, memory, program => evalPanMemProgFuelBase fuel locals memory program
+    termination_by fuel => fuel
+
+  def evalPanMemWhileFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
+      : Nat → (VarName → Option α) → (α → Option α) → Exp α → Prog α →
+        Option ((VarName → Option α) × (α → Option α) × List α)
+    | 0, locals, memory, condition, _ => do
+        let conditionValue ← evalPanMemExp locals memory condition
+        if conditionValue == 0 then some (locals, memory, []) else none
+    | fuel + 1, locals, memory, condition, body => do
+        let conditionValue ← evalPanMemExp locals memory condition
+        if conditionValue == 0 then some (locals, memory, [])
+        else
+          let result ← evalPanMemProgFuel fuel locals memory body
+          if result.2.2.isEmpty then
+            evalPanMemWhileFuel fuel result.1 result.2.1 condition body
+          else
+            some result
+    termination_by fuel _ _ _ _ => fuel
+end
+
+theorem evalPanMemProgFuel_while_const_zero [BEq α] [LawfulBEq α] [Add α]
+    [Mul α] [OfNat α 0]
+    (fuel : Nat) (locals : VarName → Option α) (memory : α → Option α)
+    (body : Prog α) :
+    evalPanMemProgFuel (fuel + 1) locals memory (.while (.const (0 : α)) body) =
+      some (locals, memory, []) := by
+  cases fuel <;>
+    simp [evalPanMemProgFuel, evalPanMemWhileFuel, evalPanMemExp]
 
 def evalCrepMemProgFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
     (fuel : Nat) (locals : Nat → Option α) (memory : α → Option α) :
@@ -692,6 +746,7 @@ theorem compile_ite_const_preserves_semantics
       split <;>
         cases fuel <;>
           simp [evalCrepMemProgFuel, evalPanMemProgFuel,
+            evalPanMemProgFuelBase,
             evalCrepMemProg.evalCrepMemExps, evalCrepMemExp, evalCrepExp,
             evalPanMemExp]
 

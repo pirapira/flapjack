@@ -375,6 +375,8 @@ definitions, pass ordering, examples, and proof obligations.
   result assignment in a fuel-bounded source regression.
 - [x] Compose the source FFI boundary with the source call evaluator, allowing
   host effects inside a callee before declaration-call result propagation.
+- [x] Integrate fuel-bounded source memory semantics for `while` loops, with
+  verified immediate termination for false conditions.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

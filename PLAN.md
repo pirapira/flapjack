@@ -174,6 +174,8 @@ definitions, pass ordering, examples, and proof obligations.
   branches, requiring both branches to expose the same return-register layout.
 - [x] Preserve terminal function returns when compiling or evaluating a
   sequence with unreachable trailing code.
+- [x] Add the pipeline’s initial register context, mapping Loop slots to
+  RISC-V registers from x2 and remapping parameter metadata consistently.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

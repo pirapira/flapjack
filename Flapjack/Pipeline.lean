@@ -63,7 +63,10 @@ def pipelineWordFunctions [OfNat α 1]
     (functions : List (Nat × List Nat × LoopProg α)) :
     List (Nat × List Nat × WordProg α) :=
   functions.map (fun (label, parameters, body) =>
-    (label, parameters, loopToWordProg { vars := [] } body))
+    let slots := loopAccVars body parameters
+    let context : WordContext :=
+      { vars := slots.map (fun name => (name, name + 2)) }
+    (label, parameters.map (fun name => name + 2), loopToWordProg context body))
 
 def pipelinePrependInitializers (initializers : List (Prog α)) :
     List (Decl α) → List (Decl α)

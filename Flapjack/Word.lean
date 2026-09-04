@@ -231,7 +231,7 @@ def loopToWordProg [OfNat α 1] (context : WordContext) :
   | .mark body => loopToWordProg context body
   | .fail => .skip
   | .locValue destination source =>
-      .locValue (wordFindVar context destination) source
+      .locValue (wordFindVar context destination) (wordFindVar context source)
   | .call returns target arguments none =>
       .call (returns.map (fun (values, live) =>
         (wordMapVars context values, wordMapVars context live))) target

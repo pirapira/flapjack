@@ -419,6 +419,29 @@ theorem loopToWord_binop_assign_register_agreement_mapped [NeZero width]
       RiscV.nextPc, updateLoopLocal, hdestination, hleft, hright,
       hdestination_nonzero, hzero, hand, hor]
 
+theorem loopToWord_locValue_register_agreement_mapped [NeZero width]
+    (context : WordContext) (state : RiscV.State width)
+    (destination source : Nat) (destinationRegister sourceRegister : Fin 32)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) = some destinationRegister)
+    (hsource :
+      RiscV.registerOfNat (wordFindVar context source) = some sourceRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0) :
+    (evalLoopProg 1 (loopRegisterStateMapped context state)
+      (.locValue destination source)).bind
+        (fun result =>
+          match result with
+          | .normal state => state.locals destination
+          | _ => none) =
+      (RiscV.evalWordProg state
+        (loopToWordProg context (.locValue destination source))).map
+        (fun state => RiscV.readRegister state destinationRegister) := by
+  simp [evalLoopProg, loopRegisterStateMapped, loopToWordProg,
+    RiscV.evalWordProg, RiscV.wordExpToInstructions,
+    RiscV.wordExpToInstruction, RiscV.executeInstructions, RiscV.execute,
+    RiscV.writeRegister, RiscV.readRegister, RiscV.nextPc,
+    updateLoopLocal, hdestination, hsource, hdestination_nonzero]
+
 theorem loopToWord_load32_register_agreement_mapped [NeZero width]
     (context : WordContext) (state : RiscV.State width)
     (memory : RiscV.Word width → Option (RiscV.Word width))

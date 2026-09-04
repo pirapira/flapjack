@@ -110,6 +110,7 @@ def wordProgToRiscV [NeZero width] :
       let first ← wordProgToRiscV first
       let second ← wordProgToRiscV second
       pure (first ++ second)
+  | .tick => some [.addi 0 0 0]
   | .ite operator condition rightValue thenBranch elseBranch => do
       let condition ← registerOfNat condition
       let right ← match rightValue with
@@ -263,6 +264,7 @@ def wordFunctionToRiscV [NeZero width] :
   | .inst instruction => do
       let instruction ← wordInstToInstruction instruction
       pure ([instruction], [])
+  | .tick => pure ([.addi 0 0 0], [])
   | .ite operator condition rightValue thenBranch elseBranch => do
       let code ← wordProgToRiscV
         (.ite operator condition rightValue thenBranch elseBranch)
@@ -304,6 +306,7 @@ def evalWordFunction [NeZero width] (state : State width) :
       let destination ← registerOfNat name
       let value ← evalWordExp state value
       pure (writeRegister { state with pc := nextPc state } destination value, [])
+  | .tick => pure (execute state (.addi 0 0 0), [])
   | .inst (.arith operation) => do
       let instruction ← wordArithToInstruction operation
       pure (execute state instruction, [])
@@ -351,6 +354,7 @@ def evalWordProg [NeZero width] (state : State width) :
       let destination ← registerOfNat name
       let value ← evalWordExp state value
       pure (writeRegister { state with pc := nextPc state } destination value)
+  | .tick => pure (execute state (.addi 0 0 0))
   | .inst (.arith operation) => do
       let instruction ← wordArithToInstruction operation
       pure (execute state instruction)

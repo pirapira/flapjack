@@ -168,6 +168,8 @@ definitions, pass ordering, examples, and proof obligations.
   explicit two's-complement ordering and concrete execution proofs.
 - [x] Port `Test`/`NotTest` Word conditions through an `AND`/x0 sequence,
   with an explicit dead-condition-register contract and execution proofs.
+- [x] Lower Loop-to-Word `Tick` to an architectural `ADDI x0,x0,0` so
+  generated conditional function artifacts can cross the RISC-V boundary.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

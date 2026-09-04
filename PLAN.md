@@ -71,6 +71,9 @@ definitions, pass ordering, examples, and proof obligations.
   assembly for the Pancake-to-Crepe pass.
 - [x] Materialize primitive arguments and multi-word store/exception payloads
   through fresh Crepe locals.
+- [x] Begin the RISC-V target-model port with HOL-derived architectural
+  vocabulary, parameterized words, register/memory primitives, and alignment
+  traps; preserve the HOL copyright notice in `Pancake/RiscV/COPYRIGHT`.
 - [x] Add executable deterministic semantics and preservation theorems for
   the supported constant/return/sequence fragment, including scalar local
   assignment state updates.

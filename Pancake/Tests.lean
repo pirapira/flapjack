@@ -3,8 +3,21 @@ import Pancake.Static
 import Pancake.PanToCrep
 import Pancake.Compile
 import Pancake.Semantics
+import Pancake.RiscV.Model
 
 namespace Pancake
+
+open RiscV
+
+example : RiscV.Architecture.width .rv32i = 32 := by
+  rfl
+
+example : RiscV.accessAligned .read (0 : RiscV.Word 32) 4 = none := by
+  native_decide
+
+example : RiscV.writeRegister (RiscV.zeroState 32) 0 (7 : RiscV.Word 32) =
+    RiscV.zeroState 32 := by
+  simp [RiscV.writeRegister]
 
 def sampleShape : Shape := .comb [.one, .comb [.one, .one]]
 

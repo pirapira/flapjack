@@ -324,6 +324,8 @@ definitions, pass ordering, examples, and proof obligations.
   agrees with cleared-and-bound Word registers under the mapped-local relation.
 - [x] Prove that every source slot in the pipeline's `name ↦ name + 2`
   context is found with its mapped register name.
+- [x] Compose the single-parameter Loop and Word binding lemmas into an
+  explicit call-boundary state-agreement theorem.
 - [x] Extend Loop condition and expression evaluation to all comparison
   constructors, including HOL's zero-test convention for test/not-test.
 - [x] Add an end-to-end declaration-call regression from Pancake through

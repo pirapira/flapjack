@@ -904,6 +904,26 @@ theorem loopLocalsMappedToRiscV_single_parameter [NeZero width]
       simpa [updateLoopLocal, hname] using hcurrent
     simp at this
 
+theorem loopBindParameters_single_parameter_agreement [NeZero width]
+    (context : WordContext) (state : RiscV.State width)
+    (name : Nat) (value : RiscV.Word width) (register : Fin 32)
+    (hregister :
+      RiscV.registerOfNat (wordFindVar context name) = some register)
+    (hregister_nonzero : register ≠ 0) :
+    ∃ locals wordState,
+      loopBindParameters [name] [value] (fun _ => none) = some locals ∧
+        RiscV.bindWordRegisters state
+          [wordFindVar context name] [value] = some wordState ∧
+        loopLocalsMappedToRiscV context locals wordState := by
+  refine ⟨updateLoopLocal (fun _ => none) name value,
+    RiscV.writeRegister (RiscV.clearWordRegisters state) register value,
+    ?_, ?_, ?_⟩
+  · simp [loopBindParameters]
+  · exact bindWordRegisters_single_parameter context state name value register
+      hregister
+  · exact loopLocalsMappedToRiscV_single_parameter context state name value register
+      hregister hregister_nonzero
+
 theorem loopToWord_binop_assign_agreement_of_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (operator : BinOp)

@@ -113,6 +113,20 @@ example :
     let result := compileFlapjackRiscV (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
       [.function
+        { name := "main", inline := false, exported := true, params := [],
+          body := .seq
+            (.while (.const (BitVec.ofNat 64 0)) .break)
+            (.return (.const (BitVec.ofNat 64 7))), returnShape := .one }]
+    (result.functions[0]?).bind (fun (_, _, artifact) =>
+      artifact.bind (fun (code, returns) =>
+        RiscV.executeFunction 200 (0 : RiscV.Word 64) [] code returns []
+          (RiscV.zeroState 64))) = some [BitVec.ofNat 64 7] := by
+  native_decide
+
+example :
+    let result := compileFlapjackRiscV (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+      [.function
         { name := "main", inline := false, exported := false, params := [],
           body := .ite (.cmp .equal (.const (BitVec.ofNat 64 1))
             (.const (BitVec.ofNat 64 1)))

@@ -509,6 +509,58 @@ mutual
     termination_by fuel _ _ => fuel
 end
 
+/-!
+Public equations for the combined evaluator.  Keeping these cases as named
+lemmas makes the later Loop-to-Word simulation proof independent of the
+implementation details of the mutually recursive definitions.
+-/
+section CombinedSemanticEquations
+
+variable [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+  [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+  [LT α] [DecidableRel (fun left right : α => left < right)]
+
+theorem evalLoopProgWithCallsAndFfi_ffi (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (fuel : Nat) (state : LoopState α) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat) (live : List Nat) :
+    evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+        (.ffi function configuration configurationLength array arrayLength live) =
+      (do
+        let configuration ← state.locals configuration
+        let configurationLength ← state.locals configurationLength
+        let array ← state.locals array
+        let arrayLength ← state.locals arrayLength
+        let state ← ffiHandler function configuration configurationLength array arrayLength state
+        pure (.normal state)) := by
+  simp [evalLoopProgWithCallsAndFfi]
+
+theorem evalLoopProgWithCallsAndFfi_call
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (fuel : Nat) (state : LoopState α) (returns : Option (List Nat × List Nat))
+    (target : Option Nat) (arguments : List Nat)
+    (handler : Option (Nat × LoopProg α × LoopProg α × List Nat)) :
+    evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+        (.call returns target arguments handler) =
+      evalLoopCallWithCallsAndFfi functions ffiHandler fuel state returns target arguments handler := by
+  simp [evalLoopProgWithCallsAndFfi]
+
+theorem evalLoopProgWithCallsAndFfi_seq_normal
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (fuel : Nat) (state : LoopState α) (first second : LoopProg α)
+    (middle : LoopState α) (result : LoopResult α)
+    (hfirst : evalLoopProgWithCallsAndFfi functions ffiHandler fuel state first =
+      some (.normal middle))
+    (hsecond : evalLoopProgWithCallsAndFfi functions ffiHandler fuel middle second =
+      some result) :
+    evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state (.seq first second) =
+      some result := by
+  simp [evalLoopProgWithCallsAndFfi, hfirst, hsecond]
+
+end CombinedSemanticEquations
+
 theorem evalLoopProg_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]

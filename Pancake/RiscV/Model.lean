@@ -98,6 +98,11 @@ structure State (width : Nat) where
   privilege : Privilege
   mode : VMMode
 
+inductive Instruction (width : Nat) where
+  | add (destination sourceLeft sourceRight : Fin 32)
+  | addi (destination source : Fin 32) (immediate : Word width)
+  deriving Repr
+
 def zeroState (width : Nat) [NeZero width] : State width :=
   { pc := 0
     registers := fun _ => 0
@@ -121,6 +126,16 @@ def readByte (state : State width) (address : Word width) : BitVec 8 :=
 def writeByte (state : State width) (address : Word width) (value : BitVec 8) : State width :=
   { state with memory := fun current => if current = address then value else state.memory current }
 
+def nextPc (state : State width) : Word width := state.pc + 4
+
+def execute (state : State width) : Instruction width → State width
+  | .add destination sourceLeft sourceRight =>
+      writeRegister { state with pc := nextPc state } destination
+        (readRegister state sourceLeft + readRegister state sourceRight)
+  | .addi destination source immediate =>
+      writeRegister { state with pc := nextPc state } destination
+        (readRegister state source + immediate)
+
 def accessAligned (access : AccessType) (address : Word width) (alignment : Nat) :
     Option ExceptionType :=
   if aligned address alignment then none
@@ -139,5 +154,14 @@ theorem accessAligned_aligned (access : AccessType) (address : Word width)
     (alignment : Nat) (aligned_address : aligned address alignment = true) :
     accessAligned access address alignment = none := by
   simp [accessAligned, aligned_address]
+
+theorem execute_pc_advance (state : State width) (instruction : Instruction width) :
+    (execute state instruction).pc = state.pc + 4 := by
+  cases instruction <;> simp [execute, nextPc, writeRegister] <;> split <;> rfl
+
+theorem execute_addi_zero_preserved (state : State width) (source : Fin 32)
+    (immediate : Word width) :
+    readRegister (execute state (.addi 0 source immediate)) 0 = readRegister state 0 := by
+  simp [execute, nextPc, writeRegister, readRegister]
 
 end Pancake.RiscV

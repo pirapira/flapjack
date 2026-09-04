@@ -76,6 +76,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Begin the RISC-V target-model port with HOL-derived architectural
   vocabulary, parameterized words, register/memory primitives, and alignment
   traps; preserve the HOL copyright notice in `Pancake/RiscV/COPYRIGHT`.
+- [x] Add executable `ADD`/`ADDI` transitions with PC-advance and
+  zero-register preservation theorems.
 - [x] Add executable deterministic semantics and preservation theorems for
   the supported constant/return/sequence fragment, including scalar local
   assignment state updates.

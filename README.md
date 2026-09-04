@@ -13,7 +13,8 @@ Core structured statement lowering and top-level function assembly are in
 [`Pancake/Compile.lean`](Pancake/Compile.lean).
 The first executable semantics and preservation lemmas are in
 [`Pancake/Semantics.lean`](Pancake/Semantics.lean).
-The initial RISC-V target vocabulary and register/memory primitives are in
+The initial RISC-V target vocabulary, register/memory primitives, and
+`ADD`/`ADDI` transition slice are in
 [`Pancake/RiscV/Model.lean`](Pancake/RiscV/Model.lean), with the HOL notice in
 [`Pancake/RiscV/COPYRIGHT`](Pancake/RiscV/COPYRIGHT).
 

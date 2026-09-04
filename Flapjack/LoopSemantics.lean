@@ -30,6 +30,23 @@ inductive LoopResult (α : Type u) where
   | continued (state : LoopState α) (label : Nat)
   | raised (state : LoopState α) (exception : α)
 
+def loopResultState : LoopResult α → LoopState α
+  | .normal state => state
+  | .returned state _ => state
+  | .broke state _ => state
+  | .continued state _ => state
+  | .raised state _ => state
+
+/-- Syntactic approximation of Loop programs that do not update globals. -/
+def loopNoGlobalWrites : LoopProg α → Bool
+  | .setGlobal _ _ => false
+  | .seq first second => loopNoGlobalWrites first && loopNoGlobalWrites second
+  | .ite _ _ _ thenBranch elseBranch _ =>
+      loopNoGlobalWrites thenBranch && loopNoGlobalWrites elseBranch
+  | .loop _ body _ => loopNoGlobalWrites body
+  | .mark body => loopNoGlobalWrites body
+  | _ => true
+
 def loopResultValues : LoopResult α → List α
   | .returned _ values => values
   | _ => []
@@ -747,6 +764,16 @@ theorem evalLoopProg_load32 [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       some (.normal { state with locals := updateLoopLocal state.locals destination value }) := by
   simp [evalLoopProg, haddress, hvalue]
 
+theorem evalLoopProg_loadByte [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (address destination : Nat) (addressValue value : α)
+    (haddress : state.locals address = some addressValue)
+    (hvalue : state.memory addressValue = some value) :
+    evalLoopProg 1 state (.loadByte address destination) =
+      some (.normal { state with locals := updateLoopLocal state.locals destination value }) := by
+  simp [evalLoopProg, haddress, hvalue]
+
 theorem evalLoopProg_store [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]
@@ -755,6 +782,28 @@ theorem evalLoopProg_store [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] 
     (haddress : evalLoopExp state address = some addressValue)
     (hvalue : state.locals value = some valueValue) :
     evalLoopProg 1 state (.store address value) =
+      some (.normal { state with memory := updateLoopMemory state.memory addressValue valueValue }) := by
+  simp [evalLoopProg, haddress, hvalue]
+
+theorem evalLoopProg_store32 [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (address value : Nat)
+    (addressValue valueValue : α)
+    (haddress : state.locals address = some addressValue)
+    (hvalue : state.locals value = some valueValue) :
+    evalLoopProg 1 state (.store32 address value) =
+      some (.normal { state with memory := updateLoopMemory state.memory addressValue valueValue }) := by
+  simp [evalLoopProg, haddress, hvalue]
+
+theorem evalLoopProg_storeByte [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (address value : Nat)
+    (addressValue valueValue : α)
+    (haddress : state.locals address = some addressValue)
+    (hvalue : state.locals value = some valueValue) :
+    evalLoopProg 1 state (.storeByte address value) =
       some (.normal { state with memory := updateLoopMemory state.memory addressValue valueValue }) := by
   simp [evalLoopProg, haddress, hvalue]
 
@@ -779,6 +828,43 @@ theorem evalLoopProg_setGlobal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul 
     evalLoopProg 1 state (.setGlobal address expression) =
       some (.normal { state with globals := updateLoopGlobal state.globals address value }) := by
   simp [evalLoopProg, hvalue]
+
+theorem evalLoopProg_locValue [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (destination source : Nat) (value : α)
+    (hvalue : state.locals source = some value) :
+    evalLoopProg 1 state (.locValue destination source) =
+      some (.normal { state with locals := updateLoopLocal state.locals destination value }) := by
+  simp [evalLoopProg, hvalue]
+
+theorem evalLoopProg_shMem_load [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (operator : CrepMemOp) (name : Nat) (address : LoopExp α)
+    (addressValue value : α)
+    (hoperator : operator = .load ∨ operator = .load8 ∨
+      operator = .load16 ∨ operator = .load32)
+    (haddress : evalLoopExp state address = some addressValue)
+    (hvalue : state.memory addressValue = some value) :
+    evalLoopProg 1 state (.shMem operator name address) =
+      some (.normal { state with locals := updateLoopLocal state.locals name value }) := by
+  rcases hoperator with rfl | rfl | rfl | rfl <;>
+    simp [evalLoopProg, haddress, hvalue]
+
+theorem evalLoopProg_shMem_store [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (operator : CrepMemOp) (name : Nat) (address : LoopExp α)
+    (addressValue value : α)
+    (hoperator : operator = .store ∨ operator = .store8 ∨
+      operator = .store16 ∨ operator = .store32)
+    (haddress : evalLoopExp state address = some addressValue)
+    (hvalue : state.locals name = some value) :
+    evalLoopProg 1 state (.shMem operator name address) =
+      some (.normal { state with memory := updateLoopMemory state.memory addressValue value }) := by
+  rcases hoperator with rfl | rfl | rfl | rfl <;>
+    simp [evalLoopProg, haddress, hvalue]
 
 theorem evalLoopProg_return [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

@@ -279,7 +279,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [x] Establish reusable Loop state-transition lemmas for the modeled
-  assignment, load/store, global, return, and control-result cases.
+  assignment, load/store (including byte and 32-bit forms), shared-memory,
+  `locValue`, global, return, and control-result cases.
 - [x] Add context-mapped Loop-to-Word register agreements for assignments
   and read-only 32-bit loads, plus the low-byte memory observation for
   `store32`, with explicit byte-fold memory premises.

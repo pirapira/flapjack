@@ -193,6 +193,8 @@ definitions, pass ordering, examples, and proof obligations.
   entry for top-level calls.
 - [x] Extend call-aware Loop evaluation through nested and recursive function
   bodies with fuel decreasing across the call graph.
+- [x] Thread call-aware evaluation through Loop repetition and break/continue
+  handling.
 - [x] Add Loop shared-memory load/store semantics for all modeled widths,
   using the executable memory state.
 - [ ] Port complete program checking, context transitions, and diagnostics.

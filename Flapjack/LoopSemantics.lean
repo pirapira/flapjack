@@ -302,7 +302,24 @@ mutual
         let choose ← evalLoopCondition operator left right
         if choose then evalLoopProgWithFunctions functions fuel state thenBranch
         else evalLoopProgWithFunctions functions fuel state elseBranch
+    | fuel + 1, state, .loop _ body _ =>
+        evalLoopRepeatWithFunctions functions fuel state body
     | fuel + 1, state, program => evalLoopProg (fuel + 1) state program
+    termination_by fuel _ _ => fuel
+
+  def evalLoopRepeatWithFunctions [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (functions : List (Nat × List Nat × LoopProg α)) :
+      Nat → LoopState α → LoopProg α → Option (LoopResult α)
+    | 0, _, _ => none
+    | fuel + 1, state, body => do
+        let result ← evalLoopProgWithFunctions functions fuel state body
+        match result with
+        | .normal state => evalLoopRepeatWithFunctions functions fuel state body
+        | .continued state 0 => evalLoopRepeatWithFunctions functions fuel state body
+        | .broke state 0 => some (.normal state)
+        | result => some result
     termination_by fuel _ _ => fuel
 end
 

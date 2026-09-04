@@ -952,6 +952,18 @@ example :
   native_decide
 
 example :
+    (evalLoopProgWithFunctions
+      [(12, [1], (.return [1] : LoopProg Nat))] 20 loopCallTestState
+      (.loop []
+        (.seq
+          (.call (some ([3], [])) (some 12) [1] none)
+          (.break 0)) [])).map (fun result =>
+        match result with
+        | .normal state => state.locals 3
+        | _ => none) = some (some 9) := by
+  native_decide
+
+example :
     let result := compileFlapjackRiscV (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
       [.function

@@ -5,10 +5,11 @@ import Flapjack.RiscV.Model
 The first executable Word-to-RISC-V instruction-selection slice.
 
 This is intentionally a partial compiler. It covers the Word fragment made of
-`skip`, assignments, sequencing, register-based equality, signed-order, and
-unsigned-order conditionals, constants, register reads, binary arithmetic,
-shifts, and selected memory operations. Immediate-zero conditions use the
-architectural x0 register. The option-valued interface makes the current
+`skip`, assignments, sequencing, equality/order/bit-test conditionals,
+constants, register reads, binary arithmetic, shifts, and selected memory
+operations. Immediate-zero conditions use the architectural x0 register. Bit
+tests reuse the condition register as the `AND` destination, so that register
+is dead after the condition. The option-valued interface makes the current
 boundary explicit while the remaining Word instructions are ported.
 -/
 
@@ -127,8 +128,12 @@ def wordProgToRiscV [NeZero width] :
         | .notLess => pure (.branchLt condition right falseOffset)
         | .lower => pure (.branchGeU condition right falseOffset)
         | .notLower => pure (.branchLtU condition right falseOffset)
-        | _ => none
-      pure ([branchFalse] ++ thenCode ++
+        | .test => pure (.branchNe condition 0 falseOffset)
+        | .notTest => pure (.branchEq condition 0 falseOffset)
+      let prelude := match operator with
+        | .test | .notTest => [.and condition condition right]
+        | _ => []
+      pure (prelude ++ [branchFalse] ++ thenCode ++
         [.branchEq 0 0 endOffset] ++ elseCode)
   | _ => none
 termination_by program => sizeOf program
@@ -205,6 +210,22 @@ theorem executeCode_conditional_notLess :
         (fun state => readRegister state 3) = some 2 := by
   native_decide
 
+theorem executeCode_conditional_test :
+    (executeCode 12 (0 : Word 32)
+      [.and 1 1 2, .branchNe 1 0 (BitVec.ofNat 32 12),
+        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2]
+      (writeRegister (writeRegister (zeroState 32) 1 1) 2 2)).map
+        (fun state => readRegister state 3) = some 1 := by
+  native_decide
+
+theorem executeCode_conditional_notTest :
+    (executeCode 12 (0 : Word 32)
+      [.and 1 1 0, .branchEq 1 0 (BitVec.ofNat 32 12),
+        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2]
+      (writeRegister (zeroState 32) 1 1)).map
+        (fun state => readRegister state 3) = some 2 := by
+  native_decide
+
 def evalWordExp [NeZero width] (state : State width) :
     WordExp (Word width) → Option (Word width)
   | .const value => some value
@@ -273,7 +294,8 @@ def evalWordCondition [NeZero width] (state : State width)
   | .notLess => pure (!signedLess left right)
   | .lower => pure (decide (left < right))
   | .notLower => pure (decide (¬ left < right))
-  | _ => none
+  | .test => pure (left &&& right == 0)
+  | .notTest => pure (left &&& right != 0)
 
 def evalWordFunction [NeZero width] (state : State width) :
     WordProg (Word width) → Option (State width × List (Word width))

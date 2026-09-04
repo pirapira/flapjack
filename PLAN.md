@@ -166,6 +166,8 @@ definitions, pass ordering, examples, and proof obligations.
   and prove their PC transitions.
 - [x] Port signed `Less`/`NotLess` Word conditions to RISC-V `BLT`/`BGE` with
   explicit two's-complement ordering and concrete execution proofs.
+- [x] Port `Test`/`NotTest` Word conditions through an `AND`/x0 sequence,
+  with an explicit dead-condition-register contract and execution proofs.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [x] Add a fuel-bounded, structurally recursive loop evaluator for the
   currently modeled Loop fragment.

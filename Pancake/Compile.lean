@@ -11,14 +11,29 @@ front-end constructs whose runtime environments are not ported yet lower to
 
 namespace Pancake
 
+def compileArgs [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (expressions : List (Exp α)) : List (CrepExp α) :=
+  match expressions with
+  | [] => []
+  | expression :: expressions =>
+      (compileExp context expression).1 ++ compileArgs context expressions
+termination_by structural expressions
+
+def allocatedNames (context : CompileContext α) (shape : Shape) : List Nat :=
+  (List.range (Shape.shapeSize shape)).map (fun offset => context.maxVar + 1 + offset)
+
+def functionReturnNames (context : CompileContext α) (function : FunName) : List Nat :=
+  match lookupInfo function context.functions with
+  | some (_, shape) => allocatedNames context shape
+  | none => []
+
 def compileProg [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (program : Prog α) : CrepProg α :=
   match program with
   | .skip => .skip
   | .dec name shape value body =>
       let compiled := compileExp context value
-      let names := (List.range (Shape.shapeSize shape)).map
-        (fun offset => context.maxVar + 1 + offset)
+      let names := allocatedNames context shape
       let nextContext := { context with
         vars := (name, (shape, names)) :: context.vars
         maxVar := context.maxVar + Shape.shapeSize shape }
@@ -61,10 +76,36 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
       | _ => .skip
   | .break => .break 0
   | .continue => .continue 0
-  | .call _ _ _ => .skip
-  | .decCall _ _ _ _ _ => .skip
+  | .call info function arguments =>
+      let args := compileArgs context arguments
+      match info with
+      | none => .call none function args
+      | some (destination, handler) =>
+          match handler with
+          | some _ => .skip
+          | none =>
+              match destination with
+              | none => .call (some (functionReturnNames context function, none)) function args
+              | some (kind, name) =>
+                  match kind with
+                  | .local =>
+                      match lookupInfo name context.vars with
+                      | some (_, names) => .call (some (names, none)) function args
+                      | none => .call none function args
+                  | .global => .call none function args
+  | .decCall name shape function arguments body =>
+      let names := allocatedNames context shape
+      let nextContext := { context with
+        vars := (name, (shape, names)) :: context.vars
+        maxVar := context.maxVar + Shape.shapeSize shape }
+      let call := .call (some (names, none)) function (compileArgs context arguments)
+      nestedDecs names (names.map (fun _ => .const 0))
+        (.seq call (compileProg nextContext body))
   | .extCall _ _ _ _ _ => .skip
-  | .raise _ _ => .skip
+  | .raise exception _ =>
+      match lookupInfo exception context.exceptions with
+      | some code => .raise code
+      | none => .skip
   | .return value => .return (compileExp context value).1
   | .shMemLoad _ _ _ _ => .skip
   | .shMemStore _ _ _ => .skip

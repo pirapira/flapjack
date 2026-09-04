@@ -13,6 +13,8 @@ namespace Pancake
 
 structure CompileContext (α : Type u) where
   vars : InfoMap (Shape × List Nat)
+  functions : InfoMap (List (VarName × Shape) × Shape)
+  exceptions : InfoMap α
   maxVar : Nat
   bytesInWord : α
   deriving Repr

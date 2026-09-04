@@ -54,7 +54,11 @@ example : validateDecl pairContext (.decl (.named "Missing") "bad" (.const 0)) =
   native_decide
 
 def crepContext : CompileContext Nat :=
-  { vars := [("pair", (.comb [.one, .one], [0, 1]))], maxVar := 1, bytesInWord := 1 }
+  { vars := [("pair", (.comb [.one, .one], [0, 1]))], functions := [], exceptions := [],
+    maxVar := 1, bytesInWord := 1 }
+
+def callContext : CompileContext Nat :=
+  { crepContext with functions := [("f", ([], .one))], exceptions := [("E", 9)] }
 
 example :
     compileExp crepContext (Exp.var .local "pair") =
@@ -92,6 +96,22 @@ example :
     compileProg crepContext (.seq .skip (.tick : Prog Nat)) =
       .seq .skip .tick := by
   simp [compileProg]
+
+example :
+    compileProg crepContext (.call none "f" [.const (α := Nat) 1]) =
+      .call none "f" [.const 1] := by
+  simp [compileProg, compileArgs, compileExp]
+
+example :
+    compileProg callContext (.call (some (none, none)) "f" []) =
+      .call (some ([2], none)) "f" [] := by
+  simp [compileProg, compileArgs, functionReturnNames, allocatedNames, callContext,
+    crepContext, lookupInfo]
+
+example :
+    compileProg callContext (.raise "E" (.const (α := Nat) 0)) =
+      .raise 9 := by
+  simp [compileProg, callContext, crepContext, lookupInfo]
 
 example :
     evalCrepProg (fun _ => none) (compileProg crepContext (.return (.const (α := Nat) 7))) =

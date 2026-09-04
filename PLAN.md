@@ -64,9 +64,11 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port core structured statement lowering and initial pass equations.
 - [x] Add executable deterministic semantics and preservation theorems for
   the supported constant/return/sequence fragment.
+- [x] Extend the initial lowering with handler-free calls, local return
+  destinations, declaration calls, and mapped exceptions.
 - [ ] Port full expression/program checking and diagnostics.
-- [ ] Port remaining call/FFI/exception lowering and a semantic simulation
-  theorem for the complete pass.
+- [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
+  for the complete pass.
 
 ## First implementation slice
 

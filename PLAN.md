@@ -92,6 +92,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the Loop intermediate-language vocabulary and begin Crepe-to-Loop
   lowering, with structural expression preservation and explicit unsupported
   cases.
+- [x] Port Loop variable-use, assigned-variable, and accumulated-variable
+  analyses as executable list-based prerequisites for liveness.
 - [ ] Port complete program checking, context transitions, and diagnostics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.

@@ -6,6 +6,7 @@ import Pancake.Semantics
 import Pancake.RiscV.Model
 import Pancake.Loop
 import Pancake.CrepToLoop
+import Pancake.LoopAnalysis
 
 namespace Pancake
 
@@ -366,5 +367,18 @@ example :
     lowerLoopProg (CrepProg.store (.const (α := Nat) 0) (.const 7)) =
       (.fail : LoopProg Nat) := by
   simp [lowerLoopProg]
+
+example :
+    loopVarsOfExp ((LoopExp.op .add [.var 1, .load (.var 2)]) : LoopExp Nat) =
+      [1, 2] := by
+  simp [loopVarsOfExp]
+
+example :
+    loopAssignedVars (LoopProg.seq (.assign 1 (.const 0)) (.load32 1 2)) = [1, 2] := by
+  rfl
+
+example :
+    loopAccVars (LoopProg.assign 1 (.op .add [.var 2, .const 0])) [] = [2, 1] := by
+  native_decide
 
 end Pancake

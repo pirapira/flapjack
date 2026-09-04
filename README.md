@@ -18,6 +18,8 @@ lowering are in [`Pancake/Loop.lean`](Pancake/Loop.lean) and
 [`Pancake/CrepToLoop.lean`](Pancake/CrepToLoop.lean). The latter keeps the
 Loop vocabulary aligned with CakeML while making conversions that require
 temporary allocation or control-flow lowering explicit as `Fail`.
+The first Loop data-flow analyses are in
+[`Pancake/LoopAnalysis.lean`](Pancake/LoopAnalysis.lean).
 The initial RISC-V target vocabulary, register/memory primitives, and
 `ADD`/`ADDI` transition slice are in
 [`Pancake/RiscV/Model.lean`](Pancake/RiscV/Model.lean), with the HOL notice in

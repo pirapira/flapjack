@@ -13,6 +13,7 @@ import Flapjack.Test.Structured
 import Flapjack.Test.CorrectnessFfi
 import Flapjack.Test.CorrectnessCalls
 import Flapjack.Test.CorrectnessMemory
+import Flapjack.Test.CorrectnessPrimitive
 import Flapjack.Test.Ffi
 import Flapjack.Test.Stack
 import Flapjack.Test.Lab

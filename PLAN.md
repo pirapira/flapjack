@@ -352,6 +352,8 @@ definitions, pass ordering, examples, and proof obligations.
   two destinations and x31 scratch register.
 - [x] Generalize the AddCarry result theorem to arbitrary allocator-selected
   registers under explicit destination/source/scratch non-alias conditions.
+- [x] Prove a mapped Loop-to-Word AddCarry agreement under explicit register
+  value, destination non-alias, and allocator scratch contracts.
 - [x] Lift the Loop no-memory-write projection invariant from one step to
   arbitrary fuel, including sequencing, conditionals, loop repetition, and
   control results.

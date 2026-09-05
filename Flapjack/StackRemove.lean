@@ -208,6 +208,8 @@ def stackRemoveFuel : Nat → StackRemoveConfig → StackProg α → StackProg �
   | fuel + 1, _, .alloc words => .alloc words
   | fuel + 1, _, .storeConsts source bitmap stub =>
       .storeConsts source bitmap stub
+  | fuel + 1, _, .dataBufferWrite address value =>
+      .inst (.mem .store value address)
   | fuel + 1, _, .raise exception => .raise exception
   | fuel + 1, _, .return value => .return value
   | fuel + 1, _, .break label => .break label

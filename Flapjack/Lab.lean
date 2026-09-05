@@ -146,7 +146,7 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
     | .alloc _ | .storeConsts _ _ _ | .stackAlloc _ | .stackFree _ | .stackStore _ _
     | .stackStoreAny _ _
     | .stackLoad _ _ | .stackLoadAny _ _ | .stackGetSize _ | .stackSetSize _
-    | .bitmapLoad _ _ =>
+    | .bitmapLoad _ _ | .dataBufferWrite _ _ =>
       ⟨[], false, counter⟩
   | .call none target none =>
       ⟨[match labCompileJump target with

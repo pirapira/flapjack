@@ -53,6 +53,13 @@ example :
   native_decide
 
 example :
+    compileStackProgramToRiscV (width := 64) { services := [] }
+      stackRemoveRiscVConfig 2 3
+      (.dataBufferWrite 7 6 : StackProg (Word 64)) =
+      some [.storeWord 6 7] := by
+  native_decide
+
+example :
     labLineInstructionCount
         (.asm (.shift .ror 4 5 6) [] 0 : LabLine (Word 64)) = 5 := by
   rfl

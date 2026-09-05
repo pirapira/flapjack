@@ -108,6 +108,12 @@ example :
     stackStorePosition, stackRemoveTestConfig]
 
 example :
+    stackRemove stackRemoveTestConfig
+      (.dataBufferWrite 7 6 : StackProg Nat) =
+      (.inst (.mem .store 6 7) : StackProg Nat) := by
+  simp [stackRemove, stackRemoveFuel]
+
+example :
     stackRemove stackRemoveTestConfig (.get 4 .currHeap : StackProg Nat) =
       .arith .or 4 12 12 := by
   exact stackRemove_get_currHeap _ _

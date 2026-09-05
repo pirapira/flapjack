@@ -575,6 +575,8 @@ definitions, pass ordering, examples, and proof obligations.
   `OpCurrHeap`, stack-size conversion, and bitmap loads.
 - [x] Expose the first executable StackLang → StackRemove → LabLang → RISC-V
   composition and test exact RV64 instruction output.
+- [x] Lower StackLang `DataBufferWrite` to explicit word memory and verify the
+  result through the RV64 backend.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

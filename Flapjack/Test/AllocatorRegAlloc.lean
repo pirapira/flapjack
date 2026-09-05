@@ -219,6 +219,15 @@ example :
   native_decide
 
 example :
+    (wordAllocateGraphFunction [2]
+      (.skip : WordProg Nat) [] 1 1).map
+        (fun result =>
+          (result.2.1,
+            lookupNatInfo 5 result.2.2.1.colouring)) =
+      some ([5], some 0) := by
+  native_decide
+
+example :
     wordProgForcedClashes
       (.inst (.arith (.longMul 4 5 6 7)) : WordProg Nat) =
       [(4, 5), (4, 6), (4, 7)] := by

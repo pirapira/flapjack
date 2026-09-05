@@ -396,6 +396,8 @@ definitions, pass ordering, examples, and proof obligations.
   move worklists before coalescing.
 - [x] Add CakeML-shaped freeze candidates and move retirement after failed
   coalescing, with recomputed move-relatedness and executable stack evidence.
+- [x] Add a function-level graph-allocation boundary seeded with renamed formal
+  parameters, retaining unused ABI formals in the graph and colouring output.
 - [x] Match CakeML's stride-four SSA fresh-name convention and branch
   reconciliation counter, preserving the physical/allocatable/stack residue
   classes used by the RISC-V graph allocator.

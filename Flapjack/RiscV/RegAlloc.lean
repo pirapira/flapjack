@@ -908,4 +908,23 @@ def wordAllocateGraphProgram (program : WordProg α)
         wordApplyColour
           (wordGraphColouringAt allocation.colouring) program))
 
+/- Function-level graph allocation.  CakeML's full SSA entry sequence makes
+   every renamed formal an allocation participant, including an unused formal.
+   Word has no separate Move constructor yet, so the seed `Set` below is the
+   compact equivalent for the graph: it puts all renamed formals in the
+   bijection and gives the clash oracle their ABI-entry interference. -/
+def wordAllocateGraphFunction (parameters : List Nat)
+    (program : WordProg α) (fixedSources : List Nat) (colours stackStart : Nat) :
+    Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
+  let (state, renamedParameters, renamedProgram) :=
+    wordSsaRenameFunction parameters program
+  let tree := WordClashTree.seq (.set renamedParameters)
+    (wordClashTree renamedProgram [])
+  let forced := wordProgForcedClashes renamedProgram
+  let moves := wordProgPreferenceEdges renamedProgram
+  (wordAllocateGraph tree forced fixedSources moves colours stackStart).map
+    (fun allocation =>
+      (state, renamedParameters, allocation,
+        wordApplyColour (wordGraphColouringAt allocation.colouring) renamedProgram))
+
 end Flapjack

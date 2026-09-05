@@ -523,6 +523,14 @@ def wordMoveReplaceNode (oldNode newNode : Nat) (move : WordMove) : WordMove :=
     left := if move.left = oldNode then newNode else move.left
     right := if move.right = oldNode then newNode else move.right }
 
+def wordResolveMove (state : WordMoveState) (move : WordMove) :
+    WordMove × NatInfoMap Nat :=
+  let (left, parents) := wordCoalesceParentFuel
+    (state.graph.dimension + 1) state.graph state.parents move.left
+  let (right, parents) := wordCoalesceParentFuel
+    (state.graph.dimension + 1) state.graph parents move.right
+  ({ move with left := left, right := right }, parents)
+
 def wordCoalesceFreshNeighbours (graph : WordRegGraph)
     (target absorbed : Nat) : List Nat :=
   (wordGraphNeighbours graph absorbed).filter (fun node =>
@@ -554,6 +562,8 @@ def wordCoalesceSafe (colours : Nat) (graph : WordRegGraph)
 
 def wordCoalesceMove (colours : Nat) (state : WordMoveState)
     (move : WordMove) : Option WordMoveState :=
+  let (move, parents) := wordResolveMove state move
+  let state := { state with parents := parents }
   let move := wordCanonicalizeMove state.graph move
   if !wordCoalesceSafe colours state.graph state.related move then
     none
@@ -574,6 +584,36 @@ def wordCoalesceMove (colours : Nat) (state : WordMoveState)
         available := worklists.available
         unavailable := worklists.unavailable
         stack := move.right :: state.stack }
+
+/-! Repeated coalescing mirrors CakeML's  loop.  Invalid moves
+    are retired to the unavailable list, while a successful merge rebuilds
+    the pending worklists so moves that became useful are reconsidered. -/
+
+def wordCoalesceAll : Nat → Nat → WordMoveState → WordMoveState
+  | 0, _, state => state
+  | fuel + 1, colours, state =>
+      match state.available with
+      | [] => state
+      | move :: moves =>
+          if wordCoalesceSafe colours state.graph state.related move then
+            match wordCoalesceMove colours state move with
+            | some state => wordCoalesceAll fuel colours state
+            | none =>
+                wordCoalesceAll fuel colours
+                  { state with
+                    available := moves
+                    unavailable := move :: state.unavailable }
+          else
+            wordCoalesceAll fuel colours
+              { state with
+                available := moves
+                unavailable := move :: state.unavailable }
+
+def wordCoalesceAllAvailable (colours : Nat) (state : WordMoveState) :
+    WordMoveState :=
+  wordCoalesceAll
+    (state.available.length + state.unavailable.length + state.graph.dimension + 1)
+    colours state
 
 structure WordRegAllocInput where
   bijection : WordBijection
@@ -597,5 +637,78 @@ def wordInitRegAlloc (tree : WordClashTree)
   { bijection := bijection
     graph := { graph with
       tags := wordMkTags bijection.next fixedSources bijection.fromNode } }
+
+/-! Bridge the graph allocator back to source variables.
+
+    CakeML stores compressed graph colours and applies  only at
+    the Word boundary.  In particular, physical source variables are tagged
+    with half their architectural register number and total colours are
+    doubled again.  Keeping this conversion explicit avoids accidentally
+    treating a graph colour as a RISC-V register number. -/
+
+def wordGraphNodeFinalColour (graph : WordRegGraph)
+    (parents : NatInfoMap Nat) (node : Nat) : Nat :=
+  let (root, _) := wordCoalesceParentFuel
+    (graph.dimension + 1) graph parents node
+  match wordGraphTagColour graph root with
+  | some colour => colour
+  | none => 0
+
+def wordGraphTotalColourAt (graph : WordRegGraph)
+    (parents : NatInfoMap Nat) (node : Nat) : Nat :=
+  2 * wordGraphNodeFinalColour graph parents node
+
+def wordGraphColouringAt (colouring : NatInfoMap Nat)
+    (source : Nat) : Nat :=
+  match lookupNatInfo source colouring with
+  | some colour => colour
+  | none => if source % 2 == 0 then source else 0
+
+def wordGraphTotalColouring (input : WordRegAllocInput)
+    (graph : WordRegGraph) (parents : NatInfoMap Nat) : NatInfoMap Nat :=
+  input.bijection.fromNode.map (fun entry =>
+    (entry.2, wordGraphTotalColourAt graph parents entry.1))
+
+structure WordGraphAllocation where
+  graph : WordRegGraph
+  colouring : NatInfoMap Nat
+  parents : NatInfoMap Nat
+  deriving Repr
+
+def wordAllocateGraph (tree : WordClashTree)
+    (forced : List (Nat × Nat)) (fixedSources : List Nat)
+    (moves : List (Nat × Nat)) (colours stackStart : Nat) :
+    Option WordGraphAllocation :=
+  let input := wordInitRegAlloc tree forced fixedSources
+  let moveState := wordInitMoveState input.graph (wordPreferenceMoves moves)
+  let moveState := wordCoalesceAllAvailable colours moveState
+  let graph := wordColourGraphWithWorklist colours stackStart moveState.graph
+  let colouring := wordGraphTotalColouring input graph moveState.parents
+  let colour := wordGraphColouringAt colouring
+  if wordGraphTagsAreFixed graph &&
+      wordGraphColouringRespectsEdges graph &&
+      (wordClashTreeCheck colour tree [] []).isSome then
+    some
+      { graph := graph
+        colouring := colouring
+        parents := moveState.parents }
+  else
+    none
+
+theorem wordAllocateGraph_sound (tree : WordClashTree)
+    (forced : List (Nat × Nat)) (fixedSources : List Nat)
+    (moves : List (Nat × Nat)) (colours stackStart : Nat)
+    (allocation : WordGraphAllocation)
+    (halloc : wordAllocateGraph tree forced fixedSources moves colours stackStart =
+      some allocation) :
+    wordGraphTagsAreFixed allocation.graph = true ∧
+      wordGraphColouringRespectsEdges allocation.graph = true ∧
+      (wordClashTreeCheck (wordGraphColouringAt allocation.colouring)
+        tree [] []).isSome = true := by
+  simp [wordAllocateGraph] at halloc
+  rcases halloc with ⟨hchecks, heq⟩
+  cases heq
+  rcases hchecks with ⟨⟨hfixed, hedges⟩, htree⟩
+  exact ⟨hfixed, hedges, htree⟩
 
 end Flapjack

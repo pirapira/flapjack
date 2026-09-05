@@ -382,6 +382,10 @@ definitions, pass ordering, examples, and proof obligations.
   colouring with executable edge-safety regressions.
 - [x] Port move consistency filtering, canonical move orientation,
   coalesced-node parent compression, and a conservative safe coalescing step.
+- [x] Port repeated safe coalescing with parent resolution and rebuilt pending
+  move worklists.
+- [x] Bridge graph colours back to source variables with CakeML total-colour
+  doubling and validate the graph allocation through the clash-tree oracle.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

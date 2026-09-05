@@ -107,15 +107,14 @@ def pipelineWordFunctionsAllocatedWithSpills [NeZero width] :
   | (label, parameters, body) :: functions => do
       let unallocatedBody :=
         loopToWordProg ({ vars := [] } : WordContext) body
-      let (_, renamedBody, allocation) ←
-        wordAllocateSsaProgramWithSpills
-          ({ current := [], next := 0 } : WordSsaState) unallocatedBody
+      let (_, renamedParameters, renamedBody, allocation) ←
+        wordAllocateSsaFunctionWithSpills parameters unallocatedBody
       let config : RiscV.WordStackConfig :=
         { locations := allocation.locations
           scratch := 31
           stackBase := 0
           addressScratch := 29 }
-      let stackBody ← RiscV.wordToStackFunctionWithParameters config parameters
+      let stackBody ← RiscV.wordToStackFunctionWithParameters config renamedParameters
         renamedBody
       let rest ← pipelineWordFunctionsAllocatedWithSpills functions
       pure ((label, parameters, stackBody) :: rest)

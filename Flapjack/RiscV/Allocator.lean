@@ -641,6 +641,34 @@ def wordProgWriteVars : WordProg α → List Nat
 def wordProgVariables (program : WordProg α) : List Nat :=
   wordProgReadVars program ++ wordProgWriteVars program
 
+/-! CakeML's `full_ssa_cc_trans` starts a function by giving each formal
+    parameter a fresh SSA name.  The fresh names are chosen above the source
+    program's variable range; the corresponding ABI moves are materialised at
+    the Word-to-Stack boundary.  Keeping this setup separate from the body
+    renamer lets the function metadata retain its source-level parameter
+    names. -/
+
+def wordListMaximum : List Nat → Nat
+  | [] => 0
+  | value :: values => max value (wordListMaximum values)
+termination_by values => sizeOf values
+decreasing_by all_goals decreasing_trivial
+
+def wordSsaLimitVar (parameters : List Nat) (program : WordProg α) : Nat :=
+  let maximum := wordListMaximum (parameters ++ wordProgVariables program)
+  maximum + (4 - maximum % 4) + 1
+
+def wordSsaSetupParameters (parameters : List Nat) (program : WordProg α) :
+    WordSsaState × List Nat :=
+  wordSsaFreshList
+    { current := [], next := wordSsaLimitVar parameters program } parameters
+
+def wordSsaRenameFunction (parameters : List Nat) (program : WordProg α) :
+    WordSsaState × List Nat × WordProg α :=
+  let (state, renamedParameters) := wordSsaSetupParameters parameters program
+  let (state, program) := wordSsaRenameProgram state program
+  (state, renamedParameters, program)
+
 def wordProgLiveBefore (program : WordProg α) (liveAfter : List Nat) : List Nat :=
   wordProgReadVars program ++
     liveAfter.filter (fun name => name ∉ wordProgWriteVars program)
@@ -1179,6 +1207,26 @@ def wordAllocateSsaProgramWithSpills (state : WordSsaState)
   | some allocation =>
       if wordProgSpecialLocationsSafe allocation.locations program = true then
         some (state, program, allocation)
+      else
+        none
+
+/-! Function-level spill allocation, including CakeML's fresh formal
+    parameters in the allocation input.  A formal that is unused by the body
+    still occurs in the generated entry move and therefore must receive a
+    location. -/
+
+def wordAllocateSsaFunctionWithSpills (parameters : List Nat)
+    (program : WordProg α) :
+    Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
+  let (state, renamedParameters, program) :=
+    wordSsaRenameFunction parameters program
+  let (liveIn, edges) := wordProgClashAnalysis program []
+  match wordAllocateVarsWithSpills
+      (renamedParameters ++ wordProgVariables program ++ liveIn) edges with
+  | none => none
+  | some allocation =>
+      if wordProgSpecialLocationsSafe allocation.locations program = true then
+        some (state, renamedParameters, program, allocation)
       else
         none
 

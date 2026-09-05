@@ -679,6 +679,8 @@ definitions, pass ordering, examples, and proof obligations.
   allocator-aware Stack/RISC-V entry point for execution-harness integration.
 - [x] Move allocated formal parameters from the incoming even-numbered ABI
   registers into their allocated registers or spill slots at function entry.
+- [x] Add CakeML-style function SSA setup: fresh formal names above the source
+  variable range, with unused formals retained in spill allocation inputs.
 - [x] Replace the fixed StackRemove fuel in all composed backend entry points
   with a size-derived bound, so generated functions are not limited to 1024
   levels of nesting.

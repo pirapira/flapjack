@@ -553,6 +553,8 @@ definitions, pass ordering, examples, and proof obligations.
   linked back to the structured source result.
 - [x] Prove the primitive constructor is preserved by the Crepe-to-Loop
   lowering and that both evaluators agree on its updated locals and results.
+- [x] Prove the emitted RISC-V AddCarry sequence preserves the complete
+  mapped-local relation under explicit allocator non-alias contracts.
 - [x] Extend the Crepe primitive evaluator across compiled memory stores,
   loads, conditionals, and result extraction.
 - [x] Port CakeML's flat structured-memory load/store model, including

@@ -189,4 +189,134 @@ theorem crepToLoop_primitive_agreement
               loopStateOfCrepLocals, loopResultState, loopResultValues, hfold,
               updateCrepLocal, updateLoopLocal]
 
+theorem addCarry_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (locals : Nat → Option (RiscV.Word width))
+    (state : RiscV.State width)
+    (destination resultCarry left right carry : Nat)
+    (destinationRegister resultCarryRegister leftRegister rightRegister
+      carryRegister : Fin 32)
+    (leftValue rightValue carryValue : RiscV.Word width)
+    (hlocals : loopLocalsMappedToRiscV context locals state)
+    (hleft : locals left = some leftValue)
+    (hright : locals right = some rightValue)
+    (hcarry : locals carry = some carryValue)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hresultCarry :
+      RiscV.registerOfNat (wordFindVar context resultCarry) =
+        some resultCarryRegister)
+    (hleft_register :
+      RiscV.registerOfNat (wordFindVar context left) = some leftRegister)
+    (hright_register :
+      RiscV.registerOfNat (wordFindVar context right) = some rightRegister)
+    (hcarry_register :
+      RiscV.registerOfNat (wordFindVar context carry) = some carryRegister)
+    (hleft_state : RiscV.readRegister state leftRegister = leftValue)
+    (hright_state : RiscV.readRegister state rightRegister = rightValue)
+    (hcarry_state : RiscV.readRegister state carryRegister = carryValue)
+    (hzero : RiscV.readRegister state 0 = 0)
+    (hdestination_nonzero : destinationRegister ≠ 0)
+    (hresultCarry_nonzero : resultCarryRegister ≠ 0)
+    (hdestination_resultCarry : destinationRegister ≠ resultCarryRegister)
+    (hdestination_sourceRight : destinationRegister ≠ rightRegister)
+    (hdestination_scratch : destinationRegister ≠ 31)
+    (hresultCarry_scratch : resultCarryRegister ≠ 31)
+    (hleft_scratch : leftRegister ≠ 31)
+    (hright_scratch : rightRegister ≠ 31)
+    (hcarry_scratch : carryRegister ≠ 31)
+    (hdestination_name_resultCarry : destination ≠ resultCarry)
+    (hnoalias :
+      ∀ name, name ≠ destination → name ≠ resultCarry →
+        ∀ register,
+          RiscV.registerOfNat (wordFindVar context name) = some register →
+          register ≠ destinationRegister ∧
+            register ≠ resultCarryRegister ∧ register ≠ 31) :
+    loopLocalsMappedToRiscV context
+      (updateLoopLocal
+        (updateLoopLocal locals destination
+          (RiscV.addCarryWords leftValue rightValue carryValue).1)
+        resultCarry (RiscV.addCarryWords leftValue rightValue carryValue).2)
+      (RiscV.executeInstructions state
+        [.sltu 31 0 carryRegister,
+          .add destinationRegister leftRegister rightRegister,
+          .sltu resultCarryRegister destinationRegister rightRegister,
+          .add destinationRegister destinationRegister 31,
+          .sltu 31 destinationRegister 31,
+          .or resultCarryRegister resultCarryRegister 31]) := by
+  have hadd := RiscV.executeInstructions_addCarry_general state
+    destinationRegister resultCarryRegister leftRegister rightRegister
+      carryRegister hzero hdestination_nonzero hresultCarry_nonzero
+      hdestination_resultCarry hdestination_sourceRight hdestination_scratch
+      hresultCarry_scratch hleft_scratch hright_scratch hcarry_scratch
+  intro name current hcurrent
+  by_cases hname_destination : name = destination
+  · subst name
+    have hvalue :
+        (RiscV.addCarryWords leftValue rightValue carryValue).1 = current := by
+      simpa [updateLoopLocal, hdestination_name_resultCarry] using hcurrent
+    subst current
+    refine ⟨destinationRegister, hdestination, ?_⟩
+    simpa [hleft_state, hright_state, hcarry_state] using congrArg Prod.fst hadd
+  · by_cases hname_resultCarry : name = resultCarry
+    · subst name
+      have hvalue :
+          (RiscV.addCarryWords leftValue rightValue carryValue).2 = current := by
+        simpa [updateLoopLocal, hname_destination] using hcurrent
+      subst current
+      refine ⟨resultCarryRegister, hresultCarry, ?_⟩
+      simpa [hleft_state, hright_state, hcarry_state] using congrArg Prod.snd hadd
+    · have hcurrent' : locals name = some current := by
+        simpa [updateLoopLocal, hname_destination, hname_resultCarry] using hcurrent
+      rcases hlocals name current hcurrent' with
+        ⟨register, hregister, hregister_value⟩
+      refine ⟨register, hregister, ?_⟩
+      have hnonalias := hnoalias name hname_destination hname_resultCarry
+        register hregister
+      have hzero_value : state.registers 0 = 0 := by
+        simpa [RiscV.readRegister] using hzero
+      have hpreserved :
+          RiscV.readRegister
+              (RiscV.executeInstructions state
+                [.sltu 31 0 carryRegister,
+                  .add destinationRegister leftRegister rightRegister,
+                  .sltu resultCarryRegister destinationRegister rightRegister,
+                  .add destinationRegister destinationRegister 31,
+                  .sltu 31 destinationRegister 31,
+                  .or resultCarryRegister resultCarryRegister 31]) register =
+            RiscV.readRegister state register := by
+        by_cases hzero_register : register = 0
+        · subst register
+          simp [RiscV.executeInstructions, RiscV.execute,
+            RiscV.writeRegister, RiscV.readRegister,
+            hdestination_nonzero, hresultCarry_nonzero,
+            hdestination_resultCarry, hdestination_sourceRight,
+            hdestination_scratch, hresultCarry_scratch,
+            hleft_scratch, hright_scratch, hcarry_scratch,
+            Ne.symm hdestination_resultCarry,
+            Ne.symm hdestination_sourceRight,
+            Ne.symm hdestination_scratch,
+            Ne.symm hresultCarry_scratch,
+            Ne.symm hleft_scratch, Ne.symm hright_scratch,
+            Ne.symm hcarry_scratch,
+            hzero_value, hnonalias.1, hnonalias.2.1, hnonalias.2.2,
+            Ne.symm hnonalias.1, Ne.symm hnonalias.2.1,
+            Ne.symm hnonalias.2.2]
+        · simp [RiscV.executeInstructions, RiscV.execute,
+            RiscV.writeRegister, RiscV.readRegister, hzero_register,
+            hdestination_nonzero, hresultCarry_nonzero,
+            hdestination_resultCarry, hdestination_sourceRight,
+            hdestination_scratch, hresultCarry_scratch,
+            hleft_scratch, hright_scratch, hcarry_scratch,
+            Ne.symm hdestination_resultCarry,
+            Ne.symm hdestination_sourceRight,
+            Ne.symm hdestination_scratch,
+            Ne.symm hresultCarry_scratch,
+            Ne.symm hleft_scratch, Ne.symm hright_scratch,
+            Ne.symm hcarry_scratch,
+            hzero_value, hnonalias.1, hnonalias.2.1, hnonalias.2.2,
+            Ne.symm hnonalias.1, Ne.symm hnonalias.2.1,
+            Ne.symm hnonalias.2.2]
+      exact hpreserved.trans hregister_value
+
 end Flapjack

@@ -192,6 +192,42 @@ theorem evalWordExp_applyColour [NeZero width]
           | _ => simp [evalWordExp, wordApplyColourExp]
       | _ => simp [evalWordExp, wordApplyColourExp]
 
+theorem evalWordCondition_applyColour [NeZero width]
+    (colour : Nat → Nat) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (colour name)
+        pure (readRegister target register)))
+    (operator : Cmp) (condition : Nat)
+    (rightValue : WordRegImm (Word width)) :
+    evalWordCondition source operator condition rightValue =
+      evalWordCondition target operator (colour condition)
+        (wordApplyColourRegImm colour rightValue) := by
+  cases rightValue with
+  | imm value =>
+      simp only [evalWordCondition, wordApplyColourRegImm]
+      cases hcondition : registerOfNat condition <;>
+        cases hcondition' : registerOfNat (colour condition) <;>
+        all_goals
+          have hconditionValue := hregister condition
+          simp_all [hcondition, hcondition', hconditionValue,
+            evalWordCondition]
+  | reg right =>
+      simp only [evalWordCondition, wordApplyColourRegImm]
+      cases hcondition : registerOfNat condition <;>
+        cases hcondition' : registerOfNat (colour condition) <;>
+        cases hright : registerOfNat right <;>
+        cases hright' : registerOfNat (colour right) <;>
+        all_goals
+          have hconditionValue := hregister condition
+          have hrightValue := hregister right
+          simp_all [hcondition, hcondition', hright, hright',
+            hconditionValue, hrightValue, evalWordCondition,
+            wordApplyColourRegImm]
+
 theorem evalWordCondition_ssaRename [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hregister : ∀ name,

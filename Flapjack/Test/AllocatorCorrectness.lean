@@ -43,6 +43,21 @@ example [NeZero 64]
   · exact hmemory
 
 example [NeZero 64]
+    (source target : State 64) (colour : Nat → Nat)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (colour name)
+        pure (readRegister target register))) :
+    evalWordCondition source .equal 2 (.reg 3) =
+      evalWordCondition target .equal (colour 2)
+        (wordApplyColourRegImm colour (.reg 3)) := by
+  apply evalWordCondition_applyColour
+  exact hregister
+
+example [NeZero 64]
     (source target : State 64) (ssa : WordSsaState)
     (hregister : ∀ name,
       (do

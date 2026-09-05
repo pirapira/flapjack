@@ -59,4 +59,22 @@ example :
       some 1 := by
   native_decide
 
+example :
+    wordGraphTagsAreFixed
+        (wordColourGraph 2 1 1
+          (wordInitRegAlloc (.delta [1, 5] []) [] []).graph) = true := by
+  native_decide
+
+example :
+    wordGraphColouringRespectsEdges
+        (wordColourGraphWithWorklist 1 1
+          (wordInitRegAlloc (.delta [1, 5] []) [] []).graph) = true := by
+  native_decide
+
+example :
+    wordGraphTagsAreFixed
+        (wordColourGraphWithWorklist 1 1
+          (wordInitRegAlloc (.delta [1, 5] []) [] []).graph) = true := by
+  native_decide
+
 end Flapjack

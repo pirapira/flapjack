@@ -377,6 +377,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the executable two-pass Atemp/Stemp colouring transition, including
   available-colour removal, stack-range colour selection, and edge-safety
   regressions.
+- [x] Add the first IRC-style graph worklist state: degree tracking,
+  low-degree simplification, forced spill selection, and reverse-stack
+  colouring with executable edge-safety regressions.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

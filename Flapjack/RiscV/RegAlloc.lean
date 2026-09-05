@@ -267,6 +267,12 @@ def wordGraphTagColour (graph : WordRegGraph) (node : Nat) : Option Nat :=
   | some tag => wordTagFixedColour tag
   | none => none
 
+def wordGraphTagsAreFixed (graph : WordRegGraph) : Bool :=
+  graph.tags.all (fun entry =>
+    match entry.2 with
+    | .fixed _ => true
+    | .atemp | .stemp => false)
+
 def wordGraphColouringRespectsEdges (graph : WordRegGraph) : Bool :=
   graph.adjacency.all (fun entry =>
     let node := entry.1
@@ -275,6 +281,118 @@ def wordGraphColouringRespectsEdges (graph : WordRegGraph) : Bool :=
         wordGraphTagColour graph neighbour with
       | some left, some right => left != right
       | _, _ => false))
+
+structure WordRaState where
+  graph : WordRegGraph
+  active : List Nat
+  degrees : NatInfoMap Nat
+  simpWl : List Nat
+  spillWl : List Nat
+  stack : List Nat
+  deriving Repr
+
+def wordRaNodeIsAtemp (graph : WordRegGraph) (node : Nat) : Bool :=
+  match lookupNatInfo node graph.tags with
+  | some .atemp => true
+  | some (.fixed _) | some .stemp | none => false
+
+def wordRaDegree (graph : WordRegGraph) (node : Nat) : Nat :=
+  (wordGraphNeighbours graph node).length
+
+def wordRaDegrees (graph : WordRegGraph) : NatInfoMap Nat :=
+  (List.range graph.dimension).map (fun node => (node, wordRaDegree graph node))
+
+def wordRaRefreshWorklists (colours : Nat) (state : WordRaState) :
+    WordRaState :=
+  let simpWl := state.active.filter (fun node =>
+    wordRaNodeIsAtemp state.graph node &&
+      match lookupNatInfo node state.degrees with
+      | some degree => degree < colours
+      | none => false)
+  let spillWl := state.active.filter (fun node =>
+    wordRaNodeIsAtemp state.graph node &&
+      match lookupNatInfo node state.degrees with
+      | some degree => degree ≥ colours
+      | none => false)
+  { state with simpWl := simpWl, spillWl := spillWl }
+
+def wordRaInit (colours : Nat) (graph : WordRegGraph) : WordRaState :=
+  let active := List.range graph.dimension
+  let state : WordRaState :=
+    { graph := graph
+      active := active
+      degrees := wordRaDegrees graph
+      simpWl := []
+      spillWl := []
+      stack := [] }
+  wordRaRefreshWorklists colours state
+
+def wordRaRemoveNode (colours : Nat) (node : Nat)
+    (forceSpill : Bool) (state : WordRaState) : WordRaState :=
+  let graph := if forceSpill then
+      { state.graph with tags :=
+          wordGraphUpdateTag node .stemp state.graph.tags }
+    else
+      state.graph
+  let degrees := (wordGraphNeighbours state.graph node).foldl
+    (fun degrees neighbour =>
+      match lookupNatInfo neighbour degrees with
+      | some degree =>
+          (neighbour, degree - 1) :: degrees.filter
+            (fun entry => entry.1 != neighbour)
+      | none => degrees)
+    state.degrees
+  let state := { state with
+    graph := graph
+    active := state.active.erase node
+    degrees := degrees
+    simpWl := state.simpWl.erase node
+    spillWl := state.spillWl.erase node
+    stack := node :: state.stack }
+  wordRaRefreshWorklists colours state
+
+def wordRaSimplifyAll : Nat → Nat → WordRaState → WordRaState
+  | 0, _, state => state
+  | fuel + 1, colours, state =>
+      match state.simpWl with
+      | node :: _ =>
+          wordRaSimplifyAll fuel colours
+            (wordRaRemoveNode colours node false state)
+      | [] =>
+          match state.spillWl with
+          | node :: _ =>
+              wordRaSimplifyAll fuel colours
+                (wordRaRemoveNode colours node true state)
+          | [] => state
+
+def wordRaChooseColour (colours stackStart : Nat)
+    (graph : WordRegGraph) (node : Nat) : Nat :=
+  let blocked := wordFixedNeighbourColours
+    (wordGraphNeighbours graph node) graph.tags
+  match lookupNatInfo node graph.tags with
+  | some .stemp => wordUnboundColour stackStart blocked
+  | some .atemp =>
+      match wordFirstAvailable
+          (wordRemoveColours blocked (List.range colours)) blocked with
+      | some colour => colour
+      | none => wordUnboundColour stackStart blocked
+  | some (.fixed colour) => colour
+  | none => 0
+
+def wordRaColourStack (colours stackStart : Nat) :
+    List Nat → WordRegGraph → WordRegGraph
+  | [], graph => graph
+  | node :: nodes, graph =>
+      let colour := wordRaChooseColour colours stackStart graph node
+      let graph := { graph with
+        tags := wordGraphUpdateTag node (.fixed colour) graph.tags }
+      wordRaColourStack colours stackStart nodes graph
+
+def wordColourGraphWithWorklist (colours stackStart : Nat)
+    (graph : WordRegGraph) : WordRegGraph :=
+  let state := wordRaInit colours graph
+  let state := wordRaSimplifyAll (state.active.length + 1) colours state
+  wordRaColourStack colours stackStart state.stack state.graph
 
 structure WordRegAllocInput where
   bijection : WordBijection

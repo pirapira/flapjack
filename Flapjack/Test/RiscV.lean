@@ -5,6 +5,30 @@ namespace Flapjack
 
 open RiscV
 
+def signedOrderState : RiscV.State 8 :=
+  { (RiscV.zeroState 8) with
+    registers := fun register =>
+      if register = 1 then BitVec.ofNat 8 255
+      else if register = 2 then BitVec.ofNat 8 1 else 0 }
+
+example :
+    RiscV.readRegister
+      (RiscV.execute signedOrderState (.slt 3 1 2)) 3 =
+      BitVec.ofNat 8 1 := by
+  native_decide
+
+example :
+    RiscV.readRegister
+      (RiscV.execute signedOrderState (.slt 3 2 1)) 3 =
+      BitVec.ofNat 8 0 := by
+  native_decide
+
+example :
+    (RiscV.execute signedOrderState
+      (.branchLt 1 2 (BitVec.ofNat 8 12))).pc =
+      BitVec.ofNat 8 12 := by
+  native_decide
+
 example [NeZero width] :
     Flapjack.RiscV.compileWordAdd (width := width) 1 2 3 =
       some [.add 1 2 3] := by

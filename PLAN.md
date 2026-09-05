@@ -82,6 +82,8 @@ definitions, pass ordering, examples, and proof obligations.
   unsigned byte/halfword operations, with destination-register theorems.
 - [x] Port HOL's signed `SLT`/`SLTI` integer comparison value paths and prove
   their destination-register behavior, including x0 handling.
+- [x] Correct the mixed-sign two's-complement ordering predicate and add
+  negative/positive `SLT` and branch regressions.
 - [x] Add executable deterministic semantics and preservation theorems for
   the supported constant/return/sequence fragment, including scalar local
   assignment state updates.

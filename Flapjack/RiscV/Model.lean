@@ -276,7 +276,7 @@ def shiftAmount (value : Word width) : Nat := value.toNat % width
 def signedLess (left right : Word width) : Bool :=
   let sign := 2 ^ (width - 1)
   if left.toNat < sign then
-    if right.toNat < sign then decide (left.toNat < right.toNat) else true
+    if right.toNat < sign then decide (left.toNat < right.toNat) else false
   else if right.toNat < sign then
     true
   else

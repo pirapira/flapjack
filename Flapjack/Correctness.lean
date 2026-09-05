@@ -1246,6 +1246,22 @@ theorem loopToWord_tick_preserves_mapped_locals [NeZero width]
   · simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister, hzero]
     exact hregister_value
 
+theorem loopToWord_skip_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state) :
+    ∀ finalLoop finalWord,
+      evalLoopProg 1 loopState (.skip) = some (.normal finalLoop) →
+      RiscV.evalWordProg state
+        (loopToWordProg context (.skip)) = some finalWord →
+      loopLocalsMappedToRiscV context finalLoop.locals finalWord := by
+  intro finalLoop finalWord hloop hword
+  simp [evalLoopProg] at hloop
+  simp [loopToWordProg, RiscV.evalWordProg] at hword
+  subst finalLoop
+  subst finalWord
+  exact hlocals
+
 def loopResultMappedToRiscV [NeZero width] (context : WordContext) :
     LoopResult (RiscV.Word width) → RiscV.WordLoopResult width → Prop
   | .normal loopState, .normal state =>

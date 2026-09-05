@@ -387,6 +387,26 @@ theorem evalPanExtCall_single [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul �
   simp [evalPanFfiProg]
 
 mutual
+  def evalPanWhileWithCallsAndFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (functions : List (FunName × List VarName × Prog α))
+      (handler : PanFfiHandler α) :
+      Nat → (VarName → Option α) → Exp α → Prog α → Option (PanControlResult α)
+    | 0, _, _, _ => none
+    | fuel + 1, locals, condition, body => do
+        let conditionValue ← evalPanCondition locals condition
+        if conditionValue then
+          let result ← evalPanProgWithCallsAndFfi functions handler fuel locals body
+          (match result with
+          | .normal locals => evalPanWhileWithCallsAndFfi functions handler fuel
+              locals condition body
+          | .returned locals values => some (.returned locals values)
+          | .raised locals exception value => some (.raised locals exception value))
+        else
+          pure (.normal locals)
+    termination_by fuel _ _ _ => fuel
+
   def evalPanCallWithCallsAndFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
       [LT α] [DecidableRel (fun left right : α => left < right)]
@@ -435,6 +455,14 @@ mutual
         let value ← evalPanExp locals value
         evalPanProgWithCallsAndFfi functions handler fuel
           (updatePanLocal locals name value) body
+    | fuel + 1, locals, .ite condition thenBranch elseBranch => do
+        let conditionValue ← evalPanCondition locals condition
+        if conditionValue then
+          evalPanProgWithCallsAndFfi functions handler fuel locals thenBranch
+        else
+          evalPanProgWithCallsAndFfi functions handler fuel locals elseBranch
+    | fuel + 1, locals, .while condition body =>
+        evalPanWhileWithCallsAndFfi functions handler fuel locals condition body
     | fuel + 1, locals, .seq first second => do
         let result ← evalPanProgWithCallsAndFfi functions handler fuel locals first
         match result with
@@ -462,6 +490,18 @@ mutual
     | _, _, _ => none
     termination_by fuel _ _ => fuel
 end
+
+theorem evalPanProgWithCallsAndFfi_while_false
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (functions : List (FunName × List VarName × Prog α))
+    (handler : PanFfiHandler α) (fuel : Nat)
+    (locals : VarName → Option α) (condition : Exp α) (body : Prog α)
+    (hcondition : evalPanCondition locals condition = some false) :
+    evalPanProgWithCallsAndFfi functions handler (fuel + 2) locals
+      (.while condition body) = some (.normal locals) := by
+  simp [evalPanProgWithCallsAndFfi, evalPanWhileWithCallsAndFfi, hcondition]
 
 def evalCrepStateProg [Add α] [Mul α] (locals : Nat → Option α) :
     CrepProg α → Option ((Nat → Option α) × List α)

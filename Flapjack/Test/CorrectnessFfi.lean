@@ -117,6 +117,16 @@ example :
   native_decide
 
 example :
+    (evalPanProgWithCallsAndFfi [] sourceFfiHandler 10
+      (fun name => if name == "x" then some (BitVec.ofNat 64 41) else none)
+      (.while (.const (BitVec.ofNat 64 0))
+        (.extCall "inc" (.var .local "x") (.const 0)
+          (.const 0) (.const 0)))).map (fun result => match result with
+        | .normal locals => locals "x"
+        | _ => none) = some (some 41) := by
+  native_decide
+
+example :
     sourceFfiPipeline.pipeline.word.length = 2 &&
       sourceFfiPipeline.functions.all (fun (_, _, artifact) => artifact.isSome) := by
   native_decide

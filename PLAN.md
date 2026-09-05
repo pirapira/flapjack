@@ -589,6 +589,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Wire the register-coloured Word function list through the actual
   Word-to-Stack, StackRemove, LabLang, and multi-section RISC-V pipeline, with
   an RV64 addition compilation regression.
+- [x] Wire the executable SSA/clash-colouring Word allocation boundary into a
+  separate allocated Stack-to-RISC-V entry point with an allocation regression.
 - [x] Replace the fixed StackRemove fuel in all composed backend entry points
   with a size-derived bound, so generated functions are not limited to 1024
   levels of nesting.

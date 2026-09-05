@@ -294,6 +294,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port recursive Word register-colouring over expressions, instructions,
   nested handlers, loops, and call metadata, and expose the coloured pipeline
   boundary.
+- [x] Add an explicit spill-aware Word allocation result with fresh stack-slot
+  assignment and a register/spill clash-validation contract; stack access
+  rewriting remains a separate backend pass.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

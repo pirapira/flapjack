@@ -669,6 +669,86 @@ theorem wordAllocateVarsWithClashes_sound (slots : List Nat)
     rcases hcolouring with ⟨hcheck, heq⟩
     simpa [heq] using hcheck
 
+/-! Spill-aware allocation boundary.  CakeML's `word_to_stack` pass consumes
+    the spill information produced by `word_alloc`; keeping that information
+    explicit here prevents register exhaustion from being confused with a
+    failed compilation.  Stack rewriting is intentionally a following pass:
+    this result records a fresh stack slot for every value that cannot use a
+    target register, while preserving the same clash check for values that do
+    receive registers. -/
+
+inductive WordLocation where
+  | register (register : Nat)
+  | stack (slot : Nat)
+  deriving DecidableEq, Repr
+
+structure WordSpillState where
+  locations : NatInfoMap WordLocation
+  nextSpill : Nat
+  deriving Repr
+
+def wordUsedLocationRegisters (names : List Nat)
+    (locations : NatInfoMap WordLocation) : List Nat :=
+  match names with
+  | [] => []
+  | name :: names =>
+      let registers := match lookupNatInfo name locations with
+        | some (.register register) => [register]
+        | some (.stack _) | none => []
+      registers ++ wordUsedLocationRegisters names locations
+
+def wordGreedyAllocateWithSpills : List Nat → List (Nat × Nat) →
+    WordSpillState → WordSpillState
+  | [], _, state => state
+  | name :: names, edges, state =>
+      let forbidden :=
+        wordUsedLocationRegisters (wordNeighbours name edges) state.locations
+      let state := match wordFirstAvailable (wordColourCandidates name) forbidden with
+        | some register =>
+            { state with locations := (name, .register register) :: state.locations }
+        | none =>
+            { locations := (name, .stack state.nextSpill) :: state.locations,
+              nextSpill := state.nextSpill + 1 }
+      wordGreedyAllocateWithSpills names edges state
+
+def wordSpillAllocationRespectsClashes (edges : List (Nat × Nat))
+    (locations : NatInfoMap WordLocation) : Bool :=
+  match edges with
+  | [] => true
+  | (left, right) :: edges =>
+      match lookupNatInfo left locations, lookupNatInfo right locations with
+      | some (.register leftRegister), some (.register rightRegister) =>
+          leftRegister != rightRegister &&
+            wordSpillAllocationRespectsClashes edges locations
+      | some _, some _ => wordSpillAllocationRespectsClashes edges locations
+      | _, _ => false
+
+def wordAllocateVarsWithSpills (slots : List Nat)
+    (edges : List (Nat × Nat)) : Option WordSpillState :=
+  let state := wordGreedyAllocateWithSpills slots.eraseDups edges
+    { locations := [], nextSpill := 0 }
+  if wordSpillAllocationRespectsClashes edges state.locations then some state
+  else none
+
+theorem wordAllocateVarsWithSpills_sound (slots : List Nat)
+    (edges : List (Nat × Nat)) (state : WordSpillState)
+    (hstate : wordAllocateVarsWithSpills slots edges = some state) :
+    wordSpillAllocationRespectsClashes edges state.locations = true := by
+  simp [wordAllocateVarsWithSpills] at hstate
+  rcases hstate with ⟨hcheck, heq⟩
+  simpa [heq] using hcheck
+
+theorem wordAllocateVarsWithSpills_example :
+    wordAllocateVarsWithSpills [0, 1] [(0, 1)] =
+      some { locations := [(1, .register 3), (0, .register 2)], nextSpill := 0 } := by
+  rfl
+
+theorem wordAllocateVarsWithSpills_spills_example :
+    (wordAllocateVarsWithSpills (List.range 29)
+      (wordPairwiseClashes (List.range 29))).map
+        (fun state => state.nextSpill != 0) = some true := by
+  native_decide
+
 theorem wordAllocatableRegisters_safe :
     ∀ register ∈ wordAllocatableRegisters,
       wordRegisterIsAllocatable register = true := by

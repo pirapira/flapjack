@@ -413,6 +413,8 @@ definitions, pass ordering, examples, and proof obligations.
   including a fully spilled destination/address regression.
 - [x] Prove concrete Stack-machine preservation for constant-address loads,
   including a spilled destination regression.
+- [x] Prove concrete Stack-machine preservation for atomized variable stores,
+  including a fully spilled source/address regression.
 - [x] Preserve StackLang arithmetic and shifts through LabLang and lower them
   to executable RISC-V instructions, including sized rotate-right expansion.
 - [x] Preserve `ShMemOp` as a distinct StackLang operation through LabLang

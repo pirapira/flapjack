@@ -985,6 +985,42 @@ theorem evalWordStackMachine_load_const_assignment [NeZero width]
     simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
       wordStackMachineWriteRegister, wordStackMachineWriteSlot, hdestination]
 
+theorem evalWordStackMachine_store_assignment [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (source address : Nat)
+    (sourceLocation addressLocation : WordLocation)
+    (sourceValue addressValue : Word width)
+    (hsource : wordStackLocation config source = some sourceLocation)
+    (haddress : wordStackLocation config address = some addressLocation)
+    (hsourceValue : wordStackMachineValue config state source =
+      some sourceValue)
+    (haddressValue : wordStackMachineValue config state address =
+      some addressValue)
+    (hscratch : config.scratch ≠ config.addressScratch)
+    (hsafe : wordStackStoreLocationsSafe config sourceLocation addressLocation = true)
+    (heval : (wordStackCompileStoreNat config (.var address) (.var source)).bind
+      (evalWordStackMachine state) = some final) :
+      final.memory addressValue = sourceValue := by
+  change lookupNatInfo source config.locations = some sourceLocation at hsource
+  change lookupNatInfo address config.locations = some addressLocation at haddress
+  have hsafe' : config.addressScratch ≠ config.scratch := by
+    intro heq
+    apply hscratch
+    exact heq.symm
+  cases sourceLocation <;> cases addressLocation <;>
+    simp [wordStackCompileStoreNat, wordStackAtomNat, wordStackReadRegister,
+      wordStackJoin, evalWordStackMachine, wordStackLocation, wordStackOffset,
+      lookupNatInfo, hsource, haddress, wordStackStoreLocationsSafe] at hsafe heval
+  all_goals
+    cases heval
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      hsource, haddress] at hsourceValue haddressValue
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      wordStackMachineWriteMemory, hsource, haddress, hsourceValue,
+      haddressValue, hsafe, hsafe']
+
 def wordStackValue [NeZero width] (config : WordStackConfig)
     (state : WordStackState width) (name : Nat) : Option (Word width) := do
   let location ← wordStackLocation config name

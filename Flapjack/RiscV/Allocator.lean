@@ -938,6 +938,102 @@ def wordClashTreeAnalyze : WordClashTree → List Nat →
         thenEdges ++ elseEdges)
   | .set names, _ => (names, [])
 
+def wordNumSetDelete : List Nat → List Nat → List Nat
+  | [], live => live
+  | name :: names, live =>
+      wordNumSetDelete names (live.filter (fun other => other != name))
+
+def wordCheckPartialColour (colour : Nat → Nat) : List Nat → List Nat →
+    List Nat → Option (List Nat × List Nat)
+  | [], live, flive => some (live, flive)
+  | name :: names, live, flive =>
+      if name ∈ live then
+        wordCheckPartialColour colour names live flive
+      else if colour name ∈ flive then
+        none
+      else
+        wordCheckPartialColour colour names (name :: live)
+          (colour name :: flive)
+
+def wordCheckColour (colour : Nat → Nat) (names : List Nat) :
+    Option (List Nat × List Nat) :=
+  let coloured := names.map colour
+  if coloured.Nodup then some (names, coloured) else none
+
+def wordClashTreeCheck (colour : Nat → Nat) : WordClashTree →
+    List Nat → List Nat → Option (List Nat × List Nat)
+  | .delta writes reads, live, flive =>
+      match wordCheckPartialColour colour writes live flive with
+      | none => none
+      | some _ =>
+          wordCheckPartialColour colour reads
+            (wordNumSetDelete writes live)
+            (wordNumSetDelete (writes.map colour) flive)
+  | .set names, _, _ => wordCheckColour colour names
+  | .branch branchLive thenBranch elseBranch, live, flive =>
+      match wordClashTreeCheck colour thenBranch live flive with
+      | none => none
+      | some (thenOut, fThenOut) =>
+          match wordClashTreeCheck colour elseBranch live flive with
+          | none => none
+          | some (elseOut, fElseOut) =>
+              match branchLive with
+              | none =>
+                  wordCheckPartialColour colour
+                    (elseOut.filter (fun name => name ∉ thenOut))
+                    thenOut fThenOut
+              | some names => wordCheckColour colour names
+  | .seq first second, live, flive =>
+      match wordClashTreeCheck colour second live flive with
+      | none => none
+      | some (secondOut, fSecondOut) =>
+          wordClashTreeCheck colour first secondOut fSecondOut
+termination_by tree => sizeOf tree
+decreasing_by all_goals decreasing_trivial
+
+theorem wordCheckPartialColour_sound (colour : Nat → Nat)
+    (names live flive live' flive' : List Nat)
+    (hlive : live.Nodup)
+    (hflive : flive.Nodup)
+    (himage : flive = live.map colour)
+    (hcheck : wordCheckPartialColour colour names live flive =
+      some (live', flive')) :
+    live'.Nodup ∧ flive'.Nodup ∧ flive' = live'.map colour := by
+  induction names generalizing live flive live' flive' with
+  | nil =>
+      simp [wordCheckPartialColour] at hcheck
+      rcases hcheck with ⟨rfl, rfl⟩
+      exact ⟨hlive, hflive, himage⟩
+  | cons name names ih =>
+      by_cases hname : name ∈ live
+      · have hcheck' : wordCheckPartialColour colour names live flive =
+            some (live', flive') := by
+          simpa [wordCheckPartialColour, hname] using hcheck
+        exact ih live flive live' flive' hlive hflive himage hcheck'
+      · by_cases hcolour : colour name ∈ flive
+        · simp [wordCheckPartialColour, hname, hcolour] at hcheck
+        · have hcheck' :
+              wordCheckPartialColour colour names (name :: live)
+                (colour name :: flive) = some (live', flive') := by
+            simpa [wordCheckPartialColour, hname, hcolour] using hcheck
+          have hlive' : (name :: live).Nodup := by
+            simp [List.nodup_cons, hname, hlive]
+          have hflive' : (colour name :: flive).Nodup := by
+            simp [List.nodup_cons, hcolour, hflive]
+          have himage' : colour name :: flive = (name :: live).map colour := by
+            simp [himage]
+          exact ih (name :: live) (colour name :: flive) live' flive'
+            hlive' hflive' himage' hcheck'
+
+theorem wordCheckColour_sound (colour : Nat → Nat)
+    (names names' coloured' : List Nat)
+    (hcheck : wordCheckColour colour names = some (names', coloured')) :
+    names' = names ∧ coloured' = names.map colour ∧
+      coloured'.Nodup := by
+  simp [wordCheckColour] at hcheck
+  rcases hcheck with ⟨hcoloured, hnames, hmap⟩
+  exact ⟨hnames.symm, hmap.symm, by simpa [hmap] using hcoloured⟩
+
 def wordAllocateProgramWithClashTree (slots : List Nat)
     (program : WordProg α) : Option WordContext :=
   let (liveIn, edges) :=
@@ -1202,6 +1298,21 @@ inductive WordLocation where
   | register (register : Nat)
   | stack (slot : Nat)
   deriving DecidableEq, Repr
+
+/-! Give spilled values colours outside the physical-register range so the
+    clash-tree oracle can validate register/register conflicts while treating
+    distinct stack slots as distinct locations. -/
+
+def wordSpillLocationColour (locations : NatInfoMap WordLocation)
+    (name : Nat) : Nat :=
+  match lookupNatInfo name locations with
+  | some (.register register) => register
+  | some (.stack slot) => 32 + slot
+  | none => 32 + name
+
+def wordSpillClashTreeChecked (tree : WordClashTree)
+    (locations : NatInfoMap WordLocation) : Bool :=
+  (wordClashTreeCheck (wordSpillLocationColour locations) tree [] []).isSome
 
 /-! The Word-to-Stack special-instruction contract is checked at allocation.
     `LongMul` writes its high result before its low result and is normalized
@@ -1720,14 +1831,15 @@ def wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences
     (state : WordSsaState) (program : WordProg α) :
     Option (WordSsaState × WordProg α × WordSpillState) :=
   let (state, program) := wordSsaRenameProgram state program
-  let (liveIn, edges) :=
-    wordClashTreeAnalyze (wordClashTree program []) []
+  let tree := wordClashTree program []
+  let (liveIn, edges) := wordClashTreeAnalyze tree []
   let preferences := wordProgPreferenceEdges program
   match wordAllocateVarsWithSpillsAndPreferences
       (wordProgVariables program ++ liveIn) edges preferences with
   | none => none
   | some allocation =>
-      if wordProgSpecialLocationsSafe allocation.locations program = true then
+      if wordProgSpecialLocationsSafe allocation.locations program = true &&
+          wordSpillClashTreeChecked tree allocation.locations then
         some (state, program, allocation)
       else
         none
@@ -1783,15 +1895,16 @@ def wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, program) :=
     wordSsaRenameFunction parameters program
-  let (liveIn, edges) :=
-    wordClashTreeAnalyze (wordClashTree program []) []
+  let tree := wordClashTree program []
+  let (liveIn, edges) := wordClashTreeAnalyze tree []
   let preferences := wordProgPreferenceEdges program
   match wordAllocateVarsWithSpillsAndPreferences
       (renamedParameters ++ wordProgVariables program ++ liveIn)
       edges preferences with
   | none => none
   | some allocation =>
-      if wordProgSpecialLocationsSafe allocation.locations program = true then
+      if wordProgSpecialLocationsSafe allocation.locations program = true &&
+          wordSpillClashTreeChecked tree allocation.locations then
         some (state, renamedParameters, program, allocation)
       else
         none

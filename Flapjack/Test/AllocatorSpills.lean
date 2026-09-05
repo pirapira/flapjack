@@ -104,6 +104,29 @@ example :
   simp [wordClashTree, wordClashTreeFindLoopFrame]
 
 example :
+    wordCheckColour id [1, 2] =
+      some ([1, 2], [1, 2]) := by
+  native_decide
+
+example :
+    wordCheckColour (fun _ => 0) [1, 2] = none := by
+  native_decide
+
+example :
+    wordClashTreeCheck id
+        (wordClashTree
+          (.seq (.assign 0 (.var 1)) (.assign 2 (.var 1)) : WordProg Nat) []) [] [] =
+      some ([1], [1]) := by
+  native_decide
+
+example :
+    wordClashTreeCheck (fun _ => 0)
+        (wordClashTree
+          (.seq (.assign 0 (.var 1)) (.assign 2 (.var 1)) : WordProg Nat) []) [] [] =
+      none := by
+  native_decide
+
+example :
     wordAllocateSsaProgramWithClashTreeWithSpills
         ({ current := [], next := 10 } : WordSsaState)
         ((.assign 1 (.var 0)) : WordProg Nat) =
@@ -162,7 +185,9 @@ example :
     wordNeighbours, wordPreferredRegister, wordRemoveRegisters,
     wordAllocatableRegisters, wordSpillAllocationRespectsClashes,
     wordSpecialArithLocationsSafe, wordProgSpecialLocationsSafe,
-    wordProgPreferenceEdges, lookupNatInfo, List.eraseDups,
+    wordProgPreferenceEdges, lookupNatInfo, wordSpillClashTreeChecked,
+    wordSpillLocationColour, wordClashTreeCheck, wordCheckPartialColour,
+    wordNumSetDelete, wordCheckColour, List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop]
 
 example (slots : List Nat) (edges : List (Nat × Nat))

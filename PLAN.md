@@ -368,6 +368,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the CakeML-shaped RISC-V Word clash-tree boundary and its backward
   live-set analysis, including `Delta`, sequencing, branch live sets, loop cut
   sets, handler paths, and a tree-driven spill-allocation entry point.
+- [x] Port the executable CakeML-style partial-colouring and clash-tree
+  acceptance oracle, prove its list-set invariant, and enforce it at the
+  preference-aware SSA spill-allocation boundary.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

@@ -12,6 +12,7 @@ import Flapjack.RiscV.CorrectnessFfi
 import Flapjack.Test.Structured
 import Flapjack.Test.CorrectnessFfi
 import Flapjack.Test.Ffi
+import Flapjack.Test.Stack
 
 /-!
 # Flapjack regression tests

@@ -497,3 +497,10 @@ checking and semantic simulation remain the next increments.
   directories).
 - Keep commits small enough that a syntax/pass port and its proof obligations
   can be reviewed independently.
+@@
+ - [x] Add a RISC-V ECALL FFI ABI boundary with service-name resolution,
+   argument marshalling, option-valued host execution, and executable
+   instruction-level regressions.
++- [x] Port the StackLang handler/FFI carriers and initial `word_to_stack`
++  call, raise, and foreign-call boundary equations, with a local HOL
++  copyright notice and structural regressions.

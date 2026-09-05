@@ -293,4 +293,122 @@ theorem evalWordFfi_single [NeZero width]
       pure (state, [])) := by
   simp [evalWordFfi]
 
+/-!
+The combined control evaluator is the semantic counterpart of the eventual
+handler-aware `word_to_stack`/RISC-V lowering.  It deliberately keeps the
+foreign host and exception continuation explicit: a callee's register frame
+does not escape, but its memory and architectural mode do, while an FFI call
+updates the caller state directly.
+-/
+mutual
+  def evalWordCallWithHandlersAndFfi [NeZero width]
+      (functions : List (Nat × List Nat × WordProg (Word width)))
+      (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+        State width → Option (State width)) :
+      Nat → State width → Option (List Nat × List Nat) → Option Nat → List Nat →
+        Option (Nat × WordProg (Word width)) → Option (WordControlResult width)
+    | 0, _, _, _, _, _ => none
+    | fuel + 1, state, returns, target, arguments, handler => do
+        let target ← target
+        let (parameters, body) ← lookupWordFunction target functions
+        let values ← readWordRegisters state arguments
+        let calleeState ← bindWordRegisters state parameters values
+        let result ← evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel
+          calleeState body
+        let returnedState := match result with
+          | .normal calleeState => { state with
+              memory := calleeState.memory
+              privilege := calleeState.privilege
+              mode := calleeState.mode }
+          | .returned calleeState _ => { state with
+              memory := calleeState.memory
+              privilege := calleeState.privilege
+              mode := calleeState.mode }
+          | .raised calleeState _ => { state with
+              memory := calleeState.memory
+              privilege := calleeState.privilege
+              mode := calleeState.mode }
+        match result with
+        | .normal _ => some (.normal returnedState)
+        | .returned _ values =>
+            match returns with
+            | none => some (.returned returnedState values)
+            | some (names, _) => do
+                let state ← assignWordRegisters returnedState names values
+                some (.normal state)
+        | .raised _ exception =>
+            match handler with
+            | none => some (.raised returnedState exception)
+            | some (name, handlerBody) => do
+                let name ← registerOfNat name
+                evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel
+                  (writeRegister returnedState name exception) handlerBody
+    termination_by fuel _ _ _ _ _ => fuel
+
+  def evalWordFunctionWithHandlersAndFfi [NeZero width]
+      (functions : List (Nat × List Nat × WordProg (Word width)))
+      (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+        State width → Option (State width)) :
+      Nat → State width → WordProg (Word width) → Option (WordControlResult width)
+    | 0, _, _ => none
+    | fuel + 1, state, .call returns target arguments handler =>
+        evalWordCallWithHandlersAndFfi functions ffiHandler fuel state returns target
+          arguments handler
+    | fuel + 1, state,
+        .ffi function configuration configurationLength array arrayLength _ => do
+        let configuration ← registerOfNat configuration
+        let configurationLength ← registerOfNat configurationLength
+        let array ← registerOfNat array
+        let arrayLength ← registerOfNat arrayLength
+        let state ← ffiHandler function (readRegister state configuration)
+          (readRegister state configurationLength) (readRegister state array)
+          (readRegister state arrayLength) state
+        pure (.normal state)
+    | fuel + 1, state, .seq first second => do
+        let result ← evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel
+          state first
+        (match result with
+        | .normal state => evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel
+            state second
+        | .returned state values => some (.returned state values)
+        | .raised state exception => some (.raised state exception))
+    | fuel + 1, state, .ite operator condition rightValue thenBranch elseBranch => do
+        let choose ← evalWordCondition state operator condition rightValue
+        if choose then
+          evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel state thenBranch
+        else
+          evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel state elseBranch
+    | fuel + 1, state, .raise exception => do
+        let exception ← registerOfNat exception
+        pure (.raised state (readRegister state exception))
+    | fuel + 1, state, .return _ values => do
+        let values ← values.mapM (fun name => do
+          let register ← registerOfNat name
+          pure (readRegister state register))
+        pure (.returned state values)
+    | fuel + 1, state, program => do
+        let (state, values) ← evalWordFunction state program
+        if values.isEmpty then some (.normal state)
+        else some (.returned state values)
+    termination_by fuel _ _ => fuel
+end
+
+theorem evalWordFunctionWithHandlersAndFfi_ffi [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state : State width) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat) (live : List Nat) :
+    evalWordFunctionWithHandlersAndFfi functions ffiHandler (fuel + 1) state
+      (.ffi function configuration configurationLength array arrayLength live) = (do
+      let configuration ← registerOfNat configuration
+      let configurationLength ← registerOfNat configurationLength
+      let array ← registerOfNat array
+      let arrayLength ← registerOfNat arrayLength
+      let state ← ffiHandler function (readRegister state configuration)
+        (readRegister state configurationLength) (readRegister state array)
+        (readRegister state arrayLength) state
+      pure (.normal state)) := by
+  simp [evalWordFunctionWithHandlersAndFfi]
+
 end Flapjack.RiscV

@@ -80,6 +80,40 @@ example :
     wordFunctionReturnNames, registerOfNat, linkRiscVFunctions,
     linkRiscVFunctionsAt]
 
+def combinedFfiHost : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+    State 64 → Option (State 64) :=
+  fun function configuration _ _ _ state =>
+    if function == "inc" then
+      some (writeRegister state 2 (configuration + 1))
+    else none
+
+def combinedFfiFunctions : List (Nat × List Nat × WordProg (Word 64)) :=
+  [(7, [2], .seq
+    (.ffi "inc" 2 3 4 5 [])
+    (.return 0 [2]))]
+
+example :
+    (evalWordFunctionWithHandlersAndFfi combinedFfiFunctions combinedFfiHost 10
+      (writeRegister (zeroState 64) 1 41)
+      (.call (some ([6], [])) (some 7) [1] none)).map
+        (fun result => match result with
+        | .normal state => readRegister state 6
+        | _ => 0) = some 42 := by
+  native_decide
+
+def combinedHandlerFunctions : List (Nat × List Nat × WordProg (Word 64)) :=
+  [(8, [3], .raise 3)]
+
+example :
+    (evalWordFunctionWithHandlersAndFfi combinedHandlerFunctions combinedFfiHost 10
+      (writeRegister (zeroState 64) 3 9)
+      (.call (some ([], [])) (some 8) [3]
+        (some (8, .assign 7 (.var 8))))).map
+        (fun result => match result with
+        | .normal state => readRegister state 7
+        | _ => 0) = some 9 := by
+  native_decide
+
 example :
     (executeWithFfi ffiAbiHost
         (writeRegister

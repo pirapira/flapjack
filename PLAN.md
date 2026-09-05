@@ -135,6 +135,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add a unified fuel-bounded Crepe control-result evaluator covering
   memory, loops, primitives, declaration-call handlers, and explicit FFI and
   shared-memory handler boundaries.
+- [x] Prove the first generic source-to-full-Crepe result agreements for
+  compiled skip and constant-return programs.
 - [x] Add a return-aware RISC-V function artifact and evaluator for the
   straight-line Word assignment/return fragment.
 - [x] Add a partial Word-to-RISC-V instruction selector for constants, moves,

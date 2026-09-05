@@ -709,6 +709,68 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+/-! The real Word pipeline is indexed by a fixed-width bit-vector type, while
+    StackProg keeps constants as natural numbers so that StackRemove can
+    materialize them at the target width.  This adapter makes that boundary
+    explicit: converting a Word constant to `toNat` is recovered by the
+    subsequent `BitVec.ofNat` performed by the StackLang machine and LabLang
+    backend. -/
+
+def wordStoreToNat : WordStore (Word width) → WordStore Nat
+  | .temp address => .temp address.toNat
+  | .currHeap => .currHeap
+  | .heapLength => .heapLength
+
+def wordExpToNat : WordExp (Word width) → WordExp Nat
+  | .const value => .const value.toNat
+  | .var name => .var name
+  | .lookup store => .lookup (wordStoreToNat store)
+  | .load address => .load (wordExpToNat address)
+  | .op operator arguments => .op operator (arguments.map wordExpToNat)
+  | .shift operator left right =>
+      .shift operator (wordExpToNat left) (wordExpToNat right)
+termination_by expression => sizeOf expression
+decreasing_by all_goals decreasing_trivial
+
+def wordRegImmToNat : WordRegImm (Word width) → WordRegImm Nat
+  | .imm value => .imm value.toNat
+  | .reg name => .reg name
+
+def wordProgToNat : WordProg (Word width) → WordProg Nat
+  | .skip => .skip
+  | .assign name value => .assign name (wordExpToNat value)
+  | .inst instruction => .inst instruction
+  | .store address value => .store (wordExpToNat address) value
+  | .set store value => .set (wordStoreToNat store) (wordExpToNat value)
+  | .seq first second => .seq (wordProgToNat first) (wordProgToNat second)
+  | .ite operator condition right thenBranch elseBranch =>
+      .ite operator condition (wordRegImmToNat right)
+        (wordProgToNat thenBranch) (wordProgToNat elseBranch)
+  | .loop liveIn body liveOut =>
+      .loop liveIn (wordProgToNat body) liveOut
+  | .break label => .break label
+  | .continue label => .continue label
+  | .raise exception => .raise exception
+  | .return label values => .return label values
+  | .tick => .tick
+  | .locValue destination source => .locValue destination source
+  | .call returns target arguments none =>
+      .call (returns.map (fun (values, live) => (values, live))) target
+        arguments none
+  | .call returns target arguments (some (exception, body)) =>
+      .call (returns.map (fun (values, live) => (values, live))) target
+        arguments (some (exception, wordProgToNat body))
+  | .ffi function configuration configurationLength array arrayLength live =>
+      .ffi function configuration configurationLength array arrayLength live
+  | .shareInst operator name address =>
+      .shareInst operator name (wordExpToNat address)
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+def wordToStackProgWord [NeZero width] (config : WordStackConfig)
+    (program : WordProg (Word width)) : Option (StackProg Nat) :=
+  wordToStackProgNat config (wordProgToNat program)
+
 theorem wordStackMove_registers :
     wordStackMove
         { locations := [(0, .register 4), (1, .register 5)],

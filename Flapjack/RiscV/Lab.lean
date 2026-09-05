@@ -239,6 +239,14 @@ def compileWordProgramNatToRiscV [NeZero width] [BEq Nat]
   compileStackProgramNatToRiscV context removeConfig sectionId initialLabel
     stackProgram
 
+def compileWordProgramToRiscV [NeZero width]
+    (context : WordFfiContext) (wordConfig : WordStackConfig)
+    (removeConfig : StackRemoveConfig) (sectionId initialLabel : Nat)
+    (program : WordProg (Word width)) : Option (List (Instruction width)) := do
+  let stackProgram ← wordToStackProgWord wordConfig program
+  compileStackProgramNatToRiscV context removeConfig sectionId initialLabel
+    stackProgram
+
 def labSectionInstructionCount (sectionData : LabSection (Word width)) : Nat :=
   sectionData.lines.foldl
     (fun count line => count + labLineInstructionCount line) 0

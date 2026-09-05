@@ -76,6 +76,13 @@ example :
   native_decide
 
 example :
+    compileWordProgramToRiscV (width := 64) { services := [] }
+      wordStackRiscVConfig stackRemoveRiscVConfig 2 3
+      (.assign 0 (.const (BitVec.ofNat 64 42)) : WordProg (Word 64)) =
+      some [.addi 4 0 (BitVec.ofNat 64 42)] := by
+  native_decide
+
+example :
     labLineInstructionCount
         (.asm (.shift .ror 4 5 6) [] 0 : LabLine (Word 64)) = 5 := by
   rfl

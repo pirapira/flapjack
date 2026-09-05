@@ -58,6 +58,19 @@ theorem primitivePipeline_source_correct :
       some (some (BitVec.ofNat 64 3)) := by
   native_decide
 
+theorem primitivePipeline_full_source_correct :
+    (evalPanValueProgWithPrimitiveCallsAndFfi
+      (α := RiscV.Word 64) RiscV.panPrimitiveHandler
+      (fun _ _ _ _ _ _ => none) [] [] 0 100 8 40
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      primitivePipelineSource).map
+        (fun result =>
+          match result with
+          | .returned _ _ _ [.word value] => some value
+          | _ => none) =
+      some (some (BitVec.ofNat 64 3)) := by
+  native_decide
+
 theorem primitivePipeline_correct :
     primitivePipelineRun =
       (evalPanValueProgWithPrimitive (α := RiscV.Word 64) [] 0 100 8
@@ -67,6 +80,49 @@ theorem primitivePipeline_correct :
           match result.2.2.2 with
           | [.word value] => [value]
           | _ => []) := by
+  native_decide
+
+theorem primitivePipeline_full_correct :
+    primitivePipelineRun =
+      (evalPanValueProgWithPrimitiveCallsAndFfi
+        (α := RiscV.Word 64) RiscV.panPrimitiveHandler
+        (fun _ _ _ _ _ _ => none) [] [] 0 100 8 40
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        primitivePipelineSource).map
+        (fun result =>
+          match result with
+          | .returned _ _ _ values => values.map (fun value =>
+              match value with
+              | .word value => value
+              | _ => 0)
+          | _ => []) := by
+  native_decide
+
+def primitiveCallSourceFunctions :
+    List (FunName × List VarName × Prog (RiscV.Word 64)) :=
+  [("produce", [],
+      .dec "result" (.comb [.one, .one])
+        (.rStruct [.const 0, .const 0])
+        (.seq
+          (.primitive "result" .addCarry
+            [.const 1, .const 2, .const 0])
+          (.return (.rField 0 (.var .local "result")))))]
+
+def primitiveCallSource : Prog (RiscV.Word 64) :=
+  .decCall "out" .one "produce" []
+    (.return (.var .local "out"))
+
+theorem primitiveCall_full_source_correct :
+    (evalPanValueProgWithPrimitiveCallsAndFfi
+      (α := RiscV.Word 64) RiscV.panPrimitiveHandler
+      (fun _ _ _ _ _ _ => none) [] primitiveCallSourceFunctions 0 100 8 50
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      primitiveCallSource).map
+        (fun result =>
+          match result with
+          | .returned _ _ _ [.word value] => some value
+          | _ => none) =
+      some (some (BitVec.ofNat 64 3)) := by
   native_decide
 
 theorem primitivePipeline_call_link_correct :

@@ -590,6 +590,221 @@ mutual
     termination_by fuel _ _ _ _ => fuel
 end
 
+/-!
+The combined source evaluator with an explicit primitive environment.  The
+ordinary combined evaluator above is useful for programs without primitive
+instructions; this version is the one used when a compiler correctness
+statement includes `Primitive`, because primitive calls may occur inside
+declarations, loops, callees, or exception handlers.
+-/
+mutual
+  def evalPanValueCallWithPrimitiveCallsAndFfi
+      [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+      (structs : StructContext)
+      (functions : List (FunName × List VarName × Prog α))
+      (baseAddress topAddress bytesInWord : α) :
+      Nat → (VarName → Option (PanValue α)) →
+        (VarName → Option (PanValue α)) → (α → Option (PanValue α)) →
+        Option (Option (VarKind × VarName) ×
+          Option (ExceptionId × VarName × Prog α)) → FunName → List (Exp α) →
+        Option (PanValueControlResult α)
+    | 0, _, _, _, _, _, _ => none
+    | fuel + 1, locals, globals, memory, info, function, arguments => do
+        let values ← evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord arguments
+        let (parameters, body) ← lookupPanFunction function functions
+        let calleeLocals ← bindPanValueParameters parameters values
+        let result ← evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+          structs functions baseAddress topAddress bytesInWord fuel
+          calleeLocals globals memory body
+        match result with
+        | .normal _ _ _ => pure (.normal locals globals memory)
+        | .returned _ _ _ values =>
+            match info with
+            | none => pure (.returned locals globals memory values)
+            | some (destination, _) => do
+                let locals ← assignPanValueCallResult locals destination values
+                pure (.normal locals globals memory)
+        | .raised _ _ _ exception value =>
+            match info with
+            | some (_, some (caught, handlerVariable, handlerProgram)) =>
+                if caught == exception then
+                  evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+                    structs functions baseAddress topAddress bytesInWord fuel
+                    (updatePanValueMap locals handlerVariable value) globals memory
+                    handlerProgram
+                else pure (.raised locals globals memory exception value)
+            | _ => pure (.raised locals globals memory exception value)
+        | .broke _ _ _ => pure (.broke locals globals memory)
+        | .continued _ _ _ => pure (.continued locals globals memory)
+    termination_by fuel _ _ _ _ _ _ => fuel
+
+  def evalPanValueProgWithPrimitiveCallsAndFfi
+      [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+      (structs : StructContext)
+      (functions : List (FunName × List VarName × Prog α))
+      (baseAddress topAddress bytesInWord : α) :
+      Nat → (VarName → Option (PanValue α)) →
+        (VarName → Option (PanValue α)) → (α → Option (PanValue α)) →
+        Prog α → Option (PanValueControlResult α)
+    | 0, _, _, _, _ => none
+    | fuel + 1, locals, globals, memory, .skip =>
+        some (.normal locals globals memory)
+    | fuel + 1, locals, globals, memory,
+        .dec name shape value body => do
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        if panShapeMatches (panValueShape structs value) shape then
+          let oldValue := locals name
+          let result ← evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+            structs functions baseAddress topAddress bytesInWord fuel
+            (updatePanValueMap locals name value) globals memory body
+          pure (restorePanValueControlLocal name oldValue result)
+        else none
+    | fuel + 1, locals, globals, memory, .assign .local name value => do
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        pure (.normal (updatePanValueMap locals name value) globals memory)
+    | fuel + 1, locals, globals, memory, .assign .global name value => do
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        pure (.normal locals (updatePanValueMap globals name value) memory)
+    | fuel + 1, locals, globals, memory, .primitive name operator arguments => do
+        let values ← evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord arguments
+        let value ← primitive operator values
+        let oldValue ← locals name
+        if panShapeMatches (panValueShape structs value)
+            (panValueShape structs oldValue) then
+          pure (.normal (updatePanValueMap locals name value) globals memory)
+        else none
+    | fuel + 1, locals, globals, memory, .store address value => do
+        let address ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord address
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        let .word address := address | none
+        pure (.normal locals globals (updatePanValueMemory memory address value))
+    | fuel + 1, locals, globals, memory, .store32 address value => do
+        let address ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord address
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        let .word address := address | none
+        let .word value := value | none
+        pure (.normal locals globals
+          (updatePanValueMemory memory address (.word value)))
+    | fuel + 1, locals, globals, memory, .storeByte address value => do
+        let address ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord address
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        let .word address := address | none
+        let .word value := value | none
+        pure (.normal locals globals
+          (updatePanValueMemory memory address (.word value)))
+    | fuel + 1, locals, globals, memory, .seq first second => do
+        let result ← evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+          structs functions baseAddress topAddress bytesInWord fuel
+          locals globals memory first
+        match result with
+        | .normal locals globals memory =>
+            evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+              structs functions baseAddress topAddress bytesInWord fuel
+              locals globals memory second
+        | result => pure result
+    | fuel + 1, locals, globals, memory,
+        .ite condition thenBranch elseBranch => do
+        let condition ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord condition
+        let .word condition := condition | none
+        if condition != 0 then
+          evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+            structs functions baseAddress topAddress bytesInWord fuel
+            locals globals memory thenBranch
+        else
+          evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+            structs functions baseAddress topAddress bytesInWord fuel
+            locals globals memory elseBranch
+    | fuel + 1, locals, globals, memory, .call info function arguments =>
+        evalPanValueCallWithPrimitiveCallsAndFfi primitive handler
+          structs functions baseAddress topAddress bytesInWord fuel
+          locals globals memory info function arguments
+    | fuel + 1, locals, globals, memory, .decCall name _ function arguments body => do
+        let result ← evalPanValueCallWithPrimitiveCallsAndFfi primitive handler
+          structs functions baseAddress topAddress bytesInWord fuel
+          locals globals memory (some (some (.local, name), none)) function arguments
+        match result with
+        | .normal locals globals memory =>
+            evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+              structs functions baseAddress topAddress bytesInWord fuel
+              locals globals memory body
+        | result => pure result
+    | fuel + 1, locals, globals, memory,
+        .extCall function configuration configurationLength array arrayLength => do
+        let (locals, globals, memory) ← evalPanValueExtCall structs handler
+          locals globals memory baseAddress topAddress bytesInWord function
+          configuration configurationLength array arrayLength
+        pure (.normal locals globals memory)
+    | fuel + 1, locals, globals, memory, .while conditionExp body => do
+        let condition ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord conditionExp
+        let .word conditionValue := condition | none
+        if conditionValue == 0 then
+          pure (.normal locals globals memory)
+        else
+          let result ← evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+            structs functions baseAddress topAddress bytesInWord fuel
+            locals globals memory body
+          match result with
+          | .normal locals globals memory | .continued locals globals memory =>
+              evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+                structs functions baseAddress topAddress bytesInWord fuel
+                locals globals memory (.while conditionExp body)
+          | .broke locals globals memory => pure (.normal locals globals memory)
+          | result => pure result
+    | fuel + 1, locals, globals, memory, .break =>
+        pure (.broke locals globals memory)
+    | fuel + 1, locals, globals, memory, .continue =>
+        pure (.continued locals globals memory)
+    | fuel + 1, locals, globals, memory, .raise exception value => do
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        pure (.raised locals globals memory exception value)
+    | fuel + 1, locals, globals, memory, .return value => do
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        pure (.returned locals globals memory [value])
+    | fuel + 1, locals, globals, memory,
+        .shMemLoad _ kind name address => do
+        let address ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord address
+        let .word address := address | none
+        let value ← memory address
+        match kind with
+        | .local => pure (.normal (updatePanValueMap locals name value) globals memory)
+        | .global => pure (.normal locals (updatePanValueMap globals name value) memory)
+    | fuel + 1, locals, globals, memory, .shMemStore _ address value => do
+        let address ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord address
+        let value ← evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value
+        let .word address := address | none
+        let .word value := value | none
+        pure (.normal locals globals
+          (updatePanValueMemory memory address (.word value)))
+    | fuel + 1, locals, globals, memory,
+        .tick | fuel + 1, locals, globals, memory, .annot _ _ =>
+        pure (.normal locals globals memory)
+    termination_by fuel _ _ _ _ => fuel
+end
+
 theorem evalPanValueExp_rField_word
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

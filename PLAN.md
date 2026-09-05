@@ -583,6 +583,9 @@ definitions, pass ordering, examples, and proof obligations.
   verify that its generated loop compiles through the RV64 backend.
 - [x] Add a concrete WordProg → Word-to-Stack → StackRemove → LabLang → RV64
   composition with an exact constant-lowering regression.
+- [x] Add a combined structured Pancake evaluator that threads primitive
+  handlers through declarations, calls, loops, exceptions, and FFI, with
+  AddCarry source and nested-call regressions.
 - [x] Add the width-indexed Word-to-Stack adapter and an actual
   `WordProg (Word width)` to RISC-V entry point, preserving bit-vector
   constants through the explicit Nat StackLang boundary.

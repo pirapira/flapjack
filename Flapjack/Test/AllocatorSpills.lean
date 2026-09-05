@@ -24,6 +24,44 @@ example :
     List.eraseDupsBy.loop]
 
 example :
+    ∀ name, name ∈ [10] →
+      ∃ location, lookupNatInfo name
+        ([(10, .register 12), (0, .register 2)] : NatInfoMap WordLocation) =
+        some location := by
+  have halloc : wordAllocateSsaProgramWithSpills
+        ({ current := [], next := 10 } : WordSsaState)
+        ((.assign 1 (.var 0)) : WordProg Nat) =
+      some (({ current := [(1, 10)], next := 11 },
+        .assign 10 (.var 0),
+        { locations := [(10, .register 12), (0, .register 2)],
+          nextSpill := 0 }) : WordSsaState × WordProg Nat × WordSpillState) := by
+    simp [wordAllocateSsaProgramWithSpills, wordSsaRenameProgram,
+      wordSsaRenameProgramWithLoops, wordSsaRenameExp, wordSsaFresh,
+      wordSsaRead, wordProgClashAnalysis, wordProgReadVars,
+      wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
+      wordClashPairs, wordProgVariables, wordAllocateVarsWithSpills,
+      wordGreedyAllocateWithSpills, wordUsedLocationRegisters,
+      wordColourCandidates, wordFirstAvailable, wordNeighbours,
+      wordPreferredRegister, wordRemoveRegisters, wordAllocatableRegisters,
+      wordSpillAllocationRespectsClashes, lookupNatInfo,
+      wordSpecialArithLocationsSafe, wordProgSpecialLocationsSafe,
+      wordExpReadVars, List.eraseDups, List.eraseDupsBy,
+      List.eraseDupsBy.loop]
+  have h := wordAllocateSsaProgramWithSpills_maps_variables
+    ({ current := [], next := 10 } : WordSsaState)
+    ((.assign 1 (.var 0)) : WordProg Nat)
+    ({ current := [(1, 10)], next := 11 } : WordSsaState)
+    ((.assign 10 (.var 0)) : WordProg Nat)
+    { locations := [(10, .register 12), (0, .register 2)], nextSpill := 0 }
+    halloc
+  intro name hname
+  simp at hname
+  rcases hname with rfl
+  apply h
+  simp [wordProgVariables, wordProgReadVars, wordProgWriteVars,
+    wordExpReadVars]
+
+example :
     (wordAllocateVarsWithSpills (List.range 29)
       (wordPairwiseClashes (List.range 29))).map
         (fun state => state.nextSpill != 0) = some true := by

@@ -1210,6 +1210,27 @@ def wordAllocateSsaProgramWithSpills (state : WordSsaState)
       else
         none
 
+theorem wordAllocateSsaProgramWithSpills_maps_variables
+    (state : WordSsaState) (program : WordProg α)
+    (renamedState : WordSsaState) (renamedProgram : WordProg α)
+    (allocation : WordSpillState)
+    (halloc : wordAllocateSsaProgramWithSpills state program =
+      some (renamedState, renamedProgram, allocation)) :
+    ∀ name, name ∈ wordProgVariables renamedProgram →
+      ∃ location, lookupNatInfo name allocation.locations = some location := by
+  simp [wordAllocateSsaProgramWithSpills] at halloc
+  split at halloc <;> simp_all
+  rcases halloc with ⟨_, rfl, rfl, rfl⟩
+  rename_i _ alloc _ hallocation
+  have hslots := wordAllocateVarsWithSpills_maps_slots
+    (wordProgVariables (wordSsaRenameProgram state program).2 ++
+      (wordProgClashAnalysis (wordSsaRenameProgram state program).2 []).fst)
+    (wordProgClashAnalysis (wordSsaRenameProgram state program).2 []).snd
+    alloc hallocation
+  intro name hname
+  apply hslots name
+  simp [hname]
+
 /-! Function-level spill allocation, including CakeML's fresh formal
     parameters in the allocation input.  A formal that is unused by the body
     still occurs in the generated entry move and therefore must receive a

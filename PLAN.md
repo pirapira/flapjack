@@ -365,6 +365,8 @@ definitions, pass ordering, examples, and proof obligations.
   register or stack location.
 - [x] Prove every successfully allocated SSA function formal receives a
   concrete register or stack location for its ABI entry move.
+- [x] Prove every successfully allocated SSA program variable receives a
+  concrete register or stack location at the renamed-program boundary.
 - [x] Port the first CakeML `word_to_stack` spill-move boundary, including all
   register/stack source and destination combinations.
 - [x] Give generated spill moves an executable StackLang semantics and prove

@@ -92,4 +92,50 @@ theorem compile_full_ite_const_correct
   split <;> simp_all [evalCrepFullProg, evalCrepFullExp,
     evalPanMemProg, evalPanMemCondition, evalPanMemExp]
 
+theorem compile_full_local_assign_return_const_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (context : CompileContext α) (locals : VarName → Option α)
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (name : VarName) (slot : Nat) (value : α)
+    (lookup : lookupInfo name context.vars = some (.one, [slot])) :
+    evalCrepFullResult [] primitive ffi sharedMem
+        baseAddress topAddress 20 state
+        (compileProg context
+          (.seq (.assign .local name (.const value))
+            (.return (.var .local name)))) =
+      evalPanMemResult locals state.memory
+        (.seq (.assign .local name (.const value))
+          (.return (.var .local name))) := by
+  simp [compileProg, compileExp, crepNestedSeq, lookup,
+    evalCrepFullResult, evalCrepFullProg, evalCrepFullExps,
+    evalCrepFullExp, evalPanMemResult, evalPanMemProg,
+    evalPanMemExp, updateCrepLocal, updatePanLocal,
+    distinctLists]
+
+theorem compile_full_local_return_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (context : CompileContext α) (locals : VarName → Option α)
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (name : VarName) (slot : Nat)
+    (lookup : lookupInfo name context.vars = some (.one, [slot]))
+    (environment_agrees : state.locals slot = locals name) :
+    evalCrepFullResult [] primitive ffi sharedMem
+        baseAddress topAddress 5 state
+        (compileProg context (.return (.var .local name))) =
+      evalPanMemResult locals state.memory
+        (.return (.var .local name) : Prog α) := by
+  simp [compileProg, compileExp, lookup, evalCrepFullResult,
+    evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+    evalPanMemResult, evalPanMemProg, evalPanMemExp,
+    environment_agrees]
+  cases h : locals name <;> simp [h]
+
 end Flapjack

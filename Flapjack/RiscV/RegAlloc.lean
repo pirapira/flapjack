@@ -927,4 +927,119 @@ def wordAllocateGraphFunction (parameters : List Nat)
       (state, renamedParameters, allocation,
         wordApplyColour (wordGraphColouringAt allocation.colouring) renamedProgram))
 
+/-! Backward forced-stack analysis from CakeML's get_stack_only.  The two
+    lists correspond to its temporary-stack and forced-stack sets.  Lists are
+    used as finite sets here so the analysis remains executable and easy to
+    inspect in small RISC-V allocation regressions. -/
+
+structure WordStackOnlyState where
+  temporary : List Nat
+  forced : List Nat
+  deriving DecidableEq, Repr
+
+def wordStackOnlyInsert (name : Nat) (names : List Nat) : List Nat :=
+  if name ∈ names then names else name :: names
+
+def wordStackOnlyDelete (name : Nat) (names : List Nat) : List Nat :=
+  names.filter (fun candidate => candidate != name)
+
+def wordStackOnlyUnion (left right : List Nat) : List Nat :=
+  right.foldl (fun names name => wordStackOnlyInsert name names) left
+
+def wordStackOnlyIntersection (left right : List Nat) : List Nat :=
+  left.filter (fun name => name ∈ right)
+
+def wordStackOnlyDifference (left right : List Nat) : List Nat :=
+  left.filter (fun name => name ∉ right)
+
+def wordStackOnlyRemoveTemps (names : List Nat)
+    (state : WordStackOnlyState) : WordStackOnlyState :=
+  let temporary := names.foldl
+    (fun temporary name => wordStackOnlyDelete name temporary)
+    state.temporary
+  { state with temporary := temporary }
+
+def wordStackOnlyMergeMove (destination source : Nat)
+    (state : WordStackOnlyState) : WordStackOnlyState :=
+  if destination ∈ state.temporary then
+    let temporary := if source % 4 = 1 then
+      wordStackOnlyInsert source state.temporary else state.temporary
+    let forced := if source % 2 = 0 then state.forced
+      else wordStackOnlyInsert destination state.forced
+    { temporary := temporary
+      forced := forced }
+  else if destination % 4 = 3 then
+    let temporary := if source % 4 = 1 then
+      wordStackOnlyInsert source state.temporary else state.temporary
+    { temporary := temporary
+      forced := state.forced }
+  else
+    { state with temporary := wordStackOnlyDelete source state.temporary }
+
+def wordStackOnlyMergeBranches (base left right : WordStackOnlyState) :
+    WordStackOnlyState :=
+  let keep := wordStackOnlyIntersection right.temporary
+    (wordStackOnlyIntersection left.temporary base.temporary)
+  let newOnly := wordStackOnlyUnion
+    (wordStackOnlyDifference left.temporary base.temporary)
+    (wordStackOnlyDifference right.temporary base.temporary)
+  { temporary := wordStackOnlyUnion keep newOnly
+    forced := wordStackOnlyUnion left.forced right.forced }
+
+def wordStackOnlyTerminalVars (program : WordProg α) : List Nat :=
+  wordProgVariables program
+
+def wordStackOnlyProgramAux (program : WordProg α)
+      (state : WordStackOnlyState) : WordStackOnlyState :=
+    match program with
+    | .assign destination (.var source) =>
+        wordStackOnlyMergeMove destination source state
+    | .assign _ _ | .inst _ | .store _ _ | .set _ _ | .raise _ |
+        .return _ _ | .tick | .locValue _ _ | .ffi _ _ _ _ _ _ |
+        .shareInst _ _ _ =>
+        wordStackOnlyRemoveTemps (wordStackOnlyTerminalVars program) state
+    | .skip => wordStackOnlyRemoveTemps [] state
+    | .seq first second =>
+        wordStackOnlyProgramAux first
+          (wordStackOnlyProgramAux second state)
+    | .ite _ condition right thenBranch elseBranch =>
+        let thenState := wordStackOnlyProgramAux thenBranch state
+        let elseState := wordStackOnlyProgramAux elseBranch state
+        let merged := wordStackOnlyMergeBranches state thenState elseState
+        let conditionNames := condition :: match right with
+          | .reg name => [name]
+          | .imm _ => []
+        wordStackOnlyRemoveTemps conditionNames merged
+    | .loop _ body _ => wordStackOnlyProgramAux body state
+    | .break _ | .continue _ =>
+        wordStackOnlyRemoveTemps (wordStackOnlyTerminalVars program) state
+    | .call returns _ arguments handler =>
+        let state := match handler with
+          | none => state
+          | some (_, body) => wordStackOnlyProgramAux body state
+        let returnNames := match returns with
+          | none => []
+          | some (values, live) => values ++ live
+        wordStackOnlyRemoveTemps (arguments ++ returnNames) state
+
+def wordStackOnly (program : WordProg α) : WordStackOnlyState :=
+  wordStackOnlyProgramAux program { temporary := [], forced := [] }
+
+def wordAllocateGraphFunctionWithStackOnly (parameters : List Nat)
+    (program : WordProg α) (fixedSources : List Nat) (colours stackStart : Nat) :
+    Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
+  let (state, renamedParameters, renamedProgram) :=
+    wordSsaRenameFunction parameters program
+  let stackOnly := wordStackOnly renamedProgram
+  let tree := WordClashTree.seq (.set renamedParameters)
+    (wordClashTree renamedProgram [])
+  let forced := wordProgForcedClashes renamedProgram
+  let moves := wordProgPreferenceEdges renamedProgram
+  (wordAllocateGraph tree forced
+      (wordStackOnlyUnion fixedSources stackOnly.forced)
+      moves colours stackStart).map
+    (fun allocation =>
+      (state, renamedParameters, allocation,
+        wordApplyColour (wordGraphColouringAt allocation.colouring) renamedProgram))
+
 end Flapjack

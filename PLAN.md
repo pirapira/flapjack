@@ -398,6 +398,9 @@ definitions, pass ordering, examples, and proof obligations.
   coalescing, with recomputed move-relatedness and executable stack evidence.
 - [x] Add a function-level graph-allocation boundary seeded with renamed formal
   parameters, retaining unused ABI formals in the graph and colouring output.
+- [x] Port CakeML's backward stack-only/forced-stack analysis for Word moves,
+  branches, calls, loops, and terminal clashes, and feed forced sources into
+  the graph-function boundary.
 - [x] Match CakeML's stride-four SSA fresh-name convention and branch
   reconciliation counter, preserving the physical/allocatable/stack residue
   classes used by the RISC-V graph allocator.

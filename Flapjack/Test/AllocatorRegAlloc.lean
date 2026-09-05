@@ -228,6 +228,18 @@ example :
   native_decide
 
 example :
+    wordStackOnly
+      ((.seq (.assign 5 (.var 7)) (.assign 3 (.var 5))) : WordProg Nat) =
+      { temporary := [5], forced := [5] } := by
+  native_decide
+
+example :
+    (wordAllocateGraphFunctionWithStackOnly [2]
+      (.seq (.assign 5 (.var 7)) (.assign 3 (.var 5)) : WordProg Nat)
+      [] 1 1).isSome := by
+  native_decide
+
+example :
     wordProgForcedClashes
       (.inst (.arith (.longMul 4 5 6 7)) : WordProg Nat) =
       [(4, 5), (4, 6), (4, 7)] := by

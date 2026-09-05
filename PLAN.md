@@ -382,6 +382,8 @@ definitions, pass ordering, examples, and proof obligations.
   registers under explicit destination/source/scratch non-alias conditions.
 - [x] Prove a mapped Loop-to-Word AddCarry agreement under explicit register
   value, destination non-alias, and allocator scratch contracts.
+- [x] Lift primitive-aware Loop AddCarry execution to complete mapped-local
+  preservation through the emitted RISC-V sequence.
 - [x] Lift the Loop no-memory-write projection invariant from one step to
   arbitrary fuel, including sequencing, conditionals, loop repetition, and
   control results.

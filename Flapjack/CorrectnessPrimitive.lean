@@ -226,6 +226,11 @@ theorem addCarry_preserves_mapped_locals [NeZero width]
     (hright_scratch : rightRegister ≠ 31)
     (hcarry_scratch : carryRegister ≠ 31)
     (hdestination_name_resultCarry : destination ≠ resultCarry)
+    (hdestination_name_scratch : wordFindVar context destination ≠ 31)
+    (hresultCarry_name_scratch : wordFindVar context resultCarry ≠ 31)
+    (hleft_name_scratch : wordFindVar context left ≠ 31)
+    (hright_name_scratch : wordFindVar context right ≠ 31)
+    (hcarry_name_scratch : wordFindVar context carry ≠ 31)
     (hnoalias :
       ∀ name, name ≠ destination → name ≠ resultCarry →
         ∀ register,
@@ -318,5 +323,157 @@ theorem addCarry_preserves_mapped_locals [NeZero width]
             Ne.symm hnonalias.1, Ne.symm hnonalias.2.1,
             Ne.symm hnonalias.2.2]
       exact hpreserved.trans hregister_value
+
+/-!
+Lift the instruction-level AddCarry preservation theorem through the
+primitive-aware Loop evaluator.  This is the state-level bridge used when a
+source primitive has already been lowered to Loop's explicit primitive
+handler.
+-/
+theorem loopToWord_primitive_addCarry_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width)
+    (destination resultCarry left right carry : Nat)
+    (destinationRegister resultCarryRegister leftRegister rightRegister
+      carryRegister : Fin 32)
+    (leftValue rightValue carryValue : RiscV.Word width)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hleft : loopState.locals left = some leftValue)
+    (hright : loopState.locals right = some rightValue)
+    (hcarry : loopState.locals carry = some carryValue)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hresultCarry :
+      RiscV.registerOfNat (wordFindVar context resultCarry) =
+        some resultCarryRegister)
+    (hleft_register :
+      RiscV.registerOfNat (wordFindVar context left) = some leftRegister)
+    (hright_register :
+      RiscV.registerOfNat (wordFindVar context right) = some rightRegister)
+    (hcarry_register :
+      RiscV.registerOfNat (wordFindVar context carry) = some carryRegister)
+    (hleft_state : RiscV.readRegister state leftRegister = leftValue)
+    (hright_state : RiscV.readRegister state rightRegister = rightValue)
+    (hcarry_state : RiscV.readRegister state carryRegister = carryValue)
+    (hzero : RiscV.readRegister state 0 = 0)
+    (hdestination_nonzero : destinationRegister ≠ 0)
+    (hresultCarry_nonzero : resultCarryRegister ≠ 0)
+    (hdestination_resultCarry : destinationRegister ≠ resultCarryRegister)
+    (hdestination_sourceRight : destinationRegister ≠ rightRegister)
+    (hdestination_scratch : destinationRegister ≠ 31)
+    (hresultCarry_scratch : resultCarryRegister ≠ 31)
+    (hleft_scratch : leftRegister ≠ 31)
+    (hright_scratch : rightRegister ≠ 31)
+    (hcarry_scratch : carryRegister ≠ 31)
+    (hdestination_name_resultCarry : destination ≠ resultCarry)
+    (hdestination_name_scratch : wordFindVar context destination ≠ 31)
+    (hresultCarry_name_scratch : wordFindVar context resultCarry ≠ 31)
+    (hleft_name_scratch : wordFindVar context left ≠ 31)
+    (hright_name_scratch : wordFindVar context right ≠ 31)
+    (hcarry_name_scratch : wordFindVar context carry ≠ 31)
+    (hnoalias :
+      ∀ name, name ≠ destination → name ≠ resultCarry →
+        ∀ register,
+          RiscV.registerOfNat (wordFindVar context name) = some register →
+          register ≠ destinationRegister ∧
+            register ≠ resultCarryRegister ∧ register ≠ 31) :
+    ∀ loopResult resultState,
+      evalLoopProgWithPrimitive RiscV.loopPrimitiveHandler 1 loopState
+          (.primitive [destination, resultCarry] .addCarry [left, right, carry]) =
+        some loopResult →
+      RiscV.evalWordProg state
+          (loopToWordProg context
+            (.primitive [destination, resultCarry] .addCarry
+              [left, right, carry])) = some resultState →
+      loopLocalsMappedToRiscV context (loopResultState loopResult).locals
+        resultState := by
+  intro loopResult resultState hloop hword
+  have hloop' :
+      some (.normal
+        { loopState with
+          locals := updateLoopLocal
+            (updateLoopLocal loopState.locals destination
+              (RiscV.addCarryWords leftValue rightValue carryValue).1)
+            resultCarry (RiscV.addCarryWords leftValue rightValue carryValue).2 }) =
+        some loopResult := by
+    simpa [evalLoopProgWithPrimitive, RiscV.loopPrimitiveHandler,
+      loopReadLocals, loopAssignValues, updateLoopLocal,
+      hleft, hright, hcarry, hdestination_name_resultCarry] using hloop
+  have hloopResult :
+      loopResult = .normal
+        { loopState with
+          locals := updateLoopLocal
+            (updateLoopLocal loopState.locals destination
+              (RiscV.addCarryWords leftValue rightValue carryValue).1)
+            resultCarry (RiscV.addCarryWords leftValue rightValue carryValue).2 } := by
+    injection hloop' with hloopResult
+    exact hloopResult.symm
+  subst loopResult
+  have hdestination_lt : wordFindVar context destination < 32 :=
+    RiscV.registerOfNat_some_lt hdestination
+  have hresultCarry_lt : wordFindVar context resultCarry < 32 :=
+    RiscV.registerOfNat_some_lt hresultCarry
+  have hleft_lt : wordFindVar context left < 32 :=
+    RiscV.registerOfNat_some_lt hleft_register
+  have hright_lt : wordFindVar context right < 32 :=
+    RiscV.registerOfNat_some_lt hright_register
+  have hcarry_lt : wordFindVar context carry < 32 :=
+    RiscV.registerOfNat_some_lt hcarry_register
+  have hdestination_fin :
+      (⟨wordFindVar context destination, hdestination_lt⟩ : Fin 32) =
+        destinationRegister := by
+    have h := hdestination
+    simp [RiscV.registerOfNat, hdestination_lt] at h
+    exact h
+  have hresultCarry_fin :
+      (⟨wordFindVar context resultCarry, hresultCarry_lt⟩ : Fin 32) =
+        resultCarryRegister := by
+    have h := hresultCarry
+    simp [RiscV.registerOfNat, hresultCarry_lt] at h
+    exact h
+  have hleft_fin :
+      (⟨wordFindVar context left, hleft_lt⟩ : Fin 32) = leftRegister := by
+    have h := hleft_register
+    simp [RiscV.registerOfNat, hleft_lt] at h
+    exact h
+  have hright_fin :
+      (⟨wordFindVar context right, hright_lt⟩ : Fin 32) = rightRegister := by
+    have h := hright_register
+    simp [RiscV.registerOfNat, hright_lt] at h
+    exact h
+  have hcarry_fin :
+      (⟨wordFindVar context carry, hcarry_lt⟩ : Fin 32) = carryRegister := by
+    have h := hcarry_register
+    simp [RiscV.registerOfNat, hcarry_lt] at h
+    exact h
+  have hword' :
+      RiscV.executeInstructions state
+        [.sltu 31 0 carryRegister,
+          .add destinationRegister leftRegister rightRegister,
+          .sltu resultCarryRegister destinationRegister rightRegister,
+          .add destinationRegister destinationRegister 31,
+          .sltu 31 destinationRegister 31,
+          .or resultCarryRegister resultCarryRegister 31] = resultState := by
+    simpa [loopToWordProg, RiscV.evalWordProg,
+      RiscV.wordArithToInstructions, RiscV.registerOfNat,
+      RiscV.executeInstructions, hdestination, hresultCarry,
+      hleft_register, hright_register, hcarry_register,
+      hdestination_lt, hresultCarry_lt, hleft_lt, hright_lt, hcarry_lt,
+      hdestination_fin, hresultCarry_fin, hleft_fin, hright_fin, hcarry_fin,
+      hdestination_name_scratch, hresultCarry_name_scratch,
+      hleft_name_scratch, hright_name_scratch, hcarry_name_scratch] using hword
+  subst resultState
+  apply addCarry_preserves_mapped_locals context loopState.locals state
+    destination resultCarry left right carry destinationRegister
+    resultCarryRegister leftRegister rightRegister carryRegister
+    leftValue rightValue carryValue hlocals hleft hright hcarry
+    hdestination hresultCarry hleft_register hright_register hcarry_register
+    hleft_state hright_state hcarry_state hzero hdestination_nonzero
+    hresultCarry_nonzero hdestination_resultCarry hdestination_sourceRight
+    hdestination_scratch hresultCarry_scratch hleft_scratch hright_scratch
+    hcarry_scratch hdestination_name_resultCarry hdestination_name_scratch
+    hresultCarry_name_scratch hleft_name_scratch hright_name_scratch
+    hcarry_name_scratch hnoalias
 
 end Flapjack

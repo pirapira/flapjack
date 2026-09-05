@@ -29,6 +29,7 @@ import Flapjack.LoopAnalysis
 import Flapjack.LoopSemantics
 import Flapjack.Word
 import Flapjack.Stack
+import Flapjack.Lab
 
 /-!
 # Flapjack in Lean

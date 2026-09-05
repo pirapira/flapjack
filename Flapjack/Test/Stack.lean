@@ -9,7 +9,7 @@ example :
 
 example :
     wordToStackRaise 7 =
-      (.call none (some stackRaiseStubLocation) none : StackProg Nat) := by
+      (.call none (.label stackRaiseStubLocation) none : StackProg Nat) := by
   rfl
 
 example :
@@ -34,7 +34,7 @@ example :
       stackSeq [
         stackPushHandler false 30 31 9,
         stackHandlerArgs false 3 6 9,
-        (.call (some ((.return 0 : StackProg Nat), 0, 20, 21)) (some 11)
+        (.call (some ((.return 0 : StackProg Nat), 0, 20, 21)) (.label 11)
           (some ((.raise 1 : StackProg Nat), 31, 30))
           : StackProg Nat)] := by
   rfl

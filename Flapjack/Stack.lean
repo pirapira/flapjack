@@ -37,6 +37,11 @@ inductive StackStore where
   | temp (index : Nat)
   deriving DecidableEq, Repr
 
+inductive StackCallTarget where
+  | label (name : Nat)
+  | register (name : Nat)
+  deriving DecidableEq, Repr
+
 inductive StackProg (α : Type u) where
   | skip
   | const (destination value : Nat)
@@ -46,7 +51,7 @@ inductive StackProg (α : Type u) where
   | arith (operator : BinOp) (destination left right : Nat)
   | opCurrHeap (operator : BinOp) (destination source : Nat)
   | call (returnHandler : Option (StackProg α × Nat × Nat × Nat))
-      (target : Option Nat) (handler : Option (StackProg α × Nat × Nat))
+      (target : StackCallTarget) (handler : Option (StackProg α × Nat × Nat))
   | seq (first second : StackProg α)
   | ite (operator : Cmp) (condition : Nat) (right : WordRegImm α)
       (thenBranch elseBranch : StackProg α)
@@ -166,14 +171,14 @@ def wordToStackFfi (function : FunName)
   .ffi function configuration configurationLength array arrayLength 0
 
 def wordToStackRaise (_exception : Nat) : StackProg α :=
-  .call none (some stackRaiseStubLocation) none
+  .call none (.label stackRaiseStubLocation) none
 
 def wordToStackCallNoHandler (_perf : Bool) (target : Nat)
     (argumentCount frameOffset scratch : Nat)
     (returnValues : List Nat) (returnCode : StackProg α)
     (returnLabel entryLabel : Nat) : StackProg α :=
   let callCode :=
-    .call (some (returnCode, 0, returnLabel, entryLabel)) (some target) none
+    .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target) none
   stackSeq [
     stackArgs (argumentCount + 1) frameOffset scratch,
     callCode,
@@ -185,7 +190,7 @@ def wordToStackCallWithHandler (perf : Bool) (target : Nat)
     (returnCode handlerCode : StackProg α)
     (returnLabel entryLabel handlerLabel exceptionLabel : Nat) : StackProg α :=
   let callCode :=
-    .call (some (returnCode, 0, returnLabel, entryLabel)) (some target)
+    .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target)
       (some (handlerCode, exceptionLabel, handlerLabel))
   stackSeq [
     stackPushHandler perf handlerLabel exceptionLabel scratch,
@@ -205,7 +210,7 @@ theorem wordToStackFfi_shape (α : Type u) (function : FunName)
 
 theorem wordToStackRaise_shape (α : Type u) (exception : Nat) :
     wordToStackRaise (α := α) exception =
-      .call none (some stackRaiseStubLocation) none := by
+      .call none (.label stackRaiseStubLocation) none := by
   rfl
 
 end Flapjack

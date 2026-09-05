@@ -216,6 +216,15 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add a RISC-V ECALL FFI ABI boundary with service-name resolution,
   argument marshalling, option-valued host execution, and executable
   instruction-level regressions.
+- [x] Port the StackLang handler/FFI carriers and initial `word_to_stack`
+  call, raise, and foreign-call boundary equations, with a local HOL
+  copyright notice and structural regressions.
+- [x] Port the core StackLang-to-LabLang flattening pass for calls, handlers,
+  loops, exceptions, labels, and FFI, with executable label-counter
+  regressions and a local HOL copyright notice.
+- [x] Port the core StackLang-to-LabLang flattening pass for calls, handlers,
+  loops, exceptions, labels, and FFI, with executable label-counter
+  regressions and a local HOL copyright notice.
 - [x] Add a unified fuel-bounded Loop evaluator that composes function calls
   and host-controlled FFI effects in one control-result semantics.
 - [x] Preserve a static-check success while diagnosing unreachable sequence
@@ -497,10 +506,3 @@ checking and semantic simulation remain the next increments.
   directories).
 - Keep commits small enough that a syntax/pass port and its proof obligations
   can be reviewed independently.
-@@
- - [x] Add a RISC-V ECALL FFI ABI boundary with service-name resolution,
-   argument marshalling, option-valued host execution, and executable
-   instruction-level regressions.
-+- [x] Port the StackLang handler/FFI carriers and initial `word_to_stack`
-+  call, raise, and foreign-call boundary equations, with a local HOL
-+  copyright notice and structural regressions.

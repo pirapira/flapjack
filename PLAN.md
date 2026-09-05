@@ -869,6 +869,9 @@ definitions, pass ordering, examples, and proof obligations.
   update the store-memory simulation invariant accordingly.
 - [x] Complete the StackRemove `StoreConsts` bitmap-copy loop with the final
   `copy_each` pass from CakeML and add a structural regression.
+- [x] Connect the exact CakeML byte-level FFI oracle/event boundary to the
+  generated RISC-V x10--x14 ABI, including returned-byte writes, terminal
+  outcomes, unknown-service rejection, and an executable RV64 regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

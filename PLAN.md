@@ -374,6 +374,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Expose the same preference-aware clash-tree spill allocator at the
   function boundary, retaining renamed ABI formal parameters as allocation
   slots and covering an unused-formal regression.
+- [x] Prove the preference-aware function boundary exposes a concrete
+  location witness for every renamed ABI formal.
 - [x] Reserve the RISC-V address scratch register x29 from Word allocation and
   cover the allocator/backend separation with executable regressions.
 - [x] Reserve the RISC-V LongMul normalization scratch register x28 from Word
@@ -382,6 +384,8 @@ definitions, pass ordering, examples, and proof obligations.
   allocation and cover the resulting register contract with regressions.
 - [x] Prove spill-aware allocation assigns every requested slot a concrete
   register or stack location.
+- [x] Extend the concrete-location witness contract to preference-aware
+  spill allocation, including the recursive lookup-preservation proof.
 - [x] Prove every successfully allocated SSA function formal receives a
   concrete register or stack location for its ABI entry move.
 - [x] Prove every successfully allocated SSA program variable receives a

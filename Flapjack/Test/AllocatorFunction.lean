@@ -38,4 +38,15 @@ example :
       (.skip : WordProg (RiscV.Word 64))).isSome := by
   native_decide
 
+example (result : WordSsaState × List Nat × WordProg (RiscV.Word 64) ×
+    WordSpillState)
+    (hresult :
+      wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences [2]
+        (.skip : WordProg (RiscV.Word 64)) = some result) :
+    ∀ name, name ∈ result.2.1 →
+      ∃ location, lookupNatInfo name result.2.2.2.locations = some location := by
+  exact wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_maps_parameters
+    [2] (.skip : WordProg (RiscV.Word 64)) result.1 result.2.1
+    result.2.2.1 result.2.2.2 hresult
+
 end Flapjack

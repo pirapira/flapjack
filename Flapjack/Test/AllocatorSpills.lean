@@ -172,6 +172,15 @@ example (slots : List Nat) (edges : List (Nat × Nat))
     ∃ location, lookupNatInfo name state.locations = some location := by
   exact wordAllocateVarsWithSpills_maps_slots slots edges state hstate name hname
 
+example (slots : List Nat) (edges preferences : List (Nat × Nat))
+    (state : WordSpillState)
+    (hstate : wordAllocateVarsWithSpillsAndPreferences slots edges preferences =
+      some state)
+    (name : Nat) (hname : name ∈ slots.eraseDups) :
+    ∃ location, lookupNatInfo name state.locations = some location := by
+  exact wordAllocateVarsWithSpillsAndPreferences_maps_slots slots edges
+    preferences state hstate name hname
+
 example :
     wordProgSpecialLocationsSafe
         [(0, .stack 0), (1, .register 5), (2, .register 6), (3, .register 7)]

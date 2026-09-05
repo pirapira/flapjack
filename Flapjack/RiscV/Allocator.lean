@@ -421,94 +421,117 @@ def wordSsaFindLoopFrame : Nat → List WordSsaLoopFrame →
   | 0, frame :: _ => some frame
   | label, _ :: frames => wordSsaFindLoopFrame (label - 1) frames
 
-def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
-    (state : WordSsaState) : WordProg α → WordSsaState × WordProg α
-  | .skip => (state, .skip)
-  | .assign name value =>
-      let value := wordSsaRenameExp state value
-      let (state, freshName) := wordSsaFresh state name
-      (state, .assign freshName value)
-  | .inst instruction =>
-      let (state, instruction) := wordSsaRenameInst state instruction
-      (state, .inst instruction)
-  | .seq first second =>
-      let (state, first) := wordSsaRenameProgramWithLoops frames state first
-      let (state, second) := wordSsaRenameProgramWithLoops frames state second
-      (state, .seq first second)
-  | .store address value =>
-      (state, .store (wordSsaRenameExp state address) (wordSsaRead state value))
-  | .set store value =>
-      (state, .set store (wordSsaRenameExp state value))
-  | .raise exception =>
-      (state, .raise (wordSsaRead state exception))
-  | .return label values =>
-      (state, .return label (values.map (wordSsaRead state)))
-  | .tick => (state, .tick)
-  | .break label =>
-      match wordSsaFindLoopFrame label frames with
-      | none => (state, .break label)
-      | some frame =>
-          (state, wordSsaSeq
-            (wordSsaReconcileTo state frame.exit frame.exitNames)
-            (.break label))
-  | .continue label =>
-      match wordSsaFindLoopFrame label frames with
-      | none => (state, .continue label)
-      | some frame =>
-          (state, wordSsaSeq
-            (wordSsaReconcileTo state frame.entry frame.entryNames)
-            (.continue label))
-  | .locValue destination source =>
-      let source := wordSsaRead state source
-      let (state, destination) := wordSsaFresh state destination
-      (state, .locValue destination source)
-  | .ffi function configuration configurationLength array arrayLength live =>
-      (state, .ffi function (wordSsaRead state configuration)
-        (wordSsaRead state configurationLength) (wordSsaRead state array)
-        (wordSsaRead state arrayLength) (live.map (wordSsaRead state)))
-  | .shareInst operator name address =>
-      let address := wordSsaRenameExp state address
-      match operator with
-      | .load | .load8 | .load16 | .load32 =>
-          let (state, name) := wordSsaFresh state name
-          (state, .shareInst operator name address)
-      | .store | .store8 | .store16 | .store32 =>
-          (state, .shareInst operator (wordSsaRead state name) address)
-  | .call returns target arguments none =>
-      let arguments := arguments.map (wordSsaRead state)
-      let (state, returns) := wordSsaRenameReturns state returns
-      (state, .call returns target arguments none)
-  | .loop liveIn body liveOut =>
-      let names := (liveIn ++ liveOut).eraseDups
-      let (setupState, setup) := wordSsaRefreshList state names
-      let entryState := wordSsaRestrict setupState liveIn
-      let exitState := wordSsaRestrict setupState liveOut
-      let frame := WordSsaLoopFrame.mk entryState exitState
-        liveIn.eraseDups liveOut.eraseDups
-      let (bodyState, body) :=
-        wordSsaRenameProgramWithLoops (frame :: frames) entryState body
-      let backMoves := wordSsaReconcileTo bodyState setupState liveIn.eraseDups
-      let body := wordSsaSeq body backMoves
-      let program := .loop (liveIn.map (wordSsaRead setupState)) body
-        (liveOut.map (wordSsaRead setupState))
-      (exitState, wordSsaSeq setup program)
-  | .ite operator condition right thenBranch elseBranch =>
-      let right := wordSsaRenameRegImm state right
-      let (thenState, thenBranch) :=
-        wordSsaRenameProgramWithLoops frames state thenBranch
-      let elseInput := { state with next := thenState.next }
-      let (elseState, elseBranch) :=
-        wordSsaRenameProgramWithLoops frames elseInput elseBranch
-      let names := wordSsaBranchNames state thenState elseState
-      let (merged, thenMoves, elseMoves) :=
-        wordSsaReconcile names thenState elseState elseState.next
-      ({ current := merged.current, next := merged.next },
-        .ite operator (wordSsaRead state condition) right
-          (wordSsaSeq thenBranch thenMoves)
-          (wordSsaSeq elseBranch elseMoves))
-  | program => (state, program)
-termination_by program => sizeOf program
-decreasing_by all_goals decreasing_trivial
+mutual
+  def wordSsaRenameCallHandler (frames : List WordSsaLoopFrame)
+      (incoming normalState : WordSsaState) (exception : Nat)
+      : WordProg α → WordSsaState × Nat × WordProg α
+    | body =>
+        let handlerSeed := { incoming with next := normalState.next }
+        let (handlerSeed, exceptionName) := wordSsaFresh handlerSeed exception
+        let (handlerState, body) :=
+          wordSsaRenameProgramWithLoops frames handlerSeed body
+        let moves := wordSsaReconcileTo handlerState normalState
+          (wordSsaKeys normalState)
+        (handlerState, exceptionName, wordSsaSeq body moves)
+  termination_by body => sizeOf body + 1
+  decreasing_by all_goals decreasing_trivial
+
+  def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
+      (state : WordSsaState) : WordProg α → WordSsaState × WordProg α
+    | .skip => (state, .skip)
+    | .assign name value =>
+        let value := wordSsaRenameExp state value
+        let (state, freshName) := wordSsaFresh state name
+        (state, .assign freshName value)
+    | .inst instruction =>
+        let (state, instruction) := wordSsaRenameInst state instruction
+        (state, .inst instruction)
+    | .seq first second =>
+        let (state, first) := wordSsaRenameProgramWithLoops frames state first
+        let (state, second) := wordSsaRenameProgramWithLoops frames state second
+        (state, .seq first second)
+    | .store address value =>
+        (state, .store (wordSsaRenameExp state address) (wordSsaRead state value))
+    | .set store value =>
+        (state, .set store (wordSsaRenameExp state value))
+    | .raise exception =>
+        (state, .raise (wordSsaRead state exception))
+    | .return label values =>
+        (state, .return label (values.map (wordSsaRead state)))
+    | .tick => (state, .tick)
+    | .break label =>
+        match wordSsaFindLoopFrame label frames with
+        | none => (state, .break label)
+        | some frame =>
+            (state, wordSsaSeq
+              (wordSsaReconcileTo state frame.exit frame.exitNames)
+              (.break label))
+    | .continue label =>
+        match wordSsaFindLoopFrame label frames with
+        | none => (state, .continue label)
+        | some frame =>
+            (state, wordSsaSeq
+              (wordSsaReconcileTo state frame.entry frame.entryNames)
+              (.continue label))
+    | .locValue destination source =>
+        let source := wordSsaRead state source
+        let (state, destination) := wordSsaFresh state destination
+        (state, .locValue destination source)
+    | .ffi function configuration configurationLength array arrayLength live =>
+        (state, .ffi function (wordSsaRead state configuration)
+          (wordSsaRead state configurationLength) (wordSsaRead state array)
+          (wordSsaRead state arrayLength) (live.map (wordSsaRead state)))
+    | .shareInst operator name address =>
+        let address := wordSsaRenameExp state address
+        match operator with
+        | .load | .load8 | .load16 | .load32 =>
+            let (state, name) := wordSsaFresh state name
+            (state, .shareInst operator name address)
+        | .store | .store8 | .store16 | .store32 =>
+            (state, .shareInst operator (wordSsaRead state name) address)
+    | .call returns target arguments none =>
+        let arguments := arguments.map (wordSsaRead state)
+        let (state, returns) := wordSsaRenameReturns state returns
+        (state, .call returns target arguments none)
+    | .call returns target arguments (some (exception, body)) =>
+        let incoming := state
+        let arguments := arguments.map (wordSsaRead state)
+        let (normalState, returns) := wordSsaRenameReturns state returns
+        let (handlerState, exception, body) :=
+          wordSsaRenameCallHandler frames incoming normalState exception body
+        ({ normalState with next := handlerState.next },
+          .call returns target arguments (some (exception, body)))
+    | .loop liveIn body liveOut =>
+        let names := (liveIn ++ liveOut).eraseDups
+        let (setupState, setup) := wordSsaRefreshList state names
+        let entryState := wordSsaRestrict setupState liveIn
+        let exitState := wordSsaRestrict setupState liveOut
+        let frame := WordSsaLoopFrame.mk entryState exitState
+          liveIn.eraseDups liveOut.eraseDups
+        let (bodyState, body) :=
+          wordSsaRenameProgramWithLoops (frame :: frames) entryState body
+        let backMoves := wordSsaReconcileTo bodyState setupState liveIn.eraseDups
+        let body := wordSsaSeq body backMoves
+        let program := .loop (liveIn.map (wordSsaRead setupState)) body
+          (liveOut.map (wordSsaRead setupState))
+        (exitState, wordSsaSeq setup program)
+    | .ite operator condition right thenBranch elseBranch =>
+        let right := wordSsaRenameRegImm state right
+        let (thenState, thenBranch) :=
+          wordSsaRenameProgramWithLoops frames state thenBranch
+        let elseInput := { state with next := thenState.next }
+        let (elseState, elseBranch) :=
+          wordSsaRenameProgramWithLoops frames elseInput elseBranch
+        let names := wordSsaBranchNames state thenState elseState
+        let (merged, thenMoves, elseMoves) :=
+          wordSsaReconcile names thenState elseState elseState.next
+        ({ current := merged.current, next := merged.next },
+          .ite operator (wordSsaRead state condition) right
+            (wordSsaSeq thenBranch thenMoves)
+            (wordSsaSeq elseBranch elseMoves))
+  termination_by program => sizeOf program
+  decreasing_by all_goals decreasing_trivial
+end
 def wordSsaRenameProgram (state : WordSsaState) (program : WordProg α) :
     WordSsaState × WordProg α :=
   wordSsaRenameProgramWithLoops [] state program

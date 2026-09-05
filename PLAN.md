@@ -287,6 +287,10 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Extend straight-line Word SSA through memory operations, `locValue`,
   returns, exceptions, FFI arguments, and handler-free call metadata, while
   matching liveness reads and writes to those data-flow conventions.
+- [x] Extend Word SSA through handler-bearing calls, recursively renaming the
+  handler body, reconciling its normal continuation with the call path, and
+  advancing fresh names across both paths; cover the transformation with an
+  executable Word control-result regression.
 - [x] Feed actual WordProg sequencing into backwards liveness and conservative
   control-flow clash construction.
 - [x] Expose a program-analysis-driven Word pipeline allocation boundary for

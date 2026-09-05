@@ -1,6 +1,9 @@
 import Flapjack.Pipeline
+import Flapjack.WordSemantics
 
 namespace Flapjack
+
+open RiscV
 
 example :
     wordSsaRenameLinear
@@ -52,6 +55,46 @@ example :
         ((.call (some ([5], [6])) (some 7) [8]
           (some (9, .return 0 [10])) : WordProg Nat)) = [5, 9] := by
   rfl
+
+example :
+    wordSsaRenameProgram
+        ({ current := [(1, 100)], next := 200 } : WordSsaState)
+        ((.call (some ([2], [1])) (some 7) [1]
+          (some (3, .assign 4 (.var 1))) : WordProg Nat)) =
+      ({ current := [(2, 200), (1, 100)], next := 203 },
+        .call (some ([200], [100])) (some 7) [100]
+          (some (201,
+            .seq (.assign 202 (.var 100))
+              (.assign 200 (.var 2))))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameCallHandler, wordSsaRenameReturns, wordSsaFreshList,
+    wordSsaFresh, wordSsaRenameExp, wordSsaRead, wordSsaKeys,
+    wordSsaReconcileTo, wordSsaSeq, lookupNatInfo]
+
+example :
+    let originalState :=
+      RiscV.writeRegister (RiscV.zeroState 64) 1 (BitVec.ofNat 64 42)
+    let renamedState :=
+      RiscV.writeRegister (RiscV.zeroState 64) 100 (BitVec.ofNat 64 42)
+    let functions : List (Nat × List Nat × WordProg (RiscV.Word 64)) :=
+      [(7, [], .raise 3)]
+    let original : WordProg (RiscV.Word 64) :=
+      .call (some ([2], [1])) (some 7) [1]
+        (some (3, .assign 4 (.var 1)))
+    let renamed : WordProg (RiscV.Word 64) :=
+      .call (some ([200], [100])) (some 7) [100]
+        (some (201,
+          .seq (.assign 202 (.var 100))
+            (.assign 200 (.var 2))))
+    (evalWordFunctionWithHandlers functions 2 originalState original).map
+        (fun result => match result with
+          | .normal state => RiscV.readRegister state 4
+          | _ => 0) =
+      (evalWordFunctionWithHandlers functions 2 renamedState renamed).map
+        (fun result => match result with
+          | .normal state => RiscV.readRegister state 202
+          | _ => 0) := by
+  native_decide
 
 example :
     (wordSsaRenameProgram

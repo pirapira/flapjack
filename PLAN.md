@@ -355,6 +355,8 @@ definitions, pass ordering, examples, and proof obligations.
   remaining operations and control-flow invariants.
 - [x] Add the terminal return control-result bridge, including mapped state
   preservation and equality of Loop and Word returned value lists.
+- [x] Add the terminal raise control-result bridge, including mapped state
+  preservation and equality of Loop and Word raised exception values.
 - [x] Prove that compiler-generated RISC-V ticks preserve the mapped-local
   relation needed by conditional and loop simulations.
 - [x] Prove conditional branch simulation for fuel-2 Loop programs, including

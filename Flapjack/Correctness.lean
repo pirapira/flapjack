@@ -1269,6 +1269,63 @@ theorem loopToWord_return_simulation [NeZero width]
           subst mappedValues
           exact ⟨hlocals, rfl⟩
 
+theorem loopToWord_raise_simulation [NeZero width]
+    (context : WordContext)
+    (loopState : LoopState (RiscV.Word width))
+    (wordState : RiscV.State width)
+    (wordFunctions : List (Nat × List Nat × WordProg (RiscV.Word width)))
+    (wordHandler : FunName → RiscV.Word width → RiscV.Word width →
+      RiscV.Word width → RiscV.Word width → RiscV.State width →
+      Option (RiscV.State width))
+    (exception : Nat) (fuel : Nat)
+    (finalLoop : LoopState (RiscV.Word width))
+    (finalWord : RiscV.State width)
+    (loopException wordException : RiscV.Word width)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals wordState)
+    (hloop :
+      evalLoopProg (fuel + 1) loopState (.raise exception) =
+        some (LoopResult.raised finalLoop loopException))
+    (hword :
+      RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler
+        (fuel + 1) wordState (loopToWordProg context (.raise exception)) =
+        some (RiscV.WordControlResult.raised finalWord wordException)) :
+    loopLocalsMappedToRiscV context finalLoop.locals finalWord ∧
+      loopException = wordException := by
+  cases hlocal : loopState.locals exception with
+  | none =>
+      simp [evalLoopProg, hlocal] at hloop
+  | some exceptionValue =>
+      have hloop' :
+          some (LoopResult.raised loopState exceptionValue) =
+            some (LoopResult.raised finalLoop loopException) := by
+        simpa [evalLoopProg, hlocal] using hloop
+      injection hloop' with hraised
+      injection hraised with hfinalLoop hloopException
+      subst finalLoop
+      rcases hlocals exception exceptionValue hlocal with
+        ⟨exceptionRegister, hexceptionRegister, hexceptionValue⟩
+      cases hwordRegister :
+          RiscV.registerOfNat (wordFindVar context exception) with
+      | none =>
+          simp [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi,
+            hwordRegister] at hword
+      | some register =>
+          have hword' :
+              some (RiscV.WordControlResult.raised wordState
+                (RiscV.readRegister wordState register)) =
+                some (RiscV.WordControlResult.raised finalWord wordException) := by
+            simpa [loopToWordProg,
+              RiscV.evalWordFunctionWithHandlersAndFfi, hwordRegister] using hword
+          injection hword' with hraisedWord
+          injection hraisedWord with hfinalWord hwordException
+          subst finalWord
+          have hregister : register = exceptionRegister := by
+            rw [hwordRegister] at hexceptionRegister
+            injection hexceptionRegister
+          subst register
+          exact ⟨hlocals,
+            hloopException.symm.trans (hexceptionValue.symm.trans hwordException)⟩
+
 theorem loopRepeat_mapped_locals [NeZero width]
     (context : WordContext) (body : LoopProg (RiscV.Word width))
     (wordBody : WordProg (RiscV.Word width))

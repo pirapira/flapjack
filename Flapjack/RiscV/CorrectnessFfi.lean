@@ -525,4 +525,198 @@ theorem loopToWord_seq_loop_simulation [NeZero width]
       | continued middleLoop label =>
           simp [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] at hloop
 
+/-!
+The loop-aware evaluator carries all five control outcomes.  This relation
+extends the ordinary mapped-local observation with return values,
+exceptions, and loop labels so that a sequence can be simulated even when
+its first component does not complete normally.
+-/
+def loopResultMappedToWordLoop [NeZero width] (context : WordContext) :
+    LoopResult (Word width) → RiscV.WordLoopControlResult width → Prop
+  | .normal loopState, .normal wordState =>
+      loopLocalsMappedToRiscV context loopState.locals wordState
+  | .returned loopState loopValues, .returned wordState wordValues =>
+      loopLocalsMappedToRiscV context loopState.locals wordState ∧
+        wordValues = loopValues
+  | .raised loopState loopException, .raised wordState wordException =>
+      loopLocalsMappedToRiscV context loopState.locals wordState ∧
+        wordException = loopException
+  | .broke loopState loopLabel, .broke wordState wordLabel =>
+      loopLabel = wordLabel ∧
+        loopLocalsMappedToRiscV context loopState.locals wordState
+  | .continued loopState loopLabel, .continued wordState wordLabel =>
+      loopLabel = wordLabel ∧
+        loopLocalsMappedToRiscV context loopState.locals wordState
+  | _, _ => False
+
+/-!
+Sequence composition for the complete loop evaluator.  The first component
+may terminate normally, in which case the second component is simulated from
+the related intermediate states, or it may propagate any other loop control
+result unchanged.
+-/
+theorem loopToWord_seq_loop_control_simulation [NeZero width]
+    (context : WordContext)
+    (primitive : LoopPrimitiveHandler (Word width))
+    (functions : List (Nat × List Nat × LoopProg (Word width)))
+    (wordFunctions : List (Nat × List Nat × WordProg (Word width)))
+    (loopState : LoopState (Word width))
+    (wordState : State width)
+    (loopHandler : FunName → Word width → Word width → Word width → Word width →
+      LoopState (Word width) → Option (LoopState (Word width)))
+    (wordHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat)
+    (first second : LoopProg (Word width))
+    (loopResult : LoopResult (Word width))
+    (wordResult : RiscV.WordLoopControlResult width)
+    (hfirst : ∀ firstResult firstWordResult,
+      evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
+          loopState first = some firstResult →
+      RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
+          wordState (loopToWordProg context first) = some firstWordResult →
+      loopResultMappedToWordLoop context firstResult firstWordResult)
+    (hsecond : ∀ middleLoop middleWord secondResult secondWordResult,
+      loopLocalsMappedToRiscV context middleLoop.locals middleWord →
+      evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
+          middleLoop second = some secondResult →
+      RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
+          middleWord (loopToWordProg context second) = some secondWordResult →
+      loopResultMappedToWordLoop context secondResult secondWordResult)
+    (hloop :
+      evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler (fuel + 1)
+          loopState (.seq first second) = some loopResult)
+    (hword :
+      RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler (fuel + 1)
+          wordState (loopToWordProg context (.seq first second)) = some wordResult) :
+    loopResultMappedToWordLoop context loopResult wordResult := by
+  cases hfirstLoop : evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      loopHandler fuel loopState first with
+  | none =>
+      simp [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] at hloop
+  | some firstResult =>
+      cases hfirstWord :
+          RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
+            wordState (loopToWordProg context first) with
+      | none =>
+          simp [loopToWordProg,
+            RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] at hword
+      | some firstWordResult =>
+          have hfirstResult := hfirst firstResult firstWordResult hfirstLoop hfirstWord
+          cases firstResult with
+          | normal middleLoop =>
+              cases firstWordResult with
+              | normal middleWord =>
+                  have hsecondLoop :
+                      evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
+                          middleLoop second = some loopResult := by
+                    simpa [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] using hloop
+                  have hsecondWord :
+                      RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
+                          middleWord (loopToWordProg context second) = some wordResult := by
+                    simpa [loopToWordProg,
+                      RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] using hword
+                  exact hsecond middleLoop middleWord loopResult wordResult
+                    hfirstResult hsecondLoop hsecondWord
+              | returned middleWord values =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | raised middleWord exception =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | broke middleWord label =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | continued middleWord label =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+          | returned middleLoop values =>
+              cases firstWordResult with
+              | normal middleWord =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | returned middleWord wordValues =>
+                  have hloop' :
+                      some (.returned middleLoop values) = some loopResult := by
+                    simpa [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] using hloop
+                  have hword' :
+                      some (.returned middleWord wordValues) = some wordResult := by
+                    simpa [loopToWordProg,
+                      RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] using hword
+                  injection hloop' with hloopResult
+                  injection hword' with hwordResult
+                  subst loopResult
+                  subst wordResult
+                  exact hfirstResult
+              | raised middleWord exception =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | broke middleWord label =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | continued middleWord label =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+          | raised middleLoop exception =>
+              cases firstWordResult with
+              | normal middleWord =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | returned middleWord values =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | raised middleWord wordException =>
+                  have hloop' :
+                      some (.raised middleLoop exception) = some loopResult := by
+                    simpa [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] using hloop
+                  have hword' :
+                      some (.raised middleWord wordException) = some wordResult := by
+                    simpa [loopToWordProg,
+                      RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] using hword
+                  injection hloop' with hloopResult
+                  injection hword' with hwordResult
+                  subst loopResult
+                  subst wordResult
+                  exact hfirstResult
+              | broke middleWord label =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | continued middleWord label =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+          | broke middleLoop label =>
+              cases firstWordResult with
+              | normal middleWord =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | returned middleWord values =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | raised middleWord exception =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | broke middleWord wordLabel =>
+                  have hloop' :
+                      some (.broke middleLoop label) = some loopResult := by
+                    simpa [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] using hloop
+                  have hword' :
+                      some (.broke middleWord wordLabel) = some wordResult := by
+                    simpa [loopToWordProg,
+                      RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] using hword
+                  injection hloop' with hloopResult
+                  injection hword' with hwordResult
+                  subst loopResult
+                  subst wordResult
+                  exact hfirstResult
+              | continued middleWord wordLabel =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+          | continued middleLoop label =>
+              cases firstWordResult with
+              | normal middleWord =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | returned middleWord values =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | raised middleWord exception =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | broke middleWord wordLabel =>
+                  simp [loopResultMappedToWordLoop] at hfirstResult
+              | continued middleWord wordLabel =>
+                  have hloop' :
+                      some (.continued middleLoop label) = some loopResult := by
+                    simpa [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] using hloop
+                  have hword' :
+                      some (.continued middleWord wordLabel) = some wordResult := by
+                    simpa [loopToWordProg,
+                      RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] using hword
+                  injection hloop' with hloopResult
+                  injection hword' with hwordResult
+                  subst loopResult
+                  subst wordResult
+                  exact hfirstResult
+
 end Flapjack.RiscV

@@ -17,6 +17,7 @@ import Flapjack.Test.CorrectnessMemory
 import Flapjack.Test.CorrectnessPrimitive
 import Flapjack.Test.CorrectnessControl
 import Flapjack.Test.CorrectnessLoopHandlers
+import Flapjack.Test.CorrectnessLoopControl
 import Flapjack.Test.WordLoopHandlers
 import Flapjack.Test.CorrectnessFfiMachine
 import Flapjack.Test.Ffi

@@ -272,6 +272,52 @@ def wordStackConditionOperands (config : WordStackConfig) (condition : Nat)
   pure (wordStackJoin conditionPrelude rightPrelude,
     conditionRegister, rightOperand)
 
+/-! FFI arguments use the fixed RISC-V ABI registers x10--x13.  The source
+    locations are checked before emitting the copies so a later argument cannot
+    be destroyed by an earlier ABI move.  Allocator configurations that keep
+    an argument in one of those destination registers are rejected here; a
+    future parallel-move implementation can relax this contract. -/
+
+def wordStackFfiRegisterSafe (register : Nat) : Bool :=
+  register != 10 && register != 11 && register != 12 && register != 13
+
+def wordStackFfiSourceSafe (config : WordStackConfig) (name : Nat) : Bool :=
+  match wordStackLocation config name with
+  | some (.register register) => wordStackFfiRegisterSafe register
+  | some (.stack _) => true
+  | none => false
+
+def wordStackFfiSourcesSafe (config : WordStackConfig) : List Nat → Bool
+  | [] => true
+  | name :: names =>
+      wordStackFfiSourceSafe config name && wordStackFfiSourcesSafe config names
+
+def wordStackFfiMove (config : WordStackConfig) (source destination : Nat) :
+    Option (StackProg α) := do
+  let location ← wordStackLocation config source
+  match location with
+  | .register register =>
+      if register = destination then pure .skip
+      else pure (.arith .or destination register register)
+  | .stack slot =>
+      pure (.stackLoad destination (wordStackOffset config slot))
+
+def wordStackFfi (config : WordStackConfig) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat) :
+    Option (StackProg α) := do
+  let sources := [configuration, configurationLength, array, arrayLength]
+  if wordStackFfiSourcesSafe config sources then
+    let configurationMove ← wordStackFfiMove config configuration 10
+    let configurationLengthMove ← wordStackFfiMove config configurationLength 11
+    let arrayMove ← wordStackFfiMove config array 12
+    let arrayLengthMove ← wordStackFfiMove config arrayLength 13
+    pure (wordStackJoin configurationMove
+      (wordStackJoin configurationLengthMove
+        (wordStackJoin arrayMove
+          (wordStackJoin arrayLengthMove
+            (.ffi function 10 11 12 13 0)))))
+  else none
+
 def wordStackStoreName : WordStore α → Option StackStore
   | .temp _ => none
   | .currHeap => some .currHeap
@@ -673,7 +719,7 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
         config.frameOffset config.scratch returnCode handlerCode
         config.returnLabel config.entryLabel config.handlerLabel exception)
   | .ffi function configuration configurationLength array arrayLength _ =>
-      pure (wordToStackFfi function configuration configurationLength array arrayLength)
+      wordStackFfi config function configuration configurationLength array arrayLength
   | .shareInst operator name (.var address) =>
       wordStackSharedMemoryInst config operator name address
   | _ => none
@@ -726,7 +772,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
         config.returnLabel config.entryLabel config.handlerLabel exception)
   | .call _ none _ _ => none
   | .ffi function configuration configurationLength array arrayLength _ =>
-      pure (wordToStackFfi function configuration configurationLength array arrayLength)
+      wordStackFfi config function configuration configurationLength array arrayLength
   | .shareInst operator name address =>
       wordStackCompileSharedNat config operator name address
 termination_by program => sizeOf program

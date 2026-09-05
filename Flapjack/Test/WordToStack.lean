@@ -1,5 +1,7 @@
 import Flapjack.RiscV.WordToStack
 
+-- FFI ABI regressions are kept here with the other Word-to-Stack tests.
+
 namespace Flapjack.RiscV
 
 example :
@@ -97,10 +99,19 @@ example :
 
 example :
     wordToStackProg
-        { locations := [], scratch := 31, stackBase := 10 }
+        { locations := [(2, .register 4), (3, .stack 2),
+            (4, .register 6), (5, .register 7)],
+          scratch := 31, stackBase := 10 }
         ((.ffi "sum" 2 3 4 5 []) : WordProg Nat) =
-      some (.ffi "sum" 2 3 4 5 0 : StackProg Nat) := by
-  simp [wordToStackProg, wordToStackFfi]
+      some (.seq (.arith .or 10 4 4)
+        (.seq (.stackLoad 11 12)
+          (.seq (.arith .or 12 6 6)
+            (.seq (.arith .or 13 7 7)
+              (.ffi "sum" 10 11 12 13 0))))) := by
+  simp [wordToStackProg, wordStackFfi, wordStackFfiSourcesSafe,
+    wordStackFfiSourceSafe, wordStackFfiRegisterSafe, wordStackFfiMove,
+    wordStackLocation,
+    wordStackOffset, lookupNatInfo, wordStackJoin]
 
 example :
     wordToStackProgNat
@@ -257,5 +268,13 @@ example :
           scratch := 31, stackBase := 10 } (.addCarry 0 1 2 3 4) =
       some (.inst (.arith (.addCarry 4 5 6 7 8)) : StackProg Nat) := by
   simp [wordStackArithInst, wordStackLocation, lookupNatInfo]
+
+example :
+    wordToStackProgNat
+        { locations := [(0, .register 10), (1, .register 2),
+            (2, .register 3), (3, .register 4)],
+          scratch := 31, stackBase := 10 }
+        ((.ffi "sum" 0 1 2 3 []) : WordProg Nat) = none := by
+  native_decide
 
 end Flapjack.RiscV

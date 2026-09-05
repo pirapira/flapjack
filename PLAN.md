@@ -352,6 +352,8 @@ definitions, pass ordering, examples, and proof obligations.
   StackLang arithmetic boundary.
 - [x] Extend the Word-to-Stack boundary through conditions, loops, returns,
   calls, exception handlers, special stores, and FFI operations.
+- [x] Marshal Word-to-Stack FFI arguments into the x10--x13 ABI registers,
+  including spilled sources and an explicit clobber-safety boundary.
 - [x] Add concrete `Nat` Word-to-Stack expression lowering for constants,
   register/stack atoms, binary operations, loads, stores, and stack-backed
   destinations, with separate value/address scratch registers.

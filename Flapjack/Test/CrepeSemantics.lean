@@ -1,4 +1,5 @@
 import Flapjack.CrepeSemantics
+import Flapjack.Test.CrepCalls
 
 namespace Flapjack
 
@@ -102,6 +103,41 @@ theorem crepe_full_primitive_semantics :
       crepeSemanticsFfi crepeSemanticsSharedMem
       0 100 30 crepeSemanticsState crepeSemanticsPrimitiveProgram =
       some [3] := by
+  native_decide
+
+def crepeCallFullState : CrepState (RiscV.Word 64) :=
+  { locals := fun _ => none
+    memory := fun _ => none }
+
+def crepeCallFullPrimitive : CrepPrimitiveHandler (RiscV.Word 64) :=
+  fun _ _ => none
+
+def crepeCallFullFfi : CrepFfiHandler (RiscV.Word 64) :=
+  noCrepFfi _
+
+def crepeCallFullSharedMem : CrepSharedMemHandler (RiscV.Word 64) :=
+  defaultCrepSharedMemHandler
+
+def crepeCallFullValues :
+    Option (List (RiscV.Word 64)) :=
+  do
+    let (_, main) ← lookupCompiledFunction "main" crepCallFunctions
+    let result ← evalCrepFullProg crepCallFunctions
+      crepeCallFullPrimitive crepeCallFullFfi crepeCallFullSharedMem
+      0 (BitVec.ofNat 64 100) 30 crepeCallFullState main
+    pure (match result with
+      | .returned _ values => values
+      | .normal _ => []
+      | .raised _ _ | .broke _ _ | .continued _ _ => [])
+
+theorem compileToCrepe_full_call_semantics :
+    crepeCallFullValues = some [BitVec.ofNat 64 41] := by
+  native_decide
+
+theorem compileToCrepe_full_call_source_agreement :
+    crepeCallFullValues =
+      (evalPanProgWithCalls pipelineCallSourceFunctions 20 (fun _ => none)
+        pipelineCallSourceMain).map (fun result => result.2) := by
   native_decide
 
 end Flapjack

@@ -363,6 +363,9 @@ definitions, pass ordering, examples, and proof obligations.
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully
   coloured SSA slot maps to an allocatable RISC-V register.
+- [x] Port CakeML-style move preference edges for Word copy nodes and feed
+  them into a reserved-register-aware preference colourer with soundness
+  regressions.
 - [x] Reserve the RISC-V address scratch register x29 from Word allocation and
   cover the allocator/backend separation with executable regressions.
 - [x] Reserve the RISC-V LongMul normalization scratch register x28 from Word

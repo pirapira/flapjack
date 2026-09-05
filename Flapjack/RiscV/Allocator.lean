@@ -119,7 +119,48 @@ def wordGreedyColour (names : List Nat) (edges : List (Nat × Nat))
       match wordFirstAvailable (wordColourCandidates name) forbidden with
       | none => none
       | some register =>
-          wordGreedyColour names edges ((name, register) :: colouring)
+      wordGreedyColour names edges ((name, register) :: colouring)
+
+/-! CakeML supplies preference edges from moves to the colouring algorithm so
+    that a move can often be made register-to-register without an extra copy.
+    A preference is only considered when its endpoint has already been
+    coloured; the ordinary candidate list remains the fallback. -/
+
+def wordPreferenceRegisters (name : Nat) (preferences : List (Nat × Nat))
+    (colouring : NatInfoMap Nat) : List Nat :=
+  match preferences with
+  | [] => []
+  | (left, right) :: preferences =>
+      if left == name then
+        match lookupNatInfo right colouring with
+        | some register => register :: wordPreferenceRegisters name preferences colouring
+        | none => wordPreferenceRegisters name preferences colouring
+      else if right == name then
+        match lookupNatInfo left colouring with
+        | some register => register :: wordPreferenceRegisters name preferences colouring
+        | none => wordPreferenceRegisters name preferences colouring
+      else
+        wordPreferenceRegisters name preferences colouring
+
+def wordColourCandidatesWithPreferences (name : Nat)
+    (preferences : List (Nat × Nat)) (colouring : NatInfoMap Nat) : List Nat :=
+  wordPreferenceRegisters name preferences colouring ++ wordColourCandidates name
+
+def wordGreedyColourWithPreferences (names : List Nat)
+    (edges preferences : List (Nat × Nat))
+    (colouring : NatInfoMap Nat) : Option (NatInfoMap Nat) :=
+  match names with
+  | [] => some colouring
+  | name :: names =>
+      let neighbours := wordNeighbours name edges
+      let forbidden := wordUsedRegisters neighbours colouring
+      match wordFirstAvailable
+          (wordColourCandidatesWithPreferences name preferences colouring)
+          forbidden with
+      | none => none
+      | some register =>
+          wordGreedyColourWithPreferences names edges preferences
+            ((name, register) :: colouring)
 
 def wordColouringUsesAllocatable (names : List Nat)
     (colouring : NatInfoMap Nat) : Bool :=
@@ -157,6 +198,22 @@ def wordAllocateVarsWithClashes (slots : List Nat)
 def wordAllocateContextWithClashes (slots : List Nat)
     (edges : List (Nat × Nat)) : Option WordContext :=
   (wordAllocateVarsWithClashes slots edges).map (fun vars => { vars := vars })
+
+def wordAllocateVarsWithClashesAndPreferences (slots : List Nat)
+    (edges preferences : List (Nat × Nat)) : Option (NatInfoMap Nat) :=
+  let names := slots.eraseDups
+  match wordGreedyColourWithPreferences names edges preferences [] with
+  | none => none
+  | some colouring =>
+      if wordColouringUsesAllocatable names colouring &&
+          wordColouringRespectsClashes edges colouring then
+        some colouring
+      else none
+
+def wordAllocateContextWithClashesAndPreferences (slots : List Nat)
+    (edges preferences : List (Nat × Nat)) : Option WordContext :=
+  (wordAllocateVarsWithClashesAndPreferences slots edges preferences).map
+    (fun vars => { vars := vars })
 
 /-! Straight-line liveness and clash construction for the current Word
 instruction fragment.  The analysis walks backwards, keeping values live
@@ -641,6 +698,22 @@ def wordProgWriteVars : WordProg α → List Nat
 def wordProgVariables (program : WordProg α) : List Nat :=
   wordProgReadVars program ++ wordProgWriteVars program
 
+/-! Preference edges corresponding to CakeML's `get_prefs`.  The current Word
+    syntax has no separate `Move` constructor: the move-shaped assignments and
+    `locValue` nodes are the copy operations exposed to the allocator. -/
+
+def wordProgPreferenceEdges : WordProg α → List (Nat × Nat)
+  | .assign destination (.var source) => [(destination, source)]
+  | .locValue destination source => [(destination, source)]
+  | .seq first second =>
+      wordProgPreferenceEdges first ++ wordProgPreferenceEdges second
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordProgPreferenceEdges thenBranch ++ wordProgPreferenceEdges elseBranch
+  | .loop _ body _ => wordProgPreferenceEdges body
+  | .call _ _ _ none => []
+  | .call _ _ _ (some (_, body)) => wordProgPreferenceEdges body
+  | _ => []
+
 /-! CakeML's `full_ssa_cc_trans` starts a function by giving each formal
     parameter a fresh SSA name.  The fresh names are chosen above the source
     program's variable range; the corresponding ABI moves are materialised at
@@ -902,6 +975,13 @@ def wordAllocateProgramWithSlots (slots : List Nat) (program : WordProg α) :
 def wordAllocateProgram (program : WordProg α) : Option WordContext :=
   wordAllocateProgramWithSlots [] program
 
+def wordAllocateProgramWithPreferences (slots : List Nat)
+    (program : WordProg α) : Option WordContext :=
+  let (liveIn, edges) := wordProgClashAnalysis program []
+  wordAllocateContextWithClashesAndPreferences
+    (slots ++ wordProgVariables program ++ liveIn) edges
+    (wordProgPreferenceEdges program)
+
 def wordAllocateSsaProgram (state : WordSsaState) (program : WordProg α) :
     Option (WordSsaState × WordProg α × WordContext) :=
   let (state, program) := wordSsaRenameProgram state program
@@ -1057,6 +1137,18 @@ theorem wordAllocateVarsWithClashes_sound (slots : List Nat)
     wordColouringUsesAllocatable slots.eraseDups colouring = true ∧
       wordColouringRespectsClashes edges colouring = true := by
   simp [wordAllocateVarsWithClashes] at hcolouring
+  split at hcolouring <;> try simp_all
+  all_goals
+    rcases hcolouring with ⟨hcheck, heq⟩
+    simpa [heq] using hcheck
+
+theorem wordAllocateVarsWithClashesAndPreferences_sound (slots : List Nat)
+    (edges preferences : List (Nat × Nat)) (colouring : NatInfoMap Nat)
+    (hcolouring : wordAllocateVarsWithClashesAndPreferences slots edges preferences =
+      some colouring) :
+    wordColouringUsesAllocatable slots.eraseDups colouring = true ∧
+      wordColouringRespectsClashes edges colouring = true := by
+  simp [wordAllocateVarsWithClashesAndPreferences] at hcolouring
   split at hcolouring <;> try simp_all
   all_goals
     rcases hcolouring with ⟨hcheck, heq⟩

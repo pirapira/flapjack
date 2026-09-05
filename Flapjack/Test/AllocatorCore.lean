@@ -24,6 +24,31 @@ example :
   exact wordAllocateVarsWithClashes_safe_example
 
 example :
+    wordProgPreferenceEdges
+        (.seq (.assign 4 (.var 0)) (.locValue 5 4) : WordProg Nat) =
+      [(4, 0), (5, 4)] := by
+  simp [wordProgPreferenceEdges]
+
+example :
+    wordAllocateVarsWithClashesAndPreferences [0, 4] [] [(4, 0)] =
+      some [(4, 2), (0, 2)] := by
+  rfl
+
+example :
+    wordAllocateVarsWithClashesAndPreferences [0, 4] [(0, 4)] [(4, 0)] =
+      some [(4, 6), (0, 2)] := by
+  rfl
+
+example (slots : List Nat) (edges preferences : List (Nat × Nat))
+    (colouring : NatInfoMap Nat)
+    (hcolouring : wordAllocateVarsWithClashesAndPreferences slots edges preferences =
+      some colouring) :
+    wordColouringUsesAllocatable slots.eraseDups colouring = true ∧
+      wordColouringRespectsClashes edges colouring = true := by
+  exact wordAllocateVarsWithClashesAndPreferences_sound slots edges preferences
+    colouring hcolouring
+
+example :
     wordInstVars (.arith (.addCarry 1 2 3 4 5)) = [3, 4, 5, 1, 2] := by
   exact wordInstVars_addCarry
 

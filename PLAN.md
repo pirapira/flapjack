@@ -332,6 +332,9 @@ definitions, pass ordering, examples, and proof obligations.
   rewriting remains a separate backend pass.
 - [x] Encode the RISC-V forced-clash constraints for multi-result `LongMul`
   and `AddCarry` in both linear and program-level allocation analyses.
+- [x] Enforce the currently supported special-instruction layout at the
+  spill-aware allocator and Word-to-Stack boundary, rejecting spilled or
+  aliased `LongMul`/`AddCarry` values before instruction selection.
 - [x] Expose an SSA-driven spill allocation boundary that derives spill
   locations from the renamed Word program and its analysed clash graph.
 - [x] Wire the available SSA/spill allocation and concrete locations into the

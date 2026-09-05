@@ -895,6 +895,60 @@ inductive WordLocation where
   | stack (slot : Nat)
   deriving DecidableEq, Repr
 
+/-! The current Word-to-Stack arithmetic selector has a deliberately small
+    special-instruction contract.  `LongMul` writes its high result before
+    its low result, while `AddCarry` uses x31 as a temporary and must keep its
+    two result locations distinct.  Keep this contract next to allocation so
+    a spill result cannot silently reach a partial selector. -/
+
+def wordSpecialArithLocationsSafe (operation : WordArith)
+    (locations : NatInfoMap WordLocation) : Bool :=
+  match operation with
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      match lookupNatInfo destinationLeft locations,
+        lookupNatInfo destinationRight locations,
+        lookupNatInfo sourceLeft locations,
+        lookupNatInfo sourceRight locations with
+      | some (.register destinationLeft), some (.register destinationRight),
+          some (.register sourceLeft), some (.register sourceRight) =>
+          destinationLeft != destinationRight &&
+            destinationLeft != sourceLeft && destinationLeft != sourceRight
+      | _, _, _, _ => false
+  | .addCarry destination resultCarry sourceLeft sourceRight carryIn =>
+      match lookupNatInfo destination locations,
+        lookupNatInfo resultCarry locations,
+        lookupNatInfo sourceLeft locations,
+        lookupNatInfo sourceRight locations,
+        lookupNatInfo carryIn locations with
+      | some (.register destination), some (.register resultCarry),
+          some (.register sourceLeft), some (.register sourceRight),
+          some (.register carryIn) =>
+          destination != resultCarry && destination != 31 &&
+            resultCarry != 31 && sourceLeft != 31 && sourceRight != 31 &&
+            carryIn != 31
+      | _, _, _, _, _ => false
+  | .longDiv _ _ _ _ _ | .div _ _ _ => true
+
+def wordProgSpecialLocationsSafe (locations : NatInfoMap WordLocation) :
+    WordProg α → Bool
+  | .skip => true
+  | .assign _ _ | .store _ _ | .set _ _ | .break _ | .continue _ |
+      .raise _ | .return _ _ | .tick | .locValue _ _ | .ffi _ _ _ _ _ _ => true
+  | .inst (.arith operation) => wordSpecialArithLocationsSafe operation locations
+  | .inst (.mem _ _ _) => true
+  | .seq first second =>
+      wordProgSpecialLocationsSafe locations first &&
+        wordProgSpecialLocationsSafe locations second
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordProgSpecialLocationsSafe locations thenBranch &&
+        wordProgSpecialLocationsSafe locations elseBranch
+  | .loop _ body _ => wordProgSpecialLocationsSafe locations body
+  | .call _ _ _ none => true
+  | .call _ _ _ (some (_, body)) => wordProgSpecialLocationsSafe locations body
+  | .shareInst _ _ _ => true
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
 structure WordSpillState where
   locations : NatInfoMap WordLocation
   nextSpill : Nat
@@ -1101,8 +1155,13 @@ def wordAllocateSsaProgramWithSpills (state : WordSsaState)
     Option (WordSsaState × WordProg α × WordSpillState) :=
   let (state, program) := wordSsaRenameProgram state program
   let (liveIn, edges) := wordProgClashAnalysis program []
-  (wordAllocateVarsWithSpills (wordProgVariables program ++ liveIn) edges).map
-    (fun allocation => (state, program, allocation))
+  match wordAllocateVarsWithSpills (wordProgVariables program ++ liveIn) edges with
+  | none => none
+  | some allocation =>
+      if wordProgSpecialLocationsSafe allocation.locations program = true then
+        some (state, program, allocation)
+      else
+        none
 
 theorem wordAllocateVarsWithSpills_sound (slots : List Nat)
     (edges : List (Nat × Nat)) (state : WordSpillState)

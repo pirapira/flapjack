@@ -19,6 +19,7 @@ example :
     wordColourCandidates, wordFirstAvailable, wordNeighbours,
     wordPreferredRegister, wordRemoveRegisters, wordAllocatableRegisters,
     wordSpillAllocationRespectsClashes, lookupNatInfo,
+    wordSpecialArithLocationsSafe, wordProgSpecialLocationsSafe,
     wordExpReadVars, List.eraseDups, List.eraseDupsBy,
     List.eraseDupsBy.loop]
 
@@ -34,5 +35,18 @@ example (slots : List Nat) (edges : List (Nat × Nat))
     (name : Nat) (hname : name ∈ slots.eraseDups) :
     ∃ location, lookupNatInfo name state.locations = some location := by
   exact wordAllocateVarsWithSpills_maps_slots slots edges state hstate name hname
+
+example :
+    wordProgSpecialLocationsSafe
+        [(0, .stack 0), (1, .register 5), (2, .register 6), (3, .register 7)]
+        ((.inst (.arith (.longMul 0 1 2 3))) : WordProg Nat) = false := by
+  native_decide
+
+example :
+    wordProgSpecialLocationsSafe
+        [(0, .register 4), (1, .register 5), (2, .register 6),
+          (3, .register 7), (4, .register 8)]
+        ((.seq (.inst (.arith (.addCarry 0 1 2 3 4))) .skip) : WordProg Nat) = true := by
+  native_decide
 
 end Flapjack

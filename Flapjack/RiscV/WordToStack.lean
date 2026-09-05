@@ -151,8 +151,11 @@ def wordStackDivInst (config : WordStackConfig)
             (.inst (.arith (.div config.scratch config.scratch config.addressScratch)))
             (.stackStore config.scratch (wordStackOffset config destination)))))
 
-def wordStackArithInst (config : WordStackConfig) : WordArith → Option (StackProg α)
-  | .longMul destinationLeft destinationRight sourceLeft sourceRight => do
+def wordStackArithInst (config : WordStackConfig) (operation : WordArith) :
+    Option (StackProg α) :=
+  if wordSpecialArithLocationsSafe operation config.locations = true then
+    match operation with
+    | .longMul destinationLeft destinationRight sourceLeft sourceRight => do
       let destinationLeft ← wordStackLocation config destinationLeft
       let destinationRight ← wordStackLocation config destinationRight
       let sourceLeft ← wordStackLocation config sourceLeft
@@ -163,7 +166,7 @@ def wordStackArithInst (config : WordStackConfig) : WordArith → Option (StackP
           pure (.inst (.arith (.longMul destinationLeft destinationRight
             sourceLeft sourceRight)))
       | _, _, _, _ => none
-  | .addCarry destination resultCarry sourceLeft sourceRight carryIn => do
+    | .addCarry destination resultCarry sourceLeft sourceRight carryIn => do
       let destination ← wordStackLocation config destination
       let resultCarry ← wordStackLocation config resultCarry
       let sourceLeft ← wordStackLocation config sourceLeft
@@ -175,9 +178,11 @@ def wordStackArithInst (config : WordStackConfig) : WordArith → Option (StackP
           pure (.inst (.arith (.addCarry destination resultCarry sourceLeft
             sourceRight carryIn)))
       | _, _, _, _, _ => none
-  | .div destination dividend divisor =>
+    | .div destination dividend divisor =>
       wordStackDivInst config destination dividend divisor
-  | _ => none
+    | .longDiv _ _ _ _ _ => none
+  else
+    none
 
 def wordStackMemoryInst (config : WordStackConfig) (operator : WordMemOp)
     (sourceOrDestination address : Nat) : Option (StackProg α) :=

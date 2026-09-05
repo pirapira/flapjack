@@ -46,8 +46,23 @@ example :
 example :
     wordProgClashAnalysis
         ((.seq (.assign 0 (.var 1)) (.assign 2 (.var 0))) : WordProg α) [] =
-      ([1], [(1, 0), (0, 2)]) := by
+      ([1], []) := by
   exact wordProgClashAnalysis_seq
+
+example :
+    wordProgClashAnalysis
+        ((.ite .equal 0 (.reg 1)
+          (.assign 2 (.var 0)) (.assign 3 (.var 0))) : WordProg α) [] =
+      ([0, 1], []) := by
+  exact wordProgClashAnalysis_ite
+
+example :
+    (wordAllocateSsaProgram
+      ({ current := [], next := 10 } : WordSsaState)
+      ((.ite .equal 0 (.reg 0)
+        (.assign 1 (.var 0)) (.assign 1 (.var 0))) : WordProg Nat)).isSome =
+      true := by
+  native_decide
 
 example (slots : List Nat) (edges : List (Nat × Nat))
     (colouring : NatInfoMap Nat)
@@ -73,7 +88,8 @@ example [OfNat α 1] :
     wordRegisterIsAllocatable,
     wordColouringUsesAllocatable, wordColouringRespectsClashes,
     wordProgClashAnalysis, wordProgVariables, wordProgReadVars,
-    wordProgWriteVars, wordProgLiveBefore, wordPairwiseClashes,
+    wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
+    wordClashPairs,
     wordExpReadVars, loopAccVars, loopVarsOfExp, loopInsertAll, loopInsert,
     loopToWordProg, wordCompileExp, wordFindVar, wordMapVars, lookupNatInfo,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]

@@ -288,6 +288,9 @@ definitions, pass ordering, examples, and proof obligations.
   control-flow clash construction.
 - [x] Expose a program-analysis-driven Word pipeline allocation boundary for
   straight-line and conservatively analysed control-flow programs.
+- [x] Add branch-aware Word SSA version reconciliation and tighten program
+  clash analysis to write/live interference for the supported control-flow
+  fragment.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

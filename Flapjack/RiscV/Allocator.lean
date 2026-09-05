@@ -300,9 +300,106 @@ def wordAllocateSsaLinear (state : WordSsaState) (instructions : List WordInst) 
   (wordAllocateLinearInstructions instructions).map
     (fun context => (state, instructions, context))
 
-/-! Program-level variable collection and liveness.  Sequencing uses the
-exact backwards transfer; control-flow constructs use a conservative clique
-over their entry variables until SSA phi reconciliation is available. -/
+/-! Branch-aware SSA renaming for the Word program fragment.  A conditional
+    starts both branches from the same incoming map, but gives the second
+    branch the first branch's fresh-name counter.  Variables whose branch
+    versions differ are reconciled with explicit copy assignments after each
+    branch.  Those copies are ordinary Word assignments, so the result stays
+    inside the existing IR and can be analysed by the allocator. -/
+
+def wordSsaRenameExp (state : WordSsaState) : WordExp α → WordExp α
+  | .const value => .const value
+  | .var name => .var (wordSsaRead state name)
+  | .lookup store => .lookup store
+  | .load address => .load (wordSsaRenameExp state address)
+  | .op operator arguments =>
+      .op operator (arguments.map (wordSsaRenameExp state))
+  | .shift operator left right =>
+      .shift operator (wordSsaRenameExp state left) (wordSsaRenameExp state right)
+termination_by expression => sizeOf expression
+decreasing_by all_goals decreasing_trivial
+
+def wordSsaRenameRegImm (state : WordSsaState) : WordRegImm α → WordRegImm α
+  | .imm value => .imm value
+  | .reg name => .reg (wordSsaRead state name)
+
+def wordSsaSeq (first second : WordProg α) : WordProg α :=
+  match first, second with
+  | .skip, second => second
+  | first, .skip => first
+  | first, second => .seq first second
+
+def wordSsaKeys (state : WordSsaState) : List Nat :=
+  state.current.map (fun entry => entry.1)
+
+def wordSsaBranchNames (base left right : WordSsaState) : List Nat :=
+  (wordSsaKeys base ++ wordSsaKeys left ++ wordSsaKeys right).eraseDups
+
+def wordSsaReconcile : List Nat → WordSsaState → WordSsaState → Nat →
+    WordSsaState × WordProg α × WordProg α
+  | [], _left, _right, next => ({ current := [], next := next }, .skip, .skip)
+  | name :: names, left, right, next =>
+      let leftName := wordSsaRead left name
+      let rightName := wordSsaRead right name
+      if leftName = rightName then
+        let (merged, leftMoves, rightMoves) :=
+          wordSsaReconcile names left right next
+        ({ current := (name, leftName) :: merged.current, next := merged.next },
+          leftMoves, rightMoves)
+      else
+        let leftMove := .assign next (.var leftName)
+        let rightMove := .assign next (.var rightName)
+        let (merged, leftMoves, rightMoves) :=
+          wordSsaReconcile names left right (next + 1)
+        ({ current := (name, next) :: merged.current, next := merged.next },
+          wordSsaSeq leftMove leftMoves, wordSsaSeq rightMove rightMoves)
+termination_by names => sizeOf names
+decreasing_by all_goals decreasing_trivial
+
+def wordSsaRenameProgram (state : WordSsaState) : WordProg α →
+    WordSsaState × WordProg α
+  | .skip => (state, .skip)
+  | .assign name value =>
+      let value := wordSsaRenameExp state value
+      let (state, freshName) := wordSsaFresh state name
+      (state, .assign freshName value)
+  | .inst instruction =>
+      let (state, instruction) := wordSsaRenameInst state instruction
+      (state, .inst instruction)
+  | .seq first second =>
+      let (state, first) := wordSsaRenameProgram state first
+      let (state, second) := wordSsaRenameProgram state second
+      (state, .seq first second)
+  | .ite operator condition right thenBranch elseBranch =>
+      let right := wordSsaRenameRegImm state right
+      let (thenState, thenBranch) := wordSsaRenameProgram state thenBranch
+      let elseInput := { state with next := thenState.next }
+      let (elseState, elseBranch) := wordSsaRenameProgram elseInput elseBranch
+      let names := wordSsaBranchNames state thenState elseState
+      let (merged, thenMoves, elseMoves) :=
+        wordSsaReconcile names thenState elseState elseState.next
+      ({ current := merged.current, next := merged.next },
+        .ite operator (wordSsaRead state condition) right
+          (wordSsaSeq thenBranch thenMoves)
+          (wordSsaSeq elseBranch elseMoves))
+  | program => (state, program)
+
+theorem wordSsaRenameProgram_ite :
+    wordSsaRenameProgram ({ current := [], next := 10 } : WordSsaState)
+        (.ite .equal 0 (.reg 0)
+          (.assign 1 (.var 0)) (.assign 1 (.var 0)) : WordProg α) =
+      ({ current := [(1, 12)], next := 13 },
+        .ite .equal 0 (.reg 0)
+          (.seq (.assign 10 (.var 0)) (.assign 12 (.var 10)))
+          (.seq (.assign 11 (.var 0)) (.assign 12 (.var 11)))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameExp, wordSsaRenameRegImm,
+    wordSsaRead, wordSsaFresh, wordSsaBranchNames, wordSsaKeys,
+    wordSsaReconcile, wordSsaSeq, List.eraseDups, List.eraseDupsBy,
+    List.eraseDupsBy.loop, lookupNatInfo]
+
+/-! Program-level variable collection and liveness.  Sequencing and branch
+    paths use backwards transfers; loop entry/exit sets remain conservative
+    until the loop SSA reconciliation and spill contracts are ported. -/
 
 def wordExpReadVars : WordExp α → List Nat
   | .const _ => []
@@ -373,16 +470,33 @@ def wordProgLiveBefore (program : WordProg α) (liveAfter : List Nat) : List Nat
   wordProgReadVars program ++
     liveAfter.filter (fun name => name ∉ wordProgWriteVars program)
 
+def wordListUnion (left right : List Nat) : List Nat :=
+  (left ++ right).eraseDups
+
+def wordProgAtomicClashes (program : WordProg α) (liveAfter : List Nat) :
+    List (Nat × Nat) :=
+  wordClashPairs (wordProgWriteVars program) liveAfter
+
 def wordProgClashAnalysis : WordProg α → List Nat →
     List Nat × List (Nat × Nat)
   | .seq first second, liveOut =>
       let (liveMiddle, secondEdges) := wordProgClashAnalysis second liveOut
       let (liveIn, firstEdges) := wordProgClashAnalysis first liveMiddle
       (liveIn, firstEdges ++ secondEdges)
+  | .ite _ condition right thenBranch elseBranch, liveOut =>
+      let (thenLive, thenEdges) := wordProgClashAnalysis thenBranch liveOut
+      let (elseLive, elseEdges) := wordProgClashAnalysis elseBranch liveOut
+      let conditionLive := condition :: match right with
+        | .reg name => [name]
+        | .imm _ => []
+      (wordListUnion conditionLive (wordListUnion thenLive elseLive),
+        thenEdges ++ elseEdges)
+  | .loop liveIn body liveOut, liveAfter =>
+      let (bodyLive, bodyEdges) :=
+        wordProgClashAnalysis body (wordListUnion liveIn (liveOut ++ liveAfter))
+      (wordListUnion liveIn bodyLive, bodyEdges)
   | program, liveOut =>
-      let variables := (wordProgVariables program ++ liveOut).eraseDups
-      (wordProgLiveBefore program liveOut,
-        wordPairwiseClashes variables)
+      (wordProgLiveBefore program liveOut, wordProgAtomicClashes program liveOut)
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
@@ -395,18 +509,36 @@ def wordAllocateProgramWithSlots (slots : List Nat) (program : WordProg α) :
 def wordAllocateProgram (program : WordProg α) : Option WordContext :=
   wordAllocateProgramWithSlots [] program
 
+def wordAllocateSsaProgram (state : WordSsaState) (program : WordProg α) :
+    Option (WordSsaState × WordProg α × WordContext) :=
+  let (state, program) := wordSsaRenameProgram state program
+  let (liveIn, edges) := wordProgClashAnalysis program []
+  (wordAllocateContextWithClashes
+      (wordProgVariables program ++ liveIn) edges).map
+    (fun context => (state, program, context))
+
 theorem wordProgClashAnalysis_skip :
     wordProgClashAnalysis (.skip : WordProg α) [] = ([], []) := by
-  simp [wordProgClashAnalysis, wordProgVariables, wordProgReadVars,
-    wordProgWriteVars, wordProgLiveBefore, wordPairwiseClashes]
+  simp [wordProgClashAnalysis, wordProgReadVars,
+    wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
+    wordClashPairs]
 
 theorem wordProgClashAnalysis_seq :
     wordProgClashAnalysis
         ((.seq (.assign 0 (.var 1)) (.assign 2 (.var 0))) : WordProg α) [] =
-      ([1], [(1, 0), (0, 2)]) := by
-  simp [wordProgClashAnalysis, wordProgVariables, wordProgReadVars,
-    wordProgWriteVars, wordProgLiveBefore, wordPairwiseClashes,
-    wordExpReadVars, List.eraseDups, List.eraseDupsBy,
+      ([1], []) := by
+  simp [wordProgClashAnalysis, wordProgReadVars,
+    wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
+    wordClashPairs, wordExpReadVars]
+
+theorem wordProgClashAnalysis_ite :
+    wordProgClashAnalysis
+        ((.ite .equal 0 (.reg 1)
+          (.assign 2 (.var 0)) (.assign 3 (.var 0))) : WordProg α) [] =
+      ([0, 1], []) := by
+  simp [wordProgClashAnalysis, wordProgReadVars, wordProgWriteVars,
+    wordProgLiveBefore, wordProgAtomicClashes, wordClashPairs,
+    wordListUnion, wordExpReadVars, List.eraseDups, List.eraseDupsBy,
     List.eraseDupsBy.loop]
 
 theorem wordLinearClashAnalysis_empty (liveOut : List Nat) :

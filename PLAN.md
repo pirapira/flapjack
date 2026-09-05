@@ -718,6 +718,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add structured control-result support for scoped declarations, stores,
   conditionals, while loops, break/continue, and shared-memory operations,
   with executable store/load and loop regressions.
+- [x] Port the top-level structured declaration environment for structures,
+  globals, functions, and exceptions, and expose an entry-point evaluator that
+  composes declaration processing with calls, primitives, and FFI.
 - [x] Enforce structure-context well-formedness for structured loads, matching
   the source evaluator's shape-validation rule.
 - [x] Connect the structured source evaluator to end-to-end declaration-call

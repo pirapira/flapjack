@@ -1,5 +1,6 @@
 import Flapjack.Test.Basics
 import Flapjack.Test.SourceSemantics
+import Flapjack.Test.SourceDeclarations
 import Flapjack.Test.Compile
 import Flapjack.Test.RiscVMemory
 import Flapjack.Test.RiscV

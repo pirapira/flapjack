@@ -822,6 +822,39 @@ theorem evalWordStackMachine_binary_assignment [NeZero width]
       wordStackMachineWriteRegister, wordStackMachineWriteSlot,
       wordStackMachineBinOp, hdestination, hleftValue, hrightValue, hsafe]
 
+theorem evalWordStackMachine_shift_assignment [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (operator : Shift) (destination left right : Nat)
+    (destinationLocation leftLocation rightLocation : WordLocation)
+    (leftValue rightValue : Word width)
+    (hdestination : wordStackLocation config destination =
+      some destinationLocation)
+    (hleft : wordStackLocation config left = some leftLocation)
+    (hright : wordStackLocation config right = some rightLocation)
+    (hleftValue : wordStackMachineValue config state left = some leftValue)
+    (hrightValue : wordStackMachineValue config state right = some rightValue)
+    (hsafe : wordStackBinaryLocationsSafe config leftLocation rightLocation = true)
+    (heval : (wordStackCompileShiftNat config destination operator
+      (.var left) (.var right)).bind (evalWordStackMachine state) = some final) :
+      wordStackMachineValue config final destination =
+        some (wordStackMachineShift operator leftValue rightValue) := by
+  change lookupNatInfo destination config.locations = some destinationLocation at hdestination
+  change lookupNatInfo left config.locations = some leftLocation at hleft
+  change lookupNatInfo right config.locations = some rightLocation at hright
+  cases destinationLocation <;> cases leftLocation <;> cases rightLocation <;>
+    simp [wordStackCompileShiftNat, wordStackAtomNat, wordStackWritePhysicalNat,
+      wordStackReadRegister, evalWordStackMachine, wordStackJoin,
+      wordStackLocation, wordStackOffset, lookupNatInfo,
+      hdestination, hleft, hright, wordStackBinaryLocationsSafe] at hsafe heval
+  all_goals
+    cases heval
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      wordStackMachineShift, hleft, hright] at hleftValue hrightValue
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      wordStackMachineShift, hdestination, hleftValue, hrightValue, hsafe]
+
 def wordStackValue [NeZero width] (config : WordStackConfig)
     (state : WordStackState width) (name : Nat) : Option (Word width) := do
   let location ← wordStackLocation config name

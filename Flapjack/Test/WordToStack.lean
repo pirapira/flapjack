@@ -665,6 +665,80 @@ example [NeZero width]
     (hsafe := by simp [config, wordStackBinaryLocationsSafe])
     (by simpa [config] using heval)
 
+example [NeZero width]
+    (state final : WordStackMachineState width)
+    (leftValue rightValue : Word width)
+    (hleftValue : wordStackMachineValue
+        { locations := [(0, .register 4), (1, .register 5), (2, .register 6)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 1 = some leftValue)
+    (hrightValue : wordStackMachineValue
+        { locations := [(0, .register 4), (1, .register 5), (2, .register 6)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 2 = some rightValue)
+    (heval : (wordStackCompileShiftNat
+        { locations := [(0, .register 4), (1, .register 5), (2, .register 6)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        0 .lsl (.var 1) (.var 2)).bind
+        (evalWordStackMachine state) = some final) :
+    wordStackMachineValue
+        { locations := [(0, .register 4), (1, .register 5), (2, .register 6)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        final 0 = some (wordStackMachineShift .lsl leftValue rightValue) := by
+  let config : WordStackConfig :=
+    { locations := [(0, .register 4), (1, .register 5), (2, .register 6)],
+      scratch := 31, stackBase := 10, addressScratch := 29 }
+  exact evalWordStackMachine_shift_assignment
+    (config := config) (state := state) (final := final)
+    (operator := .lsl) (destination := 0) (left := 1) (right := 2)
+    (destinationLocation := .register 4)
+    (leftLocation := .register 5) (rightLocation := .register 6)
+    (leftValue := leftValue) (rightValue := rightValue)
+    (hdestination := by simp [config, wordStackLocation, lookupNatInfo])
+    (hleft := by simp [config, wordStackLocation, lookupNatInfo])
+    (hright := by simp [config, wordStackLocation, lookupNatInfo])
+    (hleftValue := by simpa [config] using hleftValue)
+    (hrightValue := by simpa [config] using hrightValue)
+    (hsafe := by simp [config, wordStackBinaryLocationsSafe])
+    (by simpa [config] using heval)
+
+example [NeZero width]
+    (state final : WordStackMachineState width)
+    (leftValue rightValue : Word width)
+    (hleftValue : wordStackMachineValue
+        { locations := [(0, .stack 1), (1, .stack 2), (2, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 1 = some leftValue)
+    (hrightValue : wordStackMachineValue
+        { locations := [(0, .stack 1), (1, .stack 2), (2, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 2 = some rightValue)
+    (heval : (wordStackCompileShiftNat
+        { locations := [(0, .stack 1), (1, .stack 2), (2, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        0 .asr (.var 1) (.var 2)).bind
+        (evalWordStackMachine state) = some final) :
+    wordStackMachineValue
+        { locations := [(0, .stack 1), (1, .stack 2), (2, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        final 0 = some (wordStackMachineShift .asr leftValue rightValue) := by
+  let config : WordStackConfig :=
+    { locations := [(0, .stack 1), (1, .stack 2), (2, .stack 3)],
+      scratch := 31, stackBase := 10, addressScratch := 29 }
+  exact evalWordStackMachine_shift_assignment
+    (config := config) (state := state) (final := final)
+    (operator := .asr) (destination := 0) (left := 1) (right := 2)
+    (destinationLocation := .stack 1)
+    (leftLocation := .stack 2) (rightLocation := .stack 3)
+    (leftValue := leftValue) (rightValue := rightValue)
+    (hdestination := by simp [config, wordStackLocation, lookupNatInfo])
+    (hleft := by simp [config, wordStackLocation, lookupNatInfo])
+    (hright := by simp [config, wordStackLocation, lookupNatInfo])
+    (hleftValue := by simpa [config] using hleftValue)
+    (hrightValue := by simpa [config] using hrightValue)
+    (hsafe := by simp [config, wordStackBinaryLocationsSafe])
+    (by simpa [config] using heval)
+
 example :
     wordStackArithInst
         { locations := [(0, .register 4), (1, .register 5),

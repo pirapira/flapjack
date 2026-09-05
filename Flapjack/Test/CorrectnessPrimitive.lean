@@ -239,6 +239,55 @@ example :
   · exact hword
 
 example :
+    ∀ loopResult resultState,
+      evalLoopProgWithPrimitiveCallsAndFfi RiscV.loopPrimitiveHandler []
+          (fun _ _ _ _ _ _ => none) 1 primitiveMappedLoopState
+          (.arith (.div 5 2 3)) = some (.normal loopResult) →
+      RiscV.evalWordFunctionWithHandlersAndFfi []
+          (fun _ _ _ _ _ _ => none) 1 primitiveMappedState
+          (loopToWordProg primitiveMappedContext
+            (.arith (.div 5 2 3))) =
+        some (.normal resultState) →
+      loopLocalsMappedToRiscV primitiveMappedContext loopResult.locals resultState := by
+  intro loopResult resultState hloop hword
+  apply loopToWord_div_combined_simulation
+    (context := primitiveMappedContext)
+    (functions := [])
+    (ffiHandler := fun _ _ _ _ _ _ => none)
+    (wordFunctions := [])
+    (wordHandler := fun _ _ _ _ _ _ => none)
+    (loopState := primitiveMappedLoopState)
+    (state := primitiveMappedState)
+    (destination := 5) (dividend := 2) (divisor := 3)
+    (hatomic := by
+      intro atomicResult atomicState hsource htarget
+      have hsource' : atomicResult = .normal
+          { primitiveMappedLoopState with
+            locals := updateLoopLocal primitiveMappedLoopState.locals 5
+              (BitVec.ofNat 64 1 / BitVec.ofNat 64 2) } := by
+        simpa [evalLoopProg, primitiveMappedLoopState, primitiveMappedLocals,
+          updateLoopLocal] using hsource.symm
+      subst atomicResult
+      apply loopToWord_div_assign_preserves_mapped_locals
+        (context := primitiveMappedContext)
+        (loopState := primitiveMappedLoopState)
+        (state := primitiveMappedState)
+        (destination := 5) (dividend := 2) (divisor := 3)
+        (destinationRegister := 5)
+        (dividendValue := BitVec.ofNat 64 1)
+        (divisorValue := BitVec.ofNat 64 2)
+        (hlocals := primitiveMappedLocals_relation)
+        (hdividend := by native_decide)
+        (hdivisor := by native_decide)
+        (hdivisor_nonzero := by decide)
+        (hdestination := by native_decide)
+        (hdestination_nonzero := by decide)
+        (hnoalias := primitiveMapped_longMul_noalias)
+        atomicState htarget)
+  · exact hloop
+  · exact hword
+
+example :
     (evalLoopProgWithPrimitive RiscV.loopPrimitiveHandler 1
       loopAddCarryState (.primitive [5, 6] .addCarry [2, 3, 4])).map
         (fun result =>

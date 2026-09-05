@@ -9,6 +9,27 @@ the register and scratch contracts supplied by allocation.
 
 namespace Flapjack
 
+/-!
+For an arithmetic Word instruction, an empty return list is exactly the
+normal `evalWordProg` result.  Keeping this projection as a named lemma makes
+composed Loop/Word correctness proofs independent of the implementation
+details of the two evaluator wrappers.
+-/
+theorem evalWordFunction_arith_empty_to_evalWordProg [NeZero width]
+    (state : RiscV.State width) (operation : WordArith)
+    (resultState : RiscV.State width)
+    (hresult : RiscV.evalWordFunction state (.inst (.arith operation)) =
+      some (resultState, [])) :
+    RiscV.evalWordProg state (.inst (.arith operation)) = some resultState := by
+  simp only [RiscV.evalWordFunction] at hresult
+  cases hinstructions : RiscV.wordArithToInstructions (width := width) operation with
+  | none =>
+      simp [hinstructions] at hresult
+  | some instructions =>
+      have hstate : RiscV.executeInstructions state instructions = resultState := by
+        simpa [hinstructions] using hresult
+      simp [RiscV.evalWordProg, hinstructions, hstate]
+
 theorem loopToWord_primitive_addCarry_agreement [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width)
@@ -566,41 +587,11 @@ theorem loopToWord_primitive_addCarry_combined_simulation [NeZero width]
           (wordFindVar context resultCarry) (wordFindVar context left)
           (wordFindVar context right) (wordFindVar context carry)))) =
       some wordResult
-    have hmap :
-        Option.map (fun result : RiscV.State width × List (RiscV.Word width) =>
-            result.1)
-          ((RiscV.wordArithToInstructions
-              (.addCarry (wordFindVar context destination)
-                (wordFindVar context resultCarry) (wordFindVar context left)
-                (wordFindVar context right) (wordFindVar context carry))).bind
-            (fun instructions =>
-              some (RiscV.executeInstructions state instructions, []))) =
-        (RiscV.wordArithToInstructions
-            (.addCarry (wordFindVar context destination)
-              (wordFindVar context resultCarry) (wordFindVar context left)
-              (wordFindVar context right) (wordFindVar context carry))).bind
-          (fun instructions => some (RiscV.executeInstructions state instructions)) := by
-      cases hinstructions : RiscV.wordArithToInstructions (width := width)
-          (.addCarry (wordFindVar context destination)
-            (wordFindVar context resultCarry) (wordFindVar context left)
-            (wordFindVar context right) (wordFindVar context carry)) with
-      | none => simp [hinstructions]
-      | some instructions => simp [hinstructions]
-    have hproject := congrArg (Option.map Prod.fst) hwordFunction
-    simp only [RiscV.evalWordFunction] at hproject
-    change
-      Option.map (fun result : RiscV.State width × List (RiscV.Word width) =>
-          result.1)
-        ((RiscV.wordArithToInstructions
-            (.addCarry (wordFindVar context destination)
-              (wordFindVar context resultCarry) (wordFindVar context left)
-              (wordFindVar context right) (wordFindVar context carry))).bind
-          (fun instructions =>
-            some (RiscV.executeInstructions state instructions, []))) =
-      Option.map (fun result : RiscV.State width × List (RiscV.Word width) =>
-        result.1) (some (wordResult, [])) at hproject
-    rw [hmap] at hproject
-    simpa [RiscV.evalWordProg, Option.map] using hproject
+    exact evalWordFunction_arith_empty_to_evalWordProg state
+      (.addCarry (wordFindVar context destination)
+        (wordFindVar context resultCarry) (wordFindVar context left)
+        (wordFindVar context right) (wordFindVar context carry))
+      wordResult hwordFunction
   have hprimitive' := hprimitive (.normal loopResult) wordResult
     (by simpa [evalLoopProgWithPrimitiveCallsAndFfi,
       evalLoopProgWithPrimitive] using hloop)
@@ -687,47 +678,84 @@ theorem loopToWord_longMul_combined_simulation [NeZero width]
         (.inst (.arith (wordArith context
           (.longMul destinationLeft destinationRight sourceLeft sourceRight)))) =
       some wordResult
-    have hmap :
-        Option.map (fun result : RiscV.State width × List (RiscV.Word width) =>
-            result.1)
-          ((RiscV.wordArithToInstructions
-              (wordArith context (.longMul destinationLeft destinationRight
-                sourceLeft sourceRight))).bind
-            (fun instructions =>
-              some (RiscV.executeInstructions state instructions, []))) =
-        (RiscV.wordArithToInstructions
-            (wordArith context (.longMul destinationLeft destinationRight
-              sourceLeft sourceRight))).bind
-          (fun instructions => some (RiscV.executeInstructions state instructions)) := by
-      cases hinstructions : RiscV.wordArithToInstructions (width := width)
-          (wordArith context (.longMul destinationLeft destinationRight
-            sourceLeft sourceRight)) with
-      | none => simp [hinstructions]
-      | some instructions => simp [hinstructions]
-    have hproject := congrArg (Option.map Prod.fst) hwordFunction
-    simp only [RiscV.evalWordFunction] at hproject
-    change
-      Option.map (fun result : RiscV.State width × List (RiscV.Word width) =>
-          result.1)
-        ((RiscV.wordArithToInstructions
-            (wordArith context
-              (.longMul destinationLeft destinationRight sourceLeft sourceRight))).bind
-          (fun instructions =>
-            some (RiscV.executeInstructions state instructions, []))) =
-      Option.map (fun result : RiscV.State width × List (RiscV.Word width) =>
-          result.1) (some (wordResult, [])) at hproject
-    rw [hmap] at hproject
-    cases hinstructions : RiscV.wordArithToInstructions (width := width)
-        (wordArith context (.longMul destinationLeft destinationRight
-          sourceLeft sourceRight)) with
+    exact evalWordFunction_arith_empty_to_evalWordProg state
+      (wordArith context
+        (.longMul destinationLeft destinationRight sourceLeft sourceRight))
+      wordResult hwordFunction
+  have hatomic' := hatomic (.normal loopResult) wordResult hloop' hwordProg
+  simpa [loopResultState] using hatomic'
+
+/-!
+Division is an ordinary Loop arithmetic instruction as well.  This boundary
+lemma mirrors the LongMul bridge while leaving the divisor/non-alias proof to
+the operation-specific mapped-local theorem.
+-/
+theorem loopToWord_div_combined_simulation [NeZero width]
+    (context : WordContext)
+    (functions : List (Nat × List Nat × LoopProg (RiscV.Word width)))
+    (ffiHandler : FunName → RiscV.Word width → RiscV.Word width →
+      RiscV.Word width → RiscV.Word width →
+      LoopState (RiscV.Word width) → Option (LoopState (RiscV.Word width)))
+    (wordFunctions : List (Nat × List Nat × WordProg (RiscV.Word width)))
+    (wordHandler : FunName → RiscV.Word width → RiscV.Word width →
+      RiscV.Word width → RiscV.Word width →
+      RiscV.State width → Option (RiscV.State width))
+    (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width)
+    (destination dividend divisor : Nat)
+    (hatomic : ∀ loopResult wordResult,
+      evalLoopProg 1 loopState
+          (.arith (.div destination dividend divisor)) = some loopResult →
+      RiscV.evalWordProg state
+          (loopToWordProg context
+            (.arith (.div destination dividend divisor))) = some wordResult →
+      loopLocalsMappedToRiscV context (loopResultState loopResult).locals
+        wordResult) :
+    ∀ loopResult wordResult,
+      evalLoopProgWithPrimitiveCallsAndFfi RiscV.loopPrimitiveHandler functions
+          ffiHandler 1 loopState
+          (.arith (.div destination dividend divisor)) = some (.normal loopResult) →
+      RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler 1 state
+          (loopToWordProg context
+            (.arith (.div destination dividend divisor))) =
+        some (.normal wordResult) →
+      loopLocalsMappedToRiscV context loopResult.locals wordResult := by
+  intro loopResult wordResult hloop hword
+  have hloop' :
+      evalLoopProg 1 loopState
+          (.arith (.div destination dividend divisor)) = some (.normal loopResult) := by
+    simpa [evalLoopProgWithPrimitiveCallsAndFfi] using hloop
+  have hwordFunction :
+      RiscV.evalWordFunction state
+          (loopToWordProg context (.arith (.div destination dividend divisor))) =
+        some (wordResult, []) := by
+    simp only [loopToWordProg] at hword
+    simp only [RiscV.evalWordFunctionWithHandlersAndFfi] at hword
+    cases hfunction : RiscV.evalWordFunction state
+        (.inst (.arith (wordArith context (.div destination dividend divisor)))) with
     | none =>
-        simp [hinstructions] at hproject
-    | some instructions =>
-        have hstate : RiscV.executeInstructions state instructions = wordResult := by
-          simpa [hinstructions] using hproject
-        simp only [RiscV.evalWordProg]
-        rw [hinstructions]
-        simp [hstate]
+        simp [hfunction] at hword
+    | some result =>
+        cases result with
+        | mk intermediate values =>
+            cases hvalues : values with
+            | nil =>
+                have hstate : intermediate = wordResult := by
+                  simpa [hfunction, hvalues] using hword
+                subst wordResult
+                simpa [loopToWordProg, hvalues] using hfunction
+            | cons value values =>
+                simp [hfunction, hvalues] at hword
+  have hwordProg :
+      RiscV.evalWordProg state
+          (loopToWordProg context (.arith (.div destination dividend divisor))) =
+        some wordResult := by
+    simp only [loopToWordProg] at hwordFunction ⊢
+    change RiscV.evalWordProg state
+        (.inst (.arith (wordArith context (.div destination dividend divisor)))) =
+      some wordResult
+    exact evalWordFunction_arith_empty_to_evalWordProg state
+      (wordArith context (.div destination dividend divisor)) wordResult hwordFunction
   have hatomic' := hatomic (.normal loopResult) wordResult hloop' hwordProg
   simpa [loopResultState] using hatomic'
 

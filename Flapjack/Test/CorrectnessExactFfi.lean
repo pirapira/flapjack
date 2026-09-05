@@ -11,6 +11,12 @@ def exactFfiAbiState : ExactRiscVFfiState 64 Unit :=
       let machine := writeRegister machine 12 20
       writeRegister machine 13 2 }
 
+def exactFfiMismatchState : ExactRiscVFfiState 64 Unit :=
+  { exactFfiAbiState with
+    ffi :=
+      { exactFfiAbiState.ffi with
+        oracle := fun _ state _ _ => .returned state [9] } }
+
 example :
     exactRiscVFfiCall
         { services := [("echo", 7)] } exactFfiAbiState 7 =
@@ -49,6 +55,19 @@ example :
       [{ name := .extCall "echo", configuration := [42],
          bytes := [(9, 9), (8, 8)] }]
       (exactRiscVFfiCall { services := [("echo", 7)] } exactFfiAbiState 7) = true := by
+  native_decide
+
+def exactFfiResultFinalFailure :
+    ExactRiscVFfiResult 64 Unit → Bool
+  | .final _ event =>
+      event.name == .extCall "echo" && event.configuration == [42] &&
+        event.bytes == [9, 8] && event.outcome == .failed
+  | .normal _ | .error _ => false
+
+example :
+    exactFfiResultFinalFailure
+        (exactRiscVFfiCall { services := [("echo", 7)] }
+          exactFfiMismatchState 7) = true := by
   native_decide
 
 end Flapjack.RiscV

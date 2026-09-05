@@ -90,4 +90,32 @@ theorem exactRiscVFfiCall_final [NeZero width]
           outcome := outcome } := by
   simp [exactRiscVFfiCall, hservice, callFfi, hfunction, horacle]
 
+theorem exactRiscVFfiCall_length_failure [NeZero width]
+    (context : WordFfiContext)
+    (state : ExactRiscVFfiState width σ)
+    (service : Nat) (function : FunName)
+    (nextState : σ) (nextBytes : List UInt8)
+    (hservice : lookupWordFfiName service context.services = some function)
+    (hfunction : function ≠ "")
+    (horacle : state.ffi.oracle (.extCall function) state.ffi.state
+      (exactReadBytes state.machine (readRegister state.machine 10)
+        (readRegister state.machine 11).toNat)
+      (exactReadBytes state.machine (readRegister state.machine 12)
+        (readRegister state.machine 13).toNat) =
+      .returned nextState nextBytes)
+    (hlength : nextBytes.length ≠
+      (exactReadBytes state.machine (readRegister state.machine 12)
+        (readRegister state.machine 13).toNat).length) :
+    exactRiscVFfiCall context state service =
+      .final state
+        { name := .extCall function,
+          configuration := exactReadBytes state.machine
+            (readRegister state.machine 10)
+            (readRegister state.machine 11).toNat,
+          bytes := exactReadBytes state.machine
+            (readRegister state.machine 12)
+            (readRegister state.machine 13).toNat,
+          outcome := .failed } := by
+  simp [exactRiscVFfiCall, hservice, callFfi, hfunction, horacle, hlength]
+
 end Flapjack.RiscV

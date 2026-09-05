@@ -421,6 +421,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Prove the handler-free single-parameter call simulation boundary,
   including argument transfer, callee-frame setup, return propagation, and
   preservation of the caller's mapped locals.
+- [x] Add the handler-aware single-parameter call simulation boundary,
+  including compatible callee normal/raise results, exception-register
+  binding, handler resumption, and mapped-local preservation.
 - [x] Prove mapped-local preservation across compiled register-register
   ADD/SUB/AND/OR/XOR assignments, including unchanged non-destination locals.
 - [x] Prove mapped-local preservation across compiled LSL/LSR assignments,

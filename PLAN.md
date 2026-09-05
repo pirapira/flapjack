@@ -280,6 +280,8 @@ definitions, pass ordering, examples, and proof obligations.
   existing low-numbered mappings and rejects reserved-register exhaustion.
 - [x] Add an executable undirected clash-edge checker and
   preferred-register-aware greedy colouring boundary for Word variables.
+- [x] Add straight-line Word liveness and clash construction feeding the
+  executable colouring boundary.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

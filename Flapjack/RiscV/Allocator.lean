@@ -154,6 +154,93 @@ def wordAllocateContextWithClashes (slots : List Nat)
     (edges : List (Nat × Nat)) : Option WordContext :=
   (wordAllocateVarsWithClashes slots edges).map (fun vars => { vars := vars })
 
+/-! Straight-line liveness and clash construction for the current Word
+instruction fragment.  The analysis walks backwards, keeping values live
+after each instruction and adding an edge from every written variable to the
+values that remain live. -/
+
+def wordInstReadVars : WordInst → List Nat
+  | .arith operation =>
+      match operation with
+      | .longMul _ _ sourceLeft sourceRight => [sourceLeft, sourceRight]
+      | .longDiv _ _ sourceLeft sourceRight quotient =>
+          [sourceLeft, sourceRight, quotient]
+      | .addCarry _ _ sourceLeft sourceRight carryIn =>
+          [sourceLeft, sourceRight, carryIn]
+      | .div _ dividend divisor => [dividend, divisor]
+  | .mem operator destination address =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => [address]
+      | .store | .store8 | .store16 | .store32 => [destination, address]
+
+def wordInstWriteVars : WordInst → List Nat
+  | .arith operation =>
+      match operation with
+      | .longMul destinationLeft destinationRight _ _ =>
+          [destinationLeft, destinationRight]
+      | .longDiv destinationLeft destinationRight _ _ _ =>
+          [destinationLeft, destinationRight]
+      | .addCarry destination resultCarry _ _ _ =>
+          [destination, resultCarry]
+      | .div destination _ _ => [destination]
+  | .mem operator destination _ =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => [destination]
+      | .store | .store8 | .store16 | .store32 => []
+
+def wordInstVars (instruction : WordInst) : List Nat :=
+  wordInstReadVars instruction ++ wordInstWriteVars instruction
+
+def wordClashPairs (writes live : List Nat) : List (Nat × Nat) :=
+  writes.flatMap (fun write =>
+    (live.filter (fun name => name != write)).map (fun name => (write, name)))
+
+def wordPairwiseClashes : List Nat → List (Nat × Nat)
+  | [] => []
+  | name :: names =>
+      (names.map (fun other => (name, other))) ++
+        wordPairwiseClashes names
+
+def wordInstLiveBefore (instruction : WordInst) (liveAfter : List Nat) : List Nat :=
+  wordInstReadVars instruction ++
+    liveAfter.filter (fun name => name ∉ wordInstWriteVars instruction)
+
+def wordInstClashes (instruction : WordInst) (liveAfter : List Nat) :
+    List (Nat × Nat) :=
+  wordPairwiseClashes (wordInstWriteVars instruction) ++
+    wordClashPairs (wordInstWriteVars instruction) liveAfter
+
+def wordLinearClashAnalysis : List WordInst → List Nat →
+    List Nat × List (Nat × Nat)
+  | [], liveOut => (liveOut, [])
+  | instruction :: instructions, liveOut =>
+      let (liveAfter, edges) := wordLinearClashAnalysis instructions liveOut
+      (wordInstLiveBefore instruction liveAfter,
+        wordInstClashes instruction liveAfter ++ edges)
+
+def wordLinearVariables (instructions : List WordInst) : List Nat :=
+  instructions.flatMap wordInstVars
+
+def wordAllocateLinearInstructions (instructions : List WordInst) :
+    Option WordContext :=
+  let (liveIn, edges) := wordLinearClashAnalysis instructions []
+  wordAllocateContextWithClashes
+    (wordLinearVariables instructions ++ liveIn) edges
+
+theorem wordLinearClashAnalysis_empty (liveOut : List Nat) :
+    wordLinearClashAnalysis [] liveOut = (liveOut, []) := by
+  rfl
+
+theorem wordInstVars_addCarry :
+    wordInstVars (.arith (.addCarry 1 2 3 4 5)) = [3, 4, 5, 1, 2] := by
+  rfl
+
+theorem wordAllocateLinearInstructions_example :
+    wordAllocateLinearInstructions
+      [.arith (.addCarry 0 1 2 3 4), .arith (.addCarry 5 6 0 1 2)] =
+      some { vars := [(6, 8), (5, 7), (1, 3), (0, 2), (4, 6), (3, 5), (2, 4)] } := by
+  rfl
+
 theorem wordAllocateVarsWithClashes_sound (slots : List Nat)
     (edges : List (Nat × Nat)) (colouring : NatInfoMap Nat)
     (hcolouring : wordAllocateVarsWithClashes slots edges = some colouring) :

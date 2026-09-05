@@ -379,6 +379,8 @@ definitions, pass ordering, examples, and proof obligations.
   including spilled sources and an explicit clobber-safety boundary.
 - [x] Prove the individual Word-to-Stack FFI argument move preserves its
   source value for both register and spill locations.
+- [x] State a concrete end-to-end FFI theorem relating source call-aware
+  evaluation to execution of the generated linked RISC-V image.
 - [x] Add concrete `Nat` Word-to-Stack expression lowering for constants,
   register/stack atoms, binary operations, loads, stores, and stack-backed
   destinations, with separate value/address scratch registers.

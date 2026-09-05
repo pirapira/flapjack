@@ -1,8 +1,26 @@
 import Flapjack.Test.RiscV
+import Flapjack.Pipeline
 
 namespace Flapjack
 
 open RiscV
+
+def pipelineStackAddDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "add", inline := false, exported := false,
+      params := [("left", .one), ("right", .one)],
+      body := .return (.op .add
+        [.var .local "left", .var .local "right"]), returnShape := .one }]
+
+def pipelineStackRemoveConfig : StackRemoveConfig :=
+  { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
+    stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
+
+example :
+    (compileFlapjackRiscVViaStack (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      pipelineStackRemoveConfig pipelineStackAddDeclarations).isSome := by
+  native_decide
 
 def globalTestContext : GlobalPassContext Nat :=
   { globals := [("g", (.one, 8))]

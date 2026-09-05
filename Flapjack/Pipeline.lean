@@ -6,6 +6,7 @@ import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Loops
 import Flapjack.RiscV.Link
+import Flapjack.RiscV.Lab
 
 /-!
 An executable composition of the currently ported Pancake passes.
@@ -70,6 +71,20 @@ def pipelineWordFunctions [OfNat α 1]
     let context : WordContext :=
       { vars := slots.map (fun name => (name, name + 2)) }
     (label, parameters.map (fun name => name + 2), loopToWordProg context body))
+
+/-! StackLang view of the register-coloured Word pipeline.  This is the
+    executable bridge used by the RISC-V-only backend path below; functions
+    that require spills or unsupported Word constructors remain explicit
+    `none` results until those allocator cases are ported. -/
+def pipelineWordFunctionsToStack [NeZero width] :
+    List (Nat × List Nat × WordProg (RiscV.Word width)) →
+      Option (List (Nat × List Nat × StackProg Nat))
+  | [] => some []
+  | (label, parameters, body) :: functions => do
+      let stackBody ← RiscV.wordToStackProgWord
+        (RiscV.wordStackIdentityConfig body) body
+      let rest ← pipelineWordFunctionsToStack functions
+      pure ((label, parameters, stackBody) :: rest)
 
 /-!
 An allocation-aware variant of the Word-function boundary.  The historical
@@ -198,6 +213,19 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     crepe := crepe
     loop := loop
     word := word }
+
+def compileFlapjackRiscVViaStack [NeZero width] [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (List (RiscV.Instruction width)) := do
+  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let functions ← pipelineWordFunctionsToStack pipeline.word
+  RiscV.compileStackProgramNatListToRiscV { services := services } removeConfig 0 0
+    (functions.map (fun (label, _, body) => (label, body)))
 
 def compileFlapjackChecked [BEq String] [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)

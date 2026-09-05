@@ -586,6 +586,9 @@ definitions, pass ordering, examples, and proof obligations.
   constants through the explicit Nat StackLang boundary.
 - [x] Add explicit generated function entry labels and a cross-section
   StackLang program linker through LabLang and the RISC-V backend.
+- [x] Wire the register-coloured Word function list through the actual
+  Word-to-Stack, StackRemove, LabLang, and multi-section RISC-V pipeline, with
+  an RV64 addition compilation regression.
 - [x] Prove the non-`CurrHeap` StackRemove `Get` equation against the
   executable StackLang machine state under an explicit store-memory invariant.
 - [x] Prove the matching non-`CurrHeap` StackRemove `Set` equation under

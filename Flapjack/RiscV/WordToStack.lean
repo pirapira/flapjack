@@ -771,6 +771,18 @@ def wordToStackProgWord [NeZero width] (config : WordStackConfig)
     (program : WordProg (Word width)) : Option (StackProg Nat) :=
   wordToStackProgNat config (wordProgToNat program)
 
+/-! Location map used by the currently register-coloured pipeline fragment.
+    It is intentionally identity-based; the spill-aware allocator will
+    replace this with a map containing `WordLocation.stack` entries once its
+    StackLang frame contract is connected. -/
+def wordStackIdentityConfig [NeZero width]
+    (program : WordProg (Word width)) : WordStackConfig :=
+  { locations := (wordProgVariables program).eraseDups.map
+      (fun name => (name, .register name))
+    scratch := 31
+    stackBase := 0
+    addressScratch := 29 }
+
 theorem wordStackMove_registers :
     wordStackMove
         { locations := [(0, .register 4), (1, .register 5)],

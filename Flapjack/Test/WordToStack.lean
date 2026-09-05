@@ -446,6 +446,21 @@ example [NeZero width]
 
 example [NeZero width]
     (state final : WordStackMachineState width)
+    (heval : (wordStackCompileLoadNat
+        { locations := [(0, .stack 2)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        0 (.const 37)).bind (evalWordStackMachine state) = some final) :
+    wordStackMachineValue
+        { locations := [(0, .stack 2)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        final 0 = some (state.memory (BitVec.ofNat width 37)) := by
+  apply evalWordStackMachine_load_const_assignment
+    (destination := 0) (address := 37) (destinationLocation := .stack 2)
+  · rfl
+  · exact heval
+
+example [NeZero width]
+    (state final : WordStackMachineState width)
     (addressValue : Word width)
     (haddressValue : wordStackMachineValue
         { locations := [(0, .stack 2), (1, .stack 3)],

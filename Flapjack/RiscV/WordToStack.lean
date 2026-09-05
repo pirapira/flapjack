@@ -966,6 +966,25 @@ theorem evalWordStackMachine_load_assignment [NeZero width]
       wordStackMachineWriteRegister, wordStackMachineWriteSlot,
       haddress, haddressValue, hdestination, hscratch]
 
+theorem evalWordStackMachine_load_const_assignment [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (destination address : Nat) (destinationLocation : WordLocation)
+    (hdestination : wordStackLocation config destination =
+      some destinationLocation)
+    (heval : (wordStackCompileLoadNat config destination (.const address)).bind
+      (evalWordStackMachine state) = some final) :
+      wordStackMachineValue config final destination =
+        some (state.memory (BitVec.ofNat width address)) := by
+  change lookupNatInfo destination config.locations = some destinationLocation at hdestination
+  cases destinationLocation <;>
+    simp [wordStackCompileLoadNat, wordStackAtomNat, wordStackWritePhysicalNat,
+      evalWordStackMachine, wordStackJoin, wordStackLocation,
+      wordStackOffset, lookupNatInfo, hdestination] at heval
+  all_goals
+    cases heval
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot, hdestination]
+
 def wordStackValue [NeZero width] (config : WordStackConfig)
     (state : WordStackState width) (name : Nat) : Option (Word width) := do
   let location ← wordStackLocation config name

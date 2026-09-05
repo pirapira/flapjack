@@ -763,6 +763,13 @@ def wordStackMachineValue [NeZero width] (config : WordStackConfig)
   | .register register => some (state.registers register)
   | .stack slot => some (state.stack (wordStackOffset config slot))
 
+def wordStackBinaryLocationsSafe (config : WordStackConfig) :
+    WordLocation → WordLocation → Bool
+  | .register _, .register _ => true
+  | .register left, .stack _ => left != config.addressScratch
+  | .stack _, .register right => right != config.scratch
+  | .stack _, .stack _ => config.scratch != config.addressScratch
+
 theorem evalWordStackMachine_const_assignment [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)
     (destination value : Nat) (destinationLocation : WordLocation)
@@ -781,6 +788,39 @@ theorem evalWordStackMachine_const_assignment [NeZero width]
     cases heval
     simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
       wordStackMachineWriteRegister, wordStackMachineWriteSlot, hdestination]
+
+theorem evalWordStackMachine_binary_assignment [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (operator : BinOp) (destination left right : Nat)
+    (destinationLocation leftLocation rightLocation : WordLocation)
+    (leftValue rightValue : Word width)
+    (hdestination : wordStackLocation config destination =
+      some destinationLocation)
+    (hleft : wordStackLocation config left = some leftLocation)
+    (hright : wordStackLocation config right = some rightLocation)
+    (hleftValue : wordStackMachineValue config state left = some leftValue)
+    (hrightValue : wordStackMachineValue config state right = some rightValue)
+    (hsafe : wordStackBinaryLocationsSafe config leftLocation rightLocation = true)
+    (heval : (wordStackCompileBinaryNat config destination operator
+      (.var left) (.var right)).bind (evalWordStackMachine state) = some final) :
+      wordStackMachineValue config final destination =
+        some (wordStackMachineBinOp operator leftValue rightValue) := by
+  change lookupNatInfo destination config.locations = some destinationLocation at hdestination
+  change lookupNatInfo left config.locations = some leftLocation at hleft
+  change lookupNatInfo right config.locations = some rightLocation at hright
+  cases destinationLocation <;> cases leftLocation <;> cases rightLocation <;>
+    simp [wordStackCompileBinaryNat, wordStackAtomNat, wordStackWritePhysicalNat,
+      wordStackReadRegister, evalWordStackMachine, wordStackJoin,
+      wordStackLocation, wordStackOffset, lookupNatInfo,
+      hdestination, hleft, hright, wordStackBinaryLocationsSafe] at hsafe heval
+  all_goals
+    cases heval
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      wordStackMachineBinOp, hleft, hright] at hleftValue hrightValue
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      wordStackMachineBinOp, hdestination, hleftValue, hrightValue, hsafe]
 
 def wordStackValue [NeZero width] (config : WordStackConfig)
     (state : WordStackState width) (name : Nat) : Option (Word width) := do

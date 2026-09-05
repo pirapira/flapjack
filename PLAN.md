@@ -347,6 +347,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Lower spill-aware AddCarry through reserved scratch registers, preserve
   the register-resident fast path, and prove both result words on a concrete
   StackLang machine state.
+- [x] Prove abstract Stack-machine preservation for lowered Word binary
+  operations, including spilled operand materialization and scratch
+  non-alias conditions.
 - [x] Expose an SSA-driven spill allocation boundary that derives spill
   locations from the renamed Word program and its analysed clash graph.
 - [x] Wire the available SSA/spill allocation and concrete locations into the

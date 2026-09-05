@@ -507,6 +507,90 @@ example [NeZero width]
     (hscratch := by simp [config]) (hsafe := by simp [config, wordStackStoreLocationsSafe])
     (by simpa [config] using heval)
 
+example [NeZero width]
+    (state final : WordStackMachineState width)
+    (dividendValue divisorValue : Word width)
+    (hdividendValue : wordStackMachineValue
+        { locations := [(0, .register 4), (1, .register 5), (2, .register 6)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 1 = some dividendValue)
+    (hdivisorValue : wordStackMachineValue
+        { locations := [(0, .register 4), (1, .register 5), (2, .register 6)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 2 = some divisorValue)
+    (hdivisorNonzero : divisorValue ≠ 0)
+    (heval : (wordStackDivInst
+        { locations := [(0, .register 4), (1, .register 5), (2, .register 6)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        0 1 2).bind (evalWordStackMachine state) = some final) :
+    wordStackMachineValue
+        { locations := [(0, .register 4), (1, .register 5), (2, .register 6)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        final 0 =
+      some (BitVec.ofNat width (dividendValue.toNat / divisorValue.toNat)) := by
+  let config : WordStackConfig :=
+    { locations := [(0, .register 4), (1, .register 5), (2, .register 6)],
+      scratch := 31, stackBase := 10, addressScratch := 29 }
+  exact evalWordStackMachine_div_preserves_value
+    (config := config) (state := state) (final := final)
+    (destination := 0) (dividend := 1) (divisor := 2)
+    (destinationLocation := .register 4)
+    (dividendLocation := .register 5) (divisorLocation := .register 6)
+    (dividendValue := dividendValue) (divisorValue := divisorValue)
+    (hdestination := by simp [config, wordStackLocation, lookupNatInfo])
+    (hdividend := by simp [config, wordStackLocation, lookupNatInfo])
+    (hdivisor := by simp [config, wordStackLocation, lookupNatInfo])
+    (hdividendValue := by simpa [config] using hdividendValue)
+    (hdivisorValue := by simpa [config] using hdivisorValue)
+    (hdivisorNonzero := hdivisorNonzero)
+    (hscratch := by simp [config])
+    (hdestinationSafe := by simp [config, wordStackDivLocationSafe])
+    (hdividendSafe := by simp [config, wordStackDivLocationSafe])
+    (hdivisorSafe := by simp [config, wordStackDivLocationSafe])
+    (by simpa [config] using heval)
+
+example [NeZero width]
+    (state final : WordStackMachineState width)
+    (dividendValue divisorValue : Word width)
+    (hdividendValue : wordStackMachineValue
+        { locations := [(0, .stack 1), (1, .stack 2), (2, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 1 = some dividendValue)
+    (hdivisorValue : wordStackMachineValue
+        { locations := [(0, .stack 1), (1, .stack 2), (2, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 2 = some divisorValue)
+    (hdivisorNonzero : divisorValue ≠ 0)
+    (heval : (wordStackDivInst
+        { locations := [(0, .stack 1), (1, .stack 2), (2, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        0 1 2).bind (evalWordStackMachine state) = some final) :
+    wordStackMachineValue
+        { locations := [(0, .stack 1), (1, .stack 2), (2, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        final 0 =
+      some (BitVec.ofNat width (dividendValue.toNat / divisorValue.toNat)) := by
+  let config : WordStackConfig :=
+    { locations := [(0, .stack 1), (1, .stack 2), (2, .stack 3)],
+      scratch := 31, stackBase := 10, addressScratch := 29 }
+  exact evalWordStackMachine_div_preserves_value
+    (config := config) (state := state) (final := final)
+    (destination := 0) (dividend := 1) (divisor := 2)
+    (destinationLocation := .stack 1)
+    (dividendLocation := .stack 2) (divisorLocation := .stack 3)
+    (dividendValue := dividendValue) (divisorValue := divisorValue)
+    (hdestination := by simp [config, wordStackLocation, lookupNatInfo])
+    (hdividend := by simp [config, wordStackLocation, lookupNatInfo])
+    (hdivisor := by simp [config, wordStackLocation, lookupNatInfo])
+    (hdividendValue := by simpa [config] using hdividendValue)
+    (hdivisorValue := by simpa [config] using hdivisorValue)
+    (hdivisorNonzero := hdivisorNonzero)
+    (hscratch := by simp [config])
+    (hdestinationSafe := by simp [config, wordStackDivLocationSafe])
+    (hdividendSafe := by simp [config, wordStackDivLocationSafe])
+    (hdivisorSafe := by simp [config, wordStackDivLocationSafe])
+    (by simpa [config] using heval)
+
 example :
     wordStackArithInst
         { locations := [(0, .register 4), (1, .register 5),

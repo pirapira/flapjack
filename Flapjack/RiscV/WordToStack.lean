@@ -308,6 +308,12 @@ def wordStackStoreLocationsSafe (config : WordStackConfig) :
   | .register source, .stack _ => source != config.addressScratch
   | .stack _, .stack _ => config.scratch != config.addressScratch
 
+def wordStackDivLocationSafe (config : WordStackConfig) :
+    WordLocation → Bool
+  | .register register =>
+      register != config.scratch && register != config.addressScratch
+  | .stack _ => true
+
 def wordStackSharedLoadInst (config : WordStackConfig) (operator : WordMemOp)
     (destination address : Nat) : Option (StackProg α) := do
   let destination ← wordStackLocation config destination
@@ -718,6 +724,13 @@ def evalWordStackMachine [NeZero width]
         (BitVec.ofNat width total)
       some (wordStackMachineWriteRegister state resultCarry
         (BitVec.ofNat width (total / 2 ^ width)))
+  | .inst (.arith (.div destination dividend divisor)) =>
+      let divisorValue := state.registers divisor
+      let value := if divisorValue == 0 then
+        BitVec.ofNat width (2 ^ width - 1)
+      else
+        BitVec.ofNat width (state.registers dividend).toNat / divisorValue.toNat
+      some (wordStackMachineWriteRegister state destination value)
   | .inst (.mem .load destination address) =>
       some (wordStackMachineWriteRegister state destination
         (state.memory (state.registers address)))
@@ -916,6 +929,54 @@ theorem evalWordStackMachine_store_preserves_memory [NeZero width]
       wordStackMachineWriteRegister, wordStackMachineWriteSlot,
       wordStackMachineWriteMemory, hsource, haddress, hsourceValue,
       haddressValue, hsafe, hsafe']
+
+theorem evalWordStackMachine_div_preserves_value [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (destination dividend divisor : Nat)
+    (destinationLocation dividendLocation divisorLocation : WordLocation)
+    (dividendValue divisorValue : Word width)
+    (hdestination : wordStackLocation config destination =
+      some destinationLocation)
+    (hdividend : wordStackLocation config dividend = some dividendLocation)
+    (hdivisor : wordStackLocation config divisor = some divisorLocation)
+    (hdividendValue : wordStackMachineValue config state dividend =
+      some dividendValue)
+    (hdivisorValue : wordStackMachineValue config state divisor =
+      some divisorValue)
+    (hdivisorNonzero : divisorValue ≠ 0)
+    (hscratch : config.scratch ≠ config.addressScratch)
+    (hdestinationSafe : wordStackDivLocationSafe config destinationLocation = true)
+    (hdividendSafe : wordStackDivLocationSafe config dividendLocation = true)
+    (hdivisorSafe : wordStackDivLocationSafe config divisorLocation = true)
+    (heval : (wordStackDivInst config destination dividend divisor).bind
+      (evalWordStackMachine state) = some final) :
+      wordStackMachineValue config final destination =
+        some (BitVec.ofNat width (dividendValue.toNat / divisorValue.toNat)) := by
+  change lookupNatInfo destination config.locations = some destinationLocation at hdestination
+  change lookupNatInfo dividend config.locations = some dividendLocation at hdividend
+  change lookupNatInfo divisor config.locations = some divisorLocation at hdivisor
+  have hscratch' : config.addressScratch ≠ config.scratch := by
+    intro heq
+    apply hscratch
+    exact heq.symm
+  cases destinationLocation <;> cases dividendLocation <;> cases divisorLocation <;>
+    simp [wordStackDivInst, wordStackJoin, wordStackLocation, wordStackOffset,
+      lookupNatInfo, hdestination, hdividend, hdivisor,
+      wordStackDivLocationSafe] at hdestinationSafe hdividendSafe hdivisorSafe heval
+  all_goals
+    cases heval
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      hdividend, hdivisor] at hdividendValue hdivisorValue
+    have hdivisorNonzero' : ¬divisorValue = (0#width) := by
+      intro hz
+      apply hdivisorNonzero
+      simpa using hz
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      hdestination, hdividendValue, hdivisorValue,
+      hdivisorNonzero', hdestinationSafe, hdividendSafe, hdivisorSafe,
+      hscratch, hscratch', BitVec.udiv_def]
 
 def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

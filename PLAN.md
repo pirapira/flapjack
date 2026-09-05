@@ -379,6 +379,8 @@ definitions, pass ordering, examples, and proof obligations.
   StackLang arithmetic boundary.
 - [x] Prove abstract Stack-machine preservation for lowered Word loads and
   stores, including spill locations and scratch-register alias conditions.
+- [x] Prove abstract Stack-machine preservation for lowered Word division,
+  including the nonzero-divisor source contract and spilled operands.
 - [x] Extend the Word-to-Stack boundary through conditions, loops, returns,
   calls, exception handlers, special stores, and FFI operations.
 - [x] Marshal Word-to-Stack FFI arguments into the x10--x13 ABI registers,

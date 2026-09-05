@@ -453,67 +453,86 @@ def accessAligned (access : AccessType) (address : Word width) (alignment : Nat)
     | .read => .loadFault
     | .write => .storeAmoFault)
 
-/-!
-An execution boundary that enforces the alignment checks attached to the
-RISC-V halfword, 32-bit, and machine-word memory instructions.  The
-architectural model above remains a total state transition for the
-instruction-level backend; this option-valued boundary exposes the memory
-fault/rejection path without changing existing compiler-facing equations.
-The HOL model carries the corresponding `loadFault`/`storeAmoFault` trap in
-its full transition state; this slice keeps the trap payload available via
-`accessAligned` and uses `none` for the rejected transition.
--/
+/-! Classify the traps represented by the current architectural vocabulary.
+    The full HOL state transition also updates trap CSRs and the PC; those
+    machine details are intentionally outside this compact state record. -/
 
-def executeChecked (state : State width) : Instruction width → Option (State width)
-  | .loadHalf destination address =>
-      if aligned (readRegister state address) 2 then
-        some (execute state (.loadHalf destination address))
-      else none
-  | .loadHalfSigned destination address =>
-      if aligned (readRegister state address) 2 then
-        some (execute state (.loadHalfSigned destination address))
-      else none
-  | .storeHalf source address =>
-      if aligned (readRegister state address) 2 then
-        some (execute state (.storeHalf source address))
-      else none
-  | .load32 destination address =>
-      if aligned (readRegister state address) 4 then
-        some (execute state (.load32 destination address))
-      else none
-  | .store32 source address =>
-      if aligned (readRegister state address) 4 then
-        some (execute state (.store32 source address))
-      else none
-  | .loadWord destination address =>
-      if aligned (readRegister state address) (width / 8) then
-        some (execute state (.loadWord destination address))
-      else none
-  | .storeWord source address =>
-      if aligned (readRegister state address) (width / 8) then
-        some (execute state (.storeWord source address))
-      else none
-  | instruction => some (execute state instruction)
+def executeTrap (state : State width) : Instruction width → Option ExceptionType
+  | .ecall =>
+      some (match state.privilege with
+        | .user => .uModeEnvCall
+        | .supervisor => .sModeEnvCall
+        | .hypervisor => .hModeEnvCall
+        | .machine => .mModeEnvCall)
+  | .loadHalf _ address | .loadHalfSigned _ address =>
+      accessAligned .read (readRegister state address) 2
+  | .storeHalf _ address =>
+      accessAligned .write (readRegister state address) 2
+  | .load32 _ address =>
+      accessAligned .read (readRegister state address) 4
+  | .store32 _ address =>
+      accessAligned .write (readRegister state address) 4
+  | .loadWord _ address =>
+      accessAligned .read (readRegister state address) (width / 8)
+  | .storeWord _ address =>
+      accessAligned .write (readRegister state address) (width / 8)
+  | _ => none
+
+/-! An execution boundary that rejects instructions classified as trapping.
+    The total `execute` transition remains the backend's instruction equation;
+    this option-valued boundary exposes its architectural rejection path. -/
+
+def executeChecked (state : State width) (instruction : Instruction width) :
+    Option (State width) :=
+  match executeTrap state instruction with
+  | none => some (execute state instruction)
+  | some _ => none
+
+theorem executeTrap_ecall (state : State width) :
+    executeTrap state .ecall = some (match state.privilege with
+      | .user => .uModeEnvCall
+      | .supervisor => .sModeEnvCall
+      | .hypervisor => .hModeEnvCall
+      | .machine => .mModeEnvCall) := by
+  rfl
+
+theorem executeTrap_load32_misaligned (state : State width)
+    (address : Fin 32)
+    (h : aligned (readRegister state address) 4 = false) :
+    executeTrap state (.load32 0 address) = some .loadFault := by
+  simp [executeTrap, accessAligned, h]
+
+theorem executeChecked_ecall (state : State width) :
+    executeChecked state .ecall = none := by
+  simp [executeChecked, executeTrap]
+
+theorem executeChecked_aligned (state : State width)
+    (instruction : Instruction width)
+    (h : executeTrap state instruction = none) :
+    executeChecked state instruction = some (execute state instruction) := by
+  simp [executeChecked, h]
 
 theorem executeChecked_loadHalf_aligned (state : State width)
     (destination address : Fin 32)
     (h : aligned (readRegister state address) 2 = true) :
     executeChecked state (.loadHalf destination address) =
       some (execute state (.loadHalf destination address)) := by
-  simp [executeChecked, h]
+  apply executeChecked_aligned
+  simp [executeTrap, accessAligned, h]
 
 theorem executeChecked_load32_misaligned (state : State width)
     (destination address : Fin 32)
     (h : aligned (readRegister state address) 4 = false) :
     executeChecked state (.load32 destination address) = none := by
-  simp [executeChecked, h]
+  simp [executeChecked, executeTrap, accessAligned, h]
 
 theorem executeChecked_storeWord_aligned [NeZero width]
     (state : State width) (source address : Fin 32)
     (h : aligned (readRegister state address) (width / 8) = true) :
     executeChecked state (.storeWord source address) =
       some (execute state (.storeWord source address)) := by
-  simp [executeChecked, h]
+  apply executeChecked_aligned
+  simp [executeTrap, accessAligned, h]
 
 theorem zeroState_pc_zero [NeZero width] : (zeroState width).pc = 0 := by
   rfl

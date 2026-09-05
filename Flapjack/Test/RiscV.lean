@@ -21,12 +21,21 @@ example :
 
 example :
     RiscV.executeChecked misalignedMemoryState (.load32 2 1) = none := by
-  simp [RiscV.executeChecked, RiscV.aligned, RiscV.readRegister,
-    misalignedMemoryState, RiscV.zeroState]
+  simp [RiscV.executeChecked, RiscV.executeTrap, RiscV.accessAligned,
+    RiscV.aligned, RiscV.readRegister, misalignedMemoryState, RiscV.zeroState]
 
 example :
     RiscV.accessAligned .read (BitVec.ofNat 64 2) 4 =
       some .loadFault := by
+  native_decide
+
+example :
+    RiscV.executeTrap (RiscV.zeroState 64) .ecall =
+      some .mModeEnvCall := by
+  native_decide
+
+example :
+    RiscV.executeChecked (RiscV.zeroState 64) .ecall = none := by
   native_decide
 
 def signedOrderState : RiscV.State 8 :=

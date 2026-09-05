@@ -431,6 +431,10 @@ mutual
     | fuel + 1, locals, .assign .local name value => do
         let value ← evalPanExp locals value
         pure (.normal (updatePanLocal locals name value))
+    | fuel + 1, locals, .dec name _ value body => do
+        let value ← evalPanExp locals value
+        evalPanProgWithCallsAndFfi functions handler fuel
+          (updatePanLocal locals name value) body
     | fuel + 1, locals, .seq first second => do
         let result ← evalPanProgWithCallsAndFfi functions handler fuel locals first
         match result with

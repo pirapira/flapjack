@@ -70,14 +70,18 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
       registerOfNat, wordFindVar, lookupNatInfo, writeRegister,
       readRegister]
 
+def sourceFfiIdBody : Prog (Word 64) :=
+  .dec "result" .one (.const 0)
+    (.seq
+      (.extCall "inc" (.var .local "x") (.const 0)
+        (.const 0) (.const 0))
+      (.return (.var .local "result")))
+
 def sourceFfiDeclarations : List (Decl (Word 64)) :=
   [.function
     { name := "ffiId", inline := false, exported := false,
       params := [("x", .one)],
-      body := .seq
-        (.extCall "inc" (.var .local "x") (.const 0)
-          (.const 0) (.const 0))
-        (.return (.var .local "result")), returnShape := .one },
+      body := sourceFfiIdBody, returnShape := .one },
    .function
     { name := "main", inline := false, exported := true,
       params := [],
@@ -90,12 +94,52 @@ def sourceFfiPipeline : FlapjackRiscVResult 64 :=
     (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
     [("inc", 7)] sourceFfiDeclarations
 
+def sourceFfiHandler : PanFfiHandler (Word 64) :=
+  fun function configuration _ _ _ locals =>
+    if function == "inc" then
+      some (updatePanLocal locals "result" (configuration + 1))
+    else none
+
+def sourceFfiMainBody : Prog (Word 64) :=
+  .decCall "answer" .one "ffiId"
+    [.const (BitVec.ofNat 64 41)]
+    (.return (.var .local "answer"))
+
+def sourceFfiFunctions : List (FunName × List VarName × Prog (Word 64)) :=
+  [("ffiId", ["x"], sourceFfiIdBody), ("main", [], sourceFfiMainBody)]
+
+example :
+    (evalPanProgWithCallsAndFfi sourceFfiFunctions sourceFfiHandler 20
+      (fun _ => none) sourceFfiMainBody).map
+        (fun result => match result with
+        | .returned _ values => values
+        | _ => []) = some [42] := by
+  native_decide
+
 example :
     sourceFfiPipeline.pipeline.word.length = 2 &&
       sourceFfiPipeline.functions.all (fun (_, _, artifact) => artifact.isSome) := by
   native_decide
 
 example : sourceFfiPipeline.callLinkedFunctions.isSome := by
+  native_decide
+
+def sourceFfiHost : WordFfiHost 64 :=
+  fun service configuration _ _ _ state =>
+    if service = 7 then
+      some { (writeRegister state 4 (configuration + 1)) with pc := state.pc + 4 }
+    else none
+
+def sourceFfiImage : Option (Word 64 × List (Instruction 64)) := do
+  let entries ← sourceFfiPipeline.callLinkedFunctions
+  let entry ← lookupLinkedEntry 2 entries
+  let code := entries.flatMap (fun (_, _, _, code, _) => code)
+  pure (entry, code)
+
+example :
+    sourceFfiImage.bind (fun (entry, code) =>
+      executeFunctionAtWithFfi sourceFfiHost 100 0 entry 100 [] code [4] []
+        (writeRegister (zeroState 64) 1 100)) = some [42] := by
   native_decide
 
 end Flapjack

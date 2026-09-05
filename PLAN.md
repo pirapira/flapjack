@@ -330,6 +330,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add an explicit spill-aware Word allocation result with fresh stack-slot
   assignment and a register/spill clash-validation contract; stack access
   rewriting remains a separate backend pass.
+- [x] Encode the RISC-V forced-clash constraints for multi-result `LongMul`
+  and `AddCarry` in both linear and program-level allocation analyses.
 - [x] Expose an SSA-driven spill allocation boundary that derives spill
   locations from the renamed Word program and its analysed clash graph.
 - [x] Wire the available SSA/spill allocation and concrete locations into the

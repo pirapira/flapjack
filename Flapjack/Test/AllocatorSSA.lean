@@ -16,6 +16,24 @@ example :
   exact wordSsaRenameLinear_addCarry
 
 example :
+    wordInstForcedClashes
+        (.arith (.longMul 0 1 2 3)) =
+      [(0, 1), (0, 2), (0, 3)] := by
+  rfl
+
+example :
+    wordInstForcedClashes
+        (.arith (.addCarry 0 1 2 3 4)) =
+      [(0, 1), (0, 2), (0, 3)] := by
+  rfl
+
+example :
+    wordProgAtomicClashes
+        ((.inst (.arith (.longMul 0 1 2 3))) : WordProg Nat) [] =
+      [(0, 1), (0, 2), (0, 3)] := by
+  rfl
+
+example :
     wordSsaRenameProgram
         ({ current := [(2, 100)], next := 200 } : WordSsaState)
         ((.shareInst .load 1

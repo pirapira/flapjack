@@ -193,6 +193,22 @@ def wordInstWriteVars : WordInst → List Nat
 def wordInstVars (instruction : WordInst) : List Nat :=
   wordInstReadVars instruction ++ wordInstWriteVars instruction
 
+/-! RISC-V has additional forced clashes for multi-result arithmetic.  The
+    high half of `LongMul` is written before the low half, so its first
+    destination must not reuse either source.  The carry sequence similarly
+    reads both addends after writing the sum destination; the two result
+    destinations must also remain distinct.  These edges are part of the
+    allocator contract, rather than an instruction-selection afterthought. -/
+
+def wordInstForcedClashes : WordInst → List (Nat × Nat)
+  | .arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) =>
+      [(destinationLeft, destinationRight),
+        (destinationLeft, sourceLeft), (destinationLeft, sourceRight)]
+  | .arith (.addCarry destination resultCarry sourceLeft sourceRight _) =>
+      [(destination, resultCarry),
+        (destination, sourceLeft), (destination, sourceRight)]
+  | _ => []
+
 def wordClashPairs (writes live : List Nat) : List (Nat × Nat) :=
   writes.flatMap (fun write =>
     (live.filter (fun name => name != write)).map (fun name => (write, name)))
@@ -209,7 +225,8 @@ def wordInstLiveBefore (instruction : WordInst) (liveAfter : List Nat) : List Na
 
 def wordInstClashes (instruction : WordInst) (liveAfter : List Nat) :
     List (Nat × Nat) :=
-  wordPairwiseClashes (wordInstWriteVars instruction) ++
+  wordInstForcedClashes instruction ++
+    wordPairwiseClashes (wordInstWriteVars instruction) ++
     wordClashPairs (wordInstWriteVars instruction) liveAfter
 
 def wordLinearClashAnalysis : List WordInst → List Nat →
@@ -631,7 +648,11 @@ def wordListUnion (left right : List Nat) : List Nat :=
 
 def wordProgAtomicClashes (program : WordProg α) (liveAfter : List Nat) :
     List (Nat × Nat) :=
-  wordClashPairs (wordProgWriteVars program) liveAfter
+  match program with
+  | .inst instruction =>
+      wordInstForcedClashes instruction ++
+        wordClashPairs (wordProgWriteVars program) liveAfter
+  | _ => wordClashPairs (wordProgWriteVars program) liveAfter
 
 def wordProgClashAnalysis : WordProg α → List Nat →
     List Nat × List (Nat × Nat)

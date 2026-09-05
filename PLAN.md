@@ -363,8 +363,9 @@ definitions, pass ordering, examples, and proof obligations.
   including register-resident and fully spilled operand materialization.
 - [x] Expose an SSA-driven spill allocation boundary that derives spill
   locations from the renamed Word program and its analysed clash graph.
-- [x] Wire the available SSA/spill allocation and concrete locations into the
-  allocated RISC-V entry points; the full CakeML allocator remains separate.
+- [x] Wire the available SSA/spill allocation, graph-derived concrete locations,
+  and graph-backed entry point into the allocated RISC-V path; the full CakeML
+  allocator remains separate.
 - [x] Port the CakeML-shaped RISC-V Word clash-tree boundary and its backward
   live-set analysis, including `Delta`, sequencing, branch live sets, loop cut
   sets, handler paths, and a tree-driven spill-allocation entry point.

@@ -258,7 +258,7 @@ def wordAssignStemps (stackStart : Nat) : List Nat →
 def wordColourGraph (dimension colours stackStart : Nat)
     (graph : WordRegGraph) : WordRegGraph :=
   let nodes := List.range dimension
-  let colours := List.range colours
+  let colours := (List.range colours).map (fun colour => colour + 1)
   let graph := wordAssignAtemps colours nodes graph
   wordAssignStemps stackStart nodes graph
 
@@ -384,7 +384,8 @@ def wordRaChooseColour (colours stackStart : Nat)
   | some .stemp => wordUnboundColour stackStart blocked
   | some .atemp =>
       match wordFirstAvailable
-          (wordRemoveColours blocked (List.range colours)) blocked with
+          (wordRemoveColours blocked
+            ((List.range colours).map (fun colour => colour + 1))) blocked with
       | some colour => colour
       | none => wordUnboundColour stackStart blocked
   | some (.fixed colour) => colour
@@ -837,10 +838,42 @@ def wordGraphTotalColouring (input : WordRegAllocInput)
     (entry.2, wordGraphTotalColourAt graph parents entry.1))
 
 structure WordGraphAllocation where
+  bijection : WordBijection
+  initialTags : NatInfoMap WordRegTag
   graph : WordRegGraph
   colouring : NatInfoMap Nat
   parents : NatInfoMap Nat
   deriving Repr
+
+/-!
+The graph colours are deliberately kept separate from the physical locations
+consumed by `word_to_stack`.  Fixed source variables retain their architectural
+register, while Atemps use the even ABI registers selected by the allocator;
+Stemps and spilled Atemps use consecutive stack slots starting at
+`stackStart`.  Keeping the source-to-node bijection in the allocation makes
+this conversion total for formals that are unused by the body as well.
+-/
+def wordGraphLocationAt (allocation : WordGraphAllocation)
+    (colours stackStart : Nat) (source : Nat) : WordLocation :=
+  match lookupNatInfo source allocation.bijection.toNode with
+  | none =>
+      if source % 2 = 0 then .register source else .stack 0
+  | some node =>
+      let colour := wordGraphNodeFinalColour allocation.graph
+        allocation.parents node
+      match lookupNatInfo node allocation.initialTags with
+      | some (.fixed _) => .register (2 * colour)
+      | some .atemp | some .stemp =>
+          if colour ≤ colours then
+            .register (2 * colour)
+          else
+            .stack (colour - stackStart)
+      | none => .stack 0
+
+def wordGraphLocations (allocation : WordGraphAllocation)
+    (colours stackStart : Nat) : NatInfoMap WordLocation :=
+  allocation.bijection.fromNode.map (fun entry =>
+    (entry.2, wordGraphLocationAt allocation colours stackStart entry.2))
 
 def wordAllocateGraph (tree : WordClashTree)
     (forced : List (Nat × Nat)) (fixedSources : List Nat)
@@ -858,7 +891,9 @@ def wordAllocateGraph (tree : WordClashTree)
       wordGraphColouringRespectsEdges graph &&
       (wordClashTreeCheck colour tree [] []).isSome then
     some
-      { graph := graph
+      { bijection := input.bijection
+        initialTags := input.graph.tags
+        graph := graph
         colouring := colouring
         parents := moveState.parents }
   else
@@ -1041,5 +1076,24 @@ def wordAllocateGraphFunctionWithStackOnly (parameters : List Nat)
     (fun allocation =>
       (state, renamedParameters, allocation,
         wordApplyColour (wordGraphColouringAt allocation.colouring) renamedProgram))
+
+/-! Stack lowering consumes the SSA names together with a `WordLocation` map;
+it must not consume the graph-coloured names, since those names erase the
+identity needed by `word_to_stack` to perform loads and stores. -/
+def wordAllocateGraphFunctionWithStackOnlyRenamed (parameters : List Nat)
+    (program : WordProg α) (fixedSources : List Nat) (colours stackStart : Nat) :
+    Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
+  let (state, renamedParameters, renamedProgram) :=
+    wordSsaRenameFunction parameters program
+  let stackOnly := wordStackOnly renamedProgram
+  let tree := WordClashTree.seq (.set renamedParameters)
+    (wordClashTree renamedProgram [])
+  let forced := wordProgForcedClashes renamedProgram
+  let moves := wordProgPreferenceEdges renamedProgram
+  (wordAllocateGraph tree forced
+      (wordStackOnlyUnion fixedSources stackOnly.forced)
+      moves colours stackStart).map
+    (fun allocation =>
+      (state, renamedParameters, allocation, renamedProgram))
 
 end Flapjack

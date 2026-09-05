@@ -3,6 +3,8 @@ import Flapjack.Compile
 import Flapjack.CrepToLoop
 import Flapjack.Word
 import Flapjack.RiscV.Allocator
+import Flapjack.RiscV.RegAlloc
+import Flapjack.RiscV.WordToStack
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Loops
 import Flapjack.RiscV.Link
@@ -121,6 +123,38 @@ def pipelineWordFunctionsAllocatedWithSpills [NeZero width] :
       let stackBody ← RiscV.wordToStackFunctionWithParameters config renamedParameters
         renamedBody
       let rest ← pipelineWordFunctionsAllocatedWithSpills functions
+      pure ((label, wordParameters, stackBody) :: rest)
+
+/-! Graph-coloured Word-to-Stack pipeline.
+
+This is the first pipeline entry point that consumes the CakeML-shaped graph
+allocator rather than the earlier greedy spill allocator.  The allocator
+returns the SSA-renamed program together with its graph; `wordGraphLocations`
+then turns the graph colours into the register/stack locations expected by
+`word_to_stack`.  The old spill path remains available while the full
+spill-aware SSA metadata and all Word constructors are being ported.
+-/
+def pipelineWordFunctionsAllocatedWithGraph [NeZero width] :
+    List (Nat × List Nat × LoopProg (RiscV.Word width)) →
+      Option (List (Nat × List Nat × StackProg Nat))
+  | [] => some []
+  | (label, parameters, body) :: functions => do
+      let slots := loopAccVars body parameters
+      let context : WordContext :=
+        { vars := slots.map (fun name => (name, name + 2)) }
+      let wordParameters := parameters.map (fun name => name + 2)
+      let unallocatedBody := loopToWordProg context body
+      let (_, renamedParameters, allocation, renamedBody) ←
+        wordAllocateGraphFunctionWithStackOnlyRenamed wordParameters unallocatedBody
+          [] 13 14
+      let config : RiscV.WordStackConfig :=
+        { locations := wordGraphLocations allocation 13 14
+          scratch := 31
+          stackBase := 0
+          addressScratch := 29 }
+      let stackBody ← RiscV.wordToStackFunctionWithParameters config
+        renamedParameters renamedBody
+      let rest ← pipelineWordFunctionsAllocatedWithGraph functions
       pure ((label, wordParameters, stackBody) :: rest)
 
 /-!
@@ -279,6 +313,23 @@ def compileFlapjackRiscVViaAllocatedStack [NeZero width]
     Option (List (RiscV.Instruction width)) := do
   let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithSpills pipeline.loop
+  RiscV.compileStackProgramNatListToRiscV { services := services } removeConfig 0 0
+    (functions.map (fun (label, _, body) => (label, body)))
+
+/-! End-to-end entry point using the graph-coloured allocator.  This keeps the
+graph allocator selectable while its complete CakeML spill metadata is still
+being filled in. -/
+def compileFlapjackRiscVViaGraphAllocatedStack [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (List (RiscV.Instruction width)) := do
+  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let functions ← pipelineWordFunctionsAllocatedWithGraph pipeline.loop
   RiscV.compileStackProgramNatListToRiscV { services := services } removeConfig 0 0
     (functions.map (fun (label, _, body) => (label, body)))
 

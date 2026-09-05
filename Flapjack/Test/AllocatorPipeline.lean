@@ -55,6 +55,11 @@ example [NeZero width] :
   rfl
 
 example :
+    (pipelineWordFunctionsAllocatedWithGraph
+      [(0, [0], (.assign 1 (.var 0) : LoopProg (RiscV.Word 64))) ]).isSome := by
+  native_decide
+
+example :
     RiscV.wordToStackFunctionWithParameters
         { locations := [(0, .stack 0)], scratch := 31, stackBase := 10 }
         [0]
@@ -71,6 +76,7 @@ example :
       [(0, [0], (.assign 1 (.var 0) : LoopProg (RiscV.Word 64))) ]).isSome := by
   native_decide
 
+
 example :
     (pipelineWordFunctionsAllocatedWithSpills
       [(0, [0], (.assign 1 (.var 0) : LoopProg (RiscV.Word 64))) ]).map
@@ -86,5 +92,15 @@ example :
         stackBase := 21, wordShift := 3 }
       pipelineAllocatedMulDeclarations).isSome := by
   native_decide
+
+example :
+    (compileFlapjackRiscVViaGraphAllocatedStack (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      { storeBase := 10, currHeap := 12, scratch := 31,
+        addressScratch := 29, stackPointer := 20, bytesInWord := 8,
+        stackBase := 21, wordShift := 3 }
+      pipelineAllocatedMulDeclarations).isSome := by
+  native_decide
+
 
 end Flapjack

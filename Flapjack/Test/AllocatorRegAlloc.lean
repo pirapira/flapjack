@@ -1,4 +1,5 @@
 import Flapjack.RiscV.RegAlloc
+import Flapjack.RiscV.WordToStack
 
 namespace Flapjack
 
@@ -56,7 +57,7 @@ example :
     wordGraphTagColour
         (wordColourGraph 2 1 1
           (wordInitRegAlloc (.delta [1, 5] []) [] []).graph) 1 =
-      some 1 := by
+      some 2 := by
   native_decide
 
 example :
@@ -224,7 +225,7 @@ example :
         (fun result =>
           (result.2.1,
             lookupNatInfo 5 result.2.2.1.colouring)) =
-      some ([5], some 0) := by
+      some ([5], some 2) := by
   native_decide
 
 example :
@@ -237,6 +238,49 @@ example :
     (wordAllocateGraphFunctionWithStackOnly [2]
       (.seq (.assign 5 (.var 7)) (.assign 3 (.var 5)) : WordProg Nat)
       [] 1 1).isSome := by
+  native_decide
+
+example :
+    (wordAllocateGraph
+      (.seq (.set [5]) (.delta [9] [5])) [] [5] [(9, 5)] 13 13).isSome = true := by
+  native_decide
+
+example :
+    wordStackOnly (.assign 9 (.var 5) : WordProg Nat) =
+      { temporary := [], forced := [] } := by
+  native_decide
+
+example :
+    (wordAllocateGraphFunctionWithStackOnly [2]
+      (.assign 3 (.var 2) : WordProg Nat) [] 13 14).isSome := by
+  native_decide
+
+example :
+    ((wordAllocateGraphFunctionWithStackOnly [2]
+      (.assign 3 (.var 2) : WordProg (RiscV.Word 64)) [] 13 14).map
+        (fun (_, _, allocation, _) =>
+          (lookupNatInfo 5 (wordGraphLocations allocation 13 14)).isSome &&
+            (lookupNatInfo 9 (wordGraphLocations allocation 13 14)).isSome)).getD false = true := by
+  native_decide
+
+example :
+    ((wordAllocateGraphFunctionWithStackOnly [2]
+      (.assign 3 (.var 2) : WordProg (RiscV.Word 64)) [] 13 14).map
+        (fun (_, _, allocation, _) =>
+          (lookupNatInfo 5 (wordGraphLocations allocation 13 14),
+            lookupNatInfo 9 (wordGraphLocations allocation 13 14)))).getD
+      (none, none) =
+      (some (WordLocation.register 2), some (WordLocation.register 2)) := by
+  native_decide
+
+example :
+    ((wordAllocateGraphFunctionWithStackOnlyRenamed [2]
+      (.assign 3 (.var 2) : WordProg (RiscV.Word 64)) [] 13 14).bind
+        (fun (_, parameters, allocation, program) =>
+          RiscV.wordToStackFunctionWithParameters
+            { locations := wordGraphLocations allocation 13 14,
+              scratch := 31, stackBase := 0, addressScratch := 29 }
+            parameters program)).isSome := by
   native_decide
 
 example :

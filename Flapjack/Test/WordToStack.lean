@@ -27,4 +27,24 @@ example :
   simp [wordToStackProg, wordStackMove, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 
+example [NeZero width]
+    (state final : WordStackState width)
+    (heval : (wordStackMove (α := Nat)
+        { locations := [(0, .stack 2), (1, .register 5)],
+          scratch := 31, stackBase := 10 } 0 1).bind
+      (evalWordStackBasic state) = some final) :
+    wordStackValue
+        { locations := [(0, .stack 2), (1, .register 5)],
+          scratch := 31, stackBase := 10 } final 0 =
+      wordStackValue
+        { locations := [(0, .stack 2), (1, .register 5)],
+          scratch := 31, stackBase := 10 } state 1 := by
+  apply evalWordStackBasic_move_preserves_value
+    (destinationLocation := .stack 2) (sourceLocation := .register 5)
+  · rfl
+  · rfl
+  · simp
+  · simp
+  · exact heval
+
 end Flapjack.RiscV

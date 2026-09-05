@@ -338,6 +338,8 @@ definitions, pass ordering, examples, and proof obligations.
   register or stack location.
 - [x] Port the first CakeML `word_to_stack` spill-move boundary, including all
   register/stack source and destination combinations.
+- [x] Give generated spill moves an executable StackLang semantics and prove
+  source-value preservation under the reserved-scratch contract.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
   multiplication (`MULHU`) followed by low-half multiplication (`MUL`),
   including the target's high-destination/source non-aliasing precondition.

@@ -52,6 +52,70 @@ def wordToStackMove (config : WordStackConfig) (destination source : Nat) :
     Option (StackProg α) :=
   wordStackMove config destination source
 
+/-! A compact executable semantics for the move fragment.  StackLang uses
+natural-number register names, so this boundary deliberately models the
+register file and frame slots independently of the later byte-addressed
+RISC-V stack representation. -/
+structure WordStackState (width : Nat) where
+  registers : Nat → Word width
+  stack : Nat → Word width
+
+def wordStackWriteRegister [NeZero width] (state : WordStackState width)
+    (register : Nat) (value : Word width) : WordStackState width :=
+  { state with registers := fun current =>
+      if current = register then value else state.registers current }
+
+def wordStackWriteSlot [NeZero width] (state : WordStackState width)
+    (slot : Nat) (value : Word width) : WordStackState width :=
+  { state with stack := fun current =>
+      if current = slot then value else state.stack current }
+
+def evalWordStackBasic [NeZero width] (state : WordStackState width) :
+    StackProg α → Option (WordStackState width)
+  | .skip => some state
+  | .arith .or destination left right =>
+      some (wordStackWriteRegister state destination
+        (state.registers left ||| state.registers right))
+  | .stackLoad register offset =>
+      some (wordStackWriteRegister state register (state.stack offset))
+  | .stackStore register offset =>
+      some (wordStackWriteSlot state offset (state.registers register))
+  | .seq first second => do
+      let state ← evalWordStackBasic state first
+      evalWordStackBasic state second
+  | _ => none
+
+def wordStackValue [NeZero width] (config : WordStackConfig)
+    (state : WordStackState width) (name : Nat) : Option (Word width) := do
+  let location ← wordStackLocation config name
+  match location with
+  | .register register => some (state.registers register)
+  | .stack slot => some (state.stack (wordStackOffset config slot))
+
+theorem evalWordStackBasic_move_preserves_value [NeZero width]
+    (config : WordStackConfig) (state final : WordStackState width)
+    (destination source : Nat) (destinationLocation sourceLocation : WordLocation)
+    (hdestination : wordStackLocation config destination = some destinationLocation)
+    (hsource : wordStackLocation config source = some sourceLocation)
+    (hdestination_scratch : destinationLocation ≠ .register config.scratch)
+    (hsource_scratch : sourceLocation ≠ .register config.scratch)
+    (heval : (wordStackMove (α := Nat) config destination source).bind
+      (evalWordStackBasic state) = some final) :
+      wordStackValue config final destination =
+      wordStackValue config state source := by
+  change lookupNatInfo destination config.locations = some destinationLocation at hdestination
+  change lookupNatInfo source config.locations = some sourceLocation at hsource
+  simp [wordStackMove, hdestination, hsource] at heval
+  cases destinationLocation <;> cases sourceLocation <;>
+    simp [evalWordStackBasic, wordStackValue, wordStackLocation,
+      wordStackOffset, wordStackWriteRegister, wordStackWriteSlot,
+      hdestination, hsource, hdestination_scratch, hsource_scratch] at heval ⊢
+  all_goals
+    cases heval
+    simp [wordStackValue, wordStackLocation, wordStackOffset,
+      wordStackWriteRegister, wordStackWriteSlot,
+      hdestination, hsource, hdestination_scratch, hsource_scratch]
+
 def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α] [DecidableRel (fun left right : α => left < right)]

@@ -146,6 +146,47 @@ def updateCrepLocal (locals : Nat → Option α) (name : Nat) (value : α) :
     Nat → Option α :=
   fun current => if current = name then some value else locals current
 
+abbrev CrepPrimitiveHandler (α : Type u) :=
+  PrimOp → List α → Option (List α)
+
+def assignCrepValues (locals : Nat → Option α) (names : List Nat)
+    (values : List α) : Option (Nat → Option α) :=
+  if names.length != values.length then none
+  else
+    some ((names.zip values).foldl
+      (fun locals (name, value) => updateCrepLocal locals name value) locals)
+
+def evalCrepStateProgWithPrimitive [Add α] [Mul α]
+    (primitive : CrepPrimitiveHandler α) (locals : Nat → Option α) :
+    CrepProg α → Option ((Nat → Option α) × List α)
+  | .skip => some (locals, [])
+  | .dec name value body => do
+      let value ← evalCrepExp locals value
+      evalCrepStateProgWithPrimitive primitive
+        (updateCrepLocal locals name value) body
+  | .assign name value => do
+      let value ← evalCrepExp locals value
+      pure (updateCrepLocal locals name value, [])
+  | .primitive names operator arguments => do
+      let arguments ← arguments.mapM locals
+      let values ← primitive operator arguments
+      let locals ← assignCrepValues locals names values
+      pure (locals, [])
+  | .return values => do
+      let values ← evalCrepExps locals values
+      pure (locals, values)
+  | .seq first second => do
+      let (locals', firstResult) ← evalCrepStateProgWithPrimitive primitive locals first
+      if firstResult.isEmpty then
+        evalCrepStateProgWithPrimitive primitive locals' second
+      else pure (locals', firstResult)
+  | _ => none
+
+def evalCrepProgWithPrimitive [Add α] [Mul α]
+    (primitive : CrepPrimitiveHandler α) (locals : Nat → Option α)
+    (program : CrepProg α) : Option (List α) :=
+  (evalCrepStateProgWithPrimitive primitive locals program).map Prod.snd
+
 def evalPanStateProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]

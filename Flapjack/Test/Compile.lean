@@ -165,6 +165,20 @@ example :
     updateCrepLocal, assignmentContext,
     lookupInfo, distinctLists]
 
+def crepAddCarryHandler : CrepPrimitiveHandler Nat
+  | .addCarry, [left, right, carry] => some [left + right + carry, 0]
+  | _, _ => none
+
+example :
+    (evalCrepStateProgWithPrimitive crepAddCarryHandler (fun _ => none)
+      (compileProg crepContext
+        (.seq
+          (.primitive "pair" .addCarry
+            [.const (α := Nat) 1, .const 2, .const 0])
+          (.return (.var .local "pair"))))).map Prod.snd =
+      some [3, 0] := by
+  native_decide
+
 example :
     evalCrepMemResult (fun _ => none) (fun _ => none)
       (compileProg assignmentContext

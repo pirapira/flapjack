@@ -548,6 +548,8 @@ definitions, pass ordering, examples, and proof obligations.
   and FFI-call correctness fixtures.
 - [x] Add an explicit source primitive-handler interface with a RISC-V
   `AddCarry` implementation and executable structured-evaluator regression.
+- [x] Add the matching handler-parameterized Crepe state evaluator, including
+  flattened primitive-result assignment and a compiled AddCarry regression.
 - [x] Port CakeML's flat structured-memory load/store model, including
   consecutive word offsets, `Comb`/`Named` reconstruction, flattening, and
   failed-domain behavior.

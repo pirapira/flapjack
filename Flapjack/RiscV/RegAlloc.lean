@@ -452,6 +452,74 @@ def wordMoveConsistent (graph : WordRegGraph) (related : List Nat)
     !(wordGraphNeighbours graph move.right).contains move.left &&
     leftMayMove && rightMayMove && !(fixedLeft && fixedRight)
 
+def wordGraphTagFixedBelow (colours : Nat) (graph : WordRegGraph)
+    (node : Nat) : Bool :=
+  match lookupNatInfo node graph.tags with
+  | some (.fixed colour) => colour < colours
+  | some .atemp | some .stemp | none => false
+
+def wordPartitionBy (predicate : Nat → Bool) : List Nat →
+    List Nat × List Nat
+  | [] => ([], [])
+  | node :: nodes =>
+      let (yes, no) := wordPartitionBy predicate nodes
+      if predicate node then
+        (node :: yes, no)
+      else
+        (yes, node :: no)
+
+def wordConsideredVar (colours : Nat) (graph : WordRegGraph)
+    (node : Nat) : Bool :=
+  wordGraphTagIs wordTagIsAtemp graph node ||
+    wordGraphTagFixedBelow colours graph node
+
+def wordDegreeOrInf (colours : Nat) (graph : WordRegGraph)
+    (node : Nat) : Nat :=
+  if wordGraphTagFixedBelow colours graph node then
+    colours
+  else
+    wordRaDegree graph node
+
+def wordBgOk (colours : Nat) (graph : WordRegGraph)
+    (target absorbed : Nat) : Option (List Nat × List Nat) :=
+  let targetNeighbours := wordGraphNeighbours graph target
+  let absorbedNeighbours := wordGraphNeighbours graph absorbed
+  let (case1, case2) := wordPartitionBy
+    (fun node => targetNeighbours.contains node) absorbedNeighbours
+  let case1 := case1.filter (wordConsideredVar colours graph)
+  let case2 := case2.filter (wordConsideredVar colours graph)
+  let case2Degrees := case2.filter (fun node =>
+    wordDegreeOrInf colours graph node ≥ colours)
+  let case2Length := case2Degrees.length
+  if case2Length = 0 then
+    some (case1, case2)
+  else
+    let case3 := targetNeighbours.filter (fun node =>
+      !(absorbedNeighbours.contains node) &&
+        wordConsideredVar colours graph node)
+    let case1Degrees := case1.map (wordDegreeOrInf (colours + 1) graph)
+    let case3Degrees := case3.map (wordDegreeOrInf colours graph)
+    let case1Length := (case1Degrees.filter (fun degree =>
+      degree - 1 ≥ colours)).length
+    let case3Length := (case3Degrees.filter (fun degree =>
+      degree ≥ colours)).length
+    if case1Length + case2Length + case3Length < colours then
+      some (case1, case2)
+    else
+      none
+
+def wordFullMoveConsistent (colours : Nat) (graph : WordRegGraph)
+    (move : WordMove) : Bool :=
+  let fixedLeft := wordGraphTagFixedBelow colours graph move.left
+  let fixedRight := wordGraphTagFixedBelow colours graph move.right
+  let atempLeft := wordGraphTagIs wordTagIsAtemp graph move.left
+  let atempRight := wordGraphTagIs wordTagIsAtemp graph move.right
+  move.left < graph.dimension && move.right < graph.dimension &&
+    move.left != move.right &&
+    !(wordGraphNeighbours graph move.right).contains move.left &&
+    (fixedLeft || atempLeft) && (fixedRight || atempRight) &&
+    !(fixedLeft && fixedRight)
+
 def wordCanonicalizeMove (graph : WordRegGraph) (move : WordMove) : WordMove :=
   let leftFixed := wordGraphTagIs wordTagIsFixed graph move.left
   let rightFixed := wordGraphTagIs wordTagIsFixed graph move.right
@@ -475,6 +543,16 @@ def wordPrepareMoveWorklists (graph : WordRegGraph)
   moves.foldl (fun worklists move =>
     let move := wordCanonicalizeMove graph move
     if wordMoveConsistent graph related move then
+      { worklists with available := worklists.available ++ [move] }
+    else
+      { worklists with unavailable := worklists.unavailable ++ [move] })
+    { available := [], unavailable := [] }
+
+def wordPrepareMoveWorklistsWithColours (colours : Nat)
+    (graph : WordRegGraph) (moves : List WordMove) : WordMoveWorklists :=
+  moves.foldl (fun worklists move =>
+    let move := wordCanonicalizeMove graph move
+    if wordFullMoveConsistent colours graph move then
       { worklists with available := worklists.available ++ [move] }
     else
       { worklists with unavailable := worklists.unavailable ++ [move] })
@@ -530,6 +608,16 @@ def wordInitMoveState (graph : WordRegGraph)
     unavailable := worklists.unavailable
     stack := [] }
 
+def wordInitMoveStateWithColours (colours : Nat) (graph : WordRegGraph)
+    (moves : List WordMove) : WordMoveState :=
+  let worklists := wordPrepareMoveWorklistsWithColours colours graph moves
+  { graph := graph
+    parents := (List.range graph.dimension).map (fun node => (node, node))
+    related := wordMoveRelatedNodes moves
+    available := worklists.available
+    unavailable := worklists.unavailable
+    stack := [] }
+
 def wordMoveReplaceNode (oldNode newNode : Nat) (move : WordMove) : WordMove :=
   { move with
     left := if move.left = oldNode then newNode else move.left
@@ -563,14 +651,7 @@ def wordCoalesceSafe (colours : Nat) (graph : WordRegGraph)
     let move := wordCanonicalizeMove graph move
     let target := move.left
     let absorbed := move.right
-    let fresh := wordCoalesceFreshNeighbours graph target absorbed
-    if wordGraphTagIs wordTagIsFixed graph target then
-      fresh.all (fun node => !wordCoalesceSignificant colours graph node)
-    else
-      let neighbours :=
-        (wordGraphNeighbours graph target ++
-          wordGraphNeighbours graph absorbed).eraseDups
-      (neighbours.filter (wordCoalesceSignificant colours graph)).length < colours
+    (wordBgOk colours graph target absorbed).isSome
 
 def wordCoalesceMove (colours : Nat) (state : WordMoveState)
     (move : WordMove) : Option WordMoveState :=
@@ -597,7 +678,7 @@ def wordCoalesceMove (colours : Nat) (state : WordMoveState)
         unavailable := worklists.unavailable
         stack := move.right :: state.stack }
 
-/-! Repeated coalescing mirrors CakeML's  loop.  Invalid moves
+/-! Repeated coalescing mirrors CakeML's do_coalesce loop.  Invalid moves
     are retired to the unavailable list, while a successful merge rebuilds
     the pending worklists so moves that became useful are reconsidered. -/
 
@@ -652,7 +733,7 @@ def wordInitRegAlloc (tree : WordClashTree)
 
 /-! Bridge the graph allocator back to source variables.
 
-    CakeML stores compressed graph colours and applies  only at
+    CakeML stores compressed graph colours and applies total_colour only at
     the Word boundary.  In particular, physical source variables are tagged
     with half their architectural register number and total colours are
     doubled again.  Keeping this conversion explicit avoids accidentally
@@ -692,7 +773,8 @@ def wordAllocateGraph (tree : WordClashTree)
     (moves : List (Nat × Nat)) (colours stackStart : Nat) :
     Option WordGraphAllocation :=
   let input := wordInitRegAlloc tree forced fixedSources
-  let moveState := wordInitMoveState input.graph (wordPreferenceMoves moves)
+  let moveState := wordInitMoveStateWithColours colours input.graph
+    (wordPreferenceMoves moves)
   let moveState := wordCoalesceAllAvailable colours moveState
   let graph := wordColourGraphWithWorklist colours stackStart moveState.graph
   let colouring := wordGraphTotalColouring input graph moveState.parents

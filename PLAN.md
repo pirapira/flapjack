@@ -388,6 +388,10 @@ definitions, pass ordering, examples, and proof obligations.
   doubling and validate the graph allocation through the clash-tree oracle.
 - [x] Derive forced clashes from Word special instructions and expose a
   checked graph allocator that rewrites complete Word programs.
+- [x] Separate CakeML’s initial fixed-colour budget check from later move
+  consistency checks and enforce it at graph allocator initialization.
+- [x] Port CakeML’s exact George/Briggs coalescing threshold and route safe
+  move selection through the source-faithful criterion.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

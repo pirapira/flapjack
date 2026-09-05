@@ -101,6 +101,30 @@ example :
   native_decide
 
 example :
+    wordPrepareMoveWorklistsWithColours 1 fixedMoveWorklistGraph [move01] =
+      { available := [], unavailable := [move01] } := by
+  native_decide
+
+example :
+    wordPrepareMoveWorklistsWithColours 4 fixedMoveWorklistGraph [move01] =
+      { available := [move01], unavailable := [] } := by
+  native_decide
+
+def briggsMoveGraph : WordRegGraph :=
+  { adjacency := [(1, [2]), (2, [1, 3]), (3, [2])]
+    tags := [(0, .atemp), (1, .atemp), (2, .atemp), (3, .atemp)]
+    dimension := 4 }
+
+example : wordBgOk 2 briggsMoveGraph 0 1 = some ([], [2]) := by
+  native_decide
+
+example : wordBgOk 1 briggsMoveGraph 0 1 = none := by
+  native_decide
+
+example : wordCoalesceSafe 1 briggsMoveGraph [0, 1] move01 = false := by
+  native_decide
+
+example :
     wordPrepareMoveWorklists moveWorklistGraph
       [{ priority := 0, left := 0, right := 0 }] =
       { available := [],

@@ -71,4 +71,10 @@ example (slots : List Nat) (edges : List (Nat × Nat))
   exact wordAllocateVarsWithClashes_maps_slots slots edges colouring hcolouring
     name hname
 
+example : 29 ∉ wordAllocatableRegisters := by
+  native_decide
+
+example : wordRegisterIsReserved 29 = true := by
+  native_decide
+
 end Flapjack

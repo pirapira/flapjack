@@ -338,6 +338,8 @@ definitions, pass ordering, examples, and proof obligations.
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully
   coloured SSA slot maps to an allocatable RISC-V register.
+- [x] Reserve the RISC-V address scratch register x29 from Word allocation and
+  cover the allocator/backend separation with executable regressions.
 - [x] Prove spill-aware allocation assigns every requested slot a concrete
   register or stack location.
 - [x] Port the first CakeML `word_to_stack` spill-move boundary, including all

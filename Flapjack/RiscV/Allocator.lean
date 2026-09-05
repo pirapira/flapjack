@@ -10,6 +10,7 @@ target contract that must hold before that larger pass is introduced:
 
 * x0 is the architectural zero register;
 * x1 is the call link register;
+* x29 is the address scratch register used by stack lowering;
 * x30 is the stack pointer used by ordinary calls; and
 * x31 is the backend scratch register.
 
@@ -22,11 +23,11 @@ never converted into an aliased or reserved register.
 namespace Flapjack
 
 def wordAllocatableRegisters : List Nat :=
-  (List.range 28).map (fun index => index + 2)
+  (List.range 27).map (fun index => index + 2)
 
 def wordPreferredRegister (name : Nat) : Option Nat :=
   let register := name + 2
-  if register < 30 then some register else none
+  if register < 29 then some register else none
 
 def wordPreferredRegisters : List Nat → List Nat
   | [] => []
@@ -67,10 +68,11 @@ def wordAllocateContext (slots : List Nat) : Option WordContext :=
   (wordAllocateVarsFromSlots slots).map (fun vars => { vars := vars })
 
 def wordRegisterIsReserved (register : Nat) : Bool :=
-  register == 0 || register == 1 || register == 30 || register == 31
+  register == 0 || register == 1 || register == 29 ||
+    register == 30 || register == 31
 
 def wordRegisterIsAllocatable (register : Nat) : Bool :=
-  register ≥ 2 && register < 30
+  register ≥ 2 && register < 29
 
 /-! A compact executable clash-colouring interface.  CakeML builds a clash
 tree from the SSA program and then colours its graph.  The current Word IR

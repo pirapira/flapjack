@@ -11,6 +11,7 @@ def loopByteFfiTestState : LoopFfiState Nat Unit :=
       | 4 => some 2
       | 5 => some 7
       | _ => none
+    globals := fun _ => none
     memory := fun address =>
       if address = 10 then some 42 else
       if address = 20 then some 9 else
@@ -20,6 +21,8 @@ def loopByteFfiTestState : LoopFfiState Nat Unit :=
     byteAlign := id
     clock := 10
     bigEndian := false
+    baseAddress := 0
+    topAddress := 0
     ffi :=
       { oracle := fun _ state _ bytes => .returned state bytes
         state := ()
@@ -79,5 +82,30 @@ example :
     | _ => False := by
   simp [loopFfiExtCall, terminalLoopFfiState, loopByteFfiTestState,
     loopFfiReadBytes, callFfi, loopFfiClearLocals]
+
+example :
+    match loopFfiProgramBoundary loopByteFfiTestState
+      (.shMem .load8 5 (.var 1)) with
+    | some ((.normal state, _)) => state.locals 5 = some 10
+    | _ => False := by
+  simp [loopFfiProgramBoundary, loopFfiEvalExp, loopFfiSharedMem,
+    loopFfiSharedLoad, loopFfiIsLoad, loopFfiMemWidth,
+    loopFfiSharedAddress, loopFfiSharedOperator, loopFfiByteCount,
+    loopByteFfiTestState, callFfi, loopFfiUpdateLocal]
+
+example :
+    match loopFfiProgramBoundary loopByteFfiTestState
+      (.ffi "echo" 1 2 3 4 [1, 2, 3, 4]) with
+    | some ((.normal state, _)) => state.memory 20 = some 9
+    | _ => False := by
+  simp [loopFfiProgramBoundary, loopFfiCutState, loopFfiLocalsPresent,
+    loopFfiExtCall, loopByteFfiTestState, callFfi, loopFfiReadBytes,
+    loopFfiWriteBytes, loopFfiUpdateByte]
+
+example :
+    loopFfiProgramBoundary loopByteFfiTestState
+      (.ffi "echo" 1 2 3 4 [1, 99]) = none := by
+  simp [loopFfiProgramBoundary, loopFfiCutState, loopFfiLocalsPresent,
+    loopByteFfiTestState]
 
 end Flapjack

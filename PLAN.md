@@ -154,6 +154,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the Loop-side byte-array FFI boundary for mapped shared memory and
   external calls, including endian-aware decoding, memory-domain checks,
   host-state/event updates, and `FinalFFI` propagation.
+- [x] Connect the exact Loop FFI boundary to `LoopProg` address evaluation and
+  program dispatch, including CakeML's live-local `cut_state` and reusable
+  semantic equations for both FFI constructors.
 - [x] Prove the first environment-sensitive source-to-full-Crepe agreement
   for a local assignment followed by a compiled slot return.
 - [x] Prove the first environment-sensitive source-to-full-Crepe agreement

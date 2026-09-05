@@ -468,6 +468,7 @@ theorem loopToWord_primitive_addCarry_preserves_mapped_locals [NeZero width]
     destination resultCarry left right carry destinationRegister
     resultCarryRegister leftRegister rightRegister carryRegister
     leftValue rightValue carryValue hlocals hleft hright hcarry
+
     hdestination hresultCarry hleft_register hright_register hcarry_register
     hleft_state hright_state hcarry_state hzero hdestination_nonzero
     hresultCarry_nonzero hdestination_resultCarry hdestination_sourceRight
@@ -475,5 +476,135 @@ theorem loopToWord_primitive_addCarry_preserves_mapped_locals [NeZero width]
     hcarry_scratch hdestination_name_resultCarry hdestination_name_scratch
     hresultCarry_name_scratch hleft_name_scratch hright_name_scratch
     hcarry_name_scratch hnoalias
+
+/-!
+The same primitive bridge remains valid at the fully composed Loop/Word
+boundary. Calls and FFI handlers are intentionally parameters here: the
+single primitive constructor does not consult either environment, but keeping
+them in the statement lets this theorem be used directly by a later
+call-aware induction.
+-/
+theorem loopToWord_primitive_addCarry_combined_simulation [NeZero width]
+    (context : WordContext)
+    (functions : List (Nat × List Nat × LoopProg (RiscV.Word width)))
+    (ffiHandler : FunName → RiscV.Word width → RiscV.Word width →
+      RiscV.Word width → RiscV.Word width →
+      LoopState (RiscV.Word width) → Option (LoopState (RiscV.Word width)))
+    (wordFunctions : List (Nat × List Nat × WordProg (RiscV.Word width)))
+    (wordHandler : FunName → RiscV.Word width → RiscV.Word width →
+      RiscV.Word width → RiscV.Word width →
+      RiscV.State width → Option (RiscV.State width))
+    (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width)
+    (destination resultCarry left right carry : Nat)
+    (hprimitive : ∀ loopResult wordResult,
+      evalLoopProgWithPrimitive RiscV.loopPrimitiveHandler 1 loopState
+          (.primitive [destination, resultCarry] .addCarry [left, right, carry]) =
+        some loopResult →
+      RiscV.evalWordProg state
+          (loopToWordProg context
+            (.primitive [destination, resultCarry] .addCarry
+              [left, right, carry])) = some wordResult →
+      loopLocalsMappedToRiscV context (loopResultState loopResult).locals
+        wordResult) :
+    ∀ loopResult wordResult,
+      evalLoopProgWithPrimitiveCallsAndFfi RiscV.loopPrimitiveHandler functions
+          ffiHandler 1 loopState
+          (.primitive [destination, resultCarry] .addCarry [left, right, carry]) =
+        some (.normal loopResult) →
+      RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler 1 state
+          (loopToWordProg context
+            (.primitive [destination, resultCarry] .addCarry
+              [left, right, carry])) =
+        some (.normal wordResult) →
+      loopLocalsMappedToRiscV context loopResult.locals wordResult := by
+  intro loopResult wordResult hloop hword
+  have hwordFunction :
+      RiscV.evalWordFunction state
+          (loopToWordProg context
+            (.primitive [destination, resultCarry] .addCarry
+              [left, right, carry])) =
+        some (wordResult, []) := by
+    simp only [loopToWordProg]
+    change RiscV.evalWordFunction state
+        (.inst (.arith (.addCarry (wordFindVar context destination)
+          (wordFindVar context resultCarry) (wordFindVar context left)
+          (wordFindVar context right) (wordFindVar context carry)))) =
+      some (wordResult, [])
+    simp only [loopToWordProg] at hword
+    simp only [RiscV.evalWordFunctionWithHandlersAndFfi] at hword
+    cases hfunction : RiscV.evalWordFunction state
+        (.inst (.arith (.addCarry (wordFindVar context destination)
+          (wordFindVar context resultCarry) (wordFindVar context left)
+          (wordFindVar context right) (wordFindVar context carry)))) with
+    | none =>
+        simp [hfunction] at hword
+    | some result =>
+        cases result with
+        | mk intermediate values =>
+            cases hvalues : values with
+            | nil =>
+                have hstate : intermediate = wordResult := by
+                  simpa [hfunction, hvalues] using hword
+                subst wordResult
+                simpa [hvalues] using hfunction
+            | cons value values =>
+                simp [hfunction, hvalues] at hword
+  have hwordProg :
+      RiscV.evalWordProg state
+          (loopToWordProg context
+            (.primitive [destination, resultCarry] .addCarry
+              [left, right, carry])) = some wordResult := by
+    simp only [loopToWordProg] at hwordFunction ⊢
+    change RiscV.evalWordFunction state
+        (.inst (.arith (.addCarry (wordFindVar context destination)
+          (wordFindVar context resultCarry) (wordFindVar context left)
+          (wordFindVar context right) (wordFindVar context carry)))) =
+      some (wordResult, []) at hwordFunction
+    change RiscV.evalWordProg state
+        (.inst (.arith (.addCarry (wordFindVar context destination)
+          (wordFindVar context resultCarry) (wordFindVar context left)
+          (wordFindVar context right) (wordFindVar context carry)))) =
+      some wordResult
+    have hmap :
+        Option.map (fun result : RiscV.State width × List (RiscV.Word width) =>
+            result.1)
+          ((RiscV.wordArithToInstructions
+              (.addCarry (wordFindVar context destination)
+                (wordFindVar context resultCarry) (wordFindVar context left)
+                (wordFindVar context right) (wordFindVar context carry))).bind
+            (fun instructions =>
+              some (RiscV.executeInstructions state instructions, []))) =
+        (RiscV.wordArithToInstructions
+            (.addCarry (wordFindVar context destination)
+              (wordFindVar context resultCarry) (wordFindVar context left)
+              (wordFindVar context right) (wordFindVar context carry))).bind
+          (fun instructions => some (RiscV.executeInstructions state instructions)) := by
+      cases hinstructions : RiscV.wordArithToInstructions (width := width)
+          (.addCarry (wordFindVar context destination)
+            (wordFindVar context resultCarry) (wordFindVar context left)
+            (wordFindVar context right) (wordFindVar context carry)) with
+      | none => simp [hinstructions]
+      | some instructions => simp [hinstructions]
+    have hproject := congrArg (Option.map Prod.fst) hwordFunction
+    simp only [RiscV.evalWordFunction] at hproject
+    change
+      Option.map (fun result : RiscV.State width × List (RiscV.Word width) =>
+          result.1)
+        ((RiscV.wordArithToInstructions
+            (.addCarry (wordFindVar context destination)
+              (wordFindVar context resultCarry) (wordFindVar context left)
+              (wordFindVar context right) (wordFindVar context carry))).bind
+          (fun instructions =>
+            some (RiscV.executeInstructions state instructions, []))) =
+      Option.map (fun result : RiscV.State width × List (RiscV.Word width) =>
+        result.1) (some (wordResult, [])) at hproject
+    rw [hmap] at hproject
+    simpa [RiscV.evalWordProg, Option.map] using hproject
+  have hprimitive' := hprimitive (.normal loopResult) wordResult
+    (by simpa [evalLoopProgWithPrimitiveCallsAndFfi,
+      evalLoopProgWithPrimitive] using hloop)
+    hwordProg
+  simpa [loopResultState] using hprimitive'
 
 end Flapjack

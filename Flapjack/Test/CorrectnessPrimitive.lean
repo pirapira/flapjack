@@ -96,7 +96,7 @@ theorem primitiveMapped_noalias :
         RiscV.registerOfNat_injective hregister' hthirtyOne heq
       exact hname_thirtyOne hname
 
-example :
+theorem primitiveMapped_addCarry_preserves_mapped_locals :
     ∀ loopResult resultState,
       evalLoopProgWithPrimitive RiscV.loopPrimitiveHandler 1
           primitiveMappedLoopState
@@ -145,6 +145,31 @@ example :
     (hright_name_scratch := by decide)
     (hcarry_name_scratch := by decide)
     (hnoalias := primitiveMapped_noalias)
+
+example :
+    ∀ loopResult resultState,
+      evalLoopProgWithPrimitiveCallsAndFfi RiscV.loopPrimitiveHandler []
+          (fun _ _ _ _ _ _ => none) 1 primitiveMappedLoopState
+          (.primitive [5, 6] .addCarry [2, 3, 4]) = some (.normal loopResult) →
+      RiscV.evalWordFunctionWithHandlersAndFfi []
+          (fun _ _ _ _ _ _ => none) 1 primitiveMappedState
+          (loopToWordProg primitiveMappedContext
+            (.primitive [5, 6] .addCarry [2, 3, 4])) =
+        some (.normal resultState) →
+      loopLocalsMappedToRiscV primitiveMappedContext loopResult.locals resultState := by
+  intro loopResult resultState hloop hword
+  apply loopToWord_primitive_addCarry_combined_simulation
+    (context := primitiveMappedContext)
+    (functions := [])
+    (ffiHandler := fun _ _ _ _ _ _ => none)
+    (wordFunctions := [])
+    (wordHandler := fun _ _ _ _ _ _ => none)
+    (loopState := primitiveMappedLoopState)
+    (state := primitiveMappedState)
+    (destination := 5) (resultCarry := 6) (left := 2) (right := 3) (carry := 4)
+    (hprimitive := primitiveMapped_addCarry_preserves_mapped_locals)
+  · exact hloop
+  · exact hword
 
 example :
     (evalLoopProgWithPrimitive RiscV.loopPrimitiveHandler 1

@@ -183,6 +183,8 @@ definitions, pass ordering, examples, and proof obligations.
   registers and collects declared return registers, with an `ADD` proof.
 - [x] Add a Word-level FFI evaluator with an explicit host-handler boundary,
   its single-call semantic equation, and a concrete handler regression.
+- [x] Generalize the combined Loop-to-Word FFI simulation boundary to any
+  positive fuel budget, so it composes with fuel-bounded call-aware proofs.
 - [x] Add Word control-result semantics for handler-aware calls, including
   normal, returned, and raised paths with handler resumption.
 - [x] Add homogeneous BitVec shift instances for the Word semantic bridge.

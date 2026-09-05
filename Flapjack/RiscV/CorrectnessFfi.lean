@@ -198,4 +198,47 @@ theorem loopToWord_ffi_single_combined_simulation [NeZero width]
                             loopState wordState loopOutput wordOutput hlocals
                             hloopHandler hwordHandler
 
+/-!
+The FFI constructor itself does not consume the available fuel.  Expose that
+fact at the simulation boundary so callers composing an FFI action with a
+larger call-aware computation can choose any positive fuel budget.
+-/
+theorem loopToWord_ffi_single_combined_simulation_fuel [NeZero width]
+    (context : WordContext)
+    (functions : List (Nat × List Nat × LoopProg (Word width)))
+    (loopState : LoopState (Word width))
+    (wordState : State width)
+    (loopHandler : FunName → Word width → Word width → Word width → Word width →
+      LoopState (Word width) → Option (LoopState (Word width)))
+    (wordHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (handler_agrees : ∀ function configuration configurationLength array arrayLength
+      loopInput wordInput loopOutput wordOutput,
+      loopLocalsMappedToRiscV context loopInput.locals wordInput →
+      loopHandler function configuration configurationLength array arrayLength loopInput =
+        some loopOutput →
+      wordHandler function configuration configurationLength array arrayLength wordInput =
+        some wordOutput →
+      loopLocalsMappedToRiscV context loopOutput.locals wordOutput)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (live : List Nat)
+    (fuel : Nat)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals wordState) :
+    ∀ loopResult wordResult,
+      evalLoopProgWithCallsAndFfi functions loopHandler (fuel + 1) loopState
+          (.ffi function configuration configurationLength array arrayLength live) =
+        some (.normal loopResult) →
+      evalWordFunctionWithHandlersAndFfi [] wordHandler (fuel + 1) wordState
+          (loopToWordProg context
+            (.ffi function configuration configurationLength array arrayLength live)) =
+        some (.normal wordResult) →
+      loopLocalsMappedToRiscV context loopResult.locals wordResult := by
+  intro loopResult wordResult hloop hword
+  apply loopToWord_ffi_single_combined_simulation context functions loopState wordState
+    loopHandler wordHandler handler_agrees function configuration configurationLength array
+    arrayLength live hlocals
+  · simpa [evalLoopProgWithCallsAndFfi] using hloop
+  · simpa [loopToWordProg, evalWordFunctionWithHandlersAndFfi] using hword
+
 end Flapjack.RiscV

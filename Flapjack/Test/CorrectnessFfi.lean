@@ -28,7 +28,7 @@ def ffiIdentityWordHandler : FunName → Word 64 → Word 64 → Word 64 → Wor
     State 64 → Option (State 64) :=
   fun _ _ _ _ _ state => some state
 
-example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
+theorem ffiIdentity_mappedLocals : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
     ffiIdentityLoopState.locals ffiIdentityWordState := by
   apply loopToWord_ffi_single_simulation
     ({ vars := [] } : WordContext)
@@ -69,6 +69,36 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
   · simp [loopToWordProg, evalWordFfi, ffiIdentityWordHandler,
       registerOfNat, wordFindVar, lookupNatInfo, writeRegister,
       readRegister]
+
+example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
+    ffiIdentityLoopState.locals ffiIdentityWordState := by
+  apply loopToWord_ffi_single_combined_simulation_fuel
+    (context := ({ vars := [] } : WordContext))
+    (functions := [])
+    (loopState := ffiIdentityLoopState)
+    (wordState := ffiIdentityWordState)
+    (loopHandler := ffiIdentityLoopHandler)
+    (wordHandler := ffiIdentityWordHandler)
+    (handler_agrees := by
+      intro function configuration configurationLength array arrayLength
+        loopInput wordInput loopOutput wordOutput hlocals hloop hword
+      simp [ffiIdentityLoopHandler, ffiIdentityWordHandler] at hloop hword
+      cases hloop
+      cases hword
+      exact hlocals)
+    (function := "identity")
+    (configuration := 1)
+    (configurationLength := 2)
+    (array := 3)
+    (arrayLength := 4)
+    (live := [])
+    (fuel := 3)
+    (hlocals := ffiIdentity_mappedLocals)
+  · simp [evalLoopProgWithCallsAndFfi, ffiIdentityLoopHandler,
+      ffiIdentityLoopState]
+  · simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi,
+      ffiIdentityWordHandler, registerOfNat, wordFindVar, lookupNatInfo,
+      writeRegister, readRegister]
 
 def sourceFfiIdBody : Prog (Word 64) :=
   .dec "result" .one (.const 0)

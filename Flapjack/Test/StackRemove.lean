@@ -114,6 +114,12 @@ example :
   simp [stackRemove, stackRemoveFuel]
 
 example :
+    stackRemove stackRemoveTestConfig
+      (.storeConsts 6 7 none : StackProg Nat) =
+      stackRemoveStoreConsts stackRemoveTestConfig 6 7 none := by
+  simp [stackRemove, stackRemoveFuel]
+
+example :
     stackRemove stackRemoveTestConfig (.get 4 .currHeap : StackProg Nat) =
       .arith .or 4 12 12 := by
   exact stackRemove_get_currHeap _ _

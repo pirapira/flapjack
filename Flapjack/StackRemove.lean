@@ -165,7 +165,46 @@ def stackRemoveBitmapLoad (config : StackRemoveConfig)
           (.shift .lsl destination destination config.scratch)
           (.inst (.mem .load destination destination)))))
 
-def stackRemoveFuel : Nat → StackRemoveConfig → StackProg α → StackProg α
+/-! `StoreConsts` copies the read-only constant area selected by a bitmap into
+    the data buffer.  The HOL pass expresses the copy as two nested `While`s;
+    StackLang represents those as a loop containing a conditional break. -/
+def stackRemoveCopyEach [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
+    (source bitmap : Nat) : StackProg α :=
+  let copyWord : StackProg α :=
+    .seq (.inst (.mem .load source bitmap))
+      (.seq (.arith .add bitmap bitmap config.scratch)
+        (.seq (.ite .test 1 (.imm (1 : α)) .skip
+            (.arith .add source source 3))
+          (.seq (.shift .lsr 1 1 config.addressScratch)
+            (.seq (.inst (.mem .store source 2))
+              (.arith .add 2 2 config.scratch)))))
+  .seq (.const config.scratch config.bytesInWord)
+    (.seq (.const config.addressScratch 1)
+      (.loop (.ite .notEqual 1 (.imm (1 : α)) copyWord (.break 0))))
+
+def stackRemoveCopyLoop [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
+    (source bitmap : Nat) : StackProg α :=
+  let copyEach := stackRemoveCopyEach config source bitmap
+  let copyBitmapWord :=
+    .seq copyEach
+      (.seq (.inst (.mem .load 1 bitmap))
+        (.arith .add bitmap bitmap config.scratch))
+  .seq (.inst (.mem .load 1 bitmap))
+    (.seq (.arith .add bitmap bitmap config.scratch)
+      (.loop (.ite .less 1 (.imm (0 : α)) copyBitmapWord (.break 0))))
+
+def stackRemoveStoreConsts [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
+    (source bitmap : Nat) (_stub : Option Nat) : StackProg α :=
+  stackRemoveJoin (stackRemoveGet config bitmap .bitmapBase)
+    (stackRemoveJoin (.const config.scratch 1)
+      (stackRemoveJoin (.arith .add bitmap bitmap config.scratch)
+        (stackRemoveJoin (.const config.scratch config.wordShift)
+          (stackRemoveJoin (.shift .lsl bitmap bitmap config.scratch)
+            (stackRemoveJoin (stackRemoveCopyLoop config source bitmap)
+              (stackRemoveJoin (stackRemoveMove source 1)
+                (stackRemoveMove bitmap 1)))))))
+
+def stackRemoveFuel [OfNat α 0] [OfNat α 1] : Nat → StackRemoveConfig → StackProg α → StackProg α
   | 0, _, program => program
   | fuel + 1, _, .skip => .skip
   | fuel + 1, config, .get destination store =>
@@ -206,8 +245,8 @@ def stackRemoveFuel : Nat → StackRemoveConfig → StackProg α → StackProg �
   | fuel + 1, _, .jumpLower register target label =>
       .jumpLower register target label
   | fuel + 1, _, .alloc words => .alloc words
-  | fuel + 1, _, .storeConsts source bitmap stub =>
-      .storeConsts source bitmap stub
+  | fuel + 1, config, .storeConsts source bitmap stub =>
+      stackRemoveStoreConsts config source bitmap stub
   | fuel + 1, _, .dataBufferWrite address value =>
       .inst (.mem .store value address)
   | fuel + 1, _, .raise exception => .raise exception
@@ -247,15 +286,18 @@ def stackRemoveFuel : Nat → StackRemoveConfig → StackProg α → StackProg �
    is exposed so callers processing generated programs can choose a larger
    bound; a structural size measure can replace this bound when the complete
    CakeML pass is ported. -/
-def stackRemove (config : StackRemoveConfig) (program : StackProg α) : StackProg α :=
+def stackRemove [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
+    (program : StackProg α) : StackProg α :=
   stackRemoveFuel 1024 config program
 
-theorem stackRemove_get_currHeap (config : StackRemoveConfig) (destination : Nat) :
+theorem stackRemove_get_currHeap [OfNat α 0] [OfNat α 1]
+    (config : StackRemoveConfig) (destination : Nat) :
     stackRemove config (.get destination .currHeap : StackProg α) =
       .arith .or destination config.currHeap config.currHeap := by
   simp [stackRemove, stackRemoveFuel, stackRemoveGet]
 
-theorem stackRemove_set_currHeap (config : StackRemoveConfig) (source : Nat) :
+theorem stackRemove_set_currHeap [OfNat α 0] [OfNat α 1]
+    (config : StackRemoveConfig) (source : Nat) :
     stackRemove config (.set .currHeap source : StackProg α) =
       .arith .or config.currHeap source source := by
   simp [stackRemove, stackRemoveFuel, stackRemoveSet]

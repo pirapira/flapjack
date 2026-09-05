@@ -577,6 +577,8 @@ definitions, pass ordering, examples, and proof obligations.
   composition and test exact RV64 instruction output.
 - [x] Lower StackLang `DataBufferWrite` to explicit word memory and verify the
   result through the RV64 backend.
+- [x] Port the structured StackLang `StoreConsts` bitmap-copy lowering and
+  verify that its generated loop compiles through the RV64 backend.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

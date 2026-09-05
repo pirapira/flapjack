@@ -232,7 +232,8 @@ def labProgramToSection (sectionId initialLabel : Nat) (program : StackProg α) 
 /- The backend-facing composition applies the stack-removal pass before
    flattening.  Keeping this as a separate entry point preserves the raw
    StackLang boundary for pass-by-pass proofs. -/
-def labProgramToSectionAfterStackRemove (config : StackRemoveConfig)
+def labProgramToSectionAfterStackRemove [OfNat α 0] [OfNat α 1]
+    (config : StackRemoveConfig)
     (sectionId initialLabel : Nat) (program : StackProg α) : LabSection α :=
   labProgramToSection sectionId initialLabel (stackRemove config program)
 

@@ -22,6 +22,7 @@ structure WordStackConfig where
   scratch : Nat
   stackBase : Nat
   addressScratch : Nat := 29
+  specialScratch : Nat := 28
   perf : Bool := false
   frameOffset : Nat := 0
   returnLabel : Nat := 0
@@ -151,21 +152,85 @@ def wordStackDivInst (config : WordStackConfig)
             (.inst (.arith (.div config.scratch config.scratch config.addressScratch)))
             (.stackStore config.scratch (wordStackOffset config destination)))))
 
+def wordStackLongMulLocationSafe (config : WordStackConfig) :
+    WordLocation → Bool
+  | .register register =>
+      register != config.scratch && register != config.addressScratch &&
+        register != config.specialScratch
+  | .stack _ => true
+
+def wordStackLongMulLocationsSafe (config : WordStackConfig)
+    (operation : WordArith) : Bool :=
+  match operation with
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      match wordStackLocation config destinationLeft,
+        wordStackLocation config destinationRight,
+        wordStackLocation config sourceLeft,
+        wordStackLocation config sourceRight with
+      | some destinationLeft, some destinationRight,
+          some sourceLeft, some sourceRight =>
+          wordStackLongMulLocationSafe config destinationLeft &&
+            wordStackLongMulLocationSafe config destinationRight &&
+            wordStackLongMulLocationSafe config sourceLeft &&
+            wordStackLongMulLocationSafe config sourceRight
+      | _, _, _, _ => false
+  | _ => false
+
+def wordStackLongMulMoveToPhysical (config : WordStackConfig)
+    (source destination : Nat) : Option (StackProg α) := do
+  let location ← wordStackLocation config source
+  match location with
+  | .register register =>
+      if register = destination then pure .skip
+      else pure (.arith .or destination register register)
+  | .stack slot =>
+      pure (.stackLoad destination (wordStackOffset config slot))
+
+def wordStackLongMulMoveFromPhysical (config : WordStackConfig)
+    (destination source : Nat) : Option (StackProg α) := do
+  let location ← wordStackLocation config destination
+  match location with
+  | .register register =>
+      if register = source then pure .skip
+      else pure (.arith .or register source source)
+  | .stack slot =>
+      pure (.stackStore source (wordStackOffset config slot))
+
+def wordStackLongMulInst (config : WordStackConfig)
+    (operation : WordArith) : Option (StackProg α) :=
+  if wordStackLongMulLocationsSafe config operation then
+    match operation with
+    | .longMul destinationLeft destinationRight sourceLeft sourceRight => do
+        match wordStackLocation config destinationLeft,
+          wordStackLocation config destinationRight,
+          wordStackLocation config sourceLeft,
+          wordStackLocation config sourceRight with
+        | some (.register destinationLeft), some (.register destinationRight),
+            some (.register sourceLeft), some (.register sourceRight) =>
+            pure (.inst (.arith (.longMul destinationLeft destinationRight
+              sourceLeft sourceRight)))
+        | _, _, _, _ =>
+            let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft config.scratch
+            let loadRight ← wordStackLongMulMoveToPhysical config sourceRight config.addressScratch
+            let writeLeft ← wordStackLongMulMoveFromPhysical config destinationLeft
+              config.specialScratch
+            let writeRight ← wordStackLongMulMoveFromPhysical config destinationRight config.scratch
+            pure (wordStackJoin loadLeft
+              (wordStackJoin loadRight
+                (wordStackJoin
+                  (.inst (.arith (.longMul config.specialScratch config.scratch
+                    config.scratch config.addressScratch)))
+                  (wordStackJoin writeLeft writeRight))))
+    | _ => none
+  else
+    none
+
 def wordStackArithInst (config : WordStackConfig) (operation : WordArith) :
     Option (StackProg α) :=
   if wordSpecialArithLocationsSafe operation config.locations = true then
     match operation with
-    | .longMul destinationLeft destinationRight sourceLeft sourceRight => do
-      let destinationLeft ← wordStackLocation config destinationLeft
-      let destinationRight ← wordStackLocation config destinationRight
-      let sourceLeft ← wordStackLocation config sourceLeft
-      let sourceRight ← wordStackLocation config sourceRight
-      match destinationLeft, destinationRight, sourceLeft, sourceRight with
-      | .register destinationLeft, .register destinationRight,
-          .register sourceLeft, .register sourceRight =>
-          pure (.inst (.arith (.longMul destinationLeft destinationRight
-            sourceLeft sourceRight)))
-      | _, _, _, _ => none
+    | .longMul _ _ _ _ =>
+      wordStackLongMulInst config operation
     | .addCarry destination resultCarry sourceLeft sourceRight carryIn => do
       let destination ← wordStackLocation config destination
       let resultCarry ← wordStackLocation config resultCarry
@@ -591,6 +656,12 @@ def evalWordStackMachine [NeZero width]
       some (wordStackMachineWriteRegister state destination
         (wordStackMachineShift operator
           (state.registers left) (state.registers right)))
+  | .inst (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight)) =>
+      let left := state.registers sourceLeft
+      let right := state.registers sourceRight
+      let high := BitVec.ofNat width (left.toNat * right.toNat / 2 ^ width)
+      let state := wordStackMachineWriteRegister state destinationLeft high
+      some (wordStackMachineWriteRegister state destinationRight (left * right))
   | .inst (.mem .load destination address) =>
       some (wordStackMachineWriteRegister state destination
         (state.memory (state.registers address)))

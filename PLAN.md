@@ -339,7 +339,11 @@ definitions, pass ordering, examples, and proof obligations.
   and `AddCarry` in both linear and program-level allocation analyses.
 - [x] Enforce the currently supported special-instruction layout at the
   spill-aware allocator and Word-to-Stack boundary, rejecting spilled or
-  aliased `LongMul`/`AddCarry` values before instruction selection.
+  aliased special values before instruction selection; `AddCarry` remains
+  register-only while `LongMul` is normalized through spill moves.
+- [x] Lower spill-aware `LongMul` through reserved scratch registers, preserve
+  the register-resident fast path, and prove the generated StackLang fragment
+  on a concrete machine state.
 - [x] Expose an SSA-driven spill allocation boundary that derives spill
   locations from the renamed Word program and its analysed clash graph.
 - [x] Wire the available SSA/spill allocation and concrete locations into the
@@ -350,6 +354,8 @@ definitions, pass ordering, examples, and proof obligations.
   coloured SSA slot maps to an allocatable RISC-V register.
 - [x] Reserve the RISC-V address scratch register x29 from Word allocation and
   cover the allocator/backend separation with executable regressions.
+- [x] Reserve the RISC-V LongMul normalization scratch register x28 from Word
+  allocation and cover the resulting register contract with regressions.
 - [x] Prove spill-aware allocation assigns every requested slot a concrete
   register or stack location.
 - [x] Port the first CakeML `word_to_stack` spill-move boundary, including all

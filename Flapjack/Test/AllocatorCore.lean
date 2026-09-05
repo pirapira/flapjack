@@ -102,6 +102,12 @@ example (slots : List Nat) (edges : List (Nat × Nat))
 example : 29 ∉ wordAllocatableRegisters := by
   native_decide
 
+example : 28 ∉ wordAllocatableRegisters := by
+  native_decide
+
+example : wordRegisterIsReserved 28 = true := by
+  native_decide
+
 example : wordRegisterIsReserved 29 = true := by
   native_decide
 

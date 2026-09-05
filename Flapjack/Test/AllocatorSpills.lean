@@ -39,7 +39,7 @@ example (slots : List Nat) (edges : List (Nat × Nat))
 example :
     wordProgSpecialLocationsSafe
         [(0, .stack 0), (1, .register 5), (2, .register 6), (3, .register 7)]
-        ((.inst (.arith (.longMul 0 1 2 3))) : WordProg Nat) = false := by
+        ((.inst (.arith (.longMul 0 1 2 3))) : WordProg Nat) = true := by
   native_decide
 
 example :

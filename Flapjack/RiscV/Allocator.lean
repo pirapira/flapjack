@@ -16,18 +16,19 @@ target contract that must hold before that larger pass is introduced:
 
 The allocator preserves the historical `name + 2` assignment whenever it is
 safe.  Out-of-range names are assigned the first free register that is not a
-preferred register of another slot.  Exhaustion is reported as `none`; it is
-never converted into an aliased or reserved register.
+preferred register of another slot.  x28 is reserved as the third temporary
+used by spill-aware `LongMul` lowering.  Exhaustion is reported as `none`; it
+is never converted into an aliased or reserved register.
 -/
 
 namespace Flapjack
 
 def wordAllocatableRegisters : List Nat :=
-  (List.range 27).map (fun index => index + 2)
+  (List.range 26).map (fun index => index + 2)
 
 def wordPreferredRegister (name : Nat) : Option Nat :=
   let register := name + 2
-  if register < 29 then some register else none
+  if register < 28 then some register else none
 
 def wordPreferredRegisters : List Nat → List Nat
   | [] => []
@@ -69,10 +70,10 @@ def wordAllocateContext (slots : List Nat) : Option WordContext :=
 
 def wordRegisterIsReserved (register : Nat) : Bool :=
   register == 0 || register == 1 || register == 29 ||
-    register == 30 || register == 31
+    register == 30 || register == 31 || register == 28
 
 def wordRegisterIsAllocatable (register : Nat) : Bool :=
-  register ≥ 2 && register < 29
+  register ≥ 2 && register < 28
 
 /-! A compact executable clash-colouring interface.  CakeML builds a clash
 tree from the SSA program and then colours its graph.  The current Word IR
@@ -906,11 +907,12 @@ inductive WordLocation where
   | stack (slot : Nat)
   deriving DecidableEq, Repr
 
-/-! The current Word-to-Stack arithmetic selector has a deliberately small
-    special-instruction contract.  `LongMul` writes its high result before
-    its low result, while `AddCarry` uses x31 as a temporary and must keep its
-    two result locations distinct.  Keep this contract next to allocation so
-    a spill result cannot silently reach a partial selector. -/
+/-! The Word-to-Stack special-instruction contract is checked at allocation.
+    `LongMul` writes its high result before its low result and is normalized
+    through the reserved scratch registers when locations spill, while
+    `AddCarry` still requires register-resident operands and x31 exclusion.
+    Keep these contracts next to allocation so unsupported layouts cannot
+    silently reach instruction selection. -/
 
 def wordSpecialArithLocationsSafe (operation : WordArith)
     (locations : NatInfoMap WordLocation) : Bool :=
@@ -920,8 +922,8 @@ def wordSpecialArithLocationsSafe (operation : WordArith)
         lookupNatInfo destinationRight locations,
         lookupNatInfo sourceLeft locations,
         lookupNatInfo sourceRight locations with
-      | some (.register destinationLeft), some (.register destinationRight),
-          some (.register sourceLeft), some (.register sourceRight) =>
+      | some destinationLeft, some destinationRight,
+          some sourceLeft, some sourceRight =>
           destinationLeft != destinationRight &&
             destinationLeft != sourceLeft && destinationLeft != sourceRight
       | _, _, _, _ => false

@@ -55,6 +55,44 @@ example :
 
 example :
     wordToStackProg
+        { locations := [(0, .stack 2), (1, .stack 3),
+            (2, .stack 4), (3, .stack 5)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        ((.inst (.arith (.longMul 0 1 2 3))) : WordProg Nat) =
+      some (.seq (.stackLoad 31 14)
+        (.seq (.stackLoad 29 15)
+          (.seq (.inst (.arith (.longMul 28 31 31 29)))
+            (.seq (.stackStore 28 12) (.stackStore 31 13)))) : StackProg Nat) := by
+  simp [wordToStackProg, wordToStackInst, wordStackArithInst,
+    wordStackLongMulInst, wordStackLongMulLocationsSafe,
+    wordStackLongMulLocationSafe, wordStackLongMulMoveToPhysical,
+    wordStackLongMulMoveFromPhysical, wordStackLocation, wordStackOffset,
+    wordStackJoin, wordSpecialArithLocationsSafe, lookupNatInfo]
+
+example :
+    let config : WordStackConfig :=
+      { locations := [(0, .stack 2), (1, .stack 3),
+          (2, .stack 4), (3, .stack 5)],
+        scratch := 31, stackBase := 10, addressScratch := 29 }
+    let state : WordStackMachineState 8 :=
+      { registers := fun _ => 0,
+        stack := fun offset =>
+          if offset = 14 then BitVec.ofNat 8 3
+          else if offset = 15 then BitVec.ofNat 8 4 else 0,
+        stores := fun _ => 0,
+        memory := fun _ => 0,
+        sharedMemory := fun _ => 0 }
+    (evalWordStackMachine state
+      ((wordToStackProg config
+        ((.inst (.arith (.longMul 0 1 2 3))) : WordProg Nat)).getD .skip)).map
+      (fun state =>
+        (wordStackMachineValue config state 0,
+          wordStackMachineValue config state 1)) =
+      some (some (BitVec.ofNat 8 0), some (BitVec.ofNat 8 12)) := by
+  native_decide
+
+example :
+    wordToStackProg
         { locations := [(0, .stack 2), (1, .stack 3)],
           scratch := 31, stackBase := 10 }
         ((.ite .equal 0 (.reg 1) .skip .skip) : WordProg Nat) =
@@ -260,7 +298,10 @@ example :
           scratch := 31, stackBase := 10 } (.longMul 0 1 2 3) =
       some (.inst (.arith (.longMul 4 5 6 7)) : StackProg Nat) := by
   simp [wordStackArithInst, wordSpecialArithLocationsSafe,
-    wordStackLocation, lookupNatInfo]
+    wordStackLongMulInst, wordStackLongMulLocationsSafe,
+    wordStackLongMulLocationSafe, wordStackLongMulMoveToPhysical,
+    wordStackLongMulMoveFromPhysical, wordStackLocation, wordStackJoin,
+    lookupNatInfo]
 
 example :
     wordStackArithInst

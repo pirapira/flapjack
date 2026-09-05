@@ -3155,4 +3155,139 @@ theorem loopToWord_shift_assign_agreement_of_locals [NeZero width]
               hshiftLeft, hshiftRight,
               RiscV.bitVecWordShiftLeft, RiscV.bitVecWordShiftRight]
 
+theorem loopToWord_load32_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (address destination : Nat)
+    (destinationRegister : Fin 32) (addressValue value : RiscV.Word width)
+    (zero : RiscV.ZeroRegister state)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (haddress : loopState.locals address = some addressValue)
+    (hmemory : loopState.memory addressValue = some value)
+    (hmachine : RiscV.readWord32 state addressValue = value)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0)
+    (hnoalias :
+      ∀ name, name ≠ destination →
+        ∀ register,
+          RiscV.registerOfNat (wordFindVar context name) = some register →
+            register ≠ destinationRegister) :
+    ∀ resultState,
+      RiscV.evalWordProg state
+        (loopToWordProg context (.load32 address destination)) =
+          some resultState →
+      loopLocalsMappedToRiscV context
+        (updateLoopLocal loopState.locals destination value) resultState := by
+  intro resultState hresult
+  rcases hlocals address addressValue haddress with
+    ⟨addressRegister, haddress_register, haddress_value⟩
+  have hsource_address :
+      (loopRegisterStateMappedWithMemory context state loopState.memory).locals
+        address = some addressValue := by
+    simp [loopRegisterStateMappedWithMemory, loopRegisterStateMapped,
+      haddress_register, haddress_value]
+  have hsource :
+      (evalLoopProg 1
+        (loopRegisterStateMappedWithMemory context state loopState.memory)
+        (.load32 address destination)).bind (fun result =>
+          match result with
+          | .normal sourceState => sourceState.locals destination
+          | _ => none) = some value := by
+    rw [evalLoopProg_load32
+      (loopRegisterStateMappedWithMemory context state loopState.memory)
+      address destination addressValue value hsource_address hmemory]
+    simp [updateLoopLocal]
+  have hagreement := loopToWord_load32_register_agreement_mapped context state
+    loopState.memory address destination addressRegister destinationRegister
+    addressValue value zero haddress_register hdestination haddress_value hmemory
+    hmachine hdestination_nonzero
+  have hdestination_value :
+      RiscV.readRegister resultState destinationRegister = value := by
+    rw [hresult] at hagreement
+    rw [hsource] at hagreement
+    simpa using hagreement.symm
+  have haddress_lt : wordFindVar context address < 32 :=
+    RiscV.registerOfNat_some_lt haddress_register
+  have hdestination_lt : wordFindVar context destination < 32 :=
+    RiscV.registerOfNat_some_lt hdestination
+  have haddress_fin :
+      (⟨wordFindVar context address, haddress_lt⟩ : Fin 32) = addressRegister := by
+    have h := haddress_register
+    simp [RiscV.registerOfNat, haddress_lt] at h
+    exact h
+  have hdestination_fin :
+      (⟨wordFindVar context destination, hdestination_lt⟩ : Fin 32) =
+        destinationRegister := by
+    have h := hdestination
+    simp [RiscV.registerOfNat, hdestination_lt] at h
+    exact h
+  simp [loopToWordProg, RiscV.evalWordProg,
+    RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+    RiscV.nextPc, RiscV.registerOfNat, haddress_lt, hdestination_lt,
+    haddress_fin, hdestination_fin, haddress_value, hmachine,
+    hdestination_nonzero] at hresult
+  subst resultState
+  have hloaded :
+      RiscV.readWord32 state (state.registers addressRegister) = value := by
+    have haddress_register_value :
+        state.registers addressRegister = addressValue := by
+      exact haddress_value
+    rw [haddress_register_value, hmachine]
+  intro name current hcurrent
+  by_cases hname : name = destination
+  · subst name
+    have hvalue : value = current := by
+      simpa [updateLoopLocal] using hcurrent
+    subst current
+    refine ⟨destinationRegister, hdestination, ?_⟩
+    simp [RiscV.readRegister, hloaded]
+  · have hcurrent' : loopState.locals name = some current := by
+      simpa [updateLoopLocal, hname] using hcurrent
+    rcases hlocals name current hcurrent' with
+      ⟨register, hregister, hregister_value⟩
+    refine ⟨register, hregister, ?_⟩
+    have hregister_nonalias := hnoalias name hname register hregister
+    simp [RiscV.readRegister, hname, hregister_nonalias, hloaded]
+    exact hregister_value
+
+theorem loopToWord_store32_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (address value : Nat)
+    (addressRegister valueRegister : Fin 32)
+    (haddress :
+      RiscV.registerOfNat (wordFindVar context address) = some addressRegister)
+    (hvalue :
+      RiscV.registerOfNat (wordFindVar context value) = some valueRegister)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state) :
+    ∀ resultState,
+      RiscV.evalWordProg state
+        (loopToWordProg context (.store32 address value)) =
+          some resultState →
+      loopLocalsMappedToRiscV context loopState.locals resultState := by
+  intro resultState hresult
+  have haddress_lt : wordFindVar context address < 32 :=
+    RiscV.registerOfNat_some_lt haddress
+  have hvalue_lt : wordFindVar context value < 32 :=
+    RiscV.registerOfNat_some_lt hvalue
+  have haddress_fin :
+      (⟨wordFindVar context address, haddress_lt⟩ : Fin 32) = addressRegister := by
+    have h := haddress
+    simp [RiscV.registerOfNat, haddress_lt] at h
+    exact h
+  have hvalue_fin :
+      (⟨wordFindVar context value, hvalue_lt⟩ : Fin 32) = valueRegister := by
+    have h := hvalue
+    simp [RiscV.registerOfNat, hvalue_lt] at h
+    exact h
+  simp [loopToWordProg, RiscV.evalWordProg, RiscV.execute,
+    RiscV.writeByte, RiscV.writeWord32, RiscV.byteAddress,
+    RiscV.registerOfNat, haddress_lt, hvalue_lt, haddress_fin, hvalue_fin] at hresult
+  subst resultState
+  intro name current hcurrent
+  rcases hlocals name current hcurrent with
+    ⟨register, hregister, hregister_value⟩
+  refine ⟨register, hregister, ?_⟩
+  exact hregister_value
+
 end Flapjack

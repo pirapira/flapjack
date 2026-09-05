@@ -194,7 +194,9 @@ def stackRemoveCopyLoop [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
         (.arith .add bitmap bitmap config.scratch))
   .seq (.inst (.mem .load 1 bitmap))
     (.seq (.arith .add bitmap bitmap config.scratch)
-      (.loop (.ite .less 1 (.imm (0 : α)) copyBitmapWord (.break 0))))
+      (.seq
+        (.loop (.ite .less 1 (.imm (0 : α)) copyBitmapWord (.break 0)))
+        copyEach))
 
 def stackRemoveStoreConsts [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
     (source bitmap : Nat) (_stub : Option Nat) : StackProg α :=

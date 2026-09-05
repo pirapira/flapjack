@@ -602,6 +602,10 @@ definitions, pass ordering, examples, and proof obligations.
   explicit scratch/stack-pointer non-aliasing condition.
 - [x] Prove StackRemove fixed-offset stack load/store simulations under
   explicit address-scratch and memory-write invariants.
+- [x] Match CakeML's byte-scaled negative store offsets in StackRemove and
+  update the store-memory simulation invariant accordingly.
+- [x] Complete the StackRemove `StoreConsts` bitmap-copy loop with the final
+  `copy_each` pass from CakeML and add a structural regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

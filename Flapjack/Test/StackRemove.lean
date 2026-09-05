@@ -120,6 +120,19 @@ example :
   simp [stackRemove, stackRemoveFuel]
 
 example :
+    stackRemoveCopyLoop stackRemoveTestConfig 6 7 =
+      .seq (.inst (.mem .load 1 7))
+        (.seq (.arith .add 7 7 31)
+          (.seq
+            (.loop (.ite .less 1 (.imm (0 : Nat))
+              (.seq (stackRemoveCopyEach stackRemoveTestConfig 6 7)
+                (.seq (.inst (.mem .load 1 7))
+                  (.arith .add 7 7 31)))
+              (.break 0)))
+            (stackRemoveCopyEach stackRemoveTestConfig 6 7))) := by
+  rfl
+
+example :
     stackRemove stackRemoveTestConfig (.get 4 .currHeap : StackProg Nat) =
       .arith .or 4 12 12 := by
   exact stackRemove_get_currHeap _ _

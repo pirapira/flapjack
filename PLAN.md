@@ -408,6 +408,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Prove mapped-local preservation for structured shared-memory full-word
   `load` and `store` lowering, including register preservation through the
   byte-fold word store.
+- [x] Prove mapped-local preservation for ordinary constant-address `store`
+  lowering, with the RISC-V x31 address-materialization scratch contract.
 - [x] Generalize the context-mapped Loop-to-Word assignment agreement to all
   register-register binary operations, including BitVec bitwise compatibility.
 - [x] Correct and prove context mapping for both operands of Loop `locValue`

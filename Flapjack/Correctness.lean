@@ -3973,4 +3973,54 @@ theorem loopToWord_shMem_store_preserves_mapped_locals [NeZero width]
   rw [RiscV.writeWordValue_registers]
   exact hregister_value
 
+theorem loopToWord_store_const_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (address : RiscV.Word width) (value : Nat)
+    (valueValue : RiscV.Word width)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hvalue : loopState.locals value = some valueValue)
+    (hscratch :
+      ∀ name current, loopState.locals name = some current →
+        ∀ register,
+        RiscV.registerOfNat (wordFindVar context name) = some register →
+          register ≠ 31) :
+    ∀ resultState,
+      RiscV.evalWordProg state
+        (loopToWordProg context (.store (.const address) value)) =
+        some resultState →
+      loopLocalsMappedToRiscV context loopState.locals resultState := by
+  intro resultState hresult
+  rcases hlocals value valueValue hvalue with
+    ⟨valueRegister, hvalue_register, hvalue_value⟩
+  have hvalue_lt : wordFindVar context value < 32 :=
+    RiscV.registerOfNat_some_lt hvalue_register
+  have hvalue_fin :
+      (⟨wordFindVar context value, hvalue_lt⟩ : Fin 32) = valueRegister := by
+    have h := hvalue_register
+    simp [RiscV.registerOfNat, hvalue_lt] at h
+    exact h
+  have hvalue_not_scratch : wordFindVar context value ≠ 31 := by
+    intro h
+    have hregister := hvalue_register
+    simp [RiscV.registerOfNat, hvalue_lt, h] at hregister
+    exact hscratch value valueValue hvalue valueRegister hvalue_register
+      hregister.symm
+  simp [loopToWordProg, wordCompileExp, RiscV.evalWordProg,
+    RiscV.evalWordShareInst, RiscV.wordShareInstToInstructions,
+    RiscV.wordInstToInstruction, RiscV.wordExpToInstructions,
+    RiscV.wordExpToInstruction, RiscV.executeInstructions,
+    RiscV.execute, RiscV.writeRegister,
+    RiscV.writeByte, RiscV.byteAddress, RiscV.registerOfNat,
+    hvalue_lt, hvalue_fin, hvalue_not_scratch] at hresult
+  subst resultState
+  intro name current hcurrent
+  rcases hlocals name current hcurrent with
+    ⟨register, hregister, hregister_value⟩
+  refine ⟨register, hregister, ?_⟩
+  have hregister_nonalias := hscratch name current hcurrent register hregister
+  simp only [RiscV.readRegister]
+  rw [RiscV.writeWordValue_registers]
+  simp [hregister_nonalias]
+  exact hregister_value
+
 end Flapjack

@@ -307,4 +307,32 @@ example :
     (hvalue := by native_decide)
     (hlocals := memoryCorrectness_mappedLocals)
 
+example :
+    ∀ resultState,
+      RiscV.evalWordProg memoryCorrectnessWordState
+        (loopToWordProg memoryCorrectnessContext
+          (.store (.const (BitVec.ofNat 64 100)) 1)) = some resultState →
+      loopLocalsMappedToRiscV memoryCorrectnessContext
+        memoryCorrectnessLoopState.locals resultState := by
+  apply loopToWord_store_const_preserves_mapped_locals
+    (context := memoryCorrectnessContext)
+    (loopState := memoryCorrectnessLoopState)
+    (state := memoryCorrectnessWordState)
+    (address := BitVec.ofNat 64 100) (value := 1)
+    (valueValue := BitVec.ofNat 64 16)
+    (hlocals := memoryCorrectness_mappedLocals)
+    (hvalue := by simp [memoryCorrectnessLoopState])
+    (hscratch := by
+      intro name current hcurrent register hregister
+      by_cases hname : name = 1
+      · subst name
+        simp [memoryCorrectnessContext, wordFindVar, lookupNatInfo] at hregister
+        have hthree : RiscV.registerOfNat 3 = some (3 : Fin 32) := by
+          native_decide
+        have hregister' : register = (3 : Fin 32) := by
+          exact Option.some.inj (hregister.symm.trans hthree)
+        rw [hregister']
+        decide
+      · simp [memoryCorrectnessLoopState, hname] at hcurrent)
+
 end Flapjack

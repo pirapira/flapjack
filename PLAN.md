@@ -443,6 +443,8 @@ definitions, pass ordering, examples, and proof obligations.
   the compiler-generated post-conditional tick.
 - [x] Add fuel-bounded Word loop execution with explicit break and continue
   control results, plus basic loop-control regression theorems.
+- [x] Add handler-aware Word loop execution with recursive calls, FFI actions,
+  and control-result propagation, with focused regressions.
 - [x] Exercise the actual Loop-to-Word loop lowering through the Word loop
   evaluator, including its generated entry and exit ticks.
 - [x] Add layout-aware RISC-V lowering for Word loops, resolving generated

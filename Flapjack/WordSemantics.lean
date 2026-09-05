@@ -137,6 +137,155 @@ mutual
         | result => some result
 end
 
+/-!
+Handler-aware Word loop semantics.  The handler-free loop evaluator above is
+useful for isolated loop tests, but a source Loop body may contain calls and
+FFI actions.  This evaluator preserves those effects while also propagating
+return, raise, break, and continue control results through nested loops.
+-/
+inductive WordLoopControlResult (width : Nat) [NeZero width] where
+  | normal (state : State width)
+  | returned (state : State width) (values : List (Word width))
+  | raised (state : State width) (exception : Word width)
+  | broke (state : State width) (label : Nat)
+  | continued (state : State width) (label : Nat)
+
+mutual
+  def evalWordLoopCallWithHandlersAndFfi [NeZero width]
+      (functions : List (Nat × List Nat × WordProg (Word width)))
+      (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+        State width → Option (State width)) :
+      Nat → State width → Option (List Nat × List Nat) → Option Nat → List Nat →
+        Option (Nat × WordProg (Word width)) →
+        Option (WordLoopControlResult width)
+    | 0, _, _, _, _, _ => none
+    | fuel + 1, state, returns, target, arguments, handler => do
+        let target ← target
+        let (parameters, body) ← lookupWordFunction target functions
+        let values ← readWordRegisters state arguments
+        let calleeState ← bindWordRegisters state parameters values
+        let result ← evalWordLoopProgWithHandlersAndFfi functions ffiHandler
+          fuel calleeState body
+        let returnedState := match result with
+          | .normal calleeState => { state with
+              memory := calleeState.memory
+              privilege := calleeState.privilege
+              mode := calleeState.mode }
+          | .returned calleeState _ => { state with
+              memory := calleeState.memory
+              privilege := calleeState.privilege
+              mode := calleeState.mode }
+          | .raised calleeState _ => { state with
+              memory := calleeState.memory
+              privilege := calleeState.privilege
+              mode := calleeState.mode }
+          | .broke calleeState _ => { state with
+              memory := calleeState.memory
+              privilege := calleeState.privilege
+              mode := calleeState.mode }
+          | .continued calleeState _ => { state with
+              memory := calleeState.memory
+              privilege := calleeState.privilege
+              mode := calleeState.mode }
+        match result with
+        | .normal _ => some (.normal returnedState)
+        | .returned _ values =>
+            match returns with
+            | none => some (.returned returnedState values)
+            | some (names, _) => do
+                let state ← assignWordRegisters returnedState names values
+                some (.normal state)
+        | .raised _ exception =>
+            match handler with
+            | none => some (.raised returnedState exception)
+            | some (name, handlerBody) => do
+                let name ← registerOfNat name
+                evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel
+                  (writeRegister returnedState name exception) handlerBody
+        | .broke _ label => some (.broke returnedState label)
+        | .continued _ label => some (.continued returnedState label)
+    termination_by fuel _ _ _ _ _ => fuel
+
+  def evalWordLoopProgWithHandlersAndFfi [NeZero width]
+      (functions : List (Nat × List Nat × WordProg (Word width)))
+      (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+        State width → Option (State width)) :
+      Nat → State width → WordProg (Word width) →
+        Option (WordLoopControlResult width)
+    | 0, _, _ => none
+    | fuel + 1, state, .call returns target arguments handler =>
+        evalWordLoopCallWithHandlersAndFfi functions ffiHandler fuel state returns
+          target arguments handler
+    | fuel + 1, state,
+        .ffi function configuration configurationLength array arrayLength _ => do
+        let configuration ← registerOfNat configuration
+        let configurationLength ← registerOfNat configurationLength
+        let array ← registerOfNat array
+        let arrayLength ← registerOfNat arrayLength
+        let state ← ffiHandler function (readRegister state configuration)
+          (readRegister state configurationLength) (readRegister state array)
+          (readRegister state arrayLength) state
+        pure (.normal state)
+    | fuel + 1, state, .seq first second => do
+        let result ← evalWordLoopProgWithHandlersAndFfi functions ffiHandler
+          fuel state first
+        match result with
+          | .normal state =>
+              evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state second
+          | result => some result
+    | fuel + 1, state, .ite operator condition rightValue thenBranch elseBranch => do
+        let choose ← evalWordCondition state operator condition rightValue
+        if choose then
+          evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state thenBranch
+        else
+          evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel state elseBranch
+    | fuel + 1, state, .loop _ body _ =>
+        evalWordLoopRepeatWithHandlersAndFfi functions ffiHandler fuel state body
+    | fuel + 1, state, .break label => some (.broke state label)
+    | fuel + 1, state, .continue label => some (.continued state label)
+    | fuel + 1, state, .raise exception => do
+        let exception ← registerOfNat exception
+        pure (.raised state (readRegister state exception))
+    | fuel + 1, state, .return _ values => do
+        let values ← values.mapM (fun name => do
+          let register ← registerOfNat name
+          pure (readRegister state register))
+        pure (.returned state values)
+    | fuel + 1, state, program => do
+        let (state, values) ← evalWordFunction state program
+        if values.isEmpty then some (.normal state)
+        else some (.returned state values)
+    termination_by fuel _ _ => fuel
+
+  def evalWordLoopRepeatWithHandlersAndFfi [NeZero width]
+      (functions : List (Nat × List Nat × WordProg (Word width)))
+      (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+        State width → Option (State width)) :
+      Nat → State width → WordProg (Word width) →
+        Option (WordLoopControlResult width)
+    | 0, _, _ => none
+    | fuel + 1, state, body => do
+        let result ← evalWordLoopProgWithHandlersAndFfi functions ffiHandler
+          fuel state body
+        match result with
+        | .normal state =>
+            evalWordLoopRepeatWithHandlersAndFfi functions ffiHandler fuel state body
+        | .continued state 0 =>
+            evalWordLoopRepeatWithHandlersAndFfi functions ffiHandler fuel state body
+        | .broke state 0 => some (.normal state)
+        | result => some result
+    termination_by fuel _ _ => fuel
+end
+
+theorem evalWordLoopProgWithHandlersAndFfi_break [NeZero width]
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (ffiHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (state : State width) (label : Nat) :
+    evalWordLoopProgWithHandlersAndFfi functions ffiHandler 1 state
+      (.break label) = some (.broke state label) := by
+  simp [evalWordLoopProgWithHandlersAndFfi]
+
 theorem evalWordLoopProg_break [NeZero width] (state : State width) (label : Nat) :
     evalWordLoopProg 1 state (.break label) =
       some (.broke state label) := by

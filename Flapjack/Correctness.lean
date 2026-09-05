@@ -1688,6 +1688,64 @@ theorem loopToWord_seq_preserves_mapped_locals [NeZero width]
     (hfirst middleLoop middleWord hfirst_loop hfirst_word)
     finalLoop finalWord hsecond_loop hsecond_word
 
+/-!
+The same normal-path sequence rule with an arbitrary source fuel budget.  The
+Word evaluator is fuel-free for non-call programs, while the Loop evaluator
+uses `fuel + 1` for the enclosing sequence and `fuel` for each component.
+-/
+theorem loopToWord_seq_preserves_mapped_locals_fuel [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (first second : LoopProg (RiscV.Word width))
+    (fuel : Nat) (finalLoop : LoopState (RiscV.Word width))
+    (finalWord : RiscV.State width)
+    (hfirst : ∀ middleLoop middleWord,
+      evalLoopProg fuel loopState first = some (.normal middleLoop) →
+      RiscV.evalWordProg state (loopToWordProg context first) = some middleWord →
+      loopLocalsMappedToRiscV context middleLoop.locals middleWord)
+    (hsecond : ∀ middleLoop middleWord,
+      loopLocalsMappedToRiscV context middleLoop.locals middleWord →
+      ∀ finalLoop finalWord,
+        evalLoopProg fuel middleLoop second = some (.normal finalLoop) →
+        RiscV.evalWordProg middleWord (loopToWordProg context second) =
+          some finalWord →
+        loopLocalsMappedToRiscV context finalLoop.locals finalWord)
+    (hloop :
+      evalLoopProg (fuel + 1) loopState (.seq first second) =
+        some (.normal finalLoop))
+    (hword :
+      RiscV.evalWordProg state (loopToWordProg context (.seq first second)) =
+        some finalWord) :
+    loopLocalsMappedToRiscV context finalLoop.locals finalWord := by
+  cases hfirstLoop : evalLoopProg fuel loopState first with
+  | none =>
+      simp [evalLoopProg, hfirstLoop] at hloop
+  | some firstResult =>
+      cases firstResult with
+      | normal middleLoop =>
+          have hsecondLoop :
+              evalLoopProg fuel middleLoop second = some (.normal finalLoop) := by
+            simpa [evalLoopProg, hfirstLoop] using hloop
+          cases hfirstWord : RiscV.evalWordProg state
+              (loopToWordProg context first) with
+          | none =>
+              simp [loopToWordProg, RiscV.evalWordProg, hfirstWord] at hword
+          | some middleWord =>
+              have hsecondWord :
+                  RiscV.evalWordProg middleWord (loopToWordProg context second) =
+                    some finalWord := by
+                simpa [loopToWordProg, RiscV.evalWordProg, hfirstWord] using hword
+              exact hsecond middleLoop middleWord
+                (hfirst middleLoop middleWord hfirstLoop hfirstWord)
+                finalLoop finalWord hsecondLoop hsecondWord
+      | returned middleLoop values =>
+          simp [evalLoopProg, hfirstLoop] at hloop
+      | broke middleLoop label =>
+          simp [evalLoopProg, hfirstLoop] at hloop
+      | continued middleLoop label =>
+          simp [evalLoopProg, hfirstLoop] at hloop
+      | raised middleLoop exception =>
+          simp [evalLoopProg, hfirstLoop] at hloop
+
 theorem loopToWord_condition_agreement_of_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (operator : Cmp) (condition : Nat)

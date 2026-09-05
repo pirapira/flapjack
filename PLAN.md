@@ -428,6 +428,8 @@ definitions, pass ordering, examples, and proof obligations.
   through matching intermediate Loop and machine states.
 - [x] Add the compositional sequence simulation rule that chains mapped-local
   preservation across both successful components.
+- [x] Generalize the normal-path Loop-to-Word sequence simulation rule to
+  arbitrary Loop fuel budgets.
 - [x] Prove mapped Loop/Word condition agreement for equality, unsigned
   ordering, and HOL zero-test comparisons with immediate/register operands.
 - [x] Prove Loop slot-analysis insertion helpers preserve duplicate-freeness,

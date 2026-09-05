@@ -1,5 +1,6 @@
 import Flapjack.RiscV.WordToStack
 import Flapjack.RiscV.Backend
+import Flapjack.RiscV.Correctness
 
 -- FFI ABI regressions are kept here with the other Word-to-Stack tests.
 
@@ -103,6 +104,21 @@ example :
     (readRegister final 27, readRegister final 28) =
       (BitVec.ofNat 8 1, BitVec.ofNat 8 1) := by
   native_decide
+
+example [NeZero width] (state : State width)
+    (zero : readRegister state 0 = 0) :
+    (readRegister
+        (executeInstructions state
+          [.sltu 31 0 27, .add 27 29 28, .sltu 28 27 28,
+            .add 27 27 31, .sltu 31 27 31, .or 28 28 31]) 27,
+      readRegister
+        (executeInstructions state
+          [.sltu 31 0 27, .add 27 29 28, .sltu 28 27 28,
+            .add 27 27 31, .sltu 31 27 31, .or 28 28 31]) 28) =
+      addCarryWords (readRegister state 29) (readRegister state 28)
+        (readRegister state 27) := by
+  apply executeInstructions_addCarry_general state 27 28 29 28 27 zero
+  all_goals decide
 
 example :
     let config : WordStackConfig :=

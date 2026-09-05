@@ -339,8 +339,8 @@ definitions, pass ordering, examples, and proof obligations.
   and `AddCarry` in both linear and program-level allocation analyses.
 - [x] Enforce the currently supported special-instruction layout at the
   spill-aware allocator and Word-to-Stack boundary, rejecting spilled or
-  aliased special values before instruction selection; `AddCarry` remains
-  register-only while `LongMul` is normalized through spill moves.
+  aliased special values before instruction selection; both AddCarry and
+  LongMul are normalized through reserved scratch registers when spilled.
 - [x] Lower spill-aware `LongMul` through reserved scratch registers, preserve
   the register-resident fast path, and prove the generated StackLang fragment
   on a concrete machine state.

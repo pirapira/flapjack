@@ -333,6 +333,23 @@ def compileFlapjackRiscVViaGraphAllocatedStack [NeZero width]
   RiscV.compileStackProgramNatListToRiscV { services := services } removeConfig 0 0
     (functions.map (fun (label, _, body) => (label, body)))
 
+/-! Linked graph-allocator artifact.  Keep the section labels and byte entry
+    addresses produced by LabLang so callers can choose an exported function
+    and establish the machine-state relation at its actual entry point. -/
+def compileFlapjackRiscVViaGraphAllocatedStackLinked [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
+  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let functions ← pipelineWordFunctionsAllocatedWithGraph pipeline.loop
+  RiscV.compileStackProgramNatListLinkedToRiscV { services := services }
+    removeConfig 0 0 (functions.map (fun (label, _, body) => (label, body)))
+
 /-! Linked form of the allocator-aware entry point.  The flat instruction
     stream remains available above; this form additionally records each
     function's byte entry address so an execution harness can select an

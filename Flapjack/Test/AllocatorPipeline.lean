@@ -108,5 +108,16 @@ example :
       pipelineAllocatedMulDeclarations).isSome := by
   native_decide
 
+example :
+    (compileFlapjackRiscVViaGraphAllocatedStackLinked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      { storeBase := 10, currHeap := 12, scratch := 31,
+        addressScratch := 29, stackPointer := 20, bytesInWord := 8,
+        stackBase := 21, wordShift := 3 }
+      pipelineAllocatedMulDeclarations).map
+        (fun sections => sections.map (fun (label, entry, _) => (label, entry))) =
+      some [(1, BitVec.ofNat 64 0)] := by
+  native_decide
+
 
 end Flapjack

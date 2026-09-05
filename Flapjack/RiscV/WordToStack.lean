@@ -1003,6 +1003,67 @@ theorem evalWordStackMachine_store_preserves_memory [NeZero width]
       wordStackMachineWriteMemory, hsource, haddress, hsourceValue,
       haddressValue, hsafe, hsafe']
 
+theorem evalWordStackMachine_shared_load_preserves_value [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (destination address : Nat)
+    (destinationLocation addressLocation : WordLocation)
+    (hdestination : wordStackLocation config destination =
+      some destinationLocation)
+    (haddress : wordStackLocation config address = some addressLocation)
+    (hscratch : config.scratch ≠ config.addressScratch)
+    (heval : (wordStackSharedMemoryInst config .load destination address).bind
+      (evalWordStackMachine state) = some final) :
+      wordStackMachineValue config final destination =
+        (wordStackMachineValue config state address).map state.sharedMemory := by
+  change lookupNatInfo destination config.locations = some destinationLocation at hdestination
+  change lookupNatInfo address config.locations = some addressLocation at haddress
+  cases destinationLocation <;> cases addressLocation <;>
+    simp [wordStackSharedMemoryInst, wordStackSharedLoadInst,
+      wordStackLocation, wordStackOffset, lookupNatInfo, hdestination,
+      haddress, hscratch] at heval
+  all_goals
+    cases heval
+    simp [evalWordStackMachine, wordStackMachineValue, wordStackLocation,
+      wordStackOffset, wordStackMachineWriteRegister,
+      wordStackMachineWriteSlot, wordStackMachineWriteSharedMemory,
+      hdestination, haddress, hscratch]
+
+theorem evalWordStackMachine_shared_store_preserves_memory [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (source address : Nat)
+    (sourceLocation addressLocation : WordLocation)
+    (sourceValue addressValue : Word width)
+    (hsource : wordStackLocation config source = some sourceLocation)
+    (haddress : wordStackLocation config address = some addressLocation)
+    (hsourceValue : wordStackMachineValue config state source =
+      some sourceValue)
+    (haddressValue : wordStackMachineValue config state address =
+      some addressValue)
+    (hscratch : config.scratch ≠ config.addressScratch)
+    (hsafe : wordStackStoreLocationsSafe config sourceLocation addressLocation = true)
+    (heval : (wordStackSharedMemoryInst config .store source address).bind
+      (evalWordStackMachine state) = some final) :
+      final.sharedMemory addressValue = sourceValue := by
+  change lookupNatInfo source config.locations = some sourceLocation at hsource
+  change lookupNatInfo address config.locations = some addressLocation at haddress
+  have hsafe' : config.addressScratch ≠ config.scratch := by
+    intro heq
+    apply hscratch
+    exact heq.symm
+  cases sourceLocation <;> cases addressLocation <;>
+    simp [wordStackSharedMemoryInst, wordStackSharedStoreInst,
+      wordStackLocation, wordStackOffset, hsource, haddress,
+      wordStackStoreLocationsSafe] at hsafe heval
+  all_goals
+    cases heval
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      wordStackMachineWriteSharedMemory, hsource, haddress] at hsourceValue haddressValue
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      wordStackMachineWriteSharedMemory, hsource, haddress,
+      hsourceValue, haddressValue, hsafe, hsafe']
+
 theorem evalWordStackMachine_div_preserves_value [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)
     (destination dividend divisor : Nat)

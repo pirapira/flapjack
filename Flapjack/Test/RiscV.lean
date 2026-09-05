@@ -54,6 +54,20 @@ example :
   native_decide
 
 example :
+    RiscV.readRegister
+      (RiscV.execute (RiscV.zeroState 64)
+        (.lui 3 (BitVec.ofNat 64 1))) 3 =
+      BitVec.ofNat 64 4096 := by
+  native_decide
+
+example :
+    RiscV.readRegister
+      (RiscV.execute (RiscV.zeroState 64)
+        (.auipc 3 (BitVec.ofNat 64 1))) 3 =
+      BitVec.ofNat 64 4096 := by
+  native_decide
+
+example :
     (RiscV.execute signedOrderState
       (.branchLt 1 2 (BitVec.ofNat 8 12))).pc =
       BitVec.ofNat 8 12 := by

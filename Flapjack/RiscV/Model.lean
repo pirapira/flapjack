@@ -133,6 +133,8 @@ inductive Instruction (width : Nat) where
   | slti (destination source : Fin 32) (immediate : Word width)
   | sltu (destination sourceLeft sourceRight : Fin 32)
   | sltiu (destination source : Fin 32) (immediate : Word width)
+  | lui (destination : Fin 32) (immediate : Word width)
+  | auipc (destination : Fin 32) (immediate : Word width)
   | divU (destination sourceLeft sourceRight : Fin 32)
   | remU (destination sourceLeft sourceRight : Fin 32)
   | branchEq (sourceLeft sourceRight : Fin 32) (offset : Word width)
@@ -273,6 +275,10 @@ def nextPc (state : State width) : Word width := state.pc + 4
 
 def shiftAmount (value : Word width) : Nat := value.toNat % width
 
+def uImmediate (immediate : Word width) : Word width :=
+  BitVec.shiftLeft
+    (BitVec.signExtend width (BitVec.ofNat 20 immediate.toNat)) 12
+
 /-! Signed ordering for the two's-complement word represented by `BitVec`. -/
 def signedLess (left right : Word width) : Bool :=
   let sign := 2 ^ (width - 1)
@@ -353,6 +359,12 @@ def execute (state : State width) : Instruction width → State width
   | .sltiu destination source immediate =>
       writeRegister { state with pc := nextPc state } destination
         (if readRegister state source < immediate then 1 else 0)
+  | .lui destination immediate =>
+      writeRegister { state with pc := nextPc state } destination
+        (uImmediate immediate)
+  | .auipc destination immediate =>
+      writeRegister { state with pc := nextPc state } destination
+        (state.pc + uImmediate immediate)
   | .divU destination sourceLeft sourceRight =>
       let divisor := readRegister state sourceRight
       writeRegister { state with pc := nextPc state } destination
@@ -599,6 +611,22 @@ theorem execute_sltiu (state : State width) (destination source : Fin 32)
     readRegister (execute state (.sltiu destination source immediate)) destination =
       if destination = 0 then readRegister state destination
       else if readRegister state source < immediate then 1 else 0 := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, readRegister, h]
+
+theorem execute_lui (state : State width) (destination : Fin 32)
+    (immediate : Word width) :
+    readRegister (execute state (.lui destination immediate)) destination =
+      if destination = 0 then readRegister state destination
+      else uImmediate immediate := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, readRegister, h]
+
+theorem execute_auipc (state : State width) (destination : Fin 32)
+    (immediate : Word width) :
+    readRegister (execute state (.auipc destination immediate)) destination =
+      if destination = 0 then readRegister state destination
+      else state.pc + uImmediate immediate := by
   by_cases h : destination = 0 <;>
     simp [execute, writeRegister, readRegister, h]
 

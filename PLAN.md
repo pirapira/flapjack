@@ -87,6 +87,8 @@ definitions, pass ordering, examples, and proof obligations.
   their destination-register behavior, including x0 handling.
 - [x] Port HOL's unsigned immediate `SLTIU` comparison path and prove its
   destination-register behavior, including x0 handling.
+- [x] Port HOL's U-type `LUI` and PC-relative `AUIPC` paths, including
+  sign-extended 20-bit immediates and destination-register contracts.
 - [x] Correct the mixed-sign two's-complement ordering predicate and add
   negative/positive `SLT` and branch regressions.
 - [x] Add executable deterministic semantics and preservation theorems for

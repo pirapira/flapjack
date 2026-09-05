@@ -28,6 +28,12 @@ def loopFfiTestHandler : FunName → Nat → Nat → Nat → Nat → LoopState N
     some { state with locals := updateLoopLocal state.locals 5 value }
   else none
 
+def loopNatAddCarryHandler : LoopPrimitiveHandler Nat
+  | .addCarry, [left, right, carry] =>
+      some [left + right + if carry == 0 then 0 else 1,
+        if carry == 0 then 0 else 1]
+  | _, _ => none
+
 def loopAddCarryState : LoopState (RiscV.Word 64) :=
   { locals := fun name =>
       if name == 2 then some (BitVec.ofNat 64 1)
@@ -133,6 +139,40 @@ example :
         match result with
         | .normal state => state.locals 5
         | _ => none) = some (some 33) := by
+  native_decide
+
+/- The composed evaluator permits an FFI in a callee followed by a primitive
+   in the caller.  The old call/FFI evaluator intentionally rejects the
+   primitive at this boundary. -/
+example :
+    (evalLoopProgWithPrimitiveCallsAndFfi
+      loopNatAddCarryHandler
+      [(7, [1, 2, 3, 4],
+          (.seq
+            (.ffi "sum" 1 2 3 4 [])
+            (.return [5]) : LoopProg Nat))]
+      loopFfiTestHandler 40 loopFfiTestState
+      (.seq
+        (.call (some ([6], [])) (some 7) [1, 2, 3, 4] none)
+        (.primitive [7, 8] .addCarry [6, 2, 3]))).map (fun result =>
+      match result with
+      | .normal state => (state.locals 7, state.locals 8)
+      | _ => (none, none)) = some (some 35, some 1) := by
+  native_decide
+
+/- The same boundary also handles primitives in exception handlers. -/
+example :
+    (evalLoopProgWithPrimitiveCallsAndFfi
+      loopNatAddCarryHandler
+      [(9, [1], (.raise 1 : LoopProg Nat))]
+      loopFfiTestHandler 30 loopFfiTestState
+      (.call none (some 9) [1]
+        (some (4,
+          (.primitive [7, 8] .addCarry [1, 2, 3] : LoopProg Nat),
+          .skip, [])))).map (fun result =>
+      match result with
+      | .normal state => (state.locals 7, state.locals 8)
+      | _ => (none, none)) = some (some 12, some 1) := by
   native_decide
 
 example :

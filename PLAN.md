@@ -238,6 +238,9 @@ definitions, pass ordering, examples, and proof obligations.
   regressions and a local HOL copyright notice.
 - [x] Add a unified fuel-bounded Loop evaluator that composes function calls
   and host-controlled FFI effects in one control-result semantics.
+- [x] Extend the unified Loop evaluator with an explicit primitive handler, so
+  primitives compose with calls, callee FFI, loops, and exception handlers;
+  expose named equations for the combined semantic boundary.
 - [x] Preserve a static-check success while diagnosing unreachable sequence
   tails after a definite function exit.
 - [x] Add a library-level end-to-end correctness theorem for the composed

@@ -1105,6 +1105,184 @@ mutual
 end
 
 /-!
+The fully composed Loop evaluator.  The separate primitive, call, and FFI
+evaluators above are useful for focused proofs, but a compiler-correctness
+statement must allow all three effects to occur in the same program.  In
+particular, a primitive may occur in a callee or an exception handler, and a
+callee may itself perform an FFI call.  This evaluator keeps all environments
+explicit and uses one fuel measure for every recursive boundary.
+-/
+mutual
+  def evalLoopCallWithPrimitiveCallsAndFfi
+      [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+      [ShiftRight α] [LT α]
+      [DecidableRel (fun left right : α => left < right)]
+      (primitive : LoopPrimitiveHandler α)
+      (functions : List (Nat × List Nat × LoopProg α))
+      (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
+      Nat → LoopState α → Option (List Nat × List Nat) → Option Nat → List Nat →
+        Option (Nat × LoopProg α × LoopProg α × List Nat) → Option (LoopResult α)
+    | 0, _, _, _, _, _ => none
+    | fuel + 1, state, returns, target, arguments, handler => do
+        let target ← target
+        let (parameters, body) ← lookupLoopFunction target functions
+        let values ← loopReadLocals state.locals arguments
+        let locals ← loopBindParameters parameters values (fun _ => none)
+        let calleeState := { state with locals := locals }
+        let result ← evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+          ffiHandler fuel calleeState body
+        match result with
+        | .returned _ values =>
+            match returns with
+            | none => some (.returned state values)
+            | some (names, _) => do
+                let locals ← loopAssignValues state.locals names values
+                match handler with
+                | none => some (.normal { state with locals := locals })
+                | some (_, _, normal, _) =>
+                    evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+                      ffiHandler fuel { state with locals := locals } normal
+        | .raised _ exception =>
+            match handler with
+            | none => some (.raised state exception)
+            | some (name, exceptionBody, _, _) =>
+                evalLoopProgWithPrimitiveCallsAndFfi primitive functions ffiHandler fuel
+                  { state with locals := updateLoopLocal state.locals name exception }
+                  exceptionBody
+        | .normal _ => some (.normal state)
+        | .broke _ label => some (.broke state label)
+        | .continued _ label => some (.continued state label)
+    termination_by fuel _ _ _ _ _ => fuel
+
+  def evalLoopProgWithPrimitiveCallsAndFfi
+      [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+      [ShiftRight α] [LT α]
+      [DecidableRel (fun left right : α => left < right)]
+      (primitive : LoopPrimitiveHandler α)
+      (functions : List (Nat × List Nat × LoopProg α))
+      (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
+      Nat → LoopState α → LoopProg α → Option (LoopResult α)
+    | 0, _, _ => none
+    | fuel + 1, state, .primitive destinations operator arguments => do
+        let arguments ← loopReadLocals state.locals arguments
+        let values ← primitive operator arguments
+        let locals ← loopAssignValues state.locals destinations values
+        pure (.normal { state with locals := locals })
+    | fuel + 1, state, .call returns target arguments handler =>
+        evalLoopCallWithPrimitiveCallsAndFfi primitive functions ffiHandler fuel state
+          returns target arguments handler
+    | fuel + 1, state, .ffi function configuration configurationLength array arrayLength _ => do
+        let configuration ← state.locals configuration
+        let configurationLength ← state.locals configurationLength
+        let array ← state.locals array
+        let arrayLength ← state.locals arrayLength
+        let state ← ffiHandler function configuration configurationLength array arrayLength state
+        pure (.normal state)
+    | fuel + 1, state, .seq first second => do
+        let result ← evalLoopProgWithPrimitiveCallsAndFfi primitive functions ffiHandler
+          fuel state first
+        match result with
+        | .normal state =>
+            evalLoopProgWithPrimitiveCallsAndFfi primitive functions ffiHandler fuel state second
+        | result => some result
+    | fuel + 1, state, .ite operator condition right thenBranch elseBranch _ => do
+        let left ← state.locals condition
+        let right ← match right with
+          | .imm value => some value
+          | .reg name => state.locals name
+        let choose ← evalLoopCondition operator left right
+        if choose then
+          evalLoopProgWithPrimitiveCallsAndFfi primitive functions ffiHandler fuel state thenBranch
+        else
+          evalLoopProgWithPrimitiveCallsAndFfi primitive functions ffiHandler fuel state elseBranch
+    | fuel + 1, state, .loop _ body _ =>
+        evalLoopRepeatWithPrimitiveCallsAndFfi primitive functions ffiHandler fuel state body
+    | fuel + 1, state, .mark body =>
+        evalLoopProgWithPrimitiveCallsAndFfi primitive functions ffiHandler fuel state body
+    | fuel + 1, state, program =>
+        evalLoopProg (fuel + 1) state program
+    termination_by fuel _ _ => fuel
+
+  def evalLoopRepeatWithPrimitiveCallsAndFfi
+      [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+      [ShiftRight α] [LT α]
+      [DecidableRel (fun left right : α => left < right)]
+      (primitive : LoopPrimitiveHandler α)
+      (functions : List (Nat × List Nat × LoopProg α))
+      (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
+      Nat → LoopState α → LoopProg α → Option (LoopResult α)
+    | 0, _, _ => none
+    | fuel + 1, state, body => do
+        let result ← evalLoopProgWithPrimitiveCallsAndFfi primitive functions ffiHandler
+          fuel state body
+        match result with
+        | .normal state =>
+            evalLoopRepeatWithPrimitiveCallsAndFfi primitive functions ffiHandler fuel state body
+        | .continued state 0 =>
+            evalLoopRepeatWithPrimitiveCallsAndFfi primitive functions ffiHandler fuel state body
+        | .broke state 0 => some (.normal state)
+        | result => some result
+    termination_by fuel _ _ => fuel
+end
+
+section PrimitiveCombinedSemanticEquations
+
+variable [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+  [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+  [ShiftRight α] [LT α]
+  [DecidableRel (fun left right : α => left < right)]
+
+theorem evalLoopProgWithPrimitiveCallsAndFfi_primitive
+    (primitive : LoopPrimitiveHandler α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (fuel : Nat) (state : LoopState α) (destinations : List Nat)
+    (operator : PrimOp) (arguments : List Nat) :
+    evalLoopProgWithPrimitiveCallsAndFfi primitive functions ffiHandler (fuel + 1) state
+        (.primitive destinations operator arguments) =
+      (do
+        let arguments ← loopReadLocals state.locals arguments
+        let values ← primitive operator arguments
+        let locals ← loopAssignValues state.locals destinations values
+        pure (.normal { state with locals := locals })) := by
+  simp [evalLoopProgWithPrimitiveCallsAndFfi]
+
+theorem evalLoopProgWithPrimitiveCallsAndFfi_ffi
+    (primitive : LoopPrimitiveHandler α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (fuel : Nat) (state : LoopState α) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat) (live : List Nat) :
+    evalLoopProgWithPrimitiveCallsAndFfi primitive functions ffiHandler (fuel + 1) state
+        (.ffi function configuration configurationLength array arrayLength live) =
+      (do
+        let configuration ← state.locals configuration
+        let configurationLength ← state.locals configurationLength
+        let array ← state.locals array
+        let arrayLength ← state.locals arrayLength
+        let state ← ffiHandler function configuration configurationLength array arrayLength state
+        pure (.normal state)) := by
+  simp [evalLoopProgWithPrimitiveCallsAndFfi]
+
+theorem evalLoopProgWithPrimitiveCallsAndFfi_call
+    (primitive : LoopPrimitiveHandler α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (fuel : Nat) (state : LoopState α) (returns : Option (List Nat × List Nat))
+    (target : Option Nat) (arguments : List Nat)
+    (handler : Option (Nat × LoopProg α × LoopProg α × List Nat)) :
+    evalLoopProgWithPrimitiveCallsAndFfi primitive functions ffiHandler (fuel + 1) state
+        (.call returns target arguments handler) =
+      evalLoopCallWithPrimitiveCallsAndFfi primitive functions ffiHandler fuel state
+        returns target arguments handler := by
+  simp [evalLoopProgWithPrimitiveCallsAndFfi]
+
+end PrimitiveCombinedSemanticEquations
+
+/-!
 Public equations for the combined evaluator.  Keeping these cases as named
 lemmas makes the later Loop-to-Word simulation proof independent of the
 implementation details of the mutually recursive definitions.

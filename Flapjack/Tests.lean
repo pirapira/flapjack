@@ -20,6 +20,7 @@ import Flapjack.Test.CorrectnessLoopHandlers
 import Flapjack.Test.CorrectnessLoopControl
 import Flapjack.Test.CorrectnessLoopCalls
 import Flapjack.Test.CorrectnessLoopCallHandlers
+import Flapjack.Test.CorrectnessLoopRepeat
 import Flapjack.Test.WordLoopHandlers
 import Flapjack.Test.CorrectnessFfiMachine
 import Flapjack.Test.Ffi

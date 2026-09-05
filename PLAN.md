@@ -642,6 +642,10 @@ definitions, pass ordering, examples, and proof obligations.
   action under the fully composed Loop and Word evaluators.
 - [x] Extend the loop-aware call boundary through an exception handler and
   verify the handler's exception binding in the mapped-local relation.
+- [x] Prove fully composed repeat-loop preservation for all five control
+  outcomes, including zero-labelled break termination and continue recursion.
+- [x] Add a concrete zero-labelled break regression for repeat-loop
+  preservation.
 - [x] Port the initial StackLang store-removal slice for fixed stores,
   `CurrHeap`, stack-frame allocation/free, and fixed/dynamic stack accesses,
   recursively rewriting nested control-flow and call bodies into explicit

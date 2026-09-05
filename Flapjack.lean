@@ -21,6 +21,7 @@ import Flapjack.RiscV.WordToStack
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Calls
 import Flapjack.RiscV.CorrectnessFfi
+import Flapjack.RiscV.CorrectnessLoop
 import Flapjack.RiscV.CorrectnessFfiMachine
 import Flapjack.RiscV.CorrectnessStack
 import Flapjack.RiscV.Ffi

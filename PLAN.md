@@ -513,6 +513,8 @@ definitions, pass ordering, examples, and proof obligations.
   correctness bridge for flattened record payloads.
 - [x] Prove a one-step Loop-to-Word FFI simulation theorem under an explicit
   RISC-V host-handler agreement, with a concrete register-mapped regression.
+- [x] Prove the ordinary single-parameter Loop-to-Word call boundary, including
+  singleton result assignment and rejection of incompatible result arities.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

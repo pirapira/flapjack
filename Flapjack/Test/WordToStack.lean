@@ -446,6 +446,30 @@ example [NeZero width]
 
 example [NeZero width]
     (state final : WordStackMachineState width)
+    (addressValue : Word width)
+    (haddressValue : wordStackMachineValue
+        { locations := [(0, .stack 2), (1, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 1 = some addressValue)
+    (heval : (wordStackCompileLoadNat
+        { locations := [(0, .stack 2), (1, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        0 (.var 1)).bind (evalWordStackMachine state) = some final) :
+    wordStackMachineValue
+        { locations := [(0, .stack 2), (1, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        final 0 = some (state.memory addressValue) := by
+  apply evalWordStackMachine_load_assignment
+    (destination := 0) (address := 1)
+    (destinationLocation := .stack 2) (addressLocation := .stack 3)
+  · rfl
+  · rfl
+  · exact haddressValue
+  · decide
+  · exact heval
+
+example [NeZero width]
+    (state final : WordStackMachineState width)
     (heval : (wordStackMemoryInst
         { locations := [(0, .stack 2), (1, .stack 3)],
           scratch := 31, stackBase := 10, addressScratch := 29 }

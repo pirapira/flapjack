@@ -935,6 +935,37 @@ theorem evalWordStackMachine_shift_assignment [NeZero width]
       wordStackMachineWriteRegister, wordStackMachineWriteSlot,
       wordStackMachineShift, hdestination, hleftValue, hrightValue, hsafe]
 
+theorem evalWordStackMachine_load_assignment [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (destination address : Nat)
+    (destinationLocation addressLocation : WordLocation)
+    (addressValue : Word width)
+    (hdestination : wordStackLocation config destination =
+      some destinationLocation)
+    (haddress : wordStackLocation config address = some addressLocation)
+    (haddressValue : wordStackMachineValue config state address =
+      some addressValue)
+    (hscratch : config.scratch ≠ config.addressScratch)
+    (heval : (wordStackCompileLoadNat config destination (.var address)).bind
+      (evalWordStackMachine state) = some final) :
+      wordStackMachineValue config final destination =
+        some (state.memory addressValue) := by
+  change lookupNatInfo destination config.locations = some destinationLocation at hdestination
+  change lookupNatInfo address config.locations = some addressLocation at haddress
+  cases destinationLocation <;> cases addressLocation <;>
+    simp [wordStackCompileLoadNat, wordStackAtomNat, wordStackWritePhysicalNat,
+      wordStackReadRegister, evalWordStackMachine, wordStackJoin,
+      wordStackLocation, wordStackOffset, lookupNatInfo,
+      hdestination, haddress, hscratch] at heval
+  all_goals
+    cases heval
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      haddress] at haddressValue
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      haddress, haddressValue, hdestination, hscratch]
+
 def wordStackValue [NeZero width] (config : WordStackConfig)
     (state : WordStackState width) (name : Nat) : Option (Word width) := do
   let location ← wordStackLocation config name

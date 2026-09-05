@@ -435,6 +435,8 @@ definitions, pass ordering, examples, and proof obligations.
   reusable full `LoopState` frame theorem, with return and loop-control tests.
 - [x] Prove Word expression evaluation is preserved by SSA renaming under an
   explicit register and memory correspondence.
+- [x] Prove Word condition evaluation is preserved by SSA renaming, including
+  immediate and register comparison operands.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [x] Add the terminal return control-result bridge, including mapped state

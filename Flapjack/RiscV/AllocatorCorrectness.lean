@@ -96,4 +96,40 @@ theorem evalWordExp_ssaRename [NeZero width]
           | _ => simp [evalWordExp, wordSsaRenameExp]
       | _ => simp [evalWordExp, wordSsaRenameExp]
 
+theorem evalWordCondition_ssaRename [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (operator : Cmp) (condition : Nat)
+    (rightValue : WordRegImm (Word width)) :
+    evalWordCondition source operator condition rightValue =
+      evalWordCondition target operator (wordSsaRead ssa condition)
+        (wordSsaRenameRegImm ssa rightValue) := by
+  cases rightValue with
+  | imm value =>
+      simp only [evalWordCondition, wordSsaRenameRegImm]
+      cases hcondition : registerOfNat condition <;>
+        cases hcondition' : registerOfNat (wordSsaRead ssa condition) <;>
+        all_goals
+          have hconditionValue := hregister condition
+          simp_all [hcondition, hcondition', hconditionValue,
+            evalWordCondition]
+  | reg right =>
+      simp only [evalWordCondition, wordSsaRenameRegImm]
+      cases hcondition : registerOfNat condition <;>
+        cases hcondition' : registerOfNat (wordSsaRead ssa condition) <;>
+        cases hright : registerOfNat right <;>
+        cases hright' : registerOfNat (wordSsaRead ssa right) <;>
+        all_goals
+          have hconditionValue := hregister condition
+          have hrightValue := hregister right
+          simp_all [hcondition, hcondition', hright, hright',
+            hconditionValue, hrightValue, evalWordCondition,
+            wordSsaRenameRegImm]
+
 end Flapjack

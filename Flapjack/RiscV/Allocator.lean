@@ -517,6 +517,99 @@ def wordAllocateSsaProgram (state : WordSsaState) (program : WordProg α) :
       (wordProgVariables program ++ liveIn) edges).map
     (fun context => (state, program, context))
 
+/-! Apply a completed colouring to the full current Word syntax.  Control
+    labels and function labels are not virtual registers; every data-register
+    position, including nested handlers and loop live sets, is transformed. -/
+
+def wordApplyColourExp (colour : Nat → Nat) : WordExp α → WordExp α
+  | .const value => .const value
+  | .var name => .var (colour name)
+  | .lookup store => .lookup store
+  | .load address => .load (wordApplyColourExp colour address)
+  | .op operator arguments =>
+      .op operator (arguments.map (wordApplyColourExp colour))
+  | .shift operator left right =>
+      .shift operator (wordApplyColourExp colour left)
+        (wordApplyColourExp colour right)
+termination_by expression => sizeOf expression
+decreasing_by all_goals decreasing_trivial
+
+def wordApplyColourRegImm (colour : Nat → Nat) : WordRegImm α → WordRegImm α
+  | .imm value => .imm value
+  | .reg name => .reg (colour name)
+
+def wordApplyColourArith (colour : Nat → Nat) : WordArith → WordArith
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      .longMul (colour destinationLeft) (colour destinationRight)
+        (colour sourceLeft) (colour sourceRight)
+  | .longDiv destinationLeft destinationRight sourceLeft sourceRight quotient =>
+      .longDiv (colour destinationLeft) (colour destinationRight)
+        (colour sourceLeft) (colour sourceRight) (colour quotient)
+  | .addCarry destination resultCarry sourceLeft sourceRight carryIn =>
+      .addCarry (colour destination) (colour resultCarry)
+        (colour sourceLeft) (colour sourceRight) (colour carryIn)
+  | .div destination dividend divisor =>
+      .div (colour destination) (colour dividend) (colour divisor)
+
+def wordApplyColourInst (colour : Nat → Nat) : WordInst → WordInst
+  | .arith operation => .arith (wordApplyColourArith colour operation)
+  | .mem operator destination address =>
+      .mem operator (colour destination) (colour address)
+
+def wordApplyColour (colour : Nat → Nat) : WordProg α → WordProg α
+  | .skip => .skip
+  | .assign name value =>
+      .assign (colour name) (wordApplyColourExp colour value)
+  | .inst instruction => .inst (wordApplyColourInst colour instruction)
+  | .store address value =>
+      .store (wordApplyColourExp colour address) (colour value)
+  | .set store value => .set store (wordApplyColourExp colour value)
+  | .seq first second =>
+      .seq (wordApplyColour colour first) (wordApplyColour colour second)
+  | .ite operator condition right thenBranch elseBranch =>
+      .ite operator (colour condition) (wordApplyColourRegImm colour right)
+        (wordApplyColour colour thenBranch) (wordApplyColour colour elseBranch)
+  | .loop liveIn body liveOut =>
+      .loop (liveIn.map colour) (wordApplyColour colour body) (liveOut.map colour)
+  | .break label => .break label
+  | .continue label => .continue label
+  | .raise exception => .raise (colour exception)
+  | .return label values => .return label (values.map colour)
+  | .tick => .tick
+  | .locValue destination source =>
+      .locValue (colour destination) (colour source)
+  | .call returns target arguments none =>
+      .call (returns.map (fun (values, live) =>
+        (values.map colour, live.map colour))) target (arguments.map colour)
+        none
+  | .call returns target arguments (some (exception, body)) =>
+      .call (returns.map (fun (values, live) =>
+        (values.map colour, live.map colour))) target (arguments.map colour)
+        (some (colour exception, wordApplyColour colour body))
+  | .ffi function configuration configurationLength array arrayLength live =>
+      .ffi function (colour configuration) (colour configurationLength)
+        (colour array) (colour arrayLength) (live.map colour)
+  | .shareInst operator name address =>
+      .shareInst operator (colour name) (wordApplyColourExp colour address)
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+def wordAllocateProgramWithSlotsAndColour (slots : List Nat)
+    (program : WordProg α) : Option (WordContext × WordProg α) :=
+  let (liveIn, edges) := wordProgClashAnalysis program []
+  (wordAllocateContextWithClashes
+      (slots ++ wordProgVariables program ++ liveIn) edges).map
+    (fun context => (context, wordApplyColour (wordFindVar context) program))
+
+theorem wordApplyColour_assign (colour : Nat → Nat) (name source : Nat) :
+    wordApplyColour colour (.assign name (.var source) : WordProg α) =
+      .assign (colour name) (.var (colour source)) := by
+  simp [wordApplyColour, wordApplyColourExp]
+
+theorem wordApplyColour_preserves_control_labels (colour : Nat → Nat) (label : Nat) :
+    wordApplyColour colour (.break label : WordProg α) = .break label := by
+  simp [wordApplyColour]
+
 theorem wordProgClashAnalysis_skip :
     wordProgClashAnalysis (.skip : WordProg α) [] = ([], []) := by
   simp [wordProgClashAnalysis, wordProgReadVars,

@@ -291,6 +291,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add branch-aware Word SSA version reconciliation and tighten program
   clash analysis to write/live interference for the supported control-flow
   fragment.
+- [x] Port recursive Word register-colouring over expressions, instructions,
+  nested handlers, loops, and call metadata, and expose the coloured pipeline
+  boundary.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

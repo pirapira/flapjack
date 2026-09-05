@@ -101,6 +101,21 @@ def pipelineWordFunctionsAllocatedWithAnalysis [OfNat α 1]
       let rest ← pipelineWordFunctionsAllocatedWithAnalysis functions
       pure ((label, wordMapVars context parameters, loopToWordProg context body) :: rest)
 
+/-! Variant that consumes the same analysis boundary but returns the coloured
+    Word program directly.  This is the form expected by the target selector;
+    the context is retained alongside the code for later state-relation proofs. -/
+def pipelineWordFunctionsAllocatedWithAnalysisAndColour [OfNat α 1]
+    : List (Nat × List Nat × LoopProg α) →
+      Option (List (Nat × List Nat × WordProg α))
+  | [] => some []
+  | (label, parameters, body) :: functions => do
+      let slots := loopAccVars body parameters
+      let unallocatedBody := loopToWordProg ({ vars := [] } : WordContext) body
+      let (context, allocatedBody) ←
+        wordAllocateProgramWithSlotsAndColour slots unallocatedBody
+      let rest ← pipelineWordFunctionsAllocatedWithAnalysisAndColour functions
+      pure ((label, wordMapVars context parameters, allocatedBody) :: rest)
+
 theorem lookupNatInfo_map_add_two_of_mem (slots : List Nat) (name : Nat)
     (hname : name ∈ slots) :
     lookupNatInfo name (slots.map (fun value => (value, value + 2))) =

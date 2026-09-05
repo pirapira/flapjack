@@ -218,5 +218,23 @@ example :
   apply evalLoopProg_memory_projection
   rfl
 
+example (result : LoopResult Nat)
+    (heval : evalLoopProg 20 emptyLoopState
+      (.seq (.assign 0 (.const 42)) (.return [0])) = some result) :
+    (loopResultState result).locals 1 = emptyLoopState.locals 1 := by
+  apply evalLoopProg_result_local 1 20 emptyLoopState
+    (.seq (.assign 0 (.const 42)) (.return [0])) result
+  · rfl
+  · exact heval
+
+example (result : LoopResult Nat)
+    (heval : evalLoopProg 20 emptyLoopState
+      (.loop [] (.seq (.assign 0 (.const 42)) (.break 0)) []) = some result) :
+    (loopResultState result).locals 1 = emptyLoopState.locals 1 := by
+  apply evalLoopProg_result_local 1 20 emptyLoopState
+    (.loop [] (.seq (.assign 0 (.const 42)) (.break 0)) []) result
+  · rfl
+  · exact heval
+
 
 end Flapjack

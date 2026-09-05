@@ -706,6 +706,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Prove the one-step Loop local-state projection for programs classified
   as not writing the observed local, including all executable instruction
   forms and control constructors.
+- [x] Lift Loop local-state projection to arbitrary fuel, including sequence
+  and repeat execution, for every successful base-evaluator result.
 - [x] Prove StackRemove fixed-offset stack load/store simulations under
   explicit address-scratch and memory-write invariants.
 - [x] Match CakeML's byte-scaled negative store offsets in StackRemove and

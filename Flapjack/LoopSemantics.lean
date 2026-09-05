@@ -434,6 +434,353 @@ theorem evalLoopProg_one_local_projection [BEq α] [OfNat α 0] [OfNat α 1]
                   simp [evalLoopProg, loopResultState, haddress, hvalue]
   | _ => simp [evalLoopProg, loopResultState, Function.comp_def]
 
+theorem evalLoopProg_result_local [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (name : Nat) (fuel : Nat) (state : LoopState α)
+    (program : LoopProg α) (result : LoopResult α)
+    (hprogram : loopNoLocalWrites name program = true)
+    (heval : evalLoopProg fuel state program = some result) :
+    (loopResultState result).locals name = state.locals name := by
+  induction fuel using Nat.strongRecOn generalizing state program result with
+  | _ fuel ih =>
+      cases fuel with
+      | zero => simp [evalLoopProg] at heval
+      | succ fuel =>
+          cases program with
+          | assign destination value =>
+              have hname : name ≠ destination := by
+                simpa [loopNoLocalWrites] using hprogram
+              cases hvalue : evalLoopExp state value with
+              | none => simp [evalLoopProg, hvalue] at heval
+              | some value =>
+                  simp [evalLoopProg, hvalue] at heval
+                  cases heval
+                  simp [loopResultState, updateLoopLocal, hname]
+          | primitive destinations operator arguments =>
+              simp [evalLoopProg] at heval
+          | arith operation =>
+              cases operation with
+              | longMul left right sourceLeft sourceRight =>
+                  by_cases heq : left = right
+                  · subst right
+                    have hname : name ≠ left := by
+                      simpa [loopNoLocalWrites] using hprogram
+                    cases hleft : state.locals sourceLeft with
+                    | none => simp [evalLoopProg, hleft] at heval
+                    | some leftValue =>
+                        cases hright : state.locals sourceRight with
+                        | none => simp [evalLoopProg, hleft, hright] at heval
+                        | some rightValue =>
+                            simp [evalLoopProg, hleft, hright] at heval
+                            cases heval
+                            simp [loopResultState, updateLoopLocal, hname]
+                  · simp [evalLoopProg, heq] at heval
+              | longDiv destinationLeft destinationRight sourceLeft sourceRight quotient =>
+                  simp [evalLoopProg] at heval
+              | div destination dividend divisor =>
+                  have hname : name ≠ destination := by
+                    simpa [loopNoLocalWrites] using hprogram
+                  cases hdividend : state.locals dividend with
+                  | none => simp [evalLoopProg, hdividend] at heval
+                  | some dividendValue =>
+                      cases hdivisor : state.locals divisor with
+                      | none => simp [evalLoopProg, hdividend, hdivisor] at heval
+                      | some divisorValue =>
+                          by_cases hzero : divisorValue == 0
+                          · simp [evalLoopProg, hdividend, hdivisor, hzero] at heval
+                          · simp [evalLoopProg, hdividend, hdivisor, hzero] at heval
+                            cases heval
+                            simp [loopResultState, updateLoopLocal, hname]
+          | load32 address destination =>
+              have hname : name ≠ destination := by
+                simpa [loopNoLocalWrites] using hprogram
+              cases haddress : state.locals address with
+              | none => simp [evalLoopProg, haddress] at heval
+              | some addressValue =>
+                  cases hvalue : state.memory addressValue with
+                  | none => simp [evalLoopProg, haddress, hvalue] at heval
+                  | some value =>
+                      simp [evalLoopProg, haddress, hvalue] at heval
+                      cases heval
+                      simp [loopResultState, updateLoopLocal, hname]
+          | loadByte address destination =>
+              have hname : name ≠ destination := by
+                simpa [loopNoLocalWrites] using hprogram
+              cases haddress : state.locals address with
+              | none => simp [evalLoopProg, haddress] at heval
+              | some addressValue =>
+                  cases hvalue : state.memory addressValue with
+                  | none => simp [evalLoopProg, haddress, hvalue] at heval
+                  | some value =>
+                      simp [evalLoopProg, haddress, hvalue] at heval
+                      cases heval
+                      simp [loopResultState, updateLoopLocal, hname]
+          | seq first second =>
+              have hseq : loopNoLocalWrites name first = true ∧
+                  loopNoLocalWrites name second = true := by
+                simpa [loopNoLocalWrites] using hprogram
+              cases hfirstEval : evalLoopProg fuel state first with
+              | none => simp [evalLoopProg, hfirstEval] at heval
+              | some firstResult =>
+                  cases firstResult with
+                  | normal middleState =>
+                      have hfirst := ih fuel (by omega) state first
+                        (.normal middleState) hseq.1 hfirstEval
+                      have hsecondEval :
+                          evalLoopProg fuel middleState second = some result := by
+                        simpa [evalLoopProg, hfirstEval] using heval
+                      have hsecond := ih fuel (by omega) middleState second
+                        result hseq.2 hsecondEval
+                      have hmiddle : middleState.locals name = state.locals name := by
+                        simpa [loopResultState] using hfirst
+                      exact hsecond.trans hmiddle
+                  | returned middleState values =>
+                      have hfirst := ih fuel (by omega) state first
+                        (.returned middleState values) hseq.1 hfirstEval
+                      simp [evalLoopProg, hfirstEval] at heval
+                      cases heval
+                      simpa [loopResultState] using hfirst
+                  | broke middleState label =>
+                      have hfirst := ih fuel (by omega) state first
+                        (.broke middleState label) hseq.1 hfirstEval
+                      simp [evalLoopProg, hfirstEval] at heval
+                      cases heval
+                      simpa [loopResultState] using hfirst
+                  | continued middleState label =>
+                      have hfirst := ih fuel (by omega) state first
+                        (.continued middleState label) hseq.1 hfirstEval
+                      simp [evalLoopProg, hfirstEval] at heval
+                      cases heval
+                      simpa [loopResultState] using hfirst
+                  | raised middleState exception =>
+                      have hfirst := ih fuel (by omega) state first
+                        (.raised middleState exception) hseq.1 hfirstEval
+                      simp [evalLoopProg, hfirstEval] at heval
+                      cases heval
+                      simpa [loopResultState] using hfirst
+          | ite operator condition right thenBranch elseBranch live =>
+              have hbranches : loopNoLocalWrites name thenBranch = true ∧
+                  loopNoLocalWrites name elseBranch = true := by
+                simpa [loopNoLocalWrites] using hprogram
+              cases right with
+              | imm rightValue =>
+                  cases hleft : state.locals condition with
+                  | none => simp [evalLoopProg, hleft] at heval
+                  | some leftValue =>
+                      cases hchoose : evalLoopCondition operator leftValue rightValue with
+                      | none => simp [evalLoopProg, hleft, hchoose] at heval
+                      | some choose =>
+                          cases choose with
+                          | false =>
+                              have hbranchEval :
+                                  evalLoopProg fuel state elseBranch = some result := by
+                                simpa [evalLoopProg, hleft, hchoose] using heval
+                              exact ih fuel (by omega) state elseBranch result
+                                hbranches.2 hbranchEval
+                          | true =>
+                              have hbranchEval :
+                                  evalLoopProg fuel state thenBranch = some result := by
+                                simpa [evalLoopProg, hleft, hchoose] using heval
+                              exact ih fuel (by omega) state thenBranch result
+                                hbranches.1 hbranchEval
+              | reg conditionRight =>
+                  cases hleft : state.locals condition with
+                  | none => simp [evalLoopProg, hleft] at heval
+                  | some leftValue =>
+                      cases hright : state.locals conditionRight with
+                      | none => simp [evalLoopProg, hleft, hright] at heval
+                      | some rightValue =>
+                          cases hchoose : evalLoopCondition operator leftValue rightValue with
+                          | none => simp [evalLoopProg, hleft, hright, hchoose] at heval
+                          | some choose =>
+                              cases choose with
+                              | false =>
+                                  have hbranchEval :
+                                      evalLoopProg fuel state elseBranch = some result := by
+                                    simpa [evalLoopProg, hleft, hright, hchoose] using heval
+                                  exact ih fuel (by omega) state elseBranch result
+                                    hbranches.2 hbranchEval
+                              | true =>
+                                  have hbranchEval :
+                                      evalLoopProg fuel state thenBranch = some result := by
+                                    simpa [evalLoopProg, hleft, hright, hchoose] using heval
+                                  exact ih fuel (by omega) state thenBranch result
+                                    hbranches.1 hbranchEval
+          | loop liveIn body liveOut =>
+              have hbody : loopNoLocalWrites name body = true := by
+                simpa [loopNoLocalWrites] using hprogram
+              have repeatInvariant : ∀ (bound : Nat), bound ≤ fuel →
+                  ∀ (repeatState : LoopState α)
+                  (repeatResult : LoopResult α),
+                  evalLoopRepeat bound repeatState body = some repeatResult →
+                    (loopResultState repeatResult).locals name =
+                      repeatState.locals name := by
+                intro bound
+                induction bound using Nat.strongRecOn with
+                | _ bound ihRepeat =>
+                    intro hbound repeatState repeatResult hrepeat
+                    cases bound with
+                    | zero => simp [evalLoopRepeat] at hrepeat
+                    | succ bound =>
+                        cases hbodyEval : evalLoopProg bound repeatState body with
+                        | none => simp [evalLoopRepeat, hbodyEval] at hrepeat
+                        | some bodyResult =>
+                            have hbodyLocal := ih (bound) (by omega) repeatState body
+                              bodyResult hbody hbodyEval
+                            cases bodyResult with
+                            | normal middleState =>
+                                have hnext := ihRepeat bound (by omega) (by omega)
+                                  middleState repeatResult (by
+                                    simpa [evalLoopRepeat, hbodyEval] using hrepeat)
+                                have hmiddle : middleState.locals name =
+                                    repeatState.locals name := by
+                                  simpa [loopResultState] using hbodyLocal
+                                exact hnext.trans hmiddle
+                            | returned middleState values =>
+                                simp [evalLoopRepeat, hbodyEval] at hrepeat
+                                cases hrepeat
+                                simpa [loopResultState] using hbodyLocal
+                            | broke middleState label =>
+                                cases label with
+                                | zero =>
+                                    simp [evalLoopRepeat, hbodyEval] at hrepeat
+                                    cases hrepeat
+                                    simpa [loopResultState] using hbodyLocal
+                                | succ label =>
+                                    simp [evalLoopRepeat, hbodyEval] at hrepeat
+                                    cases hrepeat
+                                    simpa [loopResultState] using hbodyLocal
+                            | continued middleState label =>
+                                cases label with
+                                | zero =>
+                                    have hnext := ihRepeat bound (by omega) (by omega)
+                                      middleState repeatResult (by
+                                        simpa [evalLoopRepeat, hbodyEval] using hrepeat)
+                                    have hmiddle : middleState.locals name =
+                                        repeatState.locals name := by
+                                      simpa [loopResultState] using hbodyLocal
+                                    exact hnext.trans hmiddle
+                                | succ label =>
+                                    simp [evalLoopRepeat, hbodyEval] at hrepeat
+                                    cases hrepeat
+                                    simpa [loopResultState] using hbodyLocal
+                            | raised middleState exception =>
+                                simp [evalLoopRepeat, hbodyEval] at hrepeat
+                                cases hrepeat
+                                simpa [loopResultState] using hbodyLocal
+              have hrepeat : evalLoopRepeat fuel state body = some result := by
+                simpa [evalLoopProg] using heval
+              exact repeatInvariant fuel (by omega) state result hrepeat
+          | mark body =>
+              have hbody : loopNoLocalWrites name body = true := by
+                simpa [loopNoLocalWrites] using hprogram
+              exact ih fuel (by omega) state body result hbody (by
+                simpa [evalLoopProg] using heval)
+          | locValue destination source =>
+              have hname : name ≠ destination := by
+                simpa [loopNoLocalWrites] using hprogram
+              cases hvalue : state.locals source with
+              | none => simp [evalLoopProg, hvalue] at heval
+              | some value =>
+                  simp [evalLoopProg, hvalue] at heval
+                  cases heval
+                  simp [loopResultState, updateLoopLocal, hname]
+          | shMem operator destination address =>
+              cases operator with
+              | load | load8 | load16 | load32 =>
+                  have hname : name ≠ destination := by
+                    simpa [loopNoLocalWrites] using hprogram
+                  cases haddress : evalLoopExp state address with
+                  | none => simp [evalLoopProg, haddress] at heval
+                  | some addressValue =>
+                      cases hvalue : state.memory addressValue with
+                      | none => simp [evalLoopProg, haddress, hvalue] at heval
+                      | some value =>
+                          simp [evalLoopProg, haddress, hvalue] at heval
+                          cases heval
+                          simp [loopResultState, updateLoopLocal, hname]
+              | store | store8 | store16 | store32 =>
+                  cases haddress : evalLoopExp state address with
+                  | none => simp [evalLoopProg, haddress] at heval
+                  | some addressValue =>
+                      cases hvalue : state.locals destination with
+                      | none => simp [evalLoopProg, haddress, hvalue] at heval
+                      | some value =>
+                          simp [evalLoopProg, haddress, hvalue] at heval
+                          cases heval
+                          rfl
+          | skip =>
+              simp [evalLoopProg] at heval
+              cases heval
+              rfl
+          | store address value =>
+              cases haddress : evalLoopExp state address with
+              | none => simp [evalLoopProg, haddress] at heval
+              | some addressValue =>
+                  cases hvalue : state.locals value with
+                  | none => simp [evalLoopProg, haddress, hvalue] at heval
+                  | some value =>
+                      simp [evalLoopProg, haddress, hvalue] at heval
+                      cases heval
+                      rfl
+          | setGlobal address value =>
+              cases hvalue : evalLoopExp state value with
+              | none => simp [evalLoopProg, hvalue] at heval
+              | some value =>
+                  simp [evalLoopProg, hvalue] at heval
+                  cases heval
+                  rfl
+          | store32 address value =>
+              cases haddress : state.locals address with
+              | none => simp [evalLoopProg, haddress] at heval
+              | some addressValue =>
+                  cases hvalue : state.locals value with
+                  | none => simp [evalLoopProg, haddress, hvalue] at heval
+                  | some value =>
+                      simp [evalLoopProg, haddress, hvalue] at heval
+                      cases heval
+                      rfl
+          | storeByte address value =>
+              cases haddress : state.locals address with
+              | none => simp [evalLoopProg, haddress] at heval
+              | some addressValue =>
+                  cases hvalue : state.locals value with
+                  | none => simp [evalLoopProg, haddress, hvalue] at heval
+                  | some value =>
+                      simp [evalLoopProg, haddress, hvalue] at heval
+                      cases heval
+                      rfl
+          | «break» label =>
+              simp [evalLoopProg] at heval
+              cases heval
+              rfl
+          | «continue» label =>
+              simp [evalLoopProg] at heval
+              cases heval
+              rfl
+          | «raise» exception =>
+              cases hexception : state.locals exception with
+              | none => simp [evalLoopProg, hexception] at heval
+              | some exceptionValue =>
+                  simp [evalLoopProg, hexception] at heval
+                  cases heval
+                  rfl
+          | «return» values =>
+              cases hvalues : loopReadLocals state.locals values with
+              | none => simp [evalLoopProg, hvalues] at heval
+              | some values =>
+                  simp [evalLoopProg, hvalues] at heval
+                  cases heval
+                  rfl
+          | «tick» =>
+              simp [evalLoopProg] at heval
+              cases heval
+              rfl
+          | _ =>
+              simp [evalLoopProg] at heval
+
 /-!
 At one unit of fuel, every executable Loop instruction either leaves the
 global map unchanged or produces no result.  The syntactic side condition

@@ -1,4 +1,6 @@
 import Flapjack.Language
+import Flapjack.Ffi
+import Flapjack.LoopFfi
 import Flapjack.PanSimp
 import Flapjack.PanStructs
 import Flapjack.PanGlobals

@@ -33,6 +33,7 @@ import Flapjack.Test.CorrectnessTarget
 import Flapjack.Test.CrepCalls
 import Flapjack.Test.CrepeSemantics
 import Flapjack.Test.Ffi
+import Flapjack.Test.LoopFfi
 import Flapjack.Test.Stack
 import Flapjack.Test.Lab
 import Flapjack.Test.RiscVLab

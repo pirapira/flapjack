@@ -1,6 +1,55 @@
 import Flapjack.RiscV.Link
+import Flapjack.Ffi
 
 namespace Flapjack
+
+def identityFfiOracle : FfiOracle Unit :=
+  fun _ state _ bytes => .returned state bytes
+
+def identityFfiState : FfiState Unit :=
+  { oracle := identityFfiOracle, state := (), ioEvents := [] }
+
+example :
+    match callFfi identityFfiState (.extCall "echo") [1, 2] [3, 4] with
+    | .returned state bytes =>
+        bytes = [3, 4] ∧ state.state = () ∧
+          state.ioEvents =
+            [{ name := .extCall "echo", configuration := [1, 2],
+               bytes := [(3, 3), (4, 4)] }]
+    | .final _ => False := by
+  simp [callFfi, identityFfiState, identityFfiOracle]
+
+def shortFfiOracle : FfiOracle Unit :=
+  fun _ state _ _ => .returned state [7]
+
+example :
+    match callFfi { identityFfiState with oracle := shortFfiOracle }
+      (.extCall "echo") [1, 2] [3, 4] with
+    | .final event =>
+        event =
+          { name := .extCall "echo", configuration := [1, 2], bytes := [3, 4],
+            outcome := .failed }
+    | .returned _ _ => False := by
+  simp [callFfi, identityFfiState, shortFfiOracle]
+
+def finalFfiOracle : FfiOracle Unit :=
+  fun _ _ _ _ => .final .diverged
+
+example :
+    match callFfi { identityFfiState with oracle := finalFfiOracle }
+      (.extCall "echo") [1] [2] with
+    | .final event =>
+        event =
+          { name := .extCall "echo", configuration := [1], bytes := [2],
+            outcome := .diverged }
+    | .returned _ _ => False := by
+  simp [callFfi, identityFfiState, finalFfiOracle]
+
+example :
+    match callFfi identityFfiState (.extCall "") [1] [2, 3] with
+    | .returned state bytes => bytes = [2, 3] ∧ state.ioEvents = []
+    | .final _ => False := by
+  simp [callFfi, identityFfiState]
 
 open RiscV
 

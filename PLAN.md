@@ -148,6 +148,12 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port a fuel-bounded observable Crepe evaluator with CakeML-style code,
   globals, memory domains, clock timeout, calls, handlers, and `FinalFFI`
   propagation, with executable boundary regressions.
+- [x] Port CakeML's byte-level FFI oracle/state/result boundary, including
+  observable input/output events, length-failure handling, terminal outcomes,
+  and the empty external-call identity case.
+- [x] Port the Loop-side byte-array FFI boundary for mapped shared memory and
+  external calls, including endian-aware decoding, memory-domain checks,
+  host-state/event updates, and `FinalFFI` propagation.
 - [x] Prove the first environment-sensitive source-to-full-Crepe agreement
   for a local assignment followed by a compiled slot return.
 - [x] Prove the first environment-sensitive source-to-full-Crepe agreement

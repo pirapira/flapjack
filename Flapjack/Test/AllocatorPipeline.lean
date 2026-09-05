@@ -42,4 +42,14 @@ example [OfNat α 1] :
     wordApplyColour, wordApplyColourExp, wordMapVars, lookupNatInfo,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
 
+example [NeZero width] :
+    pipelineWordFunctionsAllocatedWithSpills
+      ([] : List (Nat × List Nat × LoopProg (RiscV.Word width))) = some [] := by
+  rfl
+
+example :
+    (pipelineWordFunctionsAllocatedWithSpills
+      [(0, [0], (.assign 1 (.var 0) : LoopProg (RiscV.Word 64))) ]).isSome := by
+  native_decide
+
 end Flapjack

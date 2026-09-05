@@ -332,6 +332,8 @@ definitions, pass ordering, examples, and proof obligations.
   rewriting remains a separate backend pass.
 - [x] Expose an SSA-driven spill allocation boundary that derives spill
   locations from the renamed Word program and its analysed clash graph.
+- [x] Wire the available SSA/spill allocation and concrete locations into the
+  allocated RISC-V entry points; the full CakeML allocator remains separate.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

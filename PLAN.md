@@ -404,6 +404,8 @@ definitions, pass ordering, examples, and proof obligations.
   model, Word IR, selector, evaluator, and executable round-trip regression.
 - [x] Port CakeML flat-memory byte and aligned 32-bit load/store operations
   over RISC-V word cells, with little-endian and alignment regressions.
+- [x] Extend the RISC-V flat source evaluator with size-aware shared-memory
+  loads and stores for words, bytes, halfwords, and aligned 32-bit values.
 - [x] Prove model-level register agreements for unsigned RISC-V division and
   remainder, including the HOL/RISC-V zero-divisor results.
 - [x] Prove the AddCarry lowering preserves non-result registers outside its

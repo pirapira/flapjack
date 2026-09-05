@@ -64,6 +64,17 @@ def panRiscVRead32 [NeZero width]
         256 ^ 2 * byte2.toNat + 256 ^ 3 * byte3.toNat))
   else none
 
+def panRiscVRead16 [NeZero width]
+    (domain : PanMemoryDomain (Word width))
+    (memory : PanFlatMemory (Word width))
+    (bytesInWord address : Word width) : Option (Word width) :=
+  if aligned address 2 then do
+    let byte0 ← panRiscVReadByte domain memory bytesInWord address
+    let byte1 ← panRiscVReadByte domain memory bytesInWord
+      (byteAddress address 1)
+    pure (BitVec.ofNat width (byte0.toNat + 256 * byte1.toNat))
+  else none
+
 def panRiscVStoreByte [NeZero width]
     (domain : PanMemoryDomain (Word width))
     (memory : PanFlatMemory (Word width))
@@ -94,6 +105,56 @@ def panRiscVStore32 [NeZero width]
     panRiscVStoreByte domain memory bytesInWord
       (byteAddress address 3) byte3
   else none
+
+def panRiscVStore16 [NeZero width]
+    (domain : PanMemoryDomain (Word width))
+    (memory : PanFlatMemory (Word width))
+    (bytesInWord address value : Word width) :
+    Option (PanFlatMemory (Word width)) :=
+  if aligned address 2 then
+    let byte0 := BitVec.ofNat width (value.toNat % 256)
+    let byte1 := BitVec.ofNat width (value.toNat / 256 % 256)
+    do
+      let memory ← panRiscVStoreByte domain memory bytesInWord address byte0
+      panRiscVStoreByte domain memory bytesInWord
+        (byteAddress address 1) byte1
+  else none
+
+def panRiscVReadWord [NeZero width]
+    (domain : PanMemoryDomain (Word width))
+    (memory : PanFlatMemory (Word width))
+    (address : Word width) : Option (Word width) :=
+  if domain address then memory address else none
+
+def panRiscVStoreWord [NeZero width]
+    (domain : PanMemoryDomain (Word width))
+    (memory : PanFlatMemory (Word width))
+    (address value : Word width) : Option (PanFlatMemory (Word width)) :=
+  if domain address then some (updatePanValueMap memory address value) else none
+
+def panRiscVReadShared [NeZero width]
+    (size : OpSize)
+    (domain : PanMemoryDomain (Word width))
+    (memory : PanFlatMemory (Word width))
+    (bytesInWord address : Word width) : Option (Word width) :=
+  match size with
+  | .op8 => panRiscVReadByte domain memory bytesInWord address
+  | .opW => panRiscVReadWord domain memory address
+  | .op32 => panRiscVRead32 domain memory bytesInWord address
+  | .op16 => panRiscVRead16 domain memory bytesInWord address
+
+def panRiscVStoreShared [NeZero width]
+    (size : OpSize)
+    (domain : PanMemoryDomain (Word width))
+    (memory : PanFlatMemory (Word width))
+    (bytesInWord address value : Word width) :
+    Option (PanFlatMemory (Word width)) :=
+  match size with
+  | .op8 =>
+      panRiscVStoreByte domain memory bytesInWord address value
+  | .opW => panRiscVStoreWord domain memory address value
+  | .op32 => panRiscVStore32 domain memory bytesInWord address value
+  | .op16 => panRiscVStore16 domain memory bytesInWord address value
 
 def evalPanRiscVFlatExp [NeZero width]
     (structs : StructContext)
@@ -268,6 +329,23 @@ def evalPanRiscVFlatProg [NeZero width]
       let .word address := address | none
       let .word value := value | none
       let memory ← panRiscVStoreByte domain memory bytesInWord address value
+      pure (locals, globals, memory, [])
+  | .shMemLoad size kind name address => do
+      let address ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord address
+      let .word address := address | none
+      let value ← panRiscVReadShared size domain memory bytesInWord address
+      match kind with
+      | .local => pure (updatePanValueMap locals name (.word value), globals, memory, [])
+      | .global => pure (locals, updatePanValueMap globals name (.word value), memory, [])
+  | .shMemStore size address value => do
+      let address ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord address
+      let value ← evalPanRiscVFlatExp structs locals globals domain memory
+        baseAddress topAddress bytesInWord value
+      let .word address := address | none
+      let .word value := value | none
+      let memory ← panRiscVStoreShared size domain memory bytesInWord address value
       pure (locals, globals, memory, [])
   | .seq first second => do
       let result ← evalPanRiscVFlatProg structs baseAddress topAddress bytesInWord

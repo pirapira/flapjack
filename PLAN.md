@@ -632,6 +632,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Prove the generated RISC-V FFI ABI move/`ECALL` sequence agrees with the
   abstract Word FFI handler under explicit non-clobber and service-width
   contracts.
+- [x] Lift the generated FFI ABI agreement through the call-aware WordProg
+  compiler entry point and its fuel-bounded handler-aware evaluator.
 - [x] Prove the ordinary single-parameter Loop-to-Word call boundary, including
   singleton result assignment and rejection of incompatible result arities.
 - [x] Port the initial StackLang store-removal slice for fixed stores,

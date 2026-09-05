@@ -43,4 +43,19 @@ example :
   all_goals try native_decide
   simp [ffiMachineHost, ffiMachineWordHandler]
 
+example :
+    (wordFunctionToRiscVWithCallsAndFfi
+      ({ targets := [], services := [("echo", 7)] } : WordCallFfiContext 64)
+      (.ffi "echo" 2 3 4 5 [])).bind (fun result =>
+        (executeInstructionsWithFfi ffiMachineHost ffiMachineState result.1).map
+          (fun final => (final, ([] : List (Word 64))))) =
+      evalWordFunctionWithCallsAndFfi [] ffiMachineWordHandler 1 ffiMachineState
+        (.ffi "echo" 2 3 4 5 []) := by
+  apply wordFunctionToRiscVWithCallsAndFfi_ffi_simulation
+    ({ services := [("echo", 7)] } : WordFfiContext)
+    ffiMachineHost ffiMachineWordHandler ffiMachineState "echo"
+    2 3 4 5 7 2 3 4 5
+  all_goals try native_decide
+  simp [ffiMachineHost, ffiMachineWordHandler]
+
 end Flapjack.RiscV

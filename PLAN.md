@@ -470,6 +470,8 @@ definitions, pass ordering, examples, and proof obligations.
   modules as the source-memory adapter grew.
 - [x] Prove a pass-composed Crepe/flat-source structured store/load
   correctness bridge for flattened record payloads.
+- [x] Prove a one-step Loop-to-Word FFI simulation theorem under an explicit
+  RISC-V host-handler agreement, with a concrete register-mapped regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

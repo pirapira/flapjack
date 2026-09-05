@@ -19,6 +19,7 @@ import Flapjack.RiscV.PanSemantics
 import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Calls
+import Flapjack.RiscV.CorrectnessFfi
 import Flapjack.RiscV.Link
 import Flapjack.WordSemantics
 import Flapjack.Loop

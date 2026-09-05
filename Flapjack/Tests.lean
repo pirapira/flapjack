@@ -8,7 +8,9 @@ import Flapjack.Test.Loops
 import Flapjack.Test.Primitive
 import Flapjack.Test.Allocator
 import Flapjack.RiscV.Correctness
+import Flapjack.RiscV.CorrectnessFfi
 import Flapjack.Test.Structured
+import Flapjack.Test.CorrectnessFfi
 
 /-!
 # Flapjack regression tests

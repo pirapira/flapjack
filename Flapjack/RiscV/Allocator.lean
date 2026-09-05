@@ -227,12 +227,95 @@ def wordAllocateLinearInstructions (instructions : List WordInst) :
   wordAllocateContextWithClashes
     (wordLinearVariables instructions ++ liveIn) edges
 
+/-! Straight-line SSA renaming.  Each write receives a fresh virtual name;
+reads use the latest name for their source variable.  This mirrors the
+single-block part of CakeML's `ssa_cc_trans_inst` and keeps the renaming state
+explicit so branch reconciliation can be added without changing the API. -/
+
+structure WordSsaState where
+  current : NatInfoMap Nat
+  next : Nat
+  deriving Repr
+
+def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
+  match lookupNatInfo name state.current with
+  | some value => value
+  | none => name
+
+def wordSsaFresh (state : WordSsaState) (name : Nat) : WordSsaState × Nat :=
+  ({ current := (name, state.next) :: state.current, next := state.next + 1 },
+    state.next)
+
+def wordSsaRenameInst (state : WordSsaState) : WordInst → WordSsaState × WordInst
+  | .arith operation =>
+      match operation with
+      | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+          let sourceLeft := wordSsaRead state sourceLeft
+          let sourceRight := wordSsaRead state sourceRight
+          let (state, freshLeft) := wordSsaFresh state destinationLeft
+          let (state, freshRight) := wordSsaFresh state destinationRight
+          (state, .arith (.longMul freshLeft freshRight
+            sourceLeft sourceRight))
+      | .longDiv destinationLeft destinationRight sourceLeft sourceRight quotient =>
+          let sourceLeft := wordSsaRead state sourceLeft
+          let sourceRight := wordSsaRead state sourceRight
+          let quotient := wordSsaRead state quotient
+          let (state, freshLeft) := wordSsaFresh state destinationLeft
+          let (state, freshRight) := wordSsaFresh state destinationRight
+          (state, .arith (.longDiv freshLeft freshRight
+            sourceLeft sourceRight quotient))
+      | .addCarry destination resultCarry sourceLeft sourceRight carryIn =>
+          let sourceLeft := wordSsaRead state sourceLeft
+          let sourceRight := wordSsaRead state sourceRight
+          let carryIn := wordSsaRead state carryIn
+          let (state, freshDestination) := wordSsaFresh state destination
+          let (state, freshCarry) := wordSsaFresh state resultCarry
+          (state, .arith (.addCarry freshDestination freshCarry
+            sourceLeft sourceRight carryIn))
+      | .div destination dividend divisor =>
+          let dividend := wordSsaRead state dividend
+          let divisor := wordSsaRead state divisor
+          let (state, freshDestination) := wordSsaFresh state destination
+          (state, .arith (.div freshDestination dividend divisor))
+  | .mem operator destination address =>
+      let address := wordSsaRead state address
+      match operator with
+      | .load | .load8 | .load16 | .load32 =>
+          let (state, freshDestination) := wordSsaFresh state destination
+          (state, .mem operator freshDestination address)
+      | .store | .store8 | .store16 | .store32 =>
+          (state, .mem operator (wordSsaRead state destination) address)
+
+def wordSsaRenameLinear (state : WordSsaState) : List WordInst →
+    WordSsaState × List WordInst
+  | [] => (state, [])
+  | instruction :: instructions =>
+      let (state, instruction) := wordSsaRenameInst state instruction
+      let (state, instructions) := wordSsaRenameLinear state instructions
+      (state, instruction :: instructions)
+
+def wordAllocateSsaLinear (state : WordSsaState) (instructions : List WordInst) :
+    Option (WordSsaState × List WordInst × WordContext) :=
+  let (state, instructions) := wordSsaRenameLinear state instructions
+  (wordAllocateLinearInstructions instructions).map
+    (fun context => (state, instructions, context))
+
 theorem wordLinearClashAnalysis_empty (liveOut : List Nat) :
     wordLinearClashAnalysis [] liveOut = (liveOut, []) := by
   rfl
 
 theorem wordInstVars_addCarry :
     wordInstVars (.arith (.addCarry 1 2 3 4 5)) = [3, 4, 5, 1, 2] := by
+  rfl
+
+theorem wordSsaRenameLinear_addCarry :
+    wordSsaRenameLinear
+        { current := [(2, 100), (3, 101), (4, 102)], next := 200 }
+        [.arith (.addCarry 0 1 2 3 4), .arith (.addCarry 5 6 0 1 2)] =
+      ({ current := [(6, 203), (5, 202), (1, 201), (0, 200),
+          (2, 100), (3, 101), (4, 102)], next := 204 },
+        [.arith (.addCarry 200 201 100 101 102),
+          .arith (.addCarry 202 203 200 201 100)]) := by
   rfl
 
 theorem wordAllocateLinearInstructions_example :

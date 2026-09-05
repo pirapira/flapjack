@@ -33,6 +33,16 @@ example :
       some { vars := [(6, 8), (5, 7), (1, 3), (0, 2), (4, 6), (3, 5), (2, 4)] } := by
   exact wordAllocateLinearInstructions_example
 
+example :
+    wordSsaRenameLinear
+        { current := [(2, 100), (3, 101), (4, 102)], next := 200 }
+        [.arith (.addCarry 0 1 2 3 4), .arith (.addCarry 5 6 0 1 2)] =
+      ({ current := [(6, 203), (5, 202), (1, 201), (0, 200),
+          (2, 100), (3, 101), (4, 102)], next := 204 },
+        [.arith (.addCarry 200 201 100 101 102),
+          .arith (.addCarry 202 203 200 201 100)]) := by
+  exact wordSsaRenameLinear_addCarry
+
 example (slots : List Nat) (edges : List (Nat × Nat))
     (colouring : NatInfoMap Nat)
     (hcolouring : wordAllocateVarsWithClashes slots edges = some colouring) :

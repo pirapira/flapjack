@@ -282,6 +282,8 @@ definitions, pass ordering, examples, and proof obligations.
   preferred-register-aware greedy colouring boundary for Word variables.
 - [x] Add straight-line Word liveness and clash construction feeding the
   executable colouring boundary.
+- [x] Add straight-line SSA renaming for Word writes and reads, including
+  multi-result arithmetic instructions.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

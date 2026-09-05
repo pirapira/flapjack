@@ -284,6 +284,9 @@ definitions, pass ordering, examples, and proof obligations.
   executable colouring boundary.
 - [x] Add straight-line SSA renaming for Word writes and reads, including
   multi-result arithmetic instructions.
+- [x] Extend straight-line Word SSA through memory operations, `locValue`,
+  returns, exceptions, FFI arguments, and handler-free call metadata, while
+  matching liveness reads and writes to those data-flow conventions.
 - [x] Feed actual WordProg sequencing into backwards liveness and conservative
   control-flow clash construction.
 - [x] Expose a program-analysis-driven Word pipeline allocation boundary for

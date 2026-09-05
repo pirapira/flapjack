@@ -246,6 +246,25 @@ def wordSsaFresh (state : WordSsaState) (name : Nat) : WordSsaState × Nat :=
   ({ current := (name, state.next) :: state.current, next := state.next + 1 },
     state.next)
 
+def wordSsaFreshList (state : WordSsaState) : List Nat →
+    WordSsaState × List Nat
+  | [] => (state, [])
+  | name :: names =>
+      let (state, freshName) := wordSsaFresh state name
+      let (state, freshNames) := wordSsaFreshList state names
+      (state, freshName :: freshNames)
+termination_by names => sizeOf names
+decreasing_by all_goals decreasing_trivial
+
+def wordSsaRenameReturns (state : WordSsaState) :
+    Option (List Nat × List Nat) →
+      WordSsaState × Option (List Nat × List Nat)
+  | none => (state, none)
+  | some (destinations, live) =>
+      let live := live.map (wordSsaRead state)
+      let (state, destinations) := wordSsaFreshList state destinations
+      (state, some (destinations, live))
+
 def wordSsaRenameInst (state : WordSsaState) : WordInst → WordSsaState × WordInst
   | .arith operation =>
       match operation with
@@ -370,6 +389,35 @@ def wordSsaRenameProgram (state : WordSsaState) : WordProg α →
       let (state, first) := wordSsaRenameProgram state first
       let (state, second) := wordSsaRenameProgram state second
       (state, .seq first second)
+  | .store address value =>
+      (state, .store (wordSsaRenameExp state address) (wordSsaRead state value))
+  | .set store value =>
+      (state, .set store (wordSsaRenameExp state value))
+  | .raise exception =>
+      (state, .raise (wordSsaRead state exception))
+  | .return label values =>
+      (state, .return label (values.map (wordSsaRead state)))
+  | .tick => (state, .tick)
+  | .locValue destination source =>
+      let source := wordSsaRead state source
+      let (state, destination) := wordSsaFresh state destination
+      (state, .locValue destination source)
+  | .ffi function configuration configurationLength array arrayLength live =>
+      (state, .ffi function (wordSsaRead state configuration)
+        (wordSsaRead state configurationLength) (wordSsaRead state array)
+        (wordSsaRead state arrayLength) (live.map (wordSsaRead state)))
+  | .shareInst operator name address =>
+      let address := wordSsaRenameExp state address
+      match operator with
+      | .load | .load8 | .load16 | .load32 =>
+          let (state, name) := wordSsaFresh state name
+          (state, .shareInst operator name address)
+      | .store | .store8 | .store16 | .store32 =>
+          (state, .shareInst operator (wordSsaRead state name) address)
+  | .call returns target arguments none =>
+      let arguments := arguments.map (wordSsaRead state)
+      let (state, returns) := wordSsaRenameReturns state returns
+      (state, .call returns target arguments none)
   | .ite operator condition right thenBranch elseBranch =>
       let right := wordSsaRenameRegImm state right
       let (thenState, thenBranch) := wordSsaRenameProgram state thenBranch
@@ -421,17 +469,18 @@ def wordProgReadVars : WordProg α → List Nat
         wordProgReadVars thenBranch ++ wordProgReadVars elseBranch
   | .loop liveIn body liveOut =>
       liveIn ++ wordProgReadVars body ++ liveOut
-  | .break _ | .continue _ | .raise _ => []
+  | .break _ | .continue _ => []
+  | .raise exception => [exception]
   | .return _ values => values
   | .tick => []
   | .locValue _ source => [source]
   | .call returns _ arguments handler =>
       arguments ++ (match returns with
         | none => []
-        | some (values, live) => values ++ live) ++
+        | some (_, live) => live) ++
         (match handler with
         | none => []
-        | some (exception, body) => exception :: wordProgReadVars body)
+        | some (_, body) => wordProgReadVars body)
   | .ffi _ configuration configurationLength array arrayLength live =>
       [configuration, configurationLength, array, arrayLength] ++ live
   | .shareInst operator name address =>

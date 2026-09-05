@@ -389,6 +389,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Prove abstract Stack-machine preservation for lowered shared-memory
   loads and stores, including spilled operands and scratch-register alias
   conditions.
+- [x] Prove Stack-machine preservation for concrete Word store lookups and
+  updates, including spilled source materialization.
 - [x] Extend the Word-to-Stack boundary through conditions, loops, returns,
   calls, exception handlers, special stores, and FFI operations.
 - [x] Marshal Word-to-Stack FFI arguments into the x10--x13 ABI registers,

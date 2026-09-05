@@ -797,6 +797,47 @@ example [NeZero width]
     (hsafe := by simp [config, wordStackStoreLocationsSafe])
     (by simpa [config] using heval)
 
+example [NeZero width]
+    (state final : WordStackMachineState width)
+    (heval : (wordStackCompileExpNat
+        { locations := [(0, .register 4)], scratch := 31, stackBase := 10 }
+        0 (.lookup .currHeap)).bind
+        (evalWordStackMachine state) = some final) :
+    wordStackMachineValue
+        { locations := [(0, .register 4)], scratch := 31, stackBase := 10 }
+        final 0 = some (state.stores .currHeap) := by
+  let config : WordStackConfig :=
+    { locations := [(0, .register 4)], scratch := 31, stackBase := 10 }
+  exact evalWordStackMachine_lookup_assignment
+    (config := config) (state := state) (final := final)
+    (destination := 0) (store := .currHeap) (stackStore := .currHeap)
+    (destinationLocation := .register 4)
+    (hdestination := by simp [config, wordStackLocation, lookupNatInfo])
+    (hstore := by simp [wordStackStoreNameNat])
+    (by simpa [config] using heval)
+
+example [NeZero width]
+    (state final : WordStackMachineState width)
+    (sourceValue : Word width)
+    (hsourceValue : wordStackMachineValue
+        { locations := [(0, .stack 2)], scratch := 31, stackBase := 10 }
+        state 0 = some sourceValue)
+    (heval : (wordStackSetNat
+        { locations := [(0, .stack 2)], scratch := 31, stackBase := 10 }
+        (.temp 4) (.var 0)).bind
+        (evalWordStackMachine state) = some final) :
+    final.stores (.temp 4) = sourceValue := by
+  let config : WordStackConfig :=
+    { locations := [(0, .stack 2)], scratch := 31, stackBase := 10 }
+  exact evalWordStackMachine_set_preserves_value
+    (config := config) (state := state) (final := final)
+    (store := .temp 4) (stackStore := .temp 4) (source := 0)
+    (sourceLocation := .stack 2) (sourceValue := sourceValue)
+    (hsource := by simp [config, wordStackLocation, lookupNatInfo])
+    (hsourceValue := by simpa [config] using hsourceValue)
+    (hstore := by simp [wordStackStoreNameNat])
+    (by simpa [config] using heval)
+
 example :
     wordStackArithInst
         { locations := [(0, .register 4), (1, .register 5),

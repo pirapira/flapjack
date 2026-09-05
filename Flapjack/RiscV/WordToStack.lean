@@ -789,6 +789,60 @@ theorem evalWordStackMachine_const_assignment [NeZero width]
     simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
       wordStackMachineWriteRegister, wordStackMachineWriteSlot, hdestination]
 
+theorem evalWordStackMachine_lookup_assignment [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (destination : Nat) (store : WordStore Nat) (stackStore : StackStore)
+    (destinationLocation : WordLocation)
+    (hdestination : wordStackLocation config destination =
+      some destinationLocation)
+    (hstore : wordStackStoreNameNat store = some stackStore)
+    (heval : (wordStackCompileExpNat config destination (.lookup store)).bind
+      (evalWordStackMachine state) = some final) :
+      wordStackMachineValue config final destination =
+        some (state.stores stackStore) := by
+  change lookupNatInfo destination config.locations = some destinationLocation at hdestination
+  cases store <;> simp [wordStackStoreNameNat] at hstore
+  all_goals
+    cases hstore
+    cases destinationLocation <;>
+      simp [wordStackCompileExpNat, wordStackStoreNameNat,
+        wordStackWritePhysicalNat, hdestination] at heval
+  all_goals
+    simp [evalWordStackMachine, wordStackMachineValue, wordStackLocation,
+      wordStackOffset, wordStackMachineWriteRegister,
+      wordStackMachineWriteSlot, hdestination] at heval ⊢
+  all_goals
+    cases heval
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot, hdestination]
+
+theorem evalWordStackMachine_set_preserves_value [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (store : WordStore Nat) (stackStore : StackStore) (source : Nat)
+    (sourceLocation : WordLocation) (sourceValue : Word width)
+    (hsource : wordStackLocation config source = some sourceLocation)
+    (hsourceValue : wordStackMachineValue config state source =
+      some sourceValue)
+    (hstore : wordStackStoreNameNat store = some stackStore)
+    (heval : (wordStackSetNat config store (.var source)).bind
+      (evalWordStackMachine state) = some final) :
+      final.stores stackStore = sourceValue := by
+  change lookupNatInfo source config.locations = some sourceLocation at hsource
+  cases store <;> simp [wordStackStoreNameNat] at hstore
+  all_goals
+    cases hstore
+    cases sourceLocation <;>
+    simp [wordStackSetNat, wordStackStoreNameNat, wordStackAtomNat,
+      wordStackReadRegister, wordStackLocation, wordStackOffset,
+      wordStackJoin, evalWordStackMachine, hsource] at heval
+  all_goals
+    cases heval
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      hsource] at hsourceValue
+    simp [wordStackMachineWriteRegister, wordStackMachineWriteStore,
+      hsourceValue]
+
 theorem evalWordStackMachine_binary_assignment [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)
     (operator : BinOp) (destination left right : Nat)

@@ -307,6 +307,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add an explicit spill-aware Word allocation result with fresh stack-slot
   assignment and a register/spill clash-validation contract; stack access
   rewriting remains a separate backend pass.
+- [x] Expose an SSA-driven spill allocation boundary that derives spill
+  locations from the renamed Word program and its analysed clash graph.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

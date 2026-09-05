@@ -884,6 +884,14 @@ def wordAllocateVarsWithSpills (slots : List Nat)
   if wordSpillAllocationRespectsClashes edges state.locations then some state
   else none
 
+def wordAllocateSsaProgramWithSpills (state : WordSsaState)
+    (program : WordProg α) :
+    Option (WordSsaState × WordProg α × WordSpillState) :=
+  let (state, program) := wordSsaRenameProgram state program
+  let (liveIn, edges) := wordProgClashAnalysis program []
+  (wordAllocateVarsWithSpills (wordProgVariables program ++ liveIn) edges).map
+    (fun allocation => (state, program, allocation))
+
 theorem wordAllocateVarsWithSpills_sound (slots : List Nat)
     (edges : List (Nat × Nat)) (state : WordSpillState)
     (hstate : wordAllocateVarsWithSpills slots edges = some state) :

@@ -236,5 +236,29 @@ example (result : LoopResult Nat)
   · rfl
   · exact heval
 
+example (result : LoopResult Nat)
+    (heval : evalLoopProg 20 emptyLoopState
+      (.seq .tick (.return [])) = some result) :
+    loopResultState result = emptyLoopState := by
+  apply evalLoopProg_result_state 20 emptyLoopState
+    (.seq .tick (.return []))
+  · intro name
+    rfl
+  · rfl
+  · rfl
+  · exact heval
+
+example (result : LoopResult Nat)
+    (heval : evalLoopProg 20 emptyLoopState
+      (.loop [] (.seq .tick (.break 0)) []) = some result) :
+    loopResultState result = emptyLoopState := by
+  apply evalLoopProg_result_state 20 emptyLoopState
+    (.loop [] (.seq .tick (.break 0)) [])
+  · intro name
+    rfl
+  · rfl
+  · rfl
+  · exact heval
+
 
 end Flapjack

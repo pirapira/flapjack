@@ -1271,6 +1271,38 @@ theorem evalLoopProg_result_globals [BEq α] [OfNat α 0] [OfNat α 1]
   rw [heval] at hprojection
   simpa using hprojection
 
+/-! A single frame theorem for clients that need the whole Loop state.
+    The three syntactic hypotheses are intentionally separate: later
+    compiler passes can discharge only the projections they preserve, while
+    this theorem packages the common case where no state component changes. -/
+theorem evalLoopProg_result_state [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (fuel : Nat) (state : LoopState α) (program : LoopProg α)
+    (hlocal : ∀ name, loopNoLocalWrites name program = true)
+    (hglobal : loopNoGlobalWrites program = true)
+    (hmemory : loopNoMemoryWrites program = true)
+    (result : LoopResult α)
+    (heval : evalLoopProg fuel state program = some result) :
+    loopResultState result = state := by
+  have hlocals : (loopResultState result).locals = state.locals := by
+    funext name
+    exact evalLoopProg_result_local name fuel state program result
+      (hlocal name) heval
+  have hglobals : (loopResultState result).globals = state.globals :=
+    evalLoopProg_result_globals fuel state program hglobal result heval
+  have hmemory' : (loopResultState result).memory = state.memory :=
+    evalLoopProg_result_memory fuel state program hmemory result heval
+  cases result <;>
+    simp only [loopResultState] at hlocals hglobals hmemory' ⊢
+  all_goals
+    cases state
+    cases hlocals
+    cases hglobals
+    cases hmemory'
+    rfl
+
 def lookupLoopFunction : Nat → List (Nat × List Nat × LoopProg α) →
     Option (List Nat × LoopProg α)
   | _, [] => none

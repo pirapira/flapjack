@@ -431,6 +431,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Lift the Loop no-memory-write projection invariant from one step to
   arbitrary fuel, including sequencing, conditionals, loop repetition, and
   control results.
+- [x] Compose the arbitrary-fuel local, global, and memory projections into a
+  reusable full `LoopState` frame theorem, with return and loop-control tests.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [x] Add the terminal return control-result bridge, including mapped state

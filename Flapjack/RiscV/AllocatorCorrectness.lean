@@ -264,6 +264,67 @@ theorem evalWordCondition_ssaRename [NeZero width]
             hconditionValue, hrightValue, evalWordCondition,
             wordSsaRenameRegImm]
 
+theorem evalWordReturn_applyColour [NeZero width]
+    (colour : Nat → Nat) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (colour name)
+        pure (readRegister target register)))
+    (fuel label : Nat) (values : List Nat) :
+    (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) (fuel + 1) source
+        (.return label values)).map wordControlResultValues =
+      (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) (fuel + 1) target
+        (.return label (values.map colour))).map
+        wordControlResultValues := by
+  have hvalues :
+      values.mapM (fun name => do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (values.map colour).mapM (fun name => do
+        let register ← registerOfNat name
+        pure (readRegister target register)) := by
+    induction values with
+    | nil => rfl
+    | cons name values ih =>
+        simp only [List.map, List.mapM_cons]
+        rw [hregister name, ih]
+  simp only [evalWordFunctionWithHandlersAndFfi, Option.map]
+  rw [hvalues]
+  cases hresult : List.mapM (fun name => do
+      let register ← registerOfNat name
+      pure (readRegister target register)) (List.map colour values) with
+  | none => simp [hresult]
+  | some returnedValues => simp [hresult, wordControlResultValues]
+
+theorem evalWordRaise_applyColour [NeZero width]
+    (colour : Nat → Nat) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (colour name)
+        pure (readRegister target register)))
+    (fuel exception : Nat) :
+    (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) (fuel + 1) source
+        (.raise exception)).map wordControlResultException =
+      (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) (fuel + 1) target
+        (.raise (colour exception))).map wordControlResultException := by
+  simp only [evalWordFunctionWithHandlersAndFfi, Option.map]
+  cases hsource : registerOfNat exception <;>
+    cases htarget : registerOfNat (colour exception) <;>
+    all_goals
+      have hexceptionValue := hregister exception
+      simp_all [hsource, htarget, hexceptionValue,
+        wordControlResultException]
+
 theorem evalWordReturn_ssaRename [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hregister : ∀ name,

@@ -58,6 +58,40 @@ example [NeZero 64]
   exact hregister
 
 example [NeZero 64]
+    (source target : State 64) (colour : Nat → Nat)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (colour name)
+        pure (readRegister target register))) :
+    (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) 4 source
+        (.return 0 [2, 3])).map wordControlResultValues =
+      (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) 4 target
+        (.return 0 ([2, 3].map colour))).map wordControlResultValues := by
+  exact evalWordReturn_applyColour colour source target hregister 3 0 [2, 3]
+
+example [NeZero 64]
+    (source target : State 64) (colour : Nat → Nat)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (colour name)
+        pure (readRegister target register))) :
+    (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) 4 source
+        (.raise 2)).map wordControlResultException =
+      (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) 4 target
+        (.raise (colour 2))).map wordControlResultException := by
+  exact evalWordRaise_applyColour colour source target hregister 3 2
+
+example [NeZero 64]
     (source target : State 64) (ssa : WordSsaState)
     (hregister : ∀ name,
       (do

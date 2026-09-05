@@ -441,6 +441,8 @@ definitions, pass ordering, examples, and proof obligations.
   register colouring under the corresponding register and memory relation.
 - [x] Prove Word condition evaluation is preserved by applying a physical
   register colouring, including immediate and register comparison operands.
+- [x] Prove physical-colouring preservation for Word return-value lists and
+  raised exception values under the corresponding register relation.
 - [x] Prove Word condition evaluation is preserved by SSA renaming, including
   immediate and register comparison operands.
 - [x] Prove SSA-renamed Word return evaluation preserves arbitrary returned

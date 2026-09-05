@@ -872,6 +872,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Connect the exact CakeML byte-level FFI oracle/event boundary to the
   generated RISC-V x10--x14 ABI, including returned-byte writes, terminal
   outcomes, unknown-service rejection, and an executable RV64 regression.
+- [x] Align the Word clash tree's call equations with CakeML cut-set `Set`
+  boundaries and exceptional handler branches, with reduced-IR regressions.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

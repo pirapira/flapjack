@@ -10,6 +10,7 @@ import Flapjack.Test.Loops
 import Flapjack.Test.Primitive
 import Flapjack.Test.Allocator
 import Flapjack.Test.AllocatorFunction
+import Flapjack.Test.AllocatorCalls
 import Flapjack.Test.AllocatorCorrectness
 import Flapjack.Test.AllocatorRegAlloc
 import Flapjack.Test.WordToStack

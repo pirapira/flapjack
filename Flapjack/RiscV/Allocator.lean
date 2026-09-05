@@ -882,6 +882,20 @@ def wordClashTreeCallWrites (returns : Option (List Nat × List Nat)) : List Nat
   | none => []
   | some (values, _) => values
 
+def wordClashTreeCallCutSet (returns : Option (List Nat × List Nat)) : List Nat :=
+  match returns with
+  | none => []
+  | some (_, live) => live
+
+def wordClashTreeCallSet (left right : List Nat) : List Nat :=
+  (left ++ right).eraseDups
+
+/-! The CakeML allocator models a call as a cut-set boundary.  In this reduced
+    Word IR the return continuation is represented by the returned values and
+    live set, rather than by a separate return-handler program, so the normal
+    continuation is the corresponding `Set` node.  An exceptional handler is
+    still a branch with its exception binding and cut set made live. -/
+
 def wordClashTree : WordProg α → List (List Nat × List Nat) → WordClashTree
   | .skip, _ => .delta [] []
   | .move _ moves, _ =>
@@ -918,13 +932,22 @@ def wordClashTree : WordProg α → List (List Nat × List Nat) → WordClashTre
   | .tick, _ => .delta [] []
   | .locValue destination source, _ => .delta [destination] [source]
   | .call returns _ arguments none, _ =>
-      .delta (wordClashTreeCallWrites returns)
-        (wordClashTreeCallReads returns arguments)
+      match returns with
+      | none => .set arguments.eraseDups
+      | some (values, live) =>
+          .seq (.set (wordClashTreeCallSet values live))
+            (.set (wordClashTreeCallSet arguments live))
   | .call returns _ arguments (some (exception, body)), frames =>
-      let reads := wordClashTreeCallReads returns arguments
-      .branch (some reads)
-        (.delta (wordClashTreeCallWrites returns) reads)
-        (.seq (.delta [exception] []) (wordClashTree body frames))
+      let cutSet := wordClashTreeCallCutSet returns
+      let liveSet := wordClashTreeCallSet cutSet arguments
+      .branch (some liveSet)
+        (match returns with
+        | none => .set liveSet
+        | some (values, live) =>
+            .seq (.set (wordClashTreeCallSet values live))
+              (.set liveSet))
+        (.seq (.set (wordClashTreeCallSet [exception] cutSet))
+          (wordClashTree body frames))
   | .ffi _ configuration configurationLength array arrayLength _, _ =>
       .delta [] [configuration, configurationLength, array, arrayLength]
   | .shareInst operator name address, _ =>

@@ -394,6 +394,187 @@ def wordColourGraphWithWorklist (colours stackStart : Nat)
   let state := wordRaSimplifyAll (state.active.length + 1) colours state
   wordRaColourStack colours stackStart state.stack state.graph
 
+/-! Move worklists and the first coalescing step.
+
+    CakeML keeps move preferences separate from clash edges.  A move is first
+    rejected when it is reflexive, already clashes, or has two fixed
+    endpoints.  The remaining moves are canonicalised so a fixed endpoint is
+    always the coalescing target.  The full CakeML allocator has additional
+    freeze and move-revival phases; this section ports the data and the safe
+    coalescing transition those phases build on.
+-/
+
+structure WordMove where
+  priority : Nat
+  left : Nat
+  right : Nat
+  deriving DecidableEq, Repr
+
+def wordMoveEndpoints (move : WordMove) : List Nat :=
+  [move.left, move.right]
+
+def wordTagIsFixed : WordRegTag → Bool
+  | .fixed _ => true
+  | .atemp | .stemp => false
+
+def wordTagIsAtemp : WordRegTag → Bool
+  | .atemp => true
+  | .fixed _ | .stemp => false
+
+def wordGraphTagIs (predicate : WordRegTag → Bool)
+    (graph : WordRegGraph) (node : Nat) : Bool :=
+  match lookupNatInfo node graph.tags with
+  | some tag => predicate tag
+  | none => false
+
+def wordMoveRelatedNodes (moves : List WordMove) : List Nat :=
+  (moves.flatMap wordMoveEndpoints).eraseDups
+
+def wordMoveConsistent (graph : WordRegGraph) (related : List Nat)
+    (move : WordMove) : Bool :=
+  let fixedLeft := wordGraphTagIs wordTagIsFixed graph move.left
+  let fixedRight := wordGraphTagIs wordTagIsFixed graph move.right
+  let leftMayMove := fixedLeft || (related.contains move.left)
+  let rightMayMove := fixedRight || (related.contains move.right)
+  move.left != move.right &&
+    !(wordGraphNeighbours graph move.right).contains move.left &&
+    leftMayMove && rightMayMove && !(fixedLeft && fixedRight)
+
+def wordCanonicalizeMove (graph : WordRegGraph) (move : WordMove) : WordMove :=
+  let leftFixed := wordGraphTagIs wordTagIsFixed graph move.left
+  let rightFixed := wordGraphTagIs wordTagIsFixed graph move.right
+  if rightFixed then
+    { move with left := move.right, right := move.left }
+  else if leftFixed then
+    move
+  else if move.left ≤ move.right then
+    move
+  else
+    { move with left := move.right, right := move.left }
+
+structure WordMoveWorklists where
+  available : List WordMove
+  unavailable : List WordMove
+  deriving DecidableEq, Repr
+
+def wordPrepareMoveWorklists (graph : WordRegGraph)
+    (moves : List WordMove) : WordMoveWorklists :=
+  let related := wordMoveRelatedNodes moves
+  moves.foldl (fun worklists move =>
+    let move := wordCanonicalizeMove graph move
+    if wordMoveConsistent graph related move then
+      { worklists with available := worklists.available ++ [move] }
+    else
+      { worklists with unavailable := worklists.unavailable ++ [move] })
+    { available := [], unavailable := [] }
+
+def wordPreferenceMoves : List (Nat × Nat) → List WordMove
+  | [] => []
+  | (left, right) :: moves =>
+      { priority := 0, left := left, right := right } ::
+        wordPreferenceMoves moves
+
+def wordParentUpdate (node parent : Nat)
+    (parents : NatInfoMap Nat) : NatInfoMap Nat :=
+  (node, parent) :: parents.filter (fun entry => entry.1 != node)
+
+def wordParentOf (parents : NatInfoMap Nat) (node : Nat) : Nat :=
+  match lookupNatInfo node parents with
+  | some parent => parent
+  | none => node
+
+def wordCoalesceParentFuel : Nat → WordRegGraph → NatInfoMap Nat → Nat →
+    Nat × NatInfoMap Nat
+  | 0, _graph, parents, node => (wordParentOf parents node, parents)
+  | fuel + 1, graph, parents, node =>
+      let parent := wordParentOf parents node
+      if parent = node then
+        (node, parents)
+      else if wordGraphTagIs wordTagIsFixed graph parent then
+        (parent, parents)
+      else if node ≤ parent then
+        (node, parents)
+      else
+        let (ancestor, parents) :=
+          wordCoalesceParentFuel fuel graph parents parent
+        (ancestor, wordParentUpdate node ancestor parents)
+
+structure WordMoveState where
+  graph : WordRegGraph
+  parents : NatInfoMap Nat
+  related : List Nat
+  available : List WordMove
+  unavailable : List WordMove
+  stack : List Nat
+  deriving Repr
+
+def wordInitMoveState (graph : WordRegGraph)
+    (moves : List WordMove) : WordMoveState :=
+  let worklists := wordPrepareMoveWorklists graph moves
+  { graph := graph
+    parents := (List.range graph.dimension).map (fun node => (node, node))
+    related := wordMoveRelatedNodes moves
+    available := worklists.available
+    unavailable := worklists.unavailable
+    stack := [] }
+
+def wordMoveReplaceNode (oldNode newNode : Nat) (move : WordMove) : WordMove :=
+  { move with
+    left := if move.left = oldNode then newNode else move.left
+    right := if move.right = oldNode then newNode else move.right }
+
+def wordCoalesceFreshNeighbours (graph : WordRegGraph)
+    (target absorbed : Nat) : List Nat :=
+  (wordGraphNeighbours graph absorbed).filter (fun node =>
+    node != target && !(wordGraphNeighbours graph target).contains node)
+
+def wordCoalesceSignificant (colours : Nat) (graph : WordRegGraph)
+    (node : Nat) : Bool :=
+  match lookupNatInfo node graph.tags with
+  | some (.fixed _) => true
+  | some .atemp | some .stemp => wordRaDegree graph node ≥ colours
+  | none => true
+
+def wordCoalesceSafe (colours : Nat) (graph : WordRegGraph)
+    (related : List Nat) (move : WordMove) : Bool :=
+  if !wordMoveConsistent graph related move then
+    false
+  else
+    let move := wordCanonicalizeMove graph move
+    let target := move.left
+    let absorbed := move.right
+    let fresh := wordCoalesceFreshNeighbours graph target absorbed
+    if wordGraphTagIs wordTagIsFixed graph target then
+      fresh.all (fun node => !wordCoalesceSignificant colours graph node)
+    else
+      let neighbours :=
+        (wordGraphNeighbours graph target ++
+          wordGraphNeighbours graph absorbed).eraseDups
+      (neighbours.filter (wordCoalesceSignificant colours graph)).length < colours
+
+def wordCoalesceMove (colours : Nat) (state : WordMoveState)
+    (move : WordMove) : Option WordMoveState :=
+  let move := wordCanonicalizeMove state.graph move
+  if !wordCoalesceSafe colours state.graph state.related move then
+    none
+  else
+    let fresh := wordCoalesceFreshNeighbours
+      state.graph move.left move.right
+    let graph := fresh.foldl
+      (fun graph node => wordGraphInsertEdge move.left node graph)
+      state.graph
+    let parents := wordParentUpdate move.right move.left state.parents
+    let pending := (state.available ++ state.unavailable).map
+      (wordMoveReplaceNode move.right move.left)
+    let worklists := wordPrepareMoveWorklists graph pending
+    some
+      { graph := graph
+        parents := parents
+        related := wordMoveRelatedNodes pending
+        available := worklists.available
+        unavailable := worklists.unavailable
+        stack := move.right :: state.stack }
+
 structure WordRegAllocInput where
   bijection : WordBijection
   graph : WordRegGraph

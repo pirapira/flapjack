@@ -380,6 +380,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add the first IRC-style graph worklist state: degree tracking,
   low-degree simplification, forced spill selection, and reverse-stack
   colouring with executable edge-safety regressions.
+- [x] Port move consistency filtering, canonical move orientation,
+  coalesced-node parent compression, and a conservative safe coalescing step.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

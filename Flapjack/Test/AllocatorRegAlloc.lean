@@ -73,8 +73,59 @@ example :
 
 example :
     wordGraphTagsAreFixed
-        (wordColourGraphWithWorklist 1 1
-          (wordInitRegAlloc (.delta [1, 5] []) [] []).graph) = true := by
+      (wordColourGraphWithWorklist 1 1
+        (wordInitRegAlloc (.delta [1, 5] []) [] []).graph) = true := by
+  native_decide
+
+def moveWorklistGraph : WordRegGraph :=
+  { adjacency := []
+    tags := [(0, .atemp), (1, .atemp)]
+    dimension := 2 }
+
+def fixedMoveWorklistGraph : WordRegGraph :=
+  { adjacency := []
+    tags := [(0, .fixed 3), (1, .atemp)]
+    dimension := 2 }
+
+def move01 : WordMove :=
+  { priority := 7, left := 0, right := 1 }
+
+example :
+    wordPrepareMoveWorklists moveWorklistGraph [move01] =
+      { available := [move01], unavailable := [] } := by
+  native_decide
+
+example :
+    wordPrepareMoveWorklists moveWorklistGraph
+      [{ priority := 0, left := 0, right := 0 }] =
+      { available := [],
+        unavailable := [{ priority := 0, left := 0, right := 0 }] } := by
+  native_decide
+
+example :
+    wordPrepareMoveWorklists
+      { adjacency := [(0, [1]), (1, [0])]
+        tags := [(0, .atemp), (1, .atemp)]
+        dimension := 2 }
+      [move01] =
+      { available := [], unavailable := [move01] } := by
+  native_decide
+
+example :
+    wordCanonicalizeMove fixedMoveWorklistGraph move01 =
+      { priority := 7, left := 0, right := 1 } := by
+  native_decide
+
+example :
+    (wordCoalesceMove 1
+      (wordInitMoveState fixedMoveWorklistGraph [move01]) move01).map
+        (fun state => lookupNatInfo 1 state.parents) = some (some 0) := by
+  native_decide
+
+example :
+    (wordCoalesceMove 1
+      (wordInitMoveState fixedMoveWorklistGraph [move01]) move01).map
+        (fun state => state.stack) = some [1] := by
   native_decide
 
 end Flapjack

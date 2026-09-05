@@ -1676,6 +1676,7 @@ theorem loopToWord_call_handler_simulation_single_parameter [NeZero width]
           RiscV.registerOfNat (wordFindVar context name) = some register →
             register ≠ exceptionRegister)
     (hbody : ∀ calleeLoop calleeWord loopResult wordResult,
+      RiscV.readRegister calleeWord 0 = 0 →
       evalLoopProgWithCallsAndFfi functions loopHandler fuel calleeLoop loopBody =
         some loopResult →
       RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
@@ -1716,6 +1717,22 @@ theorem loopToWord_call_handler_simulation_single_parameter [NeZero width]
   rcases loopBindParameters_single_parameter_agreement context wordState
       parameter argumentValue parameterRegister hparameter hparameter_nonzero with
     ⟨calleeLocals, calleeWord, hcalleeBind, hwordBind, _⟩
+  have hcalleeWordEq :
+      RiscV.writeRegister (RiscV.clearWordRegisters wordState)
+          parameterRegister argumentValue = calleeWord := by
+    have hbind := bindWordRegisters_single_parameter context wordState parameter
+      argumentValue parameterRegister hparameter
+    rw [hbind] at hwordBind
+    injection hwordBind
+  have hcalleeZero : RiscV.readRegister calleeWord 0 = 0 := by
+    rw [← hcalleeWordEq]
+    by_cases hzero : parameterRegister = 0
+    · exact False.elim (hparameter_nonzero hzero)
+    · have hzero' : (0 : Fin 32) ≠ parameterRegister := by
+        intro h
+        exact hzero h.symm
+      simp [RiscV.clearWordRegisters, RiscV.writeRegister, RiscV.readRegister,
+        hzero, hzero']
   cases hbodyLoop :
       evalLoopProgWithCallsAndFfi functions loopHandler fuel
         { loopState with locals := calleeLocals } loopBody with
@@ -1736,7 +1753,7 @@ theorem loopToWord_call_handler_simulation_single_parameter [NeZero width]
               | normal bodyWordState =>
                   have hcompatible := hbody { loopState with locals := calleeLocals }
                     calleeWord (.normal bodyLoopState) (.normal bodyWordState)
-                    hbodyLoop hbodyWord
+                    hcalleeZero hbodyLoop hbodyWord
                   have hloop' :
                       some (LoopResult.normal loopState) =
                         some (LoopResult.normal finalLoop) := by
@@ -1764,12 +1781,12 @@ theorem loopToWord_call_handler_simulation_single_parameter [NeZero width]
               | returned bodyWordState values =>
                   have hcompatible := hbody { loopState with locals := calleeLocals }
                     calleeWord (.normal bodyLoopState)
-                    (.returned bodyWordState values) hbodyLoop hbodyWord
+                    (.returned bodyWordState values) hcalleeZero hbodyLoop hbodyWord
                   simp [loopCallBodyResultCompatible] at hcompatible
               | raised bodyWordState value =>
                   have hcompatible := hbody { loopState with locals := calleeLocals }
                     calleeWord (.normal bodyLoopState)
-                    (.raised bodyWordState value) hbodyLoop hbodyWord
+                    (.raised bodyWordState value) hcalleeZero hbodyLoop hbodyWord
                   simp [loopCallBodyResultCompatible] at hcompatible
       | broke bodyLoopState label =>
           simp [evalLoopCallWithCallsAndFfi, hlookupLoop, hreadLoop, hcalleeBind,
@@ -1792,17 +1809,17 @@ theorem loopToWord_call_handler_simulation_single_parameter [NeZero width]
               | normal bodyWordState =>
                   have hcompatible := hbody { loopState with locals := calleeLocals }
                     calleeWord (.raised bodyLoopState sourceException)
-                    (.normal bodyWordState) hbodyLoop hbodyWord
+                    (.normal bodyWordState) hcalleeZero hbodyLoop hbodyWord
                   simp [loopCallBodyResultCompatible] at hcompatible
               | returned bodyWordState values =>
                   have hcompatible := hbody { loopState with locals := calleeLocals }
                     calleeWord (.raised bodyLoopState sourceException)
-                    (.returned bodyWordState values) hbodyLoop hbodyWord
+                    (.returned bodyWordState values) hcalleeZero hbodyLoop hbodyWord
                   simp [loopCallBodyResultCompatible] at hcompatible
               | raised bodyWordState targetException =>
                   have hcompatible := hbody { loopState with locals := calleeLocals }
                     calleeWord (.raised bodyLoopState sourceException)
-                    (.raised bodyWordState targetException) hbodyLoop hbodyWord
+                    (.raised bodyWordState targetException) hcalleeZero hbodyLoop hbodyWord
                   have hexceptionValue : sourceException = targetException := by
                     simpa [loopCallBodyResultCompatible] using hcompatible
                   have hloopHandler :

@@ -424,6 +424,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add the handler-aware single-parameter call simulation boundary,
   including compatible callee normal/raise results, exception-register
   binding, handler resumption, and mapped-local preservation.
+- [x] Add a concrete exception-handler call regression covering constant
+  exception production, callee raise propagation, and handler continuation.
 - [x] Prove mapped-local preservation across compiled register-register
   ADD/SUB/AND/OR/XOR assignments, including unchanged non-destination locals.
 - [x] Prove mapped-local preservation across compiled LSL/LSR assignments,

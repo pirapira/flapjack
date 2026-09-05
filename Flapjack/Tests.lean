@@ -11,6 +11,7 @@ import Flapjack.RiscV.Correctness
 import Flapjack.RiscV.CorrectnessFfi
 import Flapjack.Test.Structured
 import Flapjack.Test.CorrectnessFfi
+import Flapjack.Test.CorrectnessCalls
 import Flapjack.Test.Ffi
 import Flapjack.Test.Stack
 import Flapjack.Test.Lab

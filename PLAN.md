@@ -426,6 +426,9 @@ definitions, pass ordering, examples, and proof obligations.
   binding, handler resumption, and mapped-local preservation.
 - [x] Add a concrete exception-handler call regression covering constant
   exception production, callee raise propagation, and handler continuation.
+- [x] Prove control-result sequence composition for normal completion,
+  returns, and raises under the combined Loop and handler-aware Word
+  evaluators.
 - [x] Prove mapped-local preservation across compiled register-register
   ADD/SUB/AND/OR/XOR assignments, including unchanged non-destination locals.
 - [x] Prove mapped-local preservation across compiled LSL/LSR assignments,

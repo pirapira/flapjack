@@ -403,6 +403,110 @@ example [NeZero width]
   · simp
   · exact heval
 
+example [NeZero width]
+    (state final : WordStackMachineState width)
+    (heval : (wordStackMemoryInst
+        { locations := [(0, .register 4), (1, .register 5)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        .load 0 1).bind (evalWordStackMachine state) = some final) :
+    wordStackMachineValue
+        { locations := [(0, .register 4), (1, .register 5)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        final 0 =
+      (wordStackMachineValue
+        { locations := [(0, .register 4), (1, .register 5)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 1).map state.memory := by
+  apply evalWordStackMachine_load_preserves_value
+    (destinationLocation := .register 4) (addressLocation := .register 5)
+  · rfl
+  · rfl
+  · decide
+  · exact heval
+
+example [NeZero width]
+    (state final : WordStackMachineState width)
+    (heval : (wordStackMemoryInst
+        { locations := [(0, .stack 2), (1, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        .load 0 1).bind (evalWordStackMachine state) = some final) :
+    wordStackMachineValue
+        { locations := [(0, .stack 2), (1, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        final 0 =
+      (wordStackMachineValue
+        { locations := [(0, .stack 2), (1, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 1).map state.memory := by
+  apply evalWordStackMachine_load_preserves_value
+    (destinationLocation := .stack 2) (addressLocation := .stack 3)
+  · rfl
+  · rfl
+  · decide
+  · exact heval
+
+example [NeZero width]
+    (state final : WordStackMachineState width)
+    (sourceValue addressValue : Word width)
+    (hsourceValue : wordStackMachineValue
+        { locations := [(0, .register 4), (1, .register 5)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 0 = some sourceValue)
+    (haddressValue : wordStackMachineValue
+        { locations := [(0, .register 4), (1, .register 5)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 1 = some addressValue)
+    (heval : (wordStackMemoryInst
+        { locations := [(0, .register 4), (1, .register 5)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        .store 0 1).bind (evalWordStackMachine state) = some final) :
+    final.memory addressValue = sourceValue := by
+  let config : WordStackConfig :=
+    { locations := [(0, .register 4), (1, .register 5)],
+      scratch := 31, stackBase := 10, addressScratch := 29 }
+  exact evalWordStackMachine_store_preserves_memory
+    (config := config)
+    (state := state) (final := final) (source := 0) (address := 1)
+    (sourceLocation := .register 4) (addressLocation := .register 5)
+    (sourceValue := sourceValue) (addressValue := addressValue)
+    (hsource := by simp [config, wordStackLocation, lookupNatInfo])
+    (haddress := by simp [config, wordStackLocation, lookupNatInfo])
+    (hsourceValue := by simpa [config] using hsourceValue)
+    (haddressValue := by simpa [config] using haddressValue)
+    (hscratch := by simp [config]) (hsafe := by simp [config, wordStackStoreLocationsSafe])
+    (by simpa [config] using heval)
+
+example [NeZero width]
+    (state final : WordStackMachineState width)
+    (sourceValue addressValue : Word width)
+    (hsourceValue : wordStackMachineValue
+        { locations := [(0, .stack 2), (1, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 0 = some sourceValue)
+    (haddressValue : wordStackMachineValue
+        { locations := [(0, .stack 2), (1, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        state 1 = some addressValue)
+    (heval : (wordStackMemoryInst
+        { locations := [(0, .stack 2), (1, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        .store 0 1).bind (evalWordStackMachine state) = some final) :
+    final.memory addressValue = sourceValue := by
+  let config : WordStackConfig :=
+    { locations := [(0, .stack 2), (1, .stack 3)],
+      scratch := 31, stackBase := 10, addressScratch := 29 }
+  exact evalWordStackMachine_store_preserves_memory
+    (config := config)
+    (state := state) (final := final) (source := 0) (address := 1)
+    (sourceLocation := .stack 2) (addressLocation := .stack 3)
+    (sourceValue := sourceValue) (addressValue := addressValue)
+    (hsource := by simp [config, wordStackLocation, lookupNatInfo])
+    (haddress := by simp [config, wordStackLocation, lookupNatInfo])
+    (hsourceValue := by simpa [config] using hsourceValue)
+    (haddressValue := by simpa [config] using haddressValue)
+    (hscratch := by simp [config]) (hsafe := by simp [config, wordStackStoreLocationsSafe])
+    (by simpa [config] using heval)
+
 example :
     wordStackArithInst
         { locations := [(0, .register 4), (1, .register 5),

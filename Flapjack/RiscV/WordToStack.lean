@@ -301,6 +301,13 @@ def wordStackMemoryInst (config : WordStackConfig) (operator : WordMemOp)
   | .store16 => wordStackStoreInst config operator sourceOrDestination address
   | .store32 => wordStackStoreInst config operator sourceOrDestination address
 
+def wordStackStoreLocationsSafe (config : WordStackConfig) :
+    WordLocation → WordLocation → Bool
+  | .register _, .register _ => true
+  | .stack _, .register address => address != config.scratch
+  | .register source, .stack _ => source != config.addressScratch
+  | .stack _, .stack _ => config.scratch != config.addressScratch
+
 def wordStackSharedLoadInst (config : WordStackConfig) (operator : WordMemOp)
     (destination address : Nat) : Option (StackProg α) := do
   let destination ← wordStackLocation config destination
@@ -849,6 +856,66 @@ theorem evalWordStackMachine_ffi_move_preserves_value [NeZero width]
       simp [evalWordStackMachine, wordStackMachineValue,
         wordStackLocation, wordStackOffset, wordStackMachineWriteRegister,
         hsource]
+
+theorem evalWordStackMachine_load_preserves_value [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (destination address : Nat)
+    (destinationLocation addressLocation : WordLocation)
+    (hdestination : wordStackLocation config destination =
+      some destinationLocation)
+    (haddress : wordStackLocation config address = some addressLocation)
+    (hscratch : config.scratch ≠ config.addressScratch)
+    (heval : (wordStackMemoryInst config .load destination address).bind
+      (evalWordStackMachine state) = some final) :
+      wordStackMachineValue config final destination =
+        (wordStackMachineValue config state address).map state.memory := by
+  change lookupNatInfo destination config.locations = some destinationLocation at hdestination
+  change lookupNatInfo address config.locations = some addressLocation at haddress
+  cases destinationLocation <;> cases addressLocation <;>
+    simp [wordStackMemoryInst, wordStackLoadInst, wordStackLocation,
+      wordStackOffset, lookupNatInfo, hdestination, haddress,
+      hscratch] at heval
+  all_goals
+    cases heval
+    simp [evalWordStackMachine, wordStackMachineValue, wordStackLocation,
+      wordStackOffset, wordStackMachineWriteRegister,
+      wordStackMachineWriteSlot, hdestination, haddress, hscratch]
+
+theorem evalWordStackMachine_store_preserves_memory [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (source address : Nat)
+    (sourceLocation addressLocation : WordLocation)
+    (sourceValue addressValue : Word width)
+    (hsource : wordStackLocation config source = some sourceLocation)
+    (haddress : wordStackLocation config address = some addressLocation)
+    (hsourceValue : wordStackMachineValue config state source =
+      some sourceValue)
+    (haddressValue : wordStackMachineValue config state address =
+      some addressValue)
+    (hscratch : config.scratch ≠ config.addressScratch)
+    (hsafe : wordStackStoreLocationsSafe config sourceLocation addressLocation = true)
+    (heval : (wordStackMemoryInst config .store source address).bind
+      (evalWordStackMachine state) = some final) :
+      final.memory addressValue = sourceValue := by
+  change lookupNatInfo source config.locations = some sourceLocation at hsource
+  change lookupNatInfo address config.locations = some addressLocation at haddress
+  have hsafe' : config.addressScratch ≠ config.scratch := by
+    intro heq
+    apply hscratch
+    exact heq.symm
+  cases sourceLocation <;> cases addressLocation <;>
+    simp [wordStackMemoryInst, wordStackStoreInst, wordStackLocation,
+      wordStackOffset, lookupNatInfo, hsource, haddress,
+      wordStackStoreLocationsSafe] at hsafe heval
+  all_goals
+    cases heval
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      hsource, haddress] at hsourceValue haddressValue
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      wordStackMachineWriteMemory, hsource, haddress, hsourceValue,
+      haddressValue, hsafe, hsafe']
 
 def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

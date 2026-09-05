@@ -377,6 +377,8 @@ definitions, pass ordering, examples, and proof obligations.
   and data scratch registers in the StackLang boundary.
 - [x] Lower spilled Word division operands and destinations through the
   StackLang arithmetic boundary.
+- [x] Prove abstract Stack-machine preservation for lowered Word loads and
+  stores, including spill locations and scratch-register alias conditions.
 - [x] Extend the Word-to-Stack boundary through conditions, loops, returns,
   calls, exception handlers, special stores, and FFI operations.
 - [x] Marshal Word-to-Stack FFI arguments into the x10--x13 ABI registers,

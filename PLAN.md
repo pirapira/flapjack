@@ -423,6 +423,8 @@ definitions, pass ordering, examples, and proof obligations.
   source shift-count bound matching the RISC-V masking convention.
 - [x] Prove preservation of the mapped-local relation across a destination
   update and corresponding non-aliasing RISC-V register write.
+- [x] Prove mapped-local preservation for same-destination Loop `longMul`,
+  including the emitted `mulHU`/`mul` sequence and source-register non-aliasing.
 - [x] Prove mapped source-variable evaluation agrees with the compiled Word
   variable evaluation whenever the source local is present.
 - [x] Prove the one-parameter call-boundary case: fresh Loop local binding

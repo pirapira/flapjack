@@ -1057,6 +1057,104 @@ def loopLocalsMappedToRiscV [NeZero width] (context : WordContext)
       RiscV.registerOfNat (wordFindVar context name) = some register ∧
         RiscV.readRegister state register = value
 
+theorem loopToWord_longMul_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (destination sourceLeft sourceRight : Nat)
+    (destinationRegister : Fin 32) (leftValue rightValue : RiscV.Word width)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hleft : loopState.locals sourceLeft = some leftValue)
+    (hright : loopState.locals sourceRight = some rightValue)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0)
+    (hnoalias :
+      ∀ name, name ≠ destination →
+        ∀ register,
+          RiscV.registerOfNat (wordFindVar context name) = some register →
+            register ≠ destinationRegister) :
+    ∀ resultState,
+      RiscV.evalWordProg state
+        (loopToWordProg context
+          (.arith (.longMul destination destination sourceLeft sourceRight))) =
+        some resultState →
+      loopLocalsMappedToRiscV context
+        (updateLoopLocal loopState.locals destination (leftValue * rightValue))
+        resultState := by
+  intro resultState hresult
+  rcases hlocals sourceLeft leftValue hleft with
+    ⟨leftRegister, hleft_register, hleft_value⟩
+  rcases hlocals sourceRight rightValue hright with
+    ⟨rightRegister, hright_register, hright_value⟩
+  have hleft_value' : state.registers leftRegister = leftValue := by
+    exact hleft_value
+  have hright_value' : state.registers rightRegister = rightValue := by
+    exact hright_value
+  have hleft_lt : wordFindVar context sourceLeft < 32 :=
+    RiscV.registerOfNat_some_lt hleft_register
+  have hright_lt : wordFindVar context sourceRight < 32 :=
+    RiscV.registerOfNat_some_lt hright_register
+  have hdestination_lt : wordFindVar context destination < 32 :=
+    RiscV.registerOfNat_some_lt hdestination
+  have hleft_fin :
+      (⟨wordFindVar context sourceLeft, hleft_lt⟩ : Fin 32) = leftRegister := by
+    have h := hleft_register
+    simp [RiscV.registerOfNat, hleft_lt] at h
+    exact h
+  have hright_fin :
+      (⟨wordFindVar context sourceRight, hright_lt⟩ : Fin 32) = rightRegister := by
+    have h := hright_register
+    simp [RiscV.registerOfNat, hright_lt] at h
+    exact h
+  have hdestination_fin :
+      (⟨wordFindVar context destination, hdestination_lt⟩ : Fin 32) =
+        destinationRegister := by
+    have h := hdestination
+    simp [RiscV.registerOfNat, hdestination_lt] at h
+    exact h
+  by_cases halias :
+      wordFindVar context destination = wordFindVar context sourceLeft ∨
+        wordFindVar context destination = wordFindVar context sourceRight
+  · simp [loopToWordProg, wordArith, RiscV.evalWordProg,
+      RiscV.wordArithToInstructions, halias] at hresult
+  · simp [loopToWordProg, wordArith, RiscV.evalWordProg,
+      RiscV.wordArithToInstructions, RiscV.executeInstructions,
+      RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+      RiscV.registerOfNat, hleft_lt, hright_lt, hdestination_lt,
+      hleft_fin, hright_fin, hdestination_fin, hleft_value', hright_value',
+      halias, hdestination_nonzero] at hresult
+    have hleft_not_destination : leftRegister ≠ destinationRegister := by
+      intro heq
+      have hvars := RiscV.registerOfNat_injective hleft_register
+        hdestination heq
+      exact halias (Or.inl hvars.symm)
+    have hright_not_destination : rightRegister ≠ destinationRegister := by
+      intro heq
+      have hvars := RiscV.registerOfNat_injective hright_register
+        hdestination heq
+      exact halias (Or.inr hvars.symm)
+    cases hresult
+    intro name current hcurrent
+    by_cases hname : name = destination
+    · subst name
+      have hvalue : leftValue * rightValue = current := by
+        simpa [updateLoopLocal] using hcurrent
+      subst current
+      refine ⟨destinationRegister, hdestination, ?_⟩
+      simp [RiscV.readRegister, RiscV.execute, RiscV.writeRegister,
+        hdestination_nonzero, hleft_register, hright_register,
+        hleft_value', hright_value', hleft_not_destination,
+        hright_not_destination]
+    · have hcurrent' : loopState.locals name = some current := by
+        simpa [updateLoopLocal, hname] using hcurrent
+      rcases hlocals name current hcurrent' with
+        ⟨register, hregister, hregister_value⟩
+      refine ⟨register, hregister, ?_⟩
+      have hregister_nonalias := hnoalias name hname register hregister
+      simp [RiscV.readRegister, RiscV.execute, RiscV.writeRegister,
+        hdestination_nonzero, hregister_nonalias]
+      exact hregister_value
+
 theorem pipelineWordContext_register_nonalias
     (slots : List Nat) (name destination : Nat)
     (hname : name ∈ slots) (hdestination : destination ∈ slots)

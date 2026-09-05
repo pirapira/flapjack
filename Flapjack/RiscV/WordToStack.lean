@@ -106,6 +106,16 @@ def wordStackJoin (first second : StackProg α) : StackProg α :=
   | first, .skip => first
   | first, second => .seq first second
 
+def wordStackMoveList (config : WordStackConfig) :
+    List (Nat × Nat) → Option (StackProg α)
+  | [] => some .skip
+  | (destination, source) :: moves => do
+      let first ← wordStackMove config destination source
+      let rest ← wordStackMoveList config moves
+      pure (wordStackJoin first rest)
+termination_by moves => sizeOf moves
+decreasing_by all_goals decreasing_trivial
+
 def wordStackDivInst (config : WordStackConfig)
     (destination dividend divisor : Nat) : Option (StackProg α) := do
   let destination ← wordStackLocation config destination
@@ -1283,6 +1293,7 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [ShiftRight α] [LT α] [DecidableRel (fun left right : α => left < right)]
     (config : WordStackConfig) : WordProg α → Option (StackProg α)
   | .skip => some .skip
+  | .move _ moves => wordStackMoveList config moves
   | .assign destination (.var source) =>
       wordStackMove config destination source
   | .locValue destination source =>
@@ -1347,6 +1358,7 @@ decreasing_by all_goals decreasing_trivial
 def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
     WordProg Nat → Option (StackProg Nat)
   | .skip => some .skip
+  | .move _ moves => wordStackMoveList config moves
   | .assign destination value => wordStackCompileExpNat config destination value
   | .locValue destination source => wordStackMove config destination source
   | .inst instruction => wordToStackInst config instruction
@@ -1425,6 +1437,7 @@ def wordRegImmToNat : WordRegImm (Word width) → WordRegImm Nat
 
 def wordProgToNat : WordProg (Word width) → WordProg Nat
   | .skip => .skip
+  | .move priority moves => .move priority moves
   | .assign name value => .assign name (wordExpToNat value)
   | .inst instruction => .inst instruction
   | .store address value => .store (wordExpToNat address) value

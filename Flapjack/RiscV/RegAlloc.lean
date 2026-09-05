@@ -916,7 +916,7 @@ theorem wordAllocateGraph_sound (tree : WordClashTree)
   exact ⟨hfixed, hedges, htree⟩
 
 def wordProgForcedClashes : WordProg α → List (Nat × Nat)
-  | .skip | .store _ _ | .set _ _ | .break _ | .continue _ |
+  | .skip | .move _ _ | .store _ _ | .set _ _ | .break _ | .continue _ |
       .raise _ | .return _ _ | .tick | .locValue _ _ | .ffi _ _ _ _ _ _ => []
   | .assign _ _ => []
   | .inst instruction => wordInstForcedClashes instruction
@@ -945,9 +945,9 @@ def wordAllocateGraphProgram (program : WordProg α)
 
 /- Function-level graph allocation.  CakeML's full SSA entry sequence makes
    every renamed formal an allocation participant, including an unused formal.
-   Word has no separate Move constructor yet, so the seed `Set` below is the
-   compact equivalent for the graph: it puts all renamed formals in the
-   bijection and gives the clash oracle their ABI-entry interference. -/
+   The seed `Set` below still gives the graph all renamed formals and the
+   clash oracle their ABI-entry interference; explicit entry `Move` programs
+   are represented separately when the stack boundary is emitted. -/
 def wordAllocateGraphFunction (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat) (colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
@@ -1029,6 +1029,9 @@ def wordStackOnlyProgramAux (program : WordProg α)
     match program with
     | .assign destination (.var source) =>
         wordStackOnlyMergeMove destination source state
+    | .move _ moves =>
+        moves.foldl (fun state move =>
+          wordStackOnlyMergeMove move.1 move.2 state) state
     | .assign _ _ | .inst _ | .store _ _ | .set _ _ | .raise _ |
         .return _ _ | .tick | .locValue _ _ | .ffi _ _ _ _ _ _ |
         .shareInst _ _ _ =>

@@ -255,6 +255,16 @@ def wordStoreToInstructions [NeZero width] (address : WordExp (Word width))
     (value : Nat) : Option (List (Instruction width)) :=
   wordShareInstToInstructions .store value address
 
+def wordMoveToInstructions [NeZero width] :
+    List (Nat × Nat) → Option (List (Instruction width))
+  | [] => some []
+  | (destination, source) :: moves => do
+      let first ← wordExpToInstructions destination (.var source)
+      let rest ← wordMoveToInstructions moves
+      pure (first ++ rest)
+termination_by moves => sizeOf moves
+decreasing_by all_goals decreasing_trivial
+
 @[simp] def wordConditionOperands [NeZero width] (operator : Cmp) (condition : Nat)
     (rightValue : WordRegImm (Word width)) :
     Option (Fin 32 × Fin 32 × List (Instruction width)) := do
@@ -282,6 +292,7 @@ def wordStoreToInstructions [NeZero width] (address : WordExp (Word width))
 def wordProgToRiscV [NeZero width] :
     WordProg (Word width) → Option (List (Instruction width))
   | .skip => some []
+  | .move _ moves => wordMoveToInstructions moves
   | .assign name value =>
       wordExpToInstructions name value
   | .store address value =>
@@ -598,6 +609,9 @@ def evalWordCondition [NeZero width] (state : State width)
 def evalWordFunction [NeZero width] (state : State width) :
     WordProg (Word width) → Option (State width × List (Word width))
   | .skip => some (state, [])
+  | .move _ moves => do
+      let instructions ← wordMoveToInstructions moves
+      pure (executeInstructions state instructions, [])
   | .assign name value => do
       let instructions ← wordExpToInstructions name value
       pure (executeInstructions state instructions, [])
@@ -669,6 +683,9 @@ decreasing_by all_goals decreasing_trivial
 def evalWordProg [NeZero width] (state : State width) :
     WordProg (Word width) → Option (State width)
   | .skip => some state
+  | .move _ moves => do
+      let instructions ← wordMoveToInstructions moves
+      pure (executeInstructions state instructions)
   | .assign name value => do
       let instructions ← wordExpToInstructions name value
       pure (executeInstructions state instructions)

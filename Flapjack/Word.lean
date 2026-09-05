@@ -54,6 +54,7 @@ inductive WordInst where
 
 inductive WordProg (α : Type u) where
   | skip
+  | move (priority : Nat) (moves : List (Nat × Nat))
   | assign (name : Nat) (value : WordExp α)
   | inst (instruction : WordInst)
   | store (address : WordExp α) (value : Nat)

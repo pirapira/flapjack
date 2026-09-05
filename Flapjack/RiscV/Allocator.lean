@@ -356,6 +356,25 @@ def wordSsaRenameReturns (state : WordSsaState) :
       let (state, destinations) := wordSsaFreshList state destinations
       (state, some (destinations, live))
 
+def wordSsaForceRename : List (Nat × Nat) → WordSsaState → WordSsaState
+  | [], state => state
+  | (source, destination) :: renamings, state =>
+      wordSsaForceRename renamings
+        { state with current := (source, destination) ::
+            state.current.filter (fun entry => entry.1 != source) }
+termination_by renamings => sizeOf renamings
+decreasing_by all_goals decreasing_trivial
+
+def wordSsaRenameMove (state : WordSsaState) (priority : Nat)
+    (moves : List (Nat × Nat)) : WordSsaState × WordProg α :=
+  let destinations := moves.map (fun move => move.1)
+  let sources := moves.map (fun move => wordSsaRead state move.2)
+  let (state, destinations) := wordSsaFreshList state destinations
+  let force := (moves.zip destinations).filter (fun move =>
+    move.1.1 ∉ moves.map (fun candidate => candidate.1)) |>.map
+      (fun move => (move.1.2, move.2))
+  (wordSsaForceRename force state, .move priority (destinations.zip sources))
+
 
 def wordSsaRenameInst (state : WordSsaState) : WordInst → WordSsaState × WordInst
   | .arith operation =>
@@ -528,6 +547,8 @@ mutual
   def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
       (state : WordSsaState) : WordProg α → WordSsaState × WordProg α
     | .skip => (state, .skip)
+    | .move priority moves =>
+        wordSsaRenameMove state priority moves
     | .assign name value =>
         let value := wordSsaRenameExp state value
         let (state, freshName) := wordSsaFresh state name
@@ -653,6 +674,7 @@ def wordExpReadVars : WordExp α → List Nat
 
 def wordProgReadVars : WordProg α → List Nat
   | .skip => []
+  | .move _ moves => moves.map (fun move => move.2)
   | .assign _ value => wordExpReadVars value
   | .inst instruction => wordInstReadVars instruction
   | .store address value => wordExpReadVars address ++ [value]
@@ -686,6 +708,7 @@ def wordProgReadVars : WordProg α → List Nat
 def wordProgWriteVars : WordProg α → List Nat
   | .skip | .store _ _ | .set _ _ | .break _ | .continue _ | .raise _
   | .return _ _ | .tick => []
+  | .move _ moves => moves.map (fun move => move.1)
   | .assign name _ => [name]
   | .inst instruction => wordInstWriteVars instruction
   | .seq first second => wordProgWriteVars first ++ wordProgWriteVars second
@@ -709,11 +732,12 @@ def wordProgWriteVars : WordProg α → List Nat
 def wordProgVariables (program : WordProg α) : List Nat :=
   wordProgReadVars program ++ wordProgWriteVars program
 
-/-! Preference edges corresponding to CakeML's `get_prefs`.  The current Word
-    syntax has no separate `Move` constructor: the move-shaped assignments and
-    `locValue` nodes are the copy operations exposed to the allocator. -/
+/-! Preference edges corresponding to CakeML's `get_prefs`.  Both explicit
+    CakeML moves and the compact copy forms retained by the initial Word IR
+    contribute preferences. -/
 
 def wordProgPreferenceEdges : WordProg α → List (Nat × Nat)
+  | .move _ moves => moves
   | .assign destination (.var source) => [(destination, source)]
   | .locValue destination source => [(destination, source)]
   | .seq first second =>
@@ -860,6 +884,9 @@ def wordClashTreeCallWrites (returns : Option (List Nat × List Nat)) : List Nat
 
 def wordClashTree : WordProg α → List (List Nat × List Nat) → WordClashTree
   | .skip, _ => .delta [] []
+  | .move _ moves, _ =>
+      .delta (moves.map (fun move => move.1))
+        (moves.map (fun move => move.2))
   | .assign name value, _ => .delta [name] (wordExpReadVars value)
   | .inst instruction, _ => wordClashTreeDeltaInst instruction
   | .store address value, _ => .delta [] (value :: wordExpReadVars address)
@@ -1303,6 +1330,8 @@ def wordApplyColourInst (colour : Nat → Nat) : WordInst → WordInst
 
 def wordApplyColour (colour : Nat → Nat) : WordProg α → WordProg α
   | .skip => .skip
+  | .move priority moves =>
+      .move priority (moves.map (fun move => (colour move.1, colour move.2)))
   | .assign name value =>
       .assign (colour name) (wordApplyColourExp colour value)
   | .inst instruction => .inst (wordApplyColourInst colour instruction)
@@ -1533,7 +1562,7 @@ def wordSpecialArithLocationsSafe (operation : WordArith)
 def wordProgSpecialLocationsSafe (locations : NatInfoMap WordLocation) :
     WordProg α → Bool
   | .skip => true
-  | .assign _ _ | .store _ _ | .set _ _ | .break _ | .continue _ |
+  | .move _ _ | .assign _ _ | .store _ _ | .set _ _ | .break _ | .continue _ |
       .raise _ | .return _ _ | .tick | .locValue _ _ | .ffi _ _ _ _ _ _ => true
   | .inst (.arith operation) => wordSpecialArithLocationsSafe operation locations
   | .inst (.mem _ _ _) => true

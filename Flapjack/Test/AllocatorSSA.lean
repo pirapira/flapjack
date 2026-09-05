@@ -126,4 +126,29 @@ example :
     wordSsaSeq, lookupNatInfo, List.eraseDups, List.eraseDupsBy,
     List.eraseDupsBy.loop]
 
+example :
+    wordSsaRenameProgram
+        ({ current := [(1, 100)], next := 200 } : WordSsaState)
+        ((.move 7 [(2, 1), (3, 2)]) : WordProg Nat) =
+        ({ current := [(3, 204), (2, 200), (1, 100)], next := 208 },
+        .move 7 [(200, 100), (204, 2)]) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameMove, wordSsaFreshList, wordSsaFresh, wordSsaRead,
+    wordSsaForceRename, lookupNatInfo]
+
+example :
+    wordProgReadVars
+        ((.move 7 [(2, 1), (3, 2)]) : WordProg Nat) = [1, 2] := by
+  rfl
+
+example :
+    wordProgWriteVars
+        ((.move 7 [(2, 1), (3, 2)]) : WordProg Nat) = [2, 3] := by
+  rfl
+
+example :
+    wordProgPreferenceEdges
+        ((.move 7 [(2, 1), (3, 2)]) : WordProg Nat) = [(2, 1), (3, 2)] := by
+  rfl
+
 end Flapjack

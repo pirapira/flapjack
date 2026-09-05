@@ -173,4 +173,20 @@ example :
       some (some 0, some 2) := by
   native_decide
 
+example :
+    wordProgForcedClashes
+      (.inst (.arith (.longMul 4 5 6 7)) : WordProg Nat) =
+      [(4, 5), (4, 6), (4, 7)] := by
+  native_decide
+
+example :
+    (wordAllocateGraphProgram
+      (.assign 2 (.var 3) : WordProg Nat) [] 1 1).map
+        (fun allocation =>
+          match allocation.2 with
+          | .assign destination (.var source) => (destination, source)
+          | _ => (0, 0)) =
+      some (2, 2) := by
+  native_decide
+
 end Flapjack

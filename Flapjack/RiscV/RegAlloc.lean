@@ -296,6 +296,11 @@ def wordRaNodeIsAtemp (graph : WordRegGraph) (node : Nat) : Bool :=
   | some .atemp => true
   | some (.fixed _) | some .stemp | none => false
 
+def wordRaNodeIsStemp (graph : WordRegGraph) (node : Nat) : Bool :=
+  match lookupNatInfo node graph.tags with
+  | some .stemp => true
+  | some (.fixed _) | some .atemp | none => false
+
 def wordRaDegree (graph : WordRegGraph) (node : Nat) : Nat :=
   (wordGraphNeighbours graph node).length
 
@@ -365,6 +370,12 @@ def wordRaSimplifyAll : Nat → Nat → WordRaState → WordRaState
                 (wordRaRemoveNode colours node true state)
           | [] => state
 
+def wordRaFinalizeStemps (state : WordRaState) : WordRaState :=
+  let stempNodes := state.active.filter (wordRaNodeIsStemp state.graph)
+  { state with
+    active := state.active.filter (fun node => !wordRaNodeIsStemp state.graph node)
+    stack := stempNodes.reverse ++ state.stack }
+
 def wordRaChooseColour (colours stackStart : Nat)
     (graph : WordRegGraph) (node : Nat) : Nat :=
   let blocked := wordFixedNeighbourColours
@@ -392,6 +403,7 @@ def wordColourGraphWithWorklist (colours stackStart : Nat)
     (graph : WordRegGraph) : WordRegGraph :=
   let state := wordRaInit colours graph
   let state := wordRaSimplifyAll (state.active.length + 1) colours state
+  let state := wordRaFinalizeStemps state
   wordRaColourStack colours stackStart state.stack state.graph
 
 /-! Move worklists and the first coalescing step.
@@ -710,5 +722,33 @@ theorem wordAllocateGraph_sound (tree : WordClashTree)
   cases heq
   rcases hchecks with ⟨⟨hfixed, hedges⟩, htree⟩
   exact ⟨hfixed, hedges, htree⟩
+
+def wordProgForcedClashes : WordProg α → List (Nat × Nat)
+  | .skip | .store _ _ | .set _ _ | .break _ | .continue _ |
+      .raise _ | .return _ _ | .tick | .locValue _ _ | .ffi _ _ _ _ _ _ => []
+  | .assign _ _ => []
+  | .inst instruction => wordInstForcedClashes instruction
+  | .seq first second =>
+      wordProgForcedClashes first ++ wordProgForcedClashes second
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordProgForcedClashes thenBranch ++ wordProgForcedClashes elseBranch
+  | .loop _ body _ => wordProgForcedClashes body
+  | .call _ _ _ none => []
+  | .call _ _ _ (some (_, body)) => wordProgForcedClashes body
+  | .shareInst _ _ _ => []
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+def wordAllocateGraphProgram (program : WordProg α)
+    (fixedSources : List Nat) (colours stackStart : Nat) :
+    Option (WordGraphAllocation × WordProg α) :=
+  let tree := wordClashTree program []
+  let forced := wordProgForcedClashes program
+  let moves := wordProgPreferenceEdges program
+  (wordAllocateGraph tree forced fixedSources moves colours stackStart).map
+    (fun allocation =>
+      (allocation,
+        wordApplyColour
+          (wordGraphColouringAt allocation.colouring) program))
 
 end Flapjack

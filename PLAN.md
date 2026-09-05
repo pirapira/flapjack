@@ -386,6 +386,8 @@ definitions, pass ordering, examples, and proof obligations.
   move worklists.
 - [x] Bridge graph colours back to source variables with CakeML total-colour
   doubling and validate the graph allocation through the clash-tree oracle.
+- [x] Derive forced clashes from Word special instructions and expose a
+  checked graph allocator that rewrites complete Word programs.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

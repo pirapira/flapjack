@@ -67,4 +67,20 @@ theorem evalStackRemoveSetCurrHeap [NeZero width]
   simp [stackRemoveSet, evalWordStackMachine, wordStackMachineBinOp,
     wordStackMachineWriteRegister]
 
+theorem evalStackRemoveStackAlloc_small [NeZero width]
+    (config : StackRemoveConfig) (state : WordStackMachineState width)
+    (words : Nat) (hwords : words ≤ 255)
+    (hscratch : config.scratch ≠ config.stackPointer) :
+    (evalWordStackMachine state
+      (stackRemoveStackAlloc config words)).map
+        (fun final => final.registers config.stackPointer) =
+      some (state.registers config.stackPointer -
+        BitVec.ofNat width (config.bytesInWord * words)) := by
+  by_cases hzero : words = 0
+  · subst words
+    simp [stackRemoveStackAlloc, stackRemoveStackDelta, evalWordStackMachine]
+  · simp [stackRemoveStackAlloc, stackRemoveStackDelta, hzero,
+      stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
+      wordStackMachineWriteRegister, hwords, hscratch, Ne.symm hscratch]
+
 end Flapjack.RiscV

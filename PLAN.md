@@ -587,6 +587,8 @@ definitions, pass ordering, examples, and proof obligations.
   explicit address/source non-aliasing conditions.
 - [x] Prove the `CurrHeap` StackRemove fast-path simulations for both `Get`
   and `Set`.
+- [x] Prove the bounded StackRemove stack-allocation equation under an
+  explicit scratch/stack-pointer non-aliasing condition.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

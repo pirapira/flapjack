@@ -61,4 +61,14 @@ example :
     (evalStackRemoveSetCurrHeap (width := 64) stackGetCorrectnessConfig
       stackGetCorrectnessState 6)
 
+example :
+    (evalWordStackMachine stackGetCorrectnessState
+      (stackRemoveStackAlloc stackGetCorrectnessConfig 2)).map
+        (fun final => final.registers 20) =
+      some (BitVec.ofNat 64 0 - BitVec.ofNat 64 16) := by
+  simpa [stackGetCorrectnessConfig, stackGetCorrectnessState] using
+    (evalStackRemoveStackAlloc_small (width := 64)
+      stackGetCorrectnessConfig stackGetCorrectnessState 2 (by omega)
+      (by simp [stackGetCorrectnessConfig]))
+
 end Flapjack.RiscV

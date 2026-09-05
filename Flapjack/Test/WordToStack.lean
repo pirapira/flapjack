@@ -27,6 +27,21 @@ example :
   simp [wordToStackProg, wordStackMove, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 
+example :
+    wordStackMemoryInst
+        { locations := [(0, .register 4), (1, .stack 2)],
+          scratch := 31, stackBase := 10 } .load32 0 1 =
+      some (.seq (.stackLoad 29 12) (.inst (.mem .load32 4 29)) : StackProg Nat) := by
+  exact wordStackMemoryInst_load_spill_address
+
+example :
+    wordStackMemoryInst
+        { locations := [(0, .stack 3), (1, .stack 2)],
+          scratch := 31, stackBase := 10 } .store32 0 1 =
+      some (.seq (.stackLoad 29 12)
+        (.seq (.stackLoad 31 13) (.inst (.mem .store32 31 29))) : StackProg Nat) := by
+  exact wordStackMemoryInst_store_spill_value_and_address
+
 example [NeZero width]
     (state final : WordStackState width)
     (heval : (wordStackMove (α := Nat)

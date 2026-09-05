@@ -21,6 +21,7 @@ structure WordStackConfig where
   locations : NatInfoMap WordLocation
   scratch : Nat
   stackBase : Nat
+  addressScratch : Nat := 29
   deriving Repr
 
 def wordStackLocation (config : WordStackConfig) (name : Nat) :
@@ -51,6 +52,63 @@ def wordStackMove (config : WordStackConfig) (destination source : Nat) :
 def wordToStackMove (config : WordStackConfig) (destination source : Nat) :
     Option (StackProg α) :=
   wordStackMove config destination source
+
+def wordStackLoadInst (config : WordStackConfig) (operator : WordMemOp)
+    (destination address : Nat) : Option (StackProg α) := do
+  let destination ← wordStackLocation config destination
+  let address ← wordStackLocation config address
+  match destination, address with
+  | .register destination, .register address =>
+      pure (.inst (.mem operator destination address))
+  | .stack destination, .register address =>
+      pure (.seq (.inst (.mem operator config.scratch address))
+        (.stackStore config.scratch (wordStackOffset config destination)))
+  | .register destination, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.inst (.mem operator destination config.addressScratch)))
+  | .stack destination, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.seq (.inst (.mem operator config.scratch config.addressScratch))
+          (.stackStore config.scratch (wordStackOffset config destination))))
+
+def wordStackStoreInst (config : WordStackConfig) (operator : WordMemOp)
+    (source address : Nat) : Option (StackProg α) := do
+  let source ← wordStackLocation config source
+  let address ← wordStackLocation config address
+  match source, address with
+  | .register source, .register address =>
+      pure (.inst (.mem operator source address))
+  | .stack source, .register address =>
+      pure (.seq (.stackLoad config.scratch (wordStackOffset config source))
+        (.inst (.mem operator config.scratch address)))
+  | .register source, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.inst (.mem operator source config.addressScratch)))
+  | .stack source, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.seq (.stackLoad config.scratch (wordStackOffset config source))
+          (.inst (.mem operator config.scratch config.addressScratch))))
+
+def wordStackMemoryInst (config : WordStackConfig) (operator : WordMemOp)
+    (sourceOrDestination address : Nat) : Option (StackProg α) :=
+  match operator with
+  | .load => wordStackLoadInst config operator sourceOrDestination address
+  | .load8 => wordStackLoadInst config operator sourceOrDestination address
+  | .load16 => wordStackLoadInst config operator sourceOrDestination address
+  | .load32 => wordStackLoadInst config operator sourceOrDestination address
+  | .store => wordStackStoreInst config operator sourceOrDestination address
+  | .store8 => wordStackStoreInst config operator sourceOrDestination address
+  | .store16 => wordStackStoreInst config operator sourceOrDestination address
+  | .store32 => wordStackStoreInst config operator sourceOrDestination address
+
+def wordToStackInst (config : WordStackConfig) : WordInst → Option (StackProg α)
+  | .mem operator sourceOrDestination address =>
+      wordStackMemoryInst config operator sourceOrDestination address
+  | .arith _ => none
 
 /-! A compact executable semantics for the move fragment.  StackLang uses
 natural-number register names, so this boundary deliberately models the
@@ -125,6 +183,8 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       wordStackMove config destination source
   | .locValue destination source =>
       wordStackMove config destination source
+  | .inst instruction =>
+      wordToStackInst config instruction
   | .seq first second => do
       let first ← wordToStackProg config first
       let second ← wordToStackProg config second
@@ -160,5 +220,22 @@ theorem wordStackMove_spill_to_spill :
           scratch := 31, stackBase := 10 } 0 1 =
       some (.seq (.stackLoad 31 12) (.stackStore 31 13) : StackProg Nat) := by
   simp [wordStackMove, wordStackLocation, wordStackOffset, lookupNatInfo]
+
+theorem wordStackMemoryInst_load_spill_address :
+    wordStackMemoryInst
+        { locations := [(0, .register 4), (1, .stack 2)],
+          scratch := 31, stackBase := 10 } .load32 0 1 =
+      some (.seq (.stackLoad 29 12) (.inst (.mem .load32 4 29)) : StackProg Nat) := by
+  simp [wordStackMemoryInst, wordStackLoadInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+theorem wordStackMemoryInst_store_spill_value_and_address :
+    wordStackMemoryInst
+        { locations := [(0, .stack 3), (1, .stack 2)],
+          scratch := 31, stackBase := 10 } .store32 0 1 =
+      some (.seq (.stackLoad 29 12)
+        (.seq (.stackLoad 31 13) (.inst (.mem .store32 31 29))) : StackProg Nat) := by
+  simp [wordStackMemoryInst, wordStackStoreInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
 
 end Flapjack.RiscV

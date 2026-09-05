@@ -823,6 +823,42 @@ theorem wordAllocateVarsWithClashes_sound (slots : List Nat)
     rcases hcolouring with ⟨hcheck, heq⟩
     simpa [heq] using hcheck
 
+theorem wordColouringUsesAllocatable_witness (names : List Nat)
+    (colouring : NatInfoMap Nat)
+    (huses : wordColouringUsesAllocatable names colouring = true) :
+    ∀ name, name ∈ names →
+      ∃ register,
+        lookupNatInfo name colouring = some register ∧
+          wordRegisterIsAllocatable register = true := by
+  induction names with
+  | nil =>
+      intro name hname
+      simp at hname
+  | cons head tail ih =>
+      cases hlookup : lookupNatInfo head colouring with
+      | none =>
+          simp [wordColouringUsesAllocatable, hlookup] at huses
+      | some register =>
+          have huses' :
+              wordRegisterIsAllocatable register = true ∧
+                wordColouringUsesAllocatable tail colouring = true := by
+            simpa [wordColouringUsesAllocatable, hlookup] using huses
+          intro name hname
+          simp only [List.mem_cons] at hname
+          rcases hname with rfl | hname
+          · exact ⟨register, hlookup, huses'.1⟩
+          · exact ih huses'.2 name hname
+
+theorem wordAllocateVarsWithClashes_maps_slots (slots : List Nat)
+    (edges : List (Nat × Nat)) (colouring : NatInfoMap Nat)
+    (hcolouring : wordAllocateVarsWithClashes slots edges = some colouring) :
+    ∀ name, name ∈ slots.eraseDups →
+      ∃ register,
+        lookupNatInfo name colouring = some register ∧
+          wordRegisterIsAllocatable register = true := by
+  have hsound := wordAllocateVarsWithClashes_sound slots edges colouring hcolouring
+  exact wordColouringUsesAllocatable_witness slots.eraseDups colouring hsound.1
+
 /-! Spill-aware allocation boundary.  CakeML's `word_to_stack` pass consumes
     the spill information produced by `word_alloc`; keeping that information
     explicit here prevents register exhaustion from being confused with a

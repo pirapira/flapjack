@@ -61,4 +61,14 @@ example (slots : List Nat) (edges : List (Nat × Nat))
       wordColouringRespectsClashes edges colouring = true := by
   exact wordAllocateVarsWithClashes_sound slots edges colouring hcolouring
 
+example (slots : List Nat) (edges : List (Nat × Nat))
+    (colouring : NatInfoMap Nat)
+    (hcolouring : wordAllocateVarsWithClashes slots edges = some colouring)
+    (name : Nat) (hname : name ∈ slots.eraseDups) :
+    ∃ register,
+      lookupNatInfo name colouring = some register ∧
+        wordRegisterIsAllocatable register = true := by
+  exact wordAllocateVarsWithClashes_maps_slots slots edges colouring hcolouring
+    name hname
+
 end Flapjack

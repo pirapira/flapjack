@@ -332,6 +332,8 @@ definitions, pass ordering, examples, and proof obligations.
   locations from the renamed Word program and its analysed clash graph.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
+- [x] Expose witness-level allocator contracts showing every successfully
+  coloured SSA slot maps to an allocatable RISC-V register.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
   multiplication (`MULHU`) followed by low-half multiplication (`MUL`),
   including the target's high-destination/source non-aliasing precondition.

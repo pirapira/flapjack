@@ -67,8 +67,14 @@ example :
       some (.seq (.arith .or 31 2 2) (.stackStore 31 10) : StackProg Nat) := by
   simp [RiscV.wordToStackFunctionWithParameters, RiscV.wordToStackProgWord,
     RiscV.wordToStackProgNat, RiscV.wordStackMovesFromPhysical,
-    RiscV.wordStackMoveFromPhysical, RiscV.wordStackJoin,
-    RiscV.wordStackLocation, RiscV.wordStackOffset, lookupNatInfo,
+    RiscV.wordStackPhysicalMovesFrom, RiscV.wordStackParallelLocationMove,
+    RiscV.wordStackParallelLocationMoveAux,
+    RiscV.wordStackLocationMoveDestinations,
+    RiscV.wordStackLocationMoveReady,
+    RiscV.wordStackLocationMoveRemoveDestination,
+    RiscV.wordStackLocationMove, RiscV.wordStackMoveFromPhysical,
+    RiscV.wordStackJoin, RiscV.wordStackLocation, RiscV.wordStackOffset,
+    lookupNatInfo,
     RiscV.wordProgToNat]
 
 example :

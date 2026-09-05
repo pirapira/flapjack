@@ -255,15 +255,55 @@ def wordStoreToInstructions [NeZero width] (address : WordExp (Word width))
     (value : Nat) : Option (List (Instruction width)) :=
   wordShareInstToInstructions .store value address
 
-def wordMoveToInstructions [NeZero width] :
-    List (Nat × Nat) → Option (List (Instruction width))
-  | [] => some []
-  | (destination, source) :: moves => do
-      let first ← wordExpToInstructions destination (.var source)
-      let rest ← wordMoveToInstructions moves
-      pure (first ++ rest)
+def wordMoveRegisterDestinations (moves : List (Nat × Nat)) : List Nat :=
+  moves.map (fun move => move.1)
+
+def wordMoveRegisterRemoveDestination (destination : Nat) :
+    List (Nat × Nat) → List (Nat × Nat) :=
+  List.filter (fun move => move.1 != destination)
+
+def wordMoveRegisterReady (destinations : List Nat) :
+    List (Nat × Nat) → Option (Nat × Nat)
+  | [] => none
+  | move :: moves =>
+      if move.2 ∉ destinations then
+        some move
+      else
+        wordMoveRegisterReady destinations moves
 termination_by moves => sizeOf moves
 decreasing_by all_goals decreasing_trivial
+
+def wordMoveToInstructionsAux [NeZero width] :
+    Nat → List (Nat × Nat) → Option (List (Instruction width))
+  | 0, _ => none
+  | fuel + 1, moves =>
+      let destinations := wordMoveRegisterDestinations moves
+      if moves.any (fun move => move.1 == 31 || move.2 == 31) then
+        none
+      else if !destinations.Nodup then
+        none
+      else if moves.isEmpty then
+        some []
+      else
+        match wordMoveRegisterReady destinations moves with
+        | some (destination, source) => do
+            let first ← wordExpToInstructions destination (.var source)
+            let rest ← wordMoveToInstructionsAux fuel
+              (wordMoveRegisterRemoveDestination destination moves)
+            pure (first ++ rest)
+        | none =>
+            match moves with
+            | [] => some []
+            | (destination, source) :: _ => do
+                let save ← wordExpToInstructions 31 (.var source)
+                let rest ← wordMoveToInstructionsAux fuel
+                  (wordMoveRegisterRemoveDestination destination moves)
+                let restore ← wordExpToInstructions destination (.var 31)
+                pure (save ++ rest ++ restore)
+
+def wordMoveToInstructions [NeZero width] (moves : List (Nat × Nat)) :
+    Option (List (Instruction width)) :=
+  wordMoveToInstructionsAux (moves.length + 1) moves
 
 @[simp] def wordConditionOperands [NeZero width] (operator : Cmp) (condition : Nat)
     (rightValue : WordRegImm (Word width)) :

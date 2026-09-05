@@ -180,8 +180,11 @@ example :
       some (.seq (.seq (.stackLoad 31 12) (.arith .or 2 31 31)) (.return 2) :
         StackProg Nat) := by
   simp [wordToStackProg, wordStackReturn, wordStackMovesToPhysical,
-    wordStackMoveToPhysical, wordStackLocation, wordStackOffset,
-    lookupNatInfo, wordStackJoin]
+    wordStackPhysicalMovesTo, wordStackParallelLocationMove,
+    wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
+    wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
+    wordStackLocationMove, wordStackMoveToPhysical, wordStackLocation,
+    wordStackOffset, lookupNatInfo, wordStackJoin]
 
 example :
     wordToStackProg
@@ -356,9 +359,13 @@ example :
           returnLabel := 20, entryLabel := 21 }
         ((.call (some ([0], [])) (some 7) [0] none) : WordProg Nat)).isSome =
       true := by
-    simp [wordToStackProg, wordStackReturnCode, wordStackMovesToPhysical,
-    wordStackMoveToPhysical, wordStackMovesFromPhysical,
-    wordStackMoveFromPhysical, wordStackLocation, lookupNatInfo]
+  simp [wordToStackProg, wordStackReturnCode, wordStackMovesToPhysical,
+    wordStackPhysicalMovesTo, wordStackMovesFromPhysical,
+    wordStackPhysicalMovesFrom, wordStackParallelLocationMove,
+    wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
+    wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
+    wordStackLocationMove, wordStackMoveToPhysical, wordStackMoveFromPhysical,
+    wordStackLocation, lookupNatInfo]
 
 example :
     (wordToStackProgNat
@@ -377,7 +384,11 @@ example :
         ((.call none (some 7) [0] (some (1, .raise 0))) : WordProg Nat)).isSome =
       true := by
   simp [wordToStackProg, wordStackReturnCode, wordStackMovesToPhysical,
-    wordStackMoveToPhysical, wordStackMovesFromPhysical,
+    wordStackPhysicalMovesTo, wordStackMoveToPhysical,
+    wordStackMovesFromPhysical, wordStackPhysicalMovesFrom,
+    wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
+    wordStackLocationMoveDestinations, wordStackLocationMoveReady,
+    wordStackLocationMoveRemoveDestination, wordStackLocationMove,
     wordStackMoveFromPhysical, wordStackLocation, wordStackOffset,
     lookupNatInfo, wordToStackCallWithHandler, wordToStackRaise,
     stackSeq, stackArgs, stackMove, stackPushHandler, stackHandlerArgs,

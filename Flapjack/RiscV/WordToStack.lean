@@ -106,15 +106,89 @@ def wordStackJoin (first second : StackProg α) : StackProg α :=
   | first, .skip => first
   | first, second => .seq first second
 
-def wordStackMoveList (config : WordStackConfig) :
-    List (Nat × Nat) → Option (StackProg α)
-  | [] => some .skip
-  | (destination, source) :: moves => do
-      let first ← wordStackMove config destination source
-      let rest ← wordStackMoveList config moves
-      pure (wordStackJoin first rest)
+def wordMoveDestinations (moves : List (Nat × Nat)) : List Nat :=
+  moves.map (fun move => move.1)
+
+def wordMoveRemoveDestination (destination : Nat) :
+    List (Nat × Nat) → List (Nat × Nat) :=
+  List.filter (fun move => move.1 != destination)
+
+def wordMoveReady (destinations : List Nat) :
+    List (Nat × Nat) → Option (Nat × Nat)
+  | [] => none
+  | move :: moves =>
+      if move.2 ∉ destinations then
+        some move
+      else
+        wordMoveReady destinations moves
 termination_by moves => sizeOf moves
 decreasing_by all_goals decreasing_trivial
+
+def wordStackMoveToScratch (config : WordStackConfig) (source : Nat) :
+    Option (StackProg α) := do
+  let location ← wordStackLocation config source
+  match location with
+  | .register register =>
+      if register = config.scratch || register = config.addressScratch then
+        none
+      else
+        pure (.arith .or config.addressScratch register register)
+  | .stack slot =>
+      pure (.stackLoad config.addressScratch (wordStackOffset config slot))
+
+def wordStackMoveFromScratch (config : WordStackConfig) (destination : Nat) :
+    Option (StackProg α) := do
+  let location ← wordStackLocation config destination
+  match location with
+  | .register register =>
+      if register = config.scratch || register = config.addressScratch then
+        none
+      else
+        pure (.arith .or register config.addressScratch config.addressScratch)
+  | .stack slot =>
+      pure (.stackStore config.addressScratch (wordStackOffset config slot))
+
+/-! Compile a parallel move list.  A move whose source is not another pending
+    destination can be emitted immediately.  If the remaining graph is a
+    cycle, save one source in the reserved scratch register, solve the rest,
+    and restore that saved value into the postponed destination.  CakeML's
+    `parmove` uses the same temporary-register idea; the explicit `Nodup`
+    check is its windmill invariant at this boundary.  Stack-to-stack moves
+    use `scratch`, so cycle save/restore uses the independent address scratch.
+    The allocator reserves both registers for this purpose. -/
+def wordStackParallelMoveAux (config : WordStackConfig) :
+    Nat → List (Nat × Nat) → Option (StackProg α)
+  | 0, _ => none
+  | fuel + 1, moves =>
+      let destinations := wordMoveDestinations moves
+      if !destinations.Nodup then
+        none
+      else if moves.isEmpty then
+        some .skip
+      else
+        match wordMoveReady destinations moves with
+        | some (destination, source) => do
+            let first ← wordStackMove config destination source
+            let rest ← wordStackParallelMoveAux config fuel
+              (wordMoveRemoveDestination destination moves)
+            pure (wordStackJoin first rest)
+        | none =>
+            match moves with
+            | [] => some .skip
+            | (destination, source) :: _ => do
+                let save ← wordStackMoveToScratch config source
+                let rest ← wordStackParallelMoveAux config fuel
+                  (wordMoveRemoveDestination destination moves)
+                let restore ← wordStackMoveFromScratch config destination
+                pure (wordStackJoin save (wordStackJoin rest restore))
+
+def wordStackParallelMove (config : WordStackConfig)
+    (moves : List (Nat × Nat)) : Option (StackProg α) :=
+  wordStackParallelMoveAux config (moves.length + 1) moves
+
+def wordStackMoveList (config : WordStackConfig) :
+    List (Nat × Nat) → Option (StackProg α) :=
+  wordStackParallelMove config
 
 def wordStackDivInst (config : WordStackConfig)
     (destination dividend divisor : Nat) : Option (StackProg α) := do
@@ -577,25 +651,134 @@ def wordStackMoveToPhysical (config : WordStackConfig)
       pure (.seq (.stackLoad config.scratch (wordStackOffset config slot))
         (.arith .or destination config.scratch config.scratch))
 
-def wordStackMovesFromPhysical (config : WordStackConfig) :
-    List Nat → Nat → Option (StackProg α)
-  | [], _ => some .skip
+def wordStackLocationMove (config : WordStackConfig)
+    (destination source : WordLocation) : Option (StackProg α) :=
+  match destination, source with
+  | .register destination, .register source =>
+      if destination = source then some .skip
+      else some (.arith .or destination source source)
+  | .register destination, .stack slot =>
+      pure (.seq (.stackLoad config.scratch (wordStackOffset config slot))
+        (.arith .or destination config.scratch config.scratch))
+  | .stack slot, .register source =>
+      pure (.seq (.arith .or config.scratch source source)
+        (.stackStore config.scratch (wordStackOffset config slot)))
+  | .stack destinationSlot, .stack sourceSlot =>
+      if destinationSlot = sourceSlot then
+        some .skip
+      else
+        pure (.seq (.stackLoad config.scratch
+            (wordStackOffset config sourceSlot))
+          (.stackStore config.scratch (wordStackOffset config destinationSlot)))
+
+def wordStackLocationMoveToScratch (config : WordStackConfig)
+    (source : WordLocation) : Option (StackProg α) :=
+  match source with
+  | .register register =>
+      if register = config.scratch || register = config.addressScratch then
+        none
+      else
+        pure (.arith .or config.addressScratch register register)
+  | .stack slot =>
+      pure (.stackLoad config.addressScratch (wordStackOffset config slot))
+
+def wordStackLocationMoveFromScratch (config : WordStackConfig)
+    (destination : WordLocation) : Option (StackProg α) :=
+  match destination with
+  | .register register =>
+      if register = config.scratch || register = config.addressScratch then
+        none
+      else
+        pure (.arith .or register config.addressScratch config.addressScratch)
+  | .stack slot =>
+      pure (.stackStore config.addressScratch (wordStackOffset config slot))
+
+def wordStackLocationMoveDestinations
+    (moves : List (WordLocation × WordLocation)) : List WordLocation :=
+  moves.map (fun move => move.1)
+
+def wordStackLocationMoveRemoveDestination (destination : WordLocation) :
+    List (WordLocation × WordLocation) → List (WordLocation × WordLocation) :=
+  List.filter (fun move => move.1 != destination)
+
+def wordStackLocationMoveReady (destinations : List WordLocation) :
+    List (WordLocation × WordLocation) → Option (WordLocation × WordLocation)
+  | [] => none
+  | move :: moves =>
+      if move.1 = move.2 || move.2 ∉ destinations then
+        some move
+      else
+        wordStackLocationMoveReady destinations moves
+termination_by moves => sizeOf moves
+decreasing_by all_goals decreasing_trivial
+
+def wordStackParallelLocationMoveAux (config : WordStackConfig) :
+    Nat → List (WordLocation × WordLocation) → Option (StackProg α)
+  | 0, _ => none
+  | fuel + 1, moves =>
+      let destinations := wordStackLocationMoveDestinations moves
+      let reserved location :=
+        location = .register config.scratch ||
+          location = .register config.addressScratch
+      if moves.any (fun move => reserved move.1 || reserved move.2) then
+        none
+      else if !destinations.Nodup then
+        none
+      else if moves.isEmpty then
+        some .skip
+      else
+        match wordStackLocationMoveReady destinations moves with
+        | some (destination, source) => do
+            let first ← wordStackLocationMove config destination source
+            let rest ← wordStackParallelLocationMoveAux config fuel
+              (wordStackLocationMoveRemoveDestination destination moves)
+            pure (wordStackJoin first rest)
+        | none =>
+            match moves with
+            | [] => some .skip
+            | (destination, source) :: _ => do
+                if config.scratch = config.addressScratch then none else
+                  let save ← wordStackLocationMoveToScratch config source
+                  let rest ← wordStackParallelLocationMoveAux config fuel
+                    (wordStackLocationMoveRemoveDestination destination moves)
+                  let restore ← wordStackLocationMoveFromScratch config destination
+                  pure (wordStackJoin save (wordStackJoin rest restore))
+
+def wordStackParallelLocationMove (config : WordStackConfig)
+    (moves : List (WordLocation × WordLocation)) : Option (StackProg α) :=
+  wordStackParallelLocationMoveAux config (moves.length + 1) moves
+
+def wordStackPhysicalMovesFrom (config : WordStackConfig) :
+    List Nat → Nat → Option (List (WordLocation × WordLocation))
+  | [], _ => some []
   | destination :: destinations, source => do
-      let first ← wordStackMoveFromPhysical config destination source
-      let rest ← wordStackMovesFromPhysical config destinations (source + 2)
-      pure (wordStackJoin first rest)
+      let destination ← wordStackLocation config destination
+      let rest ← wordStackPhysicalMovesFrom config destinations (source + 2)
+      pure ((destination, .register source) :: rest)
 termination_by destinations => sizeOf destinations
 decreasing_by all_goals decreasing_trivial
 
-def wordStackMovesToPhysical (config : WordStackConfig) :
-    List Nat → Nat → Option (StackProg α)
-  | [], _ => some .skip
+def wordStackPhysicalMovesTo (config : WordStackConfig) :
+    List Nat → Nat → Option (List (WordLocation × WordLocation))
+  | [], _ => some []
   | source :: sources, destination => do
-      let first ← wordStackMoveToPhysical config source destination
-      let rest ← wordStackMovesToPhysical config sources (destination + 2)
-      pure (wordStackJoin first rest)
+      let source ← wordStackLocation config source
+      let rest ← wordStackPhysicalMovesTo config sources (destination + 2)
+      pure ((.register destination, source) :: rest)
 termination_by sources => sizeOf sources
 decreasing_by all_goals decreasing_trivial
+
+def wordStackMovesFromPhysical (config : WordStackConfig) :
+    List Nat → Nat → Option (StackProg α)
+  | destinations, source => do
+      let moves ← wordStackPhysicalMovesFrom config destinations source
+      wordStackParallelLocationMove config moves
+
+def wordStackMovesToPhysical (config : WordStackConfig) :
+    List Nat → Nat → Option (StackProg α)
+  | sources, destination => do
+      let moves ← wordStackPhysicalMovesTo config sources destination
+      wordStackParallelLocationMove config moves
 
 def wordStackReturnCode (config : WordStackConfig) :
     Option (List Nat × List Nat) → Option (StackProg α)

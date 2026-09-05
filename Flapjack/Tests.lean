@@ -12,6 +12,7 @@ import Flapjack.Test.AllocatorFunction
 import Flapjack.Test.AllocatorCorrectness
 import Flapjack.Test.AllocatorRegAlloc
 import Flapjack.Test.WordToStack
+import Flapjack.Test.ParallelMove
 import Flapjack.RiscV.Correctness
 import Flapjack.RiscV.CorrectnessFfi
 import Flapjack.Test.Structured

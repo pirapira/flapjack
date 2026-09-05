@@ -407,7 +407,8 @@ definitions, pass ordering, examples, and proof obligations.
   classes used by the RISC-V graph allocator.
 - [x] Carry explicit CakeML-style prioritized Word move programs through SSA
   renaming, clash/preferences, colouring, stack lowering, and RISC-V
-  execution; parallel-move cycle handling remains part of the full allocator.
+  execution, including cycle-safe scheduling with the reserved x29/x31
+  temporaries; full allocator integration remains a separate item.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

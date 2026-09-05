@@ -16,6 +16,18 @@ def pipelineStackRemoveConfig : StackRemoveConfig :=
   { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
     stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
 
+def pipelineAllocatedCallDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "id", inline := false, exported := false,
+      params := [("x", .one)],
+      body := .return (.var .local "x"), returnShape := .one },
+   .function
+    { name := "main", inline := false, exported := true,
+      params := [],
+      body := .decCall "result" .one "id"
+        [.const (BitVec.ofNat 64 41)]
+        (.return (.var .local "result")), returnShape := .one }]
+
 example :
     (compileFlapjackRiscVViaStack (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
@@ -26,6 +38,12 @@ example :
     (compileFlapjackRiscVViaAllocatedStack (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
       pipelineStackRemoveConfig pipelineStackAddDeclarations).isSome := by
+  native_decide
+
+example :
+    (compileFlapjackRiscVViaAllocatedStack (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      pipelineStackRemoveConfig pipelineAllocatedCallDeclarations).isSome := by
   native_decide
 
 def globalTestContext : GlobalPassContext Nat :=

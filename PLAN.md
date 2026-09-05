@@ -593,6 +593,8 @@ definitions, pass ordering, examples, and proof obligations.
   an RV64 addition compilation regression.
 - [x] Wire the executable SSA/clash-colouring Word allocation boundary into a
   separate allocated Stack-to-RISC-V entry point with an allocation regression.
+- [x] Exercise the allocated Stack-to-RISC-V entry point on a declaration call
+  across two generated function sections.
 - [x] Replace the fixed StackRemove fuel in all composed backend entry points
   with a size-derived bound, so generated functions are not limited to 1024
   levels of nesting.

@@ -206,6 +206,7 @@ larger call-aware computation can choose any positive fuel budget.
 theorem loopToWord_ffi_single_combined_simulation_fuel [NeZero width]
     (context : WordContext)
     (functions : List (Nat × List Nat × LoopProg (Word width)))
+    (wordFunctions : List (Nat × List Nat × WordProg (Word width)))
     (loopState : LoopState (Word width))
     (wordState : State width)
     (loopHandler : FunName → Word width → Word width → Word width → Word width →
@@ -229,7 +230,7 @@ theorem loopToWord_ffi_single_combined_simulation_fuel [NeZero width]
       evalLoopProgWithCallsAndFfi functions loopHandler (fuel + 1) loopState
           (.ffi function configuration configurationLength array arrayLength live) =
         some (.normal loopResult) →
-      evalWordFunctionWithHandlersAndFfi [] wordHandler (fuel + 1) wordState
+      evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler (fuel + 1) wordState
           (loopToWordProg context
             (.ffi function configuration configurationLength array arrayLength live)) =
         some (.normal wordResult) →
@@ -240,5 +241,87 @@ theorem loopToWord_ffi_single_combined_simulation_fuel [NeZero width]
     arrayLength live hlocals
   · simpa [evalLoopProgWithCallsAndFfi] using hloop
   · simpa [loopToWordProg, evalWordFunctionWithHandlersAndFfi] using hword
+
+/-!
+Compose two normal-returning programs under the call/FFI evaluators.  This is
+the sequencing rule needed to resume a caller after an external action.  The
+component hypotheses are intentionally explicit: later pass-specific proofs
+can supply them for calls, FFI, loops, or ordinary instructions without this
+generic rule depending on a particular backend lowering.
+-/
+theorem loopToWord_seq_combined_simulation [NeZero width]
+    (context : WordContext)
+    (functions : List (Nat × List Nat × LoopProg (Word width)))
+    (wordFunctions : List (Nat × List Nat × WordProg (Word width)))
+    (loopState : LoopState (Word width))
+    (wordState : State width)
+    (loopHandler : FunName → Word width → Word width → Word width → Word width →
+      LoopState (Word width) → Option (LoopState (Word width)))
+    (wordHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat)
+    (first second : LoopProg (Word width))
+    (finalLoop : LoopState (Word width))
+    (finalWord : State width)
+    (hfirst : ∀ middleLoop middleWord,
+      evalLoopProgWithCallsAndFfi functions loopHandler fuel loopState first =
+        some (.normal middleLoop) →
+      evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel wordState
+        (loopToWordProg context first) = some (.normal middleWord) →
+      loopLocalsMappedToRiscV context middleLoop.locals middleWord)
+    (hsecond : ∀ middleLoop middleWord,
+      loopLocalsMappedToRiscV context middleLoop.locals middleWord →
+      ∀ finalLoop finalWord,
+        evalLoopProgWithCallsAndFfi functions loopHandler fuel middleLoop second =
+          some (.normal finalLoop) →
+        evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel middleWord
+          (loopToWordProg context second) = some (.normal finalWord) →
+        loopLocalsMappedToRiscV context finalLoop.locals finalWord)
+    (hloop :
+      evalLoopProgWithCallsAndFfi functions loopHandler (fuel + 1) loopState
+        (.seq first second) = some (.normal finalLoop))
+    (hword :
+      evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler (fuel + 1) wordState
+        (loopToWordProg context (.seq first second)) = some (.normal finalWord)) :
+    loopLocalsMappedToRiscV context finalLoop.locals finalWord := by
+  cases hfirstLoop : evalLoopProgWithCallsAndFfi functions loopHandler fuel loopState first with
+  | none =>
+      simp [evalLoopProgWithCallsAndFfi, hfirstLoop] at hloop
+  | some firstResult =>
+      cases firstResult with
+      | normal middleLoop =>
+          have hsecondLoop :
+              evalLoopProgWithCallsAndFfi functions loopHandler fuel middleLoop second =
+                some (.normal finalLoop) := by
+            simpa [evalLoopProgWithCallsAndFfi, hfirstLoop] using hloop
+          cases hfirstWord :
+              evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel wordState
+                (loopToWordProg context first) with
+          | none =>
+              simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi, hfirstWord] at hword
+          | some firstWordResult =>
+              cases firstWordResult with
+              | normal middleWord =>
+                  have hsecondWord :
+                      evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
+                        middleWord (loopToWordProg context second) =
+                        some (.normal finalWord) := by
+                    simpa [loopToWordProg, evalWordFunctionWithHandlersAndFfi,
+                      hfirstWord] using hword
+                  exact hsecond middleLoop middleWord
+                    (hfirst middleLoop middleWord hfirstLoop hfirstWord)
+                    finalLoop finalWord hsecondLoop hsecondWord
+              | returned middleWord values =>
+                  simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi, hfirstWord] at hword
+              | raised middleWord exception =>
+                  simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi, hfirstWord] at hword
+      | returned middleLoop values =>
+          simp [evalLoopProgWithCallsAndFfi, hfirstLoop] at hloop
+      | broke middleLoop label =>
+          simp [evalLoopProgWithCallsAndFfi, hfirstLoop] at hloop
+      | continued middleLoop label =>
+          simp [evalLoopProgWithCallsAndFfi, hfirstLoop] at hloop
+      | raised middleLoop exception =>
+          simp [evalLoopProgWithCallsAndFfi, hfirstLoop] at hloop
 
 end Flapjack.RiscV

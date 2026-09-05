@@ -185,6 +185,8 @@ definitions, pass ordering, examples, and proof obligations.
   its single-call semantic equation, and a concrete handler regression.
 - [x] Generalize the combined Loop-to-Word FFI simulation boundary to any
   positive fuel budget, so it composes with fuel-bounded call-aware proofs.
+- [x] Add the normal-path combined sequence simulation rule and exercise an
+  FFI followed by a resumed Word tick continuation.
 - [x] Add Word control-result semantics for handler-aware calls, including
   normal, returned, and raised paths with handler resumption.
 - [x] Add homogeneous BitVec shift instances for the Word semantic bridge.

@@ -75,6 +75,7 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
   apply loopToWord_ffi_single_combined_simulation_fuel
     (context := ({ vars := [] } : WordContext))
     (functions := [])
+    (wordFunctions := [])
     (loopState := ffiIdentityLoopState)
     (wordState := ffiIdentityWordState)
     (loopHandler := ffiIdentityLoopHandler)
@@ -99,6 +100,68 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
   · simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi,
       ffiIdentityWordHandler, registerOfNat, wordFindVar, lookupNatInfo,
       writeRegister, readRegister]
+
+example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
+    ffiIdentityLoopState.locals
+      (RiscV.execute ffiIdentityWordState (.addi 0 0 0)) := by
+  apply loopToWord_seq_combined_simulation
+    (context := ({ vars := [] } : WordContext))
+    (functions := [])
+    (wordFunctions := [])
+    (loopState := ffiIdentityLoopState)
+    (wordState := ffiIdentityWordState)
+    (loopHandler := ffiIdentityLoopHandler)
+    (wordHandler := ffiIdentityWordHandler)
+    (fuel := 1)
+    (first := .ffi "identity" 1 2 3 4 [])
+    (second := .tick)
+    (finalLoop := ffiIdentityLoopState)
+    (finalWord := RiscV.execute ffiIdentityWordState (.addi 0 0 0))
+    (hfirst := by
+      intro middleLoop middleWord hloop hword
+      exact loopToWord_ffi_single_combined_simulation_fuel
+        (context := ({ vars := [] } : WordContext))
+        (functions := [])
+        (wordFunctions := [])
+        (loopState := ffiIdentityLoopState)
+        (wordState := ffiIdentityWordState)
+        (loopHandler := ffiIdentityLoopHandler)
+        (wordHandler := ffiIdentityWordHandler)
+        (handler_agrees := by
+          intro function configuration configurationLength array arrayLength
+            loopInput wordInput loopOutput wordOutput hlocals hloop hword
+          simp [ffiIdentityLoopHandler, ffiIdentityWordHandler] at hloop hword
+          cases hloop
+          cases hword
+          exact hlocals)
+        (function := "identity")
+        (configuration := 1)
+        (configurationLength := 2)
+        (array := 3)
+        (arrayLength := 4)
+        (live := [])
+        (fuel := 0)
+        (hlocals := ffiIdentity_mappedLocals)
+        middleLoop middleWord hloop hword)
+    (hsecond := by
+      intro middleLoop middleWord hlocals finalLoop finalWord hloop hword
+      have hloop' : evalLoopProg 1 middleLoop (.tick : LoopProg (Word 64)) =
+          some (.normal finalLoop) := by
+        simpa [evalLoopProgWithCallsAndFfi, evalLoopProg] using hloop
+      have hfinalLoop : finalLoop = middleLoop := by
+        simpa [evalLoopProg] using hloop'.symm
+      subst finalLoop
+      have hword' : RiscV.evalWordProg middleWord (.tick : WordProg (Word 64)) =
+          some finalWord := by
+        simpa [loopToWordProg, evalWordFunctionWithHandlersAndFfi,
+          evalWordFunction, RiscV.evalWordProg] using hword
+      exact loopToWord_tick_preserves_mapped_locals ({ vars := [] } : WordContext)
+        middleLoop.locals middleWord hlocals finalWord hword')
+  · simp [evalLoopProgWithCallsAndFfi, evalLoopProg, ffiIdentityLoopHandler,
+      ffiIdentityLoopState]
+  · simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi,
+      evalWordFunction, ffiIdentityWordHandler, registerOfNat, wordFindVar,
+      lookupNatInfo, RiscV.execute, RiscV.writeRegister, RiscV.nextPc]
 
 def sourceFfiIdBody : Prog (Word 64) :=
   .dec "result" .one (.const 0)

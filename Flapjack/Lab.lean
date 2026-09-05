@@ -1,4 +1,5 @@
 import Flapjack.Stack
+import Flapjack.StackRemove
 
 /-!
 # LabLang
@@ -227,6 +228,13 @@ def labProgramToSection (sectionId initialLabel : Nat) (program : StackProg α) 
   let result := labFlatten true sectionId initialLabel [] [] program
   let finalLabel := if labIsSequence program then result.nextLabel else 1
   ⟨sectionId, result.lines ++ [labLabel sectionId finalLabel]⟩
+
+/- The backend-facing composition applies the stack-removal pass before
+   flattening.  Keeping this as a separate entry point preserves the raw
+   StackLang boundary for pass-by-pass proofs. -/
+def labProgramToSectionAfterStackRemove (config : StackRemoveConfig)
+    (sectionId initialLabel : Nat) (program : StackProg α) : LabSection α :=
+  labProgramToSection sectionId initialLabel (stackRemove config program)
 
 theorem labFlatten_skip (sectionId counter : Nat) (continues breaks : List Nat) :
     labFlatten false sectionId counter continues breaks (.skip : StackProg α) =

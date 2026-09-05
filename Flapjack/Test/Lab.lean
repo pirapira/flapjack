@@ -2,6 +2,10 @@ import Flapjack.Lab
 
 namespace Flapjack
 
+def labStackRemoveConfig : StackRemoveConfig :=
+  { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
+    stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
+
 example :
     labFlatten false 20 7 [] []
       (.ffi "sum" 1 2 3 4 9 : StackProg Nat) =
@@ -45,5 +49,19 @@ example :
         terminal := false,
         nextLabel := 3 } := by
   simp [labFlatten]
+
+example :
+    labProgramToSectionAfterStackRemove labStackRemoveConfig 2 3
+      (.get 4 .heapLength : StackProg Nat) =
+      ⟨2, [
+        .asm (.const 29 3) [] 0,
+        .asm (.arith .add 29 10 29) [] 0,
+        .label 2 1 0,
+        .asm (.word (.mem .load 4 29)) [] 0,
+        .label 2 3 0]⟩ := by
+  simp [labProgramToSectionAfterStackRemove, labProgramToSection,
+    stackRemove, stackRemoveFuel, stackRemoveGet, stackRemoveAddress,
+    stackRemoveJoin, stackStorePosition, labFlatten, labLabel,
+    labIsSequence, labStackRemoveConfig]
 
 end Flapjack

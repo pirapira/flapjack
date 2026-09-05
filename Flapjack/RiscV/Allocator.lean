@@ -718,6 +718,128 @@ def wordProgClashAnalysis : WordProg α → List Nat →
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+/-! A CakeML-shaped clash-tree boundary for the RISC-V Word fragment.
+
+    CakeML's `word_alloc` does not allocate from a flat list of pairwise
+    clashes.  It first builds a tree whose `Delta` nodes describe writes and
+    reads, whose `Branch` nodes preserve path-local live sets, and whose `Set`
+    nodes model loop cut sets and call boundaries.  The earlier analysis above
+    remains useful as a compact executable allocator input; this tree is the
+    faithful structural interface that later colouring and spill proofs can
+    consume.  The constructors absent from this RISC-V Word IR are naturally
+    absent here as well. -/
+
+inductive WordClashTree where
+  | delta (writes reads : List Nat)
+  | seq (first second : WordClashTree)
+  | branch (live : Option (List Nat))
+      (thenBranch elseBranch : WordClashTree)
+  | set (names : List Nat)
+  deriving Repr
+
+def wordClashTreeFindLoopFrame : Nat → List (List Nat × List Nat) →
+    Option (List Nat × List Nat)
+  | _, [] => none
+  | 0, frame :: _ => some frame
+  | label, _ :: frames => wordClashTreeFindLoopFrame (label - 1) frames
+
+def wordClashTreeDeltaInst : WordInst → WordClashTree
+  | .arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) =>
+      .delta [destinationLeft, destinationRight] [sourceRight, sourceLeft]
+  | .arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) =>
+      .delta [destinationLeft, destinationRight] [quotient, sourceRight, sourceLeft]
+  | .arith (.addCarry destination resultCarry sourceLeft sourceRight carryIn) =>
+      .delta [destination, resultCarry] [carryIn, sourceRight, sourceLeft]
+  | .arith (.div destination dividend divisor) =>
+      .delta [destination] [divisor, dividend]
+  | .mem .load destination address
+  | .mem .load8 destination address
+  | .mem .load16 destination address
+  | .mem .load32 destination address =>
+      .delta [destination] [address]
+  | .mem .store source address
+  | .mem .store8 source address
+  | .mem .store16 source address
+  | .mem .store32 source address =>
+      .delta [] [source, address]
+
+def wordClashTreeCallReads (returns : Option (List Nat × List Nat))
+    (arguments : List Nat) : List Nat :=
+  arguments ++ match returns with
+    | none => []
+    | some (values, live) => values ++ live
+
+def wordClashTreeCallWrites (returns : Option (List Nat × List Nat)) : List Nat :=
+  match returns with
+  | none => []
+  | some (values, _) => values
+
+def wordClashTree : WordProg α → List (List Nat × List Nat) → WordClashTree
+  | .skip, _ => .delta [] []
+  | .assign name value, _ => .delta [name] (wordExpReadVars value)
+  | .inst instruction, _ => wordClashTreeDeltaInst instruction
+  | .store address value, _ => .delta [] (value :: wordExpReadVars address)
+  | .set _ value, _ => .delta [] (wordExpReadVars value)
+  | .seq first second, frames =>
+      .seq (wordClashTree first frames) (wordClashTree second frames)
+  | .ite _ condition right thenBranch elseBranch, frames =>
+      let conditionReads := condition :: match right with
+        | .reg name => [name]
+        | .imm _ => []
+      .seq (.delta [] conditionReads)
+        (.branch none (wordClashTree thenBranch frames)
+          (wordClashTree elseBranch frames))
+  | .loop liveIn body liveOut, frames =>
+      .seq (.set liveIn)
+        (.seq (.set liveOut)
+          (.seq (wordClashTree body ((liveIn, liveOut) :: frames))
+            (.set liveIn)))
+  | .break label, frames =>
+      match wordClashTreeFindLoopFrame label frames with
+      | some (_, exitNames) => .set exitNames
+      | none => .set []
+  | .continue label, frames =>
+      match wordClashTreeFindLoopFrame label frames with
+      | some (entryNames, _) => .set entryNames
+      | none => .set []
+  | .raise exception, _ => .delta [] [exception]
+  | .return _ values, _ => .delta [] values
+  | .tick, _ => .delta [] []
+  | .locValue destination source, _ => .delta [destination] [source]
+  | .call returns _ arguments none, _ =>
+      .delta (wordClashTreeCallWrites returns)
+        (wordClashTreeCallReads returns arguments)
+  | .call returns _ arguments (some (exception, body)), frames =>
+      let reads := wordClashTreeCallReads returns arguments
+      .branch (some reads)
+        (.delta (wordClashTreeCallWrites returns) reads)
+        (.seq (.delta [exception] []) (wordClashTree body frames))
+  | .ffi _ configuration configurationLength array arrayLength _, _ =>
+      .delta [] [configuration, configurationLength, array, arrayLength]
+  | .shareInst operator name address, _ =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 =>
+          .delta [name] (wordExpReadVars address)
+      | .store | .store8 | .store16 | .store32 =>
+          .delta [] (name :: wordExpReadVars address)
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+theorem wordClashTree_skip (frames : List (List Nat × List Nat)) :
+    wordClashTree (.skip : WordProg α) frames = .delta [] [] := by
+  simp [wordClashTree]
+
+theorem wordClashTree_loop_break_continue :
+    wordClashTree
+        (.loop [1, 2]
+          (.seq (.continue 0) (.break 0)) [3] : WordProg α) [] =
+      .seq (.set [1, 2])
+        (.seq (.set [3])
+          (.seq
+            (.seq (.set [1, 2]) (.set [3]))
+            (.set [1, 2]))) := by
+  simp [wordClashTree, wordClashTreeFindLoopFrame]
+
 def wordAllocateProgramWithSlots (slots : List Nat) (program : WordProg α) :
     Option WordContext :=
   let (liveIn, edges) := wordProgClashAnalysis program []

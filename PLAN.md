@@ -356,6 +356,8 @@ definitions, pass ordering, examples, and proof obligations.
   locations from the renamed Word program and its analysed clash graph.
 - [x] Wire the available SSA/spill allocation and concrete locations into the
   allocated RISC-V entry points; the full CakeML allocator remains separate.
+- [x] Port the CakeML-shaped RISC-V Word clash-tree boundary, including
+  `Delta`, sequencing, branch live sets, loop cut sets, and handler paths.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

@@ -79,6 +79,30 @@ example :
         (fun state => state.nextSpill != 0) = some true := by
   exact wordAllocateVarsWithSpills_spills_example
 
+example :
+    wordClashTree
+        (.seq (.assign 4 (.var 2))
+          (.inst (.arith (.longMul 5 6 4 3))) : WordProg Nat) [] =
+      .seq (.delta [4] [2]) (.delta [5, 6] [3, 4]) := by
+  simp [wordClashTree, wordClashTreeDeltaInst, wordExpReadVars]
+
+example :
+    wordClashTree
+        (.ite .equal 1 (.reg 2)
+          (.return 0 [3]) (.return 0 [4]) : WordProg Nat) [] =
+      .seq (.delta [] [1, 2])
+        (.branch none (.delta [] [3]) (.delta [] [4])) := by
+  simp [wordClashTree, wordExpReadVars]
+
+example :
+    wordClashTree
+        (.loop [1]
+          (.seq (.continue 0) (.break 0)) [2] : WordProg Nat) [] =
+      .seq (.set [1])
+        (.seq (.set [2])
+          (.seq (.seq (.set [1]) (.set [2])) (.set [1]))) := by
+  simp [wordClashTree, wordClashTreeFindLoopFrame]
+
 example (slots : List Nat) (edges : List (Nat × Nat))
     (state : WordSpillState)
     (hstate : wordAllocateVarsWithSpills slots edges = some state)

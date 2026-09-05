@@ -145,6 +145,9 @@ definitions, pass ordering, examples, and proof obligations.
   conditional control flow.
 - [x] Prove the compiled external-call temporary sequence preserves full
   Crepe state for a no-op FFI and agrees with the source FFI boundary.
+- [x] Port a fuel-bounded observable Crepe evaluator with CakeML-style code,
+  globals, memory domains, clock timeout, calls, handlers, and `FinalFFI`
+  propagation, with executable boundary regressions.
 - [x] Prove the first environment-sensitive source-to-full-Crepe agreement
   for a local assignment followed by a compiled slot return.
 - [x] Prove the first environment-sensitive source-to-full-Crepe agreement

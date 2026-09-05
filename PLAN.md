@@ -334,6 +334,8 @@ definitions, pass ordering, examples, and proof obligations.
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully
   coloured SSA slot maps to an allocatable RISC-V register.
+- [x] Prove spill-aware allocation assigns every requested slot a concrete
+  register or stack location.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
   multiplication (`MULHU`) followed by low-half multiplication (`MUL`),
   including the target's high-destination/source non-aliasing precondition.

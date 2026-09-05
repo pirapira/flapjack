@@ -28,4 +28,11 @@ example :
         (fun state => state.nextSpill != 0) = some true := by
   exact wordAllocateVarsWithSpills_spills_example
 
+example (slots : List Nat) (edges : List (Nat × Nat))
+    (state : WordSpillState)
+    (hstate : wordAllocateVarsWithSpills slots edges = some state)
+    (name : Nat) (hname : name ∈ slots.eraseDups) :
+    ∃ location, lookupNatInfo name state.locations = some location := by
+  exact wordAllocateVarsWithSpills_maps_slots slots edges state hstate name hname
+
 end Flapjack

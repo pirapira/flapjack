@@ -537,26 +537,45 @@ structure WordMoveWorklists where
   unavailable : List WordMove
   deriving DecidableEq, Repr
 
+def wordInsertMoveSorted (move : WordMove) : List WordMove → List WordMove
+  | [] => [move]
+  | head :: moves =>
+      if move.priority ≥ head.priority then
+        move :: head :: moves
+      else
+        head :: wordInsertMoveSorted move moves
+
+def wordSortMoves : List WordMove → List WordMove
+  | [] => []
+  | move :: moves => wordInsertMoveSorted move (wordSortMoves moves)
+
+def wordSortMoveWorklists (worklists : WordMoveWorklists) :
+    WordMoveWorklists :=
+  { available := wordSortMoves worklists.available
+    unavailable := wordSortMoves worklists.unavailable }
+
 def wordPrepareMoveWorklists (graph : WordRegGraph)
     (moves : List WordMove) : WordMoveWorklists :=
   let related := wordMoveRelatedNodes moves
-  moves.foldl (fun worklists move =>
+  let worklists := moves.foldl (fun worklists move =>
     let move := wordCanonicalizeMove graph move
     if wordMoveConsistent graph related move then
       { worklists with available := worklists.available ++ [move] }
     else
       { worklists with unavailable := worklists.unavailable ++ [move] })
     { available := [], unavailable := [] }
+  wordSortMoveWorklists worklists
 
 def wordPrepareMoveWorklistsWithColours (colours : Nat)
     (graph : WordRegGraph) (moves : List WordMove) : WordMoveWorklists :=
-  moves.foldl (fun worklists move =>
+  let worklists := moves.foldl (fun worklists move =>
     let move := wordCanonicalizeMove graph move
     if wordFullMoveConsistent colours graph move then
       { worklists with available := worklists.available ++ [move] }
     else
       { worklists with unavailable := worklists.unavailable ++ [move] })
     { available := [], unavailable := [] }
+  wordSortMoveWorklists worklists
 
 def wordPreferenceMoves : List (Nat × Nat) → List WordMove
   | [] => []

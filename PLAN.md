@@ -392,6 +392,8 @@ definitions, pass ordering, examples, and proof obligations.
   consistency checks and enforce it at graph allocator initialization.
 - [x] Port CakeML’s exact George/Briggs coalescing threshold and route safe
   move selection through the source-faithful criterion.
+- [x] Preserve CakeML move priorities by sorting available and unavailable
+  move worklists before coalescing.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

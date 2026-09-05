@@ -96,6 +96,16 @@ def move01 : WordMove :=
   { priority := 7, left := 0, right := 1 }
 
 example :
+    wordSortMoves
+      [{ priority := 1, left := 0, right := 1 },
+       { priority := 3, left := 2, right := 3 },
+       { priority := 2, left := 4, right := 5 }] =
+      [{ priority := 3, left := 2, right := 3 },
+       { priority := 2, left := 4, right := 5 },
+       { priority := 1, left := 0, right := 1 }] := by
+  native_decide
+
+example :
     wordPrepareMoveWorklists moveWorklistGraph [move01] =
       { available := [move01], unavailable := [] } := by
   native_decide

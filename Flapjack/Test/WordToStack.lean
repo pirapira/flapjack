@@ -103,6 +103,65 @@ example :
   simp [wordToStackProg, wordToStackFfi]
 
 example :
+    wordToStackProgNat
+        { locations := [(0, .register 4)], scratch := 31, stackBase := 10 }
+        ((.assign 0 (.const 42)) : WordProg Nat) =
+      some (.const 4 42 : StackProg Nat) := by
+  simp [wordToStackProgNat, wordStackCompileExpNat,
+    wordStackWritePhysicalNat, wordStackLocation, lookupNatInfo]
+
+example :
+    wordToStackProgNat
+        { locations := [(0, .stack 2)], scratch := 31, stackBase := 10 }
+        ((.assign 0 (.const 42)) : WordProg Nat) =
+      some (.seq (.const 31 42) (.stackStore 31 12) : StackProg Nat) := by
+  simp [wordToStackProgNat, wordStackCompileExpNat,
+    wordStackWritePhysicalNat, wordStackLocation, wordStackOffset,
+    lookupNatInfo, wordStackJoin]
+
+example :
+    wordToStackProgNat
+        { locations := [(0, .stack 2), (1, .register 5)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        ((.assign 0 (.op .add [.var 1, .const 3])) : WordProg Nat) =
+      some (.seq (.const 29 3)
+        (.seq (.arith .add 31 5 29) (.stackStore 31 12)) : StackProg Nat) := by
+  simp [wordToStackProgNat, wordStackCompileExpNat,
+    wordStackCompileBinaryNat, wordStackAtomNat,
+    wordStackWritePhysicalNat, wordStackLocation, wordStackOffset,
+    lookupNatInfo, wordStackJoin, wordStackReadRegister]
+
+example :
+    wordToStackProgNat
+        { locations := [(0, .stack 2), (1, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        ((.assign 0 (.load (.var 1))) : WordProg Nat) =
+      some (.seq (.stackLoad 29 13)
+        (.seq (.inst (.mem .load 31 29)) (.stackStore 31 12)) : StackProg Nat) := by
+  simp [wordToStackProgNat, wordStackCompileExpNat,
+    wordStackCompileLoadNat, wordStackAtomNat,
+    wordStackWritePhysicalNat, wordStackLocation, wordStackOffset,
+    lookupNatInfo, wordStackJoin, wordStackReadRegister]
+
+example :
+    wordToStackProgNat
+        { locations := [(0, .register 5)], scratch := 31, stackBase := 10,
+          addressScratch := 29 }
+        ((.store (.const 100) 0) : WordProg Nat) =
+      some (.seq (.const 29 100) (.inst (.mem .store 5 29)) : StackProg Nat) := by
+  simp [wordToStackProgNat, wordStackCompileStoreNat,
+    wordStackAtomNat, wordStackJoin, wordStackReadRegister,
+    wordStackLocation, lookupNatInfo]
+
+example :
+    wordToStackProgNat
+        { locations := [(0, .register 5)], scratch := 31, stackBase := 10 }
+        ((.set (.temp 4) (.const 7)) : WordProg Nat) =
+      some (.seq (.const 31 7) (.set (.temp 4) 31) : StackProg Nat) := by
+  simp [wordToStackProgNat, wordStackSetNat, wordStackAtomNat,
+    wordStackJoin, wordStackStoreNameNat]
+
+example :
     (wordToStackProg
         { locations := [(0, .register 5)], scratch := 31, stackBase := 6,
           returnLabel := 20, entryLabel := 21 }

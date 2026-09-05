@@ -346,6 +346,9 @@ definitions, pass ordering, examples, and proof obligations.
   StackLang arithmetic boundary.
 - [x] Extend the Word-to-Stack boundary through conditions, loops, returns,
   calls, exception handlers, special stores, and FFI operations.
+- [x] Add concrete `Nat` Word-to-Stack expression lowering for constants,
+  register/stack atoms, binary operations, loads, stores, and stack-backed
+  destinations, with separate value/address scratch registers.
 - [x] Preserve `ShMemOp` as a distinct StackLang operation through LabLang
   and the RISC-V shared-memory selector.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

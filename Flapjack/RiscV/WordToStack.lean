@@ -254,6 +254,94 @@ def wordStackStoreName : WordStore α → Option StackStore
   | .currHeap => some .currHeap
   | .heapLength => some .heapLength
 
+/-! Concrete StackLang words use natural-number constants in this port.  The
+    polymorphic Word syntax above is retained for pass composition, while
+    these helpers provide the first executable expression compiler for the
+    concrete representation.  Atom compilation deliberately uses separate
+    value and address scratch registers; callers must keep those registers
+    outside the locations assigned to simultaneously live virtual names. -/
+
+def wordStackStoreNameNat : WordStore Nat → Option StackStore
+  | .temp address => some (.temp address)
+  | .currHeap => some .currHeap
+  | .heapLength => some .heapLength
+
+def wordStackAtomNat (config : WordStackConfig) (temporary : Nat) :
+    WordExp Nat → Option (StackProg Nat × Nat)
+  | .const value => some (.const temporary value, temporary)
+  | .var name => wordStackReadRegister config name temporary
+  | .lookup store => do
+      let store ← wordStackStoreNameNat store
+      pure (.get temporary store, temporary)
+  | _ => none
+
+def wordStackWritePhysicalNat (config : WordStackConfig) (destination : Nat)
+    (body : Nat → StackProg Nat) : Option (StackProg Nat) := do
+  let location ← wordStackLocation config destination
+  match location with
+  | .register register => pure (body register)
+  | .stack slot =>
+      pure (wordStackJoin (body config.scratch)
+        (.stackStore config.scratch (wordStackOffset config slot)))
+
+def wordStackCompileBinaryNat (config : WordStackConfig) (destination : Nat)
+    (operator : BinOp) (left right : WordExp Nat) : Option (StackProg Nat) := do
+  let (leftPrelude, leftRegister) ←
+    wordStackAtomNat config config.scratch left
+  let (rightPrelude, rightRegister) ←
+    wordStackAtomNat config config.addressScratch right
+  let body ← wordStackWritePhysicalNat config destination
+    (fun register => .arith operator register leftRegister rightRegister)
+  pure (wordStackJoin leftPrelude (wordStackJoin rightPrelude body))
+
+def wordStackCompileLoadNat (config : WordStackConfig) (destination : Nat)
+    (address : WordExp Nat) : Option (StackProg Nat) := do
+  let (addressPrelude, addressRegister) ←
+    wordStackAtomNat config config.addressScratch address
+  let body ← wordStackWritePhysicalNat config destination
+    (fun register => .inst (.mem .load register addressRegister))
+  pure (wordStackJoin addressPrelude body)
+
+def wordStackCompileStoreNat (config : WordStackConfig) (address : WordExp Nat)
+    (value : WordExp Nat) : Option (StackProg Nat) := do
+  let (addressPrelude, addressRegister) ←
+    wordStackAtomNat config config.addressScratch address
+  let (valuePrelude, valueRegister) ←
+    wordStackAtomNat config config.scratch value
+  pure (wordStackJoin addressPrelude
+    (wordStackJoin valuePrelude (.inst (.mem .store valueRegister addressRegister))))
+
+def wordStackCompileSharedNat (config : WordStackConfig)
+    (operator : WordMemOp) (destination : Nat) (address : WordExp Nat) :
+    Option (StackProg Nat) := do
+  let (addressPrelude, addressRegister) ←
+    wordStackAtomNat config config.addressScratch address
+  let body ← wordStackWritePhysicalNat config destination
+    (fun register => .shMem operator register addressRegister)
+  pure (wordStackJoin addressPrelude body)
+
+def wordStackCompileExpNat (config : WordStackConfig) (destination : Nat) :
+    WordExp Nat → Option (StackProg Nat)
+  | .const value =>
+      wordStackWritePhysicalNat config destination (.const · value)
+  | .var source => wordStackMove config destination source
+  | .lookup store => do
+      let store ← wordStackStoreNameNat store
+      let body ← wordStackWritePhysicalNat config destination
+        (.get · store)
+      pure body
+  | .load address => wordStackCompileLoadNat config destination address
+  | .op operator [left, right] =>
+      wordStackCompileBinaryNat config destination operator left right
+  | .op _ _ => none
+  | .shift _ _ _ => none
+
+def wordStackSetNat (config : WordStackConfig) (store : WordStore Nat)
+    (value : WordExp Nat) : Option (StackProg Nat) := do
+  let store ← wordStackStoreNameNat store
+  let (prelude, register) ← wordStackAtomNat config config.scratch value
+  pure (wordStackJoin prelude (.set store register))
+
 def wordStackMoveFromPhysical (config : WordStackConfig)
     (destination source : Nat) : Option (StackProg α) := do
   let location ← wordStackLocation config destination
@@ -433,6 +521,58 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .shareInst operator name (.var address) =>
       wordStackSharedMemoryInst config operator name address
   | _ => none
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+/-! Concrete program compiler.  This specializes only the value representation
+    (constants and temporary store names) to `Nat`; the generic compiler above
+    remains available for syntax-only clients. -/
+
+def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
+    WordProg Nat → Option (StackProg Nat)
+  | .skip => some .skip
+  | .assign destination value => wordStackCompileExpNat config destination value
+  | .locValue destination source => wordStackMove config destination source
+  | .inst instruction => wordToStackInst config instruction
+  | .store address value =>
+      wordStackCompileStoreNat config address (.var value)
+  | .set store value => wordStackSetNat config store value
+  | .seq first second => do
+      let first ← wordToStackProgNat config first
+      let second ← wordToStackProgNat config second
+      pure (.seq first second)
+  | .ite operator condition right thenBranch elseBranch => do
+      let (prelude, condition, right) ←
+        wordStackConditionOperands config condition right
+      let thenBranch ← wordToStackProgNat config thenBranch
+      let elseBranch ← wordToStackProgNat config elseBranch
+      pure (wordStackJoin prelude
+        (.ite operator condition right thenBranch elseBranch))
+  | .loop _ body _ => do
+      let body ← wordToStackProgNat config body
+      pure (.loop body)
+  | .break label => pure (.break label)
+  | .continue label => pure (.continue label)
+  | .raise exception => pure (wordToStackRaise exception)
+  | .return _ values => wordStackReturn config values
+  | .tick => pure .tick
+  | .call returns (some target) arguments none => do
+      let returnCode ← wordStackReturnCode config returns
+      let destinations := returns.map (fun result => result.1) |>.getD []
+      pure (wordToStackCallNoHandler config.perf target arguments.length
+        config.frameOffset config.scratch destinations returnCode
+        config.returnLabel config.entryLabel)
+  | .call returns (some target) arguments (some (exception, body)) => do
+      let returnCode ← wordStackReturnCode config returns
+      let handlerCode ← wordToStackProgNat config body
+      pure (wordToStackCallWithHandler config.perf target arguments.length
+        config.frameOffset config.scratch returnCode handlerCode
+        config.returnLabel config.entryLabel config.handlerLabel exception)
+  | .call _ none _ _ => none
+  | .ffi function configuration configurationLength array arrayLength _ =>
+      pure (wordToStackFfi function configuration configurationLength array arrayLength)
+  | .shareInst operator name address =>
+      wordStackCompileSharedNat config operator name address
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 

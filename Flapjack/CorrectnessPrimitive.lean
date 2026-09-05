@@ -607,4 +607,128 @@ theorem loopToWord_primitive_addCarry_combined_simulation [NeZero width]
     hwordProg
   simpa [loopResultState] using hprimitive'
 
+/-!
+Lift the ordinary LongMul instruction through the fully composed evaluator.
+Unlike AddCarry, LongMul is handled by Loop's ordinary arithmetic evaluator;
+the explicit bridge keeps that fact visible while allowing the theorem to be
+used at the same call/FFI-aware boundary as the primitive bridge above.
+-/
+theorem loopToWord_longMul_combined_simulation [NeZero width]
+    (context : WordContext)
+    (functions : List (Nat × List Nat × LoopProg (RiscV.Word width)))
+    (ffiHandler : FunName → RiscV.Word width → RiscV.Word width →
+      RiscV.Word width → RiscV.Word width →
+      LoopState (RiscV.Word width) → Option (LoopState (RiscV.Word width)))
+    (wordFunctions : List (Nat × List Nat × WordProg (RiscV.Word width)))
+    (wordHandler : FunName → RiscV.Word width → RiscV.Word width →
+      RiscV.Word width → RiscV.Word width →
+      RiscV.State width → Option (RiscV.State width))
+    (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width)
+    (destinationLeft destinationRight sourceLeft sourceRight : Nat)
+    (hatomic : ∀ loopResult wordResult,
+      evalLoopProg 1 loopState
+          (.arith (.longMul destinationLeft destinationRight
+            sourceLeft sourceRight)) = some loopResult →
+      RiscV.evalWordProg state
+          (loopToWordProg context
+            (.arith (.longMul destinationLeft destinationRight
+              sourceLeft sourceRight))) = some wordResult →
+      loopLocalsMappedToRiscV context (loopResultState loopResult).locals
+        wordResult) :
+    ∀ loopResult wordResult,
+      evalLoopProgWithPrimitiveCallsAndFfi RiscV.loopPrimitiveHandler functions
+          ffiHandler 1 loopState
+          (.arith (.longMul destinationLeft destinationRight
+            sourceLeft sourceRight)) = some (.normal loopResult) →
+      RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler 1 state
+          (loopToWordProg context
+            (.arith (.longMul destinationLeft destinationRight
+              sourceLeft sourceRight))) =
+        some (.normal wordResult) →
+      loopLocalsMappedToRiscV context loopResult.locals wordResult := by
+  intro loopResult wordResult hloop hword
+  have hloop' :
+      evalLoopProg 1 loopState
+          (.arith (.longMul destinationLeft destinationRight
+            sourceLeft sourceRight)) = some (.normal loopResult) := by
+    simpa [evalLoopProgWithPrimitiveCallsAndFfi] using hloop
+  have hwordFunction :
+      RiscV.evalWordFunction state
+          (loopToWordProg context
+            (.arith (.longMul destinationLeft destinationRight
+              sourceLeft sourceRight))) =
+        some (wordResult, []) := by
+    simp only [loopToWordProg] at hword
+    simp only [RiscV.evalWordFunctionWithHandlersAndFfi] at hword
+    cases hfunction : RiscV.evalWordFunction state
+        (.inst (.arith (wordArith context
+          (.longMul destinationLeft destinationRight sourceLeft sourceRight)))) with
+    | none =>
+        simp [hfunction] at hword
+    | some result =>
+        cases result with
+        | mk intermediate values =>
+            cases hvalues : values with
+            | nil =>
+                have hstate : intermediate = wordResult := by
+                  simpa [hfunction, hvalues] using hword
+                subst wordResult
+                simpa [loopToWordProg, hvalues] using hfunction
+            | cons value values =>
+                simp [hfunction, hvalues] at hword
+  have hwordProg :
+      RiscV.evalWordProg state
+          (loopToWordProg context
+            (.arith (.longMul destinationLeft destinationRight
+              sourceLeft sourceRight))) = some wordResult := by
+    simp only [loopToWordProg] at hwordFunction ⊢
+    change RiscV.evalWordProg state
+        (.inst (.arith (wordArith context
+          (.longMul destinationLeft destinationRight sourceLeft sourceRight)))) =
+      some wordResult
+    have hmap :
+        Option.map (fun result : RiscV.State width × List (RiscV.Word width) =>
+            result.1)
+          ((RiscV.wordArithToInstructions
+              (wordArith context (.longMul destinationLeft destinationRight
+                sourceLeft sourceRight))).bind
+            (fun instructions =>
+              some (RiscV.executeInstructions state instructions, []))) =
+        (RiscV.wordArithToInstructions
+            (wordArith context (.longMul destinationLeft destinationRight
+              sourceLeft sourceRight))).bind
+          (fun instructions => some (RiscV.executeInstructions state instructions)) := by
+      cases hinstructions : RiscV.wordArithToInstructions (width := width)
+          (wordArith context (.longMul destinationLeft destinationRight
+            sourceLeft sourceRight)) with
+      | none => simp [hinstructions]
+      | some instructions => simp [hinstructions]
+    have hproject := congrArg (Option.map Prod.fst) hwordFunction
+    simp only [RiscV.evalWordFunction] at hproject
+    change
+      Option.map (fun result : RiscV.State width × List (RiscV.Word width) =>
+          result.1)
+        ((RiscV.wordArithToInstructions
+            (wordArith context
+              (.longMul destinationLeft destinationRight sourceLeft sourceRight))).bind
+          (fun instructions =>
+            some (RiscV.executeInstructions state instructions, []))) =
+      Option.map (fun result : RiscV.State width × List (RiscV.Word width) =>
+          result.1) (some (wordResult, [])) at hproject
+    rw [hmap] at hproject
+    cases hinstructions : RiscV.wordArithToInstructions (width := width)
+        (wordArith context (.longMul destinationLeft destinationRight
+          sourceLeft sourceRight)) with
+    | none =>
+        simp [hinstructions] at hproject
+    | some instructions =>
+        have hstate : RiscV.executeInstructions state instructions = wordResult := by
+          simpa [hinstructions] using hproject
+        simp only [RiscV.evalWordProg]
+        rw [hinstructions]
+        simp [hstate]
+  have hatomic' := hatomic (.normal loopResult) wordResult hloop' hwordProg
+  simpa [loopResultState] using hatomic'
+
 end Flapjack

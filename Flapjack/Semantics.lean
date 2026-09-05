@@ -39,6 +39,10 @@ def evalPanShift [ShiftLeft α] [ShiftRight α]
   | .lsr => some (ShiftRight.shiftRight left right)
   | .asr | .ror => none
 
+def updatePanLocal (locals : VarName → Option α) (name : VarName) (value : α) :
+    VarName → Option α :=
+  fun current => if current == name then some value else locals current
+
 def evalPanExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]
@@ -120,6 +124,9 @@ def evalPanProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [LT α] [DecidableRel (fun left right : α => left < right)]
     (locals : VarName → Option α) : Prog α → Option (List α)
   | .skip => some []
+  | .dec name _ value body => do
+      let value ← evalPanExp locals value
+      evalPanProg (updatePanLocal locals name value) body
   | .return expression => (evalPanExp locals expression).map (fun value => [value])
   | .seq first second => do
       let firstResult ← evalPanProg locals first
@@ -137,10 +144,6 @@ def evalCrepProg [Add α] [Mul α] (locals : Nat → Option α) : CrepProg α �
       let firstResult ← evalCrepProg locals first
       if firstResult.isEmpty then evalCrepProg locals second else pure firstResult
   | _ => none
-
-def updatePanLocal (locals : VarName → Option α) (name : VarName) (value : α) :
-    VarName → Option α :=
-  fun current => if current == name then some value else locals current
 
 def updateCrepLocal (locals : Nat → Option α) (name : Nat) (value : α) :
     Nat → Option α :=
@@ -193,6 +196,9 @@ def evalPanStateProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (locals : VarName → Option α) :
     Prog α → Option ((VarName → Option α) × List α)
   | .skip => some (locals, [])
+  | .dec name _ value body => do
+      let value ← evalPanExp locals value
+      evalPanStateProg (updatePanLocal locals name value) body
   | .assign .local name value => do
       let value ← evalPanExp locals value
       pure (updatePanLocal locals name value, [])
@@ -270,6 +276,10 @@ mutual
         Option ((VarName → Option α) × List α)
     | 0, _, _ => none
     | fuel + 1, locals, .skip => some (locals, [])
+    | fuel + 1, locals, .dec name _ value body => do
+        let value ← evalPanExp locals value
+        evalPanProgWithCalls functions fuel
+          (updatePanLocal locals name value) body
     | fuel + 1, locals, .assign .local name value => do
         let value ← evalPanExp locals value
         pure (updatePanLocal locals name value, [])
@@ -356,6 +366,10 @@ mutual
       Nat → (VarName → Option α) → Prog α → Option (PanControlResult α)
     | 0, _, _ => none
     | fuel + 1, locals, .skip => some (.normal locals)
+    | fuel + 1, locals, .dec name _ value body => do
+        let value ← evalPanExp locals value
+        evalPanProgWithHandlers functions fuel
+          (updatePanLocal locals name value) body
     | fuel + 1, locals, .assign .local name value => do
         let value ← evalPanExp locals value
         pure (.normal (updatePanLocal locals name value))

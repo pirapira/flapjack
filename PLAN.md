@@ -589,6 +589,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Extend scalar source expression semantics to subtraction, bitwise
   operations, all comparison constructors, and logical shifts, with executable
   Nat regressions.
+- [x] Add scoped local-declaration semantics to the base, stateful,
+  call-aware, and handler-aware scalar source evaluators, with focused
+  regressions.
 - [x] Close the constant binary-expression RISC-V selector gap and prove
   end-to-end RV64 subtraction and bitwise pipeline regressions.
 - [x] Add the first structured source-value evaluator, preserving words,

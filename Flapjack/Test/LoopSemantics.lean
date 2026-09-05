@@ -260,5 +260,30 @@ example (result : LoopResult Nat)
   · rfl
   · exact heval
 
+def populatedLoopState : LoopState Nat :=
+  { locals := fun name => if name == 7 then some 42 else none
+    globals := fun address => if address == 3 then some 9 else none
+    memory := fun address => if address == 11 then some 13 else none }
+
+example (result : LoopResult Nat)
+    (heval : evalLoopProg 20 populatedLoopState (.continue 4) = some result) :
+    loopResultState result = populatedLoopState := by
+  apply evalLoopProg_result_state 20 populatedLoopState (.continue 4)
+  · intro name
+    rfl
+  · rfl
+  · rfl
+  · exact heval
+
+example (result : LoopResult Nat)
+    (heval : evalLoopProg 20 populatedLoopState (.raise 7) = some result) :
+    loopResultState result = populatedLoopState := by
+  apply evalLoopProg_result_state 20 populatedLoopState (.raise 7)
+  · intro name
+    rfl
+  · rfl
+  · rfl
+  · exact heval
+
 
 end Flapjack

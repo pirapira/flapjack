@@ -449,7 +449,7 @@ definitions, pass ordering, examples, and proof obligations.
   register lists under the register correspondence.
 - [x] Prove SSA-renamed Word raise evaluation preserves the raised exception
   value under the register correspondence.
-- [ ] Prove the complete Loop state-preservation theorem, including the
+- [x] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [x] Add the terminal return control-result bridge, including mapped state
   preservation and equality of Loop and Word returned value lists.

@@ -581,6 +581,10 @@ definitions, pass ordering, examples, and proof obligations.
   verify that its generated loop compiles through the RV64 backend.
 - [x] Add a concrete WordProg → Word-to-Stack → StackRemove → LabLang → RV64
   composition with an exact constant-lowering regression.
+- [x] Prove the non-`CurrHeap` StackRemove `Get` equation against the
+  executable StackLang machine state under an explicit store-memory invariant.
+- [x] Prove the matching non-`CurrHeap` StackRemove `Set` equation under
+  explicit address/source non-aliasing conditions.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

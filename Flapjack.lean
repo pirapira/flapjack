@@ -22,6 +22,7 @@ import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Calls
 import Flapjack.RiscV.CorrectnessFfi
 import Flapjack.RiscV.CorrectnessFfiMachine
+import Flapjack.RiscV.CorrectnessStack
 import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.Link
 import Flapjack.WordSemantics

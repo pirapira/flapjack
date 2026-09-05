@@ -47,4 +47,24 @@ theorem evalStackRemoveSet [NeZero width]
       wordStackMachineWriteRegister, wordStackMachineWriteMemory,
       haddress, Ne.symm haddress, hsource, Ne.symm hsource]
 
+theorem evalStackRemoveGetCurrHeap [NeZero width]
+    (config : StackRemoveConfig) (state : WordStackMachineState width)
+    (destination : Nat) :
+    (evalWordStackMachine state
+      (stackRemoveGet config destination .currHeap)).map
+        (fun final => final.registers destination) =
+      some (state.registers config.currHeap) := by
+  simp [stackRemoveGet, evalWordStackMachine, wordStackMachineBinOp,
+    wordStackMachineWriteRegister]
+
+theorem evalStackRemoveSetCurrHeap [NeZero width]
+    (config : StackRemoveConfig) (state : WordStackMachineState width)
+    (source : Nat) :
+    (evalWordStackMachine state
+      (stackRemoveSet config .currHeap source)).map
+        (fun final => final.registers config.currHeap) =
+      some (state.registers source) := by
+  simp [stackRemoveSet, evalWordStackMachine, wordStackMachineBinOp,
+    wordStackMachineWriteRegister]
+
 end Flapjack.RiscV

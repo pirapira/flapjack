@@ -585,6 +585,8 @@ definitions, pass ordering, examples, and proof obligations.
   executable StackLang machine state under an explicit store-memory invariant.
 - [x] Prove the matching non-`CurrHeap` StackRemove `Set` equation under
   explicit address/source non-aliasing conditions.
+- [x] Prove the `CurrHeap` StackRemove fast-path simulations for both `Get`
+  and `Set`.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

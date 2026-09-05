@@ -399,6 +399,8 @@ definitions, pass ordering, examples, and proof obligations.
   and `store32`, including source-memory and architectural-word observations.
 - [x] Prove mapped-local state preservation for compiled byte loads and stores,
   including zero-extension and preservation of all non-destination locals.
+- [x] Prove mapped-local preservation for structured shared-memory `load8` and
+  `store8` lowering through the emitted `shareInst` operations.
 - [x] Generalize the context-mapped Loop-to-Word assignment agreement to all
   register-register binary operations, including BitVec bitwise compatibility.
 - [x] Correct and prove context mapping for both operands of Loop `locValue`

@@ -225,6 +225,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add a concrete LabLang-to-RISC-V resolver for local label positions,
   symbolic jumps, conditional branches, and ECALL service names, with
   explicit failure for unsupported target operations and executable tests.
+- [x] Extend LabLang linking across multiple sections with byte-base layout,
+  section-qualified labels, and an executable cross-section jump regression.
 - [x] Port the core StackLang-to-LabLang flattening pass for calls, handlers,
   loops, exceptions, labels, and FFI, with executable label-counter
   regressions and a local HOL copyright notice.

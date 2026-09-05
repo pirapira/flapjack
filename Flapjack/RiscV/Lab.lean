@@ -129,6 +129,87 @@ def compileLabSection [NeZero width] (context : WordFfiContext)
   let labels := labCollectLabels sectionData.name 0 sectionData.lines
   labCompileLines context sectionData.name labels 0 sectionData.lines
 
+def labSectionInstructionCount (sectionData : LabSection (Word width)) : Nat :=
+  sectionData.lines.foldl
+    (fun count line => count + labLineInstructionCount line) 0
+
+def labCollectProgramLabels (base : Nat) :
+    LabProgram (Word width) → List (Nat × Nat × Nat)
+  | [] => []
+  | sectionData :: sections =>
+      let localLabels := labCollectLabels sectionData.name 0 sectionData.lines
+      let globalLabels := localLabels.map
+        (fun (label, position) => (sectionData.name, label, base + position))
+      globalLabels ++ labCollectProgramLabels
+        (base + 4 * labSectionInstructionCount sectionData) sections
+
+def labLookupProgramPosition (sectionId label : Nat) :
+    List (Nat × Nat × Nat) → Option Nat
+  | [] => none
+  | (candidateSection, candidateLabel, position) :: labels =>
+      if sectionId == candidateSection && label == candidateLabel then some position
+      else labLookupProgramPosition sectionId label labels
+
+def labResolveProgramRef (labels : List (Nat × Nat × Nat)) (ref : LabRef) :
+    Option Nat :=
+  labLookupProgramPosition ref.sectionId ref.label labels
+
+def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
+    (labels : List (Nat × Nat × Nat)) (position : Nat) :
+    LabAsm (Word width) → Option (List (Instruction width))
+  | .jump target => do
+      let target ← labResolveProgramRef labels target
+      pure [.jal 0 (labOffset target position)]
+  | .call target => do
+      let target ← labResolveProgramRef labels target
+      pure [.jal 1 (labOffset target position)]
+  | .locValue register target => do
+      let register ← registerOfNat register
+      let target ← labResolveProgramRef labels target
+      pure [.addi register 0 (BitVec.ofNat width target)]
+  | .jumpCmp operator condition right target => do
+      let (left, right, prelude) ← wordConditionOperands operator condition right
+      let target ← labResolveProgramRef labels target
+      let branchPosition := position + 4 * prelude.length
+      pure (prelude ++ [labBranch operator left right
+        (labOffset target branchPosition)])
+  | .callFfi function => do
+      let service ← lookupWordFfiService function context.services
+      pure [.addi 14 0 (BitVec.ofNat width service), .ecall]
+  | .install | .halt => none
+
+def labCompileProgramLines [NeZero width] (context : WordFfiContext)
+    (labels : List (Nat × Nat × Nat)) (position : Nat) :
+    List (LabLine (Word width)) → Option (List (Instruction width))
+  | [] => some []
+  | .label _ _ _ :: lines =>
+      labCompileProgramLines context labels position lines
+  | .asm operation _ _ :: lines => do
+      let code ← labCompilePlain operation
+      let rest ← labCompileProgramLines context labels
+        (position + 4 * labLineInstructionCount (.asm operation [] 0)) lines
+      pure (code ++ rest)
+  | .labAsm operation _ _ :: lines => do
+      let code ← labCompileAsmProgram context labels position operation
+      let rest ← labCompileProgramLines context labels
+        (position + 4 * labLineInstructionCount (.labAsm operation [] 0)) lines
+      pure (code ++ rest)
+
+def labCompileProgramSections [NeZero width] (context : WordFfiContext)
+    (labels : List (Nat × Nat × Nat)) (base : Nat) :
+    LabProgram (Word width) → Option (List (Instruction width))
+  | [] => some []
+  | sectionData :: sections => do
+      let code ← labCompileProgramLines context labels base sectionData.lines
+      let rest ← labCompileProgramSections context labels
+        (base + 4 * labSectionInstructionCount sectionData) sections
+      pure (code ++ rest)
+
+def compileLabProgram [NeZero width] (context : WordFfiContext)
+    (program : LabProgram (Word width)) : Option (List (Instruction width)) :=
+  let labels := labCollectProgramLabels 0 program
+  labCompileProgramSections context labels 0 program
+
 theorem labLineInstructionCount_ffi :
     labLineInstructionCount
         (.labAsm (.callFfi "sum") [] 0 : LabLine (Word width)) = 2 := by
@@ -141,5 +222,21 @@ theorem compileLabSection_ffi [NeZero width] :
       some [.addi 14 0 (BitVec.ofNat width 7), .ecall] := by
   simp [compileLabSection, labCollectLabels, labCompileLines,
     labLineInstructionCount, labCompileAsm, lookupWordFfiService]
+
+theorem compileLabProgram_cross_section_jump [NeZero width] :
+    compileLabProgram (width := width) { services := [] }
+      [⟨1, [.labAsm (.jump ⟨2, 0⟩) [] 0]⟩,
+       ⟨2, [.label 2 0 0, .asm (.const 1 7) [] 0]⟩] =
+      some [.jal 0 (BitVec.ofNat width 4),
+        .addi 1 0 (BitVec.ofNat width 7)] := by
+  have hcount :
+      labLineInstructionCount
+          (.labAsm (.jump ⟨2, 0⟩) [] 0 : LabLine (Word width)) = 1 := by
+    rfl
+  simp [compileLabProgram, labCollectProgramLabels,
+    labCollectLabels, labSectionInstructionCount, labCompileProgramSections,
+    labCompileProgramLines, labCompileAsmProgram,
+    labCompilePlain, labLookupProgramPosition, labResolveProgramRef,
+    labOffset, registerOfNat, hcount]
 
 end Flapjack.RiscV

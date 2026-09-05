@@ -179,6 +179,30 @@ example :
       some [3, 0] := by
   native_decide
 
+def crepWordContext : CompileContext (RiscV.Word 64) :=
+  { vars := [("pair", (.comb [.one, .one], [0, 1]))], functions := [],
+    exceptions := [], maxVar := 1, bytesInWord := BitVec.ofNat 64 8 }
+
+def crepPrimitiveSource : Prog (RiscV.Word 64) :=
+  .seq
+    (.primitive "pair" .addCarry
+      [.const 1, .const 2, .const 0])
+    (.return (.var .local "pair"))
+
+def crepPrimitiveSourceLocals : VarName → Option (PanValue (RiscV.Word 64)) :=
+  fun name => if name == "pair" then
+    some (.rStruct [.word 0, .word 0])
+  else none
+
+example :
+    (evalCrepStateProgWithPrimitive RiscV.loopPrimitiveHandler (fun _ => none)
+      (compileProg crepWordContext crepPrimitiveSource)).map Prod.snd =
+      (evalPanValueProgWithPrimitive (α := RiscV.Word 64) [] 0 100 8
+        crepPrimitiveSourceLocals (fun _ => none) (fun _ => none)
+        RiscV.panPrimitiveHandler crepPrimitiveSource).map
+        (fun result => result.2.2.2.flatMap panValueWords) := by
+  native_decide
+
 example :
     evalCrepMemResult (fun _ => none) (fun _ => none)
       (compileProg assignmentContext

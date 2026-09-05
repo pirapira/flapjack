@@ -72,6 +72,13 @@ example :
   native_decide
 
 example :
+    (pipelineWordFunctionsAllocatedWithSpills
+      [(0, [0], (.assign 1 (.var 0) : LoopProg (RiscV.Word 64))) ]).map
+        (fun functions => functions.map (fun (_, parameters, _) => parameters)) =
+      some [[2]] := by
+  native_decide
+
+example :
     (compileFlapjackRiscVViaAllocatedStack (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
       { storeBase := 10, currHeap := 12, scratch := 31,

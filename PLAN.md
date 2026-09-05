@@ -681,6 +681,8 @@ definitions, pass ordering, examples, and proof obligations.
   registers into their allocated registers or spill slots at function entry.
 - [x] Add CakeML-style function SSA setup: fresh formal names above the source
   variable range, with unused formals retained in spill allocation inputs.
+- [x] Align the allocated pipeline with the established Loop-to-Word context
+  and `name + 2` formal-parameter mapping before function SSA setup.
 - [x] Replace the fixed StackRemove fuel in all composed backend entry points
   with a size-derived bound, so generated functions are not limited to 1024
   levels of nesting.

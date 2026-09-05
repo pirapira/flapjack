@@ -105,10 +105,14 @@ def pipelineWordFunctionsAllocatedWithSpills [NeZero width] :
       Option (List (Nat × List Nat × StackProg Nat))
   | [] => some []
   | (label, parameters, body) :: functions => do
+      let slots := loopAccVars body parameters
+      let context : WordContext :=
+        { vars := slots.map (fun name => (name, name + 2)) }
+      let wordParameters := parameters.map (fun name => name + 2)
       let unallocatedBody :=
-        loopToWordProg ({ vars := [] } : WordContext) body
+        loopToWordProg context body
       let (_, renamedParameters, renamedBody, allocation) ←
-        wordAllocateSsaFunctionWithSpills parameters unallocatedBody
+        wordAllocateSsaFunctionWithSpills wordParameters unallocatedBody
       let config : RiscV.WordStackConfig :=
         { locations := allocation.locations
           scratch := 31
@@ -117,7 +121,7 @@ def pipelineWordFunctionsAllocatedWithSpills [NeZero width] :
       let stackBody ← RiscV.wordToStackFunctionWithParameters config renamedParameters
         renamedBody
       let rest ← pipelineWordFunctionsAllocatedWithSpills functions
-      pure ((label, parameters, stackBody) :: rest)
+      pure ((label, wordParameters, stackBody) :: rest)
 
 /-!
 An allocation-aware variant of the Word-function boundary.  The historical

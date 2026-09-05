@@ -405,6 +405,9 @@ definitions, pass ordering, examples, and proof obligations.
   `store8` lowering through the emitted `shareInst` operations.
 - [x] Prove mapped-local preservation for structured shared-memory `load16` and
   `store16` lowering through the emitted `shareInst` operations.
+- [x] Prove mapped-local preservation for structured shared-memory full-word
+  `load` and `store` lowering, including register preservation through the
+  byte-fold word store.
 - [x] Generalize the context-mapped Loop-to-Word assignment agreement to all
   register-register binary operations, including BitVec bitwise compatibility.
 - [x] Correct and prove context mapping for both operands of Loop `locValue`

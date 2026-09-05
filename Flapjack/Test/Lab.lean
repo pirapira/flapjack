@@ -36,4 +36,14 @@ example :
         .label 2 3 0]⟩ := by
   simp [labProgramToSection, labFlatten, labIsSequence, labLabel]
 
+example :
+    labFlatten false 2 3 [] []
+      (.seq (.arith .add 4 5 6) (.shift .lsl 7 8 9) : StackProg Nat) =
+      { lines := [
+          .asm (.arith .add 4 5 6) [] 0,
+          .asm (.shift .lsl 7 8 9) [] 0],
+        terminal := false,
+        nextLabel := 3 } := by
+  simp [labFlatten]
+
 end Flapjack

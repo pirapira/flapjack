@@ -24,7 +24,10 @@ def labConditionPreludeCount (operator : Cmp)
 
 def labLineInstructionCount : LabLine (Word width) → Nat
   | .label _ _ _ => 0
-  | .asm _ _ _ => 1
+  | .asm operation _ _ =>
+      match operation with
+      | .shift .ror _ _ _ => 5
+      | _ => 1
   | .labAsm operation _ _ =>
       match operation with
       | .jump _ | .call _ | .locValue _ _ | .install | .halt => 1
@@ -69,12 +72,48 @@ def labBranch [NeZero width] (operator : Cmp) (left right : Fin 32)
   | .test => .branchNe left right offset
   | .notTest => .branchEq left right offset
 
+def labBinOpInstruction [NeZero width] (operator : BinOp)
+    (destination left right : Nat) : Option (Instruction width) := do
+  let destination ← registerOfNat destination
+  let left ← registerOfNat left
+  let right ← registerOfNat right
+  pure (match operator with
+    | .add => .add destination left right
+    | .sub => .sub destination left right
+    | .and => .and destination left right
+    | .or => .or destination left right
+    | .xor => .xor destination left right)
+
+def labShiftInstructions [NeZero width] (operator : Shift)
+    (destination left right : Nat) : Option (List (Instruction width)) := do
+  if operator == .ror &&
+      [destination, left, right].any (· == 31) then
+    none
+  else
+    let destination ← registerOfNat destination
+    let left ← registerOfNat left
+    let right ← registerOfNat right
+    match operator with
+    | .lsl => pure [.sll destination left right]
+    | .lsr => pure [.srl destination left right]
+    | .asr => pure [.sra destination left right]
+    | .ror => pure [
+        .ori 31 0 (BitVec.ofNat width width),
+        .sub 31 31 right,
+        .sll 31 left 31,
+        .srl destination left right,
+        .or destination destination 31]
+
 def labCompilePlain [NeZero width] :
     LabPlain (Word width) → Option (List (Instruction width))
   | .word instruction => (wordInstToInstruction instruction).map List.singleton
   | .const destination value => do
       let destination ← registerOfNat destination
       pure [.addi destination 0 (BitVec.ofNat width value)]
+  | .arith operator destination left right =>
+      (labBinOpInstruction operator destination left right).map List.singleton
+  | .shift operator destination left right =>
+      labShiftInstructions operator destination left right
   | .tick => pure [.addi 0 0 0]
   | .jumpReg register => do
       let register ← registerOfNat register

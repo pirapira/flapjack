@@ -35,6 +35,8 @@ inductive LabJump where
 inductive LabPlain (α : Type u) where
   | word (instruction : WordInst)
   | const (destination value : Nat)
+  | arith (operator : BinOp) (destination left right : Nat)
+  | shift (operator : Shift) (destination left right : Nat)
   | tick
   | jumpReg (register : Nat)
   | codeBufferWrite (address value : Nat)
@@ -111,6 +113,10 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
   | .inst instruction => ⟨[.asm (.word instruction) [] 0], false, counter⟩
   | .shMem operator source address =>
       ⟨[.asm (.shareMem operator source address) [] 0], false, counter⟩
+  | .arith operator destination left right =>
+      ⟨[.asm (.arith operator destination left right) [] 0], false, counter⟩
+  | .shift operator destination left right =>
+      ⟨[.asm (.shift operator destination left right) [] 0], false, counter⟩
   | .const destination value =>
       ⟨[.asm (.const destination value) [] 0], false, counter⟩
   | .tick => ⟨[.asm .tick [] 0], false, counter⟩
@@ -135,7 +141,7 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
       ⟨[.labAsm (.locValue register ⟨label, entry⟩) [] 0], false, counter⟩
   | .halt register =>
       ⟨[.labAsm .halt [] 0], true, counter⟩
-  | .get _ _ | .set _ _ | .arith _ _ _ _ | .shift _ _ _ _ | .opCurrHeap _ _ _
+  | .get _ _ | .set _ _ | .opCurrHeap _ _ _
     | .alloc _ | .storeConsts _ _ _ | .stackAlloc _ | .stackFree _ | .stackStore _ _
     | .stackStoreAny _ _
     | .stackLoad _ _ | .stackLoadAny _ _ | .stackGetSize _ | .stackSetSize _

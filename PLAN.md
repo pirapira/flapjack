@@ -354,6 +354,8 @@ definitions, pass ordering, examples, and proof obligations.
   preservation theorem.
 - [x] Add a StackLang shift carrier and lower register/immediate Word shifts,
   including spilled operands, through the concrete Nat expression compiler.
+- [x] Preserve StackLang arithmetic and shifts through LabLang and lower them
+  to executable RISC-V instructions, including sized rotate-right expansion.
 - [x] Preserve `ShMemOp` as a distinct StackLang operation through LabLang
   and the RISC-V shared-memory selector.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

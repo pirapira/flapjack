@@ -567,9 +567,10 @@ definitions, pass ordering, examples, and proof obligations.
   contracts.
 - [x] Prove the ordinary single-parameter Loop-to-Word call boundary, including
   singleton result assignment and rejection of incompatible result arities.
-- [x] Port the initial StackLang store-removal slice for fixed stores and
-  `CurrHeap`, recursively rewriting nested control-flow and call bodies into
-  explicit word-memory operations.
+- [x] Port the initial StackLang store-removal slice for fixed stores,
+  `CurrHeap`, stack-frame allocation/free, and fixed/dynamic stack accesses,
+  recursively rewriting nested control-flow and call bodies into explicit
+  word-memory operations.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

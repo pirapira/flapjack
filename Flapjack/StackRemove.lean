@@ -18,6 +18,8 @@ structure StackRemoveConfig where
   currHeap : Nat
   scratch : Nat
   addressScratch : Nat
+  stackPointer : Nat
+  bytesInWord : Nat
   deriving Repr
 
 /- The order is the 1-based order of CakeML's `store_list`. -/
@@ -68,6 +70,64 @@ def stackRemoveSet (config : StackRemoveConfig) (store : StackStore)
   | _ =>
       stackRemoveJoin (stackRemoveAddress config store)
         (.inst (.mem .store source config.addressScratch))
+
+def stackRemoveMove (destination source : Nat) :
+    StackProg α :=
+  if destination = source then .skip
+  else .arith .or destination source source
+
+def stackRemoveStackAddress (config : StackRemoveConfig) (offset : Nat) :
+    StackProg α :=
+  stackRemoveJoin
+    (.const config.addressScratch (config.bytesInWord * offset))
+    (.arith .add config.addressScratch config.stackPointer config.addressScratch)
+
+def stackRemoveStackDelta (config : StackRemoveConfig) (operator : BinOp)
+    (words : Nat) : StackProg α :=
+  if words = 0 then
+    .skip
+  else if words ≤ 255 then
+    stackRemoveJoin
+      (.const config.scratch (config.bytesInWord * words))
+      (.arith operator config.stackPointer config.stackPointer config.scratch)
+  else
+    stackRemoveJoin
+      (stackRemoveStackDelta config operator 255)
+      (stackRemoveStackDelta config operator (words - 255))
+termination_by words
+decreasing_by
+  · omega
+  · apply Nat.sub_lt <;> omega
+
+def stackRemoveStackAlloc (config : StackRemoveConfig) (words : Nat) : StackProg α :=
+  stackRemoveStackDelta config .sub words
+
+def stackRemoveStackFree (config : StackRemoveConfig) (words : Nat) : StackProg α :=
+  stackRemoveStackDelta config .add words
+
+def stackRemoveStackLoad (config : StackRemoveConfig) (register offset : Nat) :
+    StackProg α :=
+  stackRemoveJoin (stackRemoveStackAddress config offset)
+    (.inst (.mem .load register config.addressScratch))
+
+def stackRemoveStackStore (config : StackRemoveConfig) (register offset : Nat) :
+    StackProg α :=
+  stackRemoveJoin (stackRemoveMove config.scratch register)
+    (stackRemoveJoin (stackRemoveStackAddress config offset)
+      (.inst (.mem .store config.scratch config.addressScratch)))
+
+def stackRemoveStackLoadAny (config : StackRemoveConfig)
+    (register offsetRegister : Nat) : StackProg α :=
+  stackRemoveJoin
+    (.arith .add config.addressScratch config.stackPointer offsetRegister)
+    (.inst (.mem .load register config.addressScratch))
+
+def stackRemoveStackStoreAny (config : StackRemoveConfig)
+    (register offsetRegister : Nat) : StackProg α :=
+  stackRemoveJoin (stackRemoveMove config.scratch register)
+    (stackRemoveJoin
+      (.arith .add config.addressScratch config.stackPointer offsetRegister)
+      (.inst (.mem .store config.scratch config.addressScratch)))
 
 def stackRemoveFuel : Nat → StackRemoveConfig → StackProg α → StackProg α
   | 0, _, program => program
@@ -125,14 +185,18 @@ def stackRemoveFuel : Nat → StackRemoveConfig → StackProg α → StackProg �
   | fuel + 1, _, .install codeBuffer codeLength dataBuffer dataLength returnAddress =>
       .install codeBuffer codeLength dataBuffer dataLength returnAddress
   | fuel + 1, _, .rawCall target => .rawCall target
-  | fuel + 1, _, .stackAlloc words => .stackAlloc words
-  | fuel + 1, _, .stackFree words => .stackFree words
-  | fuel + 1, _, .stackStore register offset => .stackStore register offset
-  | fuel + 1, _, .stackStoreAny register offsetRegister =>
-      .stackStoreAny register offsetRegister
-  | fuel + 1, _, .stackLoad register offset => .stackLoad register offset
-  | fuel + 1, _, .stackLoadAny register offsetRegister =>
-      .stackLoadAny register offsetRegister
+  | fuel + 1, config, .stackAlloc words =>
+      stackRemoveStackAlloc config words
+  | fuel + 1, config, .stackFree words =>
+      stackRemoveStackFree config words
+  | fuel + 1, config, .stackStore register offset =>
+      stackRemoveStackStore config register offset
+  | fuel + 1, config, .stackStoreAny register offsetRegister =>
+      stackRemoveStackStoreAny config register offsetRegister
+  | fuel + 1, config, .stackLoad register offset =>
+      stackRemoveStackLoad config register offset
+  | fuel + 1, config, .stackLoadAny register offsetRegister =>
+      stackRemoveStackLoadAny config register offsetRegister
   | fuel + 1, _, .stackGetSize register => .stackGetSize register
   | fuel + 1, _, .stackSetSize register => .stackSetSize register
   | fuel + 1, _, .bitmapLoad destination address => .bitmapLoad destination address

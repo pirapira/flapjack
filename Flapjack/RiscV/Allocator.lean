@@ -1604,6 +1604,29 @@ def wordAllocateSsaFunctionWithSpills (parameters : List Nat)
       else
         none
 
+/-! Function-level variant using the CakeML-shaped clash tree and move
+    preferences.  The renamed formal parameters remain allocation slots so
+    that the generated entry moves are valid even when a formal is otherwise
+    unused. -/
+
+def wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences
+    (parameters : List Nat) (program : WordProg α) :
+    Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
+  let (state, renamedParameters, program) :=
+    wordSsaRenameFunction parameters program
+  let (liveIn, edges) :=
+    wordClashTreeAnalyze (wordClashTree program []) []
+  let preferences := wordProgPreferenceEdges program
+  match wordAllocateVarsWithSpillsAndPreferences
+      (renamedParameters ++ wordProgVariables program ++ liveIn)
+      edges preferences with
+  | none => none
+  | some allocation =>
+      if wordProgSpecialLocationsSafe allocation.locations program = true then
+        some (state, renamedParameters, program, allocation)
+      else
+        none
+
 theorem wordAllocateSsaFunctionWithSpills_maps_parameters
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)

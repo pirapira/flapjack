@@ -32,4 +32,10 @@ example (result : WordSsaState × List Nat × WordProg (RiscV.Word 64) ×
     (.skip : WordProg (RiscV.Word 64)) result.1 result.2.1 result.2.2.1
     result.2.2.2 hresult
 
+/- The preference-aware function entry point also handles an unused formal. -/
+example :
+    (wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences [2]
+      (.skip : WordProg (RiscV.Word 64))).isSome := by
+  native_decide
+
 end Flapjack

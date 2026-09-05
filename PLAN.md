@@ -368,6 +368,9 @@ definitions, pass ordering, examples, and proof obligations.
   regressions.
 - [x] Thread Word move preferences through the spill-aware clash-tree allocator,
   including coalescing, clash override, and a checked tree-driven entry point.
+- [x] Expose the same preference-aware clash-tree spill allocator at the
+  function boundary, retaining renamed ABI formal parameters as allocation
+  slots and covering an unused-formal regression.
 - [x] Reserve the RISC-V address scratch register x29 from Word allocation and
   cover the allocator/backend separation with executable regressions.
 - [x] Reserve the RISC-V LongMul normalization scratch register x28 from Word

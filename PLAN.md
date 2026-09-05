@@ -336,6 +336,8 @@ definitions, pass ordering, examples, and proof obligations.
   coloured SSA slot maps to an allocatable RISC-V register.
 - [x] Prove spill-aware allocation assigns every requested slot a concrete
   register or stack location.
+- [x] Port the first CakeML `word_to_stack` spill-move boundary, including all
+  register/stack source and destination combinations.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
   multiplication (`MULHU`) followed by low-half multiplication (`MUL`),
   including the target's high-destination/source non-aliasing precondition.

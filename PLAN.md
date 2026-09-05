@@ -686,6 +686,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Marshal allocated Word call arguments into the even-numbered ABI
   registers before StackLang call-frame construction, for both handler-free
   and handler-aware calls.
+- [x] Prove that an allocated Word-to-ABI argument move preserves the
+  source value at its physical destination, including register and spill
+  sources.
 - [x] Replace the fixed StackRemove fuel in all composed backend entry points
   with a size-derived bound, so generated functions are not limited to 1024
   levels of nesting.

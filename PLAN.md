@@ -447,6 +447,8 @@ definitions, pass ordering, examples, and proof obligations.
   and control-result propagation, with focused regressions.
 - [x] Prove the loop-aware Loop-to-Word FFI simulation boundary for the fully
   composed primitive/call/FFI evaluator, with a mapped-local regression.
+- [x] Add the normal-path loop-aware sequence simulation rule needed to
+  resume Word loop code after a composed FFI or call.
 - [x] Exercise the actual Loop-to-Word loop lowering through the Word loop
   evaluator, including its generated entry and exit ticks.
 - [x] Add layout-aware RISC-V lowering for Word loops, resolving generated

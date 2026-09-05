@@ -432,4 +432,97 @@ theorem loopToWord_ffi_loop_simulation [NeZero width]
                             loopState wordState loopOutput wordOutput hlocals
                             hloopHandler hwordHandler
 
+/-!
+Normal completion composes through a sequence in the loop-aware evaluator.
+This is the control-flow rule used to resume a loop body after an FFI action;
+the hypotheses remain abstract so the same rule can later be instantiated for
+calls and primitive instructions.
+-/
+theorem loopToWord_seq_loop_simulation [NeZero width]
+    (context : WordContext)
+    (primitive : LoopPrimitiveHandler (Word width))
+    (functions : List (Nat × List Nat × LoopProg (Word width)))
+    (wordFunctions : List (Nat × List Nat × WordProg (Word width)))
+    (loopState : LoopState (Word width))
+    (wordState : State width)
+    (loopHandler : FunName → Word width → Word width → Word width → Word width →
+      LoopState (Word width) → Option (LoopState (Word width)))
+    (wordHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat)
+    (first second : LoopProg (Word width))
+    (finalLoop : LoopState (Word width))
+    (finalWord : State width)
+    (hfirst : ∀ middleLoop middleWord,
+      evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
+          loopState first = some (.normal middleLoop) →
+      RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
+          wordState (loopToWordProg context first) = some (.normal middleWord) →
+      loopLocalsMappedToRiscV context middleLoop.locals middleWord)
+    (hsecond : ∀ middleLoop middleWord,
+      loopLocalsMappedToRiscV context middleLoop.locals middleWord →
+      ∀ finalLoop finalWord,
+        evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
+            middleLoop second = some (.normal finalLoop) →
+        RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
+            middleWord (loopToWordProg context second) = some (.normal finalWord) →
+        loopLocalsMappedToRiscV context finalLoop.locals finalWord)
+    (hloop :
+      evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler (fuel + 1)
+          loopState (.seq first second) = some (.normal finalLoop))
+    (hword :
+      RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler (fuel + 1)
+          wordState (loopToWordProg context (.seq first second)) =
+        some (.normal finalWord)) :
+    loopLocalsMappedToRiscV context finalLoop.locals finalWord := by
+  cases hfirstLoop : evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      loopHandler fuel loopState first with
+  | none =>
+      simp [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] at hloop
+  | some firstResult =>
+      cases firstResult with
+      | normal middleLoop =>
+          have hsecondLoop :
+              evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
+                  middleLoop second = some (.normal finalLoop) := by
+            simpa [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] using hloop
+          cases hfirstWord :
+              RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
+                wordState (loopToWordProg context first) with
+          | none =>
+              simp [loopToWordProg,
+                RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] at hword
+          | some firstWordResult =>
+              cases firstWordResult with
+              | normal middleWord =>
+                  have hsecondWord :
+                      RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
+                        middleWord (loopToWordProg context second) =
+                        some (.normal finalWord) := by
+                    simpa [loopToWordProg,
+                      RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] using hword
+                  exact hsecond middleLoop middleWord
+                    (hfirst middleLoop middleWord hfirstLoop hfirstWord)
+                    finalLoop finalWord hsecondLoop hsecondWord
+              | returned middleWord values =>
+                  simp [loopToWordProg,
+                    RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] at hword
+              | raised middleWord exception =>
+                  simp [loopToWordProg,
+                    RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] at hword
+              | broke middleWord label =>
+                  simp [loopToWordProg,
+                    RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] at hword
+              | continued middleWord label =>
+                  simp [loopToWordProg,
+                    RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] at hword
+      | returned middleLoop values =>
+          simp [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] at hloop
+      | raised middleLoop exception =>
+          simp [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] at hloop
+      | broke middleLoop label =>
+          simp [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] at hloop
+      | continued middleLoop label =>
+          simp [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] at hloop
+
 end Flapjack.RiscV

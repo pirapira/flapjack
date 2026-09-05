@@ -121,4 +121,72 @@ theorem loopToWord_primitive_addCarry_agreement [NeZero width]
       hdestination_name_resultCarry, hleft_state, hright_state, hcarry_state] using
       (congrArg Prod.snd hadd).symm
 
+def loopStateOfCrepLocals (locals : Nat → Option α) : LoopState α :=
+  { locals := locals, globals := fun _ => none, memory := fun _ => none }
+
+theorem crepToLoop_primitive_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α] [Sub α]
+    [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : CrepPrimitiveHandler α) (context : LoopContext α)
+    (live : List Nat) (locals : Nat → Option α)
+    (destinations : List Nat) (operator : PrimOp) (arguments : List Nat) :
+    (evalCrepStateProgWithPrimitive primitive locals
+      (.primitive destinations operator arguments)).map id =
+      (evalLoopProgWithPrimitive primitive 1 (loopStateOfCrepLocals locals)
+        (loopCompileProg context live
+          (.primitive destinations operator arguments))).map
+        (fun result =>
+          ((loopResultState result).locals, loopResultValues result)) := by
+  have hread : arguments.mapM locals = loopReadLocals locals arguments := by
+    induction arguments with
+    | nil => rfl
+    | cons argument arguments ih =>
+        simp [loopReadLocals, ih]
+  simp only [evalCrepStateProgWithPrimitive]
+  rw [hread]
+  cases hargs : loopReadLocals locals arguments with
+  | none =>
+      have hargs' :
+          loopReadLocals (loopStateOfCrepLocals locals).locals arguments = none := by
+        simpa [loopStateOfCrepLocals] using hargs
+      simp [hargs', loopCompileProg, evalLoopProgWithPrimitive]
+  | some values =>
+      cases hprimitive : primitive operator values with
+      | none =>
+          have hargs' :
+              loopReadLocals (loopStateOfCrepLocals locals).locals arguments =
+                some values := by
+            simpa [loopStateOfCrepLocals] using hargs
+          simp [hargs, hargs', hprimitive, loopCompileProg,
+            evalLoopProgWithPrimitive]
+      | some result =>
+          have hargs' :
+              loopReadLocals (loopStateOfCrepLocals locals).locals arguments =
+                some values := by
+            simpa [loopStateOfCrepLocals] using hargs
+          have hfold (base : Nat → Option α) (entries : List (Nat × α)) :
+              List.foldl (fun locals entry =>
+                updateCrepLocal locals entry.fst entry.snd) base entries =
+              List.foldl (fun locals entry =>
+                updateLoopLocal locals entry.fst entry.snd) base entries := by
+            induction entries generalizing base with
+            | nil => rfl
+            | cons entry entries ih =>
+                cases entry with
+                | mk name value =>
+                    simp only [List.foldl]
+                    rw [show updateCrepLocal base name value =
+                      updateLoopLocal base name value by rfl]
+                    exact ih _
+          by_cases hlength : destinations.length = result.length
+          · simp [hargs, hargs', hprimitive, hlength, loopCompileProg,
+              evalLoopProgWithPrimitive, assignCrepValues, loopAssignValues,
+              loopStateOfCrepLocals, loopResultState, loopResultValues, hfold,
+              updateCrepLocal, updateLoopLocal]
+          · simp [hargs, hargs', hprimitive, hlength, loopCompileProg,
+              evalLoopProgWithPrimitive, assignCrepValues, loopAssignValues,
+              loopStateOfCrepLocals, loopResultState, loopResultValues, hfold,
+              updateCrepLocal, updateLoopLocal]
+
 end Flapjack

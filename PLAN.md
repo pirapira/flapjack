@@ -551,6 +551,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add the matching handler-parameterized Crepe state evaluator, including
   flattened primitive-result assignment and a compiled AddCarry regression
   linked back to the structured source result.
+- [x] Prove the primitive constructor is preserved by the Crepe-to-Loop
+  lowering and that both evaluators agree on its updated locals and results.
 - [x] Port CakeML's flat structured-memory load/store model, including
   consecutive word offsets, `Comb`/`Named` reconstruction, flattening, and
   failed-domain behavior.

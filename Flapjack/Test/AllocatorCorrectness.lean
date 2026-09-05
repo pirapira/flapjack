@@ -141,4 +141,10 @@ example [NeZero 64]
         (.raise (wordSsaRead ssa 2))).map wordControlResultException := by
   exact evalWordRaise_ssaRename ssa source target hregister 3 2
 
+example [NeZero 64] (state : State 64) (name sourceName : Nat)
+    (hname : name < 32) (hsource : sourceName < 32) :
+    evalWordProg state (.assign name (.var sourceName)) =
+      some (execute state (.addi ⟨name, hname⟩ ⟨sourceName, hsource⟩ 0)) := by
+  exact compileWordAssignVar_sound state name sourceName hname hsource
+
 end Flapjack

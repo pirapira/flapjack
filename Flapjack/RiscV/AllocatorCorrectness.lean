@@ -192,6 +192,18 @@ theorem evalWordExp_applyColour [NeZero width]
           | _ => simp [evalWordExp, wordApplyColourExp]
       | _ => simp [evalWordExp, wordApplyColourExp]
 
+/-! The first executable assignment correctness lemma.  Keeping the register
+    bounds explicit mirrors the allocator invariant: after allocation, every
+    virtual name used by this instruction denotes an architectural register. -/
+
+theorem compileWordAssignVar_sound [NeZero width] (state : State width)
+    (name sourceName : Nat) (hname : name < 32)
+    (hsource : sourceName < 32) :
+    evalWordProg state (.assign name (.var sourceName)) =
+      some (execute state (.addi ⟨name, hname⟩ ⟨sourceName, hsource⟩ 0)) := by
+  simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+    registerOfNat, hname, hsource, executeInstructions]
+
 theorem evalWordCondition_applyColour [NeZero width]
     (colour : Nat → Nat) (source target : State width)
     (hregister : ∀ name,

@@ -76,6 +76,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Begin the RISC-V target-model port with HOL-derived architectural
   vocabulary, parameterized words, register/memory primitives, and alignment
   traps; preserve the HOL copyright notice in `Flapjack/RiscV/COPYRIGHT`.
+- [x] Add an option-valued RISC-V execution boundary that enforces the HOL
+  halfword, 32-bit, and machine-word memory-alignment checks, while retaining
+  the total transition used by the existing backend equations.
 - [x] Add executable `ADD`/`ADDI` transitions with PC-advance and
   zero-register preservation theorems.
 - [x] Port HOL's signed `LB`/`LH` load value paths alongside the existing

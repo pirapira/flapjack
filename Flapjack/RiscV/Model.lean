@@ -437,6 +437,68 @@ def accessAligned (access : AccessType) (address : Word width) (alignment : Nat)
     | .read => .loadFault
     | .write => .storeAmoFault)
 
+/-!
+An execution boundary that enforces the alignment checks attached to the
+RISC-V halfword, 32-bit, and machine-word memory instructions.  The
+architectural model above remains a total state transition for the
+instruction-level backend; this option-valued boundary exposes the memory
+fault/rejection path without changing existing compiler-facing equations.
+The HOL model carries the corresponding `loadFault`/`storeAmoFault` trap in
+its full transition state; this slice keeps the trap payload available via
+`accessAligned` and uses `none` for the rejected transition.
+-/
+
+def executeChecked (state : State width) : Instruction width → Option (State width)
+  | .loadHalf destination address =>
+      if aligned (readRegister state address) 2 then
+        some (execute state (.loadHalf destination address))
+      else none
+  | .loadHalfSigned destination address =>
+      if aligned (readRegister state address) 2 then
+        some (execute state (.loadHalfSigned destination address))
+      else none
+  | .storeHalf source address =>
+      if aligned (readRegister state address) 2 then
+        some (execute state (.storeHalf source address))
+      else none
+  | .load32 destination address =>
+      if aligned (readRegister state address) 4 then
+        some (execute state (.load32 destination address))
+      else none
+  | .store32 source address =>
+      if aligned (readRegister state address) 4 then
+        some (execute state (.store32 source address))
+      else none
+  | .loadWord destination address =>
+      if aligned (readRegister state address) (width / 8) then
+        some (execute state (.loadWord destination address))
+      else none
+  | .storeWord source address =>
+      if aligned (readRegister state address) (width / 8) then
+        some (execute state (.storeWord source address))
+      else none
+  | instruction => some (execute state instruction)
+
+theorem executeChecked_loadHalf_aligned (state : State width)
+    (destination address : Fin 32)
+    (h : aligned (readRegister state address) 2 = true) :
+    executeChecked state (.loadHalf destination address) =
+      some (execute state (.loadHalf destination address)) := by
+  simp [executeChecked, h]
+
+theorem executeChecked_load32_misaligned (state : State width)
+    (destination address : Fin 32)
+    (h : aligned (readRegister state address) 4 = false) :
+    executeChecked state (.load32 destination address) = none := by
+  simp [executeChecked, h]
+
+theorem executeChecked_storeWord_aligned [NeZero width]
+    (state : State width) (source address : Fin 32)
+    (h : aligned (readRegister state address) (width / 8) = true) :
+    executeChecked state (.storeWord source address) =
+      some (execute state (.storeWord source address)) := by
+  simp [executeChecked, h]
+
 theorem zeroState_pc_zero [NeZero width] : (zeroState width).pc = 0 := by
   rfl
 

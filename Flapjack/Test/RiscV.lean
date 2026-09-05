@@ -5,6 +5,30 @@ namespace Flapjack
 
 open RiscV
 
+def alignedMemoryState : RiscV.State 64 :=
+  { (RiscV.zeroState 64) with
+    registers := fun register =>
+      if register = 1 then BitVec.ofNat 64 8 else 0 }
+
+def misalignedMemoryState : RiscV.State 64 :=
+  { (RiscV.zeroState 64) with
+    registers := fun register =>
+      if register = 1 then BitVec.ofNat 64 2 else 0 }
+
+example :
+    (RiscV.executeChecked alignedMemoryState (.loadHalf 2 1)).isSome := by
+  native_decide
+
+example :
+    RiscV.executeChecked misalignedMemoryState (.load32 2 1) = none := by
+  simp [RiscV.executeChecked, RiscV.aligned, RiscV.readRegister,
+    misalignedMemoryState, RiscV.zeroState]
+
+example :
+    RiscV.accessAligned .read (BitVec.ofNat 64 2) 4 =
+      some .loadFault := by
+  native_decide
+
 def signedOrderState : RiscV.State 8 :=
   { (RiscV.zeroState 8) with
     registers := fun register =>

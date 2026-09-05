@@ -42,6 +42,22 @@ theorem pipelineCallTarget_word_semantics :
       pure values) = some [BitVec.ofNat 64 41] := by
   native_decide
 
+def pipelineCallTargetLoopState : LoopState (RiscV.Word 64) :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+theorem pipelineCallTarget_loop_semantics :
+    (do
+      let (_, main) ←
+        lookupLoopFunction 1 pipelineCallTargetPipeline.pipeline.loop
+      let result ← evalLoopProgWithFunctions
+        pipelineCallTargetPipeline.pipeline.loop 30
+        pipelineCallTargetLoopState main
+      pure (loopResultValues result)) =
+      some [BitVec.ofNat 64 41] := by
+  native_decide
+
 theorem pipelineCallTarget_compiled_execution :
     RiscV.executeFunctionAt 120 (0 : RiscV.Word 64) 0 100 []
       pipelineCallTargetImage [4] []
@@ -52,6 +68,14 @@ theorem pipelineCallTarget_compiled_execution :
 theorem pipelineCallTarget_source_word_machine_agreement :
     (evalPanProgWithCalls pipelineCallSourceFunctions 20 (fun _ => none)
       pipelineCallSourceMain).map (fun result => result.2) =
+        some [BitVec.ofNat 64 41] ∧
+      (do
+        let (_, main) ←
+          lookupLoopFunction 1 pipelineCallTargetPipeline.pipeline.loop
+        let result ← evalLoopProgWithFunctions
+          pipelineCallTargetPipeline.pipeline.loop 30
+          pipelineCallTargetLoopState main
+        pure (loopResultValues result)) =
         some [BitVec.ofNat 64 41] ∧
       (do
         let (_, main) ←
@@ -67,8 +91,9 @@ theorem pipelineCallTarget_source_word_machine_agreement :
           image [4] []
           (RiscV.writeRegister (RiscV.zeroState 64) 1 100)) =
         some [BitVec.ofNat 64 41] := by
-  exact ⟨pipelineCall_source_semantics, pipelineCallTarget_word_semantics,
-    by rw [pipelineCallTargetLinkedImage_shape]
-       exact pipelineCallTarget_compiled_execution⟩
+  exact ⟨pipelineCall_source_semantics, pipelineCallTarget_loop_semantics,
+    pipelineCallTarget_word_semantics, by
+      rw [pipelineCallTargetLinkedImage_shape]
+      exact pipelineCallTarget_compiled_execution⟩
 
 end Flapjack

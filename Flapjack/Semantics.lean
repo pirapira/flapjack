@@ -573,6 +573,72 @@ def evalCrepStateProg [Add α] [Mul α] (locals : Nat → Option α) :
       else pure (locals', firstResult)
   | _ => none
 
+/-!
+Call-aware Crepe semantics for the declaration-call fragment.  This is the
+first executable semantic boundary after `pan_to_crep`: compiled functions
+carry their flattened parameter slots, and a call either propagates its
+return values or assigns them to the caller's flattened destinations.  The
+handler-bearing and memory/FFI cases remain explicit extensions of this
+boundary rather than being silently treated as successful calls.
+-/
+
+def lookupCompiledFunction [BEq String] (name : FunName)
+    : List (CompiledFunction α) → Option (List Nat × CrepProg α)
+  | [] => none
+  | function :: functions =>
+      if name == function.name then some (function.params, function.body)
+      else lookupCompiledFunction name functions
+
+mutual
+  def evalCrepCallWithFunctions [BEq String] [Add α] [Mul α]
+      (functions : List (CompiledFunction α)) :
+      Nat → (Nat → Option α) →
+        Option (List Nat × Option (α × CrepProg α)) → FunName →
+        List (CrepExp α) → Option ((Nat → Option α) × List α)
+    | 0, _, _, _, _ => none
+    | fuel + 1, locals, info, function, arguments => do
+        let values ← evalCrepExps locals arguments
+        let (parameters, body) ← lookupCompiledFunction function functions
+        let calleeLocals ← assignCrepValues (fun _ => none) parameters values
+        let (_, result) ← evalCrepStateProgWithFunctions functions fuel
+          calleeLocals body
+        match info with
+        | none => pure (locals, result)
+        | some (destinations, none) => do
+            let locals ← assignCrepValues locals destinations result
+            pure (locals, [])
+        | some (_, some (_, _)) => none
+    termination_by fuel _ _ _ => fuel
+
+  def evalCrepStateProgWithFunctions [BEq String] [Add α] [Mul α]
+      (functions : List (CompiledFunction α)) :
+      Nat → (Nat → Option α) → CrepProg α →
+        Option ((Nat → Option α) × List α)
+    | 0, _, _ => none
+    | fuel + 1, locals, .skip => some (locals, [])
+    | fuel + 1, locals, .dec name value body => do
+        let value ← evalCrepExp locals value
+        evalCrepStateProgWithFunctions functions fuel
+          (updateCrepLocal locals name value) body
+    | fuel + 1, locals, .assign name value => do
+        let value ← evalCrepExp locals value
+        pure (updateCrepLocal locals name value, [])
+    | fuel + 1, locals, .return values => do
+        let values ← evalCrepExps locals values
+        pure (locals, values)
+    | fuel + 1, locals, .seq first second => do
+        let (locals', firstResult) ←
+          evalCrepStateProgWithFunctions functions fuel locals first
+        if firstResult.isEmpty then
+          evalCrepStateProgWithFunctions functions fuel locals' second
+        else pure (locals', firstResult)
+    | fuel + 1, locals, .call info function arguments =>
+        evalCrepCallWithFunctions functions fuel locals info function arguments
+    | _, _, _ => none
+    termination_by fuel _ _ => fuel
+
+end
+
 def updateMemory [BEq α] (memory : α → Option α) (address value : α) : α → Option α :=
   fun current => if current == address then some value else memory current
 

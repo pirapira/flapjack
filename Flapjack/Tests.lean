@@ -30,6 +30,7 @@ import Flapjack.Test.CorrectnessLoopRepeat
 import Flapjack.Test.WordLoopHandlers
 import Flapjack.Test.CorrectnessFfiMachine
 import Flapjack.Test.CorrectnessTarget
+import Flapjack.Test.CrepCalls
 import Flapjack.Test.Ffi
 import Flapjack.Test.Stack
 import Flapjack.Test.Lab

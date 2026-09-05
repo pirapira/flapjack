@@ -185,4 +185,48 @@ example :
     (hvalue := by native_decide)
     (hlocals := memoryCorrectness_mappedLocals)
 
+example :
+    ∀ resultState,
+      RiscV.evalWordProg memoryCorrectnessWordState
+        (loopToWordProg memoryCorrectnessContext
+          (.shMem .load16 2 (.var 1))) = some resultState →
+      loopLocalsMappedToRiscV memoryCorrectnessContext
+        (updateLoopLocal memoryCorrectnessLoopState.locals 2
+          (BitVec.ofNat 64 42)) resultState := by
+  apply loopToWord_shMem_load16_preserves_mapped_locals
+    (context := memoryCorrectnessContext)
+    (loopState := memoryCorrectnessLoopState)
+    (state := memoryCorrectnessWordState)
+    (address := 1) (destination := 2) (destinationRegister := 2)
+    (addressValue := BitVec.ofNat 64 16)
+    (value := BitVec.ofNat 64 42)
+    (zero := by
+      change memoryCorrectnessWordState.registers (0 : Fin 32) = 0
+      simp [memoryCorrectnessWordState, RiscV.writeRegister,
+        RiscV.zeroState, RiscV.writeWord32, RiscV.writeByte])
+    (hlocals := memoryCorrectness_mappedLocals)
+    (haddress := by simp [memoryCorrectnessLoopState])
+    (hmemory := by native_decide)
+    (hmachine := by native_decide)
+    (hdestination := by native_decide)
+    (hdestination_nonzero := by decide)
+    (hnoalias := memoryCorrectness_noalias)
+
+example :
+    ∀ resultState,
+      RiscV.evalWordProg memoryCorrectnessWordState
+        (loopToWordProg memoryCorrectnessContext
+          (.shMem .store16 1 (.var 1))) = some resultState →
+      loopLocalsMappedToRiscV memoryCorrectnessContext
+        memoryCorrectnessLoopState.locals resultState := by
+  apply loopToWord_shMem_store16_preserves_mapped_locals
+    (context := memoryCorrectnessContext)
+    (loopState := memoryCorrectnessLoopState)
+    (state := memoryCorrectnessWordState)
+    (address := 1) (value := 1)
+    (addressRegister := 3) (valueRegister := 3)
+    (haddress := by native_decide)
+    (hvalue := by native_decide)
+    (hlocals := memoryCorrectness_mappedLocals)
+
 end Flapjack

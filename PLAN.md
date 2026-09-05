@@ -139,6 +139,8 @@ definitions, pass ordering, examples, and proof obligations.
   compiled skip and constant-return programs.
 - [x] Extend generic source-to-full-Crepe agreement through a compiled
   constant store/load and its state-memory projection.
+- [x] Extend generic source-to-full-Crepe agreement through constant
+  conditional control flow.
 - [x] Add a return-aware RISC-V function artifact and evaluator for the
   straight-line Word assignment/return fragment.
 - [x] Add a partial Word-to-RISC-V instruction selector for constants, moves,

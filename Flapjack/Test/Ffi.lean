@@ -1,4 +1,4 @@
-import Flapjack.RiscV.Ffi
+import Flapjack.RiscV.Link
 
 namespace Flapjack
 
@@ -62,6 +62,23 @@ example :
       some ([.addi 10 2 0, .addi 11 3 0, .addi 12 4 0, .addi 13 5 0,
         .addi 14 0 7, .ecall, .jal 0 8, .jal 0 (0 - BitVec.ofNat 64 28)], []) := by
   native_decide
+
+example :
+    linkWordFunctionsWithFfi (0 : Word 64) [("sum", 7)]
+      [(7, [], (.seq (.ffi "sum" 2 3 4 5 []) (.return 0 [6])))] =
+      some [(7, 0, [],
+        [.addi 10 2 0, .addi 11 3 0, .addi 12 4 0, .addi 13 5 0,
+          .addi 14 0 7, .ecall, .jalr 0 1 0], [6])] := by
+  simp [linkWordFunctionsWithFfi, wordFunctionTargetSignaturesWithCalls,
+    wordFunctionTargetSignaturesAux, wordFunctionReturnNamesWithCalls,
+    lookupWordFunctionBody, compileLinkedWordFunctionWithFfi,
+    wordFunctionToRiscVWithCallsAndFfiAndLoops,
+    wordFunctionToRiscVWithCallsAndFfiAndLoopsAux,
+    wordControlInstructions, resolveWordLoopBody, resolveWordLoopBodyAux,
+    wordFunctionToRiscVWithCallsAndFfi, wordFfiToRiscV,
+    lookupWordFfiService, wordRegisterMoves, wordFunctionToRiscVWithCalls,
+    wordFunctionReturnNames, registerOfNat, linkRiscVFunctions,
+    linkRiscVFunctionsAt]
 
 example :
     (executeWithFfi ffiAbiHost

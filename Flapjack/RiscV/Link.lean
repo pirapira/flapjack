@@ -1,4 +1,5 @@
 import Flapjack.RiscV.Calls
+import Flapjack.RiscV.Ffi
 
 /-!
 The first RISC-V linker layer for Flapjack function artifacts. Function labels
@@ -141,6 +142,45 @@ def linkWordFunctions [NeZero width]
   let context : WordCallContext width := { targets := targets }
   let actual ← functions.mapM (compileLinkedWordFunction context)
   linkRiscVFunctions start actual
+
+/-!
+Linking for the FFI-aware selector mirrors the ordinary call-aware linker but
+retains the service table throughout both provisional and final compilation.
+This keeps function entry addresses stable while allowing an FFI operation in
+any supported straight-line or loop body.
+-/
+def compileLinkedWordFunctionWithFfi [NeZero width]
+    (context : WordCallFfiContext width)
+    (function : Nat × List Nat × WordProg (Word width)) :
+    Option (Nat × List Nat × Option (List (Instruction width) × List (Fin 32))) := do
+  let (label, parameters, body) := function
+  let (code, returns) ← wordFunctionToRiscVWithCallsAndFfiAndLoops context body
+  pure (label, parameters, some (code ++ [.jalr 0 1 0], returns))
+
+def linkWordFunctionsWithFfi [NeZero width]
+    (start : Word width) (services : List (FunName × Nat))
+    (functions : List (Nat × List Nat × WordProg (Word width))) := do
+  let signatures ← wordFunctionTargetSignaturesWithCalls functions
+  let provisionalContext : WordCallFfiContext width :=
+    { targets := signatures, services := services }
+  let provisional ← functions.mapM (compileLinkedWordFunctionWithFfi provisionalContext)
+  let linked :
+      List (Nat × Word width × List Nat × List (Instruction width) × List (Fin 32)) ←
+    linkRiscVFunctions start provisional
+  let targets : List (Nat × Word width × List Nat × List Nat) :=
+    linked.map (fun (item :
+        Nat × Word width × List Nat × List (Instruction width) × List (Fin 32)) =>
+      let (label, entry, parameters, _code, returns) := item
+      (label, entry, parameters, List.map (fun register : Fin 32 => register.val) returns))
+  let context : WordCallFfiContext width :=
+    { targets := targets, services := services }
+  let actual ← functions.mapM (compileLinkedWordFunctionWithFfi context)
+  linkRiscVFunctions start actual
+
+theorem linkWordFunctionsWithFfi_empty [NeZero width]
+    (start : Word width) (services : List (FunName × Nat)) :
+    linkWordFunctionsWithFfi start services [] = some [] := by
+  rfl
 
 theorem wordFunctionReturnNames_return [NeZero width] (values : List Nat) :
     wordFunctionReturnNames (.return 0 values : WordProg (Word width)) = some values := by

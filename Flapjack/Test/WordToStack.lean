@@ -162,6 +162,22 @@ example :
     wordStackJoin, wordStackStoreNameNat]
 
 example :
+    (evalWordStackMachine
+        { registers := fun register => if register = 5 then 9 else 0,
+          stack := fun _ => 0,
+          stores := fun _ => 0,
+          memory := fun _ => 0,
+          sharedMemory := fun _ => 0 }
+        ((wordToStackProgNat
+          { locations := [(0, .register 5)], scratch := 31, stackBase := 10 }
+          ((.assign 0 (.const 42)) : WordProg Nat)).getD .skip)).bind
+      (fun state => wordStackMachineValue
+        { locations := [(0, .register 5)], scratch := 31, stackBase := 10 }
+        state 0) =
+      some (BitVec.ofNat 8 42) := by
+  native_decide
+
+example :
     (wordToStackProg
         { locations := [(0, .register 5)], scratch := 31, stackBase := 6,
           returnLabel := 20, entryLabel := 21 }

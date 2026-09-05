@@ -349,6 +349,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add concrete `Nat` Word-to-Stack expression lowering for constants,
   register/stack atoms, binary operations, loads, stores, and stack-backed
   destinations, with separate value/address scratch registers.
+- [x] Add executable concrete StackLang semantics for registers, frame slots,
+  stores, and abstract full-word memory, with a constant-assignment
+  preservation theorem.
 - [x] Preserve `ShMemOp` as a distinct StackLang operation through LabLang
   and the RISC-V shared-memory selector.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

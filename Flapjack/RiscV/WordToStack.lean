@@ -435,6 +435,112 @@ def evalWordStackBasic [NeZero width] (state : WordStackState width) :
       evalWordStackBasic state second
   | _ => none
 
+/-! A slightly richer executable StackLang semantics for the concrete Nat
+    compiler.  It is intentionally an abstract word-memory model: byte
+    layout and RISC-V instruction encoding remain below StackLang, while this
+    state is sufficient to state expression-lowering preservation. -/
+
+structure WordStackMachineState (width : Nat) where
+  registers : Nat → Word width
+  stack : Nat → Word width
+  stores : StackStore → Word width
+  memory : Word width → Word width
+  sharedMemory : Word width → Word width
+
+def wordStackMachineWriteRegister (state : WordStackMachineState width)
+    (register : Nat) (value : Word width) : WordStackMachineState width :=
+  { state with registers := fun current =>
+      if current = register then value else state.registers current }
+
+def wordStackMachineWriteSlot (state : WordStackMachineState width)
+    (slot : Nat) (value : Word width) : WordStackMachineState width :=
+  { state with stack := fun current =>
+      if current = slot then value else state.stack current }
+
+def wordStackMachineWriteStore (state : WordStackMachineState width)
+    (store : StackStore) (value : Word width) : WordStackMachineState width :=
+  { state with stores := fun current =>
+      if current = store then value else state.stores current }
+
+def wordStackMachineWriteMemory (state : WordStackMachineState width)
+    (address value : Word width) : WordStackMachineState width :=
+  { state with memory := fun current =>
+      if current = address then value else state.memory current }
+
+def wordStackMachineWriteSharedMemory (state : WordStackMachineState width)
+    (address value : Word width) : WordStackMachineState width :=
+  { state with sharedMemory := fun current =>
+      if current = address then value else state.sharedMemory current }
+
+def wordStackMachineBinOp : BinOp → Word width → Word width → Word width
+  | .add, left, right => left + right
+  | .sub, left, right => left - right
+  | .and, left, right => left &&& right
+  | .or, left, right => left ||| right
+  | .xor, left, right => left ^^^ right
+
+def evalWordStackMachine [NeZero width]
+    (state : WordStackMachineState width) :
+    StackProg Nat → Option (WordStackMachineState width)
+  | .skip => some state
+  | .const destination value =>
+      some (wordStackMachineWriteRegister state destination
+        (BitVec.ofNat width value))
+  | .arith operator destination left right =>
+      some (wordStackMachineWriteRegister state destination
+        (wordStackMachineBinOp operator
+          (state.registers left) (state.registers right)))
+  | .inst (.mem .load destination address) =>
+      some (wordStackMachineWriteRegister state destination
+        (state.memory (state.registers address)))
+  | .inst (.mem .store source address) =>
+      some (wordStackMachineWriteMemory state
+        (state.registers address) (state.registers source))
+  | .shMem .load destination address =>
+      some (wordStackMachineWriteRegister state destination
+        (state.sharedMemory (state.registers address)))
+  | .shMem .store source address =>
+      some (wordStackMachineWriteSharedMemory state
+        (state.registers address) (state.registers source))
+  | .get destination store =>
+      some (wordStackMachineWriteRegister state destination (state.stores store))
+  | .set store source =>
+      some (wordStackMachineWriteStore state store (state.registers source))
+  | .stackLoad register offset =>
+      some (wordStackMachineWriteRegister state register (state.stack offset))
+  | .stackStore register offset =>
+      some (wordStackMachineWriteSlot state offset (state.registers register))
+  | .seq first second => do
+      let state ← evalWordStackMachine state first
+      evalWordStackMachine state second
+  | _ => none
+
+def wordStackMachineValue [NeZero width] (config : WordStackConfig)
+    (state : WordStackMachineState width) (name : Nat) : Option (Word width) := do
+  let location ← wordStackLocation config name
+  match location with
+  | .register register => some (state.registers register)
+  | .stack slot => some (state.stack (wordStackOffset config slot))
+
+theorem evalWordStackMachine_const_assignment [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (destination value : Nat) (destinationLocation : WordLocation)
+    (hdestination : wordStackLocation config destination = some destinationLocation)
+    (heval : (wordStackCompileExpNat config destination (.const value)).bind
+      (evalWordStackMachine state) = some final) :
+      wordStackMachineValue config final destination =
+        some (BitVec.ofNat width value) := by
+  change lookupNatInfo destination config.locations = some destinationLocation at hdestination
+  simp [wordStackCompileExpNat, wordStackWritePhysicalNat, hdestination] at heval
+  cases destinationLocation <;>
+    simp [evalWordStackMachine, wordStackMachineValue, wordStackLocation,
+      wordStackOffset, wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      hdestination] at heval ⊢
+  all_goals
+    cases heval
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot, hdestination]
+
 def wordStackValue [NeZero width] (config : WordStackConfig)
     (state : WordStackState width) (name : Nat) : Option (Word width) := do
   let location ← wordStackLocation config name

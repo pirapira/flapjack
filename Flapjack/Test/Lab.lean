@@ -54,8 +54,8 @@ example :
     labProgramToSectionAfterStackRemove labStackRemoveConfig 2 3
       (.get 4 .heapLength : StackProg Nat) =
       ⟨2, [
-        .asm (.const 29 3) [] 0,
-        .asm (.arith .add 29 10 29) [] 0,
+        .asm (.const 29 24) [] 0,
+        .asm (.arith .sub 29 10 29) [] 0,
         .label 2 1 0,
         .asm (.word (.mem .load 4 29)) [] 0,
         .label 2 3 0]⟩ := by

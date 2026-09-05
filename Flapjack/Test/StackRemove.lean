@@ -8,7 +8,7 @@ def stackRemoveTestConfig : StackRemoveConfig :=
 
 example :
     stackRemove stackRemoveTestConfig (.get 4 .heapLength : StackProg Nat) =
-      .seq (.seq (.const 29 3) (.arith .add 29 10 29))
+      .seq (.seq (.const 29 24) (.arith .sub 29 10 29))
         (.inst (.mem .load 4 29)) := by
   change stackRemoveFuel 1024 stackRemoveTestConfig
       (.get 4 .heapLength : StackProg Nat) = _
@@ -17,7 +17,7 @@ example :
 
 example :
     stackRemove stackRemoveTestConfig (.set .globals 6 : StackProg Nat) =
-      .seq (.seq (.const 29 8) (.arith .add 29 10 29))
+      .seq (.seq (.const 29 64) (.arith .sub 29 10 29))
         (.inst (.mem .store 6 29)) := by
   change stackRemoveFuel 1024 stackRemoveTestConfig
       (.set .globals 6 : StackProg Nat) = _
@@ -98,7 +98,7 @@ example :
 example :
     stackRemove stackRemoveTestConfig (.bitmapLoad 6 7 : StackProg Nat) =
       .seq
-        (.seq (.seq (.const 29 11) (.arith .add 29 10 29))
+        (.seq (.seq (.const 29 88) (.arith .sub 29 10 29))
           (.inst (.mem .load 6 29)))
         (.seq (.arith .add 6 6 7)
           (.seq (.const 31 3)
@@ -129,9 +129,9 @@ example :
         (.seq (.get 4 .heapLength)
           (.loop (.set .handler 6)) : StackProg Nat) =
       .seq
-        (.seq (.seq (.const 29 3) (.arith .add 29 10 29))
+        (.seq (.seq (.const 29 24) (.arith .sub 29 10 29))
           (.inst (.mem .load 4 29)))
-        (.loop (.seq (.seq (.const 29 7) (.arith .add 29 10 29))
+        (.loop (.seq (.seq (.const 29 56) (.arith .sub 29 10 29))
           (.inst (.mem .store 6 29)))) := by
   change stackRemoveFuel 1024 stackRemoveTestConfig
       (.seq (.get 4 .heapLength)

@@ -53,9 +53,12 @@ def stackRemoveJoin (first second : StackProg α) : StackProg α :=
 
 def stackRemoveAddress (config : StackRemoveConfig) (store : StackStore) :
     StackProg α :=
+  /- CakeML's store array grows down from `storeBase`: `store_offset` is the
+     negated byte offset of the 1-based store position. -/
   stackRemoveJoin
-    (.const config.addressScratch (stackStorePosition store))
-    (.arith .add config.addressScratch config.storeBase config.addressScratch)
+    (.const config.addressScratch
+      (config.bytesInWord * stackStorePosition store))
+    (.arith .sub config.addressScratch config.storeBase config.addressScratch)
 
 def stackRemoveGet (config : StackRemoveConfig) (destination : Nat)
     (store : StackStore) : StackProg α :=

@@ -18,8 +18,9 @@ theorem evalStackRemoveGet [NeZero width]
     (haddress : config.addressScratch ≠ config.storeBase)
     (hmemory :
       state.memory
-          (state.registers config.storeBase +
-            BitVec.ofNat width (stackStorePosition store)) =
+          (state.registers config.storeBase -
+            BitVec.ofNat width
+              (config.bytesInWord * stackStorePosition store)) =
         state.stores store) :
     (evalWordStackMachine state (stackRemoveGet config destination store)).map
         (fun final => final.registers destination) =
@@ -38,8 +39,9 @@ theorem evalStackRemoveSet [NeZero width]
     (evalWordStackMachine state (stackRemoveSet config store source)).map
         (fun final =>
           final.memory
-            (state.registers config.storeBase +
-              BitVec.ofNat width (stackStorePosition store))) =
+            (state.registers config.storeBase -
+              BitVec.ofNat width
+                (config.bytesInWord * stackStorePosition store))) =
       some (state.registers source) := by
   cases store <;>
     simp_all [stackRemoveSet, stackRemoveAddress, stackRemoveJoin,

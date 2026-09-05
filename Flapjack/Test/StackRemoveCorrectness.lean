@@ -14,7 +14,7 @@ def stackGetCorrectnessState : WordStackMachineState 64 :=
     stores := fun store =>
       if store = .heapLength then BitVec.ofNat 64 77 else 0
     memory := fun address =>
-      if address = BitVec.ofNat 64 103 then BitVec.ofNat 64 77 else 0
+      if address = BitVec.ofNat 64 76 then BitVec.ofNat 64 77 else 0
     sharedMemory := fun _ => 0 }
 
 example :
@@ -33,8 +33,10 @@ example :
       (stackRemoveSet stackGetCorrectnessConfig .heapLength 6)).map
         (fun final =>
           final.memory
-            (stackGetCorrectnessState.registers 10 +
-              BitVec.ofNat 64 (stackStorePosition .heapLength))) =
+            (stackGetCorrectnessState.registers 10 -
+              BitVec.ofNat 64
+                (stackGetCorrectnessConfig.bytesInWord *
+                  stackStorePosition .heapLength))) =
       some (BitVec.ofNat 64 55) := by
   simpa [stackGetCorrectnessConfig, stackGetCorrectnessState,
     stackStorePosition] using

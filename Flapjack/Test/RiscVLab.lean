@@ -59,8 +59,8 @@ example :
       stackRemoveRiscVConfig 2 3
       (.get 4 .heapLength : StackProg (Word 64)) =
       some [
-        .addi 29 0 (BitVec.ofNat 64 3),
-        .add 29 10 29,
+        .addi 29 0 (BitVec.ofNat 64 24),
+        .sub 29 10 29,
         .loadWord 4 29] := by
   native_decide
 

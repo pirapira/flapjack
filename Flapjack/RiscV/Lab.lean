@@ -336,7 +336,7 @@ def compileStackProgramListToRiscV [NeZero width]
   compileLabProgram context
     (programs.map (fun (sectionId, program) =>
       labProgramToEntrySection sectionId entryLabel initialLabel
-        (stackRemove config program)))
+        (stackRemoveComplete config program)))
 
 def compileStackProgramNatListToRiscV [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)
@@ -346,7 +346,7 @@ def compileStackProgramNatListToRiscV [NeZero width]
   compileLabProgram context
     ((programs.map (fun (sectionId, program) =>
       labProgramToEntrySection sectionId entryLabel initialLabel
-        (stackRemove config program))).map labSectionNatToWord)
+        (stackRemoveComplete config program))).map labSectionNatToWord)
 
 theorem labLineInstructionCount_ffi :
     labLineInstructionCount

@@ -290,6 +290,31 @@ def stackRemove [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
     (program : StackProg α) : StackProg α :=
   stackRemoveFuel 1024 config program
 
+def stackProgDepth : StackProg α → Nat
+  | .call returnHandler _ handler =>
+      1 + max
+        (match returnHandler with
+        | none => 0
+        | some (program, _, _, _) => stackProgDepth program)
+        (match handler with
+        | none => 0
+        | some (program, _, _) => stackProgDepth program)
+  | .seq first second => 1 + max (stackProgDepth first) (stackProgDepth second)
+  | .ite _ _ _ thenBranch elseBranch =>
+      1 + max (stackProgDepth thenBranch) (stackProgDepth elseBranch)
+  | .loop body => 1 + stackProgDepth body
+  | _ => 1
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+/-! A size-derived entry point for generated programs.  Every recursive child
+    passed to `stackRemoveFuel` is structurally smaller than its parent, so
+    `stackProgDepth program` supplies enough fuel for the maximum nesting depth
+    without imposing a fixed limit on the source program. -/
+def stackRemoveComplete [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
+    (program : StackProg α) : StackProg α :=
+  stackRemoveFuel (stackProgDepth program) config program
+
 theorem stackRemove_get_currHeap [OfNat α 0] [OfNat α 1]
     (config : StackRemoveConfig) (destination : Nat) :
     stackRemove config (.get destination .currHeap : StackProg α) =

@@ -60,7 +60,8 @@ example :
         .asm (.word (.mem .load 4 29)) [] 0,
         .label 2 3 0]⟩ := by
   simp [labProgramToSectionAfterStackRemove, labProgramToSection,
-    stackRemove, stackRemoveFuel, stackRemoveGet, stackRemoveAddress,
+    stackRemoveComplete, stackRemoveFuel, stackProgDepth, stackRemoveGet,
+    stackRemoveAddress,
     stackRemoveJoin, stackStorePosition, labFlatten, labLabel,
     labIsSequence, labStackRemoveConfig]
 

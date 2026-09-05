@@ -245,7 +245,8 @@ def labProgramToEntrySection (sectionId entryLabel initialLabel : Nat)
 def labProgramToSectionAfterStackRemove [OfNat α 0] [OfNat α 1]
     (config : StackRemoveConfig)
     (sectionId initialLabel : Nat) (program : StackProg α) : LabSection α :=
-  labProgramToSection sectionId initialLabel (stackRemove config program)
+  labProgramToSection sectionId initialLabel
+    (stackRemoveComplete config program)
 
 theorem labFlatten_skip (sectionId counter : Nat) (continues breaks : List Nat) :
     labFlatten false sectionId counter continues breaks (.skip : StackProg α) =

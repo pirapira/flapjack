@@ -36,14 +36,17 @@ def exactReadBytes [NeZero width] (state : State width)
   (List.range length).map (fun offset =>
     UInt8.ofNat (readByte state (byteAddress address offset)).toNat)
 
+def exactWriteBytesAux [NeZero width] (address : Word width)
+    (state : State width) (offset : Nat) : List UInt8 → State width
+  | [] => state
+  | byte :: bytes =>
+      exactWriteBytesAux address
+        (writeByte state (byteAddress address offset)
+          (BitVec.ofNat 8 byte.toNat)) (offset + 1) bytes
+
 def exactWriteBytes [NeZero width] (state : State width)
     (address : Word width) (bytes : List UInt8) : State width :=
-  let rec go (state : State width) (offset : Nat) : List UInt8 → State width
-    | [] => state
-    | byte :: bytes =>
-        go (writeByte state (byteAddress address offset)
-          (BitVec.ofNat 8 byte.toNat)) (offset + 1) bytes
-  go state 0 bytes
+  exactWriteBytesAux address state 0 bytes
 
 def lookupWordFfiName (service : Nat) :
     List (FunName × Nat) → Option FunName

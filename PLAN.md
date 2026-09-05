@@ -874,6 +874,8 @@ definitions, pass ordering, examples, and proof obligations.
   outcomes, unknown-service rejection, and an executable RV64 regression.
 - [x] Align the Word clash tree's call equations with CakeML cut-set `Set`
   boundaries and exceptional handler branches, with reduced-IR regressions.
+- [x] Prove general normal-return and terminal-outcome equations for the exact
+  RISC-V ECALL adapter directly from CakeML's `callFfi` equations.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

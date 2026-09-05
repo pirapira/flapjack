@@ -33,6 +33,7 @@ import Flapjack.RiscV.CorrectnessFfiMachine
 import Flapjack.RiscV.CorrectnessStack
 import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.ExactFfi
+import Flapjack.RiscV.CorrectnessExactFfi
 import Flapjack.RiscV.Link
 import Flapjack.WordSemantics
 import Flapjack.Loop

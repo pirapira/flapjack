@@ -789,6 +789,32 @@ theorem evalWordStackMachine_const_assignment [NeZero width]
     simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
       wordStackMachineWriteRegister, wordStackMachineWriteSlot, hdestination]
 
+theorem evalWordStackMachine_move_preserves_value [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (destination source : Nat) (destinationLocation sourceLocation : WordLocation)
+    (hdestination : wordStackLocation config destination = some destinationLocation)
+    (hsource : wordStackLocation config source = some sourceLocation)
+    (hdestinationScratch : destinationLocation ≠ .register config.scratch)
+    (hsourceScratch : sourceLocation ≠ .register config.scratch)
+    (heval : (wordStackMove (α := Nat) config destination source).bind
+      (evalWordStackMachine state) = some final) :
+      wordStackMachineValue config final destination =
+        wordStackMachineValue config state source := by
+  change lookupNatInfo destination config.locations = some destinationLocation at hdestination
+  change lookupNatInfo source config.locations = some sourceLocation at hsource
+  simp [wordStackMove, hdestination, hsource] at heval
+  cases destinationLocation <;> cases sourceLocation <;>
+    simp [evalWordStackMachine, wordStackMachineValue, wordStackLocation,
+      wordStackOffset, wordStackMachineWriteRegister,
+      wordStackMachineWriteSlot, hdestination, hsource,
+      hdestinationScratch, hsourceScratch] at heval ⊢
+  all_goals
+    cases heval
+    simp [wordStackMachineValue, wordStackLocation, wordStackOffset,
+      wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+      wordStackMachineBinOp,
+      hdestination, hsource, hdestinationScratch, hsourceScratch]
+
 theorem evalWordStackMachine_lookup_assignment [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)
     (destination : Nat) (store : WordStore Nat) (stackStore : StackStore)

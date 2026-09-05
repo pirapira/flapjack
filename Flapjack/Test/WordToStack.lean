@@ -405,6 +405,26 @@ example [NeZero width]
 
 example [NeZero width]
     (state final : WordStackMachineState width)
+    (heval : (wordStackMove (α := Nat)
+        { locations := [(0, .stack 2), (1, .register 5)],
+          scratch := 31, stackBase := 10 } 0 1).bind
+      (evalWordStackMachine state) = some final) :
+    wordStackMachineValue
+        { locations := [(0, .stack 2), (1, .register 5)],
+          scratch := 31, stackBase := 10 } final 0 =
+      wordStackMachineValue
+        { locations := [(0, .stack 2), (1, .register 5)],
+          scratch := 31, stackBase := 10 } state 1 := by
+  apply evalWordStackMachine_move_preserves_value
+    (destinationLocation := .stack 2) (sourceLocation := .register 5)
+  · rfl
+  · rfl
+  · simp
+  · simp
+  · exact heval
+
+example [NeZero width]
+    (state final : WordStackMachineState width)
     (heval : (wordStackMemoryInst
         { locations := [(0, .register 4), (1, .register 5)],
           scratch := 31, stackBase := 10, addressScratch := 29 }

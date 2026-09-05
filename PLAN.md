@@ -378,6 +378,8 @@ definitions, pass ordering, examples, and proof obligations.
   register/stack source and destination combinations.
 - [x] Give generated spill moves an executable StackLang semantics and prove
   source-value preservation under the reserved-scratch contract.
+- [x] Prove concrete Stack-machine preservation for generated Word-to-Stack
+  variable moves, including a spilled-destination regression.
 - [x] Lower spilled Word load/store instructions through independent address
   and data scratch registers in the StackLang boundary.
 - [x] Lower spilled Word division operands and destinations through the

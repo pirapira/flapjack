@@ -2,7 +2,7 @@ import Flapjack.Pipeline
 
 namespace Flapjack
 
-example :
+theorem wordAllocateSsaProgramWithSpills_example :
     wordAllocateSsaProgramWithSpills
         ({ current := [], next := 10 } : WordSsaState)
         ((.assign 1 (.var 0)) : WordProg Nat) =
@@ -22,6 +22,18 @@ example :
     wordSpecialArithLocationsSafe, wordProgSpecialLocationsSafe,
     wordExpReadVars, List.eraseDups, List.eraseDupsBy,
     List.eraseDupsBy.loop]
+
+example :
+    wordSpillAllocationRespectsClashes
+        (wordProgClashAnalysis ((.assign 10 (.var 0)) : WordProg Nat) []).snd
+        [(10, .register 12), (0, .register 2)] = true := by
+  apply wordAllocateSsaProgramWithSpills_respects_clashes
+    ({ current := [], next := 10 } : WordSsaState)
+    ((.assign 1 (.var 0)) : WordProg Nat)
+    ({ current := [(1, 10)], next := 11 } : WordSsaState)
+    ((.assign 10 (.var 0)) : WordProg Nat)
+    { locations := [(10, .register 12), (0, .register 2)], nextSpill := 0 }
+  exact wordAllocateSsaProgramWithSpills_example
 
 example :
     ∀ name, name ∈ [10] →

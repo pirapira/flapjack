@@ -1282,6 +1282,20 @@ theorem wordAllocateVarsWithSpills_sound (slots : List Nat)
   rcases hstate with ⟨hcheck, heq⟩
   simpa [heq] using hcheck
 
+theorem wordAllocateSsaProgramWithSpills_respects_clashes
+    (state : WordSsaState) (program : WordProg α)
+    (renamedState : WordSsaState) (renamedProgram : WordProg α)
+    (allocation : WordSpillState)
+    (halloc : wordAllocateSsaProgramWithSpills state program =
+      some (renamedState, renamedProgram, allocation)) :
+    wordSpillAllocationRespectsClashes
+      (wordProgClashAnalysis renamedProgram []).snd allocation.locations = true := by
+  simp [wordAllocateSsaProgramWithSpills] at halloc
+  split at halloc <;> simp_all
+  rcases halloc with ⟨_, rfl, rfl, rfl⟩
+  rename_i _ alloc _ hallocation
+  exact wordAllocateVarsWithSpills_sound _ _ alloc hallocation
+
 theorem wordAllocateVarsWithSpills_example :
     wordAllocateVarsWithSpills [0, 1] [(0, 1)] =
       some { locations := [(1, .register 3), (0, .register 2)], nextSpill := 0 } := by

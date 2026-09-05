@@ -227,10 +227,10 @@ def wordAllocateLinearInstructions (instructions : List WordInst) :
   wordAllocateContextWithClashes
     (wordLinearVariables instructions ++ liveIn) edges
 
-/-! Straight-line SSA renaming.  Each write receives a fresh virtual name;
-reads use the latest name for their source variable.  This mirrors the
-single-block part of CakeML's `ssa_cc_trans_inst` and keeps the renaming state
-explicit so branch reconciliation can be added without changing the API. -/
+/-! Word SSA renaming.  Each write receives a fresh virtual name; reads use the
+latest name for their source variable.  The implementation mirrors the
+single-block part of CakeML's `ssa_cc_trans_inst`, extends it with branch
+reconciliation, and carries loop entry/exit frames for back-edge moves. -/
 
 structure WordSsaState where
   current : NatInfoMap Nat
@@ -243,7 +243,9 @@ def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
   | none => name
 
 def wordSsaFresh (state : WordSsaState) (name : Nat) : WordSsaState × Nat :=
-  ({ current := (name, state.next) :: state.current, next := state.next + 1 },
+  ({ current := (name, state.next) ::
+        state.current.filter (fun entry => entry.1 != name),
+      next := state.next + 1 },
     state.next)
 
 def wordSsaFreshList (state : WordSsaState) : List Nat →
@@ -264,6 +266,7 @@ def wordSsaRenameReturns (state : WordSsaState) :
       let live := live.map (wordSsaRead state)
       let (state, destinations) := wordSsaFreshList state destinations
       (state, some (destinations, live))
+
 
 def wordSsaRenameInst (state : WordSsaState) : WordInst → WordSsaState × WordInst
   | .arith operation =>
@@ -375,8 +378,51 @@ def wordSsaReconcile : List Nat → WordSsaState → WordSsaState → Nat →
 termination_by names => sizeOf names
 decreasing_by all_goals decreasing_trivial
 
-def wordSsaRenameProgram (state : WordSsaState) : WordProg α →
+structure WordSsaLoopFrame where
+  entry : WordSsaState
+  exit : WordSsaState
+  entryNames : List Nat
+  exitNames : List Nat
+
+def wordSsaRestrict (state : WordSsaState) (names : List Nat) : WordSsaState :=
+  { state with current := state.current.filter (fun entry => entry.1 ∈ names) }
+
+def wordSsaReconcileTo (source target : WordSsaState) : List Nat →
+    WordProg α
+  | [] => .skip
+  | name :: names =>
+      let move := if wordSsaRead source name = wordSsaRead target name then
+        (.skip : WordProg α)
+      else
+        .assign (wordSsaRead target name) (.var (wordSsaRead source name))
+      wordSsaSeq move (wordSsaReconcileTo source target names)
+termination_by names => sizeOf names
+decreasing_by all_goals decreasing_trivial
+
+def wordSsaRefreshList (state : WordSsaState) : List Nat →
     WordSsaState × WordProg α
+  | [] => (state, .skip)
+  | name :: names =>
+      let oldName := wordSsaRead state name
+      let hadName := (lookupNatInfo name state.current).isSome
+      let (state, freshName) := wordSsaFresh state name
+      let (state, moves) := wordSsaRefreshList state names
+      let move := if hadName then
+        (.assign freshName (.var oldName) : WordProg α)
+      else
+        .skip
+      (state, wordSsaSeq move moves)
+termination_by names => sizeOf names
+decreasing_by all_goals decreasing_trivial
+
+def wordSsaFindLoopFrame : Nat → List WordSsaLoopFrame →
+    Option WordSsaLoopFrame
+  | _, [] => none
+  | 0, frame :: _ => some frame
+  | label, _ :: frames => wordSsaFindLoopFrame (label - 1) frames
+
+def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
+    (state : WordSsaState) : WordProg α → WordSsaState × WordProg α
   | .skip => (state, .skip)
   | .assign name value =>
       let value := wordSsaRenameExp state value
@@ -386,8 +432,8 @@ def wordSsaRenameProgram (state : WordSsaState) : WordProg α →
       let (state, instruction) := wordSsaRenameInst state instruction
       (state, .inst instruction)
   | .seq first second =>
-      let (state, first) := wordSsaRenameProgram state first
-      let (state, second) := wordSsaRenameProgram state second
+      let (state, first) := wordSsaRenameProgramWithLoops frames state first
+      let (state, second) := wordSsaRenameProgramWithLoops frames state second
       (state, .seq first second)
   | .store address value =>
       (state, .store (wordSsaRenameExp state address) (wordSsaRead state value))
@@ -398,6 +444,20 @@ def wordSsaRenameProgram (state : WordSsaState) : WordProg α →
   | .return label values =>
       (state, .return label (values.map (wordSsaRead state)))
   | .tick => (state, .tick)
+  | .break label =>
+      match wordSsaFindLoopFrame label frames with
+      | none => (state, .break label)
+      | some frame =>
+          (state, wordSsaSeq
+            (wordSsaReconcileTo state frame.exit frame.exitNames)
+            (.break label))
+  | .continue label =>
+      match wordSsaFindLoopFrame label frames with
+      | none => (state, .continue label)
+      | some frame =>
+          (state, wordSsaSeq
+            (wordSsaReconcileTo state frame.entry frame.entryNames)
+            (.continue label))
   | .locValue destination source =>
       let source := wordSsaRead state source
       let (state, destination) := wordSsaFresh state destination
@@ -418,11 +478,27 @@ def wordSsaRenameProgram (state : WordSsaState) : WordProg α →
       let arguments := arguments.map (wordSsaRead state)
       let (state, returns) := wordSsaRenameReturns state returns
       (state, .call returns target arguments none)
+  | .loop liveIn body liveOut =>
+      let names := (liveIn ++ liveOut).eraseDups
+      let (setupState, setup) := wordSsaRefreshList state names
+      let entryState := wordSsaRestrict setupState liveIn
+      let exitState := wordSsaRestrict setupState liveOut
+      let frame := WordSsaLoopFrame.mk entryState exitState
+        liveIn.eraseDups liveOut.eraseDups
+      let (bodyState, body) :=
+        wordSsaRenameProgramWithLoops (frame :: frames) entryState body
+      let backMoves := wordSsaReconcileTo bodyState setupState liveIn.eraseDups
+      let body := wordSsaSeq body backMoves
+      let program := .loop (liveIn.map (wordSsaRead setupState)) body
+        (liveOut.map (wordSsaRead setupState))
+      (exitState, wordSsaSeq setup program)
   | .ite operator condition right thenBranch elseBranch =>
       let right := wordSsaRenameRegImm state right
-      let (thenState, thenBranch) := wordSsaRenameProgram state thenBranch
+      let (thenState, thenBranch) :=
+        wordSsaRenameProgramWithLoops frames state thenBranch
       let elseInput := { state with next := thenState.next }
-      let (elseState, elseBranch) := wordSsaRenameProgram elseInput elseBranch
+      let (elseState, elseBranch) :=
+        wordSsaRenameProgramWithLoops frames elseInput elseBranch
       let names := wordSsaBranchNames state thenState elseState
       let (merged, thenMoves, elseMoves) :=
         wordSsaReconcile names thenState elseState elseState.next
@@ -431,6 +507,11 @@ def wordSsaRenameProgram (state : WordSsaState) : WordProg α →
           (wordSsaSeq thenBranch thenMoves)
           (wordSsaSeq elseBranch elseMoves))
   | program => (state, program)
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+def wordSsaRenameProgram (state : WordSsaState) (program : WordProg α) :
+    WordSsaState × WordProg α :=
+  wordSsaRenameProgramWithLoops [] state program
 
 theorem wordSsaRenameProgram_ite :
     wordSsaRenameProgram ({ current := [], next := 10 } : WordSsaState)
@@ -440,7 +521,8 @@ theorem wordSsaRenameProgram_ite :
         .ite .equal 0 (.reg 0)
           (.seq (.assign 10 (.var 0)) (.assign 12 (.var 10)))
           (.seq (.assign 11 (.var 0)) (.assign 12 (.var 11)))) := by
-  simp [wordSsaRenameProgram, wordSsaRenameExp, wordSsaRenameRegImm,
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp, wordSsaRenameRegImm,
     wordSsaRead, wordSsaFresh, wordSsaBranchNames, wordSsaKeys,
     wordSsaReconcile, wordSsaSeq, List.eraseDups, List.eraseDupsBy,
     List.eraseDupsBy.loop, lookupNatInfo]

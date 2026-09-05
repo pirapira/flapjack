@@ -294,6 +294,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add branch-aware Word SSA version reconciliation and tighten program
   clash analysis to write/live interference for the supported control-flow
   fragment.
+- [x] Add CakeML-aligned loop SSA setup for Word live-in/live-out names, with
+  refreshed loop frames and explicit back-edge plus `break`/`continue`
+  reconciliation moves.
 - [x] Port recursive Word register-colouring over expressions, instructions,
   nested handlers, loops, and call metadata, and expose the coloured pipeline
   boundary.

@@ -24,6 +24,25 @@ example [NeZero 64]
   · exact hmemory
 
 example [NeZero 64]
+    (source target : State 64) (colour : Nat → Nat)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (colour name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory) :
+    evalWordExp source
+        (.shift .ror (.op .add [.var 2, .var 3]) (.const 4)) =
+      evalWordExp target
+        (wordApplyColourExp colour
+          (.shift .ror (.op .add [.var 2, .var 3]) (.const 4))) := by
+  apply evalWordExp_applyColour
+  · exact hregister
+  · exact hmemory
+
+example [NeZero 64]
     (source target : State 64) (ssa : WordSsaState)
     (hregister : ∀ name,
       (do

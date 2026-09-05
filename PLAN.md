@@ -683,6 +683,9 @@ definitions, pass ordering, examples, and proof obligations.
   variable range, with unused formals retained in spill allocation inputs.
 - [x] Align the allocated pipeline with the established Loop-to-Word context
   and `name + 2` formal-parameter mapping before function SSA setup.
+- [x] Marshal allocated Word call arguments into the even-numbered ABI
+  registers before StackLang call-frame construction, for both handler-free
+  and handler-aware calls.
 - [x] Replace the fixed StackRemove fuel in all composed backend entry points
   with a size-derived bound, so generated functions are not limited to 1024
   levels of nesting.

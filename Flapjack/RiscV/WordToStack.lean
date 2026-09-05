@@ -831,18 +831,22 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .return _ values => wordStackReturn config values
   | .tick => pure .tick
   | .call returns (some target) arguments none => do
+      let argumentMoves ← wordStackMovesToPhysical config arguments 2
       let returnCode ← wordStackReturnCode config returns
       let destinations := returns.map (fun result => result.1) |>.getD []
-      pure (wordToStackCallNoHandler config.perf target arguments.length
+      let callCode := wordToStackCallNoHandler config.perf target arguments.length
         config.frameOffset config.scratch destinations returnCode
-        config.returnLabel config.entryLabel)
+        config.returnLabel config.entryLabel
+      pure (wordStackJoin argumentMoves callCode)
   | .call returns (some target) arguments (some (exception, body)) => do
+      let argumentMoves ← wordStackMovesToPhysical config arguments 2
       let returnCode ← wordStackReturnCode config returns
       let destinations := returns.map (fun result => result.1) |>.getD []
       let handlerCode ← wordToStackProg config body
-      pure (wordToStackCallWithHandler config.perf target arguments.length
+      let callCode := wordToStackCallWithHandler config.perf target arguments.length
         config.frameOffset config.scratch returnCode handlerCode
-        config.returnLabel config.entryLabel config.handlerLabel exception)
+        config.returnLabel config.entryLabel config.handlerLabel exception
+      pure (wordStackJoin argumentMoves callCode)
   | .ffi function configuration configurationLength array arrayLength _ =>
       wordStackFfi config function configuration configurationLength array arrayLength
   | .shareInst operator name (.var address) =>
@@ -884,17 +888,21 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .return _ values => wordStackReturn config values
   | .tick => pure .tick
   | .call returns (some target) arguments none => do
+      let argumentMoves ← wordStackMovesToPhysical config arguments 2
       let returnCode ← wordStackReturnCode config returns
       let destinations := returns.map (fun result => result.1) |>.getD []
-      pure (wordToStackCallNoHandler config.perf target arguments.length
+      let callCode := wordToStackCallNoHandler config.perf target arguments.length
         config.frameOffset config.scratch destinations returnCode
-        config.returnLabel config.entryLabel)
+        config.returnLabel config.entryLabel
+      pure (wordStackJoin argumentMoves callCode)
   | .call returns (some target) arguments (some (exception, body)) => do
+      let argumentMoves ← wordStackMovesToPhysical config arguments 2
       let returnCode ← wordStackReturnCode config returns
       let handlerCode ← wordToStackProgNat config body
-      pure (wordToStackCallWithHandler config.perf target arguments.length
+      let callCode := wordToStackCallWithHandler config.perf target arguments.length
         config.frameOffset config.scratch returnCode handlerCode
-        config.returnLabel config.entryLabel config.handlerLabel exception)
+        config.returnLabel config.entryLabel config.handlerLabel exception
+      pure (wordStackJoin argumentMoves callCode)
   | .call _ none _ _ => none
   | .ffi function configuration configurationLength array arrayLength _ =>
       wordStackFfi config function configuration configurationLength array arrayLength

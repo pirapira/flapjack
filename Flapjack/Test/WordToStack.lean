@@ -328,8 +328,19 @@ example :
           returnLabel := 20, entryLabel := 21 }
         ((.call (some ([0], [])) (some 7) [0] none) : WordProg Nat)).isSome =
       true := by
-  simp [wordToStackProg, wordStackReturnCode, wordStackMovesFromPhysical,
+    simp [wordToStackProg, wordStackReturnCode, wordStackMovesToPhysical,
+    wordStackMoveToPhysical, wordStackMovesFromPhysical,
     wordStackMoveFromPhysical, wordStackLocation, lookupNatInfo]
+
+example :
+    (wordToStackProgNat
+        { locations := [(0, .register 5)], scratch := 31, stackBase := 6,
+          returnLabel := 20, entryLabel := 21 }
+        ((.call none (some 7) [0] none) : WordProg Nat)).map
+        (fun program => match program with
+          | .seq (.arith .or 2 5 5) _ => true
+          | _ => false) = some true := by
+  native_decide
 
 example :
     (wordToStackProg
@@ -337,7 +348,8 @@ example :
           returnLabel := 20, entryLabel := 21, handlerLabel := 30 }
         ((.call none (some 7) [0] (some (1, .raise 0))) : WordProg Nat)).isSome =
       true := by
-  simp [wordToStackProg, wordStackReturnCode, wordStackMovesFromPhysical,
+  simp [wordToStackProg, wordStackReturnCode, wordStackMovesToPhysical,
+    wordStackMoveToPhysical, wordStackMovesFromPhysical,
     wordStackMoveFromPhysical, wordStackLocation, wordStackOffset,
     lookupNatInfo, wordToStackCallWithHandler, wordToStackRaise,
     stackSeq, stackArgs, stackMove, stackPushHandler, stackHandlerArgs,

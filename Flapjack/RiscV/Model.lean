@@ -132,6 +132,7 @@ inductive Instruction (width : Nat) where
   | slt (destination sourceLeft sourceRight : Fin 32)
   | slti (destination source : Fin 32) (immediate : Word width)
   | sltu (destination sourceLeft sourceRight : Fin 32)
+  | sltiu (destination source : Fin 32) (immediate : Word width)
   | divU (destination sourceLeft sourceRight : Fin 32)
   | remU (destination sourceLeft sourceRight : Fin 32)
   | branchEq (sourceLeft sourceRight : Fin 32) (offset : Word width)
@@ -349,6 +350,9 @@ def execute (state : State width) : Instruction width → State width
   | .sltu destination sourceLeft sourceRight =>
       writeRegister { state with pc := nextPc state } destination
         (if readRegister state sourceLeft < readRegister state sourceRight then 1 else 0)
+  | .sltiu destination source immediate =>
+      writeRegister { state with pc := nextPc state } destination
+        (if readRegister state source < immediate then 1 else 0)
   | .divU destination sourceLeft sourceRight =>
       let divisor := readRegister state sourceRight
       writeRegister { state with pc := nextPc state } destination
@@ -587,6 +591,14 @@ theorem execute_slti (state : State width) (destination source : Fin 32)
     readRegister (execute state (.slti destination source immediate)) destination =
       if destination = 0 then readRegister state destination
       else if signedLess (readRegister state source) immediate then 1 else 0 := by
+  by_cases h : destination = 0 <;>
+    simp [execute, writeRegister, readRegister, h]
+
+theorem execute_sltiu (state : State width) (destination source : Fin 32)
+    (immediate : Word width) :
+    readRegister (execute state (.sltiu destination source immediate)) destination =
+      if destination = 0 then readRegister state destination
+      else if readRegister state source < immediate then 1 else 0 := by
   by_cases h : destination = 0 <;>
     simp [execute, writeRegister, readRegister, h]
 

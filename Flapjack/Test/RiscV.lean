@@ -48,6 +48,12 @@ example :
   native_decide
 
 example :
+    RiscV.readRegister
+      (RiscV.execute signedOrderState (.sltiu 3 1 (BitVec.ofNat 8 2))) 3 =
+      BitVec.ofNat 8 0 := by
+  native_decide
+
+example :
     (RiscV.execute signedOrderState
       (.branchLt 1 2 (BitVec.ofNat 8 12))).pc =
       BitVec.ofNat 8 12 := by

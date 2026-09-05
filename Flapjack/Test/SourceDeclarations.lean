@@ -6,6 +6,7 @@ def sourceDeclarationInitialState : PanValueProgramState Nat :=
   { structs := []
     globals := fun _ => none
     functions := []
+    returnShapes := []
     exceptions := []
     memory := fun _ => none
     baseAddress := 0
@@ -71,6 +72,15 @@ example :
              (.extCall "inc" (.const 20) (.const 0) (.const 21) (.const 0))
              (.return (.var .local "result")), returnShape := .one }]
       "main" []).bind sourceDeclarationSingleWord = some 42 := by
+  native_decide
+
+example :
+    (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 20
+      [.function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .return (.const 41), returnShape := .comb [.one, .one] }]
+      "main" []).isNone = true := by
   native_decide
 
 end Flapjack

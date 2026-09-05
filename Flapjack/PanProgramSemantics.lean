@@ -17,6 +17,7 @@ structure PanValueProgramState (α : Type u) where
   structs : StructContext
   globals : VarName → Option (PanValue α)
   functions : List (FunName × List VarName × Prog α)
+  returnShapes : InfoMap Shape
   exceptions : InfoMap Shape
   memory : α → Option (PanValue α)
   baseAddress : α
@@ -53,10 +54,12 @@ def evalPanValueDeclarations
   | .function declaration :: declarations =>
       if declaration.params.all (fun parameter => isWfShape state.structs parameter.2) &&
           isWfShape state.structs declaration.returnShape then
+        let state := { state with functions :=
+          (declaration.name, declaration.params.map Prod.fst,
+            declaration.body) :: state.functions }
         evalPanValueDeclarations
-          { state with functions :=
-              (declaration.name, declaration.params.map (fun parameter => parameter.1),
-                declaration.body) :: state.functions } declarations
+          { state with returnShapes := (declaration.name, declaration.returnShape) ::
+              state.returnShapes } declarations
       else none
   | .exnDecl exception shape :: declarations =>
       if (lookupInfo exception state.exceptions).isSome then none
@@ -76,9 +79,16 @@ def evalPanValueProgram
     (entry : FunName) (arguments : List (Exp α)) :
     Option (PanValueControlResult α) := do
   let state ← evalPanValueDeclarations initial declarations
-  evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi state.structs
+  let result ← evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi state.structs
     state.functions state.baseAddress state.topAddress state.bytesInWord fuel
     (fun _ => none) state.globals state.memory none entry arguments
+  match lookupInfo entry state.returnShapes, result with
+  | some shape, .returned locals globals memory [value] =>
+      if panShapeMatches (panValueShape state.structs value) shape then
+        some (.returned locals globals memory [value])
+      else none
+  | some _, .returned _ _ _ _ => none
+  | _, result => some result
 
 def panValueProgramResult
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

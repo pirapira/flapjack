@@ -9,10 +9,10 @@ example :
     wordSsaRenameLinear
         { current := [(2, 100), (3, 101), (4, 102)], next := 200 }
         [.arith (.addCarry 0 1 2 3 4), .arith (.addCarry 5 6 0 1 2)] =
-      ({ current := [(6, 203), (5, 202), (1, 201), (0, 200),
-          (2, 100), (3, 101), (4, 102)], next := 204 },
-        [.arith (.addCarry 200 201 100 101 102),
-          .arith (.addCarry 202 203 200 201 100)]) := by
+      ({ current := [(6, 212), (5, 208), (1, 204), (0, 200),
+          (2, 100), (3, 101), (4, 102)], next := 216 },
+        [.arith (.addCarry 200 204 100 101 102),
+          .arith (.addCarry 208 212 200 204 100)]) := by
   exact wordSsaRenameLinear_addCarry
 
 example :
@@ -38,7 +38,7 @@ example :
         ({ current := [(2, 100)], next := 200 } : WordSsaState)
         ((.shareInst .load 1
           (.op .add [.var 2, .const (4 : Nat)])) : WordProg Nat) =
-      ({ current := [(1, 200), (2, 100)], next := 201 },
+      ({ current := [(1, 200), (2, 100)], next := 204 },
         .shareInst .load 200 (.op .add [.var 100, .const 4])) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameExp, wordSsaFresh, wordSsaRead, lookupNatInfo]
@@ -47,8 +47,8 @@ example :
     wordSsaRenameProgram
         ({ current := [(2, 100)], next := 200 } : WordSsaState)
         ((.call (some ([3, 4], [2])) (some 7) [2, 5] none) : WordProg Nat) =
-      ({ current := [(4, 201), (3, 200), (2, 100)], next := 202 },
-        .call (some ([200, 201], [100])) (some 7) [100, 5] none) := by
+      ({ current := [(4, 204), (3, 200), (2, 100)], next := 208 },
+        .call (some ([200, 204], [100])) (some 7) [100, 5] none) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameReturns, wordSsaFreshList, wordSsaFresh, wordSsaRead,
     lookupNatInfo]
@@ -57,7 +57,7 @@ example :
     wordSsaRenameProgram
         ({ current := [(2, 100)], next := 200 } : WordSsaState)
         ((.seq (.locValue 3 2) (.return 0 [3])) : WordProg Nat) =
-        ({ current := [(3, 200), (2, 100)], next := 201 },
+        ({ current := [(3, 200), (2, 100)], next := 204 },
         .seq (.locValue 200 100) (.return 0 [200])) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaFresh, wordSsaRead, lookupNatInfo]
@@ -79,10 +79,10 @@ example :
         ({ current := [(1, 100)], next := 200 } : WordSsaState)
         ((.call (some ([2], [1])) (some 7) [1]
           (some (3, .assign 4 (.var 1))) : WordProg Nat)) =
-      ({ current := [(2, 200), (1, 100)], next := 203 },
+        ({ current := [(2, 200), (1, 100)], next := 212 },
         .call (some ([200], [100])) (some 7) [100]
-          (some (201,
-            .seq (.assign 202 (.var 100))
+          (some (204,
+            .seq (.assign 208 (.var 100))
               (.assign 200 (.var 2))))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameCallHandler, wordSsaRenameReturns, wordSsaFreshList,
@@ -119,7 +119,7 @@ example :
         ({ current := [(1, 100)], next := 200 } : WordSsaState)
       ((.loop [1] (.seq (.assign 1 (.var 1)) (.break 0)) [1]) :
           WordProg Nat)).1 =
-      { current := [(1, 200)], next := 201 } := by
+      { current := [(1, 200)], next := 204 } := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRefreshList, wordSsaRestrict, wordSsaFresh,
     wordSsaFindLoopFrame, wordSsaReconcileTo, wordSsaRead,

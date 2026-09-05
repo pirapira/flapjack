@@ -306,8 +306,10 @@ def wordAllocateLinearInstructions (instructions : List WordInst) :
     (wordLinearVariables instructions ++ liveIn) edges
 
 /-! Word SSA renaming.  Each write receives a fresh virtual name; reads use the
-latest name for their source variable.  The implementation mirrors the
-single-block part of CakeML's `ssa_cc_trans_inst`, extends it with branch
+latest name for their source variable.  As in CakeML's `next_var_rename`,
+fresh names advance by four so the low two bits continue to identify physical,
+allocatable-temporary, and stack-temporary names.  The implementation mirrors
+the single-block part of `ssa_cc_trans_inst`, extends it with branch
 reconciliation, and carries loop entry/exit frames for back-edge moves. -/
 
 structure WordSsaState where
@@ -323,8 +325,17 @@ def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
 def wordSsaFresh (state : WordSsaState) (name : Nat) : WordSsaState × Nat :=
   ({ current := (name, state.next) ::
         state.current.filter (fun entry => entry.1 != name),
-      next := state.next + 1 },
+      next := state.next + 4 },
     state.next)
+
+theorem wordSsaFresh_next (state : WordSsaState) (name : Nat) :
+    (wordSsaFresh state name).1.next = state.next + 4 := by
+  rfl
+
+theorem wordSsaFresh_preserves_residue (state : WordSsaState) (name : Nat)
+    (residue : Nat) (hresidue : state.next % 4 = residue) :
+    (wordSsaFresh state name).1.next % 4 = residue := by
+  simp [wordSsaFresh, Nat.add_mod, hresidue]
 
 def wordSsaFreshList (state : WordSsaState) : List Nat →
     WordSsaState × List Nat
@@ -450,7 +461,7 @@ def wordSsaReconcile : List Nat → WordSsaState → WordSsaState → Nat →
         let leftMove := .assign next (.var leftName)
         let rightMove := .assign next (.var rightName)
         let (merged, leftMoves, rightMoves) :=
-          wordSsaReconcile names left right (next + 1)
+          wordSsaReconcile names left right (next + 4)
         ({ current := (name, next) :: merged.current, next := merged.next },
           wordSsaSeq leftMove leftMoves, wordSsaSeq rightMove rightMoves)
 termination_by names => sizeOf names
@@ -618,10 +629,10 @@ theorem wordSsaRenameProgram_ite :
     wordSsaRenameProgram ({ current := [], next := 10 } : WordSsaState)
         (.ite .equal 0 (.reg 0)
           (.assign 1 (.var 0)) (.assign 1 (.var 0)) : WordProg α) =
-      ({ current := [(1, 12)], next := 13 },
+      ({ current := [(1, 18)], next := 22 },
         .ite .equal 0 (.reg 0)
-          (.seq (.assign 10 (.var 0)) (.assign 12 (.var 10)))
-          (.seq (.assign 11 (.var 0)) (.assign 12 (.var 11)))) := by
+          (.seq (.assign 10 (.var 0)) (.assign 18 (.var 10)))
+          (.seq (.assign 14 (.var 0)) (.assign 18 (.var 14)))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameExp, wordSsaRenameRegImm,
     wordSsaRead, wordSsaFresh, wordSsaBranchNames, wordSsaKeys,
@@ -1380,10 +1391,10 @@ theorem wordSsaRenameLinear_addCarry :
     wordSsaRenameLinear
         { current := [(2, 100), (3, 101), (4, 102)], next := 200 }
         [.arith (.addCarry 0 1 2 3 4), .arith (.addCarry 5 6 0 1 2)] =
-      ({ current := [(6, 203), (5, 202), (1, 201), (0, 200),
-          (2, 100), (3, 101), (4, 102)], next := 204 },
-        [.arith (.addCarry 200 201 100 101 102),
-          .arith (.addCarry 202 203 200 201 100)]) := by
+      ({ current := [(6, 212), (5, 208), (1, 204), (0, 200),
+          (2, 100), (3, 101), (4, 102)], next := 216 },
+        [.arith (.addCarry 200 204 100 101 102),
+          .arith (.addCarry 208 212 200 204 100)]) := by
   rfl
 
 theorem wordAllocateLinearInstructions_example :

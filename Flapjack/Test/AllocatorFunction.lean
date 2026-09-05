@@ -8,8 +8,8 @@ namespace Flapjack
 example :
     wordSsaRenameFunction [2, 3]
         (.return 0 [2, 3] : WordProg Nat) =
-      ({ current := [(3, 6), (2, 5)], next := 7 },
-        [5, 6], .return 0 [5, 6]) := by
+      ({ current := [(3, 9), (2, 5)], next := 13 },
+        [5, 9], .return 0 [5, 9]) := by
   simp [wordSsaRenameFunction, wordSsaSetupParameters, wordSsaLimitVar,
     wordListMaximum, wordProgVariables, wordProgReadVars, wordProgWriteVars,
     wordSsaRenameProgram, wordSsaRenameProgramWithLoops, wordSsaRead,

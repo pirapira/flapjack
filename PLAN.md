@@ -394,6 +394,9 @@ definitions, pass ordering, examples, and proof obligations.
   move selection through the source-faithful criterion.
 - [x] Preserve CakeML move priorities by sorting available and unavailable
   move worklists before coalescing.
+- [x] Match CakeML's stride-four SSA fresh-name convention and branch
+  reconciliation counter, preserving the physical/allocatable/stack residue
+  classes used by the RISC-V graph allocator.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

@@ -6,7 +6,7 @@ theorem wordAllocateSsaProgramWithSpills_example :
     wordAllocateSsaProgramWithSpills
         ({ current := [], next := 10 } : WordSsaState)
         ((.assign 1 (.var 0)) : WordProg Nat) =
-      some (({ current := [(1, 10)], next := 11 },
+      some (({ current := [(1, 10)], next := 14 },
         .assign 10 (.var 0),
         { locations := [(10, .register 12), (0, .register 2)],
           nextSpill := 0 }) : WordSsaState × WordProg Nat × WordSpillState) := by
@@ -30,7 +30,7 @@ example :
   apply wordAllocateSsaProgramWithSpills_respects_clashes
     ({ current := [], next := 10 } : WordSsaState)
     ((.assign 1 (.var 0)) : WordProg Nat)
-    ({ current := [(1, 10)], next := 11 } : WordSsaState)
+    ({ current := [(1, 10)], next := 14 } : WordSsaState)
     ((.assign 10 (.var 0)) : WordProg Nat)
     { locations := [(10, .register 12), (0, .register 2)], nextSpill := 0 }
   exact wordAllocateSsaProgramWithSpills_example
@@ -43,7 +43,7 @@ example :
   have halloc : wordAllocateSsaProgramWithSpills
         ({ current := [], next := 10 } : WordSsaState)
         ((.assign 1 (.var 0)) : WordProg Nat) =
-      some (({ current := [(1, 10)], next := 11 },
+      some (({ current := [(1, 10)], next := 14 },
         .assign 10 (.var 0),
         { locations := [(10, .register 12), (0, .register 2)],
           nextSpill := 0 }) : WordSsaState × WordProg Nat × WordSpillState) := by
@@ -62,7 +62,7 @@ example :
   have h := wordAllocateSsaProgramWithSpills_maps_variables
     ({ current := [], next := 10 } : WordSsaState)
     ((.assign 1 (.var 0)) : WordProg Nat)
-    ({ current := [(1, 10)], next := 11 } : WordSsaState)
+    ({ current := [(1, 10)], next := 14 } : WordSsaState)
     ((.assign 10 (.var 0)) : WordProg Nat)
     { locations := [(10, .register 12), (0, .register 2)], nextSpill := 0 }
     halloc
@@ -144,7 +144,7 @@ example :
     wordAllocateSsaProgramWithClashTreeWithSpills
         ({ current := [], next := 10 } : WordSsaState)
         ((.assign 1 (.var 0)) : WordProg Nat) =
-      some (({ current := [(1, 10)], next := 11 },
+      some (({ current := [(1, 10)], next := 14 },
         .assign 10 (.var 0),
         { locations := [(10, .register 12), (0, .register 2)],
           nextSpill := 0 }) : WordSsaState × WordProg Nat × WordSpillState) := by
@@ -182,7 +182,7 @@ example :
     wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences
         ({ current := [], next := 10 } : WordSsaState)
         ((.assign 1 (.var 0)) : WordProg Nat) =
-      some (({ current := [(1, 10)], next := 11 },
+      some (({ current := [(1, 10)], next := 14 },
         .assign 10 (.var 0),
         { locations := [(10, .register 2), (0, .register 2)],
           nextSpill := 0 }) : WordSsaState × WordProg Nat × WordSpillState) := by

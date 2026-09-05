@@ -103,6 +103,26 @@ example :
           (.seq (.seq (.set [1]) (.set [2])) (.set [1]))) := by
   simp [wordClashTree, wordClashTreeFindLoopFrame]
 
+example :
+    wordAllocateSsaProgramWithClashTreeWithSpills
+        ({ current := [], next := 10 } : WordSsaState)
+        ((.assign 1 (.var 0)) : WordProg Nat) =
+      some (({ current := [(1, 10)], next := 11 },
+        .assign 10 (.var 0),
+        { locations := [(10, .register 12), (0, .register 2)],
+          nextSpill := 0 }) : WordSsaState × WordProg Nat × WordSpillState) := by
+  simp [wordAllocateSsaProgramWithClashTreeWithSpills,
+    wordSsaRenameProgram, wordSsaRenameProgramWithLoops, wordSsaRenameExp,
+    wordSsaFresh, wordSsaRead, wordClashTree, wordClashTreeAnalyze,
+    wordClashPairs, wordListUnion, wordProgVariables, wordProgReadVars,
+    wordProgWriteVars, wordExpReadVars, wordAllocateVarsWithSpills,
+    wordGreedyAllocateWithSpills, wordUsedLocationRegisters,
+    wordColourCandidates, wordFirstAvailable, wordNeighbours,
+    wordPreferredRegister, wordRemoveRegisters, wordAllocatableRegisters,
+    wordSpillAllocationRespectsClashes, wordSpecialArithLocationsSafe,
+    wordProgSpecialLocationsSafe, lookupNatInfo, List.eraseDups,
+    List.eraseDupsBy, List.eraseDupsBy.loop]
+
 example (slots : List Nat) (edges : List (Nat × Nat))
     (state : WordSpillState)
     (hstate : wordAllocateVarsWithSpills slots edges = some state)

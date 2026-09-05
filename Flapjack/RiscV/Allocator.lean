@@ -840,6 +840,59 @@ theorem wordClashTree_loop_break_continue :
             (.set [1, 2]))) := by
   simp [wordClashTree, wordClashTreeFindLoopFrame]
 
+/-! Backward interpretation of a clash tree.  `Delta` contributes clashes
+    between its writes and the values live after it; `Seq` feeds the live set
+    produced by its suffix into its prefix; and `Branch` joins the live sets
+    computed for both paths.  `Set` is a cut-set boundary supplied by the
+    source allocator. -/
+
+def wordClashTreeAnalyze : WordClashTree → List Nat →
+    List Nat × List (Nat × Nat)
+  | .delta writes reads, liveAfter =>
+      (wordListUnion reads (liveAfter.filter (fun name => name ∉ writes)),
+        wordClashPairs writes liveAfter)
+  | .seq first second, liveAfter =>
+      let (liveMiddle, secondEdges) := wordClashTreeAnalyze second liveAfter
+      let (liveIn, firstEdges) := wordClashTreeAnalyze first liveMiddle
+      (liveIn, firstEdges ++ secondEdges)
+  | .branch branchLive thenBranch elseBranch, liveAfter =>
+      let branchOut := match branchLive with
+        | some names => names
+        | none => liveAfter
+      let (thenLive, thenEdges) := wordClashTreeAnalyze thenBranch branchOut
+      let (elseLive, elseEdges) := wordClashTreeAnalyze elseBranch branchOut
+      (wordListUnion branchOut (wordListUnion thenLive elseLive),
+        thenEdges ++ elseEdges)
+  | .set names, _ => (names, [])
+
+def wordAllocateProgramWithClashTree (slots : List Nat)
+    (program : WordProg α) : Option WordContext :=
+  let (liveIn, edges) :=
+    wordClashTreeAnalyze (wordClashTree program []) []
+  wordAllocateContextWithClashes
+    (slots ++ liveIn ++ wordProgVariables program) edges
+
+theorem wordClashTreeAnalyze_assign (name source : Nat)
+    (hneq : name ≠ source) :
+    wordClashTreeAnalyze
+        (wordClashTree (.assign name (.var source) : WordProg α) []) [source] =
+      ([source], [(name, source)]) := by
+  have hneq' : source ≠ name := Ne.symm hneq
+  simp [wordClashTree, wordClashTreeAnalyze, wordExpReadVars,
+    wordClashPairs, wordListUnion, hneq, hneq', List.eraseDups,
+    List.eraseDupsBy, List.eraseDupsBy.loop]
+
+theorem wordClashTreeAnalyze_seq (first second : WordProg α)
+    (liveAfter : List Nat) :
+    (wordClashTreeAnalyze
+      (wordClashTree (.seq first second : WordProg α) []) liveAfter) =
+      (let (liveMiddle, secondEdges) :=
+          wordClashTreeAnalyze (wordClashTree second []) liveAfter
+       let (liveIn, firstEdges) :=
+          wordClashTreeAnalyze (wordClashTree first []) liveMiddle
+       (liveIn, firstEdges ++ secondEdges)) := by
+  simp [wordClashTree, wordClashTreeAnalyze]
+
 def wordAllocateProgramWithSlots (slots : List Nat) (program : WordProg α) :
     Option WordContext :=
   let (liveIn, edges) := wordProgClashAnalysis program []
@@ -1325,6 +1378,26 @@ def wordAllocateSsaProgramWithSpills (state : WordSsaState)
   let (state, program) := wordSsaRenameProgram state program
   let (liveIn, edges) := wordProgClashAnalysis program []
   match wordAllocateVarsWithSpills (wordProgVariables program ++ liveIn) edges with
+  | none => none
+  | some allocation =>
+      if wordProgSpecialLocationsSafe allocation.locations program = true then
+        some (state, program, allocation)
+      else
+        none
+
+/-! The same spill boundary using the CakeML-shaped clash tree.  Keeping this
+    as a separate entry point makes it possible to compare the compact
+    liveness analysis and the structural tree while the full colouring
+    heuristic is being ported. -/
+
+def wordAllocateSsaProgramWithClashTreeWithSpills (state : WordSsaState)
+    (program : WordProg α) :
+    Option (WordSsaState × WordProg α × WordSpillState) :=
+  let (state, program) := wordSsaRenameProgram state program
+  let (liveIn, edges) :=
+    wordClashTreeAnalyze (wordClashTree program []) []
+  match wordAllocateVarsWithSpills
+      (wordProgVariables program ++ liveIn) edges with
   | none => none
   | some allocation =>
       if wordProgSpecialLocationsSafe allocation.locations program = true then

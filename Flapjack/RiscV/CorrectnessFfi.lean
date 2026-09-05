@@ -324,4 +324,112 @@ theorem loopToWord_seq_combined_simulation [NeZero width]
       | raised middleLoop exception =>
           simp [evalLoopProgWithCallsAndFfi, hfirstLoop] at hloop
 
+/-!
+The loop-aware Word evaluator uses a distinct control-result carrier so that
+an FFI action in a loop body can be followed by `break`/`continue` or can be
+interrupted by a return or raise.  The one-step FFI rule preserves the same
+mapped-local relation when reached through the fully composed Loop evaluator.
+-/
+theorem loopToWord_ffi_loop_simulation [NeZero width]
+    (context : WordContext)
+    (primitive : LoopPrimitiveHandler (Word width))
+    (functions : List (Nat × List Nat × LoopProg (Word width)))
+    (wordFunctions : List (Nat × List Nat × WordProg (Word width)))
+    (loopState : LoopState (Word width))
+    (wordState : State width)
+    (loopHandler : FunName → Word width → Word width → Word width → Word width →
+      LoopState (Word width) → Option (LoopState (Word width)))
+    (wordHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (handler_agrees : ∀ function configuration configurationLength array arrayLength
+      loopInput wordInput loopOutput wordOutput,
+      loopLocalsMappedToRiscV context loopInput.locals wordInput →
+      loopHandler function configuration configurationLength array arrayLength loopInput =
+        some loopOutput →
+      wordHandler function configuration configurationLength array arrayLength wordInput =
+        some wordOutput →
+      loopLocalsMappedToRiscV context loopOutput.locals wordOutput)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (live : List Nat)
+    (fuel : Nat)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals wordState) :
+    ∀ loopResult wordResult,
+      evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler (fuel + 1)
+          loopState
+          (.ffi function configuration configurationLength array arrayLength live) =
+        some (.normal loopResult) →
+      RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler (fuel + 1)
+          wordState
+          (loopToWordProg context
+            (.ffi function configuration configurationLength array arrayLength live)) =
+        some (.normal wordResult) →
+      loopLocalsMappedToRiscV context loopResult.locals wordResult := by
+  intro loopResult wordResult hloop hword
+  cases hconfig : loopState.locals configuration with
+  | none => simp [evalLoopProgWithPrimitiveCallsAndFfi, hconfig] at hloop
+  | some configurationValue =>
+      cases hconfigLength : loopState.locals configurationLength with
+      | none =>
+          simp [evalLoopProgWithPrimitiveCallsAndFfi, hconfig, hconfigLength] at hloop
+      | some configurationLengthValue =>
+          cases harray : loopState.locals array with
+          | none =>
+              simp [evalLoopProgWithPrimitiveCallsAndFfi, hconfig, hconfigLength,
+                harray] at hloop
+          | some arrayValue =>
+              cases harrayLength : loopState.locals arrayLength with
+              | none =>
+                  simp [evalLoopProgWithPrimitiveCallsAndFfi, hconfig,
+                    hconfigLength, harray, harrayLength] at hloop
+              | some arrayLengthValue =>
+                  rcases hlocals configuration configurationValue hconfig with
+                    ⟨configurationRegister, hconfigurationRegister,
+                      hconfigurationValue⟩
+                  rcases hlocals configurationLength configurationLengthValue hconfigLength with
+                    ⟨configurationLengthRegister, hconfigurationLengthRegister,
+                      hconfigurationLengthValue⟩
+                  rcases hlocals array arrayValue harray with
+                    ⟨arrayRegister, harrayRegister, harrayValue⟩
+                  rcases hlocals arrayLength arrayLengthValue harrayLength with
+                    ⟨arrayLengthRegister, harrayLengthRegister,
+                      harrayLengthValue⟩
+                  have hloop' :
+                      (loopHandler function configurationValue
+                        configurationLengthValue arrayValue arrayLengthValue loopState).bind
+                        (fun state => some (LoopResult.normal state)) =
+                        some (LoopResult.normal loopResult) := by
+                    simpa [evalLoopProgWithPrimitiveCallsAndFfi, hconfig,
+                      hconfigLength, harray, harrayLength] using hloop
+                  have hword' :
+                      (wordHandler function configurationValue
+                        configurationLengthValue arrayValue arrayLengthValue wordState).bind
+                        (fun state =>
+                          some (RiscV.WordLoopControlResult.normal state)) =
+                        some (RiscV.WordLoopControlResult.normal wordResult) := by
+                    simpa [loopToWordProg,
+                      RiscV.evalWordLoopProgWithHandlersAndFfi,
+                      hconfigurationRegister, hconfigurationLengthRegister,
+                      harrayRegister, harrayLengthRegister,
+                      hconfigurationValue, hconfigurationLengthValue,
+                      harrayValue, harrayLengthValue] using hword
+                  cases hloopHandler : loopHandler function configurationValue
+                      configurationLengthValue arrayValue arrayLengthValue loopState with
+                  | none => simp [hloopHandler] at hloop'
+                  | some loopOutput =>
+                      cases hwordHandler : wordHandler function configurationValue
+                          configurationLengthValue arrayValue arrayLengthValue wordState with
+                      | none => simp [hwordHandler] at hword'
+                      | some wordOutput =>
+                          have hloopOutput : loopResult = loopOutput := by
+                            simpa [hloopHandler] using hloop'.symm
+                          have hwordOutput : wordResult = wordOutput := by
+                            simpa [hwordHandler] using hword'.symm
+                          subst loopResult
+                          subst wordResult
+                          exact handler_agrees function configurationValue
+                            configurationLengthValue arrayValue arrayLengthValue
+                            loopState wordState loopOutput wordOutput hlocals
+                            hloopHandler hwordHandler
+
 end Flapjack.RiscV

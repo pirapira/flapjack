@@ -445,6 +445,8 @@ definitions, pass ordering, examples, and proof obligations.
   control results, plus basic loop-control regression theorems.
 - [x] Add handler-aware Word loop execution with recursive calls, FFI actions,
   and control-result propagation, with focused regressions.
+- [x] Prove the loop-aware Loop-to-Word FFI simulation boundary for the fully
+  composed primitive/call/FFI evaluator, with a mapped-local regression.
 - [x] Exercise the actual Loop-to-Word loop lowering through the Word loop
   evaluator, including its generated entry and exit ticks.
 - [x] Add layout-aware RISC-V lowering for Word loops, resolving generated

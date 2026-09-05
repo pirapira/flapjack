@@ -17,6 +17,7 @@ import Flapjack.RiscV.Model
 import Flapjack.RiscV.PanMemory
 import Flapjack.RiscV.PanSemantics
 import Flapjack.RiscV.Allocator
+import Flapjack.RiscV.AllocatorCorrectness
 import Flapjack.RiscV.WordToStack
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Calls

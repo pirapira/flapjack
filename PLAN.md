@@ -348,6 +348,8 @@ definitions, pass ordering, examples, and proof obligations.
   over RISC-V word cells, with little-endian and alignment regressions.
 - [x] Prove model-level register agreements for unsigned RISC-V division and
   remainder, including the HOL/RISC-V zero-divisor results.
+- [x] Prove the AddCarry lowering preserves non-result registers outside its
+  two destinations and x31 scratch register.
 - [x] Lift the Loop no-memory-write projection invariant from one step to
   arbitrary fuel, including sequencing, conditionals, loop repetition, and
   control results.

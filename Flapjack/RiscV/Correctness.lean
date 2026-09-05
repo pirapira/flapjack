@@ -41,4 +41,17 @@ theorem executeInstructions_addCarry [NeZero width] (state : State width)
     · simp [executeInstructions, execute, writeRegister, nextPc, readRegister,
         zero', firstCarry, secondCarry, addCarryWords_riscv_formula]
 
+theorem executeInstructions_addCarry_register_preserved [NeZero width]
+    (state : State width) (register : Fin 32)
+    (hregister_destination : register ≠ 5)
+    (hregister_carry : register ≠ 6)
+    (hregister_scratch : register ≠ 31) :
+    readRegister
+        (executeInstructions state
+          [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+            .sltu 31 5 31, .or 6 6 31]) register =
+      readRegister state register := by
+  simp [executeInstructions, execute, writeRegister, nextPc, readRegister,
+    hregister_destination, hregister_carry, hregister_scratch]
+
 end Flapjack.RiscV

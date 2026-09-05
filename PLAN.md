@@ -579,6 +579,8 @@ definitions, pass ordering, examples, and proof obligations.
   result through the RV64 backend.
 - [x] Port the structured StackLang `StoreConsts` bitmap-copy lowering and
   verify that its generated loop compiles through the RV64 backend.
+- [x] Add a concrete WordProg → Word-to-Stack → StackRemove → LabLang → RV64
+  composition with an exact constant-lowering regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

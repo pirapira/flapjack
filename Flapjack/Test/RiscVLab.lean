@@ -6,6 +6,9 @@ def stackRemoveRiscVConfig : StackRemoveConfig :=
   { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
     stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
 
+def wordStackRiscVConfig : WordStackConfig :=
+  { locations := [(0, .register 4)], scratch := 31, stackBase := 21 }
+
 example :
     compileLabSection { services := [("sum", 7)] }
       ⟨2, [
@@ -63,6 +66,13 @@ example :
     (compileStackProgramToRiscV (width := 64) { services := [] }
       stackRemoveRiscVConfig 2 3
       (.storeConsts 6 7 none : StackProg (Word 64))).isSome := by
+  native_decide
+
+example :
+    compileWordProgramNatToRiscV (width := 64) { services := [] }
+      wordStackRiscVConfig stackRemoveRiscVConfig 2 3
+      (.assign 0 (.const 42) : WordProg Nat) =
+      some [.addi 4 0 (BitVec.ofNat 64 42)] := by
   native_decide
 
 example :

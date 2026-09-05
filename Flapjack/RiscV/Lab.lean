@@ -1,5 +1,6 @@
 import Flapjack.Lab
 import Flapjack.RiscV.Ffi
+import Flapjack.RiscV.WordToStack
 
 /-!
 # LabLang to RISC-V
@@ -177,6 +178,66 @@ def compileStackProgramToRiscV [NeZero width]
     Option (List (Instruction width)) :=
   compileLabSection context
     (labProgramToSectionAfterStackRemove config sectionId initialLabel program)
+
+/-! The current concrete Word-to-Stack compiler uses `Nat` for constants,
+    while the target backend uses width-indexed words.  Since only conditional
+    immediates carry the StackProg type parameter, this adapter is deliberately
+    small and explicit. -/
+def labAsmNatToWord [NeZero width] : LabAsm Nat → LabAsm (Word width)
+  | .jump target => .jump target
+  | .jumpCmp operator condition (.imm value) target =>
+      .jumpCmp operator condition (.imm (BitVec.ofNat width value)) target
+  | .jumpCmp operator condition (.reg register) target =>
+      .jumpCmp operator condition (.reg register) target
+  | .call target => .call target
+  | .locValue register target => .locValue register target
+  | .callFfi function => .callFfi function
+  | .install => .install
+  | .halt => .halt
+
+def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
+  | .word instruction => .word instruction
+  | .const destination value => .const destination value
+  | .arith operator destination left right =>
+      .arith operator destination left right
+  | .shift operator destination left right =>
+      .shift operator destination left right
+  | .tick => .tick
+  | .jumpReg register => .jumpReg register
+  | .codeBufferWrite address value => .codeBufferWrite address value
+  | .shareMem operator register address =>
+      .shareMem operator register address
+
+def labLineNatToWord [NeZero width] : LabLine Nat → LabLine (Word width)
+  | .label sectionId label length => .label sectionId label length
+  | .asm operation bytes length =>
+      .asm (labPlainNatToWord operation) bytes length
+  | .labAsm operation bytes length =>
+      .labAsm (labAsmNatToWord operation) bytes length
+
+def labSectionNatToWord [NeZero width] (sectionData : LabSection Nat) :
+    LabSection (Word width) :=
+  { name := sectionData.name
+    lines := sectionData.lines.map labLineNatToWord }
+
+def compileLabSectionNat [NeZero width] (context : WordFfiContext)
+    (sectionData : LabSection Nat) : Option (List (Instruction width)) :=
+  compileLabSection context (labSectionNatToWord sectionData)
+
+def compileStackProgramNatToRiscV [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel : Nat) (program : StackProg Nat) :
+    Option (List (Instruction width)) :=
+  compileLabSectionNat context
+    (labProgramToSectionAfterStackRemove config sectionId initialLabel program)
+
+def compileWordProgramNatToRiscV [NeZero width] [BEq Nat]
+    (context : WordFfiContext) (wordConfig : WordStackConfig)
+    (removeConfig : StackRemoveConfig) (sectionId initialLabel : Nat)
+    (program : WordProg Nat) : Option (List (Instruction width)) := do
+  let stackProgram ← wordToStackProgNat wordConfig program
+  compileStackProgramNatToRiscV context removeConfig sectionId initialLabel
+    stackProgram
 
 def labSectionInstructionCount (sectionData : LabSection (Word width)) : Nat :=
   sectionData.lines.foldl

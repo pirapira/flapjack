@@ -418,6 +418,8 @@ definitions, pass ordering, examples, and proof obligations.
   Loop evaluator and handler-aware Word evaluator.
 - [x] Lift the ordinary LongMul bridge through the fully composed call/FFI
   Loop evaluator and handler-aware Word evaluator.
+- [x] Exercise the composed LongMul bridge with a mapped-local RISC-V
+  regression and an explicit destination non-alias proof.
 - [x] Add the control-neutral Loop-to-Word `skip` preservation rule and keep
   its regression in a dedicated control-correctness test module.
 - [x] Lift the Loop no-memory-write projection invariant from one step to

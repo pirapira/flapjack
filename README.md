@@ -27,6 +27,10 @@ It exposes both the lower-level pass pipeline and an explicit
 `main` is placed first, or a zero-returning `main` is generated when absent;
 the corresponding RISC-V entry points are `compileFlapjackRiscVTarget` and
 `compileFlapjackRiscVTargetWithFfi`.
+
+The target-entry call regression in `Flapjack.Test.CorrectnessTarget` checks a
+reordered `main` plus callee through source evaluation, the call-aware Word
+evaluator, and the linked RISC-V execution harness.
 Core structured statement lowering and top-level function assembly are in
 [`Flapjack/Compile.lean`](Flapjack/Compile.lean).
 The first executable local/memory semantics and preservation lemmas are in

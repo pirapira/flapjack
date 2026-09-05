@@ -127,6 +127,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Match CakeML `pan_to_target` entry preparation by moving a user `main`
   to the front or synthesizing a zero-returning `main`, with explicit RISC-V
   target wrappers and executable regressions.
+- [x] Add a target-entry declaration-call correctness regression that checks
+  the reordered linked image, the call-aware Word result, and execution at
+  the generated `main` entry against the source call semantics.
 - [x] Add a return-aware RISC-V function artifact and evaluator for the
   straight-line Word assignment/return fragment.
 - [x] Add a partial Word-to-RISC-V instruction selector for constants, moves,

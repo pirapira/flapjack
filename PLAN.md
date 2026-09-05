@@ -677,6 +677,8 @@ definitions, pass ordering, examples, and proof obligations.
   across two generated function sections.
 - [x] Preserve linked section labels and byte entry addresses through the
   allocator-aware Stack/RISC-V entry point for execution-harness integration.
+- [x] Move allocated formal parameters from the incoming even-numbered ABI
+  registers into their allocated registers or spill slots at function entry.
 - [x] Replace the fixed StackRemove fuel in all composed backend entry points
   with a size-derived bound, so generated functions are not limited to 1024
   levels of nesting.

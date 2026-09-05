@@ -55,6 +55,18 @@ example [NeZero width] :
   rfl
 
 example :
+    RiscV.wordToStackFunctionWithParameters
+        { locations := [(0, .stack 0)], scratch := 31, stackBase := 10 }
+        [0]
+        ((.skip : WordProg (RiscV.Word 64))) =
+      some (.seq (.arith .or 31 2 2) (.stackStore 31 10) : StackProg Nat) := by
+  simp [RiscV.wordToStackFunctionWithParameters, RiscV.wordToStackProgWord,
+    RiscV.wordToStackProgNat, RiscV.wordStackMovesFromPhysical,
+    RiscV.wordStackMoveFromPhysical, RiscV.wordStackJoin,
+    RiscV.wordStackLocation, RiscV.wordStackOffset, lookupNatInfo,
+    RiscV.wordProgToNat]
+
+example :
     (pipelineWordFunctionsAllocatedWithSpills
       [(0, [0], (.assign 1 (.var 0) : LoopProg (RiscV.Word 64))) ]).isSome := by
   native_decide

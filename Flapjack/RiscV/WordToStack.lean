@@ -965,6 +965,18 @@ def wordToStackProgWord [NeZero width] (config : WordStackConfig)
     (program : WordProg (Word width)) : Option (StackProg Nat) :=
   wordToStackProgNat config (wordProgToNat program)
 
+/-! Function-entry lowering for allocated Word programs.  Word calls place
+    arguments in the even ABI registers beginning at x2; the allocator may
+    place a formal parameter in a different register or in a spill slot.  The
+    entry moves make that calling convention explicit before the lowered body
+    starts executing. -/
+def wordToStackFunctionWithParameters [NeZero width]
+    (config : WordStackConfig) (parameters : List Nat)
+    (program : WordProg (Word width)) : Option (StackProg Nat) := do
+  let body ← wordToStackProgWord config program
+  let parameterMoves ← wordStackMovesFromPhysical config parameters 2
+  pure (wordStackJoin parameterMoves body)
+
 /-! Location map used by the currently register-coloured pipeline fragment.
     It is intentionally identity-based; the spill-aware allocator will
     replace this with a map containing `WordLocation.stack` entries once its

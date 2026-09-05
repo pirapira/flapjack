@@ -115,7 +115,8 @@ def pipelineWordFunctionsAllocatedWithSpills [NeZero width] :
           scratch := 31
           stackBase := 0
           addressScratch := 29 }
-      let stackBody ← RiscV.wordToStackProgWord config renamedBody
+      let stackBody ← RiscV.wordToStackFunctionWithParameters config parameters
+        renamedBody
       let rest ← pipelineWordFunctionsAllocatedWithSpills functions
       pure ((label, parameters, stackBody) :: rest)
 

@@ -229,6 +229,16 @@ def labProgramToSection (sectionId initialLabel : Nat) (program : StackProg α) 
   let finalLabel := if labIsSequence program then result.nextLabel else 1
   ⟨sectionId, result.lines ++ [labLabel sectionId finalLabel]⟩
 
+/-! Function sections have a public entry label.  The single-section helper
+    above predates cross-function linking and deliberately omits that label
+    for non-sequences; generated calls target the entry label, so the
+    multi-section linker uses this explicit form. -/
+def labProgramToEntrySection (sectionId entryLabel initialLabel : Nat)
+    (program : StackProg α) : LabSection α :=
+  let sectionData := labProgramToSection sectionId initialLabel program
+  { sectionData with
+    lines := labLabel sectionId entryLabel :: sectionData.lines }
+
 /- The backend-facing composition applies the stack-removal pass before
    flattening.  Keeping this as a separate entry point preserves the raw
    StackLang boundary for pass-by-pass proofs. -/

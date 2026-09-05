@@ -328,6 +328,26 @@ def compileLabProgram [NeZero width] (context : WordFfiContext)
   let labels := labCollectProgramLabels 0 program
   labCompileProgramSections context labels 0 program
 
+def compileStackProgramListToRiscV [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (entryLabel initialLabel : Nat)
+    (programs : List (Nat × StackProg (Word width))) :
+    Option (List (Instruction width)) :=
+  compileLabProgram context
+    (programs.map (fun (sectionId, program) =>
+      labProgramToEntrySection sectionId entryLabel initialLabel
+        (stackRemove config program)))
+
+def compileStackProgramNatListToRiscV [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (entryLabel initialLabel : Nat)
+    (programs : List (Nat × StackProg Nat)) :
+    Option (List (Instruction width)) :=
+  compileLabProgram context
+    ((programs.map (fun (sectionId, program) =>
+      labProgramToEntrySection sectionId entryLabel initialLabel
+        (stackRemove config program))).map labSectionNatToWord)
+
 theorem labLineInstructionCount_ffi :
     labLineInstructionCount
         (.labAsm (.callFfi "sum") [] 0 : LabLine (Word width)) = 2 := by

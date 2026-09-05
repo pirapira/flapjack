@@ -584,6 +584,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add the width-indexed Word-to-Stack adapter and an actual
   `WordProg (Word width)` to RISC-V entry point, preserving bit-vector
   constants through the explicit Nat StackLang boundary.
+- [x] Add explicit generated function entry labels and a cross-section
+  StackLang program linker through LabLang and the RISC-V backend.
 - [x] Prove the non-`CurrHeap` StackRemove `Get` equation against the
   executable StackLang machine state under an explicit store-memory invariant.
 - [x] Prove the matching non-`CurrHeap` StackRemove `Set` equation under

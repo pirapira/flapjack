@@ -34,6 +34,15 @@ example :
   native_decide
 
 example :
+    compileStackProgramNatListToRiscV (width := 64) { services := [] }
+      stackRemoveRiscVConfig 0 0
+      [(1, (.call none (.label 2) none : StackProg Nat)),
+       (2, .const 1 7)] =
+      some [.jal 0 (BitVec.ofNat 64 4),
+        .addi 1 0 (BitVec.ofNat 64 7)] := by
+  native_decide
+
+example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.arith .add 4 5 6) [] 0]⟩ =
       some [.add 4 5 6] := by

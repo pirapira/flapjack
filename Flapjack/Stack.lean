@@ -50,6 +50,7 @@ inductive StackProg (α : Type u) where
   | get (destination : Nat) (store : StackStore)
   | set (store : StackStore) (source : Nat)
   | arith (operator : BinOp) (destination left right : Nat)
+  | shift (operator : Shift) (destination left right : Nat)
   | opCurrHeap (operator : BinOp) (destination source : Nat)
   | call (returnHandler : Option (StackProg α × Nat × Nat × Nat))
       (target : StackCallTarget) (handler : Option (StackProg α × Nat × Nat))

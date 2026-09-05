@@ -135,7 +135,7 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
       ⟨[.labAsm (.locValue register ⟨label, entry⟩) [] 0], false, counter⟩
   | .halt register =>
       ⟨[.labAsm .halt [] 0], true, counter⟩
-  | .get _ _ | .set _ _ | .arith _ _ _ _ | .opCurrHeap _ _ _
+  | .get _ _ | .set _ _ | .arith _ _ _ _ | .shift _ _ _ _ | .opCurrHeap _ _ _
     | .alloc _ | .storeConsts _ _ _ | .stackAlloc _ | .stackFree _ | .stackStore _ _
     | .stackStoreAny _ _
     | .stackLoad _ _ | .stackLoadAny _ _ | .stackGetSize _ | .stackSetSize _

@@ -145,6 +145,30 @@ example :
 
 example :
     wordToStackProgNat
+        { locations := [(0, .register 4), (1, .register 5), (2, .register 6)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        ((.assign 0 (.shift .lsl (.var 1) (.var 2))) : WordProg Nat) =
+      some (.shift .lsl 4 5 6 : StackProg Nat) := by
+  simp [wordToStackProgNat, wordStackCompileExpNat,
+    wordStackCompileShiftNat, wordStackAtomNat,
+    wordStackWritePhysicalNat, wordStackReadRegister,
+    wordStackLocation, lookupNatInfo, wordStackJoin]
+
+example :
+    wordToStackProgNat
+        { locations := [(0, .stack 2), (1, .stack 3)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        ((.assign 0 (.shift .lsr (.var 1) (.const 3))) : WordProg Nat) =
+      some (.seq (.stackLoad 31 13)
+        (.seq (.const 29 3)
+          (.seq (.shift .lsr 31 31 29) (.stackStore 31 12))) : StackProg Nat) := by
+  simp [wordToStackProgNat, wordStackCompileExpNat,
+    wordStackCompileShiftNat, wordStackAtomNat,
+    wordStackWritePhysicalNat, wordStackLocation, wordStackOffset,
+    lookupNatInfo, wordStackJoin, wordStackReadRegister]
+
+example :
+    wordToStackProgNat
         { locations := [(0, .register 5)], scratch := 31, stackBase := 10,
           addressScratch := 29 }
         ((.store (.const 100) 0) : WordProg Nat) =

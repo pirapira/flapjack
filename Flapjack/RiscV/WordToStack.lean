@@ -294,6 +294,16 @@ def wordStackCompileBinaryNat (config : WordStackConfig) (destination : Nat)
     (fun register => .arith operator register leftRegister rightRegister)
   pure (wordStackJoin leftPrelude (wordStackJoin rightPrelude body))
 
+def wordStackCompileShiftNat (config : WordStackConfig) (destination : Nat)
+    (operator : Shift) (left right : WordExp Nat) : Option (StackProg Nat) := do
+  let (leftPrelude, leftRegister) ←
+    wordStackAtomNat config config.scratch left
+  let (rightPrelude, rightRegister) ←
+    wordStackAtomNat config config.addressScratch right
+  let body ← wordStackWritePhysicalNat config destination
+    (fun register => .shift operator register leftRegister rightRegister)
+  pure (wordStackJoin leftPrelude (wordStackJoin rightPrelude body))
+
 def wordStackCompileLoadNat (config : WordStackConfig) (destination : Nat)
     (address : WordExp Nat) : Option (StackProg Nat) := do
   let (addressPrelude, addressRegister) ←
@@ -334,7 +344,8 @@ def wordStackCompileExpNat (config : WordStackConfig) (destination : Nat) :
   | .op operator [left, right] =>
       wordStackCompileBinaryNat config destination operator left right
   | .op _ _ => none
-  | .shift _ _ _ => none
+  | .shift operator left right =>
+      wordStackCompileShiftNat config destination operator left right
 
 def wordStackSetNat (config : WordStackConfig) (store : WordStore Nat)
     (value : WordExp Nat) : Option (StackProg Nat) := do
@@ -479,6 +490,18 @@ def wordStackMachineBinOp : BinOp → Word width → Word width → Word width
   | .or, left, right => left ||| right
   | .xor, left, right => left ^^^ right
 
+def wordStackMachineRotateRight (value : Word width) (amount : Word width) :
+    Word width :=
+  let amount := amount.toNat % width
+  BitVec.ushiftRight value amount |||
+    BitVec.shiftLeft value ((width - amount) % width)
+
+def wordStackMachineShift : Shift → Word width → Word width → Word width
+  | .lsl, left, right => BitVec.shiftLeft left (shiftAmount right)
+  | .lsr, left, right => BitVec.ushiftRight left (shiftAmount right)
+  | .asr, left, right => BitVec.sshiftRight left (shiftAmount right)
+  | .ror, left, right => wordStackMachineRotateRight left right
+
 def evalWordStackMachine [NeZero width]
     (state : WordStackMachineState width) :
     StackProg Nat → Option (WordStackMachineState width)
@@ -489,6 +512,10 @@ def evalWordStackMachine [NeZero width]
   | .arith operator destination left right =>
       some (wordStackMachineWriteRegister state destination
         (wordStackMachineBinOp operator
+          (state.registers left) (state.registers right)))
+  | .shift operator destination left right =>
+      some (wordStackMachineWriteRegister state destination
+        (wordStackMachineShift operator
           (state.registers left) (state.registers right)))
   | .inst (.mem .load destination address) =>
       some (wordStackMachineWriteRegister state destination

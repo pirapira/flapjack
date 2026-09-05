@@ -56,6 +56,14 @@ example :
   native_decide
 
 example :
+    wordFunctionToRiscVWithCallsAndFfiAndLoops
+      ({ targets := [], services := [("sum", 7)] } : WordCallFfiContext 64)
+      (.loop [] (.seq (.ffi "sum" 2 3 4 5 []) (.break 0)) []) =
+      some ([.addi 10 2 0, .addi 11 3 0, .addi 12 4 0, .addi 13 5 0,
+        .addi 14 0 7, .ecall, .jal 0 8, .jal 0 (0 - BitVec.ofNat 64 28)], []) := by
+  native_decide
+
+example :
     (executeWithFfi ffiAbiHost
         (writeRegister
           (writeRegister

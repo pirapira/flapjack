@@ -198,4 +198,86 @@ theorem wordFunctionToRiscVWithCallsAndFfi_ffi [NeZero width] :
   simp [wordFunctionToRiscVWithCallsAndFfi, wordFfiToRiscV,
     lookupWordFfiService, wordRegisterMoves, registerOfNat]
 
+/-!
+The loop-aware companion uses the same control-marker layout as
+`wordFunctionToRiscVWithCallsAndLoops`, but delegates straight-line leaves to
+the FFI-aware selector above.  Consequently an FFI operation can occur in a
+loop body while break and continue offsets are still resolved after the body
+length is known.
+-/
+mutual
+  def wordFunctionToRiscVWithCallsAndFfiAndLoopsAux [NeZero width]
+      (context : WordCallFfiContext width) :
+      WordProg (Word width) →
+        Option (List (WordControlInstruction width) × List (Fin 32))
+    | .break 0 => some ([.breakJump], [])
+    | .continue 0 => some ([.continueJump], [])
+    | .loop _ body _ => do
+        let (bodyCode, bodyReturns) ←
+          wordFunctionToRiscVWithCallsAndFfiAndLoopsAux context body
+        if !bodyReturns.isEmpty then none
+        else
+          let bodyCode ← resolveWordLoopBody bodyCode
+          pure (bodyCode.map .instruction ++
+            [.instruction (.jal 0 (0 - BitVec.ofNat width (4 * bodyCode.length)))], [])
+    | .ite operator condition rightValue thenBranch elseBranch => do
+        let (branchLeft, right, prelude) ←
+          wordConditionOperands operator condition rightValue
+        let (thenCode, thenReturns) ←
+          wordFunctionToRiscVWithCallsAndFfiAndLoopsAux context thenBranch
+        let (elseCode, elseReturns) ←
+          wordFunctionToRiscVWithCallsAndFfiAndLoopsAux context elseBranch
+        if thenReturns != elseReturns then none
+        else
+          let falseOffset : Word width :=
+            BitVec.ofNat width (8 + 4 * thenCode.length)
+          let endOffset : Word width :=
+            BitVec.ofNat width (4 + 4 * elseCode.length)
+          let branchFalse ← match operator with
+            | .equal => pure (.branchNe branchLeft right falseOffset)
+            | .notEqual => pure (.branchEq branchLeft right falseOffset)
+            | .less => pure (.branchGe branchLeft right falseOffset)
+            | .notLess => pure (.branchLt branchLeft right falseOffset)
+            | .lower => pure (.branchGeU branchLeft right falseOffset)
+            | .notLower => pure (.branchLtU branchLeft right falseOffset)
+            | .test => pure (.branchNe branchLeft right falseOffset)
+            | .notTest => pure (.branchEq branchLeft right falseOffset)
+          pure (prelude.map .instruction ++
+            [.instruction branchFalse] ++ thenCode ++
+            [.instruction (.branchEq 0 0 endOffset)] ++ elseCode, thenReturns)
+    | .seq first second => do
+        let (firstCode, firstReturns) ←
+          wordFunctionToRiscVWithCallsAndFfiAndLoopsAux context first
+        if !firstReturns.isEmpty then
+          pure (firstCode, firstReturns)
+        else
+          let (secondCode, secondReturns) ←
+            wordFunctionToRiscVWithCallsAndFfiAndLoopsAux context second
+          pure (firstCode ++ secondCode, secondReturns)
+    | program => do
+        let (code, returns) ← wordFunctionToRiscVWithCallsAndFfi context program
+        pure (code.map .instruction, returns)
+    termination_by program => sizeOf program
+    decreasing_by all_goals decreasing_trivial
+end
+
+def wordFunctionToRiscVWithCallsAndFfiAndLoops [NeZero width]
+    (context : WordCallFfiContext width) :
+    WordProg (Word width) → Option (List (Instruction width) × List (Fin 32)) :=
+  fun program => do
+    let (code, returns) ←
+      wordFunctionToRiscVWithCallsAndFfiAndLoopsAux context program
+    let code ← wordControlInstructions code
+    pure (code, returns)
+
+theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_break [NeZero width] :
+    wordFunctionToRiscVWithCallsAndFfiAndLoops
+      ({ targets := [], services := [] } : WordCallFfiContext width)
+      ((.loop [] (.break 0) []) : WordProg (Word width)) =
+      some ([.jal 0 (BitVec.ofNat width 8),
+        .jal 0 (0 - BitVec.ofNat width 4)], []) := by
+  simp [wordFunctionToRiscVWithCallsAndFfiAndLoops,
+    wordFunctionToRiscVWithCallsAndFfiAndLoopsAux, resolveWordLoopBody,
+    resolveWordLoopBodyAux, wordControlInstructions]
+
 end Flapjack.RiscV

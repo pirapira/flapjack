@@ -87,6 +87,20 @@ def pipelineWordFunctionsAllocated [OfNat α 1]
       let rest ← pipelineWordFunctionsAllocated functions
       pure ((label, wordMapVars context parameters, loopToWordProg context body) :: rest)
 
+/-! Allocation-aware variant that derives clashes from the generated Word
+program.  It is still separate from the historical artifact boundary while
+the full CakeML branch/loop SSA and spill pass are being ported. -/
+def pipelineWordFunctionsAllocatedWithAnalysis [OfNat α 1]
+    : List (Nat × List Nat × LoopProg α) →
+      Option (List (Nat × List Nat × WordProg α))
+  | [] => some []
+  | (label, parameters, body) :: functions => do
+      let slots := loopAccVars body parameters
+      let unallocatedBody := loopToWordProg ({ vars := [] } : WordContext) body
+      let context ← wordAllocateProgramWithSlots slots unallocatedBody
+      let rest ← pipelineWordFunctionsAllocatedWithAnalysis functions
+      pure ((label, wordMapVars context parameters, loopToWordProg context body) :: rest)
+
 theorem lookupNatInfo_map_add_two_of_mem (slots : List Nat) (name : Nat)
     (hname : name ∈ slots) :
     lookupNatInfo name (slots.map (fun value => (value, value + 2))) =

@@ -300,6 +300,115 @@ def wordAllocateSsaLinear (state : WordSsaState) (instructions : List WordInst) 
   (wordAllocateLinearInstructions instructions).map
     (fun context => (state, instructions, context))
 
+/-! Program-level variable collection and liveness.  Sequencing uses the
+exact backwards transfer; control-flow constructs use a conservative clique
+over their entry variables until SSA phi reconciliation is available. -/
+
+def wordExpReadVars : WordExp α → List Nat
+  | .const _ => []
+  | .var name => [name]
+  | .lookup _ => []
+  | .load address => wordExpReadVars address
+  | .op _ arguments => arguments.flatMap wordExpReadVars
+  | .shift _ left right => wordExpReadVars left ++ wordExpReadVars right
+
+def wordProgReadVars : WordProg α → List Nat
+  | .skip => []
+  | .assign _ value => wordExpReadVars value
+  | .inst instruction => wordInstReadVars instruction
+  | .store address value => wordExpReadVars address ++ [value]
+  | .set _ value => wordExpReadVars value
+  | .seq first second => wordProgReadVars first ++ wordProgReadVars second
+  | .ite _ condition right thenBranch elseBranch =>
+      [condition] ++ (match right with | .reg name => [name] | .imm _ => []) ++
+        wordProgReadVars thenBranch ++ wordProgReadVars elseBranch
+  | .loop liveIn body liveOut =>
+      liveIn ++ wordProgReadVars body ++ liveOut
+  | .break _ | .continue _ | .raise _ => []
+  | .return _ values => values
+  | .tick => []
+  | .locValue _ source => [source]
+  | .call returns _ arguments handler =>
+      arguments ++ (match returns with
+        | none => []
+        | some (values, live) => values ++ live) ++
+        (match handler with
+        | none => []
+        | some (exception, body) => exception :: wordProgReadVars body)
+  | .ffi _ configuration configurationLength array arrayLength live =>
+      [configuration, configurationLength, array, arrayLength] ++ live
+  | .shareInst operator name address =>
+      (match operator with
+      | .load | .load8 | .load16 | .load32 => []
+      | .store | .store8 | .store16 | .store32 => [name]) ++
+        wordExpReadVars address
+
+def wordProgWriteVars : WordProg α → List Nat
+  | .skip | .store _ _ | .set _ _ | .break _ | .continue _ | .raise _
+  | .return _ _ | .tick => []
+  | .assign name _ => [name]
+  | .inst instruction => wordInstWriteVars instruction
+  | .seq first second => wordProgWriteVars first ++ wordProgWriteVars second
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordProgWriteVars thenBranch ++ wordProgWriteVars elseBranch
+  | .loop _ body _ => wordProgWriteVars body
+  | .locValue destination _ => [destination]
+  | .call returns _ _ handler =>
+      (match returns with
+      | none => []
+      | some (values, _) => values) ++
+      (match handler with
+      | none => []
+      | some (exception, body) => exception :: wordProgWriteVars body)
+  | .ffi _ _ _ _ _ _ => []
+  | .shareInst operator name _ =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => [name]
+      | .store | .store8 | .store16 | .store32 => []
+
+def wordProgVariables (program : WordProg α) : List Nat :=
+  wordProgReadVars program ++ wordProgWriteVars program
+
+def wordProgLiveBefore (program : WordProg α) (liveAfter : List Nat) : List Nat :=
+  wordProgReadVars program ++
+    liveAfter.filter (fun name => name ∉ wordProgWriteVars program)
+
+def wordProgClashAnalysis : WordProg α → List Nat →
+    List Nat × List (Nat × Nat)
+  | .seq first second, liveOut =>
+      let (liveMiddle, secondEdges) := wordProgClashAnalysis second liveOut
+      let (liveIn, firstEdges) := wordProgClashAnalysis first liveMiddle
+      (liveIn, firstEdges ++ secondEdges)
+  | program, liveOut =>
+      let variables := (wordProgVariables program ++ liveOut).eraseDups
+      (wordProgLiveBefore program liveOut,
+        wordPairwiseClashes variables)
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+def wordAllocateProgramWithSlots (slots : List Nat) (program : WordProg α) :
+    Option WordContext :=
+  let (liveIn, edges) := wordProgClashAnalysis program []
+  wordAllocateContextWithClashes
+    (slots ++ wordProgVariables program ++ liveIn) edges
+
+def wordAllocateProgram (program : WordProg α) : Option WordContext :=
+  wordAllocateProgramWithSlots [] program
+
+theorem wordProgClashAnalysis_skip :
+    wordProgClashAnalysis (.skip : WordProg α) [] = ([], []) := by
+  simp [wordProgClashAnalysis, wordProgVariables, wordProgReadVars,
+    wordProgWriteVars, wordProgLiveBefore, wordPairwiseClashes]
+
+theorem wordProgClashAnalysis_seq :
+    wordProgClashAnalysis
+        ((.seq (.assign 0 (.var 1)) (.assign 2 (.var 0))) : WordProg α) [] =
+      ([1], [(1, 0), (0, 2)]) := by
+  simp [wordProgClashAnalysis, wordProgVariables, wordProgReadVars,
+    wordProgWriteVars, wordProgLiveBefore, wordPairwiseClashes,
+    wordExpReadVars, List.eraseDups, List.eraseDupsBy,
+    List.eraseDupsBy.loop]
+
 theorem wordLinearClashAnalysis_empty (liveOut : List Nat) :
     wordLinearClashAnalysis [] liveOut = (liveOut, []) := by
   rfl

@@ -43,6 +43,12 @@ example :
           .arith (.addCarry 202 203 200 201 100)]) := by
   exact wordSsaRenameLinear_addCarry
 
+example :
+    wordProgClashAnalysis
+        ((.seq (.assign 0 (.var 1)) (.assign 2 (.var 0))) : WordProg α) [] =
+      ([1], [(1, 0), (0, 2)]) := by
+  exact wordProgClashAnalysis_seq
+
 example (slots : List Nat) (edges : List (Nat × Nat))
     (colouring : NatInfoMap Nat)
     (hcolouring : wordAllocateVarsWithClashes slots edges = some colouring) :
@@ -54,5 +60,22 @@ example [OfNat α 1] :
     pipelineWordFunctionsAllocated
       ([] : List (Nat × List Nat × LoopProg α)) = some [] := by
   rfl
+
+example [OfNat α 1] :
+    pipelineWordFunctionsAllocatedWithAnalysis
+      [(0, [0], (.assign 1 (.var 0) : LoopProg α))] =
+      some [(0, [2], (.assign 3 (.var 2) : WordProg α))] := by
+  simp [pipelineWordFunctionsAllocatedWithAnalysis,
+    wordAllocateProgramWithSlots, wordAllocateContextWithClashes,
+    wordAllocateVarsWithClashes, wordGreedyColour, wordColourCandidates,
+    wordFirstAvailable, wordPreferredRegister,
+    wordAllocatableRegisters, wordNeighbours, wordUsedRegisters,
+    wordRegisterIsAllocatable,
+    wordColouringUsesAllocatable, wordColouringRespectsClashes,
+    wordProgClashAnalysis, wordProgVariables, wordProgReadVars,
+    wordProgWriteVars, wordProgLiveBefore, wordPairwiseClashes,
+    wordExpReadVars, loopAccVars, loopVarsOfExp, loopInsertAll, loopInsert,
+    loopToWordProg, wordCompileExp, wordFindVar, wordMapVars, lookupNatInfo,
+    List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
 
 end Flapjack

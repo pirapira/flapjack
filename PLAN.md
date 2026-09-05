@@ -284,6 +284,10 @@ definitions, pass ordering, examples, and proof obligations.
   executable colouring boundary.
 - [x] Add straight-line SSA renaming for Word writes and reads, including
   multi-result arithmetic instructions.
+- [x] Feed actual WordProg sequencing into backwards liveness and conservative
+  control-flow clash construction.
+- [x] Expose a program-analysis-driven Word pipeline allocation boundary for
+  straight-line and conservatively analysed control-flow programs.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

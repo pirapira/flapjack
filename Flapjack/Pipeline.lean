@@ -159,6 +159,19 @@ def pipelineRiscVFunctions [NeZero width]
   functions.map (fun (label, parameters, body) =>
     (label, parameters, RiscV.wordFunctionToRiscVWithLoops body))
 
+def pipelineRiscVFunctionsWithFfi [NeZero width]
+    (services : List (FunName × Nat))
+    (functions : List (Nat × List Nat × WordProg (RiscV.Word width))) :
+    List (Nat × List Nat × Option (List (RiscV.Instruction width) × List (Fin 32))) :=
+  let targets := match RiscV.wordFunctionTargetSignaturesWithCalls functions with
+    | some targets => targets
+    | none => []
+  let context : RiscV.WordCallFfiContext width :=
+    { targets := targets, services := services }
+  functions.map (fun (label, parameters, body) =>
+    (label, parameters,
+      RiscV.wordFunctionToRiscVWithCallsAndFfiAndLoops context body))
+
 structure FlapjackPipelineResult (α : Type u) where
   simplified : List (Decl α)
   structured : List (Decl α)
@@ -214,6 +227,19 @@ def compileFlapjackRiscV [NeZero width] [BEq (RiscV.Word width)]
     functions := functions
     linkedFunctions := RiscV.linkRiscVFunctions 0 functions
     callLinkedFunctions := RiscV.linkWordFunctions 0 pipeline.word }
+
+def compileFlapjackRiscVWithFfi [NeZero width] [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (declarations : List (Decl (RiscV.Word width))) : FlapjackRiscVResult width :=
+  let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let functions := pipelineRiscVFunctionsWithFfi services pipeline.word
+  { pipeline := pipeline
+    functions := functions
+    linkedFunctions := RiscV.linkRiscVFunctions 0 functions
+    callLinkedFunctions := RiscV.linkWordFunctionsWithFfi 0 services pipeline.word }
 
 def compileFlapjackRiscVChecked [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]

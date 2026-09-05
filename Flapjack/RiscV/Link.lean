@@ -77,6 +77,7 @@ def wordFunctionReturnNamesWithCalls [NeZero width]
   | .call none (some label) _ none => do
       let body ← lookupWordFunctionBody label functions
       wordFunctionReturnNames body
+  | .call (some (_, _)) _ _ none => some []
   | .seq first second =>
       match wordFunctionReturnNamesWithCalls functions first with
       | some values => some values

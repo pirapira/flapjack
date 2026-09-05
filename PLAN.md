@@ -371,6 +371,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the executable CakeML-style partial-colouring and clash-tree
   acceptance oracle, prove its list-set invariant, and enforce it at the
   preference-aware SSA spill-allocation boundary.
+- [x] Port the CakeML graph allocator data model for RISC-V: Fixed/Atemp/Stemp
+  tags, source-to-node bijections, and clash-tree clique graph construction;
+  the worklist colouring operations remain part of the full allocator item.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

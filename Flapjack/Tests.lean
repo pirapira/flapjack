@@ -10,6 +10,7 @@ import Flapjack.Test.Primitive
 import Flapjack.Test.Allocator
 import Flapjack.Test.AllocatorFunction
 import Flapjack.Test.AllocatorCorrectness
+import Flapjack.Test.AllocatorRegAlloc
 import Flapjack.Test.WordToStack
 import Flapjack.RiscV.Correctness
 import Flapjack.RiscV.CorrectnessFfi

@@ -75,6 +75,31 @@ def loopNoMemoryWrites : LoopProg α → Bool
   | .mark body => loopNoMemoryWrites body
   | _ => true
 
+/-! Syntactic approximation of Loop programs that do not update one local.
+    Unsupported base-evaluator operations are conservatively treated as
+    preserving the local because they cannot produce a result there. -/
+def loopNoLocalWrites (name : Nat) : LoopProg α → Bool
+  | .assign destination _ => name != destination
+  | .primitive destinations _ _ =>
+      if name ∈ destinations then false else true
+  | .arith (.longMul left right _ _) =>
+      if left == right then name != left else true
+  | .arith (.longDiv _ _ _ _ _) => true
+  | .arith (.div destination _ _) => name != destination
+  | .load32 _ destination | .loadByte _ destination => name != destination
+  | .seq first second =>
+      loopNoLocalWrites name first && loopNoLocalWrites name second
+  | .ite _ _ _ thenBranch elseBranch _ =>
+      loopNoLocalWrites name thenBranch && loopNoLocalWrites name elseBranch
+  | .loop _ body _ => loopNoLocalWrites name body
+  | .mark body => loopNoLocalWrites name body
+  | .locValue destination _ => name != destination
+  | .shMem operator _name _address =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => name != _name
+      | .store | .store8 | .store16 | .store32 => true
+  | _ => true
+
 def loopResultValues : LoopResult α → List α
   | .returned _ values => values
   | _ => []
@@ -297,6 +322,117 @@ mutual
         | .broke state 0 => pure (.normal state)
         | result => pure result
 end
+
+/-!
+At one unit of fuel, a Loop program classified as not writing `name` leaves
+that local unchanged whenever it produces a result.  This is the local
+component of the state relation used by the Loop-to-Word simulation. -/
+theorem evalLoopProg_one_local_projection [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (name : Nat) (state : LoopState α) (program : LoopProg α)
+    (hprogram : loopNoLocalWrites name program = true) :
+    (evalLoopProg 1 state program).map
+        (fun result => (loopResultState result).locals name) =
+      (evalLoopProg 1 state program).map (fun _ => state.locals name) := by
+  cases program with
+  | assign destination value =>
+      have hname : name ≠ destination := by
+        simpa [loopNoLocalWrites] using hprogram
+      cases hvalue : evalLoopExp state value with
+      | none => simp [evalLoopProg, hvalue]
+      | some value =>
+          simp [evalLoopProg, loopResultState, loopNoLocalWrites,
+            updateLoopLocal, hname, hvalue]
+  | arith operation =>
+      cases operation with
+      | longMul left right sourceLeft sourceRight =>
+          by_cases heq : left = right
+          · subst right
+            have hname : name ≠ left := by
+              simpa [loopNoLocalWrites] using hprogram
+            cases hleft : state.locals sourceLeft with
+            | none => simp [evalLoopProg, hleft]
+            | some leftValue =>
+                cases hright : state.locals sourceRight with
+                | none => simp [evalLoopProg, hleft, hright]
+                | some rightValue =>
+                    simp [evalLoopProg, loopResultState,
+                      updateLoopLocal, hname, hleft, hright]
+          · simp [evalLoopProg, loopNoLocalWrites, heq]
+      | longDiv destinationLeft destinationRight sourceLeft sourceRight quotient =>
+          simp [evalLoopProg]
+      | div destination dividend divisor =>
+          have hname : name ≠ destination := by
+            simpa [loopNoLocalWrites] using hprogram
+          cases hdividend : state.locals dividend with
+          | none => simp [evalLoopProg, hdividend]
+          | some dividendValue =>
+              cases hdivisor : state.locals divisor with
+              | none => simp [evalLoopProg, hdividend, hdivisor]
+              | some divisorValue =>
+                  by_cases hzero : divisorValue == 0
+                  · simp [evalLoopProg, hdividend, hdivisor, hzero]
+                  · simp [evalLoopProg, loopResultState,
+                      updateLoopLocal, hname, hdividend, hdivisor, hzero]
+  | load32 address destination =>
+      have hname : name ≠ destination := by
+        simpa [loopNoLocalWrites] using hprogram
+      cases haddress : state.locals address with
+      | none => simp [evalLoopProg, haddress]
+      | some addressValue =>
+          cases hvalue : state.memory addressValue with
+          | none => simp [evalLoopProg, haddress, hvalue]
+          | some value =>
+              simp [evalLoopProg, loopResultState, loopNoLocalWrites,
+                updateLoopLocal, hname, haddress, hvalue]
+  | loadByte address destination =>
+      have hname : name ≠ destination := by
+        simpa [loopNoLocalWrites] using hprogram
+      cases haddress : state.locals address with
+      | none => simp [evalLoopProg, haddress]
+      | some addressValue =>
+          cases hvalue : state.memory addressValue with
+          | none => simp [evalLoopProg, haddress, hvalue]
+          | some value =>
+              simp [evalLoopProg, loopResultState, loopNoLocalWrites,
+                updateLoopLocal, hname, haddress, hvalue]
+  | seq first second =>
+      simp [evalLoopProg]
+  | ite operator condition right thenBranch elseBranch live =>
+      cases right <;> simp [evalLoopProg]
+  | loop liveIn body liveOut =>
+      simp [evalLoopProg, evalLoopRepeat]
+  | locValue destination source =>
+      have hname : name ≠ destination := by
+        simpa [loopNoLocalWrites] using hprogram
+      cases hvalue : state.locals source with
+      | none => simp [evalLoopProg, hvalue]
+      | some value =>
+          simp [evalLoopProg, loopResultState, updateLoopLocal, hname, hvalue]
+  | shMem operator destination address =>
+      cases operator with
+      | load | load8 | load16 | load32 =>
+          have hname : name ≠ destination := by
+            simpa [loopNoLocalWrites] using hprogram
+          cases haddress : evalLoopExp state address with
+          | none => simp [evalLoopProg, haddress]
+          | some addressValue =>
+              cases hvalue : state.memory addressValue with
+              | none => simp [evalLoopProg, haddress, hvalue]
+              | some value =>
+                  simp [evalLoopProg, loopResultState,
+                    updateLoopLocal, hname, haddress, hvalue]
+      | store | store8 | store16 | store32 =>
+          cases haddress : evalLoopExp state address with
+          | none => simp [evalLoopProg, haddress]
+          | some addressValue =>
+              cases hvalue : state.locals destination with
+              | none => simp [evalLoopProg, haddress, hvalue]
+              | some value =>
+                  simp [evalLoopProg, loopResultState, haddress, hvalue]
+  | _ => simp [evalLoopProg, loopResultState, Function.comp_def]
 
 /-!
 At one unit of fuel, every executable Loop instruction either leaves the

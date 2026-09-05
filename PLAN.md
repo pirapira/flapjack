@@ -366,6 +366,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port CakeML-style move preference edges for Word copy nodes and feed
   them into a reserved-register-aware preference colourer with soundness
   regressions.
+- [x] Thread Word move preferences through the spill-aware clash-tree allocator,
+  including coalescing, clash override, and a checked tree-driven entry point.
 - [x] Reserve the RISC-V address scratch register x29 from Word allocation and
   cover the allocator/backend separation with executable regressions.
 - [x] Reserve the RISC-V LongMul normalization scratch register x28 from Word

@@ -123,6 +123,48 @@ example :
     wordProgSpecialLocationsSafe, lookupNatInfo, List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop]
 
+example :
+    wordAllocateVarsWithSpillsAndPreferences [0, 4] [] [(4, 0)] =
+      some (⟨[(4, .register 2), (0, .register 2)], 0⟩ : WordSpillState) := by
+  rfl
+
+example :
+    wordAllocateVarsWithSpillsAndPreferences [0, 4] [(0, 4)] [(4, 0)] =
+      some (⟨[(4, .register 6), (0, .register 2)], 0⟩ : WordSpillState) := by
+  rfl
+
+example (slots : List Nat) (edges preferences : List (Nat × Nat))
+    (state : WordSpillState)
+    (hstate : wordAllocateVarsWithSpillsAndPreferences slots edges preferences =
+      some state) :
+    wordSpillAllocationRespectsClashes edges state.locations = true := by
+  exact wordAllocateVarsWithSpillsAndPreferences_sound slots edges preferences
+    state hstate
+
+example :
+    wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences
+        ({ current := [], next := 10 } : WordSsaState)
+        ((.assign 1 (.var 0)) : WordProg Nat) =
+      some (({ current := [(1, 10)], next := 11 },
+        .assign 10 (.var 0),
+        { locations := [(10, .register 2), (0, .register 2)],
+          nextSpill := 0 }) : WordSsaState × WordProg Nat × WordSpillState) := by
+  simp [wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences,
+    wordSsaRenameProgram, wordSsaRenameProgramWithLoops, wordSsaRenameExp,
+    wordSsaFresh, wordSsaRead, wordClashTree, wordClashTreeAnalyze,
+    wordClashPairs, wordListUnion, wordProgVariables, wordProgReadVars,
+    wordProgWriteVars, wordExpReadVars,
+    wordAllocateVarsWithSpillsAndPreferences,
+    wordGreedyAllocateWithSpillsAndPreferences,
+    wordPreferenceLocationRegisters,
+    wordColourCandidatesWithSpillPreferences,
+    wordUsedLocationRegisters, wordColourCandidates, wordFirstAvailable,
+    wordNeighbours, wordPreferredRegister, wordRemoveRegisters,
+    wordAllocatableRegisters, wordSpillAllocationRespectsClashes,
+    wordSpecialArithLocationsSafe, wordProgSpecialLocationsSafe,
+    wordProgPreferenceEdges, lookupNatInfo, List.eraseDups,
+    List.eraseDupsBy, List.eraseDupsBy.loop]
+
 example (slots : List Nat) (edges : List (Nat × Nat))
     (state : WordSpillState)
     (hstate : wordAllocateVarsWithSpills slots edges = some state)

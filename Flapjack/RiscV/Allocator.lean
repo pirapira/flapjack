@@ -1278,6 +1278,49 @@ def wordUsedLocationRegisters (names : List Nat)
         | some (.stack _) | none => []
       registers ++ wordUsedLocationRegisters names locations
 
+def wordPreferenceLocationRegisters (name : Nat)
+    (preferences : List (Nat × Nat))
+    (locations : NatInfoMap WordLocation) : List Nat :=
+  match preferences with
+  | [] => []
+  | (left, right) :: preferences =>
+      if left == name then
+        match lookupNatInfo right locations with
+        | some (.register register) =>
+            register :: wordPreferenceLocationRegisters name preferences locations
+        | some (.stack _) | none =>
+            wordPreferenceLocationRegisters name preferences locations
+      else if right == name then
+        match lookupNatInfo left locations with
+        | some (.register register) =>
+            register :: wordPreferenceLocationRegisters name preferences locations
+        | some (.stack _) | none =>
+            wordPreferenceLocationRegisters name preferences locations
+      else
+        wordPreferenceLocationRegisters name preferences locations
+
+def wordColourCandidatesWithSpillPreferences (name : Nat)
+    (preferences : List (Nat × Nat))
+    (locations : NatInfoMap WordLocation) : List Nat :=
+  wordPreferenceLocationRegisters name preferences locations ++
+    wordColourCandidates name
+
+def wordGreedyAllocateWithSpillsAndPreferences : List Nat →
+    List (Nat × Nat) → List (Nat × Nat) → WordSpillState → WordSpillState
+  | [], _, _, state => state
+  | name :: names, edges, preferences, state =>
+      let forbidden :=
+        wordUsedLocationRegisters (wordNeighbours name edges) state.locations
+      let candidates := wordColourCandidatesWithSpillPreferences name
+        preferences state.locations
+      let state := match wordFirstAvailable candidates forbidden with
+        | some register =>
+            { state with locations := (name, .register register) :: state.locations }
+        | none =>
+            { locations := (name, .stack state.nextSpill) :: state.locations,
+              nextSpill := state.nextSpill + 1 }
+      wordGreedyAllocateWithSpillsAndPreferences names edges preferences state
+
 def wordGreedyAllocateWithSpills : List Nat → List (Nat × Nat) →
     WordSpillState → WordSpillState
   | [], _, state => state
@@ -1308,6 +1351,13 @@ def wordAllocateVarsWithSpills (slots : List Nat)
     (edges : List (Nat × Nat)) : Option WordSpillState :=
   let state := wordGreedyAllocateWithSpills slots.eraseDups edges
     { locations := [], nextSpill := 0 }
+  if wordSpillAllocationRespectsClashes edges state.locations then some state
+  else none
+
+def wordAllocateVarsWithSpillsAndPreferences (slots : List Nat)
+    (edges preferences : List (Nat × Nat)) : Option WordSpillState :=
+  let state := wordGreedyAllocateWithSpillsAndPreferences slots.eraseDups
+    edges preferences { locations := [], nextSpill := 0 }
   if wordSpillAllocationRespectsClashes edges state.locations then some state
   else none
 
@@ -1497,6 +1547,22 @@ def wordAllocateSsaProgramWithClashTreeWithSpills (state : WordSsaState)
       else
         none
 
+def wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences
+    (state : WordSsaState) (program : WordProg α) :
+    Option (WordSsaState × WordProg α × WordSpillState) :=
+  let (state, program) := wordSsaRenameProgram state program
+  let (liveIn, edges) :=
+    wordClashTreeAnalyze (wordClashTree program []) []
+  let preferences := wordProgPreferenceEdges program
+  match wordAllocateVarsWithSpillsAndPreferences
+      (wordProgVariables program ++ liveIn) edges preferences with
+  | none => none
+  | some allocation =>
+      if wordProgSpecialLocationsSafe allocation.locations program = true then
+        some (state, program, allocation)
+      else
+        none
+
 theorem wordAllocateSsaProgramWithSpills_maps_variables
     (state : WordSsaState) (program : WordProg α)
     (renamedState : WordSsaState) (renamedProgram : WordProg α)
@@ -1566,6 +1632,15 @@ theorem wordAllocateVarsWithSpills_sound (slots : List Nat)
     (hstate : wordAllocateVarsWithSpills slots edges = some state) :
     wordSpillAllocationRespectsClashes edges state.locations = true := by
   simp [wordAllocateVarsWithSpills] at hstate
+  rcases hstate with ⟨hcheck, heq⟩
+  simpa [heq] using hcheck
+
+theorem wordAllocateVarsWithSpillsAndPreferences_sound (slots : List Nat)
+    (edges preferences : List (Nat × Nat)) (state : WordSpillState)
+    (hstate : wordAllocateVarsWithSpillsAndPreferences slots edges preferences =
+      some state) :
+    wordSpillAllocationRespectsClashes edges state.locations = true := by
+  simp [wordAllocateVarsWithSpillsAndPreferences] at hstate
   rcases hstate with ⟨hcheck, heq⟩
   simpa [heq] using hcheck
 

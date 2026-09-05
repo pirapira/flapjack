@@ -60,6 +60,37 @@ def executeInstructionsWithFfi [NeZero width] (host : WordFfiHost width)
       let state ← executeWithFfi host state instruction
       executeInstructionsWithFfi host state instructions
 
+def executeCodeUntilWithFfi [NeZero width] (host : WordFfiHost width) :
+    Nat → Word width → Word width → List (Instruction width) → State width →
+      Option (State width)
+  | 0, _, _, _, _ => none
+  | fuel + 1, start, returnAddress, code, state =>
+      if state.pc = returnAddress then some state
+      else
+        let byteOffset := (state.pc - start).toNat
+        if byteOffset % 4 ≠ 0 then none
+        else
+          let index := byteOffset / 4
+          match code[index]? with
+          | some instruction => do
+              let nextState ← executeWithFfi host state instruction
+              executeCodeUntilWithFfi host fuel start returnAddress code nextState
+          | none => none
+
+def executeFunctionAtWithFfi [NeZero width] (host : WordFfiHost width)
+    (fuel : Nat) (start entry returnAddress : Word width)
+    (parameters : List (Fin 32)) (code : List (Instruction width))
+    (returns : List (Fin 32)) (arguments : List (Word width))
+    (state : State width) : Option (List (Word width)) :=
+  if parameters.length != arguments.length then none
+  else
+    let initialized :=
+      (parameters.zip arguments).foldl
+        (fun state (register, value) => writeRegister state register value)
+        { state with pc := entry }
+    (executeCodeUntilWithFfi host fuel start returnAddress code initialized).map
+      (fun state => returns.map (readRegister state))
+
 theorem lookupWordFfiService_shape :
     lookupWordFfiService "sum" [("sum", 7), ("other", 8)] = some 7 := by
   rfl

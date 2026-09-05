@@ -90,4 +90,19 @@ example :
         (fun state => readRegister state 6) = some 33 := by
   native_decide
 
+def ffiRunnerHost : WordFfiHost 64 :=
+  fun service configuration configurationLength array arrayLength state =>
+    if service = 7 then
+      some { (writeRegister state 6
+        (configuration + configurationLength + array + arrayLength)) with
+        pc := state.pc + 4 }
+    else none
+
+example :
+    executeFunctionAtWithFfi ffiRunnerHost 20 0 0 28 []
+      [.addi 10 0 10, .addi 11 0 1, .addi 12 0 20, .addi 13 0 2,
+        .addi 14 0 7, .ecall, .jalr 0 1 0]
+      [6] [] (writeRegister (zeroState 64) 1 28) = some [33] := by
+  native_decide
+
 end Flapjack

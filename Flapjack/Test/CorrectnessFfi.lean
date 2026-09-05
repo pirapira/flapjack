@@ -70,4 +70,32 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
       registerOfNat, wordFindVar, lookupNatInfo, writeRegister,
       readRegister]
 
+def sourceFfiDeclarations : List (Decl (Word 64)) :=
+  [.function
+    { name := "ffiId", inline := false, exported := false,
+      params := [("x", .one)],
+      body := .seq
+        (.extCall "inc" (.var .local "x") (.const 0)
+          (.const 0) (.const 0))
+        (.return (.var .local "result")), returnShape := .one },
+   .function
+    { name := "main", inline := false, exported := true,
+      params := [],
+      body := .decCall "answer" .one "ffiId"
+        [.const (BitVec.ofNat 64 41)]
+        (.return (.var .local "answer")), returnShape := .one }]
+
+def sourceFfiPipeline : FlapjackRiscVResult 64 :=
+  compileFlapjackRiscVWithFfi (width := 64) .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+    [("inc", 7)] sourceFfiDeclarations
+
+example :
+    sourceFfiPipeline.pipeline.word.length = 2 &&
+      sourceFfiPipeline.functions.all (fun (_, _, artifact) => artifact.isSome) := by
+  native_decide
+
+example : sourceFfiPipeline.callLinkedFunctions.isSome := by
+  native_decide
+
 end Flapjack

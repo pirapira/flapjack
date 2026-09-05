@@ -418,6 +418,9 @@ definitions, pass ordering, examples, and proof obligations.
   context is found with its mapped register name.
 - [x] Compose the single-parameter Loop and Word binding lemmas into an
   explicit call-boundary state-agreement theorem.
+- [x] Prove the handler-free single-parameter call simulation boundary,
+  including argument transfer, callee-frame setup, return propagation, and
+  preservation of the caller's mapped locals.
 - [x] Prove mapped-local preservation across compiled register-register
   ADD/SUB/AND/OR/XOR assignments, including unchanged non-destination locals.
 - [x] Prove mapped-local preservation across compiled LSL/LSR assignments,

@@ -22,6 +22,11 @@ structure WordStackConfig where
   scratch : Nat
   stackBase : Nat
   addressScratch : Nat := 29
+  perf : Bool := false
+  frameOffset : Nat := 0
+  returnLabel : Nat := 0
+  entryLabel : Nat := 0
+  handlerLabel : Nat := 0
   deriving Repr
 
 def wordStackLocation (config : WordStackConfig) (name : Nat) :
@@ -163,6 +168,95 @@ def wordStackMemoryInst (config : WordStackConfig) (operator : WordMemOp)
   | .store16 => wordStackStoreInst config operator sourceOrDestination address
   | .store32 => wordStackStoreInst config operator sourceOrDestination address
 
+/-! The stack program has explicit control-flow and call carriers.  These
+    helpers materialize spilled condition operands and implement the Word
+    calling convention's even-numbered result registers.  The labels are
+    supplied by the enclosing linker through `WordStackConfig`; keeping them
+    in the configuration makes this boundary executable without baking in a
+    particular code layout. -/
+
+def wordStackReadRegister (config : WordStackConfig) (name temporary : Nat) :
+    Option (StackProg α × Nat) := do
+  let location ← wordStackLocation config name
+  match location with
+  | .register register => pure (.skip, register)
+  | .stack slot =>
+      pure (.stackLoad temporary (wordStackOffset config slot), temporary)
+
+def wordStackConditionOperands (config : WordStackConfig) (condition : Nat)
+    (right : WordRegImm α) :
+    Option (StackProg α × Nat × WordRegImm α) := do
+  let (conditionPrelude, conditionRegister) ←
+    wordStackReadRegister config condition config.scratch
+  let (rightPrelude, rightOperand) ← match right with
+    | .imm value => pure (.skip, .imm value)
+    | .reg name => do
+        let (prelude, register) ←
+          wordStackReadRegister config name config.addressScratch
+        pure (prelude, .reg register)
+  pure (wordStackJoin conditionPrelude rightPrelude,
+    conditionRegister, rightOperand)
+
+def wordStackStoreName : WordStore α → Option StackStore
+  | .temp _ => none
+  | .currHeap => some .currHeap
+  | .heapLength => some .heapLength
+
+def wordStackMoveFromPhysical (config : WordStackConfig)
+    (destination source : Nat) : Option (StackProg α) := do
+  let location ← wordStackLocation config destination
+  match location with
+  | .register register =>
+      if register = source then pure .skip
+      else pure (.arith .or register source source)
+  | .stack slot =>
+      pure (.seq (.arith .or config.scratch source source)
+        (.stackStore config.scratch (wordStackOffset config slot)))
+
+def wordStackMoveToPhysical (config : WordStackConfig)
+    (source destination : Nat) : Option (StackProg α) := do
+  let location ← wordStackLocation config source
+  match location with
+  | .register register =>
+      if register = destination then pure .skip
+      else pure (.arith .or destination register register)
+  | .stack slot =>
+      pure (.seq (.stackLoad config.scratch (wordStackOffset config slot))
+        (.arith .or destination config.scratch config.scratch))
+
+def wordStackMovesFromPhysical (config : WordStackConfig) :
+    List Nat → Nat → Option (StackProg α)
+  | [], _ => some .skip
+  | destination :: destinations, source => do
+      let first ← wordStackMoveFromPhysical config destination source
+      let rest ← wordStackMovesFromPhysical config destinations (source + 2)
+      pure (wordStackJoin first rest)
+termination_by destinations => sizeOf destinations
+decreasing_by all_goals decreasing_trivial
+
+def wordStackMovesToPhysical (config : WordStackConfig) :
+    List Nat → Nat → Option (StackProg α)
+  | [], _ => some .skip
+  | source :: sources, destination => do
+      let first ← wordStackMoveToPhysical config source destination
+      let rest ← wordStackMovesToPhysical config sources (destination + 2)
+      pure (wordStackJoin first rest)
+termination_by sources => sizeOf sources
+decreasing_by all_goals decreasing_trivial
+
+def wordStackReturnCode (config : WordStackConfig) :
+    Option (List Nat × List Nat) → Option (StackProg α)
+  | none => some .skip
+  | some (destinations, _) =>
+      wordStackMovesFromPhysical config destinations 2
+
+def wordStackReturn (config : WordStackConfig) (values : List Nat) :
+    Option (StackProg α) := do
+  let moves ← wordStackMovesToPhysical config values 2
+  match values with
+  | [] => pure moves
+  | _ => pure (wordStackJoin moves (.return 2))
+
 def wordToStackInst (config : WordStackConfig) : WordInst → Option (StackProg α)
   | .mem operator sourceOrDestination address =>
       wordStackMemoryInst config operator sourceOrDestination address
@@ -243,10 +337,49 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       wordStackMove config destination source
   | .inst instruction =>
       wordToStackInst config instruction
+  | .store (.var address) value =>
+      wordStackMemoryInst config .store value address
+  | .set store (.var source) => do
+      let store ← wordStackStoreName store
+      let (prelude, register) ←
+        wordStackReadRegister config source config.scratch
+      pure (wordStackJoin prelude (.set store register))
   | .seq first second => do
       let first ← wordToStackProg config first
       let second ← wordToStackProg config second
       pure (.seq first second)
+  | .ite operator condition right thenBranch elseBranch => do
+      let (prelude, condition, right) ←
+        wordStackConditionOperands config condition right
+      let thenBranch ← wordToStackProg config thenBranch
+      let elseBranch ← wordToStackProg config elseBranch
+      pure (wordStackJoin prelude
+        (.ite operator condition right thenBranch elseBranch))
+  | .loop _ body _ => do
+      let body ← wordToStackProg config body
+      pure (.loop body)
+  | .break label => pure (.break label)
+  | .continue label => pure (.continue label)
+  | .raise exception => pure (wordToStackRaise exception)
+  | .return _ values => wordStackReturn config values
+  | .tick => pure .tick
+  | .call returns (some target) arguments none => do
+      let returnCode ← wordStackReturnCode config returns
+      let destinations := returns.map (fun result => result.1) |>.getD []
+      pure (wordToStackCallNoHandler config.perf target arguments.length
+        config.frameOffset config.scratch destinations returnCode
+        config.returnLabel config.entryLabel)
+  | .call returns (some target) arguments (some (exception, body)) => do
+      let returnCode ← wordStackReturnCode config returns
+      let destinations := returns.map (fun result => result.1) |>.getD []
+      let handlerCode ← wordToStackProg config body
+      pure (wordToStackCallWithHandler config.perf target arguments.length
+        config.frameOffset config.scratch returnCode handlerCode
+        config.returnLabel config.entryLabel config.handlerLabel exception)
+  | .ffi function configuration configurationLength array arrayLength _ =>
+      pure (wordToStackFfi function configuration configurationLength array arrayLength)
+  | .shareInst operator name (.var address) =>
+      wordStackMemoryInst config operator name address
   | _ => none
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
@@ -305,5 +438,8 @@ theorem wordStackDivInst_spill_operands :
           (.stackStore 31 13)) : StackProg Nat) := by
   simp [wordStackDivInst, wordStackJoin, wordStackLocation,
     wordStackOffset, lookupNatInfo]
+
+
+
 
 end Flapjack.RiscV

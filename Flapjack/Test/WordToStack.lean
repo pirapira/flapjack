@@ -51,6 +51,69 @@ example :
           (.stackStore 31 13)) : StackProg Nat) := by
   exact wordStackDivInst_spill_operands
 
+example :
+    wordToStackProg
+        { locations := [(0, .stack 2), (1, .stack 3)],
+          scratch := 31, stackBase := 10 }
+        ((.ite .equal 0 (.reg 1) .skip .skip) : WordProg Nat) =
+      some (.seq (.seq (.stackLoad 31 12) (.stackLoad 29 13))
+        (.ite .equal 31 (.reg 29) .skip .skip) : StackProg Nat) := by
+  simp [wordToStackProg, wordStackConditionOperands, wordStackReadRegister,
+    wordStackJoin, wordStackLocation, wordStackOffset, lookupNatInfo]
+
+example :
+    wordToStackProg
+        { locations := [(0, .stack 2)], scratch := 31, stackBase := 10 }
+        ((.return 0 [0]) : WordProg Nat) =
+      some (.seq (.seq (.stackLoad 31 12) (.arith .or 2 31 31)) (.return 2) :
+        StackProg Nat) := by
+  simp [wordToStackProg, wordStackReturn, wordStackMovesToPhysical,
+    wordStackMoveToPhysical, wordStackLocation, wordStackOffset,
+    lookupNatInfo, wordStackJoin]
+
+example :
+    wordToStackProg
+        { locations := [(0, .register 5)], scratch := 31, stackBase := 10 }
+        ((.set .currHeap (.var 0)) : WordProg Nat) =
+      some (.set .currHeap 5 : StackProg Nat) := by
+  simp [wordToStackProg, wordStackStoreName, wordStackReadRegister,
+    wordStackLocation, lookupNatInfo, wordStackJoin]
+
+example :
+    wordToStackProg
+        { locations := [], scratch := 31, stackBase := 10 }
+        ((.loop [] (.break 0) []) : WordProg Nat) =
+      some (.loop (.break 0) : StackProg Nat) := by
+  simp [wordToStackProg]
+
+example :
+    wordToStackProg
+        { locations := [], scratch := 31, stackBase := 10 }
+        ((.ffi "sum" 2 3 4 5 []) : WordProg Nat) =
+      some (.ffi "sum" 2 3 4 5 0 : StackProg Nat) := by
+  simp [wordToStackProg, wordToStackFfi]
+
+example :
+    (wordToStackProg
+        { locations := [(0, .register 5)], scratch := 31, stackBase := 6,
+          returnLabel := 20, entryLabel := 21 }
+        ((.call (some ([0], [])) (some 7) [0] none) : WordProg Nat)).isSome =
+      true := by
+  simp [wordToStackProg, wordStackReturnCode, wordStackMovesFromPhysical,
+    wordStackMoveFromPhysical, wordStackLocation, lookupNatInfo]
+
+example :
+    (wordToStackProg
+        { locations := [(0, .register 5)], scratch := 31, stackBase := 6,
+          returnLabel := 20, entryLabel := 21, handlerLabel := 30 }
+        ((.call none (some 7) [0] (some (1, .raise 0))) : WordProg Nat)).isSome =
+      true := by
+  simp [wordToStackProg, wordStackReturnCode, wordStackMovesFromPhysical,
+    wordStackMoveFromPhysical, wordStackLocation, wordStackOffset,
+    lookupNatInfo, wordToStackCallWithHandler, wordToStackRaise,
+    stackSeq, stackArgs, stackMove, stackPushHandler, stackHandlerArgs,
+    wordStackJoin]
+
 example [NeZero width]
     (state final : WordStackState width)
     (heval : (wordStackMove (α := Nat)

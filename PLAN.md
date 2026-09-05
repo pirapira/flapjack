@@ -344,6 +344,8 @@ definitions, pass ordering, examples, and proof obligations.
   and data scratch registers in the StackLang boundary.
 - [x] Lower spilled Word division operands and destinations through the
   StackLang arithmetic boundary.
+- [x] Extend the Word-to-Stack boundary through conditions, loops, returns,
+  calls, exception handlers, special stores, and FFI operations.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
   multiplication (`MULHU`) followed by low-half multiplication (`MUL`),
   including the target's high-destination/source non-aliasing precondition.

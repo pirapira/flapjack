@@ -20,6 +20,8 @@ structure StackRemoveConfig where
   addressScratch : Nat
   stackPointer : Nat
   bytesInWord : Nat
+  stackBase : Nat
+  wordShift : Nat
   deriving Repr
 
 /- The order is the 1-based order of CakeML's `store_list`. -/
@@ -129,6 +131,40 @@ def stackRemoveStackStoreAny (config : StackRemoveConfig)
       (.arith .add config.addressScratch config.stackPointer offsetRegister)
       (.inst (.mem .store config.scratch config.addressScratch)))
 
+def stackRemoveOpCurrHeap (config : StackRemoveConfig) (operator : BinOp)
+    (destination source : Nat) : StackProg α :=
+  .arith operator destination source config.currHeap
+
+def stackRemoveStackGetSize (config : StackRemoveConfig) (register : Nat) :
+    StackProg α :=
+  stackRemoveJoin (stackRemoveMove register config.stackPointer)
+    (stackRemoveJoin
+      (.arith .sub register register config.stackBase)
+      (stackRemoveJoin
+        (.const config.scratch config.wordShift)
+        (.shift .lsr register register config.scratch)))
+
+def stackRemoveStackSetSize (config : StackRemoveConfig) (register : Nat) :
+    StackProg α :=
+  stackRemoveJoin
+    (.const config.scratch config.wordShift)
+    (stackRemoveJoin
+      (.shift .lsl register register config.scratch)
+      (stackRemoveJoin
+        (.arith .or config.stackPointer config.stackBase config.stackBase)
+        (.arith .add config.stackPointer config.stackPointer register)))
+
+def stackRemoveBitmapLoad (config : StackRemoveConfig)
+    (destination address : Nat) : StackProg α :=
+  stackRemoveJoin (stackRemoveGet config destination .bitmapBase)
+    (stackRemoveJoin
+      (.arith .add destination destination address)
+      (stackRemoveJoin
+        (.const config.scratch config.wordShift)
+        (stackRemoveJoin
+          (.shift .lsl destination destination config.scratch)
+          (.inst (.mem .load destination destination)))))
+
 def stackRemoveFuel : Nat → StackRemoveConfig → StackProg α → StackProg α
   | 0, _, program => program
   | fuel + 1, _, .skip => .skip
@@ -144,8 +180,8 @@ def stackRemoveFuel : Nat → StackRemoveConfig → StackProg α → StackProg �
       .arith operator destination left right
   | fuel + 1, _, .shift operator destination left right =>
       .shift operator destination left right
-  | fuel + 1, _, .opCurrHeap operator destination source =>
-      .opCurrHeap operator destination source
+  | fuel + 1, config, .opCurrHeap operator destination source =>
+      stackRemoveOpCurrHeap config operator destination source
   | fuel + 1, config, .call returnHandler target handler =>
       match returnHandler, handler with
       | none, none => .call none target none
@@ -197,9 +233,12 @@ def stackRemoveFuel : Nat → StackRemoveConfig → StackProg α → StackProg �
       stackRemoveStackLoad config register offset
   | fuel + 1, config, .stackLoadAny register offsetRegister =>
       stackRemoveStackLoadAny config register offsetRegister
-  | fuel + 1, _, .stackGetSize register => .stackGetSize register
-  | fuel + 1, _, .stackSetSize register => .stackSetSize register
-  | fuel + 1, _, .bitmapLoad destination address => .bitmapLoad destination address
+  | fuel + 1, config, .stackGetSize register =>
+      stackRemoveStackGetSize config register
+  | fuel + 1, config, .stackSetSize register =>
+      stackRemoveStackSetSize config register
+  | fuel + 1, config, .bitmapLoad destination address =>
+      stackRemoveBitmapLoad config destination address
   | fuel + 1, _, .halt register => .halt register
 
 /- A generous default keeps the public pass total and executable.  The worker

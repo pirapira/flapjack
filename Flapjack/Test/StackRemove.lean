@@ -4,7 +4,7 @@ namespace Flapjack
 
 def stackRemoveTestConfig : StackRemoveConfig :=
   { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
-    stackPointer := 20, bytesInWord := 8 }
+    stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
 
 example :
     stackRemove stackRemoveTestConfig (.get 4 .heapLength : StackProg Nat) =
@@ -72,6 +72,40 @@ example :
         (.seq (.arith .add 29 20 7) (.inst (.mem .store 31 29))) := by
   simp [stackRemove, stackRemoveFuel, stackRemoveStackStoreAny,
     stackRemoveMove, stackRemoveJoin, stackRemoveTestConfig]
+
+example :
+    stackRemove stackRemoveTestConfig (.opCurrHeap .add 6 7 : StackProg Nat) =
+      .arith .add 6 7 12 := by
+  simp [stackRemove, stackRemoveFuel, stackRemoveOpCurrHeap,
+    stackRemoveTestConfig]
+
+example :
+    stackRemove stackRemoveTestConfig (.stackGetSize 6 : StackProg Nat) =
+      .seq (.arith .or 6 20 20)
+        (.seq (.arith .sub 6 6 21)
+          (.seq (.const 31 3) (.shift .lsr 6 6 31))) := by
+  simp [stackRemove, stackRemoveFuel, stackRemoveStackGetSize,
+    stackRemoveMove, stackRemoveJoin, stackRemoveTestConfig]
+
+example :
+    stackRemove stackRemoveTestConfig (.stackSetSize 6 : StackProg Nat) =
+      .seq (.const 31 3)
+        (.seq (.shift .lsl 6 6 31)
+          (.seq (.arith .or 20 21 21) (.arith .add 20 20 6))) := by
+  simp [stackRemove, stackRemoveFuel, stackRemoveStackSetSize,
+    stackRemoveJoin, stackRemoveTestConfig]
+
+example :
+    stackRemove stackRemoveTestConfig (.bitmapLoad 6 7 : StackProg Nat) =
+      .seq
+        (.seq (.seq (.const 29 11) (.arith .add 29 10 29))
+          (.inst (.mem .load 6 29)))
+        (.seq (.arith .add 6 6 7)
+          (.seq (.const 31 3)
+            (.seq (.shift .lsl 6 6 31) (.inst (.mem .load 6 6))))) := by
+  simp [stackRemove, stackRemoveFuel, stackRemoveBitmapLoad,
+    stackRemoveGet, stackRemoveAddress, stackRemoveJoin,
+    stackStorePosition, stackRemoveTestConfig]
 
 example :
     stackRemove stackRemoveTestConfig (.get 4 .currHeap : StackProg Nat) =

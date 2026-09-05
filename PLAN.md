@@ -571,6 +571,8 @@ definitions, pass ordering, examples, and proof obligations.
   `CurrHeap`, stack-frame allocation/free, and fixed/dynamic stack accesses,
   recursively rewriting nested control-flow and call bodies into explicit
   word-memory operations.
+- [x] Lower the compact remaining StackLang store-removal equations for
+  `OpCurrHeap`, stack-size conversion, and bitmap loads.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

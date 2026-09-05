@@ -1650,6 +1650,86 @@ theorem loopRepeat_mapped_locals [NeZero width]
               | returned middleLoop values | raised middleLoop exception =>
                   exact False.elim (by simpa [loopResultMappedToRiscV] using hbodyResult)
 
+theorem loopToWord_loop_simulation [NeZero width]
+    (context : WordContext)
+    (loopState : LoopState (RiscV.Word width))
+    (wordState : RiscV.State width)
+    (liveIn liveOut : List Nat)
+    (body : LoopProg (RiscV.Word width))
+    (fuel : Nat)
+    (loopResult : LoopResult (RiscV.Word width))
+    (wordResult : RiscV.WordLoopResult width)
+    (hbody : ∀ fuel loopState state loopResult wordResult,
+      loopLocalsMappedToRiscV context loopState.locals state →
+      evalLoopProg fuel loopState body = some loopResult →
+      RiscV.evalWordLoopProg fuel state (loopToWordProg context body) =
+        some wordResult →
+      loopResultMappedToRiscV context loopResult wordResult)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals wordState)
+    (hloop :
+      evalLoopProg (fuel + 1) loopState
+        (.loop liveIn body liveOut) = some loopResult)
+    (hword :
+      RiscV.evalWordLoopProg (fuel + 3) wordState
+        (loopToWordProg context (.loop liveIn body liveOut)) =
+          some wordResult) :
+    loopResultMappedToRiscV context loopResult wordResult := by
+  have hloop' : evalLoopRepeat fuel loopState body = some loopResult := by
+    simpa [evalLoopProg] using hloop
+  cases htick : RiscV.evalWordProg wordState (.tick) with
+  | none =>
+      simp [loopToWordProg, RiscV.evalWordLoopProg, htick] at hword
+  | some tickedWordState =>
+      have hlocals' :
+          loopLocalsMappedToRiscV context loopState.locals tickedWordState :=
+        loopToWord_tick_preserves_mapped_locals context loopState.locals
+          wordState hlocals tickedWordState htick
+      cases hbodyWord :
+          RiscV.evalWordLoopRepeat fuel tickedWordState
+            (loopToWordProg context body) with
+      | none =>
+          simp [loopToWordProg, RiscV.evalWordLoopProg, htick,
+            hbodyWord] at hword
+      | some bodyWordResult =>
+          have hrepeat := loopRepeat_mapped_locals context body
+            (loopToWordProg context body) hbody fuel loopState tickedWordState
+            loopResult bodyWordResult hlocals' hloop' hbodyWord
+          cases bodyWordResult with
+          | broke middleWord label =>
+              have hword' :
+                  some (.broke middleWord label) = some wordResult := by
+                simpa [loopToWordProg, RiscV.evalWordLoopProg, htick,
+                  hbodyWord] using hword
+              cases hword'
+              exact hrepeat
+          | continued middleWord label =>
+              have hword' :
+                  some (.continued middleWord label) = some wordResult := by
+                simpa [loopToWordProg, RiscV.evalWordLoopProg, htick,
+                  hbodyWord] using hword
+              cases hword'
+              exact hrepeat
+          | normal middleWord =>
+              cases hfinalTick : RiscV.evalWordProg middleWord (.tick) with
+              | none =>
+                  simp [loopToWordProg, RiscV.evalWordLoopProg, htick,
+                    hbodyWord, hfinalTick] at hword
+              | some finalWord =>
+                  have hword' :
+                      some (.normal finalWord) = some wordResult := by
+                    simpa [loopToWordProg, RiscV.evalWordLoopProg, htick,
+                      hbodyWord, hfinalTick] using hword
+                  cases hword'
+                  cases loopResult with
+                  | normal finalLoop =>
+                      exact loopToWord_tick_preserves_mapped_locals context
+                        finalLoop.locals middleWord hrepeat finalWord hfinalTick
+                  | returned finalLoop values
+                  | broke finalLoop label
+                  | continued finalLoop label
+                  | raised finalLoop exception =>
+                      simp [loopResultMappedToRiscV] at hrepeat
+
 theorem bindWordRegisters_single_parameter [NeZero width]
     (context : WordContext) (state : RiscV.State width)
     (name : Nat) (value : RiscV.Word width) (register : Fin 32)

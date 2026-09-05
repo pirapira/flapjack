@@ -142,6 +142,44 @@ example :
     (hlocals := memoryCorrectness_mappedLocals)
 
 example :
+    loopResultMappedToRiscV memoryCorrectnessContext
+      (.normal memoryCorrectnessLoopState)
+      (.normal
+        (RiscV.execute
+          (RiscV.execute memoryCorrectnessWordState (.addi 0 0 0))
+          (.addi 0 0 0))) := by
+  apply loopToWord_loop_simulation
+    (context := memoryCorrectnessContext)
+    (loopState := memoryCorrectnessLoopState)
+    (wordState := memoryCorrectnessWordState)
+    (liveIn := []) (liveOut := [])
+    (body := (.break 0 : LoopProg (RiscV.Word 64)))
+    (fuel := 2)
+    (loopResult := .normal memoryCorrectnessLoopState)
+    (wordResult := .normal
+      (RiscV.execute
+        (RiscV.execute memoryCorrectnessWordState (.addi 0 0 0))
+        (.addi 0 0 0)))
+    (hbody := by
+      intro bodyFuel loopState state loopResult wordResult hlocals hloop hword
+      cases bodyFuel with
+      | zero => simp [evalLoopProg] at hloop
+      | succ bodyFuel =>
+          have hloop' : loopResult = .broke loopState 0 := by
+            simpa [evalLoopProg] using hloop.symm
+          have hword' : wordResult = .broke state 0 := by
+            simpa [RiscV.evalWordLoopProg, loopToWordProg] using hword.symm
+          subst loopResult
+          subst wordResult
+          exact ⟨rfl, hlocals⟩)
+    (hlocals := memoryCorrectness_mappedLocals)
+    (hloop := by simp [evalLoopProg, evalLoopRepeat])
+    (hword := by
+      simp [loopToWordProg, RiscV.evalWordLoopProg,
+        RiscV.evalWordLoopRepeat, RiscV.evalWordProg, RiscV.execute,
+        RiscV.writeRegister, RiscV.nextPc, RiscV.readRegister])
+
+example :
     ∀ resultState,
       RiscV.evalWordProg memoryCorrectnessWordState
         (loopToWordProg memoryCorrectnessContext

@@ -379,6 +379,8 @@ definitions, pass ordering, examples, and proof obligations.
   source-memory versus compiled-RISC-V correctness theorem.
 - [x] Prove generic fuel-inductive Loop/Word repeat preservation for normal,
   break, and continue control results.
+- [x] Compose repeat preservation with the generated entry/exit ticks and prove
+  the outer Loop-to-Word loop simulation rule.
 - [x] Prove the one-step global-state projection invariant for every Loop
   constructor under the no-global-writes syntactic side condition.
 - [x] Lift the global-state projection invariant to arbitrary fuel, including

@@ -490,6 +490,8 @@ definitions, pass ordering, examples, and proof obligations.
   including the nonzero-divisor condition and DIVU result agreement.
 - [x] Prove mapped-local preservation across compiled `locValue` moves,
   including preservation of all non-destination locals.
+- [x] Prove mapped-local preservation across ordinary variable assignments,
+  which lower to the same register move as `locValue`.
 - [x] Prove successful two-step Loop/Word sequence evaluation decomposes
   through matching intermediate Loop and machine states.
 - [x] Add the compositional sequence simulation rule that chains mapped-local

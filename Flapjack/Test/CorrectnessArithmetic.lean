@@ -80,4 +80,26 @@ example :
     (hdestination_nonzero := by decide)
     (hnoalias := longMulCorrectness_noalias)
 
+example :
+    ∀ resultState,
+      RiscV.evalWordProg longMulCorrectnessWordState
+        (loopToWordProg longMulCorrectnessContext
+          (.assign 2 (.var 1))) = some resultState →
+      loopLocalsMappedToRiscV longMulCorrectnessContext
+        (updateLoopLocal longMulCorrectnessLoopState.locals 2
+          (BitVec.ofNat 64 7)) resultState := by
+  apply loopToWord_assign_var_preserves_mapped_locals
+    (context := longMulCorrectnessContext)
+    (loopState := longMulCorrectnessLoopState)
+    (state := longMulCorrectnessWordState)
+    (destination := 2) (source := 1)
+    (destinationRegister := 2) (sourceRegister := 3)
+    (sourceValue := BitVec.ofNat 64 7)
+    (hlocals := longMulCorrectness_mappedLocals)
+    (hsource := by simp [longMulCorrectnessLoopState])
+    (hdestination := by native_decide)
+    (hsource_register := by native_decide)
+    (hdestination_nonzero := by decide)
+    (hnoalias := longMulCorrectness_noalias)
+
 end Flapjack

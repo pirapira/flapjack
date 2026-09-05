@@ -846,4 +846,47 @@ theorem loopToWord_div_combined_simulation_fuel [NeZero width]
   · simpa [evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg] using hloop
   · simpa [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi] using hword
 
+theorem loopToWord_primitive_addCarry_combined_simulation_fuel [NeZero width]
+    (context : WordContext)
+    (functions : List (Nat × List Nat × LoopProg (RiscV.Word width)))
+    (ffiHandler : FunName → RiscV.Word width → RiscV.Word width →
+      RiscV.Word width → RiscV.Word width →
+      LoopState (RiscV.Word width) → Option (LoopState (RiscV.Word width)))
+    (wordFunctions : List (Nat × List Nat × WordProg (RiscV.Word width)))
+    (wordHandler : FunName → RiscV.Word width → RiscV.Word width →
+      RiscV.Word width → RiscV.Word width →
+      RiscV.State width → Option (RiscV.State width))
+    (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width)
+    (fuel : Nat)
+    (destination resultCarry left right carry : Nat)
+    (hprimitive : ∀ loopResult wordResult,
+      evalLoopProgWithPrimitive RiscV.loopPrimitiveHandler 1 loopState
+          (.primitive [destination, resultCarry] .addCarry [left, right, carry]) =
+        some loopResult →
+      RiscV.evalWordProg state
+          (loopToWordProg context
+            (.primitive [destination, resultCarry] .addCarry
+              [left, right, carry])) = some wordResult →
+      loopLocalsMappedToRiscV context (loopResultState loopResult).locals
+        wordResult) :
+    ∀ loopResult wordResult,
+      evalLoopProgWithPrimitiveCallsAndFfi RiscV.loopPrimitiveHandler functions
+          ffiHandler (fuel + 1) loopState
+          (.primitive [destination, resultCarry] .addCarry [left, right, carry]) =
+        some (.normal loopResult) →
+      RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler
+          (fuel + 1) state
+          (loopToWordProg context
+            (.primitive [destination, resultCarry] .addCarry
+              [left, right, carry])) =
+        some (.normal wordResult) →
+      loopLocalsMappedToRiscV context loopResult.locals wordResult := by
+  intro loopResult wordResult hloop hword
+  apply loopToWord_primitive_addCarry_combined_simulation
+    context functions ffiHandler wordFunctions wordHandler loopState state
+    destination resultCarry left right carry hprimitive
+  · simpa [evalLoopProgWithPrimitiveCallsAndFfi] using hloop
+  · simpa [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi] using hword
+
 end Flapjack

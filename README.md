@@ -22,6 +22,11 @@ The global heap-rewriting core is in
 [`Flapjack/PanGlobals.lean`](Flapjack/PanGlobals.lean).
 The composed pass pipeline is in
 [`Flapjack/Pipeline.lean`](Flapjack/Pipeline.lean).
+It exposes both the lower-level pass pipeline and an explicit
+`compileFlapjackTarget` boundary matching CakeML's target convention: a user
+`main` is placed first, or a zero-returning `main` is generated when absent;
+the corresponding RISC-V entry points are `compileFlapjackRiscVTarget` and
+`compileFlapjackRiscVTargetWithFfi`.
 Core structured statement lowering and top-level function assembly are in
 [`Flapjack/Compile.lean`](Flapjack/Compile.lean).
 The first executable local/memory semantics and preservation lemmas are in

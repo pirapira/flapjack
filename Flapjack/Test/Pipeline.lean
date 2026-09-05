@@ -299,4 +299,41 @@ example (left right : RiscV.Word 64) :
       [.add 5 2 3] [5] [left, right] (RiscV.zeroState 64) = some [left + right] := by
   exact RiscV.executeFunction_add_general left right
 
+example :
+    (pipelineEnsureMain (α := Nat) []).map (fun declaration =>
+      match declaration with
+      | .function function => function.name
+      | _ => "not-main") = ["main"] := by
+  native_decide
+
+example :
+    (pipelineEnsureMain (α := Nat)
+      [.decl .one "global" (.const 7),
+       .function
+         { name := "worker", inline := false, exported := false, params := [],
+           body := .return (.const 1), returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .return (.const 0), returnShape := .one }]).map
+        (fun declaration =>
+          match declaration with
+          | .function function => function.name
+          | .decl _ name _ => name
+          | .name name _ => name
+          | .exnDecl name _ => name) =
+      ["main", "global", "worker"] := by
+  native_decide
+
+example :
+    let result := compileFlapjackRiscVTarget (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+      [.function
+        { name := "worker", inline := false, exported := false, params := [],
+          body := .return (.const (BitVec.ofNat 64 7)), returnShape := .one }]
+    result.pipeline.simplified.map (fun declaration =>
+      match declaration with
+      | .function function => function.name
+      | _ => "not-function") = ["main", "worker"] := by
+  native_decide
+
 end Flapjack

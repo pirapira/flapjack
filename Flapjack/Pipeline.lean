@@ -239,6 +239,35 @@ def pipelinePrependInitializers (initializers : List (Prog α)) :
   | declaration :: declarations =>
       declaration :: pipelinePrependInitializers initializers declarations
 
+/-! `pan_to_target` makes the entry-point convention explicit: a user-written
+    `main` is moved to the front of the declaration list, while a program with
+    no `main` receives a generated function returning zero.  Keep this
+    preparation separate from `compileFlapjack`, whose lower-level form is
+    also useful for pass-local fixtures that intentionally omit `main`. -/
+def pipelineGeneratedMain [OfNat α 0] : Decl α :=
+  .function
+    { name := "main"
+      inline := false
+      exported := false
+      params := []
+      body := .return (.const 0)
+      returnShape := .one }
+
+def pipelineEnsureMainAux [OfNat α 0] (seen : List (Decl α)) :
+    List (Decl α) → List (Decl α)
+  | [] => pipelineGeneratedMain :: seen.reverse
+  | .function declaration :: declarations =>
+      if declaration.name = "main" then
+        .function declaration :: seen.reverse ++ declarations
+      else
+        pipelineEnsureMainAux (.function declaration :: seen) declarations
+  | declaration :: declarations =>
+      pipelineEnsureMainAux (declaration :: seen) declarations
+termination_by declarations => sizeOf declarations
+
+def pipelineEnsureMain [OfNat α 0] (declarations : List (Decl α)) : List (Decl α) :=
+  pipelineEnsureMainAux [] declarations
+
 def pipelineRiscVFunctions [NeZero width]
     (functions : List (Nat × List Nat × WordProg (RiscV.Word width))) :
     List (Nat × List Nat × Option (List (RiscV.Instruction width) × List (Fin 32))) :=
@@ -284,6 +313,12 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     crepe := crepe
     loop := loop
     word := word }
+
+def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    (architecture : RiscV.Architecture) (bytesInWord : α)
+    (fromNat : Nat → α) (declarations : List (Decl α)) :
+    FlapjackPipelineResult α :=
+  compileFlapjack architecture bytesInWord fromNat (pipelineEnsureMain declarations)
 
 def compileFlapjackRiscVViaStack [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
@@ -397,6 +432,19 @@ def compileFlapjackRiscV [NeZero width] [BEq (RiscV.Word width)]
     linkedFunctions := RiscV.linkRiscVFunctions 0 functions
     callLinkedFunctions := RiscV.linkWordFunctions 0 pipeline.word }
 
+def compileFlapjackRiscVTarget [NeZero width] [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width)
+    (declarations : List (Decl (RiscV.Word width))) : FlapjackRiscVResult width :=
+  let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
+  let functions := pipelineRiscVFunctions pipeline.word
+  { pipeline := pipeline
+    functions := functions
+    linkedFunctions := RiscV.linkRiscVFunctions 0 functions
+    callLinkedFunctions := RiscV.linkWordFunctions 0 pipeline.word }
+
 def compileFlapjackRiscVWithFfi [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
     [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
@@ -404,6 +452,20 @@ def compileFlapjackRiscVWithFfi [NeZero width] [BEq (RiscV.Word width)]
     (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
     (declarations : List (Decl (RiscV.Word width))) : FlapjackRiscVResult width :=
   let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
+  let functions := pipelineRiscVFunctionsWithFfi services pipeline.word
+  { pipeline := pipeline
+    functions := functions
+    linkedFunctions := RiscV.linkRiscVFunctions 0 functions
+    callLinkedFunctions := RiscV.linkWordFunctionsWithFfi 0 services pipeline.word }
+
+def compileFlapjackRiscVTargetWithFfi [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (declarations : List (Decl (RiscV.Word width))) : FlapjackRiscVResult width :=
+  let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
   let functions := pipelineRiscVFunctionsWithFfi services pipeline.word
   { pipeline := pipeline
     functions := functions

@@ -14,6 +14,7 @@ import Flapjack.Test.CorrectnessFfi
 import Flapjack.Test.Ffi
 import Flapjack.Test.Stack
 import Flapjack.Test.Lab
+import Flapjack.Test.RiscVLab
 
 /-!
 # Flapjack regression tests

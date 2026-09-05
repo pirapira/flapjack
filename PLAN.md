@@ -222,6 +222,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the core StackLang-to-LabLang flattening pass for calls, handlers,
   loops, exceptions, labels, and FFI, with executable label-counter
   regressions and a local HOL copyright notice.
+- [x] Add a concrete LabLang-to-RISC-V resolver for local label positions,
+  symbolic jumps, conditional branches, and ECALL service names, with
+  explicit failure for unsupported target operations and executable tests.
 - [x] Port the core StackLang-to-LabLang flattening pass for calls, handlers,
   loops, exceptions, labels, and FFI, with executable label-counter
   regressions and a local HOL copyright notice.

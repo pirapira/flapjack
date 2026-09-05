@@ -30,6 +30,7 @@ import Flapjack.LoopSemantics
 import Flapjack.Word
 import Flapjack.Stack
 import Flapjack.Lab
+import Flapjack.RiscV.Lab
 
 /-!
 # Flapjack in Lean

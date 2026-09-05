@@ -350,6 +350,8 @@ definitions, pass ordering, examples, and proof obligations.
   remainder, including the HOL/RISC-V zero-divisor results.
 - [x] Prove the AddCarry lowering preserves non-result registers outside its
   two destinations and x31 scratch register.
+- [x] Generalize the AddCarry result theorem to arbitrary allocator-selected
+  registers under explicit destination/source/scratch non-alias conditions.
 - [x] Lift the Loop no-memory-write projection invariant from one step to
   arbitrary fuel, including sequencing, conditionals, loop repetition, and
   control results.

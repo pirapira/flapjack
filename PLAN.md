@@ -437,6 +437,8 @@ definitions, pass ordering, examples, and proof obligations.
   explicit register and memory correspondence.
 - [x] Prove Word condition evaluation is preserved by SSA renaming, including
   immediate and register comparison operands.
+- [x] Prove SSA-renamed Word return evaluation preserves arbitrary returned
+  register lists under the register correspondence.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [x] Add the terminal return control-result bridge, including mapped state

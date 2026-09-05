@@ -1,5 +1,6 @@
 import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.Backend
+import Flapjack.WordSemantics
 
 /-!
 Semantic foundations for the SSA and colouring stages of the Word allocator.
@@ -11,6 +12,11 @@ failure result for out-of-range virtual names.
 namespace Flapjack
 
 open RiscV
+
+def wordControlResultValues [NeZero width] :
+    WordControlResult width → List (Word width)
+  | .returned _ values => values
+  | _ => []
 
 theorem evalWordExp_ssaRename [NeZero width]
     (ssa : WordSsaState) (source target : State width)
@@ -131,5 +137,42 @@ theorem evalWordCondition_ssaRename [NeZero width]
           simp_all [hcondition, hcondition', hright, hright',
             hconditionValue, hrightValue, evalWordCondition,
             wordSsaRenameRegImm]
+
+theorem evalWordReturn_ssaRename [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (fuel label : Nat) (values : List Nat) :
+    (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) (fuel + 1) source
+        (.return label values)).map wordControlResultValues =
+      (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) (fuel + 1) target
+        (.return label (values.map (wordSsaRead ssa)))).map
+        wordControlResultValues := by
+  have hvalues :
+      values.mapM (fun name => do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (values.map (wordSsaRead ssa)).mapM (fun name => do
+        let register ← registerOfNat name
+        pure (readRegister target register)) := by
+    induction values with
+    | nil => rfl
+    | cons name values ih =>
+        simp only [List.map, List.mapM_cons]
+        rw [hregister name, ih]
+  simp only [evalWordFunctionWithHandlersAndFfi, Option.map]
+  rw [hvalues]
+  cases hresult : List.mapM (fun name => do
+      let register ← registerOfNat name
+      pure (readRegister target register)) (List.map (wordSsaRead ssa) values) with
+  | none => simp [hresult]
+  | some returnedValues => simp [hresult, wordControlResultValues]
 
 end Flapjack

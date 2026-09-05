@@ -38,4 +38,22 @@ example [NeZero 64]
   apply evalWordCondition_ssaRename
   exact hregister
 
+example [NeZero 64]
+    (source target : State 64) (ssa : WordSsaState)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register))) :
+    (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) 4 source
+        (.return 0 [2, 3])).map wordControlResultValues =
+      (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) 4 target
+        (.return 0 ([2, 3].map (wordSsaRead ssa)))).map
+        wordControlResultValues := by
+  exact evalWordReturn_ssaRename ssa source target hregister 3 0 [2, 3]
+
 end Flapjack

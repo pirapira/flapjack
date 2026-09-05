@@ -573,6 +573,8 @@ definitions, pass ordering, examples, and proof obligations.
   word-memory operations.
 - [x] Lower the compact remaining StackLang store-removal equations for
   `OpCurrHeap`, stack-size conversion, and bitmap loads.
+- [x] Expose the first executable StackLang → StackRemove → LabLang → RISC-V
+  composition and test exact RV64 instruction output.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

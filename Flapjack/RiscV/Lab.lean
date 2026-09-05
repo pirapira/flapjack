@@ -168,6 +168,16 @@ def compileLabSection [NeZero width] (context : WordFfiContext)
   let labels := labCollectLabels sectionData.name 0 sectionData.lines
   labCompileLines context sectionData.name labels 0 sectionData.lines
 
+/-! The first executable StackLang-to-RISC-V composition.  StackRemove lowers
+    the stack and runtime-store operations, LabLang flattens the remaining
+    control flow, and this boundary selects concrete RISC-V instructions. -/
+def compileStackProgramToRiscV [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel : Nat) (program : StackProg (Word width)) :
+    Option (List (Instruction width)) :=
+  compileLabSection context
+    (labProgramToSectionAfterStackRemove config sectionId initialLabel program)
+
 def labSectionInstructionCount (sectionData : LabSection (Word width)) : Nat :=
   sectionData.lines.foldl
     (fun count line => count + labLineInstructionCount line) 0

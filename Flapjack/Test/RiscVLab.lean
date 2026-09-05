@@ -2,6 +2,10 @@ import Flapjack.RiscV.Lab
 
 namespace Flapjack.RiscV
 
+def stackRemoveRiscVConfig : StackRemoveConfig :=
+  { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
+    stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
+
 example :
     compileLabSection { services := [("sum", 7)] }
       ⟨2, [
@@ -36,6 +40,16 @@ example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.shift .lsl 4 5 6) [] 0]⟩ =
       some [.sll 4 5 6] := by
+  native_decide
+
+example :
+    compileStackProgramToRiscV (width := 64) { services := [] }
+      stackRemoveRiscVConfig 2 3
+      (.get 4 .heapLength : StackProg (Word 64)) =
+      some [
+        .addi 29 0 (BitVec.ofNat 64 3),
+        .add 29 10 29,
+        .loadWord 4 29] := by
   native_decide
 
 example :

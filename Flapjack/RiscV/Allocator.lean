@@ -10,25 +10,26 @@ target contract that must hold before that larger pass is introduced:
 
 * x0 is the architectural zero register;
 * x1 is the call link register;
+* x27 is the third AddCarry scratch register used by spill lowering;
 * x29 is the address scratch register used by stack lowering;
 * x30 is the stack pointer used by ordinary calls; and
 * x31 is the backend scratch register.
 
 The allocator preserves the historical `name + 2` assignment whenever it is
 safe.  Out-of-range names are assigned the first free register that is not a
-preferred register of another slot.  x28 is reserved as the third temporary
-used by spill-aware `LongMul` lowering.  Exhaustion is reported as `none`; it
+preferred register of another slot.  x27 and x28 are reserved as temporaries
+used by spill-aware `AddCarry` and `LongMul` lowering.  Exhaustion is reported as `none`; it
 is never converted into an aliased or reserved register.
 -/
 
 namespace Flapjack
 
 def wordAllocatableRegisters : List Nat :=
-  (List.range 26).map (fun index => index + 2)
+  (List.range 25).map (fun index => index + 2)
 
 def wordPreferredRegister (name : Nat) : Option Nat :=
   let register := name + 2
-  if register < 28 then some register else none
+  if register < 27 then some register else none
 
 def wordPreferredRegisters : List Nat → List Nat
   | [] => []
@@ -69,11 +70,11 @@ def wordAllocateContext (slots : List Nat) : Option WordContext :=
   (wordAllocateVarsFromSlots slots).map (fun vars => { vars := vars })
 
 def wordRegisterIsReserved (register : Nat) : Bool :=
-  register == 0 || register == 1 || register == 29 ||
-    register == 30 || register == 31 || register == 28
+  register == 0 || register == 1 || register == 27 || register == 28 ||
+    register == 29 || register == 30 || register == 31
 
 def wordRegisterIsAllocatable (register : Nat) : Bool :=
-  register ≥ 2 && register < 28
+  register ≥ 2 && register < 27
 
 /-! A compact executable clash-colouring interface.  CakeML builds a clash
 tree from the SSA program and then colours its graph.  The current Word IR
@@ -909,10 +910,11 @@ inductive WordLocation where
 
 /-! The Word-to-Stack special-instruction contract is checked at allocation.
     `LongMul` writes its high result before its low result and is normalized
-    through the reserved scratch registers when locations spill, while
-    `AddCarry` still requires register-resident operands and x31 exclusion.
-    Keep these contracts next to allocation so unsupported layouts cannot
-    silently reach instruction selection. -/
+    through the reserved scratch registers when locations spill. `AddCarry`
+    likewise uses reserved scratch registers when one of its values spills;
+    the register-resident path retains the x31 exclusion. Keep these contracts
+    next to allocation so unsupported layouts cannot silently reach instruction
+    selection. -/
 
 def wordSpecialArithLocationsSafe (operation : WordArith)
     (locations : NatInfoMap WordLocation) : Bool :=
@@ -933,12 +935,16 @@ def wordSpecialArithLocationsSafe (operation : WordArith)
         lookupNatInfo sourceLeft locations,
         lookupNatInfo sourceRight locations,
         lookupNatInfo carryIn locations with
-      | some (.register destination), some (.register resultCarry),
-          some (.register sourceLeft), some (.register sourceRight),
-          some (.register carryIn) =>
-          destination != resultCarry && destination != 31 &&
-            resultCarry != 31 && sourceLeft != 31 && sourceRight != 31 &&
-            carryIn != 31
+      | some destination, some resultCarry, some sourceLeft,
+          some sourceRight, some carryIn =>
+          destination != resultCarry &&
+            match destination, resultCarry, sourceLeft, sourceRight, carryIn with
+            | .register destination, .register resultCarry,
+                .register sourceLeft, .register sourceRight, .register carryIn =>
+                destination != sourceLeft && destination != sourceRight &&
+                  destination != 31 && resultCarry != 31 &&
+                  sourceLeft != 31 && sourceRight != 31 && carryIn != 31
+            | _, _, _, _, _ => true
       | _, _, _, _, _ => false
   | .longDiv _ _ _ _ _ | .div _ _ _ => true
 

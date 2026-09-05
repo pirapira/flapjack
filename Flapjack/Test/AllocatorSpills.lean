@@ -49,4 +49,11 @@ example :
         ((.seq (.inst (.arith (.addCarry 0 1 2 3 4))) .skip) : WordProg Nat) = true := by
   native_decide
 
+example :
+    wordProgSpecialLocationsSafe
+        [(0, .stack 0), (1, .register 5), (2, .stack 1),
+          (3, .register 6), (4, .stack 2)]
+        ((.inst (.arith (.addCarry 0 1 2 3 4))) : WordProg Nat) = true := by
+  native_decide
+
 end Flapjack

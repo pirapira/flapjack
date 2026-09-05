@@ -105,7 +105,13 @@ example : 29 ∉ wordAllocatableRegisters := by
 example : 28 ∉ wordAllocatableRegisters := by
   native_decide
 
+example : 27 ∉ wordAllocatableRegisters := by
+  native_decide
+
 example : wordRegisterIsReserved 28 = true := by
+  native_decide
+
+example : wordRegisterIsReserved 27 = true := by
   native_decide
 
 example : wordRegisterIsReserved 29 = true := by

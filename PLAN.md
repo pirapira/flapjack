@@ -344,6 +344,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Lower spill-aware `LongMul` through reserved scratch registers, preserve
   the register-resident fast path, and prove the generated StackLang fragment
   on a concrete machine state.
+- [x] Lower spill-aware AddCarry through reserved scratch registers, preserve
+  the register-resident fast path, and prove both result words on a concrete
+  StackLang machine state.
 - [x] Expose an SSA-driven spill allocation boundary that derives spill
   locations from the renamed Word program and its analysed clash graph.
 - [x] Wire the available SSA/spill allocation and concrete locations into the
@@ -355,6 +358,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Reserve the RISC-V address scratch register x29 from Word allocation and
   cover the allocator/backend separation with executable regressions.
 - [x] Reserve the RISC-V LongMul normalization scratch register x28 from Word
+  allocation and cover the resulting register contract with regressions.
+- [x] Reserve the spill-aware AddCarry scratch register x27 from Word
   allocation and cover the resulting register contract with regressions.
 - [x] Prove spill-aware allocation assigns every requested slot a concrete
   register or stack location.

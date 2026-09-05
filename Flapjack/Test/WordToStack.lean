@@ -1,4 +1,5 @@
 import Flapjack.RiscV.WordToStack
+import Flapjack.RiscV.Backend
 
 -- FFI ABI regressions are kept here with the other Word-to-Stack tests.
 
@@ -89,6 +90,61 @@ example :
         (wordStackMachineValue config state 0,
           wordStackMachineValue config state 1)) =
       some (some (BitVec.ofNat 8 0), some (BitVec.ofNat 8 12)) := by
+  native_decide
+
+example :
+    let state : State 8 :=
+      writeRegister
+        (writeRegister
+          (writeRegister (zeroState 8) 29 255) 28 1) 27 1
+    let final := executeInstructions state
+      [.sltu 31 0 27, .add 27 29 28, .sltu 28 27 28,
+        .add 27 27 31, .sltu 31 27 31, .or 28 28 31]
+    (readRegister final 27, readRegister final 28) =
+      (BitVec.ofNat 8 1, BitVec.ofNat 8 1) := by
+  native_decide
+
+example :
+    let config : WordStackConfig :=
+      { locations := [(0, .stack 2), (1, .stack 3),
+          (2, .stack 4), (3, .stack 5), (4, .stack 6)],
+        scratch := 31, stackBase := 10, addressScratch := 29,
+        specialScratch := 28, carryScratch := 27 }
+    wordToStackProg config
+      ((.inst (.arith (.addCarry 0 1 2 3 4))) : WordProg Nat) =
+      some (.seq (.stackLoad 29 14)
+        (.seq (.stackLoad 28 15)
+          (.seq (.stackLoad 27 16)
+            (.seq (.inst (.arith (.addCarry 27 28 29 28 27)))
+              (.seq (.stackStore 27 12) (.stackStore 28 13))))) : StackProg Nat) := by
+  simp [wordToStackProg, wordToStackInst, wordStackArithInst,
+    wordStackAddCarryInst, wordStackAddCarryLocationSafe,
+    wordStackLongMulMoveToPhysical, wordStackLongMulMoveFromPhysical,
+    wordStackJoin, wordStackLocation, wordStackOffset,
+    wordSpecialArithLocationsSafe, lookupNatInfo]
+
+example :
+    let config : WordStackConfig :=
+      { locations := [(0, .stack 2), (1, .stack 3),
+          (2, .stack 4), (3, .stack 5), (4, .stack 6)],
+        scratch := 31, stackBase := 10, addressScratch := 29,
+        specialScratch := 28, carryScratch := 27 }
+    let state : WordStackMachineState 8 :=
+      { registers := fun _ => 0,
+        stack := fun offset =>
+          if offset = 14 then BitVec.ofNat 8 255
+          else if offset = 15 then BitVec.ofNat 8 1
+          else if offset = 16 then BitVec.ofNat 8 1 else 0,
+        stores := fun _ => 0,
+        memory := fun _ => 0,
+        sharedMemory := fun _ => 0 }
+    (evalWordStackMachine state
+      ((wordToStackProg config
+        ((.inst (.arith (.addCarry 0 1 2 3 4))) : WordProg Nat)).getD .skip)).map
+      (fun state =>
+        (wordStackMachineValue config state 0,
+          wordStackMachineValue config state 1)) =
+      some (some (BitVec.ofNat 8 1), some (BitVec.ofNat 8 1)) := by
   native_decide
 
 example :
@@ -310,7 +366,9 @@ example :
           scratch := 31, stackBase := 10 } (.addCarry 0 1 2 3 4) =
       some (.inst (.arith (.addCarry 4 5 6 7 8)) : StackProg Nat) := by
   simp [wordStackArithInst, wordSpecialArithLocationsSafe,
-    wordStackLocation, lookupNatInfo]
+    wordStackAddCarryInst, wordStackAddCarryLocationSafe,
+    wordStackLongMulMoveToPhysical, wordStackLongMulMoveFromPhysical,
+    wordStackJoin, wordStackLocation, lookupNatInfo]
 
 example :
     wordStackArithInst

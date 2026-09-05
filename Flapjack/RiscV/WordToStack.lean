@@ -23,6 +23,7 @@ structure WordStackConfig where
   stackBase : Nat
   addressScratch : Nat := 29
   specialScratch : Nat := 28
+  carryScratch : Nat := 27
   perf : Bool := false
   frameOffset : Nat := 0
   returnLabel : Nat := 0
@@ -156,7 +157,14 @@ def wordStackLongMulLocationSafe (config : WordStackConfig) :
     WordLocation → Bool
   | .register register =>
       register != config.scratch && register != config.addressScratch &&
-        register != config.specialScratch
+        register != config.specialScratch && register != config.carryScratch
+  | .stack _ => true
+
+def wordStackAddCarryLocationSafe (config : WordStackConfig) :
+    WordLocation → Bool
+  | .register register =>
+      register != config.scratch && register != config.addressScratch &&
+        register != config.specialScratch && register != config.carryScratch
   | .stack _ => true
 
 def wordStackLongMulLocationsSafe (config : WordStackConfig)
@@ -225,24 +233,56 @@ def wordStackLongMulInst (config : WordStackConfig)
   else
     none
 
+def wordStackAddCarryInst (config : WordStackConfig)
+    (operation : WordArith) : Option (StackProg α) :=
+  match operation with
+  | .addCarry destination resultCarry sourceLeft sourceRight carryIn =>
+      let safe name := match wordStackLocation config name with
+        | some location => wordStackAddCarryLocationSafe config location
+        | none => false
+      if safe destination && safe resultCarry && safe sourceLeft &&
+          safe sourceRight && safe carryIn then
+        match wordStackLocation config destination,
+          wordStackLocation config resultCarry,
+          wordStackLocation config sourceLeft,
+          wordStackLocation config sourceRight,
+          wordStackLocation config carryIn with
+        | some (.register destination), some (.register resultCarry),
+            some (.register sourceLeft), some (.register sourceRight),
+            some (.register carryIn) =>
+            some (.inst (.arith (.addCarry destination resultCarry sourceLeft
+              sourceRight carryIn)))
+        | _, _, _, _, _ => do
+            let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+              config.addressScratch
+            let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+              config.specialScratch
+            let loadCarry ← wordStackLongMulMoveToPhysical config carryIn
+              config.carryScratch
+            let writeDestination ← wordStackLongMulMoveFromPhysical config destination
+              config.carryScratch
+            let writeResultCarry ← wordStackLongMulMoveFromPhysical config resultCarry
+              config.specialScratch
+            pure (wordStackJoin loadLeft
+              (wordStackJoin loadRight
+                (wordStackJoin loadCarry
+                  (wordStackJoin
+                    (.inst (.arith (.addCarry config.carryScratch
+                      config.specialScratch config.addressScratch
+                      config.specialScratch config.carryScratch)))
+                    (wordStackJoin writeDestination writeResultCarry)))))
+      else
+        none
+  | _ => none
+
 def wordStackArithInst (config : WordStackConfig) (operation : WordArith) :
     Option (StackProg α) :=
   if wordSpecialArithLocationsSafe operation config.locations = true then
     match operation with
     | .longMul _ _ _ _ =>
       wordStackLongMulInst config operation
-    | .addCarry destination resultCarry sourceLeft sourceRight carryIn => do
-      let destination ← wordStackLocation config destination
-      let resultCarry ← wordStackLocation config resultCarry
-      let sourceLeft ← wordStackLocation config sourceLeft
-      let sourceRight ← wordStackLocation config sourceRight
-      let carryIn ← wordStackLocation config carryIn
-      match destination, resultCarry, sourceLeft, sourceRight, carryIn with
-      | .register destination, .register resultCarry, .register sourceLeft,
-          .register sourceRight, .register carryIn =>
-          pure (.inst (.arith (.addCarry destination resultCarry sourceLeft
-            sourceRight carryIn)))
-      | _, _, _, _, _ => none
+    | .addCarry _ _ _ _ _ =>
+      wordStackAddCarryInst config operation
     | .div destination dividend divisor =>
       wordStackDivInst config destination dividend divisor
     | .longDiv _ _ _ _ _ => none
@@ -662,6 +702,15 @@ def evalWordStackMachine [NeZero width]
       let high := BitVec.ofNat width (left.toNat * right.toNat / 2 ^ width)
       let state := wordStackMachineWriteRegister state destinationLeft high
       some (wordStackMachineWriteRegister state destinationRight (left * right))
+  | .inst (.arith (.addCarry destination resultCarry sourceLeft sourceRight carryIn)) =>
+      let left := state.registers sourceLeft
+      let right := state.registers sourceRight
+      let carry := if state.registers carryIn == 0 then 0 else 1
+      let total := left.toNat + right.toNat + carry
+      let state := wordStackMachineWriteRegister state destination
+        (BitVec.ofNat width total)
+      some (wordStackMachineWriteRegister state resultCarry
+        (BitVec.ofNat width (total / 2 ^ width)))
   | .inst (.mem .load destination address) =>
       some (wordStackMachineWriteRegister state destination
         (state.memory (state.registers address)))

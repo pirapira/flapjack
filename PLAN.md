@@ -132,6 +132,9 @@ definitions, pass ordering, examples, and proof obligations.
   the generated `main` entry against the source call semantics.
 - [x] Add an executable call-aware Crepe evaluator and a declaration-call
   source-to-Crepe agreement regression before Loop lowering.
+- [x] Add a unified fuel-bounded Crepe control-result evaluator covering
+  memory, loops, primitives, declaration-call handlers, and explicit FFI and
+  shared-memory handler boundaries.
 - [x] Add a return-aware RISC-V function artifact and evaluator for the
   straight-line Word assignment/return fragment.
 - [x] Add a partial Word-to-RISC-V instruction selector for constants, moves,

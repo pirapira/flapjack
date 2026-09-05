@@ -1034,6 +1034,171 @@ theorem wordCheckColour_sound (colour : Nat → Nat)
   rcases hcheck with ⟨hcoloured, hnames, hmap⟩
   exact ⟨hnames.symm, hmap.symm, by simpa [hmap] using hcoloured⟩
 
+theorem wordMapFilterDelete (colour : Nat → Nat) (name : Nat)
+    (live : List Nat) (hinjective : Function.Injective colour) :
+    (live.filter (fun other => other != name)).map colour =
+      (live.map colour).filter (fun other => other != colour name) := by
+  induction live with
+  | nil => simp
+  | cons head tail ih =>
+      by_cases hhead : head = name
+      · subst head
+        simpa using ih
+      · have hcolour : colour head ≠ colour name := by
+          intro heq
+          apply hhead
+          exact hinjective heq
+        simp [hhead, hcolour, ih]
+
+theorem wordNumSetDelete_map (colour : Nat → Nat)
+    (names live : List Nat) (hinjective : Function.Injective colour) :
+    wordNumSetDelete (names.map colour) (live.map colour) =
+      (wordNumSetDelete names live).map colour := by
+  induction names generalizing live with
+  | nil => rfl
+  | cons name names ih =>
+      simp only [List.map_cons, wordNumSetDelete]
+      rw [← wordMapFilterDelete colour name live hinjective]
+      rw [ih]
+
+theorem wordNumSetDelete_nodup (names live : List Nat)
+    (hlive : live.Nodup) :
+    (wordNumSetDelete names live).Nodup := by
+  induction names generalizing live with
+  | nil => exact hlive
+  | cons name names ih =>
+      apply ih
+      exact hlive.filter (fun other => other != name)
+
+theorem wordMap_nodup_source (colour : Nat → Nat)
+    (names : List Nat) (hcoloured : (names.map colour).Nodup) :
+    names.Nodup := by
+  induction names with
+  | nil => simp
+  | cons name names ih =>
+      have hcoloured' := List.nodup_cons.mp hcoloured
+      apply List.nodup_cons.mpr
+      constructor
+      · intro hname
+        apply hcoloured'.1
+        exact List.mem_map.mpr ⟨name, hname, rfl⟩
+      · exact ih hcoloured'.2
+
+theorem wordClashTreeCheck_sound (colour : Nat → Nat)
+    (tree : WordClashTree) (live flive live' flive' : List Nat)
+    (hinjective : Function.Injective colour)
+    (hlive : live.Nodup)
+    (hflive : flive.Nodup)
+    (himage : flive = live.map colour)
+    (hcheck : wordClashTreeCheck colour tree live flive =
+      some (live', flive')) :
+    live'.Nodup ∧ flive'.Nodup ∧ flive' = live'.map colour := by
+  induction tree generalizing live flive live' flive' with
+  | delta writes reads =>
+      simp only [wordClashTreeCheck] at hcheck
+      split at hcheck
+      · contradiction
+      · rename_i hpartial
+        have hdeletedLive :
+            (wordNumSetDelete writes live).Nodup :=
+          wordNumSetDelete_nodup writes live hlive
+        have hdeletedFlive :
+            (wordNumSetDelete (writes.map colour) flive).Nodup := by
+          rw [himage]
+          exact wordNumSetDelete_nodup (writes.map colour)
+            (live.map colour) (by simpa [himage] using hflive)
+        have hdeletedImage :
+            wordNumSetDelete (writes.map colour) flive =
+              (wordNumSetDelete writes live).map colour := by
+          simpa [himage] using
+            (wordNumSetDelete_map colour writes live hinjective)
+        have hreads :
+            wordCheckPartialColour colour reads
+              (wordNumSetDelete writes live)
+              (wordNumSetDelete (writes.map colour) flive) =
+              some (live', flive') := by
+            simpa [hpartial] using hcheck
+        exact wordCheckPartialColour_sound colour reads
+          (wordNumSetDelete writes live)
+          (wordNumSetDelete (writes.map colour) flive)
+          live' flive' hdeletedLive hdeletedFlive hdeletedImage hreads
+  | set names =>
+      have hcheck' : wordCheckColour colour names =
+          some (live', flive') := by
+        simpa [wordClashTreeCheck] using hcheck
+      have hcolour := wordCheckColour_sound colour names live' flive' hcheck'
+      rcases hcolour with ⟨hnames, hmap, hcoloured⟩
+      subst live'
+      subst flive'
+      exact ⟨wordMap_nodup_source colour names hcoloured, hcoloured, rfl⟩
+  | branch branchLive thenBranch elseBranch ihThen ihElse =>
+      cases hthen : wordClashTreeCheck colour thenBranch live flive with
+      | none =>
+          simp [wordClashTreeCheck, hthen] at hcheck
+      | some thenResult =>
+          cases helse : wordClashTreeCheck colour elseBranch live flive with
+          | none =>
+              simp [wordClashTreeCheck, hthen, helse] at hcheck
+          | some elseResult =>
+              cases thenResult with
+              | mk thenOut fThenOut =>
+                  cases elseResult with
+                  | mk elseOut fElseOut =>
+                      have hthen' :
+                          thenOut.Nodup ∧ fThenOut.Nodup ∧
+                            fThenOut = thenOut.map colour :=
+                        ihThen live flive thenOut fThenOut
+                          hlive hflive himage hthen
+                      have helse' :
+                          elseOut.Nodup ∧ fElseOut.Nodup ∧
+                            fElseOut = elseOut.map colour :=
+                        ihElse live flive elseOut fElseOut
+                          hlive hflive himage helse
+                      cases branchLive with
+                      | none =>
+                          have hfinal :
+                              wordCheckPartialColour colour
+                                (elseOut.filter
+                                  (fun name => name ∉ thenOut))
+                                thenOut fThenOut =
+                                some (live', flive') := by
+                            simpa only [wordClashTreeCheck, hthen, helse] using
+                              hcheck
+                          exact wordCheckPartialColour_sound colour
+                            (elseOut.filter
+                              (fun name => name ∉ thenOut))
+                            thenOut fThenOut live' flive'
+                            hthen'.1 hthen'.2.1 hthen'.2.2 hfinal
+                      | some names =>
+                          have hfinal : wordCheckColour colour names =
+                              some (live', flive') := by
+                            simpa only [wordClashTreeCheck, hthen, helse] using
+                              hcheck
+                          have hcolour := wordCheckColour_sound colour
+                            names live' flive' hfinal
+                          rcases hcolour with ⟨hnames, hmap, hcoloured⟩
+                          subst live'
+                          subst flive'
+                          exact ⟨wordMap_nodup_source colour names hcoloured,
+                            hcoloured, rfl⟩
+  | seq first second ihFirst ihSecond =>
+      cases hsecond : wordClashTreeCheck colour second live flive with
+      | none =>
+          simp [wordClashTreeCheck, hsecond] at hcheck
+      | some secondResult =>
+          cases secondResult with
+          | mk secondOut fSecondOut =>
+              have hsecond' :
+                  secondOut.Nodup ∧ fSecondOut.Nodup ∧
+                    fSecondOut = secondOut.map colour :=
+                ihSecond live flive secondOut fSecondOut
+                  hlive hflive himage hsecond
+              have hfirst : wordClashTreeCheck colour first
+                  secondOut fSecondOut = some (live', flive') := by
+                simpa [wordClashTreeCheck, hsecond] using hcheck
+              exact ihFirst secondOut fSecondOut live' flive'
+                hsecond'.1 hsecond'.2.1 hsecond'.2.2 hfirst
+
 def wordAllocateProgramWithClashTree (slots : List Nat)
     (program : WordProg α) : Option WordContext :=
   let (liveIn, edges) :=

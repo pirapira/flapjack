@@ -127,6 +127,20 @@ example :
   native_decide
 
 example :
+    ([1] : List Nat).Nodup := by
+  have hcheck :
+      wordClashTreeCheck id
+          (wordClashTree
+            (.seq (.assign 0 (.var 1)) (.assign 2 (.var 1)) : WordProg Nat) [])
+          [] [] = some ([1], [1]) := by
+    native_decide
+  have hsound := wordClashTreeCheck_sound id
+    (wordClashTree
+      (.seq (.assign 0 (.var 1)) (.assign 2 (.var 1)) : WordProg Nat) [])
+    [] [] [1] [1] (fun _ _ h => h) (by simp) (by simp) (by simp) hcheck
+  exact hsound.1
+
+example :
     wordAllocateSsaProgramWithClashTreeWithSpills
         ({ current := [], next := 10 } : WordSsaState)
         ((.assign 1 (.var 0)) : WordProg Nat) =

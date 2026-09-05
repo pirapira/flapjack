@@ -1,4 +1,5 @@
 import Flapjack.CrepeSemantics
+import Flapjack.CrepeCorrectness
 import Flapjack.Test.CrepCalls
 
 namespace Flapjack
@@ -84,6 +85,9 @@ def crepeSemanticsFfiProgram : CrepProg Nat :=
      .assign 3 (.const 20), .assign 4 (.const 2),
      .extCall "sum" 1 2 3 4, .return [.load (.const 99)]]
 
+def crepeFfiContext : CompileContext Nat :=
+  { vars := [], functions := [], exceptions := [], maxVar := 0, bytesInWord := 1 }
+
 theorem crepe_full_call_semantics :
     evalCrepFullResult crepeSemanticsFunctions
       crepeSemanticsPrimitive crepeSemanticsFfi crepeSemanticsSharedMem
@@ -125,6 +129,18 @@ theorem crepe_full_ffi_semantics :
       0 100 30 crepeSemanticsState crepeSemanticsFfiProgram =
       some [33] := by
   native_decide
+
+theorem crepe_full_ffi_lowering_noop :
+    evalCrepFullProg [] crepeSemanticsPrimitive
+      (fun _ _ _ _ _ state => some state) crepeSemanticsSharedMem
+      0 100 30 crepeSemanticsState
+      (compileProg crepeFfiContext
+        (.extCall "noop" (.const 10) (.const 1) (.const 20) (.const 2))) =
+      some (.normal crepeSemanticsState) := by
+  exact (compile_full_extCall_const_noop_correct
+    crepeFfiContext (fun _ => none) crepeSemanticsState
+    crepeSemanticsPrimitive crepeSemanticsSharedMem
+    0 100 10 1 20 2 "noop").1
 
 def crepeCallFullState : CrepState (RiscV.Word 64) :=
   { locals := fun _ => none

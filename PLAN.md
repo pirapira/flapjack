@@ -143,6 +143,8 @@ definitions, pass ordering, examples, and proof obligations.
   constant store/load and its state-memory projection.
 - [x] Extend generic source-to-full-Crepe agreement through constant
   conditional control flow.
+- [x] Prove the compiled external-call temporary sequence preserves full
+  Crepe state for a no-op FFI and agrees with the source FFI boundary.
 - [x] Prove the first environment-sensitive source-to-full-Crepe agreement
   for a local assignment followed by a compiled slot return.
 - [x] Prove the first environment-sensitive source-to-full-Crepe agreement

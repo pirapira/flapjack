@@ -78,4 +78,110 @@ theorem loopCallControl_break_simulation :
         readRegister, RiscV.readWordRegisters, RiscV.bindWordRegisters,
         RiscV.clearWordRegisters, registerOfNat, wordFindVar, lookupNatInfo])
 
+def loopCallFfiBody : LoopProg (Word 64) :=
+  .ffi "identity" 10 10 10 10 []
+
+theorem loopCallFfi_simulation :
+    loopResultMappedToWordLoop ({ vars := [] } : WordContext)
+      (.normal loopCallControlLoopState)
+      (.normal loopCallControlWordState) := by
+  apply loopToWord_call_loop_control_simulation_single_parameter
+    (context := ({ vars := [] } : WordContext))
+    (primitive := fun _ _ => none)
+    (functions := [(1, [10], loopCallFfiBody)])
+    (wordFunctions := [(1, [10], loopToWordProg
+      ({ vars := [] } : WordContext) loopCallFfiBody)])
+    (loopState := loopCallControlLoopState)
+    (wordState := loopCallControlWordState)
+    (loopHandler := fun _ _ _ _ _ state => some state)
+    (wordHandler := fun _ _ _ _ _ state => some state)
+    (target := 1)
+    (parameter := 10)
+    (argument := 2)
+    (argumentValue := BitVec.ofNat 64 9)
+    (fuel := 3)
+    (loopBody := loopCallFfiBody)
+    (parameterRegister := 10)
+    (loopResult := .normal loopCallControlLoopState)
+    (wordResult := .normal loopCallControlWordState)
+    (hlookupLoop := by simp [lookupLoopFunction, loopCallFfiBody])
+    (hlookupWord := by simp [lookupWordFunction, wordFindVar, lookupNatInfo,
+      loopToWordProg, loopCallFfiBody])
+    (hparameter := by native_decide)
+    (hparameter_nonzero := by decide)
+    (hargument := by simp [loopCallControlLoopState])
+    (hbody := by
+      intro calleeLoop calleeWord bodyResult bodyWordResult hcallee hloop hword
+      cases bodyResult with
+      | normal loopResult =>
+          cases bodyWordResult with
+          | normal wordResult =>
+              exact loopToWord_ffi_loop_simulation
+                (context := ({ vars := [] } : WordContext))
+                (primitive := fun _ _ => none)
+                (functions := [(1, [10], loopCallFfiBody)])
+                (wordFunctions := [(1, [10], loopToWordProg
+                  ({ vars := [] } : WordContext) loopCallFfiBody)])
+                (loopState := calleeLoop)
+                (wordState := calleeWord)
+                (loopHandler := fun _ _ _ _ _ state => some state)
+                (wordHandler := fun _ _ _ _ _ state => some state)
+                (handler_agrees := by
+                  intro function configuration configurationLength array arrayLength
+                    loopInput wordInput loopOutput wordOutput hlocals hloop hword
+                  simp at hloop hword
+                  cases hloop
+                  cases hword
+                  exact hlocals)
+                (function := "identity")
+                (configuration := 10)
+                (configurationLength := 10)
+                (array := 10)
+                (arrayLength := 10)
+                (live := [])
+                (fuel := 2)
+                (hlocals := hcallee)
+                loopResult wordResult hloop hword
+          | returned wordState values =>
+              simp [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+                loopCallFfiBody, registerOfNat, wordFindVar, lookupNatInfo] at hword
+          | raised wordState exception =>
+              simp [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+                loopCallFfiBody, registerOfNat, wordFindVar, lookupNatInfo] at hword
+          | broke wordState label =>
+              simp [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+                loopCallFfiBody, registerOfNat, wordFindVar, lookupNatInfo] at hword
+          | continued wordState label =>
+              simp [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+                loopCallFfiBody, registerOfNat, wordFindVar, lookupNatInfo] at hword
+      | returned loopState values =>
+          cases hconfig : calleeLoop.locals 10 <;>
+            simp [evalLoopProgWithPrimitiveCallsAndFfi,
+              loopCallFfiBody, hconfig] at hloop
+      | raised loopState exception =>
+          cases hconfig : calleeLoop.locals 10 <;>
+            simp [evalLoopProgWithPrimitiveCallsAndFfi,
+              loopCallFfiBody, hconfig] at hloop
+      | broke loopState label =>
+          cases hconfig : calleeLoop.locals 10 <;>
+            simp [evalLoopProgWithPrimitiveCallsAndFfi,
+              loopCallFfiBody, hconfig] at hloop
+      | continued loopState label =>
+          cases hconfig : calleeLoop.locals 10 <;>
+            simp [evalLoopProgWithPrimitiveCallsAndFfi,
+              loopCallFfiBody, hconfig] at hloop)
+    (hlocals := loopCallControl_mapped_locals)
+    (hloop := by
+      simp [evalLoopCallWithPrimitiveCallsAndFfi,
+        evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+        lookupLoopFunction, loopCallFfiBody, loopCallControlLoopState,
+        loopReadLocals, loopBindParameters, updateLoopLocal])
+    (hword := by
+      simp [RiscV.evalWordLoopCallWithHandlersAndFfi,
+        RiscV.evalWordLoopProgWithHandlersAndFfi, RiscV.lookupWordFunction,
+        loopToWordProg, loopCallFfiBody, loopCallControlWordState,
+        writeRegister, readRegister, RiscV.readWordRegisters,
+        RiscV.bindWordRegisters, RiscV.clearWordRegisters,
+        registerOfNat, wordFindVar, lookupNatInfo])
+
 end Flapjack

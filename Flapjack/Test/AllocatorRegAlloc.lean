@@ -135,6 +135,17 @@ example : wordCoalesceSafe 1 briggsMoveGraph [0, 1] move01 = false := by
   native_decide
 
 example :
+    wordMoveFreezeCandidates 2 moveWorklistGraph
+      [(0, 0), (1, 1)] [0, 1] = [0, 1] := by
+  native_decide
+
+example :
+    let state := wordInitMoveStateWithColours 2 moveWorklistGraph [move01]
+    let state := wordFreezeAllAvailable 2 state
+    state.available = [] ∧ state.unavailable = [] ∧ state.stack = [0] := by
+  native_decide
+
+example :
     wordPrepareMoveWorklists moveWorklistGraph
       [{ priority := 0, left := 0, right := 0 }] =
       { available := [],

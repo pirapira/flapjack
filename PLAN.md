@@ -394,6 +394,8 @@ definitions, pass ordering, examples, and proof obligations.
   move selection through the source-faithful criterion.
 - [x] Preserve CakeML move priorities by sorting available and unavailable
   move worklists before coalescing.
+- [x] Add CakeML-shaped freeze candidates and move retirement after failed
+  coalescing, with recomputed move-relatedness and executable stack evidence.
 - [x] Match CakeML's stride-four SSA fresh-name convention and branch
   reconciliation counter, preserving the physical/allocatable/stack residue
   classes used by the RISC-V graph allocator.

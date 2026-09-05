@@ -592,6 +592,16 @@ def wordParentOf (parents : NatInfoMap Nat) (node : Nat) : Nat :=
   | some parent => parent
   | none => node
 
+/- A CakeML freeze candidate is a live Atemp that is still move-related and
+   has degree below the register budget.  Fixed nodes and coalesced nodes stay
+   out of this worklist. -/
+def wordMoveFreezeCandidates (colours : Nat) (graph : WordRegGraph)
+    (parents : NatInfoMap Nat) (related : List Nat) : List Nat :=
+  (List.range graph.dimension).filter (fun node =>
+    wordParentOf parents node = node &&
+      wordGraphTagIs wordTagIsAtemp graph node &&
+      wordRaDegree graph node < colours && related.contains node)
+
 def wordCoalesceParentFuel : Nat → WordRegGraph → NatInfoMap Nat → Nat →
     Nat × NatInfoMap Nat
   | 0, _graph, parents, node => (wordParentOf parents node, parents)
@@ -614,8 +624,17 @@ structure WordMoveState where
   related : List Nat
   available : List WordMove
   unavailable : List WordMove
+  freezeWl : List Nat
   stack : List Nat
   deriving Repr
+
+def wordMoveRefreshFreeze (colours : Nat) (state : WordMoveState) :
+    WordMoveState :=
+  let related := wordMoveRelatedNodes (state.available ++ state.unavailable)
+  { state with
+    related := related
+    freezeWl := wordMoveFreezeCandidates colours state.graph
+      state.parents related }
 
 def wordInitMoveState (graph : WordRegGraph)
     (moves : List WordMove) : WordMoveState :=
@@ -625,16 +644,20 @@ def wordInitMoveState (graph : WordRegGraph)
     related := wordMoveRelatedNodes moves
     available := worklists.available
     unavailable := worklists.unavailable
+    freezeWl := []
     stack := [] }
 
 def wordInitMoveStateWithColours (colours : Nat) (graph : WordRegGraph)
     (moves : List WordMove) : WordMoveState :=
   let worklists := wordPrepareMoveWorklistsWithColours colours graph moves
+  let parents := (List.range graph.dimension).map (fun node => (node, node))
+  let related := wordMoveRelatedNodes moves
   { graph := graph
-    parents := (List.range graph.dimension).map (fun node => (node, node))
-    related := wordMoveRelatedNodes moves
+    parents := parents
+    related := related
     available := worklists.available
     unavailable := worklists.unavailable
+    freezeWl := wordMoveFreezeCandidates colours graph parents related
     stack := [] }
 
 def wordMoveReplaceNode (oldNode newNode : Nat) (move : WordMove) : WordMove :=
@@ -695,7 +718,39 @@ def wordCoalesceMove (colours : Nat) (state : WordMoveState)
         related := wordMoveRelatedNodes pending
         available := worklists.available
         unavailable := worklists.unavailable
+        freezeWl := wordMoveFreezeCandidates colours graph parents
+          (wordMoveRelatedNodes pending)
         stack := move.right :: state.stack }
+
+def wordMoveTouches (node : Nat) (move : WordMove) : Bool :=
+  move.left = node || move.right = node
+
+/- Freeze one node as in CakeML's `do_freeze`: all moves incident on the node
+   become unavailable/retired, after which the node is no longer move-related.
+   The graph itself is retained for the later degree-based colouring pass. -/
+def wordFreezeNode (colours : Nat) (node : Nat)
+    (state : WordMoveState) : WordMoveState :=
+  let available := state.available.filter (fun move =>
+    !wordMoveTouches node move)
+  let unavailable := state.unavailable.filter (fun move =>
+    !wordMoveTouches node move)
+  let state := { state with
+    available := available
+    unavailable := unavailable
+    stack := if node ∈ state.stack then state.stack else node :: state.stack }
+  wordMoveRefreshFreeze colours state
+
+def wordFreezeAll : Nat → Nat → WordMoveState → WordMoveState
+  | 0, _, state => state
+  | fuel + 1, colours, state =>
+      match state.freezeWl with
+      | [] => state
+      | node :: _ => wordFreezeAll fuel colours (wordFreezeNode colours node state)
+
+def wordFreezeAllAvailable (colours : Nat) (state : WordMoveState) :
+    WordMoveState :=
+  wordFreezeAll (state.freezeWl.length + state.graph.dimension + 1)
+    colours state
 
 /-! Repeated coalescing mirrors CakeML's do_coalesce loop.  Invalid moves
     are retired to the unavailable list, while a successful merge rebuilds
@@ -795,6 +850,7 @@ def wordAllocateGraph (tree : WordClashTree)
   let moveState := wordInitMoveStateWithColours colours input.graph
     (wordPreferenceMoves moves)
   let moveState := wordCoalesceAllAvailable colours moveState
+  let moveState := wordFreezeAllAvailable colours moveState
   let graph := wordColourGraphWithWorklist colours stackStart moveState.graph
   let colouring := wordGraphTotalColouring input graph moveState.parents
   let colour := wordGraphColouringAt colouring

@@ -242,4 +242,20 @@ example [NeZero width]
   · simp
   · exact heval
 
+example :
+    wordStackArithInst
+        { locations := [(0, .register 4), (1, .register 5),
+            (2, .register 6), (3, .register 7)],
+          scratch := 31, stackBase := 10 } (.longMul 0 1 2 3) =
+      some (.inst (.arith (.longMul 4 5 6 7)) : StackProg Nat) := by
+  simp [wordStackArithInst, wordStackLocation, lookupNatInfo]
+
+example :
+    wordStackArithInst
+        { locations := [(0, .register 4), (1, .register 5),
+            (2, .register 6), (3, .register 7), (4, .register 8)],
+          scratch := 31, stackBase := 10 } (.addCarry 0 1 2 3 4) =
+      some (.inst (.arith (.addCarry 4 5 6 7 8)) : StackProg Nat) := by
+  simp [wordStackArithInst, wordStackLocation, lookupNatInfo]
+
 end Flapjack.RiscV

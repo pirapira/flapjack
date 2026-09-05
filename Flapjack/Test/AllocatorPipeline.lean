@@ -2,6 +2,13 @@ import Flapjack.Pipeline
 
 namespace Flapjack
 
+def pipelineAllocatedMulDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "mul", inline := false, exported := true, params := [],
+      body := .return (.panOp .mul
+        [.const (BitVec.ofNat 64 6), .const (BitVec.ofNat 64 7)]),
+      returnShape := .one }]
+
 example [OfNat α 1] :
     pipelineWordFunctionsAllocated
       ([] : List (Nat × List Nat × LoopProg α)) = some [] := by
@@ -50,6 +57,15 @@ example [NeZero width] :
 example :
     (pipelineWordFunctionsAllocatedWithSpills
       [(0, [0], (.assign 1 (.var 0) : LoopProg (RiscV.Word 64))) ]).isSome := by
+  native_decide
+
+example :
+    (compileFlapjackRiscVViaAllocatedStack (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      { storeBase := 10, currHeap := 12, scratch := 31,
+        addressScratch := 29, stackPointer := 20, bytesInWord := 8,
+        stackBase := 21, wordShift := 3 }
+      pipelineAllocatedMulDeclarations).isSome := by
   native_decide
 
 end Flapjack

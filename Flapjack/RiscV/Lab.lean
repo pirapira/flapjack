@@ -28,6 +28,8 @@ def labLineInstructionCount : LabLine (Word width) → Nat
   | .asm operation _ _ =>
       match operation with
       | .shift .ror _ _ _ => 5
+      | .word (.arith (.longMul _ _ _ _)) => 2
+      | .word (.arith (.addCarry _ _ _ _ _)) => 6
       | _ => 1
   | .labAsm operation _ _ =>
       match operation with
@@ -107,6 +109,7 @@ def labShiftInstructions [NeZero width] (operator : Shift)
 
 def labCompilePlain [NeZero width] :
     LabPlain (Word width) → Option (List (Instruction width))
+  | .word (.arith operation) => wordArithToInstructions operation
   | .word instruction => (wordInstToInstruction instruction).map List.singleton
   | .const destination value => do
       let destination ← registerOfNat destination

@@ -365,6 +365,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
   multiplication (`MULHU`) followed by low-half multiplication (`MUL`),
   including the target's high-destination/source non-aliasing precondition.
+- [x] Carry register-resident `LongMul` and `AddCarry` Word arithmetic through
+  Word-to-Stack and multi-instruction LabLang expansion; spilled multi-result
+  arithmetic remains part of the allocator/backend work.
 - [x] Port register-addressed and simple offset-addressed `WordProg.shareInst`
   memory lowering for all currently modeled HOL word load/store operators,
   including evaluator and call-aware selector coverage.

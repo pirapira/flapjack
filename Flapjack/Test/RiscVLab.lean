@@ -62,6 +62,19 @@ example :
   native_decide
 
 example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.longMul 4 5 6 7))) [] 0]⟩ =
+      some [.mulHU 4 6 7, .mul 5 6 7] := by
+  native_decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.word (.arith (.addCarry 4 5 6 7 8))) [] 0]⟩ =
+      some [.sltu 31 0 8, .add 4 6 7, .sltu 5 4 7,
+        .add 4 4 31, .sltu 31 4 31, .or 5 5 31] := by
+  native_decide
+
+example :
     compileStackProgramToRiscV (width := 64) { services := [] }
       stackRemoveRiscVConfig 2 3
       (.get 4 .heapLength : StackProg (Word 64)) =

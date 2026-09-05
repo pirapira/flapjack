@@ -152,6 +152,29 @@ def wordStackDivInst (config : WordStackConfig)
             (.stackStore config.scratch (wordStackOffset config destination)))))
 
 def wordStackArithInst (config : WordStackConfig) : WordArith → Option (StackProg α)
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight => do
+      let destinationLeft ← wordStackLocation config destinationLeft
+      let destinationRight ← wordStackLocation config destinationRight
+      let sourceLeft ← wordStackLocation config sourceLeft
+      let sourceRight ← wordStackLocation config sourceRight
+      match destinationLeft, destinationRight, sourceLeft, sourceRight with
+      | .register destinationLeft, .register destinationRight,
+          .register sourceLeft, .register sourceRight =>
+          pure (.inst (.arith (.longMul destinationLeft destinationRight
+            sourceLeft sourceRight)))
+      | _, _, _, _ => none
+  | .addCarry destination resultCarry sourceLeft sourceRight carryIn => do
+      let destination ← wordStackLocation config destination
+      let resultCarry ← wordStackLocation config resultCarry
+      let sourceLeft ← wordStackLocation config sourceLeft
+      let sourceRight ← wordStackLocation config sourceRight
+      let carryIn ← wordStackLocation config carryIn
+      match destination, resultCarry, sourceLeft, sourceRight, carryIn with
+      | .register destination, .register resultCarry, .register sourceLeft,
+          .register sourceRight, .register carryIn =>
+          pure (.inst (.arith (.addCarry destination resultCarry sourceLeft
+            sourceRight carryIn)))
+      | _, _, _, _, _ => none
   | .div destination dividend divisor =>
       wordStackDivInst config destination dividend divisor
   | _ => none

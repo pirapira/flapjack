@@ -397,6 +397,8 @@ definitions, pass ordering, examples, and proof obligations.
   `store32`, with explicit byte-fold memory premises.
 - [x] Prove mapped-local state preservation for compiled Loop/RISC-V `load32`
   and `store32`, including source-memory and architectural-word observations.
+- [x] Prove mapped-local state preservation for compiled byte loads and stores,
+  including zero-extension and preservation of all non-destination locals.
 - [x] Generalize the context-mapped Loop-to-Word assignment agreement to all
   register-register binary operations, including BitVec bitwise compatibility.
 - [x] Correct and prove context mapping for both operands of Loop `locValue`

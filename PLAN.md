@@ -422,6 +422,8 @@ definitions, pass ordering, examples, and proof obligations.
   regression and an explicit destination non-alias proof.
 - [x] Lift ordinary division through the composed call/FFI Loop evaluator and
   handler-aware Word evaluator, with a concrete mapped-local regression.
+- [x] Generalize the composed LongMul and division bridges to arbitrary
+  positive evaluator fuel for later sequence/loop induction.
 - [x] Add the control-neutral Loop-to-Word `skip` preservation rule and keep
   its regression in a dedicated control-correctness test module.
 - [x] Lift the Loop no-memory-write projection invariant from one step to

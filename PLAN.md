@@ -363,6 +363,8 @@ definitions, pass ordering, examples, and proof obligations.
   allocation and cover the resulting register contract with regressions.
 - [x] Prove spill-aware allocation assigns every requested slot a concrete
   register or stack location.
+- [x] Prove every successfully allocated SSA function formal receives a
+  concrete register or stack location for its ABI entry move.
 - [x] Port the first CakeML `word_to_stack` spill-move boundary, including all
   register/stack source and destination combinations.
 - [x] Give generated spill moves an executable StackLang semantics and prove

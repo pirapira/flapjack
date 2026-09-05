@@ -1230,6 +1230,29 @@ def wordAllocateSsaFunctionWithSpills (parameters : List Nat)
       else
         none
 
+theorem wordAllocateSsaFunctionWithSpills_maps_parameters
+    (parameters : List Nat) (program : WordProg α)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (renamedProgram : WordProg α) (allocation : WordSpillState)
+    (halloc : wordAllocateSsaFunctionWithSpills parameters program =
+      some (state, renamedParameters, renamedProgram, allocation)) :
+    ∀ name, name ∈ renamedParameters →
+      ∃ location, lookupNatInfo name allocation.locations = some location := by
+  simp [wordAllocateSsaFunctionWithSpills] at halloc
+  split at halloc <;> simp_all
+  rcases halloc with ⟨_, rfl, rfl, rfl, rfl⟩
+  rename_i _ alloc _ hallocation
+  have hslots := wordAllocateVarsWithSpills_maps_slots
+    ((wordSsaRenameFunction parameters program).2.fst ++
+      (wordProgVariables (wordSsaRenameFunction parameters program).2.snd ++
+        (wordProgClashAnalysis (wordSsaRenameFunction parameters program).2.snd
+          []).fst))
+    (wordProgClashAnalysis (wordSsaRenameFunction parameters program).2.snd
+    []).snd alloc hallocation
+  intro name hname
+  apply hslots name
+  simp [hname]
+
 theorem wordAllocateVarsWithSpills_sound (slots : List Nat)
     (edges : List (Nat × Nat)) (state : WordSpillState)
     (hstate : wordAllocateVarsWithSpills slots edges = some state) :

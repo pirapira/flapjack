@@ -328,6 +328,27 @@ def compileLabProgram [NeZero width] (context : WordFfiContext)
   let labels := labCollectProgramLabels 0 program
   labCompileProgramSections context labels 0 program
 
+/-! A linker result that keeps section entry addresses alongside the flattened
+    image. The plain `compileLabProgram` API is convenient for consumers that
+    only need code; correctness proofs need the section boundary to initialize
+    a function runner at the generated entry address. -/
+def compileLabProgramLinkedAux [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (base : Nat) : LabProgram (Word width) →
+      Option (List (Nat × Word width × List (Instruction width)))
+  | [] => some []
+  | sectionData :: sections => do
+      let code ← labCompileProgramLines context labels base sectionData.lines
+      let rest ← compileLabProgramLinkedAux context labels
+        (base + 4 * labSectionInstructionCount sectionData) sections
+      pure ((sectionData.name, BitVec.ofNat width base, code) :: rest)
+
+def compileLabProgramLinked [NeZero width] (context : WordFfiContext)
+    (program : LabProgram (Word width)) :
+    Option (List (Nat × Word width × List (Instruction width))) :=
+  let labels := labCollectProgramLabels 0 program
+  compileLabProgramLinkedAux context labels 0 program
+
 def compileStackProgramListToRiscV [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)
     (entryLabel initialLabel : Nat)
@@ -344,6 +365,16 @@ def compileStackProgramNatListToRiscV [NeZero width]
     (programs : List (Nat × StackProg Nat)) :
     Option (List (Instruction width)) :=
   compileLabProgram context
+    ((programs.map (fun (sectionId, program) =>
+      labProgramToEntrySection sectionId entryLabel initialLabel
+        (stackRemoveComplete config program))).map labSectionNatToWord)
+
+def compileStackProgramNatListLinkedToRiscV [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (entryLabel initialLabel : Nat)
+    (programs : List (Nat × StackProg Nat)) :
+    Option (List (Nat × Word width × List (Instruction width))) :=
+  compileLabProgramLinked context
     ((programs.map (fun (sectionId, program) =>
       labProgramToEntrySection sectionId entryLabel initialLabel
         (stackRemoveComplete config program))).map labSectionNatToWord)

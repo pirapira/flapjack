@@ -46,6 +46,12 @@ example :
       pipelineStackRemoveConfig pipelineAllocatedCallDeclarations).isSome := by
   native_decide
 
+example :
+    (compileFlapjackRiscVViaAllocatedStackLinked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      pipelineStackRemoveConfig pipelineAllocatedCallDeclarations).isSome := by
+  native_decide
+
 def globalTestContext : GlobalPassContext Nat :=
   { globals := [("g", (.one, 8))]
     globalsSize := 1

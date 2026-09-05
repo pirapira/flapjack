@@ -595,6 +595,8 @@ definitions, pass ordering, examples, and proof obligations.
   separate allocated Stack-to-RISC-V entry point with an allocation regression.
 - [x] Exercise the allocated Stack-to-RISC-V entry point on a declaration call
   across two generated function sections.
+- [x] Preserve linked section labels and byte entry addresses through the
+  allocator-aware Stack/RISC-V entry point for execution-harness integration.
 - [x] Replace the fixed StackRemove fuel in all composed backend entry points
   with a size-derived bound, so generated functions are not limited to 1024
   levels of nesting.

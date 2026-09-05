@@ -109,6 +109,8 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
     (continues breaks : List Nat) : StackProg α → FlattenResult α
   | .skip => ⟨[], false, counter⟩
   | .inst instruction => ⟨[.asm (.word instruction) [] 0], false, counter⟩
+  | .shMem operator source address =>
+      ⟨[.asm (.shareMem operator source address) [] 0], false, counter⟩
   | .const destination value =>
       ⟨[.asm (.const destination value) [] 0], false, counter⟩
   | .tick => ⟨[.asm .tick [] 0], false, counter⟩

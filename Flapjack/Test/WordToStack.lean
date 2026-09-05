@@ -81,6 +81,15 @@ example :
 
 example :
     wordToStackProg
+        { locations := [(0, .register 4), (1, .register 5)],
+          scratch := 31, stackBase := 10 }
+        ((.shareInst .load32 0 (.var 1)) : WordProg Nat) =
+      some (.shMem .load32 4 5 : StackProg Nat) := by
+  simp [wordToStackProg, wordStackSharedMemoryInst,
+    wordStackSharedLoadInst, wordStackLocation, lookupNatInfo]
+
+example :
+    wordToStackProg
         { locations := [], scratch := 31, stackBase := 10 }
         ((.loop [] (.break 0) []) : WordProg Nat) =
       some (.loop (.break 0) : StackProg Nat) := by

@@ -168,6 +168,58 @@ def wordStackMemoryInst (config : WordStackConfig) (operator : WordMemOp)
   | .store16 => wordStackStoreInst config operator sourceOrDestination address
   | .store32 => wordStackStoreInst config operator sourceOrDestination address
 
+def wordStackSharedLoadInst (config : WordStackConfig) (operator : WordMemOp)
+    (destination address : Nat) : Option (StackProg α) := do
+  let destination ← wordStackLocation config destination
+  let address ← wordStackLocation config address
+  match destination, address with
+  | .register destination, .register address =>
+      pure (.shMem operator destination address)
+  | .stack destination, .register address =>
+      pure (.seq (.shMem operator config.scratch address)
+        (.stackStore config.scratch (wordStackOffset config destination)))
+  | .register destination, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.shMem operator destination config.addressScratch))
+  | .stack destination, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.seq (.shMem operator config.scratch config.addressScratch)
+          (.stackStore config.scratch (wordStackOffset config destination))))
+
+def wordStackSharedStoreInst (config : WordStackConfig) (operator : WordMemOp)
+    (source address : Nat) : Option (StackProg α) := do
+  let source ← wordStackLocation config source
+  let address ← wordStackLocation config address
+  match source, address with
+  | .register source, .register address =>
+      pure (.shMem operator source address)
+  | .stack source, .register address =>
+      pure (.seq (.stackLoad config.scratch (wordStackOffset config source))
+        (.shMem operator config.scratch address))
+  | .register source, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.shMem operator source config.addressScratch))
+  | .stack source, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.seq (.stackLoad config.scratch (wordStackOffset config source))
+          (.shMem operator config.scratch config.addressScratch)))
+
+def wordStackSharedMemoryInst (config : WordStackConfig) (operator : WordMemOp)
+    (sourceOrDestination address : Nat) : Option (StackProg α) :=
+  match operator with
+  | .load => wordStackSharedLoadInst config operator sourceOrDestination address
+  | .load8 => wordStackSharedLoadInst config operator sourceOrDestination address
+  | .load16 => wordStackSharedLoadInst config operator sourceOrDestination address
+  | .load32 => wordStackSharedLoadInst config operator sourceOrDestination address
+  | .store => wordStackSharedStoreInst config operator sourceOrDestination address
+  | .store8 => wordStackSharedStoreInst config operator sourceOrDestination address
+  | .store16 => wordStackSharedStoreInst config operator sourceOrDestination address
+  | .store32 => wordStackSharedStoreInst config operator sourceOrDestination address
+
 /-! The stack program has explicit control-flow and call carriers.  These
     helpers materialize spilled condition operands and implement the Word
     calling convention's even-numbered result registers.  The labels are
@@ -379,7 +431,7 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .ffi function configuration configurationLength array arrayLength _ =>
       pure (wordToStackFfi function configuration configurationLength array arrayLength)
   | .shareInst operator name (.var address) =>
-      wordStackMemoryInst config operator name address
+      wordStackSharedMemoryInst config operator name address
   | _ => none
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial

@@ -346,6 +346,8 @@ definitions, pass ordering, examples, and proof obligations.
   StackLang arithmetic boundary.
 - [x] Extend the Word-to-Stack boundary through conditions, loops, returns,
   calls, exception handlers, special stores, and FFI operations.
+- [x] Preserve `ShMemOp` as a distinct StackLang operation through LabLang
+  and the RISC-V shared-memory selector.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
   multiplication (`MULHU`) followed by low-half multiplication (`MUL`),
   including the target's high-destination/source non-aliasing precondition.

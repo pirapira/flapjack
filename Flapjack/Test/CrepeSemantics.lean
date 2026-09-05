@@ -18,6 +18,14 @@ def crepeSemanticsPrimitive : CrepPrimitiveHandler Nat
 def crepeSemanticsFfi : CrepFfiHandler Nat :=
   noCrepFfi Nat
 
+def crepeSemanticsFfiHandler : CrepFfiHandler Nat :=
+  fun function configuration configurationLength array arrayLength state =>
+    if function == "sum" then
+      some { state with
+        memory := updateMemory state.memory 99
+          (configuration + configurationLength + array + arrayLength) }
+    else none
+
 def crepeSemanticsSharedMem : CrepSharedMemHandler Nat :=
   defaultCrepSharedMemHandler
 
@@ -70,6 +78,12 @@ def crepeSemanticsPrimitiveProgram : CrepProg Nat :=
           (.primitive [4, 5] .addCarry [1, 2, 3])
           (.return [.var 4]))))
 
+def crepeSemanticsFfiProgram : CrepProg Nat :=
+  crepNestedSeq
+    [.assign 1 (.const 10), .assign 2 (.const 1),
+     .assign 3 (.const 20), .assign 4 (.const 2),
+     .extCall "sum" 1 2 3 4, .return [.load (.const 99)]]
+
 theorem crepe_full_call_semantics :
     evalCrepFullResult crepeSemanticsFunctions
       crepeSemanticsPrimitive crepeSemanticsFfi crepeSemanticsSharedMem
@@ -103,6 +117,13 @@ theorem crepe_full_primitive_semantics :
       crepeSemanticsFfi crepeSemanticsSharedMem
       0 100 30 crepeSemanticsState crepeSemanticsPrimitiveProgram =
       some [3] := by
+  native_decide
+
+theorem crepe_full_ffi_semantics :
+    evalCrepFullResult [] crepeSemanticsPrimitive
+      crepeSemanticsFfiHandler crepeSemanticsSharedMem
+      0 100 30 crepeSemanticsState crepeSemanticsFfiProgram =
+      some [33] := by
   native_decide
 
 def crepeCallFullState : CrepState (RiscV.Word 64) :=

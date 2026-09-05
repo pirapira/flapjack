@@ -278,6 +278,8 @@ definitions, pass ordering, examples, and proof obligations.
   call-linked RISC-V artifact without clobbering the `x1` link register.
 - [x] Add an executable Option-valued Word allocator boundary that preserves
   existing low-numbered mappings and rejects reserved-register exhaustion.
+- [x] Add an executable undirected clash-edge checker and
+  preferred-register-aware greedy colouring boundary for Word variables.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half

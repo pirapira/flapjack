@@ -204,6 +204,19 @@ example :
   native_decide
 
 example :
+    evalCrepMemResultWithPrimitive
+        (fun _ _ => some [6]) (fun name => if name == 1 then some 1
+          else if name == 2 then some 2 else if name == 3 then some 3 else none)
+        (fun _ => none)
+      (.seq
+        (.store (.const (α := Nat) 10) (.const 7))
+        (.seq
+          (.primitive [0] .addCarry [1, 2, 3])
+          (.return [.load (.const 10), .var 0]))) =
+      some [7, 6] := by
+  native_decide
+
+example :
     evalCrepMemResult (fun _ => none) (fun _ => none)
       (compileProg assignmentContext
         (.seq (.store (.const 10) (.const 7))

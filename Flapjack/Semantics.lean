@@ -672,8 +672,8 @@ def evalCrepMemProg [BEq α] [Add α] [Mul α] (locals : Nat → Option α)
       pure (locals, memory, values)
   | .seq first second => do
       let (locals', memory', firstResult) ← evalCrepMemProg locals memory first
-      if firstResult.isEmpty then evalCrepMemProg locals' memory' second
-      else pure (locals', memory', firstResult)
+        if firstResult.isEmpty then evalCrepMemProg locals' memory' second
+        else pure (locals', memory', firstResult)
   | _ => none
   where
   evalCrepMemExps [BEq α] [Add α] [Mul α] (locals : Nat → Option α)
@@ -683,6 +683,58 @@ def evalCrepMemProg [BEq α] [Add α] [Mul α] (locals : Nat → Option α)
         let value ← evalCrepMemExp locals memory expression
         let values ← evalCrepMemExps locals memory expressions
         pure (value :: values)
+
+def evalCrepMemProgWithPrimitive [BEq α] [OfNat α 0] [Add α] [Mul α]
+    (primitive : CrepPrimitiveHandler α) (locals : Nat → Option α)
+    (memory : α → Option α) : CrepProg α →
+    Option ((Nat → Option α) × (α → Option α) × List α)
+  | .skip => some (locals, memory, [])
+  | .dec name value body => do
+      let value ← evalCrepMemExp locals memory value
+      evalCrepMemProgWithPrimitive primitive
+        (updateCrepLocal locals name value) memory body
+  | .assign name value => do
+      let value ← evalCrepMemExp locals memory value
+      pure (updateCrepLocal locals name value, memory, [])
+  | .primitive names operator arguments => do
+      let arguments ← arguments.mapM locals
+      let values ← primitive operator arguments
+      let locals ← assignCrepValues locals names values
+      pure (locals, memory, [])
+  | .store address value => do
+      let address ← evalCrepMemExp locals memory address
+      let value ← evalCrepMemExp locals memory value
+      pure (locals, updateMemory memory address value, [])
+  | .store32 address value | .storeByte address value => do
+      let address ← evalCrepMemExp locals memory address
+      let value ← evalCrepMemExp locals memory value
+      pure (locals, updateMemory memory address value, [])
+  | .storeGlob address value => do
+      let value ← evalCrepMemExp locals memory value
+      pure (locals, updateMemory memory address value, [])
+  | .return values => do
+      let values ← evalCrepMemProg.evalCrepMemExps locals memory values
+      pure (locals, memory, values)
+  | .seq first second => do
+      let (locals', memory', firstResult) ←
+        evalCrepMemProgWithPrimitive primitive locals memory first
+      if firstResult.isEmpty then
+        evalCrepMemProgWithPrimitive primitive locals' memory' second
+      else pure (locals', memory', firstResult)
+  | .ite condition thenBranch elseBranch => do
+      let condition ← evalCrepMemExp locals memory condition
+      if condition == 0 then
+        evalCrepMemProgWithPrimitive primitive locals memory elseBranch
+      else
+        evalCrepMemProgWithPrimitive primitive locals memory thenBranch
+  | _ => none
+termination_by program => sizeOf program
+
+def evalCrepMemResultWithPrimitive [BEq α] [OfNat α 0] [Add α] [Mul α]
+    (primitive : CrepPrimitiveHandler α) (locals : Nat → Option α)
+    (memory : α → Option α) (program : CrepProg α) : Option (List α) :=
+  (evalCrepMemProgWithPrimitive primitive locals memory program).map
+    (fun result => result.2.2)
 
 def evalPanMemProgFuelBase [BEq α] [Add α] [Mul α] [OfNat α 0]
     (fuel : Nat) (locals : VarName → Option α) (memory : α → Option α) :

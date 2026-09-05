@@ -1160,6 +1160,115 @@ def loopResultMappedToRiscV [NeZero width] (context : WordContext) :
         loopLocalsMappedToRiscV context loopState.locals state
   | _, _ => False
 
+/-!
+Return values are read from mapped Word registers.  The source result stores
+the values obtained from its local names, so a mapped-local relation is enough
+to show that the two return lists are identical.
+-/
+theorem loopToWord_return_simulation [NeZero width]
+    (context : WordContext)
+    (loopState : LoopState (RiscV.Word width))
+    (wordState : RiscV.State width)
+    (wordFunctions : List (Nat × List Nat × WordProg (RiscV.Word width)))
+    (wordHandler : FunName → RiscV.Word width → RiscV.Word width →
+      RiscV.Word width → RiscV.Word width → RiscV.State width →
+      Option (RiscV.State width))
+    (values : List Nat) (fuel : Nat)
+    (finalLoop : LoopState (RiscV.Word width))
+    (finalWord : RiscV.State width)
+    (loopResultValues wordResultValues : List (RiscV.Word width))
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals wordState)
+    (hloop :
+      evalLoopProg (fuel + 1) loopState (.return values) =
+        some (.returned finalLoop loopResultValues))
+    (hword :
+      RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler
+        (fuel + 1) wordState (loopToWordProg context (.return values)) =
+        some (.returned finalWord wordResultValues)) :
+    loopLocalsMappedToRiscV context finalLoop.locals finalWord ∧
+      wordResultValues = loopResultValues := by
+  have hread_values : ∀ (names : List Nat) (readValues : List (RiscV.Word width)),
+      loopReadLocals loopState.locals names = some readValues →
+      (wordMapVars context names).mapM (fun name => do
+        let register ← RiscV.registerOfNat name
+        pure (RiscV.readRegister wordState register)) = some readValues := by
+    intro names
+    induction names with
+    | nil =>
+        intro readValues hread
+        have hread' : readValues = [] := by
+          simpa [loopReadLocals] using hread
+        subst readValues
+        simp [wordMapVars]
+    | cons name names ih =>
+        intro readValues hread
+        cases hlocal : loopState.locals name with
+        | none =>
+            simp [loopReadLocals, hlocal] at hread
+        | some value =>
+            cases hrest : loopReadLocals loopState.locals names with
+            | none =>
+                simp [loopReadLocals, hlocal, hrest] at hread
+            | some rest =>
+                have hread' : readValues = value :: rest := by
+                  simpa [loopReadLocals, hlocal, hrest] using hread.symm
+                subst readValues
+                rcases hlocals name value hlocal with
+                  ⟨register, hregister, hvalue⟩
+                have htail := ih rest hrest
+                have htail' :
+                    (wordMapVars context names).mapM (fun name =>
+                      (RiscV.registerOfNat name).bind (fun register =>
+                        some (RiscV.readRegister wordState register))) = some rest := by
+                  simpa using htail
+                simp [wordMapVars, hregister, hvalue]
+                rw [htail']
+                simp
+  cases hread : loopReadLocals loopState.locals values with
+  | none =>
+      simp [evalLoopProg, hread] at hloop
+  | some readValues =>
+      have hloop' :
+          some (LoopResult.returned loopState readValues) =
+            some (LoopResult.returned finalLoop loopResultValues) := by
+        simpa [evalLoopProg, hread] using hloop
+      injection hloop' with hreturned
+      injection hreturned with hfinalLoop hresultValues
+      subst finalLoop
+      subst loopResultValues
+      cases hwordValues :
+          (wordMapVars context values).mapM (fun name => do
+            let register ← RiscV.registerOfNat name
+            pure (RiscV.readRegister wordState register)) with
+      | none =>
+          have hwordValues' :
+              (wordMapVars context values).mapM (fun name =>
+                (RiscV.registerOfNat name).bind (fun register =>
+                  some (RiscV.readRegister wordState register))) = none := by
+            simpa using hwordValues
+          simp [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi,
+            hwordValues'] at hword
+      | some mappedValues =>
+          have hwordValues' :
+              (wordMapVars context values).mapM (fun name =>
+                (RiscV.registerOfNat name).bind (fun register =>
+                  some (RiscV.readRegister wordState register))) = some mappedValues := by
+            simpa using hwordValues
+          have hword' :
+              some (RiscV.WordControlResult.returned wordState mappedValues) =
+                some (RiscV.WordControlResult.returned finalWord wordResultValues) := by
+            simpa [loopToWordProg,
+              RiscV.evalWordFunctionWithHandlersAndFfi, hwordValues'] using hword
+          injection hword' with hreturnedWord
+          injection hreturnedWord with hfinalWord hwordResultValues
+          subst finalWord
+          subst wordResultValues
+          have hmapped := hread_values values readValues hread
+          rw [hwordValues] at hmapped
+          injection hmapped with hmappedValues
+          subst mappedValues
+          exact ⟨hlocals, rfl⟩
+
 theorem loopRepeat_mapped_locals [NeZero width]
     (context : WordContext) (body : LoopProg (RiscV.Word width))
     (wordBody : WordProg (RiscV.Word width))

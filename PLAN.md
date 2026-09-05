@@ -353,6 +353,8 @@ definitions, pass ordering, examples, and proof obligations.
   control results.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
+- [x] Add the terminal return control-result bridge, including mapped state
+  preservation and equality of Loop and Word returned value lists.
 - [x] Prove that compiler-generated RISC-V ticks preserve the mapped-local
   relation needed by conditional and loop simulations.
 - [x] Prove conditional branch simulation for fuel-2 Loop programs, including

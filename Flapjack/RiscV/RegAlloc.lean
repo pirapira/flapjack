@@ -179,6 +179,103 @@ def wordMkGraph (toNode : Nat → Nat) : WordClashTree → List Nat →
 termination_by tree => sizeOf tree
 decreasing_by all_goals decreasing_trivial
 
+def wordTagFixedColour : WordRegTag → Option Nat
+  | .fixed colour => some colour
+  | .atemp | .stemp => none
+
+def wordFixedNeighbourColours (nodes : List Nat)
+    (tags : NatInfoMap WordRegTag) : List Nat :=
+  match nodes with
+  | [] => []
+  | node :: nodes =>
+      let colours := match lookupNatInfo node tags with
+        | some tag =>
+            match wordTagFixedColour tag with
+            | some colour => [colour]
+            | none => []
+        | none => []
+      colours ++ wordFixedNeighbourColours nodes tags
+
+def wordRemoveColours (removed colours : List Nat) : List Nat :=
+  match colours with
+  | [] => []
+  | colour :: colours =>
+      if colour ∈ removed then
+        wordRemoveColours removed colours
+      else
+        colour :: wordRemoveColours removed colours
+
+def wordStackColourCandidates (start : Nat) (blocked : List Nat) : List Nat :=
+  (List.range (start + blocked.length + 1)).filter
+    (fun colour => colour ≥ start)
+
+def wordUnboundColour (start : Nat) (blocked : List Nat) : Nat :=
+  match wordFirstAvailable (wordStackColourCandidates start blocked) blocked with
+  | some colour => colour
+  | none => start
+
+def wordGraphUpdateTag (node : Nat) (tag : WordRegTag)
+    (tags : NatInfoMap WordRegTag) : NatInfoMap WordRegTag :=
+  (node, tag) :: tags.filter (fun entry => entry.1 != node)
+
+def wordAssignAtempTag (colours : List Nat) (node : Nat)
+    (graph : WordRegGraph) : WordRegGraph :=
+  match lookupNatInfo node graph.tags with
+  | some .atemp =>
+      let blocked := wordFixedNeighbourColours
+        (wordGraphNeighbours graph node) graph.tags
+      match wordFirstAvailable (wordRemoveColours blocked colours) blocked with
+      | some colour =>
+          { graph with tags := wordGraphUpdateTag node (.fixed colour) graph.tags }
+      | none =>
+          { graph with tags := wordGraphUpdateTag node .stemp graph.tags }
+  | some (.fixed _) | some .stemp | none => graph
+
+def wordAssignAtemps (colours : List Nat) : List Nat →
+    WordRegGraph → WordRegGraph
+  | [], graph => graph
+  | node :: nodes, graph =>
+      wordAssignAtemps colours nodes (wordAssignAtempTag colours node graph)
+
+def wordAssignStempTag (stackStart : Nat) (node : Nat)
+    (graph : WordRegGraph) : WordRegGraph :=
+  match lookupNatInfo node graph.tags with
+  | some .stemp =>
+      let blocked := wordFixedNeighbourColours
+        (wordGraphNeighbours graph node) graph.tags
+      let colour := wordUnboundColour stackStart blocked
+      { graph with tags :=
+          wordGraphUpdateTag node (.fixed colour) graph.tags }
+  | some (.fixed _) | some .atemp | none => graph
+
+def wordAssignStemps (stackStart : Nat) : List Nat →
+    WordRegGraph → WordRegGraph
+  | [], graph => graph
+  | node :: nodes, graph =>
+      wordAssignStemps stackStart nodes
+        (wordAssignStempTag stackStart node graph)
+
+def wordColourGraph (dimension colours stackStart : Nat)
+    (graph : WordRegGraph) : WordRegGraph :=
+  let nodes := List.range dimension
+  let colours := List.range colours
+  let graph := wordAssignAtemps colours nodes graph
+  wordAssignStemps stackStart nodes graph
+
+def wordGraphTagColour (graph : WordRegGraph) (node : Nat) : Option Nat :=
+  match lookupNatInfo node graph.tags with
+  | some tag => wordTagFixedColour tag
+  | none => none
+
+def wordGraphColouringRespectsEdges (graph : WordRegGraph) : Bool :=
+  graph.adjacency.all (fun entry =>
+    let node := entry.1
+    entry.2.all (fun neighbour =>
+      match wordGraphTagColour graph node,
+        wordGraphTagColour graph neighbour with
+      | some left, some right => left != right
+      | _, _ => false))
+
 structure WordRegAllocInput where
   bijection : WordBijection
   graph : WordRegGraph

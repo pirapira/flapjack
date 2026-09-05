@@ -374,6 +374,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Port the CakeML graph allocator data model for RISC-V: Fixed/Atemp/Stemp
   tags, source-to-node bijections, and clash-tree clique graph construction;
   the worklist colouring operations remain part of the full allocator item.
+- [x] Port the executable two-pass Atemp/Stemp colouring transition, including
+  available-colour removal, stack-range colour selection, and edge-safety
+  regressions.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Expose witness-level allocator contracts showing every successfully

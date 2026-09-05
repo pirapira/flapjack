@@ -39,4 +39,24 @@ example :
       some [0] := by
   native_decide
 
+example :
+    wordGraphTagColour
+        (wordColourGraph 2 2 2
+          (wordInitRegAlloc (.delta [0, 1] []) [] []).graph) 1 =
+      some 1 := by
+  native_decide
+
+example :
+    wordGraphColouringRespectsEdges
+        (wordColourGraph 2 1 1
+          (wordInitRegAlloc (.delta [1, 5] []) [] []).graph) = true := by
+  native_decide
+
+example :
+    wordGraphTagColour
+        (wordColourGraph 2 1 1
+          (wordInitRegAlloc (.delta [1, 5] []) [] []).graph) 1 =
+      some 1 := by
+  native_decide
+
 end Flapjack

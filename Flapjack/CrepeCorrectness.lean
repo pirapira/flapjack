@@ -45,6 +45,26 @@ theorem compile_full_return_const_correct
     evalCrepFullExps, evalCrepFullExp, evalPanMemResult,
     evalPanMemProg, evalPanMemExp]
 
+theorem compile_full_add_const_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (context : CompileContext α) (locals : VarName → Option α)
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress left right : α) :
+    evalCrepFullResult [] primitive ffi sharedMem
+        baseAddress topAddress 10 state
+        (compileProg context
+          (.return (.op .add [.const left, .const right]))) =
+      evalPanMemResult locals state.memory
+        (.return (.op .add [.const left, .const right]) : Prog α) := by
+  simp [compileProg, compileExp, compileExp.compileExpList, cexpHeads,
+    evalCrepFullResult, evalCrepFullProg,
+    evalCrepFullExps, evalCrepFullExp, evalPanMemResult,
+    evalPanMemProg, evalPanMemExp, evalPanBinOp]
+
 theorem compile_full_store_load_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

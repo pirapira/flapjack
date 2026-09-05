@@ -137,6 +137,8 @@ definitions, pass ordering, examples, and proof obligations.
   shared-memory handler boundaries.
 - [x] Prove the first generic source-to-full-Crepe result agreements for
   compiled skip and constant-return programs.
+- [x] Prove source-to-full-Crepe agreement for a compiled binary addition
+  expression over constants.
 - [x] Extend generic source-to-full-Crepe agreement through a compiled
   constant store/load and its state-memory projection.
 - [x] Extend generic source-to-full-Crepe agreement through constant

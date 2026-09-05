@@ -71,4 +71,27 @@ example :
       stackGetCorrectnessConfig stackGetCorrectnessState 2 (by omega)
       (by simp [stackGetCorrectnessConfig]))
 
+example :
+    (evalWordStackMachine stackGetCorrectnessState
+      (stackRemoveStackLoad stackGetCorrectnessConfig 6 2)).map
+        (fun final => final.registers 6) =
+      some (BitVec.ofNat 64 0) := by
+  simpa [stackGetCorrectnessConfig, stackGetCorrectnessState] using
+    (evalStackRemoveStackLoad (width := 64) stackGetCorrectnessConfig
+      stackGetCorrectnessState 6 2 (by simp [stackGetCorrectnessConfig])
+      (by simp [stackGetCorrectnessConfig, stackGetCorrectnessState]))
+
+example :
+    (evalWordStackMachine stackGetCorrectnessState
+      (stackRemoveStackStore stackGetCorrectnessConfig 6 2)).map
+        (fun final =>
+          final.memory
+            (stackGetCorrectnessState.registers 20 + BitVec.ofNat 64 16)) =
+      some (stackGetCorrectnessState.registers 6) := by
+  simpa [stackGetCorrectnessConfig, stackGetCorrectnessState] using
+    (evalStackRemoveStackStore (width := 64) stackGetCorrectnessConfig
+      stackGetCorrectnessState 6 2 (by simp [stackGetCorrectnessConfig])
+      (by simp [stackGetCorrectnessConfig])
+      (by simp [stackGetCorrectnessConfig]))
+
 end Flapjack.RiscV

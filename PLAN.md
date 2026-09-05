@@ -589,6 +589,8 @@ definitions, pass ordering, examples, and proof obligations.
   and `Set`.
 - [x] Prove the bounded StackRemove stack-allocation equation under an
   explicit scratch/stack-pointer non-aliasing condition.
+- [x] Prove StackRemove fixed-offset stack load/store simulations under
+  explicit address-scratch and memory-write invariants.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 

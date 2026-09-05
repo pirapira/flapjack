@@ -83,4 +83,52 @@ theorem evalStackRemoveStackAlloc_small [NeZero width]
       stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
       wordStackMachineWriteRegister, hwords, hscratch, Ne.symm hscratch]
 
+theorem evalStackRemoveStackLoad [NeZero width]
+    (config : StackRemoveConfig) (state : WordStackMachineState width)
+    (destination offset : Nat)
+    (haddress : config.addressScratch ≠ config.stackPointer)
+    (hmemory :
+      state.memory
+          (state.registers config.stackPointer +
+            BitVec.ofNat width (config.bytesInWord * offset)) =
+        state.stack offset) :
+    (evalWordStackMachine state
+      (stackRemoveStackLoad config destination offset)).map
+        (fun final => final.registers destination) =
+      some (state.stack offset) := by
+  simp [stackRemoveStackLoad, stackRemoveStackAddress, stackRemoveJoin,
+    evalWordStackMachine, wordStackMachineBinOp,
+    wordStackMachineWriteRegister, haddress, Ne.symm haddress, hmemory]
+
+theorem evalStackRemoveStackStore [NeZero width]
+    (config : StackRemoveConfig) (state : WordStackMachineState width)
+    (source offset : Nat)
+    (haddress : config.addressScratch ≠ config.stackPointer)
+    (hscratch : config.addressScratch ≠ config.scratch)
+    (hscratchPointer : config.scratch ≠ config.stackPointer) :
+    (evalWordStackMachine state
+      (stackRemoveStackStore config source offset)).map
+        (fun final =>
+          final.memory
+            (state.registers config.stackPointer +
+              BitVec.ofNat width (config.bytesInWord * offset))) =
+      some (state.registers source) := by
+  by_cases hmove : config.scratch = source
+  · have hsourceAddress : source ≠ config.addressScratch := by
+      intro hsource
+      apply hscratch
+      calc
+        config.addressScratch = source := hsource.symm
+        _ = config.scratch := hmove.symm
+    simp [stackRemoveStackStore, stackRemoveStackAddress, stackRemoveMove,
+      stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
+      wordStackMachineWriteRegister, wordStackMachineWriteMemory,
+      hmove, haddress, Ne.symm haddress, hscratch, Ne.symm hscratch,
+      hscratchPointer, Ne.symm hscratchPointer, hsourceAddress]
+  · simp [stackRemoveStackStore, stackRemoveStackAddress, stackRemoveMove,
+      stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
+      wordStackMachineWriteRegister, wordStackMachineWriteMemory,
+      hmove, haddress, Ne.symm haddress, hscratch, Ne.symm hscratch,
+      hscratchPointer, Ne.symm hscratchPointer]
+
 end Flapjack.RiscV

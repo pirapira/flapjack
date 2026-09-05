@@ -672,6 +672,17 @@ def wordProgClashAnalysis : WordProg α → List Nat →
       let (bodyLive, bodyEdges) :=
         wordProgClashAnalysis body (wordListUnion liveIn (liveOut ++ liveAfter))
       (wordListUnion liveIn bodyLive, bodyEdges)
+  | .call returns target arguments (some (exception, body)), liveAfter =>
+      let (handlerLive, handlerEdges) :=
+        wordProgClashAnalysis body liveAfter
+      let callProgram : WordProg α :=
+        .call returns target arguments (some (exception, body))
+      let handlerEntryEdges :=
+        wordClashPairs [exception] (handlerLive ++ liveAfter)
+      (wordListUnion (exception :: handlerLive)
+          (wordProgLiveBefore callProgram liveAfter),
+        handlerEntryEdges ++ handlerEdges ++
+          wordProgAtomicClashes callProgram liveAfter)
   | program, liveOut =>
       (wordProgLiveBefore program liveOut, wordProgAtomicClashes program liveOut)
 termination_by program => sizeOf program

@@ -324,6 +324,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Add branch-aware Word SSA version reconciliation and tighten program
   clash analysis to write/live interference for the supported control-flow
   fragment.
+- [x] Include recursively analysed exception-handler bodies and handler-entry
+  interference edges in Word program clash analysis.
 - [x] Add CakeML-aligned loop SSA setup for Word live-in/live-out names, with
   refreshed loop frames and explicit back-edge plus `break`/`continue`
   reconciliation moves.

@@ -18,6 +18,11 @@ def wordControlResultValues [NeZero width] :
   | .returned _ values => values
   | _ => []
 
+def wordControlResultException [NeZero width] :
+    WordControlResult width → Option (Word width)
+  | .raised _ exception => some exception
+  | _ => none
+
 theorem evalWordExp_ssaRename [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hregister : ∀ name,
@@ -174,5 +179,30 @@ theorem evalWordReturn_ssaRename [NeZero width]
       pure (readRegister target register)) (List.map (wordSsaRead ssa) values) with
   | none => simp [hresult]
   | some returnedValues => simp [hresult, wordControlResultValues]
+
+theorem evalWordRaise_ssaRename [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (fuel exception : Nat) :
+    (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) (fuel + 1) source
+        (.raise exception)).map wordControlResultException =
+      (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) (fuel + 1) target
+        (.raise (wordSsaRead ssa exception))).map
+        wordControlResultException := by
+  simp only [evalWordFunctionWithHandlersAndFfi, Option.map]
+  cases hsource : registerOfNat exception <;>
+    cases htarget : registerOfNat (wordSsaRead ssa exception) <;>
+    all_goals
+      have hexceptionValue := hregister exception
+      simp_all [hsource, htarget, hexceptionValue,
+        wordControlResultException]
 
 end Flapjack

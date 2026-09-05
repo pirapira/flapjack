@@ -56,4 +56,21 @@ example [NeZero 64]
         wordControlResultValues := by
   exact evalWordReturn_ssaRename ssa source target hregister 3 0 [2, 3]
 
+example [NeZero 64]
+    (source target : State 64) (ssa : WordSsaState)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register))) :
+    (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) 4 source
+        (.raise 2)).map wordControlResultException =
+      (evalWordFunctionWithHandlersAndFfi []
+        (fun _ _ _ _ _ state => some state) 4 target
+        (.raise (wordSsaRead ssa 2))).map wordControlResultException := by
+  exact evalWordRaise_ssaRename ssa source target hregister 3 2
+
 end Flapjack

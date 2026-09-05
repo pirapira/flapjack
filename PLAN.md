@@ -342,6 +342,8 @@ definitions, pass ordering, examples, and proof obligations.
   source-value preservation under the reserved-scratch contract.
 - [x] Lower spilled Word load/store instructions through independent address
   and data scratch registers in the StackLang boundary.
+- [x] Lower spilled Word division operands and destinations through the
+  StackLang arithmetic boundary.
 - [x] Port the HOL RISC-V `LongMul` lowering with executable unsigned high-half
   multiplication (`MULHU`) followed by low-half multiplication (`MUL`),
   including the target's high-destination/source non-aliasing precondition.

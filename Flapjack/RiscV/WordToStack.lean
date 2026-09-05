@@ -93,6 +93,64 @@ def wordStackStoreInst (config : WordStackConfig) (operator : WordMemOp)
         (.seq (.stackLoad config.scratch (wordStackOffset config source))
           (.inst (.mem operator config.scratch config.addressScratch))))
 
+def wordStackJoin (first second : StackProg α) : StackProg α :=
+  match first, second with
+  | .skip, second => second
+  | first, .skip => first
+  | first, second => .seq first second
+
+def wordStackDivInst (config : WordStackConfig)
+    (destination dividend divisor : Nat) : Option (StackProg α) := do
+  let destination ← wordStackLocation config destination
+  let dividend ← wordStackLocation config dividend
+  let divisor ← wordStackLocation config divisor
+  match destination, dividend, divisor with
+  | .register destination, .register dividend, .register divisor =>
+      pure (.inst (.arith (.div destination dividend divisor)))
+  | .register destination, .stack dividend, .register divisor =>
+      pure (wordStackJoin
+        (.stackLoad config.scratch (wordStackOffset config dividend))
+        (.inst (.arith (.div destination config.scratch divisor))))
+  | .register destination, .register dividend, .stack divisor =>
+      pure (wordStackJoin
+        (.stackLoad config.addressScratch (wordStackOffset config divisor))
+        (.inst (.arith (.div destination dividend config.addressScratch))))
+  | .register destination, .stack dividend, .stack divisor =>
+      pure (wordStackJoin
+        (.stackLoad config.scratch (wordStackOffset config dividend))
+        (wordStackJoin
+          (.stackLoad config.addressScratch (wordStackOffset config divisor))
+          (.inst (.arith (.div destination config.scratch config.addressScratch)))))
+  | .stack destination, .register dividend, .register divisor =>
+      pure (wordStackJoin
+        (.inst (.arith (.div config.scratch dividend divisor)))
+        (.stackStore config.scratch (wordStackOffset config destination)))
+  | .stack destination, .stack dividend, .register divisor =>
+      pure (wordStackJoin
+        (.stackLoad config.scratch (wordStackOffset config dividend))
+        (wordStackJoin
+          (.inst (.arith (.div config.scratch config.scratch divisor)))
+          (.stackStore config.scratch (wordStackOffset config destination))))
+  | .stack destination, .register dividend, .stack divisor =>
+      pure (wordStackJoin
+        (.stackLoad config.addressScratch (wordStackOffset config divisor))
+        (wordStackJoin
+          (.inst (.arith (.div config.scratch dividend config.addressScratch)))
+          (.stackStore config.scratch (wordStackOffset config destination))))
+  | .stack destination, .stack dividend, .stack divisor =>
+      pure (wordStackJoin
+        (.stackLoad config.scratch (wordStackOffset config dividend))
+        (wordStackJoin
+          (.stackLoad config.addressScratch (wordStackOffset config divisor))
+          (wordStackJoin
+            (.inst (.arith (.div config.scratch config.scratch config.addressScratch)))
+            (.stackStore config.scratch (wordStackOffset config destination)))))
+
+def wordStackArithInst (config : WordStackConfig) : WordArith → Option (StackProg α)
+  | .div destination dividend divisor =>
+      wordStackDivInst config destination dividend divisor
+  | _ => none
+
 def wordStackMemoryInst (config : WordStackConfig) (operator : WordMemOp)
     (sourceOrDestination address : Nat) : Option (StackProg α) :=
   match operator with
@@ -108,7 +166,7 @@ def wordStackMemoryInst (config : WordStackConfig) (operator : WordMemOp)
 def wordToStackInst (config : WordStackConfig) : WordInst → Option (StackProg α)
   | .mem operator sourceOrDestination address =>
       wordStackMemoryInst config operator sourceOrDestination address
-  | .arith _ => none
+  | .arith operation => wordStackArithInst config operation
 
 /-! A compact executable semantics for the move fragment.  StackLang uses
 natural-number register names, so this boundary deliberately models the
@@ -236,6 +294,16 @@ theorem wordStackMemoryInst_store_spill_value_and_address :
       some (.seq (.stackLoad 29 12)
         (.seq (.stackLoad 31 13) (.inst (.mem .store32 31 29))) : StackProg Nat) := by
   simp [wordStackMemoryInst, wordStackStoreInst, wordStackLocation,
+    wordStackOffset, lookupNatInfo]
+
+theorem wordStackDivInst_spill_operands :
+    wordStackDivInst
+        { locations := [(0, .stack 3), (1, .stack 2), (2, .register 6)],
+          scratch := 31, stackBase := 10 } 0 1 2 =
+      some (.seq (.stackLoad 31 12)
+        (.seq (.inst (.arith (.div 31 31 6)))
+          (.stackStore 31 13)) : StackProg Nat) := by
+  simp [wordStackDivInst, wordStackJoin, wordStackLocation,
     wordStackOffset, lookupNatInfo]
 
 end Flapjack.RiscV

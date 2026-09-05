@@ -42,6 +42,15 @@ example :
         (.seq (.stackLoad 31 13) (.inst (.mem .store32 31 29))) : StackProg Nat) := by
   exact wordStackMemoryInst_store_spill_value_and_address
 
+example :
+    wordStackDivInst
+        { locations := [(0, .stack 3), (1, .stack 2), (2, .register 6)],
+          scratch := 31, stackBase := 10 } 0 1 2 =
+      some (.seq (.stackLoad 31 12)
+        (.seq (.inst (.arith (.div 31 31 6)))
+          (.stackStore 31 13)) : StackProg Nat) := by
+  exact wordStackDivInst_spill_operands
+
 example [NeZero width]
     (state final : WordStackState width)
     (heval : (wordStackMove (α := Nat)

@@ -223,6 +223,34 @@ example :
     wordStackLocation,
     wordStackOffset, lookupNatInfo, wordStackJoin]
 
+example (state final : WordStackMachineState 8)
+    (heval : (wordStackFfiMove
+      { locations := [(2, .register 4)], scratch := 31, stackBase := 10 }
+      2 10).bind (evalWordStackMachine state) = some final) :
+    final.registers 10 =
+      wordStackMachineValue
+        { locations := [(2, .register 4)], scratch := 31, stackBase := 10 }
+        state 2 := by
+  apply evalWordStackMachine_ffi_move_preserves_value
+    (sourceLocation := .register 4)
+  · native_decide
+  · decide
+  · exact heval
+
+example (state final : WordStackMachineState 8)
+    (heval : (wordStackFfiMove
+      { locations := [(2, .stack 2)], scratch := 31, stackBase := 10 }
+      2 10).bind (evalWordStackMachine state) = some final) :
+    final.registers 10 =
+      wordStackMachineValue
+        { locations := [(2, .stack 2)], scratch := 31, stackBase := 10 }
+        state 2 := by
+  apply evalWordStackMachine_ffi_move_preserves_value
+    (sourceLocation := .stack 2)
+  · native_decide
+  · decide
+  · exact heval
+
 example :
     wordToStackProgNat
         { locations := [(0, .register 4)], scratch := 31, stackBase := 10 }

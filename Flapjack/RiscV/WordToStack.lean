@@ -821,6 +821,35 @@ theorem evalWordStackBasic_move_to_physical_preserves_value [NeZero width]
       simp [evalWordStackBasic, wordStackValue, wordStackLocation,
         wordStackOffset, wordStackWriteRegister, wordStackWriteSlot, hsource]
 
+theorem evalWordStackMachine_ffi_move_preserves_value [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (source destination : Nat) (sourceLocation : WordLocation)
+    (hsource : wordStackLocation config source = some sourceLocation)
+    (hdestination : sourceLocation ≠ .register destination)
+    (heval : (wordStackFfiMove config source destination).bind
+      (evalWordStackMachine state) = some final) :
+      final.registers destination = wordStackMachineValue config state source := by
+  change lookupNatInfo source config.locations = some sourceLocation at hsource
+  cases sourceLocation with
+  | register register =>
+      have hregister : register ≠ destination := by
+        intro heq
+        apply hdestination
+        simp [heq]
+      simp [wordStackFfiMove, wordStackLocation, lookupNatInfo,
+        hsource, hregister] at heval
+      cases heval
+      simp [wordStackMachineValue, wordStackLocation,
+        wordStackMachineWriteRegister, wordStackMachineBinOp, hsource,
+        hregister]
+  | stack slot =>
+      simp [wordStackFfiMove, wordStackLocation, lookupNatInfo,
+        hsource] at heval
+      cases heval
+      simp [evalWordStackMachine, wordStackMachineValue,
+        wordStackLocation, wordStackOffset, wordStackMachineWriteRegister,
+        hsource]
+
 def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α] [DecidableRel (fun left right : α => left < right)]

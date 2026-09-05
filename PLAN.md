@@ -377,6 +377,8 @@ definitions, pass ordering, examples, and proof obligations.
   calls, exception handlers, special stores, and FFI operations.
 - [x] Marshal Word-to-Stack FFI arguments into the x10--x13 ABI registers,
   including spilled sources and an explicit clobber-safety boundary.
+- [x] Prove the individual Word-to-Stack FFI argument move preserves its
+  source value for both register and spill locations.
 - [x] Add concrete `Nat` Word-to-Stack expression lowering for constants,
   register/stack atoms, binary operations, loads, stores, and stack-backed
   destinations, with separate value/address scratch registers.

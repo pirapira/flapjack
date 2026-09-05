@@ -451,6 +451,8 @@ definitions, pass ordering, examples, and proof obligations.
   resume Word loop code after a composed FFI or call.
 - [x] Generalize loop-aware sequence simulation to propagate normal, return,
   raise, break, and continue results, with an FFI-followed-by-break regression.
+- [x] Add the handler-free loop-aware call boundary for fully composed callee
+  evaluation, including propagation of a callee `break` result.
 - [x] Exercise the actual Loop-to-Word loop lowering through the Word loop
   evaluator, including its generated entry and exit ticks.
 - [x] Add layout-aware RISC-V lowering for Word loops, resolving generated

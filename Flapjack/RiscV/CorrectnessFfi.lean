@@ -719,4 +719,228 @@ theorem loopToWord_seq_loop_control_simulation [NeZero width]
                   subst wordResult
                   exact hfirstResult
 
+/-!
+Handler-free single-parameter calls at a loop boundary.  The callee may
+itself use the fully composed primitive/call/FFI evaluator; the abstract
+body hypothesis supplies the corresponding five-way Loop/Word relation.
+The call dispatcher then proves the caller-frame transition and propagates
+all control outcomes.
+-/
+theorem loopToWord_call_loop_control_simulation_single_parameter [NeZero width]
+    (context : WordContext)
+    (primitive : LoopPrimitiveHandler (Word width))
+    (functions : List (Nat × List Nat × LoopProg (Word width)))
+    (wordFunctions : List (Nat × List Nat × WordProg (Word width)))
+    (loopState : LoopState (Word width))
+    (wordState : State width)
+    (loopHandler : FunName → Word width → Word width → Word width → Word width →
+      LoopState (Word width) → Option (LoopState (Word width)))
+    (wordHandler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (target parameter argument : Nat) (argumentValue : Word width)
+    (fuel : Nat) (loopBody : LoopProg (Word width))
+    (parameterRegister : Fin 32)
+    (loopResult : LoopResult (Word width))
+    (wordResult : WordLoopControlResult width)
+    (hlookupLoop :
+      lookupLoopFunction target functions = some ([parameter], loopBody))
+    (hlookupWord :
+      RiscV.lookupWordFunction target wordFunctions =
+        some ([wordFindVar context parameter], loopToWordProg context loopBody))
+    (hparameter :
+      RiscV.registerOfNat (wordFindVar context parameter) =
+        some parameterRegister)
+    (hparameter_nonzero : parameterRegister ≠ 0)
+    (hargument : loopState.locals argument = some argumentValue)
+    (hbody : ∀ calleeLoop calleeWord bodyResult bodyWordResult,
+      loopLocalsMappedToRiscV context calleeLoop.locals calleeWord →
+      evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
+          calleeLoop loopBody = some bodyResult →
+      RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
+          calleeWord (loopToWordProg context loopBody) = some bodyWordResult →
+      loopResultMappedToWordLoop context bodyResult bodyWordResult)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals wordState)
+    (hloop :
+      evalLoopCallWithPrimitiveCallsAndFfi primitive functions loopHandler
+        (fuel + 1) loopState none (some target) [argument] none =
+        some loopResult)
+    (hword :
+      RiscV.evalWordLoopCallWithHandlersAndFfi wordFunctions wordHandler
+        (fuel + 1) wordState none (some target)
+        [wordFindVar context argument] none = some wordResult) :
+    loopResultMappedToWordLoop context loopResult wordResult := by
+  rcases hlocals argument argumentValue hargument with
+    ⟨argumentRegister, hargumentRegister, hargumentValue⟩
+  have hreadLoop :
+      loopReadLocals loopState.locals [argument] = some [argumentValue] := by
+    simp [loopReadLocals, hargument]
+  have harguments :
+      RiscV.readWordRegisters wordState [wordFindVar context argument] =
+        some [argumentValue] := by
+    simp [RiscV.readWordRegisters, hargumentRegister, hargumentValue]
+  rcases loopBindParameters_single_parameter_agreement context wordState
+      parameter argumentValue parameterRegister hparameter hparameter_nonzero with
+    ⟨calleeLocals, calleeWord, hcalleeBind, hwordBind, hcallee⟩
+  cases hbodyLoop :
+      evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
+        { loopState with locals := calleeLocals } loopBody with
+  | none =>
+      simp [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop, hreadLoop,
+        hcalleeBind, hbodyLoop] at hloop
+  | some bodyResult =>
+      cases hbodyWord :
+          RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
+            calleeWord (loopToWordProg context loopBody) with
+      | none =>
+          simp [RiscV.evalWordLoopCallWithHandlersAndFfi, hlookupWord,
+            harguments, hwordBind, hbodyWord] at hword
+      | some bodyWordResult =>
+          have hbodyResult := hbody { loopState with locals := calleeLocals } calleeWord
+            bodyResult bodyWordResult hcallee hbodyLoop hbodyWord
+          have callerMapped : ∀ (bodyWordState : State width),
+              loopLocalsMappedToRiscV context loopState.locals bodyWordState →
+              loopLocalsMappedToRiscV context loopState.locals bodyWordState :=
+            fun _ h => h
+          cases bodyResult with
+          | normal bodyLoopState =>
+              cases bodyWordResult with
+              | normal bodyWordState =>
+                  have hloop' :
+                      some (.normal loopState) = some loopResult := by
+                    simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
+                      hreadLoop, hcalleeBind, hbodyLoop] using hloop
+                  let returnedWordState : State width :=
+                    { wordState with
+                      memory := bodyWordState.memory
+                      privilege := bodyWordState.privilege
+                      mode := bodyWordState.mode }
+                  have hword' :
+                      some (.normal returnedWordState) = some wordResult := by
+                    simpa [RiscV.evalWordLoopCallWithHandlersAndFfi,
+                      hlookupWord, harguments, hwordBind, hbodyWord] using hword
+                  cases hloop'
+                  cases hword'
+                  exact callerMapped returnedWordState hlocals
+              | returned bodyWordState values =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | raised bodyWordState exception =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | broke bodyWordState label =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | continued bodyWordState label =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+          | returned bodyLoopState values =>
+              cases bodyWordResult with
+              | normal bodyWordState =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | returned bodyWordState wordValues =>
+                  have hloop' :
+                      some (.returned loopState values) = some loopResult := by
+                    simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
+                      hreadLoop, hcalleeBind, hbodyLoop] using hloop
+                  let returnedWordState : State width :=
+                    { wordState with
+                      memory := bodyWordState.memory
+                      privilege := bodyWordState.privilege
+                      mode := bodyWordState.mode }
+                  have hword' :
+                      some (.returned returnedWordState wordValues) =
+                        some wordResult := by
+                    simpa [RiscV.evalWordLoopCallWithHandlersAndFfi,
+                      hlookupWord, harguments, hwordBind, hbodyWord] using hword
+                  cases hloop'
+                  cases hword'
+                  exact ⟨callerMapped returnedWordState hlocals,
+                    hbodyResult.2⟩
+              | raised bodyWordState exception =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | broke bodyWordState label =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | continued bodyWordState label =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+          | raised bodyLoopState exception =>
+              cases bodyWordResult with
+              | normal bodyWordState =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | returned bodyWordState values =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | raised bodyWordState wordException =>
+                  have hloop' :
+                      some (.raised loopState exception) = some loopResult := by
+                    simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
+                      hreadLoop, hcalleeBind, hbodyLoop] using hloop
+                  let returnedWordState : State width :=
+                    { wordState with
+                      memory := bodyWordState.memory
+                      privilege := bodyWordState.privilege
+                      mode := bodyWordState.mode }
+                  have hword' :
+                      some (.raised returnedWordState wordException) =
+                        some wordResult := by
+                    simpa [RiscV.evalWordLoopCallWithHandlersAndFfi,
+                      hlookupWord, harguments, hwordBind, hbodyWord] using hword
+                  cases hloop'
+                  cases hword'
+                  exact ⟨callerMapped returnedWordState hlocals,
+                    hbodyResult.2⟩
+              | broke bodyWordState label =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | continued bodyWordState label =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+          | broke bodyLoopState label =>
+              cases bodyWordResult with
+              | normal bodyWordState =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | returned bodyWordState values =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | raised bodyWordState exception =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | broke bodyWordState wordLabel =>
+                  have hloop' :
+                      some (.broke loopState label) = some loopResult := by
+                    simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
+                      hreadLoop, hcalleeBind, hbodyLoop] using hloop
+                  let returnedWordState : State width :=
+                    { wordState with
+                      memory := bodyWordState.memory
+                      privilege := bodyWordState.privilege
+                      mode := bodyWordState.mode }
+                  have hword' :
+                      some (.broke returnedWordState wordLabel) = some wordResult := by
+                    simpa [RiscV.evalWordLoopCallWithHandlersAndFfi,
+                      hlookupWord, harguments, hwordBind, hbodyWord] using hword
+                  cases hloop'
+                  cases hword'
+                  exact ⟨hbodyResult.1, callerMapped returnedWordState hlocals⟩
+              | continued bodyWordState wordLabel =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+          | continued bodyLoopState label =>
+              cases bodyWordResult with
+              | normal bodyWordState =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | returned bodyWordState values =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | raised bodyWordState exception =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | broke bodyWordState wordLabel =>
+                  simp [loopResultMappedToWordLoop] at hbodyResult
+              | continued bodyWordState wordLabel =>
+                  have hloop' :
+                      some (.continued loopState label) = some loopResult := by
+                    simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
+                      hreadLoop, hcalleeBind, hbodyLoop] using hloop
+                  let returnedWordState : State width :=
+                    { wordState with
+                      memory := bodyWordState.memory
+                      privilege := bodyWordState.privilege
+                      mode := bodyWordState.mode }
+                  have hword' :
+                      some (.continued returnedWordState wordLabel) =
+                        some wordResult := by
+                    simpa [RiscV.evalWordLoopCallWithHandlersAndFfi,
+                      hlookupWord, harguments, hwordBind, hbodyWord] using hword
+                  cases hloop'
+                  cases hword'
+                  exact ⟨hbodyResult.1, callerMapped returnedWordState hlocals⟩
+
 end Flapjack.RiscV

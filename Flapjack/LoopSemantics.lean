@@ -61,6 +61,20 @@ def loopNoGlobalWrites : LoopProg α → Bool
   | .mark body => loopNoGlobalWrites body
   | _ => true
 
+/-- Syntactic approximation of Loop programs that do not update memory. -/
+def loopNoMemoryWrites : LoopProg α → Bool
+  | .store _ _ | .store32 _ _ | .storeByte _ _ => false
+  | .shMem operator _ _ =>
+      match operator with
+      | .store | .store8 | .store16 | .store32 => false
+      | .load | .load8 | .load16 | .load32 => true
+  | .seq first second => loopNoMemoryWrites first && loopNoMemoryWrites second
+  | .ite _ _ _ thenBranch elseBranch _ =>
+      loopNoMemoryWrites thenBranch && loopNoMemoryWrites elseBranch
+  | .loop _ body _ => loopNoMemoryWrites body
+  | .mark body => loopNoMemoryWrites body
+  | _ => true
+
 def loopResultValues : LoopResult α → List α
   | .returned _ values => values
   | _ => []
@@ -331,6 +345,61 @@ theorem evalLoopProg_one_global_projection [BEq α] [OfNat α 0] [OfNat α 1]
       simp [loopNoGlobalWrites] at hprogram
   | _ =>
       simp [evalLoopProg, loopNoGlobalWrites, loopResultState, Function.comp_def]
+
+theorem evalLoopProg_one_memory_projection [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (state : LoopState α) (program : LoopProg α)
+    (hprogram : loopNoMemoryWrites program = true) :
+    (evalLoopProg 1 state program).map
+        (fun result => (loopResultState result).memory) =
+    (evalLoopProg 1 state program).map (fun _ => state.memory) := by
+  cases program with
+  | arith operation =>
+      cases operation with
+      | longMul left right sourceLeft sourceRight =>
+          by_cases h : left = right
+          · subst right
+            cases hleft : state.locals sourceLeft with
+            | none => simp [evalLoopProg, loopResultState, hleft]
+            | some leftValue =>
+                cases hright : state.locals sourceRight with
+                | none => simp [evalLoopProg, loopResultState, hleft, hright]
+                | some rightValue =>
+                    simp [evalLoopProg, loopResultState, hleft, hright]
+          · simp [evalLoopProg, loopResultState, h]
+      | div destination dividend divisor =>
+          cases hdividend : state.locals dividend with
+          | none => simp [evalLoopProg, loopResultState, hdividend]
+          | some dividendValue =>
+              cases hdivisor : state.locals divisor with
+              | none => simp [evalLoopProg, loopResultState, hdividend, hdivisor]
+              | some divisorValue =>
+                  by_cases hzero : (divisorValue == 0) = true
+                  · simp [evalLoopProg, loopResultState, hdividend, hdivisor, hzero]
+                  · simp [evalLoopProg, loopResultState, hdividend, hdivisor, hzero]
+      | _ => simp [evalLoopProg, loopResultState, Function.comp_def]
+  | ite operator condition right thenBranch elseBranch live =>
+      cases right <;>
+        simp [evalLoopProg, loopResultState, Function.comp_def]
+  | loop liveIn body liveOut =>
+      simp [evalLoopProg, evalLoopRepeat, loopResultState, Function.comp_def]
+  | store address value =>
+      simp [loopNoMemoryWrites] at hprogram
+  | store32 address value =>
+      simp [loopNoMemoryWrites] at hprogram
+  | storeByte address value =>
+      simp [loopNoMemoryWrites] at hprogram
+  | shMem operator name address =>
+      cases operator with
+      | load | load8 | load16 | load32 =>
+          simp [evalLoopProg, loopNoMemoryWrites, loopResultState,
+            Function.comp_def]
+      | store | store8 | store16 | store32 =>
+          simp [loopNoMemoryWrites] at hprogram
+  | _ =>
+      simp [evalLoopProg, loopNoMemoryWrites, loopResultState, Function.comp_def]
 
 theorem evalLoopProg_global_projection [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]

@@ -344,6 +344,9 @@ definitions, pass ordering, examples, and proof obligations.
   over RISC-V word cells, with little-endian and alignment regressions.
 - [x] Prove model-level register agreements for unsigned RISC-V division and
   remainder, including the HOL/RISC-V zero-divisor results.
+- [x] Lift the Loop no-memory-write projection invariant from one step to
+  arbitrary fuel, including sequencing, conditionals, loop repetition, and
+  control results.
 - [ ] Prove the complete Loop state-preservation theorem, including the
   remaining operations and control-flow invariants.
 - [x] Prove that compiler-generated RISC-V ticks preserve the mapped-local

@@ -401,6 +401,215 @@ theorem evalLoopProg_one_memory_projection [BEq α] [OfNat α 0] [OfNat α 1]
   | _ =>
       simp [evalLoopProg, loopNoMemoryWrites, loopResultState, Function.comp_def]
 
+theorem evalLoopProg_memory_projection [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (fuel : Nat) (state : LoopState α) (program : LoopProg α)
+    (hprogram : loopNoMemoryWrites program = true) :
+    (evalLoopProg fuel state program).map
+        (fun result => (loopResultState result).memory) =
+      (evalLoopProg fuel state program).map (fun _ => state.memory) := by
+  induction fuel using Nat.strongRecOn generalizing state program with
+  | _ fuel ih =>
+      cases fuel with
+      | zero => rfl
+      | succ fuel =>
+          cases program with
+          | arith operation =>
+              cases operation with
+              | longMul left right sourceLeft sourceRight =>
+                  by_cases h : left = right
+                  · subst right
+                    cases hleft : state.locals sourceLeft with
+                    | none => simp [evalLoopProg, loopResultState, hleft]
+                    | some leftValue =>
+                        cases hright : state.locals sourceRight with
+                        | none =>
+                            simp [evalLoopProg, loopResultState, hleft, hright]
+                        | some rightValue =>
+                            simp [evalLoopProg, loopResultState, hleft, hright]
+                  · simp [evalLoopProg, loopResultState, h]
+              | longDiv left right sourceLeft sourceRight quotient =>
+                  simp [evalLoopProg, loopResultState]
+              | div destination dividend divisor =>
+                  cases hdividend : state.locals dividend with
+                  | none => simp [evalLoopProg, loopResultState, hdividend]
+                  | some dividendValue =>
+                      cases hdivisor : state.locals divisor with
+                      | none =>
+                          simp [evalLoopProg, loopResultState, hdividend, hdivisor]
+                      | some divisorValue =>
+                          by_cases hzero : (divisorValue == 0) = true
+                          · simp [evalLoopProg, loopResultState, hdividend,
+                              hdivisor, hzero]
+                          · simp [evalLoopProg, loopResultState, hdividend,
+                              hdivisor, hzero]
+          | store address value =>
+              simp [loopNoMemoryWrites] at hprogram
+          | store32 address value =>
+              simp [loopNoMemoryWrites] at hprogram
+          | storeByte address value =>
+              simp [loopNoMemoryWrites] at hprogram
+          | setGlobal address value =>
+              cases hvalue : evalLoopExp state value with
+              | none => simp [evalLoopProg, hvalue]
+              | some value => simp [evalLoopProg, loopResultState, hvalue]
+          | seq first second =>
+              have hseq : loopNoMemoryWrites first = true ∧
+                  loopNoMemoryWrites second = true := by
+                simpa [loopNoMemoryWrites] using hprogram
+              cases hfirstEval : evalLoopProg fuel state first with
+              | none => simp [evalLoopProg, hfirstEval]
+              | some result =>
+                  have hresult : (loopResultState result).memory = state.memory := by
+                    have h := ih fuel (by omega) state first hseq.1
+                    rw [hfirstEval] at h
+                    simpa using h
+                  cases result with
+                  | normal nextState =>
+                      have hnext := ih fuel (by omega) nextState second hseq.2
+                      have hnormal : nextState.memory = state.memory := by
+                        simpa [loopResultState] using hresult
+                      simpa [evalLoopProg, hfirstEval, hnormal] using hnext
+                  | returned nextState values =>
+                      simp [evalLoopProg, hfirstEval, hresult]
+                  | broke nextState label =>
+                      simp [evalLoopProg, hfirstEval, hresult]
+                  | continued nextState label =>
+                      simp [evalLoopProg, hfirstEval, hresult]
+                  | raised nextState exception =>
+                      simp [evalLoopProg, hfirstEval, hresult]
+          | ite operator condition right thenBranch elseBranch live =>
+              have hbranches : loopNoMemoryWrites thenBranch = true ∧
+                  loopNoMemoryWrites elseBranch = true := by
+                simpa [loopNoMemoryWrites] using hprogram
+              cases right with
+              | imm right =>
+                  cases hleft : state.locals condition with
+                  | none => simp [evalLoopProg, hleft]
+                  | some left =>
+                      cases hchoose : evalLoopCondition operator left right with
+                      | none => simp [evalLoopProg, hleft, hchoose]
+                      | some choose =>
+                          cases choose with
+                          | false =>
+                              have hbranch := ih fuel (by omega) state elseBranch hbranches.2
+                              simpa [evalLoopProg, hleft, hchoose] using hbranch
+                          | true =>
+                              have hbranch := ih fuel (by omega) state thenBranch hbranches.1
+                              simpa [evalLoopProg, hleft, hchoose] using hbranch
+              | reg name =>
+                  cases hleft : state.locals condition with
+                  | none => simp [evalLoopProg, hleft]
+                  | some left =>
+                      cases hright : state.locals name with
+                      | none => simp [evalLoopProg, hleft, hright]
+                      | some right =>
+                          cases hchoose : evalLoopCondition operator left right with
+                          | none => simp [evalLoopProg, hleft, hright, hchoose]
+                          | some choose =>
+                              cases choose with
+                              | false =>
+                                  have hbranch := ih fuel (by omega) state elseBranch hbranches.2
+                                  simpa [evalLoopProg, hleft, hright, hchoose] using hbranch
+                              | true =>
+                                  have hbranch := ih fuel (by omega) state thenBranch hbranches.1
+                                  simpa [evalLoopProg, hleft, hright, hchoose] using hbranch
+          | loop liveIn body liveOut =>
+              have hbody : loopNoMemoryWrites body = true := by
+                simpa [loopNoMemoryWrites] using hprogram
+              have repeatInvariant : ∀ (bound : Nat),
+                  (∀ m, m < bound + 1 → ∀ state : LoopState α,
+                    (evalLoopProg m state body).map
+                        (fun result => (loopResultState result).memory) =
+                      (evalLoopProg m state body).map (fun _ => state.memory)) →
+                  ∀ state : LoopState α,
+                    (evalLoopRepeat bound state body).map
+                        (fun result => (loopResultState result).memory) =
+                      (evalLoopRepeat bound state body).map (fun _ => state.memory) := by
+                intro bound progIH
+                induction bound using Nat.strongRecOn with
+                | _ bound ihRepeat =>
+                    intro repeatState
+                    cases bound with
+                    | zero => rfl
+                    | succ bound =>
+                        cases hbodyEval : evalLoopProg bound repeatState body with
+                        | none => simp [evalLoopRepeat, hbodyEval]
+                        | some result =>
+                            have hresult :
+                                (loopResultState result).memory = repeatState.memory := by
+                              have h := progIH bound (by omega) repeatState
+                              rw [hbodyEval] at h
+                              simpa using h
+                            have progIH' : ∀ m, m < bound + 1 → ∀ state : LoopState α,
+                                (evalLoopProg m state body).map
+                                    (fun result => (loopResultState result).memory) =
+                                  (evalLoopProg m state body).map (fun _ => state.memory) := by
+                              intro m hm
+                              exact progIH m (by omega)
+                            cases result with
+                            | normal nextState =>
+                                have hnext := ihRepeat bound (by omega) progIH' nextState
+                                have hnormal : nextState.memory = repeatState.memory := by
+                                  simpa [loopResultState] using hresult
+                                simp [evalLoopRepeat, hbodyEval, hnext, hnormal]
+                            | returned nextState values =>
+                                simp [evalLoopRepeat, hbodyEval, hresult]
+                            | broke nextState label =>
+                                cases label with
+                                | zero =>
+                                    have hnormal : nextState.memory = repeatState.memory := by
+                                      simpa [loopResultState] using hresult
+                                    simp [evalLoopRepeat, hbodyEval, hnormal, loopResultState]
+                                | succ label => simp [evalLoopRepeat, hbodyEval, hresult]
+                            | continued nextState label =>
+                                cases label with
+                                | zero =>
+                                    have hnext := ihRepeat bound (by omega) progIH' nextState
+                                    have hnormal : nextState.memory = repeatState.memory := by
+                                      simpa [loopResultState] using hresult
+                                    simp [evalLoopRepeat, hbodyEval, hnext, hnormal]
+                                | succ label => simp [evalLoopRepeat, hbodyEval, hresult]
+                            | raised nextState exception =>
+                                simp [evalLoopRepeat, hbodyEval, hresult]
+              simpa [evalLoopProg] using
+                repeatInvariant fuel (fun m hm repeatState =>
+                  ih m hm repeatState body hbody) state
+          | mark body =>
+              have hbody : loopNoMemoryWrites body = true := by
+                simpa [loopNoMemoryWrites] using hprogram
+              exact ih fuel (by omega) state body hbody
+          | shMem operator name address =>
+              cases operator with
+              | load | load8 | load16 | load32 =>
+                  cases haddress : evalLoopExp state address with
+                  | none => simp [evalLoopProg, haddress]
+                  | some address =>
+                      cases hvalue : state.memory address with
+                      | none => simp [evalLoopProg, haddress, hvalue]
+                      | some value =>
+                          simp [evalLoopProg, loopResultState, haddress, hvalue]
+              | store | store8 | store16 | store32 =>
+                  simp [loopNoMemoryWrites] at hprogram
+          | _ =>
+              simp [evalLoopProg, loopNoMemoryWrites, loopResultState,
+                Function.comp_def]
+
+theorem evalLoopProg_result_memory [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (fuel : Nat) (state : LoopState α) (program : LoopProg α)
+    (hprogram : loopNoMemoryWrites program = true)
+    (result : LoopResult α)
+    (heval : evalLoopProg fuel state program = some result) :
+    (loopResultState result).memory = state.memory := by
+  have hprojection := evalLoopProg_memory_projection fuel state program hprogram
+  rw [heval] at hprojection
+  simpa using hprojection
+
 theorem evalLoopProg_global_projection [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]

@@ -198,5 +198,25 @@ example :
       (.rField 1 (.rStruct [.const 3, .const 5])) = some (.word 5) := by
   simp [evalPanValueExp, evalPanValueExp.evalPanValueExps]
 
+example :
+    (evalLoopProg 8 emptyLoopState
+      (.seq (.assign 0 (.const 42)) .tick)).map
+        (fun result => (loopResultState result).memory) =
+      (evalLoopProg 8 emptyLoopState
+        (.seq (.assign 0 (.const 42)) .tick)).map
+          (fun _ => emptyLoopState.memory) := by
+  apply evalLoopProg_memory_projection
+  rfl
+
+example :
+    (evalLoopProg 10 emptyLoopState
+      (.loop [] (.seq .tick (.break 0)) [])).map
+        (fun result => (loopResultState result).memory) =
+      (evalLoopProg 10 emptyLoopState
+        (.loop [] (.seq .tick (.break 0)) [])).map
+          (fun _ => emptyLoopState.memory) := by
+  apply evalLoopProg_memory_projection
+  rfl
+
 
 end Flapjack

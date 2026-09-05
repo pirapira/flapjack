@@ -213,6 +213,9 @@ definitions, pass ordering, examples, and proof obligations.
   using the executable memory state.
 - [x] Add an explicit fuel-bounded Loop FFI environment bridge with evaluated
   word arguments and host-controlled state updates.
+- [x] Add a RISC-V ECALL FFI ABI boundary with service-name resolution,
+  argument marshalling, option-valued host execution, and executable
+  instruction-level regressions.
 - [x] Add a unified fuel-bounded Loop evaluator that composes function calls
   and host-controlled FFI effects in one control-result semantics.
 - [x] Preserve a static-check success while diagnosing unreachable sequence

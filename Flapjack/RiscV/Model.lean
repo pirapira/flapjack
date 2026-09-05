@@ -142,6 +142,7 @@ inductive Instruction (width : Nat) where
   | branchGeU (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | jal (destination : Fin 32) (offset : Word width)
   | jalr (destination source : Fin 32) (offset : Word width)
+  | ecall
   | loadByte (destination address : Fin 32)
   | loadByteSigned (destination address : Fin 32)
   | storeByte (source address : Fin 32)
@@ -386,6 +387,8 @@ def execute (state : State width) : Instruction width → State width
       writeRegister { state with
         pc := (readRegister state source + offset) &&& BitVec.ofNat width (2 ^ width - 2) }
         destination (nextPc state)
+  | .ecall =>
+      { state with pc := nextPc state }
   | .loadByte destination address =>
       let address := readRegister state address
       let value := BitVec.ofNat width (readByte state address).toNat

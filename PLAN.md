@@ -1391,6 +1391,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Close the generated Word-to-Stack/StackRemove/LabLang FFI path with a
   machine-level RISC-V execution theorem, retaining the host transition as
   an explicit hypothesis.
+- [x] Upgrade the complete call-aware FFI source/image regression to a named
+  source-to-machine agreement theorem.
 
 ## First implementation slice
 

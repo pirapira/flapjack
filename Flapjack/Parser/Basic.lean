@@ -4,11 +4,14 @@ import Flapjack.Parser.Lexer
 Parser state and combinators.
 
 Upstream runs a PEG (`panPEG`) over the token list and then converts the
-resulting parse tree (`panPtreeConversion`). This port keeps the grammar and
-its ordered choices but drops the intermediate parse tree: each nonterminal is
-one Lean function that returns the AST fragment directly. Rule names are kept,
-so `panPEG`'s `EShiftNT` is `parseEShift` here and the two can be read side by
-side.
+resulting parse tree (`panPtreeConversion`). This port follows both stages:
+`Grammar.lean` builds a `ParseTree` and `Conversion.lean` converts it. Rule
+names are kept, so `panPEG`'s `EShiftNT` is `gEShift` here and the two can be
+read side by side.
+
+Only two combinators consume tokens -- `expect` here and `keepTok` in
+`ParseTree.lean` -- and both go through `PState.pop`, which is what keeps
+`remaining` honest.
 
 Failure is `none` rather than an exception so that ordered choice can
 backtrack. The furthest failure seen is carried in the state, which is what
@@ -39,11 +42,28 @@ def posnLe (left right : Posn) : Bool :=
 
 structure PState where
   toks : Toks
+  /-- `toks.length`, maintained as tokens are consumed rather than recomputed.
+  Every parse-tree node asks how much input a rule consumed, and walking the
+  remaining tokens to answer made parsing quadratic in file size (#405). -/
+  remaining : Nat
   /-- The deepest failure seen so far, used for the eventual error message. -/
   furthest : Option ParseError
   /-- Emit `add_locs_annot` location annotations. Off unless asked for. -/
   locations : Bool := false
   deriving Inhabited
+
+/-- The initial state for a token list. The only place `remaining` is computed
+from `toks`; everything else maintains it. -/
+def PState.ofToks (toks : Toks) (locations : Bool := false) : PState :=
+  { toks := toks, remaining := toks.length, furthest := none, locations := locations }
+
+/-- Advance past one consumed token, keeping `remaining` in step with `toks`. -/
+@[inline] def PState.pop (s : PState) (rest : Toks) : PState :=
+  { s with toks := rest, remaining := s.remaining - 1 }
+
+/-- Rewind to an earlier position on backtracking, keeping `remaining` in step. -/
+@[inline] def PState.rewind (s' : PState) (s : PState) : PState :=
+  { s' with toks := s.toks, remaining := s.remaining }
 
 /-- A backtracking parser: `none` is failure, and the state survives it. -/
 def P (α : Type) : Type := PState → Option α × PState
@@ -77,7 +97,7 @@ def fail (message : String) : P α := fun s =>
 def orElse' (p : P α) (q : P α) : P α := fun s =>
   match p s with
   | (some a, s') => (some a, s')
-  | (none, s') => q { s' with toks := s.toks }
+  | (none, s') => q (s'.rewind s)
 
 instance : OrElse (P α) where
   orElse p q := orElse' p (q ())
@@ -86,7 +106,7 @@ instance : OrElse (P α) where
 def optional' (p : P α) : P (Option α) := fun s =>
   match p s with
   | (some a, s') => (some a, s')
-  | (none, s') => (some none, { s' with toks := s.toks })
+  | (none, s') => (some none, s'.rewind s)
 
 def peek : P (Option Token) := fun s =>
   (some (s.toks.head?.map Prod.fst), s)
@@ -103,13 +123,13 @@ def atEnd : P Bool := fun s => (some s.toks.isEmpty, s)
 def advance : P Token := fun s =>
   match s.toks with
   | [] => P.fail "Didn't expect an EOF" s
-  | (token, _) :: rest => (some token, { s with toks := rest })
+  | (token, _) :: rest => (some token, s.pop rest)
 
 /-- Consume a specific token, mirroring `consume_tok`. -/
 def expect (expected : Token) (described : String) : P Unit := fun s =>
   match s.toks with
   | (token, _) :: rest =>
-      if token == expected then (some (), { s with toks := rest })
+      if token == expected then (some (), s.pop rest)
       else P.fail s!"Failed to see expected token: {described}" s
   | [] => P.fail s!"Failed to see expected token; saw EOF instead: {described}" s
 
@@ -120,33 +140,33 @@ def expectKw (keyword : Keyword) (described : String) : P Unit :=
 /-- Consume an identifier, mirroring `keep_ident` followed by `conv_ident`. -/
 def ident : P String := fun s =>
   match s.toks with
-  | (.identT name, _) :: rest => (some name, { s with toks := rest })
+  | (.identT name, _) :: rest => (some name, s.pop rest)
   | _ => P.fail "Expected an identifier" s
 
 /-- Consume an `@name` foreign identifier, mirroring `keep_ffi_ident`. -/
 def ffiIdent : P String := fun s =>
   match s.toks with
-  | (.foreignIdent name, _) :: rest => (some name, { s with toks := rest })
+  | (.foreignIdent name, _) :: rest => (some name, s.pop rest)
   | _ => P.fail "Expected a foreign identifier" s
 
 /-- Consume an integer literal, mirroring `keep_int`. -/
 def intLit : P Int := fun s =>
   match s.toks with
-  | (.intT value, _) :: rest => (some value, { s with toks := rest })
+  | (.intT value, _) :: rest => (some value, s.pop rest)
   | _ => P.fail "Expected an integer literal" s
 
 /-- Consume a non-negative integer literal, mirroring `keep_nat`/`conv_nat`. -/
 def natLit : P Nat := fun s =>
   match s.toks with
   | (.intT value, _) :: rest =>
-      if 0 ≤ value then (some value.toNat, { s with toks := rest })
+      if 0 ≤ value then (some value.toNat, s.pop rest)
       else P.fail "Expected a non-negative integer literal" s
   | _ => P.fail "Expected a non-negative integer literal" s
 
 /-- Consume an annotation comment, mirroring `keep_annot`. -/
 def annotLit : P String := fun s =>
   match s.toks with
-  | (.annotCommentT text, _) :: rest => (some text, { s with toks := rest })
+  | (.annotCommentT text, _) :: rest => (some text, s.pop rest)
   | _ => P.fail "Expected an annotation comment" s
 
 /-- Collect `, item` repetitions. Each accepted separator consumes a token, so
@@ -165,7 +185,7 @@ def commaTail (item : P α) : Nat → P (List α)
 `rpt (seql [consume_tok CommaT; ...])` shape used throughout `panPEG`. -/
 def sepByComma (item : P α) : P (List α) := fun s => (do
     let first ← item
-    let rest ← commaTail item s.toks.length
+    let rest ← commaTail item s.remaining
     pure (first :: rest)) s
 
 /-- Run a parser and report the source range it consumed. Upstream reads this
@@ -176,7 +196,7 @@ def spanned (p : P α) : P (α × Locs) := fun s =>
       let start := match s.toks with
         | [] => Posn.eofPt
         | (_, locs) :: _ => locs.start
-      let consumed := s.toks.take (s.toks.length - s'.toks.length)
+      let consumed := s.toks.take (s.remaining - s'.remaining)
       let stop := match consumed.getLast? with
         | none => start
         | some (_, locs) => locs.stop

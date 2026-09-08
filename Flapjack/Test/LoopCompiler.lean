@@ -76,9 +76,10 @@ example :
     structCompileDecls, globalCompileTop, globalCollect, globalCompileDecls,
     globalCompileInitializers, pipelineCrepeContext, pipelineExceptionCodes,
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
-    pipelineWordFunctions, pipelinePrependInitializers,
+    pipelineWordFunctions, pipelinePrependInitializers, pipelineInlineNames,
     compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
-    compileProg, crepArithFunctions, crepArithProg, loopCompileProg,
+    compileProg, crepInlineTop, crepInlineFunctions, crepInlineRemove,
+    crepArithFunctions,
     lookupInfo
     ]
 

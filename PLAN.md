@@ -1796,6 +1796,8 @@ definitions, pass ordering, examples, and proof obligations.
   elimination helpers needed by the next call-substitution layer.
 - [x] Port the Crepe inlining argument-load and return-rewrite combinators,
   including branch-return break lowering and non-tail call scaffolding.
+- [x] Port direct Crepe call substitution over an inline map, covering tail
+  and non-tail calls with temporary-variable isolation.
 
 ## First implementation slice
 

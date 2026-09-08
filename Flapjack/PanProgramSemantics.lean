@@ -34,9 +34,11 @@ def evalPanValueDeclarations
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)]
     (state : PanValueProgramState α) :
-    List (Decl α) → Option (PanValueProgramState α)
-  | [] => some state
-  | .name name fields :: declarations =>
+    (declarations : List (Decl α)) →
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) →
+      Option (PanValueProgramState α)
+  | [], _ => some state
+  | .name name fields :: declarations, memoryAccess =>
       if (lookupInfo name state.structs).isSome then none
       else if !(fields.map (fun field => field.1)).Nodup then none
       else if !fields.all (fun field => isWfShape state.structs field.2) then none
@@ -44,14 +46,17 @@ def evalPanValueDeclarations
         let info := panValueDeclStructInfo state.structs fields
         evalPanValueDeclarations
           { state with structs := (name, info) :: state.structs } declarations
-  | .decl shape name expression :: declarations => do
+          (memoryAccess := memoryAccess)
+  | .decl shape name expression :: declarations, memoryAccess => do
       let value ← evalPanValueExp state.structs (fun _ => none) state.globals
         state.memory state.baseAddress state.topAddress state.bytesInWord expression
+        (memoryAccess := memoryAccess)
       if panShapeMatches (panValueShape state.structs value) shape then
         evalPanValueDeclarations
           { state with globals := updatePanValueMap state.globals name value } declarations
+          (memoryAccess := memoryAccess)
       else none
-  | .function declaration :: declarations =>
+  | .function declaration :: declarations, memoryAccess =>
       if declaration.params.all (fun parameter => isWfShape state.structs parameter.2) &&
           isWfShape state.structs declaration.returnShape then
         let state := { state with functions :=
@@ -59,13 +64,14 @@ def evalPanValueDeclarations
             declaration.body) :: state.functions }
         evalPanValueDeclarations
           { state with returnShapes := (declaration.name, declaration.returnShape) ::
-              state.returnShapes } declarations
+              state.returnShapes } declarations (memoryAccess := memoryAccess)
       else none
-  | .exnDecl exception shape :: declarations =>
+  | .exnDecl exception shape :: declarations, memoryAccess =>
       if (lookupInfo exception state.exceptions).isSome then none
       else if isWfShape state.structs shape then
         evalPanValueDeclarations
           { state with exceptions := (exception, shape) :: state.exceptions } declarations
+          (memoryAccess := memoryAccess)
       else none
 termination_by declarations => sizeOf declarations
 
@@ -76,12 +82,15 @@ def evalPanValueProgram
     (initial : PanValueProgramState α)
     (primitive : PanPrimitiveHandler α) (ffi : PanValueFfiHandler α)
     (fuel : Nat) (declarations : List (Decl α))
-    (entry : FunName) (arguments : List (Exp α)) :
+    (entry : FunName) (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
     Option (PanValueControlResult α) := do
   let state ← evalPanValueDeclarations initial declarations
+    (memoryAccess := memoryAccess)
   let result ← evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi state.structs
     state.functions state.baseAddress state.topAddress state.bytesInWord fuel
     (fun _ => none) state.globals state.memory none entry arguments
+    (memoryAccess := memoryAccess)
   match lookupInfo entry state.returnShapes, result with
   | some shape, .returned locals globals memory [value] =>
       if panShapeMatches (panValueShape state.structs value) shape then
@@ -97,9 +106,11 @@ def panValueProgramResult
     (initial : PanValueProgramState α)
     (primitive : PanPrimitiveHandler α) (ffi : PanValueFfiHandler α)
     (fuel : Nat) (declarations : List (Decl α))
-    (entry : FunName) (arguments : List (Exp α)) :
+    (entry : FunName) (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
     Option (List (PanValue α)) :=
-  (evalPanValueProgram initial primitive ffi fuel declarations entry arguments).bind
+  (evalPanValueProgram initial primitive ffi fuel declarations entry arguments
+    (memoryAccess := memoryAccess)).bind
     (fun result => match result with
     | .returned _ _ _ values => some values
     | _ => none)

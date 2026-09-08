@@ -432,7 +432,8 @@ mutual
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value memoryAccess
         let .word address := address | none
-        pure (.normal locals globals (updatePanValueMemory memory address value),
+        let memory ← panValueStoreWithAccess memory bytesInWord address value memoryAccess
+        pure (.normal locals globals memory,
           addressSteps + valueSteps + 1)
     | _fuel + 1, locals, globals, memory, .store32 address value, memoryAccess => do
         let (address, addressSteps) ← evalPanValueExpCounted structs locals globals memory
@@ -443,7 +444,7 @@ mutual
         let .word value := value | none
         let memory ← match memoryAccess with
           | none => some (updatePanValueMemory memory address (.word value))
-          | some access => access.store32 (fun _ => true) memory bytesInWord address value
+          | some access => access.store32 access.domain memory bytesInWord address value
         pure (.normal locals globals memory, addressSteps + valueSteps + 1)
     | _fuel + 1, locals, globals, memory, .storeByte address value, memoryAccess => do
         let (address, addressSteps) ← evalPanValueExpCounted structs locals globals memory
@@ -454,7 +455,7 @@ mutual
         let .word value := value | none
         let memory ← match memoryAccess with
           | none => some (updatePanValueMemory memory address (.word value))
-          | some access => access.storeByte (fun _ => true) memory bytesInWord address value
+          | some access => access.storeByte access.domain memory bytesInWord address value
         pure (.normal locals globals memory, addressSteps + valueSteps + 1)
     | fuel + 1, locals, globals, memory, .seq first second, memoryAccess => do
         let (firstResult, firstSteps) ←
@@ -554,10 +555,13 @@ mutual
         let value ← match memoryAccess with
           | none => memory evaluatedAddress
           | some access => match size with
-              | .opW => memory evaluatedAddress
-              | .op8 => (access.readByte (fun _ => true) memory bytesInWord evaluatedAddress).map .word
-              | .op16 => (access.read16 (fun _ => true) memory bytesInWord evaluatedAddress).map .word
-              | .op32 => (access.read32 (fun _ => true) memory bytesInWord evaluatedAddress).map .word
+              | .opW => match memoryAccess with
+                  | none => memory evaluatedAddress
+                  | some access =>
+                      access.readWord access.domain memory bytesInWord evaluatedAddress
+              | .op8 => (access.readByte access.domain memory bytesInWord evaluatedAddress).map .word
+              | .op16 => (access.read16 access.domain memory bytesInWord evaluatedAddress).map .word
+              | .op32 => (access.read32 access.domain memory bytesInWord evaluatedAddress).map .word
         match kind with
         | .local => pure (.normal (updatePanValueMap locals name value) globals memory,
             addressSteps + 1)
@@ -573,10 +577,12 @@ mutual
         let memory ← match memoryAccess with
           | none => some (updatePanValueMemory memory evaluatedAddress (.word evaluatedValue))
           | some access => match size with
-              | .opW => some (updatePanValueMemory memory evaluatedAddress (.word evaluatedValue))
-              | .op8 => access.storeByte (fun _ => true) memory bytesInWord evaluatedAddress evaluatedValue
-              | .op16 => access.store16 (fun _ => true) memory bytesInWord evaluatedAddress evaluatedValue
-              | .op32 => access.store32 (fun _ => true) memory bytesInWord evaluatedAddress evaluatedValue
+              | .opW =>
+                  panValueStoreWithAccess memory bytesInWord evaluatedAddress
+                    (.word evaluatedValue) memoryAccess
+              | .op8 => access.storeByte access.domain memory bytesInWord evaluatedAddress evaluatedValue
+              | .op16 => access.store16 access.domain memory bytesInWord evaluatedAddress evaluatedValue
+              | .op32 => access.store32 access.domain memory bytesInWord evaluatedAddress evaluatedValue
         pure (.normal locals globals memory, addressSteps + valueSteps + 1)
     | _fuel + 1, locals, globals, memory,
         .tick, _ | _fuel + 1, locals, globals, memory, .annot _ _, _ =>
@@ -741,10 +747,10 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store
   | some evaluatedAddress =>
       cases hvalue : evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value with
-      | none => simp [haddress, hvalue, evalPanValueExpCounted]
+      | none => simp [haddress, hvalue, evalPanValueExpCounted, panValueStoreWithAccess]
       | some evaluatedValue =>
           cases evaluatedAddress <;>
-            simp [haddress, hvalue, evalPanValueExpCounted]
+            simp [haddress, hvalue, evalPanValueExpCounted, panValueStoreWithAccess]
 
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_skip
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

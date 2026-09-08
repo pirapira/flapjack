@@ -93,6 +93,26 @@ def memoryModelGeneric32Program : Option (RiscV.Word 64) :=
       | [.word value] => some value
       | _ => none
 
+def memoryModelGenericWordProgram : Option (RiscV.Word 64) :=
+  (evalPanFlatProg [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+      (BitVec.ofNat 64 8) (fun _ => none) (fun _ => none)
+      memoryModelDomain (fun _ => some 0)
+      (.return (.load .one (.const (BitVec.ofNat 64 8))))
+      (memoryAccess := some (panMemoryAccessOfModel memoryModel))).bind
+    fun result => match result.2.2.2 with
+      | [.word value] => some value
+      | _ => none
+
+def memoryModelGenericWordOutOfDomain : Option (RiscV.Word 64) :=
+  (evalPanFlatProg [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+      (BitVec.ofNat 64 8) (fun _ => none) (fun _ => none)
+      memoryModelDomain (fun _ => some 0)
+      (.return (.load .one (.const (BitVec.ofNat 64 16))))
+      (memoryAccess := some (panMemoryAccessOfModel memoryModel))).bind
+    fun result => match result.2.2.2 with
+      | [.word value] => some value
+      | _ => none
+
 def memoryModelSteppedByteProgram : Option (RiscV.Word 64 × Nat) :=
   (evalPanValueSteppedProg (fun _ _ => none) (fun _ _ _ _ _ locals => some locals)
       [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 20
@@ -128,6 +148,28 @@ def memoryModelPanValuesByteProgram : Option (RiscV.Word 64) :=
           (.const (BitVec.ofNat 64 0xaa)))
         (.return (.loadByte (.const (BitVec.ofNat 64 9)))))
       (memoryAccess := some (panValueMemoryAccessOfModel memoryModel))).bind
+    fun result => match result.2.2.2 with
+      | [.word value] => some value
+      | _ => none
+
+def memoryModelPanValuesWordProgram : Option (RiscV.Word 64) :=
+  (evalPanValueProg [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+      (BitVec.ofNat 64 8) (fun _ => none) (fun _ => none)
+      (fun _ => some (.word 0))
+      (.seq (.store (.const (BitVec.ofNat 64 8)) (.const (BitVec.ofNat 64 0xaa)))
+        (.return (.load .one (.const (BitVec.ofNat 64 8)))))
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel))).bind
+    fun result => match result.2.2.2 with
+      | [.word value] => some value
+      | _ => none
+
+def memoryModelPanValuesWordOutOfDomain : Option (RiscV.Word 64) :=
+  (evalPanValueProg [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+      (BitVec.ofNat 64 8) (fun _ => none) (fun _ => none)
+      (fun _ => some (.word 0))
+      (.return (.load .one (.const (BitVec.ofNat 64 16))))
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel
+        (domain := memoryModelDomain)))).bind
     fun result => match result.2.2.2 with
       | [.word value] => some value
       | _ => none
@@ -200,9 +242,13 @@ def memoryModelPublicProgram : Option (RiscV.Word 64) :=
 #guard memoryModelOutOfDomainRead = none
 #guard memoryModelGenericByteProgram = some (BitVec.ofNat 64 0xaa)
 #guard memoryModelGeneric32Program = some (BitVec.ofNat 64 0x11223344)
+#guard memoryModelGenericWordProgram = some (BitVec.ofNat 64 0)
+#guard memoryModelGenericWordOutOfDomain = none
 #guard memoryModelSteppedByteProgram = some (BitVec.ofNat 64 0xaa, 7)
 #guard memoryModelSteppedShared16Program = some (BitVec.ofNat 64 0xbeef, 9)
 #guard memoryModelPanValuesByteProgram = some (BitVec.ofNat 64 0xaa)
+#guard memoryModelPanValuesWordProgram = some (BitVec.ofNat 64 0xaa)
+#guard memoryModelPanValuesWordOutOfDomain = none
 #guard memoryModelControlByteProgram = some (BitVec.ofNat 64 0xaa)
 #guard memoryModelPrimitiveControlByteProgram = some (BitVec.ofNat 64 0xaa)
 #guard memoryModelPublicProgram = some (BitVec.ofNat 64 0xaa)

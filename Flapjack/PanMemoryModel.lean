@@ -35,8 +35,11 @@ abbrev PanWordMemoryDomain (α : Type u) := α → Bool
     source/target equivalence proof should provide an access record instead.
 -/
 structure PanMemoryAccess (α : Type u) where
+  readWord : PanWordMemoryDomain α → PanWordMemory α → α → Option α
   readByte : PanWordMemoryDomain α → PanWordMemory α → α → α → Option α
   read32 : PanWordMemoryDomain α → PanWordMemory α → α → α → Option α
+  storeWord : PanWordMemoryDomain α → PanWordMemory α → α → α →
+    Option (PanWordMemory α)
   storeByte : PanWordMemoryDomain α → PanWordMemory α → α → α → α →
     Option (PanWordMemory α)
   store32 : PanWordMemoryDomain α → PanWordMemory α → α → α → α →
@@ -118,7 +121,11 @@ def panModelStoreWord [BEq α]
 
 def panMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
     [OfNat α 2] [OfNat α 3] (model : PanMemoryModel α) : PanMemoryAccess α :=
-  { readByte := fun domain memory bytesInWord address =>
+  { readWord := fun domain memory address =>
+      panModelReadWord domain memory address
+    storeWord := fun domain memory address value =>
+      panModelStoreWord domain memory address value
+    readByte := fun domain memory bytesInWord address =>
       panModelReadByte model domain memory bytesInWord address false
     read32 := fun domain memory bytesInWord address =>
       panModelRead32 model domain memory bytesInWord address false

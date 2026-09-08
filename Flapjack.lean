@@ -20,6 +20,7 @@ import Flapjack.CrepeCorrectness
 import Flapjack.PanValues
 import Flapjack.PanSteppedSemantics
 import Flapjack.PanMemory
+import Flapjack.PanValueFfiClockSemantics
 import Flapjack.RiscV.Model
 import Flapjack.RiscV.PanMemory
 import Flapjack.RiscV.PanSemantics

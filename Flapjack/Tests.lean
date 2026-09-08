@@ -47,6 +47,9 @@ import Flapjack.Test.StatefulPipeline
 import Flapjack.Test.CorrectnessFfiRiscVLoop
 import Flapjack.Test.FullSsa
 import Flapjack.Test.FullSsaPipeline
+import Flapjack.Test.FullSsaCorrectness
+import Flapjack.Test.FullSsaHandler
+import Flapjack.Test.FullSsaFfiCall
 import Flapjack.Test.FullSsaBitmaps
 import Flapjack.Test.RuntimeLinking
 import Flapjack.Test.CallEntry

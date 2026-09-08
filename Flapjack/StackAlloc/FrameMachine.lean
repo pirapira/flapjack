@@ -247,6 +247,7 @@ def stackFrameBasic [NeZero width]
           (wordStackMachineWriteSharedMemory state.machine address
             (state.machine.registers source)) })
       else none
+  | .tick => some (.normal state)
   | _ => none
 
 def stackFrameSlotIndex (state : StackFrameMachineState width)

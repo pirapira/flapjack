@@ -1765,11 +1765,24 @@ definitions, pass ordering, examples, and proof obligations.
   establishing the first program-level Lab-to-machine FFI simulation.
 - [x] Compose a singleton Lab FFI call-and-return through
   `executeFunctionAtWithFfi`, including the caller's `x1` continuation.
+- [x] Execute a linked handler-bearing StackRemove/Lab image on the RISC-V
+  model, selecting the generated `main` section by its linked entry address
+  and checking that the handler path returns to the caller continuation.
 - [x] Prove the compiler-composed source-to-Loop `extCall` equation for
   constant arguments under no-op handlers, including generated temporary
   declaration execution and normal-result projection.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
+- [x] Prove that a resolved cross-section Lab jump executes to the target
+  section on the RISC-V model, rather than only matching emitted code shape.
+- [x] Prove Lab `linkValue` materializes a resolved continuation in ABI
+  register `x1` at the RISC-V boundary.
+- [x] Compose Lab continuation materialization, cross-section call, return,
+  and caller continuation into an executable RISC-V trace.
+- [x] Check executable equality between the handler source semantics and the
+  generated linked RISC-V handler execution result.
+- [x] Exercise a declaration call through the full-SSA spill-aware pipeline
+  and compare its linked RISC-V result with source call semantics.
 - [x] Expose location-aware bitmap sequence compilation and evaluator
   contracts for the spill-aware Word-to-Stack boundary.
 - [x] Expose location-aware bitmap handler-call and FFI lowering equations
@@ -1786,6 +1799,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Connect loop-aware FFI lowering to a machine-level RISC-V execution
   regression, including the ECALL host program-counter transition and break
   target.
+- [x] Exercise a full-SSA declaration call whose callee performs an FFI call,
+  preserving the allocation-dependent FFI result register through the linked
+  RISC-V image.
 
 ## First implementation slice
 

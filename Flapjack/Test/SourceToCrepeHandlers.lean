@@ -27,7 +27,7 @@ def sourceToCrepeHandlerFfi : CrepFfiHandler (Word 64) :=
 def sourceToCrepeHandlerSharedMem : CrepSharedMemHandler (Word 64) :=
   defaultCrepSharedMemHandler
 
-theorem sourceToCrepe_handler_simulation :
+#guard
     (do
       let (_, main) ← lookupCompiledFunction "main"
         sourceToLoopHandlerPipeline.pipeline.crepe
@@ -40,10 +40,9 @@ theorem sourceToCrepe_handler_simulation :
         (fun _ : VarName => none) sourceToLoopHandlerMain).map (fun result =>
           match result with
           | .returned _ values => values
-          | _ => []) := by
-  native_decide
+          | _ => [])
 
-theorem sourceToCrepe_handler_executes :
+#guard
     (do
       let (_, main) ← lookupCompiledFunction "main"
         sourceToLoopHandlerPipeline.pipeline.crepe
@@ -51,7 +50,6 @@ theorem sourceToCrepe_handler_executes :
         sourceToCrepeHandlerPrimitive sourceToCrepeHandlerFfi
         sourceToCrepeHandlerSharedMem
         (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) 80
-        sourceToCrepeHandlerState main) = some [BitVec.ofNat 64 7] := by
-  native_decide
+        sourceToCrepeHandlerState main) = some [BitVec.ofNat 64 7]
 
 end Flapjack

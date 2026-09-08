@@ -735,6 +735,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   prefix.
 - [x] Compose coloured straight-line Word body simulation with the ABI return
   boundary, preserving the state relation and returned value list.
+- [x] Lift the coloured Word-function return simulation through the executable
+  full-SSA graph allocator boundary.
 - [x] Prove register-coloured condition preservation and conditional-branch
   simulation for executable Word `ite` programs.
 - [x] Relate straight-line handler-aware Word evaluation to the executable

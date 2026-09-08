@@ -348,6 +348,50 @@ structure PanValueCallContracts where
   returnShapes : InfoMap Shape
   exceptionShapes : InfoMap Shape
 
+def panValuePayloadSizeFuel : Nat → StructContext → PanValue α → Nat
+  | 0, _, _ => 0
+  | _fuel + 1, _, .word _ => 1
+  | fuel + 1, context, .rStruct fields =>
+      panValuePayloadSizeFieldsFuel fuel context fields
+  | _fuel + 1, context, .nStruct name _ =>
+      (lookupInfo name context).map StructInfo.size |>.getD 1
+where
+  panValuePayloadSizeFieldsFuel : Nat → StructContext → List (PanValue α) → Nat
+    | _, _, [] => 0
+    | 0, _, _ :: _ => 0
+    | fuel + 1, context, value :: values =>
+        panValuePayloadSizeFuel fuel context value +
+          panValuePayloadSizeFieldsFuel fuel context values
+
+/-- CakeML limits returned and raised structured values to 32 words. -/
+def panValuePayloadWithinLimit (structs : StructContext)
+    (value : PanValue α) : Bool :=
+  Nat.ble (panValuePayloadSizeFuel (panValueFlatValueFuel value + 1) structs value) 32
+
+def panValueValuesWithinLimit (structs : StructContext) :
+    List (PanValue α) → Bool
+  | [] => true
+  | value :: values =>
+      panValuePayloadWithinLimit structs value &&
+        panValueValuesWithinLimit structs values
+
+@[simp] theorem panValuePayloadWithinLimit_word (structs : StructContext)
+    (value : α) :
+    panValuePayloadWithinLimit structs (.word value) = true := by
+  simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel]
+
+@[simp] theorem panValueValuesWithinLimit_word_singleton (structs : StructContext)
+    (value : α) :
+    panValueValuesWithinLimit structs [.word value] = true := by
+  simp [panValueValuesWithinLimit]
+
+@[simp] theorem panValuePayloadWithinLimit_rStruct_two_words
+    (structs : StructContext) (left right : α) :
+    panValuePayloadWithinLimit structs (.rStruct [.word left, .word right]) = true := by
+  simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel,
+    panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
+    panValueFlatValueFuel, panValueFlatValueFuel.panValueFlatValueListFuel]
+
 def panValueReturnValid (structs : StructContext)
     (contracts : Option PanValueCallContracts) (function : FunName)
     (values : List (PanValue α)) : Bool :=
@@ -705,7 +749,9 @@ def evalPanValueProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
   | .return value, memoryAccess => do
       let value ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-      pure (locals, globals, memory, [value])
+      if panValuePayloadWithinLimit structs value then
+        pure (locals, globals, memory, [value])
+      else none
   | .seq first second, memoryAccess => do
       let result ← evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
         locals globals memory primitive first (memoryAccess := memoryAccess)
@@ -886,7 +932,8 @@ mutual
         | .normal _ calleeGlobals calleeMemory =>
             pure (.normal locals calleeGlobals calleeMemory)
         | .returned _ calleeGlobals calleeMemory values =>
-            if panValueReturnValid structs contracts function values then
+            if panValueReturnValid structs contracts function values &&
+                panValueValuesWithinLimit structs values then
               match info with
               | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
               | some (destination, _) => do
@@ -896,7 +943,8 @@ mutual
                   pure (.normal locals globals calleeMemory)
             else none
         | .raised _ calleeGlobals calleeMemory exception value =>
-            if panValueExceptionValid structs contracts exception value then
+            if panValueExceptionValid structs contracts exception value &&
+                panValuePayloadWithinLimit structs value then
               match info with
               | some (_, some (caught, handlerVariable, handlerProgram)) =>
                   if caught == exception then
@@ -1063,13 +1111,16 @@ mutual
     | _fuel + 1, locals, globals, memory, .raise exception value, memoryAccess, contracts => do
         let value ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        if panValueExceptionValid structs contracts exception value then
+        if panValueExceptionValid structs contracts exception value &&
+            panValuePayloadWithinLimit structs value then
           pure (.raised locals globals memory exception value)
         else none
     | _fuel + 1, locals, globals, memory, .return value, memoryAccess, _contracts => do
         let value ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        pure (.returned locals globals memory [value])
+        if panValuePayloadWithinLimit structs value then
+          pure (.returned locals globals memory [value])
+        else none
     | _fuel + 1, locals, globals, memory,
         .shMemLoad size kind name address, memoryAccess, _contracts => do
         let address ← evalPanValueExp structs locals globals memory
@@ -1144,7 +1195,8 @@ mutual
         | .normal _ calleeGlobals calleeMemory =>
             pure (.normal locals calleeGlobals calleeMemory)
         | .returned _ calleeGlobals calleeMemory values =>
-            if panValueReturnValid structs contracts function values then
+            if panValueReturnValid structs contracts function values &&
+                panValueValuesWithinLimit structs values then
               match info with
               | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
               | some (destination, _) => do
@@ -1154,7 +1206,8 @@ mutual
                   pure (.normal locals globals calleeMemory)
             else none
         | .raised _ calleeGlobals calleeMemory exception value =>
-            if panValueExceptionValid structs contracts exception value then
+            if panValueExceptionValid structs contracts exception value &&
+                panValuePayloadWithinLimit structs value then
               match info with
               | some (_, some (caught, handlerVariable, handlerProgram)) =>
                   if caught == exception then
@@ -1336,13 +1389,16 @@ mutual
     | _fuel + 1, locals, globals, memory, .raise exception value, memoryAccess, contracts => do
         let value ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        if panValueExceptionValid structs contracts exception value then
+        if panValueExceptionValid structs contracts exception value &&
+            panValuePayloadWithinLimit structs value then
           pure (.raised locals globals memory exception value)
         else none
     | _fuel + 1, locals, globals, memory, .return value, memoryAccess, _contracts => do
         let value ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        pure (.returned locals globals memory [value])
+        if panValuePayloadWithinLimit structs value then
+          pure (.returned locals globals memory [value])
+        else none
     | _fuel + 1, locals, globals, memory,
         .shMemLoad size kind name address, memoryAccess, _contracts => do
         let address ← evalPanValueExp structs locals globals memory

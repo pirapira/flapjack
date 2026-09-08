@@ -399,7 +399,9 @@ def evalPanFlatProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mu
   | .return value, memoryAccess => do
       let value ← evalPanFlatExp structs locals globals domain memory
         baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-      pure (locals, globals, memory, [value])
+      if panValuePayloadWithinLimit structs value then
+        pure (locals, globals, memory, [value])
+      else none
   | .tick, _ | .annot _ _, _ => some (locals, globals, memory, [])
   | _, _ => none
 termination_by program => sizeOf program
@@ -477,7 +479,8 @@ mutual
         | .normal _ calleeGlobals calleeMemory =>
             pure (.normal locals calleeGlobals calleeMemory)
         | .returned _ calleeGlobals calleeMemory values =>
-            if panValueReturnValid structs contracts function values then
+            if panValueReturnValid structs contracts function values &&
+                panValueValuesWithinLimit structs values then
               match info with
               | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
               | some (destination, _) => do
@@ -487,7 +490,8 @@ mutual
                   pure (.normal locals globals calleeMemory)
             else none
         | .raised _ calleeGlobals calleeMemory exception value =>
-            if panValueExceptionValid structs contracts exception value then
+            if panValueExceptionValid structs contracts exception value &&
+                panValuePayloadWithinLimit structs value then
               match info with
               | some (_, some (caught, handlerVariable, handlerProgram)) =>
                   if caught == exception then
@@ -643,13 +647,16 @@ mutual
     | _fuel + 1, locals, globals, memory, .raise exception value, contracts => do
         let value ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord value
-        if panValueExceptionValid structs contracts exception value then
+        if panValueExceptionValid structs contracts exception value &&
+            panValuePayloadWithinLimit structs value then
           pure (.raised locals globals memory exception value)
         else none
     | _fuel + 1, locals, globals, memory, .return value, _contracts => do
         let value ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord value
-        pure (.returned locals globals memory [value])
+        if panValuePayloadWithinLimit structs value then
+          pure (.returned locals globals memory [value])
+        else none
     | _fuel + 1, locals, globals, memory, .tick, _contracts |
         _fuel + 1, locals, globals, memory, .annot _ _, _contracts =>
         pure (.normal locals globals memory)

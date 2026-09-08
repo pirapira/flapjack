@@ -190,7 +190,8 @@ mutual
             pure (.normal locals calleeGlobals calleeMemory calleeFfi,
               argumentSteps + steps)
         | .returned _ calleeGlobals calleeMemory calleeFfi values =>
-            if panValueReturnValid structs contracts function values then
+            if panValueReturnValid structs contracts function values &&
+                panValueValuesWithinLimit structs values then
               match info with
               | none => pure (.returned locals calleeGlobals calleeMemory calleeFfi values,
                   argumentSteps + steps)
@@ -202,7 +203,8 @@ mutual
                     argumentSteps + steps)
             else none
         | .raised _ calleeGlobals calleeMemory calleeFfi exception value =>
-            if panValueExceptionValid structs contracts exception value then
+            if panValueExceptionValid structs contracts exception value &&
+                panValuePayloadWithinLimit structs value then
               match info with
               | some (_, some (caught, handlerVariable, handlerProgram)) =>
                   if caught == exception then
@@ -421,13 +423,16 @@ mutual
         contracts => do
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        if panValueExceptionValid structs contracts exception value then
+        if panValueExceptionValid structs contracts exception value &&
+            panValuePayloadWithinLimit structs value then
           pure (.raised locals globals memory ffi exception value, valueSteps + 1)
         else none
     | _fuel + 1, locals, globals, memory, ffi, .return value, memoryAccess, _contracts => do
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        pure (.returned locals globals memory ffi [value], valueSteps + 1)
+        if panValuePayloadWithinLimit structs value then
+          pure (.returned locals globals memory ffi [value], valueSteps + 1)
+        else none
     | _fuel + 1, locals, globals, memory, ffi,
         .shMemLoad size kind name address, memoryAccess, _contracts => do
         let (address, addressSteps) ← evalPanValueExpCounted structs locals globals memory

@@ -62,6 +62,11 @@ example :
     panShapeFuel, panShapeFuel.panShapeListFuel, shapeSizeWithContext,
     isWfShape, isWfShape.isWfShapeList, updatePanValueMap]
 
+theorem structuredValuePayloadWithinLimit :
+    panValuePayloadWithinLimit structuredValueTestContext
+      (.rStruct [.word (3 : Nat), .word 5]) = true := by
+  decide +kernel
+
 example :
     (evalPanFlatProg (α := Nat) structuredValueTestContext 0 100 1
       (fun _ => none) (fun _ => none) flatPairDomain (fun _ => none)

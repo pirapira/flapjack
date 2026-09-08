@@ -388,9 +388,9 @@ mutual
                           handlerProgram (memoryAccess := memoryAccess) (contracts := contracts)
                       pure (result, argumentSteps + steps + handlerSteps)
                     else none
-                  else pure (.raised locals calleeGlobals calleeMemory exception value,
+                  else pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value,
                     argumentSteps + steps)
-              | _ => pure (.raised locals calleeGlobals calleeMemory exception value,
+              | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value,
                   argumentSteps + steps)
             else none
         | .broke _ calleeGlobals calleeMemory =>
@@ -580,13 +580,13 @@ mutual
           baseAddress topAddress bytesInWord value memoryAccess
         if panValueExceptionValid structs contracts exception evaluatedValue &&
             panValuePayloadWithinLimit structs evaluatedValue then
-          pure (.raised locals globals memory exception evaluatedValue, valueSteps + 1)
+          pure (.raised (fun _ => none) globals memory exception evaluatedValue, valueSteps + 1)
         else none
     | _fuel + 1, locals, globals, memory, .return value, memoryAccess, _contracts => do
         let (evaluatedValue, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value memoryAccess
         if panValuePayloadWithinLimit structs evaluatedValue then
-          pure (.returned locals globals memory [evaluatedValue], valueSteps + 1)
+          pure (.returned (fun _ => none) globals memory [evaluatedValue], valueSteps + 1)
         else none
     | _fuel + 1, locals, globals, memory,
         .shMemLoad size kind name address, memoryAccess, _contracts => do

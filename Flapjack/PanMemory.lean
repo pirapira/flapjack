@@ -649,13 +649,13 @@ mutual
           baseAddress topAddress bytesInWord value
         if panValueExceptionValid structs contracts exception value &&
             panValuePayloadWithinLimit structs value then
-          pure (.raised locals globals memory exception value)
+          pure (.raised (fun _ => none) globals memory exception value)
         else none
     | _fuel + 1, locals, globals, memory, .return value, _contracts => do
         let value ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord value
         if panValuePayloadWithinLimit structs value then
-          pure (.returned locals globals memory [value])
+          pure (.returned (fun _ => none) globals memory [value])
         else none
     | _fuel + 1, locals, globals, memory, .tick, _contracts |
         _fuel + 1, locals, globals, memory, .annot _ _, _contracts =>

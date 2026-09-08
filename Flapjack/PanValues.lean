@@ -750,7 +750,7 @@ def evalPanValueProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
       let value ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
       if panValuePayloadWithinLimit structs value then
-        pure (locals, globals, memory, [value])
+        pure ((fun _ => none), globals, memory, [value])
       else none
   | .seq first second, memoryAccess => do
       let result ← evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
@@ -954,8 +954,8 @@ mutual
                         (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
                         handlerProgram (memoryAccess := memoryAccess) (contracts := contracts)
                     else none
-                  else pure (.raised locals calleeGlobals calleeMemory exception value)
-              | _ => pure (.raised locals calleeGlobals calleeMemory exception value)
+                  else pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
+              | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
             else none
         | .broke _ calleeGlobals calleeMemory =>
             pure (.broke locals calleeGlobals calleeMemory)
@@ -1113,13 +1113,13 @@ mutual
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         if panValueExceptionValid structs contracts exception value &&
             panValuePayloadWithinLimit structs value then
-          pure (.raised locals globals memory exception value)
+          pure (.raised (fun _ => none) globals memory exception value)
         else none
     | _fuel + 1, locals, globals, memory, .return value, memoryAccess, _contracts => do
         let value ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         if panValuePayloadWithinLimit structs value then
-          pure (.returned locals globals memory [value])
+          pure (.returned (fun _ => none) globals memory [value])
         else none
     | _fuel + 1, locals, globals, memory,
         .shMemLoad size kind name address, memoryAccess, _contracts => do
@@ -1217,8 +1217,8 @@ mutual
                         (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
                         handlerProgram (memoryAccess := memoryAccess) (contracts := contracts)
                     else none
-                  else pure (.raised locals calleeGlobals calleeMemory exception value)
-              | _ => pure (.raised locals calleeGlobals calleeMemory exception value)
+                  else pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
+              | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
             else none
         | .broke _ calleeGlobals calleeMemory =>
             pure (.broke locals calleeGlobals calleeMemory)
@@ -1391,13 +1391,13 @@ mutual
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         if panValueExceptionValid structs contracts exception value &&
             panValuePayloadWithinLimit structs value then
-          pure (.raised locals globals memory exception value)
+          pure (.raised (fun _ => none) globals memory exception value)
         else none
     | _fuel + 1, locals, globals, memory, .return value, memoryAccess, _contracts => do
         let value ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         if panValuePayloadWithinLimit structs value then
-          pure (.returned locals globals memory [value])
+          pure (.returned (fun _ => none) globals memory [value])
         else none
     | _fuel + 1, locals, globals, memory,
         .shMemLoad size kind name address, memoryAccess, _contracts => do

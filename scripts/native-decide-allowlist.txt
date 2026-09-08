@@ -11,9 +11,21 @@
 # drops the check says so and asks for this file to be lowered.
 #
 # Before adding an entry, try in order: `decide`; then `decide +kernel`, which
-# unfolds `termination_by` definitions the elaborator's `whnf` stalls on; then
-# `#guard <prop>` for an `example` or an uncited regression check, which keeps
-# the check but produces no proof term and so needs no axiom.
+# unfolds many `termination_by` definitions the elaborator's `whnf` stalls on;
+# then `#guard <prop>` for an `example` or an uncited regression check, which
+# keeps the check but produces no proof term and so needs no axiom.
+#
+# `decide +kernel` does not reach everything. It stalls on `compileExp`
+# (Flapjack/PanToCrep.lean), which recurses with
+# `termination_by expression => sizeOf expression`, so a goal that runs the
+# compiler over a program containing an expression never gets the innermost
+# `compileProg` pass to a constructor. `.move` programs carry no expression to
+# recurse into and reduce fine. Bisecting by fuel distinguishes this from a
+# resource limit: a stalled goal fails at fuel 1 just as it does at fuel 16.
+#
+# When no tactic reaches a goal, the question is not settled -- ask next
+# whether the result needs to be a theorem. An uncited execution check does
+# not, and `#guard` discharges it with no axiom (see #343).
 
 # --- Cited pipeline shape theorems -------------------------------------------
 # Each runs the compiler over a program and compares the result to a literal,
@@ -37,15 +49,11 @@
 # Supplies a proof term to the surrounding proof, so `#guard` does not apply.
 1 Flapjack/Test/AllocatorSpills.lean
 
-# --- Pending removal ---------------------------------------------------------
-# These two are listed only so this check passes whichever way the open PRs
-# merge. The conversions in the companion PR take three of them to `decide`
-# and two to `#guard`; once it lands, both lines drop to zero and should be
-# deleted. Until then the check will pass here, and afterwards it will print a
-# "please lower" note rather than failing.
-#
-# For the record, the blocker in AllocatorRegAlloc.lean is `wordClashTree`
-# applied to an expression program -- `.move` programs carry no expression to
-# recurse into and reduce fine.
-3 Flapjack/RiscV/CorrectnessFfiMachine.lean
-3 Flapjack/Test/AllocatorRegAlloc.lean
+# --- Source-to-Loop FFI agreement ------------------------------------------
+# `sourceToLoop_ffi_simulation` relates Loop evaluation to Pan evaluation
+# across an FFI call. Same `compileExp` stall as above; `decide` and
+# `decide +kernel` both fail. Kept as a theorem rather than a `#guard`
+# because it states an agreement between two semantics, not a single
+# execution outcome -- the companion `sourceToLoop_ffi_executes` was the
+# execution check and is now a `#guard`.
+1 Flapjack/Test/SourceToLoopFfi.lean

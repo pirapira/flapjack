@@ -251,12 +251,18 @@ mutual
         .assign .local name value, memoryAccess => do
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        pure (.normal (updatePanValueMap locals name value) globals memory ffi, valueSteps + 1)
+        if panValueAssignmentValid structs locals globals .local name value then
+          pure (.normal (updatePanValueMap locals name value) globals memory ffi,
+            valueSteps + 1)
+        else none
     | _fuel + 1, locals, globals, memory, ffi,
         .assign .global name value, memoryAccess => do
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        pure (.normal locals (updatePanValueMap globals name value) memory ffi, valueSteps + 1)
+        if panValueAssignmentValid structs locals globals .global name value then
+          pure (.normal locals (updatePanValueMap globals name value) memory ffi,
+            valueSteps + 1)
+        else none
     | _fuel + 1, locals, globals, memory, ffi,
         .primitive name operator arguments, memoryAccess => do
         let (values, valueSteps) ← evalPanValueExpsCounted structs locals globals memory

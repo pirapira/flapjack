@@ -129,12 +129,29 @@ example :
 
 example :
     (evalPanValueProg (α := Nat) [] 0 100 8
-      (fun _ => none) (fun _ => none) (fun _ => none)
+      (fun name => if name == "x" then some (.word 0) else none)
+      (fun _ => none) (fun _ => none)
       (.seq (.assign .local "x" (.const 9))
         (.return (.var .local "x")))).map
       (fun result => result.2.2.2) = some [PanValue.word 9] := by
   simp [evalPanValueProg, evalPanValueProgWithPrimitive,
-    evalPanValueExp, updatePanValueMap]
+    evalPanValueExp, updatePanValueMap, panValueAssignmentValid,
+    panValueShape, panShapeMatches]
+
+example :
+    (evalPanValueProg (α := Nat) [] 0 100 8
+      (fun name => if name == "x" then some (.word 0) else none)
+      (fun _ => none) (fun _ => none)
+      (.assign .local "x" (.rStruct []))).isNone := by
+  simp [evalPanValueProg, evalPanValueProgWithPrimitive,
+    evalPanValueExp, panValueAssignmentValid, panValueShape, panShapeMatches]
+
+example :
+    (evalPanValueProg (α := Nat) [] 0 100 8
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      (.assign .local "missing" (.const 9))).isNone := by
+  simp [evalPanValueProg, evalPanValueProgWithPrimitive,
+    evalPanValueExp, panValueAssignmentValid]
 
 def flatWordDomain : PanMemoryDomain Nat := fun address => address == 20
 

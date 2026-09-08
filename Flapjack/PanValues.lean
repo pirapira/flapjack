@@ -195,6 +195,26 @@ where
     decreasing_by
       all_goals first | decreasing_trivial
 
+/-! CakeML assignments are shape-preserving updates to an already-bound
+    local or global variable.  In particular, an absent destination is not
+    an implicit declaration: is_valid_value rejects it. -/
+def panValueAssignmentValid (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (kind : VarKind) (name : VarName) (value : PanValue α) : Bool :=
+  match kind with
+  | .local =>
+      match locals name with
+      | some oldValue =>
+          panShapeMatches (panValueShape structs value)
+            (panValueShape structs oldValue)
+      | none => false
+  | .global =>
+      match globals name with
+      | some oldValue =>
+          panShapeMatches (panValueShape structs value)
+            (panValueShape structs oldValue)
+      | none => false
+
 def panValueFieldsHaveShapes (context : StructContext) :
     List (FieldName × Shape) → List (FieldName × PanValue α) → Bool
   | [], [] => true
@@ -434,11 +454,15 @@ def evalPanValueProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
   | .assign .local name value, memoryAccess => do
       let value ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-      pure (updatePanValueMap locals name value, globals, memory, [])
+      if panValueAssignmentValid structs locals globals .local name value then
+        pure (updatePanValueMap locals name value, globals, memory, [])
+      else none
   | .assign .global name value, memoryAccess => do
       let value ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-      pure (locals, updatePanValueMap globals name value, memory, [])
+      if panValueAssignmentValid structs locals globals .global name value then
+        pure (locals, updatePanValueMap globals name value, memory, [])
+      else none
   | .primitive name operator arguments, memoryAccess => do
       let values ← evalPanValueExps structs locals globals memory
         baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
@@ -698,11 +722,15 @@ mutual
     | _fuel + 1, locals, globals, memory, .assign .local name value, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        pure (.normal (updatePanValueMap locals name value) globals memory)
+        if panValueAssignmentValid structs locals globals .local name value then
+          pure (.normal (updatePanValueMap locals name value) globals memory)
+        else none
     | _fuel + 1, locals, globals, memory, .assign .global name value, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        pure (.normal locals (updatePanValueMap globals name value) memory)
+        if panValueAssignmentValid structs locals globals .global name value then
+          pure (.normal locals (updatePanValueMap globals name value) memory)
+        else none
     | _fuel + 1, locals, globals, memory, .store address value, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
@@ -932,11 +960,15 @@ mutual
     | _fuel + 1, locals, globals, memory, .assign .local name value, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        pure (.normal (updatePanValueMap locals name value) globals memory)
+        if panValueAssignmentValid structs locals globals .local name value then
+          pure (.normal (updatePanValueMap locals name value) globals memory)
+        else none
     | _fuel + 1, locals, globals, memory, .assign .global name value, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        pure (.normal locals (updatePanValueMap globals name value) memory)
+        if panValueAssignmentValid structs locals globals .global name value then
+          pure (.normal locals (updatePanValueMap globals name value) memory)
+        else none
     | _fuel + 1, locals, globals, memory, .primitive name operator arguments, memoryAccess => do
         let values ← evalPanValueExps structs locals globals memory
           baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)

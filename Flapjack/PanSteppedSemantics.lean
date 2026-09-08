@@ -412,11 +412,17 @@ mutual
     | _fuel + 1, locals, globals, memory, .assign .local name value, memoryAccess => do
         let (evaluatedValue, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value memoryAccess
-        pure (.normal (updatePanValueMap locals name evaluatedValue) globals memory, valueSteps + 1)
+        if panValueAssignmentValid structs locals globals .local name evaluatedValue then
+          pure (.normal (updatePanValueMap locals name evaluatedValue) globals memory,
+            valueSteps + 1)
+        else none
     | _fuel + 1, locals, globals, memory, .assign .global name value, memoryAccess => do
         let (evaluatedValue, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value memoryAccess
-        pure (.normal locals (updatePanValueMap globals name evaluatedValue) memory, valueSteps + 1)
+        if panValueAssignmentValid structs locals globals .global name evaluatedValue then
+          pure (.normal locals (updatePanValueMap globals name evaluatedValue) memory,
+            valueSteps + 1)
+        else none
     | _fuel + 1, locals, globals, memory, .primitive name operator arguments, memoryAccess => do
         let (values, valueSteps) ← evalPanValueExpsCounted structs locals globals memory
           baseAddress topAddress bytesInWord arguments memoryAccess

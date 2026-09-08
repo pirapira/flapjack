@@ -331,11 +331,15 @@ def evalPanFlatProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mu
   | .assign .local name value, memoryAccess => do
       let value ← evalPanFlatExp structs locals globals domain memory
         baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-      pure (updatePanValueMap locals name value, globals, memory, [])
+      if panValueAssignmentValid structs locals globals .local name value then
+        pure (updatePanValueMap locals name value, globals, memory, [])
+      else none
   | .assign .global name value, memoryAccess => do
       let value ← evalPanFlatExp structs locals globals domain memory
         baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-      pure (locals, updatePanValueMap globals name value, memory, [])
+      if panValueAssignmentValid structs locals globals .global name value then
+        pure (locals, updatePanValueMap globals name value, memory, [])
+      else none
   | .primitive name operator arguments, memoryAccess => do
       let values ← evalPanFlatExps structs locals globals domain memory
         baseAddress topAddress bytesInWord arguments memoryAccess
@@ -520,11 +524,15 @@ mutual
     | _fuel + 1, locals, globals, memory, .assign .local name value => do
         let value ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord value
-        pure (.normal (updatePanValueMap locals name value) globals memory)
+        if panValueAssignmentValid structs locals globals .local name value then
+          pure (.normal (updatePanValueMap locals name value) globals memory)
+        else none
     | _fuel + 1, locals, globals, memory, .assign .global name value => do
         let value ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord value
-        pure (.normal locals (updatePanValueMap globals name value) memory)
+        if panValueAssignmentValid structs locals globals .global name value then
+          pure (.normal locals (updatePanValueMap globals name value) memory)
+        else none
     | _fuel + 1, locals, globals, memory, .primitive name operator arguments => do
         let values ← evalPanFlatExps structs locals globals domain memory
           baseAddress topAddress bytesInWord arguments

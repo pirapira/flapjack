@@ -2,7 +2,8 @@ import Flapjack.PanSteppedSemantics
 
 namespace Flapjack
 
-def steppedTestLocals : VarName → Option (PanValue Nat) := fun _ => none
+def steppedTestLocals : VarName → Option (PanValue Nat) := fun name =>
+  if name == "x" then some (.word 0) else none
 def steppedTestGlobals : VarName → Option (PanValue Nat) := fun _ => none
 def steppedTestMemory : Nat → Option (PanValue Nat) := fun _ => none
 
@@ -24,6 +25,16 @@ def steppedTestProgram : Prog Nat :=
   (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi [] [] 0 100 1 8
     steppedTestLocals steppedTestGlobals steppedTestMemory steppedTestProgram).map Prod.snd =
     some 8
+
+#guard
+  (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi [] [] 0 100 1 8
+    steppedTestLocals steppedTestGlobals steppedTestMemory
+    (.assign .local "x" (.rStruct []))).isNone
+
+#guard
+  (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi [] [] 0 100 1 8
+    (fun _ => none) steppedTestGlobals steppedTestMemory
+    (.assign .local "missing" (.const 7))).isNone
 
 #guard
   (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi [] [] 0 100 1 8

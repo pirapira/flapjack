@@ -33,9 +33,17 @@ def pipelineHandlerMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← pipelineHandlerLinkedSections
   let entry ← pipelineHandlerSectionEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAt 4000 0 entry 100 [] image [] []
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 100 [] image [] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 100)
 
 #guard pipelineHandlerMachineResult.isSome
+#guard
+  let result := do
+    let sections ← pipelineHandlerLinkedSections
+    let entry ← pipelineHandlerSectionEntry 2 sections
+    let image := sections.flatMap (fun (_, _, code) => code)
+    RiscV.executeFunctionAtAfterEntry 4000 0 entry 100 [] image [4] []
+      (RiscV.writeRegister (RiscV.zeroState 64) 1 100)
+  result = some [BitVec.ofNat 64 7]
 
 end Flapjack

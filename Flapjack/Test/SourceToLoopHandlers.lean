@@ -1,4 +1,5 @@
 import Flapjack.Test.SourceToLoop
+import Flapjack.CorrectnessCalls
 
 /-!
 Source-to-Loop exception-handler regression.
@@ -11,6 +12,13 @@ materialization, handler-slot setup, and the returned exception value.
 namespace Flapjack
 
 open RiscV
+
+theorem sourceToLoop_raise_handler_simulation
+    (exceptionCode value : Word 64) :
+    raiseHandlerLoopResult exceptionCode value =
+      raiseHandlerSourceResult value := by
+  exact compilePanToLoop_raise_handler_correct (α := Word 64)
+    exceptionCode value
 
 def sourceToLoopHandlerDeclarations : List (Decl (Word 64)) :=
   [.exnDecl "E" .one,

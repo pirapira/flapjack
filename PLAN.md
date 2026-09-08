@@ -1916,6 +1916,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Prove a reusable source-to-Loop identity-call equation for an arbitrary
   returned word, including compiled function-table lookup, parameter binding,
   call-result assignment, and the caller continuation.
+- [x] Prove a reusable source-to-Loop raised-handler equation for arbitrary
+  exception codes and payloads, including global payload transfer, exception
+  dispatch, `assignRet`, and the handler continuation.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

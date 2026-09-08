@@ -450,4 +450,34 @@ def evalPanValueFfiProgramSteps
     baseAddress topAddress bytesInWord fuel locals globals memory ffi program
     (memoryAccess := memoryAccess)
 
+structure PanValueFfiProgramState (α : Type u) (σ : Type v) where
+  source : PanValueProgramState α
+  ffi : FfiState σ
+
+def evalPanValueFfiProgram
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    Option (PanValueFfiControlResult α σ) := do
+  let state ← evalPanValueDeclarations initial.source declarations
+    (memoryAccess := memoryAccess)
+  let (result, _) ← evalPanValueFfiCallSteps context primitive handler state.structs
+    state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+    (fun _ => none) state.globals state.memory initial.ffi none entry arguments
+    (memoryAccess := memoryAccess)
+  match lookupInfo entry state.returnShapes, result with
+  | some shape, .returned locals globals memory ffi [value] =>
+      if panShapeMatches (panValueShape state.structs value) shape then
+        some (.returned locals globals memory ffi [value])
+      else none
+  | some _, .returned _ _ _ _ _ => none
+  | _, result => some result
+
 end Flapjack

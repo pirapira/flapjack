@@ -107,4 +107,35 @@ def statefulExtCallProgram : Option (Word 64 × Nat × Nat) :=
 
 #guard statefulExtCallProgram = some (BitVec.ofNat 64 0x42, 9, 1)
 
+def statefulPublicProgramState : PanValueFfiProgramState (Word 64) Unit :=
+  { source :=
+      { structs := []
+        globals := fun _ => none
+        functions := []
+        returnShapes := []
+        exceptions := []
+        memory := statefulTestMemory
+        baseAddress := BitVec.ofNat 64 0
+        topAddress := BitVec.ofNat 64 100
+        bytesInWord := BitVec.ofNat 64 8 }
+    ffi := statefulTestFfiState }
+
+def statefulPublicProgram : Option (Word 64 × Nat) :=
+  (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
+      statefulTestPrimitive statefulTestHandler 30
+      [.function
+        { name := "main", inline := false, exported := true, params := [],
+          body := .seq (.extCall "echo" (.const (BitVec.ofNat 64 8))
+              (.const (BitVec.ofNat 64 1)) (.const (BitVec.ofNat 64 8))
+              (.const (BitVec.ofNat 64 1)))
+            (.return (.loadByte (.const (BitVec.ofNat 64 8)))),
+          returnShape := .one }]
+      "main" []
+      (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))).bind
+    fun result => match result with
+      | .returned _ _ _ ffi [.word value] => some (value, ffi.ioEvents.length)
+      | _ => none
+
+#guard statefulPublicProgram = some (BitVec.ofNat 64 0x42, 1)
+
 end Flapjack

@@ -84,4 +84,18 @@ theorem labCompileAsm_locValue_execute [NeZero width]
         (.addi register 0 (BitVec.ofNat width targetPosition))) := by
   simp [labCompileAsm, hregister, htarget, executeInstructions]
 
+/-! A cross-section jump is not merely assembled correctly: its resolved
+    offset must take the machine to the target section.  This is the smallest
+    executable contract for the label collection and flattening boundary. -/
+
+theorem compileLabProgram_cross_section_jump_execute :
+    (compileLabProgram (width := 64) { services := [] }
+      [⟨1, [.labAsm (.jump ⟨2, 0⟩) [] 0]⟩,
+       ⟨2, [.label 2 0 0, .asm (.const 1 7) [] 0]⟩]).bind
+        (fun code =>
+          (executeCodeUntil 10 (0 : Word 64) (BitVec.ofNat 64 8) code
+            (zeroState 64)).map (fun state => readRegister state 1)) =
+      some (BitVec.ofNat 64 7) := by
+  decide
+
 end Flapjack.RiscV

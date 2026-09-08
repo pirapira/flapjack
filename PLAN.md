@@ -36,19 +36,20 @@ not yet an equivalent source semantics. In particular:
 | Values and shaped records | `Val`, `RStruct`, `NStruct`, with declaration and shape checks | `PanValue` and most expression shape checks match the intended structure |
 | `Op` | `Add`, `And`, `Or`, and `Xor` fold over arbitrary word lists; `Sub` accepts exactly two words | Lean accepts exactly two word operands for every `BinOp` ([#382](https://github.com/pirapira/flapjack/issues/382)) |
 | Comparisons and shifts | `Lower` is unsigned, `Less` is signed; all `Lsl`, `Lsr`, `Asr`, and `Ror` are defined | `Lower`/`Less` share one `<` relation and `Asr`/`Ror` return `none` ([#383](https://github.com/pirapira/flapjack/issues/383), [#389](https://github.com/pirapira/flapjack/issues/389)) |
-| Word loads/stores | Domain-checked exact aligned word cells | `PanMemory` has this; `PanValues` has no domain and performs direct map access |
-| Byte and 32-bit accesses | Align to `byte_align`; extract/patch bytes with `be`; `Load32` additionally requires `aligned 2` | Both source evaluators currently read/write an exact whole cell; this is the #380 mismatch |
+| Word loads/stores | Domain-checked exact aligned word cells | Model-aware `PanMemory` and `PanValues` use explicit domains; legacy evaluator calls retain compatibility fallback |
+| Byte and 32-bit accesses | Align to `byte_align`; extract/patch bytes with `be`; `Load32` additionally requires `aligned 2` | Model-aware flat, structured, and stepped evaluators now use the canonical word-cell operations; compatibility fallback remains |
 | Structured `Store` | Flatten values into consecutive word cells and fail transactionally on a bad domain | `PanMemory` has the flattening helper; `PanValues` stores a whole `PanValue` in one cell ([#385](https://github.com/pirapira/flapjack/issues/385)) |
 | Assignments | `is_valid_value` checks the destination's existing shape | Source assignments currently update locals/globals without that check ([#384](https://github.com/pirapira/flapjack/issues/384)) |
-| Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation | Source evaluators ignore the size, use ordinary memory, and have no shared-memory domain or observable FFI state |
+| Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation | Structured and stepped model-aware evaluators now dispatch through a separate size-aware shared callback/domain; FFI state, terminal outcomes, and byte payloads remain to be threaded |
 | Control state | Clock, timeout, local clearing at boundaries, return/exception size limits, and declared exception shapes | Control-result evaluators use fuel only; `tick`, `return`, `raise`, and calls omit several CakeML checks and effects ([#387](https://github.com/pirapira/flapjack/issues/387)) |
 | Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays | Current call evaluators discard callee global/memory effects and the FFI handler only updates locals ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388)) |
 
-The flat-memory adapter therefore fixes the representation of ordinary
-structured loads/stores, but it does not by itself make the complete source
-semantics equivalent. The following work is now the source-semantics gate and
-should precede new end-to-end correctness claims that depend on arbitrary
-memory or shared-memory behavior.
+The flat-memory adapter and the structured/stepped canonical access slice fix
+the representation of ordinary byte and word loads/stores when a target model
+is supplied, but they do not by themselves make the complete source semantics
+equivalent. The following work is now the source-semantics gate and should
+precede new end-to-end correctness claims that depend on arbitrary memory or
+shared-memory behavior.
 
 ### Stacked implementation plan
 
@@ -71,11 +72,14 @@ memory or shared-memory behavior.
    `store32`/`storeByte` cases to the flat control evaluator and prove that
    the counted/stepped expression evaluator has the same value result as the
    uncounted evaluator.
-4. **Shared-memory and external effects.** Extend the source state/result
-   model with `sh_memaddrs`, FFI state, and terminal FFI observations. Port
-   `nb_op`, aligned shared-memory address checks, the `SharedMem` FFI payloads,
-   and the byte-array read/write behavior of `ExtCall`. Preserve the existing
-   pure handler adapters as explicitly non-observable test fixtures.
+4. **Shared-memory and external effects.** The first incremental slice is now
+   in progress: model-aware structured and stepped evaluators have a separate
+   shared-memory callback, a separate shared domain, and size-dispatched
+   `op8`/`op16`/`op32`/`opW` behavior. Complete this stage by extending the
+   source state/result model with FFI state and terminal FFI observations.
+   Port `nb_op`, aligned shared-memory address checks, the `SharedMem` FFI
+   payloads, and the byte-array read/write behavior of `ExtCall`. Preserve the
+   existing pure handler adapters as explicitly non-observable test fixtures.
 5. **Control-state fidelity.** Thread CakeML's clock and timeout rules through
    `Tick`, `While`, calls, returns, and exceptions, including local clearing
    at the same boundaries. Thread callee globals, memory, and FFI state back

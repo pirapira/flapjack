@@ -554,14 +554,7 @@ mutual
         let .word evaluatedAddress := evaluatedAddress | none
         let value ← match memoryAccess with
           | none => memory evaluatedAddress
-          | some access => match size with
-              | .opW => match memoryAccess with
-                  | none => memory evaluatedAddress
-                  | some access =>
-                      access.readWord access.domain memory bytesInWord evaluatedAddress
-              | .op8 => (access.readByte access.domain memory bytesInWord evaluatedAddress).map .word
-              | .op16 => (access.read16 access.domain memory bytesInWord evaluatedAddress).map .word
-              | .op32 => (access.read32 access.domain memory bytesInWord evaluatedAddress).map .word
+          | some access => access.sharedRead memory bytesInWord size evaluatedAddress
         match kind with
         | .local => pure (.normal (updatePanValueMap locals name value) globals memory,
             addressSteps + 1)
@@ -576,13 +569,9 @@ mutual
         let .word evaluatedValue := evaluatedValue | none
         let memory ← match memoryAccess with
           | none => some (updatePanValueMemory memory evaluatedAddress (.word evaluatedValue))
-          | some access => match size with
-              | .opW =>
-                  panValueStoreWithAccess memory bytesInWord evaluatedAddress
-                    (.word evaluatedValue) memoryAccess
-              | .op8 => access.storeByte access.domain memory bytesInWord evaluatedAddress evaluatedValue
-              | .op16 => access.store16 access.domain memory bytesInWord evaluatedAddress evaluatedValue
-              | .op32 => access.store32 access.domain memory bytesInWord evaluatedAddress evaluatedValue
+          | some access =>
+              access.sharedStore memory bytesInWord size evaluatedAddress
+                (.word evaluatedValue)
         pure (.normal locals globals memory, addressSteps + valueSteps + 1)
     | _fuel + 1, locals, globals, memory,
         .tick, _ | _fuel + 1, locals, globals, memory, .annot _ _, _ =>
@@ -1702,6 +1691,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                     | some evaluatedValue =>
                         cases evaluatedAddress <;>
                           cases evaluatedValue <;>
+                          cases size <;>
                           simp [haddress, hvalue, evalPanValueExpCounted]
             | tick =>
                 exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_tick

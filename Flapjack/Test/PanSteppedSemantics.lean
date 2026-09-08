@@ -40,6 +40,31 @@ def steppedTestFunctions : List (FunName × List VarName × Prog Nat) :=
   (evalPanValueExpCounted [] steppedTestLocals steppedTestGlobals steppedTestMemory
     0 100 1 (.op .add [.const 1, .const 2])).map Prod.snd = some 3
 
+example :
+    ((some 7 : Option Nat).map (fun value => (value, 3))).bind
+        (fun pair => (some (pair.1 + pair.2, 0) : Option (Nat × Nat)).map Prod.fst) =
+      (some 7 : Option Nat).bind (fun value => some (value + 3)) := by
+  simpa using (panOptionCountedBindMapFst (values := some 7) (steps := 3)
+    (stepped := fun value step => some (value + step, 0))
+    (original := fun value => some (value + 3)) (by
+      intro value step
+      simp))
+
+example :
+    (evalPanValueExpCounted [] steppedTestLocals steppedTestGlobals steppedTestMemory
+      0 100 1 (.op .add [.const 1, .const 2])).bind
+        (fun pair => (some (pair.1, pair.2) : Option (PanValue Nat × Nat)).map Prod.fst) =
+      (evalPanValueExp [] steppedTestLocals steppedTestGlobals steppedTestMemory
+        0 100 1 (.op .add [.const 1, .const 2])).bind (fun value => some value) := by
+  simpa using (panEvalPanValueExpCountedBindMapFst
+    (structs := []) (locals := steppedTestLocals) (globals := steppedTestGlobals)
+    (memory := steppedTestMemory) (baseAddress := 0) (topAddress := 100)
+    (bytesInWord := 1) (expression := .op .add [.const 1, .const 2])
+    (stepped := fun value step => some (value, step))
+    (original := fun value => some value) (by
+      intro value step
+      simp))
+
 #guard
   (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi [] steppedTestFunctions
     0 100 1 8 steppedTestLocals steppedTestGlobals steppedTestMemory

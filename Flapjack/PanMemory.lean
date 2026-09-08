@@ -462,36 +462,45 @@ mutual
         (VarName → Option (PanValue α)) → PanFlatMemory α →
         Option (Option (VarKind × VarName) ×
           Option (ExceptionId × VarName × Prog α)) → FunName → List (Exp α) →
+        (contracts : Option PanValueCallContracts := none) →
         Option (PanFlatControlResult α)
-    | 0, _, _, _, _, _, _ => none
-    | fuel + 1, locals, globals, memory, info, function, arguments => do
+    | 0, _, _, _, _, _, _, _ => none
+    | fuel + 1, locals, globals, memory, info, function, arguments, contracts => do
         let values ← evalPanFlatExps structs locals globals domain memory
           baseAddress topAddress bytesInWord arguments
         let (parameters, body) ← lookupPanFunction function functions
         let calleeLocals ← bindPanValueParameters parameters values
         let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
           baseAddress topAddress bytesInWord domain fuel calleeLocals globals memory body
+          (contracts := contracts)
         match result with
         | .normal _ calleeGlobals calleeMemory =>
             pure (.normal locals calleeGlobals calleeMemory)
         | .returned _ calleeGlobals calleeMemory values =>
-            match info with
-            | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
-            | some (destination, _) => do
-                let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
-                  destination values
-                  (structs := structs)
-                pure (.normal locals globals calleeMemory)
+            if panValueReturnValid structs contracts function values then
+              match info with
+              | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
+              | some (destination, _) => do
+                  let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
+                    destination values
+                    (structs := structs)
+                  pure (.normal locals globals calleeMemory)
+            else none
         | .raised _ calleeGlobals calleeMemory exception value =>
-            match info with
-            | some (_, some (caught, handlerVariable, handlerProgram)) =>
-                if caught == exception then
-                  evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
-                    baseAddress topAddress bytesInWord domain fuel
-                    (updatePanValueMap locals handlerVariable value)
-                    calleeGlobals calleeMemory handlerProgram
-                else pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
-            | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
+            if panValueExceptionValid structs contracts exception value then
+              match info with
+              | some (_, some (caught, handlerVariable, handlerProgram)) =>
+                  if caught == exception then
+                    if panValueHandlerValid structs contracts locals handlerVariable value then
+                      evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+                        baseAddress topAddress bytesInWord domain fuel
+                        (updatePanValueMap locals handlerVariable value)
+                        calleeGlobals calleeMemory handlerProgram
+                        (contracts := contracts)
+                    else none
+                  else pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
+              | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
+            else none
         | .broke _ calleeGlobals calleeMemory =>
             pure (.broke (fun _ => none) calleeGlobals calleeMemory)
         | .continued _ calleeGlobals calleeMemory =>
@@ -509,11 +518,12 @@ mutual
       (domain : PanMemoryDomain α) :
       Nat → (VarName → Option (PanValue α)) →
         (VarName → Option (PanValue α)) → PanFlatMemory α → Prog α →
+        (contracts : Option PanValueCallContracts := none) →
         Option (PanFlatControlResult α)
-    | 0, _, _, _, _ => none
-    | _fuel + 1, locals, globals, memory, .skip =>
+    | 0, _, _, _, _, _ => none
+    | _fuel + 1, locals, globals, memory, .skip, _contracts =>
         some (.normal locals globals memory)
-    | fuel + 1, locals, globals, memory, .dec name shape value body => do
+    | fuel + 1, locals, globals, memory, .dec name shape value body, contracts => do
         let value ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord value
         if panShapeMatches (panValueShape structs value) shape then
@@ -521,21 +531,22 @@ mutual
           let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
             baseAddress topAddress bytesInWord domain fuel
             (updatePanValueMap locals name value) globals memory body
+            (contracts := contracts)
           pure (restorePanFlatControlLocal name oldValue result)
         else none
-    | _fuel + 1, locals, globals, memory, .assign .local name value => do
+    | _fuel + 1, locals, globals, memory, .assign .local name value, _contracts => do
         let value ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord value
         if panValueAssignmentValid structs locals globals .local name value then
           pure (.normal (updatePanValueMap locals name value) globals memory)
         else none
-    | _fuel + 1, locals, globals, memory, .assign .global name value => do
+    | _fuel + 1, locals, globals, memory, .assign .global name value, _contracts => do
         let value ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord value
         if panValueAssignmentValid structs locals globals .global name value then
           pure (.normal locals (updatePanValueMap globals name value) memory)
         else none
-    | _fuel + 1, locals, globals, memory, .primitive name operator arguments => do
+    | _fuel + 1, locals, globals, memory, .primitive name operator arguments, _contracts => do
         let values ← evalPanFlatExps structs locals globals domain memory
           baseAddress topAddress bytesInWord arguments
         let value ← primitive operator values
@@ -543,7 +554,7 @@ mutual
         if panShapeMatches (panValueShape structs value) (panValueShape structs oldValue) then
           pure (.normal (updatePanValueMap locals name value) globals memory)
         else none
-    | _fuel + 1, locals, globals, memory, .store address value => do
+    | _fuel + 1, locals, globals, memory, .store address value, _contracts => do
         let address ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord address
         let value ← evalPanFlatExp structs locals globals domain memory
@@ -551,42 +562,49 @@ mutual
         let .word address := address | none
         let memory ← panFlatStore domain memory bytesInWord address value
         pure (.normal locals globals memory)
-    | fuel + 1, locals, globals, memory, .seq first second => do
+    | fuel + 1, locals, globals, memory, .seq first second, contracts => do
         let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
           baseAddress topAddress bytesInWord domain fuel locals globals memory first
+          (contracts := contracts)
         match result with
         | .normal locals globals memory =>
             evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
               baseAddress topAddress bytesInWord domain fuel locals globals memory second
+              (contracts := contracts)
         | result => pure result
-    | fuel + 1, locals, globals, memory, .ite condition thenBranch elseBranch => do
+    | fuel + 1, locals, globals, memory, .ite condition thenBranch elseBranch, contracts => do
         let condition ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord condition
         let .word condition := condition | none
         if condition != 0 then
           evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
             baseAddress topAddress bytesInWord domain fuel locals globals memory thenBranch
+            (contracts := contracts)
         else
           evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
             baseAddress topAddress bytesInWord domain fuel locals globals memory elseBranch
-    | fuel + 1, locals, globals, memory, .call info function arguments =>
+            (contracts := contracts)
+    | fuel + 1, locals, globals, memory, .call info function arguments, contracts =>
         evalPanFlatCallWithPrimitiveAndFfi structs functions ffi primitive
           baseAddress topAddress bytesInWord domain fuel locals globals memory info function arguments
-    | fuel + 1, locals, globals, memory, .decCall name shape function arguments body => do
+          (contracts := contracts)
+    | fuel + 1, locals, globals, memory, .decCall name shape function arguments body, contracts => do
         let oldValue := locals name
         let result ← evalPanFlatCallWithPrimitiveAndFfi structs functions ffi primitive
           baseAddress topAddress bytesInWord domain fuel locals globals memory
-          none function arguments
+          none function arguments (contracts := contracts)
         match result with
         | .returned _ globals memory [value] =>
             if panShapeMatches (panValueShape structs value) shape then
               let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
                 baseAddress topAddress bytesInWord domain fuel
                 (updatePanValueMap locals name value) globals memory body
+                (contracts := contracts)
               pure (restorePanFlatControlLocal name oldValue result)
             else none
         | _ => none
-    | _fuel + 1, locals, globals, memory, .extCall function configuration configurationLength array arrayLength => do
+    | _fuel + 1, locals, globals, memory,
+        .extCall function configuration configurationLength array arrayLength, _contracts => do
         let configuration ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord configuration
         let configurationLength ← evalPanFlatExp structs locals globals domain memory
@@ -601,7 +619,7 @@ mutual
         let .word arrayLength := arrayLength | none
         let locals ← ffi function configuration configurationLength array arrayLength locals
         pure (.normal locals globals memory)
-    | fuel + 1, locals, globals, memory, .while condition body => do
+    | fuel + 1, locals, globals, memory, .while condition body, contracts => do
         let evaluatedCondition ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord condition
         let .word conditionValue := evaluatedCondition | none
@@ -610,28 +628,32 @@ mutual
         else
           let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
             baseAddress topAddress bytesInWord domain fuel locals globals memory body
+            (contracts := contracts)
           match result with
           | .normal locals globals memory | .continued locals globals memory =>
               evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
                 baseAddress topAddress bytesInWord domain fuel locals globals memory
-                (.while condition body)
+                (.while condition body) (contracts := contracts)
           | .broke locals globals memory => pure (.normal locals globals memory)
           | result => pure result
-    | _fuel + 1, locals, globals, memory, .break =>
+    | _fuel + 1, locals, globals, memory, .break, _contracts =>
         pure (.broke locals globals memory)
-    | _fuel + 1, locals, globals, memory, .continue =>
+    | _fuel + 1, locals, globals, memory, .continue, _contracts =>
         pure (.continued locals globals memory)
-    | _fuel + 1, locals, globals, memory, .raise exception value => do
+    | _fuel + 1, locals, globals, memory, .raise exception value, contracts => do
         let value ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord value
-        pure (.raised locals globals memory exception value)
-    | _fuel + 1, locals, globals, memory, .return value => do
+        if panValueExceptionValid structs contracts exception value then
+          pure (.raised locals globals memory exception value)
+        else none
+    | _fuel + 1, locals, globals, memory, .return value, _contracts => do
         let value ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord value
         pure (.returned locals globals memory [value])
-    | _fuel + 1, locals, globals, memory, .tick | _fuel + 1, locals, globals, memory, .annot _ _ =>
+    | _fuel + 1, locals, globals, memory, .tick, _contracts |
+        _fuel + 1, locals, globals, memory, .annot _ _, _contracts =>
         pure (.normal locals globals memory)
-    | _, _, _, _, _ => none
+    | _, _, _, _, _, _ => none
     termination_by fuel _ _ _ _ => fuel
 end
 
@@ -644,10 +666,12 @@ def evalPanFlatProgWithPrimitiveAndFfi
     (ffi : PanFlatFfiHandler α) (primitive : PanPrimitiveHandler α)
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
     (locals globals : VarName → Option (PanValue α))
-    (domain : PanMemoryDomain α) (memory : PanFlatMemory α) (program : Prog α) :
+    (domain : PanMemoryDomain α) (memory : PanFlatMemory α) (program : Prog α)
+    (contracts : Option PanValueCallContracts := none) :
     Option (PanFlatControlResult α) :=
   evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
     baseAddress topAddress bytesInWord domain fuel locals globals memory program
+    (contracts := contracts)
 
 def evalPanFlatProgWithCallsAndFfi
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -658,9 +682,11 @@ def evalPanFlatProgWithCallsAndFfi
     (ffi : PanFlatFfiHandler α)
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
     (locals globals : VarName → Option (PanValue α))
-    (domain : PanMemoryDomain α) (memory : PanFlatMemory α) (program : Prog α) :
+    (domain : PanMemoryDomain α) (memory : PanFlatMemory α) (program : Prog α)
+    (contracts : Option PanValueCallContracts := none) :
     Option (PanFlatControlResult α) :=
   evalPanFlatProgWithPrimitiveAndFfi structs functions ffi (fun _ _ => none)
     baseAddress topAddress bytesInWord fuel locals globals domain memory program
+    (contracts := contracts)
 
 end Flapjack

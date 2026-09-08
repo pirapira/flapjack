@@ -138,4 +138,55 @@ def statefulPublicProgram : Option (Word 64 × Nat) :=
 
 #guard statefulPublicProgram = some (BitVec.ofNat 64 0x42, 1)
 
+example :
+    (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
+      statefulTestPrimitive statefulTestHandler 30
+      [.function
+         { name := "badReturn", inline := false, exported := false, params := [],
+           body := .return (.rStruct [.const (BitVec.ofNat 64 1),
+             .const (BitVec.ofNat 64 2)]), returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .seq (.call none "badReturn" []) (.return (.const 0)),
+           returnShape := .one }]
+      "main" []
+      (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))).isNone =
+      true := by
+  decide +kernel
+
+example :
+    (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
+      statefulTestPrimitive statefulTestHandler 30
+      [.exnDecl "E" (.comb [.one, .one]),
+       .function
+         { name := "badRaise", inline := false, exported := false, params := [],
+           body := .raise "E" (.const (BitVec.ofNat 64 1)), returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .seq (.call none "badRaise" []) (.return (.const 0)),
+           returnShape := .one }]
+      "main" []
+      (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))).isNone =
+      true := by
+  decide +kernel
+
+example :
+    (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
+      statefulTestPrimitive statefulTestHandler 40
+      [.exnDecl "E" .one,
+       .function
+         { name := "raiseGood", inline := false, exported := false, params := [],
+           body := .raise "E" (.const (BitVec.ofNat 64 1)), returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .seq
+             (.dec "caught" .one (.const 0)
+               (.call (some (none, some ("E", "missing", .skip)))
+                 "raiseGood" []))
+             (.return (.const 0)), returnShape := .one }]
+      "main" []
+      (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))).isNone =
+      true := by
+  decide +kernel
+
 end Flapjack

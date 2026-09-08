@@ -1,0 +1,85 @@
+import Flapjack.PanValueFfiSemantics
+import Flapjack.RiscV.PanMemory
+
+/-!
+Executable checks for the stateful structured source evaluator.  The oracle
+returns a fixed word for shared reads and echoes write payloads, which makes
+both the `SharedMem` event and the stepped result observable.
+-/
+
+namespace Flapjack
+
+open RiscV
+
+def statefulTestDecodeLittleEndian : List UInt8 → Nat → Nat
+  | [], _ => 0
+  | byte :: bytes, index => byte.toNat * 256 ^ index +
+      statefulTestDecodeLittleEndian bytes (index + 1)
+
+def statefulTestWordToBytes (value : Word 64) (bigEndian : Bool) : List UInt8 :=
+  let bytes := (List.range 8).map (fun index =>
+    UInt8.ofNat ((value.toNat / 256 ^ index) % 256))
+  if bigEndian then bytes.reverse else bytes
+
+def statefulTestWordOfBytes (bigEndian : Bool) (bytes : List UInt8) : Word 64 :=
+  let bytes := if bigEndian then bytes.reverse else bytes
+  BitVec.ofNat 64 (statefulTestDecodeLittleEndian bytes 0)
+
+def statefulTestOracle : FfiOracle Unit :=
+  fun name state _ bytes =>
+    match name with
+    | .sharedMem .mappedRead =>
+        .returned state (statefulTestWordToBytes (BitVec.ofNat 64 0x42) false)
+    | .sharedMem .mappedWrite => .returned state bytes
+    | .extCall _ => .returned state bytes
+
+def statefulTestFfiState : FfiState Unit :=
+  { oracle := statefulTestOracle, state := (), ioEvents := [] }
+
+def statefulTestContext : PanValueFfiContext (Word 64) :=
+  { sharedDomain := fun _ => true
+    byteAlign := fun address => panRiscVByteAlign (BitVec.ofNat 64 8) address
+    bigEndian := false
+    wordToBytes := statefulTestWordToBytes
+    wordOfBytes := statefulTestWordOfBytes }
+
+def statefulTestHandler : PanValueStatefulFfiHandler (Word 64) Unit :=
+  fun _ _ _ _ _ locals ffi => some (locals, ffi)
+
+def statefulTestPrimitive : PanPrimitiveHandler (Word 64) :=
+  fun _ _ => none
+
+def statefulSharedProgram : Option (Word 64 × Nat × Nat) :=
+  (evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
+      statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+      (BitVec.ofNat 64 8) 30 (fun _ => none) (fun _ => none) (fun _ => none)
+      statefulTestFfiState
+      (.seq (.shMemStore .op8 (.const (BitVec.ofNat 64 9))
+          (.const (BitVec.ofNat 64 0xaa)))
+        (.seq (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 10)))
+          (.return (.var .local "x"))))).map
+    fun result => match result.1 with
+      | .returned _ _ _ ffi [.word value] => (value, result.2, ffi.ioEvents.length)
+      | _ => (BitVec.ofNat 64 0, 0, 0)
+
+def statefulTestFinalOracle : FfiOracle Unit :=
+  fun _ _ _ _ => .final .failed
+
+def statefulTestFinalState : FfiState Unit :=
+  { oracle := statefulTestFinalOracle, state := (), ioEvents := [] }
+
+def statefulSharedFinal : Bool :=
+  match evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
+      statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+      (BitVec.ofNat 64 8) 10 (fun _ => none) (fun _ => none) (fun _ => none)
+      statefulTestFinalState
+      (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 10))) with
+  | some (.finalFfi locals _ _ _ event, steps) =>
+      locals "x" = none && event.name = .sharedMem .mappedRead &&
+        event.outcome = .failed && steps = 2
+  | _ => false
+
+#guard statefulSharedProgram = some (BitVec.ofNat 64 0x42, 9, 2)
+#guard statefulSharedFinal
+
+end Flapjack

@@ -1868,6 +1868,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   through the body and resuming with the body's resulting state and clock.
 - [x] Prove the nonzero-clock call-return contract, preserving the callee's
   globals, memory, FFI state, returned values, and remaining clock.
+- [x] Prove the nonzero-clock uncaught-exception call contract, preserving
+  the callee state and clock while clearing callee locals at the boundary.
 - [x] Expose the abstract StackLang FFI returned-callee continuation equation,
   matching the bounded frame boundary.
 - [x] Prove that a Word-to-Stack FFI argument move preserves every unrelated

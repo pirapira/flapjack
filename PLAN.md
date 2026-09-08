@@ -1761,6 +1761,8 @@ definitions, pass ordering, examples, and proof obligations.
   section on the RISC-V model, rather than only matching emitted code shape.
 - [x] Prove Lab `linkValue` materializes a resolved continuation in ABI
   register `x1` at the RISC-V boundary.
+- [x] Compose Lab continuation materialization, cross-section call, return,
+  and caller continuation into an executable RISC-V trace.
 - [x] Expose location-aware bitmap sequence compilation and evaluator
   contracts for the spill-aware Word-to-Stack boundary.
 - [x] Expose location-aware bitmap handler-call and FFI lowering equations

@@ -363,7 +363,9 @@ mutual
             match info with
             | none => pure (.returned locals globals memory values, argumentSteps + steps)
             | some (destination, _) => do
-                let locals ← assignPanValueCallResult locals destination values
+                let (locals, globals) ← assignPanValueCallResult locals globals
+                  destination values
+                  (structs := structs)
                 pure (.normal locals globals memory, argumentSteps + steps)
         | .raised _ _ _ exception value =>
             match info with
@@ -497,19 +499,24 @@ mutual
           locals globals memory info function arguments (memoryAccess := memoryAccess)
         pure (result, steps + 1)
     | fuel + 1, locals, globals, memory,
-        .decCall name _ function arguments body, memoryAccess => do
+        .decCall name shape function arguments body, memoryAccess => do
+        let oldValue := locals name
         let (callResult, callSteps) ← evalPanValueCallWithPrimitiveCallsAndFfiSteps
           primitive handler structs functions baseAddress topAddress bytesInWord fuel
-          locals globals memory (some (some (.local, name), none)) function arguments
+          locals globals memory none function arguments
           (memoryAccess := memoryAccess)
         match callResult with
-        | .normal locals globals memory =>
-            let (bodyResult, bodySteps) ←
-              evalPanValueProgWithPrimitiveCallsAndFfiSteps
-                primitive handler structs functions baseAddress topAddress bytesInWord fuel
-                locals globals memory body (memoryAccess := memoryAccess)
-            pure (bodyResult, callSteps + bodySteps + 1)
-        | result => pure (result, callSteps + 1)
+        | .returned _ globals memory [value] =>
+            if panShapeMatches (panValueShape structs value) shape then
+              let (bodyResult, bodySteps) ←
+                evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  (updatePanValueMap locals name value) globals memory body
+                  (memoryAccess := memoryAccess)
+              pure (restorePanValueControlLocal name oldValue bodyResult,
+                callSteps + bodySteps + 1)
+            else none
+        | _ => none
     | _fuel + 1, locals, globals, memory,
         .extCall function configuration configurationLength array arrayLength, memoryAccess => do
         let (values, expressionSteps) ← evalPanValueExpsCounted structs locals globals memory
@@ -1059,7 +1066,8 @@ theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
                               cases info with
                               | none => simp [hparams, hstep, horiginal]
                               | some info =>
-                                  cases hassign : assignPanValueCallResult locals info.1 values with
+                                  cases hassign : assignPanValueCallResult locals globals info.1 values
+                                    (structs := structs) with
                                   | none => simp [hparams, hstep, horiginal, hassign]
                                   | some assignedLocals =>
                                       simp [hparams, hstep, horiginal, hassign]
@@ -1201,7 +1209,8 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                     cases info with
                                     | none => simp [hparams, hstep, horiginal]
                                     | some info =>
-                                        cases hassign : assignPanValueCallResult locals info.1 values with
+                                        cases hassign : assignPanValueCallResult locals globals info.1 values
+                                          (structs := structs) with
                                         | none => simp [hparams, hstep, horiginal, hassign]
                                         | some assignedLocals =>
                                             simp [hparams, hstep, horiginal, hassign]
@@ -1544,14 +1553,14 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                   evalPanValueProgWithPrimitiveCallsAndFfi]
                 cases hcall : evalPanValueCallWithPrimitiveCallsAndFfiSteps
                     primitive handler structs functions baseAddress topAddress bytesInWord fuel
-                    locals globals memory (some (some (.local, name), none)) function arguments with
+                    locals globals memory none function arguments with
                 | none =>
                     have hcallOriginal :
                         evalPanValueCallWithPrimitiveCallsAndFfi primitive handler structs
                           functions baseAddress topAddress bytesInWord fuel locals globals memory
-                          (some (some (.local, name), none)) function arguments = none := by
+                          none function arguments = none := by
                       rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
-                        (some (some (.local, name), none)) function arguments).1]
+                        none function arguments).1]
                       simp [hcall]
                     simp [hcallOriginal]
                 | some callPair =>
@@ -1560,37 +1569,53 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                         have hcallOriginal :
                             evalPanValueCallWithPrimitiveCallsAndFfi primitive handler structs
                               functions baseAddress topAddress bytesInWord fuel locals globals memory
-                              (some (some (.local, name), none)) function arguments =
+                              none function arguments =
                               some callResult := by
                           rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
-                            (some (some (.local, name), none)) function arguments).1]
+                            none function arguments).1]
                           simp [hcall]
                         cases callResult with
-                        | normal callLocals callGlobals callMemory =>
-                            cases hbody : evalPanValueProgWithPrimitiveCallsAndFfiSteps
-                                primitive handler structs functions baseAddress topAddress bytesInWord fuel
-                                callLocals callGlobals callMemory body with
-                            | none =>
-                                have hbodyOriginal :
-                                    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
-                                      functions baseAddress topAddress bytesInWord fuel callLocals
-                                      callGlobals callMemory body = none := by
-                                  rw [← (ih fuel (Nat.lt_succ_self fuel) callLocals callGlobals
-                                    callMemory none function arguments).2 body]
-                                  simp [hbody]
-                                simp [hcallOriginal, hbody, hbodyOriginal]
-                            | some bodyPair =>
-                                cases bodyPair with
-                                | mk bodyResult bodySteps =>
-                                    have hbodyOriginal :
-                                        evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
-                                          functions baseAddress topAddress bytesInWord fuel callLocals
-                                          callGlobals callMemory body = some bodyResult := by
-                                      rw [← (ih fuel (Nat.lt_succ_self fuel) callLocals callGlobals
-                                        callMemory none function arguments).2 body]
-                                      simp [hbody]
-                                    simp [hcallOriginal, hbody, hbodyOriginal]
-                        | returned _ _ _ _ | raised _ _ _ _ _ | broke _ _ _ | continued _ _ _ =>
+                        | returned callLocals callGlobals callMemory values =>
+                            cases values with
+                            | nil => simp [hcallOriginal]
+                            | cons value rest =>
+                                cases rest with
+                                | nil =>
+                                    by_cases hshape :
+                                        panShapeMatches (panValueShape structs value) shape
+                                    · cases hbody : evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                                          primitive handler structs functions baseAddress topAddress
+                                          bytesInWord fuel (updatePanValueMap locals name value)
+                                          callGlobals callMemory body with
+                                      | none =>
+                                          have hbodyOriginal :
+                                              evalPanValueProgWithPrimitiveCallsAndFfi primitive
+                                                handler structs functions baseAddress topAddress
+                                                bytesInWord fuel
+                                                (updatePanValueMap locals name value)
+                                                callGlobals callMemory body = none := by
+                                            rw [← (ih fuel (Nat.lt_succ_self fuel)
+                                              (updatePanValueMap locals name value)
+                                              callGlobals callMemory none function arguments).2 body]
+                                            simp [hbody]
+                                          simp [hcallOriginal, hshape, hbody, hbodyOriginal]
+                                      | some bodyPair =>
+                                          cases bodyPair with
+                                          | mk bodyResult bodySteps =>
+                                              have hbodyOriginal :
+                                                  evalPanValueProgWithPrimitiveCallsAndFfi
+                                                    primitive handler structs functions
+                                                    baseAddress topAddress bytesInWord fuel
+                                                    (updatePanValueMap locals name value)
+                                                    callGlobals callMemory body = some bodyResult := by
+                                                rw [← (ih fuel (Nat.lt_succ_self fuel)
+                                                  (updatePanValueMap locals name value)
+                                                  callGlobals callMemory none function arguments).2 body]
+                                                simp [hbody]
+                                              simp [hcallOriginal, hshape, hbody, hbodyOriginal]
+                                    · simp [hcallOriginal, hshape]
+                                | cons _ _ => simp [hcallOriginal]
+                        | normal _ _ _ | raised _ _ _ _ _ | broke _ _ _ | continued _ _ _ =>
                             simp [hcallOriginal]
             | extCall function configuration configurationLength array arrayLength =>
                 simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,

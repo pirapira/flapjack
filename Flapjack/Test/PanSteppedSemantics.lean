@@ -84,6 +84,11 @@ example :
 #guard
   (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi [] steppedTestFunctions
     0 100 1 8 steppedTestLocals steppedTestGlobals steppedTestMemory
+    (.call (some (none, none)) "id" [.const 41])).map Prod.snd = some 4
+
+#guard
+  (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi [] steppedTestFunctions
+    0 100 1 8 steppedTestLocals steppedTestGlobals steppedTestMemory
     (.call none "id" [.const 41])).map
       (fun (result, _) => steppedReturnedValues result) =
     (evalPanValueProgWithPrimitiveCallsAndFfi steppedTestPrimitive steppedTestFfi []

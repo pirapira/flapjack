@@ -15,8 +15,10 @@ def flatNoFfi : PanFlatFfiHandler Nat :=
   fun _ _ _ _ _ _ => none
 
 example :
-    (evalPanFlatProgWithCallsAndFfi (α := Nat) [] flatCallTestFunctions flatNoFfi
-      0 100 1 20 (fun _ => none) (fun _ => none) (fun _ => true) (fun _ => none)
+  (evalPanFlatProgWithCallsAndFfi (α := Nat) [] flatCallTestFunctions flatNoFfi
+      0 100 1 20
+      (fun name => if name == "result" then some (.word 0) else none)
+      (fun _ => none) (fun _ => true) (fun _ => none)
       (.call (some (some (.local, "result"), none)) "id" [.const 7])).map
       (fun result => match result with
         | .normal locals _ _ => locals "result"
@@ -26,7 +28,8 @@ example :
     evalPanFlatCallWithPrimitiveAndFfi, evalPanFlatExps,
     evalPanFlatExp, evalPanFlatExp.evalPanFlatExps, flatCallTestFunctions,
     bindPanValueParameters, assignPanValueCallResult,
-    updatePanValueMap, lookupPanFunction]
+    updatePanValueMap, panValueAssignmentValid, panValueShape, panShapeMatches,
+    lookupPanFunction]
 
 def flatFailFunctions : List (FunName × List VarName × Prog Nat) :=
   [("fail", [], .raise "E" (.const 9))]
@@ -58,14 +61,15 @@ example :
     evalPanFlatProgWithPrimitiveAndFfi, evalPanFlatProgFuelWithPrimitiveAndFfi,
     evalPanFlatCallWithPrimitiveAndFfi, evalPanFlatExp, evalPanFlatExps,
     evalPanFlatExp.evalPanFlatExps, flatCallTestFunctions, 
-    bindPanValueParameters, assignPanValueCallResult, updatePanValueMap,
+    bindPanValueParameters, updatePanValueMap,
     restorePanFlatControlLocal, restorePanValueLocal,
     lookupPanFunction, panValueShape, panShapeMatches]
 
 example :
     (evalPanValueProgWithCallsAndFfi (α := Nat) []
       structuredCallTestFunctions structuredNoFfi 0 100 8 20
-      (fun _ => none) (fun _ => none) (fun _ => none)
+      (fun name => if name == "result" then some (.word 0) else none)
+      (fun _ => none) (fun _ => none)
       (.call (some (some (.local, "result"), none)) "id" [.const 7])).map
       (fun result => match result with
         | .normal locals _ _ => locals "result"
@@ -73,7 +77,49 @@ example :
   simp [evalPanValueProgWithCallsAndFfi, evalPanValueCallWithCallsAndFfi,
     evalPanValueExp, evalPanValueExps, evalPanValueExp.evalPanValueExps,
     structuredCallTestFunctions, bindPanValueParameters,
+    assignPanValueCallResult, updatePanValueMap, panValueAssignmentValid,
+    panValueShape, panShapeMatches, lookupPanFunction]
+
+example :
+    (evalPanValueProgWithCallsAndFfi (α := Nat) []
+      structuredCallTestFunctions structuredNoFfi 0 100 8 20
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      (.call (some (none, none)) "id" [.const 7])).map
+      (fun result => match result with
+        | .normal _ _ _ => true
+        | _ => false) = some true := by
+  simp [evalPanValueProgWithCallsAndFfi, evalPanValueCallWithCallsAndFfi,
+    evalPanValueExp, evalPanValueExps, evalPanValueExp.evalPanValueExps,
+    structuredCallTestFunctions, bindPanValueParameters,
     assignPanValueCallResult, updatePanValueMap, lookupPanFunction]
+
+example :
+    (evalPanValueProgWithCallsAndFfi (α := Nat) []
+      structuredCallTestFunctions structuredNoFfi 0 100 8 20
+      (fun _ => none)
+      (fun name => if name == "result" then some (.word 0) else none)
+      (fun _ => none)
+      (.call (some (some (.global, "result"), none)) "id" [.const 7])).map
+      (fun result => match result with
+        | .normal _ globals _ => globals "result"
+        | _ => none) = some (some (.word 7)) := by
+  simp [evalPanValueProgWithCallsAndFfi, evalPanValueCallWithCallsAndFfi,
+    evalPanValueExp, evalPanValueExps, evalPanValueExp.evalPanValueExps,
+    structuredCallTestFunctions, bindPanValueParameters,
+    assignPanValueCallResult, updatePanValueMap, panValueAssignmentValid,
+    panValueShape, panShapeMatches, lookupPanFunction]
+
+example :
+    (evalPanValueProgWithCallsAndFfi (α := Nat) []
+      structuredCallTestFunctions structuredNoFfi 0 100 8 20
+      (fun name => if name == "result" then some (.rStruct []) else none)
+      (fun _ => none) (fun _ => none)
+      (.call (some (some (.local, "result"), none)) "id" [.const 7])).isNone := by
+  simp [evalPanValueProgWithCallsAndFfi, evalPanValueCallWithCallsAndFfi,
+    evalPanValueExp, evalPanValueExps, evalPanValueExp.evalPanValueExps,
+    structuredCallTestFunctions, bindPanValueParameters,
+    assignPanValueCallResult, updatePanValueMap, panValueAssignmentValid,
+    panValueShape, panShapeMatches, lookupPanFunction]
 
 example :
     (evalPanValueProgWithCallsAndFfi (α := Nat) []

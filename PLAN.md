@@ -42,7 +42,7 @@ not yet an equivalent source semantics. In particular:
 | Assignments | `is_valid_value` checks the destination's existing shape | Generic structured, flat, stepped, and stateful-FFI assignment paths now reject absent or wrongly shaped destinations; call-result destination checks remain ([#384](https://github.com/pirapira/flapjack/issues/384)) |
 | Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation | The model-aware stateful stepped evaluator now carries FFI state, size-aware shared calls, aligned domains, and terminal outcomes; legacy evaluators retain compatibility paths |
 | Control state | Clock, timeout, local clearing at boundaries, return/exception size limits, and declared exception shapes | Control-result evaluators use fuel only; `tick`, `return`, `raise`, and calls omit several CakeML checks and effects ([#387](https://github.com/pirapira/flapjack/issues/387)) |
-| Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays | The stateful stepped evaluator propagates callee globals/memory/FFI state and performs model-aware byte-array `ExtCall`; legacy evaluators and full shape/control checks remain ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388)) |
+| Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays | The stateful stepped evaluator propagates callee globals/memory/FFI state and performs model-aware byte-array `ExtCall`; generic call destinations now validate local/global shapes and stand-alone calls discard returned values, while return-shape/control checks remain ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388), [#406](https://github.com/pirapira/flapjack/issues/406)) |
 
 The flat-memory adapter and the structured/stepped canonical access slice fix
 the representation of ordinary byte and word loads/stores when a target model
@@ -71,8 +71,11 @@ shared-memory behavior.
    comparisons and all shift operators through the target model. Complete
    this stage for legacy and flat paths. Assignment destination shape checks
    are now shared by the generic structured, flat, stepped, and stateful-FFI
-   evaluators. Enforce return, exception, call-result, and handler shape
-   checks. Add the missing `store32`/
+   evaluators. Assignment and ordinary call-result destination checks now
+   cover generic structured, flat, stepped, stateful-FFI, and RISC-V paths;
+   stand-alone and declaration calls handle return values according to
+   CakeML. Enforce return, exception, and handler shape checks. Add the
+   missing `store32`/
    `storeByte` cases to the flat control evaluator and prove that the
    counted/stepped expression evaluator has the same value result as the
    uncounted evaluator.

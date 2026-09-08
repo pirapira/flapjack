@@ -192,8 +192,10 @@ mutual
             | none => pure (.returned locals calleeGlobals calleeMemory calleeFfi values,
                 argumentSteps + steps)
             | some (destination, _) => do
-                let locals ← assignPanValueCallResult locals destination values
-                pure (.normal locals calleeGlobals calleeMemory calleeFfi,
+                let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
+                  destination values
+                  (structs := structs)
+                pure (.normal locals globals calleeMemory calleeFfi,
                   argumentSteps + steps)
         | .raised _ calleeGlobals calleeMemory calleeFfi exception value =>
             match info with
@@ -337,17 +339,22 @@ mutual
           (memoryAccess := memoryAccess)
         pure (result, steps + 1)
     | fuel + 1, locals, globals, memory, ffi,
-        .decCall name _ function arguments body, memoryAccess => do
+        .decCall name shape function arguments body, memoryAccess => do
+        let oldValue := locals name
         let (callResult, callSteps) ← evalPanValueFfiCallSteps context primitive handler structs
           functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
-          (some (some (.local, name), none)) function arguments (memoryAccess := memoryAccess)
+          none function arguments (memoryAccess := memoryAccess)
         match callResult with
-        | .normal locals globals memory ffi =>
-            let (bodyResult, bodySteps) ← evalPanValueFfiProgSteps context primitive handler
-              structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi body
-              (memoryAccess := memoryAccess)
-            pure (bodyResult, callSteps + bodySteps + 1)
-        | result => pure (result, callSteps + 1)
+        | .returned _ globals memory ffi [value] =>
+            if panShapeMatches (panValueShape structs value) shape then
+              let (bodyResult, bodySteps) ← evalPanValueFfiProgSteps context primitive handler
+                structs functions baseAddress topAddress bytesInWord fuel
+                (updatePanValueMap locals name value) globals memory ffi body
+                (memoryAccess := memoryAccess)
+              pure (restorePanValueFfiLocal name oldValue bodyResult,
+                callSteps + bodySteps + 1)
+            else none
+        | _ => none
     | _fuel + 1, locals, globals, memory, ffi,
         .extCall function configuration configurationLength array arrayLength, memoryAccess => do
         let (values, expressionSteps) ← evalPanValueExpsCounted structs locals globals memory

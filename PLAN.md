@@ -733,6 +733,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   allocator boundary.
 - [x] Lift graph-colouring simulation through the full-SSA formal-entry move
   prefix.
+- [x] Compose coloured straight-line Word body simulation with the ABI return
+  boundary, preserving the state relation and returned value list.
 - [x] Prove register-coloured condition preservation and conditional-branch
   simulation for executable Word `ite` programs.
 - [x] Relate straight-line handler-aware Word evaluation to the executable

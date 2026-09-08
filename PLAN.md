@@ -1925,6 +1925,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Expose a direct source-result-to-linked-RISC-V simulation equation for
   the complete full-SSA FFI regression, in addition to its diagnostic split
   source/machine checks.
+- [x] Expose the same direct simulation equation for a full-SSA declaration
+  call whose callee performs an FFI call and returns an allocated result.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

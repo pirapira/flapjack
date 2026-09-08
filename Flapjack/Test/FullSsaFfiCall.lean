@@ -119,4 +119,20 @@ theorem fullSsaFfiCall_source_machine_agreement :
       fullSsaFfiCallMachineResult = some [BitVec.ofNat 64 42] :=
   ⟨fullSsaFfiCall_source_execution, fullSsaFfiCall_machine_execution⟩
 
+/-! This equality exposes the complete declaration-call simulation directly:
+    source argument binding and FFI execution agree with the linked RISC-V
+    call entry, allocated FFI result register, and return continuation. -/
+
+theorem fullSsaFfiCall_source_machine_simulation :
+    (evalPanProgWithCallsAndFfi fullSsaFfiCallSourceFunctions
+      fullSsaFfiCallSourceHandler 30
+      (fun _ => none) fullSsaFfiCallSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) =
+      fullSsaFfiCallMachineResult := by
+  calc
+    _ = some [BitVec.ofNat 64 42] := fullSsaFfiCall_source_execution
+    _ = _ := fullSsaFfiCall_machine_execution.symm
+
 end Flapjack

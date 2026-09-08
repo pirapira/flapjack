@@ -52,7 +52,7 @@ def sourceToLoopHandlerMain : Prog (Word 64) :=
         .return (.var .local "exception"))))
       "raise" [])
 
-theorem sourceToLoop_handler_simulation :
+#guard
     (do
       let (_, main) ← lookupLoopFunction 2
         sourceToLoopHandlerPipeline.pipeline.loop
@@ -64,17 +64,15 @@ theorem sourceToLoop_handler_simulation :
         (fun _ : VarName => none) sourceToLoopHandlerMain).map (fun result =>
           match result with
           | .returned _ values => values
-          | _ => []) := by
-  native_decide
+          | _ => [])
 
-theorem sourceToLoop_handler_executes :
+#guard
     (do
       let (_, main) ← lookupLoopFunction 2
         sourceToLoopHandlerPipeline.pipeline.loop
       let result ← evalLoopProgWithFunctions
         sourceToLoopHandlerPipeline.pipeline.loop 80
         sourceToLoopHandlerState main
-      pure (loopResultValues result)) = some [BitVec.ofNat 64 7] := by
-  native_decide
+      pure (loopResultValues result)) = some [BitVec.ofNat 64 7]
 
 end Flapjack

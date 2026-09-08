@@ -1749,6 +1749,9 @@ definitions, pass ordering, examples, and proof obligations.
   establishing the first program-level Lab-to-machine FFI simulation.
 - [x] Compose a singleton Lab FFI call-and-return through
   `executeFunctionAtWithFfi`, including the caller's `x1` continuation.
+- [x] Execute a linked handler-bearing StackRemove/Lab image on the RISC-V
+  model, selecting the generated `main` section by its linked entry address
+  and checking that the handler path returns to the caller continuation.
 - [x] Prove the compiler-composed source-to-Loop `extCall` equation for
   constant arguments under no-op handlers, including generated temporary
   declaration execution and normal-result projection.

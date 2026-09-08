@@ -15,4 +15,14 @@ example [NeZero width] (offset : Word width) :
       .branchEq 1 2 offset := by
   rfl
 
+example :
+    (labCompileAsm ({ services := [] } : WordFfiContext)
+      2 [(17, 23)] 4 (.locValue 4 ⟨2, 17⟩)).bind
+        (fun code => executeInstructions (zeroState 64) code) =
+      some (execute (zeroState 64)
+        (.addi 4 0 (BitVec.ofNat 64 23))) := by
+  apply labCompileAsm_locValue_execute
+  · decide
+  · decide
+
 end Flapjack.Test.CorrectnessCode

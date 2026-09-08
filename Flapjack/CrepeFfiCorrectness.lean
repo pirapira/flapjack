@@ -194,4 +194,38 @@ theorem compile_full_raise_simulation
       restoreCrepOneTemp]
   · simp [evalPanProgWithCallsAndFfi, hvalue]
 
+/-! Scalar returns are the normal-result counterpart of the raise boundary.
+The explicit source/target value equation makes this usable after an FFI or
+handler-aware sequence without collapsing the full control result to a list
+projection. -/
+
+theorem compile_full_return_simulation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (context : CompileContext α)
+    (sourceLocals : VarName → Option α)
+    (state : CrepState α)
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (sourceHandler : PanFfiHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (value : Exp α) (compiledValue : CrepExp α) (sourceValue targetValue : α)
+    (hcompile : compileExp context value = ([compiledValue], .one))
+    (hvalue : evalPanExp sourceLocals value = some sourceValue)
+    (hcompiledValue : evalCrepFullExp state.locals state.memory
+      baseAddress topAddress compiledValue = some targetValue)
+    (hvalueAgreement : targetValue = sourceValue) :
+    evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+        (fuel + 1) state (compileProg context (.return value)) =
+      some (.returned state [sourceValue]) ∧
+    evalPanProgWithCallsAndFfi [] sourceHandler (fuel + 1) sourceLocals
+        (.return value) =
+      some (.returned sourceLocals [sourceValue]) := by
+  constructor
+  · simp [compileProg, hcompile, evalCrepFullProg, evalCrepFullExps,
+      hcompiledValue, hvalueAgreement]
+  · simp [evalPanProgWithCallsAndFfi, hvalue]
+
 end Flapjack

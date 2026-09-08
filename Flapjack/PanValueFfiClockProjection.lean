@@ -248,4 +248,63 @@ theorem evalPanValueFfiClockCall_handler_projects_to_steps
   · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hexception,
       hwithin, hcaught, hhandlerValid, hstepBody, hstepHandler]
 
+/-! One true loop iteration also projects compositionally.  The body consumes
+one clock unit, and both evaluators then resume the loop from the body state. -/
+theorem evalPanValueFfiClockProg_while_projects_to_steps
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock bodyClock finalClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (bodyLocals bodyGlobals : VarName → Option (PanValue α))
+    (bodyMemory : α → Option (PanValue α)) (bodyFfi : FfiState σ)
+    (conditionValue : α) (condition : Exp α) (body : Prog α)
+    (finalResult : PanValueFfiControlResult α σ)
+    (conditionSteps bodySteps restSteps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (hcondition : evalPanValueExp structs locals globals memory
+      baseAddress topAddress bytesInWord condition
+      (memoryAccess := memoryAccess) = some (.word conditionValue))
+    (hconditionSteps : evalPanValueExpCounted structs locals globals memory
+      baseAddress topAddress bytesInWord condition
+      (memoryAccess := memoryAccess) = some (.word conditionValue, conditionSteps))
+    (hconditionNonzero : (conditionValue == (0 : α)) = false)
+    (hclock : clock ≠ 0)
+    (hclockBody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi (clock - 1)
+      body (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.control (.normal bodyLocals bodyGlobals bodyMemory bodyFfi), bodyClock))
+    (hstepBody : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi body
+      (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.normal bodyLocals bodyGlobals bodyMemory bodyFfi, bodySteps))
+    (hclockRest : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel bodyLocals bodyGlobals bodyMemory bodyFfi
+      bodyClock (.while condition body) (memoryAccess := memoryAccess)
+      (contracts := contracts) = some (.control finalResult, finalClock))
+    (hstepRest : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel bodyLocals bodyGlobals bodyMemory bodyFfi
+      (.while condition body) (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (finalResult, restSteps)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.while condition body) (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.control finalResult, finalClock) ∧
+    evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      (.while condition body) (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (finalResult, conditionSteps + bodySteps + restSteps + 1) := by
+  constructor
+  · simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclock,
+      hclockBody, hclockRest]
+  · simp [evalPanValueFfiProgSteps, hconditionSteps, hconditionNonzero,
+      hstepBody, hstepRest]
+
 end Flapjack

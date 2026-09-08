@@ -1,4 +1,6 @@
 import Flapjack.Parser
+import Flapjack.Static
+import Flapjack.Compile
 
 /-!
 Parser tests.
@@ -351,6 +353,33 @@ The tests above parse into `Int`; this is the shape real callers use. -/
 #guard sameAst (parseTopDecs (BitVec.ofInt 64) "fun f() { return 42; }")
   (.ok [.function { name := "f", inline := false, exported := false, params := [],
                     body := .return (.const (BitVec.ofInt 64 42)), returnShape := .one }])
+
+/-! ### Downstream compatibility
+
+The AST the parser produces has to be consumable by what already exists, not
+merely well-formed. These feed parser output straight into Flapjack's static
+checker and its Pancake-to-Crepe compiler. -/
+
+-- Flapjack's own static checker accepts a valid parsed program.
+#guard match parseTopDecs ofI "fun 1 main() { return 1; }" with
+  | .ok declarations => staticResultOk (staticCheck declarations)
+  | .error _ => false
+
+-- And rejects one upstream also rejects: `main` may not take parameters. This
+-- is `ex_arg_main` from the static-checker examples.
+#guard match parseTopDecs ofI "fun 1 main (1 a) {\n  return 1;\n}" with
+  | .ok declarations => !staticResultOk (staticCheck declarations)
+  | .error _ => false
+
+-- Parsed declarations compile through `compileToCrepe`, producing one
+-- compiled function per source function.
+#guard match parseTopDecs (BitVec.ofInt 64)
+    "fun 1 f(1 a) { return a + 1; }\nfun 1 main() { var 1 r = f(2); return r; }" with
+  | .ok declarations =>
+      (compileToCrepe
+        { vars := [], functions := [], exceptions := [], maxVar := 0,
+          bytesInWord := BitVec.ofNat 64 8 } declarations).length == 2
+  | .error _ => false
 
 /-! ### Every example from `panConcreteExamplesScript.sml`
 

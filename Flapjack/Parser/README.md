@@ -108,6 +108,49 @@ an empty scope and never calls it.
 **`RetCallNT`.** In the grammar but unreachable: `CallNT` is tried first and
 matches everything `RetCallNT` would, and `conv_Prog` has no case for it.
 
+## Test corpora
+
+`Flapjack/Test/Parser.lean` holds the hand-written checks: the lexer,
+expression precedence and folding, every statement and declaration form, the
+localisation pass, the error cases, and the downstream checks below. It also
+runs all 38 examples from `panConcreteExamplesScript.sml`.
+
+`Flapjack/Test/ParserStaticExamples.lean` runs the 276 referenced examples
+from `cakeml/pancake/static_checker/panStaticExamplesScript.sml`. That file
+exists to exercise the static checker, but it asserts `check_parse_success` on
+every example first -- its own comment is "All examples should parse" -- which
+makes it by far the larger parser corpus, reaching combinations of shapes,
+structs, exceptions, shared memory, calls and handlers the concrete-syntax
+examples do not. Only parsing is asserted there.
+
+## Downstream compatibility
+
+Parser output is fed into what already exists: `staticCheck` from
+`Flapjack/Static.lean` and `compileToCrepe` from `Flapjack/Compile.lean`.
+Those checks live in `Flapjack/Test/Parser.lean`.
+
+Running Flapjack's `staticCheck` over all 273 static-checker examples that
+carry an upstream verdict, **266 agree (97.4%)** and 7 disagree. All 7 were
+checked by hand and none is a parsing problem -- the parser builds the
+expected AST in each case:
+
+| Example | Upstream | Flapjack |
+| --- | --- | --- |
+| `ex_redefined_var_dec_deccall` | accepts | rejects |
+| `ex_redefined_var_deccall_deccall` | accepts | rejects |
+| `ex_redefined_global_var` | accepts | rejects |
+| `ex_redefined_global_var_deccall` | accepts | rejects |
+| `ex_struct_field_reordered` | accepts | rejects |
+| `ex_shared_ldw_rstruct_dest` | rejects | accepts |
+| `ex_shared_ldw_nstruct_dest` | rejects | accepts |
+
+The first five are redefinition and field-ordering policy: upstream permits
+what `Flapjack/Static.lean` refuses. The last two are a shape check upstream
+performs and Flapjack does not -- `!ldw x, 0` where `x` has a struct shape
+parses correctly and is caught by neither the grammar nor Flapjack's checker.
+These are `Flapjack/Static.lean` gaps rather than parser gaps, and are left
+alone here; they are listed so they are not lost.
+
 ## Diagnostics
 
 Lexical errors are collected and reported together, as `safe_pancake_lex`

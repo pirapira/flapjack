@@ -1942,6 +1942,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   continuation projection.
 - [x] Prove the complementary uncaught raising-call agreement, preserving the
   propagated exception across the Crepe-to-Loop call boundary.
+- [x] Prove a caught-handler Crepe-to-Loop agreement whose handler returns a
+  scalar, preserving the returned control values through dispatch and lowering.
 - [x] Prove the reusable source-to-Crepe FFI lowering equation, including
   sequential argument evaluation and restoration of compiler temporaries.
 - [x] Compose the lowered caught-handler call with the full-Crepe evaluator,

@@ -688,9 +688,9 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_primitive
       | none => simp [hargs, hprimitive, evalPanValueExpsCounted]
       | some value =>
           cases hold : locals name with
-          | none => simp [hargs, hprimitive, hold, evalPanValueExpsCounted]
+          | none => simp [hargs, evalPanValueExpsCounted]
           | some oldValue =>
-              simp [hargs, hprimitive, hold, evalPanValueExpsCounted]
+              simp [hargs, hprimitive, evalPanValueExpsCounted]
 
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -929,7 +929,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_seq_of_projections
             baseAddress topAddress bytesInWord fuel locals globals memory first = none := by
         rw [← hfirst]
         simp [hstep]
-      simp [hstep, horiginal]
+      simp [horiginal]
   | some pair =>
       cases pair with
       | mk result firstSteps =>
@@ -951,7 +951,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_seq_of_projections
                         firstMemory second = none := by
                     rw [← hsecond firstLocals firstGlobals firstMemory]
                     simp [hsecondStep]
-                  simp [hstep, hsecondStep, horiginal, hsecondOriginal]
+                  simp [hsecondStep, horiginal, hsecondOriginal]
               | some secondPair =>
                   cases secondPair with
                   | mk secondResult secondSteps =>
@@ -961,9 +961,9 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_seq_of_projections
                             firstGlobals firstMemory second = some secondResult := by
                         rw [← hsecond firstLocals firstGlobals firstMemory]
                         simp [hsecondStep]
-                      simp [hstep, hsecondStep, horiginal, hsecondOriginal]
+                      simp [hsecondStep, horiginal, hsecondOriginal]
           | returned _ _ _ _ | raised _ _ _ _ _ | broke _ _ _ | continued _ _ _ =>
-              simp [hstep, horiginal]
+              simp [horiginal]
 
 theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -994,17 +994,17 @@ theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
       evalPanValueCallWithPrimitiveCallsAndFfi]
   | succ fuel =>
       simp only [evalPanValueCallWithPrimitiveCallsAndFfiSteps,
-        evalPanValueCallWithPrimitiveCallsAndFfi, Option.map_bind, Function.comp_def]
+        evalPanValueCallWithPrimitiveCallsAndFfi]
       cases hargs : evalPanValueExps structs locals globals memory
           baseAddress topAddress bytesInWord arguments with
       | none => simp [hargs, evalPanValueExpsCounted]
       | some values =>
           simp [hargs, evalPanValueExpsCounted]
           cases hlookup : lookupPanFunction function functions with
-          | none => simp [hlookup]
+          | none => simp
           | some callee =>
               cases hparams : bindPanValueParameters callee.1 values with
-              | none => simp [hlookup, hparams]
+              | none => simp [hparams]
               | some calleeLocals =>
                   cases hstep : evalPanValueProgWithPrimitiveCallsAndFfiSteps
                       primitive handler structs functions baseAddress topAddress bytesInWord fuel
@@ -1016,7 +1016,7 @@ theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
                             memory callee.2 = none := by
                         rw [← hprogram fuel calleeLocals globals memory callee.2]
                         simp [hstep]
-                      simp [hlookup, hparams, hstep, horiginal]
+                      simp [hparams, hstep, horiginal]
                   | some pair =>
                       cases pair with
                       | mk result steps =>
@@ -1028,23 +1028,23 @@ theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
                             simp [hstep]
                           cases result with
                           | normal _ _ _ =>
-                              simp [hlookup, hparams, hstep, horiginal]
+                              simp [hparams, hstep, horiginal]
                           | returned _ _ _ values =>
                               cases info with
-                              | none => simp [hlookup, hparams, hstep, horiginal]
+                              | none => simp [hparams, hstep, horiginal]
                               | some info =>
                                   cases hassign : assignPanValueCallResult locals info.1 values with
-                                  | none => simp [hlookup, hparams, hstep, horiginal, hassign]
+                                  | none => simp [hparams, hstep, horiginal, hassign]
                                   | some assignedLocals =>
-                                      simp [hlookup, hparams, hstep, horiginal, hassign]
+                                      simp [hparams, hstep, horiginal, hassign]
                           | raised _ _ _ exception value =>
                               cases info with
-                              | none => simp [hlookup, hparams, hstep, horiginal]
+                              | none => simp [hparams, hstep, horiginal]
                               | some info =>
                                   cases info with
                                   | mk destination handlerOption =>
                                       cases handlerOption with
-                                      | none => simp [hlookup, hparams, hstep, horiginal]
+                                      | none => simp [hparams, hstep, horiginal]
                                       | some handlerInfo =>
                                           cases handlerInfo with
                                           | mk caught handlerInfo =>
@@ -1070,8 +1070,8 @@ theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
                                                       simp [hhandler]
                                                     have heqeq : caught = exception := by
                                                       simpa using heq
-                                                    simp [hlookup, hparams, hstep, horiginal,
-                                                      heq, heqeq, hhandler, hhandlerOriginal]
+                                                    simp [hparams, hstep, horiginal,
+                                                      heqeq, hhandler, hhandlerOriginal]
                                                 | some handlerPair =>
                                                     cases handlerPair with
                                                     | mk handlerResult handlerSteps =>
@@ -1088,15 +1088,15 @@ theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
                                                           simp [hhandler]
                                                         have heqeq : caught = exception := by
                                                           simpa using heq
-                                                        simp [hlookup, hparams, hstep, horiginal,
-                                                          heq, heqeq, hhandler, hhandlerOriginal]
+                                                        simp [hparams, hstep, horiginal,
+                                                          heqeq, hhandler, hhandlerOriginal]
                                               · have hneq : caught ≠ exception := by
                                                   intro equality
                                                   apply heq
-                                                  simpa [equality]
-                                                simp [hlookup, hparams, hstep, horiginal, hneq]
+                                                  simp [equality]
+                                                simp [hparams, hstep, horiginal, hneq]
                           | broke _ _ _ | continued _ _ _ =>
-                              simp [hlookup, hparams, hstep, horiginal]
+                              simp [hparams, hstep, horiginal]
 
 theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
     ∀ [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -1134,17 +1134,17 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
               evalPanValueCallWithPrimitiveCallsAndFfi]
         | succ fuel =>
             simp only [evalPanValueCallWithPrimitiveCallsAndFfiSteps,
-              evalPanValueCallWithPrimitiveCallsAndFfi, Option.map_bind, Function.comp_def]
+              evalPanValueCallWithPrimitiveCallsAndFfi]
             cases hargs : evalPanValueExps structs locals globals memory
                 baseAddress topAddress bytesInWord arguments with
             | none => simp [hargs, evalPanValueExpsCounted]
             | some values =>
                 simp [hargs, evalPanValueExpsCounted]
                 cases hlookup : lookupPanFunction function functions with
-                | none => simp [hlookup]
+                | none => simp
                 | some callee =>
                     cases hparams : bindPanValueParameters callee.1 values with
-                    | none => simp [hlookup, hparams]
+                    | none => simp [hparams]
                     | some calleeLocals =>
                         cases hstep : evalPanValueProgWithPrimitiveCallsAndFfiSteps
                             primitive handler structs functions baseAddress topAddress bytesInWord fuel
@@ -1157,7 +1157,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                               rw [← (ih fuel (Nat.lt_succ_self fuel) calleeLocals globals memory
                                 none function arguments).2 callee.2]
                               simp [hstep]
-                            simp [hlookup, hparams, hstep, horiginal]
+                            simp [hparams, hstep, horiginal]
                         | some pair =>
                             cases pair with
                             | mk result steps =>
@@ -1170,23 +1170,23 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                   simp [hstep]
                                 cases result with
                                 | normal _ _ _ =>
-                                    simp [hlookup, hparams, hstep, horiginal]
+                                    simp [hparams, hstep, horiginal]
                                 | returned _ _ _ values =>
                                     cases info with
-                                    | none => simp [hlookup, hparams, hstep, horiginal]
+                                    | none => simp [hparams, hstep, horiginal]
                                     | some info =>
                                         cases hassign : assignPanValueCallResult locals info.1 values with
-                                        | none => simp [hlookup, hparams, hstep, horiginal, hassign]
+                                        | none => simp [hparams, hstep, horiginal, hassign]
                                         | some assignedLocals =>
-                                            simp [hlookup, hparams, hstep, horiginal, hassign]
+                                            simp [hparams, hstep, horiginal, hassign]
                                 | raised _ _ _ exception value =>
                                     cases info with
-                                    | none => simp [hlookup, hparams, hstep, horiginal]
+                                    | none => simp [hparams, hstep, horiginal]
                                     | some info =>
                                         cases info with
                                         | mk destination handlerOption =>
                                             cases handlerOption with
-                                            | none => simp [hlookup, hparams, hstep, horiginal]
+                                            | none => simp [hparams, hstep, horiginal]
                                             | some handlerInfo =>
                                                 cases handlerInfo with
                                                 | mk caught handlerInfo =>
@@ -1212,7 +1212,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                                                 simp [hhandler]
                                                               have heqeq : caught = exception := by
                                                                 simpa using heq
-                                                              simp [hlookup, hparams, hstep, horiginal,
+                                                              simp [hparams, hstep, horiginal,
                                                                 heqeq, hhandler, hhandlerOriginal]
                                                           | some handlerPair =>
                                                               cases handlerPair with
@@ -1230,15 +1230,15 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                                                     simp [hhandler]
                                                                   have heqeq : caught = exception := by
                                                                     simpa using heq
-                                                                  simp [hlookup, hparams, hstep, horiginal,
+                                                                  simp [hparams, hstep, horiginal,
                                                                     heqeq, hhandler, hhandlerOriginal]
                                                         · have hneq : caught ≠ exception := by
                                                             intro equality
                                                             apply heq
-                                                            simpa [equality]
-                                                          simp [hlookup, hparams, hstep, horiginal, hneq]
+                                                            simp [equality]
+                                                          simp [hparams, hstep, horiginal, hneq]
                                 | broke _ _ _ | continued _ _ _ =>
-                                    simp [hlookup, hparams, hstep, horiginal]
+                                    simp [hparams, hstep, horiginal]
       · intro program
         cases fuel with
         | zero =>
@@ -1339,7 +1339,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                 rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
                                   none function arguments).2 thenBranch]
                                 simp [hbranch]
-                              simp [hcondition, hselected, hbranch, hbranchOriginal,
+                              simp [hcondition, hselected, hbranchOriginal,
                                 evalPanValueExpCounted]
                           | some branchPair =>
                               cases branchPair with
@@ -1351,7 +1351,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                     rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
                                       none function arguments).2 thenBranch]
                                     simp [hbranch]
-                                  simp [hcondition, hselected, hbranch, hbranchOriginal,
+                                  simp [hcondition, hselected, hbranchOriginal,
                                     evalPanValueExpCounted]
                         · cases hbranch : evalPanValueProgWithPrimitiveCallsAndFfiSteps
                               primitive handler structs functions baseAddress topAddress bytesInWord fuel
@@ -1364,7 +1364,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                 rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
                                   none function arguments).2 elseBranch]
                                 simp [hbranch]
-                              simp [hcondition, hselected, hbranch, hbranchOriginal,
+                              simp [hcondition, hselected, hbranchOriginal,
                                 evalPanValueExpCounted]
                           | some branchPair =>
                               cases branchPair with
@@ -1376,7 +1376,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                     rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
                                       none function arguments).2 elseBranch]
                                     simp [hbranch]
-                                  simp [hcondition, hselected, hbranch, hbranchOriginal,
+                                  simp [hcondition, hselected, hbranchOriginal,
                                     evalPanValueExpCounted]
                     | rStruct _ | nStruct _ _ =>
                         simp [hcondition, evalPanValueExpCounted]
@@ -1404,7 +1404,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                 rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
                                   none function arguments).2 body]
                                 simp [hbody]
-                              simp [hcondition, hzero, hbody, hbodyOriginal,
+                              simp [hcondition, hzero, hbodyOriginal,
                                 evalPanValueExpCounted]
                           | some bodyPair =>
                               cases bodyPair with
@@ -1429,7 +1429,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                             rw [← (ih fuel (Nat.lt_succ_self fuel) bodyLocals bodyGlobals
                                               bodyMemory none function arguments).2 (.while condition body)]
                                             simp [hloop]
-                                          simp [hcondition, hzero, hbody, hbodyOriginal, hloop,
+                                          simp [hcondition, hzero, hbodyOriginal, hloop,
                                             hloopOriginal, evalPanValueExpCounted]
                                       | some loopPair =>
                                           cases loopPair with
@@ -1443,7 +1443,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                                   bodyGlobals bodyMemory none function arguments).2
                                                   (.while condition body)]
                                                 simp [hloop]
-                                              simp [hcondition, hzero, hbody, hbodyOriginal, hloop,
+                                              simp [hcondition, hzero, hbodyOriginal, hloop,
                                                 hloopOriginal, evalPanValueExpCounted]
                                   | continued bodyLocals bodyGlobals bodyMemory =>
                                       cases hloop : evalPanValueProgWithPrimitiveCallsAndFfiSteps
@@ -1457,7 +1457,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                             rw [← (ih fuel (Nat.lt_succ_self fuel) bodyLocals bodyGlobals
                                               bodyMemory none function arguments).2 (.while condition body)]
                                             simp [hloop]
-                                          simp [hcondition, hzero, hbody, hbodyOriginal, hloop,
+                                          simp [hcondition, hzero, hbodyOriginal, hloop,
                                             hloopOriginal, evalPanValueExpCounted]
                                       | some loopPair =>
                                           cases loopPair with
@@ -1471,13 +1471,13 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                                   bodyGlobals bodyMemory none function arguments).2
                                                   (.while condition body)]
                                                 simp [hloop]
-                                              simp [hcondition, hzero, hbody, hbodyOriginal, hloop,
+                                              simp [hcondition, hzero, hbodyOriginal, hloop,
                                                 hloopOriginal, evalPanValueExpCounted]
                                   | broke bodyLocals bodyGlobals bodyMemory =>
-                                      simp [hcondition, hzero, hbody, hbodyOriginal,
+                                      simp [hcondition, hzero, hbodyOriginal,
                                         evalPanValueExpCounted]
                                   | returned _ _ _ _ | raised _ _ _ _ _ =>
-                                      simp [hcondition, hzero, hbody, hbodyOriginal,
+                                      simp [hcondition, hzero, hbodyOriginal,
                                         evalPanValueExpCounted]
             | «break» =>
                 exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_break
@@ -1501,7 +1501,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                       rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
                         info function arguments).1]
                       simp [hcall]
-                    simp [hcall, hcallOriginal]
+                    simp [hcallOriginal]
                 | some callPair =>
                     cases callPair with
                     | mk callResult callSteps =>
@@ -1512,7 +1512,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                           rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
                             info function arguments).1]
                           simp [hcall]
-                        simp [hcall, hcallOriginal]
+                        simp [hcallOriginal]
             | decCall name shape function arguments body =>
                 simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
                   evalPanValueProgWithPrimitiveCallsAndFfi]
@@ -1527,7 +1527,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                       rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
                         (some (some (.local, name), none)) function arguments).1]
                       simp [hcall]
-                    simp [hcall, hcallOriginal]
+                    simp [hcallOriginal]
                 | some callPair =>
                     cases callPair with
                     | mk callResult callSteps =>
@@ -1552,7 +1552,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                   rw [← (ih fuel (Nat.lt_succ_self fuel) callLocals callGlobals
                                     callMemory none function arguments).2 body]
                                   simp [hbody]
-                                simp [hcall, hcallOriginal, hbody, hbodyOriginal]
+                                simp [hcallOriginal, hbody, hbodyOriginal]
                             | some bodyPair =>
                                 cases bodyPair with
                                 | mk bodyResult bodySteps =>
@@ -1563,9 +1563,9 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                       rw [← (ih fuel (Nat.lt_succ_self fuel) callLocals callGlobals
                                         callMemory none function arguments).2 body]
                                       simp [hbody]
-                                    simp [hcall, hcallOriginal, hbody, hbodyOriginal]
+                                    simp [hcallOriginal, hbody, hbodyOriginal]
                         | returned _ _ _ _ | raised _ _ _ _ _ | broke _ _ _ | continued _ _ _ =>
-                            simp [hcall, hcallOriginal]
+                            simp [hcallOriginal]
             | extCall function configuration configurationLength array arrayLength =>
                 simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
                   evalPanValueProgWithPrimitiveCallsAndFfi]

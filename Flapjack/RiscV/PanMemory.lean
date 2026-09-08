@@ -53,6 +53,24 @@ def panRiscVSetByte [NeZero width]
   BitVec.ofNat width
     (low + (byte.toNat % 256) * offset + high * block)
 
+/-!
+The Pancake word operator is list-valued: Add, And, Or, and Xor fold over
+all word operands, with the corresponding neutral element, while Sub is
+defined only for exactly two operands.
+-/
+
+def panRiscVWordOp [NeZero width]
+    (operator : BinOp) (values : List (Word width)) : Option (Word width) :=
+  match operator with
+  | .add => some (values.foldr (fun left right => left + right) 0)
+  | .and => some (values.foldr (fun left right => AndOp.and left right) (~~~(0 : Word width)))
+  | .or => some (values.foldr (fun left right => OrOp.or left right) 0)
+  | .xor => some (values.foldr (fun left right => HXor.hXor left right) 0)
+  | .sub =>
+      match values with
+      | [left, right] => some (left - right)
+      | _ => none
+
 def panRiscVMemoryModel [NeZero width] : PanMemoryModel (Word width) :=
   { byteAlign := panRiscVByteAlign
     getByte := fun bytesInWord address value _bigEndian =>
@@ -234,10 +252,10 @@ def evalPanRiscVFlatExp [NeZero width]
   | .op operator arguments => do
       let values ← evalPanRiscVFlatExps structs locals globals domain memory
         baseAddress topAddress bytesInWord arguments
-      match values with
-      | [.word left, .word right] =>
-          some (.word (evalPanBinOp operator left right))
-      | _ => none
+      let values ← values.mapM fun value => match value with
+        | .word value => some value
+        | _ => none
+      (panRiscVWordOp operator values).map .word
   | .panOp .mul arguments => do
       let values ← evalPanRiscVFlatExps structs locals globals domain memory
         baseAddress topAddress bytesInWord arguments

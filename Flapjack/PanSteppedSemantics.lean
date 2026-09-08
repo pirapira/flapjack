@@ -688,9 +688,9 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_primitive
       | none => simp [hargs, hprimitive, evalPanValueExpsCounted]
       | some value =>
           cases hold : locals name with
-          | none => simp [hargs, hprimitive, hold, evalPanValueExpsCounted]
+          | none => simp [hargs, evalPanValueExpsCounted]
           | some oldValue =>
-              simp [hargs, hprimitive, hold, evalPanValueExpsCounted]
+              simp [hargs, hprimitive, evalPanValueExpsCounted]
 
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -720,6 +720,1004 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store
       | some evaluatedValue =>
           cases evaluatedAddress <;>
             simp [haddress, hvalue, evalPanValueExpCounted]
+
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_skip
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory .skip).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory .skip := by
+  simp [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_break
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory .break).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory .break := by
+  simp [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_continue
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory .continue).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory .continue := by
+  simp [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_tick
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory .tick).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory .tick := by
+  simp [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_annot
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (tag text : String) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory (.annot tag text)).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory (.annot tag text) := by
+  simp [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_raise
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (exception : ExceptionId) (value : Exp α) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory (.raise exception value)).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory (.raise exception value) := by
+  simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+  cases hvalue : evalPanValueExp structs locals globals memory
+      baseAddress topAddress bytesInWord value with
+  | none => simp [hvalue, evalPanValueExpCounted]
+  | some evaluatedValue => simp [hvalue, evalPanValueExpCounted]
+
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_return
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (value : Exp α) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory (.return value)).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory (.return value) := by
+  simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+  cases hvalue : evalPanValueExp structs locals globals memory
+      baseAddress topAddress bytesInWord value with
+  | none => simp [hvalue, evalPanValueExpCounted]
+  | some evaluatedValue => simp [hvalue, evalPanValueExpCounted]
+
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store32
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (address value : Exp α) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory (.store32 address value)).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory (.store32 address value) := by
+  simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+  cases haddress : evalPanValueExp structs locals globals memory
+      baseAddress topAddress bytesInWord address with
+  | none => simp [haddress, evalPanValueExpCounted]
+  | some evaluatedAddress =>
+      cases hvalue : evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value with
+      | none => simp [haddress, hvalue, evalPanValueExpCounted]
+      | some evaluatedValue =>
+          cases evaluatedAddress <;> cases evaluatedValue <;>
+            simp [haddress, hvalue, evalPanValueExpCounted]
+
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_storeByte
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (address value : Exp α) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory (.storeByte address value)).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory (.storeByte address value) := by
+  simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+  cases haddress : evalPanValueExp structs locals globals memory
+      baseAddress topAddress bytesInWord address with
+  | none => simp [haddress, evalPanValueExpCounted]
+  | some evaluatedAddress =>
+      cases hvalue : evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value with
+      | none => simp [haddress, hvalue, evalPanValueExpCounted]
+      | some evaluatedValue =>
+          cases evaluatedAddress <;> cases evaluatedValue <;>
+            simp [haddress, hvalue, evalPanValueExpCounted]
+
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_seq_of_projections
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (first second : Prog α)
+    (hfirst :
+      (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory first).map Prod.fst =
+        evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory first)
+    (hsecond : ∀ locals globals memory,
+      (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory second).map Prod.fst =
+        evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory second) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory
+      (.seq first second)).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory
+      (.seq first second) := by
+  simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+  cases hstep : evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler
+      structs functions baseAddress topAddress bytesInWord fuel locals globals memory first with
+  | none =>
+      have horiginal :
+          evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+            baseAddress topAddress bytesInWord fuel locals globals memory first = none := by
+        rw [← hfirst]
+        simp [hstep]
+      simp [horiginal]
+  | some pair =>
+      cases pair with
+      | mk result firstSteps =>
+          have horiginal :
+              evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+                baseAddress topAddress bytesInWord fuel locals globals memory first =
+                some result := by
+            rw [← hfirst]
+            simp [hstep]
+          cases result with
+          | normal firstLocals firstGlobals firstMemory =>
+              cases hsecondStep : evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  firstLocals firstGlobals firstMemory second with
+              | none =>
+                  have hsecondOriginal :
+                      evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+                        baseAddress topAddress bytesInWord fuel firstLocals firstGlobals
+                        firstMemory second = none := by
+                    rw [← hsecond firstLocals firstGlobals firstMemory]
+                    simp [hsecondStep]
+                  simp [hsecondStep, horiginal, hsecondOriginal]
+              | some secondPair =>
+                  cases secondPair with
+                  | mk secondResult secondSteps =>
+                      have hsecondOriginal :
+                          evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                            functions baseAddress topAddress bytesInWord fuel firstLocals
+                            firstGlobals firstMemory second = some secondResult := by
+                        rw [← hsecond firstLocals firstGlobals firstMemory]
+                        simp [hsecondStep]
+                      simp [hsecondStep, horiginal, hsecondOriginal]
+          | returned _ _ _ _ | raised _ _ _ _ _ | broke _ _ _ | continued _ _ _ =>
+              simp [horiginal]
+
+theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α))
+    (hprogram : ∀ fuel (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (program : Prog α),
+      (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory program).map Prod.fst =
+      evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory program) :
+    (evalPanValueCallWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory info function arguments).map
+        Prod.fst =
+    evalPanValueCallWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory info function arguments := by
+  cases fuel with
+  | zero => simp [evalPanValueCallWithPrimitiveCallsAndFfiSteps,
+      evalPanValueCallWithPrimitiveCallsAndFfi]
+  | succ fuel =>
+      simp only [evalPanValueCallWithPrimitiveCallsAndFfiSteps,
+        evalPanValueCallWithPrimitiveCallsAndFfi]
+      cases hargs : evalPanValueExps structs locals globals memory
+          baseAddress topAddress bytesInWord arguments with
+      | none => simp [hargs, evalPanValueExpsCounted]
+      | some values =>
+          simp [hargs, evalPanValueExpsCounted]
+          cases hlookup : lookupPanFunction function functions with
+          | none => simp
+          | some callee =>
+              cases hparams : bindPanValueParameters callee.1 values with
+              | none => simp [hparams]
+              | some calleeLocals =>
+                  cases hstep : evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                      primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                      calleeLocals globals memory callee.2 with
+                  | none =>
+                      have horiginal :
+                          evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                            functions baseAddress topAddress bytesInWord fuel calleeLocals globals
+                            memory callee.2 = none := by
+                        rw [← hprogram fuel calleeLocals globals memory callee.2]
+                        simp [hstep]
+                      simp [hparams, hstep, horiginal]
+                  | some pair =>
+                      cases pair with
+                      | mk result steps =>
+                          have horiginal :
+                              evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                functions baseAddress topAddress bytesInWord fuel calleeLocals
+                                globals memory callee.2 = some result := by
+                            rw [← hprogram fuel calleeLocals globals memory callee.2]
+                            simp [hstep]
+                          cases result with
+                          | normal _ _ _ =>
+                              simp [hparams, hstep, horiginal]
+                          | returned _ _ _ values =>
+                              cases info with
+                              | none => simp [hparams, hstep, horiginal]
+                              | some info =>
+                                  cases hassign : assignPanValueCallResult locals info.1 values with
+                                  | none => simp [hparams, hstep, horiginal, hassign]
+                                  | some assignedLocals =>
+                                      simp [hparams, hstep, horiginal, hassign]
+                          | raised _ _ _ exception value =>
+                              cases info with
+                              | none => simp [hparams, hstep, horiginal]
+                              | some info =>
+                                  cases info with
+                                  | mk destination handlerOption =>
+                                      cases handlerOption with
+                                      | none => simp [hparams, hstep, horiginal]
+                                      | some handlerInfo =>
+                                          cases handlerInfo with
+                                          | mk caught handlerInfo =>
+                                              cases handlerInfo with
+                                              | mk handlerVariable handlerProgram =>
+                                              by_cases heq : caught == exception
+                                              · cases hhandler :
+                                                    evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                                                      primitive handler structs functions
+                                                      baseAddress topAddress bytesInWord fuel
+                                                      (updatePanValueMap locals handlerVariable value)
+                                                      globals memory handlerProgram with
+                                                | none =>
+                                                    have hhandlerOriginal :
+                                                        evalPanValueProgWithPrimitiveCallsAndFfi
+                                                          primitive handler structs functions
+                                                          baseAddress topAddress bytesInWord fuel
+                                                          (updatePanValueMap locals handlerVariable value)
+                                                          globals memory handlerProgram = none := by
+                                                      rw [← hprogram fuel
+                                                        (updatePanValueMap locals handlerVariable value)
+                                                        globals memory handlerProgram]
+                                                      simp [hhandler]
+                                                    have heqeq : caught = exception := by
+                                                      simpa using heq
+                                                    simp [hparams, hstep, horiginal,
+                                                      heqeq, hhandler, hhandlerOriginal]
+                                                | some handlerPair =>
+                                                    cases handlerPair with
+                                                    | mk handlerResult handlerSteps =>
+                                                        have hhandlerOriginal :
+                                                            evalPanValueProgWithPrimitiveCallsAndFfi
+                                                              primitive handler structs functions
+                                                              baseAddress topAddress bytesInWord fuel
+                                                              (updatePanValueMap locals handlerVariable value)
+                                                              globals memory handlerProgram =
+                                                              some handlerResult := by
+                                                          rw [← hprogram fuel
+                                                            (updatePanValueMap locals handlerVariable value)
+                                                            globals memory handlerProgram]
+                                                          simp [hhandler]
+                                                        have heqeq : caught = exception := by
+                                                          simpa using heq
+                                                        simp [hparams, hstep, horiginal,
+                                                          heqeq, hhandler, hhandlerOriginal]
+                                              · have hneq : caught ≠ exception := by
+                                                  intro equality
+                                                  apply heq
+                                                  simp [equality]
+                                                simp [hparams, hstep, horiginal, hneq]
+                          | broke _ _ _ | continued _ _ _ =>
+                              simp [hparams, hstep, horiginal]
+
+theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
+    ∀ [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [LT α] [DecidableRel (fun left right : α => left < right)]
+      (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+      (structs : StructContext)
+      (functions : List (FunName × List VarName × Prog α))
+      (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+      (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α))
+      (info : Option (Option (VarKind × VarName) ×
+        Option (ExceptionId × VarName × Prog α)))
+      (function : FunName) (arguments : List (Exp α)),
+      (evalPanValueCallWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory info function arguments).map
+          Prod.fst =
+        evalPanValueCallWithPrimitiveCallsAndFfi primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory info function arguments ∧
+      ∀ program,
+        (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory program).map Prod.fst =
+        evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory program := by
+  intro instBEq instOfNat0 instOfNat1 instAdd instMul instSub instAndOp instOrOp instHXor
+    instShiftLeft instShiftRight instLT instDecidable primitive handler structs functions
+    baseAddress topAddress bytesInWord fuel
+  induction fuel using Nat.strongRecOn with
+  | ind fuel ih =>
+      intro locals globals memory info function arguments
+      constructor
+      · cases fuel with
+        | zero =>
+            simp [evalPanValueCallWithPrimitiveCallsAndFfiSteps,
+              evalPanValueCallWithPrimitiveCallsAndFfi]
+        | succ fuel =>
+            simp only [evalPanValueCallWithPrimitiveCallsAndFfiSteps,
+              evalPanValueCallWithPrimitiveCallsAndFfi]
+            cases hargs : evalPanValueExps structs locals globals memory
+                baseAddress topAddress bytesInWord arguments with
+            | none => simp [hargs, evalPanValueExpsCounted]
+            | some values =>
+                simp [hargs, evalPanValueExpsCounted]
+                cases hlookup : lookupPanFunction function functions with
+                | none => simp
+                | some callee =>
+                    cases hparams : bindPanValueParameters callee.1 values with
+                    | none => simp [hparams]
+                    | some calleeLocals =>
+                        cases hstep : evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                            primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                            calleeLocals globals memory callee.2 with
+                        | none =>
+                            have horiginal :
+                                evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                  functions baseAddress topAddress bytesInWord fuel calleeLocals globals
+                                  memory callee.2 = none := by
+                              rw [← (ih fuel (Nat.lt_succ_self fuel) calleeLocals globals memory
+                                none function arguments).2 callee.2]
+                              simp [hstep]
+                            simp [hparams, hstep, horiginal]
+                        | some pair =>
+                            cases pair with
+                            | mk result steps =>
+                                have horiginal :
+                                    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                      functions baseAddress topAddress bytesInWord fuel calleeLocals
+                                      globals memory callee.2 = some result := by
+                                  rw [← (ih fuel (Nat.lt_succ_self fuel) calleeLocals globals memory
+                                    none function arguments).2 callee.2]
+                                  simp [hstep]
+                                cases result with
+                                | normal _ _ _ =>
+                                    simp [hparams, hstep, horiginal]
+                                | returned _ _ _ values =>
+                                    cases info with
+                                    | none => simp [hparams, hstep, horiginal]
+                                    | some info =>
+                                        cases hassign : assignPanValueCallResult locals info.1 values with
+                                        | none => simp [hparams, hstep, horiginal, hassign]
+                                        | some assignedLocals =>
+                                            simp [hparams, hstep, horiginal, hassign]
+                                | raised _ _ _ exception value =>
+                                    cases info with
+                                    | none => simp [hparams, hstep, horiginal]
+                                    | some info =>
+                                        cases info with
+                                        | mk destination handlerOption =>
+                                            cases handlerOption with
+                                            | none => simp [hparams, hstep, horiginal]
+                                            | some handlerInfo =>
+                                                cases handlerInfo with
+                                                | mk caught handlerInfo =>
+                                                    cases handlerInfo with
+                                                    | mk handlerVariable handlerProgram =>
+                                                        by_cases heq : caught == exception
+                                                        · cases hhandler :
+                                                              evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                                                                primitive handler structs functions
+                                                                baseAddress topAddress bytesInWord fuel
+                                                                (updatePanValueMap locals handlerVariable value)
+                                                                globals memory handlerProgram with
+                                                          | none =>
+                                                              have hhandlerOriginal :
+                                                                  evalPanValueProgWithPrimitiveCallsAndFfi
+                                                                    primitive handler structs functions
+                                                                    baseAddress topAddress bytesInWord fuel
+                                                                    (updatePanValueMap locals handlerVariable value)
+                                                                    globals memory handlerProgram = none := by
+                                                                rw [← (ih fuel (Nat.lt_succ_self fuel)
+                                                                  (updatePanValueMap locals handlerVariable value)
+                                                                  globals memory none function arguments).2 handlerProgram]
+                                                                simp [hhandler]
+                                                              have heqeq : caught = exception := by
+                                                                simpa using heq
+                                                              simp [hparams, hstep, horiginal,
+                                                                heqeq, hhandler, hhandlerOriginal]
+                                                          | some handlerPair =>
+                                                              cases handlerPair with
+                                                              | mk handlerResult handlerSteps =>
+                                                                  have hhandlerOriginal :
+                                                                      evalPanValueProgWithPrimitiveCallsAndFfi
+                                                                        primitive handler structs functions
+                                                                        baseAddress topAddress bytesInWord fuel
+                                                                        (updatePanValueMap locals handlerVariable value)
+                                                                        globals memory handlerProgram =
+                                                                        some handlerResult := by
+                                                                    rw [← (ih fuel (Nat.lt_succ_self fuel)
+                                                                      (updatePanValueMap locals handlerVariable value)
+                                                                      globals memory none function arguments).2 handlerProgram]
+                                                                    simp [hhandler]
+                                                                  have heqeq : caught = exception := by
+                                                                    simpa using heq
+                                                                  simp [hparams, hstep, horiginal,
+                                                                    heqeq, hhandler, hhandlerOriginal]
+                                                        · have hneq : caught ≠ exception := by
+                                                            intro equality
+                                                            apply heq
+                                                            simp [equality]
+                                                          simp [hparams, hstep, horiginal, hneq]
+                                | broke _ _ _ | continued _ _ _ =>
+                                    simp [hparams, hstep, horiginal]
+      · intro program
+        cases fuel with
+        | zero =>
+            simp [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+              evalPanValueProgWithPrimitiveCallsAndFfi]
+        | succ fuel =>
+            cases program with
+            | skip =>
+                exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_skip
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  locals globals memory
+            | dec name shape value body =>
+                simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+                  evalPanValueProgWithPrimitiveCallsAndFfi]
+                cases hvalue : evalPanValueExp structs locals globals memory
+                    baseAddress topAddress bytesInWord value with
+                | none => simp [hvalue, evalPanValueExpCounted]
+                | some evaluatedValue =>
+                    by_cases hshape : panShapeMatches (panValueShape structs evaluatedValue) shape
+                    · cases hbody : evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                          primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                          (updatePanValueMap locals name evaluatedValue) globals memory body with
+                      | none =>
+                          have hbodyOriginal :
+                              evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                functions baseAddress topAddress bytesInWord fuel
+                                (updatePanValueMap locals name evaluatedValue) globals memory body = none := by
+                            rw [← (ih fuel (Nat.lt_succ_self fuel)
+                              (updatePanValueMap locals name evaluatedValue) globals memory
+                              none function arguments).2 body]
+                            simp [hbody]
+                          simp [hvalue, hshape, hbody, hbodyOriginal, evalPanValueExpCounted]
+                      | some bodyPair =>
+                          cases bodyPair with
+                          | mk bodyResult bodySteps =>
+                              have hbodyOriginal :
+                                  evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                    functions baseAddress topAddress bytesInWord fuel
+                                    (updatePanValueMap locals name evaluatedValue) globals memory body =
+                                    some bodyResult := by
+                                rw [← (ih fuel (Nat.lt_succ_self fuel)
+                                  (updatePanValueMap locals name evaluatedValue) globals memory
+                                  none function arguments).2 body]
+                                simp [hbody]
+                              simp [hvalue, hshape, hbody, hbodyOriginal, evalPanValueExpCounted]
+                    · simp [hvalue, hshape, evalPanValueExpCounted]
+            | assign kind name value =>
+                cases kind
+                · exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_assign_local
+                    primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                    locals globals memory name value
+                · exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_assign_global
+                    primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                    locals globals memory name value
+            | primitive name operator arguments =>
+                exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_primitive
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  locals globals memory name operator arguments
+            | store address value =>
+                exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  locals globals memory address value
+            | store32 address value =>
+                exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store32
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  locals globals memory address value
+            | storeByte address value =>
+                exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_storeByte
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  locals globals memory address value
+            | seq first second =>
+                exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_seq_of_projections
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  locals globals memory first second
+                  ((ih fuel (Nat.lt_succ_self fuel) locals globals memory
+                    none function arguments).2 first)
+                  (fun nextLocals nextGlobals nextMemory =>
+                    (ih fuel (Nat.lt_succ_self fuel) nextLocals nextGlobals nextMemory
+                      none function arguments).2 second)
+            | ite condition thenBranch elseBranch =>
+                simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+                  evalPanValueProgWithPrimitiveCallsAndFfi]
+                cases hcondition : evalPanValueExp structs locals globals memory
+                    baseAddress topAddress bytesInWord condition with
+                | none => simp [hcondition, evalPanValueExpCounted]
+                | some evaluatedCondition =>
+                    cases evaluatedCondition with
+                    | word conditionValue =>
+                        by_cases hselected : conditionValue != 0
+                        · cases hbranch : evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                              primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                              locals globals memory thenBranch with
+                          | none =>
+                              have hbranchOriginal :
+                                  evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                    functions baseAddress topAddress bytesInWord fuel locals globals
+                                    memory thenBranch = none := by
+                                rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
+                                  none function arguments).2 thenBranch]
+                                simp [hbranch]
+                              simp [hcondition, hselected, hbranchOriginal,
+                                evalPanValueExpCounted]
+                          | some branchPair =>
+                              cases branchPair with
+                              | mk branchResult branchSteps =>
+                                  have hbranchOriginal :
+                                      evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                        functions baseAddress topAddress bytesInWord fuel locals globals
+                                        memory thenBranch = some branchResult := by
+                                    rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
+                                      none function arguments).2 thenBranch]
+                                    simp [hbranch]
+                                  simp [hcondition, hselected, hbranchOriginal,
+                                    evalPanValueExpCounted]
+                        · cases hbranch : evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                              primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                              locals globals memory elseBranch with
+                          | none =>
+                              have hbranchOriginal :
+                                  evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                    functions baseAddress topAddress bytesInWord fuel locals globals
+                                    memory elseBranch = none := by
+                                rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
+                                  none function arguments).2 elseBranch]
+                                simp [hbranch]
+                              simp [hcondition, hselected, hbranchOriginal,
+                                evalPanValueExpCounted]
+                          | some branchPair =>
+                              cases branchPair with
+                              | mk branchResult branchSteps =>
+                                  have hbranchOriginal :
+                                      evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                        functions baseAddress topAddress bytesInWord fuel locals globals
+                                        memory elseBranch = some branchResult := by
+                                    rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
+                                      none function arguments).2 elseBranch]
+                                    simp [hbranch]
+                                  simp [hcondition, hselected, hbranchOriginal,
+                                    evalPanValueExpCounted]
+                    | rStruct _ | nStruct _ _ =>
+                        simp [hcondition, evalPanValueExpCounted]
+            | «while» condition body =>
+                simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+                  evalPanValueProgWithPrimitiveCallsAndFfi]
+                cases hcondition : evalPanValueExp structs locals globals memory
+                    baseAddress topAddress bytesInWord condition with
+                | none => simp [hcondition, evalPanValueExpCounted]
+                | some evaluatedCondition =>
+                    cases evaluatedCondition with
+                    | rStruct _ | nStruct _ _ =>
+                        simp [hcondition, evalPanValueExpCounted]
+                    | word conditionValue =>
+                        by_cases hzero : conditionValue == 0
+                        · simp [hcondition, hzero, evalPanValueExpCounted]
+                        · cases hbody : evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                              primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                              locals globals memory body with
+                          | none =>
+                              have hbodyOriginal :
+                                  evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                    functions baseAddress topAddress bytesInWord fuel locals globals
+                                    memory body = none := by
+                                rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
+                                  none function arguments).2 body]
+                                simp [hbody]
+                              simp [hcondition, hzero, hbodyOriginal,
+                                evalPanValueExpCounted]
+                          | some bodyPair =>
+                              cases bodyPair with
+                              | mk bodyResult bodySteps =>
+                                  have hbodyOriginal :
+                                      evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                        functions baseAddress topAddress bytesInWord fuel locals globals
+                                        memory body = some bodyResult := by
+                                    rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
+                                      none function arguments).2 body]
+                                    simp [hbody]
+                                  cases bodyResult with
+                                  | normal bodyLocals bodyGlobals bodyMemory =>
+                                      cases hloop : evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                                          primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                                          bodyLocals bodyGlobals bodyMemory (.while condition body) with
+                                      | none =>
+                                          have hloopOriginal :
+                                              evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                                functions baseAddress topAddress bytesInWord fuel bodyLocals
+                                                bodyGlobals bodyMemory (.while condition body) = none := by
+                                            rw [← (ih fuel (Nat.lt_succ_self fuel) bodyLocals bodyGlobals
+                                              bodyMemory none function arguments).2 (.while condition body)]
+                                            simp [hloop]
+                                          simp [hcondition, hzero, hbodyOriginal, hloop,
+                                            hloopOriginal, evalPanValueExpCounted]
+                                      | some loopPair =>
+                                          cases loopPair with
+                                          | mk loopResult loopSteps =>
+                                              have hloopOriginal :
+                                                  evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+                                                    structs functions baseAddress topAddress bytesInWord fuel
+                                                    bodyLocals bodyGlobals bodyMemory (.while condition body) =
+                                                    some loopResult := by
+                                                rw [← (ih fuel (Nat.lt_succ_self fuel) bodyLocals
+                                                  bodyGlobals bodyMemory none function arguments).2
+                                                  (.while condition body)]
+                                                simp [hloop]
+                                              simp [hcondition, hzero, hbodyOriginal, hloop,
+                                                hloopOriginal, evalPanValueExpCounted]
+                                  | continued bodyLocals bodyGlobals bodyMemory =>
+                                      cases hloop : evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                                          primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                                          bodyLocals bodyGlobals bodyMemory (.while condition body) with
+                                      | none =>
+                                          have hloopOriginal :
+                                              evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                                functions baseAddress topAddress bytesInWord fuel bodyLocals
+                                                bodyGlobals bodyMemory (.while condition body) = none := by
+                                            rw [← (ih fuel (Nat.lt_succ_self fuel) bodyLocals bodyGlobals
+                                              bodyMemory none function arguments).2 (.while condition body)]
+                                            simp [hloop]
+                                          simp [hcondition, hzero, hbodyOriginal, hloop,
+                                            hloopOriginal, evalPanValueExpCounted]
+                                      | some loopPair =>
+                                          cases loopPair with
+                                          | mk loopResult loopSteps =>
+                                              have hloopOriginal :
+                                                  evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+                                                    structs functions baseAddress topAddress bytesInWord fuel
+                                                    bodyLocals bodyGlobals bodyMemory (.while condition body) =
+                                                    some loopResult := by
+                                                rw [← (ih fuel (Nat.lt_succ_self fuel) bodyLocals
+                                                  bodyGlobals bodyMemory none function arguments).2
+                                                  (.while condition body)]
+                                                simp [hloop]
+                                              simp [hcondition, hzero, hbodyOriginal, hloop,
+                                                hloopOriginal, evalPanValueExpCounted]
+                                  | broke bodyLocals bodyGlobals bodyMemory =>
+                                      simp [hcondition, hzero, hbodyOriginal,
+                                        evalPanValueExpCounted]
+                                  | returned _ _ _ _ | raised _ _ _ _ _ =>
+                                      simp [hcondition, hzero, hbodyOriginal,
+                                        evalPanValueExpCounted]
+            | «break» =>
+                exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_break
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  locals globals memory
+            | «continue» =>
+                exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_continue
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  locals globals memory
+            | call info function arguments =>
+                simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+                  evalPanValueProgWithPrimitiveCallsAndFfi]
+                cases hcall : evalPanValueCallWithPrimitiveCallsAndFfiSteps
+                    primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                    locals globals memory info function arguments with
+                | none =>
+                    have hcallOriginal :
+                        evalPanValueCallWithPrimitiveCallsAndFfi primitive handler structs
+                          functions baseAddress topAddress bytesInWord fuel locals globals memory
+                          info function arguments = none := by
+                      rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
+                        info function arguments).1]
+                      simp [hcall]
+                    simp [hcallOriginal]
+                | some callPair =>
+                    cases callPair with
+                    | mk callResult callSteps =>
+                        have hcallOriginal :
+                            evalPanValueCallWithPrimitiveCallsAndFfi primitive handler structs
+                              functions baseAddress topAddress bytesInWord fuel locals globals memory
+                              info function arguments = some callResult := by
+                          rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
+                            info function arguments).1]
+                          simp [hcall]
+                        simp [hcallOriginal]
+            | decCall name shape function arguments body =>
+                simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+                  evalPanValueProgWithPrimitiveCallsAndFfi]
+                cases hcall : evalPanValueCallWithPrimitiveCallsAndFfiSteps
+                    primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                    locals globals memory (some (some (.local, name), none)) function arguments with
+                | none =>
+                    have hcallOriginal :
+                        evalPanValueCallWithPrimitiveCallsAndFfi primitive handler structs
+                          functions baseAddress topAddress bytesInWord fuel locals globals memory
+                          (some (some (.local, name), none)) function arguments = none := by
+                      rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
+                        (some (some (.local, name), none)) function arguments).1]
+                      simp [hcall]
+                    simp [hcallOriginal]
+                | some callPair =>
+                    cases callPair with
+                    | mk callResult callSteps =>
+                        have hcallOriginal :
+                            evalPanValueCallWithPrimitiveCallsAndFfi primitive handler structs
+                              functions baseAddress topAddress bytesInWord fuel locals globals memory
+                              (some (some (.local, name), none)) function arguments =
+                              some callResult := by
+                          rw [← (ih fuel (Nat.lt_succ_self fuel) locals globals memory
+                            (some (some (.local, name), none)) function arguments).1]
+                          simp [hcall]
+                        cases callResult with
+                        | normal callLocals callGlobals callMemory =>
+                            cases hbody : evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                                primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                                callLocals callGlobals callMemory body with
+                            | none =>
+                                have hbodyOriginal :
+                                    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                      functions baseAddress topAddress bytesInWord fuel callLocals
+                                      callGlobals callMemory body = none := by
+                                  rw [← (ih fuel (Nat.lt_succ_self fuel) callLocals callGlobals
+                                    callMemory none function arguments).2 body]
+                                  simp [hbody]
+                                simp [hcallOriginal, hbody, hbodyOriginal]
+                            | some bodyPair =>
+                                cases bodyPair with
+                                | mk bodyResult bodySteps =>
+                                    have hbodyOriginal :
+                                        evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                                          functions baseAddress topAddress bytesInWord fuel callLocals
+                                          callGlobals callMemory body = some bodyResult := by
+                                      rw [← (ih fuel (Nat.lt_succ_self fuel) callLocals callGlobals
+                                        callMemory none function arguments).2 body]
+                                      simp [hbody]
+                                    simp [hcallOriginal, hbody, hbodyOriginal]
+                        | returned _ _ _ _ | raised _ _ _ _ _ | broke _ _ _ | continued _ _ _ =>
+                            simp [hcallOriginal]
+            | extCall function configuration configurationLength array arrayLength =>
+                simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+                  evalPanValueProgWithPrimitiveCallsAndFfi]
+                cases hconfiguration : evalPanValueExp structs locals globals memory
+                    baseAddress topAddress bytesInWord configuration with
+                | none => simp [hconfiguration, evalPanValueExps, evalPanValueExp.evalPanValueExps,
+                    evalPanValueExpsCounted,
+                    evalPanValueExtCall]
+                | some evaluatedConfiguration =>
+                    cases hconfigurationLength : evalPanValueExp structs locals globals memory
+                        baseAddress topAddress bytesInWord configurationLength with
+                    | none => simp [hconfiguration, hconfigurationLength, evalPanValueExps,
+                        evalPanValueExp.evalPanValueExps,
+                        evalPanValueExpsCounted, evalPanValueExtCall]
+                    | some evaluatedConfigurationLength =>
+                        cases harray : evalPanValueExp structs locals globals memory
+                            baseAddress topAddress bytesInWord array with
+                        | none => simp [hconfiguration, hconfigurationLength, harray,
+                            evalPanValueExps, evalPanValueExp.evalPanValueExps,
+                            evalPanValueExpsCounted, evalPanValueExtCall]
+                        | some evaluatedArray =>
+                            cases harrayLength : evalPanValueExp structs locals globals memory
+                                baseAddress topAddress bytesInWord arrayLength with
+                            | none => simp [hconfiguration, hconfigurationLength, harray,
+                                harrayLength, evalPanValueExps, evalPanValueExp.evalPanValueExps,
+                                evalPanValueExpsCounted,
+                                evalPanValueExtCall]
+                            | some evaluatedArrayLength =>
+                                cases evaluatedConfiguration with
+                                | word configurationValue =>
+                                    cases evaluatedConfigurationLength with
+                                    | word configurationLengthValue =>
+                                        cases evaluatedArray with
+                                        | word arrayValue =>
+                                            cases evaluatedArrayLength with
+                                            | word arrayLengthValue =>
+                                                cases hhandlerResult : handler function
+                                                    configurationValue configurationLengthValue arrayValue
+                                                    arrayLengthValue locals with
+                                                | none =>
+                                                    simp [hconfiguration, hconfigurationLength, harray,
+                                                      harrayLength, hhandlerResult, evalPanValueExps,
+                                                      evalPanValueExp.evalPanValueExps,
+                                                      evalPanValueExpsCounted, evalPanValueExtCall]
+                                                | some newLocals =>
+                                                    simp [hconfiguration, hconfigurationLength, harray,
+                                                      harrayLength, hhandlerResult, evalPanValueExps,
+                                                      evalPanValueExp.evalPanValueExps,
+                                                      evalPanValueExpsCounted, evalPanValueExtCall]
+                                            | rStruct _ | nStruct _ _ =>
+                                                simp [hconfiguration, hconfigurationLength, harray,
+                                                  harrayLength, evalPanValueExps,
+                                                  evalPanValueExp.evalPanValueExps,
+                                                  evalPanValueExpsCounted, evalPanValueExtCall]
+                                        | rStruct _ | nStruct _ _ =>
+                                            simp [hconfiguration, hconfigurationLength, harray,
+                                              harrayLength, evalPanValueExps,
+                                              evalPanValueExp.evalPanValueExps,
+                                              evalPanValueExpsCounted, evalPanValueExtCall]
+                                    | rStruct _ | nStruct _ _ =>
+                                        simp [hconfiguration, hconfigurationLength, harray,
+                                          harrayLength, evalPanValueExps,
+                                          evalPanValueExp.evalPanValueExps,
+                                          evalPanValueExpsCounted, evalPanValueExtCall]
+                                | rStruct _ | nStruct _ _ =>
+                                    simp [hconfiguration, hconfigurationLength, harray,
+                                      harrayLength, evalPanValueExps,
+                                      evalPanValueExp.evalPanValueExps,
+                                      evalPanValueExpsCounted, evalPanValueExtCall]
+            | raise exception value =>
+                exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_raise
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  locals globals memory exception value
+            | «return» value =>
+                exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_return
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  locals globals memory value
+            | shMemLoad size kind name address =>
+                simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+                  evalPanValueProgWithPrimitiveCallsAndFfi]
+                cases haddress : evalPanValueExp structs locals globals memory
+                    baseAddress topAddress bytesInWord address with
+                | none => simp [haddress, evalPanValueExpCounted]
+                | some evaluatedAddress =>
+                    cases evaluatedAddress with
+                    | word evaluatedAddress =>
+                        cases hmemory : memory evaluatedAddress with
+                        | none => simp [haddress, hmemory, evalPanValueExpCounted]
+                        | some evaluatedValue =>
+                                    cases kind <;> simp [haddress, hmemory, evalPanValueExpCounted]
+                    | rStruct _ | nStruct _ _ =>
+                        simp [haddress, evalPanValueExpCounted]
+            | shMemStore size address value =>
+                simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+                  evalPanValueProgWithPrimitiveCallsAndFfi]
+                cases haddress : evalPanValueExp structs locals globals memory
+                    baseAddress topAddress bytesInWord address with
+                | none => simp [haddress, evalPanValueExpCounted]
+                | some evaluatedAddress =>
+                    cases hvalue : evalPanValueExp structs locals globals memory
+                        baseAddress topAddress bytesInWord value with
+                    | none => simp [haddress, hvalue, evalPanValueExpCounted]
+                    | some evaluatedValue =>
+                        cases evaluatedAddress <;>
+                          cases evaluatedValue <;>
+                          simp [haddress, hvalue, evalPanValueExpCounted]
+            | tick =>
+                exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_tick
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  locals globals memory
+            | annot tag text =>
+                exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_annot
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  locals globals memory tag text
+
+theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (function : FunName) (arguments : List (Exp α)) :
+    (evalPanValueCallWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory info function arguments).map
+        Prod.fst =
+    evalPanValueCallWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory info function arguments :=
+  (evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst primitive handler structs functions
+    baseAddress topAddress bytesInWord fuel locals globals memory info function arguments).1
+
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (program : Prog α) :
+  (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory program).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory program :=
+  (evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst primitive handler structs functions
+    baseAddress topAddress bytesInWord fuel locals globals memory none "" []).2 program
 
 def evalPanValueSteppedProg
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

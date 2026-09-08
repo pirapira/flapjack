@@ -281,6 +281,47 @@ theorem crepToLoop_call_caught_return_const_agreement
     evalLoopExp, evalLoopCondition, loopReadLocals, loopBindParameters,
     loopAssignValues, updateLoopLocal, loopResultValues, hcontext, hloop]
 
+theorem crepToLoop_seq_extCall_return_const_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (context : LoopContext α)
+    (crepFunctions : List (CompiledFunction α))
+    (loopFunctions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state state' : CrepState α) (live : List Nat) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue : α)
+    (value : α)
+    (hconfiguration : state.locals configuration = some configurationValue)
+    (hconfigurationLength :
+      state.locals configurationLength = some configurationLengthValue)
+    (harray : state.locals array = some arrayValue)
+    (harrayLength : state.locals arrayLength = some arrayLengthValue)
+    (hffi : ffi function configurationValue configurationLengthValue
+      arrayValue arrayLengthValue state = some state') :
+    (evalCrepFullProg crepFunctions primitive ffi sharedMem baseAddress topAddress
+      (fuel + 20) state
+      (.seq (.extCall function configuration configurationLength array arrayLength)
+        (.return [.const value]))).map crepControlValues =
+    (evalLoopProgWithCallsAndFfi loopFunctions (loopFfiOfCrepFfi ffi) (fuel + 20)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.seq (.extCall function configuration configurationLength array arrayLength)
+          (.return [.const value])))).map loopResultValues := by
+  simp [evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+    crepControlValues, evalLoopProgWithCallsAndFfi, evalLoopProg,
+    evalLoopExp, loopCompileProg, loopCompileExps,
+    loopCompileExp.loopCompileExps, loopCompileExp_const, loopTempNames,
+    loopAssignTemps, loopNestedSeq, loopReadLocals, updateLoopLocal,
+    loopResultValues, loopFfiOfCrepFfi, crepStateOfLoopState,
+    loopStateOfCrepState, hconfiguration, hconfigurationLength, harray,
+    harrayLength, hffi]
+
 theorem crepToLoop_extCall_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

@@ -1944,6 +1944,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   propagated exception across the Crepe-to-Loop call boundary.
 - [x] Prove a caught-handler Crepe-to-Loop agreement whose handler returns a
   scalar, preserving the returned control values through dispatch and lowering.
+- [x] Prove a sequential Crepe-to-Loop agreement for an FFI call followed by a
+  scalar return, threading the host-updated state into the continuation.
 - [x] Prove the reusable source-to-Crepe FFI lowering equation, including
   sequential argument evaluation and restoration of compiler temporaries.
 - [x] Compose the lowered caught-handler call with the full-Crepe evaluator,

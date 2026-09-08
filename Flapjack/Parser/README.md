@@ -10,8 +10,9 @@ Reference sources are `cakeml/pancake/parser/`.
 | --- | --- |
 | `Lexer.lean` | `panLexerScript.sml` — tokens, keywords, comments, positions |
 | `Basic.lean` | parser state and the combinators standing in for `peg`/`pegexec` |
-| `Expressions.lean` | `panPEG` shape and expression rules, with `conv_Shape`/`conv_Exp` |
-| `Statements.lean` | `panPEG` statement and block rules, with `conv_Prog`/`conv_NonRecStmt` |
+| `ParseTree.lean` | `pancakeNT` and the `parsetree` type, with the `consume`/`keep` combinators |
+| `Grammar.lean` | every `panPEG` rule, producing parse trees |
+| `Conversion.lean` | `panPtreeConversion`: `conv_Shape`, `conv_Exp`, `conv_Prog`, `conv_TopDec*` |
 | `Localise.lean` | `localise_exp`, `localise_prog`, `localise_topdecs` |
 | `Parser.lean` | `parse_topdecs_to_ast` and `parse_to_ast` |
 
@@ -28,29 +29,37 @@ Flapjack.Parser.parseProgram (ofInt : Int → α) (source : String)
 `ofInt` turns a source literal into the target word type; real callers pass
 `BitVec.ofInt 64`, matching `panLang`'s `i2w`.
 
-## No intermediate parse tree
+## Two stages, with a parse tree between them
 
-Upstream runs a PEG over the tokens to build a parse tree and then converts
-that tree to the AST. This port keeps the grammar and its ordered choices but
-builds the AST directly: each `panPEG` nonterminal is one Lean function
-carrying the corresponding `conv_*` behaviour, named after the rule, so
-`EShiftNT` is `parseEShift` and the two can be read side by side.
+The grammar and the conversion are separate, as upstream: `panPEG` produces a
+parse tree, `panPtreeConversion` turns that tree into the AST.
 
-The reason is that porting the parse tree would mean porting HOL's `peg` and
-`pegexec` theories and the `parsetree` type with them, for an artefact nothing
-downstream consumes — the acceptance criteria, and every caller, want source
-to AST. If a parse tree is later wanted in its own right, the grammar
-functions are where it would attach.
+`ParseTree.lean` ports `pancakeNT` and the `parsetree` type. What matters for
+the conversion is *which* tokens reach the tree, so the combinators keep
+upstream's distinctions exactly: `consume` contributes no child, `keep`
+contributes a leaf, and `try_default s t` contributes a leaf of `t` when `s`
+fails. `conv_*` matches on child counts, so those choices are part of the
+grammar's contract rather than a detail. Two consequences that are easy to get
+wrong: a rule's result is a *list* of trees, not one, because `ProgNT`'s final
+`consume_tok RCurT` alternative contributes nothing at all; and
+`ShapedIdentNT` contributes two children rather than a node of its own, which
+is why `conv_params` reads a flat shape/name sequence.
 
-Two consequences worth knowing. Ordered choice is `<|>` over a backtracking
-parser, and every optional or repeated piece brackets its operator *together
-with* its operand, matching `try`/`rpt` applying to a whole `seql`; wrapping
-only the operator would let `<a, b>` consume its closing `>` as a comparison
-with no way back. And the expression chain from `ExpNT` to `EBaseNT` descends
-sixteen levels without consuming a token, so the recursion is structural on a
-fuel bound rather than on the token list. `parseFuel` seeds it at
-`40 * tokens + 64`, far above what the grammar can use, and exhaustion reports
-its own message so it can never be read as a syntax error.
+Node ranges come from the tokens a rule consumed, which is upstream's
+`ptree_list_loc` whenever the children cover the rule.
+
+`Grammar.lean` has one function per `panPEG` rule, named after it, in the same
+order and with the same ordered choices. Every optional or repeated piece
+brackets its operator together with its operand, matching `try` and `rpt`
+applying to a whole `seql`; bracketing only the operator would let `<a, b>`
+consume its closing `>` as a comparison with no way back.
+
+Recursion is structural on a fuel bound rather than on the token list, because
+the chain from `ExpNT` to `EBaseNT` descends sixteen levels without consuming
+anything. `parseFuel` seeds it at `40 * tokens + 64`, far above what the
+grammar can use, and exhaustion reports its own message so it can never be
+read as a syntax error. `Conversion.lean` is bounded the same way; running out
+yields `none`, never a wrong AST.
 
 ## Deliberate divergences
 

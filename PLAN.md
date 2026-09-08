@@ -110,9 +110,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
      for the module map, the three places this port departs from upstream
      (`@top`, and `Load32`/`Store32` in the localisation pass), the upstream
      quirks it keeps, and the `locations` option that reproduces
-     `add_locs_annot`. The parser
-     builds the AST directly rather than through a parse tree; the reasoning
-     is in that file. Tests are in `Flapjack/Test/Parser.lean` and
+     `add_locs_annot`. The grammar and the conversion are two stages with a
+     `panPEG` parse tree between them, as upstream, converted by a port of
+     `panPtreeConversion`. Tests are in `Flapjack/Test/Parser.lean` and
      `Flapjack/Test/ParserStaticExamples.lean`, covering every example in
      `cakeml/pancake/parser/panConcreteExamplesScript.sml` and the 276
      referenced examples in

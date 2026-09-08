@@ -435,16 +435,16 @@ def treeOf (source : String) : Option String :=
 -- body -- with `NoinlineT` and `StaticT` leaves standing in for the absent
 -- modifiers, which is what `conv_TopDec` matches on.
 #guard treeOf "fun f() { skip; }" == some
-  "(topDecList (funNT noinlineT staticT defaultShT identT \"f\" (paramList) (prog keywordT (Keyword.skipK))) (topDecList))"
+  "(topDecList (funNT noinlineT staticT defaultShT identT \"f\" (paramList) (prog keywordT (Flapjack.Parser.Keyword.skipK))) (topDecList))"
 
 -- `consume` contributes no child: the `lds` keyword and the shape braces are
 -- absent from the tree, leaving just shape and address.
 #guard treeOf "fun f() { return lds 2 x; }" == some
-  "(topDecList (funNT noinlineT staticT defaultShT identT \"f\" (paramList) (prog (returnNT (exp (eBoolAnd (eEq (eCmp (eLoad intT 2 (eOr (eXor (eAnd (eShift (eAdd (eMul (eNot (eField identT \"x\"))))))))))))))) (topDecList))"
+  "(topDecList (funNT noinlineT staticT defaultShT identT \"f\" (paramList) (prog (returnNT (exp (eBoolAnd (eEq (eCmp (eLoad intT 2 (eOr (eXor (eAnd (eShift (eAdd (eMul (eNot (eField identT \"x\")))))))))))))))) (topDecList))"
 
 -- A tree the grammar cannot produce converts to `none` rather than being
 -- repaired: `conv_Shape` refuses a non-positive literal.
-#guard (convShape 64 (.lf (.intT 0) unknownLoc) == (none : Option Shape))
+#guard (convShape 64 (.lf (.intT 0) unknownLoc)).isNone
 
 -- And `conv_binop` refuses a token that is not one.
 #guard (convBinop (.lf (.starT) unknownLoc) == (none : Option BinOp))

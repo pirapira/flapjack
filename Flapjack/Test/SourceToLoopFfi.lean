@@ -1,4 +1,6 @@
+import Flapjack.CorrectnessFfi
 import Flapjack.Test.CorrectnessFfi
+import Flapjack.Test.SourceToLoop
 
 /-!
 Source-to-Loop FFI regression.
@@ -13,6 +15,17 @@ namespace Flapjack
 
 open RiscV
 
+def successfulLoopFfiHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+    LoopState (Word 64) → Option (LoopState (Word 64)) :=
+  fun _ configuration _ _ _ state =>
+    some { state with
+      locals := updateLoopLocal state.locals 1 configuration }
+
+def successfulSourceFfiHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+    (VarName → Option (Word 64)) → Option (VarName → Option (Word 64)) :=
+  fun _ configuration _ _ _ locals =>
+    some (updatePanLocal locals "result" configuration)
+
 def sourceToLoopFfiState : LoopState (Word 64) :=
   { locals := fun _ => none
     globals := fun _ => none
@@ -25,6 +38,25 @@ def sourceToLoopFfiHandler : FunName → Word 64 → Word 64 → Word 64 → Wor
       some { state with
         locals := updateLoopLocal state.locals 2 (configuration + 1) }
     else none
+
+theorem sourceToLoop_extCall_success_projection :
+    (evalLoopProgWithCallsAndFfi [] successfulLoopFfiHandler 40
+      sourceToLoopFfiState
+      (loopCompileProg sourceToLoopLoopContext []
+        (compileProg sourceToLoopCompileContext
+          (.extCall "inc" (.const (BitVec.ofNat 64 41))
+            (.const (BitVec.ofNat 64 0)) (.const (BitVec.ofNat 64 0))
+            (.const (BitVec.ofNat 64 0)))))).map loopResultValues =
+      (evalPanProgWithCallsAndFfi [] successfulSourceFfiHandler 20
+        (fun _ => none)
+        (.extCall "inc" (.const (BitVec.ofNat 64 41))
+          (.const (BitVec.ofNat 64 0)) (.const (BitVec.ofNat 64 0))
+          (.const (BitVec.ofNat 64 0)))).map (fun result =>
+            match result with
+            | .normal _ => []
+            | .returned _ values => values
+            | .raised _ _ _ => []) := by
+  native_decide
 
 theorem sourceToLoop_ffi_simulation :
     (do

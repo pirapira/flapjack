@@ -41,13 +41,22 @@ def statefulTestContext : PanValueFfiContext (Word 64) :=
     byteAlign := fun address => panRiscVByteAlign (BitVec.ofNat 64 8) address
     bigEndian := false
     wordToBytes := statefulTestWordToBytes
-    wordOfBytes := statefulTestWordOfBytes }
+    wordOfBytes := statefulTestWordOfBytes
+    wordToByte := fun value => UInt8.ofNat value.toNat
+    byteToWord := fun value => BitVec.ofNat 64 value.toNat
+    valueToNat := fun value => value.toNat }
 
 def statefulTestHandler : PanValueStatefulFfiHandler (Word 64) Unit :=
   fun _ _ _ _ _ locals ffi => some (locals, ffi)
 
 def statefulTestPrimitive : PanPrimitiveHandler (Word 64) :=
   fun _ _ => none
+
+def statefulTestMemory : Word 64 → Option (PanValue (Word 64)) :=
+  fun address =>
+    if address == BitVec.ofNat 64 8 then
+      some (.word (BitVec.ofNat 64 0x0000000000000042))
+    else none
 
 def statefulSharedProgram : Option (Word 64 × Nat × Nat) :=
   (evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
@@ -81,5 +90,21 @@ def statefulSharedFinal : Bool :=
 
 #guard statefulSharedProgram = some (BitVec.ofNat 64 0x42, 9, 2)
 #guard statefulSharedFinal
+
+def statefulExtCallProgram : Option (Word 64 × Nat × Nat) :=
+  (evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
+      statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+      (BitVec.ofNat 64 8) 30 (fun _ => none) (fun _ => none) statefulTestMemory
+      statefulTestFfiState
+      (.seq (.extCall "echo" (.const (BitVec.ofNat 64 8))
+          (.const (BitVec.ofNat 64 1)) (.const (BitVec.ofNat 64 8))
+          (.const (BitVec.ofNat 64 1)))
+        (.return (.loadByte (.const (BitVec.ofNat 64 8)))))
+      (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))).map
+    fun result => match result.1 with
+      | .returned _ _ _ ffi [.word value] => (value, result.2, ffi.ioEvents.length)
+      | _ => (BitVec.ofNat 64 0, 0, 0)
+
+#guard statefulExtCallProgram = some (BitVec.ofNat 64 0x42, 9, 1)
 
 end Flapjack

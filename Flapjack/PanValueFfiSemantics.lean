@@ -23,6 +23,9 @@ structure PanValueFfiContext (α : Type u) where
   bigEndian : Bool
   wordToBytes : α → Bool → List UInt8
   wordOfBytes : Bool → List UInt8 → α
+  wordToByte : α → UInt8
+  byteToWord : UInt8 → α
+  valueToNat : α → Nat
 
 def panValueFfiWidth : OpSize → Nat
   | .op8 => 1
@@ -69,6 +72,49 @@ def panValueFfiSharedStore (context : PanValueFfiContext α)
     match callFfi ffi (.sharedMem .mappedWrite) [UInt8.ofNat width] payload with
     | .returned nextFfi _ => some (.stored nextFfi)
     | .final event => some (.final ffi event)
+
+def panValueFfiReadBytes [Add α] [OfNat α 1]
+    (access : PanValueMemoryAccess α) (context : PanValueFfiContext α)
+    (memory : α → Option (PanValue α)) (bytesInWord address : α) :
+    Nat → Option (List UInt8)
+  | 0 => some []
+  | length + 1 => do
+      let byte ← access.readByte access.domain memory bytesInWord address
+      let rest ← panValueFfiReadBytes access context memory bytesInWord
+        (address + 1) length
+      pure (context.wordToByte byte :: rest)
+termination_by length => length
+
+def panValueFfiWriteBytes [BEq α] [Add α] [OfNat α 1]
+    (access : PanValueMemoryAccess α) (context : PanValueFfiContext α)
+    (memory : α → Option (PanValue α)) (bytesInWord address : α) :
+    List UInt8 → Option (α → Option (PanValue α))
+  | [] => some memory
+  | byte :: bytes => do
+      let memory ← access.storeByte access.domain memory bytesInWord address
+        (context.byteToWord byte)
+      panValueFfiWriteBytes access context memory bytesInWord (address + 1) bytes
+termination_by bytes => sizeOf bytes
+
+inductive PanValueFfiExtCallResult (α : Type u) (σ : Type v) where
+  | returned (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+  | final (ffi : FfiState σ) (event : FfiFinalEvent)
+
+def panValueFfiExtCall [BEq α] [Add α] [OfNat α 1]
+    (access : PanValueMemoryAccess α) (context : PanValueFfiContext α)
+    (memory : α → Option (PanValue α)) (bytesInWord : α)
+    (ffi : FfiState σ) (function : FunName)
+    (configuration configurationLength array arrayLength : α) :
+    Option (PanValueFfiExtCallResult α σ) := do
+  let configurationBytes ← panValueFfiReadBytes access context memory bytesInWord
+    configuration (context.valueToNat configurationLength)
+  let arrayBytes ← panValueFfiReadBytes access context memory bytesInWord
+    array (context.valueToNat arrayLength)
+  match callFfi ffi (.extCall function) configurationBytes arrayBytes with
+  | .returned nextFfi bytes =>
+      let memory ← panValueFfiWriteBytes access context memory bytesInWord array bytes
+      pure (.returned memory nextFfi)
+  | .final event => pure (.final ffi event)
 
 inductive PanValueFfiControlResult (α : Type u) (σ : Type v) where
   | normal (locals globals : VarName → Option (PanValue α))
@@ -304,8 +350,20 @@ mutual
           (memoryAccess := memoryAccess)
         let [.word configuration, .word configurationLength, .word array, .word arrayLength] := values |
           none
-        let (locals, ffi) ← handler function configuration configurationLength array arrayLength locals ffi
-        pure (.normal locals globals memory ffi, expressionSteps + 1)
+        match memoryAccess with
+        | none =>
+            let (locals, ffi) ←
+              handler function configuration configurationLength array arrayLength locals ffi
+            pure (.normal locals globals memory ffi, expressionSteps + 1)
+        | some access =>
+            match panValueFfiExtCall access context memory bytesInWord ffi function
+                configuration configurationLength array arrayLength with
+            | some (.returned memory ffi) =>
+                pure (.normal locals globals memory ffi, expressionSteps + 1)
+            | some (.final ffi event) =>
+                pure (.finalFfi (fun _ => none) globals memory ffi event,
+                  expressionSteps + 1)
+            | none => none
     | fuel + 1, locals, globals, memory, ffi, .while conditionExp body, memoryAccess => do
         let (condition, conditionSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord conditionExp (memoryAccess := memoryAccess)

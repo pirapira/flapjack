@@ -40,9 +40,9 @@ not yet an equivalent source semantics. In particular:
 | Byte and 32-bit accesses | Align to `byte_align`; extract/patch bytes with `be`; `Load32` additionally requires `aligned 2` | Model-aware flat, structured, and stepped evaluators now use the canonical word-cell operations; compatibility fallback remains |
 | Structured `Store` | Flatten values into consecutive word cells and fail transactionally on a bad domain | `PanMemory` has the flattening helper; `PanValues` stores a whole `PanValue` in one cell ([#385](https://github.com/pirapira/flapjack/issues/385)) |
 | Assignments | `is_valid_value` checks the destination's existing shape | Source assignments currently update locals/globals without that check ([#384](https://github.com/pirapira/flapjack/issues/384)) |
-| Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation | Structured and stepped model-aware evaluators now dispatch through a separate size-aware shared callback/domain; FFI state, terminal outcomes, and byte payloads remain to be threaded |
+| Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation | The model-aware stateful stepped evaluator now carries FFI state, size-aware shared calls, aligned domains, and terminal outcomes; legacy evaluators retain compatibility paths |
 | Control state | Clock, timeout, local clearing at boundaries, return/exception size limits, and declared exception shapes | Control-result evaluators use fuel only; `tick`, `return`, `raise`, and calls omit several CakeML checks and effects ([#387](https://github.com/pirapira/flapjack/issues/387)) |
-| Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays | Current call evaluators discard callee global/memory effects and the FFI handler only updates locals ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388)) |
+| Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays | The stateful stepped evaluator propagates callee globals/memory/FFI state and performs model-aware byte-array `ExtCall`; legacy evaluators and full shape/control checks remain ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388)) |
 
 The flat-memory adapter and the structured/stepped canonical access slice fix
 the representation of ordinary byte and word loads/stores when a target model
@@ -72,14 +72,14 @@ shared-memory behavior.
    `store32`/`storeByte` cases to the flat control evaluator and prove that
    the counted/stepped expression evaluator has the same value result as the
    uncounted evaluator.
-4. **Shared-memory and external effects.** The first incremental slice is now
-   in progress: model-aware structured and stepped evaluators have a separate
-   shared-memory callback, a separate shared domain, and size-dispatched
-   `op8`/`op16`/`op32`/`opW` behavior. Complete this stage by extending the
-   source state/result model with FFI state and terminal FFI observations.
-   Port `nb_op`, aligned shared-memory address checks, the `SharedMem` FFI
-   payloads, and the byte-array read/write behavior of `ExtCall`. Preserve the
-   existing pure handler adapters as explicitly non-observable test fixtures.
+4. **Shared-memory and external effects.** Model-aware structured and stepped
+   evaluators now have a separate shared-memory callback/domain and a
+   stateful stepped path with FFI state, terminal observations, size-dispatched
+   `op8`/`op16`/`op32`/`opW` behavior, and model-backed byte-array `ExtCall`
+   reads/writes. Complete this stage by moving the public source-state entry
+   point onto that stateful evaluator and proving the remaining byte-domain
+   and length-failure correspondence. Preserve the existing pure handler
+   adapters as explicitly non-observable compatibility fixtures.
 5. **Control-state fidelity.** Thread CakeML's clock and timeout rules through
    `Tick`, `While`, calls, returns, and exceptions, including local clearing
    at the same boundaries. Thread callee globals, memory, and FFI state back

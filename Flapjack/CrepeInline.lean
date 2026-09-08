@@ -82,6 +82,76 @@ def crepMergeExit : Option CrepEarlyExit → Option CrepEarlyExit → Option Cre
   | first, some .loopExit => first
   | none, none => none
 
+def crepArgLoad (temporaryNames : List Nat) (arguments : List (CrepExp α))
+    (argumentNames : List Nat) (program : CrepProg α) : CrepProg α :=
+  nestedDecs temporaryNames arguments
+    (nestedDecs argumentNames (temporaryNames.map .var) program)
+
+def crepInlineTail (program : CrepProg α) : CrepProg α :=
+  .seq .tick program
+
+def crepTransformEoc (returnNames : List Nat) : CrepProg α → CrepProg α
+  | .return values =>
+      crepNestedSeq (returnNames.zipWith (fun name value => .assign name value) values)
+  | .call none name arguments =>
+      .call (some (returnNames, none)) name arguments
+  | .call (some (names, none)) name arguments =>
+      .call (some (names, none)) name arguments
+  | .call (some (names, some (handler, body))) name arguments =>
+      .call (some (names, some (handler, crepTransformEoc returnNames body)))
+        name arguments
+  | .dec name value body => .dec name value (crepTransformEoc returnNames body)
+  | .while condition body => .while condition (crepTransformEoc returnNames body)
+  | .seq first second =>
+      .seq (crepTransformEoc returnNames first) (crepTransformEoc returnNames second)
+  | .ite condition thenBranch elseBranch =>
+      .ite condition (crepTransformEoc returnNames thenBranch)
+        (crepTransformEoc returnNames elseBranch)
+  | program => program
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+def crepTransformBranch (loopDepth : Nat) (returnNames : List Nat) :
+    CrepProg α → CrepProg α
+  | .return values =>
+      .seq
+        (crepNestedSeq
+          (returnNames.zipWith (fun name value => .assign name value) values))
+        (.break loopDepth)
+  | .call none name arguments =>
+      .seq (.call (some (returnNames, none)) name arguments) (.break loopDepth)
+  | .call (some (names, none)) name arguments =>
+      .call (some (names, none)) name arguments
+  | .call (some (names, some (handler, body))) name arguments =>
+      .call (some (names, some (handler,
+        crepTransformBranch loopDepth returnNames body))) name arguments
+  | .dec name value body =>
+      .dec name value (crepTransformBranch loopDepth returnNames body)
+  | .while condition body =>
+      .while condition (crepTransformBranch (loopDepth + 1) returnNames body)
+  | .seq first second =>
+      .seq (crepTransformBranch loopDepth returnNames first)
+        (crepTransformBranch loopDepth returnNames second)
+  | .ite condition thenBranch elseBranch =>
+      .ite condition (crepTransformBranch loopDepth returnNames thenBranch)
+        (crepTransformBranch loopDepth returnNames elseBranch)
+  | program => program
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+def crepInlineNontail [OfNat α 0] (program : CrepProg α) (returnNames temporaryReturns
+    temporaryNames : List Nat) (arguments : List (CrepExp α))
+    (argumentNames : List Nat) : CrepProg α :=
+  nestedDecs temporaryReturns (temporaryReturns.map (fun _ => .const 0))
+    (.seq
+      (crepArgLoad temporaryNames
+        arguments argumentNames program)
+      (crepNestedSeq
+        (returnNames.zipWith (fun name temporary => .assign name (.var temporary))
+          temporaryReturns)))
+
 def crepUnreachElim : CrepProg α → CrepProg α × Option CrepEarlyExit
   | .return values => (.return values, some .return)
   | .raise exception => (.raise exception, some .exception)

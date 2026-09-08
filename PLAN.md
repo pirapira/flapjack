@@ -1810,6 +1810,8 @@ definitions, pass ordering, examples, and proof obligations.
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code
   elimination helpers needed by the next call-substitution layer.
+- [x] Port the Crepe inlining argument-load and return-rewrite combinators,
+  including branch-return break lowering and non-tail call scaffolding.
 
 ## First implementation slice
 

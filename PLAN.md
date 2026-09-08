@@ -1919,6 +1919,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Prove a reusable source-to-Loop raised-handler equation for arbitrary
   exception codes and payloads, including global payload transfer, exception
   dispatch, `assignRet`, and the handler continuation.
+- [x] Prove successful source-to-Loop `extCall` projection for arbitrary
+  state-changing host handlers, separating host-state correspondence from
+  generated argument plumbing and observable control results.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

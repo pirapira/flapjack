@@ -358,29 +358,35 @@ mutual
           primitive handler structs functions baseAddress topAddress bytesInWord fuel
           calleeLocals globals memory body (memoryAccess := memoryAccess)
         match result with
-        | .normal _ _ _ => pure (.normal locals globals memory, argumentSteps + steps)
-        | .returned _ _ _ values =>
+        | .normal _ calleeGlobals calleeMemory =>
+            pure (.normal locals calleeGlobals calleeMemory, argumentSteps + steps)
+        | .returned _ calleeGlobals calleeMemory values =>
             match info with
-            | none => pure (.returned locals globals memory values, argumentSteps + steps)
+            | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values,
+                argumentSteps + steps)
             | some (destination, _) => do
-                let (locals, globals) ← assignPanValueCallResult locals globals
+                let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
                   destination values
                   (structs := structs)
-                pure (.normal locals globals memory, argumentSteps + steps)
-        | .raised _ _ _ exception value =>
+                pure (.normal locals globals calleeMemory, argumentSteps + steps)
+        | .raised _ calleeGlobals calleeMemory exception value =>
             match info with
             | some (_, some (caught, handlerVariable, handlerProgram)) =>
                 if caught == exception then
                   let (result, handlerSteps) ←
                     evalPanValueProgWithPrimitiveCallsAndFfiSteps
                       primitive handler structs functions baseAddress topAddress bytesInWord fuel
-                      (updatePanValueMap locals handlerVariable value) globals memory
+                      (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
                       handlerProgram (memoryAccess := memoryAccess)
                   pure (result, argumentSteps + steps + handlerSteps)
-                else pure (.raised locals globals memory exception value, argumentSteps + steps)
-            | _ => pure (.raised locals globals memory exception value, argumentSteps + steps)
-        | .broke _ _ _ => pure (.broke locals globals memory, argumentSteps + steps)
-        | .continued _ _ _ => pure (.continued locals globals memory, argumentSteps + steps)
+                else pure (.raised locals calleeGlobals calleeMemory exception value,
+                  argumentSteps + steps)
+            | _ => pure (.raised locals calleeGlobals calleeMemory exception value,
+                argumentSteps + steps)
+        | .broke _ calleeGlobals calleeMemory =>
+            pure (.broke locals calleeGlobals calleeMemory, argumentSteps + steps)
+        | .continued _ calleeGlobals calleeMemory =>
+            pure (.continued locals calleeGlobals calleeMemory, argumentSteps + steps)
     termination_by fuel _ _ _ _ _ _ => fuel
 
   def evalPanValueProgWithPrimitiveCallsAndFfiSteps
@@ -1062,16 +1068,16 @@ theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
                           cases result with
                           | normal _ _ _ =>
                               simp [hparams, hstep, horiginal]
-                          | returned _ _ _ values =>
+                          | returned _ calleeGlobals calleeMemory values =>
                               cases info with
                               | none => simp [hparams, hstep, horiginal]
                               | some info =>
-                                  cases hassign : assignPanValueCallResult locals globals info.1 values
+                                  cases hassign : assignPanValueCallResult locals calleeGlobals info.1 values
                                     (structs := structs) with
                                   | none => simp [hparams, hstep, horiginal, hassign]
                                   | some assignedLocals =>
                                       simp [hparams, hstep, horiginal, hassign]
-                          | raised _ _ _ exception value =>
+                          | raised _ calleeGlobals calleeMemory exception value =>
                               cases info with
                               | none => simp [hparams, hstep, horiginal]
                               | some info =>
@@ -1090,17 +1096,17 @@ theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
                                                       primitive handler structs functions
                                                       baseAddress topAddress bytesInWord fuel
                                                       (updatePanValueMap locals handlerVariable value)
-                                                      globals memory handlerProgram with
+                                                      calleeGlobals calleeMemory handlerProgram with
                                                 | none =>
                                                     have hhandlerOriginal :
                                                         evalPanValueProgWithPrimitiveCallsAndFfi
                                                           primitive handler structs functions
                                                           baseAddress topAddress bytesInWord fuel
                                                           (updatePanValueMap locals handlerVariable value)
-                                                          globals memory handlerProgram = none := by
+                                                          calleeGlobals calleeMemory handlerProgram = none := by
                                                       rw [← hprogram fuel
                                                         (updatePanValueMap locals handlerVariable value)
-                                                        globals memory handlerProgram]
+                                                        calleeGlobals calleeMemory handlerProgram]
                                                       simp [hhandler]
                                                     have heqeq : caught = exception := by
                                                       simpa using heq
@@ -1114,11 +1120,11 @@ theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
                                                               primitive handler structs functions
                                                               baseAddress topAddress bytesInWord fuel
                                                               (updatePanValueMap locals handlerVariable value)
-                                                              globals memory handlerProgram =
+                                                              calleeGlobals calleeMemory handlerProgram =
                                                               some handlerResult := by
                                                           rw [← hprogram fuel
                                                             (updatePanValueMap locals handlerVariable value)
-                                                            globals memory handlerProgram]
+                                                            calleeGlobals calleeMemory handlerProgram]
                                                           simp [hhandler]
                                                         have heqeq : caught = exception := by
                                                           simpa using heq
@@ -1205,16 +1211,16 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                 cases result with
                                 | normal _ _ _ =>
                                     simp [hparams, hstep, horiginal]
-                                | returned _ _ _ values =>
+                                | returned _ calleeGlobals calleeMemory values =>
                                     cases info with
                                     | none => simp [hparams, hstep, horiginal]
                                     | some info =>
-                                        cases hassign : assignPanValueCallResult locals globals info.1 values
+                                        cases hassign : assignPanValueCallResult locals calleeGlobals info.1 values
                                           (structs := structs) with
                                         | none => simp [hparams, hstep, horiginal, hassign]
                                         | some assignedLocals =>
                                             simp [hparams, hstep, horiginal, hassign]
-                                | raised _ _ _ exception value =>
+                                | raised _ calleeGlobals calleeMemory exception value =>
                                     cases info with
                                     | none => simp [hparams, hstep, horiginal]
                                     | some info =>
@@ -1233,17 +1239,17 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                                                 primitive handler structs functions
                                                                 baseAddress topAddress bytesInWord fuel
                                                                 (updatePanValueMap locals handlerVariable value)
-                                                                globals memory handlerProgram with
+                                                                calleeGlobals calleeMemory handlerProgram with
                                                           | none =>
                                                               have hhandlerOriginal :
                                                                   evalPanValueProgWithPrimitiveCallsAndFfi
                                                                     primitive handler structs functions
                                                                     baseAddress topAddress bytesInWord fuel
                                                                     (updatePanValueMap locals handlerVariable value)
-                                                                    globals memory handlerProgram = none := by
+                                                                    calleeGlobals calleeMemory handlerProgram = none := by
                                                                 rw [← (ih fuel (Nat.lt_succ_self fuel)
                                                                   (updatePanValueMap locals handlerVariable value)
-                                                                  globals memory none function arguments).2 handlerProgram]
+                                                                  calleeGlobals calleeMemory none function arguments).2 handlerProgram]
                                                                 simp [hhandler]
                                                               have heqeq : caught = exception := by
                                                                 simpa using heq
@@ -1257,11 +1263,11 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                                                         primitive handler structs functions
                                                                         baseAddress topAddress bytesInWord fuel
                                                                         (updatePanValueMap locals handlerVariable value)
-                                                                        globals memory handlerProgram =
+                                                                        calleeGlobals calleeMemory handlerProgram =
                                                                         some handlerResult := by
                                                                     rw [← (ih fuel (Nat.lt_succ_self fuel)
                                                                       (updatePanValueMap locals handlerVariable value)
-                                                                      globals memory none function arguments).2 handlerProgram]
+                                                                      calleeGlobals calleeMemory none function arguments).2 handlerProgram]
                                                                     simp [hhandler]
                                                                   have heqeq : caught = exception := by
                                                                     simpa using heq

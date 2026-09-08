@@ -47,6 +47,12 @@ def steppedTestProgram : Prog Nat :=
 def steppedTestFunctions : List (FunName × List VarName × Prog Nat) :=
   [("id", ["x"], .return (.var .local "x"))]
 
+def steppedStateFunctions : List (FunName × List VarName × Prog Nat) :=
+  [("setGlobal", [], .seq (.assign .global "g" (.const 7)) (.return (.const 1)))]
+
+def steppedStateGlobals : VarName → Option (PanValue Nat) := fun name =>
+  if name == "g" then some (.word 0) else none
+
 #guard
   (evalPanValueExpCounted [] steppedTestLocals steppedTestGlobals steppedTestMemory
     0 100 1 (.op .add [.const 1, .const 2])).map Prod.snd = some 3
@@ -94,6 +100,16 @@ example :
     (evalPanValueProgWithPrimitiveCallsAndFfi steppedTestPrimitive steppedTestFfi []
       steppedTestFunctions 0 100 1 20 steppedTestLocals steppedTestGlobals
       steppedTestMemory (.call none "id" [.const 41])).map steppedReturnedValues
+
+#guard
+      (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi [] steppedStateFunctions
+    0 100 1 8 (fun _ => none) steppedStateGlobals steppedTestMemory
+    (.call none "setGlobal" [])).map
+      (fun (result, _) => match result with
+        | .returned _ globals _ _ => match globals "g" with
+          | some (.word 7) => true
+          | _ => false
+        | _ => false) == some true
 
 example :
     (evalPanValueProgWithPrimitiveCallsAndFfiSteps steppedTestPrimitive steppedTestFfi [] []

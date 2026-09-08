@@ -681,27 +681,30 @@ mutual
           baseAddress topAddress bytesInWord fuel calleeLocals globals memory body
           (memoryAccess := memoryAccess)
         match result with
-        | .normal _ _ _ => pure (.normal locals globals memory)
-        | .returned _ _ _ values =>
+        | .normal _ calleeGlobals calleeMemory =>
+            pure (.normal locals calleeGlobals calleeMemory)
+        | .returned _ calleeGlobals calleeMemory values =>
             match info with
-            | none => pure (.returned locals globals memory values)
+            | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
             | some (destination, _) => do
-                let (locals, globals) ← assignPanValueCallResult locals globals
+                let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
                   destination values
                   (structs := structs)
-                pure (.normal locals globals memory)
-        | .raised _ _ _ exception value =>
+                pure (.normal locals globals calleeMemory)
+        | .raised _ calleeGlobals calleeMemory exception value =>
             match info with
             | some (_, some (caught, handlerVariable, handlerProgram)) =>
                 if caught == exception then
                   evalPanValueProgWithCallsAndFfi structs functions handler
                     baseAddress topAddress bytesInWord fuel
-                    (updatePanValueMap locals handlerVariable value) globals memory
+                    (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
                     handlerProgram (memoryAccess := memoryAccess)
-                else pure (.raised locals globals memory exception value)
-            | _ => pure (.raised locals globals memory exception value)
-        | .broke _ _ _ => pure (.broke locals globals memory)
-        | .continued _ _ _ => pure (.continued locals globals memory)
+                else pure (.raised locals calleeGlobals calleeMemory exception value)
+            | _ => pure (.raised locals calleeGlobals calleeMemory exception value)
+        | .broke _ calleeGlobals calleeMemory =>
+            pure (.broke locals calleeGlobals calleeMemory)
+        | .continued _ calleeGlobals calleeMemory =>
+            pure (.continued locals calleeGlobals calleeMemory)
     termination_by fuel _ _ _ _ _ _ => fuel
 
   def evalPanValueProgWithCallsAndFfi
@@ -926,27 +929,30 @@ mutual
           structs functions baseAddress topAddress bytesInWord fuel
           calleeLocals globals memory body (memoryAccess := memoryAccess)
         match result with
-        | .normal _ _ _ => pure (.normal locals globals memory)
-        | .returned _ _ _ values =>
+        | .normal _ calleeGlobals calleeMemory =>
+            pure (.normal locals calleeGlobals calleeMemory)
+        | .returned _ calleeGlobals calleeMemory values =>
             match info with
-            | none => pure (.returned locals globals memory values)
+            | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
             | some (destination, _) => do
-                let (locals, globals) ← assignPanValueCallResult locals globals
+                let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
                   destination values
                   (structs := structs)
-                pure (.normal locals globals memory)
-        | .raised _ _ _ exception value =>
+                pure (.normal locals globals calleeMemory)
+        | .raised _ calleeGlobals calleeMemory exception value =>
             match info with
             | some (_, some (caught, handlerVariable, handlerProgram)) =>
                 if caught == exception then
                   evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
                     structs functions baseAddress topAddress bytesInWord fuel
-                    (updatePanValueMap locals handlerVariable value) globals memory
+                    (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
                     handlerProgram (memoryAccess := memoryAccess)
-                else pure (.raised locals globals memory exception value)
-            | _ => pure (.raised locals globals memory exception value)
-        | .broke _ _ _ => pure (.broke locals globals memory)
-        | .continued _ _ _ => pure (.continued locals globals memory)
+                else pure (.raised locals calleeGlobals calleeMemory exception value)
+            | _ => pure (.raised locals calleeGlobals calleeMemory exception value)
+        | .broke _ calleeGlobals calleeMemory =>
+            pure (.broke locals calleeGlobals calleeMemory)
+        | .continued _ calleeGlobals calleeMemory =>
+            pure (.continued locals calleeGlobals calleeMemory)
     termination_by fuel _ _ _ _ _ _ => fuel
 
   def evalPanValueProgWithPrimitiveCallsAndFfi

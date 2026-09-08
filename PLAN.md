@@ -1874,6 +1874,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   with the callee's final state and remaining clock.
 - [x] Prove the clocked call-return destination contract, checking assignment
   shape while preserving the callee memory, FFI state, and remaining clock.
+- [x] Prove clocked-to-stepped sequence projection, preserving both the
+  explicit clock result and accumulated source-step count across `seq`.
 - [x] Expose the abstract StackLang FFI returned-callee continuation equation,
   matching the bounded frame boundary.
 - [x] Prove that a Word-to-Stack FFI argument move preserves every unrelated

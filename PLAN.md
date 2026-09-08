@@ -142,6 +142,8 @@ definitions, pass ordering, examples, and proof obligations.
   compiled skip and constant-return programs.
 - [x] Prove source-to-full-Crepe agreement for a compiled binary addition
   expression over constants.
+- [x] Prove source-to-full-Crepe agreement for a caught exception handler,
+  including the global-memory payload carried across the compiled call.
 - [x] Extend generic source-to-full-Crepe agreement through a compiled
   constant store/load and its state-memory projection.
 - [x] Extend generic source-to-full-Crepe agreement through constant

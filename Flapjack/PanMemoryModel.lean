@@ -23,6 +23,10 @@ structure PanMemoryModel (α : Type u) where
   aligned : Nat → α → Bool
   /-- Decode a byte list using the source endianness convention. -/
   wordOfBytes : Bool → List α → α
+  /-- Evaluate a Pancake word operator on its complete argument list. -/
+  wordOp : BinOp → List α → Option α
+  /-- Evaluate a Pancake comparison, including its signed/unsigned split. -/
+  compare : Cmp → α → α → α
 
 abbrev PanWordMemory (α : Type u) := α → Option α
 abbrev PanWordMemoryDomain (α : Type u) := α → Bool
@@ -35,6 +39,8 @@ abbrev PanWordMemoryDomain (α : Type u) := α → Bool
     source/target equivalence proof should provide an access record instead.
 -/
 structure PanMemoryAccess (α : Type u) where
+  wordOp : BinOp → List α → Option α
+  compare : Cmp → α → α → α
   readWord : PanWordMemoryDomain α → PanWordMemory α → α → Option α
   readByte : PanWordMemoryDomain α → PanWordMemory α → α → α → Option α
   read32 : PanWordMemoryDomain α → PanWordMemory α → α → α → Option α
@@ -121,7 +127,9 @@ def panModelStoreWord [BEq α]
 
 def panMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
     [OfNat α 2] [OfNat α 3] (model : PanMemoryModel α) : PanMemoryAccess α :=
-  { readWord := fun domain memory address =>
+  { wordOp := model.wordOp
+    compare := model.compare
+    readWord := fun domain memory address =>
       panModelReadWord domain memory address
     storeWord := fun domain memory address value =>
       panModelStoreWord domain memory address value

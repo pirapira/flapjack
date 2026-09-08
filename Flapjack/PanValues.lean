@@ -24,6 +24,8 @@ inductive PanValue (α : Type u) where
     non-word cell fail instead of silently treating it as a scalar. -/
 structure PanValueMemoryAccess (α : Type u) where
   domain : α → Bool
+  wordOp : BinOp → List α → Option α
+  compare : Cmp → α → α → α
   readWord : (α → Bool) → (α → Option (PanValue α)) → α → α → Option (PanValue α)
   readByte : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
   read16 : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
@@ -53,6 +55,8 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
     (domain : α → Bool := fun _ => true)
     (sharedDomain : α → Bool := domain) : PanValueMemoryAccess α :=
   { domain := domain
+    wordOp := model.wordOp
+    compare := model.compare
     readWord := fun _ memory _ address =>
       if domain address then memory address else none
     storeWord := fun _ memory _ address value =>
@@ -278,10 +282,14 @@ def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .op operator arguments, memoryAccess => do
       let values ← evalPanValueExps structs locals globals memory
         baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
-      match values with
-      | [.word left, .word right] =>
-          some (.word (evalPanBinOp operator left right))
-      | _ => none
+      let values ← values.mapM fun value => match value with
+        | .word value => some value
+        | _ => none
+      match memoryAccess with
+      | none => match values with
+          | [left, right] => some (.word (evalPanBinOp operator left right))
+          | _ => none
+      | some access => (access.wordOp operator values).map .word
   | .panOp .mul arguments, memoryAccess => do
       let values ← evalPanValueExps structs locals globals memory
         baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
@@ -294,7 +302,10 @@ def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let right ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord right (memoryAccess := memoryAccess)
       match left, right with
-      | .word left, .word right => some (.word (evalPanCmp operator left right))
+      | .word left, .word right =>
+          match memoryAccess with
+          | none => some (.word (evalPanCmp operator left right))
+          | some access => some (.word (access.compare operator left right))
       | _, _ => none
   | .shift operator left right, memoryAccess => do
       let left ← evalPanValueExp structs locals globals memory

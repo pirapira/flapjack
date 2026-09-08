@@ -79,6 +79,15 @@ example :
       steppedTestFunctions 0 100 1 20 steppedTestLocals steppedTestGlobals
       steppedTestMemory (.call none "id" [.const 41])).map steppedReturnedValues
 
+example :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps steppedTestPrimitive steppedTestFfi [] []
+      0 100 1 8 steppedTestLocals steppedTestGlobals steppedTestMemory
+      steppedTestProgram).map Prod.fst =
+      evalPanValueProgWithPrimitiveCallsAndFfi steppedTestPrimitive steppedTestFfi [] []
+        0 100 1 8 steppedTestLocals steppedTestGlobals steppedTestMemory
+        steppedTestProgram := by
+  apply evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst
+
 def steppedTestInitial : PanValueProgramState Nat :=
   { structs := []
     globals := steppedTestGlobals

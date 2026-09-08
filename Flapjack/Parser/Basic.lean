@@ -4,11 +4,14 @@ import Flapjack.Parser.Lexer
 Parser state and combinators.
 
 Upstream runs a PEG (`panPEG`) over the token list and then converts the
-resulting parse tree (`panPtreeConversion`). This port keeps the grammar and
-its ordered choices but drops the intermediate parse tree: each nonterminal is
-one Lean function that returns the AST fragment directly. Rule names are kept,
-so `panPEG`'s `EShiftNT` is `parseEShift` here and the two can be read side by
-side.
+resulting parse tree (`panPtreeConversion`). This port follows both stages:
+`Grammar.lean` builds a `ParseTree` and `Conversion.lean` converts it. Rule
+names are kept, so `panPEG`'s `EShiftNT` is `gEShift` here and the two can be
+read side by side.
+
+Only two combinators consume tokens -- `expect` here and `keepTok` in
+`ParseTree.lean` -- and both go through `PState.pop`, which is what keeps
+`remaining` honest.
 
 Failure is `none` rather than an exception so that ordered choice can
 backtrack. The furthest failure seen is carried in the state, which is what

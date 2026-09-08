@@ -417,6 +417,28 @@ def treeOf (source : String) : Option String :=
   | some [tree] => some (treeShape tree)
   | _ => none
 
+-- `PState.remaining` mirrors `toks.length` so that spans and fuel do not have
+-- to walk the remaining tokens (#405). Nothing reports it drifting: a rule
+-- that consumed a token without going through `PState.pop` would just compute
+-- short spans. So check the invariant directly, on input that exercises every
+-- consuming primitive -- keywords, identifiers, integers, and punctuation.
+def remainingTracksToks (source : String) : Bool :=
+  let toks := pancakeLex source
+  let final := (gTopDecList (parseFuel toks.length) (PState.ofToks toks)).2
+  final.remaining == final.toks.length
+
+#guard remainingTracksToks "var 1 x = 1;"
+#guard remainingTracksToks "exception E : 1;"
+#guard remainingTracksToks "fun f(1 a, 1 b) { var x = a + b * 2; return x; }"
+#guard remainingTracksToks "fun g() { if 1 < 2 { skip; } else { skip; } while 1 { skip; } }"
+#guard remainingTracksToks "fun h() { var y = <1, 2>; st 8, y.0; return 0; }"
+#guard remainingTracksToks "fun k() { var r = @foo(1, 2, 3, 4); raise E 1; }"
+
+-- The invariant has to survive backtracking, which is where a rewind that
+-- restored `toks` but not `remaining` would show up: `<a, b>` commits to a
+-- comparison, fails on the closing `>`, and unwinds to parse a struct.
+#guard remainingTracksToks "fun b() { var s = <1, 2>; var c = 1 < 2; return 0; }"
+
 -- `TopDecListNT` nests as `[item, rest]` and ends with an empty node, which is
 -- what `conv_TopDecList` matches.
 #guard treeOf "exception E : 1;"

@@ -37,6 +37,7 @@ def pipelineHandlerMachineResult : Option (List (RiscV.Word 64)) := do
     (RiscV.writeRegister (RiscV.zeroState 64) 1 100)
 
 #guard pipelineHandlerMachineResult.isSome
+#guard pipelineHandlerMachineResult = some []
 #guard
   let result := do
     let sections ← pipelineHandlerLinkedSections

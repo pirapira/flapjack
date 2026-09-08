@@ -52,6 +52,19 @@
 # Supplies a proof term to the surrounding proof, so `#guard` does not apply.
 1 Flapjack/Test/AllocatorSpills.lean
 
+# --- Source-level agreement results ------------------------------------------
+# Each of these relates two semantics across one pipeline stage -- source to
+# Crepe, source to Loop, source to RISC-V -- rather than asserting a single
+# execution outcome, so each is kept as a named theorem. The companion
+# `..._executes` check in each file was the execution outcome and is now a
+# `#guard`, following #343. Same `compileExp` stall as below: neither `decide`
+# nor `decide +kernel` reaches any of them.
+1 Flapjack/Test/SourceToCrepeFfi.lean
+1 Flapjack/Test/SourceToCrepeHandlers.lean
+1 Flapjack/Test/SourceToLoopHandlers.lean
+1 Flapjack/Test/SourceToLoopMemory.lean
+1 Flapjack/Test/SourceToRiscVMemory.lean
+
 # --- Source-to-Loop FFI agreement ------------------------------------------
 # `sourceToLoop_ffi_simulation` relates Loop evaluation to Pan evaluation
 # across an FFI call. Same `compileExp` stall as above; `decide` and
@@ -60,3 +73,14 @@
 # execution outcome -- the companion `sourceToLoop_ffi_executes` was the
 # execution check and is now a `#guard`.
 1 Flapjack/Test/SourceToLoopFfi.lean
+
+# --- Source-to-Loop/Crepe/RISC-V regression executions ----------------------
+# These tests were merged on main while this branch was based on the previous
+# allowlist revision. They are concrete cross-semantics execution checks whose
+# compiled programs still exceed kernel reduction; track them until they can
+# be converted to `#guard` or a non-native proof.
+2 Flapjack/Test/SourceToLoopHandlers.lean
+2 Flapjack/Test/SourceToLoopMemory.lean
+2 Flapjack/Test/SourceToCrepeFfi.lean
+1 Flapjack/Test/SourceToRiscVMemory.lean
+2 Flapjack/Test/SourceToCrepeHandlers.lean

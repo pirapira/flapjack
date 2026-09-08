@@ -102,9 +102,25 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 2. **Static data and front-end support**
    - Port shape well-formedness, struct contexts, declarations, and the
      Pancake static-checker result/error types.
-   - Port parser-facing syntax only after the AST and diagnostics are stable.
    - Establish executable validation examples corresponding to CakeML's
      `static_checker` examples.
+   - **Done:** port Pancake's own front end — `panLexer`, the `panPEG`
+     grammar, and the `panPtreeConversion` conversion — to Lean, producing
+     Flapjack AST values. See [`Flapjack/Parser/README.md`](Flapjack/Parser/README.md)
+     for the module map, the three places this port departs from upstream
+     (`@top`, and `Load32`/`Store32` in the localisation pass), the upstream
+     quirks it keeps, and the `locations` option that reproduces
+     `add_locs_annot`. The grammar and the conversion are two stages with a
+     `panPEG` parse tree between them, as upstream, converted by a port of
+     `panPtreeConversion`. Tests are in `Flapjack/Test/Parser.lean` and
+     `Flapjack/Test/ParserStaticExamples.lean`, covering every example in
+     `cakeml/pancake/parser/panConcreteExamplesScript.sml` and the 276
+     referenced examples in
+     `cakeml/pancake/static_checker/panStaticExamplesScript.sml`. Parser
+     output is also fed through `staticCheck` and `compileToCrepe`; the seven
+     places Flapjack's static checker disagrees with upstream on those
+     examples are tabulated in the parser README as `Flapjack/Static.lean`
+     gaps.
 
 3. **Semantics**
    - Define a deterministic big-step/trace semantics for Pancake, including

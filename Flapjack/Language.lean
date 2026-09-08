@@ -100,6 +100,7 @@ inductive Exp (α : Type u) where
   | baseAddr
   | topAddr
   | bytesInWord
+  deriving Repr
 
 inductive OpSize where
   | op8
@@ -136,6 +137,7 @@ inductive Prog (α : Type u) where
   | shMemStore (size : OpSize) (address value : Exp α)
   | tick
   | annot (tag text : String)
+  deriving Repr
 
 structure FunDecl (α : Type u) where
   name : FunName
@@ -144,12 +146,14 @@ structure FunDecl (α : Type u) where
   params : List (VarName × Shape)
   body : Prog α
   returnShape : Shape
+  deriving Repr
 
 inductive Decl (α : Type u) where
   | function (declaration : FunDecl α)
   | decl (shape : Shape) (name : DeclarationName) (value : Exp α)
   | exnDecl (exception : ExceptionId) (shape : Shape)
   | name (struct : StructName) (fields : List (FieldName × Shape))
+  deriving Repr
 
 def nestedSeq : List (Prog α) → Prog α
   | [] => .skip

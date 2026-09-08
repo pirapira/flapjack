@@ -9,6 +9,7 @@ import Flapjack.Correctness
 import Flapjack.FlatCorrectness
 import Flapjack.Tests
 import Flapjack.Static
+import Flapjack.Parser
 import Flapjack.Crepe
 import Flapjack.PanToCrep
 import Flapjack.Compile

@@ -231,6 +231,9 @@ definitions, pass ordering, examples, and proof obligations.
   source call evaluator, including argument temporaries and the return slot.
 - [x] Prove the generated Loop FFI call pipeline agrees with the source FFI
   evaluator, including declaration-slot updates and the caller continuation.
+- [x] Align raised Loop calls with CakeML's global payload convention by
+  preserving callee globals/memory while entering an exception handler, and
+  verify source-to-Loop handler execution.
 - [x] Prove RISC-V instruction-selection and evaluator agreement for the
   emitted constant-return artifact.
 - [x] Lower register-based equality and inequality conditionals to RISC-V,

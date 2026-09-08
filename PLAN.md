@@ -771,6 +771,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   neighboring degrees, and recurse through unspill/freeze before coloring.
 - [x] Expose the ABI-correct full-SSA spill allocator at the location-aware
   Word-to-Stack entry boundary, retaining renamed parameters and allocation slots.
+- [x] Expose the full-SSA spill-to-Stack bridge's combined allocation witness,
+  preserving clash, special-location, coverage, and ABI-parameter contracts.
 - [x] Route the legacy flat full-SSA spill pipeline through state-threaded
   location-aware lowering, so `Alloc` and `StoreConsts` are supported instead
   of being rejected by the stateless compiler.

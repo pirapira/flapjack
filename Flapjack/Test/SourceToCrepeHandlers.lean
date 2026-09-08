@@ -43,7 +43,7 @@ theorem sourceToCrepe_handler_simulation :
           | _ => []) := by
   native_decide
 
-theorem sourceToCrepe_handler_executes :
+#guard
     (do
       let (_, main) ← lookupCompiledFunction "main"
         sourceToLoopHandlerPipeline.pipeline.crepe
@@ -51,7 +51,6 @@ theorem sourceToCrepe_handler_executes :
         sourceToCrepeHandlerPrimitive sourceToCrepeHandlerFfi
         sourceToCrepeHandlerSharedMem
         (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) 80
-        sourceToCrepeHandlerState main) = some [BitVec.ofNat 64 7] := by
-  native_decide
+        sourceToCrepeHandlerState main) = some [BitVec.ofNat 64 7]
 
 end Flapjack

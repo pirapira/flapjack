@@ -57,13 +57,12 @@ theorem sourceToCrepe_ffi_simulation :
           (fun locals => locals "result") := by
   native_decide
 
-theorem sourceToCrepe_ffi_executes :
+#guard
     (evalCrepFullProg [] sourceToCrepeFfiPrimitive sourceToCrepeFfiHandler
       sourceToCrepeFfiSharedMem 0 100 30 sourceToCrepeFfiState
       (compileProg sourceToCrepeFfiContext sourceToCrepeFfiProgram)).map (fun result =>
         match result with
         | .normal state => state.locals 1
-        | _ => none) = some (some (BitVec.ofNat 64 42)) := by
-  native_decide
+        | _ => none) = some (some (BitVec.ofNat 64 42))
 
 end Flapjack

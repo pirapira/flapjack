@@ -20,6 +20,7 @@ import Flapjack.Test.CorrectnessCode
 import Flapjack.Test.SourceToLoop
 import Flapjack.Test.SourceToLoopCalls
 import Flapjack.Test.SourceToLoopFfi
+import Flapjack.CorrectnessFfi
 import Flapjack.Test.SourceToLoopMemory
 import Flapjack.Test.SourceToRiscVMemory
 import Flapjack.Test.SourceToLoopHandlers

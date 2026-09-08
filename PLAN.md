@@ -1864,6 +1864,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   intermediate state and remaining clock into the second program.
 - [x] Prove zero-clock call ordering, requiring successful argument evaluation,
   callee lookup, and parameter binding before timeout.
+- [x] Prove the recursive true-loop clock contract, threading `clock - 1`
+  through the body and resuming with the body's resulting state and clock.
 - [x] Expose the abstract StackLang FFI returned-callee continuation equation,
   matching the bounded frame boundary.
 - [x] Prove that a Word-to-Stack FFI argument move preserves every unrelated

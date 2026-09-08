@@ -182,4 +182,44 @@ theorem evalPanValueFfiClockCall_zero_timeout
   simp [evalPanValueFfiClockCall, hargs, hlookup, hbind,
     panValueFfiClockTimeout]
 
+/-! One true loop iteration consumes one clock unit before evaluating the body
+and then resumes the loop with the body's resulting state and clock. -/
+theorem evalPanValueFfiClockProg_while_normal_iteration
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock bodyClock finalClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (bodyLocals bodyGlobals : VarName → Option (PanValue α))
+    (bodyMemory : α → Option (PanValue α)) (bodyFfi : FfiState σ)
+    (conditionValue : α) (condition : Exp α) (body : Prog α)
+    (outcome : PanValueFfiClockOutcome α σ)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (hcondition : evalPanValueExp structs locals globals memory
+      baseAddress topAddress bytesInWord condition
+      (memoryAccess := memoryAccess) = some (.word conditionValue))
+    (hconditionNonzero : (conditionValue == (0 : α)) = false)
+    (hclock : clock ≠ 0)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi (clock - 1)
+      body (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.control (.normal bodyLocals bodyGlobals bodyMemory bodyFfi), bodyClock))
+    (hrest : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel bodyLocals bodyGlobals bodyMemory bodyFfi
+      bodyClock (.while condition body) (memoryAccess := memoryAccess)
+      (contracts := contracts) = some (outcome, finalClock)) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.while condition body) (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (outcome, finalClock) := by
+  simp [evalPanValueFfiClockProg, hcondition, hconditionNonzero, hclock,
+    hbody, hrest]
+
 end Flapjack

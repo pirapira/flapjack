@@ -67,4 +67,49 @@ theorem crepe_handler_call_simulation_regression :
       crepNestedSeq, loadGlobals, compileProg, compileExp,
       updateCrepLocal, updateMemory, lookupCompiledFunction, hexn]
 
+def crepeRaiseContext : CompileContext (Word 64) :=
+  { vars := [], functions := [],
+    exceptions := [("E", BitVec.ofNat 64 7)],
+    maxVar := 0, bytesInWord := BitVec.ofNat 64 8 }
+
+def crepeRaiseState : CrepState (Word 64) :=
+  { locals := fun _ => none, memory := fun _ => none }
+
+def crepeRaiseSource : Prog (Word 64) :=
+  .raise "E" (.const (BitVec.ofNat 64 7))
+
+theorem crepe_raise_simulation_regression :
+    evalCrepFullProg [] (fun _ _ => none) (noCrepFfi (Word 64))
+        defaultCrepSharedMem 0 100 10 crepeRaiseState
+        (compileProg crepeRaiseContext crepeRaiseSource) =
+      some (.raised
+        (restoreCrepOneTemp
+          { crepeRaiseState with
+            memory := updateMemory crepeRaiseState.memory 0
+              (BitVec.ofNat 64 7) }
+          crepeRaiseState 1)
+        (BitVec.ofNat 64 7)) ∧
+    evalPanProgWithCallsAndFfi [] (fun _ _ _ _ _ _ => none) 6
+        (fun _ => none) crepeRaiseSource =
+      some (.raised (fun _ => none) "E" (BitVec.ofNat 64 7)) := by
+  apply compile_full_raise_simulation
+    (context := crepeRaiseContext)
+    (sourceLocals := fun _ => none)
+    (state := crepeRaiseState)
+    (primitive := fun _ _ => none)
+    (ffi := noCrepFfi (Word 64))
+    (sharedMem := defaultCrepSharedMem)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 100) (fuel := 5)
+    (exception := "E") (exceptionCode := BitVec.ofNat 64 7)
+    (value := .const (BitVec.ofNat 64 7))
+    (compiledValue := .const (BitVec.ofNat 64 7))
+    (sourceValue := BitVec.ofNat 64 7)
+    (targetValue := BitVec.ofNat 64 7)
+  · simp [crepeRaiseContext, compileExp]
+  · simp [crepeRaiseContext, lookupInfo]
+  · simp [evalPanExp]
+  · simp [crepeRaiseState, evalCrepFullExp]
+  · rfl
+
 end Flapjack

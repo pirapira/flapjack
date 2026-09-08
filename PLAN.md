@@ -1930,6 +1930,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   sequential argument evaluation and restoration of compiler temporaries.
 - [x] Compose the lowered caught-handler call with the full-Crepe evaluator,
   retaining the generated return-slot setup and handler continuation.
+- [x] Prove source-to-Crepe exception production writes the payload to the
+  global return area before restoring the generated temporary local.
 - [x] Expose a direct source-result-to-linked-RISC-V simulation equation for
   the complete full-SSA FFI regression, in addition to its diagnostic split
   source/machine checks.

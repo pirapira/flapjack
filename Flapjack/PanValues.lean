@@ -27,11 +27,11 @@ structure PanValueMemoryAccess (α : Type u) where
   wordOp : BinOp → List α → Option α
   compare : Cmp → α → α → α
   shift : Shift → α → α → Option α
-  readWord : (α → Bool) → (α → Option (PanValue α)) → α → α → Option (PanValue α)
+  readWord : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
   readByte : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
   read16 : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
   read32 : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
-  storeWord : (α → Bool) → (α → Option (PanValue α)) → α → α → PanValue α →
+  storeWord : (α → Bool) → (α → Option (PanValue α)) → α → α → α →
     Option (α → Option (PanValue α))
   storeByte : (α → Bool) → (α → Option (PanValue α)) → α → α → α →
     Option (α → Option (PanValue α))
@@ -59,11 +59,14 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
     wordOp := model.wordOp
     compare := model.compare
     shift := model.shift
-    readWord := fun _ memory _ address =>
-      if domain address then memory address else none
+    readWord := fun _ memory _ address => do
+      let value ← if domain address then memory address else none
+      let .word value := value | none
+      pure value
     storeWord := fun _ memory _ address value =>
       if domain address then
-        some (fun current => if current == address then some value else memory current)
+        some (fun current =>
+          if current == address then some (.word value) else memory current)
       else none
     readByte := fun _ memory bytesInWord address =>
       panModelReadByte model domain (panValueWordMemory memory)
@@ -172,6 +175,148 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
                 else memory current
       | .rStruct _ | .nStruct _ _ => none
   }
+
+def panValueFlatOffset [Add α] (bytesInWord address : α) : Nat → α
+  | 0 => address
+  | count + 1 => panValueFlatOffset bytesInWord address count + bytesInWord
+
+def panValueFlatValueFuel : PanValue α → Nat
+  | .word _ => 1
+  | .rStruct fields => 1 + panValueFlatValueListFuel fields
+  | .nStruct _ fields => 1 + panValueFlatValueFieldListFuel fields
+where
+  panValueFlatValueListFuel : List (PanValue α) → Nat
+    | [] => 0
+    | value :: values =>
+        panValueFlatValueFuel value + panValueFlatValueListFuel values
+
+  panValueFlatValueFieldListFuel : List (FieldName × PanValue α) → Nat
+    | [] => 0
+    | (_, value) :: fields =>
+        panValueFlatValueFuel value + panValueFlatValueFieldListFuel fields
+
+def panValueFlatWordsFuel : Nat → PanValue α → List α
+  | 0, _ => []
+  | _fuel + 1, .word value => [value]
+  | fuel + 1, .rStruct fields => panValueFlatWordsListFuel fuel fields
+  | fuel + 1, .nStruct _ fields => panValueFlatWordsFieldListFuel fuel fields
+where
+  panValueFlatWordsListFuel : Nat → List (PanValue α) → List α
+    | _, [] => []
+    | 0, _ :: _ => []
+    | fuel + 1, value :: values =>
+        panValueFlatWordsFuel fuel value ++ panValueFlatWordsListFuel fuel values
+
+  panValueFlatWordsFieldListFuel : Nat →
+      List (FieldName × PanValue α) → List α
+    | _, [] => []
+    | 0, _ :: _ => []
+    | fuel + 1, (_, value) :: fields =>
+        panValueFlatWordsFuel fuel value ++
+          panValueFlatWordsFieldListFuel fuel fields
+
+def panValueFlatWords (value : PanValue α) : List α :=
+  panValueFlatWordsFuel (panValueFlatValueFuel value + 1) value
+
+def panValueFlatShapeFuel : Shape → Nat
+  | .one => 1
+  | .comb shapes => 1 + panValueFlatShapeListFuel shapes
+  | .named _ => 1
+where
+  panValueFlatShapeListFuel : List Shape → Nat
+    | [] => 0
+    | shape :: shapes =>
+        panValueFlatShapeFuel shape + panValueFlatShapeListFuel shapes
+
+def panValueFlatFieldsFuel : List (FieldName × Shape) → Nat
+  | [] => 0
+  | (_, shape) :: fields =>
+      1 + panValueFlatShapeFuel shape + panValueFlatFieldsFuel fields
+
+def panValueFlatContextFuel : StructContext → Nat
+  | [] => 0
+  | (_, info) :: context =>
+      panValueFlatFieldsFuel info.fields + panValueFlatContextFuel context
+
+def panValueFlatReadWord [BEq α]
+    (memory : α → Option (PanValue α)) (bytesInWord : α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (address : α) : Option α :=
+  match memoryAccess with
+  | none =>
+      match memory address with
+      | some (.word value) => some value
+      | _ => none
+  | some access => access.readWord access.domain memory bytesInWord address
+
+mutual
+  def panValueFlatLoadFuel [BEq α] [Add α]
+      (structs : StructContext) (readWord : α → Option α)
+      (bytesInWord : α) : Nat → Shape → α → Option (PanValue α)
+    | 0, _, _ => none
+    | _fuel + 1, .one, address => (readWord address).map .word
+    | fuel + 1, .comb shapes, address =>
+        (panValueFlatLoadListFuel structs readWord bytesInWord fuel shapes address).map
+          .rStruct
+    | fuel + 1, .named name, address => do
+        let info ← lookupInfo name structs
+        let fields ← panValueFlatLoadFieldsFuel structs readWord bytesInWord fuel
+          info.fields address
+        pure (.nStruct name fields)
+  termination_by fuel _shape _address => fuel
+
+  def panValueFlatLoadListFuel [BEq α] [Add α]
+      (structs : StructContext) (readWord : α → Option α)
+      (bytesInWord : α) : Nat → List Shape → α → Option (List (PanValue α))
+    | _, [], _ => some []
+    | 0, _ :: _, _ => none
+    | fuel + 1, shape :: shapes, address => do
+        let value ← panValueFlatLoadFuel structs readWord bytesInWord fuel shape address
+        let values ← panValueFlatLoadListFuel structs readWord bytesInWord fuel shapes
+          (panValueFlatOffset bytesInWord address (shapeSizeWithContext structs shape))
+        pure (value :: values)
+  termination_by fuel _shapes _address => fuel
+
+  def panValueFlatLoadFieldsFuel [BEq α] [Add α]
+      (structs : StructContext) (readWord : α → Option α)
+      (bytesInWord : α) : Nat → List (FieldName × Shape) → α →
+      Option (List (FieldName × PanValue α))
+    | _, [], _ => some []
+    | 0, _ :: _, _ => none
+    | fuel + 1, (field, shape) :: fields, address => do
+        let value ← panValueFlatLoadFuel structs readWord bytesInWord fuel shape address
+        let values ← panValueFlatLoadFieldsFuel structs readWord bytesInWord fuel fields
+          (panValueFlatOffset bytesInWord address (shapeSizeWithContext structs shape))
+        pure ((field, value) :: values)
+  termination_by fuel _fields _address => fuel
+end
+
+def panValueFlatLoad [BEq α] [Add α]
+    (structs : StructContext) (memory : α → Option (PanValue α))
+    (bytesInWord : α) (address : α) (shape : Shape)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    Option (PanValue α) :=
+  if isWfShape structs shape then
+    panValueFlatLoadFuel structs
+      (panValueFlatReadWord memory bytesInWord memoryAccess)
+      bytesInWord
+      (panValueFlatContextFuel structs + panValueFlatShapeFuel shape + 1)
+      shape address
+  else none
+
+def panValueFlatStoreWords [BEq α] [Add α]
+    (storeWord : (α → Option (PanValue α)) → α → α →
+      Option (α → Option (PanValue α)))
+    (bytesInWord : α) (memory : α → Option (PanValue α)) :
+    α → List α → Option (α → Option (PanValue α))
+  | _, [] => some memory
+  | address, value :: values => do
+      let memory ← storeWord memory address value
+      panValueFlatStoreWords storeWord bytesInWord memory
+        (panValueFlatOffset bytesInWord address 1) values
+termination_by _address values => values.length
+decreasing_by
+  simp_wf
 
 def panValueShape (context : StructContext) : PanValue α → Shape
   | .word _ => .one
@@ -326,12 +471,7 @@ def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let address ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
       let .word address := address | none
-      let value ← match memoryAccess with
-        | none => memory address
-        | some access => access.readWord access.domain memory bytesInWord address
-      if isWfShape structs shape && panShapeMatches (panValueShape structs value) shape then
-        some value
-      else none
+      panValueFlatLoad structs memory bytesInWord address shape memoryAccess
   | .load32 address, memoryAccess => do
       let address ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
@@ -463,14 +603,22 @@ def updatePanValueMemory [BEq α] (memory : α → Option (PanValue α))
     (address : α) (value : PanValue α) : α → Option (PanValue α) :=
   updatePanValueMap memory address value
 
-def panValueStoreWithAccess [BEq α]
+def panValueStoreWithAccess [BEq α] [Add α]
     (memory : α → Option (PanValue α)) (bytesInWord address : α)
     (value : PanValue α)
     (memoryAccess : Option (PanValueMemoryAccess α) := none) :
     Option (α → Option (PanValue α)) :=
   match memoryAccess with
-  | none => some (updatePanValueMemory memory address value)
-  | some access => access.storeWord access.domain memory bytesInWord address value
+  | none =>
+      panValueFlatStoreWords
+        (fun memory address value =>
+          some (updatePanValueMemory memory address (.word value)))
+        bytesInWord memory address (panValueFlatWords value)
+  | some access =>
+      panValueFlatStoreWords
+        (fun memory address value =>
+          access.storeWord access.domain memory bytesInWord address value)
+        bytesInWord memory address (panValueFlatWords value)
 
 abbrev PanPrimitiveHandler (α : Type u) :=
   PrimOp → List (PanValue α) → Option (PanValue α)
@@ -930,9 +1078,7 @@ mutual
         let value ← match memoryAccess with
           | none => memory address
           | some access => match size with
-              | .opW => match memoryAccess with
-                  | none => memory address
-                  | some access => (access.readWord access.domain memory bytesInWord address)
+              | .opW => (access.readWord access.domain memory bytesInWord address).map .word
               | .op8 => (access.readByte access.domain memory bytesInWord address).map .word
               | .op16 => (access.read16 access.domain memory bytesInWord address).map .word
               | .op32 => (access.read32 access.domain memory bytesInWord address).map .word
@@ -1205,9 +1351,7 @@ mutual
         let value ← match memoryAccess with
           | none => memory address
           | some access => match size with
-              | .opW => match memoryAccess with
-                  | none => memory address
-                  | some access => (access.readWord access.domain memory bytesInWord address)
+              | .opW => (access.readWord access.domain memory bytesInWord address).map .word
               | .op8 => (access.readByte access.domain memory bytesInWord address).map .word
               | .op16 => (access.read16 access.domain memory bytesInWord address).map .word
               | .op32 => (access.read32 access.domain memory bytesInWord address).map .word

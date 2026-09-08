@@ -439,6 +439,32 @@ def executeFunctionAt [NeZero width]
     (executeCodeUntil fuel start returnAddress code initialized).map
       (fun state => returns.map (readRegister state))
 
+/-! Variant for a function whose entry may equal the caller continuation in a
+    compact linked test image.  It executes the first entry instruction before
+    delegating to `executeCodeUntil`, so the initial state is never mistaken
+    for an already-returned computation. -/
+def executeFunctionAtAfterEntry [NeZero width]
+    (fuel : Nat) (start entry returnAddress : Word width)
+    (parameters : List (Fin 32)) (code : List (Instruction width))
+    (returns : List (Fin 32)) (arguments : List (Word width))
+    (state : State width) : Option (List (Word width)) :=
+  if parameters.length != arguments.length then none
+  else
+    let initialized :=
+      (parameters.zip arguments).foldl
+        (fun state (register, value) => writeRegister state register value)
+        { state with pc := entry }
+    let byteOffset := (entry - start).toNat
+    if byteOffset % 4 ≠ 0 then none
+    else
+      let index := byteOffset / 4
+      match code[index]? with
+      | some instruction =>
+          (executeCodeUntil fuel start returnAddress code
+            (execute initialized instruction)).map
+            (fun state => returns.map (readRegister state))
+      | none => none
+
 def rotateRight [NeZero width] (value : Word width) (amount : Nat) : Word width :=
   BitVec.ushiftRight value (amount % width) |||
     BitVec.shiftLeft value ((width - amount % width) % width)

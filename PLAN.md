@@ -1876,6 +1876,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   shape while preserving the callee memory, FFI state, and remaining clock.
 - [x] Prove clocked-to-stepped sequence projection, preserving both the
   explicit clock result and accumulated source-step count across `seq`.
+- [x] Prove clocked-to-stepped projection for successful no-destination calls,
+  composing argument and callee step counts with the remaining clock.
 - [x] Expose the abstract StackLang FFI returned-callee continuation equation,
   matching the bounded frame boundary.
 - [x] Prove that a Word-to-Stack FFI argument move preserves every unrelated

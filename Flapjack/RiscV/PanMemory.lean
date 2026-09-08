@@ -260,7 +260,7 @@ def evalPanRiscVFlatExp [NeZero width]
         baseAddress topAddress bytesInWord right
       match left, right with
       | .word left, .word right =>
-          (evalPanShift operator left right).map .word
+          (evalPanShiftFull operator left right).map .word
       | _, _ => none
   | .baseAddr => some (.word baseAddress)
   | .topAddr => some (.word topAddress)

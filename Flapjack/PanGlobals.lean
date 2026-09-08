@@ -243,7 +243,18 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
   | .raise exception value => .raise exception (globalCompileExp context value)
   | .return value => .return (globalCompileExp context value)
   | .shMemLoad size kind name address =>
-      .shMemLoad size kind name (globalCompileExp context address)
+      match kind, lookupInfo name context.globals with
+      | .local, _ =>
+          .shMemLoad size .local name (globalCompileExp context address)
+      | .global, some (.one, globalAddress) =>
+          let localName := name ++ globalApostrophes 1
+          .dec name .one (globalCompileExp context address)
+            (.dec localName .one (.const (context.fromNat 0))
+              (.seq
+                (.shMemLoad size .local localName (.var .local name))
+                (.store (.op .sub [.topAddr, .const globalAddress])
+                  (.var .local localName))))
+      | .global, _ => .skip
   | .shMemStore size address value =>
       .shMemStore size (globalCompileExp context address) (globalCompileExp context value)
   | program => program

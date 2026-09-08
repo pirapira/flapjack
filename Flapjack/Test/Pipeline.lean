@@ -144,6 +144,23 @@ example :
     globalExpVars, globalShapeVal, globalTestContext, lookupInfo]
 
 example :
+    globalCompileProg globalTestContext
+        (.shMemLoad .opW .global "g" (.const 3)) =
+      .dec "g" .one (.const 3)
+        (.dec "g'" .one (.const 0)
+          (.seq
+            (.shMemLoad .opW .local "g'" (.var .local "g"))
+            (.store (.op .sub [.topAddr, .const 8]) (.var .local "g'")))) := by
+  simp [globalCompileProg, globalCompileExp, globalApostrophes,
+    globalTestContext, lookupInfo]
+
+example :
+    globalCompileProg globalTestContext
+        (.shMemLoad .opW .global "missing" (.const 3)) =
+      .skip := by
+  simp [globalCompileProg, globalTestContext, lookupInfo]
+
+example :
     let result := globalCompileTop (α := Nat) 1 id
       [.decl .one "g" (.const 7), .function
         { name := "main", inline := false, exported := true, params := [],

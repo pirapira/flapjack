@@ -7,6 +7,15 @@ Crepe-to-Loop compiler slices, executable semantic fragments, and an initial
 RISC-V model. The CakeML HOL development is included as the `cakeml`
 submodule; its Pancake sources are in [`cakeml/pancake`](cakeml/pancake).
 
+Pancake source text can be parsed into Flapjack AST values with
+[`Flapjack/Parser.lean`](Flapjack/Parser.lean), a port of Pancake's own
+`panLexer`, `panPEG` grammar and `panPtreeConversion` conversion.
+`Flapjack.Parser.parseTopDecs (BitVec.ofInt 64) source` returns either a list
+of declarations or a list of positioned errors. The module map, the divergences
+from upstream, and the omissions are documented in
+[`Flapjack/Parser/README.md`](Flapjack/Parser/README.md); there are no new
+user-facing commands.
+
 The Lean library currently contains the core Pancake syntax in
 [`Flapjack/Language.lean`](Flapjack/Language.lean) and the static-checker
 data/context layer plus shape-aware core expression and structured-program

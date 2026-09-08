@@ -1,5 +1,6 @@
 import Flapjack.PanGlobals
 import Flapjack.Compile
+import Flapjack.CrepeInlinePass
 import Flapjack.CrepeArith
 import Flapjack.CrepToLoop
 import Flapjack.Word
@@ -29,6 +30,15 @@ def pipelineExceptionCodes (fromNat : Nat → α) : Nat → List (Decl α) → I
   | index, .exnDecl exception _ :: declarations =>
       (exception, fromNat index) :: pipelineExceptionCodes fromNat (index + 1) declarations
   | index, _ :: declarations => pipelineExceptionCodes fromNat (index + 1) declarations
+
+def pipelineInlineNames : List (Decl α) → List FunName
+  | [] => []
+  | .function declaration :: declarations =>
+      if declaration.inline then
+        declaration.name :: pipelineInlineNames declarations
+      else pipelineInlineNames declarations
+  | _ :: declarations => pipelineInlineNames declarations
+termination_by declarations => sizeOf declarations
 
 def pipelineCrepeContext [BEq α] [Add α]
     (bytesInWord : α) (fromNat : Nat → α)
@@ -549,7 +559,8 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
   let declarations := pipelinePrependInitializers globals.initializers globals.declarations
   let crepe := crepArithFunctions
-    (compileToCrepe crepeContext declarations)
+    (crepInlineTop (pipelineInlineNames declarations)
+      (compileToCrepe crepeContext declarations))
   let loop := pipelineLoopFunctions architecture 1 crepe
   let word := pipelineWordFunctions loop
   { simplified := simplified

@@ -172,6 +172,25 @@ def memoryModelSignedLess : Option (RiscV.Word 64) :=
       | .word value => some value
       | _ => none
 
+def memoryModelArithmeticShift : Option (RiscV.Word 64) :=
+  evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8)
+    (.shift .asr (.const (BitVec.ofNat 64 0x8000000000000000))
+      (.const (BitVec.ofNat 64 1)))
+    (memoryAccess := some (panValueMemoryAccessOfModel memoryModel)) |>.bind fun value =>
+      match value with
+      | .word value => some value
+      | _ => none
+
+def memoryModelRotateRight : Option (RiscV.Word 64) :=
+  evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8)
+    (.shift .ror (.const (BitVec.ofNat 64 1)) (.const (BitVec.ofNat 64 1)))
+    (memoryAccess := some (panValueMemoryAccessOfModel memoryModel)) |>.bind fun value =>
+      match value with
+      | .word value => some value
+      | _ => none
+
 def memoryModelSteppedVariadicAdd : Option (RiscV.Word 64 × Nat) :=
   (evalPanValueSteppedProg (fun _ _ => none) (fun _ _ _ _ _ locals => some locals)
       [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 20
@@ -292,6 +311,8 @@ def memoryModelPublicProgram : Option (RiscV.Word 64) :=
 #guard memoryModelSteppedSharedOutOfDomain = none
 #guard memoryModelVariadicAdd = some (BitVec.ofNat 64 6)
 #guard memoryModelSignedLess = some (BitVec.ofNat 64 1)
+#guard memoryModelArithmeticShift = some (BitVec.ofNat 64 0xc000000000000000)
+#guard memoryModelRotateRight = some (BitVec.ofNat 64 0x8000000000000000)
 #guard memoryModelSteppedVariadicAdd = some (BitVec.ofNat 64 6, 5)
 #guard memoryModelPanValuesByteProgram = some (BitVec.ofNat 64 0xaa)
 #guard memoryModelPanValuesWordProgram = some (BitVec.ofNat 64 0xaa)

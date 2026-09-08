@@ -27,6 +27,8 @@ structure PanMemoryModel (α : Type u) where
   wordOp : BinOp → List α → Option α
   /-- Evaluate a Pancake comparison, including its signed/unsigned split. -/
   compare : Cmp → α → α → α
+  /-- Evaluate all source-level shift operators for the target word type. -/
+  shift : Shift → α → α → Option α
 
 abbrev PanWordMemory (α : Type u) := α → Option α
 abbrev PanWordMemoryDomain (α : Type u) := α → Bool
@@ -41,6 +43,7 @@ abbrev PanWordMemoryDomain (α : Type u) := α → Bool
 structure PanMemoryAccess (α : Type u) where
   wordOp : BinOp → List α → Option α
   compare : Cmp → α → α → α
+  shift : Shift → α → α → Option α
   readWord : PanWordMemoryDomain α → PanWordMemory α → α → Option α
   readByte : PanWordMemoryDomain α → PanWordMemory α → α → α → Option α
   read32 : PanWordMemoryDomain α → PanWordMemory α → α → α → Option α
@@ -129,6 +132,7 @@ def panMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
     [OfNat α 2] [OfNat α 3] (model : PanMemoryModel α) : PanMemoryAccess α :=
   { wordOp := model.wordOp
     compare := model.compare
+    shift := model.shift
     readWord := fun domain memory address =>
       panModelReadWord domain memory address
     storeWord := fun domain memory address value =>

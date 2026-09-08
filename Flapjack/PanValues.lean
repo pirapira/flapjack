@@ -26,6 +26,7 @@ structure PanValueMemoryAccess (α : Type u) where
   domain : α → Bool
   wordOp : BinOp → List α → Option α
   compare : Cmp → α → α → α
+  shift : Shift → α → α → Option α
   readWord : (α → Bool) → (α → Option (PanValue α)) → α → α → Option (PanValue α)
   readByte : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
   read16 : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
@@ -57,6 +58,7 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
   { domain := domain
     wordOp := model.wordOp
     compare := model.compare
+    shift := model.shift
     readWord := fun _ memory _ address =>
       if domain address then memory address else none
     storeWord := fun _ memory _ address value =>
@@ -314,7 +316,9 @@ def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
         baseAddress topAddress bytesInWord right (memoryAccess := memoryAccess)
       match left, right with
       | .word left, .word right =>
-          (evalPanShift operator left right).map .word
+          match memoryAccess with
+          | none => (evalPanShift operator left right).map .word
+          | some access => (access.shift operator left right).map .word
       | _, _ => none
   | .baseAddr, _ => some (.word baseAddress)
   | .topAddr, _ => some (.word topAddress)

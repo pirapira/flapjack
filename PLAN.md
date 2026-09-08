@@ -1765,6 +1765,8 @@ definitions, pass ordering, examples, and proof obligations.
   and caller continuation into an executable RISC-V trace.
 - [x] Check executable equality between the handler source semantics and the
   generated linked RISC-V handler execution result.
+- [x] Exercise a declaration call through the full-SSA spill-aware pipeline
+  and compare its linked RISC-V result with source call semantics.
 - [x] Expose location-aware bitmap sequence compilation and evaluator
   contracts for the spill-aware Word-to-Stack boundary.
 - [x] Expose location-aware bitmap handler-call and FFI lowering equations

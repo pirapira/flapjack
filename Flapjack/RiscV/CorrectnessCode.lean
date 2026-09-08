@@ -110,4 +110,29 @@ theorem compileLabProgram_cross_section_jump_execute :
       some (BitVec.ofNat 64 7) := by
   decide
 
+/-! Compose continuation materialization, a cross-section call jump, the
+    callee return instruction, and the caller continuation into one executable
+    trace.  The final jump skips the already-returned callee section and gives
+    the runner a concrete return PC. -/
+
+theorem compileLabProgram_call_return_execute :
+    (compileLabProgram (width := 64) { services := [] }
+      [⟨1, [
+          .labAsm (.linkValue ⟨1, 0⟩) [] 0,
+          .labAsm (.jump ⟨2, 0⟩) [] 0,
+          .label 1 0 0,
+          .asm (.const 1 28) [] 0,
+          .asm (.const 2 9) [] 0,
+          .labAsm (.jump ⟨3, 0⟩) [] 0]⟩,
+       ⟨2, [
+          .label 2 0 0,
+          .asm (.const 2 7) [] 0,
+          .labAsm .return [] 0]⟩,
+       ⟨3, [.label 3 0 0]⟩]).bind
+        (fun code =>
+          (executeCodeUntil 20 (0 : Word 64) (BitVec.ofNat 64 28) code
+            (zeroState 64)).map (fun state => readRegister state 2)) =
+      some (BitVec.ofNat 64 9) := by
+  decide
+
 end Flapjack.RiscV

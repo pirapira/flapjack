@@ -33,4 +33,24 @@ def evalRiscVRor : Option (PanValue ShiftWord) :=
   | some (.word value) => value == shiftWord 0xc0
   | _ => false
 
+#guard RiscV.panRiscVWordOp (width := 8) .add [] == some (shiftWord 0)
+#guard RiscV.panRiscVWordOp (width := 8) .add [shiftWord 1, shiftWord 2, shiftWord 3] ==
+  some (shiftWord 6)
+ #guard RiscV.panRiscVWordOp (width := 8) .and [] == some (shiftWord 0xff)
+#guard RiscV.panRiscVWordOp (width := 8) .xor [shiftWord 0xf0, shiftWord 0x0f, shiftWord 0x03] ==
+  some (shiftWord 0xfc)
+#guard RiscV.panRiscVWordOp (width := 8) .sub [shiftWord 7, shiftWord 2] == some (shiftWord 5)
+#guard RiscV.panRiscVWordOp (width := 8) .sub [] == none
+#guard RiscV.panRiscVWordOp (width := 8) .sub [shiftWord 7] == none
+
+def evalRiscVAddThree : Option (PanValue ShiftWord) :=
+  RiscV.evalPanRiscVFlatExp [] (fun _ => none) (fun _ => none)
+    (fun _ => false) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.op .add [.const (shiftWord 1), .const (shiftWord 2), .const (shiftWord 3)])
+
+#guard match evalRiscVAddThree with
+  | some (.word value) => value == shiftWord 6
+  | _ => false
+
 end Flapjack

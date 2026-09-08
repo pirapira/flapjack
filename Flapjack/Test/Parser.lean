@@ -413,7 +413,7 @@ def treeShape : ParseTree → String
 
 def treeOf (source : String) : Option String :=
   let toks := pancakeLex source
-  match (gTopDecList (parseFuel toks.length) { toks := toks, furthest := none }).1 with
+  match (gTopDecList (parseFuel toks.length) (PState.ofToks toks)).1 with
   | some [tree] => some (treeShape tree)
   | _ => none
 

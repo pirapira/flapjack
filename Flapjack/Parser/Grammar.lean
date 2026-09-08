@@ -39,7 +39,7 @@ def rpt (p : P Trees) : Nat → P Trees
           pure (trees ++ rest)
 
 /-- `rpt` seeded from the tokens still to come. -/
-def rptHere (p : P Trees) : P Trees := fun s => rpt p s.toks.length s
+def rptHere (p : P Trees) : P Trees := fun s => rpt p s.remaining s
 
 end P
 

@@ -32,7 +32,7 @@ def lexErrorToParseError (entry : String × Locs) : ParseError :=
 /-- Run a grammar rule over a token list, requiring that it consumes
 everything and yields exactly one tree. -/
 def runGrammar (rule : Nat → P P.Trees) (toks : Toks) : Except ParseError ParseTree :=
-  let state : PState := { toks := toks, furthest := none }
+  let state : PState := PState.ofToks toks
   match rule (parseFuel toks.length) state with
   | (some [tree], final) =>
       if final.toks.isEmpty then .ok tree

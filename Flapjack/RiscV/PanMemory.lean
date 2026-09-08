@@ -71,6 +71,21 @@ def panRiscVWordOp [NeZero width]
       | [left, right] => some (left - right)
       | _ => none
 
+/-! RISC-V source comparison, preserving Pancake's signed/unsigned split. -/
+
+def panRiscVCmp [NeZero width]
+    (operator : Cmp) (left right : Word width) : Word width :=
+  let result := match operator with
+    | .equal => left == right
+    | .notEqual => left != right
+    | .lower => decide (left < right)
+    | .notLower => decide (¬ left < right)
+    | .less => signedLess left right
+    | .notLess => !signedLess left right
+    | .test => AndOp.and left right == 0
+    | .notTest => AndOp.and left right != 0
+  BitVec.ofNat width (if result then 1 else 0)
+
 def panRiscVMemoryModel [NeZero width] : PanMemoryModel (Word width) :=
   { byteAlign := panRiscVByteAlign
     getByte := fun bytesInWord address value _bigEndian =>
@@ -269,7 +284,7 @@ def evalPanRiscVFlatExp [NeZero width]
         baseAddress topAddress bytesInWord right
       match left, right with
       | .word left, .word right =>
-          some (.word (evalPanCmp operator left right))
+          some (.word (panRiscVCmp operator left right))
       | _, _ => none
   | .shift operator left right => do
       let left ← evalPanRiscVFlatExp structs locals globals domain memory

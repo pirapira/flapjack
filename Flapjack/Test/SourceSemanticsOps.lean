@@ -53,4 +53,28 @@ def evalRiscVAddThree : Option (PanValue ShiftWord) :=
   | some (.word value) => value == shiftWord 6
   | _ => false
 
+#guard RiscV.panRiscVCmp .lower (shiftWord 0x80) (shiftWord 0) == shiftWord 0
+#guard RiscV.panRiscVCmp .less (shiftWord 0x80) (shiftWord 0) == shiftWord 1
+#guard RiscV.panRiscVCmp .notLower (shiftWord 0x80) (shiftWord 0) == shiftWord 1
+#guard RiscV.panRiscVCmp .notLess (shiftWord 0x80) (shiftWord 0) == shiftWord 0
+
+def evalRiscVSignedLess : Option (PanValue ShiftWord) :=
+  RiscV.evalPanRiscVFlatExp [] (fun _ => none) (fun _ => none)
+    (fun _ => false) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.cmp .less (.const (shiftWord 0x80)) (.const (shiftWord 0)))
+
+def evalRiscVUnsignedLower : Option (PanValue ShiftWord) :=
+  RiscV.evalPanRiscVFlatExp [] (fun _ => none) (fun _ => none)
+    (fun _ => false) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.cmp .lower (.const (shiftWord 0x80)) (.const (shiftWord 0)))
+
+#guard match evalRiscVSignedLess with
+  | some (.word value) => value == shiftWord 1
+  | _ => false
+#guard match evalRiscVUnsignedLower with
+  | some (.word value) => value == shiftWord 0
+  | _ => false
+
 end Flapjack

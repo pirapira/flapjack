@@ -78,8 +78,8 @@ example :
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
     pipelineWordFunctions, pipelinePrependInitializers,
     compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
-    compileProg, loopCompileProg, 
-    lookupInfo,
+    compileProg, crepArithFunctions, crepArithProg, loopCompileProg,
+    lookupInfo
     ]
 
 example :

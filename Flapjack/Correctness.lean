@@ -87,16 +87,13 @@ def pipelineMulLinkedFunctions := pipelineMulPipeline.linkedFunctions
 
 theorem pipelineMulFunctions_shape :
     pipelineMulPipeline.functions =
-      [(1, [], some ([.addi 3 0 (BitVec.ofNat 64 2),
-        .addi 4 0 (BitVec.ofNat 64 3), .mulHU 5 3 4, .mul 5 3 4,
-        .addi 6 5 0], [6]))] := by
+      [(1, [], some ([.addi 3 0 (BitVec.ofNat 64 6)], [3]))] := by
   native_decide
 
 theorem pipelineMulLinkedFunctions_shape :
     pipelineMulLinkedFunctions =
       some [(1, 0, [],
-        [.addi 3 0 (BitVec.ofNat 64 2), .addi 4 0 (BitVec.ofNat 64 3),
-          .mulHU 5 3 4, .mul 5 3 4, .addi 6 5 0], [6])] := by
+        [.addi 3 0 (BitVec.ofNat 64 6)], [3])] := by
   change RiscV.linkRiscVFunctions 0 pipelineMulPipeline.functions = _
   rw [pipelineMulFunctions_shape]
   rfl

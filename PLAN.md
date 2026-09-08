@@ -1790,6 +1790,8 @@ definitions, pass ordering, examples, and proof obligations.
   RISC-V compiler, with valid and malformed AST regressions.
 - [x] Preserve `pan_to_target` main synthesis for the checked and linked
   full-SSA RISC-V entrypoints.
+- [x] Port and place the first executable `crep_arith` simplification pass,
+  folding constant Crepe multiplication before Crepe-to-Loop lowering.
 
 ## First implementation slice
 

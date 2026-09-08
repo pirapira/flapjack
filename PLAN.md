@@ -1949,9 +1949,10 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Expose a reusable sequential Crepe-to-Loop agreement contract for an FFI
   call followed by an arbitrary continuation, preserving generated temporary
   state in every control result.
-- [x] Port the no-handler global call-result lowering from `pan_globals`,
-  rewriting known destinations to a declaration call followed by a global
-  store and preserving the timeout-safe fallback for unknown destinations.
+- [x] Port the global call-result lowering from `pan_globals`, rewriting known
+  destinations to declaration-based result handling and global stores (with
+  the caught-handler flag protocol), while preserving the timeout-safe
+  fallback for unknown destinations.
 - [x] Prove the reusable source-to-Crepe FFI lowering equation, including
   sequential argument evaluation and restoration of compiler temporaries.
 - [x] Compose the lowered caught-handler call with the full-Crepe evaluator,

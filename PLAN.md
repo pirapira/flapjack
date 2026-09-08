@@ -1862,6 +1862,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   timeout, true zero-clock loops, and clock-stable leaf evaluation.
 - [x] Prove clocked source sequence composition, threading the normal
   intermediate state and remaining clock into the second program.
+- [x] Prove zero-clock call ordering, requiring successful argument evaluation,
+  callee lookup, and parameter binding before timeout.
 - [x] Expose the abstract StackLang FFI returned-callee continuation equation,
   matching the bounded frame boundary.
 - [x] Prove that a Word-to-Stack FFI argument move preserves every unrelated

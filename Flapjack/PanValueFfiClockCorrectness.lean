@@ -146,4 +146,40 @@ theorem evalPanValueFfiClockProg_seq_normal
       some (outcome, finalClock) := by
   simp [evalPanValueFfiClockProg, hfirst, hsecond]
 
+/-! A zero-clock call still evaluates its arguments and validates the callee
+lookup/binding boundary before producing `TimeOut`.  This mirrors the order
+of the corresponding `panSem` equation and prevents a timeout theorem from
+silently accepting malformed calls. -/
+theorem evalPanValueFfiClockCall_zero_timeout
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (values : List (PanValue α)) (parameters : List VarName)
+    (calleeLocals : VarName → Option (PanValue α))
+    (body : Prog α) (function : FunName) (arguments : List (Exp α))
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (hargs : evalPanValueExps structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals) :
+    evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi 0
+      info function arguments (memoryAccess := memoryAccess)
+      (contracts := contracts) =
+      some (.timeout (fun _ => none) globals memory ffi, 0) := by
+  simp [evalPanValueFfiClockCall, hargs, hlookup, hbind,
+    panValueFfiClockTimeout]
+
 end Flapjack

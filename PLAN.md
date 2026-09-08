@@ -1880,6 +1880,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   composing argument and callee step counts with the remaining clock.
 - [x] Prove clocked-to-stepped projection for uncaught and caught call
   exceptions, including handler step counts and state/clock threading.
+- [x] Prove clocked-to-stepped projection for destination-bearing calls,
+  including validated local/global result assignment.
 - [x] Prove the recursive true-loop clocked-to-stepped projection, threading
   body and resumed-loop results with their accumulated source-step counts.
 - [x] Expose the abstract StackLang FFI returned-callee continuation equation,

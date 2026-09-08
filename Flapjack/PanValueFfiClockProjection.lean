@@ -174,6 +174,68 @@ theorem evalPanValueFfiClockCall_raised_projects_to_steps
   · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hexception,
       hwithin, hstepBody]
 
+/-! Return values assigned to an explicit caller destination project as well.
+The assignment result is shared by the clocked and stepped evaluators, while
+the callee memory, FFI state, and remaining clock continue to be preserved. -/
+theorem evalPanValueFfiClockCall_destination_projects_to_steps
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock finalClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (values : List (PanValue α)) (parameters : List VarName)
+    (calleeLocals bodyLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (body : Prog α) (function : FunName) (arguments : List (Exp α))
+    (destination : Option (VarKind × VarName))
+    (assignedLocals assignedGlobals : VarName → Option (PanValue α))
+    (argumentSteps bodySteps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (hargs : evalPanValueExps structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some values)
+    (hargsSteps : evalPanValueExpsCounted structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some (values, argumentSteps))
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hreturn : panValueReturnValid structs contracts function values = true)
+    (hwithin : panValueValuesWithinLimit structs values = true)
+    (hassign : assignPanValueCallResult locals finalGlobals destination values
+      (structs := structs) = some (assignedLocals, assignedGlobals))
+    (hclockBody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi (clock - 1)
+      body (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.control (.returned bodyLocals finalGlobals finalMemory finalFfi values), finalClock))
+    (hstepBody : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi body
+      (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.returned bodyLocals finalGlobals finalMemory finalFfi values, bodySteps)) :
+    evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (some (destination, none)) function arguments
+      (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.control (.normal assignedLocals assignedGlobals finalMemory finalFfi), finalClock) ∧
+    evalPanValueFfiCallSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      (some (destination, none)) function arguments
+      (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.normal assignedLocals assignedGlobals finalMemory finalFfi,
+        argumentSteps + bodySteps) := by
+  constructor
+  · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hreturn,
+      hwithin, hassign, hclockBody]
+  · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hreturn,
+      hwithin, hassign, hstepBody]
+
 /-! A caught exception projects through the handler continuation.  The
 handler's clock and step result are both threaded after the callee's state has
 been transferred to it. -/

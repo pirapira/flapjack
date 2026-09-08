@@ -1858,6 +1858,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   lowering, including control-marker resolution and instruction-list append.
 - [x] Add the corresponding FFI loop-continue lowering equation and compiler
   shape regression.
+- [x] Name and prove the clocked source contracts for `Tick`, zero-clock
+  timeout, true zero-clock loops, and clock-stable leaf evaluation.
 - [x] Expose the abstract StackLang FFI returned-callee continuation equation,
   matching the bounded frame boundary.
 - [x] Prove that a Word-to-Stack FFI argument move preserves every unrelated

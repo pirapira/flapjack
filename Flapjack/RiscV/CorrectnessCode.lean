@@ -1,4 +1,5 @@
 import Flapjack.RiscV.CorrectnessCondition
+import Flapjack.RiscV.Lab
 
 /-!
 Machine-level control-flow contracts for the branch instructions emitted by
@@ -63,5 +64,24 @@ theorem execute_riscVBranchFalse_pc_of_condition [NeZero width]
     branchLeft right prelude hoperands
   rw [hcondition]
   simp
+
+/-! Symbolic locations are resolved by LabLang before target-code execution.
+    This theorem records the corresponding machine boundary: once the section
+    and local label resolve to an absolute instruction position, `locValue`
+    materializes that position in the requested register. -/
+
+theorem labCompileAsm_locValue_execute [NeZero width]
+    (context : WordFfiContext)
+    (state : State width) (sectionId : Nat) (labels : List (Nat × Nat))
+    (position destination : Nat) (target : LabRef) (register : Fin 32)
+    (targetPosition : Nat)
+    (hregister : registerOfNat destination = some register)
+    (htarget : labResolveRef sectionId labels target = some targetPosition) :
+    (labCompileAsm context sectionId labels position
+      (.locValue destination target)).bind
+        (fun code => executeInstructions state code) =
+      some (execute state
+        (.addi register 0 (BitVec.ofNat width targetPosition))) := by
+  simp [labCompileAsm, hregister, htarget, executeInstructions]
 
 end Flapjack.RiscV

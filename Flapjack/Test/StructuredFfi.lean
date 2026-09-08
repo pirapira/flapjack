@@ -56,10 +56,11 @@ example :
       (fun result => match result with
         | .returned _ _ _ [PanValue.word value] => some value
         | _ => none) = some (some 9) := by
-    simp [evalPanValueProgWithCallsAndFfi, evalPanValueExp, isWfShape,
-    panValueStoreWithAccess,
-    updatePanValueMap,
-    updatePanValueMemory, panValueShape, panShapeMatches]
+    simp [evalPanValueProgWithCallsAndFfi, evalPanValueExp,
+    panValueStoreWithAccess, panValueFlatWords, panValueFlatWordsFuel,
+    panValueFlatStoreWords, panValueFlatLoad,
+    panValueFlatLoadFuel, panValueFlatReadWord, panValueFlatOffset,
+    isWfShape, updatePanValueMap, updatePanValueMemory]
 
 example :
     (evalPanValueProgWithCallsAndFfi (α := Nat) [] [] structuredNoFfi

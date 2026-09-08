@@ -775,7 +775,8 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store
       | none => simp [haddress, hvalue, evalPanValueExpCounted, panValueStoreWithAccess]
       | some evaluatedValue =>
           cases evaluatedAddress <;>
-            simp [haddress, hvalue, evalPanValueExpCounted, panValueStoreWithAccess]
+            simp [haddress, hvalue, evalPanValueExpCounted, panValueStoreWithAccess,
+              Function.comp_def]
 
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_skip
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

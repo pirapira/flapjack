@@ -38,16 +38,16 @@ not yet an equivalent source semantics. In particular:
 | Comparisons and shifts | `Lower` is unsigned, `Less` is signed; all `Lsl`, `Lsr`, `Asr`, and `Ror` are defined | Model-aware structured and stepped expressions now use target-model signed/unsigned comparisons and all shifts; legacy paths still need migration ([#383](https://github.com/pirapira/flapjack/issues/383), [#389](https://github.com/pirapira/flapjack/issues/389)) |
 | Word loads/stores | Domain-checked exact aligned word cells | Model-aware `PanMemory` and `PanValues` use explicit domains; legacy evaluator calls retain compatibility fallback |
 | Byte and 32-bit accesses | Align to `byte_align`; extract/patch bytes with `be`; `Load32` additionally requires `aligned 2` | Model-aware flat, structured, and stepped evaluators now use the canonical word-cell operations; compatibility fallback remains |
-| Structured `Store` | Flatten values into consecutive word cells and fail transactionally on a bad domain | `PanMemory` has the flattening helper; `PanValues` stores a whole `PanValue` in one cell ([#385](https://github.com/pirapira/flapjack/issues/385)) |
+| Structured `Store` | Flatten values into consecutive word cells and fail transactionally on a bad domain | `PanValues` and its stepped evaluator now flatten word leaves into consecutive cells and thread model-backed stores transactionally ([#422](https://github.com/pirapira/flapjack/issues/422)); the standalone `PanMemory` helper remains the flat reference |
 | Assignments | `is_valid_value` checks the destination's existing shape | Generic structured, flat, stepped, and stateful-FFI assignment paths now reject absent or wrongly shaped destinations; call-result destination checks remain ([#384](https://github.com/pirapira/flapjack/issues/384)) |
 | Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation | The model-aware stateful stepped evaluator now carries FFI state, size-aware shared calls, aligned domains, and terminal outcomes; legacy evaluators retain compatibility paths |
 | Control state | Clock, timeout, local clearing at boundaries, return/exception size limits, and declared exception shapes | Control-result evaluators use fuel only; `tick`, `return`, `raise`, and calls omit several CakeML checks and effects ([#387](https://github.com/pirapira/flapjack/issues/387)) |
 | Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays | Structured, stepped, flat, and stateful-FFI evaluators now propagate callee globals/memory (and stateful FFI state where applicable) and enforce declaration-driven return, exception, and handler shapes. Generic call destinations validate local/global shapes and stand-alone calls discard returned values; remaining control-state checks and legacy compatibility-path migration remain ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388), [#406](https://github.com/pirapira/flapjack/issues/406)) |
 
-The flat-memory adapter and the structured/stepped canonical access slice fix
-the representation of ordinary byte and word loads/stores when a target model
-is supplied, but they do not by themselves make the complete source semantics
-equivalent. The following work is now the source-semantics gate and should
+The flat-memory adapter and the structured/stepped canonical access slice now
+use the CakeML representation for ordinary structured word loads/stores when a
+target model is supplied. They do not by themselves make the complete source
+semantics equivalent. The following work is now the source-semantics gate and should
 precede new end-to-end correctness claims that depend on arbitrary memory or
 shared-memory behavior.
 
@@ -64,8 +64,10 @@ shared-memory behavior.
    `mem_load_byte`, `mem_store_byte`, `mem_load_32`, and `mem_store_32` in the
    source memory layer. Make ordinary `Store` flatten to consecutive word
    cells, and make all reads/writes use the explicit main-memory domain.
-   Integrate the same helpers into `PanValues`, `PanMemory`, and the RISC-V
-   adapter instead of maintaining separate sub-word behavior.
+   The structured `PanValues` and stepped paths now use shape-directed loads,
+   consecutive word stores, and typed model access; retain the standalone
+   `PanMemory` helpers as the flat reference and integrate the remaining
+   sub-word behavior into one canonical interface.
 3. **Expression and statement agreement.** Model-aware structured and stepped
    evaluation now dispatches variadic word operations and signed/unsigned
    comparisons and all shift operators through the target model. Complete
@@ -188,6 +190,10 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   the total transition used by the existing backend equations.
 - [x] Add an explicit privilege-sensitive ECALL and memory-alignment trap
   classifier, and connect checked execution to that classifier.
+- [x] Match CakeML structured source-memory layout in `PanValues`: shape-based
+  loads reconstruct records from consecutive word cells, structured stores
+  flatten transactionally, and the stepped evaluator inherits the same path
+  ([#422](https://github.com/pirapira/flapjack/issues/422)).
 - [x] Port the HOL RV64 word-width arithmetic and shift transitions
   (`ADDW`, `SUBW`, `ADDIW`, `MULW`, and W-shifts), including sign-extension
   back to the architectural register width.

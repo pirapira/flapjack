@@ -112,20 +112,22 @@ example :
 example :
     evalPanValueExp (α := Nat) []
       (fun _ => none) (fun _ => none)
-      (fun address => if address == 4 then
-        some (.rStruct [.word 1, .word 2]) else none)
+      (fun address => if address == 4 then some (.word 1)
+        else if address == 12 then some (.word 2) else none)
       0 100 8 (.load (.comb [.one, .one]) (.const 4)) =
       some (.rStruct [.word 1, .word 2]) := by
-  simp [evalPanValueExp, isWfShape, isWfShape.isWfShapeList,
-    panValueShape, panShapeMatches,
-    panShapeMatches.panShapeListMatches]
+  simp [evalPanValueExp, panValueFlatLoad, panValueFlatLoadFuel,
+    panValueFlatLoadListFuel, panValueFlatReadWord, panValueFlatOffset,
+    panValueFlatContextFuel, panValueFlatShapeFuel,
+    panValueFlatShapeFuel.panValueFlatShapeListFuel, shapeSizeWithContext,
+    isWfShape, isWfShape.isWfShapeList]
 
 example :
     evalPanValueExp (α := Nat) []
       (fun _ => none) (fun _ => none)
       (fun address => if address == 4 then some (.word 2) else none)
       0 100 8 (.load (.named "Unknown") (.const 4)) = none := by
-  simp [evalPanValueExp, isWfShape, panValueShape, panShapeMatches]
+  simp [evalPanValueExp, panValueFlatLoad, isWfShape, lookupInfo]
 
 example :
     (evalPanValueProg (α := Nat) [] 0 100 8
@@ -137,6 +139,18 @@ example :
   simp [evalPanValueProg, evalPanValueProgWithPrimitive,
     evalPanValueExp, updatePanValueMap, panValueAssignmentValid,
     panValueShape, panShapeMatches]
+
+#guard
+  match evalPanValueProgWithPrimitive (α := Nat) [] 0 100 8
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      (fun _ _ => none)
+      (.seq (.store (.const 10) (.rStruct [.const 3, .const 5]))
+        (.return (.load (.comb [.one, .one]) (.const 10)))) with
+  | some (_, _, memory, [.rStruct [.word 3, .word 5]]) =>
+      match memory 10, memory 18 with
+      | some (.word 3), some (.word 5) => true
+      | _, _ => false
+  | _ => false
 
 example :
     (evalPanValueProg (α := Nat) [] 0 100 8

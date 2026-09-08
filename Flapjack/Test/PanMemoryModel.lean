@@ -24,6 +24,49 @@ def memoryModelMemory : PanFlatMemory (RiscV.Word 64) :=
 def memoryModel : PanMemoryModel (RiscV.Word 64) :=
   RiscV.panRiscVMemoryModel
 
+def structuredFlatDomain : PanMemoryDomain (RiscV.Word 64) :=
+  fun address => address == BitVec.ofNat 64 8 || address == BitVec.ofNat 64 16
+
+def structuredFlatProgram : Prog (RiscV.Word 64) :=
+  .seq (.store (.const (BitVec.ofNat 64 8))
+      (.rStruct [.const (BitVec.ofNat 64 3), .const (BitVec.ofNat 64 5)]))
+    (.return (.load (.comb [.one, .one]) (.const (BitVec.ofNat 64 8))))
+
+def memoryModelStructuredFlatProgram : Bool :=
+  match evalPanValueProgWithPrimitive (α := RiscV.Word 64) []
+      (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8)
+      (fun _ => none) (fun _ => none) (fun _ => none) (fun _ _ => none)
+      structuredFlatProgram
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel
+        structuredFlatDomain)) with
+  | some (_, _, memory, [.rStruct [.word left, .word right]]) =>
+      match memory (BitVec.ofNat 64 8), memory (BitVec.ofNat 64 16) with
+      | some (.word storedLeft), some (.word storedRight) =>
+          left == BitVec.ofNat 64 3 && right == BitVec.ofNat 64 5 &&
+          storedLeft == BitVec.ofNat 64 3 && storedRight == BitVec.ofNat 64 5
+      | _, _ => false
+  | _ => false
+
+#guard memoryModelStructuredFlatProgram
+
+def memoryModelSteppedStructuredFlatProgram : Bool :=
+  match evalPanValueSteppedProg (α := RiscV.Word 64)
+      (fun _ _ => none) (fun _ _ _ _ _ locals => some locals) [] []
+      (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 20
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      structuredFlatProgram
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel
+        structuredFlatDomain)) with
+  | some (.returned _ _ memory [.rStruct [.word left, .word right]], _) =>
+      match memory (BitVec.ofNat 64 8), memory (BitVec.ofNat 64 16) with
+      | some (.word storedLeft), some (.word storedRight) =>
+          left == BitVec.ofNat 64 3 && right == BitVec.ofNat 64 5 &&
+          storedLeft == BitVec.ofNat 64 3 && storedRight == BitVec.ofNat 64 5
+      | _, _ => false
+  | _ => false
+
+#guard memoryModelSteppedStructuredFlatProgram
+
 def memoryModelFfi : PanValueFfiHandler (RiscV.Word 64) :=
   fun _ _ _ _ _ locals => some locals
 

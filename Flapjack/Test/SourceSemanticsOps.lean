@@ -77,4 +77,29 @@ def evalRiscVUnsignedLower : Option (PanValue ShiftWord) :=
   | some (.word value) => value == shiftWord 0
   | _ => false
 
+def assignmentWordLocals : VarName → Option (PanValue ShiftWord) := fun name =>
+  if name == "x" then some (.word (shiftWord 7)) else none
+
+def evalRiscVValidAssignment :=
+  RiscV.evalPanRiscVFlatProg []
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    assignmentWordLocals (fun _ => none) (fun _ => false) (fun _ => none)
+    (.assign .local "x" (.const (shiftWord 9)))
+
+def evalRiscVMismatchedAssignment :=
+  RiscV.evalPanRiscVFlatProg []
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    assignmentWordLocals (fun _ => none) (fun _ => false) (fun _ => none)
+    (.assign .local "x" (.rStruct []))
+
+def evalRiscVMissingAssignment :=
+  RiscV.evalPanRiscVFlatProg []
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    assignmentWordLocals (fun _ => none) (fun _ => false) (fun _ => none)
+    (.assign .local "missing" (.const (shiftWord 9)))
+
+#guard evalRiscVValidAssignment.isSome
+#guard evalRiscVMismatchedAssignment.isNone
+#guard evalRiscVMissingAssignment.isNone
+
 end Flapjack

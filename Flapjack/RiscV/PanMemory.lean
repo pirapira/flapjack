@@ -349,6 +349,24 @@ def evalPanRiscVFlatExps [NeZero width]
       pure (value :: values)
 termination_by expressions => sizeOf expressions
 
+def panRiscVAssignmentValid [NeZero width]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue (Word width)))
+    (kind : VarKind) (name : VarName) (value : PanValue (Word width)) : Bool :=
+  match kind with
+  | .local =>
+      match locals name with
+      | some oldValue =>
+          panShapeMatches (panValueShape structs value)
+            (panValueShape structs oldValue)
+      | none => false
+  | .global =>
+      match globals name with
+      | some oldValue =>
+          panShapeMatches (panValueShape structs value)
+            (panValueShape structs oldValue)
+      | none => false
+
 def evalPanRiscVFlatProg [NeZero width]
     (structs : StructContext)
     (baseAddress topAddress bytesInWord : Word width)
@@ -373,11 +391,15 @@ def evalPanRiscVFlatProg [NeZero width]
   | .assign .local name value => do
       let value ← evalPanRiscVFlatExp structs locals globals domain memory
         baseAddress topAddress bytesInWord value
-      pure (updatePanValueMap locals name value, globals, memory, [])
+      if panRiscVAssignmentValid structs locals globals .local name value then
+        pure (updatePanValueMap locals name value, globals, memory, [])
+      else none
   | .assign .global name value => do
       let value ← evalPanRiscVFlatExp structs locals globals domain memory
         baseAddress topAddress bytesInWord value
-      pure (locals, updatePanValueMap globals name value, memory, [])
+      if panRiscVAssignmentValid structs locals globals .global name value then
+        pure (locals, updatePanValueMap globals name value, memory, [])
+      else none
   | .store address value => do
       let address ← evalPanRiscVFlatExp structs locals globals domain memory
         baseAddress topAddress bytesInWord address

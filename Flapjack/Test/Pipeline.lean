@@ -134,7 +134,8 @@ example :
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
     pipelineWordFunctions, pipelinePrependInitializers, pipelineInlineNames,
     compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
-    compileProg, crepInlineTop, crepInlineFunctions, crepInlineRemove,
+    compileProg, crepInlineTopRecursiveByNames, crepInlineTopRecursive,
+    crepInlineFunctionsRecursive, crepInlineActiveNames,
     crepArithFunctions]
 
 example [NeZero width] :

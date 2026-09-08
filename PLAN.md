@@ -1804,6 +1804,8 @@ definitions, pass ordering, examples, and proof obligations.
   RISC-V image.
 - [x] Add a diagnostics-preserving checked entrypoint for the full-SSA linked
   RISC-V compiler, with valid and malformed AST regressions.
+- [x] Preserve `pan_to_target` main synthesis for the checked and linked
+  full-SSA RISC-V entrypoints.
 
 ## First implementation slice
 

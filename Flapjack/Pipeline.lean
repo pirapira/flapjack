@@ -800,6 +800,38 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaLinkedChecked [NeZero width]
     staticOk (compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked
       architecture bytesInWord fromNat services removeConfig declarations))
 
+/-! Target-facing full-SSA entry point.  `pan_to_target` guarantees that the
+program has a leading `main`; retain that convention for the linked,
+allocation-aware RISC-V path instead of requiring every caller to synthesize
+one first. -/
+def compileFlapjackRiscVViaAllocatedStackWithFullSsaTargetLinked [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (List (Nat × RiscV.Word width × List (RiscV.Instruction width))) :=
+  compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked architecture bytesInWord
+    fromNat services removeConfig (pipelineEnsureMain declarations)
+
+def compileFlapjackRiscVViaAllocatedStackWithFullSsaTargetLinkedChecked
+    [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    StaticResult
+      (Option (List (Nat × RiscV.Word width × List (RiscV.Instruction width)))) :=
+  let prepared := pipelineEnsureMain declarations
+  staticBind (staticCheck prepared) (fun _ =>
+    staticOk (compileFlapjackRiscVViaAllocatedStackWithFullSsaTargetLinked
+      architecture bytesInWord fromNat services removeConfig declarations))
+
 def compileFlapjackChecked [BEq String] [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :

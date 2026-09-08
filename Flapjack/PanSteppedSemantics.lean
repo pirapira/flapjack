@@ -661,6 +661,66 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_assign_global
   | none => simp [hvalue, evalPanValueExpCounted]
   | some evaluatedValue => simp [hvalue, evalPanValueExpCounted]
 
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_primitive
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (name : VarName)
+    (operator : PrimOp) (arguments : List (Exp α)) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory
+      (.primitive name operator arguments)).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory
+      (.primitive name operator arguments) := by
+  simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+  cases hargs : evalPanValueExps structs locals globals memory
+      baseAddress topAddress bytesInWord arguments with
+  | none => simp [hargs, evalPanValueExpsCounted]
+  | some values =>
+      cases hprimitive : primitive operator values with
+      | none => simp [hargs, hprimitive, evalPanValueExpsCounted]
+      | some value =>
+          cases hold : locals name with
+          | none => simp [hargs, hprimitive, hold, evalPanValueExpsCounted]
+          | some oldValue =>
+              simp [hargs, hprimitive, hold, evalPanValueExpsCounted]
+
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (address value : Exp α) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory
+      (.store address value)).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory
+      (.store address value) := by
+  simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+  cases haddress : evalPanValueExp structs locals globals memory
+      baseAddress topAddress bytesInWord address with
+  | none => simp [haddress, evalPanValueExpCounted]
+  | some evaluatedAddress =>
+      cases hvalue : evalPanValueExp structs locals globals memory
+          baseAddress topAddress bytesInWord value with
+      | none => simp [haddress, hvalue, evalPanValueExpCounted]
+      | some evaluatedValue =>
+          cases evaluatedAddress <;>
+            simp [haddress, hvalue, evalPanValueExpCounted]
+
 def evalPanValueSteppedProg
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

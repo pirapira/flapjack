@@ -382,16 +382,72 @@ for. -/
                       (.seq (.annot "location" "(3:2 3:6)") .tick),
                     returnShape := .one }])
 
--- An `if` is annotated, and so is the statement inside it.
+-- An `if` is annotated, and so is the statement inside it. The implicit
+-- `else` is annotated too, with `UNKNOWN`: upstream's `try_default` supplies a
+-- `SkipK` leaf carrying `unknown_loc`, and `conv_Prog` annotates every leaf it
+-- converts, so `(UNKNOWN UNKNOWN)` is upstream's own output here.
 #guard sameAst (parseProgram ofI "if 1 { skip; }" (locations := true))
   (.ok (.seq (.annot "location" "(1:1 1:12)")
-    (.ite (.const 1) (.seq (.annot "location" "(1:7 1:11)") .skip) .skip)))
+    (.ite (.const 1)
+      (.seq (.annot "location" "(1:7 1:11)") .skip)
+      (.seq (.annot "location" "(UNKNOWN UNKNOWN)") .skip))))
 
 -- The `{ ... }` statement form gets no annotation of its own: `conv_Prog`
 -- reaches it as a `ProgNT` node and folds it without calling
 -- `add_locs_annot`. Only the statement inside is annotated.
 #guard sameAst (parseProgram ofI "{ skip; };" (locations := true))
   (.ok (.seq (.annot "location" "(1:2 1:6)") .skip))
+
+/-! ### The parse tree
+
+The grammar and the conversion are separate stages, so the tree is worth
+checking directly: `conv_*` matches on how many children a node has, which
+makes the `consume` / `keep` split part of the grammar's contract. -/
+
+/-- Render a tree as `(nonterminal child ...)`, for comparing shapes. -/
+def treeShape : ParseTree → String
+  | .lf token _ => (reprStr token).replace "Flapjack.Parser.Token." ""
+  | .nd nonterminal children _ =>
+      "(" ++ (reprStr nonterminal).replace "Flapjack.Parser.Nonterminal." "" ++
+        String.join (children.map (fun child => " " ++ treeShape child)) ++ ")"
+
+def treeOf (source : String) : Option String :=
+  let toks := pancakeLex source
+  match (gTopDecList (parseFuel toks.length) { toks := toks, furthest := none }).1 with
+  | some [tree] => some (treeShape tree)
+  | _ => none
+
+-- `TopDecListNT` nests as `[item, rest]` and ends with an empty node, which is
+-- what `conv_TopDecList` matches.
+#guard treeOf "exception E : 1;"
+  == some "(topDecList (exnDec identT \"E\" intT 1) (topDecList))"
+
+-- `GlobalDecNT` has three children because `ShapedIdentNT` contributes a shape
+-- and a name rather than a node of its own.
+#guard treeOf "var 1 x = 1;" == some
+  "(topDecList (globalDec intT 1 identT \"x\" (exp (eBoolAnd (eEq (eCmp (eOr (eXor (eAnd (eShift (eAdd (eMul (eNot (eField intT 1))))))))))))) (topDecList))"
+
+-- An omitted shape becomes a `DefaultShT` leaf, so the child count is stable.
+#guard treeOf "var x = 1;" == some
+  "(topDecList (globalDec defaultShT identT \"x\" (exp (eBoolAnd (eEq (eCmp (eOr (eXor (eAnd (eShift (eAdd (eMul (eNot (eField intT 1))))))))))))) (topDecList))"
+
+-- `FunNT` has exactly six children -- inline, export, shape, name, params,
+-- body -- with `NoinlineT` and `StaticT` leaves standing in for the absent
+-- modifiers, which is what `conv_TopDec` matches on.
+#guard treeOf "fun f() { skip; }" == some
+  "(topDecList (funNT noinlineT staticT defaultShT identT \"f\" (paramList) (prog keywordT (Flapjack.Parser.Keyword.skipK))) (topDecList))"
+
+-- `consume` contributes no child: the `lds` keyword and the shape braces are
+-- absent from the tree, leaving just shape and address.
+#guard treeOf "fun f() { return lds 2 x; }" == some
+  "(topDecList (funNT noinlineT staticT defaultShT identT \"f\" (paramList) (prog (returnNT (exp (eBoolAnd (eEq (eCmp (eLoad intT 2 (eOr (eXor (eAnd (eShift (eAdd (eMul (eNot (eField identT \"x\")))))))))))))))) (topDecList))"
+
+-- A tree the grammar cannot produce converts to `none` rather than being
+-- repaired: `conv_Shape` refuses a non-positive literal.
+#guard (convShape 64 (.lf (.intT 0) unknownLoc)).isNone
+
+-- And `conv_binop` refuses a token that is not one.
+#guard (convBinop (.lf (.starT) unknownLoc) == (none : Option BinOp))
 
 /-! ### Downstream compatibility
 

@@ -23,6 +23,12 @@ while read -r count path; do
     echo "error: malformed allowlist line: $count $path" >&2
     exit 1
   fi
+  # A repeated path would silently take whichever count came last, so the
+  # ceiling would depend on line order. Refuse it instead.
+  if [ -n "${allowed[$path]+set}" ]; then
+    echo "error: $path is listed twice in $ALLOWLIST" >&2
+    exit 1
+  fi
   allowed["$path"]=$count
 done < <(sed 's/#.*//' "$ALLOWLIST")
 

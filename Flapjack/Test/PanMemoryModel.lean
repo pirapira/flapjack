@@ -163,6 +163,33 @@ def memoryModelPrimitiveControlByteProgram : Option (RiscV.Word 64) :=
       | .returned _ _ _ [.word value] => some value
       | _ => none
 
+def memoryModelProgramState : PanValueProgramState (RiscV.Word 64) :=
+  { structs := []
+    globals := fun _ => none
+    functions := []
+    returnShapes := []
+    exceptions := []
+    memory := fun address => (memoryModelMemory address).map .word
+    baseAddress := BitVec.ofNat 64 0
+    topAddress := BitVec.ofNat 64 100
+    bytesInWord := BitVec.ofNat 64 8 }
+
+def memoryModelPublicProgram : Option (RiscV.Word 64) :=
+  (panValueProgramResult memoryModelProgramState memoryModelPrimitive memoryModelFfi 30
+      [.decl .one "initial" (.loadByte (.const (BitVec.ofNat 64 9))),
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .seq (.storeByte (.const (BitVec.ofNat 64 9))
+               (.const (BitVec.ofNat 64 0xaa)))
+             (.seq (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 9)))
+               (.return (.var .local "x"))),
+           returnShape := .one }]
+      "main" []
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel))).bind
+    fun values => match values with
+      | [.word value] => some value
+      | _ => none
+
 #guard memoryModelReadByte = some (BitVec.ofNat 64 2)
 #guard memoryModelRead32 = some (BitVec.ofNat 64 0x04030201)
 #guard memoryModelWordAfterByteStore =
@@ -178,5 +205,6 @@ def memoryModelPrimitiveControlByteProgram : Option (RiscV.Word 64) :=
 #guard memoryModelPanValuesByteProgram = some (BitVec.ofNat 64 0xaa)
 #guard memoryModelControlByteProgram = some (BitVec.ofNat 64 0xaa)
 #guard memoryModelPrimitiveControlByteProgram = some (BitVec.ofNat 64 0xaa)
+#guard memoryModelPublicProgram = some (BitVec.ofNat 64 0xaa)
 
 end Flapjack

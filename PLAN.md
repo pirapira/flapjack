@@ -1946,6 +1946,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   scalar, preserving the returned control values through dispatch and lowering.
 - [x] Prove a sequential Crepe-to-Loop agreement for an FFI call followed by a
   scalar return, threading the host-updated state into the continuation.
+- [x] Expose a reusable sequential Crepe-to-Loop agreement contract for an FFI
+  call followed by an arbitrary continuation, preserving generated temporary
+  state in every control result.
 - [x] Prove the reusable source-to-Crepe FFI lowering equation, including
   sequential argument evaluation and restoration of compiler temporaries.
 - [x] Compose the lowered caught-handler call with the full-Crepe evaluator,

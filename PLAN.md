@@ -1882,6 +1882,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   exceptions, including handler step counts and state/clock threading.
 - [x] Prove clocked-to-stepped projection for destination-bearing calls,
   including validated local/global result assignment.
+- [x] Prove clocked-to-stepped projection for declaration calls, threading
+  returned values into the continuation and restoring shadowed locals.
 - [x] Prove the recursive true-loop clocked-to-stepped projection, threading
   body and resumed-loop results with their accumulated source-step counts.
 - [x] Expose the abstract StackLang FFI returned-callee continuation equation,

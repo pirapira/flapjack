@@ -369,4 +369,62 @@ theorem evalPanValueFfiClockProg_while_projects_to_steps
   · simp [evalPanValueFfiProgSteps, hconditionSteps, hconditionNonzero,
       hstepBody, hstepRest]
 
+/-! A declaration call projects through its returned-value continuation.  The
+continuation receives the callee's state and clock, and the declaration's
+shadowed local is restored in both result representations. -/
+theorem evalPanValueFfiClockProg_decCall_projects_to_steps
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock callClock finalClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (callLocals callGlobals : VarName → Option (PanValue α))
+    (callMemory : α → Option (PanValue α)) (callFfi : FfiState σ)
+    (name : VarName) (shape : Shape) (value : PanValue α)
+    (function : FunName) (arguments : List (Exp α)) (body : Prog α)
+    (oldValue : Option (PanValue α))
+    (clockBodyOutcome : PanValueFfiClockOutcome α σ)
+    (stepBodyResult : PanValueFfiControlResult α σ)
+    (callSteps bodySteps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (hcallClock : evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi clock none function
+      arguments (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.control (.returned callLocals callGlobals callMemory callFfi [value]), callClock))
+    (hcallSteps : evalPanValueFfiCallSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel locals globals memory ffi none function
+      arguments (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (.returned callLocals callGlobals callMemory callFfi [value], callSteps))
+    (hshape : panShapeMatches (panValueShape structs value) shape = true)
+    (hbodyClock : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel (updatePanValueMap locals name value)
+      callGlobals callMemory callFfi callClock body
+      (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (clockBodyOutcome, finalClock))
+    (hbodySteps : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel (updatePanValueMap locals name value)
+      callGlobals callMemory callFfi body (memoryAccess := memoryAccess)
+      (contracts := contracts) = some (stepBodyResult, bodySteps))
+    (hold : locals name = oldValue) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (.decCall name shape function arguments body)
+      (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (panValueFfiClockRestoreLocal name oldValue clockBodyOutcome, finalClock) ∧
+    evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      (.decCall name shape function arguments body)
+      (memoryAccess := memoryAccess) (contracts := contracts) =
+      some (restorePanValueFfiLocal name oldValue stepBodyResult,
+        callSteps + bodySteps + 1) := by
+  constructor
+  · simp [evalPanValueFfiClockProg, hcallClock, hshape, hbodyClock, hold]
+  · simp [evalPanValueFfiProgSteps, hcallSteps, hshape, hbodySteps, hold]
+
 end Flapjack

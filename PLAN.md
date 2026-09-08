@@ -39,7 +39,7 @@ not yet an equivalent source semantics. In particular:
 | Word loads/stores | Domain-checked exact aligned word cells | Model-aware `PanMemory` and `PanValues` use explicit domains; legacy evaluator calls retain compatibility fallback |
 | Byte and 32-bit accesses | Align to `byte_align`; extract/patch bytes with `be`; `Load32` additionally requires `aligned 2` | Model-aware flat, structured, and stepped evaluators now use the canonical word-cell operations; compatibility fallback remains |
 | Structured `Store` | Flatten values into consecutive word cells and fail transactionally on a bad domain | `PanMemory` has the flattening helper; `PanValues` stores a whole `PanValue` in one cell ([#385](https://github.com/pirapira/flapjack/issues/385)) |
-| Assignments | `is_valid_value` checks the destination's existing shape | Source assignments currently update locals/globals without that check ([#384](https://github.com/pirapira/flapjack/issues/384)) |
+| Assignments | `is_valid_value` checks the destination's existing shape | Generic structured, flat, stepped, and stateful-FFI assignment paths now reject absent or wrongly shaped destinations; call-result destination checks remain ([#384](https://github.com/pirapira/flapjack/issues/384)) |
 | Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation | The model-aware stateful stepped evaluator now carries FFI state, size-aware shared calls, aligned domains, and terminal outcomes; legacy evaluators retain compatibility paths |
 | Control state | Clock, timeout, local clearing at boundaries, return/exception size limits, and declared exception shapes | Control-result evaluators use fuel only; `tick`, `return`, `raise`, and calls omit several CakeML checks and effects ([#387](https://github.com/pirapira/flapjack/issues/387)) |
 | Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays | The stateful stepped evaluator propagates callee globals/memory/FFI state and performs model-aware byte-array `ExtCall`; legacy evaluators and full shape/control checks remain ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388)) |
@@ -69,8 +69,10 @@ shared-memory behavior.
 3. **Expression and statement agreement.** Model-aware structured and stepped
    evaluation now dispatches variadic word operations and signed/unsigned
    comparisons and all shift operators through the target model. Complete
-   this stage for legacy and flat paths. Enforce assignment, return,
-   exception, call-result, and handler shape checks. Add the missing `store32`/
+   this stage for legacy and flat paths. Assignment destination shape checks
+   are now shared by the generic structured, flat, stepped, and stateful-FFI
+   evaluators. Enforce return, exception, call-result, and handler shape
+   checks. Add the missing `store32`/
    `storeByte` cases to the flat control evaluator and prove that the
    counted/stepped expression evaluator has the same value result as the
    uncounted evaluator.

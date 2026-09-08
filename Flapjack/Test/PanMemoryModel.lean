@@ -1,4 +1,5 @@
 import Flapjack.RiscV.PanMemory
+import Flapjack.PanSteppedSemantics
 
 /-!
 Executable regressions for the shared Pancake word-cell memory model.
@@ -86,6 +87,33 @@ def memoryModelGeneric32Program : Option (RiscV.Word 64) :=
       | [.word value] => some value
       | _ => none
 
+def memoryModelSteppedByteProgram : Option (RiscV.Word 64 × Nat) :=
+  (evalPanValueSteppedProg (fun _ _ => none) (fun _ _ _ _ _ locals => some locals)
+      [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 20
+      (fun _ => none) (fun _ => none)
+      (fun _ => some (.word 0))
+      (.seq (.storeByte (.const (BitVec.ofNat 64 9))
+          (.const (BitVec.ofNat 64 0xaa)))
+        (.return (.loadByte (.const (BitVec.ofNat 64 9)))))
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel))).bind
+    fun result => match result.1 with
+      | .returned _ _ _ [.word value] => some (value, result.2)
+      | _ => none
+
+def memoryModelSteppedShared16Program : Option (RiscV.Word 64 × Nat) :=
+  (evalPanValueSteppedProg (fun _ _ => none) (fun _ _ _ _ _ locals => some locals)
+      [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 20
+      (fun name => if name == "x" then some (.word 0) else none)
+      (fun _ => none) (fun address => (memoryModelMemory address).map .word)
+      (.seq (.shMemStore .op16 (.const (BitVec.ofNat 64 8))
+          (.const (BitVec.ofNat 64 0xbeef)))
+        (.seq (.shMemLoad .op16 .local "x" (.const (BitVec.ofNat 64 8)))
+          (.return (.var .local "x"))))
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel))).bind
+    fun result => match result.1 with
+      | .returned _ _ _ [.word value] => some (value, result.2)
+      | _ => none
+
 #guard memoryModelReadByte = some (BitVec.ofNat 64 2)
 #guard memoryModelRead32 = some (BitVec.ofNat 64 0x04030201)
 #guard memoryModelWordAfterByteStore =
@@ -96,5 +124,7 @@ def memoryModelGeneric32Program : Option (RiscV.Word 64) :=
 #guard memoryModelOutOfDomainRead = none
 #guard memoryModelGenericByteProgram = some (BitVec.ofNat 64 0xaa)
 #guard memoryModelGeneric32Program = some (BitVec.ofNat 64 0x11223344)
+#guard memoryModelSteppedByteProgram = some (BitVec.ofNat 64 0xaa, 7)
+#guard memoryModelSteppedShared16Program = some (BitVec.ofNat 64 0xbeef, 9)
 
 end Flapjack

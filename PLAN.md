@@ -1872,6 +1872,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   the callee state and clock while clearing callee locals at the boundary.
 - [x] Prove the clocked caught-handler call contract, resuming the handler
   with the callee's final state and remaining clock.
+- [x] Prove the clocked call-return destination contract, checking assignment
+  shape while preserving the callee memory, FFI state, and remaining clock.
 - [x] Expose the abstract StackLang FFI returned-callee continuation equation,
   matching the bounded frame boundary.
 - [x] Prove that a Word-to-Stack FFI argument move preserves every unrelated

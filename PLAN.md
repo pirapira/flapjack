@@ -1814,6 +1814,8 @@ definitions, pass ordering, examples, and proof obligations.
   including branch-return break lowering and non-tail call scaffolding.
 - [x] Port direct Crepe call substitution over an inline map, covering tail
   and non-tail calls with temporary-variable isolation.
+- [x] Integrate recursive active-name Crepe inlining into the compiler pipeline,
+  stopping recursive call chains without a fuel approximation.
 
 ## First implementation slice
 

@@ -1912,4 +1912,65 @@ theorem evalWordFunction_wordVarStraightLine_return_applyColour [NeZero width]
       simpa [Function.comp_def, List.mapM_map] using htargetValues'
     simp [htargetValues'']
 
+/-! Lift the function-shaped return contract through the executable graph
+    allocator.  The allocator result is kept explicit so callers can use the
+    same theorem with a concrete allocation witness or with a downstream
+    allocator driver. -/
+
+theorem wordAllocateGraphFunctionWithEntry_return_simulation [NeZero width]
+    (parameters : List Nat) (program : WordProg (Word width))
+    (fixedSources : List Nat) (colours stackStart : Nat)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (allocation : WordGraphAllocation)
+    (colouredProgram : WordProg (Word width))
+    (halloc : wordAllocateGraphFunctionWithEntry parameters program fixedSources
+      colours stackStart =
+      some (state, renamedParameters, allocation, colouredProgram))
+    (valid : wordColourValid (wordGraphColouringAt allocation.colouring))
+    (injective : Function.Injective
+      (wordGraphColouringAt allocation.colouring))
+    (colourZero : wordGraphColouringAt allocation.colouring 0 = 0)
+    (colourNoScratch : ∀ name, name < 31 →
+      wordGraphColouringAt allocation.colouring name ≠ 31)
+    (source target : State width)
+    (hrelation : WordColourStateRelation
+      (wordGraphColouringAt allocation.colouring) source target)
+    (hprogram : WordVarStraightLine width
+      (wordSsaRenameFunctionWithEntry parameters program).2.snd)
+    (label : Nat) (values : List Nat)
+    (hvalues : ∀ name, name ∈ values → name < 32) :
+    ∃ source' target' returnedValues,
+      evalWordFunction source
+          (.seq (wordSsaRenameFunctionWithEntry parameters program).2.snd
+            (.return label values)) =
+        some (source', returnedValues) ∧
+      evalWordFunction target
+          (.seq colouredProgram (.return label (values.map
+            (wordGraphColouringAt allocation.colouring)))) =
+        some (target', returnedValues) ∧
+      WordColourStateRelation (wordGraphColouringAt allocation.colouring)
+        source' target' := by
+  simp [wordAllocateGraphFunctionWithEntry] at halloc
+  rcases halloc with ⟨a, _, _, _, ha, hcolour⟩
+  have hvalid : wordColourValid (wordGraphColouringAt a.colouring) := by
+    simpa [ha] using valid
+  have hinjective : Function.Injective
+      (wordGraphColouringAt a.colouring) := by
+    simpa [ha] using injective
+  have hzero : wordGraphColouringAt a.colouring 0 = 0 := by
+    simpa [ha] using colourZero
+  have hscratch : ∀ name, name < 31 →
+      wordGraphColouringAt a.colouring name ≠ 31 := by
+    simpa [ha] using colourNoScratch
+  have hrelationA : WordColourStateRelation
+      (wordGraphColouringAt a.colouring) source target := by
+    simpa [ha] using hrelation
+  have hresult := evalWordFunction_wordVarStraightLine_return_applyColour
+    (wordGraphColouringAt a.colouring) hvalid hinjective hzero hscratch
+    source target hrelationA
+    (wordSsaRenameFunctionWithEntry parameters program).2.snd hprogram
+    label values hvalues
+  rw [hcolour] at hresult
+  simpa [ha] using hresult
+
 end Flapjack.RiscV

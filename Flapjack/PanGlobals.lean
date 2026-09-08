@@ -87,12 +87,31 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
   | .while condition body =>
       .while (globalCompileExp context condition) (globalCompileProg context body)
   | .call info function arguments =>
-      let compiledInfo := match info with
-        | none => none
-        | some (returns, none) => some (returns, none)
-        | some (returns, some (exception, handlerVar, handler)) =>
-            some (returns, some (exception, handlerVar, globalCompileProg context handler))
-      .call compiledInfo function (globalCompileExps context arguments)
+      let compiledArguments := globalCompileExps context arguments
+      let compiledHandler := match info with
+        | some (_, some (exception, handlerVar, handler)) =>
+            some (exception, handlerVar, globalCompileProg context handler)
+        | _ => none
+      match info with
+        | none => .call none function compiledArguments
+        | some (none, _) =>
+            .call (some (none, compiledHandler)) function compiledArguments
+        | some (some (.local, name), _) =>
+            .call (some (some (.local, name), compiledHandler)) function compiledArguments
+        | some (some (.global, name), none) =>
+            match lookupInfo name context.globals with
+            | some (shape, address) =>
+                .decCall "" shape function compiledArguments
+                  (.store (.op .sub [.topAddr, .const address])
+                    (.var .local ""))
+            | none =>
+                .call (some (none, compiledHandler)) function compiledArguments
+        | some (some (.global, name), some _) =>
+            match lookupInfo name context.globals with
+            | some _ =>
+                .call (some (some (.global, name), compiledHandler)) function compiledArguments
+            | none =>
+                .call (some (none, compiledHandler)) function compiledArguments
   | .decCall name shape function arguments body =>
       .decCall name shape function (globalCompileExps context arguments)
         (globalCompileProg context body)

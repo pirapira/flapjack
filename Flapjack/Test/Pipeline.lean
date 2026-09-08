@@ -113,6 +113,30 @@ example :
   simp [globalCompileProg, globalCompileExp, globalTestContext, lookupInfo]
 
 example :
+    globalCompileProg globalTestContext
+        (.call (some (some (.global, "g"), none)) "id" [.const 7]) =
+      .decCall "" .one "id" [.const 7]
+        (.store (.op .sub [.topAddr, .const 8]) (.var .local "")) := by
+  simp [globalCompileProg, globalCompileProg.globalCompileExps,
+    globalCompileExp, globalTestContext, lookupInfo]
+
+example :
+    globalCompileProg globalTestContext
+        (.call (some (some (.global, "missing"), none)) "id" [.const 7]) =
+      .call (some (none, none)) "id" [.const 7] := by
+  simp [globalCompileProg, globalCompileProg.globalCompileExps,
+    globalCompileExp, globalTestContext, lookupInfo]
+
+example :
+    globalCompileProg globalTestContext
+        (.call (some (some (.global, "g"), some ("E", "exception", .skip)))
+          "id" [.const 7]) =
+      .call (some (some (.global, "g"), some ("E", "exception", .skip)))
+        "id" [.const 7] := by
+  simp [globalCompileProg, globalCompileProg.globalCompileExps,
+    globalCompileExp, globalTestContext, lookupInfo]
+
+example :
     let result := globalCompileTop (α := Nat) 1 id
       [.decl .one "g" (.const 7), .function
         { name := "main", inline := false, exported := true, params := [],

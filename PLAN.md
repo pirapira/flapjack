@@ -209,6 +209,24 @@ definitions, pass ordering, examples, and proof obligations.
   lowering through the generated temporary assignment.
 - [x] Extend that bridge through Crepe `mul`/Loop `longMul` expansion and
   preserve the returned product.
+- [x] Extend the source-to-Loop bridge through a constant Pancake binary
+  addition, including executable RV64 regression coverage.
+- [x] Extend the source-to-Loop bridge through constant Pancake multiplication
+  and its Crepe-to-Loop `longMul` expansion, with executable RV64 coverage.
+- [x] Extend the source-to-Loop bridge through constant equality comparison
+  lowering and Loop branch execution, with true and false RV64 regressions.
+- [x] Compose constant Pancake conditionals through comparison materialization,
+  Loop branching, and selected returns, with true and false RV64 regressions.
+- [x] Prove source-to-Loop agreement for a local assignment followed by a
+  source-local return, including slot-mapped RV64 execution coverage.
+- [x] Prove source-to-Loop agreement for returning an existing local under an
+  explicit source/slot state relation, with a bound-local RV64 regression.
+- [x] Prove source-to-Loop agreement for a scoped declaration followed by a
+  local return, including the compiler's context extension and Loop binding.
+- [x] Extend scoped declaration agreement through binary addition before the
+  bound local is returned, with an executable RV64 regression.
+- [x] Correct Loop declaration binding for temporary-consuming expressions and
+  verify scoped multiplication declarations through source-to-Loop execution.
 - [x] Prove RISC-V instruction-selection and evaluator agreement for the
   emitted constant-return artifact.
 - [x] Lower register-based equality and inequality conditionals to RISC-V,
@@ -588,6 +606,8 @@ definitions, pass ordering, examples, and proof obligations.
   under explicit scratch non-aliasing hypotheses.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
+- [x] Package the entry-inclusive spill allocator's clash, special-location,
+  tree, variable-coverage, and ABI-parameter witnesses for downstream lowering.
 - [x] Thread coalescing and freeze stack entries into the subsequent Atemp/Stemp
   coloring phase, preserving CakeML's push_stack order.
 - [x] Initialize residual coloring over the active subgraph after prior stack

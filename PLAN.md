@@ -144,6 +144,8 @@ definitions, pass ordering, examples, and proof obligations.
   expression over constants.
 - [x] Prove source-to-full-Crepe agreement for a caught exception handler,
   including the global-memory payload carried across the compiled call.
+- [x] Extend source-to-full-Crepe agreement through a nontrivial external
+  call, preserving a compiled local slot across the generated temporaries.
 - [x] Extend generic source-to-full-Crepe agreement through a compiled
   constant store/load and its state-memory projection.
 - [x] Extend generic source-to-full-Crepe agreement through constant

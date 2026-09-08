@@ -22,6 +22,7 @@ import Flapjack.Test.SourceToLoopCalls
 import Flapjack.Test.SourceToLoopFfi
 import Flapjack.Test.SourceToLoopHandlers
 import Flapjack.Test.SourceToCrepeHandlers
+import Flapjack.Test.SourceToCrepeFfi
 import Flapjack.Test.CorrectnessConditional
 import Flapjack.Test.CorrectnessColour
 import Flapjack.Test.FrameMachineCalls

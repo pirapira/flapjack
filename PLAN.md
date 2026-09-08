@@ -1802,6 +1802,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Exercise a full-SSA declaration call whose callee performs an FFI call,
   preserving the allocation-dependent FFI result register through the linked
   RISC-V image.
+- [x] Add a diagnostics-preserving checked entrypoint for the full-SSA linked
+  RISC-V compiler, with valid and malformed AST regressions.
 
 ## First implementation slice
 

@@ -783,6 +783,23 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked [NeZero width]
   RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscV { services := services }
     removeConfig 0 initialLabel (functions.map (fun (label, _, body) => (label, body)))
 
+/-! Checked counterpart of the full-SSA linked entry point.  Static checking
+is performed before any of the expensive lowering and allocation stages, so
+malformed source declarations cannot be mistaken for allocator failure. -/
+def compileFlapjackRiscVViaAllocatedStackWithFullSsaLinkedChecked [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    StaticResult
+      (Option (List (Nat × RiscV.Word width × List (RiscV.Instruction width)))) :=
+  staticBind (staticCheck declarations) (fun _ =>
+    staticOk (compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked
+      architecture bytesInWord fromNat services removeConfig declarations))
+
 def compileFlapjackChecked [BEq String] [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :

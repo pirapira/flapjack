@@ -1,6 +1,7 @@
 import Flapjack.Test.RiscVMemory
 import Flapjack.Test.RiscV
 import Flapjack.Test.Pipeline
+import Flapjack.Test.HandlerExecution
 import Flapjack.Test.Calls
 import Flapjack.Test.Loops
 import Flapjack.Test.Primitive

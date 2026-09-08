@@ -33,6 +33,7 @@ import Flapjack.Test.SourceSemanticsOps
 import Flapjack.Test.SourceToLoopHandlers
 import Flapjack.Test.SourceToCrepeHandlers
 import Flapjack.Test.SourceToCrepeFfi
+import Flapjack.Test.CrepeFfiCorrectness
 import Flapjack.Test.CorrectnessConditional
 import Flapjack.Test.CorrectnessColour
 import Flapjack.Test.FrameMachineCalls

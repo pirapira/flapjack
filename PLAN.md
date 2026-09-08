@@ -1926,6 +1926,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Prove successful source-to-Loop `extCall` projection for arbitrary
   state-changing host handlers, separating host-state correspondence from
   generated argument plumbing and observable control results.
+- [x] Prove the reusable source-to-Crepe FFI lowering equation, including
+  sequential argument evaluation and restoration of compiler temporaries.
 - [x] Expose a direct source-result-to-linked-RISC-V simulation equation for
   the complete full-SSA FFI regression, in addition to its diagnostic split
   source/machine checks.

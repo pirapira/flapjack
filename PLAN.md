@@ -1913,6 +1913,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Prove the compiler-composed source-to-Loop `extCall` equation for
   constant arguments under no-op handlers, including generated temporary
   declaration execution and normal-result projection.
+- [x] Prove a reusable source-to-Loop identity-call equation for an arbitrary
+  returned word, including compiled function-table lookup, parameter binding,
+  call-result assignment, and the caller continuation.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

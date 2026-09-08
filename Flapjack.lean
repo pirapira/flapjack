@@ -6,6 +6,7 @@ import Flapjack.PanStructs
 import Flapjack.PanGlobals
 import Flapjack.Pipeline
 import Flapjack.Correctness
+import Flapjack.CorrectnessCalls
 import Flapjack.FlatCorrectness
 import Flapjack.Tests
 import Flapjack.Static

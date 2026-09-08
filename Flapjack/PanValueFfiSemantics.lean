@@ -173,44 +173,53 @@ mutual
         FfiState σ → Option (Option (VarKind × VarName) ×
           Option (ExceptionId × VarName × Prog α)) → FunName → List (Exp α) →
         (memoryAccess : Option (PanValueMemoryAccess α) := none) →
+        (contracts : Option PanValueCallContracts := none) →
         Option (PanValueFfiSteppedResult α σ)
-    | 0, _, _, _, _, _, _, _, _ => none
-    | fuel + 1, locals, globals, memory, ffi, info, function, arguments, memoryAccess => do
+    | 0, _, _, _, _, _, _, _, _, _ => none
+    | fuel + 1, locals, globals, memory, ffi, info, function, arguments, memoryAccess,
+        contracts => do
         let (values, argumentSteps) ← evalPanValueExpsCounted structs locals globals memory
           baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
         let (parameters, body) ← lookupPanFunction function functions
         let calleeLocals ← bindPanValueParameters parameters values
         let (result, steps) ← evalPanValueFfiProgSteps context primitive handler structs functions
           baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi body
-          (memoryAccess := memoryAccess)
+          (memoryAccess := memoryAccess) (contracts := contracts)
         match result with
         | .normal _ calleeGlobals calleeMemory calleeFfi =>
             pure (.normal locals calleeGlobals calleeMemory calleeFfi,
               argumentSteps + steps)
         | .returned _ calleeGlobals calleeMemory calleeFfi values =>
-            match info with
-            | none => pure (.returned locals calleeGlobals calleeMemory calleeFfi values,
-                argumentSteps + steps)
-            | some (destination, _) => do
-                let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
-                  destination values
-                  (structs := structs)
-                pure (.normal locals globals calleeMemory calleeFfi,
+            if panValueReturnValid structs contracts function values then
+              match info with
+              | none => pure (.returned locals calleeGlobals calleeMemory calleeFfi values,
                   argumentSteps + steps)
-        | .raised _ calleeGlobals calleeMemory calleeFfi exception value =>
-            match info with
-            | some (_, some (caught, handlerVariable, handlerProgram)) =>
-                if caught == exception then
-                  let (handlerResult, handlerSteps) ← evalPanValueFfiProgSteps context
-                    primitive handler structs functions baseAddress topAddress bytesInWord fuel
-                    (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
-                    calleeFfi handlerProgram (memoryAccess := memoryAccess)
-                  pure (handlerResult, argumentSteps + steps + handlerSteps)
-                else
-                  pure (.raised locals calleeGlobals calleeMemory calleeFfi exception value,
+              | some (destination, _) => do
+                  let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
+                    destination values
+                    (structs := structs)
+                  pure (.normal locals globals calleeMemory calleeFfi,
                     argumentSteps + steps)
-            | _ => pure (.raised locals calleeGlobals calleeMemory calleeFfi exception value,
-                argumentSteps + steps)
+            else none
+        | .raised _ calleeGlobals calleeMemory calleeFfi exception value =>
+            if panValueExceptionValid structs contracts exception value then
+              match info with
+              | some (_, some (caught, handlerVariable, handlerProgram)) =>
+                  if caught == exception then
+                    if panValueHandlerValid structs contracts locals handlerVariable value then
+                      let (handlerResult, handlerSteps) ← evalPanValueFfiProgSteps context
+                        primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                        (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
+                        calleeFfi handlerProgram
+                        (memoryAccess := memoryAccess) (contracts := contracts)
+                      pure (handlerResult, argumentSteps + steps + handlerSteps)
+                    else none
+                  else
+                    pure (.raised locals calleeGlobals calleeMemory calleeFfi exception value,
+                      argumentSteps + steps)
+              | _ => pure (.raised locals calleeGlobals calleeMemory calleeFfi exception value,
+                  argumentSteps + steps)
+            else none
         | .broke _ calleeGlobals calleeMemory calleeFfi =>
             pure (.broke locals calleeGlobals calleeMemory calleeFfi, argumentSteps + steps)
         | .continued _ calleeGlobals calleeMemory calleeFfi =>
@@ -234,23 +243,25 @@ mutual
         (VarName → Option (PanValue α)) → (α → Option (PanValue α)) →
         FfiState σ → (program : Prog α) →
         (memoryAccess : Option (PanValueMemoryAccess α) := none) →
+        (contracts : Option PanValueCallContracts := none) →
         Option (PanValueFfiSteppedResult α σ)
-    | 0, _, _, _, _, _, _ => none
-    | _fuel + 1, locals, globals, memory, ffi, .skip, _ =>
+    | 0, _, _, _, _, _, _, _ => none
+    | _fuel + 1, locals, globals, memory, ffi, .skip, _, _ =>
         some (.normal locals globals memory ffi, 1)
     | fuel + 1, locals, globals, memory, ffi,
-        .dec name shape value body, memoryAccess => do
+        .dec name shape value body, memoryAccess, contracts => do
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         if panShapeMatches (panValueShape structs value) shape then
           let oldValue := locals name
           let (result, steps) ← evalPanValueFfiProgSteps context primitive handler structs functions
             baseAddress topAddress bytesInWord fuel (updatePanValueMap locals name value)
-            globals memory ffi body (memoryAccess := memoryAccess)
+            globals memory ffi body
+            (memoryAccess := memoryAccess) (contracts := contracts)
           pure (restorePanValueFfiLocal name oldValue result, valueSteps + steps + 1)
         else none
     | _fuel + 1, locals, globals, memory, ffi,
-        .assign .local name value, memoryAccess => do
+        .assign .local name value, memoryAccess, _contracts => do
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         if panValueAssignmentValid structs locals globals .local name value then
@@ -258,7 +269,7 @@ mutual
             valueSteps + 1)
         else none
     | _fuel + 1, locals, globals, memory, ffi,
-        .assign .global name value, memoryAccess => do
+        .assign .global name value, memoryAccess, _contracts => do
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         if panValueAssignmentValid structs locals globals .global name value then
@@ -266,7 +277,7 @@ mutual
             valueSteps + 1)
         else none
     | _fuel + 1, locals, globals, memory, ffi,
-        .primitive name operator arguments, memoryAccess => do
+        .primitive name operator arguments, memoryAccess, _contracts => do
         let (values, valueSteps) ← evalPanValueExpsCounted structs locals globals memory
           baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
         let value ← primitive operator values
@@ -274,7 +285,8 @@ mutual
         if panShapeMatches (panValueShape structs value) (panValueShape structs oldValue) then
           pure (.normal (updatePanValueMap locals name value) globals memory ffi, valueSteps + 1)
         else none
-    | _fuel + 1, locals, globals, memory, ffi, .store address value, memoryAccess => do
+    | _fuel + 1, locals, globals, memory, ffi, .store address value, memoryAccess,
+        _contracts => do
         let (address, addressSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
@@ -283,7 +295,7 @@ mutual
         let memory ← panValueStoreWithAccess memory bytesInWord address value memoryAccess
         pure (.normal locals globals memory ffi, addressSteps + valueSteps + 1)
     | _fuel + 1, locals, globals, memory, ffi,
-        .store32 address value, memoryAccess => do
+        .store32 address value, memoryAccess, _contracts => do
         let (address, addressSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
@@ -295,7 +307,7 @@ mutual
           | some access => access.store32 access.domain memory bytesInWord address value
         pure (.normal locals globals memory ffi, addressSteps + valueSteps + 1)
     | _fuel + 1, locals, globals, memory, ffi,
-        .storeByte address value, memoryAccess => do
+        .storeByte address value, memoryAccess, _contracts => do
         let (address, addressSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
@@ -306,19 +318,20 @@ mutual
           | none => some (updatePanValueMemory memory address (.word value))
           | some access => access.storeByte access.domain memory bytesInWord address value
         pure (.normal locals globals memory ffi, addressSteps + valueSteps + 1)
-    | fuel + 1, locals, globals, memory, ffi, .seq first second, memoryAccess => do
+    | fuel + 1, locals, globals, memory, ffi, .seq first second, memoryAccess,
+        contracts => do
         let (firstResult, firstSteps) ← evalPanValueFfiProgSteps context primitive handler structs
           functions baseAddress topAddress bytesInWord fuel locals globals memory ffi first
-          (memoryAccess := memoryAccess)
+          (memoryAccess := memoryAccess) (contracts := contracts)
         match firstResult with
         | .normal locals globals memory ffi =>
             let (secondResult, secondSteps) ← evalPanValueFfiProgSteps context primitive handler
               structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
-              second (memoryAccess := memoryAccess)
+              second (memoryAccess := memoryAccess) (contracts := contracts)
             pure (secondResult, firstSteps + secondSteps + 1)
         | result => pure (result, firstSteps + 1)
     | _fuel + 1, locals, globals, memory, ffi,
-        .ite condition thenBranch elseBranch, memoryAccess => do
+        .ite condition thenBranch elseBranch, memoryAccess, contracts => do
         let (condition, conditionSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord condition (memoryAccess := memoryAccess)
         let .word condition := condition | none
@@ -326,37 +339,39 @@ mutual
           if condition != 0 then
             evalPanValueFfiProgSteps context primitive handler structs functions
               baseAddress topAddress bytesInWord _fuel locals globals memory ffi thenBranch
-              (memoryAccess := memoryAccess)
+              (memoryAccess := memoryAccess) (contracts := contracts)
           else
             evalPanValueFfiProgSteps context primitive handler structs functions
               baseAddress topAddress bytesInWord _fuel locals globals memory ffi elseBranch
-              (memoryAccess := memoryAccess)
+              (memoryAccess := memoryAccess) (contracts := contracts)
         pure (result, conditionSteps + steps + 1)
     | fuel + 1, locals, globals, memory, ffi,
-        .call info function arguments, memoryAccess => do
+        .call info function arguments, memoryAccess, contracts => do
         let (result, steps) ← evalPanValueFfiCallSteps context primitive handler structs functions
           baseAddress topAddress bytesInWord fuel locals globals memory ffi info function arguments
-          (memoryAccess := memoryAccess)
+          (memoryAccess := memoryAccess) (contracts := contracts)
         pure (result, steps + 1)
     | fuel + 1, locals, globals, memory, ffi,
-        .decCall name shape function arguments body, memoryAccess => do
+        .decCall name shape function arguments body, memoryAccess, contracts => do
         let oldValue := locals name
         let (callResult, callSteps) ← evalPanValueFfiCallSteps context primitive handler structs
           functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
-          none function arguments (memoryAccess := memoryAccess)
+          none function arguments
+          (memoryAccess := memoryAccess) (contracts := contracts)
         match callResult with
         | .returned _ globals memory ffi [value] =>
             if panShapeMatches (panValueShape structs value) shape then
               let (bodyResult, bodySteps) ← evalPanValueFfiProgSteps context primitive handler
                 structs functions baseAddress topAddress bytesInWord fuel
                 (updatePanValueMap locals name value) globals memory ffi body
-                (memoryAccess := memoryAccess)
+                (memoryAccess := memoryAccess) (contracts := contracts)
               pure (restorePanValueFfiLocal name oldValue bodyResult,
                 callSteps + bodySteps + 1)
             else none
         | _ => none
     | _fuel + 1, locals, globals, memory, ffi,
-        .extCall function configuration configurationLength array arrayLength, memoryAccess => do
+        .extCall function configuration configurationLength array arrayLength, memoryAccess,
+        _contracts => do
         let (values, expressionSteps) ← evalPanValueExpsCounted structs locals globals memory
           baseAddress topAddress bytesInWord
           [configuration, configurationLength, array, arrayLength]
@@ -377,7 +392,8 @@ mutual
                 pure (.finalFfi (fun _ => none) globals memory ffi event,
                   expressionSteps + 1)
             | none => none
-    | fuel + 1, locals, globals, memory, ffi, .while conditionExp body, memoryAccess => do
+    | fuel + 1, locals, globals, memory, ffi, .while conditionExp body, memoryAccess,
+        contracts => do
         let (condition, conditionSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord conditionExp (memoryAccess := memoryAccess)
         let .word conditionValue := condition | none
@@ -386,30 +402,34 @@ mutual
         else
           let (bodyResult, bodySteps) ← evalPanValueFfiProgSteps context primitive handler structs
             functions baseAddress topAddress bytesInWord fuel locals globals memory ffi body
-            (memoryAccess := memoryAccess)
+            (memoryAccess := memoryAccess) (contracts := contracts)
           match bodyResult with
           | .normal locals globals memory ffi | .continued locals globals memory ffi =>
               let (loopResult, loopSteps) ← evalPanValueFfiProgSteps context primitive handler
                 structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
-                (.while conditionExp body) (memoryAccess := memoryAccess)
+                (.while conditionExp body)
+                (memoryAccess := memoryAccess) (contracts := contracts)
               pure (loopResult, conditionSteps + bodySteps + loopSteps + 1)
           | .broke locals globals memory ffi =>
               pure (.normal locals globals memory ffi, conditionSteps + bodySteps + 1)
           | result => pure (result, conditionSteps + bodySteps + 1)
-    | _fuel + 1, locals, globals, memory, ffi, .break, _ =>
+    | _fuel + 1, locals, globals, memory, ffi, .break, _, _ =>
         pure (.broke locals globals memory ffi, 1)
-    | _fuel + 1, locals, globals, memory, ffi, .continue, _ =>
+    | _fuel + 1, locals, globals, memory, ffi, .continue, _, _ =>
         pure (.continued locals globals memory ffi, 1)
-    | _fuel + 1, locals, globals, memory, ffi, .raise exception value, memoryAccess => do
+    | _fuel + 1, locals, globals, memory, ffi, .raise exception value, memoryAccess,
+        contracts => do
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
-        pure (.raised locals globals memory ffi exception value, valueSteps + 1)
-    | _fuel + 1, locals, globals, memory, ffi, .return value, memoryAccess => do
+        if panValueExceptionValid structs contracts exception value then
+          pure (.raised locals globals memory ffi exception value, valueSteps + 1)
+        else none
+    | _fuel + 1, locals, globals, memory, ffi, .return value, memoryAccess, _contracts => do
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         pure (.returned locals globals memory ffi [value], valueSteps + 1)
     | _fuel + 1, locals, globals, memory, ffi,
-        .shMemLoad size kind name address, memoryAccess => do
+        .shMemLoad size kind name address, memoryAccess, _contracts => do
         let (address, addressSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let .word address := address | none
@@ -424,7 +444,7 @@ mutual
             pure (.finalFfi (fun _ => none) globals memory nextFfi event, addressSteps + 1)
         | some (.stored _) | none => none
     | _fuel + 1, locals, globals, memory, ffi,
-        .shMemStore size address value, memoryAccess => do
+        .shMemStore size address value, memoryAccess, _contracts => do
         let (address, addressSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let (value, valueSteps) ← evalPanValueExpCounted structs locals globals memory
@@ -438,8 +458,8 @@ mutual
             pure (.finalFfi (fun _ => none) globals memory nextFfi event,
               addressSteps + valueSteps + 1)
         | some (.loaded _ _) | none => none
-    | _fuel + 1, locals, globals, memory, ffi, .tick, _ |
-        _fuel + 1, locals, globals, memory, ffi, .annot _ _, _ =>
+    | _fuel + 1, locals, globals, memory, ffi, .tick, _, _ |
+        _fuel + 1, locals, globals, memory, ffi, .annot _ _, _, _ =>
         pure (.normal locals globals memory ffi, 1)
     termination_by fuel _ _ _ _ _ _ => fuel
 end
@@ -457,11 +477,12 @@ def evalPanValueFfiProgramSteps
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α)) (ffi : FfiState σ)
     (program : Prog α)
-    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none) :
     Option (PanValueFfiSteppedResult α σ) :=
   evalPanValueFfiProgSteps context primitive handler structs functions
     baseAddress topAddress bytesInWord fuel locals globals memory ffi program
-    (memoryAccess := memoryAccess)
+    (memoryAccess := memoryAccess) (contracts := contracts)
 
 structure PanValueFfiProgramState (α : Type u) (σ : Type v) where
   source : PanValueProgramState α
@@ -481,10 +502,11 @@ def evalPanValueFfiProgram
     Option (PanValueFfiControlResult α σ) := do
   let state ← evalPanValueDeclarations initial.source declarations
     (memoryAccess := memoryAccess)
+  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions)
   let (result, _) ← evalPanValueFfiCallSteps context primitive handler state.structs
     state.functions state.baseAddress state.topAddress state.bytesInWord fuel
     (fun _ => none) state.globals state.memory initial.ffi none entry arguments
-    (memoryAccess := memoryAccess)
+    (memoryAccess := memoryAccess) (contracts := contracts)
   match lookupInfo entry state.returnShapes, result with
   | some shape, .returned locals globals memory ffi [value] =>
       if panShapeMatches (panValueShape state.structs value) shape then

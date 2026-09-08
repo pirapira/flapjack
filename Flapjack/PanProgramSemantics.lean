@@ -87,10 +87,11 @@ def evalPanValueProgram
     Option (PanValueControlResult α) := do
   let state ← evalPanValueDeclarations initial declarations
     (memoryAccess := memoryAccess)
+  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions)
   let result ← evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi state.structs
     state.functions state.baseAddress state.topAddress state.bytesInWord fuel
     (fun _ => none) state.globals state.memory none entry arguments
-    (memoryAccess := memoryAccess)
+    (memoryAccess := memoryAccess) (contracts := contracts)
   match lookupInfo entry state.returnShapes, result with
   | some shape, .returned locals globals memory [value] =>
       if panShapeMatches (panValueShape state.structs value) shape then

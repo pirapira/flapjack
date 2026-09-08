@@ -43,4 +43,35 @@ theorem crepToLoop_extCall_simulation_regression :
   · simp [crepLoopFfiState]
   · simp [crepLoopFfi, crepLoopFfiState, crepLoopFfiStateAfter]
 
+theorem crepToLoop_return_raise_regression :
+    (evalCrepFullProg [] (fun _ _ => none) crepLoopFfi
+        (fun _ _ _ _ => none) 0 100 1 crepLoopFfiState
+        (.return [.const 42])).map crepControlValues =
+        (evalLoopProgWithCallsAndFfi []
+          (fun _ _ _ _ _ loopState => some loopState) 12
+          (loopStateOfCrepState crepLoopFfiState)
+          (loopCompileProg
+            ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+              LoopContext Nat)
+            [9] (.return [.const 42]))).map loopResultValues ∧
+    (evalCrepFullProg [] (fun _ _ => none) crepLoopFfi
+        (fun _ _ _ _ => none) 0 100 1 crepLoopFfiState
+        (.raise 17)).map crepControlException =
+        (evalLoopProgWithCallsAndFfi []
+          (fun _ _ _ _ _ loopState => some loopState) 8
+          (loopStateOfCrepState crepLoopFfiState)
+          (loopCompileProg
+            ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+              LoopContext Nat)
+            [9] (.raise 17))).map loopControlException := by
+  constructor
+  · exact crepToLoop_return_const_agreement
+      ({ vars := [], functions := [], maxVar := 0, target := .rv64i } : LoopContext Nat)
+      [] (fun _ _ => none) crepLoopFfi (fun _ _ _ _ => none)
+      0 100 0 crepLoopFfiState [9] 42
+  · exact crepToLoop_raise_agreement
+      ({ vars := [], functions := [], maxVar := 0, target := .rv64i } : LoopContext Nat)
+      [] (fun _ _ => none) crepLoopFfi (fun _ _ _ _ => none)
+      0 100 0 crepLoopFfiState [9] 17
+
 end Flapjack

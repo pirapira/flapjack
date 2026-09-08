@@ -27,6 +27,65 @@ def loopFfiOfCrepFfi (ffi : CrepFfiHandler α) :
     (ffi function configuration configurationLength array arrayLength
       (crepStateOfLoopState state)).map loopStateOfCrepState
 
+def crepControlValues : CrepControlResult α → List α
+  | .returned _ values => values
+  | _ => []
+
+def crepControlException : CrepControlResult α → Option α
+  | .raised _ exception => some exception
+  | _ => none
+
+def loopControlException : LoopResult α → Option α
+  | .raised _ exception => some exception
+  | _ => none
+
+theorem crepToLoop_return_const_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat) (value : α) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.return [.const value])).map crepControlValues =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 12)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live (.return [.const value]))).map loopResultValues := by
+  simp [evalCrepFullProg, evalCrepFullExps, evalCrepFullExp, crepControlValues,
+    loopCompileProg,
+    loopCompileExp, loopCompileExp.loopCompileExps, loopCompileExps,
+    loopNestedSeq, loopTempNames, loopAssignTemps,
+    evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+    loopReadLocals, updateLoopLocal, loopResultValues]
+
+theorem crepToLoop_raise_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat) (exception : α) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.raise exception)).map crepControlException =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 8)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live (.raise exception))).map loopControlException := by
+  simp [evalCrepFullProg, crepControlException, loopControlException,
+    loopCompileProg, evalLoopProgWithCallsAndFfi, evalLoopProg,
+    evalLoopExp, updateLoopLocal]
+
 theorem crepToLoop_extCall_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

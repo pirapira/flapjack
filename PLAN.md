@@ -1922,6 +1922,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Prove successful source-to-Loop `extCall` projection for arbitrary
   state-changing host handlers, separating host-state correspondence from
   generated argument plumbing and observable control results.
+- [x] Expose a direct source-result-to-linked-RISC-V simulation equation for
+  the complete full-SSA FFI regression, in addition to its diagnostic split
+  source/machine checks.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

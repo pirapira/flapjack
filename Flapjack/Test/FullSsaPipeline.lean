@@ -132,4 +132,60 @@ theorem fullSsaFfi_source_machine_agreement :
         some [BitVec.ofNat 64 42] :=
   ⟨fullSsaFfi_source_execution, fullSsaFfi_compiled_execution⟩
 
+/-! The full-SSA call path exercises entry moves, the spill-aware allocator,
+    stack-based call linkage, and the linked RISC-V image together. -/
+
+def fullSsaCallDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "id", inline := false, exported := false,
+      params := [("x", .one)],
+      body := .return (.var .local "x"), returnShape := .one },
+   .function
+    { name := "main", inline := false, exported := true, params := [],
+      body := .decCall "answer" .one "id"
+        [.const (BitVec.ofNat 64 41)]
+        (.return (.var .local "answer")), returnShape := .one }]
+
+def fullSsaCallLinked :
+    Option (List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
+  compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+    fullSsaPipelineRemoveConfig fullSsaCallDeclarations
+
+def fullSsaCallLookupEntry (label : Nat) :
+    List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64)) →
+      Option (RiscV.Word 64)
+  | [] => none
+  | (candidate, entry, _) :: sections =>
+      if candidate == label then some entry
+      else fullSsaCallLookupEntry label sections
+
+def fullSsaCallMachineResult : Option (List (RiscV.Word 64)) := do
+  let sections ← fullSsaCallLinked
+  let entry ← fullSsaCallLookupEntry 2 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  /- The linked call returns to this caller continuation.  Stopping there
+     mirrors the established Lab call/return contract: the continuation has
+     already received the callee result in the ABI return register, while an
+     outer caller's link register is outside this compact image's scope. -/
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 172 [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
+
+def fullSsaCallSourceFunctions :
+    List (FunName × List VarName × Prog (RiscV.Word 64)) :=
+  [("id", ["x"], .return (.var .local "x"))]
+
+def fullSsaCallSourceMain : Prog (RiscV.Word 64) :=
+  .decCall "answer" .one "id"
+    [.const (BitVec.ofNat 64 41)]
+    (.return (.var .local "answer"))
+
+#guard fullSsaCallLinked.isSome
+#guard fullSsaCallMachineResult = some [BitVec.ofNat 64 41]
+
+#guard
+  (evalPanProgWithCalls fullSsaCallSourceFunctions 20 (fun _ => none)
+    fullSsaCallSourceMain).map (fun result => result.2) =
+    some [BitVec.ofNat 64 41]
+
 end Flapjack

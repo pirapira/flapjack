@@ -70,4 +70,88 @@ theorem compilePanToLoop_identity_call_correct
     bindPanParameters, lookupPanFunction, lookupLoopFunction, lookupInfo,
     updatePanLocal]
 
+def raiseHandlerDeclarations [OfNat α 0] [OfNat α 1]
+    (_exceptionCode value : α) : List (Decl α) :=
+  [.exnDecl "E" .one,
+   .function
+    { name := "raise", inline := false, exported := false, params := [],
+      body := .raise "E" (.const value), returnShape := .one },
+   .function
+    { name := "main", inline := false, exported := true, params := [],
+      body := .dec "exception" .one (.const 0)
+        (.call
+          (some (none, some ("E", "exception",
+            .return (.var .local "exception"))))
+          "raise" []), returnShape := .one }]
+
+def raiseHandlerCompileContext [OfNat α 0] [OfNat α 1]
+    (exceptionCode : α) : CompileContext α :=
+  { vars := [], functions := [], exceptions := [("E", exceptionCode)],
+    maxVar := 0, bytesInWord := 1 }
+
+def raiseHandlerSourceFunctions (value : α) :
+    List (FunName × List VarName × Prog α) :=
+  [("raise", [], .raise "E" (.const value))]
+
+def raiseHandlerSourceMain : Prog α :=
+  .call
+    (some (none, some ("E", "exception",
+      .return (.var .local "exception"))))
+    "raise" []
+
+def raiseHandlerLoopFunctions [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    (exceptionCode value : α) : List (Nat × List Nat × LoopProg α) :=
+  pipelineLoopFunctions .rv64i 1
+    (compileToCrepe (raiseHandlerCompileContext exceptionCode)
+      (raiseHandlerDeclarations exceptionCode value))
+
+def raiseHandlerLoopResult
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (exceptionCode value : α) : Option (List α) := do
+  let functions := raiseHandlerLoopFunctions exceptionCode value
+  let (_, main) ← lookupLoopFunction 2 functions
+  let result ← evalLoopProgWithFunctions functions 100
+    identityCallLoopState main
+  pure (loopResultValues result)
+
+def raiseHandlerSourceResult
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (value : α) : Option (List α) :=
+  (evalPanProgWithHandlers (raiseHandlerSourceFunctions value) 40
+    (fun _ => none) raiseHandlerSourceMain).map (fun result =>
+      match result with
+      | .returned _ values => values
+      | _ => [])
+
+theorem compilePanToLoop_raise_handler_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
+    [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (exceptionCode value : α) :
+    raiseHandlerLoopResult exceptionCode value =
+      raiseHandlerSourceResult value := by
+  simp [raiseHandlerLoopResult, raiseHandlerSourceResult,
+    raiseHandlerLoopFunctions, pipelineLoopFunctions, pipelineLoopFunctionsAux,
+    pipelineFunctionInfos, compileToCrepe, compileFunctions, compileFunDecl,
+    compileParamVars, functionInfos, compileProg, compileExp,
+    allocatedNames, freshNames, compileArgs, nestedDecs, crepNestedSeq,
+    storeGlobals, assignRet, functionReturnNames,
+    loadGlobals, loopCompileProg, loopCompileExp, loopCompileExps,
+    loopCompileExp.loopCompileExps, loopNestedSeq, loopTempNames,
+    loopAssignTemps, raiseHandlerDeclarations, raiseHandlerCompileContext,
+    raiseHandlerSourceFunctions, raiseHandlerSourceMain,
+    identityCallLoopState, evalLoopProgWithFunctions, evalLoopCall,
+    evalLoopProg, evalLoopExp, loopReadLocals, loopBindParameters,
+    loopAssignValues, updateLoopLocal, updateLoopGlobal, loopResultValues,
+    evalPanProgWithHandlers, evalPanCallWithHandlers, evalPanExps,
+    evalPanExp, bindPanParameters, lookupPanFunction, lookupLoopFunction,
+    lookupInfo, updatePanLocal, evalLoopCondition]
+
 end Flapjack

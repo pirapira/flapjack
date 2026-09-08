@@ -21,20 +21,18 @@ def sourceToLoopMemoryProgram : Prog (RiscV.Word 64) :=
       (.const (BitVec.ofNat 64 42)))
     (.return (.load .one (.const (BitVec.ofNat 64 100))))
 
-theorem sourceToLoop_memory_simulation :
+#guard
     (evalLoopProg 40 sourceToLoopMemoryState
       (loopCompileProg sourceToLoopLoopContext []
         (compileProg sourceToLoopCompileContext sourceToLoopMemoryProgram))).map
         loopResultValues =
       evalPanMemResult (fun _ => none) (fun _ => none)
-        sourceToLoopMemoryProgram := by
-  native_decide
+        sourceToLoopMemoryProgram
 
-theorem sourceToLoop_memory_executes :
+#guard
     (evalLoopProg 40 sourceToLoopMemoryState
       (loopCompileProg sourceToLoopLoopContext []
         (compileProg sourceToLoopCompileContext sourceToLoopMemoryProgram))).map
-        loopResultValues = some [BitVec.ofNat 64 42] := by
-  native_decide
+        loopResultValues = some [BitVec.ofNat 64 42]
 
 end Flapjack

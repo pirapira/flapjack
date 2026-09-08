@@ -45,7 +45,7 @@ def sourceToCrepeFfiSourceHandler : PanFfiHandler (RiscV.Word 64) :=
 def sourceToCrepeFfiSourceLocals : VarName → Option (RiscV.Word 64) :=
   fun name => if name == "result" then some 0 else none
 
-theorem sourceToCrepe_ffi_simulation :
+#guard
     (evalCrepFullProg [] sourceToCrepeFfiPrimitive sourceToCrepeFfiHandler
       sourceToCrepeFfiSharedMem 0 100 30 sourceToCrepeFfiState
       (compileProg sourceToCrepeFfiContext sourceToCrepeFfiProgram)).map (fun result =>
@@ -54,16 +54,14 @@ theorem sourceToCrepe_ffi_simulation :
         | _ => none) =
       (evalPanFfiProg sourceToCrepeFfiSourceHandler
         sourceToCrepeFfiSourceLocals sourceToCrepeFfiProgram).map
-          (fun locals => locals "result") := by
-  native_decide
+          (fun locals => locals "result")
 
-theorem sourceToCrepe_ffi_executes :
+#guard
     (evalCrepFullProg [] sourceToCrepeFfiPrimitive sourceToCrepeFfiHandler
       sourceToCrepeFfiSharedMem 0 100 30 sourceToCrepeFfiState
       (compileProg sourceToCrepeFfiContext sourceToCrepeFfiProgram)).map (fun result =>
         match result with
         | .normal state => state.locals 1
-        | _ => none) = some (some (BitVec.ofNat 64 42)) := by
-  native_decide
+        | _ => none) = some (some (BitVec.ofNat 64 42))
 
 end Flapjack

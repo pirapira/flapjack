@@ -44,11 +44,11 @@ example :
     ((some 7 : Option Nat).map (fun value => (value, 3))).bind
         (fun pair => (some (pair.1 + pair.2, 0) : Option (Nat × Nat)).map Prod.fst) =
       (some 7 : Option Nat).bind (fun value => some (value + 3)) := by
-  simpa using (panOptionCountedBindMapFst (values := some 7) (steps := 3)
-    (stepped := fun value step => some (value + step, 0))
+  exact panOptionCountedBindMapFst (values := some 7) (steps := 3)
+    (stepped := fun value _ => some (value + 3, 0))
     (original := fun value => some (value + 3)) (by
       intro value step
-      simp))
+      simp)
 
 example :
     (evalPanValueExpCounted [] steppedTestLocals steppedTestGlobals steppedTestMemory
@@ -78,6 +78,15 @@ example :
     (evalPanValueProgWithPrimitiveCallsAndFfi steppedTestPrimitive steppedTestFfi []
       steppedTestFunctions 0 100 1 20 steppedTestLocals steppedTestGlobals
       steppedTestMemory (.call none "id" [.const 41])).map steppedReturnedValues
+
+example :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps steppedTestPrimitive steppedTestFfi [] []
+      0 100 1 8 steppedTestLocals steppedTestGlobals steppedTestMemory
+      steppedTestProgram).map Prod.fst =
+      evalPanValueProgWithPrimitiveCallsAndFfi steppedTestPrimitive steppedTestFfi [] []
+        0 100 1 8 steppedTestLocals steppedTestGlobals steppedTestMemory
+        steppedTestProgram := by
+  apply evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst
 
 def steppedTestInitial : PanValueProgramState Nat :=
   { structs := []

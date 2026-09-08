@@ -114,6 +114,18 @@ def memoryModelSteppedShared16Program : Option (RiscV.Word 64 × Nat) :=
       | .returned _ _ _ [.word value] => some (value, result.2)
       | _ => none
 
+def memoryModelPanValuesByteProgram : Option (RiscV.Word 64) :=
+  (evalPanValueProg [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+      (BitVec.ofNat 64 8) (fun _ => none) (fun _ => none)
+      (fun _ => some (.word 0))
+      (.seq (.storeByte (.const (BitVec.ofNat 64 9))
+          (.const (BitVec.ofNat 64 0xaa)))
+        (.return (.loadByte (.const (BitVec.ofNat 64 9)))))
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel))).bind
+    fun result => match result.2.2.2 with
+      | [.word value] => some value
+      | _ => none
+
 #guard memoryModelReadByte = some (BitVec.ofNat 64 2)
 #guard memoryModelRead32 = some (BitVec.ofNat 64 0x04030201)
 #guard memoryModelWordAfterByteStore =
@@ -126,5 +138,6 @@ def memoryModelSteppedShared16Program : Option (RiscV.Word 64 × Nat) :=
 #guard memoryModelGeneric32Program = some (BitVec.ofNat 64 0x11223344)
 #guard memoryModelSteppedByteProgram = some (BitVec.ofNat 64 0xaa, 7)
 #guard memoryModelSteppedShared16Program = some (BitVec.ofNat 64 0xbeef, 9)
+#guard memoryModelPanValuesByteProgram = some (BitVec.ofNat 64 0xaa)
 
 end Flapjack

@@ -23,9 +23,13 @@ inductive PanValue (α : Type u) where
     are defined only on word cells.  The access record therefore makes a
     non-word cell fail instead of silently treating it as a scalar. -/
 structure PanValueMemoryAccess (α : Type u) where
+  domain : α → Bool
+  readWord : (α → Bool) → (α → Option (PanValue α)) → α → α → Option (PanValue α)
   readByte : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
   read16 : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
   read32 : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
+  storeWord : (α → Bool) → (α → Option (PanValue α)) → α → α → PanValue α →
+    Option (α → Option (PanValue α))
   storeByte : (α → Bool) → (α → Option (PanValue α)) → α → α → α →
     Option (α → Option (PanValue α))
   store16 : (α → Bool) → (α → Option (PanValue α)) → α → α → α →
@@ -39,11 +43,19 @@ def panValueWordMemory (memory : α → Option (PanValue α)) : α → Option α
     | _ => none
 
 def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
-    [OfNat α 2] [OfNat α 3] (model : PanMemoryModel α) : PanValueMemoryAccess α :=
-  { readByte := fun domain memory bytesInWord address =>
+    [OfNat α 2] [OfNat α 3] (model : PanMemoryModel α)
+    (domain : α → Bool := fun _ => true) : PanValueMemoryAccess α :=
+  { domain := domain
+    readWord := fun _ memory _ address =>
+      if domain address then memory address else none
+    storeWord := fun _ memory _ address value =>
+      if domain address then
+        some (fun current => if current == address then some value else memory current)
+      else none
+    readByte := fun _ memory bytesInWord address =>
       panModelReadByte model domain (panValueWordMemory memory)
         bytesInWord address false
-    read16 := fun domain memory bytesInWord address =>
+    read16 := fun _ memory bytesInWord address =>
       if model.aligned 2 address then
         let alignedAddress := model.byteAlign bytesInWord address
         if domain alignedAddress then do
@@ -54,10 +66,10 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
              model.getByte bytesInWord (address + 1) cell false])
         else none
       else none
-    read32 := fun domain memory bytesInWord address =>
+    read32 := fun _ memory bytesInWord address =>
       panModelRead32 model domain (panValueWordMemory memory)
         bytesInWord address false
-    storeByte := fun domain memory bytesInWord address value => do
+    storeByte := fun _ memory bytesInWord address value => do
       let alignedAddress := model.byteAlign bytesInWord address
       if domain alignedAddress then
         let cell ← memory alignedAddress
@@ -66,7 +78,7 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
         pure (fun current =>
           if current == alignedAddress then some (.word updated) else memory current)
       else none
-    store16 := fun domain memory bytesInWord address value => do
+    store16 := fun _ memory bytesInWord address value => do
       if model.aligned 2 address then
         let alignedAddress := model.byteAlign bytesInWord address
         if domain alignedAddress then
@@ -80,7 +92,7 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
             if current == alignedAddress then some (.word cell1) else memory current)
         else none
       else none
-    store32 := fun domain memory bytesInWord address value => do
+    store32 := fun _ memory bytesInWord address value => do
       if model.aligned 4 address then
         let alignedAddress := model.byteAlign bytesInWord address
         if domain alignedAddress then
@@ -180,7 +192,9 @@ def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let address ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
       let .word address := address | none
-      let value ← memory address
+      let value ← match memoryAccess with
+        | none => memory address
+        | some access => access.readWord access.domain memory bytesInWord address
       if isWfShape structs shape && panShapeMatches (panValueShape structs value) shape then
         some value
       else none
@@ -194,7 +208,7 @@ def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
           match value with
           | .word value => some (.word value)
           | _ => none
-      | some access => (access.read32 (fun _ => true) memory bytesInWord address).map .word
+      | some access => (access.read32 access.domain memory bytesInWord address).map .word
   | .loadByte address, memoryAccess => do
       let address ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
@@ -205,7 +219,7 @@ def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
           match value with
           | .word value => some (.word value)
           | _ => none
-      | some access => (access.readByte (fun _ => true) memory bytesInWord address).map .word
+      | some access => (access.readByte access.domain memory bytesInWord address).map .word
   | .op operator arguments, memoryAccess => do
       let values ← evalPanValueExps structs locals globals memory
         baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
@@ -306,6 +320,15 @@ def updatePanValueMemory [BEq α] (memory : α → Option (PanValue α))
     (address : α) (value : PanValue α) : α → Option (PanValue α) :=
   updatePanValueMap memory address value
 
+def panValueStoreWithAccess [BEq α]
+    (memory : α → Option (PanValue α)) (bytesInWord address : α)
+    (value : PanValue α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    Option (α → Option (PanValue α)) :=
+  match memoryAccess with
+  | none => some (updatePanValueMemory memory address value)
+  | some access => access.storeWord access.domain memory bytesInWord address value
+
 abbrev PanPrimitiveHandler (α : Type u) :=
   PrimOp → List (PanValue α) → Option (PanValue α)
 
@@ -360,7 +383,8 @@ def evalPanValueProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
       let value ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
       let .word address := address | none
-      pure (locals, globals, updatePanValueMemory memory address value, [])
+      let memory ← panValueStoreWithAccess memory bytesInWord address value memoryAccess
+      pure (locals, globals, memory, [])
   | .store32 address value, memoryAccess => do
       let address ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
@@ -370,7 +394,7 @@ def evalPanValueProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
       let .word value := value | none
       let memory ← match memoryAccess with
         | none => some (updatePanValueMemory memory address (.word value))
-        | some access => access.store32 (fun _ => true) memory bytesInWord address value
+        | some access => access.store32 access.domain memory bytesInWord address value
       pure (locals, globals, memory, [])
   | .storeByte address value, memoryAccess => do
       let address ← evalPanValueExp structs locals globals memory
@@ -381,7 +405,7 @@ def evalPanValueProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
       let .word value := value | none
       let memory ← match memoryAccess with
         | none => some (updatePanValueMemory memory address (.word value))
-        | some access => access.storeByte (fun _ => true) memory bytesInWord address value
+        | some access => access.storeByte access.domain memory bytesInWord address value
       pure (locals, globals, memory, [])
   | .return value, memoryAccess => do
       let value ← evalPanValueExp structs locals globals memory
@@ -411,10 +435,12 @@ def evalPanValueProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
       let value ← match memoryAccess with
         | none => memory address
         | some access => match size with
-            | .opW => memory address
-            | .op8 => (access.readByte (fun _ => true) memory bytesInWord address).map .word
-            | .op16 => (access.read16 (fun _ => true) memory bytesInWord address).map .word
-            | .op32 => (access.read32 (fun _ => true) memory bytesInWord address).map .word
+            | .opW => match memoryAccess with
+                | none => memory address
+                | some access => (access.readWord access.domain memory bytesInWord address)
+            | .op8 => (access.readByte access.domain memory bytesInWord address).map .word
+            | .op16 => (access.read16 access.domain memory bytesInWord address).map .word
+            | .op32 => (access.read32 access.domain memory bytesInWord address).map .word
       match kind with
       | .local => pure (updatePanValueMap locals name value, globals, memory, [])
       | .global => pure (locals, updatePanValueMap globals name value, memory, [])
@@ -428,10 +454,10 @@ def evalPanValueProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
       let memory ← match memoryAccess with
         | none => some (updatePanValueMemory memory address (.word value))
         | some access => match size with
-            | .opW => some (updatePanValueMemory memory address (.word value))
-            | .op8 => access.storeByte (fun _ => true) memory bytesInWord address value
-            | .op16 => access.store16 (fun _ => true) memory bytesInWord address value
-            | .op32 => access.store32 (fun _ => true) memory bytesInWord address value
+            | .opW => panValueStoreWithAccess memory bytesInWord address (.word value)
+            | .op8 => access.storeByte access.domain memory bytesInWord address value
+            | .op16 => access.store16 access.domain memory bytesInWord address value
+            | .op32 => access.store32 access.domain memory bytesInWord address value
       pure (locals, globals, memory, [])
   | .tick, _ | .annot _ _, _ => some (locals, globals, memory, [])
   | _, _ => none
@@ -623,7 +649,8 @@ mutual
         let value ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         let .word address := address | none
-        pure (.normal locals globals (updatePanValueMemory memory address value))
+        let memory ← panValueStoreWithAccess memory bytesInWord address value memoryAccess
+        pure (.normal locals globals memory)
     | _fuel + 1, locals, globals, memory, .store32 address value, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
@@ -633,7 +660,7 @@ mutual
         let .word value := value | none
         let memory ← match memoryAccess with
           | none => some (updatePanValueMemory memory address (.word value))
-          | some access => access.store32 (fun _ => true) memory bytesInWord address value
+          | some access => access.store32 access.domain memory bytesInWord address value
         pure (.normal locals globals
           memory)
     | _fuel + 1, locals, globals, memory, .storeByte address value, memoryAccess => do
@@ -645,7 +672,7 @@ mutual
         let .word value := value | none
         let memory ← match memoryAccess with
           | none => some (updatePanValueMemory memory address (.word value))
-          | some access => access.storeByte (fun _ => true) memory bytesInWord address value
+          | some access => access.storeByte access.domain memory bytesInWord address value
         pure (.normal locals globals
           memory)
     | fuel + 1, locals, globals, memory, .seq first second, memoryAccess => do
@@ -730,10 +757,12 @@ mutual
         let value ← match memoryAccess with
           | none => memory address
           | some access => match size with
-              | .opW => memory address
-              | .op8 => (access.readByte (fun _ => true) memory bytesInWord address).map .word
-              | .op16 => (access.read16 (fun _ => true) memory bytesInWord address).map .word
-              | .op32 => (access.read32 (fun _ => true) memory bytesInWord address).map .word
+              | .opW => match memoryAccess with
+                  | none => memory address
+                  | some access => (access.readWord access.domain memory bytesInWord address)
+              | .op8 => (access.readByte access.domain memory bytesInWord address).map .word
+              | .op16 => (access.read16 access.domain memory bytesInWord address).map .word
+              | .op32 => (access.read32 access.domain memory bytesInWord address).map .word
         match kind with
         | .local => pure (.normal (updatePanValueMap locals name value) globals memory)
         | .global => pure (.normal locals (updatePanValueMap globals name value) memory)
@@ -747,10 +776,10 @@ mutual
         let memory ← match memoryAccess with
           | none => some (updatePanValueMemory memory address (.word value))
           | some access => match size with
-              | .opW => some (updatePanValueMemory memory address (.word value))
-              | .op8 => access.storeByte (fun _ => true) memory bytesInWord address value
-              | .op16 => access.store16 (fun _ => true) memory bytesInWord address value
-              | .op32 => access.store32 (fun _ => true) memory bytesInWord address value
+              | .opW => panValueStoreWithAccess memory bytesInWord address (.word value)
+              | .op8 => access.storeByte access.domain memory bytesInWord address value
+              | .op16 => access.store16 access.domain memory bytesInWord address value
+              | .op32 => access.store32 access.domain memory bytesInWord address value
         pure (.normal locals globals memory)
     | _fuel + 1, locals, globals, memory, .tick, _ |
         _fuel + 1, locals, globals, memory, .annot _ _, _ =>
@@ -863,7 +892,8 @@ mutual
         let value ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         let .word address := address | none
-        pure (.normal locals globals (updatePanValueMemory memory address value))
+        let memory ← panValueStoreWithAccess memory bytesInWord address value memoryAccess
+        pure (.normal locals globals memory)
     | _fuel + 1, locals, globals, memory, .store32 address value, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
@@ -873,7 +903,7 @@ mutual
         let .word value := value | none
         let memory ← match memoryAccess with
           | none => some (updatePanValueMemory memory address (.word value))
-          | some access => access.store32 (fun _ => true) memory bytesInWord address value
+          | some access => access.store32 access.domain memory bytesInWord address value
         pure (.normal locals globals
           memory)
     | _fuel + 1, locals, globals, memory, .storeByte address value, memoryAccess => do
@@ -885,7 +915,7 @@ mutual
         let .word value := value | none
         let memory ← match memoryAccess with
           | none => some (updatePanValueMemory memory address (.word value))
-          | some access => access.storeByte (fun _ => true) memory bytesInWord address value
+          | some access => access.storeByte access.domain memory bytesInWord address value
         pure (.normal locals globals
           memory)
     | fuel + 1, locals, globals, memory, .seq first second, memoryAccess => do
@@ -971,10 +1001,12 @@ mutual
         let value ← match memoryAccess with
           | none => memory address
           | some access => match size with
-              | .opW => memory address
-              | .op8 => (access.readByte (fun _ => true) memory bytesInWord address).map .word
-              | .op16 => (access.read16 (fun _ => true) memory bytesInWord address).map .word
-              | .op32 => (access.read32 (fun _ => true) memory bytesInWord address).map .word
+              | .opW => match memoryAccess with
+                  | none => memory address
+                  | some access => (access.readWord access.domain memory bytesInWord address)
+              | .op8 => (access.readByte access.domain memory bytesInWord address).map .word
+              | .op16 => (access.read16 access.domain memory bytesInWord address).map .word
+              | .op32 => (access.read32 access.domain memory bytesInWord address).map .word
         match kind with
         | .local => pure (.normal (updatePanValueMap locals name value) globals memory)
         | .global => pure (.normal locals (updatePanValueMap globals name value) memory)
@@ -988,10 +1020,10 @@ mutual
         let memory ← match memoryAccess with
           | none => some (updatePanValueMemory memory address (.word value))
           | some access => match size with
-              | .opW => some (updatePanValueMemory memory address (.word value))
-              | .op8 => access.storeByte (fun _ => true) memory bytesInWord address value
-              | .op16 => access.store16 (fun _ => true) memory bytesInWord address value
-              | .op32 => access.store32 (fun _ => true) memory bytesInWord address value
+              | .opW => panValueStoreWithAccess memory bytesInWord address (.word value)
+              | .op8 => access.storeByte access.domain memory bytesInWord address value
+              | .op16 => access.store16 access.domain memory bytesInWord address value
+              | .op32 => access.store32 access.domain memory bytesInWord address value
         pure (.normal locals globals memory)
     | _fuel + 1, locals, globals, memory,
         .tick, _ | _fuel + 1, locals, globals, memory, .annot _ _, _ =>

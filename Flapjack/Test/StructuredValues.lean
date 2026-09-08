@@ -72,6 +72,7 @@ example :
       some [PanValue.rStruct [.word 3, .word 5]] := by
   simp [evalPanFlatProg, evalPanFlatProgWithPrimitive, evalPanFlatExp,
     evalPanFlatExp.evalPanFlatExps, panFlatStore,
+    panFlatStoreWithAccess, panFlatLoadWithAccess,
     panFlatStoreWords, panFlatStoreWord, panValueWords, panValueWordsFuel,
     panValueFuel, panValueFuel.panValueListFuel, panValueWordsFuel,
     panValueWordsFuel.panValueWordsListFuel, panOffset, panFlatLoad,

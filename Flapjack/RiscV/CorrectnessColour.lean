@@ -1798,4 +1798,118 @@ theorem evalWordFunction_wordVarStraightLine_applyColour [NeZero width]
     · exact wordVarStraightLine_applyColour colour valid injective
         colourNoScratch hprogram
 
+/-! Compose the straight-line body theorem with the ABI return boundary.  This
+    is the function-shaped contract consumed by full-SSA call proofs: the
+    coloured body preserves the state relation and its renamed return reads
+    produce exactly the same values. -/
+
+theorem evalWordFunction_wordVarStraightLine_return_applyColour [NeZero width]
+    (colour : Nat → Nat) (valid : wordColourValid colour)
+    (injective : Function.Injective colour) (colourZero : colour 0 = 0)
+    (colourNoScratch : ∀ name, name < 31 → colour name ≠ 31)
+    (source target : State width)
+    (hrelation : WordColourStateRelation colour source target)
+    (program : WordProg (Word width))
+    (hprogram : WordVarStraightLine width program)
+    (label : Nat) (values : List Nat)
+    (hvalues : ∀ name, name ∈ values → name < 32) :
+    ∃ source' target' returnedValues,
+      evalWordFunction source (.seq program (.return label values)) =
+        some (source', returnedValues) ∧
+      evalWordFunction target
+          (.seq (wordApplyColour colour program)
+            (.return label (values.map colour))) =
+        some (target', returnedValues) ∧
+      WordColourStateRelation colour source' target' := by
+  rcases evalWordFunction_wordVarStraightLine_applyColour colour valid injective
+    colourZero colourNoScratch source target hrelation program hprogram with
+    ⟨source', target', hsource, htarget, hrelation'⟩
+  have hreturns :
+      values.mapM (fun name => do
+        let register ← RiscV.registerOfNat name
+        pure (RiscV.readRegister source' register)) =
+      (values.map colour).mapM (fun name => do
+        let register ← RiscV.registerOfNat name
+        pure (RiscV.readRegister target' register)) := by
+    induction values with
+    | nil => rfl
+    | cons name values ih =>
+        simp only [List.map, List.mapM_cons]
+        have hname := hvalues name (by simp)
+        have hcolour : colour name < 32 := valid name hname
+        have hregister := hrelation'.register name hname hcolour
+        have hhead :
+            (do
+              let register ← RiscV.registerOfNat name
+              pure (RiscV.readRegister source' register)) =
+            (do
+              let register ← RiscV.registerOfNat (colour name)
+              pure (RiscV.readRegister target' register)) := by
+          simp [RiscV.registerOfNat, hname, hcolour, hregister]
+        have htail : ∀ name, name ∈ values → name < 32 := by
+          intro name hname
+          exact hvalues name (by simp [hname])
+        rw [hhead, ih htail]
+  have hmapSome : ∀ (state : State width) (names : List Nat),
+      (∀ name, name ∈ names → name < 32) →
+      ∃ result, List.mapM (fun name => do
+        let register ← RiscV.registerOfNat name
+        pure (RiscV.readRegister state register)) names = some result := by
+    intro state names
+    induction names with
+    | nil =>
+        intro _
+        exact ⟨[], rfl⟩
+    | cons name names ih =>
+        intro hnames
+        have hname : name < 32 := hnames name (by simp)
+        have htail : ∀ name, name ∈ names → name < 32 := by
+          intro name hname'
+          exact hnames name (by simp [hname'])
+        have hregister : RiscV.registerOfNat name = some ⟨name, hname⟩ := by
+          simp [RiscV.registerOfNat, hname]
+        rcases ih htail with ⟨result, hresult⟩
+        refine ⟨RiscV.readRegister state ⟨name, hname⟩ :: result, ?_⟩
+        simp only [List.mapM_cons, hregister]
+        rw [hresult]
+        rfl
+  rcases hmapSome source' values hvalues with
+    ⟨sourceValues, hsourceValues⟩
+  have hcolouredValues : ∀ name, name ∈ values.map colour → name < 32 := by
+    intro name hname
+    rcases List.mem_map.mp hname with ⟨sourceName, hsourceName, rfl⟩
+    exact valid sourceName (hvalues sourceName hsourceName)
+  rcases hmapSome target' (values.map colour) hcolouredValues with
+    ⟨targetValues, htargetValues⟩
+  have hvaluesEq : sourceValues = targetValues := by
+    rw [hsourceValues, htargetValues] at hreturns
+    exact Option.some.inj hreturns
+  subst targetValues
+  refine ⟨source', target', sourceValues, ?_, ?_⟩
+  · simp only [evalWordFunction]
+    rw [hsource]
+    have hsourceValues' :
+        values.mapM (fun name =>
+          (RiscV.registerOfNat name).bind (fun register =>
+            some (RiscV.readRegister source' register))) =
+          some sourceValues := by
+      simpa [Option.map, Option.bind] using hsourceValues
+    simp [hsourceValues']
+  · refine ⟨?_, hrelation'⟩
+    simp only [evalWordFunction]
+    rw [htarget]
+    have htargetValues' :
+        (values.map colour).mapM (fun name =>
+          (RiscV.registerOfNat name).bind (fun register =>
+            some (RiscV.readRegister target' register))) =
+          some sourceValues := by
+      simpa [Option.map, Option.bind] using htargetValues
+    have htargetValues'' :
+        List.mapM ((fun name =>
+          (RiscV.registerOfNat name).bind (fun register =>
+            some (RiscV.readRegister target' register))) ∘ colour) values =
+          some sourceValues := by
+      simpa [Function.comp_def, List.mapM_map] using htargetValues'
+    simp [htargetValues'']
+
 end Flapjack.RiscV

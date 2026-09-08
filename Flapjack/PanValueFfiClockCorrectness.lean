@@ -182,6 +182,44 @@ theorem evalPanValueFfiClockCall_zero_timeout
   simp [evalPanValueFfiClockCall, hargs, hlookup, hbind,
     panValueFfiClockTimeout]
 
+/-! A successful nonzero-clock call returns the callee's final globals,
+memory, FFI state, and remaining clock, while clearing the callee locals at
+the caller boundary. -/
+theorem evalPanValueFfiClockCall_returned_no_destination
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock finalClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (values : List (PanValue α)) (parameters : List VarName)
+    (calleeLocals bodyLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (body : Prog α) (function : FunName) (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (hargs : evalPanValueExps structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi (clock - 1)
+      body (memoryAccess := memoryAccess) (contracts := none) =
+      some (.control (.returned bodyLocals finalGlobals finalMemory finalFfi values), finalClock))
+    (hwithin : panValueValuesWithinLimit structs values = true) :
+    evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      none function arguments (memoryAccess := memoryAccess) (contracts := none) =
+      some (.control (.returned (fun _ => none) finalGlobals finalMemory finalFfi values),
+        finalClock) := by
+  simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hwithin]
+
 /-! One true loop iteration consumes one clock unit before evaluating the body
 and then resumes the loop with the body's resulting state and clock. -/
 theorem evalPanValueFfiClockProg_while_normal_iteration

@@ -550,11 +550,15 @@ mutual
     | _fuel + 1, locals, globals, memory, .assign .local name value => do
         let value ← evalPanRiscVFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord value
-        pure (.normal (updatePanValueMap locals name value) globals memory)
+        if panRiscVAssignmentValid structs locals globals .local name value then
+          pure (.normal (updatePanValueMap locals name value) globals memory)
+        else none
     | _fuel + 1, locals, globals, memory, .assign .global name value => do
         let value ← evalPanRiscVFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord value
-        pure (.normal locals (updatePanValueMap globals name value) memory)
+        if panRiscVAssignmentValid structs locals globals .global name value then
+          pure (.normal locals (updatePanValueMap globals name value) memory)
+        else none
     | _fuel + 1, locals, globals, memory, .primitive name operator arguments => do
         let values ← evalPanRiscVFlatExps structs locals globals domain memory
           baseAddress topAddress bytesInWord arguments

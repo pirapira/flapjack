@@ -102,4 +102,14 @@ def evalRiscVMissingAssignment :=
 #guard evalRiscVMismatchedAssignment.isNone
 #guard evalRiscVMissingAssignment.isNone
 
+def evalRiscVFuelMismatchedAssignment :=
+  RiscV.evalPanRiscVFlatProgWithCallsAndFfi []
+    []
+    (fun _ _ _ _ _ _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8) 4
+    assignmentWordLocals (fun _ => none) (fun _ => false) (fun _ => none)
+    (.assign .local "x" (.rStruct []))
+
+#guard evalRiscVFuelMismatchedAssignment.isNone
+
 end Flapjack

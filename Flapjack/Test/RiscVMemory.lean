@@ -115,9 +115,16 @@ def riscvFlatNoFfi : PanFlatFfiHandler (RiscV.Word 64) :=
   fun _ _ _ _ _ locals => some locals
 
 def riscvFlatIncrementFunctions :
-    List (FunName × List VarName × Prog (RiscV.Word 64)) :=
-  [("increment", ["x"],
-    .return (.op .add [.var .local "x", .const (BitVec.ofNat 64 1)]))]
+    List (FunDecl (RiscV.Word 64)) :=
+  [{ name := "increment"
+     inline := false
+     exported := false
+     params := [("x", .one)]
+     body := .return (.op .add [.var .local "x", .const (BitVec.ofNat 64 1)])
+     returnShape := .one }]
+
+def riscvFlatCallLocals : VarName → Option (PanValue (RiscV.Word 64)) :=
+  fun name => if name == "result" then some (.word 0) else none
 
 def riscvFlatLocalResultNat
     (result : PanFlatControlResult (RiscV.Word 64)) :
@@ -145,7 +152,7 @@ example :
     (evalPanRiscVFlatProgWithCallsAndFfi
       [] riscvFlatIncrementFunctions riscvFlatNoFfi
       (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 20
-      (fun _ => none) (fun _ => none) riscvFlatTestDomain
+      riscvFlatCallLocals (fun _ => none) riscvFlatTestDomain
       riscvFlatZeroMemory
       (.call (some (some (.local, "result"), none)) "increment"
         [.const (BitVec.ofNat 64 41)])).bind riscvFlatLocalResultNat =

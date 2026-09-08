@@ -367,6 +367,49 @@ def panRiscVAssignmentValid [NeZero width]
             (panValueShape structs oldValue)
       | none => false
 
+def lookupPanRiscVFunction [NeZero width]
+    (name : FunName) : List (FunDecl (Word width)) → Option (FunDecl (Word width))
+  | [] => none
+  | declaration :: declarations =>
+      if declaration.name == name then some declaration
+      else lookupPanRiscVFunction name declarations
+
+def bindPanRiscVValueParameters [NeZero width]
+    (structs : StructContext)
+    (parameters : List (VarName × Shape))
+    (values : List (PanValue (Word width))) :
+    Option (VarName → Option (PanValue (Word width))) :=
+  let pairs := parameters.zip values
+  if parameters.length != values.length then none
+  else if pairs.all (fun pair =>
+      panShapeMatches (panValueShape structs pair.2) pair.1.2) then
+    some (pairs.foldl
+      (fun locals pair => updatePanValueMap locals pair.1.1 pair.2)
+      (fun _ => none))
+  else none
+
+def panRiscVReturnValid [NeZero width]
+    (structs : StructContext) (shape : Shape)
+    (values : List (PanValue (Word width))) : Bool :=
+  match values with
+  | [value] => panShapeMatches (panValueShape structs value) shape
+  | _ => false
+
+def assignPanRiscVCallResult [NeZero width]
+    (structs : StructContext)
+    (locals : VarName → Option (PanValue (Word width)))
+    (destination : Option (VarKind × VarName))
+    (values : List (PanValue (Word width))) :
+    Option (VarName → Option (PanValue (Word width))) :=
+  match destination, values with
+  | none, [] => some locals
+  | some (.local, name), [value] =>
+      if panRiscVAssignmentValid structs locals (fun _ => none)
+          .local name value then
+        some (updatePanValueMap locals name value)
+      else none
+  | _, _ => none
+
 def evalPanRiscVFlatProg [NeZero width]
     (structs : StructContext)
     (baseAddress topAddress bytesInWord : Word width)
@@ -477,7 +520,7 @@ memory operation through the RISC-V byte-addressed adapter in this file.
 mutual
   def evalPanRiscVFlatCallWithPrimitiveAndFfi [NeZero width]
       (structs : StructContext)
-      (functions : List (FunName × List VarName × Prog (Word width)))
+      (functions : List (FunDecl (Word width)))
       (ffi : PanFlatFfiHandler (Word width))
       (primitive : PanPrimitiveHandler (Word width))
       (baseAddress topAddress bytesInWord : Word width)
@@ -492,20 +535,22 @@ mutual
     | fuel + 1, locals, globals, memory, info, function, arguments => do
         let values ← evalPanRiscVFlatExps structs locals globals domain memory
           baseAddress topAddress bytesInWord arguments
-        let (parameters, body) ← lookupPanFunction function functions
-        let calleeLocals ← bindPanValueParameters parameters values
+        let declaration ← lookupPanRiscVFunction function functions
+        let calleeLocals ← bindPanRiscVValueParameters structs declaration.params values
         let result ← evalPanRiscVFlatProgFuelWithPrimitiveAndFfi structs functions
           ffi primitive baseAddress topAddress bytesInWord domain fuel
-          calleeLocals globals memory body
+          calleeLocals globals memory declaration.body
         match result with
         | .normal _ calleeGlobals calleeMemory =>
             pure (.normal locals calleeGlobals calleeMemory)
         | .returned _ calleeGlobals calleeMemory values =>
-            match info with
-            | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
-            | some (destination, _) => do
-                let locals ← assignPanValueCallResult locals destination values
-                pure (.normal locals calleeGlobals calleeMemory)
+            if panRiscVReturnValid structs declaration.returnShape values then
+              match info with
+              | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
+              | some (destination, _) => do
+                  let locals ← assignPanRiscVCallResult structs locals destination values
+                  pure (.normal locals calleeGlobals calleeMemory)
+            else none
         | .raised _ calleeGlobals calleeMemory exception value =>
             match info with
             | some (_, some (caught, handlerVariable, handlerProgram)) =>
@@ -525,7 +570,7 @@ mutual
 
   def evalPanRiscVFlatProgFuelWithPrimitiveAndFfi [NeZero width]
       (structs : StructContext)
-      (functions : List (FunName × List VarName × Prog (Word width)))
+      (functions : List (FunDecl (Word width)))
       (ffi : PanFlatFfiHandler (Word width))
       (primitive : PanPrimitiveHandler (Word width))
       (baseAddress topAddress bytesInWord : Word width)
@@ -700,7 +745,7 @@ end
 
 def evalPanRiscVFlatProgWithPrimitiveAndFfi [NeZero width]
     (structs : StructContext)
-    (functions : List (FunName × List VarName × Prog (Word width)))
+    (functions : List (FunDecl (Word width)))
     (ffi : PanFlatFfiHandler (Word width))
     (primitive : PanPrimitiveHandler (Word width))
     (baseAddress topAddress bytesInWord : Word width)
@@ -713,7 +758,7 @@ def evalPanRiscVFlatProgWithPrimitiveAndFfi [NeZero width]
 
 def evalPanRiscVFlatProgWithCallsAndFfi [NeZero width]
     (structs : StructContext)
-    (functions : List (FunName × List VarName × Prog (Word width)))
+    (functions : List (FunDecl (Word width)))
     (ffi : PanFlatFfiHandler (Word width))
     (baseAddress topAddress bytesInWord : Word width) (fuel : Nat)
     (locals globals : VarName → Option (PanValue (Word width)))

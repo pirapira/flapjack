@@ -1792,6 +1792,8 @@ definitions, pass ordering, examples, and proof obligations.
   full-SSA RISC-V entrypoints.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
+- [x] Port the executable Crepe inlining analyses and unreachable-code
+  elimination helpers needed by the next call-substitution layer.
 
 ## First implementation slice
 

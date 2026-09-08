@@ -50,6 +50,7 @@ import Flapjack.Test.FullSsaHandler
 import Flapjack.Test.FullSsaFfiCall
 import Flapjack.Test.FullSsaTarget
 import Flapjack.Test.CrepeArith
+import Flapjack.Test.CrepeInline
 import Flapjack.Test.FullSsaBitmaps
 import Flapjack.Test.RuntimeLinking
 import Flapjack.Test.CallEntry

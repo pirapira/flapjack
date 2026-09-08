@@ -1931,6 +1931,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   `ffi` node without unfolding the recursive lowering function.
 - [x] Prove Crepe-to-Loop scalar return and raise agreements, including the
   generated temporary-local fuel overhead and control-result projections.
+- [x] Prove the normal no-argument Crepe-to-Loop call agreement, including
+  Crepe function lookup, Loop label lookup, callee execution, and caller-state
+  preservation.
 - [x] Prove the reusable source-to-Crepe FFI lowering equation, including
   sequential argument evaluation and restoration of compiler temporaries.
 - [x] Compose the lowered caught-handler call with the full-Crepe evaluator,

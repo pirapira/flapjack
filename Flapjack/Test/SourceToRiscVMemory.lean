@@ -10,10 +10,9 @@ program, using the executable RISC-V function artifact.
 
 namespace Flapjack
 
-theorem pipelineStoreLoad_source_riscv_agreement :
+#guard
     compiledPipelineStoreLoadRun =
       evalPanMemResult (fun _ => none) (fun _ => none)
-        pipelineStoreLoadSource := by
-  native_decide
+        pipelineStoreLoadSource
 
 end Flapjack

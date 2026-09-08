@@ -1783,6 +1783,9 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Connect loop-aware FFI lowering to a machine-level RISC-V execution
   regression, including the ECALL host program-counter transition and break
   target.
+- [x] Exercise a full-SSA declaration call whose callee performs an FFI call,
+  preserving the allocation-dependent FFI result register through the linked
+  RISC-V image.
 
 ## First implementation slice
 

@@ -99,28 +99,15 @@ def panRiscVReadByte [NeZero width]
     (domain : PanMemoryDomain (Word width))
     (memory : PanFlatMemory (Word width))
     (bytesInWord address : Word width) : Option (Word width) :=
-  let alignedAddress := panRiscVByteAlign bytesInWord address
-  if domain alignedAddress then
-    (memory alignedAddress).map
-      (panRiscVGetByte bytesInWord address)
-  else none
+  panModelReadByte (model := panRiscVMemoryModel)
+    domain memory bytesInWord address false
 
 def panRiscVRead32 [NeZero width]
     (domain : PanMemoryDomain (Word width))
     (memory : PanFlatMemory (Word width))
     (bytesInWord address : Word width) : Option (Word width) :=
-  if aligned address 4 then do
-    let byte0 ← panRiscVReadByte domain memory bytesInWord address
-    let byte1 ← panRiscVReadByte domain memory bytesInWord
-      (byteAddress address 1)
-    let byte2 ← panRiscVReadByte domain memory bytesInWord
-      (byteAddress address 2)
-    let byte3 ← panRiscVReadByte domain memory bytesInWord
-      (byteAddress address 3)
-    pure (BitVec.ofNat width
-      (byte0.toNat + 256 * byte1.toNat +
-        256 ^ 2 * byte2.toNat + 256 ^ 3 * byte3.toNat))
-  else none
+  panModelRead32 (model := panRiscVMemoryModel)
+    domain memory bytesInWord address false
 
 def panRiscVRead16 [NeZero width]
     (domain : PanMemoryDomain (Word width))
@@ -138,31 +125,16 @@ def panRiscVStoreByte [NeZero width]
     (memory : PanFlatMemory (Word width))
     (bytesInWord address byte : Word width) :
     Option (PanFlatMemory (Word width)) :=
-  let alignedAddress := panRiscVByteAlign bytesInWord address
-  if domain alignedAddress then do
-    let value ← memory alignedAddress
-    pure (updatePanValueMap memory alignedAddress
-      (panRiscVSetByte bytesInWord address byte value))
-  else none
+  panModelStoreByte (model := panRiscVMemoryModel)
+    domain memory bytesInWord address byte false
 
 def panRiscVStore32 [NeZero width]
     (domain : PanMemoryDomain (Word width))
     (memory : PanFlatMemory (Word width))
     (bytesInWord address value : Word width) :
     Option (PanFlatMemory (Word width)) :=
-  if aligned address 4 then do
-    let byte0 := BitVec.ofNat width (value.toNat % 256)
-    let byte1 := BitVec.ofNat width (value.toNat / 256 % 256)
-    let byte2 := BitVec.ofNat width (value.toNat / 256 ^ 2 % 256)
-    let byte3 := BitVec.ofNat width (value.toNat / 256 ^ 3 % 256)
-    let memory ← panRiscVStoreByte domain memory bytesInWord address byte0
-    let memory ← panRiscVStoreByte domain memory bytesInWord
-      (byteAddress address 1) byte1
-    let memory ← panRiscVStoreByte domain memory bytesInWord
-      (byteAddress address 2) byte2
-    panRiscVStoreByte domain memory bytesInWord
-      (byteAddress address 3) byte3
-  else none
+  panModelStore32 (model := panRiscVMemoryModel)
+    domain memory bytesInWord address value false
 
 def panRiscVStore16 [NeZero width]
     (domain : PanMemoryDomain (Word width))

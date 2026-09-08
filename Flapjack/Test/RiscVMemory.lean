@@ -14,6 +14,27 @@ def riscvFlatTestMemory : PanFlatMemory (RiscV.Word 64) :=
 def riscvFlatZeroMemory : PanFlatMemory (RiscV.Word 64) :=
   fun address => if address == 8 then some 0 else none
 
+def riscvFlatWordStoreByteLoad : Option (RiscV.Word 64) :=
+  (evalPanRiscVFlatResult [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+    (BitVec.ofNat 64 8) (fun _ => none) (fun _ => none)
+    riscvFlatTestDomain riscvFlatZeroMemory
+    (.seq (.store (.const (BitVec.ofNat 64 8))
+        (.const (BitVec.ofNat 64 0x0807060504030201)))
+      (.return (.loadByte (.const (BitVec.ofNat 64 9)))))).bind fun values =>
+    match values with
+    | [.word value] => some value
+    | _ => none
+
+example : riscvFlatWordStoreByteLoad = some (BitVec.ofNat 64 2) := by
+  simp [riscvFlatWordStoreByteLoad, evalPanRiscVFlatResult,
+    evalPanRiscVFlatProg, evalPanRiscVFlatExp, panFlatStore,
+    panValueWords, panValueWordsFuel, panFlatStoreWords,
+    panFlatStoreWord, panRiscVReadByte,
+    panModelReadByte,
+    panRiscVMemoryModel, panRiscVByteAlign,
+    panRiscVGetByte, panRiscVByteIndex, riscvFlatTestDomain,
+    updatePanValueMap]
+
 example :
     panRiscVReadByte riscvFlatTestDomain riscvFlatTestMemory
       (BitVec.ofNat 64 8) (BitVec.ofNat 64 9) =
@@ -64,9 +85,11 @@ example :
         (.return (.load32 (.const (BitVec.ofNat 64 8))))) =
       some [.word (BitVec.ofNat 64 67305985)] := by
   simp [evalPanRiscVFlatResult, evalPanRiscVFlatProg, evalPanRiscVFlatExp,
-    panRiscVStore32, panRiscVStoreByte, panRiscVRead32, panRiscVReadByte,
-    panRiscVGetByte, panRiscVSetByte, panRiscVByteAlign, panRiscVByteIndex,
-    riscvFlatTestDomain, riscvFlatZeroMemory, updatePanValueMap, byteAddress,
+    panRiscVStore32, panRiscVRead32,
+    panModelStore32, panModelRead32,
+    panModelUpdateMemory, panRiscVMemoryModel, panRiscVWordOfBytes,
+    panRiscVByteAlign, panRiscVGetByte, panRiscVSetByte, panRiscVByteIndex,
+    riscvFlatTestDomain, riscvFlatZeroMemory,
     aligned]
 
 example :
@@ -78,9 +101,10 @@ example :
         (.return (.loadByte (.const (BitVec.ofNat 64 9))))) =
     some [.word (BitVec.ofNat 64 7)] := by
   simp [evalPanRiscVFlatResult, evalPanRiscVFlatProg, evalPanRiscVFlatExp,
-    panRiscVStoreByte, panRiscVReadByte, panRiscVGetByte, panRiscVSetByte,
-    panRiscVByteAlign, panRiscVByteIndex, riscvFlatTestDomain,
-    riscvFlatZeroMemory, updatePanValueMap]
+    panRiscVStoreByte, panRiscVReadByte,
+    panModelStoreByte, panModelReadByte, panModelUpdateMemory,
+    panRiscVMemoryModel, panRiscVByteAlign, panRiscVGetByte, panRiscVSetByte,
+    panRiscVByteIndex, riscvFlatTestDomain, riscvFlatZeroMemory]
 
 example :
     evalPanRiscVFlatResult [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
@@ -90,10 +114,11 @@ example :
         (.return (.var .local "x"))) =
       some [.word (BitVec.ofNat 64 513)] := by
   simp [evalPanRiscVFlatResult, evalPanRiscVFlatProg,
-    evalPanRiscVFlatExp, panRiscVReadShared, panRiscVRead16,
-    panRiscVReadByte, panRiscVGetByte, panRiscVByteAlign,
-    panRiscVByteIndex, riscvFlatTestDomain, riscvFlatTestMemory,
-    updatePanValueMap, byteAddress, aligned]
+    evalPanRiscVFlatExp, panRiscVReadByte, panModelReadByte,
+    panRiscVMemoryModel, panRiscVReadShared, panRiscVRead16,
+    panRiscVByteAlign, panRiscVGetByte, panRiscVByteIndex,
+    riscvFlatTestDomain, riscvFlatTestMemory, updatePanValueMap,
+    byteAddress, aligned]
 
 example :
     evalPanRiscVFlatResult [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
@@ -105,11 +130,13 @@ example :
           (.return (.var .local "x")))) =
       some [.word (BitVec.ofNat 64 48879)] := by
   simp [evalPanRiscVFlatResult, evalPanRiscVFlatProg,
-    evalPanRiscVFlatExp, panRiscVReadShared, panRiscVRead16,
-    panRiscVReadByte, panRiscVGetByte, panRiscVByteAlign,
-    panRiscVByteIndex, panRiscVStoreShared, panRiscVStore16,
-    panRiscVStoreByte, panRiscVSetByte, riscvFlatTestDomain,
-    riscvFlatZeroMemory, updatePanValueMap, byteAddress, aligned]
+    evalPanRiscVFlatExp, panRiscVStoreByte, panRiscVReadByte,
+    panModelStoreByte, panModelReadByte,
+    panModelUpdateMemory, panRiscVMemoryModel, panRiscVReadShared,
+    panRiscVRead16, panRiscVStoreShared, panRiscVStore16,
+    panRiscVByteAlign, panRiscVGetByte, panRiscVSetByte, panRiscVByteIndex,
+    riscvFlatTestDomain, riscvFlatZeroMemory, updatePanValueMap,
+    byteAddress, aligned]
 
 def riscvFlatNoFfi : PanFlatFfiHandler (RiscV.Word 64) :=
   fun _ _ _ _ _ locals => some locals

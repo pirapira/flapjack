@@ -1928,6 +1928,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   generated argument plumbing and observable control results.
 - [x] Prove the reusable source-to-Crepe FFI lowering equation, including
   sequential argument evaluation and restoration of compiler temporaries.
+- [x] Compose the lowered caught-handler call with the full-Crepe evaluator,
+  retaining the generated return-slot setup and handler continuation.
 - [x] Expose a direct source-result-to-linked-RISC-V simulation equation for
   the complete full-SSA FFI regression, in addition to its diagnostic split
   source/machine checks.

@@ -24,8 +24,11 @@ inductive PanValue (α : Type u) where
     non-word cell fail instead of silently treating it as a scalar. -/
 structure PanValueMemoryAccess (α : Type u) where
   readByte : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
+  read16 : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
   read32 : (α → Bool) → (α → Option (PanValue α)) → α → α → Option α
   storeByte : (α → Bool) → (α → Option (PanValue α)) → α → α → α →
+    Option (α → Option (PanValue α))
+  store16 : (α → Bool) → (α → Option (PanValue α)) → α → α → α →
     Option (α → Option (PanValue α))
   store32 : (α → Bool) → (α → Option (PanValue α)) → α → α → α →
     Option (α → Option (PanValue α))
@@ -40,6 +43,17 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
   { readByte := fun domain memory bytesInWord address =>
       panModelReadByte model domain (panValueWordMemory memory)
         bytesInWord address false
+    read16 := fun domain memory bytesInWord address =>
+      if model.aligned 2 address then
+        let alignedAddress := model.byteAlign bytesInWord address
+        if domain alignedAddress then do
+          let cell ← memory alignedAddress
+          let .word cell := cell | none
+          pure (model.wordOfBytes false
+            [model.getByte bytesInWord address cell false,
+             model.getByte bytesInWord (address + 1) cell false])
+        else none
+      else none
     read32 := fun domain memory bytesInWord address =>
       panModelRead32 model domain (panValueWordMemory memory)
         bytesInWord address false
@@ -51,6 +65,20 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
         let updated := model.setByte bytesInWord address value cell false
         pure (fun current =>
           if current == alignedAddress then some (.word updated) else memory current)
+      else none
+    store16 := fun domain memory bytesInWord address value => do
+      if model.aligned 2 address then
+        let alignedAddress := model.byteAlign bytesInWord address
+        if domain alignedAddress then
+          let cell ← memory alignedAddress
+          let .word cell := cell | none
+          let cell0 := model.setByte bytesInWord address
+            (model.getByte bytesInWord 0 value false) cell false
+          let cell1 := model.setByte bytesInWord (address + 1)
+            (model.getByte bytesInWord 1 value false) cell0 false
+          pure (fun current =>
+            if current == alignedAddress then some (.word cell1) else memory current)
+        else none
       else none
     store32 := fun domain memory bytesInWord address value => do
       if model.aligned 4 address then

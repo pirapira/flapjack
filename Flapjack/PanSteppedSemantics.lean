@@ -547,26 +547,37 @@ mutual
           baseAddress topAddress bytesInWord value memoryAccess
         pure (.returned locals globals memory [evaluatedValue], valueSteps + 1)
     | _fuel + 1, locals, globals, memory,
-        .shMemLoad _ kind name address, memoryAccess => do
+        .shMemLoad size kind name address, memoryAccess => do
         let (evaluatedAddress, addressSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord address memoryAccess
         let .word evaluatedAddress := evaluatedAddress | none
-        let value ← memory evaluatedAddress
+        let value ← match memoryAccess with
+          | none => memory evaluatedAddress
+          | some access => match size with
+              | .opW => memory evaluatedAddress
+              | .op8 => (access.readByte (fun _ => true) memory bytesInWord evaluatedAddress).map .word
+              | .op16 => (access.read16 (fun _ => true) memory bytesInWord evaluatedAddress).map .word
+              | .op32 => (access.read32 (fun _ => true) memory bytesInWord evaluatedAddress).map .word
         match kind with
         | .local => pure (.normal (updatePanValueMap locals name value) globals memory,
             addressSteps + 1)
         | .global => pure (.normal locals (updatePanValueMap globals name value) memory,
             addressSteps + 1)
-    | _fuel + 1, locals, globals, memory, .shMemStore _ address value, memoryAccess => do
+    | _fuel + 1, locals, globals, memory, .shMemStore size address value, memoryAccess => do
         let (evaluatedAddress, addressSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord address memoryAccess
         let (evaluatedValue, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value memoryAccess
         let .word evaluatedAddress := evaluatedAddress | none
         let .word evaluatedValue := evaluatedValue | none
-        pure (.normal locals globals
-          (updatePanValueMemory memory evaluatedAddress (.word evaluatedValue)),
-          addressSteps + valueSteps + 1)
+        let memory ← match memoryAccess with
+          | none => some (updatePanValueMemory memory evaluatedAddress (.word evaluatedValue))
+          | some access => match size with
+              | .opW => some (updatePanValueMemory memory evaluatedAddress (.word evaluatedValue))
+              | .op8 => access.storeByte (fun _ => true) memory bytesInWord evaluatedAddress evaluatedValue
+              | .op16 => access.store16 (fun _ => true) memory bytesInWord evaluatedAddress evaluatedValue
+              | .op32 => access.store32 (fun _ => true) memory bytesInWord evaluatedAddress evaluatedValue
+        pure (.normal locals globals memory, addressSteps + valueSteps + 1)
     | _fuel + 1, locals, globals, memory,
         .tick, _ | _fuel + 1, locals, globals, memory, .annot _ _, _ =>
         pure (.normal locals globals memory, 1)

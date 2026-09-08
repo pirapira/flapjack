@@ -17,7 +17,7 @@ def fullSsaFfiCallDeclarations : List (Decl (RiscV.Word 64)) :=
       params := [("x", .one)], body := fullSsaFfiCallIdBody,
       returnShape := .one },
    .function
-    { name := "main", inline := false, exported := true, params := [],
+    { name := "main", inline := false, exported := false, params := [],
       body := .decCall "answer" .one "ffiId"
         [.const (BitVec.ofNat 64 41)]
         (.return (.var .local "answer")), returnShape := .one }]
@@ -42,6 +42,29 @@ def fullSsaFfiCallHost (register : Nat) : RiscV.WordFfiHost 64 :=
     else none
 
 #guard fullSsaFfiCallLinked.isSome
+
+def fullSsaFfiCallChecked :=
+  compileFlapjackRiscVViaAllocatedStackWithFullSsaLinkedChecked .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) [("inc", 7)]
+    fullSsaPipelineRemoveConfig fullSsaFfiCallDeclarations
+
+#guard staticResultOk fullSsaFfiCallChecked
+#guard match fullSsaFfiCallChecked.1 with
+  | .ok (some _) => true
+  | _ => false
+
+def fullSsaFfiCallInvalidDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "main", inline := false, exported := false, params := [],
+      body := .return (.const (BitVec.ofNat 64 7)),
+      returnShape := .comb [.one, .one] }]
+
+def fullSsaFfiCallInvalidChecked :=
+  compileFlapjackRiscVViaAllocatedStackWithFullSsaLinkedChecked .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+    fullSsaPipelineRemoveConfig fullSsaFfiCallInvalidDeclarations
+
+#guard !(staticResultOk fullSsaFfiCallInvalidChecked)
 
 def fullSsaFfiCallLookupEntry (label : Nat) :
     List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64)) →

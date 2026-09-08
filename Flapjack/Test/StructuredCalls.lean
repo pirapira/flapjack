@@ -8,6 +8,9 @@ def structuredCallTestFunctions : List (FunName × List VarName × Prog Nat) :=
 def structuredNoFfi : PanValueFfiHandler Nat :=
   fun _ _ _ _ _ _ => none
 
+def structuredStateFunctions : List (FunName × List VarName × Prog Nat) :=
+  [("setGlobal", [], .seq (.assign .global "g" (.const 7)) (.return (.const 1)))]
+
 def flatCallTestFunctions : List (FunName × List VarName × Prog Nat) :=
   [("id", ["x"], .return (.var .local "x"))]
 
@@ -134,5 +137,20 @@ example :
     evalPanValueExp, evalPanValueExps, evalPanValueExp.evalPanValueExps,
     bindPanValueParameters, assignPanValueCallResult,
     updatePanValueMap, lookupPanFunction]
+
+example :
+    (evalPanValueProgWithCallsAndFfi (α := Nat) []
+      structuredStateFunctions structuredNoFfi 0 100 8 20
+      (fun _ => none)
+      (fun name => if name == "g" then some (.word 0) else none)
+      (fun _ => none) (.call none "setGlobal" [])).map
+      (fun result => match result with
+        | .returned _ globals _ [PanValue.word value] => (globals "g", value)
+        | _ => (none, 0)) = some (some (.word 7), 1) := by
+  simp [evalPanValueProgWithCallsAndFfi, evalPanValueCallWithCallsAndFfi,
+    evalPanValueExp, evalPanValueExps, evalPanValueExp.evalPanValueExps,
+    structuredStateFunctions, bindPanValueParameters,
+    updatePanValueMap, panValueAssignmentValid,
+    panValueShape, panShapeMatches, lookupPanFunction]
 
 end Flapjack

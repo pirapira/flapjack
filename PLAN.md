@@ -42,7 +42,7 @@ not yet an equivalent source semantics. In particular:
 | Assignments | `is_valid_value` checks the destination's existing shape | Generic structured, flat, stepped, and stateful-FFI assignment paths now reject absent or wrongly shaped destinations; call-result destination checks remain ([#384](https://github.com/pirapira/flapjack/issues/384)) |
 | Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation | The model-aware stateful stepped evaluator now carries FFI state, size-aware shared calls, aligned domains, and terminal outcomes; legacy evaluators retain compatibility paths |
 | Control state | Clock, timeout, local clearing at boundaries, return/exception size limits, and declared exception shapes | Control-result evaluators use fuel only; `tick`, `return`, `raise`, and calls omit several CakeML checks and effects ([#387](https://github.com/pirapira/flapjack/issues/387)) |
-| Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays | The stateful stepped evaluator propagates callee globals/memory/FFI state and performs model-aware byte-array `ExtCall`; generic call destinations now validate local/global shapes and stand-alone calls discard returned values, while return-shape/control checks remain ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388), [#406](https://github.com/pirapira/flapjack/issues/406)) |
+| Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays | Structured, stepped, flat, and stateful-FFI evaluators now propagate callee globals/memory (and stateful FFI state where applicable); generic call destinations validate local/global shapes and stand-alone calls discard returned values, while return-shape/control checks remain ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388), [#406](https://github.com/pirapira/flapjack/issues/406)) |
 
 The flat-memory adapter and the structured/stepped canonical access slice fix
 the representation of ordinary byte and word loads/stores when a target model
@@ -90,9 +90,11 @@ shared-memory behavior.
    compatibility fixtures.
 5. **Control-state fidelity.** Thread CakeML's clock and timeout rules through
    `Tick`, `While`, calls, returns, and exceptions, including local clearing
-   at the same boundaries. Thread callee globals, memory, and FFI state back
-   to callers. Add declaration-environment checks for function return shapes
-   and declared exception shapes.
+   at the same boundaries. The generic structured and stepped call evaluators
+   now return callee globals and memory to callers, matching the existing flat
+   and stateful-FFI paths. Add declaration-environment checks for function
+   return shapes and declared exception shapes, and complete the remaining
+   call-result and handler contracts.
 6. **Correctness and migration.** Rebase source-to-Crepe, stepped-semantics,
    flat-memory, and source-to-RISC-V theorems on the canonical evaluator.
    Keep focused counterexamples for every formerly permissive behavior and

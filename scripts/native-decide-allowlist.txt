@@ -43,6 +43,7 @@
 # results be stated with a name at all.
 3 Flapjack/Test/FullSsaPipeline.lean
 1 Flapjack/Test/FullSsaCorrectness.lean
+1 Flapjack/Test/FullSsaHandler.lean
 1 Flapjack/Test/CorrectnessFfi.lean
 1 Flapjack/Test/SourceToLoop.lean
 

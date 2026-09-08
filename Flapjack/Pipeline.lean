@@ -390,6 +390,16 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
       let rest ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa functions
       pure ((label, wordParameters, stackBody) :: rest)
 
+/-! Full-SSA Lab sections use label 0 for their public entry and label 1 for
+    the tail-sequence entry marker.  Handler labels are function-specific, so
+    continuation labels must also start above every function label; otherwise
+    a handler in the highest-numbered function can alias its call continuation.
+    This helper computes that fresh lower bound from the generated functions. -/
+def fullSsaInitialLabLabel : List (Nat × List Nat × StackProg Nat) → Nat
+  | [] => 2
+  | (label, _, _) :: functions =>
+      max (label + 1) (fullSsaInitialLabLabel functions)
+
 /-!
 An allocation-aware variant of the Word-function boundary.  The historical
 `pipelineWordFunctions` definition remains available for existing artifact
@@ -601,8 +611,9 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsa [NeZero width]
     Option (List (RiscV.Instruction width)) := do
   let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa pipeline.loop
+  let initialLabel := fullSsaInitialLabLabel functions
   RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
-    removeConfig 0 2
+    removeConfig 0 initialLabel
     (functions.map (fun (label, _, body) => (label, body)))
 
 /-! End-to-end graph-colouring entry point using the complete CakeML-style SSA
@@ -620,8 +631,9 @@ def compileFlapjackRiscVViaGraphStackWithFullSsa [NeZero width]
     Option (List (RiscV.Instruction width)) := do
   let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithGraphAndFullSsa pipeline.loop
+  let initialLabel := fullSsaInitialLabLabel functions
   RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
-    removeConfig 0 2
+    removeConfig 0 initialLabel
     (functions.map (fun (label, _, body) => (label, body)))
 
 /-! Bitmap-carrying variant of the allocator-aware RISC-V entry point.  The
@@ -664,9 +676,10 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmaps [NeZero width]
   let (functions, bitmaps) ←
     pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps
       (RiscV.wordStackInitialBitmaps false) pipeline.loop
+  let initialLabel := fullSsaInitialLabLabel functions
   let instructions ←
     RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
-      removeConfig 0 2
+      removeConfig 0 initialLabel
       (functions.map (fun (label, _, body) => (label, body)))
   pure (bitmaps, instructions)
 
@@ -689,12 +702,13 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGc
   let (functions, bitmaps) ←
     pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps
       (RiscV.wordStackInitialBitmaps false) loop
+  let initialLabel := fullSsaInitialLabLabel functions
   let instructions ←
     RiscV.compileStackProgramNatListWithSimpleGcAndStoreConstsToRiscV
       { services := services } removeConfig
       { gcStubLocation := stackGcStubLocation, returnLabel := 0,
         firstFreshLabel := stackFunctionFirstLabel }
-      { } stackStoreConstsStubLocation wordAllocatableRegisters.length 0 2
+      { } stackStoreConstsStubLocation wordAllocatableRegisters.length 0 initialLabel
       (functions.map (fun (label, _, body) => (label, body)))
   pure (bitmaps, instructions)
 
@@ -765,8 +779,9 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked [NeZero width]
     Option (List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
   let pipeline := compileFlapjack architecture bytesInWord fromNat declarations
   let functions ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa pipeline.loop
+  let initialLabel := fullSsaInitialLabLabel functions
   RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscV { services := services }
-    removeConfig 0 2 (functions.map (fun (label, _, body) => (label, body)))
+    removeConfig 0 initialLabel (functions.map (fun (label, _, body) => (label, body)))
 
 def compileFlapjackChecked [BEq String] [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)

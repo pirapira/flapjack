@@ -84,6 +84,18 @@ theorem labCompileAsm_locValue_execute [NeZero width]
         (.addi register 0 (BitVec.ofNat width targetPosition))) := by
   simp [labCompileAsm, hregister, htarget, executeInstructions]
 
+theorem labCompileAsm_linkValue_execute [NeZero width]
+    (context : WordFfiContext)
+    (state : State width) (sectionId : Nat) (labels : List (Nat × Nat))
+    (position : Nat) (target : LabRef) (targetPosition : Nat)
+    (htarget : labResolveRef sectionId labels target = some targetPosition) :
+    (labCompileAsm context sectionId labels position
+      (.linkValue target)).bind
+        (fun code => executeInstructions state code) =
+      some (execute state
+        (.addi 1 0 (BitVec.ofNat width targetPosition))) := by
+  simp [labCompileAsm, htarget, executeInstructions]
+
 /-! A cross-section jump is not merely assembled correctly: its resolved
     offset must take the machine to the target section.  This is the smallest
     executable contract for the label collection and flattening boundary. -/

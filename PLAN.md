@@ -1759,6 +1759,8 @@ definitions, pass ordering, examples, and proof obligations.
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target
   section on the RISC-V model, rather than only matching emitted code shape.
+- [x] Prove Lab `linkValue` materializes a resolved continuation in ABI
+  register `x1` at the RISC-V boundary.
 - [x] Expose location-aware bitmap sequence compilation and evaluator
   contracts for the spill-aware Word-to-Stack boundary.
 - [x] Expose location-aware bitmap handler-call and FFI lowering equations

@@ -1852,6 +1852,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   function pipeline, including a compositional append equation.
 - [x] Add abstract and bounded FFI loop-break simulation equations, with
   FFI-in-loop regressions.
+- [x] Prove loop-aware FFI machine simulation through successful sequence
+  lowering, including control-marker resolution and instruction-list append.
 - [x] Add the corresponding FFI loop-continue lowering equation and compiler
   shape regression.
 - [x] Expose the abstract StackLang FFI returned-callee continuation equation,

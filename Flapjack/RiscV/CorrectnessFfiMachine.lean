@@ -486,4 +486,136 @@ theorem wordFunctionToRiscVWithCallsAndFfi_seq_simulation
   simp [wordFunctionToRiscVWithCallsAndFfi, hfirstCompile, hsecondCompile,
     executeInstructionsWithFfi_append, hfirstExec, hsecondExec]
 
+theorem wordControlInstructions_append_of_success
+    [NeZero width] (first second : List (WordControlInstruction width))
+    (firstCode secondCode : List (Instruction width))
+    (hfirst : wordControlInstructions first = some firstCode)
+    (hsecond : wordControlInstructions second = some secondCode) :
+    wordControlInstructions (first ++ second) = some (firstCode ++ secondCode) := by
+  induction first generalizing firstCode with
+  | nil =>
+      simp only [List.nil_append, wordControlInstructions] at hfirst ⊢
+      cases hfirst
+      simpa using hsecond
+  | cons instruction first ih =>
+      cases instruction with
+      | instruction instruction =>
+          simp only [wordControlInstructions] at hfirst ⊢
+          cases htail : wordControlInstructions first with
+          | none => simp [htail] at hfirst
+          | some tailCode =>
+              have hcode : instruction :: tailCode = firstCode := by
+                simpa [htail] using hfirst
+              subst firstCode
+              have happend := ih (firstCode := tailCode) htail
+              simp [List.cons_append, wordControlInstructions, happend]
+      | breakJump => simp [wordControlInstructions] at hfirst
+      | continueJump => simp [wordControlInstructions] at hfirst
+
+/-!
+The same sequencing boundary remains valid after enabling loop lowering.
+The loop-aware selector may resolve control markers inside either component,
+but once those components have produced ordinary instruction lists their
+machine effects still compose by list append.  Keeping this theorem separate
+from the unclocked evaluator lets loop and handler proofs use the exact
+compiled code without re-proving the selector's sequencing equation.
+-/
+theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_seq_simulation
+    [NeZero width] (context : WordCallFfiContext width)
+    (host : WordFfiHost width) (state firstState finalState : State width)
+    (first second : WordProg (Word width))
+    (firstCode secondCode : List (Instruction width))
+    (returns : List (Fin 32))
+    (hfirstCompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context first =
+      some (firstCode, []))
+    (hsecondCompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context second =
+      some (secondCode, returns))
+    (hfirstExec : executeInstructionsWithFfi host state firstCode =
+      some firstState)
+    (hsecondExec : executeInstructionsWithFfi host firstState secondCode =
+      some finalState) :
+    (wordFunctionToRiscVWithCallsAndFfiAndLoops context (.seq first second)).bind
+        (fun result =>
+          (executeInstructionsWithFfi host state result.1).map
+            (fun final => (final, returns))) =
+      some (finalState, returns) := by
+  cases hfirstAux : wordFunctionToRiscVWithCallsAndFfiAndLoopsAux context first with
+  | none =>
+      simp [wordFunctionToRiscVWithCallsAndFfiAndLoops, hfirstAux] at hfirstCompile
+  | some firstResult =>
+      cases firstResult with
+      | mk firstControl firstReturns =>
+          have hfirstBind :
+              (wordControlInstructions firstControl).bind
+                (fun code => some (code, firstReturns)) =
+                some (firstCode, ([] : List (Fin 32))) := by
+            simpa [wordFunctionToRiscVWithCallsAndFfiAndLoops,
+              hfirstAux] using hfirstCompile
+          cases firstReturns with
+          | nil =>
+              cases hsecondAux :
+                  wordFunctionToRiscVWithCallsAndFfiAndLoopsAux context second with
+              | none =>
+                  simp [wordFunctionToRiscVWithCallsAndFfiAndLoops,
+                    hsecondAux] at hsecondCompile
+              | some secondResult =>
+                  cases secondResult with
+                  | mk secondControl secondReturns =>
+                      cases hfirstControlLowering :
+                          wordControlInstructions firstControl with
+                      | none => simp [hfirstControlLowering] at hfirstBind
+                      | some loweredFirstCode =>
+                          have hfirstPair :
+                              (loweredFirstCode, ([] : List (Fin 32))) =
+                                (firstCode, []) := by
+                            simpa [hfirstControlLowering] using hfirstBind
+                          have hfirstControl : loweredFirstCode = firstCode :=
+                            congrArg Prod.fst hfirstPair
+                          have hsecondBind :
+                              (wordControlInstructions secondControl).bind
+                                (fun code => some (code, secondReturns)) =
+                                some (secondCode, returns) := by
+                            simpa [wordFunctionToRiscVWithCallsAndFfiAndLoops,
+                              hsecondAux] using hsecondCompile
+                          cases hsecondControlLowering :
+                              wordControlInstructions secondControl with
+                          | none => simp [hsecondControlLowering] at hsecondBind
+                          | some loweredSecondCode =>
+                              have hsecondPair :
+                                  (loweredSecondCode, secondReturns) =
+                                    (secondCode, returns) := by
+                                simpa [hsecondControlLowering] using hsecondBind
+                              have hsecondControl : loweredSecondCode = secondCode :=
+                                congrArg Prod.fst hsecondPair
+                              have hreturns : secondReturns = returns :=
+                                congrArg Prod.snd hsecondPair
+                              subst loweredFirstCode
+                              subst loweredSecondCode
+                              subst secondReturns
+                              have hfirstControl' :
+                                  wordControlInstructions firstControl = some firstCode :=
+                                hfirstControlLowering ▸ rfl
+                              have hsecondControl' :
+                                  wordControlInstructions secondControl = some secondCode :=
+                                hsecondControlLowering ▸ rfl
+                              have hcombined := wordControlInstructions_append_of_success
+                                firstControl secondControl firstCode secondCode
+                                hfirstControl' hsecondControl'
+                              have hseqCompile :
+                                  wordFunctionToRiscVWithCallsAndFfiAndLoops context
+                                      (.seq first second) =
+                                    some (firstCode ++ secondCode, returns) := by
+                                simp [wordFunctionToRiscVWithCallsAndFfiAndLoops,
+                                  wordFunctionToRiscVWithCallsAndFfiAndLoopsAux,
+                                  hfirstAux, hsecondAux, hcombined]
+                              rw [hseqCompile]
+                              simp [executeInstructionsWithFfi_append,
+                                hfirstExec, hsecondExec]
+          | cons firstReturn firstReturns =>
+              cases hfirstControlLowering :
+                  wordControlInstructions firstControl with
+              | none => simp [hfirstControlLowering] at hfirstBind
+              | some loweredFirstCode =>
+                  simp [hfirstControlLowering] at hfirstBind
+
 end Flapjack.RiscV

@@ -75,11 +75,12 @@ shared-memory behavior.
 4. **Shared-memory and external effects.** Model-aware structured and stepped
    evaluators now have a separate shared-memory callback/domain and a
    stateful stepped path with FFI state, terminal observations, size-dispatched
-   `op8`/`op16`/`op32`/`opW` behavior, and model-backed byte-array `ExtCall`
-   reads/writes. Complete this stage by moving the public source-state entry
-   point onto that stateful evaluator and proving the remaining byte-domain
-   and length-failure correspondence. Preserve the existing pure handler
-   adapters as explicitly non-observable compatibility fixtures.
+   `op8`/`op16`/`op32`/`opW` behavior, model-backed byte-array `ExtCall`
+   reads/writes, and a public declaration/entry-point wrapper. Complete this
+   stage by proving the remaining byte-domain and length-failure
+   correspondence, then migrate callers from the legacy pure evaluator.
+   Preserve the existing pure handler adapters as explicitly non-observable
+   compatibility fixtures.
 5. **Control-state fidelity.** Thread CakeML's clock and timeout rules through
    `Tick`, `While`, calls, returns, and exceptions, including local clearing
    at the same boundaries. Thread callee globals, memory, and FFI state back

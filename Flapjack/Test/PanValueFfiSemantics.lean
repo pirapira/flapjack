@@ -52,6 +52,9 @@ def statefulTestHandler : PanValueStatefulFfiHandler (Word 64) Unit :=
 def statefulTestPrimitive : PanPrimitiveHandler (Word 64) :=
   fun _ _ => none
 
+#guard panValuePayloadWithinLimit []
+  (.rStruct [.word (BitVec.ofNat 64 1), .word (BitVec.ofNat 64 2)])
+
 def statefulTestMemory : Word 64 → Option (PanValue (Word 64)) :=
   fun address =>
     if address == BitVec.ofNat 64 8 then
@@ -120,6 +123,31 @@ def statefulPublicProgramState : PanValueFfiProgramState (Word 64) Unit :=
         bytesInWord := BitVec.ofNat 64 8 }
     ffi := statefulTestFfiState }
 
+def statefulOversizedValues : Exp (Word 64) :=
+  .rStruct (List.replicate 33 (.const (BitVec.ofNat 64 1)))
+
+def statefulOversizedShape : Shape :=
+  .comb (List.replicate 33 .one)
+
+#guard
+  (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
+    statefulTestPrimitive statefulTestHandler 30
+    [.function
+       { name := "oversized", inline := false, exported := true, params := [],
+         body := .return statefulOversizedValues,
+         returnShape := statefulOversizedShape }]
+    "oversized" []).isNone
+
+#guard
+  (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
+    statefulTestPrimitive statefulTestHandler 30
+    [.exnDecl "Oversized" statefulOversizedShape,
+     .function
+       { name := "raisesOversized", inline := false, exported := true, params := [],
+         body := .raise "Oversized" statefulOversizedValues,
+         returnShape := .one }]
+    "raisesOversized" []).isNone
+
 def statefulPublicProgram : Option (Word 64 × Nat) :=
   (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
       statefulTestPrimitive statefulTestHandler 30
@@ -138,7 +166,7 @@ def statefulPublicProgram : Option (Word 64 × Nat) :=
 
 #guard statefulPublicProgram = some (BitVec.ofNat 64 0x42, 1)
 
-example :
+#guard
     (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
       statefulTestPrimitive statefulTestHandler 30
       [.function
@@ -151,10 +179,9 @@ example :
            returnShape := .one }]
       "main" []
       (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))).isNone =
-      true := by
-  decide +kernel
+      true
 
-example :
+#guard
     (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
       statefulTestPrimitive statefulTestHandler 30
       [.exnDecl "E" (.comb [.one, .one]),
@@ -167,10 +194,9 @@ example :
            returnShape := .one }]
       "main" []
       (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))).isNone =
-      true := by
-  decide +kernel
+      true
 
-example :
+#guard
     (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
       statefulTestPrimitive statefulTestHandler 40
       [.exnDecl "E" .one,
@@ -186,7 +212,6 @@ example :
              (.return (.const 0)), returnShape := .one }]
       "main" []
       (memoryAccess := some (panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel))).isNone =
-      true := by
-  decide +kernel
+      true
 
 end Flapjack

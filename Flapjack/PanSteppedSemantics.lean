@@ -363,7 +363,8 @@ mutual
         | .normal _ calleeGlobals calleeMemory =>
             pure (.normal locals calleeGlobals calleeMemory, argumentSteps + steps)
         | .returned _ calleeGlobals calleeMemory values =>
-            if panValueReturnValid structs contracts function values then
+            if panValueReturnValid structs contracts function values &&
+                panValueValuesWithinLimit structs values then
               match info with
               | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values,
                   argumentSteps + steps)
@@ -374,7 +375,8 @@ mutual
                   pure (.normal locals globals calleeMemory, argumentSteps + steps)
             else none
         | .raised _ calleeGlobals calleeMemory exception value =>
-            if panValueExceptionValid structs contracts exception value then
+            if panValueExceptionValid structs contracts exception value &&
+                panValuePayloadWithinLimit structs value then
               match info with
               | some (_, some (caught, handlerVariable, handlerProgram)) =>
                   if caught == exception then
@@ -576,13 +578,16 @@ mutual
     | _fuel + 1, locals, globals, memory, .raise exception value, memoryAccess, contracts => do
         let (evaluatedValue, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value memoryAccess
-        if panValueExceptionValid structs contracts exception evaluatedValue then
+        if panValueExceptionValid structs contracts exception evaluatedValue &&
+            panValuePayloadWithinLimit structs evaluatedValue then
           pure (.raised locals globals memory exception evaluatedValue, valueSteps + 1)
         else none
     | _fuel + 1, locals, globals, memory, .return value, memoryAccess, _contracts => do
         let (evaluatedValue, valueSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord value memoryAccess
-        pure (.returned locals globals memory [evaluatedValue], valueSteps + 1)
+        if panValuePayloadWithinLimit structs evaluatedValue then
+          pure (.returned locals globals memory [evaluatedValue], valueSteps + 1)
+        else none
     | _fuel + 1, locals, globals, memory,
         .shMemLoad size kind name address, memoryAccess, _contracts => do
         let (evaluatedAddress, addressSteps) ← evalPanValueExpCounted structs locals globals memory

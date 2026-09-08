@@ -260,6 +260,55 @@ theorem evalPanValueFfiClockCall_raised_no_handler
         finalClock) := by
   simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody, hwithin]
 
+/-! A caught exception resumes the handler in the callee's final state and
+remaining clock, rather than restoring the caller's pre-call globals or
+memory. -/
+theorem evalPanValueFfiClockCall_caught_handler
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock finalClock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (values : List (PanValue α)) (parameters : List VarName)
+    (calleeLocals bodyLocals calleeGlobals : VarName → Option (PanValue α))
+    (calleeMemory : α → Option (PanValue α)) (calleeFfi : FfiState σ)
+    (body : Prog α) (function : FunName) (arguments : List (Exp α))
+    (caught : ExceptionId) (exception : ExceptionId) (value : PanValue α)
+    (handlerVariable : VarName) (handlerProgram : Prog α)
+    (outcome : PanValueFfiClockOutcome α σ)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (hargs : evalPanValueExps structs locals globals memory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hclock : clock ≠ 0)
+    (hbody : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi (clock - 1)
+      body (memoryAccess := memoryAccess) (contracts := none) =
+      some (.control (.raised bodyLocals calleeGlobals calleeMemory calleeFfi exception value),
+        finalClock))
+    (hcaught : caught = exception)
+    (hwithin : panValuePayloadWithinLimit structs value = true)
+    (hhandler : evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord fuel
+      (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory calleeFfi
+      finalClock handlerProgram (memoryAccess := memoryAccess) (contracts := none) =
+      some (outcome, finalClock)) :
+    evalPanValueFfiClockCall context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi clock
+      (some (none, some (caught, handlerVariable, handlerProgram))) function arguments
+      (memoryAccess := memoryAccess) (contracts := none) =
+      some (outcome, finalClock) := by
+  simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hbody,
+    hcaught, hhandler, hwithin]
+
 /-! One true loop iteration consumes one clock unit before evaluating the body
 and then resumes the loop with the body's resulting state and clock. -/
 theorem evalPanValueFfiClockProg_while_normal_iteration

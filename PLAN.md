@@ -238,6 +238,8 @@ definitions, pass ordering, examples, and proof obligations.
 - [x] Align raised Loop calls with CakeML's global payload convention by
   preserving callee globals/memory while entering an exception handler, and
   verify source-to-Loop handler execution.
+- [x] Prove source-to-Loop agreement for a constant store/load sequence,
+  including temporary address/value lowering and Loop memory execution.
 - [x] Prove RISC-V instruction-selection and evaluator agreement for the
   emitted constant-return artifact.
 - [x] Lower register-based equality and inequality conditionals to RISC-V,

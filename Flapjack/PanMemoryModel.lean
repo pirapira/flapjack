@@ -27,6 +27,21 @@ structure PanMemoryModel (α : Type u) where
 abbrev PanWordMemory (α : Type u) := α → Option α
 abbrev PanWordMemoryDomain (α : Type u) := α → Bool
 
+/-! The four byte-addressed operations needed by the generic flat evaluator.
+
+    Keeping these operations behind a small record lets the evaluator retain
+    its old word-cell API while allowing a target to supply the exact Pancake
+    byte semantics.  `none` in the evaluator is the compatibility mode; a
+    source/target equivalence proof should provide an access record instead.
+-/
+structure PanMemoryAccess (α : Type u) where
+  readByte : PanWordMemoryDomain α → PanWordMemory α → α → α → Option α
+  read32 : PanWordMemoryDomain α → PanWordMemory α → α → α → Option α
+  storeByte : PanWordMemoryDomain α → PanWordMemory α → α → α → α →
+    Option (PanWordMemory α)
+  store32 : PanWordMemoryDomain α → PanWordMemory α → α → α → α →
+    Option (PanWordMemory α)
+
 def panModelReadWord
     (domain : PanWordMemoryDomain α) (memory : PanWordMemory α)
     (address : α) : Option α :=
@@ -97,8 +112,19 @@ def panModelStore32 [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
   else none
 
 def panModelStoreWord [BEq α]
-    (domain : PanWordMemoryDomain α) (memory : PanWordMemory α)
+  (domain : PanWordMemoryDomain α) (memory : PanWordMemory α)
     (address value : α) : Option (PanWordMemory α) :=
   if domain address then some (panModelUpdateMemory memory address value) else none
+
+def panMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
+    [OfNat α 2] [OfNat α 3] (model : PanMemoryModel α) : PanMemoryAccess α :=
+  { readByte := fun domain memory bytesInWord address =>
+      panModelReadByte model domain memory bytesInWord address false
+    read32 := fun domain memory bytesInWord address =>
+      panModelRead32 model domain memory bytesInWord address false
+    storeByte := fun domain memory bytesInWord address value =>
+      panModelStoreByte model domain memory bytesInWord address value false
+    store32 := fun domain memory bytesInWord address value =>
+      panModelStore32 model domain memory bytesInWord address value false }
 
 end Flapjack

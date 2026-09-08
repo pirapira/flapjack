@@ -1,4 +1,5 @@
 import Std
+import Flapjack.Language
 
 /-!
 The first Lean target-model slice for Flapjack's RISC-V backend.
@@ -26,6 +27,13 @@ instance bitVecWordShiftLeft : ShiftLeft (Word width) :=
 
 instance bitVecWordShiftRight : ShiftRight (Word width) :=
   ⟨fun value amount => value >>> amount.toNat⟩
+
+instance bitVecWordArithmeticShiftRight [NeZero width] :
+    ArithmeticShiftRight (Word width) :=
+  ⟨fun value amount => BitVec.sshiftRight value amount.toNat⟩
+
+instance bitVecWordRotateRight [NeZero width] : RotateRightOp (Word width) :=
+  ⟨fun value amount => BitVec.rotateRight value amount.toNat⟩
 
 inductive AccessType where
   | read

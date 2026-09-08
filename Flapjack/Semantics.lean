@@ -39,6 +39,21 @@ def evalPanShift [ShiftLeft α] [ShiftRight α]
   | .lsr => some (ShiftRight.shiftRight left right)
   | .asr | .ror => none
 
+/-!
+Complete shift semantics corresponding to CakeML's `word_sh`: ASR and ROR
+are intentionally supplied by separate interfaces so a target cannot
+accidentally implement them as logical shifts.
+-/
+
+def evalPanShiftFull [ShiftLeft α] [ShiftRight α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    (operator : Shift) (left right : α) : Option α :=
+  match operator with
+  | .lsl => some (ShiftLeft.shiftLeft left right)
+  | .lsr => some (ShiftRight.shiftRight left right)
+  | .asr => some (ArithmeticShiftRight.arithmeticShiftRight left right)
+  | .ror => some (RotateRightOp.rotateRight left right)
+
 def updatePanLocal (locals : VarName → Option α) (name : VarName) (value : α) :
     VarName → Option α :=
   fun current => if current == name then some value else locals current

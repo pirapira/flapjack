@@ -27,6 +27,7 @@ import Flapjack.CorrectnessFfi
 import Flapjack.Test.SourceToLoopMemory
 import Flapjack.Test.SourceToRiscVMemory
 import Flapjack.Test.PanMemoryModel
+import Flapjack.Test.SourceSemanticsOps
 import Flapjack.Test.SourceToLoopHandlers
 import Flapjack.Test.SourceToCrepeHandlers
 import Flapjack.Test.SourceToCrepeFfi

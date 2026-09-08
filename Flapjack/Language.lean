@@ -65,6 +65,19 @@ inductive Shift where
   | ror
   deriving DecidableEq, Repr
 
+/-!
+The source language distinguishes logical and arithmetic right shifts, and
+also exposes rotate-right.  These operations are separate from Lean's
+homogeneous `ShiftRight` class because the latter denotes logical shift for
+the target words.
+-/
+
+class ArithmeticShiftRight (α : Type u) where
+  arithmeticShiftRight : α → α → α
+
+class RotateRightOp (α : Type u) where
+  rotateRight : α → α → α
+
 inductive VarKind where
   | local
   | global

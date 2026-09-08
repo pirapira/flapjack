@@ -1749,6 +1749,9 @@ definitions, pass ordering, examples, and proof obligations.
   establishing the first program-level Lab-to-machine FFI simulation.
 - [x] Compose a singleton Lab FFI call-and-return through
   `executeFunctionAtWithFfi`, including the caller's `x1` continuation.
+- [x] Prove the compiler-composed source-to-Loop `extCall` equation for
+  constant arguments under no-op handlers, including generated temporary
+  declaration execution and normal-result projection.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Expose location-aware bitmap sequence compilation and evaluator

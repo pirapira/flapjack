@@ -138,4 +138,34 @@ theorem crepToLoop_call_return_regression :
   · simp [crepCallReturnContext, lookupInfo]
   · simp [crepCallReturnLoopFunctions, lookupLoopFunction]
 
+def crepHandlerFunctions : List (CompiledFunction Nat) :=
+  [{ name := "raise", params := [], body := .raise 17, returnShape := .one }]
+
+def crepHandlerLoopFunctions : List (Nat × List Nat × LoopProg Nat) :=
+  [(7, [], loopCompileProg crepCallSkipContext [] (.raise 17))]
+
+def crepHandlerContext : LoopContext Nat :=
+  { vars := [], functions := [("raise", (7, 0))], maxVar := 0, target := .rv64i }
+
+theorem crepToLoop_call_caught_skip_regression :
+    (evalCrepFullProg crepHandlerFunctions (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 100 20
+        crepCallSkipState
+        (.call (some ([], some (17, .skip))) "raise" [])).map
+        crepControlValues =
+      (evalLoopProgWithCallsAndFfi crepHandlerLoopFunctions
+        (loopFfiOfCrepFfi (fun _ _ _ _ _ _ => none)) 20
+        (loopStateOfCrepState crepCallSkipState)
+        (loopCompileProg crepHandlerContext [9]
+          (.call (some ([], some (17, .skip))) "raise" []))).map
+        loopResultValues := by
+  apply crepToLoop_call_caught_skip_agreement crepHandlerContext
+    crepHandlerFunctions crepHandlerLoopFunctions
+    (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+    0 100 0 crepCallSkipState [9] "raise" 7 17
+  · simp [crepHandlerFunctions, lookupCompiledFunction]
+  · simp [crepHandlerContext, lookupInfo]
+  · simp [crepHandlerLoopFunctions, crepHandlerContext, crepCallSkipContext,
+      loopCompileProg, lookupLoopFunction]
+
 end Flapjack

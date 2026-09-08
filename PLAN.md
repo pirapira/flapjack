@@ -1937,6 +1937,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Prove a one-argument Crepe-to-Loop call agreement for a returned scalar,
   including argument temporary materialization, parameter binding, and caller
   destination projection.
+- [x] Prove the caught-handler Crepe-to-Loop call agreement for a raising
+  callee, including exception-slot materialization, dispatch, and handler
+  continuation projection.
 - [x] Prove the reusable source-to-Crepe FFI lowering equation, including
   sequential argument evaluation and restoration of compiler temporaries.
 - [x] Compose the lowered caught-handler call with the full-Crepe evaluator,

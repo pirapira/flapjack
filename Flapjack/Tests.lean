@@ -21,6 +21,7 @@ import Flapjack.Test.CorrectnessCode
 import Flapjack.Test.SourceToLoop
 import Flapjack.Test.SourceToLoopCalls
 import Flapjack.Test.SourceToLoopFfi
+import Flapjack.Test.SourceToLoopMemory
 import Flapjack.Test.SourceToLoopHandlers
 import Flapjack.Test.SourceToCrepeHandlers
 import Flapjack.Test.SourceToCrepeFfi

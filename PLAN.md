@@ -183,6 +183,8 @@ definitions, pass ordering, examples, and proof obligations.
   load32/store32 operations to them with evaluator agreement.
 - [x] Add full-word register-based store lowering and prove its evaluator
   agreement with the RISC-V byte-memory fold.
+- [x] Relate the composed source store/load program directly to its generated
+  RISC-V execution result, closing the concrete source-to-machine regression.
 - [x] Add declaration-level static checking: structure discovery, global and
   exception environments, function headers, duplicate checks, and missing or
   wrongly shaped returns.

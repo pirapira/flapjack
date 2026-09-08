@@ -134,7 +134,8 @@ example :
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
     pipelineWordFunctions, pipelinePrependInitializers,
     compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
-    compileProg, loopCompileProg, 
+    compileProg, crepArithFunctions, crepArithProg,
+    loopCompileProg,
     
     ]
 

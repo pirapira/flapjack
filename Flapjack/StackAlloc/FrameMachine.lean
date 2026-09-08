@@ -230,9 +230,6 @@ def stackFrameBasic [NeZero width]
       some (.normal { state with machine :=
         (wordStackMachineWriteStore state.machine store
           (state.machine.registers source)) })
-  | .locValue destination _label entry =>
-      some (.normal (stackFrameWriteRegister state destination
-        (BitVec.ofNat width entry)))
   | .opCurrHeap operator destination source =>
       some (.normal (stackFrameWriteRegister state destination
         (wordStackMachineBinOp operator (state.machine.registers source)

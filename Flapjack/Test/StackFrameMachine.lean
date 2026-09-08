@@ -114,11 +114,6 @@ example :
   exact evalStackFrameFuel_stackLoad 1 frameMachineState 4 5 (by decide)
 
 example :
-    evalStackFrameFuel 2 frameMachineState (.locValue 4 17 23) =
-      some (.normal (stackFrameWriteRegister frameMachineState 4 23)) := by
-  rfl
-
-example :
     evalStackFrameFuel 2 frameMachineState (.tick) =
       some (.normal frameMachineState) := by
   rfl

@@ -36,6 +36,12 @@ structure PanValueMemoryAccess (α : Type u) where
     Option (α → Option (PanValue α))
   store32 : (α → Bool) → (α → Option (PanValue α)) → α → α → α →
     Option (α → Option (PanValue α))
+  /-- Shared-memory operations are separate from ordinary source-memory
+      operations.  The callback may ignore the source memory when it is
+      backed by an external FFI oracle. -/
+  sharedRead : (α → Option (PanValue α)) → α → OpSize → α → Option (PanValue α)
+  sharedStore : (α → Option (PanValue α)) → α → OpSize → α → PanValue α →
+    Option (α → Option (PanValue α))
 
 def panValueWordMemory (memory : α → Option (PanValue α)) : α → Option α :=
   fun address => match memory address with
@@ -44,7 +50,8 @@ def panValueWordMemory (memory : α → Option (PanValue α)) : α → Option α
 
 def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
     [OfNat α 2] [OfNat α 3] (model : PanMemoryModel α)
-    (domain : α → Bool := fun _ => true) : PanValueMemoryAccess α :=
+    (domain : α → Bool := fun _ => true)
+    (sharedDomain : α → Bool := domain) : PanValueMemoryAccess α :=
   { domain := domain
     readWord := fun _ memory _ address =>
       if domain address then memory address else none
@@ -110,6 +117,54 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
             if current == alignedAddress then some (.word cell3) else memory current)
         else none
       else none
+    sharedRead := fun memory bytesInWord size address =>
+      match size with
+      | .opW => (panModelReadWord sharedDomain (panValueWordMemory memory) address).map .word
+      | .op8 => (panModelReadByte model sharedDomain (panValueWordMemory memory)
+          bytesInWord address false).map .word
+      | .op16 => if model.aligned 2 address then
+          let alignedAddress := model.byteAlign bytesInWord address
+          if sharedDomain alignedAddress then do
+            let cell ← memory alignedAddress
+            let .word cell := cell | none
+            pure (.word (model.wordOfBytes false
+              [model.getByte bytesInWord address cell false,
+               model.getByte bytesInWord (address + 1) cell false]))
+          else none
+        else none
+      | .op32 => (panModelRead32 model sharedDomain (panValueWordMemory memory)
+          bytesInWord address false).map .word
+    sharedStore := fun memory bytesInWord size address value =>
+      match value with
+      | .word value => match size with
+          | .opW => if sharedDomain address then
+              some (fun current =>
+                if current == address then some (.word value) else memory current)
+            else none
+          | .op8 => (panModelStoreByte model sharedDomain (panValueWordMemory memory)
+              bytesInWord address value false).map fun wordMemory current =>
+                if current == model.byteAlign bytesInWord address then
+                  (wordMemory current).map .word
+                else memory current
+          | .op16 => if model.aligned 2 address then
+              let alignedAddress := model.byteAlign bytesInWord address
+              if sharedDomain alignedAddress then do
+                let cell ← memory alignedAddress
+                let .word cell := cell | none
+                let cell0 := model.setByte bytesInWord address
+                  (model.getByte bytesInWord 0 value false) cell false
+                let cell1 := model.setByte bytesInWord (address + 1)
+                  (model.getByte bytesInWord 1 value false) cell0 false
+                pure (fun current =>
+                  if current == alignedAddress then some (.word cell1) else memory current)
+              else none
+            else none
+          | .op32 => (panModelStore32 model sharedDomain (panValueWordMemory memory)
+              bytesInWord address value false).map fun wordMemory current =>
+                if current == model.byteAlign bytesInWord address then
+                  (wordMemory current).map .word
+                else memory current
+      | .rStruct _ | .nStruct _ _ => none
   }
 
 def panValueShape (context : StructContext) : PanValue α → Shape
@@ -434,13 +489,7 @@ def evalPanValueProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
       let .word address := address | none
       let value ← match memoryAccess with
         | none => memory address
-        | some access => match size with
-            | .opW => match memoryAccess with
-                | none => memory address
-                | some access => (access.readWord access.domain memory bytesInWord address)
-            | .op8 => (access.readByte access.domain memory bytesInWord address).map .word
-            | .op16 => (access.read16 access.domain memory bytesInWord address).map .word
-            | .op32 => (access.read32 access.domain memory bytesInWord address).map .word
+        | some access => access.sharedRead memory bytesInWord size address
       match kind with
       | .local => pure (updatePanValueMap locals name value, globals, memory, [])
       | .global => pure (locals, updatePanValueMap globals name value, memory, [])
@@ -452,12 +501,8 @@ def evalPanValueProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
       let .word address := address | none
       let .word value := value | none
       let memory ← match memoryAccess with
-        | none => some (updatePanValueMemory memory address (.word value))
-        | some access => match size with
-            | .opW => panValueStoreWithAccess memory bytesInWord address (.word value)
-            | .op8 => access.storeByte access.domain memory bytesInWord address value
-            | .op16 => access.store16 access.domain memory bytesInWord address value
-            | .op32 => access.store32 access.domain memory bytesInWord address value
+          | none => some (updatePanValueMemory memory address (.word value))
+          | some access => access.sharedStore memory bytesInWord size address (.word value)
       pure (locals, globals, memory, [])
   | .tick, _ | .annot _ _, _ => some (locals, globals, memory, [])
   | _, _ => none

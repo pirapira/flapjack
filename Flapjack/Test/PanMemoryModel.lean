@@ -140,6 +140,18 @@ def memoryModelSteppedShared16Program : Option (RiscV.Word 64 × Nat) :=
       | .returned _ _ _ [.word value] => some (value, result.2)
       | _ => none
 
+def memoryModelSteppedSharedOutOfDomain : Option (RiscV.Word 64 × Nat) :=
+  (evalPanValueSteppedProg (fun _ _ => none) (fun _ _ _ _ _ locals => some locals)
+      [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 20
+      (fun name => if name == "x" then some (.word 0) else none)
+      (fun _ => none) (fun address => (memoryModelMemory address).map .word)
+      (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 9)))
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel
+        (domain := fun _ => true) (sharedDomain := fun _ => false)))).bind
+    fun result => match result.1 with
+      | .normal _ _ _ => some (BitVec.ofNat 64 0, result.2)
+      | _ => none
+
 def memoryModelPanValuesByteProgram : Option (RiscV.Word 64) :=
   (evalPanValueProg [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
       (BitVec.ofNat 64 8) (fun _ => none) (fun _ => none)
@@ -246,6 +258,7 @@ def memoryModelPublicProgram : Option (RiscV.Word 64) :=
 #guard memoryModelGenericWordOutOfDomain = none
 #guard memoryModelSteppedByteProgram = some (BitVec.ofNat 64 0xaa, 7)
 #guard memoryModelSteppedShared16Program = some (BitVec.ofNat 64 0xbeef, 9)
+#guard memoryModelSteppedSharedOutOfDomain = none
 #guard memoryModelPanValuesByteProgram = some (BitVec.ofNat 64 0xaa)
 #guard memoryModelPanValuesWordProgram = some (BitVec.ofNat 64 0xaa)
 #guard memoryModelPanValuesWordOutOfDomain = none

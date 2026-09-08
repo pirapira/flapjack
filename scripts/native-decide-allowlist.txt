@@ -57,3 +57,14 @@
 # execution outcome -- the companion `sourceToLoop_ffi_executes` was the
 # execution check and is now a `#guard`.
 1 Flapjack/Test/SourceToLoopFfi.lean
+
+# --- Source-to-Loop/Crepe/RISC-V regression executions ----------------------
+# These tests were merged on main while this branch was based on the previous
+# allowlist revision. They are concrete cross-semantics execution checks whose
+# compiled programs still exceed kernel reduction; track them until they can
+# be converted to `#guard` or a non-native proof.
+2 Flapjack/Test/SourceToLoopHandlers.lean
+2 Flapjack/Test/SourceToLoopMemory.lean
+2 Flapjack/Test/SourceToCrepeFfi.lean
+1 Flapjack/Test/SourceToRiscVMemory.lean
+2 Flapjack/Test/SourceToCrepeHandlers.lean

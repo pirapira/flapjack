@@ -559,6 +559,62 @@ mutual
     termination_by fuel _ _ _ _ => fuel
 end
 
+/-! Projection lemmas for composing a counted expression with a continuation.
+These are the bind-level interface used by the eventual mutual evaluator
+projection theorem: the continuation may inspect the source value and the
+count, but its projected result must agree with the uncounted continuation. -/
+theorem panOptionCountedBindMapFst
+    {α : Type u} {β : Type v} (values : Option α) (steps : Nat)
+    (stepped : α → Nat → Option (β × Nat))
+    (original : α → Option β)
+    (h : ∀ value step, (stepped value step).map Prod.fst = original value) :
+    (values.map (fun value => (value, steps))).bind
+        (fun pair => (stepped pair.1 pair.2).map Prod.fst) =
+      values.bind original := by
+  cases values with
+  | none => rfl
+  | some value => simp [h]
+
+theorem panEvalPanValueExpCountedBindMapFst
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α) (expression : Exp α)
+    (stepped : PanValue α → Nat → Option (β × Nat))
+    (original : PanValue α → Option β)
+    (h : ∀ value step, (stepped value step).map Prod.fst = original value) :
+    (evalPanValueExpCounted structs locals globals memory baseAddress topAddress
+        bytesInWord expression).bind
+      (fun pair => (stepped pair.1 pair.2).map Prod.fst) =
+      (evalPanValueExp structs locals globals memory baseAddress topAddress
+        bytesInWord expression).bind original := by
+  unfold evalPanValueExpCounted
+  apply panOptionCountedBindMapFst
+  exact h
+
+theorem panEvalPanValueExpsCountedBindMapFst
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α) (expressions : List (Exp α))
+    (stepped : List (PanValue α) → Nat → Option (β × Nat))
+    (original : List (PanValue α) → Option β)
+    (h : ∀ value step, (stepped value step).map Prod.fst = original value) :
+    (evalPanValueExpsCounted structs locals globals memory baseAddress topAddress
+        bytesInWord expressions).bind
+      (fun pair => (stepped pair.1 pair.2).map Prod.fst) =
+      (evalPanValueExps structs locals globals memory baseAddress topAddress
+        bytesInWord expressions).bind original := by
+  unfold evalPanValueExpsCounted
+  apply panOptionCountedBindMapFst
+  exact h
+
 def evalPanValueSteppedProg
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

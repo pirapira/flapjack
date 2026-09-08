@@ -152,6 +152,37 @@ def memoryModelSteppedSharedOutOfDomain : Option (RiscV.Word 64 × Nat) :=
       | .normal _ _ _ => some (BitVec.ofNat 64 0, result.2)
       | _ => none
 
+def memoryModelVariadicAdd : Option (RiscV.Word 64) :=
+  evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8)
+    (.op .add [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2),
+      .const (BitVec.ofNat 64 3)])
+    (memoryAccess := some (panValueMemoryAccessOfModel memoryModel)) |>.bind fun value =>
+      match value with
+      | .word value => some value
+      | _ => none
+
+def memoryModelSignedLess : Option (RiscV.Word 64) :=
+  evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8)
+    (.cmp .less (.const (BitVec.ofNat 64 0x8000000000000000))
+      (.const (BitVec.ofNat 64 0)))
+    (memoryAccess := some (panValueMemoryAccessOfModel memoryModel)) |>.bind fun value =>
+      match value with
+      | .word value => some value
+      | _ => none
+
+def memoryModelSteppedVariadicAdd : Option (RiscV.Word 64 × Nat) :=
+  (evalPanValueSteppedProg (fun _ _ => none) (fun _ _ _ _ _ locals => some locals)
+      [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 20
+      (fun _ => none) (fun _ => none) (fun _ => some (.word 0))
+      (.return (.op .add [.const (BitVec.ofNat 64 1), .const (BitVec.ofNat 64 2),
+        .const (BitVec.ofNat 64 3)]))
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel))).bind
+    fun result => match result.1 with
+      | .returned _ _ _ [.word value] => some (value, result.2)
+      | _ => none
+
 def memoryModelPanValuesByteProgram : Option (RiscV.Word 64) :=
   (evalPanValueProg [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
       (BitVec.ofNat 64 8) (fun _ => none) (fun _ => none)
@@ -259,6 +290,9 @@ def memoryModelPublicProgram : Option (RiscV.Word 64) :=
 #guard memoryModelSteppedByteProgram = some (BitVec.ofNat 64 0xaa, 7)
 #guard memoryModelSteppedShared16Program = some (BitVec.ofNat 64 0xbeef, 9)
 #guard memoryModelSteppedSharedOutOfDomain = none
+#guard memoryModelVariadicAdd = some (BitVec.ofNat 64 6)
+#guard memoryModelSignedLess = some (BitVec.ofNat 64 1)
+#guard memoryModelSteppedVariadicAdd = some (BitVec.ofNat 64 6, 5)
 #guard memoryModelPanValuesByteProgram = some (BitVec.ofNat 64 0xaa)
 #guard memoryModelPanValuesWordProgram = some (BitVec.ofNat 64 0xaa)
 #guard memoryModelPanValuesWordOutOfDomain = none

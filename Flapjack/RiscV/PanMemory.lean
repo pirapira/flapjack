@@ -93,7 +93,9 @@ def panRiscVMemoryModel [NeZero width] : PanMemoryModel (Word width) :=
     setByte := fun bytesInWord address byte value _bigEndian =>
       panRiscVSetByte bytesInWord address byte value
     aligned := fun alignment address => aligned address alignment
-    wordOfBytes := panRiscVWordOfBytes }
+    wordOfBytes := panRiscVWordOfBytes
+    wordOp := panRiscVWordOp
+    compare := panRiscVCmp }
 
 def panRiscVReadByte [NeZero width]
     (domain : PanMemoryDomain (Word width))

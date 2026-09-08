@@ -41,7 +41,7 @@ not yet an equivalent source semantics. In particular:
 | Structured `Store` | Flatten values into consecutive word cells and fail transactionally on a bad domain | `PanValues` and its stepped evaluator now flatten word leaves into consecutive cells and thread model-backed stores transactionally ([#422](https://github.com/pirapira/flapjack/issues/422)); the standalone `PanMemory` helper remains the flat reference |
 | Assignments | `is_valid_value` checks the destination's existing shape | Generic structured, flat, stepped, and stateful-FFI assignment paths now reject absent or wrongly shaped destinations; call-result destination checks remain ([#384](https://github.com/pirapira/flapjack/issues/384)) |
 | Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation | The model-aware stateful stepped evaluator now carries FFI state, size-aware shared calls, aligned domains, and terminal outcomes; legacy evaluators retain compatibility paths |
-| Control state | Clock, timeout, local clearing at boundaries, return/exception size limits, and declared exception shapes | All structured, flat, stepped, and stateful-FFI control paths now reject return/exception payloads larger than 32 words; clock, timeout, local clearing, and remaining terminal checks are still tracked in ([#387](https://github.com/pirapira/flapjack/issues/387)) |
+| Control state | Clock, timeout, local clearing at boundaries, return/exception size limits, and declared exception shapes | Structured, flat, stepped, and stateful-FFI paths now enforce 32-word payload bounds and clear locals at direct return/uncaught-exception boundaries; clock, timeout, and remaining terminal checks are still tracked in ([#387](https://github.com/pirapira/flapjack/issues/387)) |
 | Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays | Structured, stepped, flat, and stateful-FFI evaluators now propagate callee globals/memory (and stateful FFI state where applicable) and enforce declaration-driven return, exception, and handler shapes. Generic call destinations validate local/global shapes and stand-alone calls discard returned values; remaining control-state checks and legacy compatibility-path migration remain ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388), [#406](https://github.com/pirapira/flapjack/issues/406)) |
 
 The flat-memory adapter and the structured/stepped canonical access slice now
@@ -95,10 +95,10 @@ shared-memory behavior.
    Preserve the existing pure handler adapters as explicitly non-observable
    compatibility fixtures.
 5. **Control-state fidelity.** Return and exception payloads are now bounded
-   to CakeML's 32-word limit in structured, flat, stepped, and stateful-FFI
-   evaluators. Next thread CakeML's clock and timeout rules through
-   `Tick`, `While`, calls, returns, and exceptions, including local clearing
-   at the same boundaries. The generic structured and stepped call evaluators
+   to CakeML's 32-word limit, and direct returns and uncaught exceptions clear
+   locals, in structured, flat, stepped, and stateful-FFI evaluators. Next
+   thread CakeML's clock and timeout rules through `Tick`, `While`, calls,
+   returns, and exceptions. The generic structured and stepped call evaluators
    now return callee globals and memory to callers, matching the existing flat
    and stateful-FFI paths. Generic structured and stepped paths now carry
    declaration environments for return, exception, and handler contracts in
@@ -199,6 +199,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Enforce CakeML's 32-word return and exception payload limit across the
   structured, flat, stepped, and stateful-FFI source evaluators, with explicit
   oversized-return and oversized-exception guards (issue #387).
+- [x] Clear source locals at direct return and uncaught-exception boundaries
+  across the structured, flat, stepped, and stateful-FFI evaluators, with
+  executable regressions for caller-visible control results (issue #387).
 - [x] Port the HOL RV64 word-width arithmetic and shift transitions
   (`ADDW`, `SUBW`, `ADDIW`, `MULW`, and W-shifts), including sign-extension
   back to the architectural register width.

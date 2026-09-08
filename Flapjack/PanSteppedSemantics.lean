@@ -893,6 +893,78 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_storeByte
           cases evaluatedAddress <;> cases evaluatedValue <;>
             simp [haddress, hvalue, evalPanValueExpCounted]
 
+theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_seq_of_projections
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (first second : Prog α)
+    (hfirst :
+      (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory first).map Prod.fst =
+        evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory first)
+    (hsecond : ∀ locals globals memory,
+      (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+        baseAddress topAddress bytesInWord fuel locals globals memory second).map Prod.fst =
+        evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+          baseAddress topAddress bytesInWord fuel locals globals memory second) :
+    (evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory
+      (.seq first second)).map Prod.fst =
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory
+      (.seq first second) := by
+  simp only [evalPanValueProgWithPrimitiveCallsAndFfiSteps,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+  cases hstep : evalPanValueProgWithPrimitiveCallsAndFfiSteps primitive handler
+      structs functions baseAddress topAddress bytesInWord fuel locals globals memory first with
+  | none =>
+      have horiginal :
+          evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+            baseAddress topAddress bytesInWord fuel locals globals memory first = none := by
+        rw [← hfirst]
+        simp [hstep]
+      simp [hstep, horiginal]
+  | some pair =>
+      cases pair with
+      | mk result firstSteps =>
+          have horiginal :
+              evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+                baseAddress topAddress bytesInWord fuel locals globals memory first =
+                some result := by
+            rw [← hfirst]
+            simp [hstep]
+          cases result with
+          | normal firstLocals firstGlobals firstMemory =>
+              cases hsecondStep : evalPanValueProgWithPrimitiveCallsAndFfiSteps
+                  primitive handler structs functions baseAddress topAddress bytesInWord fuel
+                  firstLocals firstGlobals firstMemory second with
+              | none =>
+                  have hsecondOriginal :
+                      evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
+                        baseAddress topAddress bytesInWord fuel firstLocals firstGlobals
+                        firstMemory second = none := by
+                    rw [← hsecond firstLocals firstGlobals firstMemory]
+                    simp [hsecondStep]
+                  simp [hstep, hsecondStep, horiginal, hsecondOriginal]
+              | some secondPair =>
+                  cases secondPair with
+                  | mk secondResult secondSteps =>
+                      have hsecondOriginal :
+                          evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs
+                            functions baseAddress topAddress bytesInWord fuel firstLocals
+                            firstGlobals firstMemory second = some secondResult := by
+                        rw [← hsecond firstLocals firstGlobals firstMemory]
+                        simp [hsecondStep]
+                      simp [hstep, hsecondStep, horiginal, hsecondOriginal]
+          | returned _ _ _ _ | raised _ _ _ _ _ | broke _ _ _ | continued _ _ _ =>
+              simp [hstep, horiginal]
+
 def evalPanValueSteppedProg
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

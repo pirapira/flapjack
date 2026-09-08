@@ -1,0 +1,74 @@
+import Flapjack.RiscV.PanMemory
+
+/-!
+Executable regressions for the shared Pancake word-cell memory model.
+
+These examples deliberately exercise byte and 32-bit operations through the
+generic model, rather than through the older RISC-V-specific wrappers.  This
+keeps the source-memory contract visible at the point where later semantic
+proofs will use it.
+-/
+
+namespace Flapjack
+
+def memoryModelDomain : PanMemoryDomain (RiscV.Word 64) :=
+  fun address => address == BitVec.ofNat 64 8
+
+def memoryModelMemory : PanFlatMemory (RiscV.Word 64) :=
+  fun address =>
+    if address == BitVec.ofNat 64 8 then
+      some (BitVec.ofNat 64 0x0807060504030201)
+    else none
+
+def memoryModel : PanMemoryModel (RiscV.Word 64) :=
+  RiscV.panRiscVMemoryModel
+
+def memoryModelReadByte : Option (RiscV.Word 64) :=
+  panModelReadByte memoryModel memoryModelDomain memoryModelMemory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 9) false
+
+def memoryModelRead32 : Option (RiscV.Word 64) :=
+  panModelRead32 memoryModel memoryModelDomain memoryModelMemory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 8) false
+
+def memoryModelByteStore : Option (PanFlatMemory (RiscV.Word 64)) :=
+  panModelStoreByte memoryModel memoryModelDomain memoryModelMemory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 9) (BitVec.ofNat 64 0xaa) false
+
+def memoryModelWordAfterByteStore : Option (RiscV.Word 64) := do
+  let memory ← memoryModelByteStore
+  panModelReadWord memoryModelDomain memory (BitVec.ofNat 64 8)
+
+def memoryModel32Store : Option (PanFlatMemory (RiscV.Word 64)) :=
+  panModelStore32 memoryModel memoryModelDomain memoryModelMemory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 8)
+    (BitVec.ofNat 64 0x11223344) false
+
+def memoryModelByteAfter32Store : Option (RiscV.Word 64) := do
+  let memory ← memoryModel32Store
+  panModelReadByte memoryModel memoryModelDomain memory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 8) false
+
+def memoryModelLastByteAfter32Store : Option (RiscV.Word 64) := do
+  let memory ← memoryModel32Store
+  panModelReadByte memoryModel memoryModelDomain memory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 11) false
+
+def memoryModelUnalignedRead : Option (RiscV.Word 64) :=
+  panModelRead32 memoryModel memoryModelDomain memoryModelMemory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 9) false
+
+def memoryModelOutOfDomainRead : Option (RiscV.Word 64) :=
+  panModelReadByte memoryModel memoryModelDomain memoryModelMemory
+    (BitVec.ofNat 64 8) (BitVec.ofNat 64 16) false
+
+#guard memoryModelReadByte = some (BitVec.ofNat 64 2)
+#guard memoryModelRead32 = some (BitVec.ofNat 64 0x04030201)
+#guard memoryModelWordAfterByteStore =
+  some (BitVec.ofNat 64 0x080706050403aa01)
+#guard memoryModelByteAfter32Store = some (BitVec.ofNat 64 0x44)
+#guard memoryModelLastByteAfter32Store = some (BitVec.ofNat 64 0x11)
+#guard memoryModelUnalignedRead = none
+#guard memoryModelOutOfDomainRead = none
+
+end Flapjack

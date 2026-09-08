@@ -19,6 +19,78 @@ definitions, pass ordering, examples, and proof obligations.
 - Keep the CakeML submodule untouched from the parent project. HOL builds can
   be run in the submodule independently with Holmake.
 
+## Source-semantics equivalence gate (issue #380)
+
+The source semantics must be CakeML-equivalent before more compiler-
+correctness claims are built on top of it. The reference for this audit is
+`cakeml/pancake/semantics/panSemScript.sml`, with the word-operation
+definitions in `cakeml/compiler/backend/wordLangScript.sml` and the shared
+memory boundary in `cakeml/pancake/semantics/loopSemScript.sml` used where
+`panSem` delegates to those definitions.
+
+The current Lean implementation is a useful executable fragment, but it is
+not yet an equivalent source semantics. In particular:
+
+| Area | CakeML `panSem` | Current Lean status |
+| --- | --- | --- |
+| Values and shaped records | `Val`, `RStruct`, `NStruct`, with declaration and shape checks | `PanValue` and most expression shape checks match the intended structure |
+| `Op` | `Add`, `And`, `Or`, and `Xor` fold over arbitrary word lists; `Sub` accepts exactly two words | Lean accepts exactly two word operands for every `BinOp` ([#382](https://github.com/pirapira/flapjack/issues/382)) |
+| Comparisons and shifts | `Lower` is unsigned, `Less` is signed; all `Lsl`, `Lsr`, `Asr`, and `Ror` are defined | `Lower`/`Less` share one `<` relation and `Asr`/`Ror` return `none` ([#383](https://github.com/pirapira/flapjack/issues/383), [#389](https://github.com/pirapira/flapjack/issues/389)) |
+| Word loads/stores | Domain-checked exact aligned word cells | `PanMemory` has this; `PanValues` has no domain and performs direct map access |
+| Byte and 32-bit accesses | Align to `byte_align`; extract/patch bytes with `be`; `Load32` additionally requires `aligned 2` | Both source evaluators currently read/write an exact whole cell; this is the #380 mismatch |
+| Structured `Store` | Flatten values into consecutive word cells and fail transactionally on a bad domain | `PanMemory` has the flattening helper; `PanValues` stores a whole `PanValue` in one cell ([#385](https://github.com/pirapira/flapjack/issues/385)) |
+| Assignments | `is_valid_value` checks the destination's existing shape | Source assignments currently update locals/globals without that check ([#384](https://github.com/pirapira/flapjack/issues/384)) |
+| Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation | Source evaluators ignore the size, use ordinary memory, and have no shared-memory domain or observable FFI state |
+| Control state | Clock, timeout, local clearing at boundaries, return/exception size limits, and declared exception shapes | Control-result evaluators use fuel only; `tick`, `return`, `raise`, and calls omit several CakeML checks and effects ([#387](https://github.com/pirapira/flapjack/issues/387)) |
+| Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays | Current call evaluators discard callee global/memory effects and the FFI handler only updates locals ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388)) |
+
+The flat-memory adapter therefore fixes the representation of ordinary
+structured loads/stores, but it does not by itself make the complete source
+semantics equivalent. The following work is now the source-semantics gate and
+should precede new end-to-end correctness claims that depend on arbitrary
+memory or shared-memory behavior.
+
+### Stacked implementation plan
+
+1. **Word/memory model and executable reference tests.** Introduce a small
+   common interface for word alignment, byte extraction/patching, 32-bit
+   packing, endianness, and memory-domain checks. Keep the generic source
+   semantics polymorphic, and instantiate the RISC-V target with little
+   endian behavior. Add tests that distinguish aligned-cell access from exact
+   address access and cover missing cells, unaligned `Load32`, both byte
+   positions, and endian order.
+2. **Canonical source memory operations.** Implement CakeML's
+   `mem_load_byte`, `mem_store_byte`, `mem_load_32`, and `mem_store_32` in the
+   source memory layer. Make ordinary `Store` flatten to consecutive word
+   cells, and make all reads/writes use the explicit main-memory domain.
+   Integrate the same helpers into `PanValues`, `PanMemory`, and the RISC-V
+   adapter instead of maintaining separate sub-word behavior.
+3. **Expression and statement agreement.** Correct variadic word operations,
+   signed/unsigned comparisons, and all shift operators. Enforce assignment,
+   return, exception, call-result, and handler shape checks. Add the missing
+   `store32`/`storeByte` cases to the flat control evaluator and prove that
+   the counted/stepped expression evaluator has the same value result as the
+   uncounted evaluator.
+4. **Shared-memory and external effects.** Extend the source state/result
+   model with `sh_memaddrs`, FFI state, and terminal FFI observations. Port
+   `nb_op`, aligned shared-memory address checks, the `SharedMem` FFI payloads,
+   and the byte-array read/write behavior of `ExtCall`. Preserve the existing
+   pure handler adapters as explicitly non-observable test fixtures.
+5. **Control-state fidelity.** Thread CakeML's clock and timeout rules through
+   `Tick`, `While`, calls, returns, and exceptions, including local clearing
+   at the same boundaries. Thread callee globals, memory, and FFI state back
+   to callers. Add declaration-environment checks for function return shapes
+   and declared exception shapes.
+6. **Correctness and migration.** Rebase source-to-Crepe, stepped-semantics,
+   flat-memory, and source-to-RISC-V theorems on the canonical evaluator.
+   Keep focused counterexamples for every formerly permissive behavior and
+   add differential executable fixtures against the corresponding HOL
+   definitions. Only then remove the equivalence gate and resume broad
+   compiler-pipeline correctness work.
+
+Until steps 1--3 land, existing source-memory milestones should be read as
+preliminary executable fragments, not proofs of equivalence with `panSem`.
+
 ## Stages
 
 1. **Project and syntax foundation**

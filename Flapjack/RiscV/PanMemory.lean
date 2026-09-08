@@ -1,4 +1,5 @@
 import Flapjack.PanMemory
+import Flapjack.PanMemoryModel
 import Flapjack.RiscV.Model
 
 /-!
@@ -11,6 +12,21 @@ representation explicit over PanFlatMemory (Word width).
 -/
 
 namespace Flapjack.RiscV
+
+def panRiscVWordOfBytes [NeZero width]
+    (bigEndian : Bool) (bytes : List (Word width)) : Word width :=
+  let byte0 := bytes[0]?.getD 0
+  let byte1 := bytes[1]?.getD 0
+  let byte2 := bytes[2]?.getD 0
+  let byte3 := bytes[3]?.getD 0
+  if bigEndian then
+    BitVec.ofNat width
+      (byte3.toNat + 256 * byte2.toNat +
+        256 ^ 2 * byte1.toNat + 256 ^ 3 * byte0.toNat)
+  else
+    BitVec.ofNat width
+      (byte0.toNat + 256 * byte1.toNat +
+        256 ^ 2 * byte2.toNat + 256 ^ 3 * byte3.toNat)
 
 def panRiscVByteAlign [NeZero width]
     (bytesInWord address : Word width) : Word width :=
@@ -36,6 +52,15 @@ def panRiscVSetByte [NeZero width]
   let high := value.toNat / block
   BitVec.ofNat width
     (low + (byte.toNat % 256) * offset + high * block)
+
+def panRiscVMemoryModel [NeZero width] : PanMemoryModel (Word width) :=
+  { byteAlign := panRiscVByteAlign
+    getByte := fun bytesInWord address value _bigEndian =>
+      panRiscVGetByte bytesInWord address value
+    setByte := fun bytesInWord address byte value _bigEndian =>
+      panRiscVSetByte bytesInWord address byte value
+    aligned := fun alignment address => aligned address alignment
+    wordOfBytes := panRiscVWordOfBytes }
 
 def panRiscVReadByte [NeZero width]
     (domain : PanMemoryDomain (Word width))

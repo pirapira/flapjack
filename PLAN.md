@@ -142,6 +142,10 @@ definitions, pass ordering, examples, and proof obligations.
   compiled skip and constant-return programs.
 - [x] Prove source-to-full-Crepe agreement for a compiled binary addition
   expression over constants.
+- [x] Prove source-to-full-Crepe agreement for a caught exception handler,
+  including the global-memory payload carried across the compiled call.
+- [x] Extend source-to-full-Crepe agreement through a nontrivial external
+  call, preserving a compiled local slot across the generated temporaries.
 - [x] Extend generic source-to-full-Crepe agreement through a compiled
   constant store/load and its state-memory projection.
 - [x] Extend generic source-to-full-Crepe agreement through constant
@@ -179,6 +183,8 @@ definitions, pass ordering, examples, and proof obligations.
   load32/store32 operations to them with evaluator agreement.
 - [x] Add full-word register-based store lowering and prove its evaluator
   agreement with the RISC-V byte-memory fold.
+- [x] Relate the composed source store/load program directly to its generated
+  RISC-V execution result, closing the concrete source-to-machine regression.
 - [x] Add declaration-level static checking: structure discovery, global and
   exception environments, function headers, duplicate checks, and missing or
   wrongly shaped returns.
@@ -227,6 +233,15 @@ definitions, pass ordering, examples, and proof obligations.
   bound local is returned, with an executable RV64 regression.
 - [x] Correct Loop declaration binding for temporary-consuming expressions and
   verify scoped multiplication declarations through source-to-Loop execution.
+- [x] Prove the generated Loop declaration-call pipeline agrees with the
+  source call evaluator, including argument temporaries and the return slot.
+- [x] Prove the generated Loop FFI call pipeline agrees with the source FFI
+  evaluator, including declaration-slot updates and the caller continuation.
+- [x] Align raised Loop calls with CakeML's global payload convention by
+  preserving callee globals/memory while entering an exception handler, and
+  verify source-to-Loop handler execution.
+- [x] Prove source-to-Loop agreement for a constant store/load sequence,
+  including temporary address/value lowering and Loop memory execution.
 - [x] Prove RISC-V instruction-selection and evaluator agreement for the
   emitted constant-return artifact.
 - [x] Lower register-based equality and inequality conditionals to RISC-V,
@@ -1734,6 +1749,9 @@ definitions, pass ordering, examples, and proof obligations.
   establishing the first program-level Lab-to-machine FFI simulation.
 - [x] Compose a singleton Lab FFI call-and-return through
   `executeFunctionAtWithFfi`, including the caller's `x1` continuation.
+- [x] Prove the compiler-composed source-to-Loop `extCall` equation for
+  constant arguments under no-op handlers, including generated temporary
+  declaration execution and normal-result projection.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Expose location-aware bitmap sequence compilation and evaluator

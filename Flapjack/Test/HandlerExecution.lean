@@ -1,3 +1,4 @@
+import Flapjack.Correctness
 import Flapjack.Test.Pipeline
 
 namespace Flapjack
@@ -36,6 +37,13 @@ def pipelineHandlerMachineResult : Option (List (RiscV.Word 64)) := do
   RiscV.executeFunctionAtAfterEntry 4000 0 entry 100 [] image [] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 100)
 
+def pipelineHandlerMachineValues : Option (List (RiscV.Word 64)) := do
+  let sections ← pipelineHandlerLinkedSections
+  let entry ← pipelineHandlerSectionEntry 2 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 100 [] image [4] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 100)
+
 #guard pipelineHandlerMachineResult.isSome
 #guard pipelineHandlerMachineResult = some []
 #guard
@@ -46,5 +54,16 @@ def pipelineHandlerMachineResult : Option (List (RiscV.Word 64)) := do
     RiscV.executeFunctionAtAfterEntry 4000 0 entry 100 [] image [4] []
       (RiscV.writeRegister (RiscV.zeroState 64) 1 100)
   result = some [BitVec.ofNat 64 7]
+
+def pipelineHandlerSourceMachineAgreement : Bool :=
+  let sourceResult :=
+    (evalPanProgWithHandlers pipelineHandlerSourceFunctions 20 (fun _ => none)
+      pipelineHandlerSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => [])
+  sourceResult == pipelineHandlerMachineValues
+
+#guard pipelineHandlerSourceMachineAgreement
 
 end Flapjack

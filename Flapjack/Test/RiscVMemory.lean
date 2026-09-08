@@ -186,4 +186,17 @@ example :
       some 42 := by
   decide +kernel
 
+example :
+    (evalPanRiscVFlatProgWithCallsAndFfi
+      [] riscvFlatIncrementFunctions riscvFlatNoFfi
+      (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 20
+      (fun _ => none) (fun _ => none) riscvFlatTestDomain
+      riscvFlatZeroMemory
+      (.call (some (none, none)) "increment"
+        [.const (BitVec.ofNat 64 41)])).map
+      (fun result => match result with
+        | .normal _ _ _ => true
+        | _ => false) = some true := by
+  decide +kernel
+
 end Flapjack

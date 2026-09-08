@@ -386,6 +386,7 @@ def assignPanRiscVCallResult [NeZero width]
     Option (VarName → Option (PanValue (Word width))) :=
   match destination, values with
   | none, [] => some locals
+  | none, [_] => some locals
   | some (.local, name), [value] =>
       if panRiscVAssignmentValid structs locals (fun _ => none)
           .local name value then
@@ -647,18 +648,16 @@ mutual
         let oldValue := locals name
         let result ← evalPanRiscVFlatCallWithPrimitiveAndFfi structs functions ffi primitive
           baseAddress topAddress bytesInWord domain fuel locals globals memory
-          (some (some (.local, name), none)) function arguments
+          none function arguments
         match result with
-        | .normal locals globals memory =>
-            if let some value := locals name then
-              if panShapeMatches (panValueShape structs value) shape then
-                let result ← evalPanRiscVFlatProgFuelWithPrimitiveAndFfi structs functions
-                  ffi primitive baseAddress topAddress bytesInWord domain fuel
-                  locals globals memory body
-                pure (restorePanFlatControlLocal name oldValue result)
-              else none
+        | .returned _ globals memory [value] =>
+            if panShapeMatches (panValueShape structs value) shape then
+              let result ← evalPanRiscVFlatProgFuelWithPrimitiveAndFfi structs functions
+                ffi primitive baseAddress topAddress bytesInWord domain fuel
+                (updatePanValueMap locals name value) globals memory body
+              pure (restorePanFlatControlLocal name oldValue result)
             else none
-        | result => pure result
+        | _ => none
     | _fuel + 1, locals, globals, memory,
         .extCall function configuration configurationLength array arrayLength => do
         let configuration ← evalPanRiscVFlatExp structs locals globals domain memory

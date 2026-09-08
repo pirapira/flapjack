@@ -478,8 +478,10 @@ mutual
             match info with
             | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
             | some (destination, _) => do
-                let locals ← assignPanValueCallResult locals destination values
-                pure (.normal locals calleeGlobals calleeMemory)
+                let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
+                  destination values
+                  (structs := structs)
+                pure (.normal locals globals calleeMemory)
         | .raised _ calleeGlobals calleeMemory exception value =>
             match info with
             | some (_, some (caught, handlerVariable, handlerProgram)) =>
@@ -574,17 +576,16 @@ mutual
         let oldValue := locals name
         let result ← evalPanFlatCallWithPrimitiveAndFfi structs functions ffi primitive
           baseAddress topAddress bytesInWord domain fuel locals globals memory
-          (some (some (.local, name), none)) function arguments
+          none function arguments
         match result with
-        | .normal locals globals memory =>
-            if let some value := locals name then
-              if panShapeMatches (panValueShape structs value) shape then
-                let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
-                  baseAddress topAddress bytesInWord domain fuel locals globals memory body
-                pure (restorePanFlatControlLocal name oldValue result)
-              else none
+        | .returned _ globals memory [value] =>
+            if panShapeMatches (panValueShape structs value) shape then
+              let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
+                baseAddress topAddress bytesInWord domain fuel
+                (updatePanValueMap locals name value) globals memory body
+              pure (restorePanFlatControlLocal name oldValue result)
             else none
-        | result => pure result
+        | _ => none
     | _fuel + 1, locals, globals, memory, .extCall function configuration configurationLength array arrayLength => do
         let configuration ← evalPanFlatExp structs locals globals domain memory
           baseAddress topAddress bytesInWord configuration

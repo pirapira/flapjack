@@ -24,6 +24,12 @@ def memoryModelMemory : PanFlatMemory (RiscV.Word 64) :=
 def memoryModel : PanMemoryModel (RiscV.Word 64) :=
   RiscV.panRiscVMemoryModel
 
+def memoryModelFfi : PanValueFfiHandler (RiscV.Word 64) :=
+  fun _ _ _ _ _ locals => some locals
+
+def memoryModelPrimitive : PanPrimitiveHandler (RiscV.Word 64) :=
+  fun _ _ => some (.word 0)
+
 def memoryModelReadByte : Option (RiscV.Word 64) :=
   panModelReadByte memoryModel memoryModelDomain memoryModelMemory
     (BitVec.ofNat 64 8) (BitVec.ofNat 64 9) false
@@ -126,6 +132,37 @@ def memoryModelPanValuesByteProgram : Option (RiscV.Word 64) :=
       | [.word value] => some value
       | _ => none
 
+def memoryModelControlByteProgram : Option (RiscV.Word 64) :=
+  (evalPanValueProgWithCallsAndFfi []
+      [("read", [], .return (.loadByte (.const (BitVec.ofNat 64 9))))]
+      memoryModelFfi (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+      (BitVec.ofNat 64 8) 30
+      (fun name => if name == "x" then some (.word 0) else none)
+      (fun _ => none) (fun _ => some (.word 0))
+      (.seq (.storeByte (.const (BitVec.ofNat 64 9))
+          (.const (BitVec.ofNat 64 0xaa)))
+        (.seq (.call (some (some (.local, "x"), none)) "read" [])
+          (.return (.var .local "x"))))
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel))).bind
+    fun result => match result with
+      | .returned _ _ _ [.word value] => some value
+      | _ => none
+
+def memoryModelPrimitiveControlByteProgram : Option (RiscV.Word 64) :=
+  (evalPanValueProgWithPrimitiveCallsAndFfi memoryModelPrimitive memoryModelFfi [] []
+      (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 30
+      (fun name => if name == "x" then some (.word 0) else none)
+      (fun _ => none) (fun _ => some (.word 0))
+      (.seq (.primitive "x" .addCarry [])
+        (.seq (.storeByte (.const (BitVec.ofNat 64 9))
+            (.const (BitVec.ofNat 64 0xaa)))
+          (.seq (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 9)))
+            (.return (.var .local "x")))))
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel))).bind
+    fun result => match result with
+      | .returned _ _ _ [.word value] => some value
+      | _ => none
+
 #guard memoryModelReadByte = some (BitVec.ofNat 64 2)
 #guard memoryModelRead32 = some (BitVec.ofNat 64 0x04030201)
 #guard memoryModelWordAfterByteStore =
@@ -139,5 +176,7 @@ def memoryModelPanValuesByteProgram : Option (RiscV.Word 64) :=
 #guard memoryModelSteppedByteProgram = some (BitVec.ofNat 64 0xaa, 7)
 #guard memoryModelSteppedShared16Program = some (BitVec.ofNat 64 0xbeef, 9)
 #guard memoryModelPanValuesByteProgram = some (BitVec.ofNat 64 0xaa)
+#guard memoryModelControlByteProgram = some (BitVec.ofNat 64 0xaa)
+#guard memoryModelPrimitiveControlByteProgram = some (BitVec.ofNat 64 0xaa)
 
 end Flapjack

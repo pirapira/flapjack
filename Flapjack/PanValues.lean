@@ -510,17 +510,18 @@ def evalPanValueExtCall [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (memory : α → Option (PanValue α))
     (baseAddress topAddress bytesInWord : α)
     (function : FunName)
-    (configuration configurationLength array arrayLength : Exp α) :
+    (configuration configurationLength array arrayLength : Exp α)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
     Option ((VarName → Option (PanValue α)) ×
       (VarName → Option (PanValue α)) × (α → Option (PanValue α))) := do
   let configuration ← evalPanValueExp structs locals globals memory
-    baseAddress topAddress bytesInWord configuration
+    baseAddress topAddress bytesInWord configuration (memoryAccess := memoryAccess)
   let configurationLength ← evalPanValueExp structs locals globals memory
-    baseAddress topAddress bytesInWord configurationLength
+    baseAddress topAddress bytesInWord configurationLength (memoryAccess := memoryAccess)
   let array ← evalPanValueExp structs locals globals memory
-    baseAddress topAddress bytesInWord array
+    baseAddress topAddress bytesInWord array (memoryAccess := memoryAccess)
   let arrayLength ← evalPanValueExp structs locals globals memory
-    baseAddress topAddress bytesInWord arrayLength
+    baseAddress topAddress bytesInWord arrayLength (memoryAccess := memoryAccess)
   let .word configuration := configuration | none
   let .word configurationLength := configurationLength | none
   let .word array := array | none
@@ -547,15 +548,17 @@ mutual
         (VarName → Option (PanValue α)) → (α → Option (PanValue α)) →
         Option (Option (VarKind × VarName) ×
           Option (ExceptionId × VarName × Prog α)) → FunName → List (Exp α) →
+        (memoryAccess : Option (PanValueMemoryAccess α) := none) →
         Option (PanValueControlResult α)
-    | 0, _, _, _, _, _, _ => none
-    | fuel + 1, locals, globals, memory, info, function, arguments => do
+    | 0, _, _, _, _, _, _, _ => none
+    | fuel + 1, locals, globals, memory, info, function, arguments, memoryAccess => do
         let values ← evalPanValueExps structs locals globals memory
-          baseAddress topAddress bytesInWord arguments
+          baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
         let (parameters, body) ← lookupPanFunction function functions
         let calleeLocals ← bindPanValueParameters parameters values
         let result ← evalPanValueProgWithCallsAndFfi structs functions handler
           baseAddress topAddress bytesInWord fuel calleeLocals globals memory body
+          (memoryAccess := memoryAccess)
         match result with
         | .normal _ _ _ => pure (.normal locals globals memory)
         | .returned _ _ _ values =>
@@ -571,7 +574,7 @@ mutual
                   evalPanValueProgWithCallsAndFfi structs functions handler
                     baseAddress topAddress bytesInWord fuel
                     (updatePanValueMap locals handlerVariable value) globals memory
-                    handlerProgram
+                    handlerProgram (memoryAccess := memoryAccess)
                 else pure (.raised locals globals memory exception value)
             | _ => pure (.raised locals globals memory exception value)
         | .broke _ _ _ => pure (.broke locals globals memory)
@@ -588,142 +591,172 @@ mutual
       (baseAddress topAddress bytesInWord : α) :
       Nat → (VarName → Option (PanValue α)) →
         (VarName → Option (PanValue α)) → (α → Option (PanValue α)) →
-        Prog α → Option (PanValueControlResult α)
-    | 0, _, _, _, _ => none
-    | _fuel + 1, locals, globals, memory, .skip =>
+        Prog α →
+        (memoryAccess : Option (PanValueMemoryAccess α) := none) →
+        Option (PanValueControlResult α)
+    | 0, _, _, _, _, _ => none
+    | _fuel + 1, locals, globals, memory, .skip, _ =>
         some (.normal locals globals memory)
     | fuel + 1, locals, globals, memory,
-        .dec name shape value body => do
+        .dec name shape value body, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         if panShapeMatches (panValueShape structs value) shape then
           let oldValue := locals name
           let result ← evalPanValueProgWithCallsAndFfi structs functions handler
             baseAddress topAddress bytesInWord fuel
             (updatePanValueMap locals name value) globals memory body
+            (memoryAccess := memoryAccess)
           pure (restorePanValueControlLocal name oldValue result)
         else none
-    | _fuel + 1, locals, globals, memory, .assign .local name value => do
+    | _fuel + 1, locals, globals, memory, .assign .local name value, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         pure (.normal (updatePanValueMap locals name value) globals memory)
-    | _fuel + 1, locals, globals, memory, .assign .global name value => do
+    | _fuel + 1, locals, globals, memory, .assign .global name value, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         pure (.normal locals (updatePanValueMap globals name value) memory)
-    | _fuel + 1, locals, globals, memory, .store address value => do
+    | _fuel + 1, locals, globals, memory, .store address value, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord address
+          baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         let .word address := address | none
         pure (.normal locals globals (updatePanValueMemory memory address value))
-    | _fuel + 1, locals, globals, memory, .store32 address value => do
+    | _fuel + 1, locals, globals, memory, .store32 address value, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord address
+          baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         let .word address := address | none
         let .word value := value | none
+        let memory ← match memoryAccess with
+          | none => some (updatePanValueMemory memory address (.word value))
+          | some access => access.store32 (fun _ => true) memory bytesInWord address value
         pure (.normal locals globals
-          (updatePanValueMemory memory address (.word value)))
-    | _fuel + 1, locals, globals, memory, .storeByte address value => do
+          memory)
+    | _fuel + 1, locals, globals, memory, .storeByte address value, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord address
+          baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         let .word address := address | none
         let .word value := value | none
+        let memory ← match memoryAccess with
+          | none => some (updatePanValueMemory memory address (.word value))
+          | some access => access.storeByte (fun _ => true) memory bytesInWord address value
         pure (.normal locals globals
-          (updatePanValueMemory memory address (.word value)))
-    | fuel + 1, locals, globals, memory, .seq first second => do
+          memory)
+    | fuel + 1, locals, globals, memory, .seq first second, memoryAccess => do
         let result ← evalPanValueProgWithCallsAndFfi structs functions handler
           baseAddress topAddress bytesInWord fuel locals globals memory first
+          (memoryAccess := memoryAccess)
         match result with
         | .normal locals globals memory =>
             evalPanValueProgWithCallsAndFfi structs functions handler
               baseAddress topAddress bytesInWord fuel locals globals memory second
+              (memoryAccess := memoryAccess)
         | result => pure result
     | fuel + 1, locals, globals, memory,
-        .ite condition thenBranch elseBranch => do
+        .ite condition thenBranch elseBranch, memoryAccess => do
         let condition ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord condition
+          baseAddress topAddress bytesInWord condition (memoryAccess := memoryAccess)
         let .word condition := condition | none
         if condition != 0 then
           evalPanValueProgWithCallsAndFfi structs functions handler
             baseAddress topAddress bytesInWord fuel locals globals memory thenBranch
+            (memoryAccess := memoryAccess)
         else
           evalPanValueProgWithCallsAndFfi structs functions handler
             baseAddress topAddress bytesInWord fuel locals globals memory elseBranch
-    | fuel + 1, locals, globals, memory, .call info function arguments =>
+            (memoryAccess := memoryAccess)
+    | fuel + 1, locals, globals, memory, .call info function arguments, memoryAccess =>
         evalPanValueCallWithCallsAndFfi structs functions handler
           baseAddress topAddress bytesInWord fuel locals globals memory info function arguments
+          (memoryAccess := memoryAccess)
     | fuel + 1, locals, globals, memory,
-        .decCall name _ function arguments body => do
+        .decCall name _ function arguments body, memoryAccess => do
         let result ← evalPanValueCallWithCallsAndFfi structs functions handler
           baseAddress topAddress bytesInWord fuel locals globals memory
           (some (some (.local, name), none)) function arguments
+          (memoryAccess := memoryAccess)
         match result with
         | .normal locals globals memory =>
             evalPanValueProgWithCallsAndFfi structs functions handler
               baseAddress topAddress bytesInWord fuel locals globals memory body
+              (memoryAccess := memoryAccess)
         | result => pure result
     | _fuel + 1, locals, globals, memory,
-        .extCall function configuration configurationLength array arrayLength => do
+        .extCall function configuration configurationLength array arrayLength, memoryAccess => do
         let (locals, globals, memory) ← evalPanValueExtCall structs handler
           locals globals memory baseAddress topAddress bytesInWord function
-          configuration configurationLength array arrayLength
+          configuration configurationLength array arrayLength (memoryAccess := memoryAccess)
         pure (.normal locals globals memory)
-    | fuel + 1, locals, globals, memory, .while conditionExp body => do
+    | fuel + 1, locals, globals, memory, .while conditionExp body, memoryAccess => do
         let condition ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord conditionExp
+          baseAddress topAddress bytesInWord conditionExp (memoryAccess := memoryAccess)
         let .word conditionValue := condition | none
         if conditionValue == 0 then
           pure (.normal locals globals memory)
         else
           let result ← evalPanValueProgWithCallsAndFfi structs functions handler
             baseAddress topAddress bytesInWord fuel locals globals memory body
+            (memoryAccess := memoryAccess)
           match result with
           | .normal locals globals memory | .continued locals globals memory =>
               evalPanValueProgWithCallsAndFfi structs functions handler
                 baseAddress topAddress bytesInWord fuel locals globals memory
-                (.while conditionExp body)
+                (.while conditionExp body) (memoryAccess := memoryAccess)
           | .broke locals globals memory => pure (.normal locals globals memory)
           | result => pure result
-    | _fuel + 1, locals, globals, memory, .break =>
+    | _fuel + 1, locals, globals, memory, .break, _ =>
         pure (.broke locals globals memory)
-    | _fuel + 1, locals, globals, memory, .continue =>
+    | _fuel + 1, locals, globals, memory, .continue, _ =>
         pure (.continued locals globals memory)
-    | _fuel + 1, locals, globals, memory, .raise exception value => do
+    | _fuel + 1, locals, globals, memory, .raise exception value, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         pure (.raised locals globals memory exception value)
-    | _fuel + 1, locals, globals, memory, .return value => do
+    | _fuel + 1, locals, globals, memory, .return value, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         pure (.returned locals globals memory [value])
     | _fuel + 1, locals, globals, memory,
-        .shMemLoad _ kind name address => do
+        .shMemLoad size kind name address, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord address
+          baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let .word address := address | none
-        let value ← memory address
+        let value ← match memoryAccess with
+          | none => memory address
+          | some access => match size with
+              | .opW => memory address
+              | .op8 => (access.readByte (fun _ => true) memory bytesInWord address).map .word
+              | .op16 => (access.read16 (fun _ => true) memory bytesInWord address).map .word
+              | .op32 => (access.read32 (fun _ => true) memory bytesInWord address).map .word
         match kind with
         | .local => pure (.normal (updatePanValueMap locals name value) globals memory)
         | .global => pure (.normal locals (updatePanValueMap globals name value) memory)
-    | _fuel + 1, locals, globals, memory, .shMemStore _ address value => do
+    | _fuel + 1, locals, globals, memory, .shMemStore size address value, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord address
+          baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         let .word address := address | none
         let .word value := value | none
-        pure (.normal locals globals
-          (updatePanValueMemory memory address (.word value)))
-    | _fuel + 1, locals, globals, memory, .tick | _fuel + 1, locals, globals, memory, .annot _ _ =>
+        let memory ← match memoryAccess with
+          | none => some (updatePanValueMemory memory address (.word value))
+          | some access => match size with
+              | .opW => some (updatePanValueMemory memory address (.word value))
+              | .op8 => access.storeByte (fun _ => true) memory bytesInWord address value
+              | .op16 => access.store16 (fun _ => true) memory bytesInWord address value
+              | .op32 => access.store32 (fun _ => true) memory bytesInWord address value
         pure (.normal locals globals memory)
-    | _, _, _, _, _ => none
-    termination_by fuel _ _ _ _ => fuel
+    | _fuel + 1, locals, globals, memory, .tick, _ |
+        _fuel + 1, locals, globals, memory, .annot _ _, _ =>
+        pure (.normal locals globals memory)
+    | _, _, _, _, _, _ => none
+    termination_by fuel _ _ _ _ _ => fuel
 end
 
 /-!
@@ -746,16 +779,17 @@ mutual
         (VarName → Option (PanValue α)) → (α → Option (PanValue α)) →
         Option (Option (VarKind × VarName) ×
           Option (ExceptionId × VarName × Prog α)) → FunName → List (Exp α) →
+        (memoryAccess : Option (PanValueMemoryAccess α) := none) →
         Option (PanValueControlResult α)
-    | 0, _, _, _, _, _, _ => none
-    | fuel + 1, locals, globals, memory, info, function, arguments => do
+    | 0, _, _, _, _, _, _, _ => none
+    | fuel + 1, locals, globals, memory, info, function, arguments, memoryAccess => do
         let values ← evalPanValueExps structs locals globals memory
-          baseAddress topAddress bytesInWord arguments
+          baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
         let (parameters, body) ← lookupPanFunction function functions
         let calleeLocals ← bindPanValueParameters parameters values
         let result ← evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
           structs functions baseAddress topAddress bytesInWord fuel
-          calleeLocals globals memory body
+          calleeLocals globals memory body (memoryAccess := memoryAccess)
         match result with
         | .normal _ _ _ => pure (.normal locals globals memory)
         | .returned _ _ _ values =>
@@ -771,7 +805,7 @@ mutual
                   evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
                     structs functions baseAddress topAddress bytesInWord fuel
                     (updatePanValueMap locals handlerVariable value) globals memory
-                    handlerProgram
+                    handlerProgram (memoryAccess := memoryAccess)
                 else pure (.raised locals globals memory exception value)
             | _ => pure (.raised locals globals memory exception value)
         | .broke _ _ _ => pure (.broke locals globals memory)
@@ -788,157 +822,181 @@ mutual
       (baseAddress topAddress bytesInWord : α) :
       Nat → (VarName → Option (PanValue α)) →
         (VarName → Option (PanValue α)) → (α → Option (PanValue α)) →
-        Prog α → Option (PanValueControlResult α)
-    | 0, _, _, _, _ => none
-    | _fuel + 1, locals, globals, memory, .skip =>
+        Prog α →
+        (memoryAccess : Option (PanValueMemoryAccess α) := none) →
+        Option (PanValueControlResult α)
+    | 0, _, _, _, _, _ => none
+    | _fuel + 1, locals, globals, memory, .skip, _ =>
         some (.normal locals globals memory)
     | fuel + 1, locals, globals, memory,
-        .dec name shape value body => do
+        .dec name shape value body, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         if panShapeMatches (panValueShape structs value) shape then
           let oldValue := locals name
           let result ← evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
             structs functions baseAddress topAddress bytesInWord fuel
             (updatePanValueMap locals name value) globals memory body
+            (memoryAccess := memoryAccess)
           pure (restorePanValueControlLocal name oldValue result)
         else none
-    | _fuel + 1, locals, globals, memory, .assign .local name value => do
+    | _fuel + 1, locals, globals, memory, .assign .local name value, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         pure (.normal (updatePanValueMap locals name value) globals memory)
-    | _fuel + 1, locals, globals, memory, .assign .global name value => do
+    | _fuel + 1, locals, globals, memory, .assign .global name value, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         pure (.normal locals (updatePanValueMap globals name value) memory)
-    | _fuel + 1, locals, globals, memory, .primitive name operator arguments => do
+    | _fuel + 1, locals, globals, memory, .primitive name operator arguments, memoryAccess => do
         let values ← evalPanValueExps structs locals globals memory
-          baseAddress topAddress bytesInWord arguments
+          baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
         let value ← primitive operator values
         let oldValue ← locals name
         if panShapeMatches (panValueShape structs value)
             (panValueShape structs oldValue) then
           pure (.normal (updatePanValueMap locals name value) globals memory)
         else none
-    | _fuel + 1, locals, globals, memory, .store address value => do
+    | _fuel + 1, locals, globals, memory, .store address value, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord address
+          baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         let .word address := address | none
         pure (.normal locals globals (updatePanValueMemory memory address value))
-    | _fuel + 1, locals, globals, memory, .store32 address value => do
+    | _fuel + 1, locals, globals, memory, .store32 address value, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord address
+          baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         let .word address := address | none
         let .word value := value | none
+        let memory ← match memoryAccess with
+          | none => some (updatePanValueMemory memory address (.word value))
+          | some access => access.store32 (fun _ => true) memory bytesInWord address value
         pure (.normal locals globals
-          (updatePanValueMemory memory address (.word value)))
-    | _fuel + 1, locals, globals, memory, .storeByte address value => do
+          memory)
+    | _fuel + 1, locals, globals, memory, .storeByte address value, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord address
+          baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         let .word address := address | none
         let .word value := value | none
+        let memory ← match memoryAccess with
+          | none => some (updatePanValueMemory memory address (.word value))
+          | some access => access.storeByte (fun _ => true) memory bytesInWord address value
         pure (.normal locals globals
-          (updatePanValueMemory memory address (.word value)))
-    | fuel + 1, locals, globals, memory, .seq first second => do
+          memory)
+    | fuel + 1, locals, globals, memory, .seq first second, memoryAccess => do
         let result ← evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
           structs functions baseAddress topAddress bytesInWord fuel
-          locals globals memory first
+          locals globals memory first (memoryAccess := memoryAccess)
         match result with
         | .normal locals globals memory =>
             evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
               structs functions baseAddress topAddress bytesInWord fuel
-              locals globals memory second
+              locals globals memory second (memoryAccess := memoryAccess)
         | result => pure result
     | fuel + 1, locals, globals, memory,
-        .ite condition thenBranch elseBranch => do
+        .ite condition thenBranch elseBranch, memoryAccess => do
         let condition ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord condition
+          baseAddress topAddress bytesInWord condition (memoryAccess := memoryAccess)
         let .word condition := condition | none
         if condition != 0 then
           evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
             structs functions baseAddress topAddress bytesInWord fuel
-            locals globals memory thenBranch
+            locals globals memory thenBranch (memoryAccess := memoryAccess)
         else
           evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
             structs functions baseAddress topAddress bytesInWord fuel
-            locals globals memory elseBranch
-    | fuel + 1, locals, globals, memory, .call info function arguments =>
+            locals globals memory elseBranch (memoryAccess := memoryAccess)
+    | fuel + 1, locals, globals, memory, .call info function arguments, memoryAccess =>
         evalPanValueCallWithPrimitiveCallsAndFfi primitive handler
           structs functions baseAddress topAddress bytesInWord fuel
-          locals globals memory info function arguments
-    | fuel + 1, locals, globals, memory, .decCall name _ function arguments body => do
+          locals globals memory info function arguments (memoryAccess := memoryAccess)
+    | fuel + 1, locals, globals, memory, .decCall name _ function arguments body,
+        memoryAccess => do
         let result ← evalPanValueCallWithPrimitiveCallsAndFfi primitive handler
           structs functions baseAddress topAddress bytesInWord fuel
           locals globals memory (some (some (.local, name), none)) function arguments
+          (memoryAccess := memoryAccess)
         match result with
         | .normal locals globals memory =>
             evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
               structs functions baseAddress topAddress bytesInWord fuel
-              locals globals memory body
+              locals globals memory body (memoryAccess := memoryAccess)
         | result => pure result
     | _fuel + 1, locals, globals, memory,
-        .extCall function configuration configurationLength array arrayLength => do
+        .extCall function configuration configurationLength array arrayLength, memoryAccess => do
         let (locals, globals, memory) ← evalPanValueExtCall structs handler
           locals globals memory baseAddress topAddress bytesInWord function
-          configuration configurationLength array arrayLength
+          configuration configurationLength array arrayLength (memoryAccess := memoryAccess)
         pure (.normal locals globals memory)
-    | fuel + 1, locals, globals, memory, .while conditionExp body => do
+    | fuel + 1, locals, globals, memory, .while conditionExp body, memoryAccess => do
         let condition ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord conditionExp
+          baseAddress topAddress bytesInWord conditionExp (memoryAccess := memoryAccess)
         let .word conditionValue := condition | none
         if conditionValue == 0 then
           pure (.normal locals globals memory)
         else
           let result ← evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
             structs functions baseAddress topAddress bytesInWord fuel
-            locals globals memory body
+            locals globals memory body (memoryAccess := memoryAccess)
           match result with
           | .normal locals globals memory | .continued locals globals memory =>
               evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
                 structs functions baseAddress topAddress bytesInWord fuel
                 locals globals memory (.while conditionExp body)
+                (memoryAccess := memoryAccess)
           | .broke locals globals memory => pure (.normal locals globals memory)
           | result => pure result
-    | _fuel + 1, locals, globals, memory, .break =>
+    | _fuel + 1, locals, globals, memory, .break, _ =>
         pure (.broke locals globals memory)
-    | _fuel + 1, locals, globals, memory, .continue =>
+    | _fuel + 1, locals, globals, memory, .continue, _ =>
         pure (.continued locals globals memory)
-    | _fuel + 1, locals, globals, memory, .raise exception value => do
+    | _fuel + 1, locals, globals, memory, .raise exception value, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         pure (.raised locals globals memory exception value)
-    | _fuel + 1, locals, globals, memory, .return value => do
+    | _fuel + 1, locals, globals, memory, .return value, memoryAccess => do
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         pure (.returned locals globals memory [value])
     | _fuel + 1, locals, globals, memory,
-        .shMemLoad _ kind name address => do
+        .shMemLoad size kind name address, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord address
+          baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let .word address := address | none
-        let value ← memory address
+        let value ← match memoryAccess with
+          | none => memory address
+          | some access => match size with
+              | .opW => memory address
+              | .op8 => (access.readByte (fun _ => true) memory bytesInWord address).map .word
+              | .op16 => (access.read16 (fun _ => true) memory bytesInWord address).map .word
+              | .op32 => (access.read32 (fun _ => true) memory bytesInWord address).map .word
         match kind with
         | .local => pure (.normal (updatePanValueMap locals name value) globals memory)
         | .global => pure (.normal locals (updatePanValueMap globals name value) memory)
-    | _fuel + 1, locals, globals, memory, .shMemStore _ address value => do
+    | _fuel + 1, locals, globals, memory, .shMemStore size address value, memoryAccess => do
         let address ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord address
+          baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let value ← evalPanValueExp structs locals globals memory
-          baseAddress topAddress bytesInWord value
+          baseAddress topAddress bytesInWord value (memoryAccess := memoryAccess)
         let .word address := address | none
         let .word value := value | none
-        pure (.normal locals globals
-          (updatePanValueMemory memory address (.word value)))
-    | _fuel + 1, locals, globals, memory,
-        .tick | _fuel + 1, locals, globals, memory, .annot _ _ =>
+        let memory ← match memoryAccess with
+          | none => some (updatePanValueMemory memory address (.word value))
+          | some access => match size with
+              | .opW => some (updatePanValueMemory memory address (.word value))
+              | .op8 => access.storeByte (fun _ => true) memory bytesInWord address value
+              | .op16 => access.store16 (fun _ => true) memory bytesInWord address value
+              | .op32 => access.store32 (fun _ => true) memory bytesInWord address value
         pure (.normal locals globals memory)
-    termination_by fuel _ _ _ _ => fuel
+    | _fuel + 1, locals, globals, memory,
+        .tick, _ | _fuel + 1, locals, globals, memory, .annot _ _, _ =>
+        pure (.normal locals globals memory)
+    termination_by fuel _ _ _ _ _ => fuel
 end
 
 theorem evalPanValueExp_rField_word

@@ -45,6 +45,16 @@ def clockedCallAtZero :
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 0
     none "returnOne" []
 
+def clockedRaiseFunctions : List (FunName × List VarName × Prog (Word 64)) :=
+  [("raiseOne", [], .raise "E" (.const (BitVec.ofNat 64 1)))]
+
+def clockedCaughtCall : Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] clockedRaiseFunctions 0 100 8 20
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 1
+    (some (none, some ("E", "exceptionValue",
+      .return (.var .local "exceptionValue")))) "raiseOne" []
+
 def clockedInvalidCallTerminal :
     Option (PanValueFfiClockResult (Word 64) Unit) :=
   evalPanValueFfiClockCall statefulTestContext statefulTestPrimitive
@@ -76,6 +86,12 @@ def clockedInvalidCallTerminal :
 #guard
   match clockedCallAtZero with
   | some (.timeout locals _ _ _, 0) => locals "x" = none
+  | _ => false
+
+#guard
+  match clockedCaughtCall with
+  | some (.control (.returned locals _ _ _ [PanValue.word value]), 0) =>
+      locals "exceptionValue" = none && value = BitVec.ofNat 64 1
   | _ => false
 
 #guard clockedInvalidCallTerminal.isNone

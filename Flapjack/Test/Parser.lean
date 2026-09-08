@@ -354,6 +354,45 @@ The tests above parse into `Int`; this is the shape real callers use. -/
   (.ok [.function { name := "f", inline := false, exported := false, params := [],
                     body := .return (.const (BitVec.ofInt 64 42)), returnShape := .one }])
 
+/-! ### Location annotations
+
+`add_locs_annot` is off by default and reproduces upstream's output when asked
+for. -/
+
+-- Off by default.
+#guard sameAst (prog "skip; tick;") (.ok (.seq .skip .tick))
+
+-- On, each statement is wrapped in its own source range.
+#guard sameAst (parseProgram ofI "skip; tick;" (locations := true))
+  (.ok (.seq
+    (.seq (.annot "location" "(1:1 1:5)") .skip)
+    (.seq (.annot "location" "(1:6 1:10)") .tick)))
+
+-- A declaration's range covers the statements it scopes over.
+#guard sameAst (parseProgram ofI "var x = 1; return x;" (locations := true))
+  (.ok (.seq (.annot "location" "(1:1 1:18)")
+    (.dec "x" .one (.const 1)
+      (.seq (.annot "location" "(1:10 1:18)") (.return (.var .local "x"))))))
+
+-- Ranges track rows through a multi-line function.
+#guard sameAst (parseTopDecs ofI "fun f() {\n  skip;\n  tick;\n}" (locations := true))
+  (.ok [.function { name := "f", inline := false, exported := false, params := [],
+                    body := .seq
+                      (.seq (.annot "location" "(2:2 2:6)") .skip)
+                      (.seq (.annot "location" "(3:2 3:6)") .tick),
+                    returnShape := .one }])
+
+-- An `if` is annotated, and so is the statement inside it.
+#guard sameAst (parseProgram ofI "if 1 { skip; }" (locations := true))
+  (.ok (.seq (.annot "location" "(1:1 1:12)")
+    (.ite (.const 1) (.seq (.annot "location" "(1:7 1:11)") .skip) .skip)))
+
+-- The `{ ... }` statement form gets no annotation of its own: `conv_Prog`
+-- reaches it as a `ProgNT` node and folds it without calling
+-- `add_locs_annot`. Only the statement inside is annotated.
+#guard sameAst (parseProgram ofI "{ skip; };" (locations := true))
+  (.ok (.seq (.annot "location" "(1:2 1:6)") .skip))
+
 /-! ### Downstream compatibility
 
 The AST the parser produces has to be consumable by what already exists, not

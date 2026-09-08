@@ -93,14 +93,27 @@ These are surprising but intended, and are kept:
   token reports the same start and stop so the next token inherits its column.
   Rows are reliable; the tests assert rows and not columns.
 
-## Not ported
+## Location annotations
 
-**`add_locs_annot`.** Upstream wraps every statement in
-`Seq (Annot "location" "(r:c r:c)") _`, unconditionally. That roughly doubles
-the tree and makes AST comparison awkward, and nothing in Flapjack consumes it
-yet. The structured errors below cover the diagnostics the issue asks for. The
-grammar already has the spans, so adding this behind a flag is small if the
-later stages want it.
+`add_locs_annot` is ported, but off by default: upstream emits it
+unconditionally, wrapping every statement in
+`Seq (Annot "location" "(r:c r:c)") _`, which roughly doubles the tree and
+makes every AST comparison awkward. Pass `locations := true` to either entry
+point to get upstream's output.
+
+```lean
+parseTopDecs ofInt source (locations := true)
+```
+
+One subtlety is reproduced: the `{ ... }` statement form gets no annotation of
+its own, because `conv_Prog` reaches it as a `ProgNT` node and folds it into a
+`Seq` without calling `add_locs_annot`. Every other statement form arrives as
+a leaf or a `conv_NonRecStmt` node and is annotated. Ranges come from the
+tokens a rule consumed rather than from a parse-tree node's `locs`, and agree
+with upstream to the extent its position arithmetic is itself exact (see the
+caveat above).
+
+## Not ported
 
 **`collect_globals`.** Upstream defines it, but `localise_topdecs` starts from
 an empty scope and never calls it.

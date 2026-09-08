@@ -13,12 +13,12 @@ together, as upstream's `safe_pancake_lex` does; a parse error is reported
 singly, taken from the alternative that consumed the most input, which is
 almost always the one the author meant.
 
-Not ported: `add_locs_annot`, which wraps every statement in
-`Seq (Annot "location" "(r:c r:c)") _`. Upstream emits it unconditionally,
-which roughly doubles the tree and makes every AST comparison awkward. The
-structured errors below cover the diagnostics the issue asks for; if the
-location annotations are wanted for later stages they are a small follow-up,
-since the parser already has the spans.
+`add_locs_annot` is available but off by default. Upstream emits it
+unconditionally, wrapping every statement in
+`Seq (Annot "location" "(r:c r:c)") _`, which roughly doubles the tree and
+makes every AST comparison awkward. Pass `locations := true` to reproduce
+upstream's output; the structured errors here are what covers diagnostics
+otherwise.
 -/
 
 namespace Flapjack.Parser
@@ -78,8 +78,9 @@ def parseTopDecList (ofInt : Int → α) (fuel : Nat) : Nat → P (List (Decl α
           | some declaration => declaration :: rest)
 
 /-- Run a parser over a token list, requiring that it consumes everything. -/
-def runParser (parser : Nat → P α) (toks : Toks) : Except ParseError α :=
-  let state : PState := { toks := toks, furthest := none }
+def runParser (parser : Nat → P α) (toks : Toks) (locations : Bool := false) :
+    Except ParseError α :=
+  let state : PState := { toks := toks, furthest := none, locations := locations }
   match parser (parseFuel toks.length) state with
   | (some value, final) =>
       if final.toks.isEmpty then .ok value
@@ -99,12 +100,13 @@ def lexErrorToParseError (entry : String × Locs) : ParseError :=
 `parse_topdecs_to_ast`: Pancake source to Flapjack declarations, with
 variables classified as local or global.
 -/
-def parseTopDecs (ofInt : Int → α) (source : String) :
+def parseTopDecs (ofInt : Int → α) (source : String) (locations : Bool := false) :
     Except (List ParseError) (List (Decl α)) :=
   match safePancakeLex source with
   | .error errors => .error (errors.map lexErrorToParseError)
   | .ok toks =>
-      match runParser (fun fuel => parseTopDecList ofInt fuel toks.length.succ) toks with
+      match runParser (fun fuel => parseTopDecList ofInt fuel toks.length.succ)
+          toks locations with
       | .error error => .error [error]
       | .ok declarations => .ok (localiseDecls declarations)
 
@@ -119,23 +121,24 @@ from an empty scope, so a variable declared inside the fragment comes back
 `Local` rather than `Global`. That is what a caller of a fragment parser
 wants, and it agrees with what the same text would give inside a function.
 -/
-def parseProgram (ofInt : Int → α) (source : String) : Except (List ParseError) (Prog α) :=
+def parseProgram (ofInt : Int → α) (source : String) (locations : Bool := false) :
+    Except (List ParseError) (Prog α) :=
   match safePancakeLex source with
   | .error errors => .error (errors.map lexErrorToParseError)
   | .ok toks =>
-      let closed := toks ++ [(Token.rCurT, unknownLoc)]
-      match runParser (parseTryProg ofInt) closed with
+      -- The synthetic closer inherits the last real token's end, so a span
+      -- reaching it does not report `UNKNOWN`.
+      let closer := match toks.getLast? with
+        | none => unknownLoc
+        | some (_, locs) => { start := locs.stop, stop := locs.stop }
+      let closed := toks ++ [(Token.rCurT, closer)]
+      match runParser (parseTryProg ofInt) closed locations with
       | .error error => .error [error]
       | .ok program => .ok (localiseProg [] program)
 
 /-- Render an error for a human: `1:5: Failed to see expected token: ;`. -/
-def formatPosn : Posn → String
-  | .posn row col => s!"{row}:{col}"
-  | .eofPt => "EOF"
-  | .unknownPt => "UNKNOWN"
-
 def formatError (error : ParseError) : String :=
-  s!"{formatPosn error.locs.start}: {error.message}"
+  s!"{posnString error.locs.start}: {error.message}"
 
 def formatErrors (errors : List ParseError) : String :=
   String.intercalate "\n" (errors.map formatError)

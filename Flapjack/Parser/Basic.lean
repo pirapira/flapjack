@@ -41,6 +41,8 @@ structure PState where
   toks : Toks
   /-- The deepest failure seen so far, used for the eventual error message. -/
   furthest : Option ParseError
+  /-- Emit `add_locs_annot` location annotations. Off unless asked for. -/
+  locations : Bool := false
   deriving Inhabited
 
 /-- A backtracking parser: `none` is failure, and the state survives it. -/
@@ -165,6 +167,21 @@ def sepByComma (item : P α) : P (List α) := fun s => (do
     let first ← item
     let rest ← commaTail item s.toks.length
     pure (first :: rest)) s
+
+/-- Run a parser and report the source range it consumed. Upstream reads this
+off the parse-tree node's `locs`; here it comes from the tokens consumed. -/
+def spanned (p : P α) : P (α × Locs) := fun s =>
+  match p s with
+  | (some value, s') =>
+      let start := match s.toks with
+        | [] => Posn.eofPt
+        | (_, locs) :: _ => locs.start
+      let consumed := s.toks.take (s.toks.length - s'.toks.length)
+      let stop := match consumed.getLast? with
+        | none => start
+        | some (_, locs) => locs.stop
+      (some (value, { start := start, stop := stop }), s')
+  | (none, s') => (none, s')
 
 end P
 

@@ -109,6 +109,20 @@ def sharedLoadForms : List (Keyword × String × OpSize) :=
 def sharedStoreForms : List (Keyword × String × OpSize) :=
   [(.st8K, "st8", .op8), (.st16K, "st16", .op16), (.st32K, "st32", .op32), (.stwK, "stw", .opW)]
 
+/--
+`add_locs_annot`: wrap a statement in its source range, as `conv_Prog` does
+for every statement it builds. Off unless `PState.locations` is set, since
+upstream emits these unconditionally and they roughly double the tree.
+-/
+def withLocs (p : P (Prog α)) : P (Prog α) := fun s =>
+  if s.locations then
+    match P.spanned p s with
+    | (some (program, locs), s') =>
+        (some (.seq (.annot locationTag (locsComment locs)) program), s')
+    | (none, s') => (none, s')
+  else
+    p s
+
 /-- Sequence a statement with whatever followed it, where `none` means the
 program ended at a `}` and so contributes no trailing `Skip`. -/
 def appendProg (statement : Prog α) : Option (Prog α) → Prog α
@@ -122,21 +136,27 @@ def parseProg (ofInt : Int → α) : Nat → P (Option (Prog α))
   | 0 => P.fail fuelExhausted
   | fuel + 1 =>
       (do
-        let block ← parseBlock ofInt fuel
+        let block ← withLocs (parseBlock ofInt fuel)
         let rest ← parseProg ofInt fuel
         pure (some (appendProg block rest)))
       <|> (do
-        let (name, shape, function, args) ← parseDecCallBody ofInt fuel
-        let body ← parseTryProg ofInt fuel
-        pure (some (buildDecCall ofInt name shape function args body)))
+        let declaration ← withLocs (do
+          let (name, shape, function, args) ← parseDecCallBody ofInt fuel
+          let body ← parseTryProg ofInt fuel
+          pure (buildDecCall ofInt name shape function args body))
+        pure (some declaration))
       <|> (do
-        let (name, shape, value) ← parseDecBody ofInt fuel
-        let body ← parseTryProg ofInt fuel
-        pure (some (.dec name shape value body)))
+        let declaration ← withLocs (do
+          let (name, shape, value) ← parseDecBody ofInt fuel
+          let body ← parseTryProg ofInt fuel
+          pure (.dec name shape value body))
+        pure (some declaration))
       <|> (do
-        let text ← P.annotLit
+        let annotation ← withLocs (do
+          let text ← P.annotLit
+          pure (.annot "@" text))
         let rest ← parseProg ofInt fuel
-        pure (some (appendProg (.annot "@" text) rest)))
+        pure (some (appendProg annotation rest)))
       <|> (do
         let statement ← parseStmt ofInt fuel
         P.expect .semiT ";"
@@ -202,8 +222,24 @@ def parseWhile (ofInt : Int → α) : Nat → P (Prog α)
       let body ← parseTryProg ofInt fuel
       pure (.while condition body)
 
-/-- `StmtNT`, in `panPEG`'s order. -/
+/--
+`StmtNT`, in `panPEG`'s order.
+
+The `{ ... }` form is not location-annotated: `conv_Prog` reaches it as a
+`ProgNT` node, which it folds into a `Seq` without calling `add_locs_annot`.
+Every other form arrives as a leaf or a `conv_NonRecStmt` node and is
+annotated.
+-/
 def parseStmt (ofInt : Int → α) : Nat → P (Prog α)
+  | 0 => P.fail fuelExhausted
+  | fuel + 1 =>
+      withLocs (parseSimpleStmt ofInt fuel)
+      <|> (do
+        P.expect .lCurT "{"
+        parseTryProg ofInt fuel)
+
+/-- Everything in `StmtNT` except the `{ ... }` block form. -/
+def parseSimpleStmt (ofInt : Int → α) : Nat → P (Prog α)
   | 0 => P.fail fuelExhausted
   | fuel + 1 =>
       (do P.expectKw .skipK "skip"; pure .skip)
@@ -231,9 +267,6 @@ def parseStmt (ofInt : Int → α) : Nat → P (Prog α)
         let value ← parseExp ofInt fuel
         pure (.return value))
       <|> (do P.expectKw .ticK "tick"; pure .tick)
-      <|> (do
-        P.expect .lCurT "{"
-        parseTryProg ofInt fuel)
 
 /-- `StoreNT`, `StoreByteNT` and `Store32NT`. -/
 def parseStore (ofInt : Int → α) (keyword : Keyword) (described : String)

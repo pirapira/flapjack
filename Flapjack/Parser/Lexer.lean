@@ -58,6 +58,19 @@ structure Locs where
 
 def unknownLoc : Locs := { start := .unknownPt, stop := .unknownPt }
 
+/-- `posn_string`. -/
+def posnString : Posn → String
+  | .posn row col => s!"{row}:{col}"
+  | .eofPt => "EOF"
+  | .unknownPt => "UNKNOWN"
+
+/-- `locs_comment`. -/
+def locsComment (locs : Locs) : String :=
+  s!"({posnString locs.start} {posnString locs.stop})"
+
+/-- The tag `add_locs_annot` uses. -/
+def locationTag : String := "location"
+
 def initLoc : Posn := .posn 1 1
 
 def nextLoc (n : Nat) : Posn → Posn

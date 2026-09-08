@@ -1757,6 +1757,8 @@ definitions, pass ordering, examples, and proof obligations.
   declaration execution and normal-result projection.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
+- [x] Prove that a resolved cross-section Lab jump executes to the target
+  section on the RISC-V model, rather than only matching emitted code shape.
 - [x] Expose location-aware bitmap sequence compilation and evaluator
   contracts for the spill-aware Word-to-Stack boundary.
 - [x] Expose location-aware bitmap handler-call and FFI lowering equations

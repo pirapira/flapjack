@@ -86,6 +86,14 @@ def panRiscVCmp [NeZero width]
     | .notTest => AndOp.and left right != 0
   BitVec.ofNat width (if result then 1 else 0)
 
+def panRiscVShift [NeZero width]
+    (operator : Shift) (left right : Word width) : Option (Word width) :=
+  match operator with
+  | .lsl => some (left <<< right.toNat)
+  | .lsr => some (left >>> right.toNat)
+  | .asr => some (BitVec.sshiftRight left right.toNat)
+  | .ror => some (BitVec.rotateRight left right.toNat)
+
 def panRiscVMemoryModel [NeZero width] : PanMemoryModel (Word width) :=
   { byteAlign := panRiscVByteAlign
     getByte := fun bytesInWord address value _bigEndian =>
@@ -95,7 +103,8 @@ def panRiscVMemoryModel [NeZero width] : PanMemoryModel (Word width) :=
     aligned := fun alignment address => aligned address alignment
     wordOfBytes := panRiscVWordOfBytes
     wordOp := panRiscVWordOp
-    compare := panRiscVCmp }
+    compare := panRiscVCmp
+    shift := panRiscVShift }
 
 def panRiscVReadByte [NeZero width]
     (domain : PanMemoryDomain (Word width))

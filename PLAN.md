@@ -35,7 +35,7 @@ not yet an equivalent source semantics. In particular:
 | --- | --- | --- |
 | Values and shaped records | `Val`, `RStruct`, `NStruct`, with declaration and shape checks | `PanValue` and most expression shape checks match the intended structure |
 | `Op` | `Add`, `And`, `Or`, and `Xor` fold over arbitrary word lists; `Sub` accepts exactly two words | Model-aware structured and stepped evaluators dispatch through the target model’s complete word operator; legacy no-model paths retain the old binary compatibility behavior ([#382](https://github.com/pirapira/flapjack/issues/382)) |
-| Comparisons and shifts | `Lower` is unsigned, `Less` is signed; all `Lsl`, `Lsr`, `Asr`, and `Ror` are defined | Model-aware structured comparisons now use the target model’s signed/unsigned comparison; shift completion remains pending ([#383](https://github.com/pirapira/flapjack/issues/383), [#389](https://github.com/pirapira/flapjack/issues/389)) |
+| Comparisons and shifts | `Lower` is unsigned, `Less` is signed; all `Lsl`, `Lsr`, `Asr`, and `Ror` are defined | Model-aware structured and stepped expressions now use target-model signed/unsigned comparisons and all shifts; legacy paths still need migration ([#383](https://github.com/pirapira/flapjack/issues/383), [#389](https://github.com/pirapira/flapjack/issues/389)) |
 | Word loads/stores | Domain-checked exact aligned word cells | Model-aware `PanMemory` and `PanValues` use explicit domains; legacy evaluator calls retain compatibility fallback |
 | Byte and 32-bit accesses | Align to `byte_align`; extract/patch bytes with `be`; `Load32` additionally requires `aligned 2` | Model-aware flat, structured, and stepped evaluators now use the canonical word-cell operations; compatibility fallback remains |
 | Structured `Store` | Flatten values into consecutive word cells and fail transactionally on a bad domain | `PanMemory` has the flattening helper; `PanValues` stores a whole `PanValue` in one cell ([#385](https://github.com/pirapira/flapjack/issues/385)) |
@@ -68,8 +68,8 @@ shared-memory behavior.
    adapter instead of maintaining separate sub-word behavior.
 3. **Expression and statement agreement.** Model-aware structured and stepped
    evaluation now dispatches variadic word operations and signed/unsigned
-   comparisons through the target model. Complete this stage for legacy and
-   flat paths, then correct all shift operators. Enforce assignment, return,
+   comparisons and all shift operators through the target model. Complete
+   this stage for legacy and flat paths. Enforce assignment, return,
    exception, call-result, and handler shape checks. Add the missing `store32`/
    `storeByte` cases to the flat control evaluator and prove that the
    counted/stepped expression evaluator has the same value result as the

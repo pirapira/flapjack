@@ -83,4 +83,48 @@ example :
       "main" []).isNone = true := by
   decide +kernel
 
+example :
+    (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 30
+      [.function
+         { name := "badReturn", inline := false, exported := false, params := [],
+           body := .return (.rStruct [.const 1, .const 2]), returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .seq (.call none "badReturn" []) (.return (.const 0)),
+           returnShape := .one }]
+      "main" []).isNone = true := by
+  decide +kernel
+
+example :
+    (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 30
+      [.exnDecl "E" (.comb [.one, .one]),
+       .function
+         { name := "badRaise", inline := false, exported := false, params := [],
+           body := .raise "E" (.const 1), returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .seq (.call none "badRaise" []) (.return (.const 0)),
+           returnShape := .one }]
+      "main" []).isNone = true := by
+  decide +kernel
+
+example :
+    (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 40
+      [.exnDecl "E" .one,
+       .function
+         { name := "raiseGood", inline := false, exported := false, params := [],
+           body := .raise "E" (.const 1), returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .seq
+             (.dec "caught" .one (.const 0)
+               (.call (some (none, some ("E", "missing", .skip)))
+                 "raiseGood" []))
+             (.return (.const 0)), returnShape := .one }]
+      "main" []).isNone = true := by
+  decide +kernel
+
 end Flapjack

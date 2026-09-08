@@ -139,4 +139,15 @@ def steppedTestInitial : PanValueProgramState Nat :=
         returnShape := .one }]
     "id" [.const 41]).map Prod.snd = some 4
 
+#guard
+  (evalPanValueSteppedProgram steppedTestInitial steppedTestPrimitive steppedTestFfi 30
+    [.function
+      { name := "badReturn", inline := false, exported := false, params := [],
+        body := .return (.rStruct [.const 1, .const 2]), returnShape := .one },
+     .function
+      { name := "main", inline := false, exported := true, params := [],
+        body := .seq (.call none "badReturn" []) (.return (.const 0)),
+        returnShape := .one }]
+    "main" []).isNone = true
+
 end Flapjack

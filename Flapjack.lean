@@ -22,6 +22,7 @@ import Flapjack.PanSteppedSemantics
 import Flapjack.PanMemory
 import Flapjack.PanValueFfiClockSemantics
 import Flapjack.PanValueFfiClockCorrectness
+import Flapjack.PanValueFfiClockProjection
 import Flapjack.RiscV.Model
 import Flapjack.RiscV.PanMemory
 import Flapjack.RiscV.PanSemantics

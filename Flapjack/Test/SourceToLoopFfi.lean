@@ -39,7 +39,7 @@ def sourceToLoopFfiHandler : FunName → Word 64 → Word 64 → Word 64 → Wor
         locals := updateLoopLocal state.locals 2 (configuration + 1) }
     else none
 
-theorem sourceToLoop_extCall_success_projection :
+#guard
     (evalLoopProgWithCallsAndFfi [] successfulLoopFfiHandler 40
       sourceToLoopFfiState
       (loopCompileProg sourceToLoopLoopContext []
@@ -55,8 +55,7 @@ theorem sourceToLoop_extCall_success_projection :
             match result with
             | .normal _ => []
             | .returned _ values => values
-            | .raised _ _ _ => []) := by
-  native_decide
+            | .raised _ _ _ => [])
 
 theorem sourceToLoop_ffi_simulation :
     (do

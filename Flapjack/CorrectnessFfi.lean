@@ -12,6 +12,29 @@ with a no-op handler produces the same normal result as the source program.
 
 namespace Flapjack
 
+theorem evalLoopCompiledExtCall
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)]
+    (context : LoopContext α) (functions : List (Nat × List Nat × LoopProg α))
+    (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (fuel : Nat) (state : LoopState α) (live : List Nat) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat) :
+    evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
+        (loopCompileProg context live
+          (.extCall function configuration configurationLength array arrayLength)) =
+      (do
+        let configuration ← state.locals configuration
+        let configurationLength ← state.locals configurationLength
+        let array ← state.locals array
+        let arrayLength ← state.locals arrayLength
+        let state ← ffiHandler function configuration configurationLength array arrayLength state
+        pure (.normal state)) := by
+  rw [loopCompileProg_extCall]
+  exact evalLoopProgWithCallsAndFfi_ffi functions ffiHandler fuel state function
+    configuration configurationLength array arrayLength live
+
 theorem compilePanToLoop_extCall_const_noop_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

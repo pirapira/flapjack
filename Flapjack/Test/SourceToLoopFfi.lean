@@ -39,6 +39,22 @@ def sourceToLoopFfiHandler : FunName → Word 64 → Word 64 → Word 64 → Wor
         locals := updateLoopLocal state.locals 2 (configuration + 1) }
     else none
 
+theorem sourceToLoop_compiled_ffi_equation :
+    evalLoopProgWithCallsAndFfi [] sourceToLoopFfiHandler 1
+      sourceToLoopFfiState
+      (loopCompileProg sourceToLoopLoopContext [7]
+        (.extCall "inc" 1 2 3 4)) =
+      (do
+        let configuration ← sourceToLoopFfiState.locals 1
+        let configurationLength ← sourceToLoopFfiState.locals 2
+        let array ← sourceToLoopFfiState.locals 3
+        let arrayLength ← sourceToLoopFfiState.locals 4
+        let state ← sourceToLoopFfiHandler "inc" configuration configurationLength
+          array arrayLength sourceToLoopFfiState
+        pure (.normal state)) := by
+  exact evalLoopCompiledExtCall sourceToLoopLoopContext [] sourceToLoopFfiHandler 0
+    sourceToLoopFfiState [7] "inc" 1 2 3 4
+
 #guard
     (evalLoopProgWithCallsAndFfi [] successfulLoopFfiHandler 40
       sourceToLoopFfiState

@@ -75,6 +75,7 @@ import Flapjack.Test.SpillRelation
 import Flapjack.Test.LocationMoveRelation
 import Flapjack.Test.StackParallelMoveRelation
 import Flapjack.Test.StackFunctionEntryRelation
+import Flapjack.Test.StackFunctionSpillRelation
 import Flapjack.RiscV.CorrectnessBinarySpill
 import Flapjack.Test.BinarySpillRelation
 import Flapjack.RiscV.CorrectnessShiftSpill

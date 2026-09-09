@@ -45,6 +45,7 @@
 1 Flapjack/Test/FullSsaCorrectness.lean
 1 Flapjack/Test/FullSsaHandler.lean
 1 Flapjack/Test/FullSsaFfiCall.lean
+1 Flapjack/Test/FullSsaHandlerFfi.lean
 1 Flapjack/Test/CorrectnessFfi.lean
 1 Flapjack/Test/SourceToLoop.lean
 

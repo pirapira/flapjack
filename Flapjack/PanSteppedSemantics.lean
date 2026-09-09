@@ -1727,26 +1727,26 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                     baseAddress topAddress bytesInWord configuration with
                 | none => simp [hconfiguration, evalPanValueExps, evalPanValueExp.evalPanValueExps,
                     evalPanValueExpsCounted,
-                    evalPanValueExtCall]
+                    ]
                 | some evaluatedConfiguration =>
                     cases hconfigurationLength : evalPanValueExp structs locals globals memory
                         baseAddress topAddress bytesInWord configurationLength with
                     | none => simp [hconfiguration, hconfigurationLength, evalPanValueExps,
                         evalPanValueExp.evalPanValueExps,
-                        evalPanValueExpsCounted, evalPanValueExtCall]
+                        evalPanValueExpsCounted]
                     | some evaluatedConfigurationLength =>
                         cases harray : evalPanValueExp structs locals globals memory
                             baseAddress topAddress bytesInWord array with
                         | none => simp [hconfiguration, hconfigurationLength, harray,
                             evalPanValueExps, evalPanValueExp.evalPanValueExps,
-                            evalPanValueExpsCounted, evalPanValueExtCall]
+                            evalPanValueExpsCounted]
                         | some evaluatedArray =>
                             cases harrayLength : evalPanValueExp structs locals globals memory
                                 baseAddress topAddress bytesInWord arrayLength with
                             | none => simp [hconfiguration, hconfigurationLength, harray,
                                 harrayLength, evalPanValueExps, evalPanValueExp.evalPanValueExps,
                                 evalPanValueExpsCounted,
-                                evalPanValueExtCall]
+                                ]
                             | some evaluatedArrayLength =>
                                 cases evaluatedConfiguration with
                                 | word configurationValue =>
@@ -1763,32 +1763,32 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                                                     simp [hconfiguration, hconfigurationLength, harray,
                                                       harrayLength, hhandlerResult, evalPanValueExps,
                                                       evalPanValueExp.evalPanValueExps,
-                                                      evalPanValueExpsCounted, evalPanValueExtCall]
+                                                      evalPanValueExpsCounted]
                                                 | some newLocals =>
                                                     simp [hconfiguration, hconfigurationLength, harray,
                                                       harrayLength, hhandlerResult, evalPanValueExps,
                                                       evalPanValueExp.evalPanValueExps,
-                                                      evalPanValueExpsCounted, evalPanValueExtCall]
+                                                      evalPanValueExpsCounted]
                                             | rStruct _ | nStruct _ _ =>
                                                 simp [hconfiguration, hconfigurationLength, harray,
                                                   harrayLength, evalPanValueExps,
                                                   evalPanValueExp.evalPanValueExps,
-                                                  evalPanValueExpsCounted, evalPanValueExtCall]
+                                                  evalPanValueExpsCounted]
                                         | rStruct _ | nStruct _ _ =>
                                             simp [hconfiguration, hconfigurationLength, harray,
                                               harrayLength, evalPanValueExps,
                                               evalPanValueExp.evalPanValueExps,
-                                              evalPanValueExpsCounted, evalPanValueExtCall]
+                                              evalPanValueExpsCounted]
                                     | rStruct _ | nStruct _ _ =>
                                         simp [hconfiguration, hconfigurationLength, harray,
                                           harrayLength, evalPanValueExps,
                                           evalPanValueExp.evalPanValueExps,
-                                          evalPanValueExpsCounted, evalPanValueExtCall]
+                                          evalPanValueExpsCounted]
                                 | rStruct _ | nStruct _ _ =>
                                     simp [hconfiguration, hconfigurationLength, harray,
                                       harrayLength, evalPanValueExps,
                                       evalPanValueExp.evalPanValueExps,
-                                      evalPanValueExpsCounted, evalPanValueExtCall]
+                                      evalPanValueExpsCounted]
             | raise exception value =>
                 exact evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_raise
                   primitive handler structs functions baseAddress topAddress bytesInWord fuel

@@ -2049,6 +2049,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   prologue and linked jump.
 - [x] Connect stack-call compiler witnesses to executable call-prefix
   decomposition and entry-transfer correctness.
+- [x] Prove the generated return suffix restores the saved link and stack
+  pointer and advances the caller PC by its two instructions.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

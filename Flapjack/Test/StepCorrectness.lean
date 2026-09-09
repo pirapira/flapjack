@@ -106,4 +106,15 @@ example (state : State 8) (entry : Word 8)
   exact wordCallToRiscVWithStack_prefix_execute_pc state entry parameters returns
     arguments destinations code hzero hcompile
 
+example (state : State 8) (stackAddress savedLink : Word 8)
+    (hstack : readRegister state 30 = stackAddress)
+    (hsaved : readWordValue state stackAddress = savedLink) :
+    let final := executeInstructions state
+      [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))]
+    readRegister final 1 = savedLink ∧
+      readRegister final 30 = stackAddress + BitVec.ofNat 8 (8 / 8) ∧
+      final.pc = state.pc + BitVec.ofNat 8 8 := by
+  exact executeInstructions_stackCall_restore_link_sp state stackAddress savedLink
+    hstack hsaved
+
 end Flapjack.RiscV

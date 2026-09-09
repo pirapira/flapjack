@@ -8,6 +8,7 @@ import Flapjack.Test.Runtime
 import Flapjack.Test.CollectorSemantics
 import Flapjack.Test.SpillAllocation
 import Flapjack.Test.CorrectnessBackend
+import Flapjack.Test.StepCorrectness
 import Flapjack.Test.OracleAllocator
 import Flapjack.Test.AllocatorDriver
 import Flapjack.Test.Heuristics

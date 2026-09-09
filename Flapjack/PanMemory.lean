@@ -617,6 +617,8 @@ mutual
                 (contracts := contracts)
               pure (restorePanFlatControlLocal name oldValue result)
             else none
+        | .raised _ globals memory exception value =>
+            pure (.raised (fun _ => none) globals memory exception value)
         | _ => none
     | _fuel + 1, locals, globals, memory,
         .extCall function configuration configurationLength array arrayLength, _contracts => do

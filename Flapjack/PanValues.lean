@@ -1079,6 +1079,8 @@ mutual
                 (memoryAccess := memoryAccess) (contracts := contracts)
               pure (restorePanValueControlLocal name oldValue result)
             else none
+        | .raised _ globals memory exception value =>
+            pure (.raised (fun _ => none) globals memory exception value)
         | _ => none
     | _fuel + 1, locals, globals, memory,
         .extCall function configuration configurationLength array arrayLength, memoryAccess, _contracts => do
@@ -1356,6 +1358,8 @@ mutual
                 (memoryAccess := memoryAccess) (contracts := contracts)
               pure (restorePanValueControlLocal name oldValue result)
             else none
+        | .raised _ globals memory exception value =>
+            pure (.raised (fun _ => none) globals memory exception value)
         | _ => none
     | _fuel + 1, locals, globals, memory,
         .extCall function configuration configurationLength array arrayLength, memoryAccess, _contracts => do

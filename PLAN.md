@@ -116,6 +116,10 @@ shared-memory behavior.
 Until steps 1--3 land, existing source-memory milestones should be read as
 preliminary executable fragments, not proofs of equivalence with `panSem`.
 
+Issue #513 is covered across the structured, stepped, flat, stateful-FFI, and
+clocked evaluators: a `DecCall` whose callee raises now propagates the raised
+outcome, while direct uncaught calls retain their failure behavior.
+
 ## Stages
 
 1. **Project and syntax foundation**

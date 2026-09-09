@@ -105,4 +105,37 @@ theorem crepToLoop_call_skip_regression :
   · simp [crepCallSkipContext, lookupInfo]
   · simp [crepCallSkipLoopFunctions, lookupLoopFunction]
 
+def crepCallReturnState : CrepState Nat :=
+  { locals := fun _ => none
+    memory := fun _ => none }
+
+def crepCallReturnFunctions : List (CompiledFunction Nat) :=
+  [{ name := "id", params := [1], body := .return [.var 1], returnShape := .one }]
+
+def crepCallReturnLoopFunctions : List (Nat × List Nat × LoopProg Nat) :=
+  [(7, [1], .return [1])]
+
+def crepCallReturnContext : LoopContext Nat :=
+  { vars := [], functions := [("id", (7, 1))], maxVar := 0, target := .rv64i }
+
+theorem crepToLoop_call_return_regression :
+    (evalCrepFullProg crepCallReturnFunctions (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 100 8
+        crepCallReturnState
+        (.call (some ([8], none)) "id" [.const 42])).map
+        (crepControlLocal 8) =
+      (evalLoopProgWithCallsAndFfi crepCallReturnLoopFunctions
+        (loopFfiOfCrepFfi (fun _ _ _ _ _ _ => none)) 8
+        (loopStateOfCrepState crepCallReturnState)
+        (loopCompileProg crepCallReturnContext [9]
+          (.call (some ([8], none)) "id" [.const 42]))).map
+        (loopControlLocal 8) := by
+  apply crepToLoop_call_return_const_agreement crepCallReturnContext
+    crepCallReturnFunctions crepCallReturnLoopFunctions
+    (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+    0 100 0 crepCallReturnState [9] "id" 7 1 8 42
+  · simp [crepCallReturnFunctions, lookupCompiledFunction]
+  · simp [crepCallReturnContext, lookupInfo]
+  · simp [crepCallReturnLoopFunctions, lookupLoopFunction]
+
 end Flapjack

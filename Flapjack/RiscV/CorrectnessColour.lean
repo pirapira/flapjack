@@ -1676,6 +1676,61 @@ theorem wordAllocateGraphFunctionWithEntry_straightLine_simulation
   rw [hcolour] at hresult
   simpa [ha] using hresult
 
+/-! The same machine boundary, lifted to the full-SSA graph allocator.  The
+    allocator result remains explicit, while its colored output is connected
+    to the backend grammar using the renamed full-SSA body witness. -/
+
+theorem wordAllocateGraphFunctionWithEntry_riscv_straightLine_simulation
+    [NeZero width]
+    (parameters : List Nat) (program : WordProg (Word width))
+    (fixedSources : List Nat) (colours stackStart : Nat)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (allocation : WordGraphAllocation) (coloured : WordProg (Word width))
+    (halloc : wordAllocateGraphFunctionWithEntry parameters program fixedSources
+      colours stackStart =
+      some (state, renamedParameters, allocation, coloured))
+    (valid : wordColourValid (wordGraphColouringAt allocation.colouring))
+    (injective : Function.Injective
+      (wordGraphColouringAt allocation.colouring))
+    (colourZero : wordGraphColouringAt allocation.colouring 0 = 0)
+    (colourNoScratch : ∀ name, name < 31 →
+      wordGraphColouringAt allocation.colouring name ≠ 31)
+    (source target : State width)
+    (hrelation : WordColourStateRelation
+      (wordGraphColouringAt allocation.colouring) source target)
+    (hprogram : WordVarStraightLine width
+      (wordSsaRenameFunctionWithEntry parameters program).2.snd)
+    (code : List (Instruction width))
+    (hcompile : wordProgToRiscV coloured = some code) :
+    ∃ source' target',
+      evalWordProg source
+          (wordSsaRenameFunctionWithEntry parameters program).2.snd =
+        some source' ∧
+      executeInstructions target code = target' ∧
+      WordColourStateRelation (wordGraphColouringAt allocation.colouring)
+        source' target' := by
+  have hsimulation := wordAllocateGraphFunctionWithEntry_straightLine_simulation
+    parameters program fixedSources colours stackStart state renamedParameters
+    allocation coloured halloc valid injective colourZero colourNoScratch source target
+    hrelation hprogram
+  rcases hsimulation with
+    ⟨source', target', hsource, htarget, htargetRelation⟩
+  have halloc' := halloc
+  simp [wordAllocateGraphFunctionWithEntry] at halloc'
+  rcases halloc' with ⟨actualAllocation, _, _, _, hallocation, hcolour⟩
+  have htargetStraight' := wordVarStraightLine_to_wordRiscVStraightLine
+    (wordGraphColouringAt actualAllocation.colouring)
+    (wordSsaRenameFunctionWithEntry parameters program).2.snd hprogram
+  rw [hcolour] at htargetStraight'
+  have htargetStraight : WordRiscVStraightLine coloured := by
+    simpa [hallocation] using htargetStraight'
+  have hmachine := wordProgToRiscV_sound_of_straightLine target coloured
+    htargetStraight code hcompile
+  have htargetEq : target' = executeInstructions target code :=
+    Option.some.inj (htarget.symm.trans hmachine)
+  subst target'
+  exact ⟨source', executeInstructions target code, hsource, rfl, htargetRelation⟩
+
 theorem wordColourStateRelation_evalWordCondition [NeZero width]
     (colour : Nat → Nat) (valid : wordColourValid colour)
     (source target : State width)

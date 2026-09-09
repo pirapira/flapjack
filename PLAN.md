@@ -2069,6 +2069,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   decomposition and entry-transfer correctness.
 - [x] Prove the generated return suffix restores the saved link and stack
   pointer and advances the caller PC by its two instructions.
+- [x] Prove ABI-safe generated result moves preserve the saved link and stack
+  pointer before the return suffix restores them.
 - [x] Prove exact PC advancement for any RISC-V code segment whose
   instructions are statically known to be non-branching.
 - [x] Prove bounded `executeCode` execution agrees with `executeInstructions`

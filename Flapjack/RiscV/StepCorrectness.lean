@@ -612,6 +612,78 @@ theorem executeInstructions_stackCall_restore_link_sp [NeZero width]
   rw [show (8 : Nat) = 4 + 4 by omega, BitVec.ofNat_add]
   rw [BitVec.add_assoc]
 
+theorem executeWordMoves_preserve_memory [NeZero width]
+    (state : State width) (moves : List (Nat × Nat))
+    (hvalid : ∀ move, move ∈ moves →
+      move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31) :
+    (executeInstructions state
+      (moves.flatMap (wordMoveInstructionList (width := width)))).memory =
+        state.memory := by
+  induction moves generalizing state with
+  | nil => rfl
+  | cons head tail ih =>
+      have hhead := hvalid head (by simp)
+      have htail : ∀ move, move ∈ tail →
+          move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31 := by
+        intro move hmove
+        exact hvalid move (by simp [hmove])
+      rw [List.flatMap_cons, executeInstructions_append]
+      rw [ih (state := executeInstructions state
+        (wordMoveInstructionList (width := width) head)) htail]
+      simp [wordMoveInstructionList, wordExpToInstructions,
+        wordExpToInstruction, registerOfNat, hhead.1, hhead.2.1,
+        execute, writeRegister, readRegister]
+      split <;> rfl
+
+theorem executeWordMoves_stackCall_restore_link_sp [NeZero width]
+    (state : State width) (stackAddress savedLink : Word width)
+    (moves : List (Nat × Nat))
+    (hvalid : ∀ move, move ∈ moves →
+      move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
+    (hdestNonzero : ∀ move, move ∈ moves → move.1 ≠ 0)
+    (hnotLink : ∀ move, move ∈ moves → move.1 ≠ 1)
+    (hnotStack : ∀ move, move ∈ moves → move.1 ≠ 30)
+    (hstack : readRegister state 30 = stackAddress)
+    (hsaved : readWordValue state stackAddress = savedLink) :
+    let moved := executeInstructions state
+      (moves.flatMap (wordMoveInstructionList (width := width)))
+    let final := executeInstructions state
+      (moves.flatMap (wordMoveInstructionList (width := width)) ++
+        [.loadWord 1 30, .addi 30 30 (BitVec.ofNat width (width / 8))])
+    readRegister final 1 = savedLink ∧
+      readRegister final 30 =
+        stackAddress + BitVec.ofNat width (width / 8) ∧
+      final.pc = moved.pc + BitVec.ofNat width 8 := by
+  have hlink := executeWordMoves_preserve_read state moves 1
+    hvalid hdestNonzero (fun move hmove => hnotLink move hmove) (by decide)
+  have hstackMove := executeWordMoves_preserve_read state moves 30
+    hvalid hdestNonzero (fun move hmove => hnotStack move hmove) (by decide)
+  have hstack' :
+      readRegister
+        (executeInstructions state
+          (moves.flatMap (wordMoveInstructionList (width := width)))) 30 =
+        stackAddress := by
+    calc
+      readRegister
+          (executeInstructions state
+            (moves.flatMap (wordMoveInstructionList (width := width)))) 30 =
+          readRegister state 30 := by simpa using hstackMove
+      _ = stackAddress := hstack
+  have hmemory := executeWordMoves_preserve_memory state moves hvalid
+  have hsaved' :
+      readWordValue
+        (executeInstructions state
+          (moves.flatMap (wordMoveInstructionList (width := width))))
+        stackAddress = savedLink := by
+    simpa [readWordValue, readByte, hmemory] using hsaved
+  have hrestore := executeInstructions_stackCall_restore_link_sp
+    (executeInstructions state
+      (moves.flatMap (wordMoveInstructionList (width := width))))
+    stackAddress savedLink hstack' hsaved'
+  dsimp
+  rw [executeInstructions_append]
+  simpa [hlink] using hrestore
+
 theorem executeInstructions_pc_fold_of_nonbranching [NeZero width]
     (state : State width) (code : List (Instruction width))
     (hcode : ∀ instruction ∈ code, instruction.isBranch = false) :

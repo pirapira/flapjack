@@ -182,4 +182,27 @@ theorem executeCode_ite_assign [NeZero width] (state : State width) (hpc : state
     intro heq
     exact (hcondition' heq).elim
 
+theorem evalWordFunction_ite_assign_riscV_register [NeZero width]
+    (state : State width) (hpc : state.pc = 0)
+    (hzero : ZeroRegister state) (hwidth : 5 ≤ width) :
+    (evalWordFunction state
+      ((.ite .equal 1 (.reg 2)
+        (.assign 3 (.const (1 : Word width)))
+        (.assign 3 (.const (2 : Word width)))) : WordProg (Word width))).map
+      (fun result => readRegister result.1 3) =
+      (executeCode 5 0
+        [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
+          .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state).map
+        (fun finalState => readRegister finalState 3) := by
+  have hzero' : state.registers 0 = 0 := by
+    simpa [ZeroRegister, readRegister] using hzero
+  rw [executeCode_ite_assign state hpc hzero hwidth]
+  by_cases hcondition : state.registers 1 = state.registers 2
+  · simp [evalWordFunction, evalWordCondition, wordExpToInstructions,
+      wordExpToInstruction, registerOfNat, executeInstructions, execute,
+      writeRegister, readRegister, nextPc, hzero', hcondition]
+  · simp [evalWordFunction, evalWordCondition, wordExpToInstructions,
+      wordExpToInstruction, registerOfNat, executeInstructions, execute,
+      writeRegister, readRegister, nextPc, hzero', hcondition]
+
 end Flapjack.RiscV

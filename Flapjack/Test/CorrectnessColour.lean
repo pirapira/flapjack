@@ -345,4 +345,114 @@ example [NeZero width] (state : State width) :
   exact .seq (.assign 3 1 (by omega) (by omega))
     (.assign 4 3 (by omega) (by omega))
 
+/-! A concrete call-colouring regression: the source passes register 1 and
+    the coloured target passes register 2, while the caller relation and the
+    callee effects are both preserved. -/
+
+def colouredCallSourceState : State 8 :=
+  writeRegister (zeroState 8) 1 9
+
+def colouredCallTargetState : State 8 :=
+  testTargetState colouredCallSourceState
+
+def colouredCallSourceCallee : State 8 :=
+  writeRegister (clearWordRegisters colouredCallSourceState) 1 9
+
+def colouredCallTargetCallee : State 8 :=
+  writeRegister (clearWordRegisters colouredCallTargetState) 2 9
+
+def colouredCallSourceBody : WordProg (Word 8) :=
+  .return 0 [1]
+
+def colouredCallTargetBody : WordProg (Word 8) :=
+  .return 0 [2]
+
+def colouredCallHandler : FunName → Word 8 → Word 8 → Word 8 → Word 8 →
+    State 8 → Option (State 8) :=
+  fun _ _ _ _ _ state => some state
+
+example :
+    evalWordCallWithHandlersAndFfi
+        [(7, [1], colouredCallSourceBody)] colouredCallHandler 2
+        colouredCallSourceState none (some 7) [1] none =
+      some (.returned
+        { colouredCallSourceState with
+          memory := colouredCallSourceCallee.memory
+          privilege := colouredCallSourceCallee.privilege
+          mode := colouredCallSourceCallee.mode } [9]) ∧
+    evalWordCallWithHandlersAndFfi
+        [(7, [2], colouredCallTargetBody)] colouredCallHandler 2
+        colouredCallTargetState none (some 7) [2] none =
+      some (.returned
+        { colouredCallTargetState with
+          memory := colouredCallTargetCallee.memory
+          privilege := colouredCallTargetCallee.privilege
+          mode := colouredCallTargetCallee.mode } [9]) ∧
+    testRelation
+      { colouredCallSourceState with
+        memory := colouredCallSourceCallee.memory
+        privilege := colouredCallSourceCallee.privilege
+        mode := colouredCallSourceCallee.mode }
+      { colouredCallTargetState with
+        memory := colouredCallTargetCallee.memory
+        privilege := colouredCallTargetCallee.privilege
+        mode := colouredCallTargetCallee.mode } ∧
+    ([9] : List (Word 8)) = [9] := by
+  apply evalWordCallWithHandlersAndFfi_return_applyColour_general
+    (colour := testColour)
+    (sourceFunctions := [(7, [1], colouredCallSourceBody)])
+    (targetFunctions := [(7, [2], colouredCallTargetBody)])
+    (sourceHandler := colouredCallHandler)
+    (targetHandler := colouredCallHandler)
+    (fuel := 1) (functionLabel := 7)
+    (parameters := [1]) (arguments := [1]) (colouredArguments := [2])
+    (argumentValues := [9])
+    (sourceBody := colouredCallSourceBody)
+    (targetBody := colouredCallTargetBody)
+    (sourceState := colouredCallSourceState)
+    (targetState := colouredCallTargetState)
+    (sourceCallee := colouredCallSourceCallee)
+    (targetCallee := colouredCallTargetCallee)
+    (sourceBodyState := colouredCallSourceCallee)
+    (targetBodyState := colouredCallTargetCallee)
+    (sourceValues := [9]) (targetValues := [9])
+  · simp [lookupWordFunction, colouredCallSourceBody]
+  · simp [lookupWordFunction, colouredCallTargetBody, testColour]
+  · simp [colouredCallSourceState, readWordRegisters, registerOfNat,
+      readRegister, writeRegister, zeroState]
+  · simp [colouredCallTargetState, testTargetState, readWordRegisters,
+      colouredCallSourceState, registerOfNat, readRegister, writeRegister,
+      zeroState]
+  · simp [bindWordRegisters, clearWordRegisters, colouredCallSourceState,
+      colouredCallSourceCallee, registerOfNat, writeRegister]
+  · simp [bindWordRegisters, clearWordRegisters, colouredCallTargetState,
+      colouredCallTargetCallee, testTargetState, registerOfNat, writeRegister,
+      testColour]
+  · simp [colouredCallSourceBody, colouredCallSourceCallee,
+      colouredCallSourceState,
+      evalWordFunctionWithHandlersAndFfi, registerOfNat,
+      readRegister, writeRegister, clearWordRegisters, zeroState]
+  · simp [colouredCallTargetBody, colouredCallTargetCallee,
+      colouredCallTargetState,
+      evalWordFunctionWithHandlersAndFfi, registerOfNat,
+      readRegister, writeRegister, clearWordRegisters]
+  · exact testRelation_target colouredCallSourceState
+  · have hcallee : colouredCallTargetCallee =
+        testTargetState colouredCallSourceCallee := by
+      dsimp [colouredCallTargetCallee, colouredCallTargetState,
+        colouredCallSourceCallee, colouredCallSourceState, writeRegister,
+        clearWordRegisters, testTargetState]
+      congr
+      funext register
+      by_cases hone : register = 1
+      · subst register
+        simp
+      · by_cases htwo : register = 2
+        · subst register
+          simp
+        · simp [hone, htwo]
+    rw [hcallee]
+    exact testRelation_target colouredCallSourceCallee
+  · rfl
+
 end Flapjack.RiscV

@@ -38,4 +38,18 @@ example :
     wordStackOffset, evalWordStackMachine, wordStackMachineWriteRegister,
     wordStackMachineBinOp]
 
+example :
+    wordStackLocationValue locationMoveConfig
+      (wordStackMachineWriteRegister
+        (wordStackMachineWriteRegister locationMoveState 31
+          (BitVec.ofNat 8 23)) 5 (BitVec.ofNat 8 23)) (.register 6) =
+      wordStackLocationValue locationMoveConfig locationMoveState (.register 6) := by
+  apply evalWordStackMachine_locationMove_preserves_other_value
+    (destination := .register 5) (source := .stack 3) (other := .register 6)
+  · decide
+  · decide
+  · simp [locationMoveConfig, locationMoveState, wordStackLocationMove,
+      wordStackOffset, evalWordStackMachine, wordStackMachineWriteRegister,
+      wordStackMachineBinOp]
+
 end Flapjack.RiscV

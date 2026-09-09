@@ -88,6 +88,88 @@ theorem evalWordStackMachine_locationMove_preserves_value [NeZero width]
             cases heval
             simp [wordStackLocationValue, wordStackOffset]
 
+theorem evalWordStackMachine_locationMove_preserves_other_value [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (destination source other : WordLocation)
+    (hotherDestination : other ≠ destination)
+    (hotherScratch : other ≠ .register config.scratch)
+    (heval : (wordStackLocationMove config destination source).bind
+      (evalWordStackMachine state) = some final) :
+    wordStackLocationValue config final other =
+      wordStackLocationValue config state other := by
+  cases destination with
+  | register destination =>
+      cases source with
+      | register source =>
+          cases other with
+          | register other =>
+              by_cases hsame : destination = source
+              · simp [wordStackLocationMove, hsame] at heval
+                cases heval
+                simp_all [wordStackLocationValue]
+              · simp [wordStackLocationMove, hsame,
+                  evalWordStackMachine, wordStackMachineWriteRegister,
+                  wordStackMachineBinOp] at heval
+                cases heval
+                simp_all [wordStackLocationValue]
+          | stack other =>
+              by_cases hsame : destination = source
+              · simp [wordStackLocationMove, hsame] at heval
+                cases heval
+                simp [wordStackLocationValue, wordStackOffset]
+              · simp [wordStackLocationMove, hsame, evalWordStackMachine,
+                  wordStackMachineWriteRegister, wordStackMachineBinOp] at heval
+                cases heval
+                simp [wordStackLocationValue, wordStackOffset]
+      | stack source =>
+          cases other with
+          | register other =>
+              simp [wordStackLocationMove, evalWordStackMachine,
+                wordStackMachineWriteRegister, wordStackMachineBinOp] at heval
+              cases heval
+              simp_all [wordStackLocationValue]
+          | stack other =>
+              simp [wordStackLocationMove, evalWordStackMachine,
+                wordStackMachineWriteRegister, wordStackMachineBinOp] at heval
+              cases heval
+              simp [wordStackLocationValue, wordStackOffset]
+  | stack destination =>
+      cases source with
+      | register source =>
+          cases other with
+          | register other =>
+              simp [wordStackLocationMove, evalWordStackMachine,
+                wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+                wordStackMachineBinOp] at heval
+              cases heval
+              simp_all [wordStackLocationValue]
+          | stack other =>
+              simp [wordStackLocationMove, evalWordStackMachine,
+                wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+                wordStackMachineBinOp] at heval
+              cases heval
+              simp_all [wordStackLocationValue, wordStackOffset]
+      | stack source =>
+          cases other with
+          | register other =>
+              by_cases hsame : destination = source
+              · simp [wordStackLocationMove, hsame] at heval
+                cases heval
+                simp_all [wordStackLocationValue]
+              · simp [wordStackLocationMove, hsame, evalWordStackMachine,
+                  wordStackMachineWriteRegister, wordStackMachineWriteSlot] at heval
+                cases heval
+                simp_all [wordStackLocationValue]
+          | stack other =>
+              by_cases hsame : destination = source
+              · simp [wordStackLocationMove, hsame] at heval
+                cases heval
+                simp_all [wordStackLocationValue, wordStackOffset]
+              · simp [wordStackLocationMove, hsame, evalWordStackMachine,
+                  wordStackMachineWriteRegister, wordStackMachineWriteSlot] at heval
+                cases heval
+                simp_all [wordStackLocationValue, wordStackOffset]
+
 theorem evalWordStackMachine_move_preserves_other_value [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)
     (destination source other : Nat)

@@ -131,6 +131,30 @@ def statefulSharedFinal : Bool :=
 #guard statefulSharedProgram = some (BitVec.ofNat 64 0x42, 11, 2)
 #guard statefulSharedFinal
 
+/- CakeML's final shared-store outcome preserves the current locals, unlike
+   the final shared-load and ExtCall boundaries which clear them. -/
+def statefulSharedStoreFinalResult :=
+  evalPanValueFfiProgSteps statefulTestContext statefulTestPrimitive
+      statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+      (BitVec.ofNat 64 8) 10
+      (fun name =>
+        if name == "x" then some (.word (BitVec.ofNat 64 0)) else none)
+      (fun _ => none) (fun _ => none) statefulTestFinalState
+      (.shMemStore .op8 (.const (BitVec.ofNat 64 10))
+        (.const (BitVec.ofNat 64 0xaa)))
+
+def statefulSharedStoreFinal : Bool :=
+  match statefulSharedStoreFinalResult with
+  | some (.finalFfi locals _ _ _ event, steps) =>
+        (match locals "x" with
+       | some (.word value) => value == BitVec.ofNat 64 0
+       | _ => false) &&
+        event.name == .sharedMem .mappedWrite &&
+        event.outcome == .failed && steps == 3
+  | _ => false
+
+#guard statefulSharedStoreFinal
+
 #guard
   (evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
       statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)

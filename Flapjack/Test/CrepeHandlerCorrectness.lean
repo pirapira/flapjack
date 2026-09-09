@@ -112,4 +112,32 @@ theorem crepe_raise_simulation_regression :
   · simp [crepeRaiseState, evalCrepFullExp]
   · rfl
 
+theorem crepe_return_simulation_regression :
+    evalCrepFullProg [] (fun _ _ => none) (noCrepFfi (Word 64))
+        defaultCrepSharedMem 0 100 10 crepeRaiseState
+        (compileProg crepeRaiseContext
+          (.return (.const (BitVec.ofNat 64 9)))) =
+      some (.returned crepeRaiseState [BitVec.ofNat 64 9]) ∧
+    evalPanProgWithCallsAndFfi [] (fun _ _ _ _ _ _ => none) 10
+        (fun _ => none)
+        (.return (.const (BitVec.ofNat 64 9))) =
+      some (.returned (fun _ => none) [BitVec.ofNat 64 9]) := by
+  apply compile_full_return_simulation
+    (context := crepeRaiseContext)
+    (sourceLocals := fun _ => none)
+    (state := crepeRaiseState)
+    (primitive := fun _ _ => none)
+    (ffi := noCrepFfi (Word 64))
+    (sharedMem := defaultCrepSharedMem)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 100) (fuel := 9)
+    (value := .const (BitVec.ofNat 64 9))
+    (compiledValue := .const (BitVec.ofNat 64 9))
+    (sourceValue := BitVec.ofNat 64 9)
+    (targetValue := BitVec.ofNat 64 9)
+  · simp [crepeRaiseContext, compileExp]
+  · simp [evalPanExp]
+  · simp [crepeRaiseState, evalCrepFullExp]
+  · rfl
+
 end Flapjack

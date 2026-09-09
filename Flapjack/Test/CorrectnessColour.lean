@@ -455,4 +455,20 @@ example :
     exact testRelation_target colouredCallSourceCallee
   · rfl
 
+example (state : State 64) :
+    ∃ source' target',
+      evalWordProg state
+          (.assign 3 (.op .add [.var 1, .var 2])) = some source' ∧
+      executeInstructions (testTargetState state) [.add 3 2 1] = target' ∧
+      testRelation source' target' := by
+  exact evalWordProg_wordVarStraightLine_riscv_simulation testColour
+    testColourValidFn testColour_injective testColour_zero testColour_noScratch
+    state (testTargetState state) (testRelation_target state)
+    (.assign 3 (.op .add [.var 1, .var 2]))
+    (.assignBinary .add 3 1 2 (by omega) (by omega) (by omega))
+    [.add 3 2 1] (by
+      simp [wordProgToRiscV, wordApplyColour, wordApplyColourExp,
+        wordExpToInstructions, wordExpToInstruction, registerOfNat,
+        testColour])
+
 end Flapjack.RiscV

@@ -280,4 +280,45 @@ example (state : State 8) (operator : Cmp) (left right : Fin 32)
   · simpa [List.length_cons, Option.isSome, hcondition] using
       congrArg Option.isSome hrun
 
+example :
+    executeCodeUntilWithFfiCounted testNoFfiHost 5 0 (16#8)
+        [riscVBranchFalseInstruction .equal 0 0 (BitVec.ofNat 8 12),
+          .addi 1 0 7, .branchEq 0 0 (BitVec.ofNat 8 8), .addi 2 0 9]
+        (zeroState 8) =
+      some
+        (execute (execute (execute (zeroState 8)
+          (riscVBranchFalseInstruction .equal 0 0 (BitVec.ofNat 8 12)))
+          (.addi 1 0 7))
+          (.branchEq 0 0 (BitVec.ofNat 8 8)), 3) := by
+  have hrun := executeCodeUntilWithFfiCounted_conditional_of_nonbranching
+    (host := testNoFfiHost) (state := zeroState 8) (operator := .equal)
+    (left := 0) (right := 0) (thenCode := [.addi 1 0 7])
+    (elseCode := [.addi 2 0 9])
+    (thenState := execute (execute (zeroState 8)
+      (riscVBranchFalseInstruction .equal 0 0 (BitVec.ofNat 8 12)))
+      (.addi 1 0 7))
+    (elseState := execute (execute (zeroState 8)
+      (riscVBranchFalseInstruction .equal 0 0 (BitVec.ofNat 8 12)))
+      (.addi 2 0 9))
+    (thenCount := 1) (elseCount := 1)
+    (hpc := by rfl)
+    (hthenAdvance := by
+      intro current instruction hinstruction next hstep
+      have hinstruction' : instruction = .addi 1 0 7 := by
+        simpa using hinstruction
+      subst instruction
+      simp [executeWithFfi, execute, writeRegister, nextPc] at hstep
+      simpa [executeWithFfi, execute, writeRegister, nextPc] using
+        (congrArg State.pc hstep).symm)
+    (helseAdvance := by
+      intro current instruction hinstruction next hstep
+      have hinstruction' : instruction = .addi 2 0 9 := by
+        simpa using hinstruction
+      subst instruction
+      simp [executeWithFfi, execute, writeRegister, nextPc] at hstep
+      simpa [executeWithFfi, execute, writeRegister, nextPc] using
+        (congrArg State.pc hstep).symm)
+    (hthenResult := by rfl) (helseResult := by rfl) (hbound := by decide)
+  simpa [riscVCondition] using hrun
+
 end Flapjack.Test.CorrectnessConditional

@@ -129,4 +129,16 @@ example (state : State 8) (code : List (Instruction 8))
       state.pc + BitVec.ofNat 8 (code.length * 4) := by
   exact executeInstructions_pc_of_nonbranching state code hcode
 
+example :
+    executeCode 3 0 [.addi 1 0 7, .addi 2 1 3] (zeroState 8) =
+      some (executeInstructions (zeroState 8) [.addi 1 0 7, .addi 2 1 3]) := by
+  simpa using (executeCode_of_nonbranching (zeroState 8)
+    ([.addi 1 0 7, .addi 2 1 3] : List (Instruction 8)) (by rfl) (by
+      intro instruction hinstruction
+      simp only [List.mem_cons] at hinstruction
+      rcases hinstruction with rfl | rfl | hfalse
+      · rfl
+      · rfl
+      · contradiction) (by decide))
+
 end Flapjack.RiscV

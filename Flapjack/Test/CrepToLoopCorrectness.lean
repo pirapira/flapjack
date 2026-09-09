@@ -74,4 +74,35 @@ theorem crepToLoop_return_raise_regression :
       [] (fun _ _ => none) crepLoopFfi (fun _ _ _ _ => none)
       0 100 0 crepLoopFfiState [9] 17
 
+def crepCallSkipState : CrepState Nat :=
+  { locals := fun _ => none
+    memory := fun _ => none }
+
+def crepCallSkipFunctions : List (CompiledFunction Nat) :=
+  [{ name := "id", params := [], body := .skip, returnShape := .one }]
+
+def crepCallSkipLoopFunctions : List (Nat × List Nat × LoopProg Nat) :=
+  [(7, [], .skip)]
+
+def crepCallSkipContext : LoopContext Nat :=
+  { vars := [], functions := [("id", (7, 0))], maxVar := 0, target := .rv64i }
+
+theorem crepToLoop_call_skip_regression :
+    evalCrepFullProg crepCallSkipFunctions (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 100 4
+        crepCallSkipState (.call none "id" []) =
+        some (.normal crepCallSkipState) ∧
+    evalLoopProgWithCallsAndFfi crepCallSkipLoopFunctions
+        (loopFfiOfCrepFfi (fun _ _ _ _ _ _ => none)) 4
+        (loopStateOfCrepState crepCallSkipState)
+        (loopCompileProg crepCallSkipContext [9] (.call none "id" [])) =
+        some (.normal (loopStateOfCrepState crepCallSkipState)) := by
+  apply crepToLoop_call_skip_agreement crepCallSkipContext
+    crepCallSkipFunctions crepCallSkipLoopFunctions
+    (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+    0 100 0 crepCallSkipState [9] "id" 7
+  · simp [crepCallSkipFunctions, lookupCompiledFunction]
+  · simp [crepCallSkipContext, lookupInfo]
+  · simp [crepCallSkipLoopFunctions, lookupLoopFunction]
+
 end Flapjack

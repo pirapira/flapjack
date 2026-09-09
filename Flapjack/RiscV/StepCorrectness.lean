@@ -70,6 +70,58 @@ theorem executeInstructionsWithFfiCounted_spec [NeZero width]
               cases final with
               | mk finalState => simp
 
+theorem executeInstructionsWithFfi_pc_of_advance [NeZero width]
+    (host : WordFfiHost width) (state : State width)
+    (instructions : List (Instruction width))
+    (hadvance : ∀ (current : State width) (instruction : Instruction width),
+      instruction ∈ instructions → ∀ next,
+        executeWithFfi host current instruction = some next →
+          next.pc = current.pc + 4) :
+    ∀ final,
+      executeInstructionsWithFfi host state instructions = some final →
+        final.pc = state.pc + BitVec.ofNat width (instructions.length * 4) := by
+  induction instructions generalizing state with
+  | nil =>
+      intro final hfinal
+      simp [executeInstructionsWithFfi] at hfinal
+      subst final
+      simp
+  | cons instruction instructions ih =>
+      have htail : ∀ (current : State width) (nextInstruction : Instruction width),
+          nextInstruction ∈ instructions → ∀ next,
+            executeWithFfi host current nextInstruction = some next →
+              next.pc = current.pc + 4 := by
+        intro current nextInstruction hnext next hstep
+        exact hadvance current nextInstruction (by simp [hnext]) next hstep
+      intro final hfinal
+      cases hstep : executeWithFfi host state instruction with
+      | none =>
+          simp [executeInstructionsWithFfi, hstep] at hfinal
+      | some nextState =>
+          have hnextPc := hadvance state instruction (by simp) nextState hstep
+          have hrest : executeInstructionsWithFfi host nextState instructions =
+              some final := by
+            simpa [executeInstructionsWithFfi, hstep] using hfinal
+          have hfinalPc := ih nextState htail final hrest
+          calc
+            final.pc = nextState.pc +
+                BitVec.ofNat width (instructions.length * 4) := hfinalPc
+            _ = state.pc + 4 + BitVec.ofNat width (instructions.length * 4) := by
+              rw [hnextPc]
+            _ = state.pc + BitVec.ofNat width 4 +
+                BitVec.ofNat width (instructions.length * 4) := by rfl
+            _ = state.pc + (BitVec.ofNat width 4 +
+                BitVec.ofNat width (instructions.length * 4)) := by
+              rw [BitVec.add_assoc]
+            _ = state.pc + BitVec.ofNat width
+                (4 + instructions.length * 4) := by
+              rw [← BitVec.ofNat_add]
+            _ = state.pc + BitVec.ofNat width ((instructions.length + 1) * 4) := by
+              have hnat :
+                  4 + instructions.length * 4 = (instructions.length + 1) * 4 := by
+                omega
+              rw [hnat]
+
 /-! Count the instructions traversed by the fuel-bounded code runner.  A
     successful return-address check costs zero additional instructions; every
     fetched instruction contributes one to the count. -/

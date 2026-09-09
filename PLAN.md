@@ -1097,6 +1097,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   over RISC-V word cells, with little-endian and alignment regressions.
 - [x] Extend the RISC-V flat source evaluator with size-aware shared-memory
   loads and stores for words, bytes, halfwords, and aligned 32-bit values.
+- [x] Thread model-aware memory access through the flat control evaluator and
+  implement its byte and aligned 32-bit store cases.
 - [x] Enforce CakeML's existing-word destination check for shared-memory loads
   across structured, stepped, and stateful-FFI source evaluators, with missing
   and structured-destination regressions.

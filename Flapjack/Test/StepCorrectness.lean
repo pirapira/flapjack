@@ -4,6 +4,11 @@ import Flapjack.RiscV.StepCorrectness
 
 namespace Flapjack.RiscV
 
+def noFfiHost : WordFfiHost 8 := fun _ _ _ _ _ _ => none
+
+def advancingFfiHost : WordFfiHost 8 :=
+  fun _ _ _ _ _ state => some { state with pc := state.pc + 4 }
+
 def stepCountState : State 8 :=
   writeRegister (zeroState 8) 1 7
 
@@ -51,6 +56,39 @@ example (host : WordFfiHost 8) (fuel : Nat) (start returnAddress : Word 8)
     count ≤ fuel := by
   exact executeCodeUntilWithFfiCounted_count_le_fuel host fuel start returnAddress
     code state final count hcount
+
+example :
+    executeCodeUntilWithFfiCounted noFfiHost
+        2 0 (4#8) [.addi 2 1 0] (zeroState 8) =
+      executeInstructionsWithFfiCounted noFfiHost
+        (zeroState 8) [.addi 2 1 0] := by
+  apply executeCodeUntilWithFfiCounted_suffix
+    (host := noFfiHost)
+    (state := zeroState 8) (prelude := []) (suffix := [.addi 2 1 0])
+    (tail := [])
+  · rfl
+  · intro current instruction hmem next hstep
+    have hinstruction : instruction = .addi 2 1 0 := by simpa using hmem
+    subst instruction
+    simp [executeWithFfi, execute, nextPc] at hstep
+    simpa [writeRegister] using (congrArg State.pc hstep).symm
+  · decide
+
+example :
+    executeCodeUntilWithFfiCounted advancingFfiHost
+        2 0 (4#8) [.ecall] (zeroState 8) =
+      executeInstructionsWithFfiCounted advancingFfiHost
+        (zeroState 8) [.ecall] := by
+  apply executeCodeUntilWithFfiCounted_suffix
+    (host := advancingFfiHost)
+    (state := zeroState 8) (prelude := []) (suffix := [.ecall]) (tail := [])
+  · rfl
+  · intro current instruction hmem next hstep
+    have hinstruction : instruction = .ecall := by simpa using hmem
+    subst instruction
+    simp [executeWithFfi, advancingFfiHost] at hstep
+    simpa [advancingFfiHost] using (congrArg State.pc hstep).symm
+  · decide
 
 example (context : WordCallContext 8) (state : State 8)
     (code : List (Instruction 8))

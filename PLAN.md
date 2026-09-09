@@ -2056,6 +2056,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   costs carried by the stepped Pancake evaluator.
 - [x] Expose a counted FFI-aware RISC-V control-flow evaluator, prove its
   projection to the existing evaluator, and bound successful runs by fuel.
+- [x] Connect counted FFI-aware code-until execution to sequential counted
+  execution for a suffix with an explicit host/instruction PC-advance
+  contract, including ordinary and ECALL regressions.
 - [x] Compose the counted RISC-V instruction result with call-aware
   straight-line Word correctness.
 - [x] Prove the machine PC contract for a register-move sequence followed by

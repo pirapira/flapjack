@@ -78,4 +78,29 @@ example (state : State 32) (hpc : state.pc = 0)
         (fun finalState => readRegister finalState 3) := by
   exact evalWordFunction_ite_assign_riscV_register state hpc hzero (by decide)
 
+example (state : State 8) (operator : Cmp) (left right : Fin 32)
+    (hpc : state.pc = 0) :
+    executeCodeUntil 6 0 (BitVec.ofNat 8 20)
+        (riscVBranchFalseInstruction operator left right (BitVec.ofNat 8 16) ::
+          [.addi 1 0 7, .addi 2 1 3] ++
+          [.branchEq 0 0 (BitVec.ofNat 8 8)] ++
+          [.addi 3 0 2]) state |>.isSome := by
+  have hrun := executeCodeUntil_conditional_of_nonbranching state operator left right
+    [.addi 1 0 7, .addi 2 1 3] [.addi 3 0 2] hpc (by
+      intro instruction hinstruction
+      simp only [List.mem_cons] at hinstruction
+      rcases hinstruction with rfl | rfl | hfalse
+      · rfl
+      · rfl
+      · contradiction) (by
+      intro instruction hinstruction
+      simp only [List.mem_singleton] at hinstruction
+      subst instruction
+      rfl) (by decide)
+  by_cases hcondition : riscVCondition state operator left right
+  · simpa [List.length_cons, Option.isSome, hcondition] using
+      congrArg Option.isSome hrun
+  · simpa [List.length_cons, Option.isSome, hcondition] using
+      congrArg Option.isSome hrun
+
 end Flapjack.Test.CorrectnessConditional

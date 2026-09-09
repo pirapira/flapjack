@@ -320,6 +320,24 @@ theorem wordCallToRiscVWithStack_prefix_execute_pc [NeZero width]
   refine ⟨parameterMoves, resultMoves,
     executeInstructions_stackCall_pc state entry parameterMoves hzero, hcode⟩
 
+theorem executeInstructions_stackCall_restore_link_sp [NeZero width]
+    (state : State width) (stackAddress savedLink : Word width)
+    (hstack : readRegister state 30 = stackAddress)
+    (hsaved : readWordValue state stackAddress = savedLink) :
+    let final := executeInstructions state
+      [.loadWord 1 30, .addi 30 30 (BitVec.ofNat width (width / 8))]
+    readRegister final 1 = savedLink ∧
+      readRegister final 30 =
+        stackAddress + BitVec.ofNat width (width / 8) ∧
+      final.pc = state.pc + BitVec.ofNat width 8 := by
+  have hstack' : state.registers 30 = stackAddress := by
+    simpa [readRegister] using hstack
+  dsimp
+  simp [executeInstructions, execute, writeRegister, readRegister,
+    nextPc, hstack', hsaved]
+  rw [show (8 : Nat) = 4 + 4 by omega, BitVec.ofNat_add]
+  rw [BitVec.add_assoc]
+
 /-! First source-to-machine step relation.  On the straight-line Word
     fragment, successful instruction selection preserves the ordinary Word
     result and the machine executes exactly one step per emitted instruction.

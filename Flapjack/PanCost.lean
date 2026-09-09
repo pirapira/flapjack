@@ -355,11 +355,13 @@ mutual
         let value ← match memoryAccess with
           | none => memory evaluatedAddress
           | some access => access.sharedRead memory bytesInWord size evaluatedAddress
-        match kind with
-        | .local => pure (.normal (updatePanValueMap locals name value) globals memory,
-            panCostAddStep depth addressCost)
-        | .global => pure (.normal locals (updatePanValueMap globals name value) memory,
-            panCostAddStep depth addressCost)
+        if panValueSharedLoadValid structs locals globals kind name value then
+          match kind with
+          | .local => pure (.normal (updatePanValueMap locals name value) globals memory,
+              panCostAddStep depth addressCost)
+          | .global => pure (.normal locals (updatePanValueMap globals name value) memory,
+              panCostAddStep depth addressCost)
+        else none
     | _fuel + 1, locals, globals, memory, depth,
         .shMemStore size address value, memoryAccess, _contracts => do
         let (evaluatedAddress, addressCost) ← evalPanValueExpCost depth structs locals globals

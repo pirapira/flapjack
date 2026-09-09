@@ -1926,6 +1926,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Prove successful source-to-Loop `extCall` projection for arbitrary
   state-changing host handlers, separating host-state correspondence from
   generated argument plumbing and observable control results.
+- [x] Expose the Crepe-to-Loop `extCall` compiler equation and its evaluator
+  contract, so later pass-composed simulations can rewrite the generated
+  `ffi` node without unfolding the recursive lowering function.
 - [x] Prove the reusable source-to-Crepe FFI lowering equation, including
   sequential argument evaluation and restoration of compiler temporaries.
 - [x] Compose the lowered caught-handler call with the full-Crepe evaluator,

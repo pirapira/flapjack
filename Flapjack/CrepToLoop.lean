@@ -290,6 +290,14 @@ theorem loopCompileProg_skip [OfNat α 0] [OfNat α 1]
     loopCompileProg context live (.skip : CrepProg α) = .skip := by
   simp [loopCompileProg]
 
+theorem loopCompileProg_extCall [OfNat α 0] [OfNat α 1]
+    (context : LoopContext α) (live : List Nat) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat) :
+    loopCompileProg context live
+        (.extCall function configuration configurationLength array arrayLength) =
+      .ffi function configuration configurationLength array arrayLength live := by
+  simp [loopCompileProg]
+
 theorem loopCompileProg_seq [OfNat α 0] [OfNat α 1]
     (context : LoopContext α) (live : List Nat) (first second : CrepProg α) :
     loopCompileProg context live (.seq first second) =

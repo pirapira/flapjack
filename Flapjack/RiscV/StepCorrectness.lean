@@ -146,6 +146,23 @@ theorem executeInstructionsWithFfiCounted_pc_of_advance [NeZero width]
       exact executeInstructionsWithFfi_pc_of_advance host state instructions
         hadvance result hrun
 
+theorem executeInstructionsWithFfiCounted_count_eq_length [NeZero width]
+    (host : WordFfiHost width) (state : State width)
+    (instructions : List (Instruction width))
+    (final : State width) (count : Nat)
+    (hfinal :
+      executeInstructionsWithFfiCounted host state instructions =
+        some (final, count)) :
+    count = instructions.length := by
+  have hspec := executeInstructionsWithFfiCounted_spec host state instructions
+  rw [hspec] at hfinal
+  cases hrun : executeInstructionsWithFfi host state instructions with
+  | none =>
+      simp [hrun] at hfinal
+  | some result =>
+      simp [hrun] at hfinal
+      exact hfinal.2.symm
+
 /-! Count the instructions traversed by the fuel-bounded code runner.  A
     successful return-address check costs zero additional instructions; every
     fetched instruction contributes one to the count. -/

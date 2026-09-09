@@ -397,6 +397,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   explicit two's-complement ordering and concrete execution proofs.
 - [x] Port `Test`/`NotTest` Word conditions through an `AND`/x0 sequence,
   with an explicit dead-condition-register contract and execution proofs.
+- [x] Expose one unified source/RISC-V condition-prelude soundness contract
+  covering register, zero-immediate, and nonzero-immediate operands.
 - [x] Lower Loop-to-Word `Tick` to an architectural `ADDI x0,x0,0` so
   generated conditional function artifacts can cross the RISC-V boundary.
 - [x] Lower function-level conditionals with recursively compiled return

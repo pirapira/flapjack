@@ -259,6 +259,20 @@ theorem evalPanValueExpCounted_fst
       evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord expression := by
   simp [evalPanValueExpCounted, Function.comp_def]
 
+theorem evalPanValueExpCounted_snd
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α) (expression : Exp α) :
+    (evalPanValueExpCounted structs locals globals memory baseAddress topAddress bytesInWord
+      expression).map Prod.snd =
+      (evalPanValueExp structs locals globals memory baseAddress topAddress bytesInWord
+        expression).map (fun _ => panValueExpStepCost expression) := by
+  simp [evalPanValueExpCounted, Function.comp_def]
+
 theorem evalPanValueExpsCounted_fst
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -271,6 +285,20 @@ theorem evalPanValueExpsCounted_fst
       bytesInWord expressions).map (fun result => result.1) =
       evalPanValueExps structs locals globals memory baseAddress topAddress
         bytesInWord expressions := by
+  simp [evalPanValueExpsCounted, Function.comp_def]
+
+theorem evalPanValueExpsCounted_snd
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α) (expressions : List (Exp α)) :
+    (evalPanValueExpsCounted structs locals globals memory baseAddress topAddress
+      bytesInWord expressions).map Prod.snd =
+      (evalPanValueExps structs locals globals memory baseAddress topAddress
+        bytesInWord expressions).map (fun _ => panValueExpsStepCost expressions) := by
   simp [evalPanValueExpsCounted, Function.comp_def]
 
 theorem evalPanValueFieldsCounted_fst
@@ -286,6 +314,22 @@ theorem evalPanValueFieldsCounted_fst
       bytesInWord fields).map (fun result => result.1) =
       evalPanValueExp.evalPanValueFields structs locals globals memory
         baseAddress topAddress bytesInWord fields := by
+  simp [evalPanValueFieldsCounted, Function.comp_def]
+
+theorem evalPanValueFieldsCounted_snd
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (fields : List (FieldName × Exp α)) :
+    (evalPanValueFieldsCounted structs locals globals memory baseAddress topAddress
+      bytesInWord fields).map Prod.snd =
+      (evalPanValueExp.evalPanValueFields structs locals globals memory
+        baseAddress topAddress bytesInWord fields).map
+        (fun _ => panValueFieldsStepCost fields) := by
   simp [evalPanValueFieldsCounted, Function.comp_def]
 
 def PanTerminates (evaluate : Nat → Option α) : Prop :=

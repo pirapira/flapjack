@@ -18,6 +18,11 @@ def WordStackRegisterRelation [NeZero width]
   ∀ register (hregister : register < 32),
     target.registers ⟨register, hregister⟩ = source.registers register
 
+def WordStackRegisterRelationExceptX31 [NeZero width]
+    (source : WordStackMachineState width) (target : State width) : Prop :=
+  ∀ register (hregister : register < 32), register ≠ 31 →
+    target.registers ⟨register, hregister⟩ = source.registers register
+
 theorem wordStackRegisterRelation_writeRegister
     [NeZero width] (source : WordStackMachineState width)
     (target : State width) (destination : Nat) (value : Word width)
@@ -297,6 +302,114 @@ theorem wordStackRegisterRelation_executeSra
   · intro register hregister
     exact hrel register hregister
   · exact hdestinationNonzero
+
+theorem wordStackRegisterRelation_executeRor
+    [NeZero width] (source : WordStackMachineState width)
+    (target : State width) (destination left right : Nat)
+    (hrel : WordStackRegisterRelationExceptX31 source target)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationNonzero : destination ≠ 0)
+    (hzero : source.registers 0 = 0)
+    (hwidth : width = 32 ∨ width = 64)
+    (hdestinationScratch : destination ≠ 31)
+    (hleftScratch : left ≠ 31) (hrightScratch : right ≠ 31) :
+    WordStackRegisterRelationExceptX31
+      (wordStackMachineWriteRegister source destination
+        (wordStackMachineShift .ror (source.registers left)
+          (source.registers right)))
+      (executeInstructions target
+        [.ori 31 0 (BitVec.ofNat width width),
+         .sub 31 31 ⟨right, hright⟩,
+         .sll 31 ⟨left, hleft⟩ 31,
+         .srl ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩,
+         .or ⟨destination, hdestination⟩ ⟨destination, hdestination⟩ 31]) := by
+  have hleftValue := hrel left hleft hleftScratch
+  have hrightValue := hrel right hright hrightScratch
+  have hzeroValue := hrel 0 (by omega) (by omega)
+  have hzeroValue' : target.registers 0 = 0 := by
+    calc
+      target.registers 0 = source.registers 0 := hzeroValue
+      _ = 0 := hzero
+  have hdestinationFinNonzero :
+      (⟨destination, hdestination⟩ : Fin 32) ≠ 0 := by
+    intro heq
+    apply hdestinationNonzero
+    exact congrArg Fin.val heq
+  have hdestinationFinScratch :
+      (⟨destination, hdestination⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hdestinationScratch
+    exact congrArg Fin.val heq
+  have hleftFinScratch :
+      (⟨left, hleft⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hleftScratch
+    exact congrArg Fin.val heq
+  have hrightFinScratch :
+      (⟨right, hright⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hrightScratch
+    exact congrArg Fin.val heq
+  have hshift :
+      shiftAmount (BitVec.ofNat width width - source.registers right) =
+        (width - shiftAmount (source.registers right)) % width := by
+    rcases hwidth with rfl | rfl <;>
+      simp [shiftAmount, BitVec.toNat_sub] <;> omega
+  have htargetDestination :
+      (executeInstructions target
+        [.ori 31 0 (BitVec.ofNat width width),
+         .sub 31 31 ⟨right, hright⟩,
+         .sll 31 ⟨left, hleft⟩ 31,
+         .srl ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩,
+         .or ⟨destination, hdestination⟩ ⟨destination, hdestination⟩ 31]).registers
+          ⟨destination, hdestination⟩ =
+      wordStackMachineShift .ror (source.registers left)
+          (source.registers right) := by
+    simp [executeInstructions, execute, readRegister, writeRegister,
+      wordStackMachineShift, wordStackMachineRotateRight, hzeroValue',
+      hleftValue, hrightValue, hleftFinScratch,
+      hrightFinScratch, hdestinationFinNonzero, Ne.symm hdestinationFinScratch,
+      ]
+    rw [hshift]
+    rfl
+  intro register hregister hregisterScratch
+  have htarget := hrel register hregister hregisterScratch
+  by_cases hsame : register = destination
+  · subst register
+    simpa [wordStackMachineWriteRegister] using htargetDestination
+  · have hfin : (⟨register, hregister⟩ : Fin 32) ≠
+        ⟨destination, hdestination⟩ := by
+      intro heq
+      apply hsame
+      exact congrArg Fin.val heq
+    have hregisterFinScratch :
+        (⟨register, hregister⟩ : Fin 32) ≠ 31 := by
+      intro heq
+      apply hregisterScratch
+      exact congrArg Fin.val heq
+    have htargetPreserved :
+        (executeInstructions target
+          [.ori 31 0 (BitVec.ofNat width width),
+           .sub 31 31 ⟨right, hright⟩,
+           .sll 31 ⟨left, hleft⟩ 31,
+           .srl ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩,
+           .or ⟨destination, hdestination⟩ ⟨destination, hdestination⟩ 31]).registers
+            ⟨register, hregister⟩ = target.registers ⟨register, hregister⟩ := by
+      simp [executeInstructions, execute, writeRegister, hfin,
+        hregisterFinScratch, hdestinationFinNonzero]
+    calc
+      (executeInstructions target
+          [.ori 31 0 (BitVec.ofNat width width),
+           .sub 31 31 ⟨right, hright⟩,
+           .sll 31 ⟨left, hleft⟩ 31,
+           .srl ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩,
+           .or ⟨destination, hdestination⟩ ⟨destination, hdestination⟩ 31]).registers
+            ⟨register, hregister⟩ = target.registers ⟨register, hregister⟩ := htargetPreserved
+      _ = source.registers register := htarget
+      _ = (wordStackMachineWriteRegister source destination
+          (wordStackMachineShift .ror (source.registers left)
+            (source.registers right))).registers register := by
+        simp [wordStackMachineWriteRegister, hsame]
 
 theorem labCompilePlain_const
     [NeZero width] (destination value : Nat) (hdestination : destination < 32) :
@@ -618,5 +731,46 @@ theorem labCompilePlain_shift_asr_register_simulation
       ⟨left, hleft⟩ ⟨right, hright⟩))
   exact wordStackRegisterRelation_executeSra source target destination left right
     hrel hdestination hleft hright hdestinationNonzero
+
+theorem labCompilePlain_shift_ror
+    [NeZero width] (destination left right : Nat)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationScratch : destination ≠ 31)
+    (hleftScratch : left ≠ 31) (hrightScratch : right ≠ 31) :
+    labCompilePlain (.shift .ror destination left right : LabPlain (Word width)) =
+      some [.ori 31 0 (BitVec.ofNat width width),
+        .sub 31 31 ⟨right, hright⟩,
+        .sll 31 ⟨left, hleft⟩ 31,
+        .srl ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩,
+        .or ⟨destination, hdestination⟩ ⟨destination, hdestination⟩ 31] := by
+  simp [labCompilePlain, labShiftInstructions, registerOfNat,
+    hdestination, hleft, hright, hdestinationScratch, hleftScratch,
+    hrightScratch]
+
+theorem labCompilePlain_shift_ror_register_simulation
+    [NeZero width] (source : WordStackMachineState width)
+    (target : State width) (destination left right : Nat)
+    (hrel : WordStackRegisterRelationExceptX31 source target)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationNonzero : destination ≠ 0)
+    (hzero : source.registers 0 = 0)
+    (hwidth : width = 32 ∨ width = 64)
+    (hdestinationScratch : destination ≠ 31)
+    (hleftScratch : left ≠ 31) (hrightScratch : right ≠ 31)
+    (code : List (Instruction width))
+    (hcode : labCompilePlain
+      (.shift .ror destination left right : LabPlain (Word width)) = some code) :
+    WordStackRegisterRelationExceptX31
+      (wordStackMachineWriteRegister source destination
+        (wordStackMachineShift .ror (source.registers left)
+          (source.registers right)))
+      (executeInstructions target code) := by
+  have hshape := labCompilePlain_shift_ror (width := width) destination left right
+    hdestination hleft hright hdestinationScratch hleftScratch hrightScratch
+  rw [hshape] at hcode
+  cases hcode
+  exact wordStackRegisterRelation_executeRor source target destination left right
+    hrel hdestination hleft hright hdestinationNonzero hzero hwidth
+    hdestinationScratch hleftScratch hrightScratch
 
 end Flapjack.RiscV

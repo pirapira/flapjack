@@ -1345,6 +1345,60 @@ inductive WordVarStraightLine (width : Nat) : WordProg (Word width) → Prop whe
       WordVarStraightLine width first → WordVarStraightLine width second →
       WordVarStraightLine width (.seq first second)
 
+/-! Every coloured program in the restricted variable straight-line fragment
+    is also accepted by the backend's structural straight-line contract.  The
+    latter deliberately permits a wider set of leaves; this bridge lets the
+    allocator simulation be composed with the generic Word-to-RISC-V soundness
+    theorem without duplicating the backend grammar. -/
+
+theorem wordVarStraightLine_to_wordRiscVStraightLine [NeZero width]
+    (colour : Nat → Nat) (program : WordProg (Word width))
+    (hprogram : WordVarStraightLine width program) :
+    WordRiscVStraightLine (wordApplyColour colour program) := by
+  induction hprogram with
+  | skip => simpa [wordApplyColour] using (WordRiscVStraightLine.skip :
+      WordRiscVStraightLine (.skip : WordProg (Word width)))
+  | moveOne name source _ _ _ _ _ => simpa [wordApplyColour] using (WordRiscVStraightLine.move 1
+      [(colour name, colour source)] : WordRiscVStraightLine
+        (.move 1 [(colour name, colour source)]))
+  | moveTwo destinationOne sourceOne destinationTwo sourceTwo _ _ _ _ _ _ _ _ _ _ _ =>
+      simpa [wordApplyColour] using (WordRiscVStraightLine.move 1
+      [(colour destinationOne, colour sourceOne),
+       (colour destinationTwo, colour sourceTwo)] : WordRiscVStraightLine
+        (.move 1 [(colour destinationOne, colour sourceOne),
+          (colour destinationTwo, colour sourceTwo)]))
+  | assign name source _ _ => simpa [wordApplyColour, wordApplyColourExp] using
+      (WordRiscVStraightLine.assign
+      (colour name) (WordExp.var (colour source)) : WordRiscVStraightLine
+        (.assign (colour name) (.var (colour source))))
+  | assignConst name value _ => simpa [wordApplyColour, wordApplyColourExp] using
+      (WordRiscVStraightLine.assign
+      (colour name) (WordExp.const value) : WordRiscVStraightLine
+        (.assign (colour name) (.const value)))
+  | assignBinary operator name left right _ _ _ =>
+      simpa [wordApplyColour, wordApplyColourExp] using (WordRiscVStraightLine.assign
+      (colour name) (WordExp.op operator [.var (colour left), .var (colour right)]) :
+        WordRiscVStraightLine
+          (.assign (colour name) (.op operator [.var (colour left), .var (colour right)])))
+  | assignImmediate operator name source value _ _ =>
+      simpa [wordApplyColour, wordApplyColourExp] using (WordRiscVStraightLine.assign
+      (colour name) (WordExp.op operator [.var (colour source), .const value]) :
+        WordRiscVStraightLine
+          (.assign (colour name) (.op operator [.var (colour source), .const value])))
+  | assignShift operator name left right _ _ _ _ =>
+      simpa [wordApplyColour, wordApplyColourExp] using (WordRiscVStraightLine.assign
+      (colour name) (WordExp.shift operator (.var (colour left)) (.var (colour right))) :
+        WordRiscVStraightLine
+          (.assign (colour name) (.shift operator (.var (colour left)) (.var (colour right)))))
+  | assignShiftImmediate operator name left amount _ _ _ =>
+      simpa [wordApplyColour, wordApplyColourExp] using
+      (WordRiscVStraightLine.assign (colour name)
+        (WordExp.shift operator (.var (colour left)) (.const amount)) :
+        WordRiscVStraightLine
+          (.assign (colour name) (.shift operator (.var (colour left)) (.const amount))))
+  | seq _ _ ihFirst ihSecond => simpa [wordApplyColour] using
+      (WordRiscVStraightLine.seq _ _ ihFirst ihSecond)
+
 theorem evalWordProg_wordVarStraightLine_applyColour
     (colour : Nat → Nat) (valid : wordColourValid colour)
     (injective : Function.Injective colour) (colourZero : colour 0 = 0)
@@ -1411,6 +1465,38 @@ theorem evalWordProg_wordVarStraightLine_applyColour
       refine ⟨secondSource, secondTarget, ?_, ?_, hsecondRelation⟩
       · simp [evalWordProg, hfirstSource, hsecondSource]
       · simp [evalWordProg, wordApplyColour, hfirstTarget, hsecondTarget]
+
+/-! Compose the register-colouring simulation with the executable backend.  A
+    successful RISC-V compilation of the coloured program now gives a machine
+    state related to the source Word result, rather than stopping at a second
+    Word evaluator. -/
+
+theorem evalWordProg_wordVarStraightLine_riscv_simulation [NeZero width]
+    (colour : Nat → Nat) (valid : wordColourValid colour)
+    (injective : Function.Injective colour) (colourZero : colour 0 = 0)
+    (colourNoScratch : ∀ name, name < 31 → colour name ≠ 31)
+    (source target : State width)
+    (hrelation : WordColourStateRelation colour source target)
+    (program : WordProg (Word width))
+    (hprogram : WordVarStraightLine width program)
+    (code : List (Instruction width))
+    (hcompile : wordProgToRiscV (wordApplyColour colour program) = some code) :
+    ∃ source' target',
+      evalWordProg source program = some source' ∧
+      executeInstructions target code = target' ∧
+      WordColourStateRelation colour source' target' := by
+  rcases evalWordProg_wordVarStraightLine_applyColour colour valid injective
+      colourZero colourNoScratch source target hrelation program hprogram with
+    ⟨source', target', hsource, htarget, htargetRelation⟩
+  have htargetStraight : WordRiscVStraightLine
+      (wordApplyColour colour program) :=
+    wordVarStraightLine_to_wordRiscVStraightLine colour program hprogram
+  have hmachine := wordProgToRiscV_sound_of_straightLine target
+    (wordApplyColour colour program) htargetStraight code hcompile
+  have htargetEq : target' = executeInstructions target code :=
+    Option.some.inj (htarget.symm.trans hmachine)
+  subst target'
+  exact ⟨source', executeInstructions target code, hsource, rfl, htargetRelation⟩
 
 /-! The semantic colouring theorem is also a contract for the executable
     allocator boundary: once the clash-tree allocator has produced a context,

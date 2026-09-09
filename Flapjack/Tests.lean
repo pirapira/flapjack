@@ -94,6 +94,7 @@ import Flapjack.Test.CorrectnessStackSize
 import Flapjack.Test.CorrectnessStackSetSize
 import Flapjack.Test.CorrectnessStackDelta
 import Flapjack.Test.CorrectnessBitmapLoad
+import Flapjack.Test.CorrectnessStackOpCurrHeap
 import Flapjack.RiscV.CorrectnessBinarySpill
 import Flapjack.Test.BinarySpillRelation
 import Flapjack.RiscV.CorrectnessShiftSpill

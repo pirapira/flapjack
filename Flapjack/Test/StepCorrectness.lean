@@ -117,4 +117,16 @@ example (state : State 8) (stackAddress savedLink : Word 8)
   exact executeInstructions_stackCall_restore_link_sp state stackAddress savedLink
     hstack hsaved
 
+example (state : State 8) (code : List (Instruction 8))
+    (hcode : ∀ instruction ∈ code, instruction.isBranch = false) :
+    (executeInstructions state code).pc =
+      code.foldl (fun pc _ => pc + 4) state.pc := by
+  exact executeInstructions_pc_fold_of_nonbranching state code hcode
+
+example (state : State 8) (code : List (Instruction 8))
+    (hcode : ∀ instruction ∈ code, instruction.isBranch = false) :
+    (executeInstructions state code).pc =
+      state.pc + BitVec.ofNat 8 (code.length * 4) := by
+  exact executeInstructions_pc_of_nonbranching state code hcode
+
 end Flapjack.RiscV

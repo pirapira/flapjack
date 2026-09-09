@@ -166,7 +166,7 @@ def panFlatStoreWithAccess [BEq α] [Add α] (domain : PanMemoryDomain α)
 
 def evalPanFlatExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (domain : PanMemoryDomain α) (memory : PanFlatMemory α)
@@ -267,7 +267,7 @@ termination_by expression => sizeOf expression
 where
   evalPanFlatExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (structs : StructContext)
       (locals globals : VarName → Option (PanValue α))
       (domain : PanMemoryDomain α) (memory : PanFlatMemory α)
@@ -286,7 +286,7 @@ where
 
   evalPanFlatFields [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (structs : StructContext)
       (locals globals : VarName → Option (PanValue α))
       (domain : PanMemoryDomain α) (memory : PanFlatMemory α)
@@ -305,7 +305,7 @@ where
 
 def evalPanFlatExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (domain : PanMemoryDomain α) (memory : PanFlatMemory α)
@@ -317,7 +317,7 @@ def evalPanFlatExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 def evalPanFlatProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (baseAddress topAddress bytesInWord : α)
     (locals globals : VarName → Option (PanValue α))
@@ -419,7 +419,7 @@ termination_by program => sizeOf program
 
 def evalPanFlatProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext) (baseAddress topAddress bytesInWord : α)
     (locals globals : VarName → Option (PanValue α))
     (domain : PanMemoryDomain α) (memory : PanFlatMemory α)
@@ -465,7 +465,7 @@ mutual
   def evalPanFlatCallWithPrimitiveAndFfi
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (structs : StructContext)
       (functions : List (FunName × List VarName × Prog α))
       (ffi : PanFlatFfiHandler α) (primitive : PanPrimitiveHandler α)
@@ -525,7 +525,7 @@ mutual
   def evalPanFlatProgFuelWithPrimitiveAndFfi
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (structs : StructContext)
       (functions : List (FunName × List VarName × Prog α))
       (ffi : PanFlatFfiHandler α) (primitive : PanPrimitiveHandler α)
@@ -680,7 +680,7 @@ end
 def evalPanFlatProgWithPrimitiveAndFfi
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (functions : List (FunName × List VarName × Prog α))
     (ffi : PanFlatFfiHandler α) (primitive : PanPrimitiveHandler α)
@@ -696,7 +696,7 @@ def evalPanFlatProgWithPrimitiveAndFfi
 def evalPanFlatProgWithCallsAndFfi
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (functions : List (FunName × List VarName × Prog α))
     (ffi : PanFlatFfiHandler α)

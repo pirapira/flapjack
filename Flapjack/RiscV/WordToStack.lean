@@ -1909,7 +1909,7 @@ theorem evalWordStackMachine_div_preserves_value [NeZero width]
 
 def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
-    [ShiftRight α] [LT α] [DecidableRel (fun left right : α => left < right)]
+    [ShiftRight α] [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (config : WordStackConfig) : WordProg α → Option (StackProg α)
   | .skip => some .skip
   | .move _ moves => wordStackMoveList config moves

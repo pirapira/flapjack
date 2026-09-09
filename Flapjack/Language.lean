@@ -58,6 +58,23 @@ inductive Cmp where
   | notTest
   deriving DecidableEq, Repr
 
+/-!
+Pancake has two order relations on words: `Lower` is unsigned while `Less`
+is signed. Keeping them in a target-supplied interface avoids accidentally
+using Lean's single `LT` relation for both source-language operations.
+The fallback instance below is useful for abstract scalar models whose only
+available order is `LT`; word targets should provide their own instance.
+-/
+
+class PanCmp (α : Type u) where
+  lower : α → α → Bool
+  less : α → α → Bool
+
+instance (priority := 10) panCmpOfLt [LT α]
+    [DecidableRel (fun left right : α => left < right)] : PanCmp α where
+  lower left right := decide (left < right)
+  less left right := decide (left < right)
+
 inductive Shift where
   | lsl
   | lsr

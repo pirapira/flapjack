@@ -148,7 +148,7 @@ def loopStateOfCrepLocals (locals : Nat → Option α) : LoopState α :=
 theorem crepToLoop_primitive_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α] [Sub α]
     [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : CrepPrimitiveHandler α) (context : LoopContext α)
     (live : List Nat) (locals : Nat → Option α)
     (destinations : List Nat) (operator : PrimOp) (arguments : List Nat) :

@@ -32,7 +32,7 @@ def panValueDeclStructInfo (context : StructContext)
 def evalPanValueDeclarations
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : PanValueProgramState α) :
     (declarations : List (Decl α)) →
     (memoryAccess : Option (PanValueMemoryAccess α) := none) →
@@ -78,7 +78,7 @@ termination_by declarations => sizeOf declarations
 def evalPanValueProgram
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (initial : PanValueProgramState α)
     (primitive : PanPrimitiveHandler α) (ffi : PanValueFfiHandler α)
     (fuel : Nat) (declarations : List (Decl α))
@@ -103,7 +103,7 @@ def evalPanValueProgram
 def panValueProgramResult
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (initial : PanValueProgramState α)
     (primitive : PanPrimitiveHandler α) (ffi : PanValueFfiHandler α)
     (fuel : Nat) (declarations : List (Decl α))
@@ -119,7 +119,7 @@ def panValueProgramResult
 theorem evalPanValueDeclarations_empty
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : PanValueProgramState α) :
     evalPanValueDeclarations state [] = some state := by
   simp [evalPanValueDeclarations]

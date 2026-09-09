@@ -42,7 +42,7 @@ theorem compilePanToLoop_identity_call_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (value : α) :
     (do
       let functions := pipelineLoopFunctions .rv64i 1
@@ -109,7 +109,7 @@ def raiseHandlerLoopResult
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (exceptionCode value : α) : Option (List α) := do
   let functions := raiseHandlerLoopFunctions exceptionCode value
   let (_, main) ← lookupLoopFunction 2 functions
@@ -121,7 +121,7 @@ def raiseHandlerSourceResult
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (value : α) : Option (List α) :=
   (evalPanProgWithHandlers (raiseHandlerSourceFunctions value) 40
     (fun _ => none) raiseHandlerSourceMain).map (fun result =>
@@ -133,7 +133,7 @@ theorem compilePanToLoop_raise_handler_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (exceptionCode value : α) :
     raiseHandlerLoopResult exceptionCode value =
       raiseHandlerSourceResult value := by

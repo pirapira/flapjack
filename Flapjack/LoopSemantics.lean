@@ -157,20 +157,21 @@ def evalLoopShift [ShiftLeft α] [ShiftRight α]
   | .lsr => some (ShiftRight.shiftRight left right)
   | .asr | .ror => none
 
-def evalLoopCmp [BEq α] [OfNat α 0] [OfNat α 1] [AndOp α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+def evalLoopCmp [BEq α] [OfNat α 0] [OfNat α 1] [AndOp α] [PanCmp α]
     (operator : Cmp) (left right : α) : α :=
   match operator with
   | .equal => if left == right then 1 else 0
   | .notEqual => if left == right then 0 else 1
-  | .lower | .less => if left < right then 1 else 0
-  | .notLower | .notLess => if left < right then 0 else 1
+  | .lower => if PanCmp.lower left right then 1 else 0
+  | .less => if PanCmp.less left right then 1 else 0
+  | .notLower => if PanCmp.lower left right then 0 else 1
+  | .notLess => if PanCmp.less left right then 0 else 1
   | .test => if AndOp.and left right == 0 then 1 else 0
   | .notTest => if AndOp.and left right == 0 then 0 else 1
 
 def evalLoopExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [PanCmp α]
     (state : LoopState α) (expression : LoopExp α) : Option α :=
   match expression with
   | .const value => some value
@@ -198,21 +199,22 @@ def evalLoopExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | _ => none
 termination_by structural expression
 
-def evalLoopCondition [BEq α] [OfNat α 0] [AndOp α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+def evalLoopCondition [BEq α] [OfNat α 0] [AndOp α] [PanCmp α]
     (operator : Cmp) (left right : α) : Option Bool :=
   match operator with
   | .equal => some (left == right)
   | .notEqual => some (left != right)
-  | .lower | .less => some (decide (left < right))
-  | .notLower | .notLess => some (decide (¬ left < right))
+  | .lower => some (PanCmp.lower left right)
+  | .less => some (PanCmp.less left right)
+  | .notLower => some (!PanCmp.lower left right)
+  | .notLess => some (!PanCmp.less left right)
   | .test => some (AndOp.and left right == 0)
   | .notTest => some (AndOp.and left right != 0)
 
 mutual
   def evalLoopProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       : Nat → LoopState α → LoopProg α → Option (LoopResult α)
     | 0, _, _ => none
     | _fuel + 1, state, .skip => some (.normal state)
@@ -311,7 +313,7 @@ mutual
 
   def evalLoopRepeat [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       : Nat → LoopState α → LoopProg α → Option (LoopResult α)
     | 0, _, _ => none
     | fuel + 1, state, body => do
@@ -330,7 +332,7 @@ component of the state relation used by the Loop-to-Word simulation. -/
 theorem evalLoopProg_one_local_projection [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (name : Nat) (state : LoopState α) (program : LoopProg α)
     (hprogram : loopNoLocalWrites name program = true) :
     (evalLoopProg 1 state program).map
@@ -437,7 +439,7 @@ theorem evalLoopProg_one_local_projection [BEq α] [OfNat α 0] [OfNat α 1]
 theorem evalLoopProg_result_local [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (name : Nat) (fuel : Nat) (state : LoopState α)
     (program : LoopProg α) (result : LoopResult α)
     (hprogram : loopNoLocalWrites name program = true)
@@ -791,7 +793,7 @@ fuel-inductive proofs.
 theorem evalLoopProg_one_global_projection [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (program : LoopProg α)
     (hprogram : loopNoGlobalWrites program = true) :
     (evalLoopProg 1 state program).map
@@ -832,7 +834,7 @@ theorem evalLoopProg_one_global_projection [BEq α] [OfNat α 0] [OfNat α 1]
 theorem evalLoopProg_one_memory_projection [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (program : LoopProg α)
     (hprogram : loopNoMemoryWrites program = true) :
     (evalLoopProg 1 state program).map
@@ -887,7 +889,7 @@ theorem evalLoopProg_one_memory_projection [BEq α] [OfNat α 0] [OfNat α 1]
 theorem evalLoopProg_memory_projection [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) (program : LoopProg α)
     (hprogram : loopNoMemoryWrites program = true) :
     (evalLoopProg fuel state program).map
@@ -1083,7 +1085,7 @@ theorem evalLoopProg_memory_projection [BEq α] [OfNat α 0] [OfNat α 1]
 theorem evalLoopProg_result_memory [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) (program : LoopProg α)
     (hprogram : loopNoMemoryWrites program = true)
     (result : LoopResult α)
@@ -1096,7 +1098,7 @@ theorem evalLoopProg_result_memory [BEq α] [OfNat α 0] [OfNat α 1]
 theorem evalLoopProg_global_projection [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) (program : LoopProg α)
     (hprogram : loopNoGlobalWrites program = true) :
     (evalLoopProg fuel state program).map
@@ -1261,7 +1263,7 @@ theorem evalLoopProg_global_projection [BEq α] [OfNat α 0] [OfNat α 1]
 theorem evalLoopProg_result_globals [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) (program : LoopProg α)
     (hprogram : loopNoGlobalWrites program = true)
     (result : LoopResult α)
@@ -1278,7 +1280,7 @@ theorem evalLoopProg_result_globals [BEq α] [OfNat α 0] [OfNat α 1]
 theorem evalLoopProg_result_state [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) (program : LoopProg α)
     (hlocal : ∀ name, loopNoLocalWrites name program = true)
     (hglobal : loopNoGlobalWrites program = true)
@@ -1337,7 +1339,7 @@ mutual
   def evalLoopProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
       [ShiftRight α] [LT α]
-      [DecidableRel (fun left right : α => left < right)]
+      [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (primitive : LoopPrimitiveHandler α) :
       Nat → LoopState α → LoopProg α → Option (LoopResult α)
     | 0, _, _ => none
@@ -1371,7 +1373,7 @@ mutual
   def evalLoopRepeatWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
       [Mul α] [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
       [ShiftLeft α] [ShiftRight α] [LT α]
-      [DecidableRel (fun left right : α => left < right)]
+      [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (primitive : LoopPrimitiveHandler α) :
       Nat → LoopState α → LoopProg α → Option (LoopResult α)
     | 0, _, _ => none
@@ -1392,7 +1394,7 @@ bounded by the same fuel used for ordinary Loop execution.
 mutual
   def evalLoopCall [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (Nat × List Nat × LoopProg α)) :
       Nat → LoopState α → Option (List Nat × List Nat) → Option Nat → List Nat →
         Option (Nat × LoopProg α × LoopProg α × List Nat) → Option (LoopResult α)
@@ -1432,7 +1434,7 @@ mutual
 
   def evalLoopProgWithFunctions [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (Nat × List Nat × LoopProg α)) :
       Nat → LoopState α → LoopProg α → Option (LoopResult α)
     | 0, _, _ => none
@@ -1458,7 +1460,7 @@ mutual
 
   def evalLoopRepeatWithFunctions [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (Nat × List Nat × LoopProg α)) :
       Nat → LoopState α → LoopProg α → Option (LoopResult α)
     | 0, _, _ => none
@@ -1481,7 +1483,7 @@ continue to use the base evaluator above.
 mutual
   def evalLoopFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (handler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
       Nat → LoopState α → LoopProg α → Option (LoopResult α)
     | 0, _, _ => none
@@ -1511,7 +1513,7 @@ mutual
 
   def evalLoopFfiRepeat [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (handler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
       Nat → LoopState α → LoopProg α → Option (LoopResult α)
     | 0, _, _ => none
@@ -1535,7 +1537,7 @@ bound and control-result interface.
 mutual
   def evalLoopCallWithCallsAndFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (Nat × List Nat × LoopProg α))
       (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
       Nat → LoopState α → Option (List Nat × List Nat) → Option Nat → List Nat →
@@ -1573,7 +1575,7 @@ mutual
 
   def evalLoopProgWithCallsAndFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (Nat × List Nat × LoopProg α))
       (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
       Nat → LoopState α → LoopProg α → Option (LoopResult α)
@@ -1607,7 +1609,7 @@ mutual
 
   def evalLoopRepeatWithCallsAndFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (Nat × List Nat × LoopProg α))
       (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
       Nat → LoopState α → LoopProg α → Option (LoopResult α)
@@ -1635,7 +1637,7 @@ mutual
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
       [ShiftRight α] [LT α]
-      [DecidableRel (fun left right : α => left < right)]
+      [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (primitive : LoopPrimitiveHandler α)
       (functions : List (Nat × List Nat × LoopProg α))
       (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
@@ -1677,7 +1679,7 @@ mutual
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
       [ShiftRight α] [LT α]
-      [DecidableRel (fun left right : α => left < right)]
+      [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (primitive : LoopPrimitiveHandler α)
       (functions : List (Nat × List Nat × LoopProg α))
       (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
@@ -1727,7 +1729,7 @@ mutual
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
       [ShiftRight α] [LT α]
-      [DecidableRel (fun left right : α => left < right)]
+      [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (primitive : LoopPrimitiveHandler α)
       (functions : List (Nat × List Nat × LoopProg α))
       (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α)) :
@@ -1751,7 +1753,7 @@ section PrimitiveCombinedSemanticEquations
 variable [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
   [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
   [ShiftRight α] [LT α]
-  [DecidableRel (fun left right : α => left < right)]
+  [DecidableRel (fun left right : α => left < right)] [PanCmp α]
 
 theorem evalLoopProgWithPrimitiveCallsAndFfi_primitive
     (primitive : LoopPrimitiveHandler α)
@@ -1809,7 +1811,7 @@ section CombinedSemanticEquations
 
 variable [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
   [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-  [LT α] [DecidableRel (fun left right : α => left < right)]
+  [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
 
 theorem evalLoopProgWithCallsAndFfi_ffi (functions : List (Nat × List Nat × LoopProg α))
     (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
@@ -1854,14 +1856,14 @@ end CombinedSemanticEquations
 
 theorem evalLoopProg_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) :
     evalLoopProg 1 state (.skip : LoopProg α) = some (.normal state) := by
   simp [evalLoopProg]
 
 theorem evalLoopProg_assign [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (name : Nat) (expression : LoopExp α) (value : α)
     (hvalue : evalLoopExp state expression = some value) :
     evalLoopProg 1 state (.assign name expression) =
@@ -1870,7 +1872,7 @@ theorem evalLoopProg_assign [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 theorem evalLoopExp_var [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (name : Nat) (value : α)
     (hvalue : state.locals name = some value) :
     evalLoopExp state (.var name) = some value := by
@@ -1878,7 +1880,7 @@ theorem evalLoopExp_var [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 theorem evalLoopExp_load [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (address value : α) (expression : LoopExp α)
     (haddress : evalLoopExp state expression = some address)
     (hvalue : state.memory address = some value) :
@@ -1887,7 +1889,7 @@ theorem evalLoopExp_load [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 theorem evalLoopExp_binOp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (operator : BinOp) (left right : LoopExp α)
     (leftValue rightValue : α)
     (hleft : evalLoopExp state left = some leftValue)
@@ -1898,7 +1900,7 @@ theorem evalLoopExp_binOp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 theorem evalLoopExp_mul [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (left right : LoopExp α) (leftValue rightValue : α)
     (hleft : evalLoopExp state left = some leftValue)
     (hright : evalLoopExp state right = some rightValue) :
@@ -1907,7 +1909,7 @@ theorem evalLoopExp_mul [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 theorem evalLoopExp_shift [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (operator : Shift) (left right : LoopExp α)
     (leftValue rightValue : α) (value : α)
     (hleft : evalLoopExp state left = some leftValue)
@@ -1918,7 +1920,7 @@ theorem evalLoopExp_shift [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 theorem evalLoopProg_seq_normal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) (first second : LoopProg α)
     (middle : LoopState α) (result : LoopResult α)
     (hfirst : evalLoopProg fuel state first = some (.normal middle))
@@ -1928,7 +1930,7 @@ theorem evalLoopProg_seq_normal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul
 
 theorem evalLoopProg_seq_returned [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) (first second : LoopProg α)
     (middle : LoopState α) (values : List α)
     (hfirst : evalLoopProg fuel state first = some (.returned middle values)) :
@@ -1938,7 +1940,7 @@ theorem evalLoopProg_seq_returned [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
 
 theorem evalLoopProg_seq_broke [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) (first second : LoopProg α)
     (middle : LoopState α) (label : Nat)
     (hfirst : evalLoopProg fuel state first = some (.broke middle label)) :
@@ -1948,7 +1950,7 @@ theorem evalLoopProg_seq_broke [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul 
 
 theorem evalLoopProg_seq_continued [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) (first second : LoopProg α)
     (middle : LoopState α) (label : Nat)
     (hfirst : evalLoopProg fuel state first = some (.continued middle label)) :
@@ -1958,7 +1960,7 @@ theorem evalLoopProg_seq_continued [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [
 
 theorem evalLoopProg_seq_raised [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) (first second : LoopProg α)
     (middle : LoopState α) (exception : α)
     (hfirst : evalLoopProg fuel state first = some (.raised middle exception)) :
@@ -1968,7 +1970,7 @@ theorem evalLoopProg_seq_raised [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul
 
 theorem evalLoopProg_ite_true [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) (operator : Cmp) (condition : Nat)
     (right : RegImm α) (thenBranch elseBranch : LoopProg α) (live : List Nat)
     (leftValue rightValue : α) (result : LoopResult α)
@@ -1990,7 +1992,7 @@ theorem evalLoopProg_ite_true [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul �
 
 theorem evalLoopProg_ite_false [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) (operator : Cmp) (condition : Nat)
     (right : RegImm α) (thenBranch elseBranch : LoopProg α) (live : List Nat)
     (leftValue rightValue : α) (result : LoopResult α)
@@ -2012,14 +2014,14 @@ theorem evalLoopProg_ite_false [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul 
 
 theorem evalLoopRepeat_break_zero [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (fuel : Nat) (state : LoopState α) :
     evalLoopRepeat (fuel + 2) state (.break 0) = some (.normal state) := by
   simp [evalLoopRepeat, evalLoopProg]
 
 theorem evalLoopExp_cmp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (operator : Cmp) (left right : LoopExp α)
     (leftValue rightValue : α)
     (hleft : evalLoopExp state left = some leftValue)
@@ -2030,7 +2032,7 @@ theorem evalLoopExp_cmp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 theorem evalLoopProg_load32 [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (address destination : Nat) (addressValue value : α)
     (haddress : state.locals address = some addressValue)
     (hvalue : state.memory addressValue = some value) :
@@ -2040,7 +2042,7 @@ theorem evalLoopProg_load32 [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 theorem evalLoopProg_loadByte [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (address destination : Nat) (addressValue value : α)
     (haddress : state.locals address = some addressValue)
     (hvalue : state.memory addressValue = some value) :
@@ -2050,7 +2052,7 @@ theorem evalLoopProg_loadByte [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul �
 
 theorem evalLoopProg_store [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (address : LoopExp α) (value : Nat)
     (addressValue valueValue : α)
     (haddress : evalLoopExp state address = some addressValue)
@@ -2061,7 +2063,7 @@ theorem evalLoopProg_store [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] 
 
 theorem evalLoopProg_store32 [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (address value : Nat)
     (addressValue valueValue : α)
     (haddress : state.locals address = some addressValue)
@@ -2072,7 +2074,7 @@ theorem evalLoopProg_store32 [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α
 
 theorem evalLoopProg_storeByte [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (address value : Nat)
     (addressValue valueValue : α)
     (haddress : state.locals address = some addressValue)
@@ -2083,7 +2085,7 @@ theorem evalLoopProg_storeByte [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul 
 
 theorem evalLoopProg_div [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (destination dividend divisor : Nat)
     (dividendValue divisorValue : α)
     (hdividend : state.locals dividend = some dividendValue)
@@ -2096,7 +2098,7 @@ theorem evalLoopProg_div [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [D
 
 theorem evalLoopProg_setGlobal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (address : α) (expression : LoopExp α) (value : α)
     (hvalue : evalLoopExp state expression = some value) :
     evalLoopProg 1 state (.setGlobal address expression) =
@@ -2105,7 +2107,7 @@ theorem evalLoopProg_setGlobal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul 
 
 theorem evalLoopProg_locValue [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (destination source : Nat) (value : α)
     (hvalue : state.locals source = some value) :
     evalLoopProg 1 state (.locValue destination source) =
@@ -2114,7 +2116,7 @@ theorem evalLoopProg_locValue [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul �
 
 theorem evalLoopProg_shMem_load [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (operator : CrepMemOp) (name : Nat) (address : LoopExp α)
     (addressValue value : α)
     (hoperator : operator = .load ∨ operator = .load8 ∨
@@ -2128,7 +2130,7 @@ theorem evalLoopProg_shMem_load [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul
 
 theorem evalLoopProg_shMem_store [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (operator : CrepMemOp) (name : Nat) (address : LoopExp α)
     (addressValue value : α)
     (hoperator : operator = .store ∨ operator = .store8 ∨
@@ -2142,7 +2144,7 @@ theorem evalLoopProg_shMem_store [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mu
 
 theorem evalLoopProg_return [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (names : List Nat) (values : List α)
     (hvalues : loopReadLocals state.locals names = some values) :
     evalLoopProg 1 state (.return names) = some (.returned state values) := by
@@ -2150,28 +2152,28 @@ theorem evalLoopProg_return [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 theorem evalLoopProg_break [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (label : Nat) :
     evalLoopProg 1 state (.break label) = some (.broke state label) := by
   simp [evalLoopProg]
 
 theorem evalLoopProg_continue [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (label : Nat) :
     evalLoopProg 1 state (.continue label) = some (.continued state label) := by
   simp [evalLoopProg]
 
 theorem evalLoopProg_tick [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) :
     evalLoopProg 1 state (.tick) = some (.normal state) := by
   simp [evalLoopProg]
 
 theorem evalLoopProg_assign_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopState α) (name : Nat) (value : α) :
     evalLoopProg 1 state (.assign name (.const value)) =
       some (.normal { state with locals := updateLoopLocal state.locals name value }) := by
@@ -2179,7 +2181,7 @@ theorem evalLoopProg_assign_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
 
 theorem evalLoopCompile_return_const [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : LoopContext α) (live : List Nat) (state : LoopState α) (value : α) :
     (evalLoopProg 12 state
       (loopCompileProg context live (.return [(.const value)]))).map loopResultValues =

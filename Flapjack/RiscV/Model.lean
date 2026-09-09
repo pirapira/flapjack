@@ -318,6 +318,20 @@ def signedLess (left right : Word width) : Bool :=
   else
     decide (left.toNat < right.toNat)
 
+/-! RISC-V words use unsigned order for `Lower` and signed order for `Less`. -/
+
+instance [NeZero width] : PanCmp (Word width) where
+  lower left right := decide (left < right)
+  less := signedLess
+
+@[simp] theorem panCmp_word_lower [NeZero width] (left right : Word width) :
+    PanCmp.lower left right = decide (left < right) := by
+  rfl
+
+@[simp] theorem panCmp_word_less [NeZero width] (left right : Word width) :
+    PanCmp.less left right = signedLess left right := by
+  rfl
+
 def execute (state : State width) : Instruction width → State width
   | .add destination sourceLeft sourceRight =>
       writeRegister { state with pc := nextPc state } destination

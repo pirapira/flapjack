@@ -15,7 +15,7 @@ theorem compile_full_skip_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (locals : VarName → Option α)
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
@@ -31,7 +31,7 @@ theorem compile_full_return_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (locals : VarName → Option α)
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
@@ -49,7 +49,7 @@ theorem compile_full_add_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (locals : VarName → Option α)
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
@@ -69,7 +69,7 @@ theorem compile_full_store_load_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (locals : VarName → Option α)
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
@@ -91,7 +91,7 @@ theorem compile_full_ite_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (locals : VarName → Option α)
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
@@ -116,7 +116,7 @@ theorem compile_full_local_assign_return_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (locals : VarName → Option α)
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
@@ -140,7 +140,7 @@ theorem compile_full_local_return_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (locals : VarName → Option α)
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
@@ -162,7 +162,7 @@ theorem compile_full_extCall_const_noop_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (locals : VarName → Option α)
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (sharedMem : CrepSharedMemHandler α)

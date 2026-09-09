@@ -24,7 +24,7 @@ abbrev PanValueSteppedResult (α : Type u) :=
 
 private def evalPanValueExpSteps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -117,7 +117,7 @@ termination_by expression => sizeOf expression
 where
   evalExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (structs : StructContext)
       (locals globals : VarName → Option (PanValue α))
       (memory : α → Option (PanValue α))
@@ -135,7 +135,7 @@ where
 
   evalFields [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (structs : StructContext)
       (locals globals : VarName → Option (PanValue α))
       (memory : α → Option (PanValue α))
@@ -153,7 +153,7 @@ where
 
 private def evalPanValueExpsSteps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -164,7 +164,7 @@ private def evalPanValueExpsSteps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
 
 private def evalPanValueFieldsSteps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -209,7 +209,7 @@ def panValueFieldsStepCost (fields : List (FieldName × Exp α)) : Nat :=
 
 def evalPanValueExpCounted [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -222,7 +222,7 @@ def evalPanValueExpCounted [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 def evalPanValueExpsCounted [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -235,7 +235,7 @@ def evalPanValueExpsCounted [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 def evalPanValueFieldsCounted [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -249,7 +249,7 @@ def evalPanValueFieldsCounted [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul �
 theorem evalPanValueExpCounted_fst
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -262,7 +262,7 @@ theorem evalPanValueExpCounted_fst
 theorem evalPanValueExpCounted_snd
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -276,7 +276,7 @@ theorem evalPanValueExpCounted_snd
 theorem evalPanValueExpsCounted_fst
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -290,7 +290,7 @@ theorem evalPanValueExpsCounted_fst
 theorem evalPanValueExpsCounted_snd
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -304,7 +304,7 @@ theorem evalPanValueExpsCounted_snd
 theorem evalPanValueFieldsCounted_fst
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -319,7 +319,7 @@ theorem evalPanValueFieldsCounted_fst
 theorem evalPanValueFieldsCounted_snd
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -381,7 +381,7 @@ mutual
   def evalPanValueCallWithPrimitiveCallsAndFfiSteps
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
       (structs : StructContext)
       (functions : List (FunName × List VarName × Prog α))
@@ -446,7 +446,7 @@ mutual
   def evalPanValueProgWithPrimitiveCallsAndFfiSteps
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
       (structs : StructContext)
       (functions : List (FunName × List VarName × Prog α))
@@ -686,7 +686,7 @@ theorem panOptionCountedBindMapFst
 theorem panEvalPanValueExpCountedBindMapFst
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -706,7 +706,7 @@ theorem panEvalPanValueExpCountedBindMapFst
 theorem panEvalPanValueExpsCountedBindMapFst
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (structs : StructContext)
     (locals globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α))
@@ -726,7 +726,7 @@ theorem panEvalPanValueExpsCountedBindMapFst
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_assign_local
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext)
     (functions : List (FunName × List VarName × Prog α))
@@ -749,7 +749,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_assign_local
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_assign_global
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext)
     (functions : List (FunName × List VarName × Prog α))
@@ -772,7 +772,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_assign_global
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_primitive
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext)
     (functions : List (FunName × List VarName × Prog α))
@@ -803,7 +803,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_primitive
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext)
     (functions : List (FunName × List VarName × Prog α))
@@ -833,7 +833,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_skip
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
@@ -849,7 +849,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_skip
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_break
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
@@ -865,7 +865,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_break
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_continue
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
@@ -881,7 +881,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_continue
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_tick
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
@@ -897,7 +897,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_tick
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_annot
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
@@ -913,7 +913,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_annot
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_raise
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
@@ -933,7 +933,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_raise
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_return
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
@@ -953,7 +953,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_return
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store32
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
@@ -979,7 +979,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_store32
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_storeByte
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext) (functions : List (FunName × List VarName × Prog α))
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
@@ -1005,7 +1005,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_storeByte
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_seq_of_projections
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext)
     (functions : List (FunName × List VarName × Prog α))
@@ -1077,7 +1077,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst_seq_of_projections
 theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext)
     (functions : List (FunName × List VarName × Prog α))
@@ -1211,7 +1211,7 @@ theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst_of_projection
 theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
     ∀ [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
       (structs : StructContext)
       (functions : List (FunName × List VarName × Prog α))
@@ -1232,7 +1232,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
         evalPanValueProgWithPrimitiveCallsAndFfi primitive handler structs functions
           baseAddress topAddress bytesInWord fuel locals globals memory program := by
   intro instBEq instOfNat0 instOfNat1 instAdd instMul instSub instAndOp instOrOp instHXor
-    instShiftLeft instShiftRight instLT instDecidable primitive handler structs functions
+    instShiftLeft instShiftRight instLT instDecidable instPanCmp primitive handler structs functions
     baseAddress topAddress bytesInWord fuel
   induction fuel using Nat.strongRecOn with
   | ind fuel ih =>
@@ -1812,7 +1812,7 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
 theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext)
     (functions : List (FunName × List VarName × Prog α))
@@ -1833,7 +1833,7 @@ theorem evalPanValueCallWithPrimitiveCallsAndFfiSteps_fst
 theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext)
     (functions : List (FunName × List VarName × Prog α))
@@ -1850,7 +1850,7 @@ theorem evalPanValueProgWithPrimitiveCallsAndFfiSteps_fst
 def evalPanValueSteppedProg
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (structs : StructContext)
     (functions : List (FunName × List VarName × Prog α))
@@ -1866,7 +1866,7 @@ def evalPanValueSteppedProg
 def evalPanValueSteppedProgram
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (initial : PanValueProgramState α)
     (primitive : PanPrimitiveHandler α) (ffi : PanValueFfiHandler α)
     (fuel : Nat) (declarations : List (Decl α))

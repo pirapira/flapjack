@@ -231,6 +231,21 @@ theorem executeInstructions_tailCall_pc [NeZero width]
   simp [executeInstructions, execute, writeRegister, readRegister,
     nextPc, jalrTarget, hzeroMoves']
 
+theorem wordTailCallToRiscV_execute_pc [NeZero width]
+    (state : State width) (entry : Word width)
+    (parameters arguments : List Nat) (code : List (Instruction width))
+    (hzero : ZeroRegister state)
+    (hcompile : wordTailCallToRiscV entry parameters arguments = some code) :
+    (executeInstructions state code).pc = jalrTarget entry 0 := by
+  cases hmove : wordRegisterMoves (width := width) (parameters.zip arguments) with
+  | none =>
+      simp [wordTailCallToRiscV, hmove] at hcompile
+  | some moves =>
+      simp [wordTailCallToRiscV, hmove] at hcompile
+      rcases hcompile with ⟨_, hcode⟩
+      subst code
+      exact executeInstructions_tailCall_pc state entry moves hzero
+
 /-! First source-to-machine step relation.  On the straight-line Word
     fragment, successful instruction selection preserves the ordinary Word
     result and the machine executes exactly one step per emitted instruction.

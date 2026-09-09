@@ -2033,6 +2033,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   evaluator used by composed call and loop correctness proofs.
 - [x] Add a compositional handler-aware Word call-colouring theorem that
   propagates callee effects and preserves the caller register relation.
+- [x] State the exact machine-step relation for successful RISC-V instruction
+  execution and connect it to the straight-line Word compiler witness.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

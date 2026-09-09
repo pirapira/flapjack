@@ -2006,6 +2006,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   call whose callee performs an FFI call and returns an allocated result.
 - [x] Expose a top-level stateful-FFI stepped evaluator and prove its result
   projection agrees with the non-stepped program boundary.
+- [x] Add a combined Word evaluator/RISC-V sequence simulation contract,
+  composing normal evaluator sequencing with generated instruction execution.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

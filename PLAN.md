@@ -814,6 +814,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   under explicit scratch non-aliasing hypotheses.
 - [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
+- [x] Add a unified source-faithful function allocator dispatcher that records
+  the CakeML linear-scan mode separately from graph and spill allocation.
 - [x] Package the linear-scan allocation mode with its Word-to-Stack lowering,
   safety and formal-parameter coverage, entry/body composition, and execution
   contracts.

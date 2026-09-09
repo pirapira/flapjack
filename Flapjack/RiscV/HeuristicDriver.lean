@@ -1,17 +1,115 @@
 import Flapjack.RiscV.SpillCosts
 import Flapjack.RiscV.AllocatorDriver
+import Flapjack.RiscV.LinearScanDriver
 
 /-!
-# Heuristic function-allocation driver
+# Heuristic and allocation-mode function driver
 
 This is the executable composition corresponding to CakeML's allocator
-decision boundary: an accepted oracle wins first, then the prioritized graph
+decision boundary: an accepted oracle wins first, then the selected register
 allocator is attempted, and finally the checked spill allocator is used.  The
-linear-scan and Simple/IRC distinctions remain explicit future work; the
-current graph engine is the implementation used by this boundary.
+older heuristic driver below is retained for compatibility; the mode-aware
+entry point records linear-scan results explicitly instead of silently routing
+them through the graph allocator.
 -/
 
 namespace Flapjack
+
+inductive WordFunctionAllocationModeResult (α : Type) where
+  | oracle (state : WordSsaState) (parameters : List Nat)
+      (program : WordProg α)
+  | graph (state : WordSsaState) (parameters : List Nat)
+      (allocation : WordGraphAllocation) (program : WordProg α)
+  | linearScan (state : WordSsaState) (parameters : List Nat)
+      (allocation : WordLinearScanState) (program : WordProg α)
+  | spill (state : WordSsaState) (parameters : List Nat)
+      (allocation : WordSpillState) (program : WordProg α)
+  deriving Repr
+
+/-! The source `select_reg_alloc` chooses linear scan for modes `4` and
+larger.  This driver keeps that choice visible in its result, while preserving
+the oracle-first and spill-fallback behavior of the existing entry point. -/
+def wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry
+    (parameters : List Nat) (program : WordProg α)
+    (fixedSources : List Nat) (algorithm currentFunction colours stackStart : Nat)
+    (oracle : NatInfoMap Nat) :
+    Option (WordFunctionAllocationModeResult α) :=
+  let (state, renamedParameters, renamedProgram) :=
+    wordSsaRenameFunctionWithEntry parameters program
+  let tree := WordClashTree.seq (.set renamedParameters)
+    (wordClashTree renamedProgram [])
+  let forced := wordProgForcedClashes renamedProgram
+  let colour := wordOracleColour oracle
+  if wordOracleColouringOk colours stackStart tree forced oracle then
+    some (.oracle state renamedParameters
+      (wordApplyColour colour renamedProgram))
+  else if 4 ≤ algorithm then
+    match wordAllocateLinearScanFunctionWithEntry parameters program colours
+        stackStart with
+    | some (state, renamedParameters, allocation, renamedProgram) =>
+        some (.linearScan state renamedParameters allocation renamedProgram)
+    | none => none
+  else
+    match wordAllocateGraphFunctionWithHeuristicsEntryRenamed parameters program
+        fixedSources algorithm currentFunction colours stackStart with
+    | some (state, renamedParameters, allocation, renamedProgram) =>
+        some (.graph state renamedParameters allocation renamedProgram)
+    | none =>
+        match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences
+            parameters program with
+        | none => none
+        | some (state, renamedParameters, renamedProgram, allocation) =>
+            some (.spill state renamedParameters allocation renamedProgram)
+
+theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_linear_safe
+    (parameters : List Nat) (program : WordProg α)
+    (fixedSources : List Nat)
+    (algorithm currentFunction colours stackStart : Nat)
+    (oracle : NatInfoMap Nat) (state : WordSsaState)
+    (renamedParameters : List Nat) (allocation : WordLinearScanState)
+    (renamedProgram : WordProg α)
+    (halloc :
+      wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry parameters
+        program fixedSources algorithm currentFunction colours stackStart oracle =
+        some (.linearScan state renamedParameters allocation renamedProgram)) :
+    wordLinearScanAllocationSafe
+        (WordClashTree.seq
+          (.set (wordSsaRenameFunctionWithEntry parameters program).2.fst)
+          (wordClashTree
+            (wordSsaRenameFunctionWithEntry parameters program).2.snd []))
+        (wordProgForcedClashes
+          (wordSsaRenameFunctionWithEntry parameters program).2.snd)
+        allocation = true := by
+  simp [wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry] at halloc
+  split at halloc
+  · simp_all
+  · split at halloc
+    · cases hlinear : wordAllocateLinearScanFunctionWithEntry parameters
+        program colours stackStart with
+      | none => simp [hlinear] at halloc
+      | some value =>
+          cases value with
+          | mk allocationState rest =>
+              cases rest with
+              | mk allocationParameters rest =>
+                  cases rest with
+                  | mk allocation' allocationProgram =>
+                      simp [hlinear] at halloc
+                      rcases halloc with ⟨rfl, rfl, rfl, rfl⟩
+                      exact wordAllocateLinearScanFunctionWithEntry_safe
+                        parameters program colours stackStart allocationState
+                        allocationParameters allocation' allocationProgram hlinear
+    · cases hgraph : wordAllocateGraphFunctionWithHeuristicsEntryRenamed
+          parameters program fixedSources algorithm currentFunction colours
+          stackStart with
+      | none =>
+          cases hspill :
+              wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences
+                parameters program with
+          | none => simp [hgraph, hspill] at halloc
+          | some value => simp [hgraph, hspill] at halloc
+      | some value => simp [hgraph] at halloc
+
 
 def wordAllocateFunctionWithOracleOrHeuristicOrSpill
     (parameters : List Nat) (program : WordProg α)

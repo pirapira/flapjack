@@ -246,6 +246,43 @@ theorem wordTailCallToRiscV_execute_pc [NeZero width]
       subst code
       exact executeInstructions_tailCall_pc state entry moves hzero
 
+/-! The tail-call PC theorem also has a value-transfer form for the smallest
+    ABI case.  Keeping the source and destination names explicit makes the
+    no-clobber conditions visible to callers composing this with callee
+    execution. -/
+
+theorem wordTailCallToRiscV_execute_single_parameter [NeZero width]
+    (state : State width) (entry : Word width)
+    (parameter argument : Nat) (code : List (Instruction width))
+    (hzero : ZeroRegister state)
+    (hparameter : parameter < 32) (hargument : argument < 32)
+    (hparameterNonzero : parameter ≠ 0)
+    (hparameterNoScratch : parameter ≠ 31)
+    (hcompile : wordTailCallToRiscV entry [parameter] [argument] = some code) :
+    readRegister (executeInstructions state code) ⟨parameter, hparameter⟩ =
+        readRegister state ⟨argument, hargument⟩ ∧
+      (executeInstructions state code).pc = jalrTarget entry 0 := by
+  have hshape : wordTailCallToRiscV entry [parameter] [argument] = some
+      ([.addi ⟨parameter, hparameter⟩ ⟨argument, hargument⟩ 0,
+        .addi 31 0 entry, .jalr 0 31 0] : List (Instruction width)) := by
+    simp [wordTailCallToRiscV, wordRegisterMoves, registerOfNat,
+      hparameter, hargument]
+  have hcode :
+      ([.addi ⟨parameter, hparameter⟩ ⟨argument, hargument⟩ 0,
+        .addi 31 0 entry, .jalr 0 31 0] : List (Instruction width)) = code := by
+    exact Option.some.inj (hshape.symm.trans hcompile)
+  have hparameterNoScratch' :
+      (⟨parameter, hparameter⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hparameterNoScratch
+    exact congrArg Fin.val heq
+  subst code
+  constructor
+  · simp [executeInstructions, execute, writeRegister, readRegister,
+      nextPc, hparameterNonzero, hparameterNoScratch']
+  · exact executeInstructions_tailCall_pc state entry
+      [.addi ⟨parameter, hparameter⟩ ⟨argument, hargument⟩ 0] hzero
+
 theorem executeInstructions_stackCall_pc [NeZero width]
     (state : State width) (entry : Word width)
     (moves : List (Instruction width)) (hzero : ZeroRegister state) :

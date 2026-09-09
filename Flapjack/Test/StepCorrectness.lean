@@ -77,6 +77,14 @@ example (state : State 8) (entry : Word 8) (parameters arguments : List Nat)
   exact wordTailCallToRiscV_execute_pc state entry parameters arguments code
     hzero hcompile
 
+example (state : State 8) (entry : Word 8) (code : List (Instruction 8))
+    (hzero : ZeroRegister state)
+    (hcompile : wordTailCallToRiscV entry [2] [3] = some code) :
+    readRegister (executeInstructions state code) 2 = readRegister state 3 ∧
+      (executeInstructions state code).pc = jalrTarget entry 0 := by
+  exact wordTailCallToRiscV_execute_single_parameter state entry 2 3 code hzero
+    (by decide) (by decide) (by decide) (by decide) hcompile
+
 example (state : State 8) (entry : Word 8) (moves : List (Instruction 8))
     (hzero : ZeroRegister state) :
     (executeInstructions state

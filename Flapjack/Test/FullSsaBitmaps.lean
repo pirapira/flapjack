@@ -19,11 +19,18 @@ def fullSsaBitmapMain :
     (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
     fullSsaBitmapRemoveConfig fullSsaBitmapDeclarations
 
+def fullSsaBitmapTargetMain :
+    Option (RiscV.WordStackBitmapState × List (RiscV.Instruction 64)) :=
+  compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsTarget .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+    fullSsaBitmapRemoveConfig fullSsaBitmapDeclarations
+
 /-! The full-SSA state-threaded pipeline remains executable for a function
     whose body does not allocate; heap-producing bodies use the same entrypoint
     and expose their bitmap table in the returned artifact. -/
 
 #guard fullSsaBitmapMain.isSome
+#guard fullSsaBitmapTargetMain.isSome
 
 example :
     pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps

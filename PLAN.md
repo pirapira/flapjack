@@ -2235,6 +2235,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   bijection receives a corresponding wordGraphLocations entry.
 - [x] Extend the StackLang/RISC-V register relation through unsigned
   division, including the defined zero-divisor result and Lab lowering.
+- [x] Extend the StackLang/RISC-V register relation through high/low
+  multi-result multiplication, with the high-destination non-clobber contract.
 
 ## First implementation slice
 

@@ -2070,6 +2070,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   conditional Word compiler, including 32-bit coverage.
 - [x] Prove bounded execution of variable-length conditional layouts, including
   branch-over-then, unconditional jump-over-else, and post-layout stopping.
+- [x] Expose the exact call-aware compiler output shape for conditionals from
+  successful condition and branch-body compiler witnesses.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

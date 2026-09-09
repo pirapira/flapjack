@@ -41,6 +41,28 @@ example :
         .branchEq 0 0 (BitVec.ofNat 64 8), .addi 3 0 2], []) := by
   exact wordFunctionToRiscV_ite_assign
 
+example :
+    wordFunctionToRiscVWithCalls (⟨[]⟩ : WordCallContext 8)
+        ((.ite .equal 1 (.reg 2)
+          (.assign 3 (.const (1 : Word 8)))
+          (.assign 3 (.const (2 : Word 8)))) : WordProg (Word 8)) =
+      some ([.branchNe 1 2 (BitVec.ofNat 8 12), .addi 3 0 1,
+        .branchEq 0 0 (BitVec.ofNat 8 8), .addi 3 0 2], []) := by
+  apply wordFunctionToRiscVWithCalls_ite_shape
+    (context := (⟨[]⟩ : WordCallContext 8))
+    (operator := .equal) (condition := 1) (rightValue := .reg 2)
+    (thenBranch := (.assign 3 (.const (1 : Word 8))))
+    (elseBranch := (.assign 3 (.const (2 : Word 8))))
+    (branchLeft := 1) (right := 2) (prelude := [])
+    (thenCode := [.addi 3 0 1]) (elseCode := [.addi 3 0 2])
+    (thenReturns := []) (elseReturns := [])
+  · simp [wordConditionOperands, registerOfNat]
+  · simp [wordFunctionToRiscVWithCalls, wordExpToInstructions,
+      wordExpToInstruction, registerOfNat]
+  · simp [wordFunctionToRiscVWithCalls, wordExpToInstructions,
+      wordExpToInstruction, registerOfNat]
+  · rfl
+
 example (state : State 64) (hpc : state.pc = 0)
     (hzero : ZeroRegister state) :
     (executeCode 5 0

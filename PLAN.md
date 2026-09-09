@@ -2191,6 +2191,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Prove the first StackRemove-to-RISC-V memory-boundary contract: the
   emitted address-scratch stack-load sequence reads the little-endian word at
   the frame-cell address and preserves all non-scratch registers.
+- [x] Prove the non-aliasing StackRemove stack-store boundary: copying a source
+  register to scratch, calculating the frame-cell address, and storing it has
+  the exact RISC-V byte-memory effect of writing that source word.
 
 ## First implementation slice
 

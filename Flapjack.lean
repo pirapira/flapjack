@@ -60,6 +60,7 @@ import Flapjack.RiscV.CorrectnessWordToStack
 import Flapjack.RiscV.CorrectnessSpill
 import Flapjack.RiscV.CorrectnessStackParallelMove
 import Flapjack.RiscV.CorrectnessStackFunctionEntry
+import Flapjack.RiscV.CorrectnessStackFunctionSpill
 import Flapjack.RiscV.CorrectnessStack
 import Flapjack.RiscV.CorrectnessFfiMachine
 import Flapjack.RiscV.CorrectnessStack

@@ -156,6 +156,34 @@ def memoryModelGenericWordOutOfDomain : Option (RiscV.Word 64) :=
       | [.word value] => some value
       | _ => none
 
+def memoryModelFlatControlByteStore : Option (RiscV.Word 64) := do
+  let result ← evalPanFlatProgWithPrimitiveAndFfi (α := RiscV.Word 64) [] []
+    (fun _ _ _ _ _ locals => some locals) (fun _ _ => none)
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+    (BitVec.ofNat 64 8) 20 (fun _ => none) (fun _ => none) memoryModelDomain
+    memoryModelMemory (.storeByte (.const (BitVec.ofNat 64 9))
+      (.const (BitVec.ofNat 64 0xaa)))
+    (memoryAccess := some (panMemoryAccessOfModel memoryModel))
+  match result with
+  | .normal _ _ memory =>
+      panModelReadByte memoryModel memoryModelDomain memory
+        (BitVec.ofNat 64 8) (BitVec.ofNat 64 9) false
+  | _ => none
+
+def memoryModelFlatControl32Store : Option (RiscV.Word 64) := do
+  let result ← evalPanFlatProgWithPrimitiveAndFfi (α := RiscV.Word 64) [] []
+    (fun _ _ _ _ _ locals => some locals) (fun _ _ => none)
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+    (BitVec.ofNat 64 8) 20 (fun _ => none) (fun _ => none) memoryModelDomain
+    memoryModelMemory (.store32 (.const (BitVec.ofNat 64 8))
+      (.const (BitVec.ofNat 64 0x11223344)))
+    (memoryAccess := some (panMemoryAccessOfModel memoryModel))
+  match result with
+  | .normal _ _ memory =>
+      panModelRead32 memoryModel memoryModelDomain memory
+        (BitVec.ofNat 64 8) (BitVec.ofNat 64 8) false
+  | _ => none
+
 def memoryModelSteppedByteProgram : Option (RiscV.Word 64 × Nat) :=
   (evalPanValueSteppedProg (fun _ _ => none) (fun _ _ _ _ _ locals => some locals)
       [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 20
@@ -379,6 +407,8 @@ def memoryModelPublicProgram : Option (RiscV.Word 64) :=
 #guard memoryModelGeneric32Program = some (BitVec.ofNat 64 0x11223344)
 #guard memoryModelGenericWordProgram = some (BitVec.ofNat 64 0)
 #guard memoryModelGenericWordOutOfDomain = none
+#guard memoryModelFlatControlByteStore = some (BitVec.ofNat 64 0xaa)
+#guard memoryModelFlatControl32Store = some (BitVec.ofNat 64 0x11223344)
 #guard memoryModelSteppedByteProgram = some (BitVec.ofNat 64 0xaa, 7)
 #guard memoryModelSteppedShared16Program = some (BitVec.ofNat 64 0xbeef, 9)
 #guard memoryModelSteppedSharedOutOfDomain = none

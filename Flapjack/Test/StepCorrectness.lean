@@ -345,6 +345,41 @@ example (returnState : State 8) (stackAddress savedLink entry : Word 8)
     hstack hsaved hcompile
 
 example (state : State 8) (code : List (Instruction 8))
+    (hcompile : wordRegisterMoves (width := 8) [(2, 6), (3, 7)] = some code) :
+    readRegister (executeInstructions state
+      (code ++ [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))])) 2 =
+        readRegister state 6 ∧
+      readRegister (executeInstructions state
+        (code ++ [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))])) 3 =
+        readRegister state 7 := by
+  have htransfer := wordRegisterMoves_execute_stackCall_result_transfer state
+    [(2, 6), (3, 7)] code
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    (by decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    (by
+      intro move hmove
+      simp at hmove ⊢
+      rcases hmove with rfl | rfl <;> decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    hcompile
+  exact ⟨by simpa using htransfer (2, 6) (by simp),
+    by simpa using htransfer (3, 7) (by simp)⟩
+
+example (state : State 8) (code : List (Instruction 8))
     (hcode : ∀ instruction ∈ code, instruction.isBranch = false) :
     (executeInstructions state code).pc =
       code.foldl (fun pc _ => pc + 4) state.pc := by

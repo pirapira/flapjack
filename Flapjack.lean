@@ -62,6 +62,7 @@ import Flapjack.RiscV.Link
 import Flapjack.WordSemantics
 import Flapjack.Loop
 import Flapjack.CrepToLoop
+import Flapjack.CrepToLoopCorrectness
 import Flapjack.LoopAnalysis
 import Flapjack.LoopSemantics
 import Flapjack.Word

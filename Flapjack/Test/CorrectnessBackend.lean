@@ -96,4 +96,23 @@ example [NeZero width] (state : State width)
   exact wordFunctionToRiscVWithCalls_return_sound
     ({ targets := [] } : WordCallContext width) state 0 [2, 3] [] returns hcompile
 
+example [NeZero width] (state : State width) :
+    wordFunctionToRiscVWithCalls ({ targets := [] } : WordCallContext width)
+        (.seq (.assign 2 (.const (BitVec.ofNat width 7))) (.return 0 [2])) =
+      some ([.addi 2 0 (BitVec.ofNat width 7)], [⟨2, by omega⟩]) ∧
+    evalWordFunction state
+        (.seq (.assign 2 (.const (BitVec.ofNat width 7))) (.return 0 [2])) =
+      some (executeInstructions state [.addi 2 0 (BitVec.ofNat width 7)],
+        [readRegister (executeInstructions state
+          [.addi 2 0 (BitVec.ofNat width 7)]) ⟨2, by omega⟩]) := by
+  have h := wordFunctionToRiscVWithCalls_seq_return_sound
+    ({ targets := [] } : WordCallContext width) state
+    (.assign 2 (.const (BitVec.ofNat width 7)))
+    (.assign 2 (.const (BitVec.ofNat width 7)) : WordRiscVStraightLine _)
+    0 [2] [.addi 2 0 (BitVec.ofNat width 7)] [⟨2, by omega⟩]
+    (by simp [wordFunctionToRiscVWithCalls, wordExpToInstructions,
+      wordExpToInstruction, registerOfNat])
+    (by simp [wordFunctionToRiscVWithCalls, registerOfNat])
+  simpa [registerOfNat, Function.comp_def] using h
+
 end Flapjack.RiscV

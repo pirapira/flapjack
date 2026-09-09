@@ -875,4 +875,94 @@ theorem evalWordFunction_ite_assign_riscV_register [NeZero width]
       wordExpToInstruction, registerOfNat, executeInstructions, execute,
       writeRegister, readRegister, nextPc, hzero', hcondition]
 
+/-! The counted machine boundary for the concrete register-conditional
+    assignment layout.  This is the first consumer of the generic counted
+    conditional theorem: it exposes the exact instruction cost of the taken
+    and fall-through paths of compiler output. -/
+theorem executeCodeUntilWithFfiCounted_ite_assign [NeZero width]
+    (host : WordFfiHost width) (state : State width)
+    (hpc : state.pc = 0) (hzero : ZeroRegister state)
+    (hwidth : 5 ≤ width) :
+    (executeCodeUntilWithFfiCounted host
+      (if readRegister state 1 == readRegister state 2 then 5 else 3) 0
+      (BitVec.ofNat width 16)
+      [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
+        .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state).map
+      (fun result => (readRegister result.1 3, result.2)) =
+      if readRegister state 1 == readRegister state 2 then
+        some ((1 : Word width), 3)
+      else some ((2 : Word width), 2) := by
+  have hzero' : state.registers 0 = 0 := by
+    simpa [ZeroRegister, readRegister] using hzero
+  have hrun := executeCodeUntilWithFfiCounted_conditional_of_nonbranching
+    (host := host) (state := state) (operator := .equal)
+    (left := 1) (right := 2) (thenCode := [.addi 3 0 1])
+    (elseCode := [.addi 3 0 2])
+    (thenState := execute (execute state
+      (riscVBranchFalseInstruction .equal 1 2 (BitVec.ofNat width 12)))
+      (.addi 3 0 1))
+    (elseState := execute (execute state
+      (riscVBranchFalseInstruction .equal 1 2 (BitVec.ofNat width 12)))
+      (.addi 3 0 2))
+    (thenCount := 1) (elseCount := 1)
+    (hpc := hpc)
+    (hthenAdvance := by
+      intro current instruction hinstruction next hstep
+      have hinstruction' : instruction = .addi 3 0 1 := by
+        simpa using hinstruction
+      subst instruction
+      simp [executeWithFfi, execute, writeRegister, nextPc] at hstep
+      simpa [executeWithFfi, execute, writeRegister, nextPc] using
+        (congrArg State.pc hstep).symm)
+    (helseAdvance := by
+      intro current instruction hinstruction next hstep
+      have hinstruction' : instruction = .addi 3 0 2 := by
+        simpa using hinstruction
+      subst instruction
+      simp [executeWithFfi, execute, writeRegister, nextPc] at hstep
+      simpa [executeWithFfi, execute, writeRegister, nextPc] using
+        (congrArg State.pc hstep).symm)
+    (hthenResult := by rfl) (helseResult := by rfl)
+    (hbound := by
+      change 16 < 2 ^ width
+      have hp : 2 ^ 5 ≤ 2 ^ width := by
+        exact Nat.pow_le_pow_right (by decide) hwidth
+      omega)
+  by_cases hcondition : readRegister state 1 = readRegister state 2
+  · have hrisc : riscVCondition state .equal 1 2 = true := by
+      simp [riscVCondition, hcondition]
+    have hcondition' : state.registers 1 = state.registers 2 := by
+      simpa [readRegister] using hcondition
+    have hrun' :
+        executeCodeUntilWithFfiCounted host 5 0 (BitVec.ofNat width 16)
+            [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
+              .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state =
+          some
+            (execute (execute (execute state
+              (.branchNe 1 2 (BitVec.ofNat width 12))) (.addi 3 0 1))
+              (.branchEq 0 0 (BitVec.ofNat width 8)), 3) := by
+      simpa [riscVBranchFalseInstruction, riscVCondition, hcondition] using hrun
+    have hconditionBool : (readRegister state 1 == readRegister state 2) = true := by
+      simp [hcondition]
+    rw [if_pos hconditionBool]
+    rw [hrun']
+    simp [execute, writeRegister, readRegister, nextPc, hzero', hcondition']
+  · have hrisc : ¬riscVCondition state .equal 1 2 = true := by
+      simp [riscVCondition, hcondition]
+    have hcondition' : ¬state.registers 1 = state.registers 2 := by
+      simpa [readRegister] using hcondition
+    have hrun' :
+        executeCodeUntilWithFfiCounted host 3 0 (BitVec.ofNat width 16)
+            [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
+              .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state =
+          some
+            (execute (execute state
+              (.branchNe 1 2 (BitVec.ofNat width 12))) (.addi 3 0 2), 2) := by
+      simpa [riscVBranchFalseInstruction, riscVCondition, hcondition] using hrun
+    have hconditionBool : ¬((readRegister state 1 == readRegister state 2) = true) := by
+      simp [hcondition]
+    rw [if_neg hconditionBool]
+    rw [hrun']
+    simp [execute, writeRegister, readRegister, nextPc, hzero', hcondition']
+
 end Flapjack.RiscV

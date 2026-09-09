@@ -756,6 +756,35 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcTarget
       (functions.map (fun (label, _, body) => (label, body)))
   pure (bitmaps, instructions)
 
+/-! Linked target-facing form of the complete full-SSA bitmap/simple-GC
+pipeline.  The bitmap table is retained alongside the resolved Lab sections,
+so execution and GC correctness clients can use one artifact. -/
+def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcTargetLinked
+    [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (RiscV.WordStackBitmapState ×
+      List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
+  let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
+  let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
+  let (functions, bitmaps) ←
+    pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps
+      (RiscV.wordStackInitialBitmaps false) loop
+  let initialLabel := fullSsaInitialLabLabel functions
+  let sections ←
+    RiscV.compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscV
+      { services := services } removeConfig
+      { gcStubLocation := stackGcStubLocation, returnLabel := 0,
+        firstFreshLabel := stackFunctionFirstLabel }
+      { } stackStoreConstsStubLocation wordAllocatableRegisters.length 0 initialLabel
+      (functions.map (fun (label, _, body) => (label, body)))
+  pure (bitmaps, sections)
+
 def compileFlapjackRiscVViaStack [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
     [Add (RiscV.Word width)] [Mul (RiscV.Word width)]

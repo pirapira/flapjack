@@ -486,6 +486,54 @@ theorem wordFunctionToRiscVWithCallsAndFfi_seq_simulation
   simp [wordFunctionToRiscVWithCallsAndFfi, hfirstCompile, hsecondCompile,
     executeInstructionsWithFfi_append, hfirstExec, hsecondExec]
 
+/-!
+The machine sequencing theorem and the evaluator sequencing theorem above are
+usually consumed together by a pass-level correctness proof.  This combined
+contract keeps that composition explicit: a normal first component, followed
+by a second component, has the same final state and return values in both the
+FFI-aware Word evaluator and the generated RISC-V instruction stream.
+
+The hypotheses deliberately expose the component boundaries.  In particular,
+the theorem does not assume that either component is straight-line code; the
+component compiler and execution witnesses may already include calls, FFI,
+or resolved loop control.
+-/
+theorem wordFunctionToRiscVWithCallsAndFfi_seq_complete_simulation
+    [NeZero width] (context : WordCallFfiContext width)
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (host : WordFfiHost width)
+    (handler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state firstState finalState : State width)
+    (first second : WordProg (Word width))
+    (firstCode secondCode : List (Instruction width))
+    (returns : List (Fin 32)) (values : List (Word width))
+    (hfirstCompile : wordFunctionToRiscVWithCallsAndFfi context first =
+      some (firstCode, []))
+    (hsecondCompile : wordFunctionToRiscVWithCallsAndFfi context second =
+      some (secondCode, returns))
+    (hfirstExec : executeInstructionsWithFfi host state firstCode =
+      some firstState)
+    (hsecondExec : executeInstructionsWithFfi host firstState secondCode =
+      some finalState)
+    (hfirstEval : evalWordFunctionWithCallsAndFfi functions handler fuel state first =
+      some (firstState, []))
+    (hsecondEval : evalWordFunctionWithCallsAndFfi functions handler fuel firstState second =
+      some (finalState, values)) :
+    ((wordFunctionToRiscVWithCallsAndFfi context (.seq first second)).bind
+        (fun result =>
+          (executeInstructionsWithFfi host state result.1).map
+            (fun final => (final, returns))) =
+      some (finalState, returns)) ∧
+    evalWordFunctionWithCallsAndFfi functions handler (fuel + 1) state
+      (.seq first second) = some (finalState, values) := by
+  constructor
+  · exact wordFunctionToRiscVWithCallsAndFfi_seq_simulation context host state
+      firstState finalState first second firstCode secondCode returns
+      hfirstCompile hsecondCompile hfirstExec hsecondExec
+  · exact evalWordFunctionWithCallsAndFfi_seq_normal functions handler fuel state
+      firstState finalState first second values hfirstEval hsecondEval
+
 theorem wordControlInstructions_append_of_success
     [NeZero width] (first second : List (WordControlInstruction width))
     (firstCode secondCode : List (Instruction width))

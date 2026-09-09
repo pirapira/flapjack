@@ -453,6 +453,130 @@ def compileLabProgramLinked [NeZero width] (context : WordFfiContext)
   let labels := labCollectProgramLabels 0 program
   compileLabProgramLinkedAux context labels 0 program
 
+def flattenLabProgramLinked :
+    List (Nat × Word width × List (Instruction width)) → List (Instruction width)
+  | [] => []
+  | (_, _, code) :: sections => code ++ flattenLabProgramLinked sections
+
+theorem compileLabProgramLinkedAux_flatten
+    [NeZero width] (context : WordFfiContext)
+    (labels : List (Nat × Nat × Nat)) (base : Nat)
+    (program : LabProgram (Word width)) :
+    (compileLabProgramLinkedAux context labels base program).map
+        flattenLabProgramLinked =
+      labCompileProgramSections context labels base program := by
+  induction program generalizing base with
+  | nil =>
+      simp [compileLabProgramLinkedAux, labCompileProgramSections,
+        flattenLabProgramLinked]
+  | cons sectionData sections ih =>
+      simp only [compileLabProgramLinkedAux, labCompileProgramSections]
+      cases hcode : labCompileProgramLines context labels base sectionData.lines with
+      | none => simp
+      | some code =>
+          cases hrest : compileLabProgramLinkedAux context labels
+              (base + 4 * labSectionInstructionCount sectionData) sections with
+          | none =>
+              have hsections := ih
+                (base := base + 4 * labSectionInstructionCount sectionData)
+              rw [hrest] at hsections
+              rw [← hsections]
+              simp
+          | some rest =>
+              have hsections := ih
+                (base := base + 4 * labSectionInstructionCount sectionData)
+              rw [← hsections]
+              simp [hrest, flattenLabProgramLinked]
+
+theorem compileLabProgramLinked_flatten [NeZero width]
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    (compileLabProgramLinked context program).map flattenLabProgramLinked =
+      compileLabProgram context program := by
+  simp [compileLabProgramLinked, compileLabProgram,
+    compileLabProgramLinkedAux_flatten]
+
+def compileLabProgramLinkedWithHaltAux [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (base haltPc : Nat) : LabProgram (Word width) →
+      Option (List (Nat × Word width × List (Instruction width)))
+  | [] => some []
+  | sectionData :: sections => do
+      let code ← labCompileProgramLinesWithHalt context labels base haltPc
+        sectionData.lines
+      let rest ← compileLabProgramLinkedWithHaltAux context labels
+        (base + 4 * labSectionInstructionCount sectionData) haltPc sections
+      pure ((sectionData.name, BitVec.ofNat width base, code) :: rest)
+
+def compileLabProgramLinkedWithHalt [NeZero width] (context : WordFfiContext)
+    (program : LabProgram (Word width)) :
+    Option (List (Nat × Word width × List (Instruction width))) :=
+  let labels := labCollectProgramLabels 0 program
+  let haltPc := 4 * labProgramInstructionCount program
+  compileLabProgramLinkedWithHaltAux context labels 0 haltPc program
+
+theorem compileLabProgramLinkedWithHaltAux_flatten
+    [NeZero width] (context : WordFfiContext)
+    (labels : List (Nat × Nat × Nat)) (base haltPc : Nat)
+    (program : LabProgram (Word width)) :
+    (compileLabProgramLinkedWithHaltAux context labels base haltPc program).map
+        flattenLabProgramLinked =
+      labCompileProgramSectionsWithHalt context labels base haltPc program := by
+  induction program generalizing base with
+  | nil =>
+      simp [compileLabProgramLinkedWithHaltAux, labCompileProgramSectionsWithHalt,
+        flattenLabProgramLinked]
+  | cons sectionData sections ih =>
+      simp only [compileLabProgramLinkedWithHaltAux,
+        labCompileProgramSectionsWithHalt]
+      cases hcode :
+          labCompileProgramLinesWithHalt context labels base haltPc sectionData.lines with
+      | none => simp
+      | some code =>
+          cases hrest : compileLabProgramLinkedWithHaltAux context labels
+              (base + 4 * labSectionInstructionCount sectionData) haltPc sections with
+          | none =>
+              have hsections := ih
+                (base := base + 4 * labSectionInstructionCount sectionData)
+              rw [hrest] at hsections
+              rw [← hsections]
+              simp
+          | some rest =>
+              have hsections := ih
+                (base := base + 4 * labSectionInstructionCount sectionData)
+              rw [← hsections]
+              simp [hrest, flattenLabProgramLinked]
+
+def flattenLabProgramLinkedWithHalt :
+    List (Nat × Word width × List (Instruction width)) → List (Instruction width)
+  | sections => flattenLabProgramLinked sections ++ [.jal 0 0]
+
+theorem compileLabProgramLinkedWithHalt_flatten [NeZero width]
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    (compileLabProgramLinkedWithHalt context program).map
+        flattenLabProgramLinkedWithHalt =
+      compileLabProgramWithHalt context program := by
+  let labels := labCollectProgramLabels 0 program
+  let haltPc := 4 * labProgramInstructionCount program
+  change
+    (compileLabProgramLinkedWithHaltAux context labels 0 haltPc program).map
+        flattenLabProgramLinkedWithHalt =
+      (labCompileProgramSectionsWithHalt context labels 0 haltPc program).bind
+        (fun code => some (code ++ [.jal 0 0]))
+  cases hcompiled : compileLabProgramLinkedWithHaltAux context
+      labels 0 haltPc program with
+  | none =>
+      have hsections := compileLabProgramLinkedWithHaltAux_flatten
+        context labels 0 haltPc program
+      rw [hcompiled] at hsections
+      rw [← hsections]
+      simp
+  | some sections =>
+      have hsections := compileLabProgramLinkedWithHaltAux_flatten
+        context labels 0 haltPc program
+      rw [hcompiled] at hsections
+      rw [← hsections]
+      simp [flattenLabProgramLinkedWithHalt]
+
 def compileStackProgramListToRiscV [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)
     (entryLabel initialLabel : Nat)
@@ -538,6 +662,24 @@ def compileStackProgramNatListLinkedToRiscV [NeZero width]
     ((programs.map (fun (sectionId, program) =>
       labProgramToEntrySection sectionId entryLabel initialLabel
         (stackRemoveComplete config program))).map labSectionNatToWord)
+
+/-! Linked counterpart of the bitmap/simple-GC entry point.  Keeping the
+runtime sections in the same Lab linker as ordinary functions preserves their
+resolved entry addresses for machine-level correctness harnesses. -/
+def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscV
+    [NeZero width]
+    (context : WordFfiContext) (removeConfig : StackRemoveConfig)
+    (allocConfig : StackAllocConfig) (gcConfig : StackGcConfig)
+    (storeConstsLocation registerCount : Nat)
+    (entryLabel initialLabel : Nat)
+    (programs : List (Nat × StackProg Nat)) :
+    Option (List (Nat × Word width × List (Instruction width))) :=
+  compileLabProgramLinkedWithHalt context
+    (((((stackRaiseStubLocation, stackRaiseStub false removeConfig.addressScratch) ::
+      stackAllocCompileWithSimpleGcAndStoreConsts allocConfig gcConfig
+        storeConstsLocation registerCount programs).map (fun (sectionId, program) =>
+          labProgramToEntrySection sectionId entryLabel initialLabel
+            (stackRemoveComplete removeConfig program))).map labSectionNatToWord))
 
 def compileStackProgramNatListLinkedWithRaiseStubToRiscV [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)

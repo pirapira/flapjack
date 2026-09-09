@@ -26,6 +26,13 @@ def fullSsaMainTargetLinked :
     (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
     fullSsaPipelineRemoveConfig fullSsaMainDeclarations
 
+def fullSsaMainBitmapSimpleGcTargetLinked :
+    Option (RiscV.WordStackBitmapState ×
+      List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
+  compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcTargetLinked
+    .rv64i (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+    fullSsaPipelineRemoveConfig fullSsaMainDeclarations
+
 def fullSsaMainImage : Option (List (RiscV.Instruction 64)) :=
   fullSsaMainLinked.map (List.flatMap (fun (_, _, code) => code))
 
@@ -59,6 +66,9 @@ example :
 
 #guard
     fullSsaMainTargetLinked.isSome
+
+#guard
+    fullSsaMainBitmapSimpleGcTargetLinked.isSome
 
 #guard
     fullSsaMainGraphImage.isSome

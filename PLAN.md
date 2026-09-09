@@ -1890,6 +1890,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   artifact.
 - [x] Link the full-SSA bitmap path with separate raise, StoreConsts, and
   simple-GC runtime sections, reserving their labels before compiled functions.
+- [x] Add a halt-aware linked Lab entrypoint for the full-SSA bitmap/simple-GC
+  artifact, retaining section addresses for machine-level execution proofs.
+- [x] Prove that the halt-aware linked sections flatten to the exact
+  halt-terminated Lab image used by the flat execution path.
 - [x] Expose source-order bitmap threading through the allocated Word-to-Stack
   function pipeline, including a compositional append equation.
 - [x] Add abstract and bounded FFI loop-break simulation equations, with
@@ -1945,6 +1949,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   compilation, hiding label collection and code-shape normalization.
 - [x] Lift the same boundary through singleton linked-program flattening,
   establishing the first program-level Lab-to-machine FFI simulation.
+- [x] Prove that flattening the linked Lab sections preserves the ordinary
+  compiled instruction stream, including the FFI instruction boundary.
 - [x] Compose a singleton Lab FFI call-and-return through
   `executeFunctionAtWithFfi`, including the caller's `x1` continuation.
 - [x] Execute a linked handler-bearing StackRemove/Lab image on the RISC-V
@@ -2006,6 +2012,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   call whose callee performs an FFI call and returns an allocated result.
 - [x] Expose a top-level stateful-FFI stepped evaluator and prove its result
   projection agrees with the non-stepped program boundary.
+- [x] Add a combined Word evaluator/RISC-V sequence simulation contract,
+  composing normal evaluator sequencing with generated instruction execution.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

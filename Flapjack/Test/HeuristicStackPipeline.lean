@@ -1,4 +1,4 @@
-import Flapjack.RiscV.HeuristicStackPipeline
+import Flapjack.RiscV.CorrectnessHeuristicStack
 
 /-! Regression coverage for the full-SSA heuristic graph-to-Stack bridge. -/
 
@@ -48,5 +48,15 @@ example [NeZero width]
     0 0 0 none heuristicStackTestBitmapState ssaState renamedParameters allocation
     renamedProgram stackProgram finalState halloc hbridge
   exact ⟨hcontract.1, hcontract.2.1⟩
+
+example [NeZero width]
+    (halloc : wordAllocateGraphFunctionWithHeuristicsEntryRenamed
+      [] (.skip : WordProg (Word width)) [] 1 0 2 0 =
+      some (ssaState, renamedParameters, allocation, renamedProgram)) :
+    ∀ name, name ∈ renamedParameters →
+      ∃ node, lookupNatInfo name allocation.bijection.toNode = some node := by
+  exact wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_parameters
+    [] (.skip : WordProg (Word width)) [] 1 0 2 0
+    ssaState renamedParameters allocation renamedProgram halloc
 
 end Flapjack.RiscV

@@ -163,4 +163,20 @@ example :
       "main" []).isNone = true := by
   native_decide
 
+/- CakeML pre-collects struct declarations, so declarations before a struct may
+   use its name in a function signature.  The struct's own fields still obey
+   the preceding-context rule. -/
+#guard
+    (panValueProgramResult sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 30
+      [.function
+         { name := "takesLaterStruct", inline := false, exported := false,
+           params := [("value", .named "LaterStruct")],
+           body := .return (.const 0), returnShape := .one },
+       .name "LaterStruct" [("field", .one)],
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .return (.const 0), returnShape := .one }]
+      "main" []).bind sourceDeclarationSingleWord = some 0
+
 end Flapjack

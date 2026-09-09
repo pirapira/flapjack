@@ -24,6 +24,52 @@ theorem executeInstructionsWithFfi_append
       | none => simp []
       | some nextState => simp [ih]
 
+/-! Register marshalling is made only of `addi` instructions, so it cannot
+invoke the host.  This connects the ordinary execution equation for the
+generated move prefix to the FFI-aware runner. -/
+theorem executeInstructionsWithFfi_wordRegisterMoves [NeZero width]
+    (host : WordFfiHost width) (state : State width)
+    (registerMoves : List (Nat × Nat)) (code : List (Instruction width))
+    (hcode : wordRegisterMoves (width := width) registerMoves = some code) :
+    executeInstructionsWithFfi host state code =
+      some (executeInstructions state code) := by
+  induction registerMoves generalizing state code with
+  | nil =>
+      simp [wordRegisterMoves] at hcode
+      subst code
+      simp [executeInstructionsWithFfi, executeInstructions]
+  | cons move registerMoves ih =>
+      cases move with
+      | mk destination source =>
+          cases hdestination : registerOfNat destination with
+          | none => simp [wordRegisterMoves, hdestination] at hcode
+          | some destinationRegister =>
+              cases hsource : registerOfNat source with
+              | none => simp [wordRegisterMoves, hdestination, hsource] at hcode
+              | some sourceRegister =>
+                  cases hmoves : wordRegisterMoves (width := width) registerMoves with
+                  | none =>
+                      simp [wordRegisterMoves, hdestination, hsource, hmoves]
+                        at hcode
+                  | some rest =>
+                      have hrest : wordRegisterMoves (width := width) registerMoves = some rest :=
+                        hmoves
+                      have hcode' :
+                          (.addi destinationRegister sourceRegister 0 :: rest) = code := by
+                        simpa [wordRegisterMoves, hdestination, hsource, hmoves]
+                          using hcode
+                      subst code
+                      simp only [executeInstructionsWithFfi, executeInstructions,
+                        executeWithFfi]
+                      change executeInstructionsWithFfi host
+                          (execute state
+                            (.addi destinationRegister sourceRegister 0)) rest =
+                        some (executeInstructions
+                          (execute state
+                            (.addi destinationRegister sourceRegister 0)) rest)
+                      rw [ih (execute state
+                        (.addi destinationRegister sourceRegister 0)) rest hrest]
+
 /-!
 The Lab FFI operation is the point at which the already-marshalled Word ABI
 is handed to the target machine.  Its compiler expansion only materializes

@@ -50,6 +50,8 @@ structure PState where
   furthest : Option ParseError
   /-- Emit `add_locs_annot` location annotations. Off unless asked for. -/
   locations : Bool := false
+  /-- The location of the last token consumed by the current parser scope. -/
+  lastConsumed : Option Locs := none
   deriving Inhabited
 
 /-- The initial state for a token list. The only place `remaining` is computed
@@ -63,7 +65,7 @@ def PState.ofToks (toks : Toks) (locations : Bool := false) : PState :=
 
 /-- Rewind to an earlier position on backtracking, keeping `remaining` in step. -/
 @[inline] def PState.rewind (s' : PState) (s : PState) : PState :=
-  { s' with toks := s.toks, remaining := s.remaining }
+  { s' with toks := s.toks, remaining := s.remaining, lastConsumed := s.lastConsumed }
 
 /-- A backtracking parser: `none` is failure, and the state survives it. -/
 def P (α : Type) : Type := PState → Option α × PState
@@ -123,13 +125,17 @@ def atEnd : P Bool := fun s => (some s.toks.isEmpty, s)
 def advance : P Token := fun s =>
   match s.toks with
   | [] => P.fail "Didn't expect an EOF" s
-  | (token, _) :: rest => (some token, s.pop rest)
+  | (token, locs) :: rest =>
+      let s' := s.pop rest
+      (some token, { s' with lastConsumed := some locs })
 
 /-- Consume a specific token, mirroring `consume_tok`. -/
 def expect (expected : Token) (described : String) : P Unit := fun s =>
   match s.toks with
-  | (token, _) :: rest =>
-      if token == expected then (some (), s.pop rest)
+  | (token, locs) :: rest =>
+      if token == expected then
+        let s' := s.pop rest
+        (some (), { s' with lastConsumed := some locs })
       else P.fail s!"Failed to see expected token: {described}" s
   | [] => P.fail s!"Failed to see expected token; saw EOF instead: {described}" s
 
@@ -140,33 +146,43 @@ def expectKw (keyword : Keyword) (described : String) : P Unit :=
 /-- Consume an identifier, mirroring `keep_ident` followed by `conv_ident`. -/
 def ident : P String := fun s =>
   match s.toks with
-  | (.identT name, _) :: rest => (some name, s.pop rest)
+  | (.identT name, locs) :: rest =>
+      let s' := s.pop rest
+      (some name, { s' with lastConsumed := some locs })
   | _ => P.fail "Expected an identifier" s
 
 /-- Consume an `@name` foreign identifier, mirroring `keep_ffi_ident`. -/
 def ffiIdent : P String := fun s =>
   match s.toks with
-  | (.foreignIdent name, _) :: rest => (some name, s.pop rest)
+  | (.foreignIdent name, locs) :: rest =>
+      let s' := s.pop rest
+      (some name, { s' with lastConsumed := some locs })
   | _ => P.fail "Expected a foreign identifier" s
 
 /-- Consume an integer literal, mirroring `keep_int`. -/
 def intLit : P Int := fun s =>
   match s.toks with
-  | (.intT value, _) :: rest => (some value, s.pop rest)
+  | (.intT value, locs) :: rest =>
+      let s' := s.pop rest
+      (some value, { s' with lastConsumed := some locs })
   | _ => P.fail "Expected an integer literal" s
 
 /-- Consume a non-negative integer literal, mirroring `keep_nat`/`conv_nat`. -/
 def natLit : P Nat := fun s =>
   match s.toks with
-  | (.intT value, _) :: rest =>
-      if 0 ≤ value then (some value.toNat, s.pop rest)
+  | (.intT value, locs) :: rest =>
+      if 0 ≤ value then
+        let s' := s.pop rest
+        (some value.toNat, { s' with lastConsumed := some locs })
       else P.fail "Expected a non-negative integer literal" s
   | _ => P.fail "Expected a non-negative integer literal" s
 
 /-- Consume an annotation comment, mirroring `keep_annot`. -/
 def annotLit : P String := fun s =>
   match s.toks with
-  | (.annotCommentT text, _) :: rest => (some text, s.pop rest)
+  | (.annotCommentT text, locs) :: rest =>
+      let s' := s.pop rest
+      (some text, { s' with lastConsumed := some locs })
   | _ => P.fail "Expected an annotation comment" s
 
 /-- Collect `, item` repetitions. Each accepted separator consumes a token, so
@@ -191,16 +207,18 @@ def sepByComma (item : P α) : P (List α) := fun s => (do
 /-- Run a parser and report the source range it consumed. Upstream reads this
 off the parse-tree node's `locs`; here it comes from the tokens consumed. -/
 def spanned (p : P α) : P (α × Locs) := fun s =>
-  match p s with
+  match p { s with lastConsumed := none } with
   | (some value, s') =>
       let start := match s.toks with
         | [] => Posn.eofPt
         | (_, locs) :: _ => locs.start
-      let consumed := s.toks.take (s.remaining - s'.remaining)
-      let stop := match consumed.getLast? with
+      let stop := match s'.lastConsumed with
         | none => start
-        | some (_, locs) => locs.stop
-      (some (value, { start := start, stop := stop }), s')
+        | some locs => locs.stop
+      let finalState := match s'.lastConsumed with
+        | none => { s' with lastConsumed := s.lastConsumed }
+        | some _ => s'
+      (some (value, { start := start, stop := stop }), finalState)
   | (none, s') => (none, s')
 
 end P

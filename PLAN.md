@@ -146,6 +146,11 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
      places Flapjack's static checker disagrees with upstream on those
      examples are tabulated in the parser README as `Flapjack/Static.lean`
      gaps.
+   - **Done:** make parse-tree span tracking constant-time by carrying the
+     last consumed token location through the parser state, while restoring it
+     across ordered-choice and optional backtracking. This removes the
+     quadratic prefix reconstruction from `P.spanned` without changing the
+     location-sensitive parser output.
 
 3. **Semantics**
    - Define a deterministic big-step/trace semantics for Pancake, including

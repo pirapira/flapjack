@@ -104,7 +104,9 @@ def consumeKw (keyword : Keyword) (described : String) : P Trees :=
 def keepTok (accept : Token → Bool) (described : String) : P Trees := fun s =>
   match s.toks with
   | (token, locs) :: rest =>
-      if accept token then (some [.lf token locs], s.pop rest)
+      if accept token then
+        let s' := s.pop rest
+        (some [.lf token locs], { s' with lastConsumed := some locs })
       else P.fail s!"Failed to see expected token: {described}" s
   | [] => P.fail s!"Failed to see expected token; saw EOF instead: {described}" s
 

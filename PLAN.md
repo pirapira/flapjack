@@ -791,6 +791,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   graph allocator boundary, retaining its allocation witness.
 - [x] Carry a successfully compiled Word function through the linked RISC-V
   entry table, including the appended return stub and its byte offset.
+- [x] Introduce the Nat-register/Fin-32 register relation and prove the
+  StackLang constant-to-RISC-V `addi` simulation at the Lab backend boundary.
 - [x] Match CakeML Simple/IRC distinction in graph allocation modes: modes
   0--1 omit move preferences during coalescing but retain the original move table for coloring, while modes 2--3 use the prioritized list for coalescing and the original move table for coloring.
 - [x] Preserve SSA-renamed virtual names at the heuristic allocator's

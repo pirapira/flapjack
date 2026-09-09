@@ -227,4 +227,26 @@ theorem wordConditionOperands_immediate_sound [NeZero width]
               simp [evalWordCondition, riscVCondition, executeInstructions,
                 execute, writeRegister, readRegister, hcondition, hzero']
 
+/-! A single condition-prelude contract for the compiler boundary.  The
+    right operand may be a register, zero, or a nonzero immediate; callers do
+    not need to duplicate the case split when composing conditional lowering
+    with source evaluation. -/
+
+theorem wordConditionOperands_sound [NeZero width] (state : State width)
+    (operator : Cmp) (condition : Nat)
+    (rightValue : WordRegImm (Word width)) (hzero : ZeroRegister state) :
+    ∀ branchLeft right prelude,
+      wordConditionOperands operator condition rightValue =
+        some (branchLeft, right, prelude) →
+      evalWordCondition state operator condition rightValue =
+        riscVCondition (executeInstructions state prelude) operator branchLeft right := by
+  intro branchLeft right prelude hoperands
+  cases rightValue with
+  | reg source =>
+      exact wordConditionOperands_register_sound state operator condition source hzero
+        branchLeft right prelude hoperands
+  | imm value =>
+      exact wordConditionOperands_immediate_sound state operator condition value hzero
+        branchLeft right prelude hoperands
+
 end Flapjack.RiscV

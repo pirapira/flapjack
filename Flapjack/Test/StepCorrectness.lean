@@ -228,6 +228,44 @@ example (state : State 8) (stackAddress savedLink : Word 8)
   exact executeInstructions_stackCall_restore_link_sp state stackAddress savedLink
     hstack hsaved
 
+example (state : State 8) (stackAddress savedLink : Word 8)
+    (hstack : readRegister state 30 = stackAddress)
+    (hsaved : readWordValue state stackAddress = savedLink) :
+    let moved := executeInstructions state
+      (([(2, 4)] : List (Nat × Nat)).flatMap
+        (wordMoveInstructionList (width := 8)))
+    let final := executeInstructions state
+      (([(2, 4)] : List (Nat × Nat)).flatMap
+        (wordMoveInstructionList (width := 8)) ++
+        [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))])
+    readRegister final 1 = savedLink ∧
+      readRegister final 30 =
+        stackAddress + BitVec.ofNat 8 (8 / 8) ∧
+      final.pc = moved.pc + BitVec.ofNat 8 8 := by
+  exact executeWordMoves_stackCall_restore_link_sp state stackAddress savedLink
+    [(2, 4)]
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl
+      decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl
+      decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl
+      decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl
+      decide)
+    hstack hsaved
+
 example (state : State 8) (code : List (Instruction 8))
     (hcode : ∀ instruction ∈ code, instruction.isBranch = false) :
     (executeInstructions state code).pc =

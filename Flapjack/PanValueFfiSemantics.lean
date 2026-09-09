@@ -520,4 +520,86 @@ def evalPanValueFfiProgram
   | some _, .returned _ _ _ _ _ => none
   | _, result => some result
 
+/-! Public top-level stateful-FFI evaluator retaining the source-step count.
+    The underlying call evaluator already records argument and body steps; this
+    wrapper keeps that count at the same declaration/entry boundary as
+    `evalPanValueFfiProgram`. -/
+def evalPanValueFfiProgramStepped
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    Option (PanValueFfiSteppedResult α σ) := do
+  let state ← evalPanValueDeclarations initial.source declarations
+    (memoryAccess := memoryAccess)
+  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions)
+  let result ← evalPanValueFfiCallSteps context primitive handler state.structs
+    state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+    (fun _ => none) state.globals state.memory initial.ffi none entry arguments
+    (memoryAccess := memoryAccess) (contracts := contracts)
+  match lookupInfo entry state.returnShapes, result with
+  | some shape, (.returned locals globals memory ffi [value], steps) =>
+      if panShapeMatches (panValueShape state.structs value) shape then
+        some (.returned locals globals memory ffi [value], steps)
+      else none
+  | some _, (.returned _ _ _ _ _, _) => none
+  | _, result => some result
+
+theorem evalPanValueFfiProgramStepped_fst
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)]
+    (context : PanValueFfiContext α)
+    (initial : PanValueFfiProgramState α σ)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (fuel : Nat) (declarations : List (Decl α))
+    (entry : FunName) (arguments : List (Exp α))
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    (evalPanValueFfiProgramStepped context initial primitive handler fuel
+      declarations entry arguments (memoryAccess := memoryAccess)).map Prod.fst =
+      evalPanValueFfiProgram context initial primitive handler fuel
+      declarations entry arguments (memoryAccess := memoryAccess) := by
+  unfold evalPanValueFfiProgramStepped evalPanValueFfiProgram
+  cases hstate : evalPanValueDeclarations initial.source declarations
+      (memoryAccess := memoryAccess) with
+  | none => simp
+  | some state =>
+      cases hcall : evalPanValueFfiCallSteps context primitive handler state.structs
+          state.functions state.baseAddress state.topAddress state.bytesInWord fuel
+          (fun _ => none) state.globals state.memory initial.ffi none entry arguments
+          (memoryAccess := memoryAccess)
+          (contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions)) with
+      | none => simp [hcall]
+      | some result =>
+          cases result with
+          | mk control steps =>
+              cases hlookup : lookupInfo entry state.returnShapes with
+              | none => simp [hcall, hlookup]
+              | some shape =>
+                  cases control with
+                  | normal locals globals memory ffi =>
+                      simp [hcall, hlookup]
+                  | returned locals globals memory ffi values =>
+                      cases values with
+                      | nil => simp [hcall, hlookup]
+                      | cons value values =>
+                          cases values with
+                          | nil => simp [hcall, hlookup]
+                          | cons value values => simp [hcall, hlookup]
+                  | raised locals globals memory ffi exception value =>
+                      simp [hcall, hlookup]
+                  | broke locals globals memory ffi =>
+                      simp [hcall, hlookup]
+                  | continued locals globals memory ffi =>
+                      simp [hcall, hlookup]
+                  | finalFfi locals globals memory ffi event =>
+                      simp [hcall, hlookup]
+
 end Flapjack

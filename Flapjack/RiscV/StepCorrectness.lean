@@ -269,6 +269,57 @@ theorem executeInstructions_stackCall_pc [NeZero width]
   simp [execute, writeRegister, readRegister,
     nextPc, writeWordValue_registers, jalrTarget, hzeroMoves']
 
+theorem wordCallToRiscVWithStack_prefix_shape [NeZero width]
+    (entry : Word width) (parameters returns arguments destinations : List Nat)
+    (code : List (Instruction width))
+    (hcompile :
+      wordCallToRiscVWithStack entry parameters returns arguments destinations =
+        some code) :
+    ∃ parameterMoves resultMoves,
+      code =
+        parameterMoves ++
+          [.addi 30 30 (0 - BitVec.ofNat width (width / 8)),
+           .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0] ++
+          resultMoves := by
+  cases hmove : wordRegisterMoves (width := width)
+      (parameters.zip arguments) with
+  | none =>
+      simp [wordCallToRiscVWithStack, hmove] at hcompile
+  | some parameterMoves =>
+      cases hresult : wordRegisterMoves (width := width)
+          (destinations.zip returns) with
+      | none =>
+          simp [wordCallToRiscVWithStack, hmove, hresult] at hcompile
+      | some resultMoves =>
+          simp [wordCallToRiscVWithStack, hmove, hresult] at hcompile
+          exact ⟨parameterMoves,
+            resultMoves ++ [.loadWord 1 30,
+              .addi 30 30 (BitVec.ofNat width (width / 8))],
+            by simpa [List.cons_append] using hcompile.2.symm⟩
+
+theorem wordCallToRiscVWithStack_prefix_execute_pc [NeZero width]
+    (state : State width) (entry : Word width)
+    (parameters returns arguments destinations : List Nat)
+    (code : List (Instruction width)) (hzero : ZeroRegister state)
+    (hcompile :
+      wordCallToRiscVWithStack entry parameters returns arguments destinations =
+        some code) :
+    ∃ parameterMoves resultMoves,
+      (executeInstructions state
+        (parameterMoves ++
+          [.addi 30 30 (0 - BitVec.ofNat width (width / 8)),
+           .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])).pc =
+        jalrTarget entry 0 ∧
+      code =
+        parameterMoves ++
+          [.addi 30 30 (0 - BitVec.ofNat width (width / 8)),
+           .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0] ++
+          resultMoves := by
+  rcases wordCallToRiscVWithStack_prefix_shape entry parameters returns arguments
+    destinations code hcompile with ⟨parameterMoves, resultMoves, hcode⟩
+  refine ⟨parameterMoves, resultMoves,
+    executeInstructions_stackCall_pc state entry parameterMoves hzero, hcode⟩
+
 /-! First source-to-machine step relation.  On the straight-line Word
     fragment, successful instruction selection preserves the ordinary Word
     result and the machine executes exactly one step per emitted instruction.

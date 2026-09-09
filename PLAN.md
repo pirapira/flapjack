@@ -2231,6 +2231,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   StackLang entry moves and body evaluation, retaining its colouring checks.
 - [x] Prove that every heuristic graph-allocation branch preserves the source
   to graph-node bijection used by location-aware lowering.
+- [x] Prove that every source represented by a graph allocation's inverse
+  bijection receives a corresponding wordGraphLocations entry.
 
 ## First implementation slice
 

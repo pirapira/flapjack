@@ -36,4 +36,20 @@ example (host : WordFfiHost 8) (state : State 8) :
     executeInstructionsWithFfiCounted host state [] = some (state, 0) := by
   rfl
 
+example (host : WordFfiHost 8) (fuel : Nat) (start returnAddress : Word 8)
+    (code : List (Instruction 8)) (state : State 8) :
+    (executeCodeUntilWithFfiCounted host fuel start returnAddress code state).map
+        Prod.fst =
+      executeCodeUntilWithFfi host fuel start returnAddress code state := by
+  exact executeCodeUntilWithFfiCounted_fst host fuel start returnAddress code state
+
+example (host : WordFfiHost 8) (fuel : Nat) (start returnAddress : Word 8)
+    (code : List (Instruction 8)) (state final : State 8) (count : Nat)
+    (hcount :
+      executeCodeUntilWithFfiCounted host fuel start returnAddress code state =
+        some (final, count)) :
+    count ≤ fuel := by
+  exact executeCodeUntilWithFfiCounted_count_le_fuel host fuel start returnAddress
+    code state final count hcount
+
 end Flapjack.RiscV

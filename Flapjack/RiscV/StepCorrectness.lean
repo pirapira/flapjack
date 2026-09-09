@@ -69,6 +69,149 @@ theorem executeInstructionsWithFfiCounted_spec [NeZero width]
               cases final with
               | mk finalState => simp
 
+/-! Count the instructions traversed by the fuel-bounded code runner.  A
+    successful return-address check costs zero additional instructions; every
+    fetched instruction contributes one to the count. -/
+def executeCodeUntilWithFfiCounted [NeZero width]
+    (host : WordFfiHost width) :
+    Nat → Word width → Word width → List (Instruction width) → State width →
+      Option (State width × Nat)
+  | 0, _, _, _, _ => none
+  | fuel + 1, start, returnAddress, code, state =>
+      if state.pc = returnAddress then
+        some (state, 0)
+      else
+        let byteOffset := (state.pc - start).toNat
+        if byteOffset % 4 ≠ 0 then none
+        else
+          let index := byteOffset / 4
+          match code[index]? with
+          | none => none
+          | some instruction => do
+              let nextState ← executeWithFfi host state instruction
+              let (final, count) ← executeCodeUntilWithFfiCounted host fuel
+                start returnAddress code nextState
+              pure (final, count + 1)
+
+theorem executeCodeUntilWithFfiCounted_fst [NeZero width]
+    (host : WordFfiHost width) (fuel : Nat) (start returnAddress : Word width)
+    (code : List (Instruction width)) (state : State width) :
+    (executeCodeUntilWithFfiCounted host fuel start returnAddress code state).map
+        Prod.fst =
+      executeCodeUntilWithFfi host fuel start returnAddress code state := by
+  induction fuel generalizing state with
+  | zero => rfl
+  | succ fuel ih =>
+      by_cases hpc : state.pc = returnAddress
+      · simp [executeCodeUntilWithFfiCounted, executeCodeUntilWithFfi, hpc]
+      · let byteOffset := (state.pc - start).toNat
+        have hbyteOffset :
+            (state.pc - start).toNat =
+              (2 ^ width - start.toNat + state.pc.toNat) % 2 ^ width := by
+          rfl
+        by_cases halign : byteOffset % 4 = 0
+        · let index := byteOffset / 4
+          have halign' :
+              ((2 ^ width - start.toNat + state.pc.toNat) % 2 ^ width) % 4 = 0 := by
+            simpa [byteOffset, hbyteOffset] using halign
+          cases hcode : code[index]? with
+          | none =>
+              have hcode' :
+                  code[((2 ^ width - start.toNat + state.pc.toNat) % 2 ^ width) / 4]? = none := by
+                simpa [index, byteOffset, hbyteOffset] using hcode
+              simp [executeCodeUntilWithFfiCounted, executeCodeUntilWithFfi,
+                hpc, hbyteOffset, halign', hcode']
+          | some instruction =>
+              have hcode' :
+                  code[((2 ^ width - start.toNat + state.pc.toNat) % 2 ^ width) / 4]? =
+                    some instruction := by
+                simpa [index, byteOffset, hbyteOffset] using hcode
+              cases hstep : executeWithFfi host state instruction with
+              | none =>
+                  have hstep' : executeWithFfi host state instruction = none := hstep
+                  simp [executeCodeUntilWithFfiCounted, executeCodeUntilWithFfi,
+                    hpc, hbyteOffset, halign', hcode', hstep']
+              | some nextState =>
+                  cases hcount : executeCodeUntilWithFfiCounted host fuel start
+                      returnAddress code nextState with
+                  | none =>
+                      simp [executeCodeUntilWithFfiCounted,
+                        executeCodeUntilWithFfi, hpc, hbyteOffset, halign', hcode',
+                        hstep]
+                      rw [← ih nextState, hcount]
+                      rfl
+                  | some result =>
+                      cases result with
+                      | mk final count =>
+                          simp [executeCodeUntilWithFfiCounted,
+                            executeCodeUntilWithFfi, hpc, hbyteOffset, halign', hcode',
+                            hstep]
+                          rw [← ih nextState, hcount]
+                          rfl
+        · have halign' :
+              ((2 ^ width - start.toNat + state.pc.toNat) % 2 ^ width) % 4 ≠ 0 := by
+            simpa [byteOffset, hbyteOffset] using halign
+          simp [executeCodeUntilWithFfiCounted, executeCodeUntilWithFfi,
+            hpc, hbyteOffset, halign']
+
+theorem executeCodeUntilWithFfiCounted_count_le_fuel [NeZero width]
+    (host : WordFfiHost width) (fuel : Nat) (start returnAddress : Word width)
+    (code : List (Instruction width)) (state : State width) :
+    ∀ final count,
+      executeCodeUntilWithFfiCounted host fuel start returnAddress code state =
+        some (final, count) → count ≤ fuel := by
+  induction fuel generalizing state with
+  | zero =>
+      intro final count h
+      simp [executeCodeUntilWithFfiCounted] at h
+  | succ fuel ih =>
+      intro final count h
+      by_cases hpc : state.pc = returnAddress
+      · simp [executeCodeUntilWithFfiCounted, hpc] at h
+        omega
+      · let byteOffset := (state.pc - start).toNat
+        have hbyteOffset :
+            (state.pc - start).toNat =
+              (2 ^ width - start.toNat + state.pc.toNat) % 2 ^ width := by
+          rfl
+        by_cases halign : byteOffset % 4 = 0
+        · let index := byteOffset / 4
+          have halign' :
+              ((2 ^ width - start.toNat + state.pc.toNat) % 2 ^ width) % 4 = 0 := by
+            simpa [byteOffset, hbyteOffset] using halign
+          cases hcode : code[index]? with
+          | none =>
+              have hcode' :
+                  code[((2 ^ width - start.toNat + state.pc.toNat) % 2 ^ width) / 4]? = none := by
+                simpa [index, byteOffset, hbyteOffset] using hcode
+              simp [executeCodeUntilWithFfiCounted, hpc, hbyteOffset, halign', hcode'] at h
+          | some instruction =>
+              have hcode' :
+                  code[((2 ^ width - start.toNat + state.pc.toNat) % 2 ^ width) / 4]? =
+                    some instruction := by
+                simpa [index, byteOffset, hbyteOffset] using hcode
+              cases hstep : executeWithFfi host state instruction with
+              | none =>
+                  simp [executeCodeUntilWithFfiCounted, hpc, hbyteOffset, halign',
+                    hcode', hstep] at h
+              | some nextState =>
+                  cases hcount : executeCodeUntilWithFfiCounted host fuel start
+                      returnAddress code nextState with
+                  | none =>
+                      simp [executeCodeUntilWithFfiCounted, hpc, hbyteOffset, halign',
+                        hcode', hstep, hcount] at h
+                  | some result =>
+                      cases result with
+                      | mk final' count' =>
+                          have hbound := ih nextState final' count' hcount
+                          simp [executeCodeUntilWithFfiCounted, hpc, hbyteOffset,
+                            halign', hcode', hstep, hcount] at h
+                          omega
+        · have halign' :
+              ((2 ^ width - start.toNat + state.pc.toNat) % 2 ^ width) % 4 ≠ 0 := by
+            simpa [byteOffset, hbyteOffset] using halign
+          simp [executeCodeUntilWithFfiCounted, hpc, hbyteOffset, halign'] at h
+
 /-! First source-to-machine step relation.  On the straight-line Word
     fragment, successful instruction selection preserves the ordinary Word
     result and the machine executes exactly one step per emitted instruction.

@@ -2037,6 +2037,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   execution and connect it to the straight-line Word compiler witness.
 - [x] Expose the exact source expression, expression-list, and field-list step
   costs carried by the stepped Pancake evaluator.
+- [x] Expose a counted FFI-aware RISC-V control-flow evaluator, prove its
+  projection to the existing evaluator, and bound successful runs by fuel.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

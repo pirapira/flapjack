@@ -582,6 +582,9 @@ mutual
               pure (restorePanValueControlLocal name oldValue bodyResult,
                 callSteps + bodySteps + 1)
             else none
+        | .raised _ globals memory exception value =>
+            pure (.raised (fun _ => none) globals memory exception value,
+              callSteps + 1)
         | _ => none
     | _fuel + 1, locals, globals, memory,
         .extCall function configuration configurationLength array arrayLength, memoryAccess, _contracts => do

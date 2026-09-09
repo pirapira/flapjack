@@ -8,6 +8,18 @@ def structuredCallTestFunctions : List (FunName × List VarName × Prog Nat) :=
 def structuredNoFfi : PanValueFfiHandler Nat :=
   fun _ _ _ _ _ _ => none
 
+def structuredRaiseFunctions : List (FunName × List VarName × Prog Nat) :=
+  [("raise", [], .raise "E" (.const 9))]
+
+example :
+    (evalPanValueProgWithCallsAndFfi (α := Nat) [] structuredRaiseFunctions structuredNoFfi
+      0 100 8 20 (fun _ => none) (fun _ => none) (fun _ => none)
+      (.decCall "result" .one "raise" [] (.return (.const 0)))).map
+      (fun result => match result with
+        | .raised _ _ _ exception (.word value) => exception == "E" && value == 9
+        | _ => false) = some true := by
+  decide +kernel
+
 def structuredStateFunctions : List (FunName × List VarName × Prog Nat) :=
   [("setGlobal", [], .seq (.assign .global "g" (.const 7)) (.return (.const 1)))]
 

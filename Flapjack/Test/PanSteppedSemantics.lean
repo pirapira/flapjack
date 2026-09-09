@@ -67,6 +67,17 @@ def steppedStructuredStoreLoadProgram : Prog Nat :=
 def steppedTestFunctions : List (FunName × List VarName × Prog Nat) :=
   [("id", ["x"], .return (.var .local "x"))]
 
+def steppedRaiseFunctions : List (FunName × List VarName × Prog Nat) :=
+  [("raise", [], .raise "E" (.const 9))]
+
+#guard
+  (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi [] steppedRaiseFunctions
+    0 100 1 20 (fun _ => none) (fun _ => none) (fun _ => none)
+    (.decCall "result" .one "raise" [] (.return (.const 0)))).map
+      (fun (result, _) => match result with
+        | .raised _ _ _ exception (.word value) => exception == "E" && value == 9
+        | _ => false) = some true
+
 def steppedStateFunctions : List (FunName × List VarName × Prog Nat) :=
   [("setGlobal", [], .seq (.assign .global "g" (.const 7)) (.return (.const 1)))]
 

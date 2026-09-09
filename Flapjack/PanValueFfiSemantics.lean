@@ -370,6 +370,9 @@ mutual
               pure (restorePanValueFfiLocal name oldValue bodyResult,
                 callSteps + bodySteps + 1)
             else none
+        | .raised _ globals memory ffi exception value =>
+            pure (.raised (fun _ => none) globals memory ffi exception value,
+              callSteps + 1)
         | _ => none
     | _fuel + 1, locals, globals, memory, ffi,
         .extCall function configuration configurationLength array arrayLength, memoryAccess,

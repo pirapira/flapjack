@@ -2039,6 +2039,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   costs carried by the stepped Pancake evaluator.
 - [x] Expose a counted FFI-aware RISC-V control-flow evaluator, prove its
   projection to the existing evaluator, and bound successful runs by fuel.
+- [x] Compose the counted RISC-V instruction result with call-aware
+  straight-line Word correctness.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

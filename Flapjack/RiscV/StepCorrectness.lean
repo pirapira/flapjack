@@ -231,4 +231,18 @@ theorem wordProgToRiscV_counted_sound_of_straightLine [NeZero width]
   rw [hsem]
   rfl
 
+theorem wordFunctionToRiscV_counted_sound_of_straightLine [NeZero width]
+    (context : WordCallContext width) (state : State width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCalls context program =
+      some (code, [])) :
+    evalWordFunction state program =
+      some ((executeInstructionsCounted state code).1, []) := by
+  have hsound := wordFunctionToRiscVWithCalls_sound_of_straightLine
+    context state program hstraight code hcompile
+  rw [executeInstructionsCounted_spec]
+  exact hsound
+
 end Flapjack.RiscV

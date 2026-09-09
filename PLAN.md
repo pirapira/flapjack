@@ -2055,6 +2055,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   instructions are statically known to be non-branching.
 - [x] Prove bounded `executeCode` execution agrees with `executeInstructions`
   for arbitrary non-branching code suffixes, with an explicit no-wrap bound.
+- [x] Prove bounded `executeCodeUntil` execution agrees with
+  `executeInstructions` for a non-branching suffix while retaining an
+  arbitrary code tail, including a branch-capable prefix.
 - [x] Add a stepped-semantics regression for CakeML-compatible structured
   store flattening and shape-directed reconstruction (issue #422).
 - [x] Generalize the conditional RISC-V execution contract to every word

@@ -203,9 +203,7 @@ mutual
           (memoryAccess := memoryAccess) (contracts := contracts)
           (memoryHandler := memoryHandler)
         match result with
-        | .normal _ calleeGlobals calleeMemory calleeFfi =>
-            pure (.normal locals calleeGlobals calleeMemory calleeFfi,
-              argumentSteps + steps)
+        | .normal _ _ _ _ => none
         | .returned _ calleeGlobals calleeMemory calleeFfi values =>
             if panValueReturnValid structs contracts function values &&
                 panValueValuesWithinLimit structs values then
@@ -240,10 +238,7 @@ mutual
               | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory calleeFfi exception value,
                   argumentSteps + steps)
             else none
-        | .broke _ calleeGlobals calleeMemory calleeFfi =>
-            pure (.broke locals calleeGlobals calleeMemory calleeFfi, argumentSteps + steps)
-        | .continued _ calleeGlobals calleeMemory calleeFfi =>
-            pure (.continued locals calleeGlobals calleeMemory calleeFfi, argumentSteps + steps)
+        | .broke _ _ _ _ | .continued _ _ _ _ => none
         | .finalFfi _ calleeGlobals calleeMemory calleeFfi event =>
             pure (.finalFfi (fun _ => none) calleeGlobals calleeMemory calleeFfi event,
               argumentSteps + steps)

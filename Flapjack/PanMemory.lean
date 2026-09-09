@@ -487,8 +487,7 @@ mutual
           baseAddress topAddress bytesInWord domain fuel calleeLocals globals memory body
           (contracts := contracts)
         match result with
-        | .normal _ calleeGlobals calleeMemory =>
-            pure (.normal locals calleeGlobals calleeMemory)
+        | .normal _ _ _ => none
         | .returned _ calleeGlobals calleeMemory values =>
             if panValueReturnValid structs contracts function values &&
                 panValueValuesWithinLimit structs values then
@@ -516,10 +515,7 @@ mutual
                   else pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
               | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
             else none
-        | .broke _ calleeGlobals calleeMemory =>
-            pure (.broke (fun _ => none) calleeGlobals calleeMemory)
-        | .continued _ calleeGlobals calleeMemory =>
-            pure (.continued (fun _ => none) calleeGlobals calleeMemory)
+        | .broke _ _ _ | .continued _ _ _ => none
     termination_by fuel _ _ _ _ _ _ => fuel
 
   def evalPanFlatProgFuelWithPrimitiveAndFfi

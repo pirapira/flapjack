@@ -406,8 +406,7 @@ mutual
           calleeLocals globals memory body (memoryAccess := memoryAccess)
           (contracts := contracts) (memoryHandler := memoryHandler)
         match result with
-        | .normal _ calleeGlobals calleeMemory =>
-            pure (.normal locals calleeGlobals calleeMemory, argumentSteps + steps)
+        | .normal _ _ _ => none
         | .returned _ calleeGlobals calleeMemory values =>
             if panValueReturnValid structs contracts function values &&
                 panValueValuesWithinLimit structs values then
@@ -440,10 +439,7 @@ mutual
               | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value,
                   argumentSteps + steps)
             else none
-        | .broke _ calleeGlobals calleeMemory =>
-            pure (.broke locals calleeGlobals calleeMemory, argumentSteps + steps)
-        | .continued _ calleeGlobals calleeMemory =>
-            pure (.continued locals calleeGlobals calleeMemory, argumentSteps + steps)
+        | .broke _ _ _ | .continued _ _ _ => none
     termination_by fuel _ _ _ _ _ _ => fuel
 
   def evalPanValueProgWithPrimitiveCallsAndFfiSteps

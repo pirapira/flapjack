@@ -260,6 +260,92 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
   | program => program
 termination_by program => sizeOf program
 
+/-! The declaration-order and function-permutation helpers used by
+    CakeML's `pan_to_target`.  Keeping these transformations separate from
+    global allocation makes their name-preservation contracts reusable by the
+    target-facing pipeline. -/
+
+def globalRenameFunctionName [BEq String]
+    (source target name : FunName) : FunName :=
+  if source == name then target else if target == name then source else name
+
+def globalRenameProg [BEq String]
+    (source target : FunName) : Prog α → Prog α
+  | .dec name shape value body =>
+      .dec name shape value (globalRenameProg source target body)
+  | .seq first second =>
+      .seq (globalRenameProg source target first) (globalRenameProg source target second)
+  | .ite condition thenBranch elseBranch =>
+      .ite condition (globalRenameProg source target thenBranch)
+        (globalRenameProg source target elseBranch)
+  | .while condition body =>
+      .while condition (globalRenameProg source target body)
+  | .call info function arguments =>
+      let renamedInfo := match info with
+        | none => none
+        | some (returns, none) => some (returns, none)
+        | some (returns, some (exception, handlerVar, handler)) =>
+            some (returns, some (exception, handlerVar,
+              globalRenameProg source target handler))
+      .call renamedInfo (globalRenameFunctionName source target function) arguments
+  | .decCall name shape function arguments body =>
+      .decCall name shape (globalRenameFunctionName source target function) arguments
+        (globalRenameProg source target body)
+  | program => program
+termination_by program => sizeOf program
+
+def globalRenameDecls [BEq String]
+    (source target : FunName) : List (Decl α) → List (Decl α)
+  | [] => []
+  | .function declaration :: declarations =>
+      .function { declaration with
+        name := globalRenameFunctionName source target declaration.name
+        body := globalRenameProg source target declaration.body } ::
+        globalRenameDecls source target declarations
+  | declaration :: declarations =>
+      declaration :: globalRenameDecls source target declarations
+termination_by declarations => sizeOf declarations
+
+def globalFunctionNames : List (Decl α) → List FunName
+  | [] => []
+  | .function declaration :: declarations =>
+      declaration.name :: globalFunctionNames declarations
+  | _ :: declarations => globalFunctionNames declarations
+termination_by declarations => sizeOf declarations
+
+def globalDeclsFilter (predicate : Decl α → Bool) : List (Decl α) → List (Decl α)
+  | [] => []
+  | declaration :: declarations =>
+      if predicate declaration then
+        declaration :: globalDeclsFilter predicate declarations
+      else globalDeclsFilter predicate declarations
+termination_by declarations => sizeOf declarations
+
+def globalDeclIsName : Decl α → Bool
+  | .name _ _ => true
+  | _ => false
+
+def globalDeclIsException : Decl α → Bool
+  | .exnDecl _ _ => true
+  | _ => false
+
+def globalDeclIsGlobal : Decl α → Bool
+  | .decl _ _ _ => true
+  | _ => false
+
+def globalDeclIsFunction : Decl α → Bool
+  | .function _ => true
+  | _ => false
+
+def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
+  globalDeclsFilter globalDeclIsName declarations ++
+    globalDeclsFilter globalDeclIsException declarations ++
+    globalDeclsFilter globalDeclIsGlobal declarations ++
+    globalDeclsFilter globalDeclIsFunction declarations
+
+def globalNewMainName [BEq String] (declarations : List (Decl α)) : FunName :=
+  globalFreshName "main" (globalFunctionNames declarations)
+
 def globalCollect [Add α] [Mul α] (context : GlobalPassContext α) :
     List (Decl α) → GlobalPassContext α
   | [] => context

@@ -161,6 +161,49 @@ example :
   simp [globalCompileProg, globalTestContext, lookupInfo]
 
 example :
+    globalRenameProg (α := Nat) "main" "main'"
+      (.seq
+        (.call (some (none, some ("E", "x",
+          .decCall "r" .one "main" [] .skip))) "main" [])
+        (.decCall "r" .one "worker" []
+          (.call none "main'" []))) =
+      (.seq
+        (.call (some (none, some ("E", "x",
+          .decCall "r" .one "main'" [] .skip))) "main'" [])
+        (.decCall "r" .one "worker" []
+          (.call none "main" []))) := by
+  simp [globalRenameProg, globalRenameFunctionName]
+
+example :
+    (globalResortDecls
+      ([.function
+        { name := "f", inline := false, exported := false,
+          params := [], body := .skip, returnShape := .one },
+       .decl .one "g" (.const 0),
+       .name "S" [],
+       .exnDecl "E" .one,
+       .function
+        { name := "h", inline := false, exported := false,
+          params := [], body := .skip, returnShape := .one }] : List (Decl Nat))).map
+      (fun declaration => match declaration with
+        | .name name _ => "name:" ++ name
+        | .exnDecl exception _ => "exn:" ++ exception
+        | .decl _ name _ => "global:" ++ name
+        | .function function => "function:" ++ function.name) =
+      ["name:S", "exn:E", "global:g", "function:f", "function:h"] := by
+  decide +kernel
+
+example :
+    globalNewMainName
+      ([.function
+        { name := "main", inline := false, exported := false,
+          params := [], body := .skip, returnShape := .one },
+       .function
+        { name := "main'", inline := false, exported := false,
+          params := [], body := .skip, returnShape := .one }] : List (Decl Nat)) = "main''" := by
+  decide +kernel
+
+example :
     let result := globalCompileTop (α := Nat) 1 id
       [.decl .one "g" (.const 7), .function
         { name := "main", inline := false, exported := true, params := [],

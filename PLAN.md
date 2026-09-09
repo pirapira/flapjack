@@ -2029,6 +2029,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   RISC-V pipelines with executable artifact regressions.
 - [x] Export the RISC-V Word-to-Stack, spill-state, and StackRemove correctness
   contracts through the public Flapjack library aggregate.
+- [x] Lift the register-colouring FFI agreement to the handler-aware Word
+  evaluator used by composed call and loop correctness proofs.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

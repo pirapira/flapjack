@@ -1095,4 +1095,62 @@ theorem evalWordFfi_applyColour [NeZero width]
       simp_all [
         ]
 
+/-! Lift the FFI colouring contract to the handler-aware Word evaluator used
+by call and loop correctness.  The machine state is returned as a normal
+control result here, so this is the boundary consumed by the composed
+handler/FFI simulation rather than only by the legacy pair-valued evaluator. -/
+
+theorem evalWordFunctionWithHandlersAndFfi_ffi_applyColour [NeZero width]
+    (colour : Nat → Nat) (source target : State width)
+    (sourceHandler targetHandler : FunName → Word width → Word width →
+      Word width → Word width → State width → Option (State width))
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (colour name)
+        pure (readRegister target register)))
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (live : List Nat × List Nat)
+    (hhandler :
+      (do
+        let configuration ← registerOfNat configuration
+        let configurationLength ← registerOfNat configurationLength
+        let array ← registerOfNat array
+        let arrayLength ← registerOfNat arrayLength
+        sourceHandler function (readRegister source configuration)
+          (readRegister source configurationLength) (readRegister source array)
+          (readRegister source arrayLength) source) =
+      (do
+        let configuration ← registerOfNat (colour configuration)
+        let configurationLength ← registerOfNat (colour configurationLength)
+        let array ← registerOfNat (colour array)
+        let arrayLength ← registerOfNat (colour arrayLength)
+        targetHandler function (readRegister target configuration)
+          (readRegister target configurationLength) (readRegister target array)
+          (readRegister target arrayLength) target)) :
+    evalWordFunctionWithHandlersAndFfi [] sourceHandler 1 source
+      (.ffi function configuration configurationLength array arrayLength live) =
+    evalWordFunctionWithHandlersAndFfi [] targetHandler 1 target
+      (.ffi function (colour configuration) (colour configurationLength)
+        (colour array) (colour arrayLength)
+        (live.1.map colour, live.2.map colour)) := by
+  simp only [evalWordFunctionWithHandlersAndFfi]
+  cases hconfiguration : registerOfNat configuration <;>
+    cases hconfigurationLength : registerOfNat configurationLength <;>
+    cases harray : registerOfNat array <;>
+    cases harrayLength : registerOfNat arrayLength <;>
+    cases hconfiguration' : registerOfNat (colour configuration) <;>
+    cases hconfigurationLength' : registerOfNat (colour configurationLength) <;>
+    cases harray' : registerOfNat (colour array) <;>
+    cases harrayLength' : registerOfNat (colour arrayLength) <;>
+    all_goals
+      have hconfigurationValue := hregister configuration
+      have hconfigurationLengthValue := hregister configurationLength
+      have harrayValue := hregister array
+      have harrayLengthValue := hregister arrayLength
+      simp_all
+
 end Flapjack

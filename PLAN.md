@@ -2075,6 +2075,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   link/stack restoration contract.
 - [x] Compose the complete stack-call compiler layout with the callee-return
   state and generated result/restore suffix contract.
+- [x] Prove generated result moves transfer all callee return values to caller
+  destinations through the non-tail return restoration suffix.
 - [x] Prove exact PC advancement for any RISC-V code segment whose
   instructions are statically known to be non-branching.
 - [x] Prove bounded `executeCode` execution agrees with `executeInstructions`

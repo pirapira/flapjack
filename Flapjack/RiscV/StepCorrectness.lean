@@ -753,6 +753,56 @@ theorem wordCallToRiscVWithStack_full_return_contract [NeZero width]
             hreturn.2.2⟩
           simpa [List.cons_append, List.append_assoc] using hcompile.2.symm
 
+theorem executeInstructions_stackCall_restore_read_register [NeZero width]
+    (state : State width) (register : Fin 32)
+    (hregisterNoLink : register ≠ 1)
+    (hregisterNoStack : register ≠ 30) :
+    readRegister (executeInstructions state
+      [.loadWord 1 30, .addi 30 30 (BitVec.ofNat width (width / 8))]) register =
+      readRegister state register := by
+  simp [executeInstructions, execute, writeRegister, readRegister, nextPc,
+    hregisterNoLink, hregisterNoStack]
+
+theorem wordRegisterMoves_execute_stackCall_result_transfer [NeZero width]
+    (state : State width) (moves : List (Nat × Nat))
+    (code : List (Instruction width))
+    (hvalid : ∀ move, move ∈ moves →
+      move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
+    (hdestNonzero : ∀ move, move ∈ moves → move.1 ≠ 0)
+    (hdestinations : (moves.map Prod.fst).Nodup)
+    (hnoSource : ∀ move, move ∈ moves →
+      move.2 ∉ moves.map Prod.fst)
+    (hnotLink : ∀ move, move ∈ moves → move.1 ≠ 1)
+    (hnotStack : ∀ move, move ∈ moves → move.1 ≠ 30)
+    (hcompile : wordRegisterMoves (width := width) moves = some code) :
+    ∀ move (hmove : move ∈ moves),
+      readRegister (executeInstructions state
+        (code ++
+          [.loadWord 1 30, .addi 30 30 (BitVec.ofNat width (width / 8))]))
+        ⟨move.1, (hvalid move hmove).1⟩ =
+      readRegister state ⟨move.2, (hvalid move hmove).2.1⟩ := by
+  have hshape := wordRegisterMoves_shape moves code hvalid hcompile
+  have hsourcePreserved := executeWordMoves_preserves_sources state moves
+    hdestinations hnoSource hvalid hdestNonzero
+  subst code
+  intro move hmove
+  have hdestination := hvalid move hmove
+  have hregisterNoLink :
+      (⟨move.1, hdestination.1⟩ : Fin 32) ≠ 1 := by
+    intro heq
+    apply hnotLink move hmove
+    exact congrArg Fin.val heq
+  have hregisterNoStack :
+      (⟨move.1, hdestination.1⟩ : Fin 32) ≠ 30 := by
+    intro heq
+    apply hnotStack move hmove
+    exact congrArg Fin.val heq
+  rw [executeInstructions_append]
+  rw [executeInstructions_stackCall_restore_read_register
+    (hregisterNoLink := hregisterNoLink)
+    (hregisterNoStack := hregisterNoStack)]
+  exact hsourcePreserved move hmove
+
 theorem executeInstructions_pc_fold_of_nonbranching [NeZero width]
     (state : State width) (code : List (Instruction width))
     (hcode : ∀ instruction ∈ code, instruction.isBranch = false) :

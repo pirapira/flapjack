@@ -113,6 +113,37 @@ example :
   simp [globalCompileProg, globalCompileExp, globalTestContext, lookupInfo]
 
 example :
+    globalCompileProg globalTestContext
+        (.call (some (some (.global, "g"), none)) "id" [.const 7]) =
+      .decCall "" .one "id" [.const 7]
+        (.store (.op .sub [.topAddr, .const 8]) (.var .local "")) := by
+  simp [globalCompileProg, globalCompileExpList,
+    globalCompileExp, globalTestContext, lookupInfo]
+
+example :
+    globalCompileProg globalTestContext
+        (.call (some (some (.global, "missing"), none)) "id" [.const 7]) =
+      .call (some (none, none)) "id" [.const 7] := by
+  simp [globalCompileProg, globalCompileExpList,
+    globalCompileExp, globalTestContext, lookupInfo]
+
+example :
+    globalCompileProg globalTestContext
+        (.call (some (some (.global, "g"), some ("E", "exception", .skip)))
+          "id" [.const 7]) =
+      .dec "" .one (.const 0)
+        (.dec "'" .one (.const 0)
+          (.seq
+            (.call (some (some (.local, ""), some ("E", "exception",
+              (.seq .skip (.assign .local "'" (.const 1))))))
+              "id" [.const 7])
+            (.ite (.var .local "'") .skip
+              (.store (.op .sub [.topAddr, .const 8]) (.var .local ""))))) := by
+  simp [globalCompileProg, globalCompileExpList, globalCompileExp,
+    globalFreshName, globalFreshNameAux, globalApostrophes, globalFreeVars,
+    globalExpVars, globalShapeVal, globalTestContext, lookupInfo]
+
+example :
     let result := globalCompileTop (α := Nat) 1 id
       [.decl .one "g" (.const 7), .function
         { name := "main", inline := false, exported := true, params := [],

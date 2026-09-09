@@ -58,6 +58,105 @@ where
   termination_by expressions => sizeOf expressions
   decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
+def globalExpVars : Exp α → List VarName
+  | .const _ => []
+  | .var _ name => [name]
+  | .rStruct fields => globalExpVarsList fields
+  | .rField _ value => globalExpVars value
+  | .nStruct _ fields => globalExpVarsFieldList fields
+  | .nField _ value => globalExpVars value
+  | .load _ address => globalExpVars address
+  | .load32 address => globalExpVars address
+  | .loadByte address => globalExpVars address
+  | .op _ arguments => globalExpVarsList arguments
+  | .panOp _ arguments => globalExpVarsList arguments
+  | .cmp _ left right => globalExpVars left ++ globalExpVars right
+  | .shift _ left right => globalExpVars left ++ globalExpVars right
+  | .baseAddr => []
+  | .topAddr => []
+  | .bytesInWord => []
+termination_by expression => sizeOf expression
+where
+  globalExpVarsList : List (Exp α) → List VarName
+    | [] => []
+    | expression :: expressions => globalExpVars expression ++ globalExpVarsList expressions
+  termination_by expressions => sizeOf expressions
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+  globalExpVarsFieldList : List (FieldName × Exp α) → List VarName
+    | [] => []
+    | (_, expression) :: fields => globalExpVars expression ++ globalExpVarsFieldList fields
+  termination_by fields => sizeOf fields
+  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def globalCompileExpList [BEq String] (context : GlobalPassContext α) :
+    List (Exp α) → List (Exp α)
+  | [] => []
+  | expression :: expressions =>
+      globalCompileExp context expression :: globalCompileExpList context expressions
+termination_by expressions => sizeOf expressions
+decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+def globalFreeVars : Prog α → List VarName
+  | .skip => []
+  | .dec name _ value body =>
+      globalExpVars value ++ (globalFreeVars body).filter (· != name)
+  | .assign kind name value =>
+      (if kind == .local then [name] else []) ++ globalExpVars value
+  | .primitive name _ arguments => name :: arguments.flatMap globalExpVars
+  | .store address value => globalExpVars address ++ globalExpVars value
+  | .store32 address value => globalExpVars address ++ globalExpVars value
+  | .storeByte address value => globalExpVars address ++ globalExpVars value
+  | .seq first second => globalFreeVars first ++ globalFreeVars second
+  | .ite condition thenBranch elseBranch =>
+      globalExpVars condition ++ globalFreeVars thenBranch ++ globalFreeVars elseBranch
+  | .while condition body => globalExpVars condition ++ globalFreeVars body
+  | .break => []
+  | .continue => []
+  | .call info _ arguments =>
+      let destination := match info with
+        | some (some (kind, name), _) => if kind == .local then [name] else []
+        | _ => []
+      let handler := match info with
+        | some (_, some (_, handlerVar, program)) => handlerVar :: globalFreeVars program
+        | _ => []
+      destination ++ handler ++ arguments.flatMap globalExpVars
+  | .decCall name _ _ arguments body =>
+      name :: globalFreeVars body ++ arguments.flatMap globalExpVars
+  | .extCall _ configuration configurationLength array arrayLength =>
+      globalExpVars configuration ++ globalExpVars configurationLength ++
+        globalExpVars array ++ globalExpVars arrayLength
+  | .raise _ value => globalExpVars value
+  | .return value => globalExpVars value
+  | .shMemLoad _ kind name address =>
+      (if kind == .local then [name] else []) ++ globalExpVars address
+  | .shMemStore _ address value => globalExpVars address ++ globalExpVars value
+  | .tick => []
+  | .annot _ _ => []
+termination_by program => sizeOf program
+
+def globalApostrophes : Nat → String
+  | 0 => ""
+  | count + 1 => "'" ++ globalApostrophes count
+
+def globalFreshNameAux [BEq String] (name : String) (names : List String) :
+    Nat → Nat → String
+  | candidate, 0 => name ++ globalApostrophes candidate
+  | candidate, fuel + 1 =>
+      let candidateName := name ++ globalApostrophes candidate
+      if names.contains candidateName then
+        globalFreshNameAux name names (candidate + 1) fuel
+      else candidateName
+
+def globalFreshName [BEq String] (name : String) (names : List String) : String :=
+  globalFreshNameAux name names 0 names.length
+
+def globalShapeVal (context : GlobalPassContext α) : Shape → Exp α
+  | .one => .const (context.fromNat 0)
+  | .named _ => .const (context.fromNat 0)
+  | .comb shapes => .rStruct (shapes.map (globalShapeVal context))
+termination_by shape => sizeOf shape
+
 def globalCompileProg [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) : Prog α → Prog α
   | .dec name shape value body =>
@@ -72,7 +171,7 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
   | .assign .local name value =>
       .assign .local name (globalCompileExp context value)
   | .primitive name operator arguments =>
-      .primitive name operator (globalCompileExps context arguments)
+      .primitive name operator (globalCompileExpList context arguments)
   | .store address value =>
       .store (globalCompileExp context address) (globalCompileExp context value)
   | .store32 address value =>
@@ -87,14 +186,55 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
   | .while condition body =>
       .while (globalCompileExp context condition) (globalCompileProg context body)
   | .call info function arguments =>
-      let compiledInfo := match info with
-        | none => none
-        | some (returns, none) => some (returns, none)
-        | some (returns, some (exception, handlerVar, handler)) =>
-            some (returns, some (exception, handlerVar, globalCompileProg context handler))
-      .call compiledInfo function (globalCompileExps context arguments)
+      let compiledArguments := globalCompileExpList context arguments
+      match info with
+        | none => .call none function compiledArguments
+        | some (none, none) =>
+            .call (some (none, none)) function compiledArguments
+        | some (none, some (exception, handlerVar, handler)) =>
+            .call (some (none, some (exception, handlerVar,
+              globalCompileProg context handler))) function compiledArguments
+        | some (some (.local, name), none) =>
+            .call (some (some (.local, name), none)) function compiledArguments
+        | some (some (.local, name), some (exception, handlerVar, handler)) =>
+            .call (some (some (.local, name), some (exception, handlerVar,
+              globalCompileProg context handler))) function compiledArguments
+        | some (some (.global, name), none) =>
+            match lookupInfo name context.globals with
+            | some (shape, address) =>
+                .decCall "" shape function compiledArguments
+                  (.store (.op .sub [.topAddr, .const address])
+                    (.var .local ""))
+            | none =>
+                .call (some (none, none)) function compiledArguments
+        | some (some (.global, name), some (exception, handlerVar, handler)) =>
+            match lookupInfo name context.globals with
+            | some (shape, address) =>
+                let compiledHandlerProgram := globalCompileProg context handler
+                let names := handlerVar :: globalFreeVars compiledHandlerProgram ++
+                  compiledArguments.flatMap globalExpVars
+                let resultName := globalFreshName "" names
+                let flagName := globalFreshName resultName (resultName :: names)
+                let handlerBody :=
+                  .seq compiledHandlerProgram
+                    (.assign .local flagName (.const (context.fromNat 1)))
+                let callInfo := some (some (.local, resultName),
+                  some (exception, handlerVar, handlerBody))
+                let callProgram : Prog α :=
+                  .call callInfo function compiledArguments
+                let storeAddress : Exp α :=
+                  .op .sub [.topAddr, .const address]
+                .dec resultName shape (globalShapeVal context shape)
+                  (.dec flagName .one (.const (context.fromNat 0))
+                    (.seq callProgram
+                      (.ite (.var .local flagName) .skip
+                        (.store storeAddress
+                          (.var .local resultName)))))
+            | none =>
+                .call (some (none, some (exception, handlerVar,
+                  globalCompileProg context handler))) function compiledArguments
   | .decCall name shape function arguments body =>
-      .decCall name shape function (globalCompileExps context arguments)
+      .decCall name shape function (globalCompileExpList context arguments)
         (globalCompileProg context body)
   | .extCall function configuration configurationLength array arrayLength =>
       .extCall function (globalCompileExp context configuration)
@@ -108,14 +248,6 @@ def globalCompileProg [BEq String] [Add α] [Mul α]
       .shMemStore size (globalCompileExp context address) (globalCompileExp context value)
   | program => program
 termination_by program => sizeOf program
-where
-  globalCompileExps [BEq String] (context : GlobalPassContext α) :
-      List (Exp α) → List (Exp α)
-    | [] => []
-    | expression :: expressions =>
-        globalCompileExp context expression :: globalCompileExps context expressions
-  termination_by expressions => sizeOf expressions
-  decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
 def globalCollect [Add α] [Mul α] (context : GlobalPassContext α) :
     List (Decl α) → GlobalPassContext α

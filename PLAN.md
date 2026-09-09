@@ -1890,6 +1890,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   artifact.
 - [x] Link the full-SSA bitmap path with separate raise, StoreConsts, and
   simple-GC runtime sections, reserving their labels before compiled functions.
+- [x] Add a halt-aware linked Lab entrypoint for the full-SSA bitmap/simple-GC
+  artifact, retaining section addresses for machine-level execution proofs.
 - [x] Expose source-order bitmap threading through the allocated Word-to-Stack
   function pipeline, including a compositional append equation.
 - [x] Add abstract and bounded FFI loop-break simulation equations, with

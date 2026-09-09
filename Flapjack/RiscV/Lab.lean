@@ -453,6 +453,25 @@ def compileLabProgramLinked [NeZero width] (context : WordFfiContext)
   let labels := labCollectProgramLabels 0 program
   compileLabProgramLinkedAux context labels 0 program
 
+def compileLabProgramLinkedWithHaltAux [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (base haltPc : Nat) : LabProgram (Word width) →
+      Option (List (Nat × Word width × List (Instruction width)))
+  | [] => some []
+  | sectionData :: sections => do
+      let code ← labCompileProgramLinesWithHalt context labels base haltPc
+        sectionData.lines
+      let rest ← compileLabProgramLinkedWithHaltAux context labels
+        (base + 4 * labSectionInstructionCount sectionData) haltPc sections
+      pure ((sectionData.name, BitVec.ofNat width base, code) :: rest)
+
+def compileLabProgramLinkedWithHalt [NeZero width] (context : WordFfiContext)
+    (program : LabProgram (Word width)) :
+    Option (List (Nat × Word width × List (Instruction width))) :=
+  let labels := labCollectProgramLabels 0 program
+  let haltPc := 4 * labProgramInstructionCount program
+  compileLabProgramLinkedWithHaltAux context labels 0 haltPc program
+
 def compileStackProgramListToRiscV [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)
     (entryLabel initialLabel : Nat)
@@ -538,6 +557,24 @@ def compileStackProgramNatListLinkedToRiscV [NeZero width]
     ((programs.map (fun (sectionId, program) =>
       labProgramToEntrySection sectionId entryLabel initialLabel
         (stackRemoveComplete config program))).map labSectionNatToWord)
+
+/-! Linked counterpart of the bitmap/simple-GC entry point.  Keeping the
+runtime sections in the same Lab linker as ordinary functions preserves their
+resolved entry addresses for machine-level correctness harnesses. -/
+def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscV
+    [NeZero width]
+    (context : WordFfiContext) (removeConfig : StackRemoveConfig)
+    (allocConfig : StackAllocConfig) (gcConfig : StackGcConfig)
+    (storeConstsLocation registerCount : Nat)
+    (entryLabel initialLabel : Nat)
+    (programs : List (Nat × StackProg Nat)) :
+    Option (List (Nat × Word width × List (Instruction width))) :=
+  compileLabProgramLinkedWithHalt context
+    (((((stackRaiseStubLocation, stackRaiseStub false removeConfig.addressScratch) ::
+      stackAllocCompileWithSimpleGcAndStoreConsts allocConfig gcConfig
+        storeConstsLocation registerCount programs).map (fun (sectionId, program) =>
+          labProgramToEntrySection sectionId entryLabel initialLabel
+            (stackRemoveComplete removeConfig program))).map labSectionNatToWord))
 
 def compileStackProgramNatListLinkedWithRaiseStubToRiscV [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)

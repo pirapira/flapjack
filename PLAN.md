@@ -2041,6 +2041,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   projection to the existing evaluator, and bound successful runs by fuel.
 - [x] Compose the counted RISC-V instruction result with call-aware
   straight-line Word correctness.
+- [x] Prove the machine PC contract for a register-move sequence followed by
+  the RISC-V tail-call jump.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

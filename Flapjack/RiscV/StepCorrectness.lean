@@ -212,6 +212,25 @@ theorem executeCodeUntilWithFfiCounted_count_le_fuel [NeZero width]
             simpa [byteOffset, hbyteOffset] using halign
           simp [executeCodeUntilWithFfiCounted, hpc, hbyteOffset, halign'] at h
 
+theorem executeInstructions_tailCall_pc [NeZero width]
+    (state : State width) (entry : Word width)
+    (moves : List (Instruction width)) (hzero : ZeroRegister state) :
+    (executeInstructions state
+      (moves ++ [.addi 31 0 entry, .jalr 0 31 0])).pc =
+      jalrTarget entry 0 := by
+  have hzeroMoves : ZeroRegister (executeInstructions state moves) := by
+    induction moves generalizing state with
+    | nil => exact hzero
+    | cons instruction moves ih =>
+        exact ih (execute state instruction)
+          (execute_zeroRegister_preserved state instruction hzero)
+  have hzeroMoves' :
+      (executeInstructions state moves).registers 0 = 0 := by
+    simpa [ZeroRegister, readRegister] using hzeroMoves
+  rw [executeInstructions_append]
+  simp [executeInstructions, execute, writeRegister, readRegister,
+    nextPc, jalrTarget, hzeroMoves']
+
 /-! First source-to-machine step relation.  On the straight-line Word
     fragment, successful instruction selection preserves the ordinary Word
     result and the machine executes exactly one step per emitted instruction.

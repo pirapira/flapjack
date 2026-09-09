@@ -63,4 +63,11 @@ example (context : WordCallContext 8) (state : State 8)
   · exact .assign 2 (.var 1)
   · exact hcompile
 
+example (state : State 8) (entry : Word 8) (moves : List (Instruction 8))
+    (hzero : ZeroRegister state) :
+    (executeInstructions state
+      (moves ++ [.addi 31 0 entry, .jalr 0 31 0])).pc =
+      jalrTarget entry 0 := by
+  exact executeInstructions_tailCall_pc state entry moves hzero
+
 end Flapjack.RiscV

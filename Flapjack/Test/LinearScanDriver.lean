@@ -1,4 +1,4 @@
-import Flapjack.RiscV.LinearScanPipeline
+import Flapjack.RiscV.CorrectnessLinearScanStack
 
 /-! Regression coverage for function-level linear-scan pipeline integration. -/
 
@@ -64,5 +64,22 @@ example
   exact wordAllocateLinearScanFunctionWithEntry_maps_parameters
     parameters program colours stackStart state renamedParameters allocation
     renamedProgram halloc
+
+example [NeZero width]
+    (config : RiscV.WordStackConfig) (parameters : List Nat)
+    (program : WordProg (RiscV.Word width)) (colours stackStart : Nat)
+    (ssaState : WordSsaState) (renamedParameters : List Nat)
+    (allocation : WordLinearScanState)
+    (renamedProgram : WordProg (RiscV.Word width)) (stackProgram : StackProg Nat)
+    (hbridge : RiscV.wordAllocateLinearScanFunctionWithEntryToStack config
+      parameters program colours stackStart =
+      some (ssaState, renamedParameters, allocation, renamedProgram,
+        stackProgram)) :
+    RiscV.wordToStackFunctionWithParameters
+      { config with locations := wordLinearScanLocations allocation }
+      renamedParameters renamedProgram = some stackProgram := by
+  exact RiscV.wordAllocateLinearScanFunctionWithEntryToStack_stack_result
+    config parameters program colours stackStart ssaState renamedParameters
+    allocation renamedProgram stackProgram hbridge
 
 end Flapjack

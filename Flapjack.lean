@@ -39,6 +39,7 @@ import Flapjack.RiscV.LinearScan
 import Flapjack.RiscV.LinearScanSource
 import Flapjack.RiscV.LinearScanDriver
 import Flapjack.RiscV.LinearScanPipeline
+import Flapjack.RiscV.CorrectnessLinearScanStack
 import Flapjack.RiscV.AllocationModePipeline
 import Flapjack.RiscV.OracleAllocator
 import Flapjack.RiscV.AllocatorCorrectness

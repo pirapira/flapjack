@@ -93,6 +93,7 @@ import Flapjack.Test.CorrectnessStackDynamicStore
 import Flapjack.Test.CorrectnessStackSize
 import Flapjack.Test.CorrectnessStackSetSize
 import Flapjack.Test.CorrectnessStackDelta
+import Flapjack.Test.CorrectnessStackDeltaGeneral
 import Flapjack.Test.CorrectnessBitmapLoad
 import Flapjack.Test.CorrectnessStackOpCurrHeap
 import Flapjack.Test.CorrectnessStackCurrHeap

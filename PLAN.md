@@ -2206,6 +2206,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   scratch and address-scratch shift-register layouts.
 - [x] Prove the one-chunk StackRemove frame allocation and release lowerings on
   RISC-V, including their zero-word no-op cases.
+- [x] Lift the StackRemove frame-allocation evaluator contract from one chunk to
+  arbitrary recursively split frame sizes.
 - [x] Prove the StackRemove bitmap-load lowering against the RISC-V byte-memory
   model, including bitmap-base lookup and word-index scaling.
 - [x] Connect StackRemove OpCurrHeap to the generic RISC-V binary-operation

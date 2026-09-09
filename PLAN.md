@@ -254,6 +254,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   including heap-relative global loads/stores and adjusted `TopAddr`.
 - [x] Add global declaration address collection and explicit initializer
   programs for composing the global pass with later compiler stages.
+- [x] Port the CakeML top-level declaration ordering and two-name function
+  permutation helpers used by `pan_to_target`, including recursive call and
+  handler traversal.
 - [x] Compose the ported front-end, global, Crepe, Loop, and Word passes in an
   executable pipeline that exposes every intermediate artifact.
 - [x] Match CakeML `pan_to_target` entry preparation by moving a user `main`

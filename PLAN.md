@@ -2058,6 +2058,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Prove bounded `executeCodeUntil` execution agrees with
   `executeInstructions` for a non-branching suffix while retaining an
   arbitrary code tail, including a branch-capable prefix.
+- [x] Generalize the bounded `executeCodeUntil` suffix contract to surplus
+  fuel, as required when a conditional skips one of its bodies.
 - [x] Add a stepped-semantics regression for CakeML-compatible structured
   store flattening and shape-directed reconstruction (issue #422).
 - [x] Generalize the conditional RISC-V execution contract to every word
@@ -2066,6 +2068,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   correctness theorem to the same supported widths, with a 32-bit regression.
 - [x] Prove a source-to-machine register simulation equation for the
   conditional Word compiler, including 32-bit coverage.
+- [x] Prove bounded execution of variable-length conditional layouts, including
+  branch-over-then, unconditional jump-over-else, and post-layout stopping.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

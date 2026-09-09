@@ -2059,6 +2059,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   width at least five bits, with 32-bit and 64-bit regressions.
 - [x] Generalize the conditional Word-to-RISC-V compiler and execution
   correctness theorem to the same supported widths, with a 32-bit regression.
+- [x] Prove a source-to-machine register simulation equation for the
+  conditional Word compiler, including 32-bit coverage.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

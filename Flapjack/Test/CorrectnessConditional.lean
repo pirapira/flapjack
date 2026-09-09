@@ -65,4 +65,17 @@ example (state : State 32) (hpc : state.pc = 0)
         some (2 : Word 32) := by
   exact executeCode_ite_assign state hpc hzero (by decide)
 
+example (state : State 32) (hpc : state.pc = 0)
+    (hzero : ZeroRegister state) :
+    (evalWordFunction state
+      ((.ite .equal 1 (.reg 2)
+        (.assign 3 (.const (1 : Word 32)))
+        (.assign 3 (.const (2 : Word 32)))) : WordProg (Word 32))).map
+      (fun result => readRegister result.1 3) =
+      (executeCode 5 0
+        [.branchNe 1 2 (BitVec.ofNat 32 12), .addi 3 0 1,
+          .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2] state).map
+        (fun finalState => readRegister finalState 3) := by
+  exact evalWordFunction_ite_assign_riscV_register state hpc hzero (by decide)
+
 end Flapjack.Test.CorrectnessConditional

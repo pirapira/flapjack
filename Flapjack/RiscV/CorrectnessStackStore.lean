@@ -34,6 +34,25 @@ theorem writeRegister_memory (state : State width) (register : Fin 32)
   unfold writeRegister
   split <;> rfl
 
+theorem executeStoreWord_memory [NeZero width]
+    (state target : State width) (sourceRegister addressRegister : Fin 32)
+    (address value : Word width)
+    (haddress :
+      readRegister state addressRegister = address)
+    (hvalue :
+      readRegister state sourceRegister = value)
+    (hmemory : state.memory = target.memory) :
+    (execute state (.storeWord sourceRegister addressRegister)).memory =
+      (writeWordValue target address value).memory := by
+  change (writeWordValue
+      { state with pc := nextPc state }
+      (readRegister state addressRegister)
+      (readRegister state sourceRegister)).memory =
+    (writeWordValue target address value).memory
+  rw [haddress, hvalue]
+  apply foldWriteBytes_memory
+  simp [hmemory]
+
 theorem executeStackRemoveStackStore_move_memory [NeZero width]
     (config : StackRemoveConfig) (source : WordStackMachineState width)
     (target : State width) (register offset : Nat)
@@ -195,5 +214,111 @@ theorem executeStackRemoveStackStore_move_memory [NeZero width]
   rw [hstoreAddress, hstoreValue]
   apply foldWriteBytes_memory
   simp [hafterAddressMemory]
+
+theorem executeStackRemoveStackStore_same_memory [NeZero width]
+    (config : StackRemoveConfig) (source : WordStackMachineState width)
+    (target : State width) (register offset : Nat)
+    (hstackPointer : config.stackPointer < 32)
+    (haddressScratch : config.addressScratch < 32)
+    (hscratchRegister : config.scratch < 32)
+    (haddressScratchNonzero : config.addressScratch ≠ 0)
+    (hstackPointerAddressScratch : config.stackPointer ≠ config.addressScratch)
+    (hscratchAddressScratch : config.scratch ≠ config.addressScratch)
+    (hvalue :
+      target.registers ⟨config.scratch, hscratchRegister⟩ =
+        source.registers register)
+    (hzero : target.registers 0 = 0) :
+    (executeInstructions target
+        [.addi ⟨config.addressScratch, haddressScratch⟩ 0
+           (BitVec.ofNat width (config.bytesInWord * offset)),
+         .add ⟨config.addressScratch, haddressScratch⟩
+           ⟨config.stackPointer, hstackPointer⟩
+           ⟨config.addressScratch, haddressScratch⟩,
+         .storeWord ⟨config.scratch, hscratchRegister⟩
+           ⟨config.addressScratch, haddressScratch⟩]).memory =
+      (writeWordValue target
+        (target.registers ⟨config.stackPointer, hstackPointer⟩ +
+          BitVec.ofNat width (config.bytesInWord * offset))
+        (source.registers register)).memory := by
+  have hstackPointerFinAddressScratch :
+      (⟨config.stackPointer, hstackPointer⟩ : Fin 32) ≠
+        ⟨config.addressScratch, haddressScratch⟩ := by
+    intro heq
+    apply hstackPointerAddressScratch
+    exact congrArg Fin.val heq
+  have hscratchFinAddressScratch :
+      (⟨config.scratch, hscratchRegister⟩ : Fin 32) ≠
+        ⟨config.addressScratch, haddressScratch⟩ := by
+    intro heq
+    apply hscratchAddressScratch
+    exact congrArg Fin.val heq
+  have haddressScratchFinNonzero :
+      (⟨config.addressScratch, haddressScratch⟩ : Fin 32) ≠ 0 := by
+    intro heq
+    apply haddressScratchNonzero
+    exact congrArg Fin.val heq
+  let afterImmediate := execute target
+    (.addi ⟨config.addressScratch, haddressScratch⟩ 0
+      (BitVec.ofNat width (config.bytesInWord * offset)))
+  have hafterImmediateScratch :
+      afterImmediate.registers ⟨config.addressScratch, haddressScratch⟩ =
+        BitVec.ofNat width (config.bytesInWord * offset) := by
+    simp [afterImmediate, execute, writeRegister, readRegister,
+      haddressScratchFinNonzero, hzero]
+  have hafterImmediateValue :
+      afterImmediate.registers ⟨config.scratch, hscratchRegister⟩ =
+        source.registers register := by
+    simp [afterImmediate, execute, writeRegister, readRegister,
+      haddressScratchFinNonzero, hscratchFinAddressScratch, hvalue]
+  have hafterImmediateStackPointer :
+      afterImmediate.registers ⟨config.stackPointer, hstackPointer⟩ =
+        target.registers ⟨config.stackPointer, hstackPointer⟩ := by
+    simp [afterImmediate, execute, writeRegister, readRegister,
+      haddressScratchFinNonzero, hstackPointerFinAddressScratch]
+  let afterAddress := execute afterImmediate
+    (.add ⟨config.addressScratch, haddressScratch⟩
+      ⟨config.stackPointer, hstackPointer⟩
+      ⟨config.addressScratch, haddressScratch⟩)
+  have hafterAddressScratch :
+      afterAddress.registers ⟨config.addressScratch, haddressScratch⟩ =
+        target.registers ⟨config.stackPointer, hstackPointer⟩ +
+          BitVec.ofNat width (config.bytesInWord * offset) := by
+    simp [afterAddress, execute, writeRegister, readRegister,
+      haddressScratchFinNonzero, hafterImmediateScratch,
+      hafterImmediateStackPointer]
+  have hafterAddressMemory : afterAddress.memory = target.memory := by
+    calc
+      afterAddress.memory = afterImmediate.memory := by
+        simpa [afterAddress, execute] using
+          writeRegister_memory
+            ({ afterImmediate with pc := nextPc afterImmediate })
+            ⟨config.addressScratch, haddressScratch⟩
+            (readRegister afterImmediate ⟨config.stackPointer, hstackPointer⟩ +
+              readRegister afterImmediate ⟨config.addressScratch, haddressScratch⟩)
+      _ = target.memory := by
+        simp [afterImmediate, execute, writeRegister, haddressScratchFinNonzero]
+  have hstoreAddress :
+      readRegister afterAddress
+          ⟨config.addressScratch, haddressScratch⟩ =
+        target.registers ⟨config.stackPointer, hstackPointer⟩ +
+          BitVec.ofNat width (config.bytesInWord * offset) := by
+    exact hafterAddressScratch
+  have hstoreValue :
+      readRegister afterAddress ⟨config.scratch, hscratchRegister⟩ =
+        source.registers register := by
+    simp [readRegister, afterAddress, execute, writeRegister,
+      haddressScratchFinNonzero, hscratchFinAddressScratch,
+      hafterImmediateValue]
+  change (execute afterAddress
+      (.storeWord ⟨config.scratch, hscratchRegister⟩
+        ⟨config.addressScratch, haddressScratch⟩)).memory =
+    (writeWordValue target
+      (target.registers ⟨config.stackPointer, hstackPointer⟩ +
+        BitVec.ofNat width (config.bytesInWord * offset))
+      (source.registers register)).memory
+  apply executeStoreWord_memory
+  · exact hstoreAddress
+  · exact hstoreValue
+  · exact hafterAddressMemory
 
 end Flapjack.RiscV

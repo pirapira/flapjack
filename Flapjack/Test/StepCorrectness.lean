@@ -85,6 +85,32 @@ example (state : State 8) (entry : Word 8) (code : List (Instruction 8))
   exact wordTailCallToRiscV_execute_single_parameter state entry 2 3 code hzero
     (by decide) (by decide) (by decide) (by decide) hcompile
 
+example (state : State 8) (entry : Word 8) (code : List (Instruction 8))
+    (hzero : ZeroRegister state)
+    (hcompile : wordTailCallToRiscV entry [2, 3] [4, 5] = some code) :
+    readRegister (executeInstructions state code) 2 = readRegister state 4 ∧
+      readRegister (executeInstructions state code) 3 = readRegister state 5 ∧
+      (executeInstructions state code).pc = jalrTarget entry 0 := by
+  have htransfer := wordTailCallToRiscV_execute_moves_transfer state entry
+    [2, 3] [4, 5] code hzero
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    (by decide)
+    (by
+      intro move hmove
+      simp at hmove ⊢
+      rcases hmove with rfl | rfl <;> decide)
+    hcompile
+  have hfirst := htransfer.1 (2, 4) (by simp)
+  have hsecond := htransfer.1 (3, 5) (by simp)
+  exact ⟨by simpa using hfirst, by simpa using hsecond, htransfer.2⟩
+
 example (state : State 8) (entry : Word 8) (moves : List (Instruction 8))
     (hzero : ZeroRegister state) :
     (executeInstructions state

@@ -1,5 +1,6 @@
 import Flapjack.RiscV.CorrectnessBackend
 import Flapjack.RiscV.Ffi
+import Flapjack.RiscV.ParallelMoveCorrectness
 
 /-!
 # RISC-V step-count contracts
@@ -282,6 +283,101 @@ theorem wordTailCallToRiscV_execute_single_parameter [NeZero width]
       nextPc, hparameterNonzero, hparameterNoScratch']
   · exact executeInstructions_tailCall_pc state entry
       [.addi ⟨parameter, hparameter⟩ ⟨argument, hargument⟩ 0] hzero
+
+theorem executeInstructions_tailCall_read_register [NeZero width]
+    (state : State width) (entry : Word width)
+    (moves : List (Instruction width)) (register : Fin 32)
+    (hregisterNoScratch : register ≠ 31) :
+    readRegister (executeInstructions state
+      (moves ++ [.addi 31 0 entry, .jalr 0 31 0])) register =
+      readRegister (executeInstructions state moves) register := by
+  rw [executeInstructions_append]
+  simp [executeInstructions, execute, writeRegister, readRegister,
+    nextPc, hregisterNoScratch]
+
+theorem wordRegisterMoves_shape [NeZero width]
+    (moves : List (Nat × Nat)) (code : List (Instruction width))
+    (hvalid : ∀ move, move ∈ moves →
+      move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
+    (hcompile : wordRegisterMoves (width := width) moves = some code) :
+    code = moves.flatMap (wordMoveInstructionList (width := width)) := by
+  induction moves generalizing code with
+  | nil =>
+      simp [wordRegisterMoves] at hcompile ⊢
+      exact hcompile
+  | cons head tail ih =>
+      have hhead := hvalid head (by simp)
+      have htail : ∀ move, move ∈ tail →
+          move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31 := by
+        intro move hmove
+        exact hvalid move (by simp [hmove])
+      cases htailCode : wordRegisterMoves (width := width) tail with
+      | none =>
+          simp [wordRegisterMoves, htailCode] at hcompile
+      | some tailCode =>
+          have htailShape := ih (code := tailCode) htail htailCode
+          have hheadDestination : registerOfNat head.1 =
+              some ⟨head.1, hhead.1⟩ := by
+            simp [registerOfNat, hhead.1]
+          have hheadSource : registerOfNat head.2 =
+              some ⟨head.2, hhead.2.1⟩ := by
+            simp [registerOfNat, hhead.2.1]
+          have hcode :
+              (.addi ⟨head.1, hhead.1⟩ ⟨head.2, hhead.2.1⟩ 0
+                :: tailCode : List (Instruction width)) = code := by
+            simpa [wordRegisterMoves, htailCode, hheadDestination,
+              hheadSource] using hcompile
+          subst code
+          simp [wordMoveInstructionList, wordExpToInstructions,
+            wordExpToInstruction, registerOfNat, hhead.1, hhead.2.1,
+            htailShape]
+
+theorem wordTailCallToRiscV_execute_moves_transfer [NeZero width]
+    (state : State width) (entry : Word width)
+    (parameters arguments : List Nat) (code : List (Instruction width))
+    (hzero : ZeroRegister state)
+    (hvalid : ∀ move, move ∈ parameters.zip arguments →
+      move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
+    (hdestNonzero : ∀ move, move ∈ parameters.zip arguments → move.1 ≠ 0)
+    (hdestinations : ((parameters.zip arguments).map Prod.fst).Nodup)
+    (hnoSource : ∀ move, move ∈ parameters.zip arguments →
+      move.2 ∉ (parameters.zip arguments).map Prod.fst)
+    (hcompile : wordTailCallToRiscV entry parameters arguments = some code) :
+    (∀ move (hmove : move ∈ parameters.zip arguments),
+      readRegister (executeInstructions state code)
+          ⟨move.1, (hvalid move hmove).1⟩ =
+        readRegister state ⟨move.2, (hvalid move hmove).2.1⟩) ∧
+      (executeInstructions state code).pc = jalrTarget entry 0 := by
+  cases hmove : wordRegisterMoves (width := width)
+      (parameters.zip arguments) with
+  | none =>
+      simp [wordTailCallToRiscV, hmove] at hcompile
+  | some moves =>
+      have hcompile' : parameters.length = arguments.length ∧
+          moves ++ [.addi 31 0 entry, .jalr 0 31 0] = code := by
+        simpa [wordTailCallToRiscV, hmove] using hcompile
+      have hcode :
+          moves ++ [.addi 31 0 entry, .jalr 0 31 0] = code := by
+        exact hcompile'.2
+      have hmoveShape := wordRegisterMoves_shape
+        (parameters.zip arguments) moves hvalid hmove
+      subst code
+      have hsourcePreserved := executeWordMoves_preserves_sources state
+        (parameters.zip arguments) hdestinations hnoSource hvalid hdestNonzero
+      constructor
+      · intro move hmove'
+        have hdestination := hvalid move hmove'
+        have hregisterNoScratch :
+            (⟨move.1, hdestination.1⟩ : Fin 32) ≠ 31 := by
+          intro heq
+          apply hdestination.2.2.1
+          exact congrArg Fin.val heq
+        rw [hmoveShape]
+        rw [executeInstructions_tailCall_read_register
+          (hregisterNoScratch := hregisterNoScratch)]
+        exact hsourcePreserved move hmove'
+      · simpa [hmoveShape] using
+          executeInstructions_tailCall_pc state entry moves hzero
 
 theorem executeInstructions_stackCall_pc [NeZero width]
     (state : State width) (entry : Word width)

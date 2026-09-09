@@ -402,6 +402,101 @@ theorem executeInstructions_stackCall_pc [NeZero width]
   simp [execute, writeRegister, readRegister,
     nextPc, writeWordValue_registers, jalrTarget, hzeroMoves']
 
+theorem executeInstructions_stackCall_read_register [NeZero width]
+    (state : State width) (entry : Word width)
+    (moves : List (Instruction width)) (register : Fin 32)
+    (hregisterNoStack : register ≠ 30)
+    (hregisterNoScratch : register ≠ 31)
+    (hregisterNoLink : register ≠ 1) :
+    readRegister (executeInstructions state
+      (moves ++
+        [.addi 30 30 (0 - BitVec.ofNat width (width / 8)),
+         .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])) register =
+      readRegister (executeInstructions state moves) register := by
+  rw [executeInstructions_append]
+  simp [executeInstructions, execute, writeRegister, readRegister,
+    nextPc, writeWordValue_registers, hregisterNoStack,
+    hregisterNoScratch, hregisterNoLink]
+
+theorem wordCallToRiscVWithStack_prefix_execute_parameter_transfer [NeZero width]
+    (state : State width) (entry : Word width)
+    (parameters returns arguments destinations : List Nat)
+    (code : List (Instruction width)) (hzero : ZeroRegister state)
+    (hvalid : ∀ move, move ∈ parameters.zip arguments →
+      move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
+    (hdestNonzero : ∀ move, move ∈ parameters.zip arguments → move.1 ≠ 0)
+    (hdestinations : ((parameters.zip arguments).map Prod.fst).Nodup)
+    (hnoSource : ∀ move, move ∈ parameters.zip arguments →
+      move.2 ∉ (parameters.zip arguments).map Prod.fst)
+    (hparameterNoStack : ∀ move, move ∈ parameters.zip arguments →
+      move.1 ≠ 30)
+    (hparameterNoLink : ∀ move, move ∈ parameters.zip arguments →
+      move.1 ≠ 1)
+    (hcompile :
+      wordCallToRiscVWithStack entry parameters returns arguments destinations =
+        some code) :
+    ∃ parameterMoves resultMoves,
+      wordRegisterMoves (width := width) (parameters.zip arguments) =
+        some parameterMoves ∧
+      (∀ move (hmove : move ∈ parameters.zip arguments),
+        readRegister (executeInstructions state
+          (parameterMoves ++
+            [.addi 30 30 (0 - BitVec.ofNat width (width / 8)),
+             .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0]))
+            ⟨move.1, (hvalid move hmove).1⟩ =
+          readRegister state ⟨move.2, (hvalid move hmove).2.1⟩) ∧
+      (executeInstructions state
+        (parameterMoves ++
+          [.addi 30 30 (0 - BitVec.ofNat width (width / 8)),
+           .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])).pc =
+        jalrTarget entry 0 ∧
+      code = parameterMoves ++
+        [.addi 30 30 (0 - BitVec.ofNat width (width / 8)),
+         .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0] ++ resultMoves := by
+  cases hmove : wordRegisterMoves (width := width)
+      (parameters.zip arguments) with
+  | none =>
+      simp [wordCallToRiscVWithStack, hmove] at hcompile
+  | some parameterMoves =>
+      cases hresult : wordRegisterMoves (width := width)
+          (destinations.zip returns) with
+      | none =>
+          simp [wordCallToRiscVWithStack, hmove, hresult] at hcompile
+      | some resultMoves =>
+          simp [wordCallToRiscVWithStack, hmove, hresult] at hcompile
+          have hmoveShape := wordRegisterMoves_shape
+            (parameters.zip arguments) parameterMoves hvalid hmove
+          have hsourcePreserved := executeWordMoves_preserves_sources state
+            (parameters.zip arguments) hdestinations hnoSource hvalid hdestNonzero
+          refine ⟨parameterMoves,
+            resultMoves ++ [.loadWord 1 30,
+              .addi 30 30 (BitVec.ofNat width (width / 8))], by simp, ?_, ?_, ?_⟩
+          · intro move hmove'
+            have hdestination := hvalid move hmove'
+            have hregisterNoStack :
+                (⟨move.1, hdestination.1⟩ : Fin 32) ≠ 30 := by
+              intro heq
+              apply hparameterNoStack move hmove'
+              exact congrArg Fin.val heq
+            have hregisterNoScratch :
+                (⟨move.1, hdestination.1⟩ : Fin 32) ≠ 31 := by
+              intro heq
+              apply hdestination.2.2.1
+              exact congrArg Fin.val heq
+            have hregisterNoLink :
+                (⟨move.1, hdestination.1⟩ : Fin 32) ≠ 1 := by
+              intro heq
+              apply hparameterNoLink move hmove'
+              exact congrArg Fin.val heq
+            rw [hmoveShape]
+            rw [executeInstructions_stackCall_read_register
+              (hregisterNoStack := hregisterNoStack)
+              (hregisterNoScratch := hregisterNoScratch)
+              (hregisterNoLink := hregisterNoLink)]
+            exact hsourcePreserved move hmove'
+          · exact executeInstructions_stackCall_pc state entry parameterMoves hzero
+          · simpa [List.cons_append] using hcompile.2.symm
+
 theorem wordCallToRiscVWithStack_prefix_shape [NeZero width]
     (entry : Word width) (parameters returns arguments destinations : List Nat)
     (code : List (Instruction width))

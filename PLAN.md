@@ -2059,6 +2059,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   parameter values through the generated RISC-V jump suffix.
 - [x] Prove the machine PC contract for the stack-based non-tail call
   prologue and linked jump.
+- [x] Connect the stack-call prefix to parameter-value transfer, retaining
+  the generated return restoration suffix in the compiler decomposition.
 - [x] Connect stack-call compiler witnesses to executable call-prefix
   decomposition and entry-transfer correctness.
 - [x] Prove the generated return suffix restores the saved link and stack

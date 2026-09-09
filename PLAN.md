@@ -2128,6 +2128,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   conditional Word compiler, including 32-bit coverage.
 - [x] Prove bounded execution of variable-length conditional layouts, including
   branch-over-then, unconditional jump-over-else, and post-layout stopping.
+- [x] Expose counted FFI-aware PC advancement for successful non-branching
+  instruction lists and variable-length conditional layouts.
+- [x] Connect the counted conditional machine layout to the source Word
+  assignment result, including exact taken and fall-through path costs.
 - [x] Expose the exact call-aware compiler output shape for conditionals from
   successful condition and branch-body compiler witnesses.
 - [x] Port and place the first executable `crep_arith` simplification pass,

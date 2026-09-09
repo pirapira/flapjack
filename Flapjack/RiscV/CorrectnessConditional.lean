@@ -324,6 +324,32 @@ theorem executeCodeUntil_conditional_of_nonbranching [NeZero width]
     simpa [code, branch, jump, returnOffset, List.cons_append,
       List.append_assoc, hcondition] using hrun
 
+theorem wordFunctionToRiscVWithCalls_ite_shape [NeZero width]
+    (context : WordCallContext width) (operator : Cmp) (condition : Nat)
+    (rightValue : WordRegImm (Word width))
+    (thenBranch elseBranch : WordProg (Word width))
+    (branchLeft right : Fin 32) (prelude : List (Instruction width))
+    (thenCode elseCode : List (Instruction width))
+    (thenReturns elseReturns : List (Fin 32))
+    (hoperands : wordConditionOperands operator condition rightValue =
+      some (branchLeft, right, prelude))
+    (hthen : wordFunctionToRiscVWithCalls context thenBranch =
+      some (thenCode, thenReturns))
+    (helse : wordFunctionToRiscVWithCalls context elseBranch =
+      some (elseCode, elseReturns))
+    (hreturns : thenReturns = elseReturns) :
+    wordFunctionToRiscVWithCalls context
+        (.ite operator condition rightValue thenBranch elseBranch) =
+      some (prelude ++
+        [riscVBranchFalseInstruction operator branchLeft right
+          (BitVec.ofNat width (8 + 4 * thenCode.length))] ++
+        thenCode ++
+        [.branchEq 0 0 (BitVec.ofNat width (4 + 4 * elseCode.length))] ++
+      elseCode, thenReturns) := by
+  simp only [wordFunctionToRiscVWithCalls]
+  rw [hoperands, hthen, helse]
+  cases operator <;> simp [hreturns, riscVBranchFalseInstruction]
+
 theorem wordFunctionToRiscV_ite_assign [NeZero width] :
     wordFunctionToRiscV
         ((.ite .equal 1 (.reg 2)

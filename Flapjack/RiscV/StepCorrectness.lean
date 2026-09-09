@@ -402,6 +402,52 @@ theorem executeInstructions_stackCall_pc [NeZero width]
   simp [execute, writeRegister, readRegister,
     nextPc, writeWordValue_registers, jalrTarget, hzeroMoves']
 
+theorem executeInstructions_stackCall_prologue_effects [NeZero width]
+    (state : State width) (entry : Word width)
+    (moves : List (Instruction width)) (hzero : ZeroRegister state) :
+    let moved := executeInstructions state moves
+    let final := executeInstructions state
+      (moves ++
+        [.addi 30 30 (0 - BitVec.ofNat width (width / 8)),
+         .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])
+    readRegister final 1 = moved.pc + BitVec.ofNat width 16 ∧
+      readRegister final 30 =
+        readRegister moved 30 - BitVec.ofNat width (width / 8) ∧
+      final.pc = jalrTarget entry 0 := by
+  have hzeroMoves : ZeroRegister (executeInstructions state moves) := by
+    induction moves generalizing state with
+    | nil => exact hzero
+    | cons instruction moves ih =>
+        exact ih (execute state instruction)
+          (execute_zeroRegister_preserved state instruction hzero)
+  have hzeroMoves' :
+      (executeInstructions state moves).registers 0 = 0 := by
+    simpa [ZeroRegister, readRegister] using hzeroMoves
+  dsimp
+  rw [executeInstructions_append]
+  simp [executeInstructions, execute, writeRegister, readRegister,
+    nextPc, writeWordValue_registers, jalrTarget, hzeroMoves']
+  rw [writeWordValue_pc]
+  constructor
+  · change (executeInstructions state moves).pc + 4 + 4 + 4 + 4 =
+      (executeInstructions state moves).pc + BitVec.ofNat width 16
+    calc
+      (executeInstructions state moves).pc + 4 + 4 + 4 + 4 =
+          (executeInstructions state moves).pc +
+            ((4 : BitVec width) + 4 + (4 + 4)) := by ac_rfl
+      _ = (executeInstructions state moves).pc +
+          (BitVec.ofNat width 8 + BitVec.ofNat width 8) := by
+        change (executeInstructions state moves).pc +
+            (BitVec.ofNat width 4 + BitVec.ofNat width 4 +
+              (BitVec.ofNat width 4 + BitVec.ofNat width 4)) =
+          (executeInstructions state moves).pc +
+            (BitVec.ofNat width 8 + BitVec.ofNat width 8)
+        rw [← BitVec.ofNat_add, ← BitVec.ofNat_add]
+      _ = (executeInstructions state moves).pc +
+          BitVec.ofNat width 16 := by
+        rw [show (16 : Nat) = 8 + 8 by omega, BitVec.ofNat_add]
+  · simp [BitVec.sub_eq_add_neg]
+
 theorem executeInstructions_stackCall_read_register [NeZero width]
     (state : State width) (entry : Word width)
     (moves : List (Instruction width)) (register : Fin 32)

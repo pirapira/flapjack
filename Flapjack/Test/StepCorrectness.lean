@@ -129,6 +129,19 @@ example (state : State 8) (entry : Word 8) (moves : List (Instruction 8)) :
   exact executeInstructions_stackCall_read_register state entry moves 2
     (by decide) (by decide) (by decide)
 
+example (state : State 8) (entry : Word 8) (moves : List (Instruction 8))
+    (hzero : ZeroRegister state) :
+    let moved := executeInstructions state moves
+    let final := executeInstructions state
+      (moves ++
+        [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
+         .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])
+    readRegister final 1 = moved.pc + BitVec.ofNat 8 16 ∧
+      readRegister final 30 =
+        readRegister moved 30 - BitVec.ofNat 8 (8 / 8) ∧
+      final.pc = jalrTarget entry 0 := by
+  exact executeInstructions_stackCall_prologue_effects state entry moves hzero
+
 example (state : State 8) (entry : Word 8)
     (parameters returns arguments destinations : List Nat)
     (code : List (Instruction 8)) (hzero : ZeroRegister state)

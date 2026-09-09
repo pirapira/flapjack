@@ -49,6 +49,13 @@
 1 Flapjack/Test/CorrectnessFfi.lean
 1 Flapjack/Test/SourceToLoop.lean
 
+# --- Declaration-driven parameter-shape regressions -------------------------
+# These regressions execute the declaration compiler over Word expressions;
+# kernel reduction stalls in `compileExp`, so the named correctness check and
+# its two declaration cases must use `native_decide`.
+1 Flapjack/FlatCorrectness.lean
+2 Flapjack/Test/SourceDeclarations.lean
+
 # --- Nested `have` inside a larger proof -------------------------------------
 # Supplies a proof term to the surrounding proof, so `#guard` does not apply.
 1 Flapjack/Test/AllocatorSpills.lean

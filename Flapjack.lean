@@ -35,6 +35,7 @@ import Flapjack.RiscV.Heuristics
 import Flapjack.RiscV.SpillCosts
 import Flapjack.RiscV.HeuristicDriver
 import Flapjack.RiscV.HeuristicPipeline
+import Flapjack.RiscV.HeuristicStackPipeline
 import Flapjack.RiscV.LinearScan
 import Flapjack.RiscV.LinearScanSource
 import Flapjack.RiscV.LinearScanDriver

@@ -2245,6 +2245,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   equations through their addi lowering.
 - [x] Extend the AST-to-RISC-V relation and compiler equations through
   immediate left, logical-right, and arithmetic-right shifts.
+- [x] Extend the AST-to-RISC-V relation and compiler equations through
+  immediate rotate-right lowering with its x31 scratch contract.
 
 ## First implementation slice
 

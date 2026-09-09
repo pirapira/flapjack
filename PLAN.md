@@ -401,6 +401,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   generated conditional function artifacts can cross the RISC-V boundary.
 - [x] Lower function-level conditionals with recursively compiled return
   branches, requiring both branches to expose the same return-register layout.
+- [x] Compose source `evalWordFunction` condition selection with bounded
+  RISC-V conditional execution, using a PC-insensitive branch-body contract.
 - [x] Preserve terminal function returns when compiling or evaluating a
   sequence with unreachable trailing code.
 - [x] Add the pipeline’s initial register context, mapping Loop slots to

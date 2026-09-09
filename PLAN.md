@@ -2202,6 +2202,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   offset-register non-alias requirement and the optimized scratch-alias case.
 - [x] Prove the StackRemove frame-size query lowering on RISC-V, including its
   stack-pointer-destination optimization and scratch/stack-pointer alias guard.
+- [x] Prove the StackRemove frame-size setter lowering on RISC-V for both
+  scratch and address-scratch shift-register layouts.
 
 ## First implementation slice
 

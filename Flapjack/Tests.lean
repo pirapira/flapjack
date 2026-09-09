@@ -91,6 +91,7 @@ import Flapjack.Test.CorrectnessStackStoreSame
 import Flapjack.Test.CorrectnessStackDynamicMemory
 import Flapjack.Test.CorrectnessStackDynamicStore
 import Flapjack.Test.CorrectnessStackSize
+import Flapjack.Test.CorrectnessStackSetSize
 import Flapjack.RiscV.CorrectnessBinarySpill
 import Flapjack.Test.BinarySpillRelation
 import Flapjack.RiscV.CorrectnessShiftSpill

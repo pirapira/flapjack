@@ -62,6 +62,7 @@ import Flapjack.RiscV.CorrectnessStackParallelMove
 import Flapjack.RiscV.CorrectnessStackFunctionEntry
 import Flapjack.RiscV.CorrectnessStackFunctionSpill
 import Flapjack.RiscV.CorrectnessAllocatorStack
+import Flapjack.RiscV.CorrectnessAllocatorStackDecomposition
 import Flapjack.RiscV.CorrectnessStack
 import Flapjack.RiscV.CorrectnessFfiMachine
 import Flapjack.RiscV.CorrectnessStack

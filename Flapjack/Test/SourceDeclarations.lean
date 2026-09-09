@@ -96,6 +96,21 @@ example :
       "main" []).isNone = true := by
   decide +kernel
 
+/- `lookup_code` rejects a function whose formal parameter names are not
+   distinct, even before a call can bind its arguments. -/
+example :
+    (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 30
+      [.function
+         { name := "duplicateParameters", inline := false, exported := false,
+           params := [("x", .one), ("x", .one)],
+           body := .return (.var .local "x"), returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .return (.const 0), returnShape := .one }]
+      "main" []).isNone = true := by
+  decide +kernel
+
 example :
     (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
       sourceDeclarationNoFfi 30

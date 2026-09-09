@@ -1973,4 +1973,99 @@ theorem wordAllocateGraphFunctionWithEntry_return_simulation [NeZero width]
   rw [hcolour] at hresult
   simpa [ha] using hresult
 
+/-! A call-level colouring contract for the handler-aware Word evaluator.  It
+keeps the source and target body proofs explicit, so the theorem composes with
+straight-line, loop, and FFI body simulations without unfolding those bodies
+at every caller.  As in the evaluator, only the callee memory and machine
+mode escape the call frame; caller registers remain related by the incoming
+colouring relation. -/
+
+theorem evalWordCallWithHandlersAndFfi_return_applyColour_general [NeZero width]
+    (colour : Nat → Nat)
+    (sourceFunctions targetFunctions : List
+      (Nat × List Nat × WordProg (Word width)))
+    (sourceHandler targetHandler : FunName → Word width → Word width →
+      Word width → Word width → State width → Option (State width))
+    (fuel functionLabel : Nat) (parameters : List Nat)
+    (arguments : List Nat) (colouredArguments : List Nat)
+    (argumentValues : List (Word width))
+    (sourceBody targetBody : WordProg (Word width))
+    (sourceState targetState : State width)
+    (sourceCallee targetCallee : State width)
+    (sourceBodyState targetBodyState : State width)
+    (sourceValues targetValues : List (Word width))
+    (hlookupSource : lookupWordFunction functionLabel sourceFunctions =
+      some (parameters, sourceBody))
+    (hlookupTarget : lookupWordFunction functionLabel targetFunctions =
+      some (parameters.map colour, targetBody))
+    (hargumentsSource : readWordRegisters sourceState arguments =
+      some argumentValues)
+    (hargumentsTarget : readWordRegisters targetState colouredArguments =
+      some argumentValues)
+    (hbindSource : bindWordRegisters sourceState parameters argumentValues =
+      some sourceCallee)
+    (hbindTarget : bindWordRegisters targetState (parameters.map colour)
+      argumentValues = some targetCallee)
+    (hbodySource : evalWordFunctionWithHandlersAndFfi sourceFunctions
+      sourceHandler fuel sourceCallee sourceBody =
+      some (.returned sourceBodyState sourceValues))
+    (hbodyTarget : evalWordFunctionWithHandlersAndFfi targetFunctions
+      targetHandler fuel targetCallee targetBody =
+      some (.returned targetBodyState targetValues))
+    (hcallerRelation : WordColourStateRelation colour sourceState targetState)
+    (hbodyRelation : WordColourStateRelation colour
+      sourceBodyState targetBodyState)
+    (hvalues : targetValues = sourceValues) :
+    evalWordCallWithHandlersAndFfi sourceFunctions sourceHandler (fuel + 1)
+      sourceState none (some functionLabel) arguments none =
+        some (.returned
+          { sourceState with
+            memory := sourceBodyState.memory
+            privilege := sourceBodyState.privilege
+            mode := sourceBodyState.mode }
+          sourceValues) ∧
+    evalWordCallWithHandlersAndFfi targetFunctions targetHandler (fuel + 1)
+      targetState none (some functionLabel) colouredArguments none =
+        some (.returned
+          { targetState with
+            memory := targetBodyState.memory
+            privilege := targetBodyState.privilege
+            mode := targetBodyState.mode }
+          targetValues) ∧
+    WordColourStateRelation colour
+      { sourceState with
+        memory := sourceBodyState.memory
+        privilege := sourceBodyState.privilege
+        mode := sourceBodyState.mode }
+      { targetState with
+        memory := targetBodyState.memory
+        privilege := targetBodyState.privilege
+        mode := targetBodyState.mode } ∧
+    targetValues = sourceValues := by
+  have hsourceResult := evalWordCallWithHandlersAndFfi_return_of_eval
+    sourceFunctions sourceHandler fuel sourceState sourceCallee sourceBodyState
+    functionLabel parameters arguments sourceBody argumentValues sourceValues
+    hlookupSource hargumentsSource hbindSource hbodySource
+  have htargetResult := evalWordCallWithHandlersAndFfi_return_of_eval
+    targetFunctions targetHandler fuel targetState targetCallee targetBodyState
+    functionLabel (parameters.map colour) colouredArguments targetBody argumentValues
+    targetValues hlookupTarget hargumentsTarget hbindTarget hbodyTarget
+  have hfinal : WordColourStateRelation colour
+      { sourceState with
+        memory := sourceBodyState.memory
+        privilege := sourceBodyState.privilege
+        mode := sourceBodyState.mode }
+      { targetState with
+        memory := targetBodyState.memory
+        privilege := targetBodyState.privilege
+        mode := targetBodyState.mode } := by
+    constructor
+    · exact hcallerRelation.pc
+    · exact hbodyRelation.memory
+    · exact hbodyRelation.privilege
+    · exact hbodyRelation.mode
+    · intro name hname hcolour
+      exact hcallerRelation.register name hname hcolour
+  exact ⟨hsourceResult, htargetResult, hfinal, hvalues⟩
+
 end Flapjack.RiscV

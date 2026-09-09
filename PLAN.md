@@ -2031,6 +2031,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   contracts through the public Flapjack library aggregate.
 - [x] Lift the register-colouring FFI agreement to the handler-aware Word
   evaluator used by composed call and loop correctness proofs.
+- [x] Add a compositional handler-aware Word call-colouring theorem that
+  propagates callee effects and preserves the caller register relation.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

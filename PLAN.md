@@ -2061,6 +2061,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   prologue and linked jump.
 - [x] Connect the stack-call prefix to parameter-value transfer, retaining
   the generated return restoration suffix in the compiler decomposition.
+- [x] Expose compiled stack-call witnesses together with parameter transfer
+  through the prologue and exact callee-entry PC.
 - [x] Connect stack-call compiler witnesses to executable call-prefix
   decomposition and entry-transfer correctness.
 - [x] Prove the generated return suffix restores the saved link and stack

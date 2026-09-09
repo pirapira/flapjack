@@ -14,9 +14,7 @@ theorem evalStackRemoveBitmapLoad [NeZero width]
     (config : StackRemoveConfig) (state : WordStackMachineState width)
     (destination address : Nat)
     (haddressScratchStoreBase : config.addressScratch ≠ config.storeBase)
-    (hscratchAddress : config.scratch ≠ config.addressScratch)
     (hdestinationScratch : destination ≠ config.scratch)
-    (hdestinationAddress : destination ≠ config.addressScratch)
     (haddressDestination : address ≠ destination)
     (haddressAddressScratch : address ≠ config.addressScratch) :
     (evalWordStackMachine state
@@ -32,11 +30,7 @@ theorem evalStackRemoveBitmapLoad [NeZero width]
   simp [stackRemoveBitmapLoad, stackRemoveGet, stackRemoveAddress,
     stackRemoveJoin, stackStorePosition, evalWordStackMachine,
     wordStackMachineBinOp, wordStackMachineShift,
-    wordStackMachineWriteRegister, haddressScratchStoreBase,
-    hscratchAddress, hdestinationScratch, hdestinationAddress,
-    haddressDestination, haddressAddressScratch,
-    Ne.symm haddressScratchStoreBase, Ne.symm hscratchAddress,
-    Ne.symm hdestinationScratch, Ne.symm hdestinationAddress,
-    Ne.symm haddressDestination, Ne.symm haddressAddressScratch]
+    wordStackMachineWriteRegister, Ne.symm haddressScratchStoreBase,
+    hdestinationScratch, haddressDestination, haddressAddressScratch]
 
 end Flapjack.RiscV

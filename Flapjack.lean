@@ -52,6 +52,7 @@ import Flapjack.RiscV.CorrectnessCode
 import Flapjack.RiscV.CorrectnessConditional
 import Flapjack.RiscV.Calls
 import Flapjack.RiscV.CorrectnessFfi
+import Flapjack.RiscV.CorrectnessCallEntry
 import Flapjack.RiscV.CorrectnessLoop
 import Flapjack.RiscV.CorrectnessFfiMachine
 import Flapjack.RiscV.CorrectnessStack

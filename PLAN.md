@@ -2021,6 +2021,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Expose the exact `pan_to_target` entry wrapper through the primary
   non-linked, stack, spill, and graph full-SSA RISC-V entrypoints without
   changing the historical compatibility APIs.
+- [x] Export the generalized Loop-to-Word call-entry correctness contracts
+  from the public Flapjack library aggregate for downstream RISC-V proofs.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

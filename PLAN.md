@@ -2053,6 +2053,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   pointer and advances the caller PC by its two instructions.
 - [x] Prove exact PC advancement for any RISC-V code segment whose
   instructions are statically known to be non-branching.
+- [x] Prove bounded `executeCode` execution agrees with `executeInstructions`
+  for arbitrary non-branching code suffixes, with an explicit no-wrap bound.
 - [x] Add a stepped-semantics regression for CakeML-compatible structured
   store flattening and shape-directed reconstruction (issue #422).
 - [x] Generalize the conditional RISC-V execution contract to every word

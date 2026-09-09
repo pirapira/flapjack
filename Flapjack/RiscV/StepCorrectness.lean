@@ -376,6 +376,77 @@ theorem executeInstructions_pc_of_nonbranching [NeZero width]
       congr 1
       exact BitVec.add_comm _ _
 
+theorem executeCode_suffix_of_nonbranching [NeZero width]
+    (state : State width) (prelude suffix : List (Instruction width))
+    (hpc : state.pc = BitVec.ofNat width (prelude.length * 4))
+    (hprefix : ∀ instruction ∈ prelude, instruction.isBranch = false)
+    (hsuffix : ∀ instruction ∈ suffix, instruction.isBranch = false)
+    (hbound : (prelude.length + suffix.length) * 4 < 2 ^ width) :
+    executeCode (suffix.length + 1) 0 (prelude ++ suffix) state =
+      some (executeInstructions state suffix) := by
+  induction suffix generalizing prelude state with
+  | nil =>
+      have hprefixBound : prelude.length * 4 < 2 ^ width := by omega
+      simp [executeCode, executeInstructions, hpc,
+        BitVec.toNat_ofNat, Nat.mod_eq_of_lt hprefixBound]
+  | cons instruction suffix ih =>
+      have hnotBranch : instruction.isBranch = false :=
+        hsuffix instruction (by simp)
+      have htail : ∀ nextInstruction ∈ suffix, nextInstruction.isBranch = false := by
+        intro nextInstruction hnext
+        exact hsuffix nextInstruction (by simp [hnext])
+      have hnextPc : (execute state instruction).pc =
+          BitVec.ofNat width ((prelude.length + 1) * 4) := by
+        calc
+          (execute state instruction).pc = state.pc + 4 :=
+            execute_pc_advance state instruction hnotBranch
+          _ = BitVec.ofNat width (prelude.length * 4) + 4 := by rw [hpc]
+          _ = BitVec.ofNat width (prelude.length * 4) + BitVec.ofNat width 4 := by rfl
+          _ = BitVec.ofNat width (prelude.length * 4 + 4) := by
+            rw [← BitVec.ofNat_add]
+          _ = BitVec.ofNat width ((prelude.length + 1) * 4) := by
+            congr 1
+            omega
+      have hprefix' : ∀ nextInstruction ∈ prelude ++ [instruction],
+          nextInstruction.isBranch = false := by
+        intro nextInstruction hnext
+        simp only [List.mem_append, List.mem_singleton] at hnext
+        rcases hnext with hnext | rfl
+        · exact hprefix nextInstruction hnext
+        · exact hnotBranch
+      have htailBound : (prelude.length + 1 + suffix.length) * 4 < 2 ^ width := by
+        simp only [List.length_cons] at hbound
+        omega
+      have htailBound' : ((prelude ++ [instruction]).length + suffix.length) * 4 <
+          2 ^ width := by
+        simpa [List.length_append] using htailBound
+      have hrest := ih (prelude := prelude ++ [instruction])
+        (state := execute state instruction) (by simpa using hnextPc)
+        hprefix' htail htailBound'
+      have hpreludeBound : prelude.length * 4 < 2 ^ width := by omega
+      have hstep :
+          executeCode ((instruction :: suffix).length + 1) 0
+              (prelude ++ instruction :: suffix) state =
+            executeCode (suffix.length + 1) 0
+              (prelude ++ [instruction] ++ suffix) (execute state instruction) := by
+        simp [executeCode, hpc, BitVec.toNat_ofNat,
+          Nat.mod_eq_of_lt hpreludeBound]
+      rw [hstep, hrest]
+      simp [executeInstructions]
+
+theorem executeCode_of_nonbranching [NeZero width]
+    (state : State width) (code : List (Instruction width))
+    (hpc : state.pc = 0)
+    (hcode : ∀ instruction ∈ code, instruction.isBranch = false)
+    (hbound : code.length * 4 < 2 ^ width) :
+    executeCode (code.length + 1) 0 code state =
+      some (executeInstructions state code) := by
+  apply executeCode_suffix_of_nonbranching state [] code
+  · simpa using hpc
+  · simp
+  · exact hcode
+  · simpa using hbound
+
 /-! First source-to-machine step relation.  On the straight-line Word
     fragment, successful instruction selection preserves the ordinary Word
     result and the machine executes exactly one step per emitted instruction.

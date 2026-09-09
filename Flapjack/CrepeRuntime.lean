@@ -108,7 +108,7 @@ def crepRuntimeSharedMemExp
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (handler : CrepRuntimeFfiHandler α σ ε)
     (state : CrepRuntimeState α σ) (operator : CrepMemOp)
     (name : Nat) (address : CrepExp α) : CrepRuntimeStep α σ ε :=
@@ -121,7 +121,7 @@ def crepRuntimeExtCallExp
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (handler : CrepRuntimeFfiHandler α σ ε)
     (state : CrepRuntimeState α σ) (function : FunName)
     (configuration configurationLength array arrayLength : CrepExp α) :
@@ -144,7 +144,7 @@ def evalCrepRuntimeExp
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : CrepRuntimeState α σ) : CrepExp α → Option α
   | .const value => some value
   | .var name => state.locals name
@@ -177,7 +177,7 @@ def evalCrepRuntimeExps
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : CrepRuntimeState α σ) : List (CrepExp α) → Option (List α)
   | [] => some []
   | expression :: expressions => do
@@ -211,7 +211,7 @@ mutual
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α]
       [ShiftLeft α] [ShiftRight α] [LT α]
-      [DecidableRel (fun left right : α => left < right)]
+      [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (handler : CrepRuntimeFfiHandler α σ ε)
       (primitive : CrepPrimitiveHandler α) :
       Nat → CrepRuntimeState α σ →
@@ -269,7 +269,7 @@ mutual
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α]
       [ShiftLeft α] [ShiftRight α] [LT α]
-      [DecidableRel (fun left right : α => left < right)]
+      [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (handler : CrepRuntimeFfiHandler α σ ε)
       (primitive : CrepPrimitiveHandler α) :
       Nat → CrepRuntimeState α σ → CrepProg α →
@@ -382,7 +382,7 @@ def evalCrepRuntimeResult
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (handler : CrepRuntimeFfiHandler α σ ε)
     (primitive : CrepPrimitiveHandler α) (fuel : Nat)
     (state : CrepRuntimeState α σ) (program : CrepProg α) :
@@ -405,7 +405,7 @@ theorem evalCrepRuntimeResult_skip
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (handler : CrepRuntimeFfiHandler α σ ε)
     (primitive : CrepPrimitiveHandler α)
     (fuel : Nat) (state : CrepRuntimeState α σ) :
@@ -417,7 +417,7 @@ theorem evalCrepRuntimeResult_extCall_final
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (handler : CrepRuntimeFfiHandler α σ ε)
     (primitive : CrepPrimitiveHandler α)
     (fuel : Nat) (state : CrepRuntimeState α σ)

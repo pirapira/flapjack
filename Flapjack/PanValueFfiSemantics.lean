@@ -176,7 +176,7 @@ mutual
   def evalPanValueFfiCallSteps
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (context : PanValueFfiContext α)
       (primitive : PanPrimitiveHandler α)
       (handler : PanValueStatefulFfiHandler α σ)
@@ -252,7 +252,7 @@ mutual
   def evalPanValueFfiProgSteps
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (context : PanValueFfiContext α)
       (primitive : PanPrimitiveHandler α)
       (handler : PanValueStatefulFfiHandler α σ)
@@ -511,7 +511,7 @@ end
 def evalPanValueFfiProgramSteps
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : PanValueFfiContext α)
     (primitive : PanPrimitiveHandler α)
     (handler : PanValueStatefulFfiHandler α σ)
@@ -537,7 +537,7 @@ structure PanValueFfiProgramState (α : Type u) (σ : Type v) where
 def evalPanValueFfiProgram
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : PanValueFfiContext α)
     (initial : PanValueFfiProgramState α σ)
     (primitive : PanPrimitiveHandler α)
@@ -570,7 +570,7 @@ def evalPanValueFfiProgram
 def evalPanValueFfiProgramStepped
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : PanValueFfiContext α)
     (initial : PanValueFfiProgramState α σ)
     (primitive : PanPrimitiveHandler α)
@@ -599,7 +599,7 @@ def evalPanValueFfiProgramStepped
 theorem evalPanValueFfiProgramStepped_fst
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : PanValueFfiContext α)
     (initial : PanValueFfiProgramState α σ)
     (primitive : PanPrimitiveHandler α)

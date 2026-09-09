@@ -16,7 +16,7 @@ theorem evalLoopCompiledExtCall
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : LoopContext α) (functions : List (Nat × List Nat × LoopProg α))
     (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
     (fuel : Nat) (state : LoopState α) (live : List Nat) (function : FunName)
@@ -39,7 +39,7 @@ theorem compilePanToLoop_extCall_const_noop_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (state : LoopState α) (locals : VarName → Option α)
     (function : FunName) (configuration configurationLength array arrayLength : α) :
@@ -90,7 +90,7 @@ theorem compilePanToLoop_extCall_const_success_projection
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (state : LoopState α) (locals : VarName → Option α)
     (loopHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))

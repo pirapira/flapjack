@@ -57,7 +57,7 @@ theorem crepToLoop_return_const_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : LoopContext α)
     (functions : List (Nat × List Nat × LoopProg α))
     (primitive : CrepPrimitiveHandler α)
@@ -82,7 +82,7 @@ theorem crepToLoop_raise_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : LoopContext α)
     (functions : List (Nat × List Nat × LoopProg α))
     (primitive : CrepPrimitiveHandler α)
@@ -104,7 +104,7 @@ theorem crepToLoop_call_skip_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : LoopContext α)
     (crepFunctions : List (CompiledFunction α))
     (loopFunctions : List (Nat × List Nat × LoopProg α))
@@ -143,7 +143,7 @@ theorem crepToLoop_call_return_const_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : LoopContext α)
     (crepFunctions : List (CompiledFunction α))
     (loopFunctions : List (Nat × List Nat × LoopProg α))
@@ -180,7 +180,7 @@ theorem crepToLoop_call_caught_skip_agreement
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : LoopContext α)
     (crepFunctions : List (CompiledFunction α))
     (loopFunctions : List (Nat × List Nat × LoopProg α))
@@ -216,7 +216,7 @@ theorem crepToLoop_call_uncaught_raise_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : LoopContext α)
     (crepFunctions : List (CompiledFunction α))
     (loopFunctions : List (Nat × List Nat × LoopProg α))
@@ -249,7 +249,7 @@ theorem crepToLoop_call_caught_return_const_agreement
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : LoopContext α)
     (crepFunctions : List (CompiledFunction α))
     (loopFunctions : List (Nat × List Nat × LoopProg α))
@@ -285,7 +285,7 @@ theorem crepToLoop_seq_extCall_return_const_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : LoopContext α)
     (crepFunctions : List (CompiledFunction α))
     (loopFunctions : List (Nat × List Nat × LoopProg α))
@@ -326,7 +326,7 @@ theorem crepToLoop_extCall_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : LoopContext α)
     (crepFunctions : List (CompiledFunction α))
     (loopFunctions : List (Nat × List Nat × LoopProg α))
@@ -372,7 +372,7 @@ theorem crepToLoop_seq_extCall_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : LoopContext α)
     (crepFunctions : List (CompiledFunction α))
     (loopFunctions : List (Nat × List Nat × LoopProg α))

@@ -14,7 +14,7 @@ namespace Flapjack
 
 def evalCrepFullExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (locals : Nat → Option α) (memory : α → Option α)
     (baseAddress topAddress : α) : CrepExp α → Option α
   | .const value => some value
@@ -46,7 +46,7 @@ termination_by expression => sizeOf expression
 
 def evalCrepFullExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (locals : Nat → Option α) (memory : α → Option α)
     (baseAddress topAddress : α) : List (CrepExp α) → Option (List α)
   | [] => some []
@@ -107,7 +107,7 @@ mutual
   def evalCrepFullCall
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (CompiledFunction α))
       (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
       (sharedMem : CrepSharedMemHandler α)
@@ -152,7 +152,7 @@ mutual
   def evalCrepFullProg
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (CompiledFunction α))
       (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
       (sharedMem : CrepSharedMemHandler α)
@@ -245,7 +245,7 @@ end
 theorem evalCrepFullProg_extCall [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (functions : List (CompiledFunction α))
     (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
     (sharedMem : CrepSharedMemHandler α)
@@ -270,7 +270,7 @@ theorem evalCrepFullProg_extCall [BEq α] [OfNat α 0] [OfNat α 1]
 theorem evalCrepFullCall_caught_handler [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (functions : List (CompiledFunction α))
     (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
     (sharedMem : CrepSharedMemHandler α)
@@ -304,7 +304,7 @@ theorem evalCrepFullCall_caught_handler [BEq α] [OfNat α 0] [OfNat α 1]
 theorem evalCrepFullCall_uncaught [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (functions : List (CompiledFunction α))
     (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
     (sharedMem : CrepSharedMemHandler α)
@@ -331,7 +331,7 @@ theorem evalCrepFullCall_uncaught [BEq α] [OfNat α 0] [OfNat α 1]
 def evalCrepFullResult
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (functions : List (CompiledFunction α))
     (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
     (sharedMem : CrepSharedMemHandler α)

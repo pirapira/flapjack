@@ -518,7 +518,7 @@ deliberately explicit until a general fuel monotonicity theorem is available.
 theorem compilePanToLoop_return_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (live : List Nat) (state : LoopState α) (value : α) :
     (evalLoopProg 12 state
@@ -540,7 +540,7 @@ the corresponding Loop operation.
 theorem compilePanToLoop_return_add_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (live : List Nat) (state : LoopState α) (left right : α) :
     (evalLoopProg 12 state
@@ -567,7 +567,7 @@ Loop-to-Word/RISC-V simulation layers.
 theorem compilePanToLoop_return_mul_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (live : List Nat) (state : LoopState α) (left right : α) :
     (evalLoopProg 16 state
@@ -639,7 +639,7 @@ bridge that checks the generated control flow as well as expression values.
 theorem compilePanToLoop_return_equal_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (live : List Nat) (state : LoopState α) (left right : α) :
     (evalLoopProg 30 state
@@ -666,7 +666,7 @@ and then preserve the selected return value.
 theorem compilePanToLoop_ite_equal_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (live : List Nat) (state : LoopState α)
     (conditionLeft conditionRight thenValue elseValue : α)
@@ -697,7 +697,7 @@ source-local return reads the same slot through the Loop evaluator.
 theorem compilePanToLoop_local_assign_return_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (live : List Nat) (state : LoopState α) (name : VarName) (slot : Nat)
     (value : α)
@@ -724,7 +724,7 @@ contain the same value at that slot.
 theorem compilePanToLoop_local_return_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (live : List Nat) (state : LoopState α) (locals : VarName → Option α)
     (name : VarName) (slot : Nat)
@@ -752,7 +752,7 @@ slot through the usual local-return path.
 theorem compilePanToLoop_dec_return_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (live : List Nat) (state : LoopState α) (locals : VarName → Option α)
     (name : VarName) (value : α)
@@ -791,7 +791,7 @@ that slot through the compiled local variable.
 theorem compilePanToLoop_dec_return_add_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (live : List Nat) (state : LoopState α) (locals : VarName → Option α)
     (name : VarName) (left right : α)
@@ -3252,6 +3252,13 @@ theorem loopToWord_condition_agreement_of_locals [NeZero width]
       AndOp.and x y = x &&& y := by
     change x.and y = x &&& y
     exact BitVec.and_eq x y
+  have lower_notLower (left right : RiscV.Word width) :
+      decide (left < right) = !decide (right ≤ left) := by
+    by_cases h : left < right
+    · have h' : ¬ right ≤ left := (BitVec.not_le).mpr h
+      simp [h, h']
+    · have h' : right ≤ left := (BitVec.not_lt).mp h
+      simp [h, h']
   cases right with
   | imm immediate =>
       have hright_value : immediate = rightValue := by
@@ -3259,7 +3266,7 @@ theorem loopToWord_condition_agreement_of_locals [NeZero width]
       subst rightValue
       rcases hoperator with rfl | rfl | rfl | rfl | rfl | rfl <;>
         simp [evalLoopCondition, RiscV.evalWordCondition, wordRegImm,
-          hcondition_register, hcondition_value, hand]
+          hcondition_register, hcondition_value, hand, lower_notLower]
   | reg name =>
       have hright_local : loopState.locals name = some rightValue := by
         simpa using hright
@@ -3268,7 +3275,7 @@ theorem loopToWord_condition_agreement_of_locals [NeZero width]
       rcases hoperator with rfl | rfl | rfl | rfl | rfl | rfl <;>
         simp [evalLoopCondition, RiscV.evalWordCondition, wordRegImm,
           hcondition_register, hright_register, hcondition_value,
-        hright_value, hand]
+        hright_value, hand, lower_notLower]
 
 theorem loopToWord_ite_preserves_mapped_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))

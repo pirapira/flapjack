@@ -21,14 +21,15 @@ def evalPanBinOp [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
   | .or => OrOp.or left right
   | .xor => HXor.hXor left right
 
-def evalPanCmp [BEq α] [OfNat α 0] [OfNat α 1] [AndOp α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+def evalPanCmp [BEq α] [OfNat α 0] [OfNat α 1] [AndOp α] [PanCmp α]
     (operator : Cmp) (left right : α) : α :=
   match operator with
   | .equal => if left == right then 1 else 0
   | .notEqual => if left == right then 0 else 1
-  | .lower | .less => if left < right then 1 else 0
-  | .notLower | .notLess => if left < right then 0 else 1
+  | .lower => if PanCmp.lower left right then 1 else 0
+  | .less => if PanCmp.less left right then 1 else 0
+  | .notLower => if PanCmp.lower left right then 0 else 1
+  | .notLess => if PanCmp.less left right then 0 else 1
   | .test => if AndOp.and left right == 0 then 1 else 0
   | .notTest => if AndOp.and left right == 0 then 0 else 1
 
@@ -60,7 +61,7 @@ def updatePanLocal (locals : VarName → Option α) (name : VarName) (value : α
 
 def evalPanExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [PanCmp α]
     (locals : VarName → Option α) (expression : Exp α) : Option α :=
   match expression with
   | .const value => some value
@@ -86,7 +87,7 @@ termination_by structural expression
 
 def evalPanCondition [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [PanCmp α]
     (locals : VarName → Option α) : Exp α → Option Bool
   | .cmp .equal left right => do
       let left ← evalPanExp locals left
@@ -102,8 +103,10 @@ def evalPanCondition [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       pure (match operator with
         | .equal => left == right
         | .notEqual => left != right
-        | .lower | .less => decide (left < right)
-        | .notLower | .notLess => decide (¬ left < right)
+        | .lower => PanCmp.lower left right
+        | .less => PanCmp.less left right
+        | .notLower => !PanCmp.lower left right
+        | .notLess => !PanCmp.less left right
         | .test => AndOp.and left right == 0
         | .notTest => AndOp.and left right != 0)
   | expression => do
@@ -136,7 +139,7 @@ def evalCrepExps [Add α] [Mul α] (locals : Nat → Option α) :
 
 def evalPanProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (locals : VarName → Option α) : Prog α → Option (List α)
   | .skip => some []
   | .dec name _ value body => do
@@ -207,7 +210,7 @@ def evalCrepProgWithPrimitive [Add α] [Mul α]
 
 def evalPanStateProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (locals : VarName → Option α) :
     Prog α → Option ((VarName → Option α) × List α)
   | .skip => some (locals, [])
@@ -236,7 +239,7 @@ def lookupPanFunction :
 
 def evalPanExps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (locals : VarName → Option α) :
     List (Exp α) → Option (List α)
   | [] => some []
@@ -262,7 +265,7 @@ silently using the older evaluator, which deliberately rejects calls.
 mutual
   def evalPanCallWithCalls [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (FunName × List VarName × Prog α)) :
       Nat → (VarName → Option α) → Prog α →
         Option ((VarName → Option α) × List α)
@@ -285,7 +288,7 @@ mutual
 
   def evalPanProgWithCalls [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (FunName × List VarName × Prog α)) :
       Nat → (VarName → Option α) → Prog α →
         Option ((VarName → Option α) × List α)
@@ -344,7 +347,7 @@ def assignPanCallResult (locals : VarName → Option α)
 mutual
   def evalPanCallWithHandlers [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (FunName × List VarName × Prog α)) :
       Nat → (VarName → Option α) →
         Option (Option (VarKind × VarName) ×
@@ -376,7 +379,7 @@ mutual
 
   def evalPanProgWithHandlers [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (FunName × List VarName × Prog α)) :
       Nat → (VarName → Option α) → Prog α → Option (PanControlResult α)
     | 0, _, _ => none
@@ -422,7 +425,7 @@ abbrev PanFfiHandler (α : Type u) :=
 
 def evalPanExtCall [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (handler : PanFfiHandler α)
     (locals : VarName → Option α) (function : FunName)
     (configuration configurationLength array arrayLength : Exp α) :
@@ -435,7 +438,7 @@ def evalPanExtCall [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 def evalPanFfiProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (handler : PanFfiHandler α)
     (locals : VarName → Option α) : Prog α → Option (VarName → Option α)
   | .extCall function configuration configurationLength array arrayLength =>
@@ -447,7 +450,7 @@ def evalPanFfiProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 theorem evalPanExtCall_single [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (handler : PanFfiHandler α)
     (locals : VarName → Option α) (function : FunName)
     (configuration configurationLength array arrayLength : Exp α) :
@@ -459,7 +462,7 @@ theorem evalPanExtCall_single [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul �
 mutual
   def evalPanWhileWithCallsAndFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (FunName × List VarName × Prog α))
       (handler : PanFfiHandler α) :
       Nat → (VarName → Option α) → Exp α → Prog α → Option (PanControlResult α)
@@ -479,7 +482,7 @@ mutual
 
   def evalPanCallWithCallsAndFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (FunName × List VarName × Prog α))
       (handler : PanFfiHandler α) :
       Nat → (VarName → Option α) →
@@ -512,7 +515,7 @@ mutual
 
   def evalPanProgWithCallsAndFfi [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-      [LT α] [DecidableRel (fun left right : α => left < right)]
+      [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
       (functions : List (FunName × List VarName × Prog α))
       (handler : PanFfiHandler α) :
       Nat → (VarName → Option α) → Prog α → Option (PanControlResult α)
@@ -564,7 +567,7 @@ end
 theorem evalPanProgWithCallsAndFfi_while_false
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (functions : List (FunName × List VarName × Prog α))
     (handler : PanFfiHandler α) (fuel : Nat)
     (locals : VarName → Option α) (condition : Exp α) (body : Prog α)
@@ -982,7 +985,7 @@ def evalCrepMemResult [BEq α] [Add α] [Mul α] (locals : Nat → Option α)
 theorem compile_return_const_preserves_semantics [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (locals : VarName → Option α)
     (compiledLocals : Nat → Option α) (value : α) :
     evalCrepProg compiledLocals (compileProg context (.return (.const value))) =
@@ -993,7 +996,7 @@ theorem compile_return_const_preserves_semantics [BEq α] [OfNat α 0] [OfNat α
 theorem compile_skip_preserves_semantics [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (locals : VarName → Option α)
     (compiledLocals : Nat → Option α) :
     evalCrepProg compiledLocals (compileProg context (.skip : Prog α)) =
@@ -1003,7 +1006,7 @@ theorem compile_skip_preserves_semantics [BEq α] [OfNat α 0] [OfNat α 1]
 theorem compile_local_var_preserves_semantics [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (name : VarName) (slot : Nat)
     (lookup : lookupInfo name context.vars = some (.one, [slot]))
     (locals : VarName → Option α) (compiledLocals : Nat → Option α)
@@ -1018,7 +1021,7 @@ theorem compile_local_assign_return_const_preserves_semantics
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (name : VarName) (slot : Nat) (value : α)
     (lookup : lookupInfo name context.vars = some (.one, [slot]))
     (locals : VarName → Option α) (compiledLocals : Nat → Option α) :
@@ -1116,7 +1119,7 @@ theorem compile_pan_mul_const_preserves_semantics
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (left right : α)
     (locals : VarName → Option α) (compiledLocals : Nat → Option α) :
     evalCrepProg compiledLocals

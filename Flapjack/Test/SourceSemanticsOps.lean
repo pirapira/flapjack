@@ -91,10 +91,26 @@ def evalGenericRiscVUnsignedLower : Option (PanValue ShiftWord) :=
     (.cmp .lower (.const (shiftWord 0x80)) (.const (shiftWord 0)))
     (memoryAccess := some (panMemoryAccessOfModel RiscV.panRiscVMemoryModel))
 
+def evalGenericRiscVSignedLessWithoutMemory : Option (PanValue ShiftWord) :=
+  evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.cmp .less (.const (shiftWord 0x80)) (.const (shiftWord 0)))
+
+def evalGenericRiscVUnsignedLowerWithoutMemory : Option (PanValue ShiftWord) :=
+  evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.cmp .lower (.const (shiftWord 0x80)) (.const (shiftWord 0)))
+
 #guard match evalGenericRiscVSignedLess with
   | some (.word value) => value == shiftWord 1
   | _ => false
 #guard match evalGenericRiscVUnsignedLower with
+  | some (.word value) => value == shiftWord 0
+  | _ => false
+#guard match evalGenericRiscVSignedLessWithoutMemory with
+  | some (.word value) => value == shiftWord 1
+  | _ => false
+#guard match evalGenericRiscVUnsignedLowerWithoutMemory with
   | some (.word value) => value == shiftWord 0
   | _ => false
 

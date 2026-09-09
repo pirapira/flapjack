@@ -103,7 +103,7 @@ def loopFfiEvalExp
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopFfiState α σ) : LoopExp α → Option α
   | .const value => some value
   | .var name => state.locals name
@@ -223,7 +223,7 @@ def loopFfiExtCall [BEq α] [OfNat α 1] [Add α]
 def loopFfiProgramBoundary [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopFfiState α σ) : LoopProg α → Option (LoopFfiStep α σ)
   | .ffi function configuration configurationLength array arrayLength live => do
       let cutState ← loopFfiCutState state live
@@ -247,7 +247,7 @@ theorem loopFfiProgramBoundary_shMem
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopFfiState α σ) (operator : CrepMemOp)
     (name : Nat) (address : LoopExp α) (addressValue : α)
     (haddress : loopFfiEvalExp state address = some addressValue) :
@@ -259,7 +259,7 @@ theorem loopFfiProgramBoundary_ffi
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state cutState : LoopFfiState α σ) (function : FunName)
     (configuration configurationLength array arrayLength : Nat)
     (live : List Nat) (configurationValue configurationLengthValue

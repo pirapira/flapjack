@@ -28,7 +28,7 @@ theorem compile_full_extCall_simulation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α)
     (sourceLocals sourceLocals' : VarName → Option α)
     (state state' : CrepState α)
@@ -108,7 +108,7 @@ theorem compile_full_call_handler_simulation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α)
     (functions : List (CompiledFunction α))
     (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
@@ -162,7 +162,7 @@ theorem compile_full_raise_simulation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α)
     (sourceLocals : VarName → Option α)
     (state : CrepState α)
@@ -203,7 +203,7 @@ theorem compile_full_return_simulation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α)
     (sourceLocals : VarName → Option α)
     (state : CrepState α)

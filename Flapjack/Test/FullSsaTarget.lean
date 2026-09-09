@@ -41,6 +41,31 @@ def fullSsaGeneratedMainSource : Prog (RiscV.Word 64) :=
 
 #guard fullSsaGeneratedMainMachineResult = some [BitVec.ofNat 64 0]
 
+/-! The target wrapper is available through each primary stack-producing
+    allocator family.  These checks deliberately use a declaration list with
+    no source `main`, so the target API must exercise the same generated-main
+    fallback as the linked full-SSA entrypoint above. -/
+
+#guard
+    (compileFlapjackRiscVViaStackTarget .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      fullSsaPipelineRemoveConfig []).isSome
+
+#guard
+    (compileFlapjackRiscVViaAllocatedStackTarget .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      fullSsaPipelineRemoveConfig []).isSome
+
+#guard
+    (compileFlapjackRiscVViaAllocatedStackWithFullSsaTarget .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      fullSsaPipelineRemoveConfig []).isSome
+
+#guard
+    (compileFlapjackRiscVViaGraphStackWithFullSsaTarget .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      fullSsaPipelineRemoveConfig []).isSome
+
 #guard
   (evalPanProgWithCallsAndFfi [] (fun _ _ _ _ _ locals => some locals) 10
     (fun _ => none) fullSsaGeneratedMainSource).map (fun result =>

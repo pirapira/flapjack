@@ -624,6 +624,73 @@ def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | some result => result
   | none => compileFlapjack architecture bytesInWord fromNat (pipelineEnsureMain declarations)
 
+/-! Target-facing variants of the RISC-V stack pipelines.  The historical
+entrypoints below retain their pass-local generated-main behavior; these
+variants make the exact `pan_to_target` wrapper available without changing
+their established labels or linked-image contracts. -/
+
+def compileFlapjackRiscVViaStackTarget [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (List (RiscV.Instruction width)) := do
+  let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
+  let functions ← pipelineWordFunctionsToStack pipeline.word
+  RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
+    removeConfig 0 0
+    (functions.map (fun (label, _, body) => (label, body)))
+
+def compileFlapjackRiscVViaAllocatedStackTarget [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (List (RiscV.Instruction width)) := do
+  let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
+  let functions ← pipelineWordFunctionsAllocatedWithSpills pipeline.loop
+  RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
+    removeConfig 0 0
+    (functions.map (fun (label, _, body) => (label, body)))
+
+def compileFlapjackRiscVViaAllocatedStackWithFullSsaTarget [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (List (RiscV.Instruction width)) := do
+  let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
+  let functions ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa pipeline.loop
+  let initialLabel := fullSsaInitialLabLabel functions
+  RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
+    removeConfig 0 initialLabel
+    (functions.map (fun (label, _, body) => (label, body)))
+
+def compileFlapjackRiscVViaGraphStackWithFullSsaTarget [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (List (RiscV.Instruction width)) := do
+  let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
+  let functions ← pipelineWordFunctionsAllocatedWithGraphAndFullSsa pipeline.loop
+  let initialLabel := fullSsaInitialLabLabel functions
+  RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
+    removeConfig 0 initialLabel
+    (functions.map (fun (label, _, body) => (label, body)))
+
 def compileFlapjackRiscVViaStack [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
     [Add (RiscV.Word width)] [Mul (RiscV.Word width)]

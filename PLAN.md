@@ -2018,6 +2018,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   full-SSA RISC-V entrypoints.
 - [x] Preserve the exact `pan_to_target` entry wrapper through the allocated
   full-SSA linked RISC-V entrypoint.
+- [x] Expose the exact `pan_to_target` entry wrapper through the primary
+  non-linked, stack, spill, and graph full-SSA RISC-V entrypoints without
+  changing the historical compatibility APIs.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

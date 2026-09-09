@@ -2014,6 +2014,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   RISC-V compiler, with valid and malformed AST regressions.
 - [x] Preserve `pan_to_target` main synthesis for the checked and linked
   full-SSA RISC-V entrypoints.
+- [x] Preserve the exact `pan_to_target` entry wrapper through the allocated
+  full-SSA linked RISC-V entrypoint.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

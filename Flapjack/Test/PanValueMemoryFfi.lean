@@ -24,6 +24,29 @@ def memoryFfiTestState : FfiState Unit :=
 def memoryFfiTestHandler : PanValueStatefulFfiHandler Nat Unit :=
   fun _ _ _ _ _ locals ffi => some (locals, ffi)
 
+def memoryFfiTestMemoryAccess : PanValueMemoryAccess Nat :=
+  { domain := fun _ => true
+    wordOp := fun _ _ => some 0
+    compare := fun _ _ _ => 0
+    shift := fun _ _ _ => some 0
+    readWord := fun domain memory _ address =>
+      if domain address then
+        match memory address with
+        | some (.word value) => some value
+        | _ => none
+      else none
+    readByte := fun _ _ _ _ => none
+    read16 := fun _ _ _ _ => none
+    read32 := fun _ _ _ _ => none
+    storeWord := fun domain memory _ address value =>
+      if domain address then some (updatePanValueMemory memory address (.word value))
+      else none
+    storeByte := fun _ _ _ _ _ => none
+    store16 := fun _ _ _ _ _ => none
+    store32 := fun _ _ _ _ _ => none
+    sharedRead := fun _ _ _ _ => none
+    sharedStore := fun _ _ _ _ _ => none }
+
 def memoryFfiAccelerator : PanValueMemoryFfiHandler Nat Unit :=
   fun function configuration _ array _ locals memory ffi =>
     if function == "accelerator" then
@@ -56,6 +79,7 @@ def memoryFfiDeclarations : List (Decl Nat) :=
 def memoryFfiSteppedResult :=
   evalPanValueFfiProgramStepped memoryFfiTestContext memoryFfiInitial
     (fun _ _ => none) memoryFfiTestHandler 20 memoryFfiDeclarations "main" []
+    (memoryAccess := some memoryFfiTestMemoryAccess)
     (memoryHandler := some memoryFfiAccelerator)
 
 def memoryFfiResultHasWrite : Bool :=
@@ -72,9 +96,11 @@ theorem memoryFfiStepped_projects_to_nonstepped :
     memoryFfiSteppedResult.map Prod.fst =
       evalPanValueFfiProgram memoryFfiTestContext memoryFfiInitial
         (fun _ _ => none) memoryFfiTestHandler 20 memoryFfiDeclarations "main" []
+        (memoryAccess := some memoryFfiTestMemoryAccess)
         (memoryHandler := some memoryFfiAccelerator) := by
   exact evalPanValueFfiProgramStepped_fst memoryFfiTestContext memoryFfiInitial
     (fun _ _ => none) memoryFfiTestHandler 20 memoryFfiDeclarations "main" []
+    (memoryAccess := some memoryFfiTestMemoryAccess)
     (memoryHandler := some memoryFfiAccelerator)
 
 end Flapjack

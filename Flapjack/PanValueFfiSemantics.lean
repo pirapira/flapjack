@@ -410,26 +410,26 @@ mutual
           (memoryAccess := memoryAccess)
         let [.word configuration, .word configurationLength, .word array, .word arrayLength] := values |
           none
-        match memoryAccess with
+        match memoryHandler with
+        | some memoryHandler =>
+            let (locals, memory, ffi) ← memoryHandler function configuration
+              configurationLength array arrayLength locals memory ffi
+            pure (.normal locals globals memory ffi, expressionSteps + 1)
         | none =>
-            match memoryHandler with
+            match memoryAccess with
             | none =>
                 let (locals, ffi) ←
                   handler function configuration configurationLength array arrayLength locals ffi
                 pure (.normal locals globals memory ffi, expressionSteps + 1)
-            | some memoryHandler =>
-                let (locals, memory, ffi) ← memoryHandler function configuration
-                  configurationLength array arrayLength locals memory ffi
-                pure (.normal locals globals memory ffi, expressionSteps + 1)
-        | some access =>
-            match panValueFfiExtCall access context memory bytesInWord ffi function
-                configuration configurationLength array arrayLength with
-            | some (.returned memory ffi) =>
-                pure (.normal locals globals memory ffi, expressionSteps + 1)
-            | some (.final ffi event) =>
-                pure (.finalFfi (fun _ => none) globals memory ffi event,
-                  expressionSteps + 1)
-            | none => none
+            | some access =>
+                match panValueFfiExtCall access context memory bytesInWord ffi function
+                    configuration configurationLength array arrayLength with
+                | some (.returned memory ffi) =>
+                    pure (.normal locals globals memory ffi, expressionSteps + 1)
+                | some (.final ffi event) =>
+                    pure (.finalFfi (fun _ => none) globals memory ffi event,
+                      expressionSteps + 1)
+                | none => none
     | fuel + 1, locals, globals, memory, ffi, .while conditionExp body, memoryAccess,
         contracts, memoryHandler => do
         let (condition, conditionSteps) ← evalPanValueExpCounted structs locals globals memory

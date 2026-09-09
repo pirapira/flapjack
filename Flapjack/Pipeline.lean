@@ -620,7 +620,9 @@ def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
     FlapjackPipelineResult α :=
-  compileFlapjack architecture bytesInWord fromNat (pipelineEnsureMain declarations)
+  match compileFlapjackEntry architecture bytesInWord fromNat "main" declarations with
+  | some result => result
+  | none => compileFlapjack architecture bytesInWord fromNat (pipelineEnsureMain declarations)
 
 def compileFlapjackRiscVViaStack [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]

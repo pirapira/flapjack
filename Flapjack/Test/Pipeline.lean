@@ -493,6 +493,14 @@ example :
       (fun result => result.globals.initializers.length) = some 1 := by
   decide +kernel
 
+example :
+    (compileFlapjackTarget (α := Nat) .rv64i 1 id exactEntryDeclarations).globals.declarations.map
+      (fun declaration => match declaration with
+        | .function function => function.name
+        | _ => "not-function") =
+      ["main", "main'", "worker"] := by
+  decide +kernel
+
 def exactEntryRiscVDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function
     { name := "main", inline := false, exported := true, params := [],

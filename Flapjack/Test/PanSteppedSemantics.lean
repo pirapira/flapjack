@@ -21,6 +21,26 @@ def steppedTestProgram : Prog Nat :=
     (.assign .local "x" (.const 7))
     (.seq (.while (.const 0) .skip) (.return (.var .local "x")))
 
+def steppedStructuredStoreLoadProgram : Prog Nat :=
+  .seq
+    (.store (.const 10) (.rStruct [.const 3, .const 5]))
+    (.return (.load (.comb [.one, .one]) (.const 10)))
+
+#guard
+  (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi [] [] 0 100 1 20
+    (fun _ => none) (fun _ => none) (fun _ => none)
+    steppedStructuredStoreLoadProgram).map
+      (fun (result, steps) => match result with
+        | .returned _ _ memory [PanValue.rStruct [PanValue.word 3, PanValue.word 5]] =>
+            steps == 9 &&
+              (match memory 10 with
+                | some (.word 3) => true
+                | _ => false) &&
+              (match memory 11 with
+                | some (.word 5) => true
+                | _ => false)
+        | _ => false) = some true
+
 #guard
   (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi [] [] 0 100 1 8
     steppedTestLocals steppedTestGlobals steppedTestMemory steppedTestProgram).map Prod.snd =

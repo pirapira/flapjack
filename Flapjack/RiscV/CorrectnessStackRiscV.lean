@@ -97,6 +97,33 @@ theorem wordStackRegisterRelation_executeAdd
     exact hrel register hregister
   · exact hdestinationNonzero
 
+theorem wordStackRegisterRelation_executeSub
+    [NeZero width] (source : WordStackMachineState width)
+    (target : State width) (destination left right : Nat)
+    (hrel : WordStackRegisterRelation source target)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationNonzero : destination ≠ 0) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (source.registers left - source.registers right))
+      (execute target (.sub ⟨destination, hdestination⟩
+        ⟨left, hleft⟩ ⟨right, hright⟩)) := by
+  have hleftValue := hrel left hleft
+  have hrightValue := hrel right hright
+  change WordStackRegisterRelation
+    (wordStackMachineWriteRegister source destination
+      (source.registers left - source.registers right))
+    (writeRegister {target with pc := nextPc target}
+      ⟨destination, hdestination⟩
+      (target.registers ⟨left, hleft⟩ - target.registers ⟨right, hright⟩))
+  rw [hleftValue, hrightValue]
+  apply wordStackRegisterRelation_writeRegister source
+    {target with pc := nextPc target} destination
+    (source.registers left - source.registers right)
+  · intro register hregister
+    exact hrel register hregister
+  · exact hdestinationNonzero
+
 theorem labCompilePlain_const
     [NeZero width] (destination value : Nat) (hdestination : destination < 32) :
     labCompilePlain (.const destination value : LabPlain (Word width)) =
@@ -168,6 +195,41 @@ theorem labCompilePlain_add_register_simulation
     (execute target (.add ⟨destination, hdestination⟩
       ⟨left, hleft⟩ ⟨right, hright⟩))
   exact wordStackRegisterRelation_executeAdd source target destination left right
+    hrel hdestination hleft hright hdestinationNonzero
+
+theorem labCompilePlain_sub
+    [NeZero width] (destination left right : Nat)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) :
+    labCompilePlain (.arith .sub destination left right : LabPlain (Word width)) =
+      some [.sub ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩] := by
+  simp [labCompilePlain, labBinOpInstruction, registerOfNat,
+    hdestination, hleft, hright]
+  congr 1
+
+theorem labCompilePlain_sub_register_simulation
+    [NeZero width] (source : WordStackMachineState width)
+    (target : State width) (destination left right : Nat)
+    (hrel : WordStackRegisterRelation source target)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationNonzero : destination ≠ 0)
+    (code : List (Instruction width))
+    (hcode : labCompilePlain
+      (.arith .sub destination left right : LabPlain (Word width)) = some code) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (source.registers left - source.registers right))
+      (executeInstructions target code) := by
+  have hshape := labCompilePlain_sub (width := width) destination left right
+    hdestination hleft hright
+  rw [hshape] at hcode
+  cases hcode
+  change WordStackRegisterRelation
+    (wordStackMachineWriteRegister source destination
+      (source.registers left - source.registers right))
+    (execute target (.sub ⟨destination, hdestination⟩
+      ⟨left, hleft⟩ ⟨right, hright⟩))
+  exact wordStackRegisterRelation_executeSub source target destination left right
     hrel hdestination hleft hright hdestinationNonzero
 
 end Flapjack.RiscV

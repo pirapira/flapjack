@@ -42,4 +42,15 @@ example :
     (by omega) (by omega) [.add 5 2 3]
   exact labCompilePlain_add 5 2 3 (by omega) (by omega) (by omega)
 
+example :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (stackRiscVTestSource.registers 2 - stackRiscVTestSource.registers 3))
+      (executeInstructions (zeroState 64)
+        [.sub 5 2 3]) := by
+  apply labCompilePlain_sub_register_simulation stackRiscVTestSource
+    (zeroState 64) 5 2 3 stackRiscVTestRelation (by omega) (by omega)
+    (by omega) (by omega) [.sub 5 2 3]
+  exact labCompilePlain_sub 5 2 3 (by omega) (by omega) (by omega)
+
 end Flapjack.RiscV

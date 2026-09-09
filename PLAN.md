@@ -2045,6 +2045,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   the RISC-V tail-call jump.
 - [x] Connect the tail-call PC contract to the successful
   wordTailCallToRiscV compiler witness.
+- [x] Prove the machine PC contract for the stack-based non-tail call
+  prologue and linked jump.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

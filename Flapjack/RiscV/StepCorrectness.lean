@@ -246,6 +246,29 @@ theorem wordTailCallToRiscV_execute_pc [NeZero width]
       subst code
       exact executeInstructions_tailCall_pc state entry moves hzero
 
+theorem executeInstructions_stackCall_pc [NeZero width]
+    (state : State width) (entry : Word width)
+    (moves : List (Instruction width)) (hzero : ZeroRegister state) :
+    (executeInstructions state
+      (moves ++
+        [.addi 30 30 (0 - BitVec.ofNat width (width / 8)),
+         .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])).pc =
+      jalrTarget entry 0 := by
+  have hzeroMoves : ZeroRegister (executeInstructions state moves) := by
+    induction moves generalizing state with
+    | nil => exact hzero
+    | cons instruction moves ih =>
+        exact ih (execute state instruction)
+          (execute_zeroRegister_preserved state instruction hzero)
+  have hzeroMoves' :
+      (executeInstructions state moves).registers 0 = 0 := by
+    simpa [ZeroRegister, readRegister] using hzeroMoves
+  rw [executeInstructions_append]
+  simp only [executeInstructions]
+  rw [execute_jalr_pc]
+  simp [execute, writeRegister, readRegister,
+    nextPc, writeWordValue_registers, jalrTarget, hzeroMoves']
+
 /-! First source-to-machine step relation.  On the straight-line Word
     fragment, successful instruction selection preserves the ordinary Word
     result and the machine executes exactly one step per emitted instruction.

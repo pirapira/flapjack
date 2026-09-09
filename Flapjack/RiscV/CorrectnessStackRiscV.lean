@@ -205,6 +205,99 @@ theorem wordStackRegisterRelation_executeXor
     exact hrel register hregister
   · exact hdestinationNonzero
 
+theorem wordStackRegisterRelation_executeSll
+    [NeZero width] (source : WordStackMachineState width)
+    (target : State width) (destination left right : Nat)
+    (hrel : WordStackRegisterRelation source target)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationNonzero : destination ≠ 0) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (wordStackMachineShift .lsl (source.registers left)
+          (source.registers right)))
+      (execute target (.sll ⟨destination, hdestination⟩
+        ⟨left, hleft⟩ ⟨right, hright⟩)) := by
+  have hleftValue := hrel left hleft
+  have hrightValue := hrel right hright
+  change WordStackRegisterRelation
+    (wordStackMachineWriteRegister source destination
+      (BitVec.shiftLeft (source.registers left)
+        (shiftAmount (source.registers right))))
+    (writeRegister {target with pc := nextPc target}
+      ⟨destination, hdestination⟩
+      (BitVec.shiftLeft (target.registers ⟨left, hleft⟩)
+        (shiftAmount (target.registers ⟨right, hright⟩))))
+  rw [hleftValue, hrightValue]
+  apply wordStackRegisterRelation_writeRegister source
+    {target with pc := nextPc target} destination
+    (BitVec.shiftLeft (source.registers left)
+      (shiftAmount (source.registers right)))
+  · intro register hregister
+    exact hrel register hregister
+  · exact hdestinationNonzero
+
+theorem wordStackRegisterRelation_executeSrl
+    [NeZero width] (source : WordStackMachineState width)
+    (target : State width) (destination left right : Nat)
+    (hrel : WordStackRegisterRelation source target)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationNonzero : destination ≠ 0) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (wordStackMachineShift .lsr (source.registers left)
+          (source.registers right)))
+      (execute target (.srl ⟨destination, hdestination⟩
+        ⟨left, hleft⟩ ⟨right, hright⟩)) := by
+  have hleftValue := hrel left hleft
+  have hrightValue := hrel right hright
+  change WordStackRegisterRelation
+    (wordStackMachineWriteRegister source destination
+      (BitVec.ushiftRight (source.registers left)
+        (shiftAmount (source.registers right))))
+    (writeRegister {target with pc := nextPc target}
+      ⟨destination, hdestination⟩
+      (BitVec.ushiftRight (target.registers ⟨left, hleft⟩)
+        (shiftAmount (target.registers ⟨right, hright⟩))))
+  rw [hleftValue, hrightValue]
+  apply wordStackRegisterRelation_writeRegister source
+    {target with pc := nextPc target} destination
+    (BitVec.ushiftRight (source.registers left)
+      (shiftAmount (source.registers right)))
+  · intro register hregister
+    exact hrel register hregister
+  · exact hdestinationNonzero
+
+theorem wordStackRegisterRelation_executeSra
+    [NeZero width] (source : WordStackMachineState width)
+    (target : State width) (destination left right : Nat)
+    (hrel : WordStackRegisterRelation source target)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationNonzero : destination ≠ 0) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (wordStackMachineShift .asr (source.registers left)
+          (source.registers right)))
+      (execute target (.sra ⟨destination, hdestination⟩
+        ⟨left, hleft⟩ ⟨right, hright⟩)) := by
+  have hleftValue := hrel left hleft
+  have hrightValue := hrel right hright
+  change WordStackRegisterRelation
+    (wordStackMachineWriteRegister source destination
+      (BitVec.sshiftRight (source.registers left)
+        (shiftAmount (source.registers right))))
+    (writeRegister {target with pc := nextPc target}
+      ⟨destination, hdestination⟩
+      (BitVec.sshiftRight (target.registers ⟨left, hleft⟩)
+        (shiftAmount (target.registers ⟨right, hright⟩))))
+  rw [hleftValue, hrightValue]
+  apply wordStackRegisterRelation_writeRegister source
+    {target with pc := nextPc target} destination
+    (BitVec.sshiftRight (source.registers left)
+      (shiftAmount (source.registers right)))
+  · intro register hregister
+    exact hrel register hregister
+  · exact hdestinationNonzero
+
 theorem labCompilePlain_const
     [NeZero width] (destination value : Nat) (hdestination : destination < 32) :
     labCompilePlain (.const destination value : LabPlain (Word width)) =
@@ -416,6 +509,114 @@ theorem labCompilePlain_xor_register_simulation
     (execute target (.xor ⟨destination, hdestination⟩
       ⟨left, hleft⟩ ⟨right, hright⟩))
   exact wordStackRegisterRelation_executeXor source target destination left right
+    hrel hdestination hleft hright hdestinationNonzero
+
+theorem labCompilePlain_shift_lsl
+    [NeZero width] (destination left right : Nat)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) :
+    labCompilePlain (.shift .lsl destination left right : LabPlain (Word width)) =
+      some [.sll ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩] := by
+  simp [labCompilePlain, labShiftInstructions, registerOfNat,
+    hdestination, hleft, hright]
+
+theorem labCompilePlain_shift_lsr
+    [NeZero width] (destination left right : Nat)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) :
+    labCompilePlain (.shift .lsr destination left right : LabPlain (Word width)) =
+      some [.srl ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩] := by
+  simp [labCompilePlain, labShiftInstructions, registerOfNat,
+    hdestination, hleft, hright]
+
+theorem labCompilePlain_shift_asr
+    [NeZero width] (destination left right : Nat)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) :
+    labCompilePlain (.shift .asr destination left right : LabPlain (Word width)) =
+      some [.sra ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩] := by
+  simp [labCompilePlain, labShiftInstructions, registerOfNat,
+    hdestination, hleft, hright]
+
+theorem labCompilePlain_shift_lsl_register_simulation
+    [NeZero width] (source : WordStackMachineState width)
+    (target : State width) (destination left right : Nat)
+    (hrel : WordStackRegisterRelation source target)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationNonzero : destination ≠ 0)
+    (code : List (Instruction width))
+    (hcode : labCompilePlain
+      (.shift .lsl destination left right : LabPlain (Word width)) = some code) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (wordStackMachineShift .lsl (source.registers left)
+          (source.registers right)))
+      (executeInstructions target code) := by
+  have hshape := labCompilePlain_shift_lsl (width := width) destination left right
+    hdestination hleft hright
+  rw [hshape] at hcode
+  cases hcode
+  change WordStackRegisterRelation
+    (wordStackMachineWriteRegister source destination
+      (wordStackMachineShift .lsl (source.registers left)
+        (source.registers right)))
+    (execute target (.sll ⟨destination, hdestination⟩
+      ⟨left, hleft⟩ ⟨right, hright⟩))
+  exact wordStackRegisterRelation_executeSll source target destination left right
+    hrel hdestination hleft hright hdestinationNonzero
+
+theorem labCompilePlain_shift_lsr_register_simulation
+    [NeZero width] (source : WordStackMachineState width)
+    (target : State width) (destination left right : Nat)
+    (hrel : WordStackRegisterRelation source target)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationNonzero : destination ≠ 0)
+    (code : List (Instruction width))
+    (hcode : labCompilePlain
+      (.shift .lsr destination left right : LabPlain (Word width)) = some code) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (wordStackMachineShift .lsr (source.registers left)
+          (source.registers right)))
+      (executeInstructions target code) := by
+  have hshape := labCompilePlain_shift_lsr (width := width) destination left right
+    hdestination hleft hright
+  rw [hshape] at hcode
+  cases hcode
+  change WordStackRegisterRelation
+    (wordStackMachineWriteRegister source destination
+      (wordStackMachineShift .lsr (source.registers left)
+        (source.registers right)))
+    (execute target (.srl ⟨destination, hdestination⟩
+      ⟨left, hleft⟩ ⟨right, hright⟩))
+  exact wordStackRegisterRelation_executeSrl source target destination left right
+    hrel hdestination hleft hright hdestinationNonzero
+
+theorem labCompilePlain_shift_asr_register_simulation
+    [NeZero width] (source : WordStackMachineState width)
+    (target : State width) (destination left right : Nat)
+    (hrel : WordStackRegisterRelation source target)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationNonzero : destination ≠ 0)
+    (code : List (Instruction width))
+    (hcode : labCompilePlain
+      (.shift .asr destination left right : LabPlain (Word width)) = some code) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (wordStackMachineShift .asr (source.registers left)
+          (source.registers right)))
+      (executeInstructions target code) := by
+  have hshape := labCompilePlain_shift_asr (width := width) destination left right
+    hdestination hleft hright
+  rw [hshape] at hcode
+  cases hcode
+  change WordStackRegisterRelation
+    (wordStackMachineWriteRegister source destination
+      (wordStackMachineShift .asr (source.registers left)
+        (source.registers right)))
+    (execute target (.sra ⟨destination, hdestination⟩
+      ⟨left, hleft⟩ ⟨right, hright⟩))
+  exact wordStackRegisterRelation_executeSra source target destination left right
     hrel hdestination hleft hright hdestinationNonzero
 
 end Flapjack.RiscV

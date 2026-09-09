@@ -802,6 +802,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Connect the StackLang register relation to the executable
   Word-to-Stack/StackRemove/Lab/RISC-V pipeline with a binary-assignment
   artifact and simulation regression.
+- [x] Extend the StackLang/RISC-V register relation through register shifts
+  `lsl`, `lsr`, and `asr`, including their Lab lowerings and regressions.
 - [x] Match CakeML Simple/IRC distinction in graph allocation modes: modes
   0--1 omit move preferences during coalescing but retain the original move table for coloring, while modes 2--3 use the prioritized list for coalescing and the original move table for coloring.
 - [x] Preserve SSA-renamed virtual names at the heuristic allocator's

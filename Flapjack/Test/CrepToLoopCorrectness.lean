@@ -230,4 +230,36 @@ theorem crepToLoop_seq_extCall_return_regression :
   · simp [crepLoopFfiState]
   · simp [crepLoopFfi, crepLoopFfiState, crepLoopFfiStateAfter]
 
+theorem crepToLoop_seq_extCall_raise_regression :
+    evalCrepFullProg [] (fun _ _ => none) crepLoopFfi
+        (fun _ _ _ _ => none) 0 100 20 crepLoopFfiState
+        (.seq (.extCall "inc" 1 2 3 4) (.raise 17)) =
+      some (.raised crepLoopFfiStateAfter 17) ∧
+    evalLoopProgWithCallsAndFfi [] (loopFfiOfCrepFfi crepLoopFfi) 20
+        (loopStateOfCrepState crepLoopFfiState)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+            LoopContext Nat)
+          [9] (.seq (.extCall "inc" 1 2 3 4) (.raise 17))) =
+      some (.raised
+        { (loopStateOfCrepState crepLoopFfiStateAfter) with
+          locals := updateLoopLocal crepLoopFfiStateAfter.locals 1 17 } 17) := by
+  apply crepToLoop_seq_extCall_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] [] (fun _ _ => none) crepLoopFfi (fun _ _ _ _ => none)
+    0 100 18 crepLoopFfiState crepLoopFfiStateAfter [9] "inc" 1 2 3 4
+    41 0 0 0 (.raise 17) (.raised crepLoopFfiStateAfter 17)
+      (.raised
+        { (loopStateOfCrepState crepLoopFfiStateAfter) with
+          locals := updateLoopLocal crepLoopFfiStateAfter.locals 1 17 } 17)
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfi, crepLoopFfiState, crepLoopFfiStateAfter]
+  · simp [evalCrepFullProg, crepLoopFfiStateAfter]
+  · simp [loopCompileProg, evalLoopProgWithCallsAndFfi, evalLoopProg,
+      evalLoopExp, updateLoopLocal, loopStateOfCrepState]
+
 end Flapjack

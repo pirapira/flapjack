@@ -77,4 +77,13 @@ example (state : State 8) (entry : Word 8) (parameters arguments : List Nat)
   exact wordTailCallToRiscV_execute_pc state entry parameters arguments code
     hzero hcompile
 
+example (state : State 8) (entry : Word 8) (moves : List (Instruction 8))
+    (hzero : ZeroRegister state) :
+    (executeInstructions state
+      (moves ++
+        [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
+         .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])).pc =
+      jalrTarget entry 0 := by
+  exact executeInstructions_stackCall_pc state entry moves hzero
+
 end Flapjack.RiscV

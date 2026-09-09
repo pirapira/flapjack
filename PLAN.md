@@ -2055,6 +2055,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   instructions are statically known to be non-branching.
 - [x] Add a stepped-semantics regression for CakeML-compatible structured
   store flattening and shape-directed reconstruction (issue #422).
+- [x] Generalize the conditional RISC-V execution contract to every word
+  width at least five bits, with 32-bit and 64-bit regressions.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

@@ -15,7 +15,21 @@ example (state : State 64) (operator : Cmp) (left right : Fin 32)
         , .branchEq 0 0 (BitVec.ofNat 64 8)
         , elseInstruction ] state |>.isSome := by
   rw [executeCode_conditional_single state operator left right thenInstruction
-    elseInstruction hpc hthen helse]
+    elseInstruction hpc (by decide) hthen helse]
+  split <;> simp
+
+example (state : State 32) (operator : Cmp) (left right : Fin 32)
+    (thenInstruction elseInstruction : Instruction 32)
+    (hpc : state.pc = 0)
+    (hthen : advancesPc thenInstruction)
+    (helse : advancesPc elseInstruction) :
+    executeCode 5 0
+        [ riscVBranchFalseInstruction operator left right (BitVec.ofNat 32 12)
+        , thenInstruction
+        , .branchEq 0 0 (BitVec.ofNat 32 8)
+        , elseInstruction ] state |>.isSome := by
+  rw [executeCode_conditional_single state operator left right thenInstruction
+    elseInstruction hpc (by decide) hthen helse]
   split <;> simp
 
 example :

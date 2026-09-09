@@ -684,6 +684,30 @@ theorem executeWordMoves_stackCall_restore_link_sp [NeZero width]
   rw [executeInstructions_append]
   simpa [hlink] using hrestore
 
+theorem wordRegisterMoves_execute_stackCall_restore_link_sp [NeZero width]
+    (state : State width) (stackAddress savedLink : Word width)
+    (moves : List (Nat × Nat)) (code : List (Instruction width))
+    (hvalid : ∀ move, move ∈ moves →
+      move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
+    (hdestNonzero : ∀ move, move ∈ moves → move.1 ≠ 0)
+    (hnotLink : ∀ move, move ∈ moves → move.1 ≠ 1)
+    (hnotStack : ∀ move, move ∈ moves → move.1 ≠ 30)
+    (hstack : readRegister state 30 = stackAddress)
+    (hsaved : readWordValue state stackAddress = savedLink)
+    (hcompile : wordRegisterMoves (width := width) moves = some code) :
+    let final := executeInstructions state
+      (code ++ [.loadWord 1 30,
+        .addi 30 30 (BitVec.ofNat width (width / 8))])
+    readRegister final 1 = savedLink ∧
+      readRegister final 30 =
+        stackAddress + BitVec.ofNat width (width / 8) ∧
+      final.pc =
+        (executeInstructions state code).pc + BitVec.ofNat width 8 := by
+  have hshape := wordRegisterMoves_shape moves code hvalid hcompile
+  subst code
+  simpa using executeWordMoves_stackCall_restore_link_sp state stackAddress savedLink
+    moves hvalid hdestNonzero hnotLink hnotStack hstack hsaved
+
 theorem executeInstructions_pc_fold_of_nonbranching [NeZero width]
     (state : State width) (code : List (Instruction width))
     (hcode : ∀ instruction ∈ code, instruction.isBranch = false) :

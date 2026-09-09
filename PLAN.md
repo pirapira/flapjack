@@ -2077,6 +2077,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   state and generated result/restore suffix contract.
 - [x] Prove generated result moves transfer all callee return values to caller
   destinations through the non-tail return restoration suffix.
+- [x] Lift generated result-value transfer through the full
+  `wordCallToRiscVWithStack` compiler witness.
 - [x] Prove exact PC advancement for any RISC-V code segment whose
   instructions are statically known to be non-branching.
 - [x] Prove bounded `executeCode` execution agrees with `executeInstructions`

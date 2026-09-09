@@ -70,4 +70,11 @@ example (state : State 8) (entry : Word 8) (moves : List (Instruction 8))
       jalrTarget entry 0 := by
   exact executeInstructions_tailCall_pc state entry moves hzero
 
+example (state : State 8) (entry : Word 8) (parameters arguments : List Nat)
+    (code : List (Instruction 8)) (hzero : ZeroRegister state)
+    (hcompile : wordTailCallToRiscV entry parameters arguments = some code) :
+    (executeInstructions state code).pc = jalrTarget entry 0 := by
+  exact wordTailCallToRiscV_execute_pc state entry parameters arguments code
+    hzero hcompile
+
 end Flapjack.RiscV

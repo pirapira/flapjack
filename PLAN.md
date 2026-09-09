@@ -2023,6 +2023,10 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   changing the historical compatibility APIs.
 - [x] Export the generalized Loop-to-Word call-entry correctness contracts
   from the public Flapjack library aggregate for downstream RISC-V proofs.
+- [x] Expose target-wrapper siblings for heuristic, linear-scan, and numeric
+  allocation-mode RISC-V entrypoints with executable main regressions.
+- [x] Expose target-wrapper variants for bitmap-carrying and Simple-GC
+  RISC-V pipelines with executable artifact regressions.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

@@ -691,6 +691,71 @@ def compileFlapjackRiscVViaGraphStackWithFullSsaTarget [NeZero width]
     removeConfig 0 initialLabel
     (functions.map (fun (label, _, body) => (label, body)))
 
+def compileFlapjackRiscVViaAllocatedStackWithBitmapsTarget [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (RiscV.WordStackBitmapState × List (RiscV.Instruction width)) := do
+  let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
+  let (functions, bitmaps) ←
+    pipelineWordFunctionsAllocatedWithSpillsAndBitmaps
+      (RiscV.wordStackInitialBitmaps false) pipeline.loop
+  let instructions ←
+    RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
+      removeConfig 0 0
+      (functions.map (fun (label, _, body) => (label, body)))
+  pure (bitmaps, instructions)
+
+def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsTarget
+    [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (RiscV.WordStackBitmapState × List (RiscV.Instruction width)) := do
+  let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
+  let (functions, bitmaps) ←
+    pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps
+      (RiscV.wordStackInitialBitmaps false) pipeline.loop
+  let initialLabel := fullSsaInitialLabLabel functions
+  let instructions ←
+    RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
+      removeConfig 0 initialLabel
+      (functions.map (fun (label, _, body) => (label, body)))
+  pure (bitmaps, instructions)
+
+def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcTarget
+    [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (RiscV.WordStackBitmapState × List (RiscV.Instruction width)) := do
+  let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
+  let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
+  let (functions, bitmaps) ←
+    pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps
+      (RiscV.wordStackInitialBitmaps false) loop
+  let initialLabel := fullSsaInitialLabLabel functions
+  let instructions ←
+    RiscV.compileStackProgramNatListWithSimpleGcAndStoreConstsToRiscV
+      { services := services } removeConfig
+      { gcStubLocation := stackGcStubLocation, returnLabel := 0,
+        firstFreshLabel := stackFunctionFirstLabel }
+      { } stackStoreConstsStubLocation wordAllocatableRegisters.length 0 initialLabel
+      (functions.map (fun (label, _, body) => (label, body)))
+  pure (bitmaps, instructions)
+
 def compileFlapjackRiscVViaStack [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
     [Add (RiscV.Word width)] [Mul (RiscV.Word width)]

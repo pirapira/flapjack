@@ -44,6 +44,12 @@ def runtimeLinkDeclarations : List (Decl (RiscV.Word 64)) :=
     (fun value => BitVec.ofNat 64 value) [] runtimeLinkRemoveConfig
     runtimeLinkDeclarations).isSome
 
+#guard
+  (compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcTarget
+    (width := 64) .rv64i (BitVec.ofNat 64 8)
+    (fun value => BitVec.ofNat 64 value) [] runtimeLinkRemoveConfig
+    runtimeLinkDeclarations).isSome
+
 example :
     RiscV.linkRiscVFunctionsAt (0 : RiscV.Word 64) 12
       [(7, [], some ([.addi 2 0 1, .jalr 0 1 0], [])),

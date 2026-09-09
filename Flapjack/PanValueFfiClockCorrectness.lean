@@ -178,7 +178,9 @@ theorem evalPanValueFfiClockCall_zero_timeout
       baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi 0
       info function arguments (memoryAccess := memoryAccess)
       (contracts := contracts) =
-      some (.timeout (fun _ => none) globals memory ffi, 0) := by
+      if panValueParametersValid structs contracts function values then
+        some (.timeout (fun _ => none) globals memory ffi, 0)
+      else none := by
   simp [evalPanValueFfiClockCall, hargs, hlookup, hbind,
     panValueFfiClockTimeout]
 

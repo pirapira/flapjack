@@ -109,12 +109,13 @@ mutual
         let (values, argumentCost) ← evalPanValueExpsCost depth structs locals globals
           memory baseAddress topAddress bytesInWord arguments memoryAccess
         let (parameters, body) ← lookupPanFunction function functions
-        let calleeLocals ← bindPanValueParameters parameters values
-        let (result, bodyCost) ← evalPanValueProgWithCost primitive handler structs functions
-          baseAddress topAddress bytesInWord fuel calleeLocals globals memory (depth + 1) body
-          (memoryAccess := memoryAccess) (contracts := contracts)
-        let cost := panCostCombine argumentCost bodyCost
-        match result with
+        if panValueParametersValid structs contracts function values then
+          let calleeLocals ← bindPanValueParameters parameters values
+          let (result, bodyCost) ← evalPanValueProgWithCost primitive handler structs functions
+            baseAddress topAddress bytesInWord fuel calleeLocals globals memory (depth + 1) body
+            (memoryAccess := memoryAccess) (contracts := contracts)
+          let cost := panCostCombine argumentCost bodyCost
+          match result with
         | .normal _ calleeGlobals calleeMemory =>
             pure (.normal locals calleeGlobals calleeMemory, cost)
         | .returned _ calleeGlobals calleeMemory values =>
@@ -146,8 +147,9 @@ mutual
             else none
         | .broke _ calleeGlobals calleeMemory =>
             pure (.broke locals calleeGlobals calleeMemory, cost)
-        | .continued _ calleeGlobals calleeMemory =>
-            pure (.continued locals calleeGlobals calleeMemory, cost)
+          | .continued _ calleeGlobals calleeMemory =>
+              pure (.continued locals calleeGlobals calleeMemory, cost)
+        else none
     termination_by fuel _ _ _ _ _ _ _ _ _ => fuel
 
   def evalPanValueProgWithCost
@@ -407,7 +409,8 @@ def evalPanValueCostProgram
     (memoryAccess : Option (PanValueMemoryAccess α) := none) :
     Option (PanValueCostResult α) := do
   let state ← evalPanValueDeclarations initial declarations (memoryAccess := memoryAccess)
-  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions)
+  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions
+    state.parameterShapes)
   let result ← evalPanValueCallWithCost primitive ffi state.structs state.functions
     state.baseAddress state.topAddress state.bytesInWord fuel
     (fun _ => none) state.globals state.memory 0 none entry arguments

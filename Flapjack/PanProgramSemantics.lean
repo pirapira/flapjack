@@ -18,6 +18,7 @@ structure PanValueProgramState (α : Type u) where
   globals : VarName → Option (PanValue α)
   functions : List (FunName × List VarName × Prog α)
   returnShapes : InfoMap Shape
+  parameterShapes : InfoMap (List (VarName × Shape)) := []
   exceptions : InfoMap Shape
   memory : α → Option (PanValue α)
   baseAddress : α
@@ -63,8 +64,10 @@ def evalPanValueDeclarations
           (declaration.name, declaration.params.map Prod.fst,
             declaration.body) :: state.functions }
         evalPanValueDeclarations
-          { state with returnShapes := (declaration.name, declaration.returnShape) ::
-              state.returnShapes } declarations (memoryAccess := memoryAccess)
+          { state with
+              returnShapes := (declaration.name, declaration.returnShape) :: state.returnShapes
+              parameterShapes := (declaration.name, declaration.params) :: state.parameterShapes }
+          declarations (memoryAccess := memoryAccess)
       else none
   | .exnDecl exception shape :: declarations, memoryAccess =>
       if (lookupInfo exception state.exceptions).isSome then none
@@ -88,7 +91,8 @@ def evalPanValueProgram
     Option (PanValueControlResult α) := do
   let state ← evalPanValueDeclarations initial declarations
     (memoryAccess := memoryAccess)
-  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions)
+  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions
+    state.parameterShapes)
   let result ← evalPanValueCallWithPrimitiveCallsAndFfi primitive ffi state.structs
     state.functions state.baseAddress state.topAddress state.bytesInWord fuel
     (fun _ => none) state.globals state.memory none entry arguments

@@ -127,4 +127,40 @@ example :
       "main" []).isNone = true := by
   decide +kernel
 
+/- `lookup_code` rejects calls whose evaluated arguments do not have the
+   declared parameter shapes. -/
+example :
+    (panValueProgramResult sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 30
+      [.function
+         { name := "takesWord", inline := false, exported := false,
+           params := [("x", .one)],
+           body := .return (.var .local "x"), returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .dec "result" .one (.const 0)
+             (.seq
+               (.call (some (some (.local, "result"), none)) "takesWord"
+                 [.const 7])
+               (.return (.var .local "result"))), returnShape := .one }]
+      "main" []).bind sourceDeclarationSingleWord = some 7 := by
+  native_decide
+
+example :
+    (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 30
+      [.function
+         { name := "takesWord", inline := false, exported := false,
+           params := [("x", .one)],
+           body := .return (.var .local "x"), returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .dec "result" .one (.const 0)
+             (.seq
+               (.call (some (some (.local, "result"), none)) "takesWord"
+                 [.rStruct [.const 7, .const 8]])
+               (.return (.var .local "result"))), returnShape := .one }]
+      "main" []).isNone = true := by
+  native_decide
+
 end Flapjack

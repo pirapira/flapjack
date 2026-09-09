@@ -88,7 +88,9 @@ mutual
         let values ← evalPanValueExps structs locals globals memory
           baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
         let (parameters, body) ← lookupPanFunction function functions
-        let calleeLocals ← bindPanValueParameters parameters values
+        let calleeLocals ← if panValueParametersValid structs contracts function values then
+          bindPanValueParameters parameters values
+        else none
         if clock = 0 then
           pure (panValueFfiClockTimeout globals memory ffi clock)
         else
@@ -263,7 +265,8 @@ def evalPanValueFfiClockProgram
     Option (PanValueFfiClockResult α σ) := do
   let state ← evalPanValueDeclarations initial.source declarations
     (memoryAccess := memoryAccess)
-  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions)
+  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions
+    state.parameterShapes)
   let (outcome, nextClock) ← evalPanValueFfiClockCall context primitive handler state.structs
     state.functions state.baseAddress state.topAddress state.bytesInWord fuel
     (fun _ => none) state.globals state.memory initial.ffi clock none entry arguments

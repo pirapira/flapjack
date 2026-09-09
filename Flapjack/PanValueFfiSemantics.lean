@@ -197,7 +197,9 @@ mutual
         let (values, argumentSteps) ← evalPanValueExpsCounted structs locals globals memory
           baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
         let (parameters, body) ← lookupPanFunction function functions
-        let calleeLocals ← bindPanValueParameters parameters values
+        let calleeLocals ← if panValueParametersValid structs contracts function values then
+          bindPanValueParameters parameters values
+        else none
         let (result, steps) ← evalPanValueFfiProgSteps context primitive handler structs functions
           baseAddress topAddress bytesInWord fuel calleeLocals globals memory ffi body
           (memoryAccess := memoryAccess) (contracts := contracts)
@@ -546,7 +548,8 @@ def evalPanValueFfiProgram
     Option (PanValueFfiControlResult α σ) := do
   let state ← evalPanValueDeclarations initial.source declarations
     (memoryAccess := memoryAccess)
-  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions)
+  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions
+    state.parameterShapes)
   let (result, _) ← evalPanValueFfiCallSteps context primitive handler state.structs
     state.functions state.baseAddress state.topAddress state.bytesInWord fuel
     (fun _ => none) state.globals state.memory initial.ffi none entry arguments
@@ -579,7 +582,8 @@ def evalPanValueFfiProgramStepped
     Option (PanValueFfiSteppedResult α σ) := do
   let state ← evalPanValueDeclarations initial.source declarations
     (memoryAccess := memoryAccess)
-  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions)
+  let contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions
+    state.parameterShapes)
   let result ← evalPanValueFfiCallSteps context primitive handler state.structs
     state.functions state.baseAddress state.topAddress state.bytesInWord fuel
     (fun _ => none) state.globals state.memory initial.ffi none entry arguments
@@ -620,7 +624,8 @@ theorem evalPanValueFfiProgramStepped_fst
           state.functions state.baseAddress state.topAddress state.bytesInWord fuel
           (fun _ => none) state.globals state.memory initial.ffi none entry arguments
           (memoryAccess := memoryAccess)
-          (contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions))
+          (contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions
+            state.parameterShapes))
           (memoryHandler := memoryHandler) with
       | none => simp [hcall]
       | some result =>

@@ -77,6 +77,27 @@ def evalRiscVUnsignedLower : Option (PanValue ShiftWord) :=
   | some (.word value) => value == shiftWord 0
   | _ => false
 
+def evalGenericRiscVSignedLess : Option (PanValue ShiftWord) :=
+  evalPanFlatExp [] (fun _ => none) (fun _ => none)
+    (fun _ => false) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.cmp .less (.const (shiftWord 0x80)) (.const (shiftWord 0)))
+    (memoryAccess := some (panMemoryAccessOfModel RiscV.panRiscVMemoryModel))
+
+def evalGenericRiscVUnsignedLower : Option (PanValue ShiftWord) :=
+  evalPanFlatExp [] (fun _ => none) (fun _ => none)
+    (fun _ => false) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.cmp .lower (.const (shiftWord 0x80)) (.const (shiftWord 0)))
+    (memoryAccess := some (panMemoryAccessOfModel RiscV.panRiscVMemoryModel))
+
+#guard match evalGenericRiscVSignedLess with
+  | some (.word value) => value == shiftWord 1
+  | _ => false
+#guard match evalGenericRiscVUnsignedLower with
+  | some (.word value) => value == shiftWord 0
+  | _ => false
+
 def assignmentWordLocals : VarName → Option (PanValue ShiftWord) := fun name =>
   if name == "x" then some (.word (shiftWord 7)) else none
 

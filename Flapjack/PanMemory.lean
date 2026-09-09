@@ -223,9 +223,15 @@ def evalPanFlatExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .op operator arguments, memoryAccess => do
       let values ← evalPanFlatExps structs locals globals domain memory
         baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
-      match values with
-      | [.word left, .word right] => some (.word (evalPanBinOp operator left right))
-      | _ => none
+      let values ← values.mapM fun value => match value with
+        | .word value => some value
+        | _ => none
+      match memoryAccess with
+      | none =>
+          match values with
+          | [left, right] => some (.word (evalPanBinOp operator left right))
+          | _ => none
+      | some access => (access.wordOp operator values).map .word
   | .panOp .mul arguments, memoryAccess => do
       let values ← evalPanFlatExps structs locals globals domain memory
         baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
@@ -238,7 +244,10 @@ def evalPanFlatExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let right ← evalPanFlatExp structs locals globals domain memory
         baseAddress topAddress bytesInWord right (memoryAccess := memoryAccess)
       match left, right with
-      | .word left, .word right => some (.word (evalPanCmp operator left right))
+      | .word left, .word right =>
+          match memoryAccess with
+          | none => some (.word (evalPanCmp operator left right))
+          | some access => some (.word (access.compare operator left right))
       | _, _ => none
   | .shift operator left right, memoryAccess => do
       let left ← evalPanFlatExp structs locals globals domain memory
@@ -247,7 +256,9 @@ def evalPanFlatExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
         baseAddress topAddress bytesInWord right (memoryAccess := memoryAccess)
       match left, right with
       | .word left, .word right =>
-          (evalPanShift operator left right).map .word
+          match memoryAccess with
+          | none => (evalPanShift operator left right).map .word
+          | some access => (access.shift operator left right).map .word
       | _, _ => none
   | .baseAddr, _ => some (.word baseAddress)
   | .topAddr, _ => some (.word topAddress)

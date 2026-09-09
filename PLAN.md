@@ -35,7 +35,7 @@ not yet an equivalent source semantics. In particular:
 | --- | --- | --- |
 | Values and shaped records | `Val`, `RStruct`, `NStruct`, with declaration and shape checks | `PanValue` and most expression shape checks match the intended structure |
 | `Op` | `Add`, `And`, `Or`, and `Xor` fold over arbitrary word lists; `Sub` accepts exactly two words | Model-aware structured and stepped evaluators dispatch through the target model’s complete word operator; legacy no-model paths retain the old binary compatibility behavior ([#382](https://github.com/pirapira/flapjack/issues/382)) |
-| Comparisons and shifts | `Lower` is unsigned, `Less` is signed; all `Lsl`, `Lsr`, `Asr`, and `Ror` are defined | Model-aware structured and stepped expressions now use target-model signed/unsigned comparisons and all shifts; legacy paths still need migration ([#383](https://github.com/pirapira/flapjack/issues/383), [#389](https://github.com/pirapira/flapjack/issues/389)) |
+| Comparisons and shifts | `Lower` is unsigned, `Less` is signed; all `Lsl`, `Lsr`, `Asr`, and `Ror` are defined | Model-aware structured, flat, and stepped expressions now use target-model signed/unsigned comparisons and all shifts; legacy paths still need migration ([#383](https://github.com/pirapira/flapjack/issues/383), [#389](https://github.com/pirapira/flapjack/issues/389)) |
 | Word loads/stores | Domain-checked exact aligned word cells | Model-aware `PanMemory` and `PanValues` use explicit domains; legacy evaluator calls retain compatibility fallback |
 | Byte and 32-bit accesses | Align to `byte_align`; extract/patch bytes with `be`; `Load32` additionally requires `aligned 2` | Model-aware flat, structured, and stepped evaluators now use the canonical word-cell operations; compatibility fallback remains |
 | Structured `Store` | Flatten values into consecutive word cells and fail transactionally on a bad domain | `PanValues` and its stepped evaluator now flatten word leaves into consecutive cells and thread model-backed stores transactionally ([#422](https://github.com/pirapira/flapjack/issues/422)); the standalone `PanMemory` helper remains the flat reference |
@@ -222,6 +222,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   sign-extended 20-bit immediates and destination-register contracts.
 - [x] Correct the mixed-sign two's-complement ordering predicate and add
   negative/positive `SLT` and branch regressions.
+- [x] Route the model-aware flat source evaluator's word operators,
+  signed/unsigned comparisons, and complete shift family through the target
+  memory model, with RISC-V regressions for signed `Less` and unsigned `Lower`.
 - [x] Add executable deterministic semantics and preservation theorems for
   the supported constant/return/sequence fragment, including scalar local
   assignment state updates.

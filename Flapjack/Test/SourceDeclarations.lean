@@ -125,6 +125,47 @@ example :
       "main" []).isNone = true := by
   decide +kernel
 
+/- CakeML treats every callee completion other than Return or Raise as an
+   error at the call boundary.  Cover fall-through, Break, and Continue. -/
+example :
+    (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 30
+      [.function
+         { name := "fallsThrough", inline := false, exported := false, params := [],
+           body := .skip, returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .seq (.call none "fallsThrough" []) (.return (.const 1)),
+           returnShape := .one }]
+      "main" []).isNone = true := by
+  decide +kernel
+
+example :
+    (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 30
+      [.function
+         { name := "breaks", inline := false, exported := false, params := [],
+           body := .break, returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .seq (.call none "breaks" []) (.return (.const 1)),
+           returnShape := .one }]
+      "main" []).isNone = true := by
+  decide +kernel
+
+example :
+    (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 30
+      [.function
+         { name := "continues", inline := false, exported := false, params := [],
+           body := .continue, returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .seq (.call none "continues" []) (.return (.const 1)),
+           returnShape := .one }]
+      "main" []).isNone = true := by
+  decide +kernel
+
 example :
     (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
       sourceDeclarationNoFfi 40

@@ -108,4 +108,20 @@ theorem compileWordImmediateXor_sound [NeZero width] (state : State width)
   simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
     registerOfNat, executeInstructions, execute, writeRegister, nextPc]
 
+theorem compileWordImmediateAdd_sound [NeZero width] (state : State width)
+    (value : Word width) :
+    evalWordProg state
+        (.assign 1 (.op .add [.var 2, .const value])) =
+      some (execute state (.addi 1 2 value)) := by
+  simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+    registerOfNat, executeInstructions, execute, writeRegister, nextPc]
+
+theorem compileWordImmediateSub_sound [NeZero width] (state : State width)
+    (value : Word width) :
+    evalWordProg state
+        (.assign 1 (.op .sub [.var 2, .const value])) =
+      some (execute state (.addi 1 2 (0 - value))) := by
+  simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+    registerOfNat, executeInstructions, execute, writeRegister, nextPc]
+
 end Flapjack.RiscV

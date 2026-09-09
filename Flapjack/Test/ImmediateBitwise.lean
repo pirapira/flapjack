@@ -22,4 +22,16 @@ example [NeZero width] (state : State width) (value : Word width) :
       some (execute state (.xori 1 2 value)) :=
   compileWordImmediateXor_sound state value
 
+example [NeZero width] (state : State width) (value : Word width) :
+    evalWordProg state
+        (.assign 1 (.op .add [.var 2, .const value])) =
+      some (execute state (.addi 1 2 value)) :=
+  compileWordImmediateAdd_sound state value
+
+example [NeZero width] (state : State width) (value : Word width) :
+    evalWordProg state
+        (.assign 1 (.op .sub [.var 2, .const value])) =
+      some (execute state (.addi 1 2 (0 - value))) :=
+  compileWordImmediateSub_sound state value
+
 end Flapjack.RiscV

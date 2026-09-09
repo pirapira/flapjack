@@ -2198,6 +2198,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   optimized path that omits the redundant source-to-scratch copy.
 - [x] Prove the dynamic StackRemove stack-load boundary for register-held byte
   offsets, preserving the non-address-scratch register relation.
+- [x] Prove both dynamic StackRemove frame-store paths, including the
+  offset-register non-alias requirement and the optimized scratch-alias case.
 
 ## First implementation slice
 

@@ -324,6 +324,260 @@ theorem executeCodeUntil_conditional_of_nonbranching [NeZero width]
     simpa [code, branch, jump, returnOffset, List.cons_append,
       List.append_assoc, hcondition] using hrun
 
+theorem executeCodeUntilWithFfiCounted_conditional_of_nonbranching
+    [NeZero width] (host : WordFfiHost width) (state : State width)
+    (operator : Cmp) (left right : Fin 32)
+    (thenCode elseCode : List (Instruction width))
+    (thenState elseState : State width) (thenCount elseCount : Nat)
+    (hpc : state.pc = 0)
+    (hthenAdvance : ∀ (current : State width) (instruction : Instruction width),
+      instruction ∈ thenCode → ∀ next,
+        executeWithFfi host current instruction = some next →
+          next.pc = current.pc + 4)
+    (helseAdvance : ∀ (current : State width) (instruction : Instruction width),
+      instruction ∈ elseCode → ∀ next,
+        executeWithFfi host current instruction = some next →
+          next.pc = current.pc + 4)
+    (hthenResult :
+      executeInstructionsWithFfiCounted host
+          (execute state (riscVBranchFalseInstruction operator left right
+            (BitVec.ofNat width (8 + 4 * thenCode.length)))) thenCode =
+        some (thenState, thenCount))
+    (helseResult :
+      executeInstructionsWithFfiCounted host
+          (execute state (riscVBranchFalseInstruction operator left right
+            (BitVec.ofNat width (8 + 4 * thenCode.length)))) elseCode =
+        some (elseState, elseCount))
+    (hbound : (thenCode.length + elseCode.length + 2) * 4 < 2 ^ width) :
+    executeCodeUntilWithFfiCounted host
+        (if riscVCondition state operator left right then
+          thenCode.length + elseCode.length + 3
+        else elseCode.length + 2)
+        0 (BitVec.ofNat width ((thenCode.length + elseCode.length + 2) * 4))
+        (riscVBranchFalseInstruction operator left right
+            (BitVec.ofNat width (8 + 4 * thenCode.length)) ::
+          thenCode ++
+          [.branchEq 0 0 (BitVec.ofNat width (4 + 4 * elseCode.length))] ++
+          elseCode) state =
+      if riscVCondition state operator left right then
+        some
+          (execute thenState
+            (.branchEq 0 0 (BitVec.ofNat width (4 + 4 * elseCode.length))),
+            thenCount + 2)
+      else some (elseState, elseCount + 1) := by
+  let branch := riscVBranchFalseInstruction operator left right
+    (BitVec.ofNat width (8 + 4 * thenCode.length))
+  let jump : Instruction width :=
+    .branchEq 0 0 (BitVec.ofNat width (4 + 4 * elseCode.length))
+  let code := branch :: thenCode ++ [jump] ++ elseCode
+  have hbranchFfi :
+      executeWithFfi host state branch = some (execute state branch) := by
+    cases operator <;> rfl
+  have hbranchFfi' :
+      executeWithFfi host state
+          (riscVBranchFalseInstruction operator left right
+            (BitVec.ofNat width (8 + 4 * thenCode.length))) =
+        some (execute state
+          (riscVBranchFalseInstruction operator left right
+            (BitVec.ofNat width (8 + 4 * thenCode.length))) ) := by
+    cases operator <;> rfl
+  let returnAddress : Word width :=
+    BitVec.ofNat width ((thenCode.length + elseCode.length + 2) * 4)
+  have hreturnBound : returnAddress.toNat < 2 ^ width := by
+    simpa [returnAddress, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hbound] using hbound
+  have hnotReturn : state.pc ≠ returnAddress := by
+    intro heq
+    rw [hpc] at heq
+    have heqNat := congrArg BitVec.toNat heq
+    simp [returnAddress, BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt hbound] at heqNat
+  by_cases hcondition : riscVCondition state operator left right
+  · have hbranchPc :
+        (execute state branch).pc = BitVec.ofNat width 4 := by
+      simpa [branch, hcondition, hpc, nextPc] using
+        execute_riscVBranchFalse_pc state operator left right
+          (BitVec.ofNat width (8 + 4 * thenCode.length))
+    have hbranchStep :
+        executeCodeUntilWithFfiCounted host (thenCode.length + elseCode.length + 3)
+            0 returnAddress code state =
+          (executeCodeUntilWithFfiCounted host
+            (thenCode.length + elseCode.length + 2) 0 returnAddress code
+            (execute state branch)).map
+            (fun result => (result.1, result.2 + 1)) := by
+      have hfuel :
+          thenCode.length + elseCode.length + 3 =
+            Nat.succ (thenCode.length + elseCode.length + 2) := by omega
+      rw [show code = branch :: thenCode ++ [jump] ++ elseCode by rfl]
+      rw [hfuel, executeCodeUntilWithFfiCounted]
+      rw [if_neg (by simpa [returnAddress] using hnotReturn)]
+      rw [hpc]
+      simp [BitVec.toNat_ofNat]
+      rw [hbranchFfi']
+      have hmap_bind (result : Option (State width × Nat)) :
+          result.bind (fun value => some (value.1, value.2 + 1)) =
+            result.map (fun value => (value.1, value.2 + 1)) := by
+        cases result <;> rfl
+      simpa [code, branch] using (hmap_bind
+        (executeCodeUntilWithFfiCounted host
+          (thenCode.length + elseCode.length + 2) 0 returnAddress code
+          (execute state branch)))
+    have hthenPc :
+        thenState.pc =
+          (execute state branch).pc +
+            BitVec.ofNat width (thenCode.length * 4) :=
+      executeInstructionsWithFfiCounted_pc_of_advance host
+        (execute state branch) thenCode hthenAdvance thenState thenCount
+        hthenResult
+    have hthenPc' :
+        thenState.pc = BitVec.ofNat width ((1 + thenCode.length) * 4) := by
+      calc
+        thenState.pc =
+            (execute state branch).pc +
+              BitVec.ofNat width (thenCode.length * 4) := hthenPc
+        _ = BitVec.ofNat width 4 +
+              BitVec.ofNat width (thenCode.length * 4) := by
+          rw [hbranchPc]
+        _ = BitVec.ofNat width (4 + thenCode.length * 4) := by
+          rw [← BitVec.ofNat_add]
+        _ = BitVec.ofNat width ((1 + thenCode.length) * 4) := by
+          congr 1
+          omega
+    have hthenBeforeEnd :
+        (1 + thenCode.length) * 4 <
+          (thenCode.length + elseCode.length + 2) * 4 := by omega
+    have hthenFactor := executeCodeUntilWithFfiCounted_after_nonbranching
+      host (execute state branch) [branch] thenCode (jump :: elseCode)
+      (elseCode.length + 2) returnAddress
+      (by simpa using hbranchPc) hthenAdvance
+      (by simpa [returnAddress, BitVec.toNat_ofNat,
+        Nat.mod_eq_of_lt hbound] using hthenBeforeEnd)
+      hreturnBound
+    have hthenFactor' :
+        executeCodeUntilWithFfiCounted host
+            (thenCode.length + elseCode.length + 2) 0 returnAddress code
+            (execute state branch) =
+          (executeCodeUntilWithFfiCounted host (elseCode.length + 2) 0
+            returnAddress code thenState).map
+              (fun final => (final.1, final.2 + thenCode.length)) := by
+      have hlen :
+          thenCode.length + elseCode.length + 2 =
+            thenCode.length + (elseCode.length + 2) := by omega
+      rw [hlen]
+      rw [hthenResult] at hthenFactor
+      simpa [code, branch, jump, List.cons_append, List.append_assoc] using hthenFactor
+    have hjumpPc :
+        (execute thenState jump).pc = returnAddress := by
+      rw [execute_branchEq_pc, hthenPc']
+      simp [returnAddress]
+      rw [← BitVec.ofNat_add]
+      congr 1
+      omega
+    have hjumpRun :
+        executeCodeUntilWithFfiCounted host (elseCode.length + 2) 0
+            returnAddress code thenState =
+          some (execute thenState jump, 1) := by
+      have hthenBound : (1 + thenCode.length) * 4 < 2 ^ width := by omega
+      have hnotReturnThen : thenState.pc ≠ returnAddress := by
+        intro heq
+        rw [hthenPc'] at heq
+        have heqNat := congrArg BitVec.toNat heq
+        simp [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hthenBound,
+          returnAddress, Nat.mod_eq_of_lt hbound] at heqNat
+        omega
+      have hfuel : elseCode.length + 2 = Nat.succ (elseCode.length + 1) := by omega
+      rw [hfuel, executeCodeUntilWithFfiCounted]
+      rw [if_neg hnotReturnThen]
+      rw [hthenPc']
+      simp [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hthenBound]
+      have hlookup : code[1 + thenCode.length]? = some jump := by
+        simp only [code, List.cons_append, List.append_assoc]
+        rw [show 1 + thenCode.length = thenCode.length + 1 by omega]
+        rw [List.getElem?_cons_succ]
+        rw [List.getElem?_append_right (by omega)]
+        simp
+      rw [hlookup]
+      simp [executeCodeUntilWithFfiCounted, executeWithFfi, jump, hjumpPc]
+    have hthenCountEq := executeInstructionsWithFfiCounted_count_eq_length
+      host (execute state branch) thenCode thenState thenCount hthenResult
+    have hrun :
+        executeCodeUntilWithFfiCounted host
+            (thenCode.length + elseCode.length + 3) 0 returnAddress code state =
+          some (execute thenState jump, thenCount + 2) := by
+      rw [hbranchStep, hthenFactor', hjumpRun]
+      simp [hthenCountEq]
+      omega
+    simpa [hcondition, code, returnAddress, branch, jump] using hrun
+  · have hbranchPc :
+        (execute state branch).pc =
+          BitVec.ofNat width (8 + 4 * thenCode.length) := by
+      simpa [branch, hcondition, hpc] using
+        execute_riscVBranchFalse_pc state operator left right
+          (BitVec.ofNat width (8 + 4 * thenCode.length))
+    have hfalsePc :
+        (execute state branch).pc =
+          BitVec.ofNat width (([branch] ++ thenCode ++ [jump]).length * 4) := by
+      calc
+        (execute state branch).pc =
+            BitVec.ofNat width (8 + 4 * thenCode.length) := hbranchPc
+        _ = BitVec.ofNat width (([branch] ++ thenCode ++ [jump]).length * 4) := by
+          congr 1
+          simp
+          omega
+    have hfalseBound :
+        (([branch] ++ thenCode ++ [jump]).length + elseCode.length) * 4 <
+          2 ^ width := by
+      have hlen :
+          (([branch] ++ thenCode ++ [jump]).length + elseCode.length) * 4 =
+            (thenCode.length + elseCode.length + 2) * 4 := by
+        simp [List.length_append, List.length_cons]
+        omega
+      rw [hlen]
+      exact hbound
+    have hfalseRun := executeCodeUntilWithFfiCounted_suffix
+      (host := host) (state := execute state branch)
+      (prelude := [branch] ++ thenCode ++ [jump])
+      (suffix := elseCode) (tail := [])
+      (hpc := hfalsePc) (hadvance := helseAdvance) (hbound := hfalseBound)
+    have hbranchStep :
+        executeCodeUntilWithFfiCounted host (elseCode.length + 2)
+            0 returnAddress code state =
+          (executeCodeUntilWithFfiCounted host (elseCode.length + 1)
+            0 returnAddress code (execute state branch)).map
+            (fun result => (result.1, result.2 + 1)) := by
+      have hfuel : elseCode.length + 2 = Nat.succ (elseCode.length + 1) := by omega
+      rw [show code = branch :: thenCode ++ [jump] ++ elseCode by rfl]
+      rw [hfuel, executeCodeUntilWithFfiCounted]
+      rw [if_neg (by simpa [returnAddress] using hnotReturn)]
+      rw [hpc]
+      simp [BitVec.toNat_ofNat]
+      rw [hbranchFfi']
+      have hmap_bind (result : Option (State width × Nat)) :
+          result.bind (fun value => some (value.1, value.2 + 1)) =
+            result.map (fun value => (value.1, value.2 + 1)) := by
+        cases result <;> rfl
+      simpa [code, branch] using (hmap_bind
+        (executeCodeUntilWithFfiCounted host (elseCode.length + 1)
+          0 returnAddress code (execute state branch)))
+    have hfalseRun' :
+        executeCodeUntilWithFfiCounted host (elseCode.length + 1)
+            0 returnAddress code (execute state branch) =
+          executeInstructionsWithFfiCounted host (execute state branch) elseCode := by
+      have hreturnEq :
+          (([branch] ++ thenCode ++ [jump]).length + elseCode.length) * 4 =
+            (thenCode.length + elseCode.length + 2) * 4 := by
+        simp [List.length_append, List.length_cons]
+        omega
+      rw [hreturnEq] at hfalseRun
+      simpa [code, branch, jump, List.cons_append, List.append_assoc] using
+        hfalseRun
+    have hrun :
+        executeCodeUntilWithFfiCounted host (elseCode.length + 2) 0
+            returnAddress code state =
+          some (elseState, elseCount + 1) := by
+      rw [hbranchStep, hfalseRun', helseResult]
+      simp
+    simpa [hcondition, code, returnAddress, branch, jump] using hrun
+
 theorem wordFunctionToRiscVWithCalls_ite_shape [NeZero width]
     (context : WordCallContext width) (operator : Cmp) (condition : Nat)
     (rightValue : WordRegImm (Word width))

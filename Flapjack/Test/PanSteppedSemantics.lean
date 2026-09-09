@@ -82,6 +82,15 @@ example :
       intro value step
       simp))
 
+example :
+    (evalPanValueExpCounted [] steppedTestLocals steppedTestGlobals steppedTestMemory
+      0 100 1 (.op .add [.const 1, .const 2])).map Prod.snd =
+      (evalPanValueExp [] steppedTestLocals steppedTestGlobals steppedTestMemory
+        0 100 1 (.op .add [.const 1, .const 2])).map
+        (fun _ => panValueExpStepCost (.op .add [.const 1, .const 2])) := by
+  exact evalPanValueExpCounted_snd [] steppedTestLocals steppedTestGlobals
+    steppedTestMemory 0 100 1 (.op .add [.const 1, .const 2])
+
 #guard
   (evalPanValueSteppedProg steppedTestPrimitive steppedTestFfi [] steppedTestFunctions
     0 100 1 8 steppedTestLocals steppedTestGlobals steppedTestMemory

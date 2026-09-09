@@ -86,6 +86,36 @@ example (state : State 8) (hpc : state.pc = 0)
   · simp
   · decide
 
+example (state : State 8) (hpc : state.pc = 0)
+    (hzero : ZeroRegister state) :
+    ∃ sourceState machineState,
+      evalWordFunction state
+          ((.ite .equal 1 (.reg 2) .skip .skip) : WordProg (Word 8)) =
+        some (sourceState, []) ∧
+      wordFunctionToRiscVWithCalls (⟨[]⟩ : WordCallContext 8)
+          ((.ite .equal 1 (.reg 2) .skip .skip) : WordProg (Word 8)) =
+        some ([.branchNe 1 2 (BitVec.ofNat 8 8),
+          .branchEq 0 0 (BitVec.ofNat 8 4)], []) ∧
+      executeCodeUntil 3 0 (BitVec.ofNat 8 8)
+          [.branchNe 1 2 (BitVec.ofNat 8 8),
+            .branchEq 0 0 (BitVec.ofNat 8 4)] state = some machineState ∧
+      StateDataRelation sourceState machineState := by
+  apply wordFunctionToRiscVWithCalls_ite_source_machine_of_nonbranching
+    (context := (⟨[]⟩ : WordCallContext 8)) (state := state)
+    (operator := .equal) (condition := 1) (source := 2)
+    (thenBranch := (.skip : WordProg (Word 8)))
+    (elseBranch := (.skip : WordProg (Word 8)))
+    (branchLeft := 1) (right := 2) (thenCode := []) (elseCode := [])
+    (returnRegisters := []) (returnValues := []) (hpc := hpc) (hzero := hzero)
+  · simp [wordConditionOperands, registerOfNat]
+  · simp [wordFunctionToRiscVWithCalls]
+  · simp [wordFunctionToRiscVWithCalls]
+  · exact ⟨state, by simp [evalWordFunction], by constructor <;> rfl⟩
+  · exact ⟨state, by simp [evalWordFunction], by constructor <;> rfl⟩
+  · simp
+  · simp
+  · decide
+
 example (state : State 64) (hpc : state.pc = 0)
     (hzero : ZeroRegister state) :
     (executeCode 5 0

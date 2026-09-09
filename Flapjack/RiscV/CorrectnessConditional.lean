@@ -469,6 +469,80 @@ theorem evalWordFunction_ite_executeCodeUntil_of_nonbranching [NeZero width]
       hsourceEval, ?_, helseRelation⟩
     simpa [List.cons_append, List.append_assoc] using hrun
 
+/-! The previous theorem is now connected to the actual call-aware compiler
+    result.  This boundary keeps the compiler witnesses, source return values,
+    and machine execution result explicit, so callers can instantiate it with
+    a separately proved body simulation. -/
+
+theorem wordFunctionToRiscVWithCalls_ite_source_machine_of_nonbranching
+    [NeZero width]
+    (context : WordCallContext width) (state : State width)
+    (operator : Cmp) (condition source : Nat)
+    (thenBranch elseBranch : WordProg (Word width))
+    (branchLeft right : Fin 32)
+    (thenCode elseCode : List (Instruction width))
+    (returnRegisters : List (Fin 32)) (returnValues : List (Word width))
+    (hpc : state.pc = 0)
+    (hzero : ZeroRegister state)
+    (hoperands : wordConditionOperands operator condition
+        (.reg source : WordRegImm (Word width)) =
+      some (branchLeft, right, []))
+    (hthenCompile : wordFunctionToRiscVWithCalls context thenBranch =
+      some (thenCode, returnRegisters))
+    (helseCompile : wordFunctionToRiscVWithCalls context elseBranch =
+      some (elseCode, returnRegisters))
+    (hthen : ∃ thenState,
+      evalWordFunction state thenBranch = some (thenState, returnValues) ∧
+      StateDataRelation thenState
+        (executeInstructions
+          (execute state (riscVBranchFalseInstruction operator branchLeft right
+            (BitVec.ofNat width (8 + 4 * thenCode.length)))) thenCode))
+    (helse : ∃ elseState,
+      evalWordFunction state elseBranch = some (elseState, returnValues) ∧
+      StateDataRelation elseState
+        (executeInstructions
+          (execute state (riscVBranchFalseInstruction operator branchLeft right
+            (BitVec.ofNat width (8 + 4 * thenCode.length)))) elseCode))
+    (hthenNonbranching : ∀ instruction ∈ thenCode, instruction.isBranch = false)
+    (helseNonbranching : ∀ instruction ∈ elseCode, instruction.isBranch = false)
+    (hbound : (thenCode.length + elseCode.length + 2) * 4 < 2 ^ width) :
+    ∃ sourceState machineState,
+      evalWordFunction state
+          (.ite operator condition (.reg source) thenBranch elseBranch) =
+        some (sourceState, returnValues) ∧
+      wordFunctionToRiscVWithCalls context
+          (.ite operator condition (.reg source) thenBranch elseBranch) =
+        some (riscVBranchFalseInstruction operator branchLeft right
+              (BitVec.ofNat width (8 + 4 * thenCode.length)) ::
+            thenCode ++
+            [.branchEq 0 0 (BitVec.ofNat width (4 + 4 * elseCode.length))] ++
+            elseCode, returnRegisters) ∧
+      executeCodeUntil (thenCode.length + elseCode.length + 3) 0
+          (BitVec.ofNat width ((thenCode.length + elseCode.length + 2) * 4))
+          (riscVBranchFalseInstruction operator branchLeft right
+              (BitVec.ofNat width (8 + 4 * thenCode.length)) ::
+            thenCode ++
+            [.branchEq 0 0 (BitVec.ofNat width (4 + 4 * elseCode.length))] ++
+            elseCode) state = some machineState ∧
+      StateDataRelation sourceState machineState := by
+  have hshape := wordFunctionToRiscVWithCalls_ite_shape
+    (context := context) (operator := operator) (condition := condition)
+    (rightValue := (.reg source : WordRegImm (Word width)))
+    (thenBranch := thenBranch) (elseBranch := elseBranch)
+    (branchLeft := branchLeft) (right := right) (prelude := [])
+    (thenCode := thenCode) (elseCode := elseCode)
+    (thenReturns := returnRegisters) (elseReturns := returnRegisters)
+    hoperands hthenCompile helseCompile rfl
+  have hsimulation := evalWordFunction_ite_executeCodeUntil_of_nonbranching
+    (state := state) (operator := operator) (condition := condition)
+    (source := source) (thenBranch := thenBranch) (elseBranch := elseBranch)
+    (branchLeft := branchLeft) (right := right) (thenCode := thenCode)
+    (elseCode := elseCode) (returns := returnValues)
+    hpc hzero hoperands hthen helse hthenNonbranching helseNonbranching hbound
+  rcases hsimulation with ⟨sourceState, machineState, hsource, hmachine, hdata⟩
+  refine ⟨sourceState, machineState, hsource, ?_, hmachine, hdata⟩
+  simpa [List.cons_append, List.append_assoc] using hshape
+
 theorem wordFunctionToRiscV_ite_assign [NeZero width] :
     wordFunctionToRiscV
         ((.ite .equal 1 (.reg 2)

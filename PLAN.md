@@ -405,6 +405,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   RISC-V conditional execution, using a PC-insensitive branch-body contract.
 - [x] Connect that conditional source-machine contract to the concrete
   call-aware compiler output shape for register-based conditions.
+- [x] Exercise the compiler/source/machine conditional contract with nonempty
+  constant-assignment branch bodies and the generated fall-through jump.
 - [x] Preserve terminal function returns when compiling or evaluating a
   sequence with unreachable trailing code.
 - [x] Add the pipeline’s initial register context, mapping Loop slots to

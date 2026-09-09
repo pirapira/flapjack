@@ -338,6 +338,44 @@ theorem executeInstructions_stackCall_restore_link_sp [NeZero width]
   rw [show (8 : Nat) = 4 + 4 by omega, BitVec.ofNat_add]
   rw [BitVec.add_assoc]
 
+theorem executeInstructions_pc_fold_of_nonbranching [NeZero width]
+    (state : State width) (code : List (Instruction width))
+    (hcode : ∀ instruction ∈ code, instruction.isBranch = false) :
+    (executeInstructions state code).pc =
+      code.foldl (fun pc _ => pc + 4) state.pc := by
+  induction code generalizing state with
+  | nil => rfl
+  | cons instruction code ih =>
+      have hnotBranch : instruction.isBranch = false :=
+        hcode instruction (by simp)
+      have htail : ∀ nextInstruction ∈ code, nextInstruction.isBranch = false := by
+        intro nextInstruction hnext
+        exact hcode nextInstruction (by simp [hnext])
+      simp only [executeInstructions, List.foldl]
+      rw [ih (execute state instruction) htail]
+      rw [execute_pc_advance state instruction hnotBranch]
+
+theorem executeInstructions_pc_of_nonbranching [NeZero width]
+    (state : State width) (code : List (Instruction width))
+    (hcode : ∀ instruction ∈ code, instruction.isBranch = false) :
+    (executeInstructions state code).pc =
+      state.pc + BitVec.ofNat width (code.length * 4) := by
+  induction code generalizing state with
+  | nil => simp [executeInstructions]
+  | cons instruction code ih =>
+      have hnotBranch : instruction.isBranch = false :=
+        hcode instruction (by simp)
+      have htail : ∀ nextInstruction ∈ code, nextInstruction.isBranch = false := by
+        intro nextInstruction hnext
+        exact hcode nextInstruction (by simp [hnext])
+      simp only [executeInstructions, List.length_cons]
+      rw [ih (execute state instruction) htail]
+      rw [execute_pc_advance state instruction hnotBranch]
+      simp only [Nat.succ_mul, BitVec.ofNat_add]
+      rw [BitVec.add_assoc]
+      congr 1
+      exact BitVec.add_comm _ _
+
 /-! First source-to-machine step relation.  On the straight-line Word
     fragment, successful instruction selection preserves the ordinary Word
     result and the machine executes exactly one step per emitted instruction.

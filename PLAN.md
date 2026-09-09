@@ -2051,6 +2051,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   decomposition and entry-transfer correctness.
 - [x] Prove the generated return suffix restores the saved link and stack
   pointer and advances the caller PC by its two instructions.
+- [x] Prove exact PC advancement for any RISC-V code segment whose
+  instructions are statically known to be non-branching.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

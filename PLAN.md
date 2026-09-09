@@ -2027,6 +2027,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   allocation-mode RISC-V entrypoints with executable main regressions.
 - [x] Expose target-wrapper variants for bitmap-carrying and Simple-GC
   RISC-V pipelines with executable artifact regressions.
+- [x] Export the RISC-V Word-to-Stack, spill-state, and StackRemove correctness
+  contracts through the public Flapjack library aggregate.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

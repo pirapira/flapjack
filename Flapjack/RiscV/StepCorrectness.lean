@@ -122,6 +122,30 @@ theorem executeInstructionsWithFfi_pc_of_advance [NeZero width]
                 omega
               rw [hnat]
 
+theorem executeInstructionsWithFfiCounted_pc_of_advance [NeZero width]
+    (host : WordFfiHost width) (state : State width)
+    (instructions : List (Instruction width))
+    (hadvance : ∀ (current : State width) (instruction : Instruction width),
+      instruction ∈ instructions → ∀ next,
+        executeWithFfi host current instruction = some next →
+          next.pc = current.pc + 4)
+    (final : State width) (count : Nat)
+    (hfinal :
+      executeInstructionsWithFfiCounted host state instructions =
+        some (final, count)) :
+    final.pc = state.pc + BitVec.ofNat width (instructions.length * 4) := by
+  have hspec := executeInstructionsWithFfiCounted_spec host state instructions
+  rw [hspec] at hfinal
+  cases hrun : executeInstructionsWithFfi host state instructions with
+  | none =>
+      simp [hrun] at hfinal
+  | some result =>
+      simp [hrun] at hfinal
+      rcases hfinal with ⟨hstate, hcount⟩
+      subst final
+      exact executeInstructionsWithFfi_pc_of_advance host state instructions
+        hadvance result hrun
+
 /-! Count the instructions traversed by the fuel-bounded code runner.  A
     successful return-address check costs zero additional instructions; every
     fetched instruction contributes one to the count. -/

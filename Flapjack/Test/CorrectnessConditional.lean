@@ -75,6 +75,23 @@ example (state final : State 8)
       (congrArg State.pc hstep).symm
   · exact hfinal
 
+example (state final : State 8) (count : Nat)
+    (hfinal :
+      executeInstructionsWithFfiCounted testNoFfiHost state [.addi 1 0 7] =
+        some (final, count)) :
+    final.pc = state.pc + BitVec.ofNat 8 4 := by
+  apply executeInstructionsWithFfiCounted_pc_of_advance
+    (host := testNoFfiHost) (state := state)
+    (instructions := [.addi 1 0 7])
+  · intro current instruction hinstruction next hstep
+    have hinstruction' : instruction = .addi 1 0 7 := by
+      simpa using hinstruction
+    subst instruction
+    simp [executeWithFfi, execute, writeRegister, nextPc] at hstep
+    simpa [executeWithFfi, execute, writeRegister, nextPc] using
+      (congrArg State.pc hstep).symm
+  · exact hfinal
+
 example :
     wordFunctionToRiscV
         ((.ite .equal 1 (.reg 2)

@@ -83,7 +83,8 @@ def evalPanValueProgram
     (primitive : PanPrimitiveHandler α) (ffi : PanValueFfiHandler α)
     (fuel : Nat) (declarations : List (Decl α))
     (entry : FunName) (arguments : List (Exp α))
-    (memoryAccess : Option (PanValueMemoryAccess α) := none) :
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler α) := none) :
     Option (PanValueControlResult α) := do
   let state ← evalPanValueDeclarations initial declarations
     (memoryAccess := memoryAccess)
@@ -92,6 +93,7 @@ def evalPanValueProgram
     state.functions state.baseAddress state.topAddress state.bytesInWord fuel
     (fun _ => none) state.globals state.memory none entry arguments
     (memoryAccess := memoryAccess) (contracts := contracts)
+    (memoryHandler := memoryHandler)
   match lookupInfo entry state.returnShapes, result with
   | some shape, .returned locals globals memory [value] =>
       if panShapeMatches (panValueShape state.structs value) shape then

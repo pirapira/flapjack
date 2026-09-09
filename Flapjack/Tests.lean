@@ -58,6 +58,7 @@ import Flapjack.Test.FullSsaPipeline
 import Flapjack.Test.FullSsaCorrectness
 import Flapjack.Test.FullSsaHandler
 import Flapjack.Test.FullSsaFfiCall
+import Flapjack.Test.FullSsaHandlerFfi
 import Flapjack.Test.FullSsaTarget
 import Flapjack.Test.CrepeArith
 import Flapjack.Test.CrepeInline

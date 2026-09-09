@@ -207,4 +207,27 @@ theorem crepToLoop_call_caught_return_regression :
   · simp [crepHandlerLoopFunctions, crepHandlerContext, crepCallSkipContext,
       loopCompileProg, lookupLoopFunction]
 
+theorem crepToLoop_seq_extCall_return_regression :
+    (evalCrepFullProg [] (fun _ _ => none) crepLoopFfi
+        (fun _ _ _ _ => none) 0 100 20 crepLoopFfiState
+        (.seq (.extCall "inc" 1 2 3 4) (.return [.const 99]))).map
+        crepControlValues =
+      (evalLoopProgWithCallsAndFfi [] (loopFfiOfCrepFfi crepLoopFfi) 20
+        (loopStateOfCrepState crepLoopFfiState)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+            LoopContext Nat)
+          [9] (.seq (.extCall "inc" 1 2 3 4) (.return [.const 99])))).map
+        loopResultValues := by
+  apply crepToLoop_seq_extCall_return_const_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } : LoopContext Nat)
+    [] [] (fun _ _ => none) crepLoopFfi (fun _ _ _ _ => none)
+    0 100 0 crepLoopFfiState crepLoopFfiStateAfter [9] "inc" 1 2 3 4
+    41 0 0 0 99
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfi, crepLoopFfiState, crepLoopFfiStateAfter]
+
 end Flapjack

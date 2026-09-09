@@ -2073,6 +2073,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   pointer before the return suffix restores them.
 - [x] Connect generated `wordRegisterMoves` return code to the executable
   link/stack restoration contract.
+- [x] Compose the complete stack-call compiler layout with the callee-return
+  state and generated result/restore suffix contract.
 - [x] Prove exact PC advancement for any RISC-V code segment whose
   instructions are statically known to be non-branching.
 - [x] Prove bounded `executeCode` execution agrees with `executeInstructions`

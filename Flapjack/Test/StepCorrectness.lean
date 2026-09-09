@@ -301,6 +301,49 @@ example (state : State 8) (stackAddress savedLink : Word 8)
       decide)
     hstack hsaved hcompile
 
+example (returnState : State 8) (stackAddress savedLink entry : Word 8)
+    (code : List (Instruction 8))
+    (hstack : readRegister returnState 30 = stackAddress)
+    (hsaved : readWordValue returnState stackAddress = savedLink)
+    (hcompile : wordCallToRiscVWithStack entry [2] [6] [4] [7] = some code) :
+    ∃ parameterMoves resultMoves,
+      code = parameterMoves ++
+          [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
+           .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0] ++
+          resultMoves ++
+          [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))] ∧
+      let final := executeInstructions returnState
+        (resultMoves ++
+          [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))])
+      readRegister final 1 = savedLink ∧
+        readRegister final 30 =
+          stackAddress + BitVec.ofNat 8 (8 / 8) ∧
+        final.pc = (executeInstructions returnState resultMoves).pc +
+          BitVec.ofNat 8 8 := by
+  exact wordCallToRiscVWithStack_full_return_contract returnState stackAddress
+    savedLink entry [2] [6] [4] [7] code
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl
+      decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl
+      decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl
+      decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl
+      decide)
+    hstack hsaved hcompile
+
 example (state : State 8) (code : List (Instruction 8))
     (hcode : ∀ instruction ∈ code, instruction.isBranch = false) :
     (executeInstructions state code).pc =

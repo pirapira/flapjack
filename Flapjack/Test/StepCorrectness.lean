@@ -52,4 +52,15 @@ example (host : WordFfiHost 8) (fuel : Nat) (start returnAddress : Word 8)
   exact executeCodeUntilWithFfiCounted_count_le_fuel host fuel start returnAddress
     code state final count hcount
 
+example (context : WordCallContext 8) (state : State 8)
+    (code : List (Instruction 8))
+    (hcompile : wordFunctionToRiscVWithCalls context
+      (.assign 2 (.var 1) : WordProg (Word 8)) = some (code, [])) :
+    evalWordFunction state (.assign 2 (.var 1) : WordProg (Word 8)) =
+      some ((executeInstructionsCounted state code).1, []) := by
+  apply wordFunctionToRiscV_counted_sound_of_straightLine
+    context state (.assign 2 (.var 1))
+  · exact .assign 2 (.var 1)
+  · exact hcompile
+
 end Flapjack.RiscV

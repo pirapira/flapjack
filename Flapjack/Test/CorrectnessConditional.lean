@@ -116,6 +116,48 @@ example (state : State 8) (hpc : state.pc = 0)
   · simp
   · decide
 
+example (state : State 8) (hpc : state.pc = 0)
+    (hzero : ZeroRegister state) :
+    ∃ sourceState machineState,
+      evalWordFunction state
+          ((.ite .equal 1 (.reg 2)
+            (.assign 3 (.const (1 : Word 8)))
+            (.assign 3 (.const (2 : Word 8)))) : WordProg (Word 8)) =
+        some (sourceState, []) ∧
+      wordFunctionToRiscVWithCalls (⟨[]⟩ : WordCallContext 8)
+          ((.ite .equal 1 (.reg 2)
+            (.assign 3 (.const (1 : Word 8)))
+            (.assign 3 (.const (2 : Word 8)))) : WordProg (Word 8)) =
+        some ([.branchNe 1 2 (BitVec.ofNat 8 12), .addi 3 0 1,
+          .branchEq 0 0 (BitVec.ofNat 8 8), .addi 3 0 2], []) ∧
+      executeCodeUntil 5 0 (BitVec.ofNat 8 16)
+          [.branchNe 1 2 (BitVec.ofNat 8 12), .addi 3 0 1,
+            .branchEq 0 0 (BitVec.ofNat 8 8), .addi 3 0 2] state =
+        some machineState ∧
+      StateDataRelation sourceState machineState := by
+  apply wordFunctionToRiscVWithCalls_ite_source_machine_of_nonbranching
+    (context := (⟨[]⟩ : WordCallContext 8)) (state := state)
+    (operator := .equal) (condition := 1) (source := 2)
+    (thenBranch := (.assign 3 (.const (1 : Word 8))))
+    (elseBranch := (.assign 3 (.const (2 : Word 8))))
+    (branchLeft := 1) (right := 2)
+    (thenCode := [.addi 3 0 1]) (elseCode := [.addi 3 0 2])
+    (returnRegisters := []) (returnValues := []) (hpc := hpc) (hzero := hzero)
+  · simp [wordConditionOperands, registerOfNat]
+  · simp [wordFunctionToRiscVWithCalls, wordExpToInstructions,
+      wordExpToInstruction, registerOfNat]
+  · simp [wordFunctionToRiscVWithCalls, wordExpToInstructions,
+      wordExpToInstruction, registerOfNat]
+  · exact ⟨execute state (.addi 3 0 1),
+      by simp [evalWordFunction, wordExpToInstructions,
+        wordExpToInstruction, registerOfNat], by constructor <;> rfl⟩
+  · exact ⟨execute state (.addi 3 0 2),
+      by simp [evalWordFunction, wordExpToInstructions,
+        wordExpToInstruction, registerOfNat], by constructor <;> rfl⟩
+  · decide
+  · decide
+  · decide
+
 example (state : State 64) (hpc : state.pc = 0)
     (hzero : ZeroRegister state) :
     (executeCode 5 0

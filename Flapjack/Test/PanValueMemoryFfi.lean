@@ -103,4 +103,29 @@ theorem memoryFfiStepped_projects_to_nonstepped :
     (memoryAccess := some memoryFfiTestMemoryAccess)
     (memoryHandler := some memoryFfiAccelerator)
 
+theorem memoryFfi_dispatch_contract :
+    evalPanValueFfiProgSteps memoryFfiTestContext
+      (fun _ _ => none) memoryFfiTestHandler [] [] 0 1000 1 20
+      (fun _ => none) (fun _ => none) memoryFfiInitial.source.memory
+      memoryFfiTestState
+      (.extCall "accelerator" (.const 7) (.const 0) (.const 200) (.const 1))
+      (memoryAccess := some memoryFfiTestMemoryAccess)
+      (contracts := none)
+      (memoryHandler := some memoryFfiAccelerator) =
+      some (.normal (fun _ => none) (fun _ => none)
+        (updatePanValueMemory memoryFfiInitial.source.memory 200 (.word 8))
+        memoryFfiTestState, 5) := by
+  exact evalPanValueFfiProgSteps_extCall_memoryHandler
+    memoryFfiTestContext (fun _ _ => none) memoryFfiTestHandler [] []
+    0 1000 1 19 (fun _ => none) (fun _ => none)
+    memoryFfiInitial.source.memory memoryFfiTestState "accelerator"
+    7 0 200 1 (some memoryFfiTestMemoryAccess) none memoryFfiAccelerator
+    (fun _ => none)
+    (updatePanValueMemory memoryFfiInitial.source.memory 200 (.word 8))
+    memoryFfiTestState 4
+    (by simp [evalPanValueExpsCounted, evalPanValueExps,
+      evalPanValueExp.evalPanValueExps, evalPanValueExp,
+      panValueExpsStepCost, panValueExpStepCost,
+      panValueExpStepCost.panValueExpsStepCost]) (by rfl)
+
 end Flapjack

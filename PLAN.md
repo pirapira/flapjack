@@ -751,6 +751,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   coloring simulation induction, with an entry-shaped regression.
 - [x] Prove source-ordered lowering for arbitrary acyclic parallel-move lists,
   covering the fresh full-SSA formal-entry case without scratch-register use.
+- [x] Prove the exact correspondence between named physical-entry destinations
+  and their ABI-strided StackLang location-move list.
 - [x] Prove the RISC-V execution of an arbitrary acyclic move list writes each
   destination from its original source value.
 - [x] Compose acyclic move-list lowering with the register-state relation,

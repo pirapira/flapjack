@@ -88,11 +88,13 @@ def panRiscVCmp [NeZero width]
 
 def panRiscVShift [NeZero width]
     (operator : Shift) (left right : Word width) : Option (Word width) :=
-  match operator with
-  | .lsl => some (left <<< right.toNat)
-  | .lsr => some (left >>> right.toNat)
-  | .asr => some (BitVec.sshiftRight left right.toNat)
-  | .ror => some (BitVec.rotateRight left right.toNat)
+  if right.toNat < width then
+    match operator with
+    | .lsl => some (left <<< right.toNat)
+    | .lsr => some (left >>> right.toNat)
+    | .asr => some (BitVec.sshiftRight left right.toNat)
+    | .ror => some (BitVec.rotateRight left right.toNat)
+  else none
 
 def panRiscVMemoryModel [NeZero width] : PanMemoryModel (Word width) :=
   { byteAlign := panRiscVByteAlign
@@ -276,7 +278,7 @@ def evalPanRiscVFlatExp [NeZero width]
         baseAddress topAddress bytesInWord right
       match left, right with
       | .word left, .word right =>
-          (evalPanShiftFull operator left right).map .word
+          (panRiscVShift operator left right).map .word
       | _, _ => none
   | .baseAddr => some (.word baseAddress)
   | .topAddr => some (.word topAddress)

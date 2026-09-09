@@ -33,6 +33,16 @@ def evalRiscVRor : Option (PanValue ShiftWord) :=
   | some (.word value) => value == shiftWord 0xc0
   | _ => false
 
+def evalRiscVOutOfRangeShift : Option (PanValue ShiftWord) :=
+  RiscV.evalPanRiscVFlatExp [] (fun _ => none) (fun _ => none)
+    (fun _ => false) (fun _ => none)
+    (shiftWord 0) (shiftWord 0) (shiftWord 8)
+    (.shift .lsl (.const (shiftWord 1)) (.const (shiftWord 8)))
+
+#guard evalRiscVOutOfRangeShift.isNone
+#guard RiscV.panRiscVShift .lsl (shiftWord 1) (shiftWord 8) == none
+#guard RiscV.panRiscVShift .lsl (shiftWord 1) (shiftWord 0) == some (shiftWord 1)
+
 #guard RiscV.panRiscVWordOp (width := 8) .add [] == some (shiftWord 0)
 #guard RiscV.panRiscVWordOp (width := 8) .add [shiftWord 1, shiftWord 2, shiftWord 3] ==
   some (shiftWord 6)

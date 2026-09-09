@@ -186,6 +186,32 @@ theorem compileLinkedWordFunction_shape [NeZero width]
       some (label, parameters, some (code ++ [.jalr 0 1 0], returns)) := by
   simp [compileLinkedWordFunction, hcode]
 
+/-! Carry the compiler witness through the first linker cell.  This is the
+    boundary used by correctness clients that need the actual entry address,
+    rather than only the instruction list returned by the selector. -/
+theorem compileLinkedWordFunction_linkRiscVFunctionsAt_head [NeZero width]
+    (context : WordCallContext width)
+    (start : Word width) (offset label : Nat) (parameters : List Nat)
+    (body : WordProg (Word width)) (code : List (Instruction width))
+    (returns : List (Fin 32))
+    (functions : List (Nat × List Nat × Option
+      (List (Instruction width) × List (Fin 32))))
+    (linked : List (Nat × Word width × List Nat ×
+      List (Instruction width) × List (Fin 32)))
+    (hcode : wordFunctionToRiscVWithCallsAndLoops context body =
+      some (code, returns))
+    (hrest : linkRiscVFunctionsAt start
+      (offset + 4 * (code.length + 1)) functions = some linked) :
+    compileLinkedWordFunction context (label, parameters, body) =
+        some (label, parameters, some (code ++ [.jalr 0 1 0], returns)) ∧
+      linkRiscVFunctionsAt start offset
+        ((label, parameters, some (code ++ [.jalr 0 1 0], returns)) :: functions) =
+        some ((label, start + BitVec.ofNat width offset, parameters,
+          code ++ [.jalr 0 1 0], returns) :: linked) := by
+  constructor
+  · exact compileLinkedWordFunction_shape context label parameters body code returns hcode
+  · simp [linkRiscVFunctionsAt, hrest]
+
 def wordFunctionTargetSignaturesAux [NeZero width]
     (allFunctions : List (Nat × List Nat × WordProg (Word width))) :
     List (Nat × List Nat × WordProg (Word width)) →
@@ -251,6 +277,30 @@ theorem compileLinkedWordFunctionWithFfi_shape [NeZero width]
     compileLinkedWordFunctionWithFfi context (label, parameters, body) =
       some (label, parameters, some (code ++ [.jalr 0 1 0], returns)) := by
   simp [compileLinkedWordFunctionWithFfi, hcode]
+
+theorem compileLinkedWordFunctionWithFfi_linkRiscVFunctionsAt_head
+    [NeZero width]
+    (context : WordCallFfiContext width)
+    (start : Word width) (offset label : Nat) (parameters : List Nat)
+    (body : WordProg (Word width)) (code : List (Instruction width))
+    (returns : List (Fin 32))
+    (functions : List (Nat × List Nat × Option
+      (List (Instruction width) × List (Fin 32))))
+    (linked : List (Nat × Word width × List Nat ×
+      List (Instruction width) × List (Fin 32)))
+    (hcode : wordFunctionToRiscVWithCallsAndFfiAndLoops context body =
+      some (code, returns))
+    (hrest : linkRiscVFunctionsAt start
+      (offset + 4 * (code.length + 1)) functions = some linked) :
+    compileLinkedWordFunctionWithFfi context (label, parameters, body) =
+        some (label, parameters, some (code ++ [.jalr 0 1 0], returns)) ∧
+      linkRiscVFunctionsAt start offset
+        ((label, parameters, some (code ++ [.jalr 0 1 0], returns)) :: functions) =
+        some ((label, start + BitVec.ofNat width offset, parameters,
+          code ++ [.jalr 0 1 0], returns) :: linked) := by
+  constructor
+  · exact compileLinkedWordFunctionWithFfi_shape context label parameters body code returns hcode
+  · simp [linkRiscVFunctionsAt, hrest]
 
 def linkWordFunctionsWithFfi [NeZero width]
     (start : Word width) (services : List (FunName × Nat))

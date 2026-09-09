@@ -27,6 +27,35 @@ example :
   rfl
 
 example :
+    let context : RiscV.WordCallContext 64 := { targets := [] }
+    let body : WordProg (RiscV.Word 64) := .return 0 [2]
+    RiscV.compileLinkedWordFunction context (7, [2], body) =
+        some (7, [2], some ([.jalr 0 1 0], [2])) ∧
+      RiscV.linkRiscVFunctionsAt (0 : RiscV.Word 64) 0
+        [(7, [2], some ([.jalr 0 1 0], [2]))] =
+        some [(7, 0, [2], [.jalr 0 1 0], [2])] := by
+  dsimp
+  exact RiscV.compileLinkedWordFunction_linkRiscVFunctionsAt_head
+    ({ targets := [] } : RiscV.WordCallContext 64)
+    (0 : RiscV.Word 64) 0 7 [2] (.return 0 [2]) [] [2] [] []
+    (by decide +kernel) (by rfl)
+
+example :
+    let context : RiscV.WordCallFfiContext 64 :=
+      { targets := [], services := [] }
+    let body : WordProg (RiscV.Word 64) := .return 0 [2]
+    RiscV.compileLinkedWordFunctionWithFfi context (7, [2], body) =
+        some (7, [2], some ([.jalr 0 1 0], [2])) ∧
+      RiscV.linkRiscVFunctionsAt (0 : RiscV.Word 64) 0
+        [(7, [2], some ([.jalr 0 1 0], [2]))] =
+        some [(7, 0, [2], [.jalr 0 1 0], [2])] := by
+  dsimp
+  exact RiscV.compileLinkedWordFunctionWithFfi_linkRiscVFunctionsAt_head
+    ({ targets := [], services := [] } : RiscV.WordCallFfiContext 64)
+    (0 : RiscV.Word 64) 0 7 [2] (.return 0 [2]) [] [2] [] []
+    (by decide +kernel) (by rfl)
+
+example :
     RiscV.wordCallToRiscVLabel
       [(7, (32 : RiscV.Word 64), [2], [], [10])] 7 [2] [10] [6] [4] =
       some [.addi 2 6 0, .addi 31 0 32, .jalr 1 31 0, .addi 4 10 0] := by

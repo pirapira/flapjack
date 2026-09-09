@@ -32,6 +32,62 @@ def wordStackMappedValuesExcept [NeZero width] (config : WordStackConfig)
     wordStackLocation config name = some location →
     wordStackMachineValue config state name = some value
 
+/-! The location-indexed form is the natural intermediate relation for the
+    parallel move algorithm.  Unlike `wordStackMachineValue`, it does not
+    perform a name lookup: its input is already the physical location selected
+    by the allocator. -/
+def wordStackLocationValue [NeZero width] (config : WordStackConfig)
+    (state : WordStackMachineState width) : WordLocation → Word width
+  | .register register => state.registers register
+  | .stack slot => state.stack (wordStackOffset config slot)
+
+theorem evalWordStackMachine_locationMove_preserves_value [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (destination source : WordLocation)
+    (heval : (wordStackLocationMove config destination source).bind
+      (evalWordStackMachine state) = some final) :
+    wordStackLocationValue config final destination =
+      wordStackLocationValue config state source := by
+  cases destination with
+  | register destination =>
+      cases source with
+      | register source =>
+          by_cases hsame : destination = source
+          · simp [wordStackLocationMove, hsame] at heval
+            cases heval
+            subst source
+            rfl
+          · simp [wordStackLocationMove, hsame,
+              evalWordStackMachine, wordStackMachineWriteRegister,
+              wordStackMachineBinOp] at heval
+            cases heval
+            simp [wordStackLocationValue]
+      | stack source =>
+          simp [wordStackLocationMove, evalWordStackMachine,
+            wordStackMachineWriteRegister,
+            wordStackMachineBinOp] at heval
+          cases heval
+          simp [wordStackLocationValue, wordStackOffset]
+  | stack destination =>
+      cases source with
+      | register source =>
+          simp [wordStackLocationMove, evalWordStackMachine,
+            wordStackMachineWriteRegister,
+            wordStackMachineBinOp] at heval
+          cases heval
+          simp [wordStackLocationValue, wordStackOffset,
+            wordStackMachineWriteSlot]
+      | stack source =>
+          by_cases hsame : destination = source
+          · simp [wordStackLocationMove, hsame] at heval
+            cases heval
+            subst source
+            rfl
+          · simp [wordStackLocationMove, hsame, evalWordStackMachine,
+              wordStackMachineWriteRegister, wordStackMachineWriteSlot] at heval
+            cases heval
+            simp [wordStackLocationValue, wordStackOffset]
+
 theorem evalWordStackMachine_move_preserves_other_value [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)
     (destination source other : Nat)

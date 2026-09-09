@@ -422,7 +422,7 @@ example :
       readRegister, writeRegister, zeroState]
   · simp [colouredCallTargetState, testTargetState, readWordRegisters,
       colouredCallSourceState, registerOfNat, readRegister, writeRegister,
-      zeroState, testColour]
+      zeroState]
   · simp [bindWordRegisters, clearWordRegisters, colouredCallSourceState,
       colouredCallSourceCallee, registerOfNat, writeRegister]
   · simp [bindWordRegisters, clearWordRegisters, colouredCallTargetState,
@@ -430,12 +430,12 @@ example :
       testColour]
   · simp [colouredCallSourceBody, colouredCallSourceCallee,
       colouredCallSourceState,
-      evalWordFunctionWithHandlersAndFfi, evalWordFunction, registerOfNat,
+      evalWordFunctionWithHandlersAndFfi, registerOfNat,
       readRegister, writeRegister, clearWordRegisters, zeroState]
   · simp [colouredCallTargetBody, colouredCallTargetCallee,
       colouredCallTargetState,
-      evalWordFunctionWithHandlersAndFfi, evalWordFunction, registerOfNat,
-      readRegister, writeRegister, clearWordRegisters, zeroState]
+      evalWordFunctionWithHandlersAndFfi, registerOfNat,
+      readRegister, writeRegister, clearWordRegisters]
   · exact testRelation_target colouredCallSourceState
   · have hcallee : colouredCallTargetCallee =
         testTargetState colouredCallSourceCallee := by
@@ -446,11 +446,11 @@ example :
       funext register
       by_cases hone : register = 1
       · subst register
-        simp [testTargetState, clearWordRegisters, writeRegister]
+        simp
       · by_cases htwo : register = 2
         · subst register
-          simp [testTargetState, clearWordRegisters, writeRegister]
-        · simp [testTargetState, clearWordRegisters, writeRegister, hone, htwo]
+          simp
+        · simp [hone, htwo]
     rw [hcallee]
     exact testRelation_target colouredCallSourceCallee
   · rfl

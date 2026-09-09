@@ -514,6 +514,69 @@ def compileLabProgramLinkedWithHalt [NeZero width] (context : WordFfiContext)
   let haltPc := 4 * labProgramInstructionCount program
   compileLabProgramLinkedWithHaltAux context labels 0 haltPc program
 
+theorem compileLabProgramLinkedWithHaltAux_flatten
+    [NeZero width] (context : WordFfiContext)
+    (labels : List (Nat × Nat × Nat)) (base haltPc : Nat)
+    (program : LabProgram (Word width)) :
+    (compileLabProgramLinkedWithHaltAux context labels base haltPc program).map
+        flattenLabProgramLinked =
+      labCompileProgramSectionsWithHalt context labels base haltPc program := by
+  induction program generalizing base with
+  | nil =>
+      simp [compileLabProgramLinkedWithHaltAux, labCompileProgramSectionsWithHalt,
+        flattenLabProgramLinked]
+  | cons sectionData sections ih =>
+      simp only [compileLabProgramLinkedWithHaltAux,
+        labCompileProgramSectionsWithHalt]
+      cases hcode :
+          labCompileProgramLinesWithHalt context labels base haltPc sectionData.lines with
+      | none => simp
+      | some code =>
+          cases hrest : compileLabProgramLinkedWithHaltAux context labels
+              (base + 4 * labSectionInstructionCount sectionData) haltPc sections with
+          | none =>
+              have hsections := ih
+                (base := base + 4 * labSectionInstructionCount sectionData)
+              rw [hrest] at hsections
+              rw [← hsections]
+              simp
+          | some rest =>
+              have hsections := ih
+                (base := base + 4 * labSectionInstructionCount sectionData)
+              rw [← hsections]
+              simp [hrest, flattenLabProgramLinked]
+
+def flattenLabProgramLinkedWithHalt :
+    List (Nat × Word width × List (Instruction width)) → List (Instruction width)
+  | sections => flattenLabProgramLinked sections ++ [.jal 0 0]
+
+theorem compileLabProgramLinkedWithHalt_flatten [NeZero width]
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    (compileLabProgramLinkedWithHalt context program).map
+        flattenLabProgramLinkedWithHalt =
+      compileLabProgramWithHalt context program := by
+  let labels := labCollectProgramLabels 0 program
+  let haltPc := 4 * labProgramInstructionCount program
+  change
+    (compileLabProgramLinkedWithHaltAux context labels 0 haltPc program).map
+        flattenLabProgramLinkedWithHalt =
+      (labCompileProgramSectionsWithHalt context labels 0 haltPc program).bind
+        (fun code => some (code ++ [.jal 0 0]))
+  cases hcompiled : compileLabProgramLinkedWithHaltAux context
+      labels 0 haltPc program with
+  | none =>
+      have hsections := compileLabProgramLinkedWithHaltAux_flatten
+        context labels 0 haltPc program
+      rw [hcompiled] at hsections
+      rw [← hsections]
+      simp
+  | some sections =>
+      have hsections := compileLabProgramLinkedWithHaltAux_flatten
+        context labels 0 haltPc program
+      rw [hcompiled] at hsections
+      rw [← hsections]
+      simp [flattenLabProgramLinkedWithHalt]
+
 def compileStackProgramListToRiscV [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)
     (entryLabel initialLabel : Nat)

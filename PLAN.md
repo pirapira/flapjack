@@ -1892,6 +1892,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   simple-GC runtime sections, reserving their labels before compiled functions.
 - [x] Add a halt-aware linked Lab entrypoint for the full-SSA bitmap/simple-GC
   artifact, retaining section addresses for machine-level execution proofs.
+- [x] Prove that the halt-aware linked sections flatten to the exact
+  halt-terminated Lab image used by the flat execution path.
 - [x] Expose source-order bitmap threading through the allocated Word-to-Stack
   function pipeline, including a compositional append equation.
 - [x] Add abstract and bounded FFI loop-break simulation equations, with

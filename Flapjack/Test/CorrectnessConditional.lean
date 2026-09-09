@@ -4,6 +4,8 @@ namespace Flapjack.Test.CorrectnessConditional
 
 open Flapjack Flapjack.RiscV
 
+def testNoFfiHost : WordFfiHost 8 := fun _ _ _ _ _ _ => none
+
 example (state : State 64) (operator : Cmp) (left right : Fin 32)
     (thenInstruction elseInstruction : Instruction 64)
     (hpc : state.pc = 0)
@@ -31,6 +33,30 @@ example (state : State 32) (operator : Cmp) (left right : Fin 32)
   rw [executeCode_conditional_single state operator left right thenInstruction
     elseInstruction hpc (by decide) hthen helse]
   split <;> simp
+
+example :
+    executeCodeUntilWithFfiCounted testNoFfiHost 3 0 (8#8)
+        ([.addi 1 0 7] : List (Instruction 8)) (zeroState 8) =
+      (executeInstructionsWithFfiCounted testNoFfiHost (zeroState 8)
+        [.addi 1 0 7]).bind
+        (fun result =>
+          (executeCodeUntilWithFfiCounted testNoFfiHost 2 0 (8#8)
+            [.addi 1 0 7] result.1).map
+            (fun final => (final.1, final.2 + 1))) := by
+  apply executeCodeUntilWithFfiCounted_after_nonbranching
+    (host := testNoFfiHost) (state := zeroState 8)
+    (prelude := []) (suffix := [.addi 1 0 7]) (tail := [])
+    (fuel := 2) (returnAddress := (8#8))
+  · rfl
+  · intro current instruction hinstruction next hstep
+    have hinstruction' : instruction = .addi 1 0 7 := by
+      simpa using hinstruction
+    subst instruction
+    simp [executeWithFfi, execute, nextPc] at hstep
+    simpa [executeWithFfi, execute, writeRegister, nextPc] using
+      (congrArg State.pc hstep).symm
+  · decide
+  · decide
 
 example :
     wordFunctionToRiscV

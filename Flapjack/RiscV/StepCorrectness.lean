@@ -340,6 +340,143 @@ theorem executeCodeUntilWithFfiCounted_suffix
           simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm,
             List.append_assoc] using hmap_bind _
 
+/-! A counted non-branching prefix can be factored out even when the
+    remaining runner has additional fuel.  The return address is kept beyond
+    the prefix, so this lemma is the counted counterpart of
+    `executeCodeUntil_after_nonbranching`. -/
+theorem executeCodeUntilWithFfiCounted_after_nonbranching
+    [NeZero width] (host : WordFfiHost width)
+    (state : State width) (prelude suffix tail : List (Instruction width))
+    (fuel : Nat) (returnAddress : Word width)
+    (hpc : state.pc = BitVec.ofNat width (prelude.length * 4))
+    (hadvance : ∀ (current : State width) (instruction : Instruction width),
+      instruction ∈ suffix → ∀ next,
+        executeWithFfi host current instruction = some next →
+          next.pc = current.pc + 4)
+    (hreturn : (prelude.length + suffix.length) * 4 < returnAddress.toNat)
+    (hreturnBound : returnAddress.toNat < 2 ^ width) :
+    executeCodeUntilWithFfiCounted host (suffix.length + fuel) 0 returnAddress
+        (prelude ++ suffix ++ tail) state =
+      (executeInstructionsWithFfiCounted host state suffix).bind
+        (fun result =>
+          (executeCodeUntilWithFfiCounted host fuel 0 returnAddress
+            (prelude ++ suffix ++ tail) result.1).map
+            (fun final => (final.1, final.2 + suffix.length))) := by
+  induction suffix generalizing prelude state tail fuel with
+  | nil =>
+      simp [executeInstructionsWithFfiCounted]
+  | cons instruction suffix ih =>
+      have htail : ∀ (nextInstruction : Instruction width),
+          nextInstruction ∈ suffix → ∀ current next,
+            executeWithFfi host current nextInstruction = some next →
+              next.pc = current.pc + 4 := by
+        intro nextInstruction hnext current next hstep
+        exact hadvance current nextInstruction (by simp [hnext]) next hstep
+      have htail' : ∀ (current : State width) (nextInstruction : Instruction width),
+          nextInstruction ∈ suffix → ∀ next,
+            executeWithFfi host current nextInstruction = some next →
+              next.pc = current.pc + 4 := by
+        intro current nextInstruction hnext next hstep
+        exact htail nextInstruction hnext current next hstep
+      have hpreludeBound : prelude.length * 4 < 2 ^ width := by
+        have hle : prelude.length * 4 ≤
+            (prelude.length + (instruction :: suffix).length) * 4 := by
+          simp only [List.length_cons]
+          omega
+        exact Nat.lt_of_le_of_lt hle (by
+          have hreturnNat := hreturn
+          simp only [List.length_cons] at hreturnNat
+          omega)
+      have hnotReturn : state.pc ≠ returnAddress := by
+        intro heq
+        rw [hpc] at heq
+        have heqNat := congrArg BitVec.toNat heq
+        simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hpreludeBound] at heqNat
+        exact (by omega : ¬ (prelude.length * 4 = returnAddress.toNat)) heqNat
+      have htailBound :
+          ((prelude ++ [instruction]).length + suffix.length) * 4 <
+            returnAddress.toNat := by
+        simpa [List.length_append, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+          using hreturn
+      cases hstep : executeWithFfi host state instruction with
+      | none =>
+          have hnotReturnPc :
+              BitVec.ofNat width (prelude.length * 4) ≠ returnAddress := by
+            simpa [hpc] using hnotReturn
+          simp only [List.length_cons, Nat.succ_add]
+          rw [executeCodeUntilWithFfiCounted]
+          rw [hpc]
+          rw [if_neg hnotReturnPc]
+          simp [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hpreludeBound]
+          simp [hstep, executeInstructionsWithFfiCounted]
+      | some nextState =>
+          have hnextPc : nextState.pc =
+              BitVec.ofNat width ((prelude.length + 1) * 4) := by
+            calc
+              nextState.pc = state.pc + 4 :=
+                hadvance state instruction (by simp) nextState hstep
+              _ = BitVec.ofNat width (prelude.length * 4) + 4 := by rw [hpc]
+              _ = BitVec.ofNat width (prelude.length * 4) +
+                  BitVec.ofNat width 4 := by rfl
+              _ = BitVec.ofNat width (prelude.length * 4 + 4) := by
+                rw [← BitVec.ofNat_add]
+              _ = BitVec.ofNat width ((prelude.length + 1) * 4) := by
+                congr 1
+                omega
+          have hnextPc' : nextState.pc =
+              BitVec.ofNat width ((prelude ++ [instruction]).length * 4) := by
+            simpa [List.length_append] using hnextPc
+          have hrest := ih (prelude := prelude ++ [instruction])
+            (state := nextState) (tail := tail) fuel hnextPc' htail' htailBound
+          have hstepCode :
+              executeCodeUntilWithFfiCounted host
+                  ((instruction :: suffix).length + fuel) 0 returnAddress
+                  (prelude ++ (instruction :: suffix) ++ tail) state =
+                (executeCodeUntilWithFfiCounted host
+                  (suffix.length + fuel) 0 returnAddress
+                  ((prelude ++ [instruction]) ++ suffix ++ tail) nextState).map
+                    (fun result => (result.1, result.2 + 1)) := by
+            have hnotReturnPc :
+                BitVec.ofNat width (prelude.length * 4) ≠ returnAddress := by
+              simpa [hpc] using hnotReturn
+            simp only [List.length_cons, Nat.succ_add]
+            rw [executeCodeUntilWithFfiCounted]
+            rw [hpc]
+            rw [if_neg hnotReturnPc]
+            simp [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hpreludeBound]
+            rw [hstep]
+            have hmap_bind (result : Option (State width × Nat)) :
+                result.bind (fun value => some (value.1, value.2 + 1)) =
+                  result.map (fun value => (value.1, value.2 + 1)) := by
+              cases result <;> rfl
+            simpa using (hmap_bind
+              (executeCodeUntilWithFfiCounted host (suffix.length + fuel)
+                (0 : Word width) returnAddress
+                (prelude ++ instruction :: (suffix ++ tail)) nextState))
+          rw [hstepCode, hrest]
+          simp only [List.append_assoc]
+          cases hsequence : executeInstructionsWithFfiCounted host nextState suffix with
+          | none =>
+              simp [executeInstructionsWithFfiCounted, hstep, hsequence]
+          | some sequence =>
+              cases sequence with
+              | mk intermediate sequenceCount =>
+                  have hmap_count (runner : Option (State width × Nat)) :
+                      (runner.map (fun result => (result.1, result.2 + suffix.length))).map
+                          (fun result => (result.1, result.2 + 1)) =
+                        runner.map
+                          (fun result => (result.1, result.2 + (suffix.length + 1))) := by
+                    cases runner with
+                    | none => rfl
+                    | some result =>
+                        cases result
+                        simp [Nat.add_assoc]
+                  simpa [executeInstructionsWithFfiCounted, hstep, hsequence,
+                    List.append_assoc] using hmap_count
+                    (executeCodeUntilWithFfiCounted host fuel (0 : Word width)
+                      returnAddress (prelude ++ instruction :: (suffix ++ tail))
+                      intermediate)
+
 theorem executeInstructions_tailCall_pc [NeZero width]
     (state : State width) (entry : Word width)
     (moves : List (Instruction width)) (hzero : ZeroRegister state) :

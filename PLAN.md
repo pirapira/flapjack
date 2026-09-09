@@ -257,6 +257,9 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
 - [x] Port the CakeML top-level declaration ordering and two-name function
   permutation helpers used by `pan_to_target`, including recursive call and
   handler traversal.
+- [x] Expose an exact CakeML-style entry-point pipeline that freshens the
+  requested source function and places global initialization before a new
+  `main` tail-call wrapper, while retaining the compatibility pipeline.
 - [x] Compose the ported front-end, global, Crepe, Loop, and Word passes in an
   executable pipeline that exposes every intermediate artifact.
 - [x] Match CakeML `pan_to_target` entry preparation by moving a user `main`

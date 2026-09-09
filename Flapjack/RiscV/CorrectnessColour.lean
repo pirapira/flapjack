@@ -1,5 +1,6 @@
 import Flapjack.RiscV.AllocatorCorrectness
 import Flapjack.RiscV.CorrectnessBackend
+import Flapjack.RiscV.CorrectnessFfi
 
 /-!
 Correctness of applying a register colouring to a small, executable Word
@@ -2231,6 +2232,86 @@ theorem wordAllocateGraphFunctionWithEntry_riscv_return_simulation
         exact htargetEq.1
   subst target'
   exact ⟨source', returnedValues, hsource, htarget, htargetRelation⟩
+
+/-! The same allocator boundary is available to the FFI-aware RISC-V
+    selector.  On a straight-line colored body the selector intentionally
+    agrees with the ordinary one, so this theorem exposes that fact without
+    forcing callers to erase the service environment by hand. -/
+
+theorem wordAllocateGraphFunctionWithEntry_riscv_ffi_return_simulation
+    [NeZero width]
+    (context : WordCallFfiContext width)
+    (parameters : List Nat) (program : WordProg (Word width))
+    (fixedSources : List Nat) (colours stackStart : Nat)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (allocation : WordGraphAllocation) (coloured : WordProg (Word width))
+    (halloc : wordAllocateGraphFunctionWithEntry parameters program fixedSources
+      colours stackStart =
+      some (state, renamedParameters, allocation, coloured))
+    (valid : wordColourValid (wordGraphColouringAt allocation.colouring))
+    (injective : Function.Injective
+      (wordGraphColouringAt allocation.colouring))
+    (colourZero : wordGraphColouringAt allocation.colouring 0 = 0)
+    (colourNoScratch : ∀ name, name < 31 →
+      wordGraphColouringAt allocation.colouring name ≠ 31)
+    (source target : State width)
+    (hrelation : WordColourStateRelation
+      (wordGraphColouringAt allocation.colouring) source target)
+    (hprogram : WordVarStraightLine width
+      (wordSsaRenameFunctionWithEntry parameters program).2.snd)
+    (store : Nat) (values : List Nat)
+    (hvalues : ∀ name, name ∈ values → name < 32)
+    (code : List (Instruction width))
+    (returns : List (Fin 32))
+    (hcompile : wordFunctionToRiscVWithCallsAndFfi context coloured =
+      some (code, []))
+    (hreturnCompile : wordFunctionToRiscVWithCallsAndFfi context
+      ((.return store (values.map
+        (wordGraphColouringAt allocation.colouring))) : WordProg (Word width)) =
+      some ([], returns)) :
+    ∃ source' returnedValues,
+      evalWordFunction source
+          (.seq (wordSsaRenameFunctionWithEntry parameters program).2.snd
+            (.return store values)) =
+        some (source', returnedValues) ∧
+      evalWordFunction target
+          (.seq coloured (.return store (values.map
+            (wordGraphColouringAt allocation.colouring)))) =
+        some (executeInstructions target code, returnedValues) ∧
+      WordColourStateRelation (wordGraphColouringAt allocation.colouring)
+        source' (executeInstructions target code) := by
+  have halloc' := halloc
+  simp [wordAllocateGraphFunctionWithEntry] at halloc'
+  rcases halloc' with ⟨actualAllocation, _, _, _, hallocation, hcolour⟩
+  have htargetStraight' := wordVarStraightLine_to_wordRiscVStraightLine
+    (wordGraphColouringAt actualAllocation.colouring)
+    (wordSsaRenameFunctionWithEntry parameters program).2.snd hprogram
+  rw [hcolour] at htargetStraight'
+  have htargetStraight : WordRiscVStraightLine coloured := by
+    simpa [hallocation] using htargetStraight'
+  have hcompileOrdinary : wordFunctionToRiscVWithCalls
+      { targets := context.targets } coloured = some (code, []) := by
+    rw [← wordFunctionToRiscVWithCallsAndFfi_agrees_straightLine
+      context coloured htargetStraight]
+    exact hcompile
+  have hreturnOrdinary : wordFunctionToRiscVWithCalls
+      { targets := context.targets }
+      ((.return store (values.map
+        (wordGraphColouringAt allocation.colouring))) : WordProg (Word width)) =
+      some ([], returns) := by
+    cases hmap : (values.map (wordGraphColouringAt allocation.colouring)).mapM
+        registerOfNat with
+    | none =>
+        simp [wordFunctionToRiscVWithCallsAndFfi,
+          wordFunctionToRiscVWithCalls, hmap] at hreturnCompile
+    | some registers =>
+        simpa [wordFunctionToRiscVWithCallsAndFfi,
+          wordFunctionToRiscVWithCalls, hmap] using hreturnCompile
+  exact wordAllocateGraphFunctionWithEntry_riscv_return_simulation
+    { targets := context.targets } parameters program fixedSources colours stackStart
+    state renamedParameters allocation coloured halloc valid injective colourZero
+    colourNoScratch source target hrelation hprogram store values hvalues code returns
+    hcompileOrdinary hreturnOrdinary
 
 /-! A call-level colouring contract for the handler-aware Word evaluator.  It
 keeps the source and target body proofs explicit, so the theorem composes with

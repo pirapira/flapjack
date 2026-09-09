@@ -85,6 +85,22 @@ theorem evalStackRemoveStackAlloc_small [NeZero width]
       stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
       wordStackMachineWriteRegister, hwords, Ne.symm hscratch]
 
+theorem evalStackRemoveStackFree_small [NeZero width]
+    (config : StackRemoveConfig) (state : WordStackMachineState width)
+    (words : Nat) (hwords : words ≤ 255)
+    (hscratch : config.scratch ≠ config.stackPointer) :
+    (evalWordStackMachine state
+      (stackRemoveStackFree config words)).map
+        (fun final => final.registers config.stackPointer) =
+      some (state.registers config.stackPointer +
+        BitVec.ofNat width (config.bytesInWord * words)) := by
+  by_cases hzero : words = 0
+  · subst words
+    simp [stackRemoveStackFree, stackRemoveStackDelta, evalWordStackMachine]
+  · simp [stackRemoveStackFree, stackRemoveStackDelta, hzero,
+      stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
+      wordStackMachineWriteRegister, hwords, Ne.symm hscratch]
+
 theorem evalStackRemoveStackLoad [NeZero width]
     (config : StackRemoveConfig) (state : WordStackMachineState width)
     (destination offset : Nat)

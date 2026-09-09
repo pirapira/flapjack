@@ -2204,6 +2204,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   stack-pointer-destination optimization and scratch/stack-pointer alias guard.
 - [x] Prove the StackRemove frame-size setter lowering on RISC-V for both
   scratch and address-scratch shift-register layouts.
+- [x] Prove the one-chunk StackRemove frame allocation and release lowerings on
+  RISC-V, including their zero-word no-op cases.
 
 ## First implementation slice
 

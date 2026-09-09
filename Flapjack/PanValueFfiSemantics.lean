@@ -87,13 +87,16 @@ termination_by length => length
 
 def panValueFfiWriteBytes [BEq α] [Add α] [OfNat α 1]
     (access : PanValueMemoryAccess α) (context : PanValueFfiContext α)
-    (memory : α → Option (PanValue α)) (bytesInWord address : α) :
-    List UInt8 → Option (α → Option (PanValue α))
-  | [] => some memory
-  | byte :: bytes => do
-      let memory ← access.storeByte access.domain memory bytesInWord address
-        (context.byteToWord byte)
-      panValueFfiWriteBytes access context memory bytesInWord (address + 1) bytes
+  (memory : α → Option (PanValue α)) (bytesInWord address : α) :
+    List UInt8 → (α → Option (PanValue α))
+  | [] => memory
+  | byte :: bytes =>
+      let tailMemory := panValueFfiWriteBytes access context memory bytesInWord
+        (address + 1) bytes
+      match access.storeByte access.domain tailMemory bytesInWord address
+          (context.byteToWord byte) with
+      | some updatedMemory => updatedMemory
+      | none => memory
 termination_by bytes => sizeOf bytes
 
 inductive PanValueFfiExtCallResult (α : Type u) (σ : Type v) where
@@ -112,7 +115,7 @@ def panValueFfiExtCall [BEq α] [Add α] [OfNat α 1]
     array (context.valueToNat arrayLength)
   match callFfi ffi (.extCall function) configurationBytes arrayBytes with
   | .returned nextFfi bytes =>
-      let memory ← panValueFfiWriteBytes access context memory bytesInWord array bytes
+      let memory := panValueFfiWriteBytes access context memory bytesInWord array bytes
       pure (.returned memory nextFfi)
   | .final event => pure (.final ffi event)
 

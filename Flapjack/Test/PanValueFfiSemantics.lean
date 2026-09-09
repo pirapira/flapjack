@@ -61,6 +61,38 @@ def statefulTestMemory : Word 64 → Option (PanValue (Word 64)) :=
       some (.word (BitVec.ofNat 64 0x0000000000000042))
     else none
 
+def statefulExtCallWriteFailureAccess : PanValueMemoryAccess (Word 64) :=
+  { panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel with
+    readByte := fun _ _ _ _ => some 0
+    storeByte := fun _ memory _ address value =>
+      if address == BitVec.ofNat 64 8 then
+        some (fun current =>
+          if current == address then some (.word value) else memory current)
+      else none }
+
+def statefulExtCallWriteFailureOracle : FfiOracle Unit :=
+  fun name state _ _ =>
+    match name with
+    | .extCall _ => .returned state [UInt8.ofNat 1, UInt8.ofNat 2]
+    | _ => .returned state []
+
+def statefulExtCallWriteFailureFfi : FfiState Unit :=
+  { oracle := statefulExtCallWriteFailureOracle, state := (), ioEvents := [] }
+
+#guard
+  match panValueFfiExtCall statefulExtCallWriteFailureAccess statefulTestContext
+      (fun address =>
+        if address == BitVec.ofNat 64 8 then some (.word 0) else none)
+      (BitVec.ofNat 64 8) statefulExtCallWriteFailureFfi "writeFailure"
+      (BitVec.ofNat 64 0) (BitVec.ofNat 64 0)
+      (BitVec.ofNat 64 8) (BitVec.ofNat 64 2) with
+  | some (.returned memory _) =>
+      (match memory (BitVec.ofNat 64 8) with
+        | some (.word value) => value == BitVec.ofNat 64 1
+        | _ => false) &&
+        (memory (BitVec.ofNat 64 9)).isNone
+  | _ => false
+
 def statefulSharedProgram : Option (Word 64 × Nat × Nat) :=
   (evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
       statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)

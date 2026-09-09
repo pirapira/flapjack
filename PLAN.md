@@ -120,6 +120,10 @@ Issue #513 is covered across the structured, stepped, flat, stateful-FFI, and
 clocked evaluators: a `DecCall` whose callee raises now propagates the raised
 outcome, while direct uncaught calls retain their failure behavior.
 
+The stateful ExtCall byte-array helper now follows CakeML's `write_bytearray`
+ordering and failure fallback, including its behavior when a later byte store
+cannot be performed; the RISC-V regression keeps the successful prefix visible.
+
 ## Stages
 
 1. **Project and syntax foundation**

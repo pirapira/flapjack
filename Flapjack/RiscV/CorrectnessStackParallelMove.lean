@@ -132,6 +132,54 @@ theorem wordStackMovesFromPhysical_singleton
         [(destinationLocation, .register source)] := by
   simp [wordStackMovesFromPhysical, wordStackPhysicalMovesFrom, hdestination]
 
+def wordStackPhysicalMovesFromSpec : List WordLocation → Nat →
+    List (WordLocation × WordLocation)
+  | [], _ => []
+  | location :: locations, source =>
+      (location, .register source) ::
+        wordStackPhysicalMovesFromSpec locations (source + 2)
+
+theorem wordStackPhysicalMovesFrom_mapM'
+    (config : WordStackConfig) (destinations : List Nat) (source : Nat) :
+    wordStackPhysicalMovesFrom config destinations source =
+      (List.mapM' (wordStackLocation config) destinations).map
+        (fun locations => wordStackPhysicalMovesFromSpec locations source) := by
+  induction destinations generalizing source with
+  | nil =>
+      simp [wordStackPhysicalMovesFrom, wordStackPhysicalMovesFromSpec,
+        List.mapM']
+  | cons destination destinations ih =>
+      cases hlocation : wordStackLocation config destination with
+      | none =>
+          simp [wordStackPhysicalMovesFrom, List.mapM', hlocation]
+      | some location =>
+          cases hrest : List.mapM' (wordStackLocation config) destinations with
+          | none =>
+              have htail :
+                  wordStackPhysicalMovesFrom config destinations (source + 2) =
+                    none := by
+                rw [ih (source := source + 2), hrest]
+                rfl
+              simp [wordStackPhysicalMovesFrom, List.mapM', hlocation, hrest,
+                htail]
+          | some locations =>
+              simp [wordStackPhysicalMovesFrom, wordStackPhysicalMovesFromSpec,
+                List.mapM', hlocation, hrest, ih]
+
+theorem wordStackPhysicalMovesFrom_eq_spec
+    (config : WordStackConfig) (destinations : List Nat) (source : Nat)
+    (locations : List WordLocation)
+    (hlookup :
+      destinations.mapM (wordStackLocation config) = some locations) :
+    wordStackPhysicalMovesFrom config destinations source =
+      some (wordStackPhysicalMovesFromSpec locations source) := by
+  have hlookup' :
+      List.mapM' (wordStackLocation config) destinations = some locations := by
+    rw [List.mapM'_eq_mapM]
+    exact hlookup
+  rw [wordStackPhysicalMovesFrom_mapM', hlookup']
+  rfl
+
 theorem evalWordStackMachine_movesFromPhysical_singleton_preserves_value
     [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)

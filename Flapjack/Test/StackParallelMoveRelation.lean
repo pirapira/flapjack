@@ -81,7 +81,14 @@ example :
       wordStackParallelLocationMove,
       wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
       wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
-      wordStackLocationMove, wordStackJoin, evalWordStackMachine,
-      wordStackMachineWriteRegister, wordStackMachineBinOp]
+    wordStackLocationMove, wordStackJoin, evalWordStackMachine,
+    wordStackMachineWriteRegister, wordStackMachineBinOp]
+
+example :
+    wordStackPhysicalMovesFrom entryMoveConfig [1] 2 =
+      some [(.register 5, .register 2)] := by
+  apply wordStackPhysicalMovesFrom_eq_spec
+    (locations := [.register 5])
+  simp [entryMoveConfig, wordStackLocation, lookupNatInfo]
 
 end Flapjack.RiscV

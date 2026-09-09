@@ -141,4 +141,22 @@ example :
       · rfl
       · contradiction) (by decide))
 
+example :
+    executeCodeUntil 3 0 (BitVec.ofNat 8 12)
+        ([.branchEq 0 0 0, .addi 1 0 7, .addi 2 1 3, .addi 3 2 1])
+        ({zeroState 8 with pc := BitVec.ofNat 8 4}) =
+      some (executeInstructions ({zeroState 8 with pc := BitVec.ofNat 8 4})
+        [.addi 1 0 7, .addi 2 1 3]) := by
+  simpa using (executeCodeUntil_suffix_of_nonbranching
+    ({zeroState 8 with pc := BitVec.ofNat 8 4})
+    ([.branchEq 0 0 0] : List (Instruction 8))
+    [.addi 1 0 7, .addi 2 1 3]
+    [.addi 3 2 1] (by rfl) (by
+      intro instruction hinstruction
+      simp only [List.mem_cons] at hinstruction
+      rcases hinstruction with rfl | rfl | hfalse
+      · rfl
+      · rfl
+      · contradiction) (by decide))
+
 end Flapjack.RiscV

@@ -54,4 +54,20 @@ def compileFlapjackRiscVViaHeuristicAllocatedStack [NeZero width]
     removeConfig 0 0
     (functions.map (fun (label, _, body) => (label, body)))
 
+/-! Target-facing sibling of the historical heuristic entrypoint. -/
+def compileFlapjackRiscVViaHeuristicAllocatedStackTarget [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (algorithm : Nat) (architecture : RiscV.Architecture)
+    (bytesInWord : RiscV.Word width) (fromNat : Nat → RiscV.Word width)
+    (services : List (FunName × Nat)) (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (List (RiscV.Instruction width)) := do
+  let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
+  let functions ← pipelineWordFunctionsAllocatedWithHeuristics algorithm pipeline.loop
+  RiscV.compileStackProgramNatListWithRaiseStubToRiscV { services := services }
+    removeConfig 0 0
+    (functions.map (fun (label, _, body) => (label, body)))
+
 end Flapjack

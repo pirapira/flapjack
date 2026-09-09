@@ -4,6 +4,15 @@ import Flapjack.RiscV.LinearScanPipeline
 
 namespace Flapjack
 
+def linearScanTargetRemoveConfig : StackRemoveConfig :=
+  { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
+    stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
+
+def linearScanTargetDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "main", inline := false, exported := true, params := [],
+      body := .return (.const (BitVec.ofNat 64 7)), returnShape := .one }]
+
 example :
     (wordAllocateLinearScanFunction [] (.skip : WordProg Nat) 2 0).isSome =
       true := by
@@ -24,6 +33,11 @@ example :
     (pipelineWordFunctionsAllocatedWithLinearScan
       [(0, [], (.skip : LoopProg (RiscV.Word 64))) ]).isSome = true := by
   decide +kernel
+
+#guard
+    (compileFlapjackRiscVViaLinearScanStackTarget .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      linearScanTargetRemoveConfig linearScanTargetDeclarations).isSome
 
 example
     (parameters : List Nat) (program : WordProg α)

@@ -41,4 +41,21 @@ def panCostReturned41 : PanValueControlResult Nat → Bool
     panCostTestFunctions 0 100 1 20 (fun _ => none) (fun _ => none) panCostTestMemory
     (.call none "id" [.const 41])).map panCostReturned41
 
+/- CakeML turns all non-returning terminal results from an ordinary callee into
+   an error, including the callee's normal, break, and continue results. -/
+#guard
+  (evalPanValueCostProg panCostTestPrimitive panCostTestFfi []
+    [("normal", [], .skip)] 0 100 1 20 (fun _ => none) (fun _ => none)
+    panCostTestMemory (.call none "normal" [])).isNone
+
+#guard
+  (evalPanValueCostProg panCostTestPrimitive panCostTestFfi []
+    [("break", [], .break)] 0 100 1 20 (fun _ => none) (fun _ => none)
+    panCostTestMemory (.call none "break" [])).isNone
+
+#guard
+  (evalPanValueCostProg panCostTestPrimitive panCostTestFfi []
+    [("continue", [], .continue)] 0 100 1 20 (fun _ => none) (fun _ => none)
+    panCostTestMemory (.call none "continue" [])).isNone
+
 end Flapjack

@@ -116,8 +116,7 @@ mutual
             (memoryAccess := memoryAccess) (contracts := contracts)
           let cost := panCostCombine argumentCost bodyCost
           match result with
-        | .normal _ calleeGlobals calleeMemory =>
-            pure (.normal locals calleeGlobals calleeMemory, cost)
+        | .normal _ _ _ => none
         | .returned _ calleeGlobals calleeMemory values =>
             if panValueReturnValid structs contracts function values &&
                 panValueValuesWithinLimit structs values then
@@ -145,10 +144,7 @@ mutual
                   else pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value, cost)
               | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value, cost)
             else none
-        | .broke _ calleeGlobals calleeMemory =>
-            pure (.broke locals calleeGlobals calleeMemory, cost)
-          | .continued _ calleeGlobals calleeMemory =>
-              pure (.continued locals calleeGlobals calleeMemory, cost)
+        | .broke _ _ _ | .continued _ _ _ => none
         else none
     termination_by fuel _ _ _ _ _ _ _ _ _ => fuel
 

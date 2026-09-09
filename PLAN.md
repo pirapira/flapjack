@@ -80,7 +80,9 @@ shared-memory behavior.
    driven parameter, return, exception, and handler shape checks; integrate the same
    contract environment into the flat paths. The four model-aware call
    evaluators now enforce declaration-driven return, exception, and handler
-   contracts. Add the
+   contracts; the cost-instrumented call evaluator applies the same
+   declaration parameter checks and rejects invalid callee terminal results.
+   Add the
    missing `store32`/
    `storeByte` cases to the flat control evaluator and prove that the
    counted/stepped expression evaluator has the same value result as the
@@ -1328,6 +1330,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Preserve function parameter names and shapes in the declaration environment;
   enforce distinct parameter names and argument-shape agreement at every
   declaration-driven call, with valid and invalid source regressions.
+- [x] Align the cost-instrumented ordinary call evaluator with `panSem` by
+  converting callee `normal`, `break`, and `continue` results into errors, with
+  executable regressions for all three terminal outcomes.
 - [x] Enforce structure-context well-formedness for structured loads, matching
   the source evaluator's shape-validation rule.
 - [x] Connect the structured source evaluator to end-to-end declaration-call

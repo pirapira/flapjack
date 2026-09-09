@@ -20,13 +20,15 @@ def pipelineCallTargetLinkedImage : Option (List (RiscV.Instruction 64)) :=
       code))
 
 def pipelineCallTargetImage : List (RiscV.Instruction 64) :=
-  [.addi 3 0 0, .addi 4 0 (BitVec.ofNat 64 41),
+  [.addi 31 0 (BitVec.ofNat 64 20), .jalr 0 31 0,
+   .jalr 0 1 0,
+   .addi 4 2 0, .jalr 0 1 0,
+   .addi 3 0 0, .addi 4 0 (BitVec.ofNat 64 41),
    .addi 2 4 0, .addi 30 30 (0 - BitVec.ofNat 64 8),
-   .storeWord 1 30, .addi 31 0 (BitVec.ofNat 64 48), .jalr 1 31 0,
+   .storeWord 1 30, .addi 31 0 (BitVec.ofNat 64 12), .jalr 1 31 0,
    .addi 3 4 0, .loadWord 1 30,
    .addi 30 30 (BitVec.ofNat 64 8), .addi 4 3 0,
-   .jalr 0 1 0,
-   .addi 4 2 0, .jalr 0 1 0]
+   .jalr 0 1 0]
 
 theorem pipelineCallTargetLinkedImage_shape :
     pipelineCallTargetLinkedImage = some pipelineCallTargetImage := by

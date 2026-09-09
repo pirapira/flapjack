@@ -21,4 +21,13 @@ example :
   exact evalStackRemoveStackAlloc_all stackDeltaTestConfig
     stackDeltaGeneralMachineState 256 (by decide)
 
+example :
+    (evalWordStackMachine stackDeltaGeneralMachineState
+      (stackRemoveStackFree stackDeltaTestConfig 256)).map
+        (fun final => final.registers stackDeltaTestConfig.stackPointer) =
+      some (stackDeltaGeneralMachineState.registers stackDeltaTestConfig.stackPointer +
+        BitVec.ofNat 64 (stackDeltaTestConfig.bytesInWord * 256)) := by
+  exact evalStackRemoveStackFree_all stackDeltaTestConfig
+    stackDeltaGeneralMachineState 256 (by decide)
+
 end Flapjack.RiscV

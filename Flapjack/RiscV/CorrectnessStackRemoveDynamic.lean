@@ -54,7 +54,7 @@ theorem evalStackRemoveStackGetSize [NeZero width]
     (hscratchAddress : config.scratch ≠ config.addressScratch)
     (hregisterBase : register ≠ config.stackBase)
     (hbaseScratch : config.stackBase ≠ config.scratch)
-    (hbaseAddress : config.stackBase ≠ config.addressScratch) :
+    (_hbaseAddress : config.stackBase ≠ config.addressScratch) :
     (evalWordStackMachine state
       (stackRemoveStackGetSize config register)).map
         (fun final => final.registers register) =
@@ -62,19 +62,12 @@ theorem evalStackRemoveStackGetSize [NeZero width]
         (state.registers config.stackPointer - state.registers config.stackBase)
         (shiftAmount (BitVec.ofNat width config.wordShift))) := by
   by_cases hregisterScratch : register = config.scratch
-  · simp [stackRemoveStackGetSize, stackRemoveStackDelta, stackRemoveMove,
-      stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
-      wordStackMachineShift, wordStackMachineWriteRegister,
-      hregisterScratch, hscratchAddress, hregisterBase,
-      hbaseScratch, hbaseAddress, Ne.symm hscratchAddress] <;>
+  · simp [stackRemoveStackGetSize, stackRemoveMove, stackRemoveJoin,
+      hregisterScratch] <;>
       split <;> simp_all [evalWordStackMachine, wordStackMachineShift,
-        wordStackMachineBinOp, wordStackMachineWriteRegister,
-        Ne.symm hregisterBase]
-  · simp [stackRemoveStackGetSize, stackRemoveStackDelta, stackRemoveMove,
-      stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
-      wordStackMachineShift, wordStackMachineWriteRegister,
-      hregisterScratch, hscratchAddress, hregisterBase,
-      hbaseScratch, hbaseAddress, Ne.symm hscratchAddress] <;>
+        wordStackMachineBinOp, wordStackMachineWriteRegister]
+  · simp [stackRemoveStackGetSize, stackRemoveMove, stackRemoveJoin,
+      hregisterScratch] <;>
       split <;> simp_all [evalWordStackMachine, wordStackMachineShift,
         wordStackMachineBinOp, wordStackMachineWriteRegister,
         Ne.symm hregisterBase]
@@ -83,8 +76,8 @@ theorem evalStackRemoveStackSetSize [NeZero width]
     (config : StackRemoveConfig) (state : WordStackMachineState width)
     (register : Nat)
     (hscratchAddress : config.scratch ≠ config.addressScratch)
-    (hstackPointerScratch : config.stackPointer ≠ config.scratch)
-    (hstackPointerAddress : config.stackPointer ≠ config.addressScratch)
+    (_hstackPointerScratch : config.stackPointer ≠ config.scratch)
+    (_hstackPointerAddress : config.stackPointer ≠ config.addressScratch)
     (hregisterBase : register ≠ config.stackBase)
     (hregisterPointer : register ≠ config.stackPointer)
     (hbaseScratch : config.stackBase ≠ config.scratch)
@@ -96,25 +89,13 @@ theorem evalStackRemoveStackSetSize [NeZero width]
         BitVec.shiftLeft (state.registers register)
           (shiftAmount (BitVec.ofNat width config.wordShift))) := by
   by_cases hregisterScratch : register = config.scratch
-  · simp [stackRemoveStackSetSize, stackRemoveStackDelta, stackRemoveMove,
-      stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
-      wordStackMachineShift, wordStackMachineWriteRegister,
-      hregisterScratch, hscratchAddress, hstackPointerScratch,
-      hstackPointerAddress, hregisterBase, hregisterPointer,
-      hbaseScratch, hbaseAddress, Ne.symm hscratchAddress,
-      Ne.symm hstackPointerScratch, Ne.symm hstackPointerAddress,
-      Ne.symm hregisterBase] <;> split <;>
-      simp_all [evalWordStackMachine, wordStackMachineShift,
-        wordStackMachineBinOp, wordStackMachineWriteRegister]
-  · simp [stackRemoveStackSetSize, stackRemoveStackDelta, stackRemoveMove,
-      stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
-      wordStackMachineShift, wordStackMachineWriteRegister,
-      hregisterScratch, hscratchAddress, hstackPointerScratch,
-      hstackPointerAddress, hregisterBase, hregisterPointer,
-      hbaseScratch, hbaseAddress, Ne.symm hscratchAddress,
-      Ne.symm hstackPointerScratch, Ne.symm hstackPointerAddress,
-      Ne.symm hregisterBase] <;> split <;>
-      simp_all [evalWordStackMachine, wordStackMachineShift,
-        wordStackMachineBinOp, wordStackMachineWriteRegister]
+  · simp [stackRemoveStackSetSize, stackRemoveJoin, evalWordStackMachine,
+      wordStackMachineBinOp, wordStackMachineShift,
+      wordStackMachineWriteRegister, hregisterScratch] <;> split <;>
+      simp_all
+  · simp [stackRemoveStackSetSize, stackRemoveJoin, evalWordStackMachine,
+      wordStackMachineBinOp, wordStackMachineShift,
+      wordStackMachineWriteRegister, hregisterScratch] <;> split <;>
+      simp_all
 
 end Flapjack.RiscV

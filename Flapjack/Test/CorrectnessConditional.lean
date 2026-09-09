@@ -51,6 +51,18 @@ example (state : State 64) (hpc : state.pc = 0)
         some (1 : Word 64)
       else
         some (2 : Word 64) := by
-  exact executeCode_ite_assign state hpc hzero
+  exact executeCode_ite_assign state hpc hzero (by decide)
+
+example (state : State 32) (hpc : state.pc = 0)
+    (hzero : ZeroRegister state) :
+    (executeCode 5 0
+      [.branchNe 1 2 (BitVec.ofNat 32 12), .addi 3 0 1,
+        .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2] state).map
+      (fun state => readRegister state 3) =
+      if readRegister state 1 == readRegister state 2 then
+        some (1 : Word 32)
+      else
+        some (2 : Word 32) := by
+  exact executeCode_ite_assign state hpc hzero (by decide)
 
 end Flapjack.Test.CorrectnessConditional

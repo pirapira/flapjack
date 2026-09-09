@@ -122,4 +122,39 @@ theorem evalWordStackMachine_parallelLocationMove_singleton_preserves_other_valu
   exact evalWordStackMachine_locationMove_preserves_other_value
     config state final destination source other hotherDestination hotherScratch heval
 
+theorem wordStackMovesFromPhysical_singleton
+    (config : WordStackConfig) (destination source : Nat)
+    (destinationLocation : WordLocation)
+    (hdestination :
+      wordStackLocation config destination = some destinationLocation) :
+    wordStackMovesFromPhysical (α := Nat) config [destination] source =
+      wordStackParallelLocationMove (α := Nat) config
+        [(destinationLocation, .register source)] := by
+  simp [wordStackMovesFromPhysical, wordStackPhysicalMovesFrom, hdestination]
+
+theorem evalWordStackMachine_movesFromPhysical_singleton_preserves_value
+    [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (destination source : Nat) (destinationLocation : WordLocation)
+    (hdestination :
+      wordStackLocation config destination = some destinationLocation)
+    (hdestinationScratch :
+      destinationLocation ≠ .register config.scratch)
+    (hdestinationAddressScratch :
+      destinationLocation ≠ .register config.addressScratch)
+    (hsourceScratch : WordLocation.register source ≠
+      WordLocation.register config.scratch)
+    (hsourceAddressScratch : WordLocation.register source ≠
+      WordLocation.register config.addressScratch)
+    (heval : (wordStackMovesFromPhysical config [destination] source).bind
+      (evalWordStackMachine state) = some final) :
+    wordStackLocationValue config final destinationLocation =
+      wordStackLocationValue config state (.register source) := by
+  rw [wordStackMovesFromPhysical_singleton config destination source
+    destinationLocation hdestination] at heval
+  exact evalWordStackMachine_parallelLocationMove_singleton_preserves_value
+    config state final destinationLocation (.register source)
+    hdestinationScratch hdestinationAddressScratch hsourceScratch
+    hsourceAddressScratch heval
+
 end Flapjack.RiscV

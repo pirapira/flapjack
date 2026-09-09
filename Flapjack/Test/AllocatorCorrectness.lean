@@ -238,6 +238,22 @@ example [NeZero 64] (state : State 64)
     (by intro name; rfl) function configuration configurationLength array arrayLength live
     (by rfl)
 
+example [NeZero 64] (state : State 64)
+    (handler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+      State 64 → Option (State 64))
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (live : List Nat × List Nat) :
+    evalWordFunctionWithHandlersAndFfi [] handler 1 state
+        (.ffi function configuration configurationLength array arrayLength live) =
+      evalWordFunctionWithHandlersAndFfi [] handler 1 state
+        (.ffi function configuration configurationLength array arrayLength
+          (live.1.map (fun name => name), live.2.map (fun name => name))) := by
+  exact evalWordFunctionWithHandlersAndFfi_ffi_applyColour
+    (fun name => name) state state handler handler
+    (by intro name; rfl) function configuration configurationLength array arrayLength live
+    (by rfl)
+
 /-! The full-SSA graph boundary must retain an allocation node for an unused
     formal: the entry move is part of the allocated function even when the
     body is `skip`. -/

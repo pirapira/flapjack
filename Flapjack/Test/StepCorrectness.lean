@@ -86,4 +86,24 @@ example (state : State 8) (entry : Word 8) (moves : List (Instruction 8))
       jalrTarget entry 0 := by
   exact executeInstructions_stackCall_pc state entry moves hzero
 
+example (state : State 8) (entry : Word 8)
+    (parameters returns arguments destinations : List Nat)
+    (code : List (Instruction 8)) (hzero : ZeroRegister state)
+    (hcompile :
+      wordCallToRiscVWithStack entry parameters returns arguments destinations =
+        some code) :
+    ∃ parameterMoves resultMoves,
+      (executeInstructions state
+        (parameterMoves ++
+          [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
+           .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])).pc =
+        jalrTarget entry 0 ∧
+      code =
+        parameterMoves ++
+          [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
+           .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0] ++
+          resultMoves := by
+  exact wordCallToRiscVWithStack_prefix_execute_pc state entry parameters returns
+    arguments destinations code hzero hcompile
+
 end Flapjack.RiscV

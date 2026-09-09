@@ -2047,6 +2047,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   wordTailCallToRiscV compiler witness.
 - [x] Prove the machine PC contract for the stack-based non-tail call
   prologue and linked jump.
+- [x] Connect stack-call compiler witnesses to executable call-prefix
+  decomposition and entry-transfer correctness.
 - [x] Port and place the first executable `crep_arith` simplification pass,
   folding constant Crepe multiplication before Crepe-to-Loop lowering.
 - [x] Port the executable Crepe inlining analyses and unreachable-code

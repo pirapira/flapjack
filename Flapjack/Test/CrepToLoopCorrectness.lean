@@ -168,4 +168,22 @@ theorem crepToLoop_call_caught_skip_regression :
   · simp [crepHandlerLoopFunctions, crepHandlerContext, crepCallSkipContext,
       loopCompileProg, lookupLoopFunction]
 
+theorem crepToLoop_call_uncaught_regression :
+    (evalCrepFullProg crepHandlerFunctions (fun _ _ => none)
+        (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none) 0 100 20
+        crepCallSkipState (.call none "raise" [])).map crepControlException =
+      (evalLoopProgWithCallsAndFfi crepHandlerLoopFunctions
+        (loopFfiOfCrepFfi (fun _ _ _ _ _ _ => none)) 20
+        (loopStateOfCrepState crepCallSkipState)
+        (loopCompileProg crepHandlerContext [9] (.call none "raise" []))).map
+        loopControlException := by
+  apply crepToLoop_call_uncaught_raise_agreement crepHandlerContext
+    crepHandlerFunctions crepHandlerLoopFunctions
+    (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+    0 100 0 crepCallSkipState [9] "raise" 7 17
+  · simp [crepHandlerFunctions, lookupCompiledFunction]
+  · simp [crepHandlerContext, lookupInfo]
+  · simp [crepHandlerLoopFunctions, crepHandlerContext, crepCallSkipContext,
+      loopCompileProg, lookupLoopFunction]
+
 end Flapjack

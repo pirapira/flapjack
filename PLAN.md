@@ -1953,6 +1953,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   destinations to declaration-based result handling and global stores (with
   the caught-handler flag protocol), while preserving the timeout-safe
   fallback for unknown destinations.
+- [x] Port `pan_globals` scalar global `ShMemLoad` lowering, including its
+  local address/load temporaries and global write-back.
 - [x] Prove the reusable source-to-Crepe FFI lowering equation, including
   sequential argument evaluation and restoration of compiler temporaries.
 - [x] Compose the lowered caught-handler call with the full-Crepe evaluator,

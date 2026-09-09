@@ -1262,6 +1262,53 @@ theorem wordFunctionToRiscVWithCallsAndFfi_agrees_straightLine [NeZero width]
       simp [wordFunctionToRiscVWithCallsAndFfi,
         wordFunctionToRiscVWithCalls, ihfirst, ihsecond]
 
+/-! Compose the FFI-aware selector with the ABI return boundary for a
+    deterministic straight-line body.  Foreign calls may occur in the
+    surrounding function, but this theorem isolates the ordinary body/return
+    fragment needed by allocator and function-entry proofs. -/
+
+theorem wordFunctionToRiscVWithCallsAndFfi_seq_return_sound [NeZero width]
+    (context : WordCallFfiContext width) (state : State width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (store : Nat) (values : List Nat)
+    (firstCode : List (Instruction width)) (returns : List (Fin 32))
+    (hfirstCompile : wordFunctionToRiscVWithCallsAndFfi context program =
+      some (firstCode, []))
+    (hreturnCompile : wordFunctionToRiscVWithCallsAndFfi context
+      ((.return store values) : WordProg (Word width)) =
+      some ([], returns)) :
+    wordFunctionToRiscVWithCallsAndFfi context
+        (.seq program (.return store values)) =
+      some (firstCode, returns) ∧
+    evalWordFunction state (.seq program (.return store values)) =
+      Option.map (fun returned =>
+        (executeInstructions state firstCode, returned))
+        (values.mapM (fun name => do
+          let register ← registerOfNat name
+          pure (readRegister (executeInstructions state firstCode) register))) := by
+  have hfirstOrdinary : wordFunctionToRiscVWithCalls
+      { targets := context.targets } program = some (firstCode, []) := by
+    rw [← wordFunctionToRiscVWithCallsAndFfi_agrees_straightLine
+      context program hstraight]
+    exact hfirstCompile
+  have hreturnOrdinary : wordFunctionToRiscVWithCalls
+      { targets := context.targets }
+      ((.return store values) : WordProg (Word width)) = some ([], returns) := by
+    cases hvalues : values.mapM registerOfNat with
+    | none =>
+        simp [wordFunctionToRiscVWithCallsAndFfi,
+          wordFunctionToRiscVWithCalls, hvalues] at hreturnCompile
+    | some registers =>
+        simpa [wordFunctionToRiscVWithCallsAndFfi,
+          wordFunctionToRiscVWithCalls, hvalues] using hreturnCompile
+  have hmachine := wordFunctionToRiscVWithCalls_seq_return_sound
+    { targets := context.targets } state program hstraight store values
+    firstCode returns hfirstOrdinary hreturnOrdinary
+  constructor
+  · simp [wordFunctionToRiscVWithCallsAndFfi, hfirstCompile, hreturnCompile]
+  · exact hmachine.2
+
 /-! The loop-capable FFI selector has the same ordinary straight-line
     normalization as the non-loop FFI selector, and also admits an ECALL leaf.
     No control-flow marker is present in this fragment. -/

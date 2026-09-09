@@ -1,4 +1,5 @@
 import Flapjack.RiscV.CorrectnessFfiMachine
+import Flapjack.RiscV.CorrectnessFfi
 import Flapjack.RiscV.CorrectnessPipelineFfi
 
 /-!
@@ -191,5 +192,26 @@ example [NeZero width] (context : WordCallFfiContext width)
   exact wordFunctionToRiscVWithCallsAndFfi_seq_simulation context host state
     firstState finalState first second firstCode secondCode returns
     hfirstCompile hsecondCompile hfirstExec hsecondExec
+
+example [NeZero width] (state : State width) :
+    wordFunctionToRiscVWithCallsAndFfi
+        ({ targets := [], services := [] } : WordCallFfiContext width)
+        (.seq (.assign 2 (.const (BitVec.ofNat width 7))) (.return 0 [2])) =
+      some ([.addi 2 0 (BitVec.ofNat width 7)], [⟨2, by omega⟩]) ∧
+    evalWordFunction state
+        (.seq (.assign 2 (.const (BitVec.ofNat width 7))) (.return 0 [2])) =
+      some (executeInstructions state [.addi 2 0 (BitVec.ofNat width 7)],
+        [readRegister (executeInstructions state
+          [.addi 2 0 (BitVec.ofNat width 7)]) ⟨2, by omega⟩]) := by
+  have h := wordFunctionToRiscVWithCallsAndFfi_seq_return_sound
+    ({ targets := [], services := [] } : WordCallFfiContext width) state
+    (.assign 2 (.const (BitVec.ofNat width 7)))
+    (.assign 2 (.const (BitVec.ofNat width 7)) : WordRiscVStraightLine _)
+    0 [2] [.addi 2 0 (BitVec.ofNat width 7)] [⟨2, by omega⟩]
+    (by simp [wordFunctionToRiscVWithCallsAndFfi, wordFunctionToRiscVWithCalls,
+      wordExpToInstructions, wordExpToInstruction, registerOfNat])
+    (by simp [wordFunctionToRiscVWithCallsAndFfi, wordFunctionToRiscVWithCalls,
+      registerOfNat])
+  simpa [registerOfNat, Function.comp_def] using h
 
 end Flapjack.RiscV

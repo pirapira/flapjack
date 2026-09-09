@@ -53,4 +53,37 @@ example :
     (by omega) (by omega) [.sub 5 2 3]
   exact labCompilePlain_sub 5 2 3 (by omega) (by omega) (by omega)
 
+example :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (stackRiscVTestSource.registers 2 &&& stackRiscVTestSource.registers 3))
+      (executeInstructions (zeroState 64)
+        [.and 5 2 3]) := by
+  apply labCompilePlain_and_register_simulation stackRiscVTestSource
+    (zeroState 64) 5 2 3 stackRiscVTestRelation (by omega) (by omega)
+    (by omega) (by omega) [.and 5 2 3]
+  exact labCompilePlain_and 5 2 3 (by omega) (by omega) (by omega)
+
+example :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (stackRiscVTestSource.registers 2 ||| stackRiscVTestSource.registers 3))
+      (executeInstructions (zeroState 64)
+        [.or 5 2 3]) := by
+  apply labCompilePlain_or_register_simulation stackRiscVTestSource
+    (zeroState 64) 5 2 3 stackRiscVTestRelation (by omega) (by omega)
+    (by omega) (by omega) [.or 5 2 3]
+  exact labCompilePlain_or 5 2 3 (by omega) (by omega) (by omega)
+
+example :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (stackRiscVTestSource.registers 2 ^^^ stackRiscVTestSource.registers 3))
+      (executeInstructions (zeroState 64)
+        [.xor 5 2 3]) := by
+  apply labCompilePlain_xor_register_simulation stackRiscVTestSource
+    (zeroState 64) 5 2 3 stackRiscVTestRelation (by omega) (by omega)
+    (by omega) (by omega) [.xor 5 2 3]
+  exact labCompilePlain_xor 5 2 3 (by omega) (by omega) (by omega)
+
 end Flapjack.RiscV

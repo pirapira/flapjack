@@ -797,6 +797,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   and the corresponding Lab `add` lowering.
 - [x] Extend the StackLang/RISC-V register relation through binary subtraction
   and the corresponding Lab `sub` lowering.
+- [x] Extend the StackLang/RISC-V register relation through register bitwise
+  `and`, `or`, and `xor`, including their Lab lowerings.
 - [x] Match CakeML Simple/IRC distinction in graph allocation modes: modes
   0--1 omit move preferences during coalescing but retain the original move table for coloring, while modes 2--3 use the prioritized list for coalescing and the original move table for coloring.
 - [x] Preserve SSA-renamed virtual names at the heuristic allocator's

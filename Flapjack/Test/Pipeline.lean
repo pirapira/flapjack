@@ -464,4 +464,48 @@ example :
       | _ => "not-function") = ["main", "worker"] := by
   decide +kernel
 
+def exactEntryDeclarations : List (Decl Nat) :=
+  [.decl .one "global" (.const 7),
+   .function
+    { name := "main", inline := false, exported := true, params := [],
+      body := .return (.var .global "global"), returnShape := .one },
+   .function
+    { name := "worker", inline := false, exported := false, params := [],
+      body := .return (.const 1), returnShape := .one }]
+
+example :
+    (compileFlapjackEntry (α := Nat) .rv64i 1 id "main" exactEntryDeclarations).map
+      (fun result => result.globals.declarations.map (fun declaration =>
+        match declaration with
+        | .function function => function.name
+        | .decl _ name _ => name
+        | .name name _ => name
+        | .exnDecl exception _ => exception)) =
+      some ["main", "main'", "worker"] := by
+  decide +kernel
+
+example :
+    (compileFlapjackEntry (α := Nat) .rv64i 1 id "missing" exactEntryDeclarations).isNone := by
+  decide +kernel
+
+example :
+    (compileFlapjackEntry (α := Nat) .rv64i 1 id "main" exactEntryDeclarations).map
+      (fun result => result.globals.initializers.length) = some 1 := by
+  decide +kernel
+
+def exactEntryRiscVDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "main", inline := false, exported := true, params := [],
+      body := .return (.const (BitVec.ofNat 64 7)), returnShape := .one }]
+
+#guard
+    (compileFlapjackRiscVEntry (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+      "main" exactEntryRiscVDeclarations).isSome
+
+#guard
+    (compileFlapjackRiscVEntry (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+      "missing" exactEntryRiscVDeclarations).isNone
+
 end Flapjack

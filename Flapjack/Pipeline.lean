@@ -40,6 +40,15 @@ def pipelineInlineNames : List (Decl α) → List FunName
   | _ :: declarations => pipelineInlineNames declarations
 termination_by declarations => sizeOf declarations
 
+def pipelineFindFunction (name : FunName) :
+    List (Decl α) → Option (FunDecl α)
+  | [] => none
+  | .function declaration :: declarations =>
+      if declaration.name == name then some declaration
+      else pipelineFindFunction name declarations
+  | _ :: declarations => pipelineFindFunction name declarations
+termination_by declarations => sizeOf declarations
+
 def pipelineCrepeContext [BEq α] [Add α]
     (bytesInWord : α) (fromNat : Nat → α)
     (program : GlobalCompiledProgram α) : CompileContext α :=
@@ -570,6 +579,43 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     loop := loop
     word := word }
 
+/-! Exact `pan_to_target` entry preparation.  The ordinary pipeline above is
+    retained for pass-local fixtures and its historical generated-main
+    behavior.  This entry-point form follows CakeML: it finds the requested
+    source function, gives it a fresh name, permutes all function references,
+    and emits a new public `main` whose body runs global initializers before a
+    tail call to the renamed source entry. -/
+def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
+    (fromNat : Nat → α) (start : FunName) (declarations : List (Decl α)) :
+    Option (FlapjackPipelineResult α) :=
+  let simplified := panSimpDecls declarations
+  let structured := structCompileTop simplified
+  match pipelineFindFunction start structured with
+  | none => none
+  | some entry =>
+      let renamed := globalFreshName start (globalFunctionNames structured)
+      let prepared := globalRenameDecls start renamed (globalResortDecls structured)
+      let globals := globalCompileTop bytesInWord fromNat prepared
+      let entryArguments := entry.params.map (fun parameter =>
+        Exp.var .local parameter.1)
+      let wrapper : Decl α := .function
+        { name := start
+          inline := false
+          exported := false
+          params := entry.params
+          body := .seq (nestedSeq globals.initializers)
+            (.call none renamed entryArguments)
+          returnShape := entry.returnShape }
+      let globals := { globals with declarations := wrapper :: globals.declarations }
+      let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
+      let compiled := compileToCrepe crepeContext globals.declarations
+      let crepe := crepArithFunctions
+        (crepInlineTopRecursiveByNames (pipelineInlineNames globals.declarations) compiled)
+      let loop := pipelineLoopFunctions architecture 1 crepe
+      let word := pipelineWordFunctions loop
+      some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)
+
 def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
@@ -873,6 +919,23 @@ def compileFlapjackRiscV [NeZero width] [BEq (RiscV.Word width)]
     functions := functions
     linkedFunctions := RiscV.linkRiscVFunctions 0 functions
     callLinkedFunctions := RiscV.linkWordFunctions 0 pipeline.word }
+
+/-! RISC-V artifact wrapper for the exact entry-point pipeline.  Its `Option`
+    result reflects CakeML's behavior when the requested source entry is not
+    present, while the established target wrapper above retains the generated
+    zero-returning-main compatibility behavior. -/
+def compileFlapjackRiscVEntry [NeZero width] [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (start : FunName)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (FlapjackRiscVResult width) := do
+  let pipeline ← compileFlapjackEntry architecture bytesInWord fromNat start declarations
+  let functions := pipelineRiscVFunctions pipeline.word
+  pure (FlapjackRiscVResult.mk pipeline functions
+    (RiscV.linkRiscVFunctions 0 functions)
+    (RiscV.linkWordFunctions 0 pipeline.word))
 
 def compileFlapjackRiscVTarget [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]

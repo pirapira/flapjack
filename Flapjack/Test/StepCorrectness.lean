@@ -379,6 +379,52 @@ example (state : State 8) (code : List (Instruction 8))
   exact ⟨by simpa using htransfer (2, 6) (by simp),
     by simpa using htransfer (3, 7) (by simp)⟩
 
+example (state : State 8) (entry : Word 8) (code : List (Instruction 8))
+    (hcompile : wordCallToRiscVWithStack entry [8, 9] [6, 7] [4, 5] [2, 3] =
+      some code) :
+    ∃ parameterMoves resultMoves,
+      code = parameterMoves ++
+          [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
+           .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0] ++
+          resultMoves ++
+          [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))] ∧
+      readRegister (executeInstructions state
+        (resultMoves ++
+          [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))])) 2 =
+        readRegister state 6 ∧
+      readRegister (executeInstructions state
+        (resultMoves ++
+          [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))])) 3 =
+        readRegister state 7 := by
+  have hresult := wordCallToRiscVWithStack_full_result_contract state entry
+    [8, 9] [6, 7] [4, 5] [2, 3] code
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    (by decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    hcompile
+  rcases hresult with ⟨parameterMoves, resultMoves, hcode, htransfer⟩
+  refine ⟨parameterMoves, resultMoves, hcode, ?_, ?_⟩
+  · simpa using htransfer (2, 6) (by simp)
+  · simpa using htransfer (3, 7) (by simp)
+
 example (state : State 8) (code : List (Instruction 8))
     (hcode : ∀ instruction ∈ code, instruction.isBranch = false) :
     (executeInstructions state code).pc =

@@ -803,6 +803,50 @@ theorem wordRegisterMoves_execute_stackCall_result_transfer [NeZero width]
     (hregisterNoStack := hregisterNoStack)]
   exact hsourcePreserved move hmove
 
+theorem wordCallToRiscVWithStack_full_result_contract [NeZero width]
+    (state : State width) (entry : Word width)
+    (parameters returns arguments destinations : List Nat)
+    (code : List (Instruction width))
+    (hvalid : ∀ move, move ∈ destinations.zip returns →
+      move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
+    (hdestNonzero : ∀ move, move ∈ destinations.zip returns → move.1 ≠ 0)
+    (hdestinations : ((destinations.zip returns).map Prod.fst).Nodup)
+    (hnoSource : ∀ move, move ∈ destinations.zip returns →
+      move.2 ∉ (destinations.zip returns).map Prod.fst)
+    (hnotLink : ∀ move, move ∈ destinations.zip returns → move.1 ≠ 1)
+    (hnotStack : ∀ move, move ∈ destinations.zip returns → move.1 ≠ 30)
+    (hcompile :
+      wordCallToRiscVWithStack entry parameters returns arguments destinations =
+        some code) :
+    ∃ parameterMoves resultMoves,
+      code = parameterMoves ++
+          [.addi 30 30 (0 - BitVec.ofNat width (width / 8)),
+           .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0] ++
+          resultMoves ++
+          [.loadWord 1 30, .addi 30 30 (BitVec.ofNat width (width / 8))] ∧
+      ∀ move (hmove : move ∈ destinations.zip returns),
+        readRegister (executeInstructions state
+          (resultMoves ++
+            [.loadWord 1 30, .addi 30 30 (BitVec.ofNat width (width / 8))]))
+          ⟨move.1, (hvalid move hmove).1⟩ =
+        readRegister state ⟨move.2, (hvalid move hmove).2.1⟩ := by
+  cases hmove : wordRegisterMoves (width := width)
+      (parameters.zip arguments) with
+  | none =>
+      simp [wordCallToRiscVWithStack, hmove] at hcompile
+  | some parameterMoves =>
+      cases hresult : wordRegisterMoves (width := width)
+          (destinations.zip returns) with
+      | none =>
+          simp [wordCallToRiscVWithStack, hmove, hresult] at hcompile
+      | some resultMoves =>
+          simp [wordCallToRiscVWithStack, hmove, hresult] at hcompile
+          have hreturn := wordRegisterMoves_execute_stackCall_result_transfer
+            state (destinations.zip returns) resultMoves hvalid hdestNonzero
+            hdestinations hnoSource hnotLink hnotStack hresult
+          refine ⟨parameterMoves, resultMoves, ?_, hreturn⟩
+          simpa [List.cons_append, List.append_assoc] using hcompile.2.symm
+
 theorem executeInstructions_pc_fold_of_nonbranching [NeZero width]
     (state : State width) (code : List (Instruction width))
     (hcode : ∀ instruction ∈ code, instruction.isBranch = false) :

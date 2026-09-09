@@ -2055,6 +2055,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   wordTailCallToRiscV compiler witness.
 - [x] Prove single-parameter tail-call transfer, including the argument
   register value and the callee-entry PC.
+- [x] Generalize tail-call transfer to acyclic register moves, preserving all
+  parameter values through the generated RISC-V jump suffix.
 - [x] Prove the machine PC contract for the stack-based non-tail call
   prologue and linked jump.
 - [x] Connect stack-call compiler witnesses to executable call-prefix

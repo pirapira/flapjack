@@ -87,6 +87,16 @@ example :
   simp [ffiMachineHost]
 
 example :
+    (compileLabProgramLinked ({ services := [("echo", 7)] } : WordFfiContext)
+      ([⟨2, [.labAsm (.callFfi "echo") [] 0]⟩] :
+        LabProgram (Word 64))).map
+        flattenLabProgramLinked =
+      compileLabProgram ({ services := [("echo", 7)] } : WordFfiContext)
+        ([⟨2, [.labAsm (.callFfi "echo") [] 0]⟩] :
+          LabProgram (Word 64)) := by
+  exact compileLabProgramLinked_flatten (width := 64) _ _
+
+example :
     (compileLabProgram ({ services := [("echo", 7)] } : WordFfiContext)
       [⟨2, [.labAsm (.callFfi "echo") [] 0,
             .labAsm (.return) [] 0]⟩]).bind (fun code =>

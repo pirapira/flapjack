@@ -453,6 +453,48 @@ def compileLabProgramLinked [NeZero width] (context : WordFfiContext)
   let labels := labCollectProgramLabels 0 program
   compileLabProgramLinkedAux context labels 0 program
 
+def flattenLabProgramLinked :
+    List (Nat × Word width × List (Instruction width)) → List (Instruction width)
+  | [] => []
+  | (_, _, code) :: sections => code ++ flattenLabProgramLinked sections
+
+theorem compileLabProgramLinkedAux_flatten
+    [NeZero width] (context : WordFfiContext)
+    (labels : List (Nat × Nat × Nat)) (base : Nat)
+    (program : LabProgram (Word width)) :
+    (compileLabProgramLinkedAux context labels base program).map
+        flattenLabProgramLinked =
+      labCompileProgramSections context labels base program := by
+  induction program generalizing base with
+  | nil =>
+      simp [compileLabProgramLinkedAux, labCompileProgramSections,
+        flattenLabProgramLinked]
+  | cons sectionData sections ih =>
+      simp only [compileLabProgramLinkedAux, labCompileProgramSections]
+      cases hcode : labCompileProgramLines context labels base sectionData.lines with
+      | none => simp
+      | some code =>
+          cases hrest : compileLabProgramLinkedAux context labels
+              (base + 4 * labSectionInstructionCount sectionData) sections with
+          | none =>
+              have hsections := ih
+                (base := base + 4 * labSectionInstructionCount sectionData)
+              rw [hrest] at hsections
+              rw [← hsections]
+              simp
+          | some rest =>
+              have hsections := ih
+                (base := base + 4 * labSectionInstructionCount sectionData)
+              rw [← hsections]
+              simp [hrest, flattenLabProgramLinked]
+
+theorem compileLabProgramLinked_flatten [NeZero width]
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    (compileLabProgramLinked context program).map flattenLabProgramLinked =
+      compileLabProgram context program := by
+  simp [compileLabProgramLinked, compileLabProgram,
+    compileLabProgramLinkedAux_flatten]
+
 def compileLabProgramLinkedWithHaltAux [NeZero width]
     (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
     (base haltPc : Nat) : LabProgram (Word width) →

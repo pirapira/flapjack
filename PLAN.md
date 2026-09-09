@@ -1947,6 +1947,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   compilation, hiding label collection and code-shape normalization.
 - [x] Lift the same boundary through singleton linked-program flattening,
   establishing the first program-level Lab-to-machine FFI simulation.
+- [x] Prove that flattening the linked Lab sections preserves the ordinary
+  compiled instruction stream, including the FFI instruction boundary.
 - [x] Compose a singleton Lab FFI call-and-return through
   `executeFunctionAtWithFfi`, including the caller's `x1` continuation.
 - [x] Execute a linked handler-bearing StackRemove/Lab image on the RISC-V

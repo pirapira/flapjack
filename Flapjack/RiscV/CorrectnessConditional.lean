@@ -965,4 +965,75 @@ theorem executeCodeUntilWithFfiCounted_ite_assign [NeZero width]
     rw [hrun']
     simp [execute, writeRegister, readRegister, nextPc, hzero', hcondition']
 
+/-! Connect the source-level Word result to the exact path cost exposed by the
+    counted RISC-V conditional runner.  The nested `Option.map` on the source
+    side makes the observed value and the path cost explicit while retaining
+    the existing source evaluator boundary. -/
+theorem evalWordFunction_ite_assign_counted_riscV_register [NeZero width]
+    (host : WordFfiHost width) (state : State width)
+    (hpc : state.pc = 0) (hzero : ZeroRegister state)
+    (hwidth : 5 ≤ width) :
+    ((evalWordFunction state
+      ((.ite .equal 1 (.reg 2)
+        (.assign 3 (.const (1 : Word width)))
+        (.assign 3 (.const (2 : Word width)))) : WordProg (Word width))).map
+      (fun result => readRegister result.1 3)).map
+        (fun value =>
+          (value, if readRegister state 1 == readRegister state 2 then 3 else 2)) =
+      (executeCodeUntilWithFfiCounted host
+        (if readRegister state 1 == readRegister state 2 then 5 else 3) 0
+        (BitVec.ofNat width 16)
+        [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
+          .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state).map
+        (fun result => (readRegister result.1 3, result.2)) := by
+  have hsource := evalWordFunction_ite_assign_riscV_register
+    (state := state) hpc hzero hwidth
+  have hmachine := executeCodeUntilWithFfiCounted_ite_assign
+    (host := host) (state := state) hpc hzero hwidth
+  by_cases hcondition : readRegister state 1 = readRegister state 2
+  · have hsourceValue :
+        (evalWordFunction state
+          ((.ite .equal 1 (.reg 2)
+            (.assign 3 (.const (1 : Word width)))
+            (.assign 3 (.const (2 : Word width)))) : WordProg (Word width))).map
+          (fun result => readRegister result.1 3) =
+          some (1 : Word width) := by
+      rw [hsource]
+      rw [executeCode_ite_assign state hpc hzero hwidth]
+      simp [hcondition]
+    have hmachineValue :
+        (executeCodeUntilWithFfiCounted host
+          (if readRegister state 1 == readRegister state 2 then 5 else 3) 0
+          (BitVec.ofNat width 16)
+          [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
+            .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state).map
+          (fun result => (readRegister result.1 3, result.2)) =
+          some ((1 : Word width), 3) := by
+      rw [hmachine]
+      simp [hcondition]
+    rw [hsourceValue, hmachineValue]
+    simp [hcondition]
+  · have hsourceValue :
+        (evalWordFunction state
+          ((.ite .equal 1 (.reg 2)
+            (.assign 3 (.const (1 : Word width)))
+            (.assign 3 (.const (2 : Word width)))) : WordProg (Word width))).map
+          (fun result => readRegister result.1 3) =
+          some (2 : Word width) := by
+      rw [hsource]
+      rw [executeCode_ite_assign state hpc hzero hwidth]
+      simp [hcondition]
+    have hmachineValue :
+        (executeCodeUntilWithFfiCounted host
+          (if readRegister state 1 == readRegister state 2 then 5 else 3) 0
+          (BitVec.ofNat width 16)
+          [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
+            .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state).map
+          (fun result => (readRegister result.1 3, result.2)) =
+          some ((2 : Word width), 2) := by
+      rw [hmachine]
+      simp [hcondition]
+    rw [hsourceValue, hmachineValue]
+    simp [hcondition]
+
 end Flapjack.RiscV

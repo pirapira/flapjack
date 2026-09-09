@@ -321,4 +321,22 @@ example :
     (hthenResult := by rfl) (helseResult := by rfl) (hbound := by decide)
   simpa [riscVCondition] using hrun
 
+example (state : State 8) (hpc : state.pc = 0)
+    (hzero : ZeroRegister state) :
+    ((evalWordFunction state
+      ((.ite .equal 1 (.reg 2)
+        (.assign 3 (.const (1 : Word 8)))
+        (.assign 3 (.const (2 : Word 8)))) : WordProg (Word 8))).map
+      (fun result => readRegister result.1 3)).map
+        (fun value =>
+          (value, if readRegister state 1 == readRegister state 2 then 3 else 2)) =
+      (executeCodeUntilWithFfiCounted testNoFfiHost
+        (if readRegister state 1 == readRegister state 2 then 5 else 3) 0
+        (BitVec.ofNat 8 16)
+        [.branchNe 1 2 (BitVec.ofNat 8 12), .addi 3 0 1,
+          .branchEq 0 0 (BitVec.ofNat 8 8), .addi 3 0 2] state).map
+        (fun result => (readRegister result.1 3, result.2)) := by
+  exact evalWordFunction_ite_assign_counted_riscV_register
+    testNoFfiHost state hpc hzero (by decide)
+
 end Flapjack.Test.CorrectnessConditional

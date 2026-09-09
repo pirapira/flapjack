@@ -40,7 +40,7 @@ not yet an equivalent source semantics. In particular:
 | Byte and 32-bit accesses | Align to `byte_align`; extract/patch bytes with `be`; `Load32` additionally requires `aligned 2` | Model-aware flat, structured, and stepped evaluators now use the canonical word-cell operations; compatibility fallback remains |
 | Structured `Store` | Flatten values into consecutive word cells and fail transactionally on a bad domain | `PanValues` and its stepped evaluator now flatten word leaves into consecutive cells and thread model-backed stores transactionally ([#422](https://github.com/pirapira/flapjack/issues/422)); the standalone `PanMemory` helper remains the flat reference |
 | Assignments | `is_valid_value` checks the destination's existing shape | Generic structured, flat, stepped, and stateful-FFI assignment paths now reject absent or wrongly shaped destinations; call-result destination checks remain ([#384](https://github.com/pirapira/flapjack/issues/384)) |
-| Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation | The model-aware stateful stepped evaluator now carries FFI state, size-aware shared calls, aligned domains, and terminal outcomes; legacy evaluators retain compatibility paths |
+| Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation; `ShMemLoad` requires an existing word destination | The model-aware structured, stepped, and stateful-FFI evaluators now enforce the word destination rule, while carrying size-aware shared calls, aligned domains, and terminal outcomes; legacy evaluators retain compatibility paths |
 | Control state | Clock, timeout, local clearing at boundaries, return/exception size limits, and declared exception shapes | The clocked stateful-FFI evaluator now charges calls, while iterations, and `Tick`, returns explicit timeouts with empty locals, and rejects invalid callee terminal outcomes; the established structured, flat, stepped, and stateful-FFI paths enforce 32-word bounds and local clearing ([#387](https://github.com/pirapira/flapjack/issues/387)) |
 | Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays | Structured, stepped, flat, and stateful-FFI evaluators now propagate callee globals/memory (and stateful FFI state where applicable) and enforce declaration-driven return, exception, and handler shapes. Generic call destinations validate local/global shapes and stand-alone calls discard returned values; remaining control-state checks and legacy compatibility-path migration remain ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388), [#406](https://github.com/pirapira/flapjack/issues/406)) |
 
@@ -89,7 +89,9 @@ shared-memory behavior.
    evaluators now have a separate shared-memory callback/domain and a
    stateful stepped path with FFI state, terminal observations, size-dispatched
    `op8`/`op16`/`op32`/`opW` behavior, model-backed byte-array `ExtCall`
-   reads/writes, and a public declaration/entry-point wrapper. Complete this
+   reads/writes, and a public declaration/entry-point wrapper. Shared loads now
+   reject absent, structured, or non-word destinations as required by `panSem`.
+   Complete this
    stage by proving the remaining byte-domain and length-failure
    correspondence, then migrate callers from the legacy pure evaluator.
    Preserve the existing pure handler adapters as explicitly non-observable
@@ -1095,6 +1097,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   over RISC-V word cells, with little-endian and alignment regressions.
 - [x] Extend the RISC-V flat source evaluator with size-aware shared-memory
   loads and stores for words, bytes, halfwords, and aligned 32-bit values.
+- [x] Enforce CakeML's existing-word destination check for shared-memory loads
+  across structured, stepped, and stateful-FFI source evaluators, with missing
+  and structured-destination regressions.
 - [x] Add a fuel-bounded RISC-V flat source evaluator with structured control
   results for loops, declaration calls, exceptions, primitive dispatch, FFI,
   and RISC-V byte/32-bit/shared-memory operations.

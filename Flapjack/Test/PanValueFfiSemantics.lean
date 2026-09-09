@@ -98,10 +98,11 @@ def statefulSharedProgram : Option (Word 64 × Nat × Nat) :=
       statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
       (BitVec.ofNat 64 8) 30 (fun _ => none) (fun _ => none) (fun _ => none)
       statefulTestFfiState
-      (.seq (.shMemStore .op8 (.const (BitVec.ofNat 64 9))
-          (.const (BitVec.ofNat 64 0xaa)))
-        (.seq (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 10)))
-          (.return (.var .local "x"))))).map
+      (.dec "x" .one (.const (BitVec.ofNat 64 0))
+        (.seq (.shMemStore .op8 (.const (BitVec.ofNat 64 9))
+            (.const (BitVec.ofNat 64 0xaa)))
+          (.seq (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 10)))
+            (.return (.var .local "x")))))).map
     fun result => match result.1 with
       | .returned _ _ _ ffi [.word value] => (value, result.2, ffi.ioEvents.length)
       | _ => (BitVec.ofNat 64 0, 0, 0)
@@ -112,19 +113,30 @@ def statefulTestFinalOracle : FfiOracle Unit :=
 def statefulTestFinalState : FfiState Unit :=
   { oracle := statefulTestFinalOracle, state := (), ioEvents := [] }
 
-def statefulSharedFinal : Bool :=
-  match evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
+def statefulSharedFinalResult :=
+  evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
       statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
       (BitVec.ofNat 64 8) 10 (fun _ => none) (fun _ => none) (fun _ => none)
       statefulTestFinalState
-      (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 10))) with
+      (.dec "x" .one (.const (BitVec.ofNat 64 0))
+        (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 10))))
+
+def statefulSharedFinal : Bool :=
+  match statefulSharedFinalResult with
   | some (.finalFfi locals _ _ _ event, steps) =>
       locals "x" = none && event.name = .sharedMem .mappedRead &&
-        event.outcome = .failed && steps = 2
+        event.outcome = .failed && steps = 4
   | _ => false
 
-#guard statefulSharedProgram = some (BitVec.ofNat 64 0x42, 9, 2)
+#guard statefulSharedProgram = some (BitVec.ofNat 64 0x42, 11, 2)
 #guard statefulSharedFinal
+
+#guard
+  (evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
+      statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+      (BitVec.ofNat 64 8) 10 (fun _ => none) (fun _ => none) (fun _ => none)
+      statefulTestFfiState
+      (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 10)))).isNone
 
 def statefulExtCallProgram : Option (Word 64 × Nat × Nat) :=
   (evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive

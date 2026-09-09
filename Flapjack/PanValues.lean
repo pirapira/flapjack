@@ -442,6 +442,16 @@ def panValueAssignmentValid (structs : StructContext)
             (panValueShape structs oldValue)
       | none => false
 
+/-! CakeML's shared-memory load is a word assignment, rather than a general
+    declaration or structured assignment.  The destination must therefore be
+    an existing word, and the memory operation must produce a word. -/
+def panValueSharedLoadValid (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (kind : VarKind) (name : VarName) (value : PanValue α) : Bool :=
+  match value with
+  | .word _ => panValueAssignmentValid structs locals globals kind name value
+  | _ => false
+
 def panValueHandlerValid (structs : StructContext)
     (contracts : Option PanValueCallContracts)
     (locals : VarName → Option (PanValue α)) (handlerVariable : VarName)
@@ -786,9 +796,11 @@ def evalPanValueProgWithPrimitive [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [M
       let value ← match memoryAccess with
         | none => memory address
         | some access => access.sharedRead memory bytesInWord size address
-      match kind with
-      | .local => pure (updatePanValueMap locals name value, globals, memory, [])
-      | .global => pure (locals, updatePanValueMap globals name value, memory, [])
+      if panValueSharedLoadValid structs locals globals kind name value then
+        match kind with
+        | .local => pure (updatePanValueMap locals name value, globals, memory, [])
+        | .global => pure (locals, updatePanValueMap globals name value, memory, [])
+      else none
   | .shMemStore size address value, memoryAccess => do
       let address ← evalPanValueExp structs locals globals memory
         baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
@@ -1145,9 +1157,11 @@ mutual
               | .op8 => (access.readByte access.domain memory bytesInWord address).map .word
               | .op16 => (access.read16 access.domain memory bytesInWord address).map .word
               | .op32 => (access.read32 access.domain memory bytesInWord address).map .word
-        match kind with
-        | .local => pure (.normal (updatePanValueMap locals name value) globals memory)
-        | .global => pure (.normal locals (updatePanValueMap globals name value) memory)
+        if panValueSharedLoadValid structs locals globals kind name value then
+          match kind with
+          | .local => pure (.normal (updatePanValueMap locals name value) globals memory)
+          | .global => pure (.normal locals (updatePanValueMap globals name value) memory)
+        else none
     | _fuel + 1, locals, globals, memory, .shMemStore size address value, memoryAccess, _contracts => do
         let address ← evalPanValueExp structs locals globals memory
           baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
@@ -1455,9 +1469,11 @@ mutual
               | .op8 => (access.readByte access.domain memory bytesInWord address).map .word
               | .op16 => (access.read16 access.domain memory bytesInWord address).map .word
               | .op32 => (access.read32 access.domain memory bytesInWord address).map .word
-        match kind with
-        | .local => pure (.normal (updatePanValueMap locals name value) globals memory)
-        | .global => pure (.normal locals (updatePanValueMap globals name value) memory)
+        if panValueSharedLoadValid structs locals globals kind name value then
+          match kind with
+          | .local => pure (.normal (updatePanValueMap locals name value) globals memory)
+          | .global => pure (.normal locals (updatePanValueMap globals name value) memory)
+        else none
     | _fuel + 1, locals, globals, memory, .shMemStore size address value, memoryAccess,
         _contracts, _memoryHandler => do
         let address ← evalPanValueExp structs locals globals memory

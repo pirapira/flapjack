@@ -669,11 +669,13 @@ mutual
         let value ← match memoryAccess with
           | none => memory evaluatedAddress
           | some access => access.sharedRead memory bytesInWord size evaluatedAddress
-        match kind with
-        | .local => pure (.normal (updatePanValueMap locals name value) globals memory,
-            addressSteps + 1)
-        | .global => pure (.normal locals (updatePanValueMap globals name value) memory,
-            addressSteps + 1)
+        if panValueSharedLoadValid structs locals globals kind name value then
+          match kind with
+          | .local => pure (.normal (updatePanValueMap locals name value) globals memory,
+              addressSteps + 1)
+          | .global => pure (.normal locals (updatePanValueMap globals name value) memory,
+              addressSteps + 1)
+        else none
     | _fuel + 1, locals, globals, memory, .shMemStore size address value, memoryAccess,
         _contracts, _memoryHandler => do
         let (evaluatedAddress, addressSteps) ← evalPanValueExpCounted structs locals globals memory
@@ -1809,7 +1811,17 @@ theorem evalPanValueCallAndProgWithPrimitiveCallsAndFfiSteps_fst :
                         cases hmemory : memory evaluatedAddress with
                         | none => simp [haddress, hmemory, evalPanValueExpCounted]
                         | some evaluatedValue =>
-                                    cases kind <;> simp [haddress, hmemory, evalPanValueExpCounted]
+                            cases evaluatedValue with
+                            | word evaluatedValue =>
+                                by_cases hvalid : panValueSharedLoadValid structs locals globals kind name
+                                    (.word evaluatedValue)
+                                · simp [haddress, hmemory, hvalid, evalPanValueExpCounted] <;>
+                                    cases kind <;> rfl
+                                · simp [haddress, hmemory, hvalid, evalPanValueExpCounted] <;>
+                                    cases kind <;> rfl
+                            | rStruct _ | nStruct _ _ =>
+                                simp [haddress, hmemory, evalPanValueExpCounted,
+                                  panValueSharedLoadValid]
                     | rStruct _ | nStruct _ _ =>
                         simp [haddress, evalPanValueExpCounted]
             | shMemStore size address value =>

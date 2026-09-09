@@ -195,6 +195,35 @@ def memoryModelSteppedSharedOutOfDomain : Option (RiscV.Word 64 × Nat) :=
       | .normal _ _ _ => some (BitVec.ofNat 64 0, result.2)
       | _ => none
 
+def memoryModelSharedLoadValid : Bool :=
+  match evalPanValueProgWithPrimitive (α := RiscV.Word 64) []
+      (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8)
+      (fun name => if name == "x" then some (.word 0) else none) (fun _ => none)
+      (fun address => (memoryModelMemory address).map .word) (fun _ _ => none)
+      (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 8)))
+      (memoryAccess := some (panValueMemoryAccessOfModel memoryModel)) with
+  | some (locals, _, _, []) =>
+      match locals "x" with
+      | some (.word value) => value == BitVec.ofNat 64 1
+      | _ => false
+  | _ => false
+
+def memoryModelSharedLoadMissingDestination : Bool :=
+  (evalPanValueProgWithPrimitive (α := RiscV.Word 64) []
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8)
+    (fun _ => none) (fun _ => none)
+    (fun address => (memoryModelMemory address).map .word) (fun _ _ => none)
+    (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 8)))
+    (memoryAccess := some (panValueMemoryAccessOfModel memoryModel))).isNone
+
+def memoryModelSharedLoadStructuredDestination : Bool :=
+  (evalPanValueProgWithPrimitive (α := RiscV.Word 64) []
+    (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8)
+    (fun name => if name == "x" then some (.rStruct [.word 0]) else none)
+    (fun _ => none) (fun address => (memoryModelMemory address).map .word)
+    (fun _ _ => none) (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 8)))
+    (memoryAccess := some (panValueMemoryAccessOfModel memoryModel))).isNone
+
 def memoryModelVariadicAdd : Option (RiscV.Word 64) :=
   evalPanValueExp [] (fun _ => none) (fun _ => none) (fun _ => none)
     (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8)
@@ -326,10 +355,11 @@ def memoryModelPublicProgram : Option (RiscV.Word 64) :=
       [.decl .one "initial" (.loadByte (.const (BitVec.ofNat 64 9))),
        .function
          { name := "main", inline := false, exported := true, params := [],
-           body := .seq (.storeByte (.const (BitVec.ofNat 64 9))
-               (.const (BitVec.ofNat 64 0xaa)))
-             (.seq (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 9)))
-               (.return (.var .local "x"))),
+           body := .dec "x" .one (.const (BitVec.ofNat 64 0))
+             (.seq (.storeByte (.const (BitVec.ofNat 64 9))
+                 (.const (BitVec.ofNat 64 0xaa)))
+               (.seq (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 9)))
+                 (.return (.var .local "x")))),
            returnShape := .one }]
       "main" []
       (memoryAccess := some (panValueMemoryAccessOfModel memoryModel))).bind
@@ -352,6 +382,9 @@ def memoryModelPublicProgram : Option (RiscV.Word 64) :=
 #guard memoryModelSteppedByteProgram = some (BitVec.ofNat 64 0xaa, 7)
 #guard memoryModelSteppedShared16Program = some (BitVec.ofNat 64 0xbeef, 9)
 #guard memoryModelSteppedSharedOutOfDomain = none
+#guard memoryModelSharedLoadValid
+#guard memoryModelSharedLoadMissingDestination
+#guard memoryModelSharedLoadStructuredDestination
 #guard memoryModelVariadicAdd = some (BitVec.ofNat 64 6)
 #guard memoryModelSignedLess = some (BitVec.ofNat 64 1)
 #guard memoryModelArithmeticShift = some (BitVec.ofNat 64 0xc000000000000000)

@@ -477,16 +477,18 @@ mutual
         let (address, addressSteps) ← evalPanValueExpCounted structs locals globals memory
           baseAddress topAddress bytesInWord address (memoryAccess := memoryAccess)
         let .word address := address | none
-        match panValueFfiSharedLoad context ffi size address with
-        | some (.loaded nextFfi value) =>
-            match kind with
-            | .local => pure (.normal (updatePanValueMap locals name (.word value)) globals memory nextFfi,
-                addressSteps + 1)
-            | .global => pure (.normal locals (updatePanValueMap globals name (.word value)) memory nextFfi,
-                addressSteps + 1)
-        | some (.final nextFfi event) =>
-            pure (.finalFfi (fun _ => none) globals memory nextFfi event, addressSteps + 1)
-        | some (.stored _) | none => none
+        if panValueSharedLoadValid structs locals globals kind name (.word 0) then
+          match panValueFfiSharedLoad context ffi size address with
+          | some (.loaded nextFfi value) =>
+              match kind with
+              | .local => pure (.normal (updatePanValueMap locals name (.word value)) globals memory nextFfi,
+                  addressSteps + 1)
+              | .global => pure (.normal locals (updatePanValueMap globals name (.word value)) memory nextFfi,
+                  addressSteps + 1)
+          | some (.final nextFfi event) =>
+              pure (.finalFfi (fun _ => none) globals memory nextFfi event, addressSteps + 1)
+          | some (.stored _) | none => none
+        else none
     | _fuel + 1, locals, globals, memory, ffi,
         .shMemStore size address value, memoryAccess, _contracts, _memoryHandler => do
         let (address, addressSteps) ← evalPanValueExpCounted structs locals globals memory

@@ -166,6 +166,14 @@ def statefulPublicProgram : Option (Word 64 × Nat) :=
 
 #guard statefulPublicProgram = some (BitVec.ofNat 64 0x42, 1)
 
+example :
+    (evalPanValueFfiProgramStepped statefulTestContext
+      statefulPublicProgramState statefulTestPrimitive statefulTestHandler
+      30 [] "missing" []).map Prod.fst =
+      evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
+        statefulTestPrimitive statefulTestHandler 30 [] "missing" [] := by
+  apply evalPanValueFfiProgramStepped_fst
+
 #guard
     (evalPanValueFfiProgram statefulTestContext statefulPublicProgramState
       statefulTestPrimitive statefulTestHandler 30

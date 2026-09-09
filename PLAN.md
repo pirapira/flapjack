@@ -1979,6 +1979,8 @@ preliminary executable fragments, not proofs of equivalence with `panSem`.
   source/machine checks.
 - [x] Expose the same direct simulation equation for a full-SSA declaration
   call whose callee performs an FFI call and returns an allocated result.
+- [x] Expose a top-level stateful-FFI stepped evaluator and prove its result
+  projection agrees with the non-stepped program boundary.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

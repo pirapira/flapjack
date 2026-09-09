@@ -873,9 +873,12 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaTargetLinked [NeZero width]
     (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
     (removeConfig : StackRemoveConfig)
     (declarations : List (Decl (RiscV.Word width))) :
-    Option (List (Nat × RiscV.Word width × List (RiscV.Instruction width))) :=
-  compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked architecture bytesInWord
-    fromNat services removeConfig (pipelineEnsureMain declarations)
+    Option (List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
+  let pipeline := compileFlapjackTarget architecture bytesInWord fromNat declarations
+  let functions ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa pipeline.loop
+  let initialLabel := fullSsaInitialLabLabel functions
+  RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscV { services := services }
+    removeConfig 0 initialLabel (functions.map (fun (label, _, body) => (label, body)))
 
 def compileFlapjackRiscVViaAllocatedStackWithFullSsaTargetLinkedChecked
     [NeZero width]

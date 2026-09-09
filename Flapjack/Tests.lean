@@ -20,6 +20,8 @@ import Flapjack.RiscV.CorrectnessHeuristicStack
 import Flapjack.RiscV.CorrectnessGraphLocations
 import Flapjack.RiscV.CorrectnessStackRiscVDivision
 import Flapjack.RiscV.CorrectnessStackRiscVLongMul
+import Flapjack.RiscV.CorrectnessStackRiscVAddCarry
+import Flapjack.Test.StackRiscVAddCarry
 import Flapjack.Test.StackRiscVLongMul
 import Flapjack.Test.StackRiscVDivision
 import Flapjack.Test.GraphLocations

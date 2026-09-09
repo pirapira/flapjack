@@ -2237,6 +2237,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   division, including the defined zero-divisor result and Lab lowering.
 - [x] Extend the StackLang/RISC-V register relation through high/low
   multi-result multiplication, with the high-destination non-clobber contract.
+- [x] Extend the StackLang/RISC-V register relation through scratch-based
+  AddCarry, relating both results while excluding the temporary x31.
 
 ## First implementation slice
 

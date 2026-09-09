@@ -30,6 +30,7 @@ import Flapjack.Test.SourceToRiscVMemory
 import Flapjack.Test.PanMemoryModel
 import Flapjack.Test.PanValueFfiSemantics
 import Flapjack.Test.PanValueFfiClockSemantics
+import Flapjack.Test.PanCost
 import Flapjack.Test.SourceSemanticsOps
 import Flapjack.Test.SourceToLoopHandlers
 import Flapjack.Test.SourceToCrepeHandlers

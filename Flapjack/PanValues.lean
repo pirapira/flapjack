@@ -347,6 +347,7 @@ where
 structure PanValueCallContracts where
   returnShapes : InfoMap Shape
   exceptionShapes : InfoMap Shape
+  parameterShapes : InfoMap (List (VarName × Shape)) := []
 
 def panValuePayloadSizeFuel : Nat → StructContext → PanValue α → Nat
   | 0, _, _ => 0
@@ -411,6 +412,35 @@ def panValueExceptionValid (structs : StructContext)
       match lookupInfo exception contracts.exceptionShapes with
       | some shape => panShapeMatches (panValueShape structs value) shape
       | none => false
+
+def panValueValuesMatchShapes (structs : StructContext) :
+    List Shape → List (PanValue α) → Bool
+  | [], [] => true
+  | shape :: shapes, value :: values =>
+      panShapeMatches (panValueShape structs value) shape &&
+        panValueValuesMatchShapes structs shapes values
+  | _, _ => false
+
+/-! `lookup_code` in CakeML validates both parameter distinctness and the shape
+    of every argument.  Hand-built evaluators may omit this optional contract,
+    but declaration-driven public evaluation supplies it. -/
+def panValueParametersValid (structs : StructContext)
+    (contracts : Option PanValueCallContracts) (function : FunName)
+    (values : List (PanValue α)) : Bool :=
+  match contracts with
+  | none => true
+  | some contracts =>
+      match lookupInfo function contracts.parameterShapes with
+      | none => true
+      | some parameters =>
+          decide (parameters.map (fun parameter => parameter.1)).Nodup &&
+            panValueValuesMatchShapes structs
+              (parameters.map (fun parameter => parameter.2)) values
+
+@[simp] theorem panValueParametersValid_none (structs : StructContext)
+    (function : FunName) (values : List (PanValue α)) :
+    panValueParametersValid structs none function values = true := by
+  rfl
 
 @[simp] theorem panValueReturnValid_none (structs : StructContext)
     (function : FunName) (values : List (PanValue α)) :
@@ -946,39 +976,41 @@ mutual
         let values ← evalPanValueExps structs locals globals memory
           baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
         let (parameters, body) ← lookupPanFunction function functions
-        let calleeLocals ← bindPanValueParameters parameters values
-        let result ← evalPanValueProgWithCallsAndFfi structs functions handler
-          baseAddress topAddress bytesInWord fuel calleeLocals globals memory body
-          (memoryAccess := memoryAccess) (contracts := contracts)
-        match result with
-        | .normal _ _ _ => none
-        | .returned _ calleeGlobals calleeMemory values =>
-            if panValueReturnValid structs contracts function values &&
-                panValueValuesWithinLimit structs values then
-              match info with
-              | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
-              | some (destination, _) => do
-                  let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
-                    destination values
-                    (structs := structs)
-                  pure (.normal locals globals calleeMemory)
-            else none
-        | .raised _ calleeGlobals calleeMemory exception value =>
-            if panValueExceptionValid structs contracts exception value &&
-                panValuePayloadWithinLimit structs value then
-              match info with
-              | some (_, some (caught, handlerVariable, handlerProgram)) =>
-                  if caught == exception then
-                    if panValueHandlerValid structs contracts locals handlerVariable value then
-                      evalPanValueProgWithCallsAndFfi structs functions handler
-                        baseAddress topAddress bytesInWord fuel
-                        (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
-                        handlerProgram (memoryAccess := memoryAccess) (contracts := contracts)
-                    else none
-                  else pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
-              | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
-            else none
-        | .broke _ _ _ | .continued _ _ _ => none
+        if panValueParametersValid structs contracts function values then
+          let calleeLocals ← bindPanValueParameters parameters values
+          let result ← evalPanValueProgWithCallsAndFfi structs functions handler
+            baseAddress topAddress bytesInWord fuel calleeLocals globals memory body
+            (memoryAccess := memoryAccess) (contracts := contracts)
+          match result with
+          | .normal _ _ _ => none
+          | .returned _ calleeGlobals calleeMemory values =>
+              if panValueReturnValid structs contracts function values &&
+                  panValueValuesWithinLimit structs values then
+                match info with
+                | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
+                | some (destination, _) => do
+                    let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
+                      destination values
+                      (structs := structs)
+                    pure (.normal locals globals calleeMemory)
+              else none
+          | .raised _ calleeGlobals calleeMemory exception value =>
+              if panValueExceptionValid structs contracts exception value &&
+                  panValuePayloadWithinLimit structs value then
+                match info with
+                | some (_, some (caught, handlerVariable, handlerProgram)) =>
+                    if caught == exception then
+                      if panValueHandlerValid structs contracts locals handlerVariable value then
+                        evalPanValueProgWithCallsAndFfi structs functions handler
+                          baseAddress topAddress bytesInWord fuel
+                          (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
+                          handlerProgram (memoryAccess := memoryAccess) (contracts := contracts)
+                      else none
+                    else pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
+                | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
+              else none
+          | .broke _ _ _ | .continued _ _ _ => none
+        else none
     termination_by fuel _ _ _ _ _ _ => fuel
 
   def evalPanValueProgWithCallsAndFfi
@@ -1210,41 +1242,43 @@ mutual
         let values ← evalPanValueExps structs locals globals memory
           baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
         let (parameters, body) ← lookupPanFunction function functions
-        let calleeLocals ← bindPanValueParameters parameters values
-        let result ← evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
-          structs functions baseAddress topAddress bytesInWord fuel
-          calleeLocals globals memory body (memoryAccess := memoryAccess)
-          (contracts := contracts) (memoryHandler := memoryHandler)
-        match result with
-        | .normal _ _ _ => none
-        | .returned _ calleeGlobals calleeMemory values =>
-            if panValueReturnValid structs contracts function values &&
-                panValueValuesWithinLimit structs values then
-              match info with
-              | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
-              | some (destination, _) => do
-                  let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
-                    destination values
-                    (structs := structs)
-                  pure (.normal locals globals calleeMemory)
-            else none
-        | .raised _ calleeGlobals calleeMemory exception value =>
-            if panValueExceptionValid structs contracts exception value &&
-                panValuePayloadWithinLimit structs value then
-              match info with
-              | some (_, some (caught, handlerVariable, handlerProgram)) =>
-                  if caught == exception then
-                    if panValueHandlerValid structs contracts locals handlerVariable value then
-                      evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
-                        structs functions baseAddress topAddress bytesInWord fuel
-                        (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
-                        handlerProgram (memoryAccess := memoryAccess) (contracts := contracts)
-                        (memoryHandler := memoryHandler)
-                    else none
-                  else pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
-              | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
-            else none
-        | .broke _ _ _ | .continued _ _ _ => none
+        if panValueParametersValid structs contracts function values then
+          let calleeLocals ← bindPanValueParameters parameters values
+          let result ← evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+            structs functions baseAddress topAddress bytesInWord fuel
+            calleeLocals globals memory body (memoryAccess := memoryAccess)
+            (contracts := contracts) (memoryHandler := memoryHandler)
+          match result with
+          | .normal _ _ _ => none
+          | .returned _ calleeGlobals calleeMemory values =>
+              if panValueReturnValid structs contracts function values &&
+                  panValueValuesWithinLimit structs values then
+                match info with
+                | none => pure (.returned (fun _ => none) calleeGlobals calleeMemory values)
+                | some (destination, _) => do
+                    let (locals, globals) ← assignPanValueCallResult locals calleeGlobals
+                      destination values
+                      (structs := structs)
+                    pure (.normal locals globals calleeMemory)
+              else none
+          | .raised _ calleeGlobals calleeMemory exception value =>
+              if panValueExceptionValid structs contracts exception value &&
+                  panValuePayloadWithinLimit structs value then
+                match info with
+                | some (_, some (caught, handlerVariable, handlerProgram)) =>
+                    if caught == exception then
+                      if panValueHandlerValid structs contracts locals handlerVariable value then
+                        evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
+                          structs functions baseAddress topAddress bytesInWord fuel
+                          (updatePanValueMap locals handlerVariable value) calleeGlobals calleeMemory
+                          handlerProgram (memoryAccess := memoryAccess) (contracts := contracts)
+                          (memoryHandler := memoryHandler)
+                      else none
+                    else pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
+                | _ => pure (.raised (fun _ => none) calleeGlobals calleeMemory exception value)
+              else none
+          | .broke _ _ _ | .continued _ _ _ => none
+        else none
     termination_by fuel _ _ _ _ _ _ => fuel
 
   def evalPanValueProgWithPrimitiveCallsAndFfi

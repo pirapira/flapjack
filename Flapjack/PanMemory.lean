@@ -484,7 +484,9 @@ mutual
         let values ← evalPanFlatExps structs locals globals domain memory
           baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
         let (parameters, body) ← lookupPanFunction function functions
-        let calleeLocals ← bindPanValueParameters parameters values
+        let calleeLocals ← if panValueParametersValid structs contracts function values then
+          bindPanValueParameters parameters values
+        else none
         let result ← evalPanFlatProgFuelWithPrimitiveAndFfi structs functions ffi primitive
           baseAddress topAddress bytesInWord domain fuel calleeLocals globals memory body
           (contracts := contracts) (memoryAccess := memoryAccess)

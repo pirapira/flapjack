@@ -88,6 +88,7 @@ theorem evalPanValueFfiClockCall_returned_projects_to_steps
       (memoryAccess := memoryAccess) = some (values, argumentSteps))
     (hlookup : lookupPanFunction function functions = some (parameters, body))
     (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hparameters : panValueParametersValid structs contracts function values = true)
     (hclock : clock ≠ 0)
     (hreturn : panValueReturnValid structs contracts function values = true)
     (hwithin : panValueValuesWithinLimit structs values = true)
@@ -110,9 +111,9 @@ theorem evalPanValueFfiClockCall_returned_projects_to_steps
       some (.returned (fun _ => none) finalGlobals finalMemory finalFfi values,
         argumentSteps + bodySteps) := by
   constructor
-  · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hreturn,
+  · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hparameters, hclock, hreturn,
       hwithin, hclockBody]
-  · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hreturn,
+  · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hparameters, hreturn,
       hwithin, hstepBody]
 
 /-! The uncaught-exception call branch projects in the same way: the callee
@@ -146,6 +147,7 @@ theorem evalPanValueFfiClockCall_raised_projects_to_steps
       (memoryAccess := memoryAccess) = some (values, argumentSteps))
     (hlookup : lookupPanFunction function functions = some (parameters, body))
     (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hparameters : panValueParametersValid structs contracts function values = true)
     (hclock : clock ≠ 0)
     (hexception : panValueExceptionValid structs contracts exception value = true)
     (hwithin : panValuePayloadWithinLimit structs value = true)
@@ -169,9 +171,9 @@ theorem evalPanValueFfiClockCall_raised_projects_to_steps
       some (.raised (fun _ => none) finalGlobals finalMemory finalFfi exception value,
         argumentSteps + bodySteps) := by
   constructor
-  · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hexception,
+  · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hparameters, hclock, hexception,
       hwithin, hclockBody]
-  · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hexception,
+  · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hparameters, hexception,
       hwithin, hstepBody]
 
 /-! Return values assigned to an explicit caller destination project as well.
@@ -206,6 +208,7 @@ theorem evalPanValueFfiClockCall_destination_projects_to_steps
       (memoryAccess := memoryAccess) = some (values, argumentSteps))
     (hlookup : lookupPanFunction function functions = some (parameters, body))
     (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hparameters : panValueParametersValid structs contracts function values = true)
     (hclock : clock ≠ 0)
     (hreturn : panValueReturnValid structs contracts function values = true)
     (hwithin : panValueValuesWithinLimit structs values = true)
@@ -231,9 +234,9 @@ theorem evalPanValueFfiClockCall_destination_projects_to_steps
       some (.normal assignedLocals assignedGlobals finalMemory finalFfi,
         argumentSteps + bodySteps) := by
   constructor
-  · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hreturn,
+  · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hparameters, hclock, hreturn,
       hwithin, hassign, hclockBody]
-  · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hreturn,
+  · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hparameters, hreturn,
       hwithin, hassign, hstepBody]
 
 /-! A caught exception projects through the handler continuation.  The
@@ -269,6 +272,7 @@ theorem evalPanValueFfiClockCall_handler_projects_to_steps
       (memoryAccess := memoryAccess) = some (values, argumentSteps))
     (hlookup : lookupPanFunction function functions = some (parameters, body))
     (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hparameters : panValueParametersValid structs contracts function values = true)
     (hclock : clock ≠ 0)
     (hexception : panValueExceptionValid structs contracts exception value = true)
     (hwithin : panValuePayloadWithinLimit structs value = true)
@@ -305,9 +309,9 @@ theorem evalPanValueFfiClockCall_handler_projects_to_steps
       (memoryAccess := memoryAccess) (contracts := contracts) =
       some (handlerResult, argumentSteps + calleeSteps + handlerSteps) := by
   constructor
-  · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hclock, hexception,
+  · simp [evalPanValueFfiClockCall, hargs, hlookup, hbind, hparameters, hclock, hexception,
       hwithin, hcaught, hhandlerValid, hclockBody, hclockHandler]
-  · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hexception,
+  · simp [evalPanValueFfiCallSteps, hargsSteps, hlookup, hbind, hparameters, hexception,
       hwithin, hcaught, hhandlerValid, hstepBody, hstepHandler]
 
 /-! One true loop iteration also projects compositionally.  The body consumes

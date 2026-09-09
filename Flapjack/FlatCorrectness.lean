@@ -86,7 +86,7 @@ def flatContractExceptionShapes : InfoMap Shape :=
   [("E", .comb [.one, .one])]
 
 def flatContractEnvironment : Option PanValueCallContracts :=
-  some (PanValueCallContracts.mk flatContractReturnShapes flatContractExceptionShapes)
+  some (PanValueCallContracts.mk flatContractReturnShapes flatContractExceptionShapes [])
 
 example :
     (evalPanFlatProgWithCallsAndFfi []
@@ -106,8 +106,8 @@ example :
       flatContractDomain flatContractMemory
       (.seq (.call none "badRaise" []) (.return (.const 0)))
       (contracts := some (PanValueCallContracts.mk
-        [("main", .one)] flatContractExceptionShapes))).isNone = true := by
-  decide +kernel
+        [("main", .one)] flatContractExceptionShapes []))).isNone = true := by
+  native_decide
 
 example :
     (evalPanFlatProgWithCallsAndFfi []
@@ -119,7 +119,7 @@ example :
         "raiseGood" [])
       (contracts := some (PanValueCallContracts.mk
         [("main", .one), ("raiseGood", .one)]
-        [("E", .one)]))).isNone = true := by
+        [("E", .one)] []))).isNone = true := by
   decide +kernel
 
 end Flapjack

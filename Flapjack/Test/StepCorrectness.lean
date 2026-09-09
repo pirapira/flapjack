@@ -120,6 +120,15 @@ example (state : State 8) (entry : Word 8) (moves : List (Instruction 8))
       jalrTarget entry 0 := by
   exact executeInstructions_stackCall_pc state entry moves hzero
 
+example (state : State 8) (entry : Word 8) (moves : List (Instruction 8)) :
+    readRegister (executeInstructions state
+      (moves ++
+        [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
+         .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])) 2 =
+      readRegister (executeInstructions state moves) 2 := by
+  exact executeInstructions_stackCall_read_register state entry moves 2
+    (by decide) (by decide) (by decide)
+
 example (state : State 8) (entry : Word 8)
     (parameters returns arguments destinations : List Nat)
     (code : List (Instruction 8)) (hzero : ZeroRegister state)
@@ -139,6 +148,61 @@ example (state : State 8) (entry : Word 8)
           resultMoves := by
   exact wordCallToRiscVWithStack_prefix_execute_pc state entry parameters returns
     arguments destinations code hzero hcompile
+
+example (state : State 8) (entry : Word 8) (code : List (Instruction 8))
+    (hzero : ZeroRegister state)
+    (hcompile : wordCallToRiscVWithStack entry [2, 3] [6] [4, 5] [7] =
+      some code) :
+    ∃ parameterMoves resultMoves,
+      wordRegisterMoves (width := 8)
+        ([2, 3].zip [4, 5] : List (Nat × Nat)) =
+        some parameterMoves ∧
+      readRegister (executeInstructions state
+        (parameterMoves ++
+          [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
+           .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])) 2 =
+        readRegister state 4 ∧
+      readRegister (executeInstructions state
+        (parameterMoves ++
+          [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
+           .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])) 3 =
+        readRegister state 5 ∧
+      (executeInstructions state
+        (parameterMoves ++
+          [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
+           .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])).pc =
+        jalrTarget entry 0 ∧
+      code = parameterMoves ++
+        [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
+         .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0] ++ resultMoves := by
+  have hresult := wordCallToRiscVWithStack_prefix_execute_parameter_transfer state entry
+    [2, 3] [6] [4, 5] [7] code hzero
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    (by decide)
+    (by
+      intro move hmove
+      simp at hmove ⊢
+      rcases hmove with rfl | rfl <;> decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    (by
+      intro move hmove
+      simp at hmove
+      rcases hmove with rfl | rfl <;> decide)
+    hcompile
+  rcases hresult with ⟨parameterMoves, resultMoves, hmoves, htransfer, hpc, hcode⟩
+  refine ⟨parameterMoves, resultMoves, hmoves, ?_, ?_, hpc, hcode⟩
+  · simpa using htransfer (2, 4) (by simp)
+  · simpa using htransfer (3, 5) (by simp)
 
 example (state : State 8) (stackAddress savedLink : Word 8)
     (hstack : readRegister state 30 = stackAddress)

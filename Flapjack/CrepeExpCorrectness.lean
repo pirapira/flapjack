@@ -59,4 +59,60 @@ theorem compileExp_local_word_correct
   simp [compileExp, hlookup, evalPanValueExp, hsource,
     evalCrepFullExps, evalCrepFullExp, hslot]
 
+theorem compileExp_rStruct_const_words_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepLocals : Nat → Option α) (crepMemory : α → Option α)
+    (baseAddress topAddress bytesInWord : α) (values : List α) :
+    compileExp context (.rStruct (values.map (fun value => .const value))) =
+      (values.map (fun value => .const value),
+        .comb (values.map (fun _ => .one))) ∧
+    evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.rStruct (values.map (fun value => .const value))) =
+      some (.rStruct (values.map (fun value => .word value))) ∧
+    evalCrepFullExps crepLocals crepMemory baseAddress topAddress
+      (values.map (fun value => .const value)) = some values := by
+  have hcompileList :
+      compileExp.compileExpList context
+          (values.map (fun value => .const value)) =
+        values.map (fun value => ([.const value], .one)) := by
+    induction values with
+    | nil => simp [compileExp.compileExpList]
+    | cons value values ih =>
+        simp [compileExp.compileExpList, compileExp, ih]
+  have hsourceList :
+      evalPanValueExp.evalPanValueExps structs sourceLocals sourceGlobals
+          sourceMemory baseAddress topAddress bytesInWord
+          (values.map (fun value => .const value)) =
+        some (values.map (fun value => .word value)) := by
+    clear hcompileList
+    induction values with
+    | nil => simp [evalPanValueExp.evalPanValueExps]
+    | cons value values ih =>
+        simp [evalPanValueExp.evalPanValueExps, evalPanValueExp, ih]
+  have hcrepList :
+      evalCrepFullExps crepLocals crepMemory baseAddress topAddress
+          (values.map (fun value => .const value)) = some values := by
+    clear hcompileList hsourceList
+    induction values with
+    | nil => simp [evalCrepFullExps]
+    | cons value values ih =>
+        simp [evalCrepFullExps, evalCrepFullExp, ih]
+  have hflat :
+      List.flatMap Prod.fst
+          (values.map (fun value => ([CrepExp.const value], Shape.one))) =
+        values.map (fun value => CrepExp.const value) := by
+    clear hcompileList hsourceList hcrepList
+    induction values with
+    | nil => simp
+    | cons value values ih => simp [ih]
+  simp [compileExp, evalPanValueExp, hcompileList, hsourceList, hcrepList,
+    hflat]
+
 end Flapjack

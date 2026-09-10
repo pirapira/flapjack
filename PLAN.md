@@ -2230,8 +2230,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   declaration local is extended with a shape and its Crep slot witness.
 - [x] Prove the compiled declaration-table head lookup exposes flattened
   parameter slots and the exact compiled function body.
-- [x] Prove source/Crep expression agreement for constants and word locals
-  using the flattened-local state relation.
+- [x] Prove source/Crep expression agreement for constants, word locals, and
+  recursive records of word constants using the flattened-local relation.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

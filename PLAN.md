@@ -2304,6 +2304,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   the non-address-scratch register relation for register-held frame offsets.
 - [x] Lift dynamic StackStore through the StackProg-to-RISC-V entrypoint, preserving
   its offset-register and scratch non-aliasing conditions in the memory contract.
+- [x] Lift StackGetSize through the StackProg-to-RISC-V entrypoint, including its
+  stack-pointer destination optimization and compiler `addi` constant lowering.
 - [x] Prove the dynamic StackRemove stack-load boundary for register-held byte
   offsets, preserving the non-address-scratch register relation.
 - [x] Prove both dynamic StackRemove frame-store paths, including the

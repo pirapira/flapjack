@@ -42,6 +42,7 @@ theorem compile_full_extCall_simulation
     [ShiftLeft α] [ShiftRight α] [LT α]
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α)
+    (functions : List (CompiledFunction α))
     (sourceLocals sourceLocals' : VarName → Option α)
     (state state' : CrepState α)
     (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
@@ -94,7 +95,7 @@ theorem compile_full_extCall_simulation
                 (context.maxVar + 2) configurationLengthValue)
               (context.maxVar + 3) arrayValue)
             (context.maxVar + 4) arrayLengthValue) }) = some state') :
-    evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+    evalCrepFullProg functions primitive ffi sharedMem baseAddress topAddress
         (fuel + 5) state
         (compileProg context
           (.extCall function configuration configurationLength array arrayLength)) =

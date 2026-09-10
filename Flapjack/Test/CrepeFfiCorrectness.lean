@@ -37,6 +37,7 @@ theorem sourceToCrepeFfi_simulation_theorem :
         some sourceToCrepeFfiSourceAfter := by
   have h := compile_full_extCall_simulation
     (context := sourceToCrepeFfiContext)
+    (functions := [])
     (sourceLocals := sourceToCrepeFfiSourceLocals)
     (sourceLocals' := sourceToCrepeFfiSourceAfter)
     (state := sourceToCrepeFfiState)

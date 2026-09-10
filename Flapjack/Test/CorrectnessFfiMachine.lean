@@ -239,6 +239,39 @@ example [NeZero width]
     context host state finalState program code [⟨2, by omega⟩]
     [BitVec.ofNat width 7] hcompile hsemantic
 
+example [NeZero width]
+    (context : WordCallFfiContext width)
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (host : WordFfiHost width)
+    (handler : FunName → Word width → Word width → Word width → Word width →
+      State width → Option (State width))
+    (fuel : Nat) (state firstState finalState : State width)
+    (first second : WordProg (Word width))
+    (firstCode secondCode : List (Instruction width))
+    (returns : List (Fin 32)) (values : List (Word width))
+    (hseqCompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context
+      (.seq first second) = some (firstCode ++ secondCode, returns))
+    (hfirstCompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context first =
+      some (firstCode, []))
+    (hsecondCompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context second =
+      some (secondCode, returns))
+    (hfirstExec : executeInstructionsWithFfi host state firstCode =
+      some firstState)
+    (hsecondExec : executeInstructionsWithFfi host firstState secondCode =
+      some finalState)
+    (hfirstEval : evalWordFunctionWithCallsAndFfi functions handler fuel state first =
+      some (firstState, []))
+    (hsecondEval : evalWordFunctionWithCallsAndFfi functions handler fuel firstState second =
+      some (finalState, values)) :
+    executeInstructionsWithFfiCounted host state (firstCode ++ secondCode) =
+      some (finalState, (firstCode ++ secondCode).length) ∧
+    evalWordFunctionWithCallsAndFfi functions handler (fuel + 1) state
+      (.seq first second) = some (finalState, values) := by
+  exact wordFunctionToRiscVWithCallsAndFfiAndLoops_seq_counted_complete_simulation
+    context functions host handler fuel state firstState finalState first second
+    firstCode secondCode returns values hseqCompile hfirstCompile hsecondCompile
+    hfirstExec hsecondExec hfirstEval hsecondEval
+
 example :
     (compileWordProgramNatToRiscV (width := 64)
       { services := [("echo", 7)] } pipelineFfiWordConfig

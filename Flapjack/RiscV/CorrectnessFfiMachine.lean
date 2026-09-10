@@ -846,4 +846,67 @@ theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_seq_simulation
               | some loweredFirstCode =>
                   simp [hfirstControlLowering] at hfirstBind
 
+/-! The counted machine contract composes through the loop-aware selector as
+    well.  The control-marker proof above recovers the exact concatenated
+    instruction list; the generic counted contract then supplies the machine
+    step count for that list. -/
+theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_seq_counted_complete_simulation
+    [NeZero width] (context : WordCallFfiContext width)
+    (functions : List (Nat × List Nat × WordProg (Word width)))
+    (host : WordFfiHost width)
+    (handler : FunName → Word width → Word width → Word width →
+      Word width → State width → Option (State width))
+    (fuel : Nat) (state firstState finalState : State width)
+    (first second : WordProg (Word width))
+    (firstCode secondCode : List (Instruction width))
+    (returns : List (Fin 32)) (values : List (Word width))
+    (hseqCompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context
+      (.seq first second) = some (firstCode ++ secondCode, returns))
+    (hfirstCompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context first =
+      some (firstCode, []))
+    (hsecondCompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context second =
+      some (secondCode, returns))
+    (hfirstExec : executeInstructionsWithFfi host state firstCode =
+      some firstState)
+    (hsecondExec : executeInstructionsWithFfi host firstState secondCode =
+      some finalState)
+    (hfirstEval : evalWordFunctionWithCallsAndFfi functions handler fuel state first =
+      some (firstState, []))
+    (hsecondEval : evalWordFunctionWithCallsAndFfi functions handler fuel firstState second =
+      some (finalState, values)) :
+    executeInstructionsWithFfiCounted host state (firstCode ++ secondCode) =
+      some (finalState, (firstCode ++ secondCode).length) ∧
+    evalWordFunctionWithCallsAndFfi functions handler (fuel + 1) state
+      (.seq first second) = some (finalState, values) := by
+  have hmachine := wordFunctionToRiscVWithCallsAndFfiAndLoops_seq_simulation
+    context host state firstState finalState first second firstCode secondCode
+    returns hfirstCompile hsecondCompile hfirstExec hsecondExec
+  have heval := evalWordFunctionWithCallsAndFfi_seq_normal
+    functions handler fuel state firstState finalState first second values
+    hfirstEval hsecondEval
+  have hcomplete :
+      ((wordFunctionToRiscVWithCallsAndFfiAndLoops context (.seq first second)).bind
+          (fun result =>
+            (executeInstructionsWithFfi host state result.1).map
+              (fun final => (final, returns))) =
+        some (finalState, returns)) ∧
+      evalWordFunctionWithCallsAndFfi functions handler (fuel + 1) state
+        (.seq first second) = some (finalState, values) :=
+    ⟨hmachine, heval⟩
+  have hrun : executeInstructionsWithFfi host state (firstCode ++ secondCode) =
+      some finalState := by
+    have hprojection := congrArg (Option.map Prod.fst) hcomplete.1
+    simpa [hseqCompile] using hprojection
+  have hsemantic :
+      (wordFunctionToRiscVWithCallsAndFfiAndLoops context (.seq first second)).bind
+          (fun result =>
+            (executeInstructionsWithFfi host state result.1).map
+              (fun final => (final, values))) =
+        some (finalState, values) := by
+    simp [hseqCompile, hrun]
+  have hcount := wordFunctionToRiscVWithCallsAndFfiAndLoops_counted_simulation_general
+    context host state finalState (.seq first second) (firstCode ++ secondCode)
+    returns values hseqCompile hsemantic
+  exact ⟨hcount, hcomplete.2⟩
+
 end Flapjack.RiscV

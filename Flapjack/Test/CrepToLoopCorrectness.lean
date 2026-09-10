@@ -15,7 +15,8 @@ def crepLoopFfiState : CrepState Nat :=
 
 def crepLoopFfi : CrepFfiHandler Nat :=
   fun _ configuration _ _ _ state =>
-    some { state with locals := updateCrepLocal state.locals 9 (configuration + 1) }
+    some (.returned { state with
+      locals := updateCrepLocal state.locals 9 (configuration + 1) })
 
 def crepLoopFfiStateAfter : CrepState Nat :=
   { crepLoopFfiState with

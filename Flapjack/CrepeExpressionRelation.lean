@@ -665,4 +665,86 @@ theorem compileSourceWordExp_op_recursive_relation
     hrightEval
   exact ⟨.op operator [leftCompiled, rightCompiled], hop.1, hop.2⟩
 
+/-! Unified scalar expression simulation.  The source expression is represented
+by `SourceWordExp` so this induction is structural, while the generated Crep
+expression and its evaluation are ordinary Pancake objects. -/
+theorem compileSourceWordExp_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (crepLocals : Nat → Option α)
+    (crepMemory : α → Option α) (baseAddress topAddress bytesInWord : α)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hlocals : panValueCrepLocalsRel structs context sourceLocals crepLocals)
+    (hlookup : ∀ name value, sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (expression : SourceWordExp α) (value : α)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression.toExp = some (.word value)) :
+    ∃ compiled, compileExp context expression.toExp = ([compiled], .one) ∧
+      evalCrepFullExp crepLocals crepMemory baseAddress topAddress compiled =
+        some value := by
+  induction expression generalizing value with
+  | const constant =>
+      have hvalue : constant = value := by
+        simpa [SourceWordExp.toExp, evalPanValueExp] using hsource
+      subst value
+      exact ⟨.const constant, by simp [SourceWordExp.toExp, compileExp],
+        by simp [evalCrepFullExp]⟩
+  | «local» name =>
+      have hsource' : sourceLocals name = some (.word value) := by
+        simpa [SourceWordExp.toExp, evalPanValueExp] using hsource
+      change ∃ compiled, compileExp context (.var .local name) = ([compiled], .one) ∧
+        evalCrepFullExp crepLocals crepMemory baseAddress topAddress compiled =
+          some value
+      obtain ⟨slot, hcompile, heval⟩ :=
+        compileSourceWordExp_local_relation context structs sourceLocals
+        sourceGlobals sourceMemory crepLocals crepMemory baseAddress topAddress
+        bytesInWord name value hsource (hlookup name (.word value) hsource') hlocals
+      exact ⟨.var slot, hcompile, heval⟩
+  | op operator left right ihLeft ihRight =>
+      exact compileSourceWordExp_op_recursive_relation context structs sourceLocals
+        sourceGlobals sourceMemory crepLocals crepMemory baseAddress topAddress
+        bytesInWord operator left right value
+        (fun leftValue hleft => ihLeft leftValue hleft)
+        (fun rightValue hright => ihRight rightValue hright) hsource
+  | mul left right ihLeft ihRight =>
+      exact compileSourceWordExp_mul_recursive_relation context structs sourceLocals
+        sourceGlobals sourceMemory crepLocals crepMemory baseAddress topAddress
+        bytesInWord left right value
+        (fun leftValue hleft => ihLeft leftValue hleft)
+        (fun rightValue hright => ihRight rightValue hright) hsource
+  | cmp operator left right ihLeft ihRight =>
+      exact compileSourceWordExp_cmp_recursive_relation context structs sourceLocals
+        sourceGlobals sourceMemory crepLocals crepMemory baseAddress topAddress
+        bytesInWord operator left right value
+        (fun leftValue hleft => ihLeft leftValue hleft)
+        (fun rightValue hright => ihRight rightValue hright) hsource
+  | shift operator left right ihLeft ihRight =>
+      exact compileSourceWordExp_shift_recursive_relation context structs sourceLocals
+        sourceGlobals sourceMemory crepLocals crepMemory baseAddress topAddress
+        bytesInWord operator left right value
+        (fun leftValue hleft => ihLeft leftValue hleft)
+        (fun rightValue hright => ihRight rightValue hright) hsource
+  | baseAddr =>
+      have hvalue : baseAddress = value := by
+        simpa [SourceWordExp.toExp, evalPanValueExp] using hsource
+      subst value
+      exact ⟨.baseAddr, by simp [SourceWordExp.toExp, compileExp],
+        by simp [evalCrepFullExp]⟩
+  | topAddr =>
+      have hvalue : topAddress = value := by
+        simpa [SourceWordExp.toExp, evalPanValueExp] using hsource
+      subst value
+      exact ⟨.topAddr, by simp [SourceWordExp.toExp, compileExp],
+        by simp [evalCrepFullExp]⟩
+  | bytesInWord =>
+      have hvalue : bytesInWord = value := by
+        simpa [SourceWordExp.toExp, evalPanValueExp] using hsource
+      subst value
+      exact ⟨.const context.bytesInWord, by simp [SourceWordExp.toExp, compileExp],
+        by simp [hbytesInWord, evalCrepFullExp]⟩
+
 end Flapjack

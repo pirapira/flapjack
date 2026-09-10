@@ -103,6 +103,12 @@ def evalStackProgFuelWithCode [NeZero width] :
         (state.registers register)))
   | _fuel + 1, _, state, .bitmapLoad destination address =>
       some (.normal (stackMachineWriteBitmap state destination address))
+  | _fuel + 1, code, state, .locValue destination label _entry =>
+      match code label with
+      | none => none
+      | some _ =>
+          some (.normal (wordStackMachineWriteRegister state destination
+            (BitVec.ofNat width label)))
   | fuel + 1, code, state, .seq first second =>
       match evalStackProgFuelWithCode fuel code state first with
       | some (.normal state) => evalStackProgFuelWithCode fuel code state second

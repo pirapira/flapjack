@@ -2212,6 +2212,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   and memory through the declaration body and restoring the caller local.
 - [x] Add the target-side call/continuation composition rule used by lowered
   declaration calls after their callee has produced a normal caller state.
+- [x] Prove the target-side one-word `decCall` lowering, including fresh-slot
+  initialization, destination assignment, continuation execution, and restore.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

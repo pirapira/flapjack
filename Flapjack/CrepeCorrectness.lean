@@ -2031,6 +2031,45 @@ theorem evalCrepFullProg_call_seq_normal_compose
       (.seq (.call info function arguments) body) = some result := by
   simp [evalCrepFullProg, hcall, hbody]
 
+/-! The one-word declaration-call lowering combines fresh-slot setup, the
+    destination-aware call, and the compiled continuation.  Its fuel offsets
+    are explicit so later source-to-Crep induction can instantiate this rule
+    without unfolding the evaluator by hand. -/
+theorem compile_full_pan_value_decCall_one_compose
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α)
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state callState : CrepState α) (result : CrepControlResult α)
+    (name : VarName) (function : FunName) (arguments : List (Exp α))
+    (body : Prog α) (compiledArguments : List (CrepExp α))
+    (hcompileArgs : compileArgs context arguments = compiledArguments)
+    (hcall : evalCrepFullCall functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with
+          locals := updateCrepLocal state.locals (context.maxVar + 1) 0 }
+      (some ([context.maxVar + 1], none)) function compiledArguments =
+      some (.normal callState))
+    (hbody : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) callState
+      (compileProg
+        { context with
+            vars := (name, (.one, [context.maxVar + 1])) :: context.vars
+            maxVar := context.maxVar + 1 }
+        body) = some result) :
+    evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 3) state
+      (compileProg context (.decCall name .one function arguments body)) =
+      some (restoreCrepResult (context.maxVar + 1)
+        (state.locals (context.maxVar + 1)) result) := by
+  simp [compileProg, allocatedNames, nestedDecs,
+    evalCrepFullProg, evalCrepFullExp, hcompileArgs, hcall, hbody]
+
 /-! Expose the exact compiler equation for declaration calls.  Keeping this
     expansion named prevents later correctness proofs from duplicating the
     fresh-slot and continuation-context bookkeeping. -/

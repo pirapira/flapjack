@@ -2234,6 +2234,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   recursive records of word constants using the flattened-local relation.
 - [x] Prove binary-operation expression agreement for word constants through
   `cexpHeads` and `evalPanBinOp`.
+- [x] Prove comparison, shift, and Pancake multiplication expression agreement
+  for word constants.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

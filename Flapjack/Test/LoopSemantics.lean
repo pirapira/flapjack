@@ -11,6 +11,25 @@ def loopDivisionState : LoopState Nat :=
       if name = 1 then some 42 else if name = 2 then some 6 else none
     globals := fun _ => none, memory := fun _ => none }
 
+def primitiveCallStatePropagationBody : LoopProg Nat :=
+  .seq (.setGlobal 42 (.const 7))
+    (.seq (.assign 0 (.const 9)) (.store (.const 8) 0))
+
+def primitiveCallStatePropagationState : LoopState Nat :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+#guard
+    (evalLoopCallWithPrimitiveCallsAndFfi (fun _ _ => none)
+      [(1, [], primitiveCallStatePropagationBody)]
+      (fun _ _ _ _ _ state => some state) 10
+      primitiveCallStatePropagationState none (some 1) [] none).map
+      (fun result =>
+        ((loopResultState result).globals 42,
+          (loopResultState result).memory 8)) =
+      some (some 7, some 9)
+
 example :
     (evalLoopProg 10 loopDivisionState
       (.seq (.arith (.div 3 1 2)) (.return [3]))).map loopResultValues =

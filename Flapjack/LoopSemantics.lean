@@ -1660,26 +1660,30 @@ mutual
         let result ← evalLoopProgWithPrimitiveCallsAndFfi primitive functions
           ffiHandler fuel calleeState body
         match result with
-        | .returned _ values =>
+        | .returned calleeState values =>
             match returns with
-            | none => some (.returned state values)
+            | none => some (.returned { calleeState with locals := state.locals } values)
             | some (names, _) => do
                 let locals ← loopAssignValues state.locals names values
                 match handler with
-                | none => some (.normal { state with locals := locals })
+                | none => some (.normal { calleeState with locals := locals })
                 | some (_, _, normal, _) =>
                     evalLoopProgWithPrimitiveCallsAndFfi primitive functions
-                      ffiHandler fuel { state with locals := locals } normal
-        | .raised _ exception =>
+                      ffiHandler fuel { calleeState with locals := locals } normal
+        | .raised calleeState exception =>
             match handler with
-            | none => some (.raised state exception)
+            | none => some (.raised { calleeState with locals := state.locals } exception)
             | some (name, exceptionBody, _, _) =>
                 evalLoopProgWithPrimitiveCallsAndFfi primitive functions ffiHandler fuel
-                  { state with locals := updateLoopLocal state.locals name exception }
+                  { calleeState with
+                    locals := updateLoopLocal state.locals name exception }
                   exceptionBody
-        | .normal _ => some (.normal state)
-        | .broke _ label => some (.broke state label)
-        | .continued _ label => some (.continued state label)
+        | .normal calleeState =>
+            some (.normal { calleeState with locals := state.locals })
+        | .broke calleeState label =>
+            some (.broke { calleeState with locals := state.locals } label)
+        | .continued calleeState label =>
+            some (.continued { calleeState with locals := state.locals } label)
     termination_by fuel _ _ _ _ _ => fuel
 
   def evalLoopProgWithPrimitiveCallsAndFfi

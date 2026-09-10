@@ -567,6 +567,37 @@ theorem wordFunctionToRiscVWithCallsAndFfi_counted_simulation_general
   rw [executeInstructionsWithFfiCounted_spec]
   simp [hrun]
 
+/-! The loop-aware selector has the same machine-count boundary.  Keeping the
+    theorem at this compiler entrypoint is useful to callers that retain
+    resolved break/continue control in their source witness. -/
+theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_counted_simulation_general
+    [NeZero width] (context : WordCallFfiContext width)
+    (host : WordFfiHost width) (state finalState : State width)
+    (program : WordProg (Word width)) (code : List (Instruction width))
+    (returnRegisters : List (Fin 32)) (returnValues : List (Word width))
+    (hcompile : wordFunctionToRiscVWithCallsAndFfiAndLoops context program =
+      some (code, returnRegisters))
+    (hsemantic :
+      (wordFunctionToRiscVWithCallsAndFfiAndLoops context program).bind
+          (fun result =>
+            (executeInstructionsWithFfi host state result.1).map
+              (fun final => (final, returnValues))) =
+        some (finalState, returnValues)) :
+    executeInstructionsWithFfiCounted host state code =
+      some (finalState, code.length) := by
+  have hrun : executeInstructionsWithFfi host state code = some finalState := by
+    cases hexecute : executeInstructionsWithFfi host state code with
+    | none =>
+        simp [hcompile, hexecute] at hsemantic
+    | some actualState =>
+        have hresult :
+            (actualState, returnValues) = (finalState, returnValues) := by
+          simpa [hcompile, hexecute] using hsemantic
+        cases hresult
+        rfl
+  rw [executeInstructionsWithFfiCounted_spec]
+  simp [hrun]
+
 theorem wordFunctionToRiscVWithCallsAndFfi_counted_simulation
     [NeZero width] (context : WordCallFfiContext width)
     (host : WordFfiHost width) (state finalState : State width)

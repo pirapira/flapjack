@@ -2120,6 +2120,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   after a source-local FFI simulation step.
 - [x] Preserve source/Loop FFI failure propagation when the host service is
   unavailable, in addition to the successful state-transition boundary.
+- [x] Preserve callee global/memory effects across combined call/FFI dispatch
+  so compiled exception handlers can consume FFI-produced return data.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

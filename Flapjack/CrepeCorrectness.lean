@@ -1652,7 +1652,7 @@ theorem compile_full_pan_value_shMemLoad_word_correct
     (crepPrimitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
-    (name : VarName) (slot : Nat) (address value oldValue : α)
+    (size : OpSize) (name : VarName) (slot : Nat) (address value oldValue : α)
     (sourceAddress : Exp α) (compiledAddress : CrepExp α)
     (lookup : lookupInfo name context.vars = some (.one, [slot]))
     (haddress : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
@@ -1661,26 +1661,26 @@ theorem compile_full_pan_value_shMemLoad_word_correct
     (hcompiledAddress : firstCompiledExp context sourceAddress = some compiledAddress)
     (hcrepAddress : evalCrepFullExp state.locals state.memory
       baseAddress topAddress compiledAddress = some address)
-    (hsharedMem : sharedMem .load slot address state = some targetState)
+    (hsharedMem : sharedMem (loadMemOp size) slot address state = some targetState)
     (hlocals : sourceLocals name = some (.word oldValue)) :
     evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory
-      (.shMemLoad .opW .local name sourceAddress) =
+      (.shMemLoad size .local name sourceAddress) =
       some (.normal (updatePanValueMap sourceLocals name (.word value))
         sourceGlobals sourceMemory) ∧
     evalCrepFullProg functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state
       (compileProg context
-        (.shMemLoad .opW .local name sourceAddress)) =
+        (.shMemLoad size .local name sourceAddress)) =
       some (.normal targetState) := by
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress, hmemory,
       panValueSharedLoadValid, panValueAssignmentValid, panValueShape,
       panShapeMatches, hlocals]
   · simp [compileProg, lookup, hcompiledAddress, evalCrepFullProg,
-      hcrepAddress, loadMemOp, hsharedMem]
+      hcrepAddress, hsharedMem]
 
 theorem compile_full_pan_value_shMemStore_word_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -1698,7 +1698,7 @@ theorem compile_full_pan_value_shMemStore_word_correct
     (crepPrimitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
-    (address value : α) (sourceAddress sourceValue : Exp α)
+    (size : OpSize) (address value : α) (sourceAddress sourceValue : Exp α)
     (compiledAddress compiledValue : CrepExp α)
     (haddress : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
       baseAddress topAddress bytesInWord sourceAddress = some (.word address))
@@ -1711,7 +1711,7 @@ theorem compile_full_pan_value_shMemStore_word_correct
       baseAddress topAddress compiledAddress = some address)
     (hcrepValue : evalCrepFullExp state.locals state.memory
       baseAddress topAddress compiledValue = some value)
-    (hsharedMem : sharedMem .store (context.maxVar + 1) address
+    (hsharedMem : sharedMem (storeMemOp size) (context.maxVar + 1) address
       { state with
         locals := updateCrepLocal state.locals (context.maxVar + 1) value } =
       some targetState) :
@@ -1719,12 +1719,12 @@ theorem compile_full_pan_value_shMemStore_word_correct
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 2)
       sourceLocals sourceGlobals sourceMemory
-      (.shMemStore .opW sourceAddress sourceValue) =
+      (.shMemStore size sourceAddress sourceValue) =
       some (.normal sourceLocals sourceGlobals
         (updatePanValueMemory sourceMemory address (.word value))) ∧
     evalCrepFullProg functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 2) state
-      (compileProg context (.shMemStore .opW sourceAddress sourceValue)) =
+      (compileProg context (.shMemStore size sourceAddress sourceValue)) =
       some (.normal
         { targetState with
           locals := restoreCrepLocal targetState.locals
@@ -1734,6 +1734,6 @@ theorem compile_full_pan_value_shMemStore_word_correct
       updatePanValueMemory]
   · simp [compileProg, hcompiledAddress, hcompiledValue, nestedDecs,
       evalCrepFullProg, hcrepAddress, hcrepValue,
-      hsharedMem, restoreCrepResult, storeMemOp]
+      hsharedMem, restoreCrepResult]
 
 end Flapjack

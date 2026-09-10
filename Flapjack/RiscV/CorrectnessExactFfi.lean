@@ -110,6 +110,76 @@ theorem wordFfiToRiscV_exactFfi_simulation [NeZero width]
     configuration configurationLength array arrayLength result hservice_bounded hzero
   exact hresult
 
+/-! Exact FFI execution composes over instruction-list append.  This keeps
+    terminal results visible: a final or error result from the first list
+    prevents the second list from running. -/
+theorem executeInstructionsWithExactFfi_append [NeZero width]
+    (context : WordFfiContext)
+    (state : ExactRiscVFfiState width sigma)
+    (first second : List (Instruction width)) :
+    executeInstructionsWithExactFfi context state (first ++ second) =
+      match executeInstructionsWithExactFfi context state first with
+      | .normal middle => executeInstructionsWithExactFfi context middle second
+      | result => result := by
+  induction first generalizing state with
+  | nil =>
+      rfl
+  | cons instruction first ih =>
+      cases hstep : executeWithExactFfi context state instruction with
+      | normal middle =>
+          simpa [executeInstructionsWithExactFfi, hstep] using ih middle
+      | final terminalState event =>
+          simp [executeInstructionsWithExactFfi, hstep]
+      | error terminalState =>
+          simp [executeInstructionsWithExactFfi, hstep]
+
+/-! A prefix without ECALL is observationally ordinary execution.  This is
+    the bridge needed when a compiler pass emits setup instructions before an
+    exact byte-level FFI operation. -/
+theorem executeInstructionsWithExactFfi_of_no_ecall [NeZero width]
+    (context : WordFfiContext)
+    (state : ExactRiscVFfiState width sigma)
+    (instructions : List (Instruction width))
+    (hnoEcall : ∀ instruction, instruction ∈ instructions →
+      instruction ≠ .ecall) :
+    executeInstructionsWithExactFfi context state instructions =
+      .normal { state with
+        machine := executeInstructions state.machine instructions } := by
+  induction instructions generalizing state with
+  | nil =>
+      rfl
+  | cons instruction instructions ih =>
+      have hinstruction : instruction ≠ .ecall :=
+        hnoEcall instruction (by simp)
+      have htail : ∀ nextInstruction, nextInstruction ∈ instructions →
+          nextInstruction ≠ .ecall := by
+        intro nextInstruction hnext
+        exact hnoEcall nextInstruction (by simp [hnext])
+      simpa [executeInstructionsWithExactFfi, executeWithExactFfi,
+        hinstruction, executeInstructions] using
+        ih { state with machine := execute state.machine instruction } htail
+
+/-! Compose a compiler-emitted ordinary prefix directly with its trailing
+    ECALL.  The service number is read from the post-prefix ABI state, so the
+    theorem can be reused when the prefix materializes or moves x14. -/
+theorem executeInstructionsWithExactFfi_prefix_ecall [NeZero width]
+    (context : WordFfiContext)
+    (state : ExactRiscVFfiState width sigma)
+    (setup : List (Instruction width))
+    (result : ExactRiscVFfiResult width sigma)
+    (hprefix : ∀ instruction, instruction ∈ setup →
+      instruction ≠ .ecall)
+    (hresult : exactRiscVFfiCall context
+        { state with machine := executeInstructions state.machine setup }
+        (readRegister (executeInstructions state.machine setup) 14).toNat =
+      result) :
+    executeInstructionsWithExactFfi context state (setup ++ [.ecall]) = result := by
+  rw [executeInstructionsWithExactFfi_append]
+  rw [executeInstructionsWithExactFfi_of_no_ecall context state setup hprefix]
+  simp only [executeInstructionsWithExactFfi, executeWithExactFfi]
+  rw [hresult]
+  cases result <;> rfl
+
 /-! The loop-aware selector delegates an FFI leaf to the same Word selector,
     but its result is wrapped in labelled-control lowering.  This bridge keeps
     that normalization explicit so a control-flow-aware pipeline can consume

@@ -1,4 +1,5 @@
 import Flapjack.RiscV.CorrectnessStackDynamicStore
+import Flapjack.RiscV.CorrectnessStackRemoveDynamic
 
 /-!
 # StackRemove frame-size arithmetic at the RISC-V boundary
@@ -244,5 +245,44 @@ theorem compileStackProgramNatToRiscV_stackGetSize_value [NeZero width]
   exact executeStackRemoveStackGetSize config target register hstackPointer hstackBase
     hscratch hregister hregisterNonzero hscratchNonzero hstackPointerScratch
     hregisterScratch hregisterBase hzero
+
+theorem compileStackProgramNatToRiscV_stackGetSize_eval_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel register : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hstackPointer : config.stackPointer < 32)
+    (hstackBase : config.stackBase < 32)
+    (hscratch : config.scratch < 32)
+    (hregister : register < 32)
+    (hregisterNonzero : register ≠ 0)
+    (hscratchNonzero : config.scratch ≠ 0)
+    (hstackPointerScratch : config.stackPointer ≠ config.scratch)
+    (hregisterScratch : register ≠ config.scratch)
+    (hregisterBase : register ≠ config.stackBase)
+    (hscratchAddress : config.scratch ≠ config.addressScratch)
+    (hbaseScratch : config.stackBase ≠ config.scratch)
+    (hbaseAddress : config.stackBase ≠ config.addressScratch)
+    (hzero : target.registers 0 = 0)
+    (hrel : WordStackRegisterRelationExceptRegister config.scratch source target)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.stackGetSize register : StackProg Nat) = some code) :
+    (evalWordStackMachine source
+      (stackRemoveStackGetSize config register)).map
+        (fun final => final.registers register) =
+      some ((executeInstructions target code).registers
+        ⟨register, hregister⟩) := by
+  have hsourcePointer := hrel config.stackPointer hstackPointer
+    hstackPointerScratch
+  have hsourceBase := hrel config.stackBase hstackBase hbaseScratch
+  rw [evalStackRemoveStackGetSize config source register hscratchAddress
+    hregisterBase hbaseScratch hbaseAddress]
+  congr 1
+  have hvalue := compileStackProgramNatToRiscV_stackGetSize_value
+    context config sectionId initialLabel register target hstackPointer hstackBase
+    hscratch hregister hregisterNonzero hscratchNonzero hstackPointerScratch
+    hregisterScratch hregisterBase hzero code hcode
+  rw [hvalue]
+  simp [hsourcePointer, hsourceBase]
 
 end Flapjack.RiscV

@@ -2230,6 +2230,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   declaration local is extended with a shape and its Crep slot witness.
 - [x] Prove preservation of the flattened-local relation under a word local
   assignment, assuming assigned-slot non-aliasing.
+- [x] Couple word assignment evaluation with preservation of the full
+  source-to-Crep state relation for continuations.
 - [x] Prove the compiled declaration-table head lookup exposes flattened
   parameter slots and the exact compiled function body.
 - [x] Prove source/Crep expression agreement for constants, word locals, and

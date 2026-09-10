@@ -640,13 +640,86 @@ theorem compile_full_pan_value_dec_word_return_correct
         locals globals (fun address =>
           (state.memory address).map PanValue.word)
         (.dec name .one (.const value)
-          (.return (.var .local name)))).map
+        (.return (.var .local name)))).map
         (fun result => result.2.2.2.flatMap panValueFlatWords) := by
   simp [compileProg, compileExp, allocatedNames, nestedDecs,
     evalCrepFullResult, evalCrepFullProg, evalCrepFullExps,
     evalCrepFullExp, evalPanValueProg, evalPanValueProgWithPrimitive,
     evalPanValueExp, updateCrepLocal, restoreCrepResult,
     updatePanValueMap, lookupInfo, panValueShape, panShapeMatches,
+    panValueFlatWords, panValueFlatWordsFuel]
+
+/-! A two-word record declaration gives a concrete structured witness for the
+    declaration path: both flattened slots are allocated and returned in
+    source order. -/
+theorem compile_full_pan_value_dec_two_word_record_return_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord left right : α) (name : VarName) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 10 state
+        (compileProg context
+          (.dec name (.comb [.one, .one])
+            (.rStruct [.const left, .const right])
+            (.return (.var .local name)))) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.dec name (.comb [.one, .one])
+          (.rStruct [.const left, .const right])
+          (.return (.var .local name)))).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  have hcompile :
+      compileExp context (.rStruct [.const left, .const right]) =
+        ([.const left, .const right], .comb [.one, .one]) := by
+    simp [compileExp, compileExp.compileExpList]
+  have hnames :
+      allocatedNames context (.comb [.one, .one]) =
+        [context.maxVar + 1, context.maxVar + 2] := by
+    simp [allocatedNames, Shape.shapeSize, List.range, List.range.loop]
+  have hprogram :
+      compileProg context
+          (.dec name (.comb [.one, .one])
+            (.rStruct [.const left, .const right])
+            (.return (.var .local name))) =
+        nestedDecs [context.maxVar + 1, context.maxVar + 2]
+          [.const left, .const right]
+          (.return [.var (context.maxVar + 1), .var (context.maxVar + 2)]) := by
+    simp only [compileProg, hcompile, Shape.shapeSize]
+    rw [hnames]
+    simp [compileExp, lookupInfo]
+  have hsourceExps :
+      evalPanValueExp.evalPanValueExps structs locals globals
+        (fun address => (state.memory address).map PanValue.word)
+        baseAddress topAddress bytesInWord [.const left, .const right] =
+      some [.word left, .word right] := by
+    simp [evalPanValueExp.evalPanValueExps, evalPanValueExp]
+  rw [hprogram]
+  have hflat :
+      panValueFlatWords (.rStruct [.word left, .word right]) = [left, right] := by
+    simp [panValueFlatWords, panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel]
+  have hflatListFuel :
+      panValueFlatWordsFuel.panValueFlatWordsListFuel
+          (panValueFlatValueFuel
+            (PanValue.rStruct [PanValue.word left, PanValue.word right]))
+          [PanValue.word left, PanValue.word right] = [left, right] := by
+    simp [panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel]
+  simp [nestedDecs,
+    evalCrepFullResult, evalCrepFullProg, evalCrepFullExps,
+    evalCrepFullExp, evalPanValueProg, evalPanValueProgWithPrimitive,
+    evalPanValueExp, updateCrepLocal, restoreCrepResult,
+    updatePanValueMap, panValueShape, panShapeMatches,
+    panShapeMatches.panShapeListMatches,
+    hsourceExps, hflatListFuel,
     panValueFlatWords, panValueFlatWordsFuel]
 
 end Flapjack

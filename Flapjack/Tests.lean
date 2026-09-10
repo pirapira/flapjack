@@ -27,6 +27,7 @@ import Flapjack.Test.ImmediateShift
 import Flapjack.Test.ImmediateRotate
 import Flapjack.Test.StackRiscVAddCarry
 import Flapjack.Test.StackRiscVLongMul
+import Flapjack.Test.LongDivSemantics
 import Flapjack.Test.StackRiscVDivision
 import Flapjack.Test.GraphLocations
 import Flapjack.Test.LinearScan

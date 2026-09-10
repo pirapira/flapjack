@@ -178,6 +178,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 
 5. **Target and end-to-end correctness**
    - Port the word-level/target interface and one concrete backend first.
+   - **In progress:** execute CakeML's normalized two-word `LongDiv` in the
+     abstract StackLang machine. Its RISC-V target boundary remains separate:
+     CakeML's RISC-V encoder lowers `LongDiv` through runtime support rather
+     than a native instruction.
    - Use `/home/zksecurity/HOL/examples/l3-machine-code/riscv/model/riscv.sml`
      as the RISC-V architectural reference; copy `/home/zksecurity/HOL/COPYRIGHT`
      into the Lean RISC-V model subdirectory when that port starts.

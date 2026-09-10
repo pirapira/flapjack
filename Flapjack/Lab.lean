@@ -148,7 +148,9 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
   | .alloc words =>
       ⟨[.labAsm (.heapAlloc words) [] 0], false, counter⟩
   | .locValue register label entry =>
-      ⟨[.labAsm (.locValue register ⟨label, entry⟩) [] 0], false, counter⟩
+      /- StackLang stores the target as (label, entry-section), while LabRef
+         stores it as (section, label). -/
+      ⟨[.labAsm (.locValue register ⟨entry, label⟩) [] 0], false, counter⟩
   | .halt _register =>
       ⟨[.labAsm .halt [] 0], true, counter⟩
   | .get _ _ | .set _ _ | .opCurrHeap _ _ _

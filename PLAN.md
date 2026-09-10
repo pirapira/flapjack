@@ -2545,7 +2545,10 @@ static-checker data types and shape-context operations from
 `panStaticScript.sml`, followed by a small executable checker. The static
 data/context layer, expression variable-use helpers, Crepe IR, expression
 lowering, and core structured statement lowering are now implemented; full
-checking and semantic simulation remain the next increments.
+checking and semantic simulation remain the next increments. The correctness
+stack now also has the HOL-aligned `localisedExp`/`localisedProg` boundary in
+`CrepeExpressionRelation.lean`; the next proof slice should use this domain to
+complete the nested-inductive expression simulation lemma.
 
 ## Verification workflow
 

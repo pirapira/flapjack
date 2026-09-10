@@ -104,6 +104,7 @@ import Flapjack.Test.CrepeSourceWordGenericStoreCorrectness
 import Flapjack.Test.CrepeSourceWordRecordCorrectness
 import Flapjack.Test.CrepeSourceWordRecordAssignmentCorrectness
 import Flapjack.Test.CrepeSourceWordRecordDeclarationCorrectness
+import Flapjack.Test.CrepeSourceWordRecordDeclarationSimulationCorrectness
 import Flapjack.Test.CrepeSourceWordLoopCorrectness
 import Flapjack.Test.CrepeInline
 import Flapjack.Test.CrepeInlineRewrite

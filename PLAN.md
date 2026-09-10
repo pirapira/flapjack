@@ -2302,6 +2302,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   optimized path that omits the redundant source-to-scratch copy.
 - [x] Lift dynamic StackLoad through the StackProg-to-RISC-V entrypoint, preserving
   the non-address-scratch register relation for register-held frame offsets.
+- [x] Lift dynamic StackStore through the StackProg-to-RISC-V entrypoint, preserving
+  its offset-register and scratch non-aliasing conditions in the memory contract.
 - [x] Prove the dynamic StackRemove stack-load boundary for register-held byte
   offsets, preserving the non-address-scratch register relation.
 - [x] Prove both dynamic StackRemove frame-store paths, including the

@@ -217,4 +217,69 @@ theorem executeStackRemoveStackStoreAny_same_memory [NeZero width]
   · exact hstoreValue
   · exact hafterAddressMemory
 
+theorem compileStackProgramNatToRiscV_stackStoreAny [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel register offsetRegister : Nat)
+    (hstackPointer : config.stackPointer < 32)
+    (haddressScratch : config.addressScratch < 32)
+    (hscratchRegister : config.scratch < 32)
+    (hoffsetRegister : offsetRegister < 32)
+    (hregister : register < 32)
+    (hscratchSource : config.scratch ≠ register) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.stackStoreAny register offsetRegister : StackProg Nat) =
+      some [.or ⟨config.scratch, hscratchRegister⟩
+          ⟨register, hregister⟩ ⟨register, hregister⟩,
+        .add ⟨config.addressScratch, haddressScratch⟩
+          ⟨config.stackPointer, hstackPointer⟩
+          ⟨offsetRegister, hoffsetRegister⟩,
+        .storeWord ⟨config.scratch, hscratchRegister⟩
+          ⟨config.addressScratch, haddressScratch⟩] := by
+  simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+    compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+    labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+    labLabel, labCompileLines, labCompilePlain, labCollectLabels,
+    labLineInstructionCount, labBinOpInstruction, wordInstToInstruction,
+    registerOfNat, hstackPointer, haddressScratch, hscratchRegister,
+    hoffsetRegister, hregister, hscratchSource, stackRemoveStackStoreAny,
+    stackRemoveMove, stackRemoveJoin, stackRemoveComplete, stackProgDepth,
+    stackRemoveFuel] <;>
+    congr 1
+
+theorem compileStackProgramNatToRiscV_stackStoreAny_memory [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel register offsetRegister : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hstackPointer : config.stackPointer < 32)
+    (haddressScratch : config.addressScratch < 32)
+    (hscratchRegister : config.scratch < 32)
+    (hoffsetRegister : offsetRegister < 32)
+    (hregister : register < 32)
+    (hscratchNonzero : config.scratch ≠ 0)
+    (haddressScratchNonzero : config.addressScratch ≠ 0)
+    (hstackPointerScratch : config.stackPointer ≠ config.scratch)
+    (hstackPointerAddressScratch : config.stackPointer ≠ config.addressScratch)
+    (hscratchAddressScratch : config.scratch ≠ config.addressScratch)
+    (hoffsetRegisterScratch : offsetRegister ≠ config.scratch)
+    (hscratchSource : config.scratch ≠ register)
+    (hrel : WordStackRegisterRelationExceptRegister config.scratch source target)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.stackStoreAny register offsetRegister : StackProg Nat) =
+      some code) :
+    (executeInstructions target code).memory =
+      (writeWordValue target
+        (target.registers ⟨config.stackPointer, hstackPointer⟩ +
+          target.registers ⟨offsetRegister, hoffsetRegister⟩)
+        (source.registers register)).memory := by
+  rw [compileStackProgramNatToRiscV_stackStoreAny context config sectionId initialLabel
+    register offsetRegister hstackPointer haddressScratch hscratchRegister
+    hoffsetRegister hregister hscratchSource] at hcode
+  cases hcode
+  exact executeStackRemoveStackStoreAny_move_memory config source target register
+    offsetRegister hstackPointer haddressScratch hscratchRegister hoffsetRegister
+    hregister hscratchNonzero haddressScratchNonzero hstackPointerScratch
+    hstackPointerAddressScratch hscratchAddressScratch hoffsetRegisterScratch
+    hscratchSource hrel
+
 end Flapjack.RiscV

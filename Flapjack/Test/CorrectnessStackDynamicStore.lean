@@ -59,4 +59,51 @@ example :
     (hscratchAddressScratch := by decide +kernel)
     (hvalue := by simp [stackRiscVTestSource, zeroState])
 
+example :
+    compileStackProgramNatToRiscV (width := 64) { services := [] }
+      stackRiscVRemoveConfig 2 3 (.stackStoreAny 5 6 : StackProg Nat) =
+      some [.or 31 5 5, .add 29 20 6, .storeWord 31 29] := by
+  simpa [stackRiscVRemoveConfig, Fin.ext_iff] using
+    (compileStackProgramNatToRiscV_stackStoreAny (width := 64)
+      { services := [] } stackRiscVRemoveConfig 2 3 5 6
+      (by simp [stackRiscVRemoveConfig]) (by simp [stackRiscVRemoveConfig])
+      (by simp [stackRiscVRemoveConfig]) (by omega) (by omega)
+      (by simp [stackRiscVRemoveConfig]))
+
+example :
+    (executeInstructions (zeroState 64)
+        [.or 31 5 5, .add 29 20 6, .storeWord 31 29]).memory =
+      (writeWordValue (zeroState 64)
+        ((zeroState 64).registers 20 + (zeroState 64).registers 6)
+        (stackRiscVTestSource.registers 5)).memory := by
+  apply compileStackProgramNatToRiscV_stackStoreAny_memory
+    (context := { services := [] }) (config := stackRiscVRemoveConfig)
+    (sectionId := 2) (initialLabel := 3) (register := 5)
+    (offsetRegister := 6) (source := stackRiscVTestSource)
+    (target := zeroState 64)
+    (hstackPointer := by simp [stackRiscVRemoveConfig])
+    (haddressScratch := by simp [stackRiscVRemoveConfig])
+    (hscratchRegister := by simp [stackRiscVRemoveConfig])
+    (hoffsetRegister := by omega)
+    (hregister := by omega)
+    (hscratchNonzero := by simp [stackRiscVRemoveConfig])
+    (haddressScratchNonzero := by simp [stackRiscVRemoveConfig])
+    (hstackPointerScratch := by simp [stackRiscVRemoveConfig])
+    (hstackPointerAddressScratch := by simp [stackRiscVRemoveConfig])
+    (hscratchAddressScratch := by simp [stackRiscVRemoveConfig])
+    (hoffsetRegisterScratch := by simp [stackRiscVRemoveConfig])
+    (hscratchSource := by simp [stackRiscVRemoveConfig])
+    (hrel := by
+      unfold WordStackRegisterRelationExceptRegister
+      intro register hregister hignored
+      simp [stackRiscVTestSource, zeroState])
+    (code := [.or 31 5 5, .add 29 20 6, .storeWord 31 29])
+    (hcode := by
+      simpa [stackRiscVRemoveConfig, Fin.ext_iff] using
+        (compileStackProgramNatToRiscV_stackStoreAny (width := 64)
+          { services := [] } stackRiscVRemoveConfig 2 3 5 6
+          (by simp [stackRiscVRemoveConfig]) (by simp [stackRiscVRemoveConfig])
+          (by simp [stackRiscVRemoveConfig]) (by omega) (by omega)
+          (by simp [stackRiscVRemoveConfig])))
+
 end Flapjack.RiscV

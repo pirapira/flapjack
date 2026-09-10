@@ -2151,6 +2151,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   costs carried by the stepped Pancake evaluator.
 - [x] Expose a counted FFI-aware RISC-V control-flow evaluator, prove its
   projection to the existing evaluator, and bound successful runs by fuel.
+- [x] Generalize counted FFI-aware compiler simulation to arbitrary return
+  metadata and expose the same exact instruction-count contract for the
+  loop-aware RISC-V selector.
 - [x] Connect counted FFI-aware code-until execution to sequential counted
   execution for a suffix with an explicit host/instruction PC-advance
   contract, including ordinary and ECALL regressions.

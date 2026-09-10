@@ -2242,6 +2242,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   so return, raise, break, and continue all short-circuit the continuation.
 - [x] Add the relation-aware compiled call boundary, retaining explicit
   source and Crep callee/handler witnesses for induction.
+- [x] Add the relation-aware normal structured FFI boundary, including ABI
+  temporary restoration and post-handler state relation.
 - [x] Couple word assignment evaluation with preservation of the full
   source-to-Crep state relation for continuations.
 - [x] Add the relation-aware normally-completing sequence rule for the program

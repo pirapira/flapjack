@@ -850,6 +850,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Lift the StackRemove frame-cell `stackLoad` path through the Nat
   StackProg → Lab → RISC-V entrypoint, retaining the address-scratch and
   byte-memory stack-cell relation.
+- [x] Lift the StackRemove frame-cell `stackStore` path through the Nat
+  StackProg → Lab → RISC-V entrypoint, retaining its byte-memory write
+  contract and scratch/address non-aliasing conditions.
 - [x] Match CakeML Simple/IRC distinction in graph allocation modes: modes
   0--1 omit move preferences during coalescing but retain the original move table for coloring, while modes 2--3 use the prioritized list for coalescing and the original move table for coloring.
 - [x] Preserve SSA-renamed virtual names at the heuristic allocator's

@@ -2200,6 +2200,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   offsets, preserving the non-address-scratch register relation.
 - [x] Prove both dynamic StackRemove frame-store paths, including the
   offset-register non-alias requirement and the optimized scratch-alias case.
+- [x] Prove the StackRemove frame-size query lowering on RISC-V, including its
+  stack-pointer-destination optimization and scratch/stack-pointer alias guard.
 
 ## First implementation slice
 

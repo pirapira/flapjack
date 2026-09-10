@@ -76,6 +76,7 @@ import Flapjack.RiscV.CorrectnessStackMemory
 import Flapjack.RiscV.CorrectnessStackStore
 import Flapjack.RiscV.CorrectnessStackDynamicMemory
 import Flapjack.RiscV.CorrectnessStackDynamicStore
+import Flapjack.RiscV.CorrectnessStackSize
 import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.ExactFfi
 import Flapjack.RiscV.CorrectnessExactFfi

@@ -2226,6 +2226,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   leaving only source/Crep callee and body simulations as supplied witnesses.
 - [x] Introduce the source-to-Crep state/control relation for flattened locals,
   word memory, exception codes, and returned-value flattening.
+- [x] Package the `skip`, `break`, `continue`, `tick`, and `annot` cases as
+  exact source-to-Crep base cases for the program correctness induction.
 - [x] Prove preservation of the flattened-local relation when a structured
   declaration local is extended with a shape and its Crep slot witness.
 - [x] Prove preservation of the flattened-local relation under a word local

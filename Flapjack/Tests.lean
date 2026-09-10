@@ -96,6 +96,7 @@ import Flapjack.Test.CrepeSourceWordAssignmentCorrectness
 import Flapjack.Test.CrepeSourceWordStoreCorrectness
 import Flapjack.Test.CrepeSourceWordConditionalCorrectness
 import Flapjack.Test.CrepeSourceWordLoadCorrectness
+import Flapjack.Test.CrepeSourceWordLoadReturnCorrectness
 import Flapjack.Test.CrepeSourceWordLoopCorrectness
 import Flapjack.Test.CrepeInline
 import Flapjack.Test.CrepeInlineRewrite

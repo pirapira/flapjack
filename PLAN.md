@@ -821,6 +821,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   contracts.
 - [x] Package heuristic full-SSA graph allocation with the location-aware
   Word-to-Stack lowering, retaining its allocation and bitmap-state witnesses.
+- [x] Attach the heuristic graph allocator's checked colouring witness to its
+  full-SSA location-aware StackLang lowering boundary.
 - [x] Prove that generated FFI ABI register-move prefixes have the same result
   under FFI-aware and ordinary RISC-V execution, so they cannot invoke the host.
 - [x] Package the entry-inclusive spill allocator's clash, special-location,

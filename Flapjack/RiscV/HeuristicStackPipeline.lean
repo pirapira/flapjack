@@ -85,4 +85,43 @@ theorem wordAllocateGraphFunctionWithHeuristicsEntryToStack_stack_result
                             ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
                           exact hstack
 
+theorem wordAllocateGraphFunctionWithHeuristicsEntryToStack_contract
+    [NeZero width]
+    (config : WordStackConfig) (parameters : List Nat)
+    (program : WordProg (Word width)) (fixedSources : List Nat)
+    (algorithm currentFunction colours stackStart : Nat)
+    (registerCount bitmapRegister frameSlots : Nat)
+    (storeConstsStub : Option Nat) (bitmapState : WordStackBitmapState)
+    (ssaState : WordSsaState) (renamedParameters : List Nat)
+    (allocation : WordGraphAllocation)
+    (renamedProgram : WordProg (Word width)) (stackProgram : StackProg Nat)
+    (finalState : WordStackBitmapState)
+    (halloc : wordAllocateGraphFunctionWithHeuristicsEntryRenamed parameters program
+      fixedSources algorithm currentFunction colours stackStart =
+      some (ssaState, renamedParameters, allocation, renamedProgram))
+    (hbridge : wordAllocateGraphFunctionWithHeuristicsEntryToStack config
+      parameters program fixedSources algorithm currentFunction colours stackStart
+      registerCount bitmapRegister frameSlots storeConstsStub bitmapState =
+      some (ssaState, renamedParameters, allocation, renamedProgram,
+        stackProgram, finalState)) :
+    wordGraphTagsAreFixed allocation.graph = true ∧
+      wordGraphColouringRespectsEdges allocation.graph = true ∧
+      (wordClashTreeCheck (wordGraphColouringAt allocation.colouring)
+        (WordClashTree.seq
+          (.set (wordSsaRenameFunctionWithEntry parameters program).2.fst)
+          (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd []))
+        [] []).isSome = true ∧
+      wordToStackFunctionWithGraphAllocationAndLocationBitmaps config
+        renamedParameters allocation colours stackStart registerCount bitmapRegister
+        frameSlots storeConstsStub bitmapState renamedProgram =
+        some (stackProgram, finalState) := by
+  have hsound := wordAllocateGraphFunctionWithHeuristicsEntryRenamed_sound
+    parameters program fixedSources algorithm currentFunction colours stackStart
+    ssaState renamedParameters allocation renamedProgram halloc
+  have hstack := wordAllocateGraphFunctionWithHeuristicsEntryToStack_stack_result
+    config parameters program fixedSources algorithm currentFunction colours stackStart
+    registerCount bitmapRegister frameSlots storeConstsStub bitmapState
+    ssaState renamedParameters allocation renamedProgram stackProgram finalState hbridge
+  exact ⟨hsound.1, hsound.2.1, hsound.2.2, hstack⟩
+
 end Flapjack.RiscV

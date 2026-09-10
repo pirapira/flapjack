@@ -32,4 +32,21 @@ example [NeZero width]
     0 0 0 none heuristicStackTestBitmapState ssaState renamedParameters allocation
     renamedProgram stackProgram finalState hresult
 
+example [NeZero width]
+    (halloc : wordAllocateGraphFunctionWithHeuristicsEntryRenamed
+      [] (.skip : WordProg (Word width)) [] 1 0 2 0 =
+      some (ssaState, renamedParameters, allocation, renamedProgram))
+    (hbridge : wordAllocateGraphFunctionWithHeuristicsEntryToStack
+      heuristicStackTestConfig [] (.skip : WordProg (Word width)) [] 1 0 2 0
+      0 0 0 none heuristicStackTestBitmapState =
+      some (ssaState, renamedParameters, allocation, renamedProgram,
+        stackProgram, finalState)) :
+    wordGraphTagsAreFixed allocation.graph = true ∧
+      wordGraphColouringRespectsEdges allocation.graph = true := by
+  have hcontract := wordAllocateGraphFunctionWithHeuristicsEntryToStack_contract
+    heuristicStackTestConfig [] (.skip : WordProg (Word width)) [] 1 0 2 0
+    0 0 0 none heuristicStackTestBitmapState ssaState renamedParameters allocation
+    renamedProgram stackProgram finalState halloc hbridge
+  exact ⟨hcontract.1, hcontract.2.1⟩
+
 end Flapjack.RiscV

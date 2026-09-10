@@ -84,6 +84,32 @@ theorem executeInstructionsWithFfiCounted_spec [NeZero width]
               cases final with
               | mk finalState => simp
 
+theorem executeInstructionsWithFfiCounted_append [NeZero width]
+    (host : WordFfiHost width) (state : State width)
+    (first second : List (Instruction width)) :
+    executeInstructionsWithFfiCounted host state (first ++ second) =
+      (executeInstructionsWithFfiCounted host state first).bind
+        (fun firstResult =>
+          (executeInstructionsWithFfiCounted host firstResult.1 second).map
+            (fun secondResult =>
+              (secondResult.1, firstResult.2 + secondResult.2))) := by
+  induction first generalizing state with
+  | nil => simp [executeInstructionsWithFfiCounted]
+  | cons instruction first ih =>
+      simp only [List.cons_append, executeInstructionsWithFfiCounted]
+      cases hstep : executeWithFfi host state instruction with
+      | none => simp
+      | some nextState =>
+          simp [ih]
+          cases hfirst : executeInstructionsWithFfiCounted host nextState first with
+          | none => simp
+          | some firstResult =>
+              cases hsecond : executeInstructionsWithFfiCounted host firstResult.1 second with
+              | none => simp [hsecond]
+              | some secondResult =>
+                  simp [hsecond]
+                  ac_rfl
+
 theorem executeInstructionsWithFfi_pc_of_advance [NeZero width]
     (host : WordFfiHost width) (state : State width)
     (instructions : List (Instruction width))

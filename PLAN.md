@@ -2164,6 +2164,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Prove counted RISC-V instruction execution composes over appended
   instruction lists, preserving both the intermediate machine state and the
   additive instruction count.
+- [x] Prove counted FFI-aware RISC-V execution composes over appended
+  instruction lists, preserving the post-prefix state and additive count on
+  successful host transitions.
 - [x] Prove that a resolved cross-section Lab jump executes to the target
   section on the RISC-V model, rather than only matching emitted code shape.
 - [x] Prove Lab `linkValue` materializes a resolved continuation in ABI

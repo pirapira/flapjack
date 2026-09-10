@@ -205,7 +205,77 @@ example (operator : BinOp) :
     <;> simpa [Fin.ext_iff] using
       (compileStackProgramNatToRiscV_binop (width := 64) { services := [] }
         stackRiscVRemoveConfig _ 2 3 5 2 3
-        (by omega) (by omega) (by omega))
+      (by omega) (by omega) (by omega))
+
+example (operator : Shift) (hrotate : operator ≠ .ror) :
+    compileStackProgramNatToRiscV (width := 64) { services := [] }
+      stackRiscVRemoveConfig 2 3 (.shift operator 5 2 3 : StackProg Nat) =
+      some [match operator with
+        | .lsl => .sll 5 2 3
+        | .lsr => .srl 5 2 3
+        | .asr => .sra 5 2 3
+        | .ror => .sll 5 2 3] := by
+  cases operator with
+  | lsl =>
+      simpa [Fin.ext_iff] using
+        (compileStackProgramNatToRiscV_shift_noRotate (width := 64)
+          { services := [] } stackRiscVRemoveConfig .lsl 2 3 5 2 3 hrotate
+          (by omega) (by omega) (by omega))
+  | lsr =>
+      simpa [Fin.ext_iff] using
+        (compileStackProgramNatToRiscV_shift_noRotate (width := 64)
+          { services := [] } stackRiscVRemoveConfig .lsr 2 3 5 2 3 hrotate
+          (by omega) (by omega) (by omega))
+  | asr =>
+      simpa [Fin.ext_iff] using
+        (compileStackProgramNatToRiscV_shift_noRotate (width := 64)
+          { services := [] } stackRiscVRemoveConfig .asr 2 3 5 2 3 hrotate
+          (by omega) (by omega) (by omega))
+  | ror =>
+      exact (hrotate rfl).elim
+
+example (operator : Shift) (hrotate : operator ≠ .ror) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (wordStackMachineShift operator
+          (stackRiscVTestSource.registers 2)
+          (stackRiscVTestSource.registers 3)))
+      (executeInstructions (zeroState 64)
+        [match operator with
+          | .lsl => .sll 5 2 3
+          | .lsr => .srl 5 2 3
+          | .asr => .sra 5 2 3
+          | .ror => .sll 5 2 3]) := by
+  cases operator with
+  | lsl =>
+      apply compileStackProgramNatToRiscV_shift_noRotate_register_simulation
+        (width := 64) { services := [] } stackRiscVRemoveConfig .lsl 2 3 5 2 3
+        stackRiscVTestSource (zeroState 64) stackRiscVTestRelation hrotate
+        (by omega) (by omega) (by omega) (by omega) _
+      simpa [Fin.ext_iff] using
+        (compileStackProgramNatToRiscV_shift_noRotate (width := 64)
+          { services := [] } stackRiscVRemoveConfig .lsl 2 3 5 2 3 hrotate
+          (by omega) (by omega) (by omega))
+  | lsr =>
+      apply compileStackProgramNatToRiscV_shift_noRotate_register_simulation
+        (width := 64) { services := [] } stackRiscVRemoveConfig .lsr 2 3 5 2 3
+        stackRiscVTestSource (zeroState 64) stackRiscVTestRelation hrotate
+        (by omega) (by omega) (by omega) (by omega) _
+      simpa [Fin.ext_iff] using
+        (compileStackProgramNatToRiscV_shift_noRotate (width := 64)
+          { services := [] } stackRiscVRemoveConfig .lsr 2 3 5 2 3 hrotate
+          (by omega) (by omega) (by omega))
+  | asr =>
+      apply compileStackProgramNatToRiscV_shift_noRotate_register_simulation
+        (width := 64) { services := [] } stackRiscVRemoveConfig .asr 2 3 5 2 3
+        stackRiscVTestSource (zeroState 64) stackRiscVTestRelation hrotate
+        (by omega) (by omega) (by omega) (by omega) _
+      simpa [Fin.ext_iff] using
+        (compileStackProgramNatToRiscV_shift_noRotate (width := 64)
+          { services := [] } stackRiscVRemoveConfig .asr 2 3 5 2 3 hrotate
+          (by omega) (by omega) (by omega))
+  | ror =>
+      exact (hrotate rfl).elim
 
 example :
     WordStackRegisterRelation

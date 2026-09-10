@@ -617,6 +617,84 @@ theorem compileStackProgramNatToRiscV_binop_register_simulation [NeZero width]
         (wordStackRegisterRelation_executeXor source target destination left right
           hrel hdestination hleft hright hdestinationNonzero)
 
+theorem compileStackProgramNatToRiscV_shift_noRotate [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (operator : Shift) (sectionId initialLabel destination left right : Nat)
+    (hrotate : operator ≠ .ror) (hdestination : destination < 32)
+    (hleft : left < 32) (hright : right < 32) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.shift operator destination left right : StackProg Nat) =
+      some [match operator with
+        | .lsl => .sll ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩
+        | .lsr => .srl ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩
+        | .asr => .sra ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩
+        | .ror => .sll ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩] := by
+  cases operator with
+  | lsl =>
+      simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+        compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+        labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+        labLabel, labCompileLines, labCompilePlain, labShiftInstructions,
+        labCollectLabels, labLineInstructionCount, registerOfNat,
+        hdestination, hleft, hright, stackRemoveComplete, stackProgDepth,
+        stackRemoveFuel]
+  | lsr =>
+      simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+        compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+        labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+        labLabel, labCompileLines, labCompilePlain, labShiftInstructions,
+        labCollectLabels, labLineInstructionCount, registerOfNat,
+        hdestination, hleft, hright, stackRemoveComplete, stackProgDepth,
+        stackRemoveFuel]
+  | asr =>
+      simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+        compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+        labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+        labLabel, labCompileLines, labCompilePlain, labShiftInstructions,
+        labCollectLabels, labLineInstructionCount, registerOfNat,
+        hdestination, hleft, hright, stackRemoveComplete, stackProgDepth,
+        stackRemoveFuel]
+  | ror =>
+      exact (hrotate rfl).elim
+
+theorem compileStackProgramNatToRiscV_shift_noRotate_register_simulation
+    [NeZero width] (context : WordFfiContext) (config : StackRemoveConfig)
+    (operator : Shift) (sectionId initialLabel destination left right : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hrel : WordStackRegisterRelation source target)
+    (hrotate : operator ≠ .ror) (hdestination : destination < 32)
+    (hleft : left < 32) (hright : right < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.shift operator destination left right : StackProg Nat) =
+      some code) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (wordStackMachineShift operator (source.registers left)
+          (source.registers right)))
+      (executeInstructions target code) := by
+  rw [compileStackProgramNatToRiscV_shift_noRotate context config operator sectionId
+    initialLabel destination left right hrotate hdestination hleft hright] at hcode
+  cases operator with
+  | lsl =>
+      cases hcode
+      simpa [wordStackMachineShift, Fin.ext_iff] using
+        (wordStackRegisterRelation_executeSll source target destination left right
+          hrel hdestination hleft hright hdestinationNonzero)
+  | lsr =>
+      cases hcode
+      simpa [wordStackMachineShift, Fin.ext_iff] using
+        (wordStackRegisterRelation_executeSrl source target destination left right
+          hrel hdestination hleft hright hdestinationNonzero)
+  | asr =>
+      cases hcode
+      simpa [wordStackMachineShift, Fin.ext_iff] using
+        (wordStackRegisterRelation_executeSra source target destination left right
+          hrel hdestination hleft hright hdestinationNonzero)
+  | ror =>
+      exact (hrotate rfl).elim
+
 theorem labCompilePlain_const_register_simulation
     [NeZero width] (source : WordStackMachineState width)
     (target : State width) (destination value : Nat)

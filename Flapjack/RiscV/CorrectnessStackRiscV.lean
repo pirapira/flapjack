@@ -440,6 +440,36 @@ theorem labCompilePlain_tick_register_simulation
   simpa only [executeInstructions_single] using
     wordStackRegisterRelation_executeTick source target hrel
 
+theorem evalWordStackMachine_tick [NeZero width]
+    (state : WordStackMachineState width) :
+    evalWordStackMachine state (.tick : StackProg Nat) = some state := by
+  rfl
+
+theorem compileStackProgramNatToRiscV_tick [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel : Nat) :
+    compileStackProgramNatToRiscV context config sectionId initialLabel
+      (.tick : StackProg Nat) = some [.addi 0 0 (0 : Word width)] := by
+  simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+    compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+    labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+    labLabel, labCompileLines, labCompilePlain, labCollectLabels,
+    labLineInstructionCount,
+    stackRemoveComplete, stackProgDepth, stackRemoveFuel]
+
+theorem compileStackProgramNatToRiscV_tick_register_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel : Nat) (source : WordStackMachineState width)
+    (target : State width) (hrel : WordStackRegisterRelation source target)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV context config sectionId initialLabel
+      (.tick : StackProg Nat) = some code) :
+    WordStackRegisterRelation source (executeInstructions target code) := by
+  rw [compileStackProgramNatToRiscV_tick] at hcode
+  cases hcode
+  simpa only [executeInstructions_single] using
+    wordStackRegisterRelation_executeTick source target hrel
+
 theorem labCompilePlain_const_register_simulation
     [NeZero width] (source : WordStackMachineState width)
     (target : State width) (destination value : Nat)

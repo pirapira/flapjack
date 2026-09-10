@@ -91,6 +91,29 @@ example :
     [.addi 0 0 (0 : Word 64)] (by simp [labCompilePlain])
 
 example :
+    evalWordStackMachine stackRiscVTestSource
+      (.tick : StackProg Nat) = some stackRiscVTestSource := by
+  exact evalWordStackMachine_tick stackRiscVTestSource
+
+example :
+    compileStackProgramNatToRiscV (width := 64) { services := [] }
+      stackRiscVRemoveConfig 2 3 (.tick : StackProg Nat) =
+      some [.addi 0 0 (0 : Word 64)] := by
+  exact compileStackProgramNatToRiscV_tick { services := [] }
+    stackRiscVRemoveConfig 2 3
+
+example :
+    WordStackRegisterRelation stackRiscVTestSource
+      (executeInstructions (zeroState 64)
+        [.addi 0 0 (0 : Word 64)]) := by
+  exact compileStackProgramNatToRiscV_tick_register_simulation
+    { services := [] } stackRiscVRemoveConfig 2 3
+    stackRiscVTestSource (zeroState 64) stackRiscVTestRelation
+    [.addi 0 0 (0 : Word 64)]
+    (compileStackProgramNatToRiscV_tick { services := [] }
+      stackRiscVRemoveConfig 2 3)
+
+example :
     WordStackRegisterRelation
       (wordStackMachineWriteRegister stackRiscVTestSource 5
         (stackRiscVTestSource.registers 2 + stackRiscVTestSource.registers 3))

@@ -22,6 +22,7 @@ import Flapjack.CrepeFfiCorrectness
 import Flapjack.PanValues
 import Flapjack.PanSteppedSemantics
 import Flapjack.PanMemory
+import Flapjack.PanValueFfiFuel
 import Flapjack.PanValueFfiClockSemantics
 import Flapjack.PanValueFfiClockFuel
 import Flapjack.PanValueFfiClockCorrectness

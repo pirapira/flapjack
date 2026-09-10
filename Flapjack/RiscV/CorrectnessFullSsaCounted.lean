@@ -57,6 +57,49 @@ theorem wordAllocateGraphFunctionWithEntry_riscv_straightLine_counted_simulation
   refine ⟨source', target', hsource, ?_, htargetRelation⟩
   rw [executeInstructionsCounted_spec, htarget]
 
+/-! The same boundary in the function-evaluator representation is the form
+    needed when composing this machine theorem with source-level compiler
+    correctness. -/
+
+theorem wordAllocateGraphFunctionWithEntry_riscv_straightLine_source_function_counted_simulation
+    [NeZero width]
+    (parameters : List Nat) (program : WordProg (Word width))
+    (fixedSources : List Nat) (colours stackStart : Nat)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (allocation : WordGraphAllocation) (coloured : WordProg (Word width))
+    (halloc : wordAllocateGraphFunctionWithEntry parameters program fixedSources
+      colours stackStart =
+      some (state, renamedParameters, allocation, coloured))
+    (valid : wordColourValid (wordGraphColouringAt allocation.colouring))
+    (injective : Function.Injective
+      (wordGraphColouringAt allocation.colouring))
+    (colourZero : wordGraphColouringAt allocation.colouring 0 = 0)
+    (colourNoScratch : ∀ name, name < 31 →
+      wordGraphColouringAt allocation.colouring name ≠ 31)
+    (source target : State width)
+    (hrelation : WordColourStateRelation
+      (wordGraphColouringAt allocation.colouring) source target)
+    (hprogram : WordVarStraightLine width
+      (wordSsaRenameFunctionWithEntry parameters program).2.snd)
+    (code : List (Instruction width))
+    (hcompile : wordProgToRiscV coloured = some code) :
+    ∃ source' target',
+      evalWordFunction source
+          (wordSsaRenameFunctionWithEntry parameters program).2.snd =
+        some (source', []) ∧
+      executeInstructionsCounted target code = (target', code.length) ∧
+      WordColourStateRelation (wordGraphColouringAt allocation.colouring)
+        source' target' := by
+  rcases wordAllocateGraphFunctionWithEntry_riscv_straightLine_counted_simulation
+      parameters program fixedSources colours stackStart state
+      renamedParameters allocation coloured halloc valid injective colourZero
+      colourNoScratch source target hrelation hprogram code hcompile with
+    ⟨source', target', hsource, htarget, htargetRelation⟩
+  refine ⟨source', target', ?_, htarget, htargetRelation⟩
+  rw [evalWordFunction_wordVarStraightLine_eq_evalWordProg
+    source (wordSsaRenameFunctionWithEntry parameters program).2.snd hprogram]
+  simp [hsource]
+
 theorem wordAllocateGraphFunctionWithEntry_riscv_return_counted_simulation
     [NeZero width]
     (context : WordCallContext width)

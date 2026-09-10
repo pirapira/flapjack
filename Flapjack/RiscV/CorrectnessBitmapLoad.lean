@@ -328,4 +328,56 @@ theorem compileStackProgramNatToRiscV_bitmapLoad_simulation [NeZero width]
     haddressScratchStoreBase hdestinationScratch haddressDestination
     haddressAddressScratch hzero
 
+theorem compileStackProgramNatToRiscV_bitmapLoad_source_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination address : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hstoreBase : config.storeBase < 32)
+    (haddressScratch : config.addressScratch < 32)
+    (hdestination : destination < 32)
+    (haddress : address < 32)
+    (hscratch : config.scratch < 32)
+    (hstoreBaseNonzero : config.storeBase ≠ 0)
+    (haddressScratchNonzero : config.addressScratch ≠ 0)
+    (hdestinationNonzero : destination ≠ 0)
+    (hscratchNonzero : config.scratch ≠ 0)
+    (haddressScratchStoreBase : config.addressScratch ≠ config.storeBase)
+    (hdestinationScratch : destination ≠ config.scratch)
+    (haddressDestination : address ≠ destination)
+    (haddressAddressScratch : address ≠ config.addressScratch)
+    (hzero : target.registers 0 = 0)
+    (hrel : WordStackRegisterRelation source target)
+    (hmemory : ∀ address, readWordValue target address = source.memory address)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.bitmapLoad destination address : StackProg Nat) =
+      some code) :
+    (executeInstructions target code).registers
+        ⟨destination, hdestination⟩ =
+      source.memory
+        ((source.memory
+            (source.registers config.storeBase -
+              BitVec.ofNat width
+                (config.bytesInWord * stackStorePosition .bitmapBase)) +
+          source.registers address) <<<
+          shiftAmount (BitVec.ofNat width config.wordShift)) := by
+  have hcompiled := compileStackProgramNatToRiscV_bitmapLoad_simulation
+    (context := context) (config := config) (sectionId := sectionId)
+    (initialLabel := initialLabel) (destination := destination)
+    (address := address) (target := target)
+    (hstoreBase := hstoreBase) (haddressScratch := haddressScratch)
+    (hdestination := hdestination) (haddress := haddress) (hscratch := hscratch)
+    (hstoreBaseNonzero := hstoreBaseNonzero)
+    (haddressScratchNonzero := haddressScratchNonzero)
+    (hdestinationNonzero := hdestinationNonzero)
+    (hscratchNonzero := hscratchNonzero)
+    (haddressScratchStoreBase := haddressScratchStoreBase)
+    (hdestinationScratch := hdestinationScratch)
+    (haddressDestination := haddressDestination)
+    (haddressAddressScratch := haddressAddressScratch) (hzero := hzero)
+    (code := code) (hcode := hcode)
+  rw [hcompiled]
+  simp only [hmemory]
+  rw [hrel config.storeBase hstoreBase, hrel address haddress]
+
 end Flapjack.RiscV

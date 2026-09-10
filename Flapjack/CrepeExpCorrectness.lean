@@ -139,6 +139,59 @@ theorem compileExp_binop_const_correct
     evalPanValueExp, evalPanValueExp.evalPanValueExps,
     evalCrepFullExp]
 
+theorem compileExp_binop_local_words_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepLocals : Nat → Option α) (crepMemory : α → Option α)
+    (baseAddress topAddress bytesInWord : α)
+    (operator : BinOp)
+    (leftName rightName : VarName) (leftSlot rightSlot : Nat)
+    (leftValue rightValue : α)
+    (hleftLookup : lookupInfo leftName context.vars = some (.one, [leftSlot]))
+    (hrightLookup : lookupInfo rightName context.vars = some (.one, [rightSlot]))
+    (hleftSource : sourceLocals leftName = some (.word leftValue))
+    (hrightSource : sourceLocals rightName = some (.word rightValue))
+    (hrel : panValueCrepLocalsRel structs context sourceLocals crepLocals) :
+    compileExp context
+        (.op operator [.var .local leftName, .var .local rightName]) =
+      ([.op operator [.var leftSlot, .var rightSlot]], .one) ∧
+    evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord
+        (.op operator [.var .local leftName, .var .local rightName]) =
+      some (.word (evalPanBinOp operator leftValue rightValue)) ∧
+    evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+        (.op operator [.var leftSlot, .var rightSlot]) =
+      some (evalPanBinOp operator leftValue rightValue) := by
+  have hleft := hrel leftName (.word leftValue) .one [leftSlot]
+    hleftSource hleftLookup
+  have hright := hrel rightName (.word rightValue) .one [rightSlot]
+    hrightSource hrightLookup
+  have hleftSlot : crepLocals leftSlot = some leftValue := by
+    cases h : crepLocals leftSlot with
+    | none => simp [readCrepLocals, h] at hleft
+    | some currentValue =>
+        have hvalue : currentValue = leftValue := by
+          simpa [readCrepLocals, h, panValueFlatWords,
+            panValueFlatWordsFuel, panValueFlatValueFuel] using hleft.2
+        simp [hvalue]
+  have hrightSlot : crepLocals rightSlot = some rightValue := by
+    cases h : crepLocals rightSlot with
+    | none => simp [readCrepLocals, h] at hright
+    | some currentValue =>
+        have hvalue : currentValue = rightValue := by
+          simpa [readCrepLocals, h, panValueFlatWords,
+            panValueFlatWordsFuel, panValueFlatValueFuel] using hright.2
+        simp [hvalue]
+  simp [compileExp, compileExp.compileExpList, cexpHeads,
+    hleftLookup, hrightLookup, evalPanValueExp,
+    evalPanValueExp.evalPanValueExps, hleftSource, hrightSource,
+    evalCrepFullExp, hleftSlot, hrightSlot]
+
 theorem compileExp_cmp_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

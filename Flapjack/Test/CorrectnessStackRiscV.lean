@@ -91,6 +91,57 @@ example :
     [.addi 0 0 (0 : Word 64)] (by simp [labCompilePlain])
 
 example :
+    evalWordStackMachine stackRiscVTestSource
+      (.tick : StackProg Nat) = some stackRiscVTestSource := by
+  exact evalWordStackMachine_tick stackRiscVTestSource
+
+example :
+    compileStackProgramNatToRiscV (width := 64) { services := [] }
+      stackRiscVRemoveConfig 2 3 (.tick : StackProg Nat) =
+      some [.addi 0 0 (0 : Word 64)] := by
+  exact compileStackProgramNatToRiscV_tick { services := [] }
+    stackRiscVRemoveConfig 2 3
+
+example :
+    WordStackRegisterRelation stackRiscVTestSource
+      (executeInstructions (zeroState 64)
+        [.addi 0 0 (0 : Word 64)]) := by
+  exact compileStackProgramNatToRiscV_tick_register_simulation
+    { services := [] } stackRiscVRemoveConfig 2 3
+    stackRiscVTestSource (zeroState 64) stackRiscVTestRelation
+    [.addi 0 0 (0 : Word 64)]
+    (compileStackProgramNatToRiscV_tick { services := [] }
+      stackRiscVRemoveConfig 2 3)
+
+example :
+    evalWordStackMachine stackRiscVTestSource
+      (.const 5 7 : StackProg Nat) =
+      some (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (BitVec.ofNat 64 7)) := by
+  rfl
+
+example :
+    compileStackProgramNatToRiscV (width := 64) { services := [] }
+      stackRiscVRemoveConfig 2 3 (.const 5 7 : StackProg Nat) =
+      some [.addi 5 0 (BitVec.ofNat 64 7)] := by
+  simpa using (compileStackProgramNatToRiscV_const (width := 64)
+    { services := [] } stackRiscVRemoveConfig 2 3 5 7 (by omega))
+
+example :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (BitVec.ofNat 64 7))
+      (executeInstructions (zeroState 64)
+        [.addi 5 0 (BitVec.ofNat 64 7)]) := by
+  exact compileStackProgramNatToRiscV_const_register_simulation
+    (width := 64) { services := [] } stackRiscVRemoveConfig 2 3 5 7
+    stackRiscVTestSource (zeroState 64) stackRiscVTestRelation (by omega)
+    (by omega) (by simp [stackRiscVTestSource])
+    [.addi 5 0 (BitVec.ofNat 64 7)]
+    (by simpa using (compileStackProgramNatToRiscV_const (width := 64)
+      { services := [] } stackRiscVRemoveConfig 2 3 5 7 (by omega)))
+
+example :
     WordStackRegisterRelation
       (wordStackMachineWriteRegister stackRiscVTestSource 5
         (stackRiscVTestSource.registers 2 + stackRiscVTestSource.registers 3))

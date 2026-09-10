@@ -1066,6 +1066,7 @@ def evalWordStackBasic [NeZero width] (state : WordStackState width) :
       some (wordStackWriteRegister state register (state.stack offset))
   | .stackStore register offset =>
       some (wordStackWriteSlot state offset (state.registers register))
+  | .tick => some state
   | .seq first second => do
       let state ← evalWordStackBasic state first
       evalWordStackBasic state second
@@ -1210,6 +1211,7 @@ def evalWordStackMachine [NeZero width]
       some (wordStackMachineWriteRegister state register (state.stack offset))
   | .stackStore register offset =>
       some (wordStackMachineWriteSlot state offset (state.registers register))
+  | .tick => some state
   | .seq first second => do
       let state ← evalWordStackMachine state first
       evalWordStackMachine state second

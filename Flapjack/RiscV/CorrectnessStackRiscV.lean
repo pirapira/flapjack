@@ -440,6 +440,77 @@ theorem labCompilePlain_tick_register_simulation
   simpa only [executeInstructions_single] using
     wordStackRegisterRelation_executeTick source target hrel
 
+theorem evalWordStackMachine_tick [NeZero width]
+    (state : WordStackMachineState width) :
+    evalWordStackMachine state (.tick : StackProg Nat) = some state := by
+  rfl
+
+theorem compileStackProgramNatToRiscV_tick [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel : Nat) :
+    compileStackProgramNatToRiscV context config sectionId initialLabel
+      (.tick : StackProg Nat) = some [.addi 0 0 (0 : Word width)] := by
+  simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+    compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+    labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+    labLabel, labCompileLines, labCompilePlain, labCollectLabels,
+    labLineInstructionCount,
+    stackRemoveComplete, stackProgDepth, stackRemoveFuel]
+
+theorem compileStackProgramNatToRiscV_tick_register_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel : Nat) (source : WordStackMachineState width)
+    (target : State width) (hrel : WordStackRegisterRelation source target)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV context config sectionId initialLabel
+      (.tick : StackProg Nat) = some code) :
+    WordStackRegisterRelation source (executeInstructions target code) := by
+  rw [compileStackProgramNatToRiscV_tick] at hcode
+  cases hcode
+  simpa only [executeInstructions_single] using
+    wordStackRegisterRelation_executeTick source target hrel
+
+theorem compileStackProgramNatToRiscV_const [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination value : Nat)
+    (hdestination : destination < 32) :
+    compileStackProgramNatToRiscV context config sectionId initialLabel
+      (.const destination value : StackProg Nat) =
+      some [.addi ⟨destination, hdestination⟩ 0 (BitVec.ofNat width value)] := by
+  simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+    compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+    labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+    labLabel, labCompileLines, labCompilePlain, labCollectLabels,
+    labLineInstructionCount, registerOfNat, hdestination,
+    stackRemoveComplete, stackProgDepth, stackRemoveFuel]
+
+theorem compileStackProgramNatToRiscV_const_register_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination value : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hrel : WordStackRegisterRelation source target)
+    (hdestination : destination < 32) (hdestinationNonzero : destination ≠ 0)
+    (hzero : source.registers 0 = 0)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV context config sectionId initialLabel
+      (.const destination value : StackProg Nat) = some code) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (BitVec.ofNat width value))
+      (executeInstructions target code) := by
+  rw [compileStackProgramNatToRiscV_const context config sectionId initialLabel
+    destination value hdestination] at hcode
+  cases hcode
+  have hsimulation := wordStackRegisterRelation_executeAddi source target
+    destination 0 (BitVec.ofNat width value) hrel hdestination (by omega)
+    hdestinationNonzero
+  have hzeroAdd : source.registers 0 + BitVec.ofNat width value =
+      BitVec.ofNat width value := by
+    simpa using congrArg (fun register : Word width =>
+      register + BitVec.ofNat width value) hzero
+  rw [hzeroAdd] at hsimulation
+  simpa [Fin.ext_iff] using hsimulation
+
 theorem labCompilePlain_const_register_simulation
     [NeZero width] (source : WordStackMachineState width)
     (target : State width) (destination value : Nat)

@@ -16,6 +16,11 @@ theorem stackRiscVTestRelation :
   intro register hregister
   simp [stackRiscVTestSource, zeroState]
 
+theorem stackRiscVTestRelationExceptX31 :
+    WordStackRegisterRelationExceptX31 stackRiscVTestSource (zeroState 64) := by
+  intro register hregister _
+  simp [stackRiscVTestSource, zeroState]
+
 def stackRiscVWordConfig : WordStackConfig :=
   { locations := [(0, .register 4), (1, .register 5), (2, .register 6)]
     scratch := 31
@@ -167,5 +172,23 @@ example :
     (zeroState 64) 5 2 3 stackRiscVTestRelation (by omega) (by omega)
     (by omega) (by omega) [.sra 5 2 3]
   exact labCompilePlain_shift_asr 5 2 3 (by omega) (by omega) (by omega)
+
+example :
+    WordStackRegisterRelationExceptX31
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (wordStackMachineShift .ror (stackRiscVTestSource.registers 2)
+          (stackRiscVTestSource.registers 3)))
+      (executeInstructions (zeroState 64)
+        [.ori 31 0 (BitVec.ofNat 64 64), .sub 31 31 3,
+         .sll 31 2 31, .srl 5 2 3, .or 5 5 31]) := by
+  apply labCompilePlain_shift_ror_register_simulation stackRiscVTestSource
+    (zeroState 64) 5 2 3 stackRiscVTestRelationExceptX31 (by omega)
+    (by omega) (by omega) (by omega)
+    (by simp [stackRiscVTestSource]) (Or.inr rfl) (by omega) (by omega)
+    (by omega)
+    [.ori 31 0 (BitVec.ofNat 64 64), .sub 31 31 3,
+      .sll 31 2 31, .srl 5 2 3, .or 5 5 31]
+  exact labCompilePlain_shift_ror 5 2 3 (by omega) (by omega) (by omega)
+    (by omega) (by omega) (by omega)
 
 end Flapjack.RiscV

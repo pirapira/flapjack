@@ -43,6 +43,7 @@ import Flapjack.RiscV.CorrectnessStackRiscVLongMul
 import Flapjack.RiscV.CorrectnessStackRiscVAddCarry
 import Flapjack.RiscV.CorrectnessImmediateBitwise
 import Flapjack.RiscV.CorrectnessImmediateShift
+import Flapjack.RiscV.CorrectnessImmediateRotate
 import Flapjack.RiscV.LinearScan
 import Flapjack.RiscV.LinearScanSource
 import Flapjack.RiscV.LinearScanDriver

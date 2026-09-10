@@ -195,6 +195,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
    evaluator is replaced by the layout-aware Lab path. The code-aware
    StackAlloc evaluator now validates StackLang LocValue labels and writes an
    abstract label pointer; frame-machine and layout-aware equivalence remain.
+   The bounded FrameMachine now has the same validated abstract transition;
+   layout-aware target-position materialization is still a separate Lab
+   boundary.
    - Use `/home/zksecurity/HOL/examples/l3-machine-code/riscv/model/riscv.sml`
      as the RISC-V architectural reference; copy `/home/zksecurity/HOL/COPYRIGHT`
      into the Lean RISC-V model subdirectory when that port starts.

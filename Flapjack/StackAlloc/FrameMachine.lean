@@ -333,6 +333,12 @@ def evalStackFrameFuelWithCode [NeZero width] :
       some (.returned state (state.machine.registers register))
   | _fuel + 1, _, state, .halt register =>
       some (.halted state (state.machine.registers register))
+  | _fuel + 1, code, state, .locValue destination label _entry =>
+      match code label with
+      | none => none
+      | some _ =>
+          some (.normal (stackFrameWriteRegister state destination
+            (BitVec.ofNat width label)))
   | fuel + 1, code, state, .seq first second =>
       match evalStackFrameFuelWithCode fuel code state first with
       | some (.normal state) => evalStackFrameFuelWithCode fuel code state second

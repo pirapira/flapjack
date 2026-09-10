@@ -2232,6 +2232,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   assignment, assuming assigned-slot non-aliasing.
 - [x] Couple word assignment evaluation with preservation of the full
   source-to-Crep state relation for continuations.
+- [x] Add the relation-aware normally-completing sequence rule for the program
+  correctness induction.
 - [x] Prove the compiled declaration-table head lookup exposes flattened
   parameter slots and the exact compiled function body.
 - [x] Prove source/Crep expression agreement for constants, word locals, and

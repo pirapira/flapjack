@@ -21,6 +21,7 @@ import Flapjack.CrepeCorrectness
 import Flapjack.CrepeStateRelation
 import Flapjack.CrepeExpCorrectness
 import Flapjack.CrepeAssignmentCorrectness
+import Flapjack.CrepeSequenceCorrectness
 import Flapjack.CrepeFfiCorrectness
 import Flapjack.PanValues
 import Flapjack.PanSteppedSemantics

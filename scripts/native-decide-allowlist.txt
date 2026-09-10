@@ -45,7 +45,9 @@
 1 Flapjack/Test/FullSsaCorrectness.lean
 1 Flapjack/Test/FullSsaHandler.lean
 1 Flapjack/Test/FullSsaFfiCall.lean
-1 Flapjack/Test/FullSsaHandlerFfi.lean
+# Two named executions are intentional here: one checks the linked RISC-V
+# image and one checks the compiled Loop evaluator before the image backend.
+2 Flapjack/Test/FullSsaHandlerFfi.lean
 1 Flapjack/Test/CorrectnessFfi.lean
 1 Flapjack/Test/SourceToLoop.lean
 

@@ -1,4 +1,5 @@
 import Flapjack.Test.FullSsaPipeline
+import Flapjack.LoopSemantics
 
 namespace Flapjack
 
@@ -76,6 +77,36 @@ def fullSsaHandlerFfiSourceHandler : PanFfiHandler (RiscV.Word 64) :=
       some (updatePanLocal locals "ffiResult" (configuration + 1))
     else none
 
+def fullSsaHandlerFfiLoopContext : CompileContext (RiscV.Word 64) :=
+  { vars := [], functions := [], exceptions := [("E", BitVec.ofNat 64 0)],
+    maxVar := 0, bytesInWord := BitVec.ofNat 64 8 }
+
+def fullSsaHandlerFfiLoopFunctions :
+    List (Nat × List Nat × LoopProg (RiscV.Word 64)) :=
+  pipelineLoopFunctions .rv64i 1
+    (compileToCrepe fullSsaHandlerFfiLoopContext
+      fullSsaHandlerFfiDeclarations)
+
+def fullSsaHandlerFfiLoopState : LoopState (RiscV.Word 64) :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    memory := fun _ => none }
+
+def fullSsaHandlerFfiLoopHandler :
+    FunName → RiscV.Word 64 → RiscV.Word 64 → RiscV.Word 64 → RiscV.Word 64 →
+      LoopState (RiscV.Word 64) → Option (LoopState (RiscV.Word 64)) :=
+  fun function configuration _ _ _ state =>
+    if function == "inc" then
+      some { state with
+        locals := updateLoopLocal state.locals 1 (configuration + 1) }
+    else none
+
+def fullSsaHandlerFfiLoopResult : Option (List (RiscV.Word 64)) := do
+  let (_, main) ← lookupLoopFunction 2 fullSsaHandlerFfiLoopFunctions
+  let result ← evalLoopProgWithCallsAndFfi fullSsaHandlerFfiLoopFunctions
+    fullSsaHandlerFfiLoopHandler 100 fullSsaHandlerFfiLoopState main
+  pure (loopResultValues result)
+
 #guard fullSsaHandlerFfiLinked.isSome
 
 theorem fullSsaHandlerFfi_source_execution :
@@ -91,6 +122,10 @@ theorem fullSsaHandlerFfi_machine_execution :
     fullSsaHandlerFfiMachineResult = some [BitVec.ofNat 64 4] := by
   native_decide
 
+theorem fullSsaHandlerFfi_loop_execution :
+    fullSsaHandlerFfiLoopResult = some [BitVec.ofNat 64 4] := by
+  native_decide
+
 theorem fullSsaHandlerFfi_source_machine_simulation :
     (evalPanProgWithCallsAndFfi fullSsaHandlerFfiSourceFunctions
       fullSsaHandlerFfiSourceHandler 40
@@ -101,5 +136,16 @@ theorem fullSsaHandlerFfi_source_machine_simulation :
   calc
     _ = some [BitVec.ofNat 64 4] := fullSsaHandlerFfi_source_execution
     _ = _ := fullSsaHandlerFfi_machine_execution.symm
+
+theorem fullSsaHandlerFfi_source_loop_simulation :
+    (evalPanProgWithCallsAndFfi fullSsaHandlerFfiSourceFunctions
+      fullSsaHandlerFfiSourceHandler 40
+      (fun _ => none) fullSsaHandlerFfiSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = fullSsaHandlerFfiLoopResult := by
+  calc
+    _ = some [BitVec.ofNat 64 4] := fullSsaHandlerFfi_source_execution
+    _ = _ := fullSsaHandlerFfi_loop_execution.symm
 
 end Flapjack

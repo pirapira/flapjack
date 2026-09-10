@@ -169,7 +169,9 @@ theorem loopToWord_call_tail_simulation_general [NeZero width]
                     bodyLoopState bodyWordState bodyValues bodyValues'
                     hcallee hbodyLoop hbodyWord
                   have hloop' :
-                      some (LoopResult.returned loopState bodyValues) =
+                      some (LoopResult.returned
+                        { bodyLoopState with locals := loopState.locals }
+                        bodyValues) =
                         some (LoopResult.returned finalLoop loopResultValues) := by
                     simpa [evalLoopCallWithCallsAndFfi, hlookupLoop,
                       hread, hloopBind, hbodyLoop] using hloop
@@ -248,12 +250,14 @@ theorem loopToWord_call_handler_simulation_general [NeZero width]
       RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
         calleeWord' (loopToWordProg context loopBody) = some wordResult →
       loopCallBodyResultCompatible loopResult wordResult)
-    (hhandler : ∀ exceptionValue handlerWord handlerLoop handlerFinalWord,
+    (hhandler : ∀ exceptionValue handlerWord handlerLoop handlerFinalWord
+      (handlerState : LoopState (RiscV.Word width)),
+      handlerState.locals =
+        updateLoopLocal loopState.locals exception exceptionValue →
       loopLocalsMappedToRiscV context
         (updateLoopLocal loopState.locals exception exceptionValue) handlerWord →
       evalLoopProgWithCallsAndFfi functions loopHandler fuel
-          { loopState with
-            locals := updateLoopLocal loopState.locals exception exceptionValue }
+          handlerState
           handlerBody = some (.normal handlerLoop) →
       RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
           handlerWord (loopToWordProg context handlerBody) =
@@ -312,7 +316,8 @@ theorem loopToWord_call_handler_simulation_general [NeZero width]
                     hcalleeZero hbodyLoop hbodyWord
                   simp [loopCallBodyResultCompatible] at hcompatible
                   have hloop' :
-                      some (LoopResult.normal loopState) =
+                      some (LoopResult.normal
+                        { bodyLoopState with locals := loopState.locals }) =
                         some (LoopResult.normal finalLoop) := by
                     simpa [evalLoopCallWithCallsAndFfi, hlookupLoop,
                       hread, hloopBind, hbodyLoop] using hloop
@@ -381,7 +386,7 @@ theorem loopToWord_call_handler_simulation_general [NeZero width]
                     simpa [loopCallBodyResultCompatible] using hcompatible
                   have hloopHandler :
                       evalLoopProgWithCallsAndFfi functions loopHandler fuel
-                        { loopState with
+                        { bodyLoopState with
                           locals := updateLoopLocal loopState.locals exception
                             sourceException }
                         handlerBody = some (.normal finalLoop) := by
@@ -415,7 +420,10 @@ theorem loopToWord_call_handler_simulation_general [NeZero width]
                       hreturnedLocals hexception hexception_nonzero hnoalias
                   exact hhandler sourceException
                     (RiscV.writeRegister returnedWordState exceptionRegister
-                      sourceException) finalLoop finalWord hhandlerLocals hloopHandler
+                      sourceException) finalLoop finalWord
+                    { bodyLoopState with
+                      locals := updateLoopLocal loopState.locals exception
+                        sourceException } rfl hhandlerLocals hloopHandler
                     hwordHandler
 
 end Flapjack

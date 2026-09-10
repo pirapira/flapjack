@@ -135,8 +135,22 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
       cases hword
       simp [loopCallBodyResultCompatible])
     (hhandler := by
-      simpa [loopToWordProg] using
-        (handlerCall_skip_handler (fuel := 2)))
+      intro exceptionValue handlerWord handlerLoop handlerFinalWord handlerState
+        hstate hlocals hloop hword
+      have hloop' :
+          some (LoopResult.normal handlerState) =
+            some (LoopResult.normal handlerLoop) := by
+        simpa [evalLoopProgWithCallsAndFfi, evalLoopProg] using hloop
+      have hword' :
+          some (RiscV.WordControlResult.normal handlerWord) =
+            some (RiscV.WordControlResult.normal handlerFinalWord) := by
+        simpa [RiscV.evalWordFunctionWithHandlersAndFfi,
+          RiscV.evalWordFunction, loopToWordProg] using hword
+      injection hloop' with hloopResult
+      injection hword' with hwordResult
+      cases hloopResult
+      cases hwordResult
+      simpa [hstate] using hlocals)
     (hlocals := handlerCall_mappedLocals)
   · simp [evalLoopCallWithCallsAndFfi, evalLoopProgWithCallsAndFfi,
       evalLoopProg, evalLoopExp, loopReadLocals, loopBindParameters,

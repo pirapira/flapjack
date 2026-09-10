@@ -2239,6 +2239,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   multi-result multiplication, with the high-destination non-clobber contract.
 - [x] Extend the StackLang/RISC-V register relation through scratch-based
   AddCarry, relating both results while excluding the temporary x31.
+- [x] Extend the AST-to-RISC-V relation and compiler equations through
+  immediate and, or, and xor forms.
+- [x] Complete the variable-plus-constant add and sub AST-to-RISC-V
+  equations through their addi lowering.
 
 ## First implementation slice
 

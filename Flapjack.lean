@@ -41,6 +41,7 @@ import Flapjack.RiscV.CorrectnessGraphLocations
 import Flapjack.RiscV.CorrectnessStackRiscVDivision
 import Flapjack.RiscV.CorrectnessStackRiscVLongMul
 import Flapjack.RiscV.CorrectnessStackRiscVAddCarry
+import Flapjack.RiscV.CorrectnessImmediateBitwise
 import Flapjack.RiscV.LinearScan
 import Flapjack.RiscV.LinearScanSource
 import Flapjack.RiscV.LinearScanDriver

@@ -2236,6 +2236,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   exception-code correspondence.
 - [x] Generalize the raised-control relation to two-word payload spills while
   preserving source order and both reserved memory addresses.
+- [x] Add the relation-aware arbitrary-shaped return boundary, preserving the
+  structured source payload and unchanged source-to-Crep state relation.
 - [x] Couple word assignment evaluation with preservation of the full
   source-to-Crep state relation for continuations.
 - [x] Add the relation-aware normally-completing sequence rule for the program

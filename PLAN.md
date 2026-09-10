@@ -2111,6 +2111,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   byte-level RISC-V FFI executor.
 - [x] Preserve the exact seven-instruction count for a normally returning
   generated FFI pipeline.
+- [x] Connect a source-aligned Word FFI pipeline to the handler-aware source
+  evaluator, including its ABI-marshalling state transition.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

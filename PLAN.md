@@ -2216,6 +2216,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   initialization, destination assignment, continuation execution, and restore.
 - [x] Generalize fresh zero-slot initialization and restoration to arbitrary
   flattened declaration results via a reusable `nestedDecs` evaluator theorem.
+- [x] Compose arbitrary-shape target `decCall` lowering from fresh-slot setup,
+  destination-aware call execution, and the compiled continuation.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

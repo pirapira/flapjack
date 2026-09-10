@@ -2131,6 +2131,68 @@ theorem evalCrepFullProg_nestedDecs_const_zero
             names result))
       simp [evalCrepFullProg, evalCrepFullExp, htail]
 
+/-! With the generic nested-declaration rule, the destination-aware lowering
+    of `decCall` composes for every flattened result shape. -/
+theorem compile_full_pan_value_decCall_compose
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state callState : CrepState α) (result : CrepControlResult α)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (compiledArguments : List (CrepExp α))
+    (hcompileArgs : compileArgs context arguments = compiledArguments)
+    (hcall : evalCrepFullCall functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with
+          locals := initializeCrepLocals state.locals
+            (allocatedNames context shape) }
+      (some (allocatedNames context shape, none)) function compiledArguments =
+      some (.normal callState))
+    (hbody : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) callState
+      (compileProg
+        { context with
+            vars := (name, (shape, allocatedNames context shape)) :: context.vars
+            maxVar := context.maxVar + Shape.shapeSize shape }
+        body) = some result) :
+    evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress
+      (fuel + (allocatedNames context shape).length + 2) state
+      (compileProg context (.decCall name shape function arguments body)) =
+      some (restoreCrepResultList state.locals
+        (allocatedNames context shape) result) := by
+  have hseq : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 2)
+      { state with
+          locals := initializeCrepLocals state.locals
+            (allocatedNames context shape) }
+      (.seq
+        (.call (some (allocatedNames context shape, none)) function compiledArguments)
+        (compileProg
+          { context with
+              vars := (name, (shape, allocatedNames context shape)) :: context.vars
+              maxVar := context.maxVar + Shape.shapeSize shape }
+          body)) = some result := by
+    simp [evalCrepFullProg, hcall, hbody]
+  have hnested := evalCrepFullProg_nestedDecs_const_zero
+    functions primitive ffi sharedMem baseAddress topAddress (fuel + 2) state
+    (allocatedNames context shape)
+    (.seq
+      (.call (some (allocatedNames context shape, none)) function compiledArguments)
+      (compileProg
+        { context with
+            vars := (name, (shape, allocatedNames context shape)) :: context.vars
+            maxVar := context.maxVar + Shape.shapeSize shape }
+        body)) result hseq
+  simpa [compileProg, allocatedNames, nestedDecs, hcompileArgs, Nat.add_assoc,
+    Nat.add_comm, Nat.add_left_comm] using hnested
+
 /-! Expose the exact compiler equation for declaration calls.  Keeping this
     expansion named prevents later correctness proofs from duplicating the
     fresh-slot and continuation-context bookkeeping. -/

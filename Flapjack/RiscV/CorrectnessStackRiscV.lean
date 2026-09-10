@@ -417,6 +417,28 @@ theorem labCompilePlain_const
       some [.addi ⟨destination, hdestination⟩ 0 (BitVec.ofNat width value)] := by
   simp [labCompilePlain, registerOfNat, hdestination]
 
+theorem wordStackRegisterRelation_executeTick
+    [NeZero width] (source : WordStackMachineState width)
+    (target : State width) (hrel : WordStackRegisterRelation source target) :
+    WordStackRegisterRelation source
+      (execute target (.addi 0 0 (0 : Word width))) := by
+  intro register hregister
+  have htarget := hrel register hregister
+  simp [execute, writeRegister, htarget]
+
+theorem labCompilePlain_tick_register_simulation
+    [NeZero width] (source : WordStackMachineState width)
+    (target : State width) :
+    (labCompilePlain (.tick : LabPlain (Word width))).bind
+        (fun code =>
+          some (WordStackRegisterRelation source
+            (executeInstructions target code))) =
+      some (WordStackRegisterRelation source
+        (execute target (.addi 0 0 (0 : Word width)))) := by
+  change some (WordStackRegisterRelation source
+    (executeInstructions target [.addi 0 0 (0 : Word width)])) = _
+  rw [executeInstructions_single]
+
 theorem labCompilePlain_const_register_simulation
     [NeZero width] (source : WordStackMachineState width)
     (target : State width) (destination value : Nat)

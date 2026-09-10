@@ -83,6 +83,16 @@ example :
     (by simp [stackRiscVTestSource])
 
 example :
+    (labCompilePlain (.tick : LabPlain (Word 64))).bind
+        (fun code =>
+          some (WordStackRegisterRelation stackRiscVTestSource
+            (executeInstructions (zeroState 64) code))) =
+      some (WordStackRegisterRelation stackRiscVTestSource
+        (execute (zeroState 64) (.addi 0 0 (0 : Word 64)))) := by
+  exact labCompilePlain_tick_register_simulation stackRiscVTestSource
+    (zeroState 64)
+
+example :
     WordStackRegisterRelation
       (wordStackMachineWriteRegister stackRiscVTestSource 5
         (stackRiscVTestSource.registers 2 + stackRiscVTestSource.registers 3))

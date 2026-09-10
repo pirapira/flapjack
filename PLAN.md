@@ -2167,6 +2167,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Prove counted FFI-aware RISC-V execution composes over appended
   instruction lists, preserving the post-prefix state and additive count on
   successful host transitions.
+- [x] Prove FFI-aware RISC-V execution agrees with ordinary execution for
+  generated no-ecall code, including its exact instruction count.
 - [x] Lift the full-SSA straight-line allocator/coloring simulation to the
   counted RISC-V executor, exposing the exact generated instruction length.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

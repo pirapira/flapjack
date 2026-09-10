@@ -41,6 +41,25 @@ example (host : WordFfiHost 8) (state : State 8) :
     executeInstructionsWithFfiCounted host state [] = some (state, 0) := by
   rfl
 
+example (host : WordFfiHost 8) (state : State 8) :
+    executeInstructionsWithFfi host state [.addi 1 0 1] =
+      some (executeInstructions state [.addi 1 0 1]) := by
+  apply executeInstructionsWithFfi_of_ne_ecall
+  intro instruction hinstruction
+  simp at hinstruction
+  subst instruction
+  simp
+
+example (host : WordFfiHost 8) (state : State 8) :
+    executeInstructionsWithFfiCounted host state [.addi 1 0 1] =
+      some (executeInstructions state [.addi 1 0 1], 1) := by
+  apply executeInstructionsWithFfiCounted_of_ne_ecall
+  · intro instruction hinstruction
+    simp at hinstruction
+    subst instruction
+    simp
+  · rfl
+
 example (host : WordFfiHost 8) (fuel : Nat) (start returnAddress : Word 8)
     (code : List (Instruction 8)) (state : State 8) :
     (executeCodeUntilWithFfiCounted host fuel start returnAddress code state).map

@@ -23,4 +23,28 @@ def clockedMemoryFfiResultHasWrite : Bool :=
 
 #guard clockedMemoryFfiResultHasWrite
 
+def clockedMemoryFfiDecliningFinalResult := do
+  let state ← evalPanValueDeclarations memoryFfiInitial.source
+    [.function
+      { name := "main", inline := false, exported := true, params := [],
+        body := memoryFfiFinalMain, returnShape := .one }]
+    (memoryAccess := some memoryFfiTestMemoryAccess)
+  evalPanValueFfiClockCall memoryFfiTestContext (fun _ _ => none)
+    memoryFfiTestHandler state.structs state.functions state.baseAddress
+    state.topAddress state.bytesInWord 20 (fun _ => none) state.globals state.memory
+    memoryFfiFinalState 20 none "main" []
+    (memoryAccess := some memoryFfiTestMemoryAccess)
+    (contracts := some (PanValueCallContracts.mk state.returnShapes state.exceptions
+      state.parameterShapes))
+    (memoryHandler := some memoryFfiDecliningHandler)
+
+def clockedMemoryFfiDecliningFinalIsReachable : Bool :=
+  match clockedMemoryFfiDecliningFinalResult with
+  | some (.control (.finalFfi locals _ memory ffi event), 19) =>
+      locals "x" = none && memory 200 = none && ffi.state = () &&
+        event.name = .extCall "unknown" && event.outcome = .failed
+  | _ => false
+
+#guard clockedMemoryFfiDecliningFinalIsReachable
+
 end Flapjack

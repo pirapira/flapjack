@@ -2155,6 +2155,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   and prove caught-handler returns short-circuit following continuations.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
+- [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI
+  handler declines an external call, including the clocked evaluator boundary.
 - [x] Prove that a resolved cross-section Lab jump executes to the target
   section on the RISC-V model, rather than only matching emitted code shape.
 - [x] Prove Lab `linkValue` materializes a resolved continuation in ABI

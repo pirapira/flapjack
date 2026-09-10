@@ -169,6 +169,18 @@ example :
   all_goals try decide
   simp [ffiMachineHost, ffiMachineWordHandler]
 
+/- The counted compiler path exposes the exact six instructions traversed by
+   this ABI sequence (four argument moves, service materialization, and ECALL).
+   Projecting the result to its count avoids making the regression depend on
+   the representation of the machine state's function-valued fields. -/
+example :
+    (wordFunctionToRiscVWithCallsAndFfi
+      ({ targets := [], services := [("echo", 7)] } : WordCallFfiContext 64)
+      (.ffi "echo" 2 3 4 5 ([], []))).bind (fun result =>
+        (executeInstructionsWithFfiCounted ffiMachineHost ffiMachineState result.1).map
+          (fun counted => counted.2)) = some 6 := by
+  decide +kernel
+
 example :
     (compileWordProgramNatToRiscV (width := 64)
       { services := [("echo", 7)] } pipelineFfiWordConfig

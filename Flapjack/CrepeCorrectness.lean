@@ -2004,6 +2004,33 @@ theorem evalPanValueProg_decCall_compose
       some (restorePanValueControlLocal name (sourceLocals name) sourceResult) := by
   simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall, hshape, hbody]
 
+/-! The corresponding Crep rule composes a normal lowered call with its
+    continuation body.  Fresh declaration slots are handled by the compiler
+    expansion lemma separately, so this rule can be reused for any call
+    lowering that has already established the call-state witness. -/
+theorem evalCrepFullProg_call_seq_normal_compose
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state callState : CrepState α)
+    (info : Option (List Nat × Option (α × CrepProg α)))
+    (function : FunName) (arguments : List (CrepExp α))
+    (body : CrepProg α) (result : CrepControlResult α)
+    (hcall : evalCrepFullCall functions primitive ffi sharedMem
+      baseAddress topAddress fuel state info function arguments =
+      some (.normal callState))
+    (hbody : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) callState body = some result) :
+    evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state
+      (.seq (.call info function arguments) body) = some result := by
+  simp [evalCrepFullProg, hcall, hbody]
+
 /-! Expose the exact compiler equation for declaration calls.  Keeping this
     expansion named prevents later correctness proofs from duplicating the
     fresh-slot and continuation-context bookkeeping. -/

@@ -789,6 +789,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   Word-to-RISC-V execution, retaining the final machine state relation.
 - [x] Lift the composed colouring-to-RISC-V simulation through the full-SSA
   graph allocator boundary, retaining its allocation witness.
+- [x] Carry a successfully compiled Word function through the linked RISC-V
+  entry table, including the appended return stub and its byte offset.
 - [x] Match CakeML Simple/IRC distinction in graph allocation modes: modes
   0--1 omit move preferences during coalescing but retain the original move table for coloring, while modes 2--3 use the prioritized list for coalescing and the original move table for coloring.
 - [x] Preserve SSA-renamed virtual names at the heuristic allocator's
@@ -2039,6 +2041,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   projection agrees with the non-stepped program boundary.
 - [x] Add a combined Word evaluator/RISC-V sequence simulation contract,
   composing normal evaluator sequencing with generated instruction execution.
+- [x] Preserve accelerator-style memory-handler dispatch when a byte-granular
+  `memoryAccess` model is also installed, including the clocked evaluator.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

@@ -142,6 +142,34 @@ example :
       { services := [] } stackRiscVRemoveConfig 2 3 5 7 (by omega)))
 
 example :
+    evalWordStackMachine stackRiscVTestSource
+      (.arith .add 5 2 3 : StackProg Nat) =
+      some (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (stackRiscVTestSource.registers 2 + stackRiscVTestSource.registers 3)) := by
+  rfl
+
+example :
+    compileStackProgramNatToRiscV (width := 64) { services := [] }
+      stackRiscVRemoveConfig 2 3 (.arith .add 5 2 3 : StackProg Nat) =
+      some [.add 5 2 3] := by
+  simpa using (compileStackProgramNatToRiscV_add (width := 64)
+    { services := [] } stackRiscVRemoveConfig 2 3 5 2 3
+    (by omega) (by omega) (by omega))
+
+example :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (stackRiscVTestSource.registers 2 + stackRiscVTestSource.registers 3))
+      (executeInstructions (zeroState 64) [.add 5 2 3]) := by
+  exact compileStackProgramNatToRiscV_add_register_simulation
+    (width := 64) { services := [] } stackRiscVRemoveConfig 2 3 5 2 3
+    stackRiscVTestSource (zeroState 64) stackRiscVTestRelation (by omega)
+    (by omega) (by omega) (by omega) [.add 5 2 3]
+    (by simpa using (compileStackProgramNatToRiscV_add (width := 64)
+      { services := [] } stackRiscVRemoveConfig 2 3 5 2 3
+      (by omega) (by omega) (by omega)))
+
+example :
     WordStackRegisterRelation
       (wordStackMachineWriteRegister stackRiscVTestSource 5
         (stackRiscVTestSource.registers 2 + stackRiscVTestSource.registers 3))

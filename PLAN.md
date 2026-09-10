@@ -832,6 +832,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   Nat-StackProg → StackRemove → Lab → RISC-V compiler entrypoint.
 - [x] Lift the constant-assignment evaluator and prove its immediate-valued
   StackProg → StackRemove → Lab → RISC-V register simulation contract.
+- [x] Lift register addition through the StackProg evaluator and concrete
+  StackRemove/Lab/RISC-V entrypoint, preserving the mapped register relation.
 - [x] Match CakeML Simple/IRC distinction in graph allocation modes: modes
   0--1 omit move preferences during coalescing but retain the original move table for coloring, while modes 2--3 use the prioritized list for coalescing and the original move table for coloring.
 - [x] Preserve SSA-renamed virtual names at the heuristic allocator's

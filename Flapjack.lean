@@ -81,6 +81,7 @@ import Flapjack.RiscV.CorrectnessStackSetSize
 import Flapjack.RiscV.CorrectnessStackDelta
 import Flapjack.RiscV.CorrectnessBitmapLoad
 import Flapjack.RiscV.CorrectnessStackOpCurrHeap
+import Flapjack.RiscV.CorrectnessStackCurrHeap
 import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.ExactFfi
 import Flapjack.RiscV.CorrectnessExactFfi

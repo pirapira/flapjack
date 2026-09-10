@@ -2210,6 +2210,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   model, including bitmap-base lookup and word-index scaling.
 - [x] Connect StackRemove OpCurrHeap to the generic RISC-V binary-operation
   register simulation for all five binary operators.
+- [x] Prove the StackRemove current-heap get/set fast paths at the RISC-V
+  register boundary.
 
 ## First implementation slice
 

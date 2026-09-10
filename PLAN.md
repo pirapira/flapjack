@@ -2244,6 +2244,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   source and Crep callee/handler witnesses for induction.
 - [x] Add the relation-aware normal structured FFI boundary, including ABI
   temporary restoration and post-handler state relation.
+- [x] Extend the compact Crep FFI boundary with explicit terminal `FinalFFI`
+  control results, preserving the existing normal-handler API and proving the
+  corresponding external-call equation.
 - [x] Add the relation-aware arbitrary-shape declaration-call boundary,
   including fresh result slots and restoration around the continuation.
 - [x] Couple word assignment evaluation with preservation of the full

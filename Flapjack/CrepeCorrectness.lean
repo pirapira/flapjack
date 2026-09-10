@@ -347,14 +347,14 @@ theorem compile_full_pan_value_seq_normal_compose
         match result with
         | .returned _ values => some values
         | .normal _ => some []
-        | .raised _ _ | .broke _ _ | .continued _ _ => none) = _
+        | .raised _ _ | .broke _ _ | .continued _ _ | .finalFfi _ _ => none) = _
   have hsecond' :
       (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress fuel
         firstState (compileProg context second)).bind (fun result =>
           match result with
           | .returned _ values => some values
           | .normal _ => some []
-          | .raised _ _ | .broke _ _ | .continued _ _ => none) =
+          | .raised _ _ | .broke _ _ | .continued _ _ | .finalFfi _ _ => none) =
         (evalPanValueProg structs baseAddress topAddress bytesInWord
           firstSourceLocals firstSourceGlobals firstSourceMemory second).map
           (fun result => result.2.2.2.flatMap panValueFlatWords) := by

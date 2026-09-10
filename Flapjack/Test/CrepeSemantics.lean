@@ -23,10 +23,26 @@ def crepeSemanticsFfi : CrepFfiHandler Nat :=
 def crepeSemanticsFfiHandler : CrepFfiHandler Nat :=
   fun function configuration configurationLength array arrayLength state =>
     if function == "sum" then
-      some { state with
+      some (.returned { state with
         memory := updateMemory state.memory 99
-          (configuration + configurationLength + array + arrayLength) }
+          (configuration + configurationLength + array + arrayLength) })
     else none
+
+def crepeSemanticsFinalEvent : FfiFinalEvent :=
+  { name := .extCall "halt"
+    configuration := []
+    bytes := []
+    outcome := .failed }
+
+def crepeSemanticsFinalHandler : CrepFfiHandler Nat :=
+  fun _ _ _ _ _ _ => some (.final crepeSemanticsFinalEvent)
+
+def crepeSemanticsFinalState : CrepState Nat :=
+  { locals := fun name =>
+      match name with
+      | 1 | 2 | 3 | 4 => some 0
+      | _ => none
+    memory := fun _ => none }
 
 def crepeSemanticsSharedMem : CrepSharedMemHandler Nat :=
   defaultCrepSharedMemHandler
@@ -167,7 +183,18 @@ theorem crepe_full_ffi_semantics :
       crepeSemanticsFfiHandler crepeSemanticsSharedMem
       0 100 30 crepeSemanticsState crepeSemanticsFfiProgram =
       some [33] := by
-  decide +kernel
+  simp [evalCrepFullResult, evalCrepFullProg, evalCrepFullExp,
+    evalCrepFullExps, crepeSemanticsFfiHandler, crepeSemanticsFfiProgram,
+    crepNestedSeq, updateCrepLocal, updateMemory]
+
+theorem crepe_full_ffi_final_semantics :
+    evalCrepFullProg [] crepeSemanticsPrimitive
+      crepeSemanticsFinalHandler crepeSemanticsSharedMem
+      0 100 30 crepeSemanticsFinalState
+      (.extCall "halt" 1 2 3 4) =
+      some (.finalFfi crepeSemanticsFinalState crepeSemanticsFinalEvent) := by
+  simp [evalCrepFullProg, crepeSemanticsFinalHandler,
+    crepeSemanticsFinalState, crepeSemanticsFinalEvent]
 
 theorem crepe_full_ffi_lowering_noop :
     evalCrepFullProg [] crepeSemanticsPrimitive
@@ -270,7 +297,7 @@ def crepeCallFullValues :
     pure (match result with
       | .returned _ values => values
       | .normal _ => []
-      | .raised _ _ | .broke _ _ | .continued _ _ => [])
+      | .raised _ _ | .broke _ _ | .continued _ _ | .finalFfi _ _ => [])
 
 #guard
     crepeCallFullValues = some [BitVec.ofNat 64 41]

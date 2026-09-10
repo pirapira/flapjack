@@ -4,10 +4,10 @@ import Flapjack.CrepeSemantics
 Observable runtime boundary for the Crepe evaluator.
 
 `CrepeSemantics` is intentionally a compact executable model whose handlers
-return `Option state`.  CakeML's `crepSem` has a richer machine state and an
-observable `FinalFFI` result.  This file ports that boundary without changing
-the compact evaluator: it is the state/result vocabulary on which the full
-compiler simulation can be built.
+return either a new state or an observable terminal event.  CakeML's `crepSem`
+has a richer machine state and the same observable `FinalFFI` result.  This
+file ports that richer runtime boundary: it is the state/result vocabulary on
+which the full compiler simulation can be built.
 
 The FFI request carries the already decoded word arguments.  Byte-array
 decoding and the concrete foreign-state type are deliberately left to the

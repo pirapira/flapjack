@@ -1,4 +1,5 @@
 import Flapjack.Semantics
+import Flapjack.Ffi
 
 /-!
 Fuel-bounded executable semantics for the full scalar Crepe control fragment.
@@ -66,9 +67,17 @@ inductive CrepControlResult (α : Type u) where
   | raised (state : CrepState α) (exception : α)
   | broke (state : CrepState α) (label : Nat)
   | continued (state : CrepState α) (label : Nat)
+  | finalFfi (state : CrepState α) (event : FfiFinalEvent)
+
+inductive CrepFfiResult (α : Type u) where
+  | returned (state : CrepState α)
+  | final (event : FfiFinalEvent)
+
+instance : Coe (CrepState α) (CrepFfiResult α) :=
+  ⟨CrepFfiResult.returned⟩
 
 abbrev CrepFfiHandler (α : Type u) :=
-  FunName → α → α → α → α → CrepState α → Option (CrepState α)
+  FunName → α → α → α → α → CrepState α → Option (CrepFfiResult α)
 
 abbrev CrepSharedMemHandler (α : Type u) :=
   CrepMemOp → Nat → α → CrepState α → Option (CrepState α)
@@ -88,6 +97,8 @@ def restoreCrepResult (name : Nat) (oldValue : Option α) :
       .broke { state with locals := restoreCrepLocal state.locals name oldValue } label
   | .continued state label =>
       .continued { state with locals := restoreCrepLocal state.locals name oldValue } label
+  | .finalFfi state event =>
+      .finalFfi { state with locals := restoreCrepLocal state.locals name oldValue } event
 
 def defaultCrepSharedMemHandler [BEq α]
     : CrepSharedMemHandler α :=
@@ -147,6 +158,10 @@ mutual
             pure (.broke { caller with memory := callee.memory } label)
         | .continued callee label =>
             pure (.continued { caller with memory := callee.memory } label)
+        | .finalFfi callee event =>
+            pure (.finalFfi { caller with
+              locals := fun _ => none
+              memory := callee.memory } event)
     termination_by fuel _ _ _ _ => fuel
 
   def evalCrepFullProg
@@ -227,8 +242,10 @@ mutual
         let configurationLength ← state.locals configurationLength
         let array ← state.locals array
         let arrayLength ← state.locals arrayLength
-        let state ← ffi function configuration configurationLength array arrayLength state
-        pure (.normal state)
+        let ffiResult ← ffi function configuration configurationLength array arrayLength state
+        match ffiResult with
+        | .returned state => pure (.normal state)
+        | .final event => pure (.finalFfi state event)
     | _fuel + 1, state, .raise exception => pure (.raised state exception)
     | _fuel + 1, state, .return values => do
         let values ← evalCrepFullExps state.locals state.memory
@@ -264,6 +281,32 @@ theorem evalCrepFullProg_extCall [BEq α] [OfNat α 0] [OfNat α 1]
       (fuel + 1) state
       (.extCall function configuration configurationLength array arrayLength) =
       some (.normal state') := by
+  simp [evalCrepFullProg, hconfiguration, hconfigurationLength, harray,
+    harrayLength, hffi]
+
+theorem evalCrepFullProg_extCall_finalFfi [BEq α] [OfNat α 0] [OfNat α 1]
+    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue : α)
+    (event : FfiFinalEvent)
+    (hconfiguration : state.locals configuration = some configurationValue)
+    (hconfigurationLength :
+      state.locals configurationLength = some configurationLengthValue)
+    (harray : state.locals array = some arrayValue)
+    (harrayLength : state.locals arrayLength = some arrayLengthValue)
+    (hffi : ffi function configurationValue configurationLengthValue
+      arrayValue arrayLengthValue state = some (.final event)) :
+    evalCrepFullProg functions primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state
+      (.extCall function configuration configurationLength array arrayLength) =
+      some (.finalFfi state event) := by
   simp [evalCrepFullProg, hconfiguration, hconfigurationLength, harray,
     harrayLength, hffi]
 
@@ -342,6 +385,6 @@ def evalCrepFullResult
       match result with
       | .returned _ values => some values
       | .normal _ => some []
-      | .raised _ _ | .broke _ _ | .continued _ _ => none
+      | .raised _ _ | .broke _ _ | .continued _ _ | .finalFfi _ _ => none
 
 end Flapjack

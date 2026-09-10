@@ -94,6 +94,10 @@ theorem compile_full_pan_value_seq_control_relation
         rw [hcrepResult] at hcrepFirst
         simp [compileProg, hcompileFirst, hcompileSecond,
           evalCrepFullProg, hcrepFirst]
+    | finalFfi state event =>
+        rw [hcrepResult] at hcrepFirst
+        simp [compileProg, hcompileFirst, hcompileSecond,
+          evalCrepFullProg, hcrepFirst]
   · exact hrel
 
 end Flapjack

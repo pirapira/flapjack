@@ -24,8 +24,10 @@ def crepStateOfLoopState (state : LoopState α) : CrepState α :=
 def loopFfiOfCrepFfi (ffi : CrepFfiHandler α) :
     FunName → α → α → α → α → LoopState α → Option (LoopState α) :=
   fun function configuration configurationLength array arrayLength state =>
-    (ffi function configuration configurationLength array arrayLength
-      (crepStateOfLoopState state)).map loopStateOfCrepState
+    match ffi function configuration configurationLength array arrayLength
+      (crepStateOfLoopState state) with
+    | some (.returned state) => some (loopStateOfCrepState state)
+    | some (.final _) | none => none
 
 def crepControlValues : CrepControlResult α → List α
   | .returned _ values => values
@@ -45,6 +47,7 @@ def crepControlLocal (name : Nat) : CrepControlResult α → Option α
   | .raised state _ => state.locals name
   | .broke state _ => state.locals name
   | .continued state _ => state.locals name
+  | .finalFfi state _ => state.locals name
 
 def loopControlLocal (name : Nat) : LoopResult α → Option α
   | .normal state => state.locals name

@@ -29,8 +29,9 @@ def sourceToCrepeFfiPrimitive : CrepPrimitiveHandler (RiscV.Word 64) :=
 def sourceToCrepeFfiHandler : CrepFfiHandler (RiscV.Word 64) :=
   fun function configuration _ _ _ state =>
     if function == "inc" then
-      some { state with
+      some (.returned { state with
         locals := updateCrepLocal state.locals 1 (configuration + 1) }
+      )
     else none
 
 def sourceToCrepeFfiSharedMem : CrepSharedMemHandler (RiscV.Word 64) :=

@@ -2310,6 +2310,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   both shift-scratch layouts and the compiler `addi` constant lowering.
 - [x] Lift one-chunk StackAlloc and StackFree through the StackProg-to-RISC-V
   entrypoint, including zero-word no-ops and bounded `addi` delta lowering.
+- [x] Lift BitmapLoad through the StackProg-to-RISC-V entrypoint and compose its
+  concrete RISC-V execution contract with the compiler code-shape theorem.
 - [x] Prove the dynamic StackRemove stack-load boundary for register-held byte
   offsets, preserving the non-address-scratch register relation.
 - [x] Prove both dynamic StackRemove frame-store paths, including the

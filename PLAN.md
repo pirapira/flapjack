@@ -1366,6 +1366,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Extend scalar source expression semantics to subtraction, bitwise
   operations, all comparison constructors, and logical shifts, with executable
   Nat regressions.
+- [x] Enforce CakeML's `word_sh` range rule in the generic full-shift helper:
+  zero is valid, while nonzero amounts at least the target word width fail.
 - [x] Add scoped local-declaration semantics to the base, stateful,
   call-aware, and handler-aware scalar source evaluators, with focused
   regressions.

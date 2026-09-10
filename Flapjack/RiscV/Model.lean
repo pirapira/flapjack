@@ -28,6 +28,10 @@ instance bitVecWordShiftLeft : ShiftLeft (Word width) :=
 instance bitVecWordShiftRight : ShiftRight (Word width) :=
   ⟨fun value amount => value >>> amount.toNat⟩
 
+instance bitVecWordPanShiftWidth : PanShiftWidth (Word width) where
+  width := width
+  amount := BitVec.toNat
+
 instance bitVecWordArithmeticShiftRight [NeZero width] :
     ArithmeticShiftRight (Word width) :=
   ⟨fun value amount => BitVec.sshiftRight value amount.toNat⟩

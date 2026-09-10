@@ -2256,6 +2256,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   temporary restoration and post-handler state relation.
 - [x] Generalize the structured FFI source-to-Crep boundary over nonempty
   source and compiled function environments, with an executable regression.
+- [x] Add a mixed-fuel structured sequence relation and exercise an FFI
+  continuation with the source/Crep five-step lowering cost.
 - [x] Extend the compact Crep FFI boundary with explicit terminal `FinalFFI`
   control results, preserving the existing normal-handler API and proving the
   corresponding external-call equation.

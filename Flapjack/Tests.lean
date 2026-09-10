@@ -60,6 +60,7 @@ import Flapjack.Test.SourceToCrepeHandlers
 import Flapjack.Test.SourceToCrepeFfi
 import Flapjack.Test.CrepeFfiCorrectness
 import Flapjack.Test.CrepeFfiRelation
+import Flapjack.Test.CrepeFfiSequenceRelation
 import Flapjack.Test.CrepeHandlerCorrectness
 import Flapjack.Test.CrepToLoopCorrectness
 import Flapjack.Test.CorrectnessConditional

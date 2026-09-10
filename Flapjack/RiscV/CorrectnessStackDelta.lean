@@ -100,4 +100,72 @@ theorem executeStackRemoveStackFree_small [NeZero width]
       hwordsZero, hstackPointerFinNonzero, hscratchFinNonzero,
       Ne.symm hscratchPointer, hzero]
 
+theorem compileStackProgramNatToRiscV_stackAlloc_small [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel words : Nat)
+    (hstackPointer : config.stackPointer < 32)
+    (hscratch : config.scratch < 32)
+    (hwords : words ≤ 255) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.stackAlloc words : StackProg Nat) =
+      some (if words = 0 then [] else
+        [.addi ⟨config.scratch, hscratch⟩ 0
+           (BitVec.ofNat width (config.bytesInWord * words)),
+         .sub ⟨config.stackPointer, hstackPointer⟩
+           ⟨config.stackPointer, hstackPointer⟩
+           ⟨config.scratch, hscratch⟩]) := by
+  by_cases hwordsZero : words = 0
+  · simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+      compileLabSection, labProgramToSectionAfterStackRemove,
+      labProgramToSection, labSectionNatToWord, labLineNatToWord,
+      labLabel, labIsSequence, labFlatten, labCompileLines,
+      labCollectLabels,
+      hwordsZero, stackRemoveStackAlloc, stackRemoveStackDelta,
+      stackRemoveComplete, stackProgDepth, stackRemoveFuel]
+  · simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+      compileLabSection, labProgramToSectionAfterStackRemove,
+      labProgramToSection, labSectionNatToWord, labLineNatToWord,
+      labLabel, labIsSequence, labFlatten, labCompileLines,
+      labCompilePlain, labCollectLabels, labLineInstructionCount,
+      labBinOpInstruction, labPlainNatToWord, registerOfNat,
+      hwordsZero, hwords, hstackPointer, hscratch, stackRemoveStackAlloc,
+      stackRemoveStackDelta,
+      stackRemoveJoin,
+      stackRemoveComplete, stackProgDepth, stackRemoveFuel] <;>
+      congr 1
+
+theorem compileStackProgramNatToRiscV_stackFree_small [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel words : Nat)
+    (hstackPointer : config.stackPointer < 32)
+    (hscratch : config.scratch < 32)
+    (hwords : words ≤ 255) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.stackFree words : StackProg Nat) =
+      some (if words = 0 then [] else
+        [.addi ⟨config.scratch, hscratch⟩ 0
+           (BitVec.ofNat width (config.bytesInWord * words)),
+         .add ⟨config.stackPointer, hstackPointer⟩
+           ⟨config.stackPointer, hstackPointer⟩
+           ⟨config.scratch, hscratch⟩]) := by
+  by_cases hwordsZero : words = 0
+  · simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+      compileLabSection, labProgramToSectionAfterStackRemove,
+      labProgramToSection, labSectionNatToWord, labLineNatToWord,
+      labLabel, labIsSequence, labFlatten, labCompileLines,
+      labCollectLabels,
+      hwordsZero, stackRemoveStackFree, stackRemoveStackDelta,
+      stackRemoveComplete, stackProgDepth, stackRemoveFuel]
+  · simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+      compileLabSection, labProgramToSectionAfterStackRemove,
+      labProgramToSection, labSectionNatToWord, labLineNatToWord,
+      labLabel, labIsSequence, labFlatten, labCompileLines,
+      labCompilePlain, labCollectLabels, labLineInstructionCount,
+      labBinOpInstruction, labPlainNatToWord, registerOfNat,
+      hwordsZero, hwords, hstackPointer, hscratch, stackRemoveStackFree,
+      stackRemoveStackDelta,
+      stackRemoveJoin,
+      stackRemoveComplete, stackProgDepth, stackRemoveFuel] <;>
+      congr 1
+
 end Flapjack.RiscV

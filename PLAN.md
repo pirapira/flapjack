@@ -2124,6 +2124,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   so compiled exception handlers can consume FFI-produced return data.
 - [x] Add a reusable full-Crepe normal-step sequencing contract and a concrete
   FFI continuation regression that observes the returned value.
+- [x] Generalize full-Crepe sequencing over source and compiled function tables
+  and prove caught-handler returns short-circuit following continuations.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

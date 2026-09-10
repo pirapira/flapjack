@@ -171,6 +171,23 @@ def statefulNormalCallRejected : Bool :=
 
 #guard statefulNormalCallRejected
 
+def statefulBreakCallRejected : Bool :=
+  (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] [("break", [], .break)] (BitVec.ofNat 64 0)
+    (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 10
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState none
+    "break" []).isNone
+
+def statefulContinueCallRejected : Bool :=
+  (evalPanValueFfiCallSteps statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] [("continue", [], .continue)] (BitVec.ofNat 64 0)
+    (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 10
+    (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState none
+    "continue" []).isNone
+
+#guard statefulBreakCallRejected
+#guard statefulContinueCallRejected
+
 def statefulExtCallProgram : Option (Word 64 × Nat × Nat) :=
   (evalPanValueFfiProgramSteps statefulTestContext statefulTestPrimitive
       statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)

@@ -1,5 +1,6 @@
 import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.Lab
+import Flapjack.RiscV.StepCorrectness
 
 /-!
 Machine-level correctness for the RISC-V FFI ABI.  The abstract Word FFI
@@ -531,6 +532,39 @@ theorem wordFunctionToRiscVWithCallsAndFfi_seq_simulation
       some (finalState, returns) := by
   simp [wordFunctionToRiscVWithCallsAndFfi, hfirstCompile, hsecondCompile,
     executeInstructionsWithFfi_append, hfirstExec, hsecondExec]
+
+/-!
+The uncounted machine agreement is also enough to recover an exact instruction
+step count.  This is intentionally phrased at the compiled Word boundary: a
+later source-to-Word theorem can supply the semantic agreement hypothesis
+without depending on the details of FFI service selection.
+-/
+theorem wordFunctionToRiscVWithCallsAndFfi_counted_simulation
+    [NeZero width] (context : WordCallFfiContext width)
+    (host : WordFfiHost width) (state finalState : State width)
+    (program : WordProg (Word width)) (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCallsAndFfi context program =
+      some (code, []))
+    (hsemantic :
+      (wordFunctionToRiscVWithCallsAndFfi context program).bind
+          (fun result =>
+            (executeInstructionsWithFfi host state result.1).map
+              (fun final => (final, ([] : List (Word width))))) =
+        some (finalState, [])) :
+    executeInstructionsWithFfiCounted host state code =
+      some (finalState, code.length) := by
+  have hrun : executeInstructionsWithFfi host state code = some finalState := by
+    cases hexecute : executeInstructionsWithFfi host state code with
+    | none =>
+        simp [hcompile, hexecute] at hsemantic
+    | some actualState =>
+        have hresult :
+            (actualState, ([] : List (Word width))) = (finalState, []) := by
+          simpa [hcompile, hexecute] using hsemantic
+        cases hresult
+        rfl
+  rw [executeInstructionsWithFfiCounted_spec]
+  simp [hrun]
 
 /-!
 The machine sequencing theorem and the evaluator sequencing theorem above are

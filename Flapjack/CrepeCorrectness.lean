@@ -1785,4 +1785,88 @@ theorem compile_full_pan_value_raise_word_correct
       evalCrepFullExp, updateCrepLocal, restoreCrepResult,
       hrestore]
 
+/-! Structured raise payloads are spilled in source order before the target
+    raises.  This two-word case is the first nontrivial instance of that
+    general payload relation. -/
+theorem compile_full_pan_value_raise_two_word_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord left right : α)
+    (exception : ExceptionId) (exceptionCode : α)
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hbytesInWord : context.bytesInWord = bytesInWord) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord 5
+      sourceLocals sourceGlobals sourceMemory
+      (.raise exception (.rStruct [.const left, .const right])) =
+      some (.raised (fun _ => none) sourceGlobals sourceMemory
+        exception (.rStruct [.word left, .word right])) ∧
+    evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress 15 state
+      (compileProg context
+        (.raise exception (.rStruct [.const left, .const right]))) =
+      some (.raised
+        { state with
+          memory := updateMemory
+            (updateMemory state.memory 0 left)
+            (0 + bytesInWord) right }
+        exceptionCode) := by
+  constructor
+  · have hlimit : panValuePayloadWithinLimit structs
+        (.rStruct [.word left, .word right]) = true := by
+      exact panValuePayloadWithinLimit_rStruct_two_words structs left right
+    simp [evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp,
+      evalPanValueExp.evalPanValueExps, hlimit]
+  · have hcompile : compileExp context
+        (.rStruct [.const left, .const right]) =
+        ([.const left, .const right], .comb [.one, .one]) := by
+      simp [compileExp, compileExp.compileExpList]
+    have hnames : freshNames context 2 1 =
+        [context.maxVar + 1, context.maxVar + 2] := by
+      simp [freshNames, List.range, List.range.loop, Nat.add_assoc]
+    have hprogram : compileProg context
+          (.raise exception (.rStruct [.const left, .const right])) =
+        (.seq
+          (nestedDecs [context.maxVar + 1, context.maxVar + 2]
+            [.const left, .const right]
+            (crepNestedSeq
+              (storeGlobals 0 context.bytesInWord
+                [.var (context.maxVar + 1), .var (context.maxVar + 2)])))
+          (.raise exceptionCode)) := by
+      simp only [compileProg, hcompile, Shape.shapeSize,
+        List.length_cons, List.length_nil]
+      rw [hnames]
+      simp [hlookup]
+    rw [hprogram]
+    have hrestore : restoreCrepLocal
+        (restoreCrepLocal
+          (updateCrepLocal
+            (updateCrepLocal state.locals (context.maxVar + 1) left)
+            (context.maxVar + 2) right)
+          (context.maxVar + 2) (state.locals (context.maxVar + 2)))
+        (context.maxVar + 1) (state.locals (context.maxVar + 1)) =
+        state.locals := by
+      funext current
+      by_cases hsecond : current = context.maxVar + 2
+      · simp [restoreCrepLocal, hsecond]
+      · by_cases hfirst : current = context.maxVar + 1 <;>
+          simp [restoreCrepLocal, updateCrepLocal, hsecond, hfirst]
+    simp [nestedDecs,
+      crepNestedSeq, storeGlobals, evalCrepFullProg,
+      evalCrepFullExp, updateCrepLocal, restoreCrepResult,
+      hrestore, hbytesInWord]
+
 end Flapjack

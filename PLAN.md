@@ -2200,6 +2200,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   transition.
 - [x] Prove the closed-word raise boundary, including exception-code lookup,
   payload spilling to global memory, and the resulting Crep exception.
+- [x] Verify a two-word structured raise payload, preserving source order in
+  the global spill and the target exception result.
 - [x] Prove the word declaration-binding source-to-Crep boundary, including
   fresh-slot allocation and restoration of the shadowed local.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

@@ -21,8 +21,20 @@ def restoreCrepFfiTemps (state original : CrepState α) (offset : Nat) :
           (restoreCrepLocal
             (restoreCrepLocal state.locals (offset + 4) (original.locals (offset + 4)))
             (offset + 3) (original.locals (offset + 3)))
-          (offset + 2) (original.locals (offset + 2)))
+        (offset + 2) (original.locals (offset + 2)))
         (offset + 1) (original.locals (offset + 1)) }
+
+def restoreCrepOneTemp (state original : CrepState α) (name : Nat) :
+    CrepState α :=
+  { state with locals := restoreCrepLocal state.locals name (original.locals name) }
+
+@[simp] theorem restoreCrepLocal_update_same (locals : Nat → Option α)
+    (name : Nat) (value : α) (oldValue : Option α) :
+    restoreCrepLocal (updateCrepLocal locals name value) name oldValue =
+      restoreCrepLocal locals name oldValue := by
+  funext current
+  by_cases h : current = name <;>
+    simp [restoreCrepLocal, updateCrepLocal, h]
 
 theorem compile_full_extCall_simulation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -189,6 +201,60 @@ theorem compile_full_pan_value_extCall_simulation
       harrayLengthValue, hffi, restoreCrepResult, restoreCrepFfiTemps]
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceValues, hsource]
 
+/-! Structured exception production is the corresponding control-result
+    boundary.  The source retains the payload as a PanValue, whereas Crep
+    writes its flattened word payload to the return area before raising the
+    translated exception code. -/
+theorem compile_full_pan_value_raise_simulation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals : VarName → Option (PanValue α))
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (functions : List (FunName × List VarName × Prog α))
+    (contracts : Option PanValueCallContracts)
+    (exception : ExceptionId) (exceptionCode : α)
+    (value : Exp α) (compiledValue : CrepExp α)
+    (sourceValue targetValue : α)
+    (hcompile : compileExp context value = ([compiledValue], .one))
+    (hexception : lookupInfo exception context.exceptions = some exceptionCode)
+    (hsourceValue : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord value = some (.word sourceValue))
+    (hcompiledValue : evalCrepFullExp state.locals state.memory
+      baseAddress topAddress compiledValue = some targetValue)
+    (hpayload : targetValue = sourceValue)
+    (hvalid : panValueExceptionValid structs contracts exception
+      (.word sourceValue) = true)
+    (hwithin : panValuePayloadWithinLimit structs (.word sourceValue) = true) :
+    evalCrepFullProg [] crepPrimitive ffi sharedMem baseAddress topAddress
+        (fuel + 5) state (compileProg context (.raise exception value)) =
+      some (.raised
+        (restoreCrepOneTemp
+          { state with memory := updateMemory state.memory 0 sourceValue }
+          state (context.maxVar + 1)) exceptionCode) ∧
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive sourceHandler structs
+      functions baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory (.raise exception value)
+      (contracts := contracts) (memoryHandler := none) =
+      some (.raised (fun _ => none) sourceGlobals sourceMemory exception
+        (.word sourceValue)) := by
+  constructor
+  · simp [compileProg, hcompile, hexception, freshNames, nestedDecs,
+      storeGlobals, crepNestedSeq, evalCrepFullProg, evalCrepFullExp,
+      hcompiledValue, hpayload, updateCrepLocal, restoreCrepResult,
+      restoreCrepOneTemp]
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceValue, hvalid,
+      hwithin]
+
 /-! A normal source/Crepe step can be composed with an arbitrary
 continuation.  This is the sequencing boundary needed to lift the local FFI
 contract above to larger handler bodies without unfolding either evaluator.
@@ -318,18 +384,6 @@ theorem compile_full_call_handler_simulation
     exception handlerVar exceptionCode handlerProgram handlerNames
     compiledArguments hfunction hexception hhandler harguments]
   simpa [evalCrepFullProg] using hcall
-
-def restoreCrepOneTemp (state original : CrepState α) (name : Nat) :
-    CrepState α :=
-  { state with locals := restoreCrepLocal state.locals name (original.locals name) }
-
-@[simp] theorem restoreCrepLocal_update_same (locals : Nat → Option α)
-    (name : Nat) (value : α) (oldValue : Option α) :
-    restoreCrepLocal (updateCrepLocal locals name value) name oldValue =
-      restoreCrepLocal locals name oldValue := by
-  funext current
-  by_cases h : current = name <;>
-    simp [restoreCrepLocal, updateCrepLocal, h]
 
 /-! Exception production is the other handler-facing lowering in `pan_to_crep`.
 The payload is first materialized in a fresh local and then written to the

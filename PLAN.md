@@ -2111,6 +2111,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   retaining the generated return-slot setup and handler continuation.
 - [x] Prove source-to-Crepe exception production writes the payload to the
   global return area before restoring the generated temporary local.
+- [x] Lift exception production to the structured source evaluator, retaining
+  the payload validity and translated exception-code obligations.
 - [x] Prove the scalar source-to-Crepe return boundary as a full control-result
   equation, preserving the returned value and unchanged caller state.
 - [x] Expose a direct source-result-to-linked-RISC-V simulation equation for

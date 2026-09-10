@@ -96,6 +96,36 @@ example :
       zeroState, readRegister, writeRegister]
   · rfl
 
+example (final : ExactRiscVFfiState 64 Unit)
+    (hcall : exactRiscVFfiCall { services := [("echo", 7)] }
+        { machine := executeInstructions exactFfiState.machine
+            [.addi 10 1 0, .addi 11 2 0, .addi 12 3 0, .addi 13 4 0,
+             .addi 14 0 (BitVec.ofNat 64 7)],
+          ffi := exactFfiState.ffi } 7 = .normal final) :
+    executeInstructionsWithExactFfiCounted
+        { services := [("echo", 7)] } exactFfiState
+        [.addi 10 1 0, .addi 11 2 0, .addi 12 3 0, .addi 13 4 0,
+         .addi 14 0 (BitVec.ofNat 64 7), .ecall] =
+      (.normal final, 6) := by
+  apply wordFunctionToRiscVWithCallsAndFfiAndLoops_exactFfi_counted_simulation_targets
+    (context := { services := [("echo", 7)] })
+    (targets := [(99, BitVec.ofNat 64 100, [2], [10])])
+    (state := exactFfiState) (final := final) (function := "echo")
+    (configuration := 1) (configurationLength := 2)
+    (array := 3) (arrayLength := 4) (service := 7)
+    (code := [.addi 10 1 0, .addi 11 2 0, .addi 12 3 0, .addi 13 4 0,
+      .addi 14 0 (BitVec.ofNat 64 7), .ecall])
+  · rfl
+  · simp [wordFunctionToRiscVWithCallsAndFfiAndLoops,
+      wordFunctionToRiscVWithCallsAndFfiAndLoopsAux,
+      wordFunctionToRiscVWithCallsAndFfi, wordFfiToRiscV,
+      lookupWordFfiService, wordRegisterMoves, registerOfNat,
+      wordControlInstructions]
+  · decide
+  · simp [exactFfiState, exactFfiMachineWithBytes, exactFfiMachine,
+      zeroState, readRegister, writeRegister]
+  · exact hcall
+
 example :
     exactRiscVFfiCall
         { services := [("echo", 7)] } exactFfiAbiState 7 =

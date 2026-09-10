@@ -2194,6 +2194,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Prove the non-aliasing StackRemove stack-store boundary: copying a source
   register to scratch, calculating the frame-cell address, and storing it has
   the exact RISC-V byte-memory effect of writing that source word.
+- [x] Prove the scratch-aliasing StackRemove stack-store boundary, covering the
+  optimized path that omits the redundant source-to-scratch copy.
 
 ## First implementation slice
 

@@ -688,10 +688,9 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
             (state, wordSsaSeq
               (wordSsaReconcileTo state frame.entry frame.entryNames)
               (.continue label))
-    | .locValue destination source =>
-        let source := wordSsaRead state source
+    | .locValue destination label =>
         let (state, destination) := wordSsaFresh state destination
-        (state, .locValue destination source)
+        (state, .locValue destination label)
     | .ffi function configuration configurationLength array arrayLength live =>
         let names := (live.1 ++ live.2).eraseDups
         let (stackState, stackNext, stackMove) :=
@@ -928,7 +927,7 @@ def wordProgReadVars : WordProg α → List Nat
   | .raise exception => [exception]
   | .return _ values => values
   | .tick => []
-  | .locValue _ source => [source]
+  | .locValue _ _label => []
   | .call returns _ arguments handler =>
       arguments ++ (match returns with
         | none => []
@@ -1005,7 +1004,7 @@ def wordPhysicalFixedSources (parameters : List Nat) (program : WordProg α) :
 def wordProgPreferenceEdges : WordProg α → List (Nat × Nat)
   | .move _ moves => moves
   | .assign destination (.var source) => [(destination, source)]
-  | .locValue destination source => [(destination, source)]
+  | .locValue _destination _label => []
   | .seq first second =>
       wordProgPreferenceEdges first ++ wordProgPreferenceEdges second
   | .ite _ _ _ thenBranch elseBranch =>
@@ -1237,7 +1236,7 @@ def wordClashTree : WordProg α → List (List Nat × List Nat) → WordClashTre
   | .raise exception, _ => .delta [] [exception]
   | .return _ values, _ => .delta [] values
   | .tick, _ => .delta [] []
-  | .locValue destination source, _ => .delta [destination] [source]
+  | .locValue destination _label, _ => .delta [destination] []
   | .call returns _ arguments none, frames =>
       match returns with
       | none => .set arguments.eraseDups
@@ -1700,8 +1699,8 @@ def wordApplyColour (colour : Nat → Nat) : WordProg α → WordProg α
   | .raise exception => .raise (colour exception)
   | .return label values => .return label (values.map colour)
   | .tick => .tick
-  | .locValue destination source =>
-      .locValue (colour destination) (colour source)
+  | .locValue destination label =>
+      .locValue (colour destination) label
   | .call returns target arguments none =>
       .call (returns.map (fun (values, cutsets, returnCode, returnLabel, entryLabel) =>
         (values.map colour,

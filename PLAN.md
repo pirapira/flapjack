@@ -2185,6 +2185,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   relating flattened Crep words to the source structured result.
 - [x] Verify the structured return boundary on closed records of word
   constants through the actual compiler and full Crep evaluator.
+- [x] Prove structured source and compiled Crep branch selection agree for a
+  closed equality conditional with word-valued branches.
 - [x] Prove that a resolved cross-section Lab jump executes to the target
   section on the RISC-V model, rather than only matching emitted code shape.
 - [x] Prove Lab `linkValue` materializes a resolved continuation in ABI

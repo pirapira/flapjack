@@ -527,4 +527,40 @@ theorem compile_full_pan_value_record_return_const_correct
     (by simpa [panValueShape, Function.comp_def] using hcompile values)
     (by simpa [hflat values] using hcompiled values)
 
+/-! The structured source boundary also covers branch selection.  This closed
+    equality conditional exercises the source boolean interpretation and the
+    compiled Crep nonzero test, while both branches retain word-shaped values. -/
+theorem compile_full_pan_value_ite_word_const_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord conditionLeft conditionRight : α)
+    (thenValue elseValue : α) (one_ne_zero : (1 : α) ≠ 0) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 20 state
+        (compileProg context
+          (.ite (.cmp .equal (.const conditionLeft) (.const conditionRight))
+            (.return (.const thenValue)) (.return (.const elseValue)))) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.ite (.cmp .equal (.const conditionLeft) (.const conditionRight))
+          (.return (.const thenValue)) (.return (.const elseValue)))).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  by_cases hcondition : conditionLeft == conditionRight
+  · simp [compileProg, compileExp, evalCrepFullResult, evalCrepFullProg,
+      evalCrepFullExp, evalCrepFullExps, evalPanValueProg,
+      evalPanValueProgWithPrimitive, evalPanValueExp,
+      evalPanCmp, hcondition, one_ne_zero,
+      panValueFlatWords, panValueFlatWordsFuel]
+  · simp [compileProg, compileExp, evalCrepFullResult, evalCrepFullProg,
+      evalCrepFullExp, evalCrepFullExps, evalPanValueProg,
+      evalPanValueProgWithPrimitive, evalPanValueExp,
+      evalPanCmp, hcondition,
+      panValueFlatWords, panValueFlatWordsFuel]
+
 end Flapjack

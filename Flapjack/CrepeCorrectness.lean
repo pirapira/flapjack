@@ -996,4 +996,36 @@ theorem compile_full_pan_value_storeByte_loadByte_word_correct
     updateMemory, updatePanValueMemory, updatePanValueMap,
     panValueFlatWords, panValueFlatWordsFuel]
 
+/-! A zero-condition loop is the first loop-shaped source-to-Crep
+    correctness case.  Its body is deliberately arbitrary: neither
+    evaluator enters it, so the state and normal-result boundary are
+    preserved without imposing a body invariant. -/
+theorem compile_full_pan_value_while_zero_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (body : Prog α) :
+    evalCrepFullResult [] primitive ffi sharedMem
+        baseAddress topAddress (fuel + 1) state
+        (compileProg context (.while (.const 0) body)) =
+      (evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        structs [] baseAddress topAddress bytesInWord (fuel + 1)
+        locals globals sourceMemory (.while (.const 0) body)).map
+        (fun result => match result with
+        | .normal _ _ _ => []
+        | .returned _ _ _ values => values.flatMap panValueFlatWords
+        | .raised _ _ _ _ _ => []
+        | .broke _ _ _ | .continued _ _ _ => []) := by
+  simp [compileProg, compileExp, evalCrepFullResult, evalCrepFullProg,
+    evalCrepFullExp, evalPanValueProgWithPrimitiveCallsAndFfi,
+    evalPanValueExp]
+
 end Flapjack

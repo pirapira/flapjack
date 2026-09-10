@@ -67,4 +67,28 @@ example :
     (hscratchAddress := by decide +kernel)
     (hzero := by simp [zeroState])
 
+example :
+    compileStackProgramNatToRiscV (width := 64) { services := [] }
+      stackRiscVRemoveConfig 2 3 (.stackSetSize 6 : StackProg Nat) =
+      some [.addi 31 0 (BitVec.ofNat 64 3), .sll 6 6 31,
+        .or 20 21 21, .add 20 20 6] := by
+  simpa [stackRiscVRemoveConfig, Fin.ext_iff] using
+    (compileStackProgramNatToRiscV_stackSetSize (width := 64)
+      { services := [] } stackRiscVRemoveConfig 2 3 6
+      (by simp [stackRiscVRemoveConfig]) (by simp [stackRiscVRemoveConfig])
+      (by simp [stackRiscVRemoveConfig]) (by simp [stackRiscVRemoveConfig])
+      (by omega))
+
+example :
+    compileStackProgramNatToRiscV (width := 64) { services := [] }
+      stackRiscVRemoveConfig 2 3 (.stackSetSize 31 : StackProg Nat) =
+      some [.addi 29 0 (BitVec.ofNat 64 3), .sll 31 31 29,
+        .or 20 21 21, .add 20 20 31] := by
+  simpa [stackRiscVRemoveConfig, Fin.ext_iff] using
+    (compileStackProgramNatToRiscV_stackSetSize (width := 64)
+      { services := [] } stackRiscVRemoveConfig 2 3 31
+      (by simp [stackRiscVRemoveConfig]) (by simp [stackRiscVRemoveConfig])
+      (by simp [stackRiscVRemoveConfig]) (by simp [stackRiscVRemoveConfig])
+      (by omega))
+
 end Flapjack.RiscV

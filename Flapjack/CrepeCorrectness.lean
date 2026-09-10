@@ -404,4 +404,127 @@ theorem compile_full_pan_value_return_of_exp
     hcompiled, evalPanValueProg,
     evalPanValueProgWithPrimitive, hsource, hvalid]
 
+/-! A concrete structured witness for the preceding abstraction: a record of
+    closed word constants is flattened by the real compiler and returned by
+    the full Crep evaluator with the same words as the source semantics. -/
+theorem compile_full_pan_value_record_return_const_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (values : List α)
+    (hvalid : panValuePayloadWithinLimit structs
+      (.rStruct (values.map PanValue.word)) = true) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 1 state
+        (compileProg context
+          (.return (.rStruct (values.map (fun value => .const value))))) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.return (.rStruct (values.map (fun value => .const value))))).map
+    (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  have hsourceExps : ∀ values : List α,
+      evalPanValueExp.evalPanValueExps structs locals globals
+        (fun address => (state.memory address).map PanValue.word)
+        baseAddress topAddress bytesInWord
+        (values.map (fun value => .const value)) =
+      some (values.map PanValue.word) := by
+    intro values
+    induction values with
+    | nil => simp [evalPanValueExp.evalPanValueExps]
+    | cons value values ih =>
+        simp [evalPanValueExp.evalPanValueExps, evalPanValueExp, ih]
+  have hsource : evalPanValueExp structs locals globals (fun address =>
+      (state.memory address).map PanValue.word)
+      baseAddress topAddress bytesInWord
+      (.rStruct (values.map (fun value => .const value))) =
+      some (.rStruct (values.map PanValue.word)) := by
+    simp only [evalPanValueExp]
+    rw [hsourceExps values]
+    rfl
+  have hcompileExpList : ∀ values : List α,
+      compileExp.compileExpList context
+        (values.map (fun value => .const value)) =
+      values.map (fun value => ([.const value], .one)) := by
+    intro values
+    induction values with
+    | nil => simp [compileExp.compileExpList]
+    | cons value values ih =>
+        simp [compileExp.compileExpList, compileExp, ih]
+  have hflatCompilePairs : ∀ values : List α,
+      List.flatMap Prod.fst
+          (values.map (fun value => ([CrepExp.const value], Shape.one))) =
+        values.map (fun value => .const value) := by
+    intro values
+    induction values with
+    | nil => rfl
+    | cons value values ih => simp [ih]
+  have hcompile : ∀ values : List α, compileExp context
+      (.rStruct (values.map (fun value => .const value))) =
+      (values.map (fun value => .const value),
+        .comb (values.map (fun _ => .one))) := by
+    intro values
+    simp [compileExp, hcompileExpList, hflatCompilePairs,
+      Function.comp_def]
+  have hcompiled : ∀ values : List α, evalCrepFullExps state.locals state.memory
+      baseAddress topAddress (values.map (fun value => .const value)) =
+      some values := by
+    intro values
+    induction values with
+    | nil => simp [evalCrepFullExps]
+    | cons value values ih =>
+        simp [evalCrepFullExps, evalCrepFullExp, ih]
+  have hlistFuel : ∀ values : List α,
+      panValueFlatValueFuel.panValueFlatValueListFuel
+        (values.map PanValue.word) = values.length := by
+    intro values
+    induction values with
+    | nil => simp [panValueFlatValueFuel.panValueFlatValueListFuel]
+    | cons value values ih =>
+        simp [panValueFlatValueFuel.panValueFlatValueListFuel,
+          panValueFlatValueFuel, ih, Nat.add_comm]
+  have hvalueFuel : ∀ values : List α,
+      panValueFlatValueFuel (.rStruct (values.map PanValue.word)) =
+        values.length + 1 := by
+    intro values
+    simp only [panValueFlatValueFuel]
+    rw [hlistFuel values]
+    simpa using (Nat.add_comm 1 values.length)
+  have hwordsFuel : ∀ (fuel : Nat) (values : List α),
+      values.length < fuel →
+      panValueFlatWordsFuel.panValueFlatWordsListFuel fuel
+          (values.map PanValue.word) = values := by
+    intro fuel values
+    induction values generalizing fuel with
+    | nil => intro; simp [panValueFlatWordsFuel.panValueFlatWordsListFuel]
+    | cons value values ih =>
+        cases fuel with
+        | zero => simp_all
+        | succ fuel =>
+            intro hlength
+            cases fuel with
+            | zero => simp_all
+            | succ fuel =>
+                simp only [List.length_cons] at hlength
+                have htail : values.length < fuel + 1 := by omega
+                simp [panValueFlatWordsFuel.panValueFlatWordsListFuel,
+                  panValueFlatWordsFuel, ih (fuel + 1) htail]
+  have hflat : ∀ values : List α,
+      panValueFlatWords (.rStruct (values.map PanValue.word)) = values := by
+    intro values
+    rw [panValueFlatWords, hvalueFuel values]
+    simp only [panValueFlatWordsFuel]
+    exact hwordsFuel (values.length + 1) values (by omega)
+  exact compile_full_pan_value_return_of_exp context structs locals globals
+    state primitive ffi sharedMem baseAddress topAddress bytesInWord
+    (.rStruct (values.map (fun value => .const value)))
+    (.rStruct (values.map PanValue.word))
+    (values.map (fun value => .const value)) hsource hvalid
+    (by simpa [panValueShape, Function.comp_def] using hcompile values)
+    (by simpa [hflat values] using hcompiled values)
+
 end Flapjack

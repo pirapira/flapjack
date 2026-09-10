@@ -2228,6 +2228,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   word memory, exception codes, and returned-value flattening.
 - [x] Prove preservation of the flattened-local relation when a structured
   declaration local is extended with a shape and its Crep slot witness.
+- [x] Prove the compiled declaration-table head lookup exposes flattened
+  parameter slots and the exact compiled function body.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

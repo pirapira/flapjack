@@ -115,4 +115,28 @@ theorem compileExp_rStruct_const_words_correct
   simp [compileExp, evalPanValueExp, hcompileList, hsourceList, hcrepList,
     hflat]
 
+theorem compileExp_binop_const_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepLocals : Nat → Option α) (crepMemory : α → Option α)
+    (baseAddress topAddress bytesInWord : α)
+    (operator : BinOp) (left right : α) :
+    compileExp context (.op operator [.const left, .const right]) =
+      ([.op operator [.const left, .const right]], .one) ∧
+    evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.op operator [.const left, .const right]) =
+      some (.word (evalPanBinOp operator left right)) ∧
+    evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+      (.op operator [.const left, .const right]) =
+      some (evalPanBinOp operator left right) := by
+  simp [compileExp, compileExp.compileExpList, cexpHeads,
+    evalPanValueExp, evalPanValueExp.evalPanValueExps,
+    evalCrepFullExp]
+
 end Flapjack

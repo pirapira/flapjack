@@ -70,6 +70,45 @@ theorem executeInstructionsWithExactFfi_abi [NeZero width]
   rw [hservice_read', hresult']
   cases result <;> rfl
 
+/-! The compiler-facing form of the ABI theorem.  The Word selector emits
+    register moves from natural-number locations, whereas the exact machine
+    boundary consumes `Fin 32` registers.  Keeping this conversion here makes
+    the generated FFI code usable in a pass-level correctness proof without
+    repeating the selector's list-shape calculation. -/
+theorem wordFfiToRiscV_exactFfi_simulation [NeZero width]
+    (context : WordFfiContext)
+    (state : ExactRiscVFfiState width σ)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Fin 32)
+    (service : Nat) (code : List (Instruction width))
+    (result : ExactRiscVFfiResult width σ)
+    (hservice : lookupWordFfiService function context.services = some service)
+    (hcode : wordFfiToRiscV context function configuration.val
+        configurationLength.val array.val arrayLength.val = some code)
+    (hservice_bounded : service < 2 ^ width)
+    (hzero : readRegister state.machine 0 = 0)
+    (hresult : exactRiscVFfiCall context
+        { machine := executeInstructions state.machine
+            [.addi 10 configuration (0#width),
+             .addi 11 configurationLength (0#width),
+             .addi 12 array (0#width),
+             .addi 13 arrayLength (0#width),
+             .addi 14 0 (BitVec.ofNat width service)],
+          ffi := state.ffi } service = result) :
+    executeInstructionsWithExactFfi context state code = result := by
+  have hcode' : code =
+      [.addi 10 configuration (0#width),
+       .addi 11 configurationLength (0#width),
+       .addi 12 array (0#width),
+       .addi 13 arrayLength (0#width),
+       .addi 14 0 (BitVec.ofNat width service), .ecall] := by
+    simp [wordFfiToRiscV, hservice, wordRegisterMoves, registerOfNat] at hcode
+    exact hcode.symm
+  rw [hcode']
+  apply executeInstructionsWithExactFfi_abi context state service
+    configuration configurationLength array arrayLength result hservice_bounded hzero
+  exact hresult
+
 theorem exactWriteBytesAux_pc [NeZero width] (address : Word width)
     (state : State width) (offset : Nat) (bytes : List UInt8) :
     (exactWriteBytesAux address state offset bytes).pc = state.pc := by

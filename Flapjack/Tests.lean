@@ -107,6 +107,7 @@ import Flapjack.Test.CrepeSourceWordRecordDeclarationCorrectness
 import Flapjack.Test.CrepeSourceWordRecordDeclarationSimulationCorrectness
 import Flapjack.Test.CrepeSourceWordRecordRaiseCorrectness
 import Flapjack.Test.CrepeSourceWordRecordDeclarationReturnCorrectness
+import Flapjack.Test.CrepeIdentityCallCorrectness
 import Flapjack.Test.CrepeSourceWordLoopCorrectness
 import Flapjack.Test.CrepeInline
 import Flapjack.Test.CrepeInlineRewrite

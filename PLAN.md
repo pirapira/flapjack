@@ -2236,6 +2236,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   `cexpHeads` and `evalPanBinOp`.
 - [x] Prove binary-operation agreement for one-word local operands through the
   flattened-local state relation.
+- [x] Lift related-local binary-operation agreement through the full Crep
+  return boundary.
 - [x] Prove comparison, shift, and Pancake multiplication expression agreement
   for word constants.
 - [x] Prove field projection agreement for a word field of a recursively

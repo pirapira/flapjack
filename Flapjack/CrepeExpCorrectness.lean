@@ -192,6 +192,48 @@ theorem compileExp_binop_local_words_correct
     evalPanValueExp.evalPanValueExps, hleftSource, hrightSource,
     evalCrepFullExp, hleftSlot, hrightSlot]
 
+theorem compile_full_pan_value_return_local_binop_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (operator : BinOp)
+    (leftName rightName : VarName) (leftSlot rightSlot : Nat)
+    (leftValue rightValue : α)
+    (hleftLookup : lookupInfo leftName context.vars = some (.one, [leftSlot]))
+    (hrightLookup : lookupInfo rightName context.vars = some (.one, [rightSlot]))
+    (hleftSource : sourceLocals leftName = some (.word leftValue))
+    (hrightSource : sourceLocals rightName = some (.word rightValue))
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      (fun address => (state.memory address).map PanValue.word) state) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 1 state
+        (compileProg context
+          (.return (.op operator
+            [.var .local leftName, .var .local rightName]))) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        sourceLocals sourceGlobals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.return (.op operator
+          [.var .local leftName, .var .local rightName]))).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  have hexp := compileExp_binop_local_words_correct context structs
+    sourceLocals sourceGlobals
+    (fun address => (state.memory address).map PanValue.word)
+    state.locals state.memory baseAddress topAddress bytesInWord operator
+    leftName rightName leftSlot rightSlot leftValue rightValue
+    hleftLookup hrightLookup hleftSource hrightSource hrel.2.1
+  exact compile_full_pan_value_return_word_of_exp context structs
+    sourceLocals sourceGlobals state primitive ffi sharedMem
+    baseAddress topAddress bytesInWord (evalPanBinOp operator leftValue rightValue)
+    (.op operator [.var .local leftName, .var .local rightName])
+    (CrepExp.op operator [CrepExp.var leftSlot, CrepExp.var rightSlot])
+    hexp.2.1 hexp.1 hexp.2.2
+
 theorem compileExp_cmp_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

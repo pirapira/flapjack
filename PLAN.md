@@ -2099,6 +2099,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   byte-level RISC-V FFI adapter, retaining the post-ABI machine-state witness.
 - [x] Lift the exact FFI bridge through the loop-aware RISC-V selector for
   generated FFI leaves.
+- [x] Generalize the loop-aware exact FFI bridge to carry the complete
+  call-target table, and regress that boundary with a nonempty target context.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

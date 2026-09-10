@@ -2171,6 +2171,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   generated no-ecall code, including its exact instruction count.
 - [x] Lift the full-SSA straight-line allocator/coloring simulation to the
   counted RISC-V executor, exposing the exact generated instruction length.
+- [x] Expose that counted full-SSA RISC-V simulation in the source
+  function-evaluator form needed to compose Pancake pass correctness.
 - [x] Prove that a resolved cross-section Lab jump executes to the target
   section on the RISC-V model, rather than only matching emitted code shape.
 - [x] Prove Lab `linkValue` materializes a resolved continuation in ABI

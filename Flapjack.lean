@@ -53,6 +53,7 @@ import Flapjack.CrepeCallRelation
 import Flapjack.CrepeFfiRelation
 import Flapjack.CrepeDecCallRelation
 import Flapjack.CrepeDeclarationRelation
+import Flapjack.CrepeDeclarationFuelRelation
 import Flapjack.CrepeProgramRelation
 import Flapjack.CrepeProgramBasicRelation
 import Flapjack.CrepeProgramReturnRelation

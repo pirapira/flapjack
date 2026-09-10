@@ -695,6 +695,56 @@ theorem compileStackProgramNatToRiscV_shift_noRotate_register_simulation
   | ror =>
       exact (hrotate rfl).elim
 
+theorem compileStackProgramNatToRiscV_rotateRight [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination left right : Nat)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationScratch : destination ≠ 31)
+    (hleftScratch : left ≠ 31) (hrightScratch : right ≠ 31) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.shift .ror destination left right : StackProg Nat) =
+      some [.ori 31 0 (BitVec.ofNat width width),
+        .sub 31 31 ⟨right, hright⟩,
+        .sll 31 ⟨left, hleft⟩ 31,
+        .srl ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩,
+        .or ⟨destination, hdestination⟩ ⟨destination, hdestination⟩ 31] := by
+  simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+    compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+    labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+    labLabel, labCompileLines, labCompilePlain, labShiftInstructions,
+    labCollectLabels, labLineInstructionCount, registerOfNat,
+    hdestination, hleft, hright, hdestinationScratch, hleftScratch,
+    hrightScratch, stackRemoveComplete, stackProgDepth, stackRemoveFuel]
+
+theorem compileStackProgramNatToRiscV_rotateRight_register_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination left right : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hrel : WordStackRegisterRelationExceptX31 source target)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationNonzero : destination ≠ 0)
+    (hzero : source.registers 0 = 0)
+    (hwidth : width = 32 ∨ width = 64)
+    (hdestinationScratch : destination ≠ 31)
+    (hleftScratch : left ≠ 31) (hrightScratch : right ≠ 31)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.shift .ror destination left right : StackProg Nat) =
+      some code) :
+    WordStackRegisterRelationExceptX31
+      (wordStackMachineWriteRegister source destination
+        (wordStackMachineShift .ror (source.registers left)
+          (source.registers right)))
+      (executeInstructions target code) := by
+  rw [compileStackProgramNatToRiscV_rotateRight context config sectionId initialLabel
+    destination left right hdestination hleft hright hdestinationScratch
+    hleftScratch hrightScratch] at hcode
+  cases hcode
+  simpa [wordStackMachineShift, Fin.ext_iff] using
+    (wordStackRegisterRelation_executeRor source target destination left right hrel
+      hdestination hleft hright hdestinationNonzero hzero hwidth
+      hdestinationScratch hleftScratch hrightScratch)
+
 theorem labCompilePlain_const_register_simulation
     [NeZero width] (source : WordStackMachineState width)
     (target : State width) (destination value : Nat)

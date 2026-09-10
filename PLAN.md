@@ -2188,6 +2188,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   and non-tail calls with temporary-variable isolation.
 - [x] Integrate recursive active-name Crepe inlining into the compiler pipeline,
   stopping recursive call chains without a fuel approximation.
+- [x] Prove the first StackRemove-to-RISC-V memory-boundary contract: the
+  emitted address-scratch stack-load sequence reads the little-endian word at
+  the frame-cell address and preserves all non-scratch registers.
 
 ## First implementation slice
 

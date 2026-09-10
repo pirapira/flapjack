@@ -36,6 +36,20 @@ theorem executeInstructionsCounted_spec [NeZero width]
       simp only [executeInstructionsCounted, executeInstructions, List.length_cons]
       rw [ih]
 
+theorem executeInstructionsCounted_append [NeZero width]
+    (state : State width) (first second : List (Instruction width)) :
+    executeInstructionsCounted state (first ++ second) =
+      let (middle, firstCount) := executeInstructionsCounted state first
+      let (final, secondCount) := executeInstructionsCounted middle second
+      (final, firstCount + secondCount) := by
+  induction first generalizing state with
+  | nil => simp [executeInstructionsCounted]
+  | cons instruction first ih =>
+      simp only [List.cons_append, executeInstructionsCounted]
+      rw [ih (state := execute state instruction)]
+      simp only [Prod.mk.injEq]
+      simp [Nat.add_assoc, Nat.add_comm]
+
 /-! The FFI-aware machine evaluator has the same exact count on successful
     execution.  Failed host transitions remain failures, but do not alter the
     count of a successful prefix. -/

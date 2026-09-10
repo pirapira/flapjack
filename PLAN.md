@@ -2204,6 +2204,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   the global spill and the target exception result.
 - [x] Prove the word declaration-binding source-to-Crep boundary, including
   fresh-slot allocation and restoration of the shadowed local.
+- [x] Exercise declaration collection and `compileToCrepe` through a concrete
+  identity declaration call and its flattened Crep return.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving
   source order across the fresh Crep slots.
 - [x] Add a compositional two-word declaration simulation theorem with separate

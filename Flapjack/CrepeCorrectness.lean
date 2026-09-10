@@ -304,4 +304,70 @@ theorem compile_full_pan_value_local_assign_return_word_correct
     panValueFlatWords,
     panValueFlatWordsFuel]
 
+/-! Sequence evaluation can now be composed at the structured source boundary.
+    The first component is required to complete normally in both semantics;
+    the continuation hypothesis is then reusable for any source statement.
+    This explicit state-threaded form is the induction interface needed for a
+    full Pancake-to-Crep simulation theorem. -/
+theorem compile_full_pan_value_seq_normal_compose
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (firstSourceLocals firstSourceGlobals : VarName → Option (PanValue α))
+    (firstSourceMemory : α → Option (PanValue α))
+    (state firstState : CrepState α)
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (first second : Prog α)
+    (hfirstSource : evalPanValueProg structs baseAddress topAddress bytesInWord
+      sourceLocals sourceGlobals sourceMemory first =
+        some (firstSourceLocals, firstSourceGlobals, firstSourceMemory, []))
+    (hfirstCrep : evalCrepFullProg [] primitive ffi sharedMem
+      baseAddress topAddress fuel state (compileProg context first) =
+        some (.normal firstState))
+    (hsecond : evalCrepFullResult [] primitive ffi sharedMem
+      baseAddress topAddress fuel firstState (compileProg context second) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        firstSourceLocals firstSourceGlobals firstSourceMemory second).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords)) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress
+        (fuel + 1) state (compileProg context (.seq first second)) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        sourceLocals sourceGlobals sourceMemory (.seq first second)).map
+    (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp only [compileProg, evalCrepFullResult, evalCrepFullProg]
+  rw [hfirstCrep]
+  change (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress fuel
+      firstState (compileProg context second)).bind (fun result =>
+        match result with
+        | .returned _ values => some values
+        | .normal _ => some []
+        | .raised _ _ | .broke _ _ | .continued _ _ => none) = _
+  have hsecond' :
+      (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress fuel
+        firstState (compileProg context second)).bind (fun result =>
+          match result with
+          | .returned _ values => some values
+          | .normal _ => some []
+          | .raised _ _ | .broke _ _ | .continued _ _ => none) =
+        (evalPanValueProg structs baseAddress topAddress bytesInWord
+          firstSourceLocals firstSourceGlobals firstSourceMemory second).map
+          (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+    exact hsecond
+  rw [hsecond']
+  have hfirstSource' :
+      evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
+        sourceLocals sourceGlobals sourceMemory (fun _ _ => none) first =
+        some (firstSourceLocals, firstSourceGlobals, firstSourceMemory, []) := by
+    simpa [evalPanValueProg] using hfirstSource
+  simp only [evalPanValueProg]
+  simp only [evalPanValueProgWithPrimitive]
+  rw [hfirstSource']
+  simp
+
 end Flapjack

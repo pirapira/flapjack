@@ -46,6 +46,20 @@ def ffiMachineWordHandler : FunName → Word 64 → Word 64 → Word 64 → Word
          .addi 14 0 (BitVec.ofNat 64 7)])
     else none
 
+def pipelineFfiIdentityHost : WordFfiHost 64 :=
+  fun service _ _ _ _ state =>
+    if service == 7 then some state else none
+
+def pipelineFfiIdentityHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
+    State 64 → Option (State 64) :=
+  fun function _ _ _ _ state =>
+    if function == "echo" then
+      some (executeInstructions state
+        [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
+         .addi 0 0 (BitVec.ofNat 64 28),
+         .addi 14 0 (BitVec.ofNat 64 7)])
+    else none
+
 example :
     executeInstructionsWithFfi ffiMachineHost ffiMachineState
       [.addi 10 2 (0#64), .addi 11 3 (0#64),
@@ -288,6 +302,20 @@ example :
             .addi 14 0 (BitVec.ofNat 64 7)]) := by
   apply executeCompiledPipelineFfi
   simp [ffiMachineState, zeroState, readRegister, writeRegister]
+
+example (state : State 64) (hzero : readRegister state 0 = 0) :
+    (compileWordProgramNatToRiscV (width := 64)
+      { services := [("echo", 7)] } pipelineFfiWordConfigSource
+      pipelineFfiStackRemoveConfig 2 3
+      (.ffi "echo" 4 5 6 7 ([], []) : WordProg Nat)).bind
+        (fun code =>
+          (executeInstructionsWithFfi pipelineFfiIdentityHost state code).map
+            (fun final => (final, ([] : List (Word 64))))) =
+      evalWordFunctionWithCallsAndFfi [] pipelineFfiIdentityHandler 1 state
+        (.ffi "echo" 4 5 6 7 ([], [])) := by
+  apply executeCompiledPipelineFfi_source_agreement
+  · simpa [readRegister] using hzero
+  · simp [pipelineFfiIdentityHost, pipelineFfiIdentityHandler]
 
 example (state : ExactRiscVFfiState 64 Unit)
     (hzero : readRegister state.machine 0 = 0) :

@@ -100,6 +100,7 @@ import Flapjack.Test.CrepeSourceWordLoadReturnCorrectness
 import Flapjack.Test.CrepeSourceWordStoreLoadCorrectness
 import Flapjack.Test.CrepeSourceWordFixedWidthLoadReturnCorrectness
 import Flapjack.Test.CrepeSourceWordStoreByteLoadCorrectness
+import Flapjack.Test.CrepeSourceWordGenericStoreCorrectness
 import Flapjack.Test.CrepeSourceWordLoopCorrectness
 import Flapjack.Test.CrepeInline
 import Flapjack.Test.CrepeInlineRewrite

@@ -2230,6 +2230,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   exact source-to-Crep base cases for the program correctness induction.
 - [x] Prove the relation-aware `Store32` source-to-Crep case, including exact
   word-memory relation preservation after the update.
+- [x] Prove the relation-aware `StoreByte` source-to-Crep case under the
+  abstract word-memory model.
 - [x] Prove preservation of the flattened-local relation when a structured
   declaration local is extended with a shape and its Crep slot witness.
 - [x] Prove preservation of the flattened-local relation under a word local

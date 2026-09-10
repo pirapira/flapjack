@@ -2113,6 +2113,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   generated FFI pipeline.
 - [x] Connect a source-aligned Word FFI pipeline to the handler-aware source
   evaluator, including its ABI-marshalling state transition.
+- [x] Add a reusable source-local FFI simulation boundary through `pan_to_crep`
+  and `crep_to_loop`, retaining an explicit post-handler Loop/source state
+  relation.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

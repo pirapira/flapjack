@@ -2236,6 +2236,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   correctness induction.
 - [x] Add relation-aware conditional branch rules for both source condition
   outcomes and their selected control-result relations.
+- [x] Add relation-aware zero-condition and recursive nonzero loop rules for
+  the program correctness induction.
 - [x] Prove the compiled declaration-table head lookup exposes flattened
   parameter slots and the exact compiled function body.
 - [x] Prove source/Crep expression agreement for constants, word locals, and

@@ -86,6 +86,7 @@ import Flapjack.Test.CorrectnessStackRemoveDynamic
 import Flapjack.Test.CorrectnessStackRemoveBitmap
 import Flapjack.Test.CorrectnessStackRiscV
 import Flapjack.Test.CorrectnessStackMemory
+import Flapjack.Test.CorrectnessStackStore
 import Flapjack.RiscV.CorrectnessBinarySpill
 import Flapjack.Test.BinarySpillRelation
 import Flapjack.RiscV.CorrectnessShiftSpill

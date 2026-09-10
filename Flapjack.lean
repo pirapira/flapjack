@@ -73,6 +73,7 @@ import Flapjack.RiscV.CorrectnessFfiMachine
 import Flapjack.RiscV.CorrectnessStack
 import Flapjack.RiscV.CorrectnessStackRiscV
 import Flapjack.RiscV.CorrectnessStackMemory
+import Flapjack.RiscV.CorrectnessStackStore
 import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.ExactFfi
 import Flapjack.RiscV.CorrectnessExactFfi

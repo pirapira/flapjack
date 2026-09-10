@@ -132,4 +132,40 @@ example :
     (by omega) (by omega) [.xor 5 2 3]
   exact labCompilePlain_xor 5 2 3 (by omega) (by omega) (by omega)
 
+example :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (wordStackMachineShift .lsl (stackRiscVTestSource.registers 2)
+          (stackRiscVTestSource.registers 3)))
+      (executeInstructions (zeroState 64)
+        [.sll 5 2 3]) := by
+  apply labCompilePlain_shift_lsl_register_simulation stackRiscVTestSource
+    (zeroState 64) 5 2 3 stackRiscVTestRelation (by omega) (by omega)
+    (by omega) (by omega) [.sll 5 2 3]
+  exact labCompilePlain_shift_lsl 5 2 3 (by omega) (by omega) (by omega)
+
+example :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (wordStackMachineShift .lsr (stackRiscVTestSource.registers 2)
+          (stackRiscVTestSource.registers 3)))
+      (executeInstructions (zeroState 64)
+        [.srl 5 2 3]) := by
+  apply labCompilePlain_shift_lsr_register_simulation stackRiscVTestSource
+    (zeroState 64) 5 2 3 stackRiscVTestRelation (by omega) (by omega)
+    (by omega) (by omega) [.srl 5 2 3]
+  exact labCompilePlain_shift_lsr 5 2 3 (by omega) (by omega) (by omega)
+
+example :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (wordStackMachineShift .asr (stackRiscVTestSource.registers 2)
+          (stackRiscVTestSource.registers 3)))
+      (executeInstructions (zeroState 64)
+        [.sra 5 2 3]) := by
+  apply labCompilePlain_shift_asr_register_simulation stackRiscVTestSource
+    (zeroState 64) 5 2 3 stackRiscVTestRelation (by omega) (by omega)
+    (by omega) (by omega) [.sra 5 2 3]
+  exact labCompilePlain_shift_asr 5 2 3 (by omega) (by omega) (by omega)
+
 end Flapjack.RiscV

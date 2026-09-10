@@ -819,6 +819,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Package the linear-scan allocation mode with its Word-to-Stack lowering,
   safety and formal-parameter coverage, entry/body composition, and execution
   contracts.
+- [x] Prove that generated FFI ABI register-move prefixes have the same result
+  under FFI-aware and ordinary RISC-V execution, so they cannot invoke the host.
 - [x] Package the entry-inclusive spill allocator's clash, special-location,
   tree, variable-coverage, and ABI-parameter witnesses for downstream lowering.
 - [x] Thread coalescing and freeze stack entries into the subsequent Atemp/Stemp

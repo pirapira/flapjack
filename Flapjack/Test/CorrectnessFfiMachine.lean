@@ -46,6 +46,20 @@ def ffiMachineWordHandler : FunName → Word 64 → Word 64 → Word 64 → Word
     else none
 
 example :
+    executeInstructionsWithFfi ffiMachineHost ffiMachineState
+      [.addi 10 2 (0#64), .addi 11 3 (0#64),
+       .addi 12 4 (0#64), .addi 13 5 (0#64)] =
+      some (executeInstructions ffiMachineState
+        [.addi 10 2 (0#64), .addi 11 3 (0#64),
+         .addi 12 4 (0#64), .addi 13 5 (0#64)]) := by
+  apply executeInstructionsWithFfi_wordRegisterMoves
+    ffiMachineHost ffiMachineState
+    [(10, 2), (11, 3), (12, 4), (13, 5)]
+    [.addi 10 2 (0#64), .addi 11 3 (0#64),
+     .addi 12 4 (0#64), .addi 13 5 (0#64)]
+  simp [wordRegisterMoves, registerOfNat]
+
+example :
     (labCompileAsm ({ services := [("echo", 7)] } : WordFfiContext)
       2 [] 0 (.callFfi "echo")).bind
         (executeInstructionsWithFfi ffiMachineHost ffiMachineState) =

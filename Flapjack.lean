@@ -38,6 +38,7 @@ import Flapjack.CrepeSourceWordConditionalCorrectness
 import Flapjack.CrepeSourceWordLoadCorrectness
 import Flapjack.CrepeSourceWordLoadReturnCorrectness
 import Flapjack.CrepeSourceWordStoreLoadCorrectness
+import Flapjack.CrepeSourceWordFixedWidthLoadReturnCorrectness
 import Flapjack.CrepeSourceWordLoopCorrectness
 import Flapjack.CrepeSequenceControlRelation
 import Flapjack.CrepeCallRelation

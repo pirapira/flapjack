@@ -30,6 +30,70 @@ def panValueDeclStructInfo (context : StructContext)
   { fields := fields
     size := shapeSizeWithContext context (.comb (fields.map Prod.snd)) }
 
+/-! CakeML's `decs_stcnames` pass collects and validates every struct
+    declaration before evaluating any other declaration.  In particular, a
+    function or global initializer may refer to a struct declared later in the
+    source list.  Fields may refer only to structs preceding their own
+    declaration, while all non-struct declarations see the completed context. -/
+def collectPanValueStructs : List (Decl α) → StructContext → Option StructContext
+  | [], context => some context
+  | .name name fields :: declarations, context =>
+      if (lookupInfo name context).isSome then none
+      else if !(fields.map (fun field => field.1)).Nodup then none
+      else if !fields.all (fun field => isWfShape context field.2) then none
+      else
+        collectPanValueStructs
+          declarations ((name, panValueDeclStructInfo context fields) :: context)
+  | _ :: declarations, context => collectPanValueStructs declarations context
+termination_by declarations => sizeOf declarations
+
+def evalPanValueDeclarationsWithStructs
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (state : PanValueProgramState α) :
+    (declarations : List (Decl α)) →
+    (memoryAccess : Option (PanValueMemoryAccess α) := none) →
+      Option (PanValueProgramState α)
+  | [], _ => some state
+  | .name _ _ :: declarations, memoryAccess =>
+      evalPanValueDeclarationsWithStructs structs state declarations
+        (memoryAccess := memoryAccess)
+  | .decl shape name expression :: declarations, memoryAccess => do
+      let value ← evalPanValueExp structs (fun _ => none) state.globals
+        state.memory state.baseAddress state.topAddress state.bytesInWord expression
+        (memoryAccess := memoryAccess)
+      if panShapeMatches (panValueShape structs value) shape then
+        evalPanValueDeclarationsWithStructs structs
+          { state with
+              structs := structs
+              globals := updatePanValueMap state.globals name value } declarations
+          (memoryAccess := memoryAccess)
+      else none
+  | .function declaration :: declarations, memoryAccess =>
+      if declaration.params.all (fun parameter => isWfShape structs parameter.2) &&
+          isWfShape structs declaration.returnShape then
+        let state := { state with functions :=
+          (declaration.name, declaration.params.map Prod.fst,
+            declaration.body) :: state.functions }
+        evalPanValueDeclarationsWithStructs structs
+          { state with
+              structs := structs
+              returnShapes := (declaration.name, declaration.returnShape) :: state.returnShapes
+              parameterShapes := (declaration.name, declaration.params) :: state.parameterShapes }
+          declarations (memoryAccess := memoryAccess)
+      else none
+  | .exnDecl exception shape :: declarations, memoryAccess =>
+      if (lookupInfo exception state.exceptions).isSome then none
+      else if isWfShape structs shape then
+        evalPanValueDeclarationsWithStructs structs
+          { state with
+              structs := structs
+              exceptions := (exception, shape) :: state.exceptions } declarations
+          (memoryAccess := memoryAccess)
+      else none
+termination_by declarations => sizeOf declarations
+
 def evalPanValueDeclarations
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -38,45 +102,11 @@ def evalPanValueDeclarations
     (declarations : List (Decl α)) →
     (memoryAccess : Option (PanValueMemoryAccess α) := none) →
       Option (PanValueProgramState α)
-  | [], _ => some state
-  | .name name fields :: declarations, memoryAccess =>
-      if (lookupInfo name state.structs).isSome then none
-      else if !(fields.map (fun field => field.1)).Nodup then none
-      else if !fields.all (fun field => isWfShape state.structs field.2) then none
-      else
-        let info := panValueDeclStructInfo state.structs fields
-        evalPanValueDeclarations
-          { state with structs := (name, info) :: state.structs } declarations
-          (memoryAccess := memoryAccess)
-  | .decl shape name expression :: declarations, memoryAccess => do
-      let value ← evalPanValueExp state.structs (fun _ => none) state.globals
-        state.memory state.baseAddress state.topAddress state.bytesInWord expression
+  | declarations, memoryAccess => do
+      let structs ← collectPanValueStructs declarations state.structs
+      evalPanValueDeclarationsWithStructs structs
+        { state with structs := structs } declarations
         (memoryAccess := memoryAccess)
-      if panShapeMatches (panValueShape state.structs value) shape then
-        evalPanValueDeclarations
-          { state with globals := updatePanValueMap state.globals name value } declarations
-          (memoryAccess := memoryAccess)
-      else none
-  | .function declaration :: declarations, memoryAccess =>
-      if declaration.params.all (fun parameter => isWfShape state.structs parameter.2) &&
-          isWfShape state.structs declaration.returnShape then
-        let state := { state with functions :=
-          (declaration.name, declaration.params.map Prod.fst,
-            declaration.body) :: state.functions }
-        evalPanValueDeclarations
-          { state with
-              returnShapes := (declaration.name, declaration.returnShape) :: state.returnShapes
-              parameterShapes := (declaration.name, declaration.params) :: state.parameterShapes }
-          declarations (memoryAccess := memoryAccess)
-      else none
-  | .exnDecl exception shape :: declarations, memoryAccess =>
-      if (lookupInfo exception state.exceptions).isSome then none
-      else if isWfShape state.structs shape then
-        evalPanValueDeclarations
-          { state with exceptions := (exception, shape) :: state.exceptions } declarations
-          (memoryAccess := memoryAccess)
-      else none
-termination_by declarations => sizeOf declarations
 
 def evalPanValueProgram
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -128,6 +158,7 @@ theorem evalPanValueDeclarations_empty
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : PanValueProgramState α) :
     evalPanValueDeclarations state [] = some state := by
-  simp [evalPanValueDeclarations]
+  simp [evalPanValueDeclarations, collectPanValueStructs,
+    evalPanValueDeclarationsWithStructs]
 
 end Flapjack

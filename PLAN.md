@@ -43,6 +43,7 @@ not yet an equivalent source semantics. In particular:
 | Shared memory | `sh_memaddrs`, `nb_op`, and `call_FFI (SharedMem MappedRead/MappedWrite)`; size zero is a distinct word operation; `ShMemLoad` requires an existing word destination | The model-aware structured, stepped, and stateful-FFI evaluators now enforce the word destination rule, while carrying size-aware shared calls, aligned domains, and terminal outcomes; legacy evaluators retain compatibility paths |
 | Control state | Clock, timeout, local clearing at boundaries, return/exception size limits, and declared exception shapes | The clocked stateful-FFI evaluator now charges calls, while iterations, and `Tick`, returns explicit timeouts with empty locals, and rejects invalid callee terminal outcomes; the established structured, flat, stepped, and stateful-FFI paths enforce 32-word bounds and local clearing ([#387](https://github.com/pirapira/flapjack/issues/387)) |
 | Calls and FFI | Callee globals/memory and FFI state are threaded; call results/handlers are shape-checked; external calls read/write byte arrays; invalid callee control results become errors | Structured, stepped, flat, and stateful-FFI evaluators now propagate callee globals/memory (and stateful FFI state where applicable), reject normal/break/continue callee completion, and enforce declaration-driven parameter, return, exception, and handler shapes. Generic call destinations validate local/global shapes and stand-alone calls discard returned values; remaining control-state checks and legacy compatibility-path migration remain ([#386](https://github.com/pirapira/flapjack/issues/386), [#388](https://github.com/pirapira/flapjack/issues/388), [#406](https://github.com/pirapira/flapjack/issues/406)) |
+| Declaration ordering | `decs_stcnames` validates and collects all struct declarations before `evaluate_decls` | `collectPanValueStructs` now pre-collects the complete struct context while retaining preceding-context validation for struct fields, so later struct declarations may be referenced by earlier globals, functions, and exceptions ([#548](https://github.com/pirapira/flapjack/issues/548)) |
 
 The flat-memory adapter and the structured/stepped canonical access slice now
 use the CakeML representation for ordinary structured word loads/stores when a
@@ -274,6 +275,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Port the CakeML top-level declaration ordering and two-name function
   permutation helpers used by `pan_to_target`, including recursive call and
   handler traversal.
+- [x] Match CakeML `decs_stcnames` declaration ordering by pre-collecting and
+  validating struct declarations before evaluating globals, functions, and
+  exceptions, with a forward-struct regression.
 - [x] Expose an exact CakeML-style entry-point pipeline that freshens the
   requested source function and places global initialization before a new
   `main` tail-call wrapper, while retaining the compatibility pipeline.

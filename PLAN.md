@@ -2344,6 +2344,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   destination/register results.
 - [x] Connect fixed-offset stack-load evaluator results to the compiled RISC-V
   destination register under the address-scratch non-aliasing condition.
+- [x] Connect dynamic-offset stack-load evaluator results to the compiled RISC-V
+  destination register under explicit source and target memory invariants.
 - [x] Carry the full-SSA heuristic graph allocator through location-aware
   StackLang entry moves and body evaluation, retaining its colouring checks.
 - [x] Prove that every heuristic graph-allocation branch preserves the source

@@ -549,6 +549,74 @@ theorem compileStackProgramNatToRiscV_add_register_simulation [NeZero width]
     (wordStackRegisterRelation_executeAdd source target destination left right
       hrel hdestination hleft hright hdestinationNonzero)
 
+theorem compileStackProgramNatToRiscV_binop [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (operator : BinOp) (sectionId initialLabel destination left right : Nat)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.arith operator destination left right : StackProg Nat) =
+      some [match operator with
+        | .add => .add ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩
+        | .sub => .sub ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩
+        | .and => .and ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩
+        | .or => .or ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩
+        | .xor => .xor ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩] := by
+  cases operator <;>
+    simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+      compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+      labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+      labLabel, labCompileLines, labCompilePlain, labBinOpInstruction,
+      labCollectLabels, labLineInstructionCount, registerOfNat,
+      hdestination, hleft, hright, stackRemoveComplete, stackProgDepth,
+      stackRemoveFuel] <;>
+    congr 1
+
+theorem compileStackProgramNatToRiscV_binop_register_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (operator : BinOp) (sectionId initialLabel destination left right : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hrel : WordStackRegisterRelation source target)
+    (hdestination : destination < 32) (hleft : left < 32)
+    (hright : right < 32) (hdestinationNonzero : destination ≠ 0)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.arith operator destination left right : StackProg Nat) =
+      some code) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (wordStackMachineBinOp operator (source.registers left)
+          (source.registers right)))
+      (executeInstructions target code) := by
+  rw [compileStackProgramNatToRiscV_binop context config operator sectionId
+    initialLabel destination left right hdestination hleft hright] at hcode
+  cases operator with
+  | add =>
+      cases hcode
+      simpa [wordStackMachineBinOp, Fin.ext_iff] using
+        (wordStackRegisterRelation_executeAdd source target destination left right
+          hrel hdestination hleft hright hdestinationNonzero)
+  | sub =>
+      cases hcode
+      simpa [wordStackMachineBinOp, Fin.ext_iff] using
+        (wordStackRegisterRelation_executeSub source target destination left right
+          hrel hdestination hleft hright hdestinationNonzero)
+  | and =>
+      cases hcode
+      simpa [wordStackMachineBinOp, Fin.ext_iff] using
+        (wordStackRegisterRelation_executeAnd source target destination left right
+          hrel hdestination hleft hright hdestinationNonzero)
+  | or =>
+      cases hcode
+      simpa [wordStackMachineBinOp, Fin.ext_iff] using
+        (wordStackRegisterRelation_executeOr source target destination left right
+          hrel hdestination hleft hright hdestinationNonzero)
+  | xor =>
+      cases hcode
+      simpa [wordStackMachineBinOp, Fin.ext_iff] using
+        (wordStackRegisterRelation_executeXor source target destination left right
+          hrel hdestination hleft hright hdestinationNonzero)
+
 theorem labCompilePlain_const_register_simulation
     [NeZero width] (source : WordStackMachineState width)
     (target : State width) (destination value : Nat)

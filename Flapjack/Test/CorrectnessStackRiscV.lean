@@ -165,9 +165,47 @@ example :
     (width := 64) { services := [] } stackRiscVRemoveConfig 2 3 5 2 3
     stackRiscVTestSource (zeroState 64) stackRiscVTestRelation (by omega)
     (by omega) (by omega) (by omega) [.add 5 2 3]
-    (by simpa using (compileStackProgramNatToRiscV_add (width := 64)
+      (by simpa using (compileStackProgramNatToRiscV_add (width := 64)
       { services := [] } stackRiscVRemoveConfig 2 3 5 2 3
       (by omega) (by omega) (by omega)))
+
+example (operator : BinOp) :
+    compileStackProgramNatToRiscV (width := 64) { services := [] }
+      stackRiscVRemoveConfig 2 3 (.arith operator 5 2 3 : StackProg Nat) =
+      some [match operator with
+        | .add => .add 5 2 3
+        | .sub => .sub 5 2 3
+        | .and => .and 5 2 3
+        | .or => .or 5 2 3
+        | .xor => .xor 5 2 3] := by
+  cases operator <;>
+    simpa [Fin.ext_iff] using
+      (compileStackProgramNatToRiscV_binop (width := 64) { services := [] }
+        stackRiscVRemoveConfig _ 2 3 5 2 3
+        (by omega) (by omega) (by omega))
+
+example (operator : BinOp) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (wordStackMachineBinOp operator
+          (stackRiscVTestSource.registers 2)
+          (stackRiscVTestSource.registers 3)))
+      (executeInstructions (zeroState 64)
+        [match operator with
+          | .add => .add 5 2 3
+          | .sub => .sub 5 2 3
+          | .and => .and 5 2 3
+          | .or => .or 5 2 3
+          | .xor => .xor 5 2 3]) := by
+  cases operator <;>
+    apply compileStackProgramNatToRiscV_binop_register_simulation
+      (width := 64) { services := [] } stackRiscVRemoveConfig _ 2 3 5 2 3
+      stackRiscVTestSource (zeroState 64) stackRiscVTestRelation (by omega)
+      (by omega) (by omega) (by omega) _
+    <;> simpa [Fin.ext_iff] using
+      (compileStackProgramNatToRiscV_binop (width := 64) { services := [] }
+        stackRiscVRemoveConfig _ 2 3 5 2 3
+        (by omega) (by omega) (by omega))
 
 example :
     WordStackRegisterRelation

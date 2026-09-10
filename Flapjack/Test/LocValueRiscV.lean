@@ -16,10 +16,6 @@ def locValueLabProgram : LabProgram (Word 64) :=
         (stackRemoveComplete locValueStackRemoveConfig program)))
     [(1, (.locValue 5 0 2 : StackProg Nat)), (2, (.skip : StackProg Nat))]
 
-def locValueFirstLines : List (LabLine (Word 64)) :=
-  match locValueLabProgram with
-  | first :: _ => first.lines
-  | [] => []
 example :
     compileStackProgramNatListToRiscV (width := 64) { services := [] }
       locValueStackRemoveConfig 0 0

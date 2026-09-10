@@ -2206,6 +2206,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   fresh-slot allocation and restoration of the shadowed local.
 - [x] Exercise declaration collection and `compileToCrepe` through a concrete
   identity declaration call and its flattened Crep return.
+- [x] Add the generic source-to-Crep call composition rule, exposing the
+  lowered argument list and separate source/Crep callee simulation witnesses.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving
   source order across the fresh Crep slots.
 - [x] Add a compositional two-word declaration simulation theorem with separate

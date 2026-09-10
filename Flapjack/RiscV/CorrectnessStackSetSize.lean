@@ -124,4 +124,58 @@ theorem executeStackRemoveStackSetSize [NeZero width]
       hstackPointerFinNonzero, hscratchFinNonzero,
       hregisterNonzero, hbaseScratch, Ne.symm hregisterBase, hzero]
 
+theorem compileStackProgramNatToRiscV_stackSetSize [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel register : Nat)
+    (hstackPointer : config.stackPointer < 32)
+    (hstackBase : config.stackBase < 32)
+    (hscratch : config.scratch < 32)
+    (haddressScratch : config.addressScratch < 32)
+    (hregister : register < 32) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.stackSetSize register : StackProg Nat) =
+      some (if register = config.scratch then
+        [.addi ⟨config.addressScratch, haddressScratch⟩ 0
+           (BitVec.ofNat width config.wordShift),
+         .sll ⟨register, hregister⟩ ⟨register, hregister⟩
+           ⟨config.addressScratch, haddressScratch⟩,
+         .or ⟨config.stackPointer, hstackPointer⟩
+           ⟨config.stackBase, hstackBase⟩
+           ⟨config.stackBase, hstackBase⟩,
+         .add ⟨config.stackPointer, hstackPointer⟩
+           ⟨config.stackPointer, hstackPointer⟩
+           ⟨register, hregister⟩]
+      else
+        [.addi ⟨config.scratch, hscratch⟩ 0
+           (BitVec.ofNat width config.wordShift),
+         .sll ⟨register, hregister⟩ ⟨register, hregister⟩
+           ⟨config.scratch, hscratch⟩,
+         .or ⟨config.stackPointer, hstackPointer⟩
+           ⟨config.stackBase, hstackBase⟩
+           ⟨config.stackBase, hstackBase⟩,
+         .add ⟨config.stackPointer, hstackPointer⟩
+           ⟨config.stackPointer, hstackPointer⟩
+           ⟨register, hregister⟩]) := by
+  by_cases hregisterScratch : register = config.scratch
+  · simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+      compileLabSection, labProgramToSectionAfterStackRemove,
+      labProgramToSection, labSectionNatToWord, labLineNatToWord,
+      labLabel, labIsSequence, labFlatten, labCompileLines, labCompilePlain,
+      labCollectLabels, labLineInstructionCount, labBinOpInstruction,
+      labPlainNatToWord, registerOfNat, labShiftInstructions,
+      hregisterScratch, hstackPointer, hstackBase, hscratch, haddressScratch,
+      stackRemoveStackSetSize,
+      stackRemoveJoin, stackRemoveComplete, stackProgDepth, stackRemoveFuel] <;>
+      congr 1
+  · simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+      compileLabSection, labProgramToSectionAfterStackRemove,
+      labProgramToSection, labSectionNatToWord, labLineNatToWord,
+      labLabel, labIsSequence, labFlatten, labCompileLines, labCompilePlain,
+      labCollectLabels, labLineInstructionCount, labBinOpInstruction,
+      labPlainNatToWord, registerOfNat, labShiftInstructions,
+      hregisterScratch, hstackPointer, hstackBase, hscratch,
+      hregister, stackRemoveStackSetSize,
+      stackRemoveJoin, stackRemoveComplete, stackProgDepth, stackRemoveFuel] <;>
+      congr 1
+
 end Flapjack.RiscV

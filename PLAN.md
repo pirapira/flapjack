@@ -2234,6 +2234,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   source-to-Crep state relation for continuations.
 - [x] Add the relation-aware normally-completing sequence rule for the program
   correctness induction.
+- [x] Add relation-aware conditional branch rules for both source condition
+  outcomes and their selected control-result relations.
 - [x] Prove the compiled declaration-table head lookup exposes flattened
   parameter slots and the exact compiled function body.
 - [x] Prove source/Crep expression agreement for constants, word locals, and

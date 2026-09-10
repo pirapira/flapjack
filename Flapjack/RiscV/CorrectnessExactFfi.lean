@@ -1,4 +1,5 @@
 import Flapjack.RiscV.ExactFfi
+import Flapjack.RiscV.CorrectnessFfi
 
 /-!
 # Correctness equations for the exact RISC-V FFI adapter
@@ -69,6 +70,101 @@ theorem executeInstructionsWithExactFfi_abi [NeZero width]
     simpa [executeInstructions] using hservice_read
   rw [hservice_read', hresult']
   cases result <;> rfl
+
+/-! The compiler-facing form of the ABI theorem.  The Word selector emits
+    register moves from natural-number locations, whereas the exact machine
+    boundary consumes `Fin 32` registers.  Keeping this conversion here makes
+    the generated FFI code usable in a pass-level correctness proof without
+    repeating the selector's list-shape calculation. -/
+theorem wordFfiToRiscV_exactFfi_simulation [NeZero width]
+    (context : WordFfiContext)
+    (state : ExactRiscVFfiState width σ)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Fin 32)
+    (service : Nat) (code : List (Instruction width))
+    (result : ExactRiscVFfiResult width σ)
+    (hservice : lookupWordFfiService function context.services = some service)
+    (hcode : wordFfiToRiscV context function configuration.val
+        configurationLength.val array.val arrayLength.val = some code)
+    (hservice_bounded : service < 2 ^ width)
+    (hzero : readRegister state.machine 0 = 0)
+    (hresult : exactRiscVFfiCall context
+        { machine := executeInstructions state.machine
+            [.addi 10 configuration (0#width),
+             .addi 11 configurationLength (0#width),
+             .addi 12 array (0#width),
+             .addi 13 arrayLength (0#width),
+             .addi 14 0 (BitVec.ofNat width service)],
+          ffi := state.ffi } service = result) :
+    executeInstructionsWithExactFfi context state code = result := by
+  have hcode' : code =
+      [.addi 10 configuration (0#width),
+       .addi 11 configurationLength (0#width),
+       .addi 12 array (0#width),
+       .addi 13 arrayLength (0#width),
+       .addi 14 0 (BitVec.ofNat width service), .ecall] := by
+    simp [wordFfiToRiscV, hservice, wordRegisterMoves, registerOfNat] at hcode
+    exact hcode.symm
+  rw [hcode']
+  apply executeInstructionsWithExactFfi_abi context state service
+    configuration configurationLength array arrayLength result hservice_bounded hzero
+  exact hresult
+
+/-! The loop-aware selector delegates an FFI leaf to the same Word selector,
+    but its result is wrapped in labelled-control lowering.  This bridge keeps
+    that normalization explicit so a control-flow-aware pipeline can consume
+    the exact FFI theorem without reopening the mutual selector definition. -/
+theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_exactFfi_simulation
+    [NeZero width]
+    (context : WordFfiContext)
+    (state : ExactRiscVFfiState width σ)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Fin 32)
+    (service : Nat) (code : List (Instruction width))
+    (result : ExactRiscVFfiResult width σ)
+    (hservice : lookupWordFfiService function context.services = some service)
+    (hcode : wordFunctionToRiscVWithCallsAndFfiAndLoops
+      ({ targets := [], services := context.services } : WordCallFfiContext width)
+      (.ffi function configuration.val configurationLength.val array.val
+        arrayLength.val ([], [])) = some (code, []))
+    (hservice_bounded : service < 2 ^ width)
+    (hzero : readRegister state.machine 0 = 0)
+    (hresult : exactRiscVFfiCall context
+        { machine := executeInstructions state.machine
+            [.addi 10 configuration (0#width),
+             .addi 11 configurationLength (0#width),
+             .addi 12 array (0#width),
+             .addi 13 arrayLength (0#width),
+             .addi 14 0 (BitVec.ofNat width service)],
+          ffi := state.ffi } service = result) :
+    executeInstructionsWithExactFfi context state code = result := by
+  have hagree := wordFunctionToRiscVWithCallsAndFfiAndLoops_agrees_straightLine
+    ({ targets := [], services := context.services } : WordCallFfiContext width)
+    (.ffi function configuration.val configurationLength.val array.val
+      arrayLength.val ([], []) : WordProg (Word width))
+    (WordRiscVFFIStraightLine.ffi function configuration.val
+      configurationLength.val array.val arrayLength.val ([], []))
+  have hwordCode : wordFunctionToRiscVWithCallsAndFfi
+      ({ targets := [], services := context.services } : WordCallFfiContext width)
+      (.ffi function configuration.val configurationLength.val array.val
+        arrayLength.val ([], [])) = some (code, []) := by
+    rw [← hagree]
+    exact hcode
+  have hcode' : wordFfiToRiscV context function configuration.val
+      configurationLength.val array.val arrayLength.val = some code := by
+    cases hffi : wordFfiToRiscV (width := width) context function configuration.val
+        configurationLength.val array.val arrayLength.val with
+    | none =>
+        simp [wordFunctionToRiscVWithCallsAndFfi, hffi] at hwordCode
+    | some ffiCode =>
+        have hpair : (ffiCode, ([] : List (Fin 32))) =
+            (code, ([] : List (Fin 32))) := by
+          simpa [wordFunctionToRiscVWithCallsAndFfi, hffi] using hwordCode
+        cases hpair
+        rfl
+  exact wordFfiToRiscV_exactFfi_simulation context state function
+    configuration configurationLength array arrayLength service code result
+    hservice hcode' hservice_bounded hzero hresult
 
 theorem exactWriteBytesAux_pc [NeZero width] (address : Word width)
     (state : State width) (offset : Nat) (bytes : List UInt8) :

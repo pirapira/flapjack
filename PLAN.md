@@ -2095,6 +2095,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   `memoryAccess` model is also installed, including the clocked evaluator.
 - [x] Expose a reusable stepped source-semantics theorem for that dispatch
   order, retaining the handler-updated memory and FFI state.
+- [x] Connect the compiler-facing `wordFfiToRiscV` selector to the exact
+  byte-level RISC-V FFI adapter, retaining the post-ABI machine-state witness.
+- [x] Lift the exact FFI bridge through the loop-aware RISC-V selector for
+  generated FFI leaves.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

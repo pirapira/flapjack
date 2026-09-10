@@ -498,7 +498,7 @@ mutual
         | some (.stored nextFfi) =>
             pure (.normal locals globals memory nextFfi, addressSteps + valueSteps + 1)
         | some (.final nextFfi event) =>
-            pure (.finalFfi (fun _ => none) globals memory nextFfi event,
+            pure (.finalFfi locals globals memory nextFfi event,
               addressSteps + valueSteps + 1)
         | some (.loaded _ _) | none => none
     | _fuel + 1, locals, globals, memory, ffi, .tick, _, _, _ |

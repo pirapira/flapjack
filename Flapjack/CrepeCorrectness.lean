@@ -1028,4 +1028,59 @@ theorem compile_full_pan_value_while_zero_correct
     evalCrepFullExp, evalPanValueProgWithPrimitiveCallsAndFfi,
     evalPanValueExp]
 
+/-! Loop-control transfers are observable at the full result boundary as
+    non-returning outcomes.  The source and Crep evaluators agree on that
+    projection for `break`, independently of the surrounding state. -/
+theorem compile_full_pan_value_break_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat) :
+    evalCrepFullResult [] primitive ffi sharedMem
+        baseAddress topAddress (fuel + 1) state
+        (compileProg context (.break : Prog α)) =
+      (evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        structs [] baseAddress topAddress bytesInWord (fuel + 1)
+        locals globals sourceMemory (.break : Prog α)).bind
+        (fun result => match result with
+        | .normal _ _ _ => some []
+        | .returned _ _ _ values => some (values.flatMap panValueFlatWords)
+        | .raised _ _ _ _ _ | .broke _ _ _ | .continued _ _ _ => none) := by
+  simp [compileProg, evalCrepFullResult, evalCrepFullProg,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+
+/-! The analogous `continue` transfer also agrees at the result boundary;
+    its loop-label representation is erased by the full result projection. -/
+theorem compile_full_pan_value_continue_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat) :
+    evalCrepFullResult [] primitive ffi sharedMem
+        baseAddress topAddress (fuel + 1) state
+        (compileProg context (.continue : Prog α)) =
+      (evalPanValueProgWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        structs [] baseAddress topAddress bytesInWord (fuel + 1)
+        locals globals sourceMemory (.continue : Prog α)).bind
+        (fun result => match result with
+        | .normal _ _ _ => some []
+        | .returned _ _ _ values => some (values.flatMap panValueFlatWords)
+        | .raised _ _ _ _ _ | .broke _ _ _ | .continued _ _ _ => none) := by
+  simp [compileProg, evalCrepFullResult, evalCrepFullProg,
+    evalPanValueProgWithPrimitiveCallsAndFfi]
+
 end Flapjack

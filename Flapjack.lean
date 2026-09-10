@@ -52,6 +52,7 @@ import Flapjack.CrepeSequenceControlRelation
 import Flapjack.CrepeCallRelation
 import Flapjack.CrepeFfiRelation
 import Flapjack.CrepeDecCallRelation
+import Flapjack.CrepeDeclarationRelation
 import Flapjack.CrepeIdentityCallCorrectness
 import Flapjack.CrepeFfiCorrectness
 import Flapjack.PanValues

@@ -2232,6 +2232,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   assignment, assuming assigned-slot non-aliasing.
 - [x] Prove preservation of the flat memory relation under a word update,
   including the source structured-memory update used by exception payloads.
+- [x] Couple word raise lowering with the raised-control relation and explicit
+  exception-code correspondence.
 - [x] Couple word assignment evaluation with preservation of the full
   source-to-Crep state relation for continuations.
 - [x] Add the relation-aware normally-completing sequence rule for the program

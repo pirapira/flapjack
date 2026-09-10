@@ -40,6 +40,43 @@ def panValueCrepMemoryRel {α : Type u}
     (crepMemory : α → Option α) : Prop :=
   panValueWordMemory sourceMemory = crepMemory
 
+def panValueCrepMemoryRelExcept {α : Type u}
+    (sourceMemory : α → Option (PanValue α))
+    (crepMemory : α → Option α) (excluded : α → Prop) : Prop :=
+  ∀ address, ¬ excluded address →
+    panValueWordMemory sourceMemory address = crepMemory address
+
+theorem panValueCrepMemoryRelExcept_update_word
+    [BEq α] [LawfulBEq α]
+    (sourceMemory : α → Option (PanValue α))
+    (crepMemory : α → Option α) (address value : α)
+    (excluded : α → Prop)
+    (hrel : panValueCrepMemoryRelExcept sourceMemory crepMemory excluded) :
+    panValueCrepMemoryRelExcept
+      (updatePanValueMemory sourceMemory address (.word value))
+      (updateMemory crepMemory address value) excluded := by
+  intro current hnot
+  by_cases hcurrent : current == address
+  · simp [panValueWordMemory, updatePanValueMemory,
+      updatePanValueMap, updateMemory, hcurrent]
+  · simpa [panValueWordMemory, updatePanValueMemory,
+      updatePanValueMap, updateMemory, hcurrent] using hrel current hnot
+
+theorem panValueCrepMemoryRelExcept_update_crep_at_excluded
+    [BEq α] [LawfulBEq α]
+    (sourceMemory : α → Option (PanValue α))
+    (crepMemory : α → Option α) (address value : α)
+    (excluded : α → Prop)
+    (hrel : panValueCrepMemoryRelExcept sourceMemory crepMemory excluded)
+    (hexcluded : excluded address) :
+    panValueCrepMemoryRelExcept sourceMemory
+      (updateMemory crepMemory address value) excluded := by
+  intro current hnot
+  by_cases hcurrent : current == address
+  · have heq : current = address := by simpa using hcurrent
+    exact False.elim (hnot (by simpa [heq] using hexcluded))
+  · simpa [updateMemory, hcurrent] using hrel current hnot
+
 def panValueCrepStateRel {α : Type u}
     (structs : StructContext) (context : CompileContext α)
     (sourceLocals sourceGlobals : VarName → Option (PanValue α))
@@ -76,6 +113,53 @@ def panValueCrepControlRel {α : Type u}
       panValueCrepStateRel structs context sourceLocals sourceGlobals
         sourceMemory crepState
   | _, _ => False
+
+def panValueCrepRaisedStateRel {α : Type u}
+    (structs : StructContext) (context : CompileContext α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepState : CrepState α) (spillAddress : α) : Prop :=
+  sourceGlobals = (fun _ => none) ∧
+  panValueCrepLocalsRel structs context (fun _ => none) crepState.locals ∧
+  panValueCrepMemoryRelExcept sourceMemory crepState.memory
+    (fun address => address = spillAddress)
+
+def panValueCrepRaisedControlRel {α : Type u}
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (sourceValue : PanValue α)
+    (crepState : CrepState α) (exceptionCode spillAddress : α) : Prop :=
+  panValueCrepRaisedStateRel structs context sourceGlobals sourceMemory
+    crepState spillAddress ∧
+  exceptionRel sourceException sourceValue exceptionCode
+
+theorem panValueCrepRaisedStateRel_word_spill
+    [BEq α] [LawfulBEq α]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α) (spillAddress value : α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state) :
+    panValueCrepRaisedStateRel structs context sourceGlobals sourceMemory
+      { state with memory := updateMemory state.memory spillAddress value }
+      spillAddress := by
+  have hmemory : panValueCrepMemoryRel sourceMemory state.memory := hrel.2.2
+  have hexcept : panValueCrepMemoryRelExcept sourceMemory state.memory
+      (fun address => address = spillAddress) := by
+    intro address _
+    exact congrFun (show panValueWordMemory sourceMemory = state.memory
+      from hmemory) address
+  have hlocals : panValueCrepLocalsRel structs context (fun _ => none)
+      state.locals := by
+    intro name currentValue shape slots hsource _
+    simp at hsource
+  exact ⟨hrel.1, hlocals,
+    panValueCrepMemoryRelExcept_update_crep_at_excluded sourceMemory
+      state.memory spillAddress value (fun address => address = spillAddress)
+      hexcept rfl⟩
 
 theorem panValueCrepValuesRel_singleton (value : PanValue α) :
     panValueCrepValuesRel [value] (panValueFlatWords value) := by

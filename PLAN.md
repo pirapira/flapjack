@@ -2198,6 +2198,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Prove the word shared-memory store boundary for every OpSize, including
   compiler-created temporary slots and their restoration after the handler
   transition.
+- [x] Prove the closed-word raise boundary, including exception-code lookup,
+  payload spilling to global memory, and the resulting Crep exception.
 - [x] Prove the word declaration-binding source-to-Crep boundary, including
   fresh-slot allocation and restoration of the shadowed local.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

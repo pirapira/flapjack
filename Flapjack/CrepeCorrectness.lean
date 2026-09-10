@@ -1736,4 +1736,53 @@ theorem compile_full_pan_value_shMemStore_word_correct
       evalCrepFullProg, hcrepAddress, hcrepValue,
       hsharedMem, restoreCrepResult]
 
+/-! A closed word raise exercises the exception-code lookup and the compiler's
+    global payload spill before the Crep exception result is produced. -/
+theorem compile_full_pan_value_raise_word_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord value : α)
+    (exception : ExceptionId) (exceptionCode : α)
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord 3
+      sourceLocals sourceGlobals sourceMemory
+      (.raise exception (.const value)) =
+      some (.raised (fun _ => none) sourceGlobals sourceMemory
+        exception (.word value)) ∧
+    evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress 10 state
+      (compileProg context (.raise exception (.const value))) =
+      some (.raised
+        { state with memory := updateMemory state.memory 0 value }
+        exceptionCode) := by
+  constructor
+  · have hlimit : panValuePayloadWithinLimit structs (.word value) = true := by
+      simp [panValuePayloadWithinLimit, panValuePayloadSizeFuel]
+    simp [evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExp, hlimit]
+  · have hrestore : restoreCrepLocal
+        (updateCrepLocal state.locals (context.maxVar + 1) value)
+        (context.maxVar + 1) (state.locals (context.maxVar + 1)) =
+        state.locals := by
+      funext current
+      by_cases hcurrent : current = context.maxVar + 1 <;>
+        simp [restoreCrepLocal, updateCrepLocal, hcurrent]
+    simp [compileProg, compileExp, hlookup, freshNames, nestedDecs,
+      crepNestedSeq, storeGlobals, evalCrepFullProg,
+      evalCrepFullExp, updateCrepLocal, restoreCrepResult,
+      hrestore]
+
 end Flapjack

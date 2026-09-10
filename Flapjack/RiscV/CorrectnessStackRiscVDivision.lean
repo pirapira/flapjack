@@ -102,4 +102,67 @@ theorem labCompilePlain_div_register_simulation
   exact wordStackRegisterRelation_executeDivU source target destination dividend divisor
     hrel hdestination hdividend hdivisor hdestinationNonzero
 
+theorem evalWordStackMachine_div [NeZero width]
+    (state : WordStackMachineState width) (destination dividend divisor : Nat) :
+    evalWordStackMachine state
+      (.inst (.arith (.div destination dividend divisor)) : StackProg Nat) =
+      some (wordStackMachineWriteRegister state destination
+        (if state.registers divisor == 0 then
+          BitVec.ofNat width (2 ^ width - 1)
+        else
+          BitVec.ofNat width
+            (state.registers dividend).toNat / (state.registers divisor).toNat)) := by
+  rfl
+
+theorem compileStackProgramNatToRiscV_div [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination dividend divisor : Nat)
+    (hdestination : destination < 32) (hdividend : dividend < 32)
+    (hdivisor : divisor < 32) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.inst (.arith (.div destination dividend divisor)) : StackProg Nat) =
+      some [.divU ⟨destination, hdestination⟩
+        ⟨dividend, hdividend⟩ ⟨divisor, hdivisor⟩] := by
+  simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+    compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+    labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+    labLabel, labCompileLines, labCompilePlain, labCollectLabels,
+    labLineInstructionCount, wordArithToInstructions, wordArithToInstruction,
+    registerOfNat, hdestination, hdividend, hdivisor,
+    stackRemoveComplete, stackProgDepth, stackRemoveFuel]
+
+theorem compileStackProgramNatToRiscV_div_register_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination dividend divisor : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hrel : WordStackRegisterRelation source target)
+    (hdestination : destination < 32) (hdividend : dividend < 32)
+    (hdivisor : divisor < 32) (hdestinationNonzero : destination ≠ 0)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel
+      (.inst (.arith (.div destination dividend divisor)) : StackProg Nat) = some code) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (if source.registers divisor == 0 then
+          BitVec.ofNat width (2 ^ width - 1)
+        else
+          BitVec.ofNat width
+            (source.registers dividend).toNat / (source.registers divisor).toNat))
+      (executeInstructions target code) := by
+  rw [compileStackProgramNatToRiscV_div context config sectionId initialLabel
+    destination dividend divisor hdestination hdividend hdivisor] at hcode
+  cases hcode
+  change WordStackRegisterRelation
+    (wordStackMachineWriteRegister source destination
+      (if source.registers divisor == 0 then
+        BitVec.ofNat width (2 ^ width - 1)
+      else
+        BitVec.ofNat width
+          (source.registers dividend).toNat / (source.registers divisor).toNat))
+    (execute target (.divU ⟨destination, hdestination⟩
+      ⟨dividend, hdividend⟩ ⟨divisor, hdivisor⟩))
+  exact wordStackRegisterRelation_executeDivU source target destination dividend divisor
+    hrel hdestination hdividend hdivisor hdestinationNonzero
+
 end Flapjack.RiscV

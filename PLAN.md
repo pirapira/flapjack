@@ -2183,6 +2183,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   theorem from normal first-component and continuation witnesses.
 - [x] Generalize the structured return boundary to arbitrary shaped values,
   relating flattened Crep words to the source structured result.
+- [x] Verify the structured return boundary on closed records of word
+  constants through the actual compiler and full Crep evaluator.
 - [x] Prove that a resolved cross-section Lab jump executes to the target
   section on the RISC-V model, rather than only matching emitted code shape.
 - [x] Prove Lab `linkValue` materializes a resolved continuation in ABI

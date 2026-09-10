@@ -772,7 +772,7 @@ theorem compile_full_pan_value_dec_two_word_simulation
         locals globals (fun address =>
           (state.memory address).map PanValue.word)
         (.dec name (.comb [.one, .one]) expression body)).map
-        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+      (fun result => result.2.2.2.flatMap panValueFlatWords) := by
   have hnames :
       allocatedNames context (.comb [.one, .one]) =
         [context.maxVar + 1, context.maxVar + 2] := by
@@ -840,5 +840,63 @@ theorem compile_full_pan_value_dec_two_word_simulation
       (updatePanValueMap locals name (.rStruct [.word left, .word right]))
       globals (fun address => (state.memory address).map PanValue.word)
       (fun _ _ => none) body <;> simp
+
+/-! A structured local assignment updates both flattened destination slots
+    before the returned local is read.  This is the assignment case needed by
+    the source correctness induction after declarations have introduced a
+    shaped local. -/
+theorem compile_full_pan_value_local_assign_record_return_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (name : VarName) (slotLeft slotRight : Nat)
+    (oldLeft oldRight left right : α)
+    (hlookup : lookupInfo name context.vars =
+      some (.comb [.one, .one], [slotLeft, slotRight]))
+    (hdistinct : slotLeft ≠ slotRight)
+    (hlocals : locals name = some (.rStruct [.word oldLeft, .word oldRight])) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 30 state
+        (compileProg context
+          (.seq
+            (.assign .local name
+              (.rStruct [.const left, .const right]))
+            (.return (.var .local name)))) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.seq
+          (.assign .local name
+            (.rStruct [.const left, .const right]))
+          (.return (.var .local name)))).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  have hsourceExps :
+      evalPanValueExp.evalPanValueExps structs locals globals
+        (fun address => (state.memory address).map PanValue.word)
+        baseAddress topAddress bytesInWord
+        [.const left, .const right] =
+      some [.word left, .word right] := by
+    simp [evalPanValueExp.evalPanValueExps, evalPanValueExp]
+  have hflatListFuel :
+      panValueFlatWordsFuel.panValueFlatWordsListFuel
+          (panValueFlatValueFuel
+            (PanValue.rStruct [PanValue.word left, PanValue.word right]))
+          [PanValue.word left, PanValue.word right] = [left, right] := by
+    simp [panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel]
+  simp [compileProg, compileExp, compileExp.compileExpList, hlookup,
+    hlocals, evalCrepFullResult, evalCrepFullProg, evalCrepFullExps,
+    evalCrepFullExp, evalPanValueProg, evalPanValueProgWithPrimitive,
+    evalPanValueExp, panValueAssignmentValid, panValueShape,
+    panShapeMatches, panShapeMatches.panShapeListMatches,
+    crepNestedSeq, distinctLists, hdistinct, updateCrepLocal,
+    updatePanValueMap, hsourceExps, hflatListFuel,
+    panValueFlatWords, panValueFlatWordsFuel]
 
 end Flapjack

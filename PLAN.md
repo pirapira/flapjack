@@ -2224,6 +2224,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   return-shape, and payload validation witnesses.
 - [x] Couple source and target `decCall` composition into one induction rule,
   leaving only source/Crep callee and body simulations as supplied witnesses.
+- [x] Introduce the source-to-Crep state/control relation for flattened locals,
+  word memory, exception codes, and returned-value flattening.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

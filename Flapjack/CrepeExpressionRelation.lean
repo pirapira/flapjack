@@ -342,4 +342,52 @@ theorem compileSourceWordExp_shift_relation
   · simp [compileExp, hleftCompile, hrightCompile]
   · simp [evalCrepFullExp, hleftEval, hrightEval, hvalue]
 
+/-! Recursive binary-operation composition.  This is the exact induction
+interface needed when a localized Pancake expression is decomposed into its
+word-expression children. -/
+theorem compileSourceWordExp_op_recursive_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (crepLocals : Nat → Option α)
+    (crepMemory : α → Option α) (baseAddress topAddress bytesInWord : α)
+    (operator : BinOp) (left right : SourceWordExp α) (value : α)
+    (hleftRelation : ∀ leftValue,
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord left.toExp = some (.word leftValue) →
+      ∃ compiled,
+        compileExp context left.toExp = ([compiled], .one) ∧
+        evalCrepFullExp crepLocals crepMemory baseAddress topAddress compiled =
+          some leftValue)
+    (hrightRelation : ∀ rightValue,
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord right.toExp = some (.word rightValue) →
+      ∃ compiled,
+        compileExp context right.toExp = ([compiled], .one) ∧
+        evalCrepFullExp crepLocals crepMemory baseAddress topAddress compiled =
+          some rightValue)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.op operator [left.toExp, right.toExp]) = some (.word value)) :
+    ∃ compiled,
+      compileExp context (.op operator [left.toExp, right.toExp]) =
+        ([compiled], .one) ∧
+      evalCrepFullExp crepLocals crepMemory baseAddress topAddress compiled =
+        some value := by
+  obtain ⟨leftValue, rightValue, hleftSource, hrightSource, _⟩ :=
+    evalPanValueExp_op_word_inv structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord operator left.toExp right.toExp value hsource
+  obtain ⟨leftCompiled, hleftCompile, hleftEval⟩ :=
+    hleftRelation leftValue hleftSource
+  obtain ⟨rightCompiled, hrightCompile, hrightEval⟩ :=
+    hrightRelation rightValue hrightSource
+  have hop := compileSourceWordExp_op_relation context structs sourceLocals
+    sourceGlobals sourceMemory crepLocals crepMemory baseAddress topAddress
+    bytesInWord operator left right leftCompiled rightCompiled leftValue rightValue
+    value hleftSource hrightSource hsource hleftCompile hrightCompile hleftEval
+    hrightEval
+  exact ⟨.op operator [leftCompiled, rightCompiled], hop.1, hop.2⟩
+
 end Flapjack

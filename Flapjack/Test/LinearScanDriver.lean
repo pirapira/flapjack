@@ -1,4 +1,6 @@
 import Flapjack.RiscV.CorrectnessLinearScanStack
+import Flapjack.RiscV.HeuristicDriver
+import Flapjack.RiscV.AllocationModePipeline
 
 /-! Regression coverage for function-level linear-scan pipeline integration. -/
 
@@ -81,5 +83,7 @@ example [NeZero width]
   exact RiscV.wordAllocateLinearScanFunctionWithEntryToStack_stack_result
     config parameters program colours stackStart ssaState renamedParameters
     allocation renamedProgram stackProgram hbridge
+
+#guard wordAllocationAlgorithmIsLinearScanNat 4
 
 end Flapjack

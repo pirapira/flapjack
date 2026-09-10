@@ -2189,6 +2189,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   threading for a normally completing first component.
 - [x] Prove that a returned first structured component short-circuits the
   remaining sequence in both source and Crep evaluators.
+- [x] Prove sequence short-circuit correctness for raised first components,
+  retaining source exception payloads and compiled exception words.
+- [x] Prove sequence short-circuit correctness for first-component `break` and
+  `continue` control results.
 - [x] Prove the word declaration-binding source-to-Crep boundary, including
   fresh-slot allocation and restoration of the shadowed local.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

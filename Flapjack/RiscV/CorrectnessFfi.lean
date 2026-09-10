@@ -809,7 +809,9 @@ theorem loopToWord_call_loop_control_simulation_single_parameter [NeZero width]
               cases bodyWordResult with
               | normal bodyWordState =>
                   have hloop' :
-                      some (.normal loopState) = some loopResult := by
+                      some (.normal
+                        { bodyLoopState with locals := loopState.locals }) =
+                        some loopResult := by
                     simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
                       hreadLoop, hcalleeBind, hbodyLoop] using hloop
                   let returnedWordState : State width :=
@@ -838,7 +840,9 @@ theorem loopToWord_call_loop_control_simulation_single_parameter [NeZero width]
                   simp [loopResultMappedToWordLoop] at hbodyResult
               | returned bodyWordState wordValues =>
                   have hloop' :
-                      some (.returned loopState values) = some loopResult := by
+                      some (.returned
+                        { bodyLoopState with locals := loopState.locals } values) =
+                        some loopResult := by
                     simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
                       hreadLoop, hcalleeBind, hbodyLoop] using hloop
                   let returnedWordState : State width :=
@@ -869,7 +873,9 @@ theorem loopToWord_call_loop_control_simulation_single_parameter [NeZero width]
                   simp [loopResultMappedToWordLoop] at hbodyResult
               | raised bodyWordState wordException =>
                   have hloop' :
-                      some (.raised loopState exception) = some loopResult := by
+                      some (.raised
+                        { bodyLoopState with locals := loopState.locals } exception) =
+                        some loopResult := by
                     simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
                       hreadLoop, hcalleeBind, hbodyLoop] using hloop
                   let returnedWordState : State width :=
@@ -900,7 +906,9 @@ theorem loopToWord_call_loop_control_simulation_single_parameter [NeZero width]
                   simp [loopResultMappedToWordLoop] at hbodyResult
               | broke bodyWordState wordLabel =>
                   have hloop' :
-                      some (.broke loopState label) = some loopResult := by
+                      some (.broke
+                        { bodyLoopState with locals := loopState.locals } label) =
+                        some loopResult := by
                     simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
                       hreadLoop, hcalleeBind, hbodyLoop] using hloop
                   let returnedWordState : State width :=
@@ -929,7 +937,9 @@ theorem loopToWord_call_loop_control_simulation_single_parameter [NeZero width]
                   simp [loopResultMappedToWordLoop] at hbodyResult
               | continued bodyWordState wordLabel =>
                   have hloop' :
-                      some (.continued loopState label) = some loopResult := by
+                      some (.continued
+                        { bodyLoopState with locals := loopState.locals } label) =
+                        some loopResult := by
                     simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
                       hreadLoop, hcalleeBind, hbodyLoop] using hloop
                   let returnedWordState : State width :=
@@ -995,16 +1005,17 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
           calleeWord (loopToWordProg context loopBody) = some bodyWordResult →
       loopResultMappedToWordLoop context bodyResult bodyWordResult)
     (hhandler : ∀ exceptionValue
-        (_handlerLoopState : LoopState (Word width))
+        (handlerLoopState : LoopState (Word width))
         (handlerWordState : State width)
         (handlerResult : LoopResult (Word width))
         (handlerWordResult : WordLoopControlResult width),
+      handlerLoopState.locals =
+        updateLoopLocal loopState.locals exception exceptionValue →
       loopLocalsMappedToRiscV context
           (updateLoopLocal loopState.locals exception exceptionValue)
           handlerWordState →
       evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
-          { loopState with
-            locals := updateLoopLocal loopState.locals exception exceptionValue }
+          handlerLoopState
           handlerBody = some handlerResult →
       RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
           handlerWordState (loopToWordProg context handlerBody) =
@@ -1060,7 +1071,9 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
               cases bodyWordResult with
               | normal bodyWordState =>
                   have hloop' :
-                      some (.normal loopState) = some loopResult := by
+                      some (.normal
+                        { bodyLoopState with locals := loopState.locals }) =
+                        some loopResult := by
                     simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
                       hreadLoop, hcalleeBind, hbodyLoop] using hloop
                   let returnedWordState : State width :=
@@ -1089,7 +1102,9 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
                   simp [loopResultMappedToWordLoop] at hbodyResult
               | returned bodyWordState wordValues =>
                   have hloop' :
-                      some (.returned loopState values) = some loopResult := by
+                      some (.returned
+                        { bodyLoopState with locals := loopState.locals } values) =
+                        some loopResult := by
                     simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
                       hreadLoop, hcalleeBind, hbodyLoop] using hloop
                   let returnedWordState : State width :=
@@ -1122,7 +1137,9 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
                   simp [loopResultMappedToWordLoop] at hbodyResult
               | broke bodyWordState wordLabel =>
                   have hloop' :
-                      some (.broke loopState label) = some loopResult := by
+                      some (.broke
+                        { bodyLoopState with locals := loopState.locals } label) =
+                        some loopResult := by
                     simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
                       hreadLoop, hcalleeBind, hbodyLoop] using hloop
                   let returnedWordState : State width :=
@@ -1151,7 +1168,9 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
                   simp [loopResultMappedToWordLoop] at hbodyResult
               | continued bodyWordState wordLabel =>
                   have hloop' :
-                      some (.continued loopState label) = some loopResult := by
+                      some (.continued
+                        { bodyLoopState with locals := loopState.locals } label) =
+                        some loopResult := by
                     simpa [evalLoopCallWithPrimitiveCallsAndFfi, hlookupLoop,
                       hreadLoop, hcalleeBind, hbodyLoop] using hloop
                   let returnedWordState : State width :=
@@ -1177,7 +1196,7 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
                   have hloopHandler :
                       evalLoopProgWithPrimitiveCallsAndFfi primitive functions
                         loopHandler fuel
-                        { loopState with
+                        { bodyLoopState with
                           locals := updateLoopLocal loopState.locals exception
                             sourceException }
                         handlerBody = some loopResult := by
@@ -1211,12 +1230,12 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
                       returnedWordState exception exceptionRegister sourceException
                       hreturnedLocals hexception hexception_nonzero hnoalias
                   exact hhandler sourceException
-                    { loopState with
+                    { bodyLoopState with
                       locals := updateLoopLocal loopState.locals exception
                         sourceException }
                     (RiscV.writeRegister returnedWordState exceptionRegister
                       sourceException)
-                    loopResult wordResult hhandlerLocals hloopHandler hwordHandler
+                    loopResult wordResult rfl hhandlerLocals hloopHandler hwordHandler
               | broke bodyWordState label =>
                   simp [loopResultMappedToWordLoop] at hbodyResult
               | continued bodyWordState label =>

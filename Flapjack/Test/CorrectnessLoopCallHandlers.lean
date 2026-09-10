@@ -111,11 +111,9 @@ theorem loopCallHandler_simulation :
           exact ⟨hcallee, hvalue⟩)
     (hhandler := by
       intro exceptionValue handlerLoopState handlerWordState handlerResult handlerWordResult
-        hlocals hloop hword
+        hstate hlocals hloop hword
       have hloop' :
-          some (.normal { loopCallHandlerLoopState with
-            locals := updateLoopLocal loopCallHandlerLoopState.locals 11
-              exceptionValue }) = some handlerResult := by
+          some (.normal handlerLoopState) = some handlerResult := by
         simpa [evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
           loopCallHandlerHandler] using hloop
       have hword' : some (.normal handlerWordState) = some handlerWordResult := by
@@ -123,7 +121,7 @@ theorem loopCallHandler_simulation :
           RiscV.evalWordFunction, loopCallHandlerHandler] using hword
       cases hloop'
       cases hword'
-      exact hlocals)
+      simpa [loopResultMappedToWordLoop, hstate] using hlocals)
     (hlocals := loopCallHandler_mapped_locals)
     (hloop := by
       simp [evalLoopCallWithPrimitiveCallsAndFfi,

@@ -722,4 +722,123 @@ theorem compile_full_pan_value_dec_two_word_record_return_correct
     hsourceExps, hflatListFuel,
     panValueFlatWords, panValueFlatWordsFuel]
 
+/-! The declaration boundary can be composed with an arbitrary source
+    expression and continuation once the expression and continuation
+    obligations are supplied separately.  This is the induction shape used
+    by the full Pancake correctness theorem. -/
+theorem compile_full_pan_value_dec_two_word_simulation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord left right : α) (name : VarName)
+    (body : Prog α) (expression : Exp α)
+    (compiledLeft compiledRight : CrepExp α)
+    (hsource : evalPanValueExp structs locals globals (fun address =>
+      (state.memory address).map PanValue.word)
+      baseAddress topAddress bytesInWord expression =
+      some (.rStruct [.word left, .word right]))
+    (hcompile : compileExp context expression =
+      ([compiledLeft, compiledRight], .comb [.one, .one]))
+    (hcompiledLeft : evalCrepFullExp state.locals state.memory
+      baseAddress topAddress compiledLeft = some left)
+    (hcompiledRight : ∀ value : α, evalCrepFullExp
+      (updateCrepLocal state.locals (context.maxVar + 1) value)
+      state.memory baseAddress topAddress compiledRight = some right)
+    (hbody : evalCrepFullResult [] primitive ffi sharedMem
+      baseAddress topAddress 8
+      { state with locals :=
+          updateCrepLocal (updateCrepLocal state.locals
+            (context.maxVar + 1) left) (context.maxVar + 2) right }
+      (compileProg
+        { context with
+            vars := (name, (.comb [.one, .one],
+              [context.maxVar + 1, context.maxVar + 2])) :: context.vars
+            maxVar := context.maxVar + 2 }
+        body) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        (updatePanValueMap locals name (.rStruct [.word left, .word right]))
+        globals (fun address =>
+          (state.memory address).map PanValue.word) body).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords)) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 10 state
+        (compileProg context
+          (.dec name (.comb [.one, .one]) expression body)) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.dec name (.comb [.one, .one]) expression body)).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  have hnames :
+      allocatedNames context (.comb [.one, .one]) =
+        [context.maxVar + 1, context.maxVar + 2] := by
+    simp [allocatedNames, Shape.shapeSize, List.range, List.range.loop]
+  have hprogram :
+      compileProg context
+          (.dec name (.comb [.one, .one]) expression body) =
+        nestedDecs [context.maxVar + 1, context.maxVar + 2]
+          [compiledLeft, compiledRight]
+          (compileProg
+            { context with
+                vars := (name, (.comb [.one, .one],
+                  [context.maxVar + 1, context.maxVar + 2])) :: context.vars
+                maxVar := context.maxVar + 2 }
+          body) := by
+    simp only [compileProg, hcompile, Shape.shapeSize]
+    rw [hnames]
+    simp
+  rw [hprogram]
+  have hcrepNested :
+      evalCrepFullResult [] primitive ffi sharedMem
+        baseAddress topAddress 10 state
+        (nestedDecs [context.maxVar + 1, context.maxVar + 2]
+          [compiledLeft, compiledRight]
+          (compileProg
+            { context with
+                vars := (name, (.comb [.one, .one],
+                  [context.maxVar + 1, context.maxVar + 2])) :: context.vars
+                maxVar := context.maxVar + 2 }
+            body)) =
+      evalCrepFullResult [] primitive ffi sharedMem
+        baseAddress topAddress 8
+        { state with locals :=
+            updateCrepLocal (updateCrepLocal state.locals
+              (context.maxVar + 1) left) (context.maxVar + 2) right }
+        (compileProg
+          { context with
+              vars := (name, (.comb [.one, .one],
+                [context.maxVar + 1, context.maxVar + 2])) :: context.vars
+              maxVar := context.maxVar + 2 }
+            body) := by
+    simp only [nestedDecs, evalCrepFullResult, evalCrepFullProg,
+      hcompiledLeft]
+    simp [Option.bind, hcompiledRight]
+    generalize hraw : evalCrepFullProg [] primitive ffi sharedMem
+      baseAddress topAddress 8
+      { state with locals :=
+          updateCrepLocal (updateCrepLocal state.locals
+            (context.maxVar + 1) left) (context.maxVar + 2) right }
+      (compileProg
+        { context with
+            vars := (name, (.comb [.one, .one],
+              [context.maxVar + 1, context.maxVar + 2])) :: context.vars
+            maxVar := context.maxVar + 2 }
+        body) = raw
+    cases raw with
+    | none => simp
+    | some result => cases result <;> simp [restoreCrepResult]
+  rw [hcrepNested, hbody]
+  simp [evalPanValueProg, evalPanValueProgWithPrimitive,
+    hsource, panValueShape, panShapeMatches,
+    panShapeMatches.panShapeListMatches, Function.comp_def]
+  cases hresult : evalPanValueProgWithPrimitive structs baseAddress topAddress
+      bytesInWord
+      (updatePanValueMap locals name (.rStruct [.word left, .word right]))
+      globals (fun address => (state.memory address).map PanValue.word)
+      (fun _ _ => none) body <;> simp
+
 end Flapjack

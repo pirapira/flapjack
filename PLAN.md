@@ -2164,6 +2164,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Lift the counted return simulation through the full-SSA graph allocator,
   retaining the exact generated instruction-list length beside the final
   machine state.
+- [x] Expose the same counted full-SSA return boundary for the FFI-aware
+  Word selector, preserving the service context while using the straight-line
+  machine count.
 - [x] Prove the machine PC contract for a register-move sequence followed by
   the RISC-V tail-call jump.
 - [x] Connect the tail-call PC contract to the successful

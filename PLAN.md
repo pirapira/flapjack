@@ -840,6 +840,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   evaluator and StackRemove/Lab/RISC-V entrypoint with register simulations.
 - [x] Lift scratch-aware rotate-right through the StackProg evaluator and
   StackRemove/Lab/RISC-V entrypoint, retaining the x31-excluding relation.
+- [x] Lift the CakeML-compatible unsigned division evaluator and `divU`
+  lowering through the StackProg → StackRemove → Lab → RISC-V entrypoint.
+- [x] Lift the two-result LongMul evaluator and its `mulHU`/`mul` lowering
+  through the StackProg → StackRemove → Lab → RISC-V register simulation.
 - [x] Match CakeML Simple/IRC distinction in graph allocation modes: modes
   0--1 omit move preferences during coalescing but retain the original move table for coloring, while modes 2--3 use the prioritized list for coalescing and the original move table for coloring.
 - [x] Preserve SSA-renamed virtual names at the heuristic allocator's

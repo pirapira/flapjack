@@ -121,4 +121,78 @@ theorem wordStackRegisterRelation_executeLongMul
         hleftNonzero, hrightNonzero, htargetValue, hleft, hright,
         hregisterLeft, hregisterRight]
 
+theorem evalWordStackMachine_longMul [NeZero width]
+    (state : WordStackMachineState width)
+    (destinationLeft destinationRight sourceLeft sourceRight : Nat) :
+    evalWordStackMachine state
+      (.inst (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight)) :
+        StackProg Nat) =
+      some (wordStackMachineWriteRegister
+        (wordStackMachineWriteRegister state destinationLeft
+          (BitVec.ofNat width
+            ((state.registers sourceLeft).toNat *
+              (state.registers sourceRight).toNat / 2 ^ width)))
+        destinationRight (state.registers sourceLeft * state.registers sourceRight)) := by
+  rfl
+
+theorem compileStackProgramNatToRiscV_longMul [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destinationLeft destinationRight sourceLeft sourceRight : Nat)
+    (hdestinationLeft : destinationLeft < 32)
+    (hdestinationRight : destinationRight < 32)
+    (hsourceLeft : sourceLeft < 32) (hsourceRight : sourceRight < 32)
+    (hdestinationLeftSourceLeft : destinationLeft ≠ sourceLeft)
+    (hdestinationLeftSourceRight : destinationLeft ≠ sourceRight) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.inst (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight)) :
+        StackProg Nat) =
+      some [.mulHU ⟨destinationLeft, hdestinationLeft⟩
+          ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩,
+        .mul ⟨destinationRight, hdestinationRight⟩
+          ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩] := by
+  simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+    compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+    labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+    labLabel, labCompileLines, labCompilePlain, labCollectLabels,
+    labLineInstructionCount, wordArithToInstructions,
+    registerOfNat, hdestinationLeft, hdestinationRight, hsourceLeft,
+    hsourceRight, hdestinationLeftSourceLeft, hdestinationLeftSourceRight,
+    stackRemoveComplete, stackProgDepth, stackRemoveFuel]
+
+theorem compileStackProgramNatToRiscV_longMul_register_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destinationLeft destinationRight sourceLeft sourceRight : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hrel : WordStackRegisterRelation source target)
+    (hdestinationLeft : destinationLeft < 32)
+    (hdestinationRight : destinationRight < 32)
+    (hsourceLeft : sourceLeft < 32) (hsourceRight : sourceRight < 32)
+    (hdestinationLeftNonzero : destinationLeft ≠ 0)
+    (hdestinationRightNonzero : destinationRight ≠ 0)
+    (hdestinationDistinct : destinationLeft ≠ destinationRight)
+    (hdestinationLeftSourceLeft : destinationLeft ≠ sourceLeft)
+    (hdestinationLeftSourceRight : destinationLeft ≠ sourceRight)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel
+      (.inst (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight)) :
+        StackProg Nat) = some code) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister
+        (wordStackMachineWriteRegister source destinationLeft
+          (BitVec.ofNat width
+            ((source.registers sourceLeft).toNat *
+              (source.registers sourceRight).toNat / 2 ^ width)))
+        destinationRight (source.registers sourceLeft * source.registers sourceRight))
+      (executeInstructions target code) := by
+  rw [compileStackProgramNatToRiscV_longMul context config sectionId initialLabel
+    destinationLeft destinationRight sourceLeft sourceRight hdestinationLeft
+    hdestinationRight hsourceLeft hsourceRight hdestinationLeftSourceLeft
+    hdestinationLeftSourceRight] at hcode
+  cases hcode
+  exact wordStackRegisterRelation_executeLongMul source target destinationLeft
+    destinationRight sourceLeft sourceRight hrel hdestinationLeft hdestinationRight
+    hsourceLeft hsourceRight hdestinationLeftNonzero hdestinationRightNonzero
+    hdestinationDistinct hdestinationLeftSourceLeft hdestinationLeftSourceRight
+
 end Flapjack.RiscV

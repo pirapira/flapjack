@@ -1,5 +1,7 @@
 import Flapjack.RiscV.CorrectnessFfiMachine
 import Flapjack.RiscV.Lab
+import Flapjack.RiscV.ExactFfi
+import Flapjack.RiscV.CorrectnessExactFfi
 
 /-!
 # Pipeline FFI machine correctness
@@ -51,5 +53,48 @@ theorem executeCompiledPipelineFfi
     simpa [readRegister] using hzero
   simp [executeInstructionsWithFfi, executeWithFfi, executeInstructions,
     execute, writeRegister, readRegister, nextPc, hzero']
+
+theorem executeCompiledPipelineExactFfi
+    (state : ExactRiscVFfiState 64 sigma)
+    (hzero : readRegister state.machine 0 = 0) :
+    executeInstructionsWithExactFfi
+        { services := [("echo", 7)] } state
+        [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
+         .addi 0 0 (BitVec.ofNat 64 28),
+         .addi 14 0 (BitVec.ofNat 64 7), .ecall] =
+      exactRiscVFfiCall { services := [("echo", 7)] }
+        { state with machine := (executeInstructions state.machine
+            [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
+             .addi 0 0 (BitVec.ofNat 64 28),
+             .addi 14 0 (BitVec.ofNat 64 7)]) } 7 := by
+  have hzero' : state.machine.registers 0 = 0 := by
+    simpa [readRegister] using hzero
+  have hecall := executeInstructionsWithExactFfi_ecall
+    ({ services := [("echo", 7)] } : WordFfiContext)
+    ({ state with machine := (executeInstructions state.machine
+        [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
+         .addi 0 0 (BitVec.ofNat 64 28),
+         .addi 14 0 (BitVec.ofNat 64 7)]) })
+  simpa [executeInstructionsWithExactFfi, executeWithExactFfi,
+    executeInstructions, execute, writeRegister, readRegister,
+    nextPc, hzero'] using hecall
+
+theorem executeCompiledPipelineExactFfi_counted
+    (state final : ExactRiscVFfiState 64 sigma)
+    (hzero : readRegister state.machine 0 = 0)
+    (hresult : exactRiscVFfiCall { services := [("echo", 7)] }
+        { state with machine := (executeInstructions state.machine
+            [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
+             .addi 0 0 (BitVec.ofNat 64 28),
+             .addi 14 0 (BitVec.ofNat 64 7)]) } 7 = .normal final) :
+    executeInstructionsWithExactFfiCounted
+        { services := [("echo", 7)] } state
+        [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
+         .addi 0 0 (BitVec.ofNat 64 28),
+         .addi 14 0 (BitVec.ofNat 64 7), .ecall] =
+      (.normal final, 7) := by
+  apply executeInstructionsWithExactFfiCounted_normal
+  rw [executeCompiledPipelineExactFfi state hzero]
+  exact hresult
 
 end Flapjack.RiscV

@@ -2238,6 +2238,7 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   outcomes and their selected control-result relations.
 - [x] Add relation-aware zero-condition and recursive nonzero loop rules for
   the program correctness induction.
+- [x] Add relation-aware loop-control rules for body break and continue.
 - [x] Prove the compiled declaration-table head lookup exposes flattened
   parameter slots and the exact compiled function body.
 - [x] Prove source/Crep expression agreement for constants, word locals, and

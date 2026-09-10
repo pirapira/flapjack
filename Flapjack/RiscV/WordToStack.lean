@@ -58,6 +58,21 @@ def wordStackMove (config : WordStackConfig) (destination source : Nat) :
           (wordStackOffset config sourceSlot))
         (.stackStore config.scratch (wordStackOffset config destinationSlot)))
 
+/-! A `LocValue` materializes a code label, rather than reading a source
+    variable.  A register destination can receive the StackLang instruction
+    directly; a spilled destination is materialized in the reserved scratch
+    register and then stored in its stack slot.  The entry field is zero for
+    the ordinary code-label values emitted by CakeML's Word-to-Stack pass. -/
+def wordStackLocValue (config : WordStackConfig) (destination label : Nat) :
+    Option (StackProg α) := do
+  let location ← wordStackLocation config destination
+  match location with
+  | .register register =>
+      pure (.locValue register label 0)
+  | .stack slot =>
+      pure (.seq (.locValue config.scratch label 0)
+        (.stackStore config.scratch (wordStackOffset config slot)))
+
 def wordToStackMove (config : WordStackConfig) (destination source : Nat) :
     Option (StackProg α) :=
   wordStackMove config destination source
@@ -1942,7 +1957,7 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .assign destination (.var source) =>
       wordStackMove config destination source
   | .locValue destination source =>
-      wordStackMove config destination source
+      wordStackLocValue config destination source
   | .inst instruction =>
       wordToStackInst config instruction
   | .get destination store =>
@@ -2022,7 +2037,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .skip => some .skip
   | .move _ moves => wordStackMoveList config moves
   | .assign destination value => wordStackCompileExpNat config destination value
-  | .locValue destination source => wordStackMove config destination source
+  | .locValue destination source => wordStackLocValue config destination source
   | .inst instruction => wordToStackInst config instruction
   | .get destination store => wordStackGet config destination store
   | .store address value =>

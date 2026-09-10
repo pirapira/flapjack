@@ -24,7 +24,7 @@ example :
     wordToStackProg
         { locations := [(0, .stack 2), (1, .register 5)],
           scratch := 31, stackBase := 10 }
-        ((.seq (.assign 0 (.var 1)) (.locValue 1 0)) : WordProg Nat) =
+        ((.seq (.assign 0 (.var 1)) (.assign 1 (.var 0))) : WordProg Nat) =
       some (.seq
         (.seq (.arith .or 31 5 5) (.stackStore 31 12))
         (.seq (.stackLoad 31 12) (.arith .or 5 31 31)) : StackProg Nat) := by

@@ -189,7 +189,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
    The Word-to-Stack lowering now emits StackLang `LocValue` directly for
    register destinations and materializes it through the scratch register
    for spilled destinations; the abstract StackLang evaluator still needs a
-   code-label environment before this path can be executed there.
+   code-label environment before this path can be executed there. Loop-to-Word
+   now preserves labels as metadata as well; the legacy direct agreement
+   lemmas make their no-label-renaming assumption explicit until the direct
+   evaluator is replaced by the layout-aware Lab path.
    - Use `/home/zksecurity/HOL/examples/l3-machine-code/riscv/model/riscv.sml`
      as the RISC-V architectural reference; copy `/home/zksecurity/HOL/COPYRIGHT`
      into the Lean RISC-V model subdirectory when that port starts.

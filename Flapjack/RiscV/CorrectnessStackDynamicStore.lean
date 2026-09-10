@@ -1,4 +1,5 @@
 import Flapjack.RiscV.CorrectnessStackStore
+import Flapjack.RiscV.CorrectnessStackRemoveDynamic
 
 /-!
 # Dynamic StackRemove frame-cell stores at the RISC-V boundary
@@ -281,5 +282,71 @@ theorem compileStackProgramNatToRiscV_stackStoreAny_memory [NeZero width]
     hregister hscratchNonzero haddressScratchNonzero hstackPointerScratch
     hstackPointerAddressScratch hscratchAddressScratch hoffsetRegisterScratch
     hscratchSource hrel
+
+theorem compileStackProgramNatToRiscV_stackStoreAny_eval_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel register offsetRegister : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hstackPointer : config.stackPointer < 32)
+    (haddressScratch : config.addressScratch < 32)
+    (hscratchRegister : config.scratch < 32)
+    (hoffsetRegister : offsetRegister < 32)
+    (hregister : register < 32)
+    (hscratchNonzero : config.scratch ≠ 0)
+    (haddressScratchNonzero : config.addressScratch ≠ 0)
+    (hstackPointerScratch : config.stackPointer ≠ config.scratch)
+    (hstackPointerAddressScratch : config.stackPointer ≠ config.addressScratch)
+    (hscratchAddressScratch : config.scratch ≠ config.addressScratch)
+    (hoffsetRegisterScratch : offsetRegister ≠ config.scratch)
+    (hscratchSource : config.scratch ≠ register)
+    (hrel : WordStackRegisterRelationExceptRegister config.scratch source target)
+    (hread : readWordValue
+        (writeWordValue target
+          (target.registers ⟨config.stackPointer, hstackPointer⟩ +
+            target.registers ⟨offsetRegister, hoffsetRegister⟩)
+          (source.registers register))
+        (target.registers ⟨config.stackPointer, hstackPointer⟩ +
+          target.registers ⟨offsetRegister, hoffsetRegister⟩) =
+      source.registers register)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.stackStoreAny register offsetRegister : StackProg Nat) =
+      some code) :
+    (evalWordStackMachine source
+      (stackRemoveStackStoreAny config register offsetRegister)).map
+        (fun final => final.memory
+          (source.registers config.stackPointer + source.registers offsetRegister)) =
+      some (readWordValue (executeInstructions target code)
+        (target.registers ⟨config.stackPointer, hstackPointer⟩ +
+          target.registers ⟨offsetRegister, hoffsetRegister⟩)) := by
+  rw [evalStackRemoveStackStoreAny config source register offsetRegister
+    hscratchAddressScratch hstackPointerScratch.symm
+    hoffsetRegisterScratch.symm]
+  congr 1
+  have hmemory := compileStackProgramNatToRiscV_stackStoreAny_memory
+    context config sectionId initialLabel register offsetRegister source target
+    hstackPointer haddressScratch hscratchRegister hoffsetRegister hregister
+    hscratchNonzero haddressScratchNonzero hstackPointerScratch
+    hstackPointerAddressScratch hscratchAddressScratch hoffsetRegisterScratch
+    hscratchSource hrel code hcode
+  have hreadMemory (state₁ state₂ : State width) (address : Word width)
+      (hmemory : state₁.memory = state₂.memory) :
+      readWordValue state₁ address = readWordValue state₂ address := by
+    simp [readWordValue, readByte, hmemory]
+  symm
+  calc
+    readWordValue (executeInstructions target code)
+        (target.registers ⟨config.stackPointer, hstackPointer⟩ +
+          target.registers ⟨offsetRegister, hoffsetRegister⟩) =
+      readWordValue
+        (writeWordValue target
+          (target.registers ⟨config.stackPointer, hstackPointer⟩ +
+            target.registers ⟨offsetRegister, hoffsetRegister⟩)
+          (source.registers register))
+        (target.registers ⟨config.stackPointer, hstackPointer⟩ +
+          target.registers ⟨offsetRegister, hoffsetRegister⟩) := by
+      exact hreadMemory _ _ _ hmemory
+    _ = source.registers register := by
+      exact hread
 
 end Flapjack.RiscV

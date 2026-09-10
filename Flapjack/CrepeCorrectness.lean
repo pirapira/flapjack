@@ -922,7 +922,7 @@ theorem compile_full_pan_value_store_load_word_correct
         (.seq
           (.store (.const address) (.const value))
           (.return (.load .one (.const address))))).map
-        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+    (fun result => result.2.2.2.flatMap panValueFlatWords) := by
   simp [Option.bind, compileProg, compileExp, freshNames,
     nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResult,
     evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
@@ -934,6 +934,124 @@ theorem compile_full_pan_value_store_load_word_correct
     updateCrepLocal, updateMemory, updatePanValueMemory, updatePanValueMap,
     isWfShape,
     panValueFlatWords, panValueFlatWordsFuel]
+
+/-! A structured two-word store followed by a shaped load exercises the
+    compiler's multiword `stores` lowering and the source flat-memory model. -/
+set_option linter.unusedSimpArgs false in
+theorem compile_full_pan_value_store_load_two_word_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord address left right : α)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hzeroAdd : 0 + bytesInWord = bytesInWord)
+    (haddZero : ∀ value : α, value + 0 = value) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 120 state
+        (compileProg context
+          (.seq
+            (.store (.const address)
+              (.rStruct [.const left, .const right]))
+            (.return (.load (.comb [.one, .one]) (.const address))))) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun current =>
+          (state.memory current).map PanValue.word)
+        (.seq
+          (.store (.const address)
+            (.rStruct [.const left, .const right]))
+        (.return (.load (.comb [.one, .one]) (.const address))))).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  have hcompile : compileExp context
+      (.rStruct [.const left, .const right]) =
+      ([.const left, .const right], .comb [.one, .one]) := by
+    simp [compileExp, compileExp.compileExpList]
+  have hsize : (Shape.comb [.one, .one]).shapeSize = 2 := by
+    simp [Shape.shapeSize]
+  have hrange : List.range 2 = [0, 1] := by rfl
+  have hnames : freshNames context 2 2 =
+      [context.maxVar + 2, context.maxVar + 3] := by
+    simp [freshNames, List.range, List.range.loop, Nat.add_assoc]
+  by_cases hzero : bytesInWord == 0
+  · have hbytesZero : bytesInWord = 0 := by simpa using hzero
+    by_cases haddr : address == address + bytesInWord
+    · simp [Option.bind, compileProg, hcompile, hsize, hrange, hbytesInWord,
+        hzeroAdd, haddZero, hzero, hbytesZero, haddr, hnames, compileExp,
+    Function.comp_def, freshNames,
+    nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResult,
+    evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+    restoreCrepResult, evalPanValueProg,
+    evalPanValueProgWithPrimitive, evalPanValueExp,
+    evalPanValueExp.evalPanValueExps, panValueFlatLoad,
+    panValueFlatLoadListFuel, panValueFlatLoadFuel,
+    panValueFlatShapeFuel, panValueFlatShapeFuel.panValueFlatShapeListFuel,
+    panValueFlatContextFuel, panValueFlatValueFuel,
+    panValueFlatValueFuel.panValueFlatValueListFuel,
+    panValueFlatWordsFuel.panValueFlatWordsListFuel,
+    panValueFlatOffset, shapeSizeWithContext, evalPanBinOp,
+    panValueFlatReadWord, panValueFlatStoreWords,
+    panValueStoreWithAccess, updateCrepLocal, updateMemory,
+    updatePanValueMemory, updatePanValueMap, isWfShape,
+    isWfShape.isWfShapeList,
+        panValueFlatWords, panValueFlatWordsFuel]
+    · simp [Option.bind, compileProg, hcompile, hsize, hrange, hbytesInWord,
+        hzeroAdd, haddZero, hzero, hbytesZero, haddr, hnames, compileExp,
+        nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResult,
+        evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+        restoreCrepResult, evalPanValueProg,
+        evalPanValueProgWithPrimitive, evalPanValueExp,
+        evalPanValueExp.evalPanValueExps, panValueFlatLoad,
+        panValueFlatLoadListFuel, panValueFlatLoadFuel,
+        panValueFlatShapeFuel, panValueFlatShapeFuel.panValueFlatShapeListFuel,
+        panValueFlatContextFuel, panValueFlatValueFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatOffset, shapeSizeWithContext, evalPanBinOp,
+        panValueFlatReadWord, panValueFlatStoreWords,
+        panValueStoreWithAccess, updateCrepLocal, updateMemory,
+        updatePanValueMemory, updatePanValueMap, isWfShape,
+        isWfShape.isWfShapeList,
+        panValueFlatWords, panValueFlatWordsFuel]
+  · by_cases haddr : address == address + bytesInWord
+    · simp [Option.bind, compileProg, hcompile, hsize, hrange, hbytesInWord,
+        hzeroAdd, haddZero, hzero, haddr, hnames, compileExp,
+        nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResult,
+      evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+      restoreCrepResult, evalPanValueProg,
+      evalPanValueProgWithPrimitive, evalPanValueExp,
+      evalPanValueExp.evalPanValueExps, panValueFlatLoad,
+      panValueFlatLoadListFuel, panValueFlatLoadFuel,
+      panValueFlatShapeFuel, panValueFlatShapeFuel.panValueFlatShapeListFuel,
+      panValueFlatContextFuel, panValueFlatValueFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatOffset, shapeSizeWithContext, evalPanBinOp,
+      panValueFlatReadWord, panValueFlatStoreWords,
+      panValueStoreWithAccess, updateCrepLocal, updateMemory,
+      updatePanValueMemory, updatePanValueMap, isWfShape,
+      isWfShape.isWfShapeList,
+        panValueFlatWords, panValueFlatWordsFuel]
+    · simp [Option.bind, compileProg, hcompile, hsize, hrange, hbytesInWord,
+        hzeroAdd, haddZero, hzero, haddr, hnames, compileExp,
+        nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResult,
+        evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+        restoreCrepResult, evalPanValueProg,
+        evalPanValueProgWithPrimitive, evalPanValueExp,
+        evalPanValueExp.evalPanValueExps, panValueFlatLoad,
+        panValueFlatLoadListFuel, panValueFlatLoadFuel,
+        panValueFlatShapeFuel, panValueFlatShapeFuel.panValueFlatShapeListFuel,
+        panValueFlatContextFuel, panValueFlatValueFuel,
+        panValueFlatValueFuel.panValueFlatValueListFuel,
+        panValueFlatWordsFuel.panValueFlatWordsListFuel,
+        panValueFlatOffset, shapeSizeWithContext, evalPanBinOp,
+        panValueFlatReadWord, panValueFlatStoreWords,
+        panValueStoreWithAccess, updateCrepLocal, updateMemory,
+        updatePanValueMemory, updatePanValueMap, isWfShape,
+        isWfShape.isWfShapeList,
+        panValueFlatWords, panValueFlatWordsFuel]
 
 /-! The fixed-width store32/load32 pair is the direct word-memory case of the
     Pancake correctness induction. -/

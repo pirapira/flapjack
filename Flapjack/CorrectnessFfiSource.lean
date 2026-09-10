@@ -130,6 +130,106 @@ theorem compilePanToLoop_extCall_local_state_simulation
       hconfiguration, hconfigurationLength, harray, harrayLength, hsource']
   exact ⟨by rw [hcompile]; exact hloop, hsourceResult, hrelation⟩
 
+theorem compilePanToLoop_extCall_local_failure
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (compileContext : CompileContext α) (loopContext : LoopContext α)
+    (state : LoopState α) (sourceLocals : VarName → Option α)
+    (loopHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (sourceHandler : PanFfiHandler α) (function : FunName)
+    (configuration configurationLength array arrayLength : α)
+    (hmaxVar : compileContext.maxVar = loopContext.maxVar)
+    (hconfigurationVar : lookupInfo "configuration" compileContext.vars =
+      some (.one, [compileContext.maxVar + 1]))
+    (hconfigurationLengthVar : lookupInfo "configurationLength" compileContext.vars =
+      some (.one, [compileContext.maxVar + 2]))
+    (harrayVar : lookupInfo "array" compileContext.vars =
+      some (.one, [compileContext.maxVar + 3]))
+    (harrayLengthVar : lookupInfo "arrayLength" compileContext.vars =
+      some (.one, [compileContext.maxVar + 4]))
+    (hconfiguration : sourceLocals "configuration" = some configuration)
+    (hconfigurationLength : sourceLocals "configurationLength" = some configurationLength)
+    (harray : sourceLocals "array" = some array)
+    (harrayLength : sourceLocals "arrayLength" = some arrayLength)
+    (hslotConfiguration : state.locals (compileContext.maxVar + 1) =
+      sourceLocals "configuration")
+    (hslotConfigurationLength : state.locals (compileContext.maxVar + 2) =
+      sourceLocals "configurationLength")
+    (hslotArray : state.locals (compileContext.maxVar + 3) = sourceLocals "array")
+    (hslotArrayLength : state.locals (compileContext.maxVar + 4) =
+      sourceLocals "arrayLength")
+    (hloopFailure : loopHandler function configuration configurationLength array arrayLength
+      (sourceFfiSetupState state compileContext.maxVar configuration configurationLength
+        array arrayLength) = none)
+    (hsourceFailure : evalPanExtCall sourceHandler sourceLocals function
+      (.var .local "configuration") (.var .local "configurationLength")
+      (.var .local "array") (.var .local "arrayLength") = none) :
+    evalLoopProgWithCallsAndFfi [] loopHandler 40 state
+      (loopCompileProg loopContext []
+        (compileProg compileContext
+          (.extCall function (.var .local "configuration")
+            (.var .local "configurationLength") (.var .local "array")
+            (.var .local "arrayLength")))) = none ∧
+    evalPanProgWithCallsAndFfi [] sourceHandler 20 sourceLocals
+      (.extCall function (.var .local "configuration")
+        (.var .local "configurationLength") (.var .local "array")
+        (.var .local "arrayLength")) = none := by
+  have hcompile :
+      compileProg compileContext
+          (.extCall function (.var .local "configuration")
+            (.var .local "configurationLength") (.var .local "array")
+            (.var .local "arrayLength")) =
+        nestedDecs [compileContext.maxVar + 1, compileContext.maxVar + 2,
+          compileContext.maxVar + 3, compileContext.maxVar + 4]
+          [.var (compileContext.maxVar + 1), .var (compileContext.maxVar + 2),
+            .var (compileContext.maxVar + 3), .var (compileContext.maxVar + 4)]
+          (.extCall function (compileContext.maxVar + 1)
+            (compileContext.maxVar + 2) (compileContext.maxVar + 3)
+            (compileContext.maxVar + 4)) := by
+    simp [compileProg, firstCompiledExp, compileExp, nestedDecs,
+      hconfigurationVar, hconfigurationLengthVar, harrayVar, harrayLengthVar]
+  have hslotConfiguration' : state.locals (loopContext.maxVar + 1) = some configuration := by
+    rw [← hmaxVar, hslotConfiguration, hconfiguration]
+  have hslotConfigurationLength' : state.locals (loopContext.maxVar + 2) =
+      some configurationLength := by
+    rw [← hmaxVar, hslotConfigurationLength, hconfigurationLength]
+  have hslotArray' : state.locals (loopContext.maxVar + 3) = some array := by
+    rw [← hmaxVar, hslotArray, harray]
+  have hslotArrayLength' : state.locals (loopContext.maxVar + 4) =
+      some arrayLength := by
+    rw [← hmaxVar, hslotArrayLength, harrayLength]
+  have hloopFailure' : loopHandler function configuration configurationLength array arrayLength
+      { locals :=
+          updateLoopLocal
+            (updateLoopLocal
+              (updateLoopLocal
+                (updateLoopLocal state.locals (loopContext.maxVar + 1) configuration)
+                (loopContext.maxVar + 2) configurationLength)
+              (loopContext.maxVar + 3) array)
+            (loopContext.maxVar + 4) arrayLength,
+        globals := state.globals, memory := state.memory } = none := by
+    simpa [sourceFfiSetupState] using (show
+      loopHandler function configuration configurationLength array arrayLength
+        (sourceFfiSetupState state loopContext.maxVar configuration configurationLength
+          array arrayLength) = none by
+        rw [← hmaxVar]
+        exact hloopFailure)
+  have hsourceFailure' : sourceHandler function configuration configurationLength array arrayLength
+      sourceLocals = none := by
+    simpa [evalPanExtCall, evalPanExp, hconfiguration, hconfigurationLength,
+      harray, harrayLength] using hsourceFailure
+  constructor
+  · rw [hcompile, hmaxVar]
+    simp [nestedDecs, loopCompileProg, loopCompileExp,
+      loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+      updateLoopLocal, hslotConfiguration', hslotConfigurationLength', hslotArray',
+      hslotArrayLength', hloopFailure']
+  · simp [evalPanProgWithCallsAndFfi, evalPanExtCall, evalPanExp,
+      hconfiguration, hconfigurationLength, harray, harrayLength,
+      hsourceFailure']
+
 /-! Once an FFI leaf has established the state relation, ordinary sequencing
     can thread an arbitrary continuation through both evaluators.  Keeping the
     compiled continuation as an explicit argument makes this theorem useful

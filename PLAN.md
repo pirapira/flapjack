@@ -192,7 +192,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
    code-label environment before this path can be executed there. Loop-to-Word
    now preserves labels as metadata as well; the legacy direct agreement
    lemmas make their no-label-renaming assumption explicit until the direct
-   evaluator is replaced by the layout-aware Lab path.
+   evaluator is replaced by the layout-aware Lab path. The code-aware
+   StackAlloc evaluator now validates StackLang LocValue labels and writes an
+   abstract label pointer; frame-machine and layout-aware equivalence remain.
    - Use `/home/zksecurity/HOL/examples/l3-machine-code/riscv/model/riscv.sml`
      as the RISC-V architectural reference; copy `/home/zksecurity/HOL/COPYRIGHT`
      into the Lean RISC-V model subdirectory when that port starts.

@@ -2191,6 +2191,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   source order across the fresh Crep slots.
 - [x] Add a compositional two-word declaration simulation theorem with separate
   source-expression, lowered-expression, and continuation obligations.
+- [x] Relate a structured two-word local assignment to direct Crep slot writes
+  and a subsequent flattened local return.
 - [x] Generalize the structured return boundary to arbitrary shaped values,
   relating flattened Crep words to the source structured result.
 - [x] Verify the structured return boundary on closed records of word

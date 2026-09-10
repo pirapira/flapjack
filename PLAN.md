@@ -2218,6 +2218,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   flattened declaration results via a reusable `nestedDecs` evaluator theorem.
 - [x] Compose arbitrary-shape target `decCall` lowering from fresh-slot setup,
   destination-aware call execution, and the compiled continuation.
+- [x] Add the target normal-return call rule that assigns callee words to
+  caller destinations and carries callee memory into the caller state.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

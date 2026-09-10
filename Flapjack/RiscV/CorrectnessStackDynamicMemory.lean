@@ -1,4 +1,5 @@
 import Flapjack.RiscV.CorrectnessStackMemory
+import Flapjack.RiscV.CorrectnessStackRemoveDynamic
 
 /-!
 # Dynamic StackRemove frame-cell loads at the RISC-V boundary
@@ -196,5 +197,44 @@ theorem compileStackProgramNatToRiscV_stackLoadAny_simulation [NeZero width]
   exact executeStackRemoveStackLoadAny config source target destination offsetRegister offset
     hstackPointer haddressScratch hoffsetRegister hdestination hdestinationNonzero
     haddressScratchNonzero hstackPointerAddressScratch hrel hcell
+
+theorem compileStackProgramNatToRiscV_stackLoadAny_eval_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination offsetRegister : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (offset : Nat)
+    (hstackPointer : config.stackPointer < 32)
+    (haddressScratch : config.addressScratch < 32)
+    (hoffsetRegister : offsetRegister < 32)
+    (hdestination : destination < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (haddressScratchNonzero : config.addressScratch ≠ 0)
+    (hstackPointerAddressScratch : config.stackPointer ≠ config.addressScratch)
+    (hdestinationScratch : destination ≠ config.addressScratch)
+    (hrel : WordStackRegisterRelationExceptRegister config.addressScratch source target)
+    (hmemory : source.memory
+      (source.registers config.stackPointer + source.registers offsetRegister) =
+      source.stack offset)
+    (hcell : readWordValue target
+        (target.registers ⟨config.stackPointer, hstackPointer⟩ +
+          target.registers ⟨offsetRegister, hoffsetRegister⟩) =
+      source.stack offset)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.stackLoadAny destination offsetRegister : StackProg Nat) =
+      some code) :
+    (evalWordStackMachine source
+      (stackRemoveStackLoadAny config destination offsetRegister)).map
+        (fun final => final.registers destination) =
+      some ((executeInstructions target code).registers
+        ⟨destination, hdestination⟩) := by
+  rw [evalStackRemoveStackLoadAny config source destination offsetRegister, hmemory]
+  congr 1
+  have hsim := compileStackProgramNatToRiscV_stackLoadAny_simulation
+    context config sectionId initialLabel destination offsetRegister source target
+    hstackPointer haddressScratch hoffsetRegister hdestination hdestinationNonzero
+    haddressScratchNonzero hstackPointerAddressScratch hrel offset hcell code hcode
+  have hdest := hsim destination hdestination hdestinationScratch
+  simpa [wordStackMachineWriteRegister] using hdest.symm
 
 end Flapjack.RiscV

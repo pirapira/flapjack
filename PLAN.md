@@ -2232,6 +2232,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   parameter slots and the exact compiled function body.
 - [x] Prove source/Crep expression agreement for constants, word locals, and
   recursive records of word constants using the flattened-local relation.
+- [x] Prove binary-operation expression agreement for word constants through
+  `cexpHeads` and `evalPanBinOp`.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

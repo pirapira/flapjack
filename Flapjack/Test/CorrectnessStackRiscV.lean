@@ -278,6 +278,28 @@ example (operator : Shift) (hrotate : operator ≠ .ror) :
       exact (hrotate rfl).elim
 
 example :
+    WordStackRegisterRelationExceptX31
+      (wordStackMachineWriteRegister stackRiscVTestSource 5
+        (wordStackMachineShift .ror
+          (stackRiscVTestSource.registers 2)
+          (stackRiscVTestSource.registers 3)))
+      (executeInstructions (zeroState 64)
+        [.ori 31 0 (BitVec.ofNat 64 64), .sub 31 31 3,
+         .sll 31 2 31, .srl 5 2 3, .or 5 5 31]) := by
+  apply compileStackProgramNatToRiscV_rotateRight_register_simulation
+    (width := 64) { services := [] } stackRiscVRemoveConfig 2 3 5 2 3
+    stackRiscVTestSource (zeroState 64) stackRiscVTestRelationExceptX31
+    (by omega) (by omega) (by omega) (by omega)
+    (by simp [stackRiscVTestSource]) (Or.inr rfl)
+    (by omega) (by omega) (by omega)
+    [.ori 31 0 (BitVec.ofNat 64 64), .sub 31 31 3,
+      .sll 31 2 31, .srl 5 2 3, .or 5 5 31]
+  simpa [Fin.ext_iff] using
+    (compileStackProgramNatToRiscV_rotateRight (width := 64)
+      { services := [] } stackRiscVRemoveConfig 2 3 5 2 3
+      (by omega) (by omega) (by omega) (by omega) (by omega) (by omega))
+
+example :
     WordStackRegisterRelation
       (wordStackMachineWriteRegister stackRiscVTestSource 5
         (stackRiscVTestSource.registers 2 + stackRiscVTestSource.registers 3))

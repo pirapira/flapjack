@@ -95,4 +95,48 @@ theorem panValueCrepMemoryRel_def
       panValueWordMemory sourceMemory = crepMemory := by
   rfl
 
+theorem panValueCrepLocalsRel_extend
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceLocals' : VarName → Option (PanValue α))
+    (crepLocals : Nat → Option α)
+    (name : VarName) (shape : Shape) (slots : List Nat)
+    (value : PanValue α)
+    (hsource : sourceLocals' = updatePanValueMap sourceLocals name value)
+    (hshape : panShapeMatches (panValueShape structs value) shape = true)
+    (hread : readCrepLocals crepLocals slots = some (panValueFlatWords value))
+    (hold : ∀ oldName oldValue oldShape oldSlots,
+      oldName ≠ name →
+      sourceLocals oldName = some oldValue →
+      lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+      panShapeMatches (panValueShape structs oldValue) oldShape = true ∧
+      readCrepLocals crepLocals oldSlots = some (panValueFlatWords oldValue)) :
+    panValueCrepLocalsRel structs
+      { context with vars := (name, (shape, slots)) :: context.vars }
+      sourceLocals' crepLocals := by
+  intro current currentValue currentShape currentSlots hcurrent hlookup
+  by_cases hname : current = name
+  · subst current
+    have hlookup' : some (shape, slots) =
+        some (currentShape, currentSlots) := by
+      simpa [lookupInfo] using hlookup
+    have hpair : (shape, slots) = (currentShape, currentSlots) :=
+      Option.some.inj hlookup'
+    have hshapeEq : shape = currentShape := congrArg Prod.fst hpair
+    have hslotsEq : slots = currentSlots := congrArg Prod.snd hpair
+    cases hshapeEq
+    cases hslotsEq
+    rw [hsource] at hcurrent
+    simp [updatePanValueMap] at hcurrent
+    cases hcurrent
+    exact And.intro hshape hread
+  · have hlookupOld : lookupInfo current context.vars =
+        some (currentShape, currentSlots) := by
+      simpa [lookupInfo, hname, Ne.symm hname] using hlookup
+    have hcurrentOld : sourceLocals current = some currentValue := by
+      rw [hsource] at hcurrent
+      simpa [updatePanValueMap, hname] using hcurrent
+    exact hold current currentValue currentShape currentSlots hname
+      hcurrentOld hlookupOld
+
 end Flapjack

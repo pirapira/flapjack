@@ -139,4 +139,18 @@ theorem panValueCrepLocalsRel_extend
     exact hold current currentValue currentShape currentSlots hname
       hcurrentOld hlookupOld
 
+theorem lookupCompiledFunction_compileFunctions_head
+    [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (declaration : FunDecl α)
+    (declarations : List (Decl α)) :
+    lookupCompiledFunction declaration.name
+      (compileFunctions context (.function declaration :: declarations)) =
+      some ((compileParamVars declaration.params 0).2.1,
+        compileProg
+          { context with
+              vars := (compileParamVars declaration.params 0).1
+              maxVar := (compileParamVars declaration.params 0).2.2 }
+          declaration.body) := by
+  simp [compileFunctions, compileFunDecl, lookupCompiledFunction]
+
 end Flapjack

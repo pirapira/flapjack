@@ -2195,6 +2195,7 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   and a subsequent flattened local return.
 - [x] Prove the word store/load source-to-Crep boundary through the shared
   flat-memory update and shaped load semantics.
+- [x] Prove the direct word store32/load32 source-to-Crep boundary.
 - [x] Generalize the structured return boundary to arbitrary shaped values,
   relating flattened Crep words to the source structured result.
 - [x] Verify the structured return boundary on closed records of word

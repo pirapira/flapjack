@@ -1269,4 +1269,127 @@ theorem compile_full_pan_value_while_nonzero_compose
       evalCrepFullProg, hcrepCondition, hconditionAgreement,
       hsourceNonzero, hcrepBody, hcrepLoop]
 
+/-! A nonzero loop whose body breaks consumes the break in both semantics and
+    returns normally with the post-body state. -/
+theorem compile_full_pan_value_while_break_compose
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceNextLocals sourceNextGlobals : VarName → Option (PanValue α))
+    (sourceNextMemory : α → Option (PanValue α))
+    (state nextState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (condition : Exp α) (compiledCondition : CrepExp α)
+    (body : Prog α) (compiledBody : CrepProg α)
+    (sourceCondition targetCondition : α)
+    (hcompileCondition : compileExp context condition =
+      ([compiledCondition], .one))
+    (hcompileBody : compileProg context body = compiledBody)
+    (hsourceCondition : evalPanValueExp structs sourceLocals sourceGlobals
+      sourceMemory baseAddress topAddress bytesInWord condition =
+      some (.word sourceCondition))
+    (hcrepCondition : evalCrepFullExp state.locals state.memory
+      baseAddress topAddress compiledCondition = some targetCondition)
+    (hconditionAgreement : targetCondition = sourceCondition)
+    (hsourceNonzero : sourceCondition ≠ 0)
+    (hsourceBody : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord fuel
+      sourceLocals sourceGlobals sourceMemory body =
+      some (.broke sourceNextLocals sourceNextGlobals sourceNextMemory))
+    (hcrepBody : evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress fuel state compiledBody =
+      some (.broke nextState 0)) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory (.while condition body) =
+      some (.normal sourceNextLocals sourceNextGlobals sourceNextMemory) ∧
+    evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state
+      (compileProg context (.while condition body)) =
+      some (.normal nextState) := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceCondition,
+      hsourceNonzero, hsourceBody]
+  · simp [compileProg, hcompileCondition, hcompileBody,
+      evalCrepFullProg, hcrepCondition, hconditionAgreement,
+      hsourceNonzero, hcrepBody]
+
+/-! A nonzero loop whose body continues re-enters the same loop.  This is the
+    companion composition rule to the normal-body theorem above. -/
+theorem compile_full_pan_value_while_continue_compose
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceNextLocals sourceNextGlobals : VarName → Option (PanValue α))
+    (sourceNextMemory : α → Option (PanValue α))
+    (state nextState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (condition : Exp α) (compiledCondition : CrepExp α)
+    (body : Prog α) (compiledBody : CrepProg α)
+    (sourceCondition targetCondition : α)
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α)
+    (hcompileCondition : compileExp context condition =
+      ([compiledCondition], .one))
+    (hcompileBody : compileProg context body = compiledBody)
+    (hsourceCondition : evalPanValueExp structs sourceLocals sourceGlobals
+      sourceMemory baseAddress topAddress bytesInWord condition =
+      some (.word sourceCondition))
+    (hcrepCondition : evalCrepFullExp state.locals state.memory
+      baseAddress topAddress compiledCondition = some targetCondition)
+    (hconditionAgreement : targetCondition = sourceCondition)
+    (hsourceNonzero : sourceCondition ≠ 0)
+    (hsourceBody : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord fuel
+      sourceLocals sourceGlobals sourceMemory body =
+      some (.continued sourceNextLocals sourceNextGlobals sourceNextMemory))
+    (hcrepBody : evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress fuel state compiledBody =
+      some (.continued nextState 0))
+    (hsourceLoop : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord fuel
+      sourceNextLocals sourceNextGlobals sourceNextMemory
+      (.while condition body) = some sourceResult)
+    (hcrepLoop : evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress fuel nextState
+      (.while compiledCondition compiledBody) = some crepResult) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory (.while condition body) =
+      some sourceResult ∧
+    evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state
+      (compileProg context (.while condition body)) = some crepResult := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceCondition,
+      hsourceNonzero, hsourceBody, hsourceLoop]
+  · simp [compileProg, hcompileCondition, hcompileBody,
+      evalCrepFullProg, hcrepCondition, hconditionAgreement,
+      hsourceNonzero, hcrepBody, hcrepLoop]
+
 end Flapjack

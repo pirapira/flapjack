@@ -2205,6 +2205,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   full source-to-Crep result projection.
 - [x] Add the compositional nonzero-loop source-to-Crep rule, exposing
   condition agreement, normal body simulation, and recursive-loop premises.
+- [x] Add the nonzero-loop composition rules for body `break` and body
+  `continue`, including their distinct loop-control transitions.
 - [x] Generalize the structured return boundary to arbitrary shaped values,
   relating flattened Crep words to the source structured result.
 - [x] Verify the structured return boundary on closed records of word

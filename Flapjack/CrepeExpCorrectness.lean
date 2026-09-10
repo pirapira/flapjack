@@ -206,4 +206,102 @@ theorem compileExp_panOp_mul_const_correct
     evalPanValueExp, evalPanValueExp.evalPanValueExps,
     evalCrepFullExp]
 
+theorem compileExp_const_words_list
+    [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (values : List α) :
+    compileExp.compileExpList context
+        (values.map (fun value => .const value)) =
+      values.map (fun value => ([.const value], .one)) := by
+  induction values with
+  | nil => simp [compileExp.compileExpList]
+  | cons value values ih =>
+      simp [compileExp.compileExpList, compileExp, ih]
+
+theorem evalPanValueExp_const_words_list
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α) (values : List α) :
+    evalPanValueExp.evalPanValueExps structs sourceLocals sourceGlobals
+        sourceMemory baseAddress topAddress bytesInWord
+        (values.map (fun value => .const value)) =
+      some (values.map (fun value => .word value)) := by
+  induction values with
+  | nil => simp [evalPanValueExp.evalPanValueExps]
+  | cons value values ih =>
+      simp [evalPanValueExp.evalPanValueExps, evalPanValueExp, ih]
+
+theorem compileField_const_words
+    [OfNat α 0]
+    (values : List α) (index : Nat) (value : α)
+    (hfield : values[index]? = some value) :
+    compileField index (values.map (fun _ => .one))
+        (values.map (fun value => .const value)) =
+      ([.const value], .one) := by
+  induction values generalizing index value with
+  | nil => simp at hfield
+  | cons head tail ih =>
+      cases index with
+      | zero =>
+          simp at hfield
+          subst value
+          simp [compileField]
+      | succ index =>
+          have htail : tail[index]? = some value := by
+            simpa using hfield
+          simpa [compileField] using ih index value htail
+
+theorem compileExp_rField_const_words_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepLocals : Nat → Option α) (crepMemory : α → Option α)
+    (baseAddress topAddress bytesInWord : α)
+    (values : List α) (index : Nat) (value : α)
+    (hfield : values[index]? = some value) :
+    compileExp context
+        (.rField index (.rStruct (values.map (fun value => .const value)))) =
+      ([.const value], .one) ∧
+    evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.rField index (.rStruct (values.map (fun value => .const value)))) =
+      some (.word value) ∧
+    evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+      (.const value) = some value := by
+  have hcompileList := compileExp_const_words_list context values
+  have hsourceList := evalPanValueExp_const_words_list structs sourceLocals
+    sourceGlobals sourceMemory baseAddress topAddress bytesInWord values
+  have hfieldCompile := compileField_const_words values index value hfield
+  have hflat :
+      List.flatMap Prod.fst
+        (values.map (fun value =>
+            ([CrepExp.const value], Shape.one))) =
+        values.map (fun value => CrepExp.const value) := by
+    clear hfield hcompileList hsourceList hfieldCompile
+    induction values with
+    | nil => simp
+    | cons head tail ih => simp [ih]
+  have hcompile :
+      compileExp context
+          (.rField index (.rStruct (values.map (fun value => .const value)))) =
+        ([.const value], .one) := by
+    simpa [compileExp, hcompileList, hflat, Function.comp_def] using hfieldCompile
+  have hsource :
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord
+          (.rField index (.rStruct (values.map (fun value => .const value)))) =
+        some (.word value) := by
+    simp only [evalPanValueExp]
+    rw [hsourceList]
+    simpa using hfield
+  exact ⟨hcompile, hsource, by simp [evalCrepFullExp]⟩
+
 end Flapjack

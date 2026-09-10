@@ -183,9 +183,13 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
      CakeML's RISC-V encoder lowers `LongDiv` through runtime support rather
      than a native instruction.
    - **In progress:** make WordLang `LocValue` label-aware in allocator
-     analyses. The destination is an SSA variable; the label is code metadata,
-     not a source register. The executable Loop/Word/Stack semantics and their
-     end-to-end label environment remain to be migrated.
+   analyses. The destination is an SSA variable; the label is code metadata,
+   not a source register. The executable Loop/Word/Stack semantics and their
+   end-to-end label environment remain to be migrated.
+   The Word-to-Stack lowering now emits StackLang `LocValue` directly for
+   register destinations and materializes it through the scratch register
+   for spilled destinations; the abstract StackLang evaluator still needs a
+   code-label environment before this path can be executed there.
    - Use `/home/zksecurity/HOL/examples/l3-machine-code/riscv/model/riscv.sml`
      as the RISC-V architectural reference; copy `/home/zksecurity/HOL/COPYRIGHT`
      into the Lean RISC-V model subdirectory when that port starts.

@@ -251,4 +251,81 @@ theorem executeStackRemoveBitmapLoad [NeZero width]
     exact readWordValue_memory afterShift target _ hafterShiftMemory
   simp [execute, writeRegister, readRegister, hdestinationNonzero, hreadFinal]
 
+theorem compileStackProgramNatToRiscV_bitmapLoad [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination address : Nat)
+    (hstoreBase : config.storeBase < 32)
+    (haddressScratch : config.addressScratch < 32)
+    (hdestination : destination < 32)
+    (haddress : address < 32)
+    (hscratch : config.scratch < 32) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.bitmapLoad destination address : StackProg Nat) =
+      some [
+        .addi ⟨config.addressScratch, haddressScratch⟩ 0
+          (BitVec.ofNat width
+            (config.bytesInWord * stackStorePosition .bitmapBase)),
+        .sub ⟨config.addressScratch, haddressScratch⟩
+          ⟨config.storeBase, hstoreBase⟩
+          ⟨config.addressScratch, haddressScratch⟩,
+        .loadWord ⟨destination, hdestination⟩
+          ⟨config.addressScratch, haddressScratch⟩,
+        .add ⟨destination, hdestination⟩
+          ⟨destination, hdestination⟩ ⟨address, haddress⟩,
+        .addi ⟨config.scratch, hscratch⟩ 0
+          (BitVec.ofNat width config.wordShift),
+        .sll ⟨destination, hdestination⟩
+          ⟨destination, hdestination⟩ ⟨config.scratch, hscratch⟩,
+        .loadWord ⟨destination, hdestination⟩
+          ⟨destination, hdestination⟩] := by
+  simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+    compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+    labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+    labLabel, labCompileLines, labCompilePlain, labCollectLabels,
+    labLineInstructionCount, labBinOpInstruction, wordInstToInstruction,
+    registerOfNat, labShiftInstructions, hstoreBase, haddressScratch,
+    hdestination, haddress, hscratch, stackRemoveBitmapLoad, stackRemoveGet,
+    stackRemoveAddress, stackRemoveJoin, stackRemoveComplete, stackProgDepth,
+    stackRemoveFuel] <;>
+    congr 1
+
+theorem compileStackProgramNatToRiscV_bitmapLoad_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination address : Nat) (target : State width)
+    (hstoreBase : config.storeBase < 32)
+    (haddressScratch : config.addressScratch < 32)
+    (hdestination : destination < 32)
+    (haddress : address < 32)
+    (hscratch : config.scratch < 32)
+    (hstoreBaseNonzero : config.storeBase ≠ 0)
+    (haddressScratchNonzero : config.addressScratch ≠ 0)
+    (hdestinationNonzero : destination ≠ 0)
+    (hscratchNonzero : config.scratch ≠ 0)
+    (haddressScratchStoreBase : config.addressScratch ≠ config.storeBase)
+    (hdestinationScratch : destination ≠ config.scratch)
+    (haddressDestination : address ≠ destination)
+    (haddressAddressScratch : address ≠ config.addressScratch)
+    (hzero : target.registers 0 = 0)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.bitmapLoad destination address : StackProg Nat) =
+      some code) :
+    (executeInstructions target code).registers
+        ⟨destination, hdestination⟩ =
+      readWordValue target
+        ((readWordValue target
+            (target.registers ⟨config.storeBase, hstoreBase⟩ -
+              BitVec.ofNat width
+                (config.bytesInWord * stackStorePosition .bitmapBase)) +
+          target.registers ⟨address, haddress⟩) <<<
+          shiftAmount (BitVec.ofNat width config.wordShift)) := by
+  rw [compileStackProgramNatToRiscV_bitmapLoad context config sectionId initialLabel
+    destination address hstoreBase haddressScratch hdestination haddress hscratch] at hcode
+  cases hcode
+  exact executeStackRemoveBitmapLoad config target destination address
+    hstoreBase haddressScratch hdestination haddress hscratch
+    hstoreBaseNonzero haddressScratchNonzero hdestinationNonzero hscratchNonzero
+    haddressScratchStoreBase hdestinationScratch haddressDestination
+    haddressAddressScratch hzero
+
 end Flapjack.RiscV

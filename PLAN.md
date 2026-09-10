@@ -2167,6 +2167,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Expose the same counted full-SSA return boundary for the FFI-aware
   Word selector, preserving the service context while using the straight-line
   machine count.
+- [x] Compose counted FFI-aware RISC-V sequencing with the corresponding
+  component evaluator and machine-execution witnesses.
 - [x] Prove the machine PC contract for a register-move sequence followed by
   the RISC-V tail-call jump.
 - [x] Connect the tail-call PC contract to the successful

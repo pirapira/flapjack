@@ -112,6 +112,8 @@ theorem compile_full_seq_after_normal_simulation
     [ShiftLeft α] [ShiftRight α] [LT α]
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α)
+    (functions : List (CompiledFunction α))
+    (sourceFunctions : List (FunName × List VarName × Prog α))
     (sourceLocals sourceLocals' : VarName → Option α)
     (state state' : CrepState α)
     (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
@@ -124,25 +126,65 @@ theorem compile_full_seq_after_normal_simulation
     (crepResult : CrepControlResult α)
     (hfirstCompile : compileProg context first = compiledFirst)
     (hsecondCompile : compileProg context second = compiledSecond)
-    (hfirstCrep : evalCrepFullProg [] primitive ffi sharedMem
+    (hfirstCrep : evalCrepFullProg functions primitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.normal state'))
-    (hfirstSource : evalPanProgWithCallsAndFfi [] sourceHandler
+    (hfirstSource : evalPanProgWithCallsAndFfi sourceFunctions sourceHandler
       (fuel + 1) sourceLocals first = some (.normal sourceLocals'))
-    (hsecondCrep : evalCrepFullProg [] primitive ffi sharedMem
+    (hsecondCrep : evalCrepFullProg functions primitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state' compiledSecond =
       some crepResult)
-    (hsecondSource : evalPanProgWithCallsAndFfi [] sourceHandler
+    (hsecondSource : evalPanProgWithCallsAndFfi sourceFunctions sourceHandler
       (fuel + 1) sourceLocals' second = some sourceResult) :
-    evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+    evalCrepFullProg functions primitive ffi sharedMem baseAddress topAddress
       (fuel + 2) state (compileProg context (.seq first second)) =
       some crepResult ∧
-    evalPanProgWithCallsAndFfi [] sourceHandler (fuel + 2) sourceLocals
+    evalPanProgWithCallsAndFfi sourceFunctions sourceHandler (fuel + 2) sourceLocals
       (.seq first second) = some sourceResult := by
   constructor
   · rw [compileProg_seq, hfirstCompile, hsecondCompile]
     simp [evalCrepFullProg, hfirstCrep, hsecondCrep]
   · simp [evalPanProgWithCallsAndFfi, hfirstSource, hsecondSource]
+
+/-! A return from the first component must short-circuit the continuation.
+This is the control-flow counterpart of the normal-step theorem and is
+needed for caught call handlers, whose handler body may itself return. -/
+
+theorem compile_full_seq_after_return_simulation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α)
+    (functions : List (CompiledFunction α))
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (sourceLocals sourceLocals' : VarName → Option α)
+    (state state' : CrepState α)
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (sourceHandler : PanFfiHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (first : Prog α) (compiledFirst : CrepProg α)
+    (second : Prog α) (compiledSecond : CrepProg α)
+    (sourceValues crepValues : List α)
+    (hfirstCompile : compileProg context first = compiledFirst)
+    (hsecondCompile : compileProg context second = compiledSecond)
+    (hfirstCrep : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state compiledFirst =
+      some (.returned state' crepValues))
+    (hfirstSource : evalPanProgWithCallsAndFfi sourceFunctions sourceHandler
+      (fuel + 1) sourceLocals first =
+      some (.returned sourceLocals' sourceValues)) :
+    evalCrepFullProg functions primitive ffi sharedMem baseAddress topAddress
+      (fuel + 2) state (compileProg context (.seq first second)) =
+      some (.returned state' crepValues) ∧
+    evalPanProgWithCallsAndFfi sourceFunctions sourceHandler (fuel + 2)
+      sourceLocals (.seq first second) =
+      some (.returned sourceLocals' sourceValues) := by
+  constructor
+  · rw [compileProg_seq, hfirstCompile, hsecondCompile]
+    simp [evalCrepFullProg, hfirstCrep]
+  · simp [evalPanProgWithCallsAndFfi, hfirstSource]
 
 /-! The corresponding call equation keeps the lowered handler visible.  The
     caller supplies the result of the full Crepe call evaluator, so this lemma

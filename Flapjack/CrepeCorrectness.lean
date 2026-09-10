@@ -2227,6 +2227,53 @@ theorem evalCrepFullCall_returned_with_destinations
       some (.normal { locals := callerLocals, memory := callee.memory }) := by
   simp [evalCrepFullCall, hvalues, hlookup, hassign, hcallee, hdestinations]
 
+/-! The source-side normal-return call rule makes the validation and parameter
+    binding obligations explicit.  The no-destination form is the callee
+    witness consumed by `decCall`. -/
+theorem evalPanValueCall_returned_no_destination
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (contracts : Option PanValueCallContracts)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler α))
+    (function : FunName) (arguments : List (Exp α))
+    (values : List (PanValue α)) (parameters : List VarName)
+    (body : Prog α) (calleeLocals : VarName → Option (PanValue α))
+    (calleeGlobals : VarName → Option (PanValue α))
+    (calleeMemory : α → Option (PanValue α))
+    (calleeBodyLocals : VarName → Option (PanValue α))
+    (calleeValues : List (PanValue α))
+    (hvalues : evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord arguments
+      (memoryAccess := memoryAccess) = some values)
+    (hlookup : lookupPanFunction function functions = some (parameters, body))
+    (hparameters : panValueParametersValid structs contracts function values = true)
+    (hbind : bindPanValueParameters parameters values = some calleeLocals)
+    (hcallee : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive handler structs functions baseAddress topAddress bytesInWord fuel
+      calleeLocals sourceGlobals sourceMemory body
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.returned calleeBodyLocals calleeGlobals calleeMemory calleeValues))
+    (hreturn : panValueReturnValid structs contracts function calleeValues = true)
+    (hlimit : panValueValuesWithinLimit structs calleeValues = true) :
+    evalPanValueCallWithPrimitiveCallsAndFfi
+      primitive handler structs functions baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory none function arguments
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.returned (fun _ => none) calleeGlobals calleeMemory calleeValues) := by
+  simp [evalPanValueCallWithPrimitiveCallsAndFfi, hvalues, hlookup,
+    hparameters, hbind, hcallee, hreturn, hlimit]
+
 /-! Expose the exact compiler equation for declaration calls.  Keeping this
     expansion named prevents later correctness proofs from duplicating the
     fresh-slot and continuation-context bookkeeping. -/

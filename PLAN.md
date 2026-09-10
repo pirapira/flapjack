@@ -2352,6 +2352,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   pointer for both scratch-register layouts.
 - [x] Connect one-chunk stack allocation and release evaluator results to the
   compiled RISC-V stack pointer.
+- [x] Connect fixed-offset stack-store evaluator observations to the compiled
+  RISC-V byte-memory result through `readWordValue`.
 - [x] Carry the full-SSA heuristic graph allocator through location-aware
   StackLang entry moves and body evaluation, retaining its colouring checks.
 - [x] Prove that every heuristic graph-allocation branch preserves the source

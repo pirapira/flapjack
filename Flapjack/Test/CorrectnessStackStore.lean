@@ -84,6 +84,51 @@ example :
       simp [stackRiscVTestSource, zeroState])
     (code := [.or 31 5 5, .addi 29 0 (BitVec.ofNat 64 (8 * 12)),
       .add 29 20 29, .storeWord 31 29])
+        (hcode := by
+      simpa [stackRiscVRemoveConfig, Fin.ext_iff] using
+        (compileStackProgramNatToRiscV_stackStore (width := 64)
+          { services := [] } stackRiscVRemoveConfig 2 3 5 12
+          (by simp [stackRiscVRemoveConfig]) (by simp [stackRiscVRemoveConfig])
+          (by simp [stackRiscVRemoveConfig]) (by omega)
+          (by simp [stackRiscVRemoveConfig])))
+
+example :
+    (evalWordStackMachine stackRiscVTestSource
+      (stackRemoveStackStore stackRiscVRemoveConfig 5 12)).map
+        (fun final => final.memory
+          (stackRiscVTestSource.registers stackRiscVRemoveConfig.stackPointer +
+            BitVec.ofNat 64 (stackRiscVRemoveConfig.bytesInWord * 12))) =
+      some (readWordValue (executeInstructions (zeroState 64)
+        [.or 31 5 5,
+         .addi 29 0 (BitVec.ofNat 64 (8 * 12)),
+         .add 29 20 29,
+         .storeWord 31 29])
+        ((zeroState 64).registers 20 + BitVec.ofNat 64 (8 * 12))) := by
+  apply compileStackProgramNatToRiscV_stackStore_eval_simulation
+    (context := { services := [] }) (config := stackRiscVRemoveConfig)
+    (sectionId := 2) (initialLabel := 3) (register := 5) (offset := 12)
+    (source := stackRiscVTestSource) (target := zeroState 64)
+    (hstackPointer := by simp [stackRiscVRemoveConfig])
+    (haddressScratch := by simp [stackRiscVRemoveConfig])
+    (hscratchRegister := by simp [stackRiscVRemoveConfig])
+    (hregister := by omega)
+    (hscratchNonzero := by simp [stackRiscVRemoveConfig])
+    (haddressScratchNonzero := by simp [stackRiscVRemoveConfig])
+    (hstackPointerScratch := by simp [stackRiscVRemoveConfig])
+    (hstackPointerAddressScratch := by simp [stackRiscVRemoveConfig])
+    (hscratchAddressScratch := by simp [stackRiscVRemoveConfig])
+    (hscratchSource := by simp [stackRiscVRemoveConfig])
+    (hzero := by simp [zeroState])
+    (hrel := by
+      unfold WordStackRegisterRelationExceptRegister
+      intro register hregister hignored
+      simp [stackRiscVTestSource, zeroState])
+    (hread := by
+      decide +kernel)
+    (code := [.or 31 5 5,
+      .addi 29 0 (BitVec.ofNat 64 (8 * 12)),
+      .add 29 20 29,
+      .storeWord 31 29])
     (hcode := by
       simpa [stackRiscVRemoveConfig, Fin.ext_iff] using
         (compileStackProgramNatToRiscV_stackStore (width := 64)

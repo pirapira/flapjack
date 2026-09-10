@@ -2175,6 +2175,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   function-evaluator form needed to compose Pancake pass correctness.
 - [x] Prove the first structured Pancake-to-Crep result boundary for a closed
   word return, retaining the source structured result before flattening.
+- [x] Generalize that structured return boundary over source expressions,
+  exposing separate source and lowered-Crep expression obligations.
 - [x] Prove that a resolved cross-section Lab jump executes to the target
   section on the RISC-V model, rather than only matching emitted code shape.
 - [x] Prove Lab `linkValue` materializes a resolved continuation in ABI

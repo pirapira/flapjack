@@ -238,4 +238,36 @@ theorem compile_full_pan_value_return_word_correct
     evalPanValueProgWithPrimitive, evalPanValueExp, panValueFlatWords,
     panValueFlatWordsFuel]
 
+/-! The return boundary is also useful with a non-constant source expression.
+    Its two hypotheses are precisely the source-expression and lowered-Crep
+    expression obligations that a later expression pass theorem supplies. -/
+theorem compile_full_pan_value_return_word_of_exp
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord value : α)
+    (expression : Exp α) (compiled : CrepExp α)
+    (hsource : evalPanValueExp structs locals globals (fun address =>
+      (state.memory address).map PanValue.word)
+      baseAddress topAddress bytesInWord expression = some (.word value))
+    (hcompile : compileExp context expression = ([compiled], .one))
+    (hcompiled : evalCrepFullExp state.locals state.memory baseAddress topAddress
+      compiled = some value) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 1 state
+        (compileProg context (.return expression)) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.return expression)).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp [compileProg, hcompile, evalCrepFullResult, evalCrepFullProg,
+    evalCrepFullExps, hcompiled, evalPanValueProg,
+    evalPanValueProgWithPrimitive, hsource, panValueFlatWords,
+    panValueFlatWordsFuel]
+
 end Flapjack

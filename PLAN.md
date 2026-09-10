@@ -2222,6 +2222,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   caller destinations and carries callee memory into the caller state.
 - [x] Add the source normal-return call rule with explicit argument, parameter,
   return-shape, and payload validation witnesses.
+- [x] Couple source and target `decCall` composition into one induction rule,
+  leaving only source/Crep callee and body simulations as supplied witnesses.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

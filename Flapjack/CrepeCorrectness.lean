@@ -2274,6 +2274,91 @@ theorem evalPanValueCall_returned_no_destination
   simp [evalPanValueCallWithPrimitiveCallsAndFfi, hvalues, hlookup,
     hparameters, hbind, hcallee, hreturn, hlimit]
 
+/-! Couple the source and target declaration-call constructors.  The theorem
+    deliberately keeps the source and Crep body simulations as hypotheses:
+    those are supplied by the main induction and this rule only accounts for
+    the call boundary, fresh slots, and continuation bookkeeping. -/
+theorem compile_full_pan_value_decCall_compose_full
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state callState : CrepState α)
+    (primitive : PanPrimitiveHandler α) (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (contracts : Option PanValueCallContracts)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler α))
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (compiledArguments : List (CrepExp α))
+    (sourceCalleeGlobals : VarName → Option (PanValue α))
+    (sourceCalleeMemory : α → Option (PanValue α))
+    (sourceValue : PanValue α) (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α)
+    (hcompileArgs : compileArgs context arguments = compiledArguments)
+    (hsourceCall : evalPanValueCallWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord fuel
+      sourceLocals sourceGlobals sourceMemory none function arguments
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.returned (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
+        [sourceValue]))
+    (hsourceShape : panShapeMatches
+      (panValueShape structs sourceValue) shape = true)
+    (hsourceBody : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord fuel
+      (updatePanValueMap sourceLocals name sourceValue)
+      sourceCalleeGlobals sourceCalleeMemory body
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some sourceResult)
+    (hcrepCall : evalCrepFullCall functions crepPrimitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with
+          locals := initializeCrepLocals state.locals
+            (allocatedNames context shape) }
+      (some (allocatedNames context shape, none)) function compiledArguments =
+      some (.normal callState))
+    (hcrepBody : evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) callState
+      (compileProg
+        { context with
+            vars := (name, (shape, allocatedNames context shape)) :: context.vars
+            maxVar := context.maxVar + Shape.shapeSize shape }
+        body) = some crepResult) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory
+      (.decCall name shape function arguments body)
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (restorePanValueControlLocal name (sourceLocals name) sourceResult) ∧
+    evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress
+      (fuel + (allocatedNames context shape).length + 2) state
+      (compileProg context (.decCall name shape function arguments body)) =
+      some (restoreCrepResultList state.locals
+        (allocatedNames context shape) crepResult) := by
+  constructor
+  · apply evalPanValueProg_decCall_compose
+    · exact hsourceCall
+    · exact hsourceShape
+    · exact hsourceBody
+  · apply compile_full_pan_value_decCall_compose
+    · exact hcompileArgs
+    · exact hcrepCall
+    · exact hcrepBody
+
 /-! Expose the exact compiler equation for declaration calls.  Keeping this
     expansion named prevents later correctness proofs from duplicating the
     fresh-slot and continuation-context bookkeeping. -/

@@ -23,7 +23,7 @@ def exactFfiSetupInstructions : List (Instruction 64) :=
 
 example :
     executeInstructionsWithExactFfi
-        { services := [(echo, 7)] } exactFfiState
+        { services := [("echo", 7)] } exactFfiState
         exactFfiSetupInstructions =
       .normal { exactFfiState with
         machine := executeInstructions exactFfiState.machine
@@ -35,16 +35,32 @@ example :
 
 example :
     executeInstructionsWithExactFfi
-        { services := [(echo, 7)] } exactFfiState
+        { services := [("echo", 7)] } exactFfiState
         (exactFfiSetupInstructions ++ [.ecall]) =
       match executeInstructionsWithExactFfi
-          { services := [(echo, 7)] } exactFfiState
+          { services := [("echo", 7)] } exactFfiState
           exactFfiSetupInstructions with
       | .normal middle =>
           executeInstructionsWithExactFfi
-            { services := [(echo, 7)] } middle [.ecall]
+            { services := [("echo", 7)] } middle [.ecall]
       | result => result := by
   apply executeInstructionsWithExactFfi_append
+
+example (result : ExactRiscVFfiResult 64 Unit)
+    (hresult : exactRiscVFfiCall { services := [("echo", 7)] }
+        { exactFfiState with
+          machine := executeInstructions exactFfiState.machine
+            exactFfiSetupInstructions }
+        (readRegister
+          (executeInstructions exactFfiState.machine exactFfiSetupInstructions) 14).toNat =
+      result) :
+    executeInstructionsWithExactFfi { services := [("echo", 7)] } exactFfiState
+        (exactFfiSetupInstructions ++ [.ecall]) = result := by
+  apply executeInstructionsWithExactFfi_prefix_ecall
+  · intro instruction hinstruction
+    simp [exactFfiSetupInstructions] at hinstruction
+    rcases hinstruction with rfl | rfl | rfl | rfl | rfl <;> decide
+  · exact hresult
 
 example :
     executeInstructionsWithExactFfi

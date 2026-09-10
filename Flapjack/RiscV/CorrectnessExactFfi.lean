@@ -159,6 +159,27 @@ theorem executeInstructionsWithExactFfi_of_no_ecall [NeZero width]
         hinstruction, executeInstructions] using
         ih { state with machine := execute state.machine instruction } htail
 
+/-! Compose a compiler-emitted ordinary prefix directly with its trailing
+    ECALL.  The service number is read from the post-prefix ABI state, so the
+    theorem can be reused when the prefix materializes or moves x14. -/
+theorem executeInstructionsWithExactFfi_prefix_ecall [NeZero width]
+    (context : WordFfiContext)
+    (state : ExactRiscVFfiState width sigma)
+    (setup : List (Instruction width))
+    (result : ExactRiscVFfiResult width sigma)
+    (hprefix : ∀ instruction, instruction ∈ setup →
+      instruction ≠ .ecall)
+    (hresult : exactRiscVFfiCall context
+        { state with machine := executeInstructions state.machine setup }
+        (readRegister (executeInstructions state.machine setup) 14).toNat =
+      result) :
+    executeInstructionsWithExactFfi context state (setup ++ [.ecall]) = result := by
+  rw [executeInstructionsWithExactFfi_append]
+  rw [executeInstructionsWithExactFfi_of_no_ecall context state setup hprefix]
+  simp only [executeInstructionsWithExactFfi, executeWithExactFfi]
+  rw [hresult]
+  cases result <;> rfl
+
 /-! The loop-aware selector delegates an FFI leaf to the same Word selector,
     but its result is wrapped in labelled-control lowering.  This bridge keeps
     that normalization explicit so a control-flow-aware pipeline can consume

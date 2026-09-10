@@ -166,6 +166,126 @@ theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_exactFfi_simulation
     configuration configurationLength array arrayLength service code result
     hservice hcode' hservice_bounded hzero hresult
 
+/-! The same FFI leaf theorem remains valid in the real call-aware context.
+    The target table is carried by the complete compiler even when this leaf
+    does not perform a call; making it explicit avoids weakening a later
+    pass-level theorem to the singleton empty-target fixture above. -/
+theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_exactFfi_simulation_targets
+    [NeZero width]
+    (context : WordFfiContext)
+    (targets : List (Nat × Word width × List Nat × List Nat))
+    (state : ExactRiscVFfiState width σ)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Fin 32)
+    (service : Nat) (code : List (Instruction width))
+    (result : ExactRiscVFfiResult width σ)
+    (hservice : lookupWordFfiService function context.services = some service)
+    (hcode : wordFunctionToRiscVWithCallsAndFfiAndLoops
+      ({ targets := targets, services := context.services } : WordCallFfiContext width)
+      (.ffi function configuration.val configurationLength.val array.val
+        arrayLength.val ([], [])) = some (code, []))
+    (hservice_bounded : service < 2 ^ width)
+    (hzero : readRegister state.machine 0 = 0)
+    (hresult : exactRiscVFfiCall context
+        { machine := executeInstructions state.machine
+            [.addi 10 configuration (0#width),
+             .addi 11 configurationLength (0#width),
+             .addi 12 array (0#width),
+             .addi 13 arrayLength (0#width),
+             .addi 14 0 (BitVec.ofNat width service)],
+          ffi := state.ffi } service = result) :
+    executeInstructionsWithExactFfi context state code = result := by
+  have hagree := wordFunctionToRiscVWithCallsAndFfiAndLoops_agrees_straightLine
+    ({ targets := targets, services := context.services } : WordCallFfiContext width)
+    (.ffi function configuration.val configurationLength.val array.val
+      arrayLength.val ([], []) : WordProg (Word width))
+    (WordRiscVFFIStraightLine.ffi function configuration.val
+      configurationLength.val array.val arrayLength.val ([], []))
+  have hwordCode : wordFunctionToRiscVWithCallsAndFfi
+      ({ targets := targets, services := context.services } : WordCallFfiContext width)
+      (.ffi function configuration.val configurationLength.val array.val
+        arrayLength.val ([], [])) = some (code, []) := by
+    rw [← hagree]
+    exact hcode
+  have hcode' : wordFfiToRiscV context function configuration.val
+      configurationLength.val array.val arrayLength.val = some code := by
+    cases hffi : wordFfiToRiscV (width := width) context function configuration.val
+        configurationLength.val array.val arrayLength.val with
+    | none =>
+        simp [wordFunctionToRiscVWithCallsAndFfi, hffi] at hwordCode
+    | some ffiCode =>
+        have hpair : (ffiCode, ([] : List (Fin 32))) =
+            (code, ([] : List (Fin 32))) := by
+          simpa [wordFunctionToRiscVWithCallsAndFfi, hffi] using hwordCode
+        cases hpair
+        rfl
+  exact wordFfiToRiscV_exactFfi_simulation context state function
+    configuration configurationLength array arrayLength service code result
+    hservice hcode' hservice_bounded hzero hresult
+
+theorem executeInstructionsWithExactFfiCounted_normal
+    [NeZero width]
+    (context : WordFfiContext)
+    (state final : ExactRiscVFfiState width σ)
+    (instructions : List (Instruction width))
+    (hresult : executeInstructionsWithExactFfi context state instructions =
+      .normal final) :
+    executeInstructionsWithExactFfiCounted context state instructions =
+      (.normal final, instructions.length) := by
+  induction instructions generalizing state final with
+  | nil =>
+      simp [executeInstructionsWithExactFfi,
+        executeInstructionsWithExactFfiCounted] at hresult ⊢
+      cases hresult
+      rfl
+  | cons instruction instructions ih =>
+      cases hstep : executeWithExactFfi context state instruction with
+      | normal nextState =>
+          have htail : executeInstructionsWithExactFfi context nextState instructions =
+              .normal final := by
+            simpa [executeInstructionsWithExactFfi, hstep] using hresult
+          have hcount := ih nextState final htail
+          simp [executeInstructionsWithExactFfiCounted, hstep, hcount,
+            List.length]
+      | final terminalState event =>
+          simp [executeInstructionsWithExactFfi, hstep] at hresult
+      | error terminalState =>
+          simp [executeInstructionsWithExactFfi, hstep] at hresult
+
+/-! Counted version of the compiler-facing exact FFI boundary.  The result
+    hypothesis is restricted to the normal case because a final FFI event
+    intentionally short-circuits the remaining instruction list. -/
+theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_exactFfi_counted_simulation_targets
+    [NeZero width]
+    (context : WordFfiContext)
+    (targets : List (Nat × Word width × List Nat × List Nat))
+    (state final : ExactRiscVFfiState width σ)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Fin 32)
+    (service : Nat) (code : List (Instruction width))
+    (hservice : lookupWordFfiService function context.services = some service)
+    (hcode : wordFunctionToRiscVWithCallsAndFfiAndLoops
+      ({ targets := targets, services := context.services } : WordCallFfiContext width)
+      (.ffi function configuration.val configurationLength.val array.val
+        arrayLength.val ([], [])) = some (code, []))
+    (hservice_bounded : service < 2 ^ width)
+    (hzero : readRegister state.machine 0 = 0)
+    (hresult : exactRiscVFfiCall context
+        { machine := executeInstructions state.machine
+            [.addi 10 configuration (0#width),
+             .addi 11 configurationLength (0#width),
+             .addi 12 array (0#width),
+             .addi 13 arrayLength (0#width),
+             .addi 14 0 (BitVec.ofNat width service)],
+          ffi := state.ffi } service = .normal final) :
+    executeInstructionsWithExactFfiCounted context state code =
+      (.normal final, code.length) := by
+  have hrun := wordFunctionToRiscVWithCallsAndFfiAndLoops_exactFfi_simulation_targets
+    context targets state function configuration configurationLength array arrayLength
+    service code (.normal final) hservice hcode hservice_bounded hzero hresult
+  apply executeInstructionsWithExactFfiCounted_normal context state final code
+  exact hrun
+
 theorem exactWriteBytesAux_pc [NeZero width] (address : Word width)
     (state : State width) (offset : Nat) (bytes : List UInt8) :
     (exactWriteBytesAux address state offset bytes).pc = state.pc := by

@@ -91,6 +91,21 @@ def executeInstructionsWithExactFfi [NeZero width]
       | .normal state => executeInstructionsWithExactFfi context state instructions
       | result => result
 
+/-! Count the instructions consumed by the exact machine runner.  A terminal
+    FFI result stops the run and therefore reports only the successful prefix;
+    the normal-result theorem below recovers the full list length. -/
+def executeInstructionsWithExactFfiCounted [NeZero width]
+    (context : WordFfiContext) (state : ExactRiscVFfiState width σ) :
+    List (Instruction width) → ExactRiscVFfiResult width σ × Nat
+  | [] => (.normal state, 0)
+  | instruction :: instructions =>
+      match executeWithExactFfi context state instruction with
+      | .normal nextState =>
+          let (result, count) :=
+            executeInstructionsWithExactFfiCounted context nextState instructions
+          (result, count + 1)
+      | result => (result, 1)
+
 theorem lookupWordFfiName_shape :
     lookupWordFfiName 7 [("echo", 7), ("other", 8)] = some "echo" := by
   rfl

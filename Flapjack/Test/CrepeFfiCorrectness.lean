@@ -87,6 +87,94 @@ theorem sourceToCrepeFfi_simulation_theorem :
   rw [hprogram]
   simpa [evalPanFfiProg] using h
 
+def sourceToCrepeFfiContinuation : Prog (RiscV.Word 64) :=
+  .return (.var .local "result")
+
+def sourceToCrepeFfiSequence : Prog (RiscV.Word 64) :=
+  .seq sourceToCrepeFfiProgram sourceToCrepeFfiContinuation
+
+/-! The reusable sequencing contract carries the value produced by the FFI
+step into a following source return.  This is the first concrete regression
+that observes the post-FFI state through a continuation rather than only
+checking the FFI leaf itself. -/
+
+theorem sourceToCrepeFfi_sequence_simulation :
+    evalCrepFullProg [] sourceToCrepeFfiPrimitive sourceToCrepeFfiHandler
+      sourceToCrepeFfiSharedMem 0 100 31 sourceToCrepeFfiState
+      (compileProg sourceToCrepeFfiContext sourceToCrepeFfiSequence) =
+        some (.returned
+          (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
+            sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar)
+          [BitVec.ofNat 64 42]) ∧
+      evalPanProgWithCallsAndFfi [] sourceToCrepeFfiSourceHandler 31
+        sourceToCrepeFfiSourceLocals sourceToCrepeFfiSequence =
+        some (.returned sourceToCrepeFfiSourceAfter [BitVec.ofNat 64 42]) := by
+  have hfirst := sourceToCrepeFfi_simulation_theorem
+  apply compile_full_seq_after_normal_simulation
+    (context := sourceToCrepeFfiContext)
+    (sourceLocals := sourceToCrepeFfiSourceLocals)
+    (sourceLocals' := sourceToCrepeFfiSourceAfter)
+    (state := sourceToCrepeFfiState)
+    (state' := restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
+      sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar)
+    (primitive := sourceToCrepeFfiPrimitive)
+    (ffi := sourceToCrepeFfiHandler)
+    (sharedMem := sourceToCrepeFfiSharedMem)
+    (sourceHandler := sourceToCrepeFfiSourceHandler)
+    (baseAddress := 0) (topAddress := 100) (fuel := 29)
+    (first := sourceToCrepeFfiProgram)
+    (compiledFirst := compileProg sourceToCrepeFfiContext sourceToCrepeFfiProgram)
+    (second := sourceToCrepeFfiContinuation)
+    (compiledSecond := compileProg sourceToCrepeFfiContext
+      sourceToCrepeFfiContinuation)
+    (sourceResult := .returned sourceToCrepeFfiSourceAfter
+      [BitVec.ofNat 64 42])
+    (crepResult := .returned
+      (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
+        sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar)
+      [BitVec.ofNat 64 42])
+    (hfirstCompile := rfl) (hsecondCompile := rfl)
+    (hfirstCrep := hfirst.1)
+    (hfirstSource := by
+      have hfirst' : evalPanExtCall sourceToCrepeFfiSourceHandler
+          sourceToCrepeFfiSourceLocals "inc"
+          (.const (BitVec.ofNat 64 41)) (.const 0) (.const 0) (.const 0) =
+          some sourceToCrepeFfiSourceAfter := by
+        simpa [sourceToCrepeFfiProgram, evalPanFfiProg] using hfirst.2
+      simp only [sourceToCrepeFfiProgram, evalPanProgWithCallsAndFfi]
+      rw [hfirst']
+      rfl
+    )
+    (hsecondCrep := by
+      have hmax : sourceToCrepeFfiContext.maxVar = 1 := rfl
+      have hcompiled :
+          compileProg sourceToCrepeFfiContext sourceToCrepeFfiContinuation =
+            .return [.var 1] := by
+        simp [sourceToCrepeFfiContinuation, sourceToCrepeFfiContext,
+          compileProg, compileExp, lookupInfo]
+      have hlocal :
+          (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
+            sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar).locals 1 =
+            some (BitVec.ofNat 64 42) := by
+        rw [hmax]
+        simp [restoreCrepFfiTemps, sourceToCrepeFfiTargetAfter,
+          sourceToCrepeFfiTargetAfterTemps, sourceToCrepeFfiState,
+          updateCrepLocal, restoreCrepLocal]
+      rw [hcompiled]
+      simp [evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+        hlocal, Option.bind]
+    )
+    (hsecondSource := by
+      simp [sourceToCrepeFfiContinuation, sourceToCrepeFfiSourceAfter,
+        evalPanProgWithCallsAndFfi, evalPanExp, updatePanLocal, Option.bind])
+
+#guard
+    (evalPanProgWithCallsAndFfi [] sourceToCrepeFfiSourceHandler 31
+      sourceToCrepeFfiSourceLocals sourceToCrepeFfiSequence).map
+        (fun result => match result with
+        | .returned _ values => values
+        | _ => []) = some [BitVec.ofNat 64 42]
+
 #guard sourceToCrepeFfiSourceAfter "result" = some (BitVec.ofNat 64 42)
 
 end Flapjack

@@ -1,4 +1,5 @@
 import Flapjack.RiscV.CorrectnessStackSetSize
+import Flapjack.RiscV.CorrectnessStack
 
 /-!
 # StackRemove frame allocation and release at the RISC-V boundary
@@ -167,5 +168,111 @@ theorem compileStackProgramNatToRiscV_stackFree_small [NeZero width]
       stackRemoveJoin,
       stackRemoveComplete, stackProgDepth, stackRemoveFuel] <;>
       congr 1
+
+theorem compileStackProgramNatToRiscV_stackAlloc_small_value [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel words : Nat) (target : State width)
+    (hstackPointer : config.stackPointer < 32)
+    (hscratch : config.scratch < 32)
+    (hstackPointerNonzero : config.stackPointer ≠ 0)
+    (hscratchNonzero : config.scratch ≠ 0)
+    (hscratchPointer : config.scratch ≠ config.stackPointer)
+    (hwords : words ≤ 255)
+    (hzero : target.registers 0 = 0)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.stackAlloc words : StackProg Nat) = some code) :
+    (executeInstructions target code).registers
+        ⟨config.stackPointer, hstackPointer⟩ =
+      target.registers ⟨config.stackPointer, hstackPointer⟩ -
+        BitVec.ofNat width (config.bytesInWord * words) := by
+  rw [compileStackProgramNatToRiscV_stackAlloc_small context config sectionId
+    initialLabel words hstackPointer hscratch hwords] at hcode
+  cases hcode
+  exact executeStackRemoveStackAlloc_small config target words hstackPointer hscratch
+    hstackPointerNonzero hscratchNonzero hscratchPointer hwords hzero
+
+theorem compileStackProgramNatToRiscV_stackFree_small_value [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel words : Nat) (target : State width)
+    (hstackPointer : config.stackPointer < 32)
+    (hscratch : config.scratch < 32)
+    (hstackPointerNonzero : config.stackPointer ≠ 0)
+    (hscratchNonzero : config.scratch ≠ 0)
+    (hscratchPointer : config.scratch ≠ config.stackPointer)
+    (hwords : words ≤ 255)
+    (hzero : target.registers 0 = 0)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.stackFree words : StackProg Nat) = some code) :
+    (executeInstructions target code).registers
+        ⟨config.stackPointer, hstackPointer⟩ =
+      target.registers ⟨config.stackPointer, hstackPointer⟩ +
+        BitVec.ofNat width (config.bytesInWord * words) := by
+  rw [compileStackProgramNatToRiscV_stackFree_small context config sectionId
+    initialLabel words hstackPointer hscratch hwords] at hcode
+  cases hcode
+  exact executeStackRemoveStackFree_small config target words hstackPointer hscratch
+    hstackPointerNonzero hscratchNonzero hscratchPointer hwords hzero
+
+theorem compileStackProgramNatToRiscV_stackAlloc_small_eval_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel words : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hstackPointer : config.stackPointer < 32)
+    (hscratch : config.scratch < 32)
+    (hstackPointerNonzero : config.stackPointer ≠ 0)
+    (hscratchNonzero : config.scratch ≠ 0)
+    (hscratchPointer : config.scratch ≠ config.stackPointer)
+    (hwords : words ≤ 255)
+    (hzero : target.registers 0 = 0)
+    (hrel : WordStackRegisterRelationExceptRegister config.scratch source target)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.stackAlloc words : StackProg Nat) = some code) :
+    (evalWordStackMachine source
+      (stackRemoveStackAlloc config words)).map
+        (fun final => final.registers config.stackPointer) =
+      some ((executeInstructions target code).registers
+        ⟨config.stackPointer, hstackPointer⟩) := by
+  have hsourcePointer := hrel config.stackPointer hstackPointer
+    hscratchPointer.symm
+  rw [evalStackRemoveStackAlloc_small config source words hwords hscratchPointer]
+  congr 1
+  have hvalue := compileStackProgramNatToRiscV_stackAlloc_small_value
+    context config sectionId initialLabel words target hstackPointer hscratch
+    hstackPointerNonzero hscratchNonzero hscratchPointer hwords hzero code hcode
+  rw [hvalue]
+  simp [hsourcePointer]
+
+theorem compileStackProgramNatToRiscV_stackFree_small_eval_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel words : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hstackPointer : config.stackPointer < 32)
+    (hscratch : config.scratch < 32)
+    (hstackPointerNonzero : config.stackPointer ≠ 0)
+    (hscratchNonzero : config.scratch ≠ 0)
+    (hscratchPointer : config.scratch ≠ config.stackPointer)
+    (hwords : words ≤ 255)
+    (hzero : target.registers 0 = 0)
+    (hrel : WordStackRegisterRelationExceptRegister config.scratch source target)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.stackFree words : StackProg Nat) = some code) :
+    (evalWordStackMachine source
+      (stackRemoveStackFree config words)).map
+        (fun final => final.registers config.stackPointer) =
+      some ((executeInstructions target code).registers
+        ⟨config.stackPointer, hstackPointer⟩) := by
+  have hsourcePointer := hrel config.stackPointer hstackPointer
+    hscratchPointer.symm
+  rw [evalStackRemoveStackFree_small config source words hwords hscratchPointer]
+  congr 1
+  have hvalue := compileStackProgramNatToRiscV_stackFree_small_value
+    context config sectionId initialLabel words target hstackPointer hscratch
+    hstackPointerNonzero hscratchNonzero hscratchPointer hwords hzero code hcode
+  rw [hvalue]
+  simp [hsourcePointer]
 
 end Flapjack.RiscV

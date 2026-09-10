@@ -1960,4 +1960,24 @@ theorem compile_full_pan_value_call_compose
   · rw [hcompileProg, hcompileArgs]
     simp [evalCrepFullProg, hcrepCall]
 
+/-! Expose the exact compiler equation for declaration calls.  Keeping this
+    expansion named prevents later correctness proofs from duplicating the
+    fresh-slot and continuation-context bookkeeping. -/
+theorem compileProg_decCall_expansion
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    (context : CompileContext α) (name : VarName) (shape : Shape)
+    (function : FunName) (arguments : List (Exp α)) (body : Prog α) :
+    compileProg context (.decCall name shape function arguments body) =
+      nestedDecs (allocatedNames context shape)
+        ((allocatedNames context shape).map (fun _ => .const 0))
+        (.seq
+          (.call (some (allocatedNames context shape, none)) function
+            (compileArgs context arguments))
+          (compileProg
+            { context with
+                vars := (name, (shape, allocatedNames context shape)) :: context.vars
+                maxVar := context.maxVar + Shape.shapeSize shape }
+            body)) := by
+  simp [compileProg]
+
 end Flapjack

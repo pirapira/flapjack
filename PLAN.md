@@ -826,6 +826,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   `lsl`, `lsr`, and `asr`, including their Lab lowerings and regressions.
 - [x] Add the scratch-aware StackLang/RISC-V rotate-right contract, including
   the RV32/RV64 width condition required by the five-instruction lowering.
+- [x] Prove the Lab `tick` no-op preserves the StackLang/RISC-V register
+  relation, covering the first compiler-generated timing instruction.
 - [x] Match CakeML Simple/IRC distinction in graph allocation modes: modes
   0--1 omit move preferences during coalescing but retain the original move table for coloring, while modes 2--3 use the prioritized list for coalescing and the original move table for coloring.
 - [x] Preserve SSA-renamed virtual names at the heuristic allocator's

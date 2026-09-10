@@ -2103,6 +2103,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   call-target table, and regress that boundary with a nonempty target context.
 - [x] Add a counted exact-FFI machine runner and prove that normal generated
   FFI code consumes exactly its instruction-list length.
+- [x] Compose the counted machine and source-evaluator contracts through
+  loop-aware sequence lowering, preserving the exact concatenated code length.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

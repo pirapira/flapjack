@@ -118,4 +118,47 @@ example :
           (by decide +kernel) (by decide +kernel) (by decide +kernel)
           (by decide +kernel) (by decide +kernel)))
 
+example :
+    (evalWordStackMachine bitmapLoadTestSource
+      (stackRemoveBitmapLoad bitmapLoadTestConfig 6 7)).map
+        (fun final => final.registers 6) =
+      some ((executeInstructions (zeroState 64)
+        [.addi 29 0 (BitVec.ofNat 64 88), .sub 29 10 29,
+         .loadWord 6 29, .add 6 6 7, .addi 31 0 (BitVec.ofNat 64 3),
+         .sll 6 6 31, .loadWord 6 6]).registers 6) := by
+  apply compileStackProgramNatToRiscV_bitmapLoad_eval_simulation
+    (context := { services := [] }) (config := bitmapLoadTestConfig)
+    (sectionId := 2) (initialLabel := 3) (destination := 6) (address := 7)
+    (source := bitmapLoadTestSource) (target := zeroState 64)
+    (hstoreBase := by decide +kernel)
+    (haddressScratch := by decide +kernel)
+    (hdestination := by decide +kernel)
+    (haddress := by decide +kernel)
+    (hscratch := by decide +kernel)
+    (hstoreBaseNonzero := by decide +kernel)
+    (haddressScratchNonzero := by decide +kernel)
+    (hdestinationNonzero := by decide +kernel)
+    (hscratchNonzero := by decide +kernel)
+    (haddressScratchStoreBase := by decide +kernel)
+    (hdestinationScratch := by decide +kernel)
+    (haddressDestination := by decide +kernel)
+    (haddressAddressScratch := by decide +kernel)
+    (hzero := by simp [zeroState])
+    (hrel := by
+      intro register hregister
+      simp [bitmapLoadTestSource, zeroState])
+    (hmemory := by
+      intro address
+      simp [bitmapLoadTestSource, zeroState, readWordValue, readByte] <;>
+        decide +kernel)
+    (code := [.addi 29 0 (BitVec.ofNat 64 88), .sub 29 10 29,
+      .loadWord 6 29, .add 6 6 7, .addi 31 0 (BitVec.ofNat 64 3),
+      .sll 6 6 31, .loadWord 6 6])
+    (hcode := by
+      simpa [bitmapLoadTestConfig, Fin.ext_iff, stackStorePosition] using
+        (compileStackProgramNatToRiscV_bitmapLoad (width := 64)
+          { services := [] } bitmapLoadTestConfig 2 3 6 7
+          (by decide +kernel) (by decide +kernel) (by decide +kernel)
+          (by decide +kernel) (by decide +kernel)))
+
 end Flapjack.RiscV

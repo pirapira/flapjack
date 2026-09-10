@@ -1,4 +1,5 @@
 import Flapjack.RiscV.CorrectnessStackDelta
+import Flapjack.RiscV.CorrectnessStackRemoveBitmap
 
 /-!
 # StackRemove bitmap loads at the RISC-V boundary
@@ -379,5 +380,46 @@ theorem compileStackProgramNatToRiscV_bitmapLoad_source_simulation [NeZero width
   rw [hcompiled]
   simp only [hmemory]
   rw [hrel config.storeBase hstoreBase, hrel address haddress]
+
+theorem compileStackProgramNatToRiscV_bitmapLoad_eval_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination address : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hstoreBase : config.storeBase < 32)
+    (haddressScratch : config.addressScratch < 32)
+    (hdestination : destination < 32)
+    (haddress : address < 32)
+    (hscratch : config.scratch < 32)
+    (hstoreBaseNonzero : config.storeBase ≠ 0)
+    (haddressScratchNonzero : config.addressScratch ≠ 0)
+    (hdestinationNonzero : destination ≠ 0)
+    (hscratchNonzero : config.scratch ≠ 0)
+    (haddressScratchStoreBase : config.addressScratch ≠ config.storeBase)
+    (hdestinationScratch : destination ≠ config.scratch)
+    (haddressDestination : address ≠ destination)
+    (haddressAddressScratch : address ≠ config.addressScratch)
+    (hzero : target.registers 0 = 0)
+    (hrel : WordStackRegisterRelation source target)
+    (hmemory : ∀ address, readWordValue target address = source.memory address)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.bitmapLoad destination address : StackProg Nat) =
+      some code) :
+    (evalWordStackMachine source
+      (stackRemoveBitmapLoad config destination address)).map
+        (fun final => final.registers destination) =
+      some ((executeInstructions target code).registers
+        ⟨destination, hdestination⟩) := by
+  rw [evalStackRemoveBitmapLoad config source destination address
+    haddressScratchStoreBase hdestinationScratch haddressDestination
+    haddressAddressScratch]
+  congr 1
+  symm
+  exact compileStackProgramNatToRiscV_bitmapLoad_source_simulation
+    context config sectionId initialLabel destination address source target
+    hstoreBase haddressScratch hdestination haddress hscratch
+    hstoreBaseNonzero haddressScratchNonzero hdestinationNonzero hscratchNonzero
+    haddressScratchStoreBase hdestinationScratch haddressDestination
+    haddressAddressScratch hzero hrel hmemory code hcode
 
 end Flapjack.RiscV

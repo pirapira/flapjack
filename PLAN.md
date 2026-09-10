@@ -2314,6 +2314,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   concrete RISC-V execution contract with the compiler code-shape theorem.
 - [x] Connect the BitmapLoad entrypoint result to source memory through explicit
   register and byte-memory relations.
+- [x] Identify the BitmapLoad source evaluator result with the compiled RISC-V
+  destination result under those relations.
 - [x] Prove the dynamic StackRemove stack-load boundary for register-held byte
   offsets, preserving the non-address-scratch register relation.
 - [x] Prove both dynamic StackRemove frame-store paths, including the

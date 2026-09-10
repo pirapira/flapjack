@@ -2118,6 +2118,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   relation.
 - [x] Add a compositional sequence theorem that threads arbitrary continuations
   after a source-local FFI simulation step.
+- [x] Preserve source/Loop FFI failure propagation when the host service is
+  unavailable, in addition to the successful state-transition boundary.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

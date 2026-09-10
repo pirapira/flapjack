@@ -202,4 +202,29 @@ theorem sourceFfiSimulation_sequence
   · simp [evalLoopProgWithCallsAndFfi, evalLoopProg]
   · simp [evalPanProgWithCallsAndFfi]
 
+theorem sourceFfiSimulation_failure
+    (configuration configurationLength array arrayLength : RiscV.Word 64) :
+    evalLoopProgWithCallsAndFfi [] sourceFfiSimulationHandler 40
+      (sourceFfiSimulationState configuration configurationLength array arrayLength)
+      (loopCompileProg sourceFfiSimulationLoopContext []
+        (compileProg sourceFfiSimulationCompileContext
+          (.extCall "missing" (.var .local "configuration")
+            (.var .local "configurationLength") (.var .local "array")
+            (.var .local "arrayLength")))) = none ∧
+    evalPanProgWithCallsAndFfi [] sourceFfiSimulationSourceHandler 20
+      (sourceFfiSimulationLocals configuration configurationLength array arrayLength)
+      (.extCall "missing" (.var .local "configuration")
+        (.var .local "configurationLength") (.var .local "array")
+        (.var .local "arrayLength")) = none := by
+  apply compilePanToLoop_extCall_local_failure
+    sourceFfiSimulationCompileContext sourceFfiSimulationLoopContext
+    (sourceFfiSimulationState configuration configurationLength array arrayLength)
+    (sourceFfiSimulationLocals configuration configurationLength array arrayLength)
+    sourceFfiSimulationHandler sourceFfiSimulationSourceHandler "missing"
+    configuration configurationLength array arrayLength rfl
+  all_goals simp [sourceFfiSimulationCompileContext,
+    sourceFfiSimulationLocals, sourceFfiSimulationState,
+    sourceFfiSimulationHandler, sourceFfiSimulationSourceHandler,
+    evalPanExtCall, evalPanExp, lookupInfo]
+
 end Flapjack

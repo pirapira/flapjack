@@ -2043,6 +2043,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   composing normal evaluator sequencing with generated instruction execution.
 - [x] Preserve accelerator-style memory-handler dispatch when a byte-granular
   `memoryAccess` model is also installed, including the clocked evaluator.
+- [x] Expose a reusable stepped source-semantics theorem for that dispatch
+  order, retaining the handler-updated memory and FFI state.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

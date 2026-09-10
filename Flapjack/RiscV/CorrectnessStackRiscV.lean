@@ -428,16 +428,17 @@ theorem wordStackRegisterRelation_executeTick
 
 theorem labCompilePlain_tick_register_simulation
     [NeZero width] (source : WordStackMachineState width)
-    (target : State width) :
-    (labCompilePlain (.tick : LabPlain (Word width))).bind
-        (fun code =>
-          some (WordStackRegisterRelation source
-            (executeInstructions target code))) =
-      some (WordStackRegisterRelation source
-        (execute target (.addi 0 0 (0 : Word width)))) := by
-  change some (WordStackRegisterRelation source
-    (executeInstructions target [.addi 0 0 (0 : Word width)])) = _
-  rw [executeInstructions_single]
+    (target : State width) (hrel : WordStackRegisterRelation source target)
+    (code : List (Instruction width))
+    (hcode : labCompilePlain (.tick : LabPlain (Word width)) = some code) :
+    WordStackRegisterRelation source (executeInstructions target code) := by
+  have hshape : labCompilePlain (.tick : LabPlain (Word width)) =
+      some [.addi 0 0 (0 : Word width)] := by
+    simp [labCompilePlain]
+  rw [hshape] at hcode
+  cases hcode
+  simpa only [executeInstructions_single] using
+    wordStackRegisterRelation_executeTick source target hrel
 
 theorem labCompilePlain_const_register_simulation
     [NeZero width] (source : WordStackMachineState width)

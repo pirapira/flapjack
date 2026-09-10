@@ -15,6 +15,26 @@ def stackDeltaTestConfig : StackRemoveConfig :=
     wordShift := 3 }
 
 example :
+    compileStackProgramNatToRiscV (width := 64) { services := [] }
+      stackDeltaTestConfig 2 3 (.stackAlloc 2 : StackProg Nat) =
+      some [.addi 31 0 (BitVec.ofNat 64 16), .sub 20 20 31] := by
+  simpa [stackDeltaTestConfig, Fin.ext_iff] using
+    (compileStackProgramNatToRiscV_stackAlloc_small (width := 64)
+      { services := [] } stackDeltaTestConfig 2 3 2
+      (by simp [stackDeltaTestConfig]) (by simp [stackDeltaTestConfig])
+      (by decide +kernel))
+
+example :
+    compileStackProgramNatToRiscV (width := 64) { services := [] }
+      stackDeltaTestConfig 2 3 (.stackFree 1 : StackProg Nat) =
+      some [.addi 31 0 (BitVec.ofNat 64 8), .add 20 20 31] := by
+  simpa [stackDeltaTestConfig, Fin.ext_iff] using
+    (compileStackProgramNatToRiscV_stackFree_small (width := 64)
+      { services := [] } stackDeltaTestConfig 2 3 1
+      (by simp [stackDeltaTestConfig]) (by simp [stackDeltaTestConfig])
+      (by decide +kernel))
+
+example :
     (executeInstructions (zeroState 64)
         [.addi 31 0 (BitVec.ofNat 64 16), .sub 20 20 31]).registers 20 =
       (zeroState 64).registers 20 -

@@ -64,6 +64,7 @@ import Flapjack.CrepeProgramConditionalFuelRelation
 import Flapjack.CrepeProgramLoopFuelRelation
 import Flapjack.CrepeLoopComposeFuelRelation
 import Flapjack.CrepeLoopBreakComposeFuelRelation
+import Flapjack.CrepeLoopContinueComposeFuelRelation
 import Flapjack.CrepeIdentityCallCorrectness
 import Flapjack.CrepeFfiCorrectness
 import Flapjack.PanValues

@@ -86,6 +86,31 @@ theorem compileStackProgramNatToRiscV_getCurrHeap_simulation [NeZero width]
   exact executeStackRemoveGetCurrHeap config source target destination hcurrHeap
     hdestination hdestinationNonzero hrel
 
+theorem compileStackProgramNatToRiscV_getCurrHeap_eval_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hcurrHeap : config.currHeap < 32)
+    (hdestination : destination < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hrel : WordStackRegisterRelation source target)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.get destination .currHeap : StackProg Nat) =
+      some code) :
+    (evalWordStackMachine source
+      (stackRemoveGet config destination .currHeap)).map
+        (fun final => final.registers destination) =
+      some ((executeInstructions target code).registers
+        ⟨destination, hdestination⟩) := by
+  rw [evalStackRemoveGetCurrHeap config source destination]
+  congr 1
+  have hsim := compileStackProgramNatToRiscV_getCurrHeap_simulation
+    context config sectionId initialLabel destination source target
+    hcurrHeap hdestination hdestinationNonzero hrel code hcode
+  have hdest := hsim destination hdestination
+  simpa [wordStackMachineWriteRegister] using hdest.symm
+
 theorem compileStackProgramNatToRiscV_setCurrHeap [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)
     (sectionId initialLabel sourceRegister : Nat)
@@ -125,5 +150,30 @@ theorem compileStackProgramNatToRiscV_setCurrHeap_simulation [NeZero width]
   cases hcode
   exact executeStackRemoveSetCurrHeap config source target sourceRegister hcurrHeap
     hsource hcurrHeapNonzero hrel
+
+theorem compileStackProgramNatToRiscV_setCurrHeap_eval_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel sourceRegister : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hcurrHeap : config.currHeap < 32)
+    (hsource : sourceRegister < 32)
+    (hcurrHeapNonzero : config.currHeap ≠ 0)
+    (hrel : WordStackRegisterRelation source target)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.set .currHeap sourceRegister : StackProg Nat) =
+      some code) :
+    (evalWordStackMachine source
+      (stackRemoveSet config .currHeap sourceRegister)).map
+        (fun final => final.registers config.currHeap) =
+      some ((executeInstructions target code).registers
+        ⟨config.currHeap, hcurrHeap⟩) := by
+  rw [evalStackRemoveSetCurrHeap config source sourceRegister]
+  congr 1
+  have hsim := compileStackProgramNatToRiscV_setCurrHeap_simulation
+    context config sectionId initialLabel sourceRegister source target
+    hcurrHeap hsource hcurrHeapNonzero hrel code hcode
+  have hcurr := hsim config.currHeap hcurrHeap
+  simpa [wordStackMachineWriteRegister] using hcurr.symm
 
 end Flapjack.RiscV

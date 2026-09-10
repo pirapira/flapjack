@@ -2230,6 +2230,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   word memory, exception codes, and returned-value flattening.
 - [x] Package the `skip`, `break`, `continue`, `tick`, and `annot` cases as
   exact source-to-Crep base cases for the program correctness induction.
+- [x] Add the compositional source-word `return` constructor, connecting
+  arbitrary-fuel program evaluation to the flattened return relation.
 - [x] Prove the relation-aware `Store32` source-to-Crep case, including exact
   word-memory relation preservation after the update.
 - [x] Prove the relation-aware `StoreByte` source-to-Crep case under the

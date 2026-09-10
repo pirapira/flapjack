@@ -78,6 +78,7 @@ import Flapjack.Test.StackFunctionEntryRelation
 import Flapjack.Test.StackFunctionSpillRelation
 import Flapjack.Test.CorrectnessAllocatorStack
 import Flapjack.Test.CorrectnessAllocatorStackDecomposition
+import Flapjack.Test.CorrectnessAllocatorStackContract
 import Flapjack.Test.StackParallelMoveAcyclic
 import Flapjack.Test.StackParallelMoveEvaluator
 import Flapjack.Test.CorrectnessStackRemoveDynamic

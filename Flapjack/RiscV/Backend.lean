@@ -144,6 +144,14 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
           .or destination destination 31]
   | expression => (wordExpToInstruction destination expression).map (fun instruction => [instruction])
 
+/-! The standalone Word selector has no layout table.  Its LocValue boundary
+    therefore materializes the abstract label number; the layout-aware Lab
+    selector later replaces this with the absolute target position. -/
+def wordLocValueToInstructions [NeZero width] (destination label : Nat) :
+    Option (List (Instruction width)) := do
+  let destination ← registerOfNat destination
+  pure [.addi destination 0 (BitVec.ofNat width label)]
+
 def wordArithToInstruction [NeZero width] :
     WordArith → Option (Instruction width)
   | .longMul _destinationLeft _destinationRight _sourceLeft _sourceRight =>
@@ -340,7 +348,7 @@ def wordProgToRiscV [NeZero width] :
   | .shareInst operator name address =>
       wordShareInstToInstructions operator name address
   | .locValue destination source =>
-      wordExpToInstructions destination (.var source)
+      wordLocValueToInstructions destination source
   | .inst (.arith operation) => wordArithToInstructions operation
   | .inst instruction =>
       (wordInstToInstruction instruction).map (fun instruction => [instruction])
@@ -615,7 +623,7 @@ def wordFunctionToRiscV [NeZero width] :
       let instructions ← wordShareInstToInstructions operator name address
       pure (instructions, [])
   | .locValue destination source => do
-      let instructions ← wordExpToInstructions destination (.var source)
+      let instructions ← wordLocValueToInstructions destination source
       pure (instructions, [])
   | .tick => pure ([.addi 0 0 0], [])
   | .ite operator condition rightValue thenBranch elseBranch => do
@@ -725,7 +733,7 @@ def evalWordFunction [NeZero width] (state : State width) :
       let state ← evalWordShareInst state operator name address
       pure (state, [])
   | .locValue destination source => do
-      let instructions ← wordExpToInstructions destination (.var source)
+      let instructions ← wordLocValueToInstructions destination source
       pure (executeInstructions state instructions, [])
   | .ite operator condition rightValue thenBranch elseBranch => do
       let choose ← evalWordCondition state operator condition rightValue
@@ -798,7 +806,7 @@ def evalWordProg [NeZero width] (state : State width) :
   | .shareInst operator name address =>
       evalWordShareInst state operator name address
   | .locValue destination source => do
-      let instructions ← wordExpToInstructions destination (.var source)
+      let instructions ← wordLocValueToInstructions destination source
       pure (executeInstructions state instructions)
   | .ite operator condition rightValue thenBranch elseBranch => do
       let choose ← evalWordCondition state operator condition rightValue
@@ -823,23 +831,22 @@ theorem compileWordAdd_sound [NeZero width] (state : State width) :
 theorem wordFunctionToRiscV_locValue [NeZero width] :
     wordFunctionToRiscV
         ((.locValue 4 2) : WordProg (Word width)) =
-      some ([.addi 4 2 0], []) := by
-  simp [wordFunctionToRiscV, wordExpToInstructions,
-    wordExpToInstruction, registerOfNat]
+      some ([.addi 4 0 2], []) := by
+  simp [wordFunctionToRiscV, wordLocValueToInstructions, registerOfNat]
 
 theorem evalWordFunction_locValue [NeZero width] (state : State width) :
     evalWordFunction state
         ((.locValue 4 2) : WordProg (Word width)) =
-      some (execute state (.addi 4 2 0), []) := by
-  simp [evalWordFunction, wordExpToInstructions,
-    wordExpToInstruction, executeInstructions, registerOfNat]
+      some (execute state (.addi 4 0 2), []) := by
+  simp [evalWordFunction, wordLocValueToInstructions,
+    executeInstructions, registerOfNat]
 
 theorem compileWordLocValue_sound [NeZero width] (state : State width) :
     evalWordProg state
         ((.locValue 4 2) : WordProg (Word width)) =
-      some (executeInstructions state [.addi 4 2 0]) := by
-  simp [evalWordProg, wordExpToInstructions,
-    wordExpToInstruction, executeInstructions, registerOfNat]
+      some (executeInstructions state [.addi 4 0 2]) := by
+  simp [evalWordProg, wordLocValueToInstructions,
+    executeInstructions, registerOfNat]
 
 theorem wordExpToInstruction_binOp [NeZero width] (operator : BinOp) :
     wordExpToInstruction (width := width) 1 (.op operator [.var 2, .var 3]) =

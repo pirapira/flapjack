@@ -136,17 +136,16 @@ theorem wordProgToRiscV_sound_of_straightLine [NeZero width]
               subst code
               simp [evalWordProg, hfirst', hsecond', executeInstructions_append]
   | locValue destination source =>
-      have hcompile' : wordExpToInstructions (width := width) destination (.var source) =
+      have hcompile' : wordLocValueToInstructions (width := width) destination source =
           some code := by
         simpa only [wordProgToRiscV] using hcompile
-      cases h : wordExpToInstructions (width := width) destination (.var source) with
+      cases h : wordLocValueToInstructions (width := width) destination source with
       | none => rw [h] at hcompile'; cases hcompile'
       | some instructions =>
           have hcode : instructions = code :=
             Option.some.inj (h.symm.trans hcompile')
           subst code
-          simp only [evalWordProg, h]
-          rfl
+          simp [evalWordProg, h]
   | tick =>
       have hcompile' : some ([.addi 0 0 0] : List (Instruction width)) = some code := by
         simpa only [wordProgToRiscV] using hcompile
@@ -198,7 +197,7 @@ theorem wordFunctionToRiscVWithCalls_agrees_straightLine [NeZero width]
       cases h : wordStoreToInstructions (width := width) address value <;>
         simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
   | locValue destination source =>
-      cases h : wordExpToInstruction (width := width) destination (.var source) <;>
+      cases h : wordLocValueToInstructions (width := width) destination source <;>
         simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
   | tick => simp [wordFunctionToRiscVWithCalls, wordProgToRiscV]
   | shareInst operator name address =>

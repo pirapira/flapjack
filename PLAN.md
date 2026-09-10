@@ -1319,10 +1319,12 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   carrying the architectural x0 invariant.
 - [x] Prove mapped-local preservation across compiled unsigned division,
   including the nonzero-divisor condition and DIVU result agreement.
-- [x] Prove mapped-local preservation across compiled `locValue` moves,
-  including preservation of all non-destination locals.
+- [x] Define the direct RISC-V boundary for `locValue` as an abstract label
+  immediate, and resolve that label to an absolute position in the layout-aware
+  Lab linker.  The Loop evaluator still needs a code-environment model before
+  full source-to-machine `locValue` correctness can be claimed.
 - [x] Prove mapped-local preservation across ordinary variable assignments,
-  which lower to the same register move as `locValue`.
+  which lower to register moves.
 - [x] Prove successful two-step Loop/Word sequence evaluation decomposes
   through matching intermediate Loop and machine states.
 - [x] Add the compositional sequence simulation rule that chains mapped-local

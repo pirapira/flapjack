@@ -1250,9 +1250,9 @@ theorem wordFunctionToRiscVWithCallsAndFfi_agrees_straightLine [NeZero width]
       cases h : wordStoreToInstructions (width := width) address value <;>
         simp [wordFunctionToRiscVWithCallsAndFfi, wordFunctionToRiscVWithCalls, h]
   | locValue destination source =>
-      cases h : wordExpToInstruction (width := width) destination (.var source) <;>
+      cases h : wordLocValueToInstructions (width := width) destination source <;>
         simp [wordFunctionToRiscVWithCallsAndFfi, wordFunctionToRiscVWithCalls,
-          wordExpToInstructions, h]
+          h]
   | tick =>
       simp [wordFunctionToRiscVWithCallsAndFfi, wordFunctionToRiscVWithCalls]
   | shareInst operator name address =>

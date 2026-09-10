@@ -84,6 +84,43 @@ theorem executeInstructionsWithFfiCounted_spec [NeZero width]
               cases final with
               | mk finalState => simp
 
+theorem executeWithFfi_of_ne_ecall [NeZero width]
+    (host : WordFfiHost width) (state : State width)
+    (instruction : Instruction width) (hne : instruction ≠ .ecall) :
+    executeWithFfi host state instruction = some (execute state instruction) := by
+  cases instruction <;> simp [executeWithFfi] at hne ⊢
+
+theorem executeInstructionsWithFfi_of_ne_ecall [NeZero width]
+    (host : WordFfiHost width) (state : State width)
+    (instructions : List (Instruction width))
+    (hne : ∀ instruction ∈ instructions, instruction ≠ .ecall) :
+    executeInstructionsWithFfi host state instructions =
+      some (executeInstructions state instructions) := by
+  induction instructions generalizing state with
+  | nil => rfl
+  | cons instruction instructions ih =>
+      have hinstruction : instruction ≠ .ecall := hne instruction (by simp)
+      have htail : ∀ candidate ∈ instructions, candidate ≠ .ecall := by
+        intro candidate hcandidate
+        exact hne candidate (by simp [hcandidate])
+      simp only [executeInstructionsWithFfi, executeInstructions]
+      rw [executeWithFfi_of_ne_ecall host state instruction hinstruction]
+      change executeInstructionsWithFfi host (execute state instruction)
+        instructions =
+        some (executeInstructions (execute state instruction) instructions)
+      rw [ih (state := execute state instruction) htail]
+
+theorem executeInstructionsWithFfiCounted_of_ne_ecall [NeZero width]
+    (host : WordFfiHost width) (state : State width)
+    (instructions : List (Instruction width)) (final : State width)
+    (hne : ∀ instruction ∈ instructions, instruction ≠ .ecall)
+    (hrun : executeInstructions state instructions = final) :
+    executeInstructionsWithFfiCounted host state instructions =
+      some (final, instructions.length) := by
+  rw [executeInstructionsWithFfiCounted_spec,
+    executeInstructionsWithFfi_of_ne_ecall host state instructions hne]
+  simp [hrun]
+
 theorem executeInstructionsWithFfiCounted_append [NeZero width]
     (host : WordFfiHost width) (state : State width)
     (first second : List (Instruction width)) :

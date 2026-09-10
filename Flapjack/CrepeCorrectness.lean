@@ -2070,6 +2070,67 @@ theorem compile_full_pan_value_decCall_one_compose
   simp [compileProg, allocatedNames, nestedDecs,
     evalCrepFullProg, evalCrepFullExp, hcompileArgs, hcall, hbody]
 
+/-! These helpers expose the state transformation performed by a list of
+    compiler-generated zero declarations.  The recursive order mirrors
+    `nestedDecs`, which makes the multi-word declaration-call proof independent
+    of the particular shape being flattened. -/
+def initializeCrepLocals {α : Type u} [OfNat α 0]
+    (locals : Nat → Option α) : List Nat → Nat → Option α
+  | [], current => locals current
+  | name :: names, current =>
+      initializeCrepLocals (updateCrepLocal locals name 0) names current
+
+def restoreCrepResultList {α : Type u} [OfNat α 0]
+    (locals : Nat → Option α) : List Nat →
+    CrepControlResult α → CrepControlResult α
+  | [], result => result
+  | name :: names, result =>
+      restoreCrepResult name (locals name)
+        (restoreCrepResultList (updateCrepLocal locals name 0) names result)
+
+theorem evalCrepFullProg_nestedDecs_const_zero
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (names : List Nat) (body : CrepProg α)
+    (result : CrepControlResult α)
+    (hbody : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with locals := initializeCrepLocals state.locals names } body =
+      some result) :
+    evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + names.length) state
+      (nestedDecs names (names.map (fun _ => .const 0)) body) =
+      some (restoreCrepResultList state.locals names result) := by
+  induction names generalizing state result with
+  | nil =>
+      simpa [nestedDecs, initializeCrepLocals, restoreCrepResultList] using hbody
+  | cons name names ih =>
+      have hbody' : evalCrepFullProg functions primitive ffi sharedMem
+          baseAddress topAddress fuel
+          { state with
+              locals := initializeCrepLocals
+                (updateCrepLocal state.locals name 0) names } body =
+          some result := by
+        simpa [initializeCrepLocals] using hbody
+      have htail := ih
+        (state := { state with
+          locals := updateCrepLocal state.locals name 0 })
+        (result := result) hbody'
+      change evalCrepFullProg functions primitive ffi sharedMem
+        baseAddress topAddress ((fuel + names.length) + 1) state
+        (.dec name (.const 0)
+          (nestedDecs names (names.map (fun _ => .const 0)) body)) =
+        some (restoreCrepResult name (state.locals name)
+          (restoreCrepResultList (updateCrepLocal state.locals name 0)
+            names result))
+      simp [evalCrepFullProg, evalCrepFullExp, htail]
+
 /-! Expose the exact compiler equation for declaration calls.  Keeping this
     expansion named prevents later correctness proofs from duplicating the
     fresh-slot and continuation-context bookkeeping. -/

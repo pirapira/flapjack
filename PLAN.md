@@ -2214,6 +2214,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   declaration calls after their callee has produced a normal caller state.
 - [x] Prove the target-side one-word `decCall` lowering, including fresh-slot
   initialization, destination assignment, continuation execution, and restore.
+- [x] Generalize fresh zero-slot initialization and restoration to arbitrary
+  flattened declaration results via a reusable `nestedDecs` evaluator theorem.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

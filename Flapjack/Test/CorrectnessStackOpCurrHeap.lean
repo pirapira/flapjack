@@ -4,6 +4,31 @@ import Flapjack.RiscV.CorrectnessStackOpCurrHeap
 
 namespace Flapjack.RiscV
 
+def stackOpCurrHeapTestConfig : StackRemoveConfig :=
+  { storeBase := 10
+    currHeap := 12
+    scratch := 31
+    addressScratch := 29
+    stackPointer := 20
+    bytesInWord := 8
+    stackBase := 21
+    wordShift := 3 }
+
+example (operator : BinOp) :
+    compileStackProgramNatToRiscV (width := 64) { services := [] }
+      stackOpCurrHeapTestConfig 2 3 (.opCurrHeap operator 5 6 : StackProg Nat) =
+      some [match operator with
+        | .add => .add 5 6 12
+        | .sub => .sub 5 6 12
+        | .and => .and 5 6 12
+        | .or => .or 5 6 12
+        | .xor => .xor 5 6 12] := by
+  cases operator <;>
+    simpa [stackOpCurrHeapTestConfig, Fin.ext_iff] using
+      (compileStackProgramNatToRiscV_opCurrHeap (width := 64)
+        { services := [] } stackOpCurrHeapTestConfig _ 2 3 5 6
+        (by decide +kernel) (by decide +kernel) (by decide +kernel))
+
 example [NeZero width]
     (config : StackRemoveConfig) (source : WordStackMachineState width)
     (target : State width) (operator : BinOp)

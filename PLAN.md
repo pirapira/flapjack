@@ -2348,6 +2348,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   destination register under explicit source and target memory invariants.
 - [x] Connect stack-size evaluator results to the compiled RISC-V destination
   register for the optimized fixed-offset frame-size lowering.
+- [x] Connect stack-size setter evaluator results to the compiled RISC-V stack
+  pointer for both scratch-register layouts.
 - [x] Carry the full-SSA heuristic graph allocator through location-aware
   StackLang entry moves and body evaluation, retaining its colouring checks.
 - [x] Prove that every heuristic graph-allocation branch preserves the source

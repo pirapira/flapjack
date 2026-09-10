@@ -2226,6 +2226,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   leaving only source/Crep callee and body simulations as supplied witnesses.
 - [x] Introduce the source-to-Crep state/control relation for flattened locals,
   word memory, exception codes, and returned-value flattening.
+- [x] Prove preservation of the flattened-local relation when a structured
+  declaration local is extended with a shape and its Crep slot witness.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

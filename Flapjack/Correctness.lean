@@ -965,6 +965,7 @@ theorem loopToWord_locValue_register_agreement_mapped [NeZero width]
       RiscV.registerOfNat (wordFindVar context destination) = some destinationRegister)
     (hsource :
       RiscV.registerOfNat (wordFindVar context source) = some sourceRegister)
+    (hsource_unmapped : wordFindVar context source = source)
     (hdestination_nonzero : destinationRegister ≠ 0) :
     (evalLoopProg 1 (loopRegisterStateMapped context state)
       (.locValue destination source)).bind
@@ -975,11 +976,14 @@ theorem loopToWord_locValue_register_agreement_mapped [NeZero width]
       (RiscV.evalWordProg state
         (loopToWordProg context (.locValue destination source))).map
         (fun state => RiscV.readRegister state destinationRegister) := by
+  have hsource' : RiscV.registerOfNat source = some sourceRegister := by
+    simpa [hsource_unmapped] using hsource
   simp [evalLoopProg, loopRegisterStateMapped, loopToWordProg,
     RiscV.evalWordProg, RiscV.wordExpToInstructions,
     RiscV.wordExpToInstruction, RiscV.executeInstructions, RiscV.execute,
     RiscV.writeRegister, RiscV.readRegister, RiscV.nextPc,
-    updateLoopLocal, hdestination, hsource, hdestination_nonzero]
+    updateLoopLocal, hdestination, hsource', hsource_unmapped,
+    hdestination_nonzero]
 
 theorem loopToWord_load32_register_agreement_mapped [NeZero width]
     (context : WordContext) (state : RiscV.State width)
@@ -3459,6 +3463,7 @@ theorem loopToWord_locValue_preserves_mapped_locals [NeZero width]
     (hsource_register :
       RiscV.registerOfNat (wordFindVar context source) =
         some sourceRegister)
+    (hsource_unmapped : wordFindVar context source = source)
     (hdestination_nonzero : destinationRegister ≠ 0)
     (hnoalias :
       ∀ name, name ≠ destination →
@@ -3474,13 +3479,15 @@ theorem loopToWord_locValue_preserves_mapped_locals [NeZero width]
   intro resultState hresult
   rcases hlocals source sourceValue hsource with
     ⟨mappedSourceRegister, hsource_map, hsource_value⟩
+  have hsource_register' : RiscV.registerOfNat source = some sourceRegister := by
+    simpa [hsource_unmapped] using hsource_register
   have hsource_map_eq : mappedSourceRegister = sourceRegister := by
     simpa [hsource_register] using hsource_map.symm
   subst mappedSourceRegister
   have hdestination_lt : wordFindVar context destination < 32 :=
     RiscV.registerOfNat_some_lt hdestination
-  have hsource_lt : wordFindVar context source < 32 :=
-    RiscV.registerOfNat_some_lt hsource_register
+  have hsource_lt : source < 32 :=
+    RiscV.registerOfNat_some_lt hsource_register'
   have hdestination_fin :
       (⟨wordFindVar context destination, hdestination_lt⟩ : Fin 32) =
         destinationRegister := by
@@ -3488,9 +3495,9 @@ theorem loopToWord_locValue_preserves_mapped_locals [NeZero width]
     simp [RiscV.registerOfNat, hdestination_lt] at h
     exact h
   have hsource_fin :
-      (⟨wordFindVar context source, hsource_lt⟩ : Fin 32) =
+      (⟨source, hsource_lt⟩ : Fin 32) =
         sourceRegister := by
-    have h := hsource_register
+    have h := hsource_register'
     simp [RiscV.registerOfNat, hsource_lt] at h
     exact h
   simp [loopToWordProg, RiscV.evalWordProg,

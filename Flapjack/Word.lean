@@ -267,7 +267,10 @@ def loopToWordProg [OfNat α 1] (context : WordContext) :
   | .mark body => loopToWordProg context body
   | .fail => .skip
   | .locValue destination source =>
-      .locValue (wordFindVar context destination) (wordFindVar context source)
+      /- The second field is a code label, not a virtual register.  CakeML's
+         loop_to_word pass renames only the destination variable and preserves
+         the label for the later code-environment lookup. -/
+      .locValue (wordFindVar context destination) source
   | .call returns target arguments none =>
       .call (returns.map (fun (values, live) =>
         (wordMapVars context values, (wordMapVars context live, []),

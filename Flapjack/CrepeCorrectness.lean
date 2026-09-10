@@ -619,4 +619,34 @@ theorem compile_full_pan_value_ite_compose
   · simp [hcondition]
     simpa [evalCrepFullResult, evalPanValueProg] using helse
 
+/-! A word declaration binds a fresh Crep slot while the source evaluator
+    binds the named local, and both evaluators expose the same returned word.
+    This is the base declaration case for the full source induction. -/
+theorem compile_full_pan_value_dec_word_return_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord value : α) (name : VarName) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 10 state
+        (compileProg context
+          (.dec name .one (.const value)
+            (.return (.var .local name)))) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.dec name .one (.const value)
+          (.return (.var .local name)))).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp [compileProg, compileExp, allocatedNames, nestedDecs,
+    evalCrepFullResult, evalCrepFullProg, evalCrepFullExps,
+    evalCrepFullExp, evalPanValueProg, evalPanValueProgWithPrimitive,
+    evalPanValueExp, updateCrepLocal, restoreCrepResult,
+    updatePanValueMap, lookupInfo, panValueShape, panShapeMatches,
+    panValueFlatWords, panValueFlatWordsFuel]
+
 end Flapjack

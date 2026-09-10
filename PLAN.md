@@ -2203,6 +2203,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   the normal state/result without evaluating its arbitrary body.
 - [x] Prove the structured Pancake `break` and `continue` boundaries at the
   full source-to-Crep result projection.
+- [x] Add the compositional nonzero-loop source-to-Crep rule, exposing
+  condition agreement, normal body simulation, and recursive-loop premises.
 - [x] Generalize the structured return boundary to arbitrary shaped values,
   relating flattened Crep words to the source structured result.
 - [x] Verify the structured return boundary on closed records of word

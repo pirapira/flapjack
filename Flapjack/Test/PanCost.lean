@@ -6,6 +6,10 @@ def panCostTestPrimitive : PanPrimitiveHandler Nat := fun _ _ => none
 def panCostTestFfi : PanValueFfiHandler Nat := fun _ _ _ _ _ locals => some locals
 def panCostTestMemory : Nat → Option (PanValue Nat) := fun _ => none
 
+def panCostSharedLoadMemory : Nat → Option (PanValue Nat)
+  | 8 => some (.word 9)
+  | _ => none
+
 #guard
   (evalPanValueCostProg panCostTestPrimitive panCostTestFfi [] [] 0 100 1 20
     (fun _ => none) (fun _ => none) panCostTestMemory
@@ -57,5 +61,12 @@ def panCostReturned41 : PanValueControlResult Nat → Bool
   (evalPanValueCostProg panCostTestPrimitive panCostTestFfi []
     [("continue", [], .continue)] 0 100 1 20 (fun _ => none) (fun _ => none)
     panCostTestMemory (.call none "continue" [])).isNone
+
+/- A shared load is an assignment to an existing word destination, including
+   in the cost-instrumented evaluator. -/
+#guard
+  (evalPanValueCostProg panCostTestPrimitive panCostTestFfi [] []
+    0 100 1 20 (fun _ => none) (fun _ => none) panCostSharedLoadMemory
+    (.shMemLoad .opW .local "missing" (.const 8))).isNone
 
 end Flapjack

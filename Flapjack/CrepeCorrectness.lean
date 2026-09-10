@@ -899,4 +899,40 @@ theorem compile_full_pan_value_local_assign_record_return_correct
     updatePanValueMap, hsourceExps, hflatListFuel,
     panValueFlatWords, panValueFlatWordsFuel]
 
+/-! A word store followed by a shaped load exercises the same flat-memory
+    update on both sides of the source-to-Crep boundary. -/
+theorem compile_full_pan_value_store_load_word_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord address value : α) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 80 state
+        (compileProg context
+          (.seq
+            (.store (.const address) (.const value))
+            (.return (.load .one (.const address))))) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun current =>
+          (state.memory current).map PanValue.word)
+        (.seq
+          (.store (.const address) (.const value))
+          (.return (.load .one (.const address))))).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp [Option.bind, compileProg, compileExp, freshNames,
+    nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResult,
+    evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+    restoreCrepResult,
+    evalPanValueProg, evalPanValueProgWithPrimitive, evalPanValueExp,
+    panValueFlatLoad, panValueFlatLoadFuel,
+    panValueFlatReadWord,
+    panValueStoreWithAccess, panValueFlatStoreWords,
+    updateCrepLocal, updateMemory, updatePanValueMemory, updatePanValueMap,
+    isWfShape,
+    panValueFlatWords, panValueFlatWordsFuel]
+
 end Flapjack

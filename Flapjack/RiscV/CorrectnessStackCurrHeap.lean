@@ -46,4 +46,84 @@ theorem executeStackRemoveSetCurrHeap [NeZero width]
     sourceRegister sourceRegister hrel hcurrHeap hsource hsource
     hcurrHeapNonzero
 
+theorem compileStackProgramNatToRiscV_getCurrHeap [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination : Nat)
+    (hcurrHeap : config.currHeap < 32)
+    (hdestination : destination < 32) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.get destination .currHeap : StackProg Nat) =
+      some [.or ⟨destination, hdestination⟩
+        ⟨config.currHeap, hcurrHeap⟩ ⟨config.currHeap, hcurrHeap⟩] := by
+  simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+    compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+    labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+    labLabel, labCompileLines, labCompilePlain, labCollectLabels,
+    labLineInstructionCount, labBinOpInstruction, registerOfNat,
+    hcurrHeap, hdestination, stackRemoveGet, stackRemoveComplete,
+    stackProgDepth, stackRemoveFuel] <;>
+    congr 1
+
+theorem compileStackProgramNatToRiscV_getCurrHeap_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hcurrHeap : config.currHeap < 32)
+    (hdestination : destination < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hrel : WordStackRegisterRelation source target)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.get destination .currHeap : StackProg Nat) =
+      some code) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source destination
+        (source.registers config.currHeap))
+      (executeInstructions target code) := by
+  rw [compileStackProgramNatToRiscV_getCurrHeap context config sectionId initialLabel
+    destination hcurrHeap hdestination] at hcode
+  cases hcode
+  exact executeStackRemoveGetCurrHeap config source target destination hcurrHeap
+    hdestination hdestinationNonzero hrel
+
+theorem compileStackProgramNatToRiscV_setCurrHeap [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel sourceRegister : Nat)
+    (hcurrHeap : config.currHeap < 32)
+    (hsource : sourceRegister < 32) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.set .currHeap sourceRegister : StackProg Nat) =
+      some [.or ⟨config.currHeap, hcurrHeap⟩
+        ⟨sourceRegister, hsource⟩ ⟨sourceRegister, hsource⟩] := by
+  simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+    compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+    labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+    labLabel, labCompileLines, labCompilePlain, labCollectLabels,
+    labLineInstructionCount, labBinOpInstruction, registerOfNat,
+    hcurrHeap, hsource, stackRemoveSet, stackRemoveComplete,
+    stackProgDepth, stackRemoveFuel] <;>
+    congr 1
+
+theorem compileStackProgramNatToRiscV_setCurrHeap_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel sourceRegister : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hcurrHeap : config.currHeap < 32)
+    (hsource : sourceRegister < 32)
+    (hcurrHeapNonzero : config.currHeap ≠ 0)
+    (hrel : WordStackRegisterRelation source target)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.set .currHeap sourceRegister : StackProg Nat) =
+      some code) :
+    WordStackRegisterRelation
+      (wordStackMachineWriteRegister source config.currHeap
+        (source.registers sourceRegister))
+      (executeInstructions target code) := by
+  rw [compileStackProgramNatToRiscV_setCurrHeap context config sectionId initialLabel
+    sourceRegister hcurrHeap hsource] at hcode
+  cases hcode
+  exact executeStackRemoveSetCurrHeap config source target sourceRegister hcurrHeap
+    hsource hcurrHeapNonzero hrel
+
 end Flapjack.RiscV

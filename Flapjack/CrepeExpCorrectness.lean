@@ -139,4 +139,71 @@ theorem compileExp_binop_const_correct
     evalPanValueExp, evalPanValueExp.evalPanValueExps,
     evalCrepFullExp]
 
+theorem compileExp_cmp_const_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepLocals : Nat → Option α) (crepMemory : α → Option α)
+    (baseAddress topAddress bytesInWord : α)
+    (operator : Cmp) (left right : α) :
+    compileExp context (.cmp operator (.const left) (.const right)) =
+      ([.cmp operator (.const left) (.const right)], .one) ∧
+    evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.cmp operator (.const left) (.const right)) =
+      some (.word (evalPanCmp operator left right)) ∧
+    evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+      (.cmp operator (.const left) (.const right)) =
+      some (evalPanCmp operator left right) := by
+  simp [compileExp, evalPanValueExp, evalCrepFullExp]
+
+theorem compileExp_shift_const_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepLocals : Nat → Option α) (crepMemory : α → Option α)
+    (baseAddress topAddress bytesInWord : α)
+    (operator : Shift) (left right : α) :
+    compileExp context (.shift operator (.const left) (.const right)) =
+      ([.shift operator (.const left) (.const right)], .one) ∧
+    evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.shift operator (.const left) (.const right)) =
+      (evalPanShift operator left right).map PanValue.word ∧
+    evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+      (.shift operator (.const left) (.const right)) =
+      evalPanShift operator left right := by
+  simp [compileExp, evalPanValueExp, evalCrepFullExp]
+
+theorem compileExp_panOp_mul_const_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepLocals : Nat → Option α) (crepMemory : α → Option α)
+    (baseAddress topAddress bytesInWord : α) (left right : α) :
+    compileExp context (.panOp .mul [.const left, .const right]) =
+      ([.crepOp .mul [.const left, .const right]], .one) ∧
+    evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.panOp .mul [.const left, .const right]) =
+      some (.word (left * right)) ∧
+    evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+      (.crepOp .mul [.const left, .const right]) =
+      some (left * right) := by
+  simp [compileExp, compileExp.compileExpList, cexpHeads,
+    evalPanValueExp, evalPanValueExp.evalPanValueExps,
+    evalCrepFullExp]
+
 end Flapjack

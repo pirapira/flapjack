@@ -2161,6 +2161,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   handler declines an external call, including the clocked evaluator boundary.
 - [x] Prove fuel monotonicity for successful unclocked stepped stateful-FFI
   runs, preserving both the control result and exact step count.
+- [x] Prove counted RISC-V instruction execution composes over appended
+  instruction lists, preserving both the intermediate machine state and the
+  additive instruction count.
 - [x] Prove that a resolved cross-section Lab jump executes to the target
   section on the RISC-V model, rather than only matching emitted code shape.
 - [x] Prove Lab `linkValue` materializes a resolved continuation in ABI

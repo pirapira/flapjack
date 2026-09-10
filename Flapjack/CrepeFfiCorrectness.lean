@@ -99,6 +99,96 @@ theorem compile_full_extCall_simulation
       harrayLengthValue, hffi, restoreCrepResult, restoreCrepFfiTemps]
   · simpa [evalPanFfiProg] using hsource
 
+/-! The same lowering contract at the structured Pancake boundary.  The
+    source evaluator retains its structured environments, while the compiled
+    FFI ABI still consumes four scalar words. -/
+theorem compile_full_pan_value_extCall_simulation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceLocals' : VarName → Option (PanValue α))
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state state' : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Exp α)
+    (configuration' configurationLength' array' arrayLength' : CrepExp α)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue : α)
+    (hconfiguration : firstCompiledExp context configuration = some configuration')
+    (hconfigurationLength :
+      firstCompiledExp context configurationLength = some configurationLength')
+    (harray : firstCompiledExp context array = some array')
+    (harrayLength : firstCompiledExp context arrayLength = some arrayLength')
+    (hsourceValues : evalPanValueExps structs sourceLocals sourceGlobals
+      sourceMemory baseAddress topAddress bytesInWord
+      [configuration, configurationLength, array, arrayLength] =
+      some [.word configurationValue, .word configurationLengthValue,
+        .word arrayValue, .word arrayLengthValue])
+    (hconfigurationValue :
+      evalCrepFullExp state.locals state.memory baseAddress topAddress
+        configuration' = some configurationValue)
+    (hconfigurationLengthValue :
+      evalCrepFullExp
+        (updateCrepLocal state.locals (context.maxVar + 1) configurationValue)
+        state.memory baseAddress topAddress
+        configurationLength' = some configurationLengthValue)
+    (harrayValue :
+      evalCrepFullExp
+        (updateCrepLocal
+          (updateCrepLocal state.locals (context.maxVar + 1) configurationValue)
+          (context.maxVar + 2) configurationLengthValue)
+        state.memory baseAddress topAddress
+        array' = some arrayValue)
+    (harrayLengthValue :
+      evalCrepFullExp
+        (updateCrepLocal
+          (updateCrepLocal
+            (updateCrepLocal state.locals (context.maxVar + 1) configurationValue)
+            (context.maxVar + 2) configurationLengthValue)
+          (context.maxVar + 3) arrayValue)
+        state.memory baseAddress topAddress
+        arrayLength' = some arrayLengthValue)
+    (hsource : sourceHandler function configurationValue configurationLengthValue
+      arrayValue arrayLengthValue sourceLocals = some sourceLocals')
+    (hffi : ffi function configurationValue configurationLengthValue arrayValue
+      arrayLengthValue
+      ({ state with
+        locals :=
+          updateCrepLocal
+            (updateCrepLocal
+              (updateCrepLocal
+                (updateCrepLocal state.locals (context.maxVar + 1)
+                  configurationValue)
+                (context.maxVar + 2) configurationLengthValue)
+              (context.maxVar + 3) arrayValue)
+            (context.maxVar + 4) arrayLengthValue }) = some state') :
+    evalCrepFullProg [] crepPrimitive ffi sharedMem baseAddress topAddress
+        (fuel + 5) state
+        (compileProg context
+          (.extCall function configuration configurationLength array arrayLength)) =
+      some (.normal (restoreCrepFfiTemps state' state context.maxVar)) ∧
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive sourceHandler structs []
+      baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory
+      (.extCall function configuration configurationLength array arrayLength)
+      (contracts := none) (memoryHandler := none) =
+      some (.normal sourceLocals' sourceGlobals sourceMemory) := by
+  constructor
+  · rw [compileProg_extCall_of_compiled context function configuration
+      configurationLength array arrayLength configuration' configurationLength'
+      array' arrayLength' hconfiguration hconfigurationLength harray harrayLength]
+    simp [nestedDecs, evalCrepFullProg, updateCrepLocal,
+      hconfigurationValue, hconfigurationLengthValue, harrayValue,
+      harrayLengthValue, hffi, restoreCrepResult, restoreCrepFfiTemps]
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceValues, hsource]
+
 /-! A normal source/Crepe step can be composed with an arbitrary
 continuation.  This is the sequencing boundary needed to lift the local FFI
 contract above to larger handler bodies without unfolding either evaluator.

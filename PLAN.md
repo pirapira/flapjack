@@ -2105,6 +2105,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   local address/load temporaries and global write-back.
 - [x] Prove the reusable source-to-Crepe FFI lowering equation, including
   sequential argument evaluation and restoration of compiler temporaries.
+- [x] Lift the source-to-Crepe FFI lowering equation to structured Pancake
+  environments, retaining the scalar ABI argument boundary explicitly.
 - [x] Compose the lowered caught-handler call with the full-Crepe evaluator,
   retaining the generated return-slot setup and handler continuation.
 - [x] Prove source-to-Crepe exception production writes the payload to the

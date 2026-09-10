@@ -53,6 +53,14 @@ def memoryFfiAccelerator : PanValueMemoryFfiHandler Nat Unit :=
       some (locals, updatePanValueMemory memory array (.word (configuration + 1)), ffi)
     else none
 
+def memoryFfiDecliningHandler : PanValueMemoryFfiHandler Nat Unit :=
+  fun _ _ _ _ _ _ _ _ => none
+
+def memoryFfiFinalState : FfiState Unit :=
+  { oracle := fun _ _ _ _ => .final .failed
+    state := ()
+    ioEvents := [] }
+
 def memoryFfiInitial : PanValueFfiProgramState Nat Unit :=
   { source :=
       { structs := []
@@ -70,6 +78,9 @@ def memoryFfiMain : Prog Nat :=
   .seq
     (.extCall "accelerator" (.const 7) (.const 0) (.const 200) (.const 1))
     (.return (.load .one (.const 200)))
+
+def memoryFfiFinalMain : Prog Nat :=
+  .extCall "unknown" (.const 7) (.const 0) (.const 200) (.const 0)
 
 def memoryFfiDeclarations : List (Decl Nat) :=
   [.function
@@ -127,5 +138,23 @@ theorem memoryFfi_dispatch_contract :
       evalPanValueExp.evalPanValueExps, evalPanValueExp,
       panValueExpsStepCost, panValueExpStepCost,
       panValueExpStepCost.panValueExpsStepCost]) (by rfl)
+
+def memoryFfiDecliningFinalResult :=
+  evalPanValueFfiProgSteps memoryFfiTestContext
+    (fun _ _ => none) memoryFfiTestHandler [] [] 0 1000 1 10
+    (fun _ => none) (fun _ => none) memoryFfiInitial.source.memory
+    memoryFfiFinalState
+    memoryFfiFinalMain
+    (memoryAccess := some memoryFfiTestMemoryAccess)
+    (memoryHandler := some memoryFfiDecliningHandler)
+
+def memoryFfiDecliningFinalIsReachable : Bool :=
+  match memoryFfiDecliningFinalResult with
+  | some (.finalFfi locals _ memory ffi event, steps) =>
+      locals "x" = none && memory 200 = none && ffi.state = () &&
+        event.name = .extCall "unknown" && event.outcome = .failed && steps = 5
+  | _ => false
+
+#guard memoryFfiDecliningFinalIsReachable
 
 end Flapjack

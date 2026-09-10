@@ -409,9 +409,25 @@ mutual
           none
         match memoryHandler with
         | some memoryHandler =>
-            let (locals, memory, ffi) ← memoryHandler function configuration
-              configurationLength array arrayLength locals memory ffi
-            pure (.normal locals globals memory ffi, expressionSteps + 1)
+            match memoryHandler function configuration configurationLength array arrayLength
+                locals memory ffi with
+            | some (locals, memory, ffi) =>
+                pure (.normal locals globals memory ffi, expressionSteps + 1)
+            | none =>
+                match memoryAccess with
+                | none =>
+                    let (locals, ffi) ←
+                      handler function configuration configurationLength array arrayLength locals ffi
+                    pure (.normal locals globals memory ffi, expressionSteps + 1)
+                | some access =>
+                    match panValueFfiExtCall access context memory bytesInWord ffi function
+                        configuration configurationLength array arrayLength with
+                    | some (.returned memory ffi) =>
+                        pure (.normal locals globals memory ffi, expressionSteps + 1)
+                    | some (.final ffi event) =>
+                        pure (.finalFfi (fun _ => none) globals memory ffi event,
+                          expressionSteps + 1)
+                    | none => none
         | none =>
             match memoryAccess with
             | none =>

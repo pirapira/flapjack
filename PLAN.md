@@ -2269,6 +2269,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   including fresh result slots and restoration around the continuation.
 - [x] Couple word assignment evaluation with preservation of the full
   source-to-Crep state relation for continuations.
+- [x] Prove successful `SourceWordExp` evaluation returns a word under the
+  flattened-local relation, and add the compositional local-assignment rule
+  for both direct and fresh-temporary lowering paths.
 - [x] Add the relation-aware normally-completing sequence rule for the program
   correctness induction.
 - [x] Add relation-aware conditional branch rules for both source condition

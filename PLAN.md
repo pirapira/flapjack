@@ -836,6 +836,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   StackRemove/Lab/RISC-V entrypoint, preserving the mapped register relation.
 - [x] Generalize the StackProg arithmetic entrypoint contract across `add`,
   `sub`, `and`, `or`, and `xor`, including all corresponding RISC-V relations.
+- [x] Lift non-rotate `lsl`, `lsr`, and `asr` StackProg shifts through the
+  evaluator and StackRemove/Lab/RISC-V entrypoint with register simulations.
 - [x] Match CakeML Simple/IRC distinction in graph allocation modes: modes
   0--1 omit move preferences during coalescing but retain the original move table for coloring, while modes 2--3 use the prioritized list for coalescing and the original move table for coloring.
 - [x] Preserve SSA-renamed virtual names at the heuristic allocator's

@@ -2185,6 +2185,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   to the corresponding Crep slot update and flattened result.
 - [x] Prove a state-threaded structured Pancake-to-Crep sequence composition
   theorem from normal first-component and continuation witnesses.
+- [x] Generalize structured sequence composition to full source/Crep state
+  threading for a normally completing first component.
+- [x] Prove that a returned first structured component short-circuits the
+  remaining sequence in both source and Crep evaluators.
 - [x] Prove the word declaration-binding source-to-Crep boundary, including
   fresh-slot allocation and restoration of the shadowed local.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

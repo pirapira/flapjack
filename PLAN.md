@@ -2233,6 +2233,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   to graph-node bijection used by location-aware lowering.
 - [x] Prove that every source represented by a graph allocation's inverse
   bijection receives a corresponding wordGraphLocations entry.
+- [x] Extend the StackLang/RISC-V register relation through unsigned
+  division, including the defined zero-divisor result and Lab lowering.
 
 ## First implementation slice
 

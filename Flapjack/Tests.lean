@@ -18,6 +18,8 @@ import Flapjack.Test.HeuristicPipeline
 import Flapjack.Test.HeuristicStackPipeline
 import Flapjack.RiscV.CorrectnessHeuristicStack
 import Flapjack.RiscV.CorrectnessGraphLocations
+import Flapjack.RiscV.CorrectnessStackRiscVDivision
+import Flapjack.Test.StackRiscVDivision
 import Flapjack.Test.GraphLocations
 import Flapjack.Test.LinearScan
 import Flapjack.Test.LinearScanSource

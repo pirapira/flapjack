@@ -2236,6 +2236,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   `cexpHeads` and `evalPanBinOp`.
 - [x] Prove comparison, shift, and Pancake multiplication expression agreement
   for word constants.
+- [x] Prove field projection agreement for a word field of a recursively
+  compiled record.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

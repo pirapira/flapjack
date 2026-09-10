@@ -1112,6 +1112,25 @@ def wordStackMachineShift : Shift → Word width → Word width → Word width
   | .asr, left, right => BitVec.sshiftRight left (shiftAmount right)
   | .ror, left, right => wordStackMachineRotateRight left right
 
+/-! The StackLang `LongDiv` operation follows CakeML's word convention: the
+    two source words form one unsigned double-width dividend, the divisor must
+    be nonzero, and the quotient must fit in one word.  Returning `none` for
+    either failed precondition matches the source/StackLang semantics. -/
+def wordStackLongDivResult [NeZero width]
+    (sourceLeft sourceRight divisor : Word width) :
+    Option (Word width × Word width) :=
+  let divisorValue := divisor.toNat
+  let dividendValue := sourceLeft.toNat * 2 ^ width + sourceRight.toNat
+  if divisorValue == 0 then
+    none
+  else
+    let quotient := dividendValue / divisorValue
+    if quotient < 2 ^ width then
+      some (BitVec.ofNat width quotient,
+        BitVec.ofNat width (dividendValue % divisorValue))
+    else
+      none
+
 def evalWordStackMachine [NeZero width]
     (state : WordStackMachineState width) :
     StackProg Nat → Option (WordStackMachineState width)
@@ -1133,6 +1152,13 @@ def evalWordStackMachine [NeZero width]
       let high := BitVec.ofNat width (left.toNat * right.toNat / 2 ^ width)
       let state := wordStackMachineWriteRegister state destinationLeft high
       some (wordStackMachineWriteRegister state destinationRight (left * right))
+  | .inst (.arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight divisor)) =>
+      match wordStackLongDivResult (state.registers sourceLeft)
+          (state.registers sourceRight) (state.registers divisor) with
+      | some (quotient, remainder) =>
+          let state := wordStackMachineWriteRegister state destinationLeft quotient
+          some (wordStackMachineWriteRegister state destinationRight remainder)
+      | none => none
   | .inst (.arith (.addCarry destination resultCarry sourceLeft sourceRight carryIn)) =>
       let left := state.registers sourceLeft
       let right := state.registers sourceRight

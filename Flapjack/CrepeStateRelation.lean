@@ -139,6 +139,71 @@ theorem panValueCrepLocalsRel_extend
     exact hold current currentValue currentShape currentSlots hname
       hcurrentOld hlookupOld
 
+theorem readCrepLocals_update_of_not_mem
+    (locals : Nat → Option α) (slot : Nat) (value : α) :
+    ∀ slots, slot ∉ slots →
+      readCrepLocals (updateCrepLocal locals slot value) slots =
+        readCrepLocals locals slots := by
+  intro slots hnot
+  induction slots with
+  | nil => rfl
+  | cons head tail ih =>
+      have hhead : head ≠ slot := by
+        intro heq
+        apply hnot
+        simp [heq]
+      have htail : slot ∉ tail := by
+        intro hmem
+        apply hnot
+        simp [hmem]
+      simp [readCrepLocals, updateCrepLocal, hhead,
+        ih htail]
+
+theorem panValueCrepLocalsRel_update_word
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals : VarName → Option (PanValue α))
+    (crepLocals : Nat → Option α)
+    (name : VarName) (slot : Nat) (value : α)
+    (hrel : panValueCrepLocalsRel structs context sourceLocals crepLocals)
+    (hlookup : lookupInfo name context.vars = some (.one, [slot]))
+    (hnoalias : ∀ oldName oldShape oldSlots,
+      oldName ≠ name →
+      lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+      slot ∉ oldSlots) :
+    panValueCrepLocalsRel structs context
+      (updatePanValueMap sourceLocals name (.word value))
+      (updateCrepLocal crepLocals slot value) := by
+  intro current currentValue currentShape currentSlots hcurrent hcurrentLookup
+  by_cases hname : current = name
+  · subst current
+    have hpair : (Shape.one, [slot]) = (currentShape, currentSlots) := by
+      have hlookup' : some (Shape.one, [slot]) =
+          some (currentShape, currentSlots) := by
+        simpa [hlookup] using hcurrentLookup
+      exact Option.some.inj hlookup'
+    have hshape : currentShape = Shape.one := (congrArg Prod.fst hpair).symm
+    have hslots : currentSlots = [slot] := (congrArg Prod.snd hpair).symm
+    cases hshape
+    cases hslots
+    have hvalue : currentValue = PanValue.word value := by
+      rw [updatePanValueMap] at hcurrent
+      simpa using hcurrent.symm
+    cases hvalue
+    constructor
+    · simp [panValueShape, panShapeMatches]
+    · simp [readCrepLocals, updateCrepLocal, panValueFlatWords,
+        panValueFlatWordsFuel]
+  · have hcurrentOld : sourceLocals current = some currentValue := by
+      rw [updatePanValueMap] at hcurrent
+      simpa [hname] using hcurrent
+    have hold := hrel current currentValue currentShape currentSlots
+      hcurrentOld hcurrentLookup
+    have hnot : slot ∉ currentSlots :=
+      hnoalias current currentShape currentSlots hname hcurrentLookup
+    exact ⟨hold.1,
+      (readCrepLocals_update_of_not_mem crepLocals slot value currentSlots hnot).symm ▸ hold.2⟩
+
 theorem lookupCompiledFunction_compileFunctions_head
     [BEq String] [LawfulBEq String] [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (declaration : FunDecl α)

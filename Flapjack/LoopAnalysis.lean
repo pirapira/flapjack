@@ -93,7 +93,7 @@ def loopAccVars : LoopProg α → List Nat → List Nat
       loopInsertAll arguments
         (loopInsertAll returns (loopInsertAll live
           (loopInsert exception (loopInsertAll handlerLive names))))
-  | .locValue destination source, names => loopInsert destination (loopInsert source names)
+  | .locValue destination _label, names => loopInsert destination names
   | .assign destination expression, names =>
       loopInsertAll (loopVarsOfExp expression) (loopInsert destination names)
   | .primitive destinations _ arguments, names =>

@@ -66,7 +66,7 @@ example :
         ({ current := [(2, 100)], next := 200 } : WordSsaState)
         ((.seq (.locValue 3 2) (.return 0 [3])) : WordProg Nat) =
         ({ current := [(3, 200), (2, 100)], next := 204 },
-        .seq (.locValue 200 100)
+        .seq (.locValue 200 2)
           (.seq (.move 0 [(2, 200)]) (.return 0 [2]))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaCallAbiRegisters, wordSsaFresh, wordSsaRead, wordSsaSeq,

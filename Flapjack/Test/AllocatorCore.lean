@@ -26,7 +26,7 @@ example :
 example :
     wordProgPreferenceEdges
         (.seq (.assign 4 (.var 0)) (.locValue 5 4) : WordProg Nat) =
-      [(4, 0), (5, 4)] := by
+      [(4, 0)] := by
   simp [wordProgPreferenceEdges]
 
 example :

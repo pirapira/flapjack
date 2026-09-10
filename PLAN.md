@@ -182,6 +182,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
      abstract StackLang machine. Its RISC-V target boundary remains separate:
      CakeML's RISC-V encoder lowers `LongDiv` through runtime support rather
      than a native instruction.
+   - **In progress:** make WordLang `LocValue` label-aware in allocator
+     analyses. The destination is an SSA variable; the label is code metadata,
+     not a source register. The executable Loop/Word/Stack semantics and their
+     end-to-end label environment remain to be migrated.
    - Use `/home/zksecurity/HOL/examples/l3-machine-code/riscv/model/riscv.sml`
      as the RISC-V architectural reference; copy `/home/zksecurity/HOL/COPYRIGHT`
      into the Lean RISC-V model subdirectory when that port starts.

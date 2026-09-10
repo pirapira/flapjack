@@ -1869,4 +1869,45 @@ theorem compile_full_pan_value_raise_two_word_correct
       evalCrepFullExp, updateCrepLocal, restoreCrepResult,
       hrestore, hbytesInWord]
 
+/-! A declaration-level call regression exercises the declaration environment,
+    `compileToCrepe`, callee lookup, and flattened Crep return values in one
+    compiler-to-Crep correctness statement. -/
+def correctnessIdentityDeclarations (value : α) : List (Decl α) :=
+  [.function
+    { name := "id", inline := false, exported := false,
+      params := [("x", .one)],
+      body := .return (.var .local "x"), returnShape := .one },
+   .function
+    { name := "main", inline := false, exported := true,
+      params := [],
+      body := .decCall "result" .one "id" [.const value]
+        (.return (.var .local "result")), returnShape := .one }]
+
+def correctnessIdentityContext [OfNat α 1] : CompileContext α :=
+  { vars := [], functions := [], exceptions := [], maxVar := 0,
+    bytesInWord := 1 }
+
+theorem compile_full_pan_value_identity_declaration_call_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (value : α) :
+    (evalCrepFullCall
+      (compileToCrepe (correctnessIdentityContext (α := α))
+        (correctnessIdentityDeclarations value))
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+      0 0 100
+      { locals := fun _ => none, memory := fun _ => none }
+      none "main" [] =
+      some (.returned
+        { locals := fun _ => none, memory := fun _ => none } [value])) := by
+  simp [correctnessIdentityContext, correctnessIdentityDeclarations,
+      compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
+      functionInfos, compileProg, compileExp, compileArgs, allocatedNames,
+      nestedDecs, evalCrepFullCall, evalCrepFullProg,
+      evalCrepFullExps, evalCrepFullExp, updateCrepLocal, restoreCrepResult,
+      lookupCompiledFunction, assignCrepValues, lookupInfo, List.map,
+      List.zip, List.foldl]
+
 end Flapjack

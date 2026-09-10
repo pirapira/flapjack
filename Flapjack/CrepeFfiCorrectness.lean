@@ -99,6 +99,51 @@ theorem compile_full_extCall_simulation
       harrayLengthValue, hffi, restoreCrepResult, restoreCrepFfiTemps]
   · simpa [evalPanFfiProg] using hsource
 
+/-! A normal source/Crepe step can be composed with an arbitrary
+continuation.  This is the sequencing boundary needed to lift the local FFI
+contract above to larger handler bodies without unfolding either evaluator.
+The first-step hypotheses intentionally expose the post-step states: callers
+can instantiate them with `compile_full_extCall_simulation`, or with the
+corresponding call/handler theorem. -/
+
+theorem compile_full_seq_after_normal_simulation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α)
+    (sourceLocals sourceLocals' : VarName → Option α)
+    (state state' : CrepState α)
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (sourceHandler : PanFfiHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (first : Prog α) (compiledFirst : CrepProg α)
+    (second : Prog α) (compiledSecond : CrepProg α)
+    (sourceResult : PanControlResult α)
+    (crepResult : CrepControlResult α)
+    (hfirstCompile : compileProg context first = compiledFirst)
+    (hsecondCompile : compileProg context second = compiledSecond)
+    (hfirstCrep : evalCrepFullProg [] primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state compiledFirst =
+      some (.normal state'))
+    (hfirstSource : evalPanProgWithCallsAndFfi [] sourceHandler
+      (fuel + 1) sourceLocals first = some (.normal sourceLocals'))
+    (hsecondCrep : evalCrepFullProg [] primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state' compiledSecond =
+      some crepResult)
+    (hsecondSource : evalPanProgWithCallsAndFfi [] sourceHandler
+      (fuel + 1) sourceLocals' second = some sourceResult) :
+    evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 2) state (compileProg context (.seq first second)) =
+      some crepResult ∧
+    evalPanProgWithCallsAndFfi [] sourceHandler (fuel + 2) sourceLocals
+      (.seq first second) = some sourceResult := by
+  constructor
+  · rw [compileProg_seq, hfirstCompile, hsecondCompile]
+    simp [evalCrepFullProg, hfirstCrep, hsecondCrep]
+  · simp [evalPanProgWithCallsAndFfi, hfirstSource, hsecondSource]
+
 /-! The corresponding call equation keeps the lowered handler visible.  The
     caller supplies the result of the full Crepe call evaluator, so this lemma
     can be composed with either the caught- or uncaught-callee contracts in

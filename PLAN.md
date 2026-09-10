@@ -2122,6 +2122,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   unavailable, in addition to the successful state-transition boundary.
 - [x] Preserve callee global/memory effects across combined call/FFI dispatch
   so compiled exception handlers can consume FFI-produced return data.
+- [x] Add a reusable full-Crepe normal-step sequencing contract and a concrete
+  FFI continuation regression that observes the returned value.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

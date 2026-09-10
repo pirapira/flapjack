@@ -104,7 +104,8 @@ def sourceFfiSimulationRelation :
       state.locals 11 = locals "seenArray" ∧
       state.locals 12 = locals "seenArrayLength"
 
-example (configuration configurationLength array arrayLength : RiscV.Word 64) :
+theorem sourceFfiSimulation_leaf (configuration configurationLength array arrayLength :
+    RiscV.Word 64) :
     evalLoopProgWithCallsAndFfi [] sourceFfiSimulationHandler 40
       (sourceFfiSimulationState configuration configurationLength array arrayLength)
       (loopCompileProg sourceFfiSimulationLoopContext []
@@ -164,5 +165,41 @@ example (configuration configurationLength array arrayLength : RiscV.Word 64) :
               simp [updateLoopLocal]
             · simp [updateLoopLocal, h1, h2, h3, h4]
   exact hsim.1
+
+theorem sourceFfiSimulation_sequence
+    (configuration configurationLength array arrayLength : RiscV.Word 64) :
+    evalLoopProgWithCallsAndFfi [] sourceFfiSimulationHandler 41
+      (sourceFfiSimulationState configuration configurationLength array arrayLength)
+      (loopCompileProg sourceFfiSimulationLoopContext []
+        (compileProg sourceFfiSimulationCompileContext
+          (.seq (.extCall "echo" (.var .local "configuration")
+            (.var .local "configurationLength") (.var .local "array")
+            (.var .local "arrayLength")) .skip))) =
+        some (.normal
+          (sourceFfiSimulationNextState configuration configurationLength array arrayLength)) ∧
+    evalPanProgWithCallsAndFfi [] sourceFfiSimulationSourceHandler 21
+      (sourceFfiSimulationLocals configuration configurationLength array arrayLength)
+      (.seq (.extCall "echo" (.var .local "configuration")
+        (.var .local "configurationLength") (.var .local "array")
+        (.var .local "arrayLength")) .skip) =
+      some (.normal
+        (sourceFfiSimulationNextLocals configuration configurationLength array arrayLength)) := by
+  apply compilePanToLoop_seq_after_extCall
+    sourceFfiSimulationCompileContext sourceFfiSimulationLoopContext
+    (sourceFfiSimulationState configuration configurationLength array arrayLength)
+    (sourceFfiSimulationLocals configuration configurationLength array arrayLength)
+    sourceFfiSimulationHandler sourceFfiSimulationSourceHandler "echo"
+    (sourceFfiSimulationNextState configuration configurationLength array arrayLength)
+    (sourceFfiSimulationNextLocals configuration configurationLength array arrayLength)
+    (.skip : Prog (RiscV.Word 64)) (.skip : LoopProg (RiscV.Word 64))
+    (.normal (sourceFfiSimulationNextLocals configuration configurationLength array arrayLength))
+    (.normal (sourceFfiSimulationNextState configuration configurationLength array arrayLength))
+  · exact sourceFfiSimulation_leaf configuration configurationLength array arrayLength
+  · simp [sourceFfiSimulationLocals,
+      sourceFfiSimulationSourceHandler, sourceFfiSimulationNextLocals,
+      evalPanProgWithCallsAndFfi, evalPanExtCall, evalPanExp]
+  · simp [compileProg, loopCompileProg]
+  · simp [evalLoopProgWithCallsAndFfi, evalLoopProg]
+  · simp [evalPanProgWithCallsAndFfi]
 
 end Flapjack

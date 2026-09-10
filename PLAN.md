@@ -2116,6 +2116,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add a reusable source-local FFI simulation boundary through `pan_to_crep`
   and `crep_to_loop`, retaining an explicit post-handler Loop/source state
   relation.
+- [x] Add a compositional sequence theorem that threads arbitrary continuations
+  after a source-local FFI simulation step.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

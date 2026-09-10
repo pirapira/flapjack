@@ -130,4 +130,68 @@ theorem compilePanToLoop_extCall_local_state_simulation
       hconfiguration, hconfigurationLength, harray, harrayLength, hsource']
   exact ⟨by rw [hcompile]; exact hloop, hsourceResult, hrelation⟩
 
+/-! Once an FFI leaf has established the state relation, ordinary sequencing
+    can thread an arbitrary continuation through both evaluators.  Keeping the
+    compiled continuation as an explicit argument makes this theorem useful
+    before the complete pass-level relation is assembled. -/
+
+theorem compilePanToLoop_seq_after_extCall
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (compileContext : CompileContext α) (loopContext : LoopContext α)
+    (state : LoopState α) (sourceLocals : VarName → Option α)
+    (loopHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (sourceHandler : PanFfiHandler α) (function : FunName)
+    (nextState : LoopState α) (nextLocals : VarName → Option α)
+    (second : Prog α) (compiledSecond : LoopProg α)
+    (sourceResult : PanControlResult α) (loopResult : LoopResult α)
+    (hfirstLoop :
+      evalLoopProgWithCallsAndFfi [] loopHandler 40 state
+        (loopCompileProg loopContext []
+          (compileProg compileContext
+            (.extCall function (.var .local "configuration")
+              (.var .local "configurationLength") (.var .local "array")
+              (.var .local "arrayLength")))) = some (.normal nextState))
+    (hfirstSource :
+      evalPanProgWithCallsAndFfi [] sourceHandler 20 sourceLocals
+        (.extCall function (.var .local "configuration")
+          (.var .local "configurationLength") (.var .local "array")
+          (.var .local "arrayLength")) = some (.normal nextLocals))
+    (hcompiledSecond : loopCompileProg loopContext []
+      (compileProg compileContext second) = compiledSecond)
+    (hloopSecond : evalLoopProgWithCallsAndFfi [] loopHandler 40 nextState
+      compiledSecond = some loopResult)
+    (hsourceSecond : evalPanProgWithCallsAndFfi [] sourceHandler 20 nextLocals
+      second = some sourceResult) :
+    evalLoopProgWithCallsAndFfi [] loopHandler 41 state
+      (loopCompileProg loopContext []
+        (compileProg compileContext
+          (.seq (.extCall function (.var .local "configuration")
+            (.var .local "configurationLength") (.var .local "array")
+            (.var .local "arrayLength")) second))) = some loopResult ∧
+    evalPanProgWithCallsAndFfi [] sourceHandler 21 sourceLocals
+      (.seq (.extCall function (.var .local "configuration")
+        (.var .local "configurationLength") (.var .local "array")
+        (.var .local "arrayLength")) second) = some sourceResult := by
+  constructor
+  · have hcompiledSeq :
+        loopCompileProg loopContext []
+            (compileProg compileContext
+              (.seq (.extCall function (.var .local "configuration")
+                (.var .local "configurationLength") (.var .local "array")
+                (.var .local "arrayLength")) second)) =
+          .seq
+            (loopCompileProg loopContext []
+              (compileProg compileContext
+                (.extCall function (.var .local "configuration")
+                  (.var .local "configurationLength") (.var .local "array")
+                  (.var .local "arrayLength"))))
+            compiledSecond := by
+      rw [compileProg_seq, loopCompileProg_seq, hcompiledSecond]
+    rw [hcompiledSeq]
+    simp [evalLoopProgWithCallsAndFfi, hfirstLoop, hloopSecond]
+  · simp [evalPanProgWithCallsAndFfi, hfirstSource, hsourceSecond]
+
 end Flapjack

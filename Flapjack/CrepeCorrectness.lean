@@ -370,4 +370,38 @@ theorem compile_full_pan_value_seq_normal_compose
   rw [hfirstSource']
   simp
 
+/-! The source return boundary is not intrinsically word-shaped.  This
+    structured form is the one needed for record-valued Pancake expressions:
+    the compiler emits the flattened Crep words, while the source evaluator
+    retains the original structured value until the final observation. -/
+theorem compile_full_pan_value_return_of_exp
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (expression : Exp α)
+    (value : PanValue α) (compiled : List (CrepExp α))
+    (hsource : evalPanValueExp structs locals globals (fun address =>
+      (state.memory address).map PanValue.word)
+      baseAddress topAddress bytesInWord expression = some value)
+    (hvalid : panValuePayloadWithinLimit structs value = true)
+    (hcompile : compileExp context expression =
+      (compiled, panValueShape structs value))
+    (hcompiled : evalCrepFullExps state.locals state.memory baseAddress topAddress
+      compiled = some (panValueFlatWords value)) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 1 state
+        (compileProg context (.return expression)) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.return expression)).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp [compileProg, hcompile, evalCrepFullResult, evalCrepFullProg,
+    hcompiled, evalPanValueProg,
+    evalPanValueProgWithPrimitive, hsource, hvalid]
+
 end Flapjack

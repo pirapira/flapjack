@@ -181,6 +181,27 @@ example :
           (fun counted => counted.2)) = some 6 := by
   decide +kernel
 
+/- The generalized counted contract also accepts a compiler result carrying
+   return-register metadata.  The count concerns the emitted code, so it
+   should not require the compiler to erase that metadata first. -/
+example [NeZero width]
+    (context : WordCallFfiContext width) (host : WordFfiHost width)
+    (state finalState : State width) (program : WordProg (Word width))
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCallsAndFfi context program =
+      some (code, [⟨2, by omega⟩]))
+    (hsemantic :
+      (wordFunctionToRiscVWithCallsAndFfi context program).bind
+          (fun result =>
+            (executeInstructionsWithFfi host state result.1).map
+              (fun final => (final, [BitVec.ofNat width 7]))) =
+        some (finalState, [BitVec.ofNat width 7])) :
+    executeInstructionsWithFfiCounted host state code =
+      some (finalState, code.length) := by
+  exact wordFunctionToRiscVWithCallsAndFfi_counted_simulation_general context host
+    state finalState program code [⟨2, by omega⟩] [BitVec.ofNat width 7]
+    hcompile hsemantic
+
 example :
     (compileWordProgramNatToRiscV (width := 64)
       { services := [("echo", 7)] } pipelineFfiWordConfig

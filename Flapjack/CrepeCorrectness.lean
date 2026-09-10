@@ -1,4 +1,5 @@
 import Flapjack.CrepeSemantics
+import Flapjack.PanProgramSemantics
 
 /-!
 Initial generic correctness lemmas for the stateful Crepe evaluator.
@@ -209,5 +210,32 @@ theorem compile_full_extCall_const_noop_correct
   simp [compileProg, firstCompiledExp, compileExp, nestedDecs,
     evalCrepFullProg, evalCrepFullExp, evalPanExp, evalPanFfiProg, evalPanExtCall,
     updateCrepLocal, restoreCrepResult, hrestoreFour]
+
+/-! A first structured source-to-Crep boundary for the correctness theorem.
+    A closed word return has the same observable flattened result in the
+    structured Pancake evaluator and in the full Crepe evaluator.  Keeping
+    the source result in its structured form makes this lemma composable with
+    the later environment and memory relations. -/
+theorem compile_full_pan_value_return_word_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord value : α) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 1 state
+        (compileProg context (.return (.const value))) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.return (.const value))).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp [compileProg, compileExp, evalCrepFullResult, evalCrepFullProg,
+    evalCrepFullExps, evalCrepFullExp, evalPanValueProg,
+    evalPanValueProgWithPrimitive, evalPanValueExp, panValueFlatWords,
+    panValueFlatWordsFuel]
 
 end Flapjack

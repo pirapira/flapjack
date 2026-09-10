@@ -2173,6 +2173,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   counted RISC-V executor, exposing the exact generated instruction length.
 - [x] Expose that counted full-SSA RISC-V simulation in the source
   function-evaluator form needed to compose Pancake pass correctness.
+- [x] Prove the first structured Pancake-to-Crep result boundary for a closed
+  word return, retaining the source structured result before flattening.
 - [x] Prove that a resolved cross-section Lab jump executes to the target
   section on the RISC-V model, rather than only matching emitted code shape.
 - [x] Prove Lab `linkValue` materializes a resolved continuation in ABI

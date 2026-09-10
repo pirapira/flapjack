@@ -2300,6 +2300,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   the exact RISC-V byte-memory effect of writing that source word.
 - [x] Prove the scratch-aliasing StackRemove stack-store boundary, covering the
   optimized path that omits the redundant source-to-scratch copy.
+- [x] Lift dynamic StackLoad through the StackProg-to-RISC-V entrypoint, preserving
+  the non-address-scratch register relation for register-held frame offsets.
 - [x] Prove the dynamic StackRemove stack-load boundary for register-held byte
   offsets, preserving the non-address-scratch register relation.
 - [x] Prove both dynamic StackRemove frame-store paths, including the

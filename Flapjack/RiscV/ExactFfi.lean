@@ -91,6 +91,14 @@ def executeInstructionsWithExactFfi [NeZero width]
       | .normal state => executeInstructionsWithExactFfi context state instructions
       | result => result
 
+theorem executeInstructionsWithExactFfi_ecall [NeZero width]
+    (context : WordFfiContext)
+    (state : ExactRiscVFfiState width sigma) :
+    executeInstructionsWithExactFfi context state [.ecall] =
+      exactRiscVFfiCall context state (readRegister state.machine 14).toNat := by
+  cases hcall : exactRiscVFfiCall context state (readRegister state.machine 14).toNat <;>
+    simp [executeInstructionsWithExactFfi, executeWithExactFfi, hcall]
+
 /-! Count the instructions consumed by the exact machine runner.  A terminal
     FFI result stops the run and therefore reports only the successful prefix;
     the normal-result theorem below recovers the full list length. -/

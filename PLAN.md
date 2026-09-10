@@ -2230,6 +2230,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   declaration local is extended with a shape and its Crep slot witness.
 - [x] Prove preservation of the flattened-local relation under a word local
   assignment, assuming assigned-slot non-aliasing.
+- [x] Prove preservation of the flat memory relation under a word update,
+  including the source structured-memory update used by exception payloads.
 - [x] Couple word assignment evaluation with preservation of the full
   source-to-Crep state relation for continuations.
 - [x] Add the relation-aware normally-completing sequence rule for the program

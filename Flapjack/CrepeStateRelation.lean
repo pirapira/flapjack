@@ -95,6 +95,22 @@ theorem panValueCrepMemoryRel_def
       panValueWordMemory sourceMemory = crepMemory := by
   rfl
 
+theorem panValueCrepMemoryRel_update_word
+    [BEq α] [LawfulBEq α]
+    (sourceMemory : α → Option (PanValue α))
+    (crepMemory : α → Option α) (address value : α)
+    (hrel : panValueCrepMemoryRel sourceMemory crepMemory) :
+    panValueCrepMemoryRel
+      (updatePanValueMemory sourceMemory address (.word value))
+      (updateMemory crepMemory address value) := by
+  change panValueWordMemory sourceMemory = crepMemory at hrel
+  funext current
+  by_cases hcurrent : current == address
+  · simp [panValueWordMemory,
+      updatePanValueMemory, updatePanValueMap, updateMemory, hcurrent]
+  · simpa [panValueWordMemory, updatePanValueMemory,
+      updatePanValueMap, updateMemory, hcurrent] using congrFun hrel current
+
 theorem panValueCrepLocalsRel_extend
     [LawfulBEq String]
     (structs : StructContext) (context : CompileContext α)

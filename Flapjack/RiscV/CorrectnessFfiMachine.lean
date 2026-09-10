@@ -539,6 +539,34 @@ step count.  This is intentionally phrased at the compiled Word boundary: a
 later source-to-Word theorem can supply the semantic agreement hypothesis
 without depending on the details of FFI service selection.
 -/
+theorem wordFunctionToRiscVWithCallsAndFfi_counted_simulation_general
+    [NeZero width] (context : WordCallFfiContext width)
+    (host : WordFfiHost width) (state finalState : State width)
+    (program : WordProg (Word width)) (code : List (Instruction width))
+    (returnRegisters : List (Fin 32)) (returnValues : List (Word width))
+    (hcompile : wordFunctionToRiscVWithCallsAndFfi context program =
+      some (code, returnRegisters))
+    (hsemantic :
+      (wordFunctionToRiscVWithCallsAndFfi context program).bind
+          (fun result =>
+            (executeInstructionsWithFfi host state result.1).map
+              (fun final => (final, returnValues))) =
+        some (finalState, returnValues)) :
+    executeInstructionsWithFfiCounted host state code =
+      some (finalState, code.length) := by
+  have hrun : executeInstructionsWithFfi host state code = some finalState := by
+    cases hexecute : executeInstructionsWithFfi host state code with
+    | none =>
+        simp [hcompile, hexecute] at hsemantic
+    | some actualState =>
+        have hresult :
+            (actualState, returnValues) = (finalState, returnValues) := by
+          simpa [hcompile, hexecute] using hsemantic
+        cases hresult
+        rfl
+  rw [executeInstructionsWithFfiCounted_spec]
+  simp [hrun]
+
 theorem wordFunctionToRiscVWithCallsAndFfi_counted_simulation
     [NeZero width] (context : WordCallFfiContext width)
     (host : WordFfiHost width) (state finalState : State width)
@@ -553,18 +581,8 @@ theorem wordFunctionToRiscVWithCallsAndFfi_counted_simulation
         some (finalState, [])) :
     executeInstructionsWithFfiCounted host state code =
       some (finalState, code.length) := by
-  have hrun : executeInstructionsWithFfi host state code = some finalState := by
-    cases hexecute : executeInstructionsWithFfi host state code with
-    | none =>
-        simp [hcompile, hexecute] at hsemantic
-    | some actualState =>
-        have hresult :
-            (actualState, ([] : List (Word width))) = (finalState, []) := by
-          simpa [hcompile, hexecute] using hsemantic
-        cases hresult
-        rfl
-  rw [executeInstructionsWithFfiCounted_spec]
-  simp [hrun]
+  exact wordFunctionToRiscVWithCallsAndFfi_counted_simulation_general context host
+    state finalState program code [] [] hcompile hsemantic
 
 /-!
 The machine sequencing theorem and the evaluator sequencing theorem above are

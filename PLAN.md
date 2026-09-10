@@ -2227,6 +2227,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   register simulation for all five binary operators.
 - [x] Prove the StackRemove current-heap get/set fast paths at the RISC-V
   register boundary.
+- [x] Carry the full-SSA heuristic graph allocator through location-aware
+  StackLang entry moves and body evaluation, retaining its colouring checks.
+- [x] Prove that every heuristic graph-allocation branch preserves the source
+  to graph-node bijection used by location-aware lowering.
 
 ## First implementation slice
 

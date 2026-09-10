@@ -16,6 +16,52 @@ theorem stackRiscVTestRelation :
   intro register hregister
   simp [stackRiscVTestSource, zeroState]
 
+def stackRiscVWordConfig : WordStackConfig :=
+  { locations := [(0, .register 4), (1, .register 5), (2, .register 6)]
+    scratch := 31
+    stackBase := 21 }
+
+def stackRiscVRemoveConfig : StackRemoveConfig :=
+  { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
+    stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
+
+example :
+      wordToStackProgNat stackRiscVWordConfig
+      (.assign 0 (.op .add [.var 1, .var 2]) : WordProg Nat) =
+      some (.arith .add 4 5 6) := by
+  simp [wordToStackProgNat, wordStackCompileExpNat,
+    wordStackCompileBinaryNat, wordStackAtomNat, wordStackWritePhysicalNat,
+    wordStackReadRegister, wordStackLocation, lookupNatInfo,
+    stackRiscVWordConfig, wordStackJoin]
+
+example :
+    compileWordProgramNatToRiscV (width := 64) { services := [] }
+      stackRiscVWordConfig stackRiscVRemoveConfig 2 3
+      (.assign 0 (.op .add [.var 1, .var 2]) : WordProg Nat) =
+      some [.add 4 5 6] := by
+  decide +kernel
+
+example :
+    ∃ final,
+      WordStackRegisterRelation
+        (wordStackMachineWriteRegister stackRiscVTestSource 4
+          (stackRiscVTestSource.registers 5 + stackRiscVTestSource.registers 6))
+        final ∧
+      (compileWordProgramNatToRiscV (width := 64) { services := [] }
+        stackRiscVWordConfig stackRiscVRemoveConfig 2 3
+        (.assign 0 (.op .add [.var 1, .var 2]) : WordProg Nat)).bind
+          (fun code => some (executeInstructions (zeroState 64) code)) =
+        some (execute (zeroState 64) (.add 4 5 6)) := by
+  refine ⟨execute (zeroState 64) (.add 4 5 6), ?_, ?_⟩
+  · exact wordStackRegisterRelation_executeAdd stackRiscVTestSource
+      (zeroState 64) 4 5 6 stackRiscVTestRelation (by omega) (by omega)
+      (by omega) (by omega)
+  rw [show compileWordProgramNatToRiscV (width := 64) { services := [] }
+      stackRiscVWordConfig stackRiscVRemoveConfig 2 3
+      (.assign 0 (.op .add [.var 1, .var 2]) : WordProg Nat) =
+      some [.add 4 5 6] by decide +kernel]
+  rfl
+
 example :
     (labCompilePlain (.const 5 7 : LabPlain (Word 64))).bind
         (fun code =>

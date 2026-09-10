@@ -2109,6 +2109,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   ordinary no-`ecall` prefixes, and trailing `ecall` calls.
 - [x] Connect the generated StackRemove FFI pipeline image to the exact
   byte-level RISC-V FFI executor.
+- [x] Preserve the exact seven-instruction count for a normally returning
+  generated FFI pipeline.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Prove that a resolved cross-section Lab jump executes to the target

@@ -22,6 +22,7 @@ import Flapjack.CrepeStateRelation
 import Flapjack.CrepeBasicControlRelation
 import Flapjack.CrepeStoreRelation
 import Flapjack.CrepeSharedMemoryRelation
+import Flapjack.CrepePrimitiveRelation
 import Flapjack.CrepeExpCorrectness
 import Flapjack.CrepeAssignmentCorrectness
 import Flapjack.CrepeSequenceCorrectness

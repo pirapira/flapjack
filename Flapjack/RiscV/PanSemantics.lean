@@ -1,4 +1,5 @@
 import Flapjack.PanValues
+import Flapjack.Semantics
 import Flapjack.LoopSemantics
 import Flapjack.RiscV.Model
 
@@ -29,6 +30,13 @@ def panPrimitiveHandler [NeZero width] :
 
 def loopPrimitiveHandler [NeZero width] :
     LoopPrimitiveHandler (Word width)
+  | .addCarry, [left, right, carry] =>
+      let (result, carryOut) := addCarryWords left right carry
+      some [result, carryOut]
+  | _, _ => none
+
+def crepPrimitiveHandler [NeZero width] :
+    CrepPrimitiveHandler (Word width)
   | .addCarry, [left, right, carry] =>
       let (result, carryOut) := addCarryWords left right carry
       some [result, carryOut]

@@ -1634,4 +1634,106 @@ theorem compile_full_pan_value_seq_continue_compose_full
   · simp [compileProg, hcompileFirst, hcompileSecond,
       evalCrepFullProg, hcrepFirst]
 
+/-! Shared-memory loads are word assignments in Pancake and dispatch through
+    the corresponding Crep shared-memory handler operation. -/
+theorem compile_full_pan_value_shMemLoad_word_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state targetState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (size : OpSize) (name : VarName) (slot : Nat) (address value oldValue : α)
+    (sourceAddress : Exp α) (compiledAddress : CrepExp α)
+    (lookup : lookupInfo name context.vars = some (.one, [slot]))
+    (haddress : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord sourceAddress = some (.word address))
+    (hmemory : sourceMemory address = some (.word value))
+    (hcompiledAddress : firstCompiledExp context sourceAddress = some compiledAddress)
+    (hcrepAddress : evalCrepFullExp state.locals state.memory
+      baseAddress topAddress compiledAddress = some address)
+    (hsharedMem : sharedMem (loadMemOp size) slot address state = some targetState)
+    (hlocals : sourceLocals name = some (.word oldValue)) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory
+      (.shMemLoad size .local name sourceAddress) =
+      some (.normal (updatePanValueMap sourceLocals name (.word value))
+        sourceGlobals sourceMemory) ∧
+    evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state
+      (compileProg context
+        (.shMemLoad size .local name sourceAddress)) =
+      some (.normal targetState) := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress, hmemory,
+      panValueSharedLoadValid, panValueAssignmentValid, panValueShape,
+      panShapeMatches, hlocals]
+  · simp [compileProg, lookup, hcompiledAddress, evalCrepFullProg,
+      hcrepAddress, hsharedMem]
+
+theorem compile_full_pan_value_shMemStore_word_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state targetState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (size : OpSize) (address value : α) (sourceAddress sourceValue : Exp α)
+    (compiledAddress compiledValue : CrepExp α)
+    (haddress : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord sourceAddress = some (.word address))
+    (hvalue : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord sourceValue = some (.word value))
+    (hcompiledAddress : firstCompiledExp context sourceAddress = some compiledAddress)
+    (hcompiledValue : firstCompiledExp context sourceValue = some compiledValue)
+    (hcrepAddress : evalCrepFullExp
+      (updateCrepLocal state.locals (context.maxVar + 1) value) state.memory
+      baseAddress topAddress compiledAddress = some address)
+    (hcrepValue : evalCrepFullExp state.locals state.memory
+      baseAddress topAddress compiledValue = some value)
+    (hsharedMem : sharedMem (storeMemOp size) (context.maxVar + 1) address
+      { state with
+        locals := updateCrepLocal state.locals (context.maxVar + 1) value } =
+      some targetState) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 2)
+      sourceLocals sourceGlobals sourceMemory
+      (.shMemStore size sourceAddress sourceValue) =
+      some (.normal sourceLocals sourceGlobals
+        (updatePanValueMemory sourceMemory address (.word value))) ∧
+    evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state
+      (compileProg context (.shMemStore size sourceAddress sourceValue)) =
+      some (.normal
+        { targetState with
+          locals := restoreCrepLocal targetState.locals
+            (context.maxVar + 1) (state.locals (context.maxVar + 1)) }) := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress, hvalue,
+      updatePanValueMemory]
+  · simp [compileProg, hcompiledAddress, hcompiledValue, nestedDecs,
+      evalCrepFullProg, hcrepAddress, hcrepValue,
+      hsharedMem, restoreCrepResult]
+
 end Flapjack

@@ -2193,6 +2193,11 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   retaining source exception payloads and compiled exception words.
 - [x] Prove sequence short-circuit correctness for first-component `break` and
   `continue` control results.
+- [x] Prove the word shared-memory load boundary for every OpSize, including
+  assignment shape validation and the Crep shared-memory handler transition.
+- [x] Prove the word shared-memory store boundary for every OpSize, including
+  compiler-created temporary slots and their restoration after the handler
+  transition.
 - [x] Prove the word declaration-binding source-to-Crep boundary, including
   fresh-slot allocation and restoration of the shadowed local.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

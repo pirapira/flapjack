@@ -51,6 +51,7 @@ import Flapjack.Test.SourceToLoopMemory
 import Flapjack.Test.SourceToRiscVMemory
 import Flapjack.Test.PanMemoryModel
 import Flapjack.Test.PanValueFfiSemantics
+import Flapjack.Test.PanValueFfiFuel
 import Flapjack.Test.PanValueFfiClockSemantics
 import Flapjack.Test.PanCost
 import Flapjack.Test.SourceSemanticsOps

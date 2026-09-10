@@ -27,6 +27,7 @@ theorem compile_full_pan_value_shMemLoad_word_relation
     (crepPrimitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (size : OpSize) (name : VarName) (slot : Nat)
     (address value oldValue : α)
     (sourceAddress : Exp α) (compiledAddress : CrepExp α)
@@ -56,7 +57,7 @@ theorem compile_full_pan_value_shMemLoad_word_relation
       (compileProg context
         (.shMemLoad size .local name sourceAddress)) =
       some (.normal targetState) ∧
-    panValueCrepControlRel structs context (fun _ _ _ => True)
+    panValueCrepControlRel structs context exceptionRel
       (.normal (updatePanValueMap sourceLocals name (.word value))
         sourceGlobals sourceMemory) (.normal targetState) := by
   have hsteps := compile_full_pan_value_shMemLoad_word_correct
@@ -84,6 +85,7 @@ theorem compile_full_pan_value_shMemStore_word_relation
     (crepPrimitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (size : OpSize) (address value : α)
     (sourceAddress sourceValue : Exp α)
     (compiledAddress compiledValue : CrepExp α)
@@ -123,7 +125,7 @@ theorem compile_full_pan_value_shMemStore_word_relation
         { targetState with
           locals := restoreCrepLocal targetState.locals
             (context.maxVar + 1) (state.locals (context.maxVar + 1)) }) ∧
-    panValueCrepControlRel structs context (fun _ _ _ => True)
+    panValueCrepControlRel structs context exceptionRel
       (.normal sourceLocals sourceGlobals
         (updatePanValueMemory sourceMemory address (.word value)))
       (.normal

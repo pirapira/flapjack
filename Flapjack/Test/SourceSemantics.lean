@@ -35,4 +35,26 @@ example :
           | _ => []) = some [7] := by
   decide +kernel
 
+/- A source call must terminate with Return or Raise.  A callee that merely
+   falls through is an error at the call boundary, including the scalar
+   handler-free and FFI-aware evaluators. -/
+example :
+    evalPanProgWithCalls
+      ([ ("fallsThrough", [], .skip) ]) 4 (fun _ => none)
+      (.call none "fallsThrough" []) = none := by
+  decide +kernel
+
+example :
+    evalPanProgWithHandlers
+      ([ ("fallsThrough", [], .skip) ]) 4 (fun _ => none)
+      (.call none "fallsThrough" []) = none := by
+  decide +kernel
+
+example :
+    evalPanProgWithCallsAndFfi
+      ([ ("fallsThrough", [], .skip) ])
+      (fun _ _ _ _ _ _ => some (fun _ => none)) 4 (fun _ => none)
+      (.call none "fallsThrough" []) = none := by
+  decide +kernel
+
 end Flapjack

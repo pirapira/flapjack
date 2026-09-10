@@ -130,6 +130,14 @@ inductive PrimOp where
   | addCarry
   deriving DecidableEq, Repr
 
+/-! The source `word_sh` operation receives a natural shift amount extracted
+    from a target word.  Targets provide the word width and this extraction so
+    the generic source evaluator can preserve CakeML's out-of-range failure
+    rule. -/
+class PanShiftWidth (α : Type u) where
+  width : Nat
+  amount : α → Nat
+
 inductive Prog (α : Type u) where
   | skip
   | dec (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)

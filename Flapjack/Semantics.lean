@@ -46,14 +46,16 @@ are intentionally supplied by separate interfaces so a target cannot
 accidentally implement them as logical shifts.
 -/
 
-def evalPanShiftFull [ShiftLeft α] [ShiftRight α]
+def evalPanShiftFull [PanShiftWidth α] [ShiftLeft α] [ShiftRight α]
     [ArithmeticShiftRight α] [RotateRightOp α]
     (operator : Shift) (left right : α) : Option α :=
-  match operator with
-  | .lsl => some (ShiftLeft.shiftLeft left right)
-  | .lsr => some (ShiftRight.shiftRight left right)
-  | .asr => some (ArithmeticShiftRight.arithmeticShiftRight left right)
-  | .ror => some (RotateRightOp.rotateRight left right)
+  let amount := PanShiftWidth.amount (α := α) right
+  if amount ≠ 0 ∧ PanShiftWidth.width (α := α) ≤ amount then none else
+    match operator with
+    | .lsl => some (ShiftLeft.shiftLeft left right)
+    | .lsr => some (ShiftRight.shiftRight left right)
+    | .asr => some (ArithmeticShiftRight.arithmeticShiftRight left right)
+    | .ror => some (RotateRightOp.rotateRight left right)
 
 def updatePanLocal (locals : VarName → Option α) (name : VarName) (value : α) :
     VarName → Option α :=
@@ -275,14 +277,16 @@ mutual
         let (parameters, body) ← lookupPanFunction function functions
         let calleeLocals ← bindPanParameters parameters values
         let result ← evalPanProgWithCalls functions fuel calleeLocals body
-        match info with
-        | none => pure (locals, result.2)
-        | some (none, none) => pure (locals, [])
-        | some (some (.local, name), none) =>
-            match result.2 with
-            | [value] => pure (updatePanLocal locals name value, [])
-            | _ => none
-        | _ => none
+        if result.2.isEmpty then none
+        else
+          match info with
+          | none => pure (locals, result.2)
+          | some (none, none) => pure (locals, [])
+          | some (some (.local, name), none) =>
+              match result.2 with
+              | [value] => pure (updatePanLocal locals name value, [])
+              | _ => none
+          | _ => none
     | _, _, _ => none
     termination_by fuel _ _ => fuel
 
@@ -360,7 +364,7 @@ mutual
         let calleeLocals ← bindPanParameters parameters values
         let result ← evalPanProgWithHandlers functions fuel calleeLocals body
         match result with
-        | .normal _ => pure (.normal locals)
+        | .normal _ => none
         | .returned _ values =>
             match info with
             | none => pure (.returned locals values)
@@ -496,7 +500,7 @@ mutual
         let calleeLocals ← bindPanParameters parameters values
         let result ← evalPanProgWithCallsAndFfi functions handler fuel calleeLocals body
         match result with
-        | .normal _ => pure (.normal locals)
+        | .normal _ => none
         | .returned _ values =>
             match info with
             | none => pure (.returned locals values)

@@ -60,7 +60,6 @@ import Flapjack.CrepeProgramBasicRelation
 import Flapjack.CrepeProgramReturnRelation
 import Flapjack.CrepeProgramReturnFuelRelation
 import Flapjack.CrepeProgramSourceWordReturnRelation
-import Flapjack.CrepeProgramSourceWordReturnCorrectness
 import Flapjack.CrepeProgramAssignmentFuelRelation
 import Flapjack.CrepeProgramAssignmentCorrectness
 import Flapjack.CrepeProgramPrimitiveRelation

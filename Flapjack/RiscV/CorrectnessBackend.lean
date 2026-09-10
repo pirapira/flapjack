@@ -545,4 +545,40 @@ theorem wordFunctionToRiscVWithCalls_return_sound [NeZero width]
       | none => rfl
       | some result => rfl
 
+/-! Compose a straight-line body with its ABI return boundary.  The selector
+    emits the body instructions followed by the empty return-code fragment;
+    the returned registers are read from the state produced by executing that
+    body.  This is the reusable boundary needed before lifting colouring and
+    allocation proofs from bodies to complete functions. -/
+
+theorem wordFunctionToRiscVWithCalls_seq_return_sound [NeZero width]
+    (context : WordCallContext width) (state : State width)
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (store : Nat) (values : List Nat)
+    (firstCode : List (Instruction width)) (returns : List (Fin 32))
+    (hfirstCompile : wordFunctionToRiscVWithCalls context program =
+      some (firstCode, []))
+    (hreturnCompile : wordFunctionToRiscVWithCalls context
+      ((.return store values) : WordProg (Word width)) =
+      some ([], returns)) :
+    wordFunctionToRiscVWithCalls context
+        (.seq program (.return store values)) =
+      some (firstCode, returns) ∧
+    evalWordFunction state (.seq program (.return store values)) =
+      Option.map (fun returned =>
+        (executeInstructions state firstCode, returned))
+        (values.mapM (fun name => do
+          let register ← registerOfNat name
+          pure (readRegister (executeInstructions state firstCode) register))) := by
+  constructor
+  · simp [wordFunctionToRiscVWithCalls, hfirstCompile, hreturnCompile]
+  · have hfirst := wordFunctionToRiscVWithCalls_sound_of_straightLine
+      context state program hstraight firstCode hfirstCompile
+    simp [evalWordFunction, hfirst]
+    generalize hread : values.mapM (fun name => do
+      let register ← registerOfNat name
+      pure (readRegister (executeInstructions state firstCode) register)) = readValues
+    cases readValues <;> rfl
+
 end Flapjack.RiscV

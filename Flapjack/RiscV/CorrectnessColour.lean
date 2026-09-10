@@ -2114,6 +2114,124 @@ theorem wordAllocateGraphFunctionWithEntry_return_simulation [NeZero width]
   rw [hcolour] at hresult
   simpa [ha] using hresult
 
+/-! Lift the executable full-SSA allocator contract through the backend's
+    function-shaped return boundary.  This is the first theorem that ties the
+    allocator's coloured body to the instruction stream and the returned
+    register values consumed by a caller. -/
+
+theorem wordAllocateGraphFunctionWithEntry_riscv_return_simulation
+    [NeZero width]
+    (context : WordCallContext width)
+    (parameters : List Nat) (program : WordProg (Word width))
+    (fixedSources : List Nat) (colours stackStart : Nat)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (allocation : WordGraphAllocation) (coloured : WordProg (Word width))
+    (halloc : wordAllocateGraphFunctionWithEntry parameters program fixedSources
+      colours stackStart =
+      some (state, renamedParameters, allocation, coloured))
+    (valid : wordColourValid (wordGraphColouringAt allocation.colouring))
+    (injective : Function.Injective
+      (wordGraphColouringAt allocation.colouring))
+    (colourZero : wordGraphColouringAt allocation.colouring 0 = 0)
+    (colourNoScratch : ∀ name, name < 31 →
+      wordGraphColouringAt allocation.colouring name ≠ 31)
+    (source target : State width)
+    (hrelation : WordColourStateRelation
+      (wordGraphColouringAt allocation.colouring) source target)
+    (hprogram : WordVarStraightLine width
+      (wordSsaRenameFunctionWithEntry parameters program).2.snd)
+    (store : Nat) (values : List Nat)
+    (hvalues : ∀ name, name ∈ values → name < 32)
+    (code : List (Instruction width))
+    (returns : List (Fin 32))
+    (hcompile : wordFunctionToRiscVWithCalls context coloured =
+      some (code, []))
+    (hreturnCompile : wordFunctionToRiscVWithCalls context
+      ((.return store (values.map
+        (wordGraphColouringAt allocation.colouring))) : WordProg (Word width)) =
+      some ([], returns)) :
+    ∃ source' returnedValues,
+      evalWordFunction source
+          (.seq (wordSsaRenameFunctionWithEntry parameters program).2.snd
+            (.return store values)) =
+        some (source', returnedValues) ∧
+      evalWordFunction target
+          (.seq coloured (.return store (values.map
+            (wordGraphColouringAt allocation.colouring)))) =
+        some (executeInstructions target code, returnedValues) ∧
+      WordColourStateRelation (wordGraphColouringAt allocation.colouring)
+        source' (executeInstructions target code) := by
+  have halloc' := halloc
+  simp [wordAllocateGraphFunctionWithEntry] at halloc'
+  rcases halloc' with ⟨actualAllocation, _, _, _, hallocation, hcolour⟩
+  have hvalid : wordColourValid (wordGraphColouringAt actualAllocation.colouring) := by
+    simpa [hallocation] using valid
+  have hinjective : Function.Injective
+      (wordGraphColouringAt actualAllocation.colouring) := by
+    simpa [hallocation] using injective
+  have hzero : wordGraphColouringAt actualAllocation.colouring 0 = 0 := by
+    simpa [hallocation] using colourZero
+  have hscratch : ∀ name, name < 31 →
+      wordGraphColouringAt actualAllocation.colouring name ≠ 31 := by
+    simpa [hallocation] using colourNoScratch
+  have hrelationA : WordColourStateRelation
+      (wordGraphColouringAt actualAllocation.colouring) source target := by
+    simpa [hallocation] using hrelation
+  have hsimulation := evalWordFunction_wordVarStraightLine_return_applyColour
+    (wordGraphColouringAt actualAllocation.colouring) hvalid hinjective hzero
+    hscratch source target hrelationA
+    (wordSsaRenameFunctionWithEntry parameters program).2.snd hprogram
+    store values hvalues
+  rw [hcolour] at hsimulation
+  have hsimulation' :
+      ∃ source' target' returnedValues,
+        evalWordFunction source
+            (.seq (wordSsaRenameFunctionWithEntry parameters program).2.snd
+              (.return store values)) =
+          some (source', returnedValues) ∧
+        evalWordFunction target
+            (.seq coloured (.return store (values.map
+              (wordGraphColouringAt allocation.colouring)))) =
+          some (target', returnedValues) ∧
+        WordColourStateRelation (wordGraphColouringAt allocation.colouring)
+          source' target' := by
+    simpa [hallocation] using hsimulation
+  rcases hsimulation' with
+    ⟨source', target', returnedValues, hsource, htarget, htargetRelation⟩
+  have htargetStraight' := wordVarStraightLine_to_wordRiscVStraightLine
+    (wordGraphColouringAt actualAllocation.colouring)
+    (wordSsaRenameFunctionWithEntry parameters program).2.snd hprogram
+  rw [hcolour] at htargetStraight'
+  have htargetStraight : WordRiscVStraightLine coloured := by
+    simpa [hallocation] using htargetStraight'
+  have hmachine := wordFunctionToRiscVWithCalls_seq_return_sound
+    context target coloured htargetStraight store
+    (values.map (wordGraphColouringAt allocation.colouring)) code returns
+    hcompile hreturnCompile
+  have htargetEq :
+      some (target', returnedValues) =
+        Option.map (fun returned =>
+          (executeInstructions target code, returned))
+          ((values.map (wordGraphColouringAt allocation.colouring)).mapM
+            (fun name => do
+              let register ← registerOfNat name
+              pure (readRegister (executeInstructions target code) register))) := by
+    rw [← htarget]
+    exact hmachine.2
+  have htargetState : target' = executeInstructions target code := by
+    generalize hread : ((values.map (wordGraphColouringAt allocation.colouring)).mapM
+        (fun name => do
+          let register ← registerOfNat name
+          pure (readRegister (executeInstructions target code) register))) =
+      readValues at htargetEq
+    cases readValues with
+    | none => simp at htargetEq
+    | some readValues =>
+        simp at htargetEq
+        exact htargetEq.1
+  subst target'
+  exact ⟨source', returnedValues, hsource, htarget, htargetRelation⟩
+
 /-! A call-level colouring contract for the handler-aware Word evaluator.  It
 keeps the source and target body proofs explicit, so the theorem composes with
 straight-line, loop, and FFI body simulations without unfolding those bodies

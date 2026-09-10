@@ -847,6 +847,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Lift the scratch-aware AddCarry evaluator and its six-instruction
   `sltu`/`add` lowering through the StackProg → StackRemove → Lab → RISC-V
   entrypoint, retaining the x31-excluding relation.
+- [x] Lift the StackRemove frame-cell `stackLoad` path through the Nat
+  StackProg → Lab → RISC-V entrypoint, retaining the address-scratch and
+  byte-memory stack-cell relation.
 - [x] Match CakeML Simple/IRC distinction in graph allocation modes: modes
   0--1 omit move preferences during coalescing but retain the original move table for coloring, while modes 2--3 use the prioritized list for coalescing and the original move table for coloring.
 - [x] Preserve SSA-renamed virtual names at the heuristic allocator's

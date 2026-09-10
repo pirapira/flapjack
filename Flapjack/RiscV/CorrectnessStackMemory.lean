@@ -167,4 +167,56 @@ theorem executeStackRemoveStackLoad [NeZero width]
     rw [hloadPreserved]
     simp [wordStackMachineWriteRegister, htarget, hsame]
 
+theorem compileStackProgramNatToRiscV_stackLoad [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination offset : Nat)
+    (hstackPointer : config.stackPointer < 32)
+    (haddressScratch : config.addressScratch < 32)
+    (hdestination : destination < 32) :
+    compileStackProgramNatToRiscV (width := width) context config sectionId initialLabel
+      (.stackLoad destination offset : StackProg Nat) =
+      some [.addi ⟨config.addressScratch, haddressScratch⟩ 0
+          (BitVec.ofNat width (config.bytesInWord * offset)),
+        .add ⟨config.addressScratch, haddressScratch⟩
+          ⟨config.stackPointer, hstackPointer⟩
+          ⟨config.addressScratch, haddressScratch⟩,
+        .loadWord ⟨destination, hdestination⟩
+          ⟨config.addressScratch, haddressScratch⟩] := by
+  simp [compileStackProgramNatToRiscV, compileLabSectionNat,
+    compileLabSection, labProgramToSectionAfterStackRemove, labProgramToSection,
+    labFlatten, labSectionNatToWord, labLineNatToWord, labPlainNatToWord,
+    labLabel, labCompileLines, labCompilePlain, labCollectLabels,
+    labLineInstructionCount, labBinOpInstruction, wordInstToInstruction, registerOfNat,
+    hstackPointer, haddressScratch, hdestination,
+    stackRemoveStackLoad, stackRemoveStackAddress, stackRemoveJoin,
+    stackRemoveComplete, stackProgDepth, stackRemoveFuel] <;>
+    congr 1
+
+theorem compileStackProgramNatToRiscV_stackLoad_simulation [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel destination offset : Nat)
+    (source : WordStackMachineState width) (target : State width)
+    (hstackPointer : config.stackPointer < 32)
+    (haddressScratch : config.addressScratch < 32)
+    (hdestination : destination < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (haddressScratchNonzero : config.addressScratch ≠ 0)
+    (hstackPointerScratch : config.stackPointer ≠ config.addressScratch)
+    (hzero : target.registers 0 = 0)
+    (hrel : WordStackRegisterRelationExceptRegister config.addressScratch source target)
+    (hcell : WordStackStackCellRelation source target
+      ⟨config.stackPointer, hstackPointer⟩ config.bytesInWord offset)
+    (code : List (Instruction width))
+    (hcode : compileStackProgramNatToRiscV (width := width) context config
+      sectionId initialLabel (.stackLoad destination offset : StackProg Nat) = some code) :
+    WordStackRegisterRelationExceptRegister config.addressScratch
+      (wordStackMachineWriteRegister source destination (source.stack offset))
+      (executeInstructions target code) := by
+  rw [compileStackProgramNatToRiscV_stackLoad context config sectionId initialLabel
+    destination offset hstackPointer haddressScratch hdestination] at hcode
+  cases hcode
+  exact executeStackRemoveStackLoad config source target destination offset
+    hstackPointer haddressScratch hdestination hdestinationNonzero
+    haddressScratchNonzero hstackPointerScratch hzero hrel hcell
+
 end Flapjack.RiscV

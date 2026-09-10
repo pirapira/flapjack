@@ -1960,6 +1960,50 @@ theorem compile_full_pan_value_call_compose
   · rw [hcompileProg, hcompileArgs]
     simp [evalCrepFullProg, hcrepCall]
 
+/-! The source-side declaration-call constructor threads the callee's returned
+    globals and memory into the declaration body, then restores the caller's
+    declaration local.  This is the induction rule used before relating the
+    body to its lowered Crep continuation. -/
+theorem evalPanValueProg_decCall_compose
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (contracts : Option PanValueCallContracts)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler α))
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (calleeGlobals : VarName → Option (PanValue α))
+    (calleeMemory : α → Option (PanValue α)) (value : PanValue α)
+    (sourceResult : PanValueControlResult α)
+    (hcall : evalPanValueCallWithPrimitiveCallsAndFfi
+      primitive handler structs functions baseAddress topAddress bytesInWord fuel
+      sourceLocals sourceGlobals sourceMemory none function arguments
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.returned (fun _ => none) calleeGlobals calleeMemory [value]))
+    (hshape : panShapeMatches (panValueShape structs value) shape = true)
+    (hbody : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive handler structs functions baseAddress topAddress bytesInWord fuel
+      (updatePanValueMap sourceLocals name value) calleeGlobals calleeMemory body
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) = some sourceResult) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive handler structs functions baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory
+      (.decCall name shape function arguments body)
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (restorePanValueControlLocal name (sourceLocals name) sourceResult) := by
+  simp [evalPanValueProgWithPrimitiveCallsAndFfi, hcall, hshape, hbody]
+
 /-! Expose the exact compiler equation for declaration calls.  Keeping this
     expansion named prevents later correctness proofs from duplicating the
     fresh-slot and continuation-context bookkeeping. -/

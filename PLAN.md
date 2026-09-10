@@ -2208,6 +2208,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   identity declaration call and its flattened Crep return.
 - [x] Add the generic source-to-Crep call composition rule, exposing the
   lowered argument list and separate source/Crep callee simulation witnesses.
+- [x] Add the source-side `decCall` composition rule, threading callee globals
+  and memory through the declaration body and restoring the caller local.
 - [x] Name the exact `decCall` compiler expansion, including fresh result
   slots and the continuation context used for the declaration body.
 - [x] Prove a concrete two-word record declaration-binding witness, preserving

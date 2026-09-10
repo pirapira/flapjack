@@ -563,4 +563,60 @@ theorem compile_full_pan_value_ite_word_const_correct
       evalPanCmp, hcondition,
       panValueFlatWords, panValueFlatWordsFuel]
 
+/-! Conditional correctness can be composed from an expression boundary and
+    branch boundaries.  This is the induction-shaped theorem needed once
+    condition expressions and branch programs are no longer closed constants. -/
+theorem compile_full_pan_value_ite_compose
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (condition : Exp α) (compiledCondition : CrepExp α)
+    (conditionValue : α) (thenBranch elseBranch : Prog α)
+    (hsourceCondition : evalPanValueExp structs locals globals (fun address =>
+      (state.memory address).map PanValue.word)
+      baseAddress topAddress bytesInWord condition = some (.word conditionValue))
+    (hcompileCondition : compileExp context condition =
+      ([compiledCondition], .one))
+    (hcompiledCondition : evalCrepFullExp state.locals state.memory
+      baseAddress topAddress compiledCondition = some conditionValue)
+    (hthen : evalCrepFullResult [] primitive ffi sharedMem
+      baseAddress topAddress fuel state (compileProg context thenBranch) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word) thenBranch).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords))
+    (helse : evalCrepFullResult [] primitive ffi sharedMem
+      baseAddress topAddress fuel state (compileProg context elseBranch) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word) elseBranch).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords)) :
+    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress
+        (fuel + 1) state
+        (compileProg context (.ite condition thenBranch elseBranch)) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.ite condition thenBranch elseBranch)).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  have hcompile :
+      compileProg context (.ite condition thenBranch elseBranch) =
+        .ite compiledCondition (compileProg context thenBranch)
+          (compileProg context elseBranch) := by
+    simp [compileProg, hcompileCondition]
+  rw [hcompile]
+  simp only [evalCrepFullResult, evalCrepFullProg, hcompiledCondition,
+    evalPanValueProg, evalPanValueProgWithPrimitive, hsourceCondition]
+  by_cases hcondition : (conditionValue != 0) = true
+  · simp [hcondition]
+    simpa [evalCrepFullResult, evalPanValueProg] using hthen
+  · simp [hcondition]
+    simpa [evalCrepFullResult, evalPanValueProg] using helse
+
 end Flapjack

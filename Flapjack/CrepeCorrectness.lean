@@ -1392,4 +1392,109 @@ theorem compile_full_pan_value_while_continue_compose
       evalCrepFullProg, hcrepCondition, hconditionAgreement,
       hsourceNonzero, hcrepBody, hcrepLoop]
 
+/-! Structured sequence composition threads the complete source state and
+    control result.  This normal-first rule is the principal constructor
+    case for lifting local Pancake simulations to larger programs. -/
+theorem compile_full_pan_value_seq_normal_compose_full
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceFirstLocals sourceFirstGlobals : VarName → Option (PanValue α))
+    (sourceFirstMemory : α → Option (PanValue α))
+    (state firstState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (first second : Prog α)
+    (compiledFirst compiledSecond : CrepProg α)
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α)
+    (hcompileFirst : compileProg context first = compiledFirst)
+    (hcompileSecond : compileProg context second = compiledSecond)
+    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory first =
+      some (.normal sourceFirstLocals sourceFirstGlobals sourceFirstMemory))
+    (hcrepFirst : evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state compiledFirst =
+      some (.normal firstState))
+    (hsourceSecond : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 1)
+      sourceFirstLocals sourceFirstGlobals sourceFirstMemory second =
+      some sourceResult)
+    (hcrepSecond : evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) firstState compiledSecond =
+      some crepResult) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 2)
+      sourceLocals sourceGlobals sourceMemory (.seq first second) =
+      some sourceResult ∧
+    evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state
+      (compileProg context (.seq first second)) = some crepResult := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst,
+      hsourceSecond]
+  · simp [compileProg, hcompileFirst, hcompileSecond,
+      evalCrepFullProg, hcrepFirst, hcrepSecond]
+
+/-! A returned first component short-circuits a structured sequence. -/
+theorem compile_full_pan_value_seq_return_compose_full
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceFirstLocals sourceFirstGlobals : VarName → Option (PanValue α))
+    (sourceFirstMemory : α → Option (PanValue α))
+    (state firstState : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (first second : Prog α)
+    (compiledFirst compiledSecond : CrepProg α)
+    (sourceValues : List (PanValue α)) (crepValues : List α)
+    (hcompileFirst : compileProg context first = compiledFirst)
+    (hcompileSecond : compileProg context second = compiledSecond)
+    (hsourceFirst : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory first =
+      some (.returned sourceFirstLocals sourceFirstGlobals sourceFirstMemory
+        sourceValues))
+    (hcrepFirst : evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state compiledFirst =
+      some (.returned firstState crepValues)) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 2)
+      sourceLocals sourceGlobals sourceMemory (.seq first second) =
+      some (.returned sourceFirstLocals sourceFirstGlobals sourceFirstMemory
+        sourceValues) ∧
+    evalCrepFullProg functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state
+      (compileProg context (.seq first second)) =
+      some (.returned firstState crepValues) := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst]
+  · simp [compileProg, hcompileFirst, hcompileSecond,
+      evalCrepFullProg, hcrepFirst]
+
 end Flapjack

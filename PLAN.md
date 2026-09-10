@@ -2243,6 +2243,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   immediate and, or, and xor forms.
 - [x] Complete the variable-plus-constant add and sub AST-to-RISC-V
   equations through their addi lowering.
+- [x] Extend the AST-to-RISC-V relation and compiler equations through
+  immediate left, logical-right, and arithmetic-right shifts.
 
 ## First implementation slice
 

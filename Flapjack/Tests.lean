@@ -23,6 +23,7 @@ import Flapjack.RiscV.CorrectnessStackRiscVLongMul
 import Flapjack.RiscV.CorrectnessStackRiscVAddCarry
 import Flapjack.RiscV.CorrectnessImmediateBitwise
 import Flapjack.Test.ImmediateBitwise
+import Flapjack.Test.ImmediateShift
 import Flapjack.Test.StackRiscVAddCarry
 import Flapjack.Test.StackRiscVLongMul
 import Flapjack.Test.StackRiscVDivision

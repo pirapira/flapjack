@@ -247,4 +247,44 @@ theorem compileSourceWordExp_cmp_relation
   · simp [compileExp, hleftCompile, hrightCompile]
   · simp [evalCrepFullExp, hleftEval, hrightEval, hvalue]
 
+theorem compileSourceWordExp_shift_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (crepLocals : Nat → Option α)
+    (crepMemory : α → Option α) (baseAddress topAddress bytesInWord : α)
+    (operator : Shift) (left right : SourceWordExp α)
+    (leftCompiled rightCompiled : CrepExp α)
+    (leftValue rightValue value : α)
+    (hleftSource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord left.toExp = some (.word leftValue))
+    (hrightSource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord right.toExp = some (.word rightValue))
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.shift operator left.toExp right.toExp) = some (.word value))
+    (hleftCompile : compileExp context left.toExp = ([leftCompiled], .one))
+    (hrightCompile : compileExp context right.toExp = ([rightCompiled], .one))
+    (hleftEval : evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+      leftCompiled = some leftValue)
+    (hrightEval : evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+      rightCompiled = some rightValue) :
+    compileExp context (.shift operator left.toExp right.toExp) =
+        ([.shift operator leftCompiled rightCompiled], .one) ∧
+      evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+        (.shift operator leftCompiled rightCompiled) = some value := by
+  have hvalue : evalPanShift operator leftValue rightValue = some value := by
+    have hvalue' := hsource
+    simp [evalPanValueExp, hleftSource, hrightSource] at hvalue'
+    cases hshift : evalPanShift operator leftValue rightValue with
+    | none => simp [hshift] at hvalue'
+    | some shifted =>
+        simp [hshift] at hvalue'
+        exact congrArg some hvalue'
+  constructor
+  · simp [compileExp, hleftCompile, hrightCompile]
+  · simp [evalCrepFullExp, hleftEval, hrightEval, hvalue]
+
 end Flapjack

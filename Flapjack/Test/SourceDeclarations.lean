@@ -111,6 +111,33 @@ example :
       "main" []).isNone = true := by
   decide +kernel
 
+/- `lookup_code` also rejects an argument whose runtime shape differs from the
+   declared formal shape, even when the callee body does not read that formal. -/
+example :
+    (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 30
+      [.function
+         { name := "wordOnly", inline := false, exported := false,
+           params := [("x", .one)], body := .return (.const 0),
+           returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .seq
+             (.call none "wordOnly" [.rStruct [.const 1, .const 2]])
+             (.return (.const 1)), returnShape := .one }]
+      "main" []).isNone = true := by
+  decide +kernel
+
+/- A matching word-shaped argument remains accepted by the same declaration-
+   driven contract. -/
+example :
+    panValueParametersValid ([] : StructContext)
+      (some (PanValueCallContracts.mk [] []
+        [("wordOnly", [("x", .one)])]) :
+        Option PanValueCallContracts)
+      "wordOnly" [.word 7] = true := by
+  decide +kernel
+
 example :
     (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
       sourceDeclarationNoFfi 30

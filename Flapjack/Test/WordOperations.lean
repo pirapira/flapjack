@@ -37,6 +37,19 @@ example :
   simp [wordToStackProgNat, wordStackInstall, wordStackLocation,
     lookupNatInfo, wordOperationTestConfig]
 
+/- Alloc and StoreConsts carry allocator/bitmap state which the stateless
+   entrypoint cannot preserve.  They must be rejected explicitly rather than
+   being replaced by a semantically successful Skip. -/
+example :
+    wordToStackProgNat wordOperationTestConfig
+        (.alloc 0 ([], []) : WordProg Nat) = none := by
+  simp [wordToStackProgNat]
+
+example :
+    wordToStackProgNat wordOperationTestConfig
+        (.storeConsts 0 1 2 3 [] : WordProg Nat) = none := by
+  simp [wordToStackProgNat]
+
 example :
     wordToStackProgNat wordOperationTestConfig
         (.codeBufferWrite 0 1 : WordProg Nat) =

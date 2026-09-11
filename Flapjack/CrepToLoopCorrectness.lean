@@ -284,6 +284,79 @@ theorem crepToLoop_call_caught_return_const_agreement
     evalLoopExp, evalLoopCondition, loopReadLocals, loopBindParameters,
     loopAssignValues, updateLoopLocal, loopResultValues, hcontext, hloop]
 
+/-! A caught call may run an arbitrary handler program, including one that
+    performs an FFI step.  This boundary theorem leaves the two handler
+    executions as explicit hypotheses and relates the observable returned
+    values after the caller/callee local restoration performed by each
+    evaluator. -/
+
+theorem crepToLoop_call_caught_handler_agreement
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (crepFunctions : List (CompiledFunction α))
+    (loopFunctions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (caller : CrepState α) (loopCaller : LoopState α)
+    (function : FunName) (target : Nat) (handlerVar : Nat)
+    (caught exception : α) (crepBody : CrepProg α) (loopBody : LoopProg α)
+    (crepHandler : CrepProg α) (loopHandler : LoopProg α)
+    (crepCallee : CrepState α) (loopCallee : LoopState α)
+    (crepResult : CrepControlResult α) (loopResult : LoopResult α)
+    (hloopCaller : loopCaller = loopStateOfCrepState caller)
+    (hcrepLookup : lookupCompiledFunction function crepFunctions =
+      some ([], crepBody))
+    (hloopLookup : lookupLoopFunction target loopFunctions =
+      some ([], loopBody))
+    (hcaught : caught == exception)
+    (hcrepCallee : evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { locals := fun _ => none, memory := caller.memory } crepBody =
+      some (.raised crepCallee exception))
+    (hloopCallee : evalLoopProgWithCallsAndFfi loopFunctions
+      (loopFfiOfCrepFfi ffi) fuel
+      { locals := fun _ => none, globals := loopCaller.globals,
+        memory := loopCaller.memory } loopBody =
+      some (.raised loopCallee exception))
+    (hhandler : evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { locals := caller.locals, memory := crepCallee.memory } crepHandler =
+      some crepResult)
+    (hloopHandler : evalLoopProgWithCallsAndFfi loopFunctions
+      (loopFfiOfCrepFfi ffi) fuel
+      { locals := updateLoopLocal loopCaller.locals handlerVar exception,
+        globals := loopCallee.globals, memory := loopCallee.memory } loopHandler =
+      some loopResult)
+    (hvalues : crepControlValues crepResult = loopResultValues loopResult) :
+    (evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) caller
+      (.call (some ([], some (caught, crepHandler))) function [])).map
+        crepControlValues =
+    (evalLoopProgWithCallsAndFfi loopFunctions (loopFfiOfCrepFfi ffi)
+      (fuel + 2) loopCaller
+      (.call (some ([], [])) (some target) []
+        (some (handlerVar, loopHandler, .skip, [])))).map
+        loopResultValues := by
+  subst loopCaller
+  have hcrepCall := evalCrepFullCall_caught_handler
+    crepFunctions primitive ffi sharedMem baseAddress topAddress fuel caller
+    function [] caught crepHandler [] [] [] crepBody
+    (fun _ => none) crepCallee exception crepResult
+    (by simp [evalCrepFullExps]) hcrepLookup rfl hcrepCallee hcaught hhandler
+  have hloopCall : evalLoopCallWithCallsAndFfi loopFunctions
+      (loopFfiOfCrepFfi ffi) (fuel + 1) (loopStateOfCrepState caller)
+      (some ([], [])) (some target) []
+      (some (handlerVar, loopHandler, .skip, [])) =
+      some loopResult := by
+    simp [evalLoopCallWithCallsAndFfi, hloopLookup,
+      loopReadLocals, loopBindParameters, hloopCallee, hloopHandler]
+  simp [evalCrepFullProg, hcrepCall, evalLoopProgWithCallsAndFfi,
+    hloopCall, hvalues]
+
 theorem crepToLoop_seq_extCall_return_const_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

@@ -37,6 +37,26 @@ def CalleeParameterListFreshAppend [BEq String]
       CalleeParameterListFreshAppend structs
         (addCalleeParameterContextAppend context parameter) parameters
 
+theorem calleeParameterListFreshAppend_length
+    [BEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (parameters : List (CalleeParameter α))
+    (hfresh : CalleeParameterListFreshAppend structs context parameters) :
+    ∀ parameter ∈ parameters,
+      parameter.slots.length = parameter.values.length := by
+  induction parameters generalizing context with
+  | nil =>
+      intro parameter hparameter
+      simp at hparameter
+  | cons parameter parameters ih =>
+      rcases hfresh with ⟨hname, hshape, hlength, hdistinct, hflat, hnoalias, htail⟩
+      intro current hcurrent
+      simp only [List.mem_cons] at hcurrent
+      rcases hcurrent with rfl | hcurrent
+      · exact hlength
+      · exact ih (context := addCalleeParameterContextAppend context parameter)
+          htail current hcurrent
+
 theorem lookupInfo_append_of_ne
     [LawfulBEq String]
     (entries : InfoMap β) (name newName : String) (value : β)
@@ -188,5 +208,40 @@ theorem panValueCrepCalleeStateRel_parameters_append
     (fun _ => none) sourceGlobals sourceMemory
     { locals := (fun _ => none), memory := crepMemory }
     parameters hrel hfresh
+
+theorem panValueCrepCalleeStateRel_parameters_append_of_bind_assign
+    [OfNat α 0]
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepMemory : α → Option α)
+    (parameters : List (CalleeParameter α))
+    (calleeLocals : VarName → Option (PanValue α))
+    (targetCalleeLocals : Nat → Option α)
+    (hglobals : sourceGlobals = (fun _ => none))
+    (hmemory : panValueWordMemory sourceMemory = crepMemory)
+    (hbind : bindPanValueParameters (parameters.map CalleeParameter.name)
+        (parameters.map CalleeParameter.value) = some calleeLocals)
+    (hassign : assignCrepValues (fun _ => none)
+        (parameters.flatMap CalleeParameter.slots)
+        (parameters.flatMap CalleeParameter.values) = some targetCalleeLocals)
+    (hfresh : CalleeParameterListFreshAppend structs context parameters) :
+    panValueCrepStateRel structs
+      (foldCalleeParameterContextAppend context parameters) calleeLocals sourceGlobals
+      sourceMemory
+      { locals := targetCalleeLocals, memory := crepMemory } := by
+  have hbound := bindPanValueParameters_parameters parameters
+  have hcallee : calleeLocals = foldCalleeParameterSource
+      (fun _ => none) parameters := by
+    exact Option.some.inj (hbind.symm.trans hbound)
+  have hlength := calleeParameterListFreshAppend_length structs context parameters hfresh
+  have hassigned := assignCrepValues_parameters parameters hlength
+  have htarget : targetCalleeLocals = foldCalleeParameterLocals
+      (fun _ => none) parameters := by
+    exact Option.some.inj (hassign.symm.trans hassigned)
+  have hrel := panValueCrepCalleeStateRel_parameters_append structs context
+    sourceGlobals sourceMemory crepMemory parameters hglobals hmemory hfresh
+  simpa [hcallee, htarget] using hrel
 
 end Flapjack

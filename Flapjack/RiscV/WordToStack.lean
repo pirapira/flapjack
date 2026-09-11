@@ -779,7 +779,32 @@ def wordStackBufferWrite (config : WordStackConfig) (isCode : Bool)
   | .register address, .register value =>
       pure (if isCode then .codeBufferWrite address value
         else .dataBufferWrite address value)
-  | _, _ => none
+  | .stack address, .register value =>
+      if value = config.addressScratch then
+        none
+      else
+        pure (wordStackJoin
+          (.stackLoad config.addressScratch (wordStackOffset config address))
+          (if isCode then .codeBufferWrite config.addressScratch value
+          else .dataBufferWrite config.addressScratch value))
+  | .register address, .stack value =>
+      if address = config.scratch then
+        none
+      else
+        pure (wordStackJoin
+          (.stackLoad config.scratch (wordStackOffset config value))
+          (if isCode then .codeBufferWrite address config.scratch
+          else .dataBufferWrite address config.scratch))
+  | .stack address, .stack value =>
+      if config.scratch = config.addressScratch then
+        none
+      else
+        pure (wordStackJoin
+          (.stackLoad config.addressScratch (wordStackOffset config address))
+          (wordStackJoin
+            (.stackLoad config.scratch (wordStackOffset config value))
+            (if isCode then .codeBufferWrite config.addressScratch config.scratch
+            else .dataBufferWrite config.addressScratch config.scratch)))
 
 def wordStackAtomNat (config : WordStackConfig) (temporary : Nat) :
     WordExp Nat → Option (StackProg Nat × Nat)

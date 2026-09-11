@@ -89,6 +89,7 @@ import Flapjack.Test.PanValueAcceleratorFfi
 import Flapjack.Test.PanValueFfiClockMemoryFfi
 import Flapjack.Test.FullSsaTarget
 import Flapjack.Test.CrepeArith
+import Flapjack.Test.CrepePrimitive
 import Flapjack.Test.CrepeInline
 import Flapjack.Test.CrepeInlineRewrite
 import Flapjack.Test.CrepeInlinePass

@@ -44,6 +44,30 @@ theorem crepToLoop_extCall_simulation_regression :
   · simp [crepLoopFfiState]
   · simp [crepLoopFfi, crepLoopFfiState, crepLoopFfiStateAfter]
 
+def crepLoopUnavailableFfi : CrepFfiHandler Nat :=
+  fun _ _ _ _ _ _ => none
+
+theorem crepToLoop_extCall_failure_regression :
+    evalCrepFullProg [] (fun _ _ => none) crepLoopUnavailableFfi
+        (fun _ _ _ _ => none) 0 100 4 crepLoopFfiState
+        (.extCall "missing" 1 2 3 4) = none ∧
+    evalLoopProgWithCallsAndFfi [] (loopFfiOfCrepFfi crepLoopUnavailableFfi) 4
+        (loopStateOfCrepState crepLoopFfiState)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+            LoopContext Nat)
+          [9] (.extCall "missing" 1 2 3 4)) = none := by
+  apply crepToLoop_extCall_failure_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] [] (fun _ _ => none) crepLoopUnavailableFfi (fun _ _ _ _ => none)
+    0 100 3 crepLoopFfiState [9] "missing" 1 2 3 4 41 0 0 0
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopUnavailableFfi]
+
 theorem crepToLoop_return_raise_regression :
     (evalCrepFullProg [] (fun _ _ => none) crepLoopFfi
         (fun _ _ _ _ => none) 0 100 1 crepLoopFfiState

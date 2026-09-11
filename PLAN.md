@@ -2440,6 +2440,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Package successful source local-assignment evaluation into explicit
   right-hand-side, old-destination, shape-preservation, and updated-result
   witnesses for the compositional assignment constructor.
+- [x] Prove transitivity of the Pancake shape-matching relation, composing
+  source assignment preservation with the compiler-context shape relation.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

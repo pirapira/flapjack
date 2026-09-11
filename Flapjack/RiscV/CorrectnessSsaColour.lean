@@ -58,6 +58,7 @@ theorem wordSsaRenameProgram_assign_state
   | assign name source hname hsource =>
       simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
         wordSsaFresh, wordSsaRenameExp]
+
   | assignConst name value hname =>
       simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
         wordSsaFresh, wordSsaRenameExp]
@@ -73,6 +74,15 @@ theorem wordSsaRenameProgram_assign_state
   | assignShiftImmediate operator name left amount hoperator hname hleft =>
       simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
         wordSsaFresh, wordSsaRenameExp]
+
+theorem wordSsaRenameProgram_seq
+    (ssa : WordSsaState) (first second : WordProg α) :
+    wordSsaRenameProgram ssa (.seq first second) =
+      let (ssaFirst, renamedFirst) := wordSsaRenameProgram ssa first
+      let (ssaSecond, renamedSecond) :=
+        wordSsaRenameProgram ssaFirst second
+      (ssaSecond, .seq renamedFirst renamedSecond) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops]
 
 /-! Before an SSA assignment, the destination's old value need not satisfy the
     eventual colouring relation: the generated code overwrites it. -/

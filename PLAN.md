@@ -2454,6 +2454,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   temporary restoration, and destination assignment inversion.
 - [x] Package scalar-word record expression inversion with compiled-list
   evaluation and the expression/shape length equation used by assignments.
+- [x] Derive per-expression assignment non-interference directly from the
+  compiler's `distinctLists` guard.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

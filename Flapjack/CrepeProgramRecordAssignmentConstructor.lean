@@ -1,6 +1,7 @@
 import Flapjack.CrepeProgramRecordAssignmentGeneralCorrectness
 import Flapjack.CrepeProgramSourceAssignmentInversion
 import Flapjack.CrepeAssignmentSequenceInversion
+import Flapjack.CrepeDistinctLists
 import Flapjack.CrepeShapeInversion
 import Flapjack.PanShapeMatches
 import Flapjack.PanValueShapeInversion
@@ -50,9 +51,7 @@ theorem panValueCrepProgramCorrect_assign_local_record_direct
       sourceValue = .rStruct (values.map (fun value => .word value)) →
       compileExp context (.rStruct (fields.map SourceWordExp.toExp)) =
         (compiled, .comb (values.map (fun _ => .one))) →
-      distinctLists slots (compiled.flatMap crepExpVars) = true ∧
-      ∀ slot ∈ slots, ∀ expression ∈ compiled,
-        slot ∉ crepExpVars expression)
+      distinctLists slots (compiled.flatMap crepExpVars) = true)
     (hmetadata : ∀ (context : CompileContext α) (shape : Shape) (slots : List Nat)
       (values : List α),
       lookupInfo name context.vars = some (shape, slots) →
@@ -122,8 +121,9 @@ theorem panValueCrepProgramCorrect_assign_local_record_direct
     simpa [hshapeContext] using hlookupName
   obtain ⟨hslotLength, hslotsDistinct⟩ := hmetadata context shape slots values
     hlookupName hshapeContext
-  obtain ⟨hdirect', hnot⟩ := hdirect context sourceValue values compiled
+  have hdirect' := hdirect context sourceValue values compiled
     shape slots hlookupName hrecordValue hcompile
+  have hnot := distinctLists_flatMap_not_mem slots compiled hdirect'
   have hcompileProg :
       compileProg context
         (.assign .local name (.rStruct (fields.map SourceWordExp.toExp))) =

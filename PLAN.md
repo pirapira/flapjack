@@ -2380,6 +2380,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   memory relation at the byte-load boundary.
 - [x] Lift the `LoadByte` expression contract through the generic program
   return constructor.
+- [x] Package constant record-field projection correctness as a reusable
+  expression contract for structured ASTs.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

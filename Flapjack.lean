@@ -21,6 +21,7 @@ import Flapjack.Semantics
 import Flapjack.CrepeSemantics
 import Flapjack.CrepeRuntime
 import Flapjack.CrepeCorrectness
+import Flapjack.CrepeCallHandlerCorrectness
 import Flapjack.CrepeStateRelation
 import Flapjack.CrepeExpressionRelation
 import Flapjack.CrepeWordExpressionContract

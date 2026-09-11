@@ -1,4 +1,5 @@
 import Flapjack.CrepeFfiCorrectness
+import Flapjack.CrepeCallHandlerCorrectness
 import Flapjack.RiscV.Model
 
 /-! Concrete caught-call regression for the full-Crepe handler boundary. -/
@@ -78,6 +79,46 @@ theorem crepe_handler_call_simulation_regression :
       evalCrepFullExps, evalCrepFullExp, assignCrepValues, assignRet,
       crepNestedSeq, loadGlobals, compileProg, compileExp,
       updateCrepLocal, updateMemory, lookupCompiledFunction, hexn]
+
+theorem pan_value_caught_handler_equation_regression :
+    evalPanValueCallWithPrimitiveCallsAndFfi
+        (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        [] crepeHandlerCallSourceFunctions
+        (BitVec.ofNat 64 0) (BitVec.ofNat 64 100) (BitVec.ofNat 64 8) 9
+        (fun _ => none) (fun _ => none) (fun _ => none)
+        (some (none, some ("E", "exn",
+          (.return (.var .local "exn"))))) "raise" [] =
+      some (.returned (fun _ => none) (fun _ => none) (fun _ => none)
+        [.word (BitVec.ofNat 64 7)]) := by
+  apply evalPanValueCall_caught_handler_of_eval
+    (primitive := fun _ _ => none)
+    (handler := fun _ _ _ _ _ _ => none)
+    (structs := []) (functions := crepeHandlerCallSourceFunctions)
+    (sourceLocals := fun _ => none) (sourceGlobals := fun _ => none)
+    (sourceMemory := fun _ => none)
+    (baseAddress := BitVec.ofNat 64 0)
+    (topAddress := BitVec.ofNat 64 100)
+    (bytesInWord := BitVec.ofNat 64 8) (fuel := 8)
+    (contracts := none) (memoryAccess := none) (memoryHandler := none)
+    (function := "raise") (arguments := []) (values := [])
+    (parameters := [])
+    (body := .raise "E" (.const (BitVec.ofNat 64 7)))
+    (calleeLocals := fun _ => none) (calleeBodyLocals := fun _ => none)
+    (calleeGlobals := fun _ => none) (calleeMemory := fun _ => none)
+    (sourceException := "E")
+    (sourceValue := .word (BitVec.ofNat 64 7))
+    (caught := "E") (handlerVariable := "exn")
+    (handlerProgram := .return (.var .local "exn"))
+    (sourceResult := .returned (fun _ => none) (fun _ => none)
+      (fun _ => none) [.word (BitVec.ofNat 64 7)])
+  all_goals
+    simp [crepeHandlerCallSourceFunctions, evalPanValueExps,
+      evalPanValueExp.evalPanValueExps, evalPanValueExp,
+      evalPanValueProgWithPrimitiveCallsAndFfi, lookupPanFunction,
+      bindPanValueParameters, updatePanValueMap, panValueParametersValid,
+      panValueExceptionValid, panValuePayloadWithinLimit,
+      panValueHandlerValid]
+  all_goals decide
 
 theorem crepe_handler_call_return_short_circuits_regression :
     evalCrepFullProg crepeHandlerCallFunctions

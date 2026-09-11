@@ -250,6 +250,48 @@ theorem evalPanValueExp_cmp_word_inv
           | rStruct fields => simp [evalPanValueExp, hleft, hright] at hsource
           | nStruct name fields => simp [evalPanValueExp, hleft, hright] at hsource
 
+set_option linter.unnecessarySimpa false in
+theorem evalPanValueExp_shift_word_inv
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α) (operator : Shift)
+    (left right : Exp α) (value : α)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord (.shift operator left right) =
+      some (.word value)) :
+    ∃ leftValue rightValue,
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord left = some (.word leftValue) ∧
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord right = some (.word rightValue) ∧
+      evalPanShift operator leftValue rightValue = some value := by
+  cases hleft : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord left with
+  | none => simp [evalPanValueExp, hleft] at hsource
+  | some leftValue =>
+      cases hright : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord right with
+      | none => simp [evalPanValueExp, hleft, hright] at hsource
+      | some rightValue =>
+          cases leftValue with
+          | word leftValue =>
+              cases rightValue with
+              | word rightValue =>
+                  refine ⟨leftValue, rightValue, ?_, ?_, ?_⟩
+                  · simpa using hleft
+                  · simpa using hright
+                  have hvalue' := hsource
+                  simp [evalPanValueExp, hleft, hright] at hvalue'
+                  exact hvalue'
+              | rStruct fields => simp [evalPanValueExp, hleft, hright] at hsource
+              | nStruct name fields => simp [evalPanValueExp, hleft, hright] at hsource
+          | rStruct fields => simp [evalPanValueExp, hleft, hright] at hsource
+          | nStruct name fields => simp [evalPanValueExp, hleft, hright] at hsource
+
 /-! The local-variable leaf of the source expression simulation.  The
 compiler-context lookup is deliberately an explicit premise: it is the Lean
 counterpart of the HOL proof's `FLOOKUP ctxt.vars` obligation. -/
@@ -529,6 +571,51 @@ theorem compileSourceWordExp_shift_relation
   constructor
   · simp [compileExp, hleftCompile, hrightCompile]
   · simp [evalCrepFullExp, hleftEval, hrightEval, hvalue]
+
+theorem compileSourceWordExp_shift_recursive_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (crepLocals : Nat → Option α)
+    (crepMemory : α → Option α) (baseAddress topAddress bytesInWord : α)
+    (operator : Shift) (left right : SourceWordExp α) (value : α)
+    (hleftRelation : ∀ leftValue,
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord left.toExp = some (.word leftValue) →
+      ∃ compiled,
+        compileExp context left.toExp = ([compiled], .one) ∧
+        evalCrepFullExp crepLocals crepMemory baseAddress topAddress compiled =
+          some leftValue)
+    (hrightRelation : ∀ rightValue,
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord right.toExp = some (.word rightValue) →
+      ∃ compiled,
+        compileExp context right.toExp = ([compiled], .one) ∧
+        evalCrepFullExp crepLocals crepMemory baseAddress topAddress compiled =
+          some rightValue)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.shift operator left.toExp right.toExp) = some (.word value)) :
+    ∃ compiled,
+      compileExp context (.shift operator left.toExp right.toExp) =
+        ([compiled], .one) ∧
+      evalCrepFullExp crepLocals crepMemory baseAddress topAddress compiled =
+        some value := by
+  obtain ⟨leftValue, rightValue, hleftSource, hrightSource, _⟩ :=
+    evalPanValueExp_shift_word_inv structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord operator left.toExp right.toExp value hsource
+  obtain ⟨leftCompiled, hleftCompile, hleftEval⟩ :=
+    hleftRelation leftValue hleftSource
+  obtain ⟨rightCompiled, hrightCompile, hrightEval⟩ :=
+    hrightRelation rightValue hrightSource
+  have hshift := compileSourceWordExp_shift_relation context structs sourceLocals
+    sourceGlobals sourceMemory crepLocals crepMemory baseAddress topAddress
+    bytesInWord operator left right leftCompiled rightCompiled leftValue rightValue
+    value hleftSource hrightSource hsource hleftCompile hrightCompile hleftEval
+    hrightEval
+  exact ⟨.shift operator leftCompiled rightCompiled, hshift.1, hshift.2⟩
 
 /-! Recursive binary-operation composition.  This is the exact induction
 interface needed when a localized Pancake expression is decomposed into its

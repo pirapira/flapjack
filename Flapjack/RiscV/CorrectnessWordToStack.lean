@@ -645,7 +645,8 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_raise_of_eval
       some result := by
   have hcall :
       evalStackProgFuelWithCodeAndFfi host (fuel + 2) code calleeState
-        (.call (some (returnCode, 0, config.returnLabel, config.entryLabel))
+        (.call (some (stackPopHandler config.perf config.scratch returnCode, 0,
+            config.returnLabel, config.entryLabel))
           (.label target)
           (some (handlerCode, exception, config.handlerLabel))) =
         some result := by
@@ -653,7 +654,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_raise_of_eval
       (host := host) (fuel := fuel) (code := code) (state := calleeState)
       (calleeState := calleeState) (target := target)
       (exceptionRegister := exception) (handlerLabel := config.handlerLabel)
-      (returnCode := returnCode) (link := 0)
+      (returnCode := stackPopHandler config.perf config.scratch returnCode) (link := 0)
       (returnLabel := config.returnLabel) (entryLabel := config.entryLabel)
       (handlerCode := handlerCode) (callee := callee) (value := value)
       hcode hcallee]
@@ -664,7 +665,8 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_raise_of_eval
     (first := stackHandlerArgs config.perf (argumentCount + 1)
       config.frameOffset config.scratch)
     (second :=
-      (.call (some (returnCode, 0, config.returnLabel, config.entryLabel))
+      (.call (some (stackPopHandler config.perf config.scratch returnCode, 0,
+          config.returnLabel, config.entryLabel))
         (.label target)
         (some (handlerCode, exception, config.handlerLabel))))
     (result := some result) hargs hcall
@@ -677,7 +679,8 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_raise_of_eval
       (stackSeq [
         stackHandlerArgs config.perf (argumentCount + 1) config.frameOffset
           config.scratch,
-        (.call (some (returnCode, 0, config.returnLabel, config.entryLabel))
+        (.call (some (stackPopHandler config.perf config.scratch returnCode, 0,
+            config.returnLabel, config.entryLabel))
           (.label target)
           (some (handlerCode, exception, config.handlerLabel))) ]))
     (result := some result) hsetup hinner
@@ -703,7 +706,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_return_of_eva
     (hcallee : evalStackProgFuelWithCodeAndFfi host (fuel + 1) code calleeState
       callee = some (.returned calleeState value))
     (hreturn : evalStackProgFuelWithCodeAndFfi host (fuel + 1) code calleeState
-      returnCode = some result) :
+      (stackPopHandler config.perf config.scratch returnCode) = some result) :
     evalStackProgFuelWithCodeAndFfi host (fuel + 4) code state
       (wordToStackCallWithHandlerInSection config.perf target argumentCount
         config.frameOffset config.scratch returnCode handlerCode
@@ -711,14 +714,15 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_return_of_eva
       some result := by
   have hcall :
       evalStackProgFuelWithCodeAndFfi host (fuel + 2) code calleeState
-        (.call (some (returnCode, 0, config.returnLabel, config.entryLabel))
+        (.call (some (stackPopHandler config.perf config.scratch returnCode, 0,
+            config.returnLabel, config.entryLabel))
           (.label target)
           (some (handlerCode, exception, config.handlerLabel))) =
         some result := by
     rw [evalStackProgFuelWithCodeAndFfi_call_return_handler_of_eval
       (host := host) (fuel := fuel) (code := code) (state := calleeState)
       (calleeState := calleeState) (target := target)
-      (returnCode := returnCode) (link := 0)
+      (returnCode := stackPopHandler config.perf config.scratch returnCode) (link := 0)
       (returnLabel := config.returnLabel) (entryLabel := config.entryLabel)
       (handler := some (handlerCode, exception, config.handlerLabel))
       (callee := callee) (value := value) hcode hcallee]
@@ -729,7 +733,8 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_return_of_eva
     (first := stackHandlerArgs config.perf (argumentCount + 1)
       config.frameOffset config.scratch)
     (second :=
-      (.call (some (returnCode, 0, config.returnLabel, config.entryLabel))
+      (.call (some (stackPopHandler config.perf config.scratch returnCode, 0,
+          config.returnLabel, config.entryLabel))
         (.label target)
         (some (handlerCode, exception, config.handlerLabel))))
     (result := some result) hargs hcall
@@ -738,7 +743,8 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_return_of_eva
         (stackSeq [
           stackHandlerArgs config.perf (argumentCount + 1) config.frameOffset
             config.scratch,
-          (.call (some (returnCode, 0, config.returnLabel, config.entryLabel))
+          (.call (some (stackPopHandler config.perf config.scratch returnCode, 0,
+              config.returnLabel, config.entryLabel))
             (.label target)
             (some (handlerCode, exception, config.handlerLabel))) ]) =
       some result := by
@@ -752,7 +758,8 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_return_of_eva
       (stackSeq [
         stackHandlerArgs config.perf (argumentCount + 1) config.frameOffset
           config.scratch,
-        (.call (some (returnCode, 0, config.returnLabel, config.entryLabel))
+        (.call (some (stackPopHandler config.perf config.scratch returnCode, 0,
+            config.returnLabel, config.entryLabel))
           (.label target)
           (some (handlerCode, exception, config.handlerLabel))) ]))
     (result := some result) hsetup hinner'

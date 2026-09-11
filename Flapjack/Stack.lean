@@ -201,6 +201,7 @@ def wordToStackCallWithHandlerInSection (perf : Bool) (target : Nat)
     (argumentCount frameOffset scratch : Nat)
     (returnCode handlerCode : StackProg α)
     (returnLabel entryLabel handlerLabel handlerEntryLabel exceptionLabel : Nat) : StackProg α :=
+  let returnCode := stackPopHandler perf scratch returnCode
   let callCode :=
     .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target)
       (some (handlerCode, exceptionLabel, handlerLabel))

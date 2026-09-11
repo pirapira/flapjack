@@ -2867,6 +2867,11 @@ the StackLang helper, and uses the enclosing function configuration for the
 zero placeholders produced by the reduced Loop-to-Word boundary.  Focused
 handler, pipeline, and full-SSA machine regressions cover this behavior.
 
+The handler-bearing StackLang call now wraps its normal return continuation
+with CakeML's `PopHandler`, so successful calls release the handler frame while
+raised calls continue through the raise stub.  The linked handler-address
+regression covers the resulting layout relocation.
+
 ## Verification workflow
 
 - Lean: `lake build` from the repository root.

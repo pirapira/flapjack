@@ -63,4 +63,32 @@ example :
   · rfl
   all_goals decide
 
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32)
+          (.inst (.arith (.longMul 1 2 2 3))) = some source' ∧
+      evalWordProg (zeroState 32)
+          (.inst (wordSsaRenameInst
+            ({ current := [], next := 4 } : WordSsaState)
+            (.arith (.longMul 1 2 2 3) : WordInst)).2) = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨2, by decide⟩ =
+        readRegister target' ⟨8, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_longMul_destinations
+    (ssa := ({ current := [], next := 4 } : WordSsaState))
+    (source := zeroState 32) (target := zeroState 32)
+    (first := ({ current := [(1, 4)], next := 8 } : WordSsaState))
+    (second := ({ current := [(2, 8), (1, 4)], next := 12 } : WordSsaState))
+    (freshLeft := 4) (freshRight := 8)
+    (destinationLeft := 1) (destinationRight := 2)
+    (sourceLeft := 2) (sourceRight := 3)
+  · rfl
+  · rfl
+  · intro name
+    rfl
+  · rfl
+  all_goals decide
+
 end Flapjack.RiscV

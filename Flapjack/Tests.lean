@@ -79,6 +79,7 @@ import Flapjack.Test.WordToStack.StatefulIte
 import Flapjack.Test.WordToStack.StatefulLoop
 import Flapjack.Test.WordToStack.HeapLowering
 import Flapjack.Test.WordToStack.ControlLeaves
+import Flapjack.Test.WordToStack.ReturnCopy
 import Flapjack.Test.StatefulPipeline
 import Flapjack.Test.CorrectnessFfiRiscVLoop
 import Flapjack.Test.FullSsa

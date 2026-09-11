@@ -20,6 +20,9 @@ theorem evalPanValueCall_raised_inversion
     (sourceLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α))
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (contracts : Option PanValueCallContracts)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler α))
     (function : FunName) (arguments : List (Exp α))
     (returnedGlobals : VarName → Option (PanValue α))
     (returnedMemory : α → Option (PanValue α))
@@ -27,23 +30,28 @@ theorem evalPanValueCall_raised_inversion
     (hcall : evalPanValueCallWithPrimitiveCallsAndFfi
       primitive handler structs functions
       baseAddress topAddress bytesInWord (fuel + 1)
-      sourceLocals sourceGlobals sourceMemory none function arguments =
+      sourceLocals sourceGlobals sourceMemory none function arguments
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
       some (.raised (fun _ => none) returnedGlobals returnedMemory exception value)) :
     ∃ argumentValues parameters body calleeLocals bodyLocals,
       evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
-        baseAddress topAddress bytesInWord arguments = some argumentValues ∧
+        baseAddress topAddress bytesInWord arguments
+        (memoryAccess := memoryAccess) = some argumentValues ∧
       lookupPanFunction function functions = some (parameters, body) ∧
-      panValueParametersValid structs none function argumentValues = true ∧
+      panValueParametersValid structs contracts function argumentValues = true ∧
       bindPanValueParameters parameters argumentValues = some calleeLocals ∧
       evalPanValueProgWithPrimitiveCallsAndFfi
         primitive handler structs functions
         baseAddress topAddress bytesInWord fuel
-        calleeLocals sourceGlobals sourceMemory body =
+        calleeLocals sourceGlobals sourceMemory body
+        (memoryAccess := memoryAccess) (contracts := contracts)
+        (memoryHandler := memoryHandler) =
           some (.raised bodyLocals returnedGlobals returnedMemory exception value) ∧
-      panValueExceptionValid structs none exception value = true ∧
+      panValueExceptionValid structs contracts exception value = true ∧
       panValuePayloadWithinLimit structs value = true := by
-  cases hvalues : evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
-      baseAddress topAddress bytesInWord arguments with
+    cases hvalues : evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess) with
   | none =>
       simp [evalPanValueCallWithPrimitiveCallsAndFfi, hvalues] at hcall
   | some argumentValues =>
@@ -53,10 +61,11 @@ theorem evalPanValueCall_raised_inversion
       | some functionInfo =>
           cases functionInfo with
           | mk parameters body =>
-              cases hparameters : panValueParametersValid structs none function
+              cases hparameters : panValueParametersValid structs contracts function
                   argumentValues with
               | false =>
-                  simp [panValueParametersValid_none] at hparameters
+                  simp [evalPanValueCallWithPrimitiveCallsAndFfi, hvalues, hlookup,
+                    hparameters] at hcall
               | true =>
                   cases hbind : bindPanValueParameters parameters argumentValues with
                   | none =>
@@ -65,7 +74,9 @@ theorem evalPanValueCall_raised_inversion
                   | some calleeLocals =>
                       cases hbody : evalPanValueProgWithPrimitiveCallsAndFfi primitive handler
                           structs functions baseAddress topAddress bytesInWord fuel
-                          calleeLocals sourceGlobals sourceMemory body with
+                          calleeLocals sourceGlobals sourceMemory body
+                          (memoryAccess := memoryAccess) (contracts := contracts)
+                          (memoryHandler := memoryHandler) with
                       | none =>
                           simp [evalPanValueCallWithPrimitiveCallsAndFfi, hvalues, hlookup,
                             hbind, hbody] at hcall
@@ -76,17 +87,18 @@ theorem evalPanValueCall_raised_inversion
                           | broke bodyLocals bodyGlobals bodyMemory
                           | continued bodyLocals bodyGlobals bodyMemory =>
                               simp [evalPanValueCallWithPrimitiveCallsAndFfi, hvalues,
-                                hlookup, hbind, hbody] at hcall
+                                hlookup, hparameters, hbind, hbody] at hcall
                           | raised bodyLocals bodyGlobals bodyMemory bodyException bodyValue =>
-                              cases hexception : panValueExceptionValid structs none
+                              cases hexception : panValueExceptionValid structs contracts
                                   bodyException bodyValue with
                               | false =>
-                                  simp [panValueExceptionValid_none] at hexception
+                                  simp [evalPanValueCallWithPrimitiveCallsAndFfi, hvalues,
+                                    hlookup, hparameters, hbind, hbody, hexception] at hcall
                               | true =>
                                   cases hlimit : panValuePayloadWithinLimit structs bodyValue with
                                   | false =>
                                       simp [evalPanValueCallWithPrimitiveCallsAndFfi, hvalues,
-                                        hlookup, hbind, hbody, hlimit]
+                                        hlookup, hparameters, hbind, hbody, hlimit]
                                         at hcall
                                   | true =>
                                       have hraised :
@@ -99,9 +111,11 @@ theorem evalPanValueCall_raised_inversion
                                               bodyGlobals bodyMemory bodyException bodyValue) =
                                               some (PanValueControlResult.raised (fun _ => none)
                                                 returnedGlobals returnedMemory exception value) := by
-                                          simpa [evalPanValueCallWithPrimitiveCallsAndFfi, hvalues,
-                                            hlookup, hbind, hbody, hlimit]
-                                            using hcall
+                                          have hcall' := hcall
+                                          simp [evalPanValueCallWithPrimitiveCallsAndFfi, hvalues,
+                                            hlookup, hparameters, hbind, hbody, hlimit] at hcall'
+                                          rcases hcall'.2 with ⟨rfl, rfl, rfl, rfl⟩
+                                          rfl
                                         exact Option.some.inj hsome
                                       cases hraised
                                       refine ⟨argumentValues, parameters, body, calleeLocals,

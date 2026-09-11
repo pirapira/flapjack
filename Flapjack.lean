@@ -165,6 +165,7 @@ import Flapjack.CrepeCalleeParameterWordRelation
 import Flapjack.CrepeCalleeParameterListRelation
 import Flapjack.CompileWordParamVarsRelation
 import Flapjack.CompileParamVarsRelation
+import Flapjack.CompileParamVarsSlotBounds
 import Flapjack.CrepeCalleeParameterRelation
 import Flapjack.CrepeCalleeParameterListGeneralRelation
 import Flapjack.CrepeCalleeParameterAppendRelation

@@ -30,6 +30,66 @@ theorem assignCrepValues_single_word
       some (updateCrepLocal (fun _ => none) slot value) := by
   simp [assignCrepValues]
 
+theorem panValueCrepStateRel_update_slot
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (slot : Nat) (value : α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hfresh : ∀ oldName oldShape oldSlots,
+      lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+      slot ∉ oldSlots) :
+    panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory
+      { state with locals := updateCrepLocal state.locals slot value } := by
+  refine ⟨hrel.1, ?_, hrel.2.2⟩
+  intro oldName oldValue oldShape oldSlots hsourceOld hlookupOld
+  have hold := hrel.2.1 oldName oldValue oldShape oldSlots hsourceOld hlookupOld
+  exact ⟨hold.1,
+    (readCrepLocals_update_of_not_mem state.locals slot value oldSlots
+      (hfresh oldName oldShape oldSlots hlookupOld)).symm ▸ hold.2⟩
+
+theorem panValueCrepStateRel_add_word_parameter_fresh
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (name : VarName) (slot : Nat) (value : α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hname : lookupInfo name context.vars = none)
+    (hfresh : ∀ oldName oldShape oldSlots,
+      oldName ≠ name →
+      lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+      slot ∉ oldSlots) :
+    panValueCrepStateRel structs
+      { context with vars := (name, (.one, [slot])) :: context.vars }
+      (updatePanValueMap sourceLocals name (.word value)) sourceGlobals
+      sourceMemory
+      { state with locals := updateCrepLocal state.locals slot value } := by
+  have hslot := panValueCrepStateRel_update_slot structs context sourceLocals
+    sourceGlobals sourceMemory state slot value hrel
+    (fun oldName oldShape oldSlots hlookup => by
+      by_cases holdName : oldName = name
+      · subst oldName
+        rw [hname] at hlookup
+        cases hlookup
+      · exact hfresh oldName oldShape oldSlots holdName hlookup)
+  apply panValueCrepStateRel_extend structs context sourceLocals
+    (updatePanValueMap sourceLocals name (.word value)) sourceGlobals
+    sourceMemory { state with locals := updateCrepLocal state.locals slot value }
+    name .one [slot] (.word value) rfl
+  · simp [panValueShape, panShapeMatches]
+  · simp [readCrepLocals, updateCrepLocal, panValueFlatWords,
+      panValueFlatWordsFuel]
+  · intro oldName oldValue oldShape oldSlots hne hsourceOld hlookupOld
+    exact hslot.2.1 oldName oldValue oldShape oldSlots hsourceOld
+      (by
+        simpa [lookupInfo, hne, Ne.symm hne] using hlookupOld)
+  · exact hslot
+
 theorem panValueCrepStateRel_add_word_parameter
     [LawfulBEq String] [OfNat α 0]
     (structs : StructContext) (context : CompileContext α)
@@ -93,6 +153,7 @@ theorem panValueCrepCalleeStateRel_single_word
     (name : VarName) (slot : Nat) (value : α)
     (hglobals : sourceGlobals = (fun _ => none))
     (hmemory : panValueWordMemory sourceMemory = crepMemory)
+    (hname : lookupInfo name context.vars = none)
     (hnoalias : ∀ oldName oldShape oldSlots,
       oldName ≠ name →
       lookupInfo oldName context.vars = some (oldShape, oldSlots) →
@@ -108,25 +169,9 @@ theorem panValueCrepCalleeStateRel_single_word
       { locals := (fun _ => none), memory := crepMemory } := by
     refine ⟨hglobals, panValueCrepLocalsRel_empty structs context (fun _ => none), ?_⟩
     exact hmemory
-  let parameterContext :=
-    { context with vars := (name, (.one, [slot])) :: context.vars }
-  have hbase : panValueCrepStateRel structs parameterContext
-      (fun _ => none) sourceGlobals sourceMemory
-      { locals := (fun _ => none), memory := crepMemory } := by
-    refine ⟨hglobals, panValueCrepLocalsRel_empty structs parameterContext
-      (fun _ => none), hmemory⟩
-  have hlookupNew : lookupInfo name parameterContext.vars = some (.one, [slot]) := by
-    simp [parameterContext, lookupInfo]
-  have hupdated := panValueCrepStateRel_update_word structs parameterContext
+  exact panValueCrepStateRel_add_word_parameter_fresh structs context
     (fun _ => none) sourceGlobals sourceMemory
     { locals := (fun _ => none), memory := crepMemory }
-    name slot value hbase hlookupNew
-    (by
-      intro oldName oldShape oldSlots hne hlookupOld
-      have hlookupContext : lookupInfo oldName context.vars =
-          some (oldShape, oldSlots) := by
-        simpa [parameterContext, lookupInfo, hne, Ne.symm hne] using hlookupOld
-      exact hnoalias oldName oldShape oldSlots hne hlookupContext)
-  simpa [parameterContext] using hupdated
+    name slot value hrel hname hnoalias
 
 end Flapjack

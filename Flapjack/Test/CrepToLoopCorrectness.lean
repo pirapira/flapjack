@@ -192,6 +192,24 @@ theorem crepRuntimeToLoop_loadGlob_regression :
     crepLoopRuntimeGlobalLoadState [] 5 200 42
   simp [crepLoopRuntimeGlobalLoadState]
 
+theorem crepRuntimeToLoop_store_load_regression :
+    (evalCrepRuntimeResult crepLoopRuntimeHandler (fun _ _ => none) 6
+      crepLoopRuntimeGlobalState
+      (.seq (.storeGlob 200 (.const 42)) (.assign 5 (.loadGlob 200)))).map
+        (fun result => result.2.locals 5) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      12 (loopStateOfCrepRuntimeState crepLoopRuntimeGlobalState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.seq (.storeGlob 200 (.const 42)) (.assign 5 (.loadGlob 200))))).map
+        (fun result => (loopResultState result).locals 5) := by
+  simp [evalCrepRuntimeResult, evalCrepRuntimeProg, evalCrepRuntimeExp,
+    loopStateOfCrepRuntimeState, loopCompileProg, loopCompileExp,
+    loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg,
+    evalLoopExp, loopResultState, updateMemory, updateLoopGlobal,
+    updateCrepLocal, updateLoopLocal]
+
 theorem crepToLoop_control_regressions :
     ((evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ _ _ => none) 0 100 2 crepSeqInitial (.skip)).map

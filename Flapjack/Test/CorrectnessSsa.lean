@@ -382,4 +382,25 @@ example :
   · rfl
   all_goals decide
 
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32)
+          (.shareInst .load 1 (.var 2)) = some source' ∧
+      evalWordProg (zeroState 32)
+          (wordSsaRenameProgram
+            ({ current := [], next := 4 } : WordSsaState)
+            (.shareInst .load 1 (.var 2))).2 = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_program_share_load
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  all_goals decide
+
 end Flapjack.RiscV

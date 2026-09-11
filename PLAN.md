@@ -2580,6 +2580,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   `PanValueCrepProgramCorrect`, ready for the full program induction.
 - [x] Generalize the program-level call constructor to arbitrary expression
   contracts, retaining the word-valued constructor as a specialization.
+- [x] Expose state-level one-word local/slot update transport for subsequent
+  callee-parameter and result-state correctness proofs.
 - [x] Connect generic expression-list argument preparation to recursively
   correct returned ordinary calls and their flattened callee-result relation.
 - [x] Connect generic expression-list argument preparation to recursively

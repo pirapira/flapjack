@@ -26,6 +26,22 @@ def crepLoopAssignState : CrepState Nat :=
   { locals := fun name => if name == 5 then some 1 else none
     memory := fun _ => none }
 
+theorem crepToLoop_assign_var_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 3 crepLoopAssignState
+      (.assign 5 (.var 6))).map (crepControlLocal 5) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      4 (loopStateOfCrepState crepLoopAssignState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.assign 5 (.var 6)))).map (loopControlLocal 5) := by
+  exact crepToLoop_assign_var_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 2 crepLoopAssignState [] 5 6
+
 theorem crepToLoop_assign_const_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ _ _ => none) 0 100 3 crepLoopAssignState

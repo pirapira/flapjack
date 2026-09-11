@@ -2174,6 +2174,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   and prove caught-handler returns short-circuit following continuations.
 - [x] Prove the constant-assignment Crep-to-Loop boundary, including its
   generated empty-prefix sequence and assigned-local observation.
+- [x] Prove the local-variable assignment Crep-to-Loop boundary and regress
+  its state-observation behavior with an executable test.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

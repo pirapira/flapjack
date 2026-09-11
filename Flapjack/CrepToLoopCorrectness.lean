@@ -110,11 +110,48 @@ theorem crepToLoop_assign_const_agreement
       (loopStateOfCrepState state)
       (loopCompileProg context live (.assign name (.const value)))).map
         (loopControlLocal name) := by
-  simp [evalCrepFullProg, evalCrepFullExp, updateCrepLocal,
+  simp [evalCrepFullProg, evalCrepFullExp,
+    loopStateOfCrepState, updateCrepLocal, updateLoopLocal,
     crepControlLocal, loopCompileProg, loopCompileExp,
     loopNestedSeq,
     evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
-    updateLoopLocal, loopControlLocal]
+    loopControlLocal]
+
+theorem crepToLoop_assign_var_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (name source : Nat) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.assign name (.var source))).map
+        (crepControlLocal name) =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 2)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live (.assign name (.var source)))).map
+        (loopControlLocal name) := by
+  cases hsource : state.locals source with
+  | none =>
+      simp [evalCrepFullProg, evalCrepFullExp,
+        loopStateOfCrepState, loopCompileProg, loopCompileExp,
+        loopNestedSeq,
+        evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+        hsource]
+  | some sourceValue =>
+      simp [evalCrepFullProg, evalCrepFullExp,
+        loopStateOfCrepState, updateCrepLocal, updateLoopLocal,
+        crepControlLocal, loopCompileProg, loopCompileExp,
+        loopNestedSeq,
+        evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+        loopControlLocal, hsource]
 
 theorem crepToLoop_raise_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

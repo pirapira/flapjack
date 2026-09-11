@@ -2345,6 +2345,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add the compositional two-word record declaration-return correctness
   constructor, including source declaration restoration, fresh Crep slots,
   and flattened returned-value agreement.
+- [x] Add the normal-completion two-word record declaration correctness
+  constructor, including source and Crep state restoration after `skip`.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

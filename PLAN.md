@@ -2386,6 +2386,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   source-to-Crep state relation required by declaration continuations.
 - [x] Invert generated zero-initializer declarations to recover the compiled
   declaration-call continuation evaluation.
+- [x] Invert the compiled call/continuation sequence, separating normal
+  continuation execution from short-circuiting Crep control results.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

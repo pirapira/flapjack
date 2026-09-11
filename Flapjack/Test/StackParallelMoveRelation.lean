@@ -114,7 +114,8 @@ example :
     subst move
     simp [entryMoveConfig]
   · simp [entryMoveConfig, wordStackLocation, lookupNatInfo]
-  · native_decide
+  · simp [entryMoveConfig, wordStackPhysicalMovesFrom,
+      wordStackLocation, lookupNatInfo]
   · simp [entryMoveConfig, entryMoveState,
       wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
       wordStackLocationMoveDestinations, wordStackLocationMoveReady,

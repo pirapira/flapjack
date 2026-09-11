@@ -769,6 +769,36 @@ def wordStackInstall (config : WordStackConfig)
   | .register codeBuffer, .register codeLength,
       .register dataBuffer, .register dataLength =>
       pure (.install codeBuffer codeLength dataBuffer dataLength 0)
+  | .register codeBuffer, .register codeLength,
+      .stack dataBuffer, .register dataLength =>
+      if codeBuffer = config.scratch || codeLength = config.scratch ||
+          dataLength = config.scratch then
+        none
+      else
+        pure (wordStackJoin
+          (.stackLoad config.scratch (wordStackOffset config dataBuffer))
+          (.install codeBuffer codeLength config.scratch dataLength 0))
+  | .register codeBuffer, .register codeLength,
+      .register dataBuffer, .stack dataLength =>
+      if codeBuffer = config.addressScratch ||
+          codeLength = config.addressScratch ||
+          dataBuffer = config.addressScratch then
+        none
+      else
+        pure (wordStackJoin
+          (.stackLoad config.addressScratch (wordStackOffset config dataLength))
+          (.install codeBuffer codeLength dataBuffer config.addressScratch 0))
+  | .register codeBuffer, .register codeLength,
+      .stack dataBuffer, .stack dataLength =>
+      if codeBuffer = config.scratch || codeBuffer = config.addressScratch ||
+          codeLength = config.scratch || codeLength = config.addressScratch then
+        none
+      else
+        pure (wordStackJoin
+          (.stackLoad config.scratch (wordStackOffset config dataBuffer))
+          (wordStackJoin
+            (.stackLoad config.addressScratch (wordStackOffset config dataLength))
+            (.install codeBuffer codeLength config.scratch config.addressScratch 0)))
   | _, _, _, _ => none
 
 def wordStackBufferWrite (config : WordStackConfig) (isCode : Bool)

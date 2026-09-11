@@ -58,6 +58,37 @@ def wordOperationSpillConfig : WordStackConfig :=
 
 example :
     wordToStackProgNat wordOperationSpillConfig
+        (.install 1 1 0 1 ([], []) : WordProg Nat) =
+      some (.seq (.stackLoad 31 13)
+        (.install 6 6 31 6 0)) := by
+  simp [wordToStackProgNat, wordStackInstall, wordStackLocation,
+    wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat
+        { wordOperationSpillConfig with locations :=
+            [(0, .register 5), (1, .stack 2)] }
+        (.install 0 0 1 1 ([], []) : WordProg Nat) =
+      some (.seq (.stackLoad 31 12)
+        (.seq (.stackLoad 29 12)
+          (.install 5 5 31 29 0))) := by
+  simp [wordToStackProgNat, wordStackInstall, wordStackLocation,
+    wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat
+        { wordOperationSpillConfig with locations :=
+            [(0, .register 5), (1, .register 6),
+             (2, .stack 3), (3, .stack 2)] }
+        (.install 0 1 2 3 ([], []) : WordProg Nat) =
+      some (.seq (.stackLoad 31 13)
+        (.seq (.stackLoad 29 12)
+          (.install 5 6 31 29 0))) := by
+  simp [wordToStackProgNat, wordStackInstall, wordStackLocation,
+    wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat wordOperationSpillConfig
         (.codeBufferWrite 0 1 : WordProg Nat) =
       some (.seq (.stackLoad 29 13)
         (.codeBufferWrite 29 6)) := by

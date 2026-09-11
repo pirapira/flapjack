@@ -19,7 +19,7 @@ def globalLoadRuntimeState : CrepRuntimeState Nat Unit :=
 def globalLoadRuntimeHandler : CrepRuntimeFfiHandler Nat Unit Unit :=
   fun _ state => .returned state
 
-theorem crepRuntimeToLoop_loadGlob_regression :
+theorem peerCrepRuntimeToLoop_loadGlob_regression :
     (evalCrepRuntimeResult globalLoadRuntimeHandler (fun _ _ => none) 2
       globalLoadRuntimeState (.assign 5 (.loadGlob 200))).map
         (fun result => result.2.locals 5) =
@@ -36,7 +36,7 @@ theorem crepRuntimeToLoop_loadGlob_regression :
     [] globalLoadRuntimeHandler (fun _ _ => none) 1
     globalLoadRuntimeState [] 5 200 42 (by simp [globalLoadRuntimeState])
 
-theorem crepRuntimeToLoop_loadGlob_failure_regression :
+theorem peerCrepRuntimeToLoop_loadGlob_failure_regression :
     (evalCrepRuntimeResult globalLoadRuntimeHandler (fun _ _ => none) 2
       { globalLoadRuntimeState with globals := fun _ => none }
       (.assign 5 (.loadGlob 200))).bind
@@ -56,7 +56,7 @@ theorem crepRuntimeToLoop_loadGlob_failure_regression :
     [] globalLoadRuntimeHandler (fun _ _ => none) 1
     { globalLoadRuntimeState with globals := fun _ => none } [] 5 200
 
-theorem crepRuntimeToLoop_storeGlob_loadGlob_sequence_regression :
+theorem peerCrepRuntimeToLoop_storeGlob_loadGlob_sequence_regression :
     (evalCrepRuntimeResult globalLoadRuntimeHandler (fun _ _ => none) 3
       { globalLoadRuntimeState with globals := fun _ => none }
       (.seq (.storeGlob 200 (.const 42)) (.assign 5 (.loadGlob 200)))).map

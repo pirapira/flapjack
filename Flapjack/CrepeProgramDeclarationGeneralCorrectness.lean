@@ -4,6 +4,8 @@ import Flapjack.CrepeProgramDeclarationRestoration
 import Flapjack.CrepeSourceWordRecordCorrectness
 import Flapjack.CrepeStateRelationExtension
 import Flapjack.CrepeProgramRelation
+import Flapjack.CrepeCompileExpVariables
+import Flapjack.CrepeAllocationNameLemmas
 
 /-!
 The generic compositional correctness constructor for ordinary Pancake
@@ -24,15 +26,14 @@ theorem panValueCrepProgramCorrect_dec_general
     (hbody : PanValueCrepProgramCorrect body)
     (hname : ∀ (context : CompileContext α),
       lookupInfo name context.vars = none)
+    (hbounded : ∀ (context : CompileContext α) oldName oldShape oldSlots,
+      lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+      ∀ slot ∈ oldSlots, slot ≤ context.maxVar)
     (hfresh : ∀ (context : CompileContext α) oldName oldShape oldSlots,
       oldName ≠ name →
       lookupInfo oldName context.vars = some (oldShape, oldSlots) →
       ∀ temporary, temporary ∈ allocatedNames context shape →
         temporary ∉ oldSlots)
-    (hcompiledFresh : ∀ (context : CompileContext α)
-      (compiled : List (CrepExp α)),
-      ∀ temporary, temporary ∈ allocatedNames context shape →
-      ∀ expression ∈ compiled, temporary ∉ crepExpVars expression)
     (hcompile : ∀ (context : CompileContext α),
       ∃ compiledValues,
         compileExp context value = (compiledValues, shape) ∧
@@ -119,7 +120,21 @@ theorem panValueCrepProgramCorrect_dec_general
           have hnot : ∀ temporary ∈ allocatedNames context shape,
               ∀ expression ∈ compiledValues,
                 temporary ∉ crepExpVars expression := by
-            exact hcompiledFresh context compiledValues
+            intro temporary htemporary expression hexpression
+            have hslotBound : ∀ oldName oldShape oldSlots,
+                lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+                ∀ slot ∈ oldSlots, slot ≤ context.maxVar := by
+              intro oldName oldShape oldSlots hlookupOld
+              exact hbounded context oldName oldShape oldSlots hlookupOld
+            have hcompiledBounded := compileExp_vars_bounded context hslotBound value
+            rw [hcompile] at hcompiledBounded
+            have hexpressionBounded : ∀ slot ∈ crepExpVars expression,
+                slot ≤ context.maxVar := by
+              intro slot hslot
+              apply hcompiledBounded
+              exact List.mem_flatMap.2 ⟨expression, hexpression, hslot⟩
+            exact allocatedNames_not_mem_of_bounded context shape
+              (crepExpVars expression) hexpressionBounded temporary htemporary
           have hbodyEval := crepNestedDecsEval_body_of_evalExps_stable
             functions crepPrimitive ffi sharedMem baseAddress topAddress bodyFuel
             state (allocatedNames context shape) compiledValues

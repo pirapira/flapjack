@@ -2493,6 +2493,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Prove that every slot emitted by `compileParamVars` is below the final
   parameter offset, exposing both strict and non-strict forms for generated
   compiler contexts.
+- [x] Prove that the context slot-bound invariant is preserved by local
+  declaration extension, including allocated declaration slots and inherited
+  slots.
 - [x] Move temporary-assignment destination and fresh-slot derivation into the
   generic constructor, leaving compiled-expression freshness as the remaining
   temporary-path obligation.

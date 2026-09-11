@@ -15,6 +15,7 @@ import Flapjack.Crepe
 import Flapjack.PanToCrep
 import Flapjack.CrepeCompileExpVariables
 import Flapjack.CompileParamVarsBounds
+import Flapjack.CrepeContextBounds
 import Flapjack.Compile
 import Flapjack.Semantics
 import Flapjack.CrepeSemantics

@@ -1441,6 +1441,66 @@ theorem evalWordProg_ssaRename_program_share_load [NeZero width]
       hfreshNonzero] using hloadValue
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
+theorem wordSsaRenameProgram_shareInst_load8_var
+    (ssa : WordSsaState) (destination address : Nat) :
+    wordSsaRenameProgram ssa
+        (.shareInst .load8 destination (.var address) : WordProg α) =
+      ((wordSsaFresh ssa destination).1,
+        .shareInst .load8 (wordSsaFresh ssa destination).2
+          (.var (wordSsaRead ssa address))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp]
+
+theorem evalWordProg_ssaRename_program_share_load8 [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (destination address : Nat)
+    (hdestination : destination < 32) (haddress : address < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (haddressSsa : wordSsaRead ssa address < 32)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0) :
+    ∃ source' target',
+      evalWordProg source (.shareInst .load8 destination (.var address)) = some source' ∧
+      evalWordProg target
+          (wordSsaRenameProgram ssa
+            (.shareInst .load8 destination (.var address))).2 = some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
+      source'.memory = target'.memory := by
+  have haddressValue :
+      readRegister source ⟨address, haddress⟩ =
+        readRegister target ⟨wordSsaRead ssa address, haddressSsa⟩ := by
+    have h := hregister address
+    simpa [registerOfNat, haddress, haddressSsa] using h
+  have hloadValue :
+      BitVec.ofNat width
+          (readByte source (readRegister source ⟨address, haddress⟩)).toNat =
+        BitVec.ofNat width
+          (readByte target
+            (readRegister target ⟨wordSsaRead ssa address, haddressSsa⟩)).toNat := by
+    rw [haddressValue]
+    simp [readByte, hmemory]
+  rw [wordSsaRenameProgram_shareInst_load8_var]
+  refine ⟨execute source (.loadByte ⟨destination, hdestination⟩
+      ⟨address, haddress⟩),
+    execute target (.loadByte ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+      ⟨wordSsaRead ssa address, haddressSsa⟩), ?_, ?_, ?_, ?_⟩
+  · simp [evalWordProg, evalWordShareInst, wordShareInstToInstructions,
+      wordInstToInstruction, registerOfNat, hdestination, haddress, execute]
+  · simp [evalWordProg, evalWordShareInst, wordShareInstToInstructions,
+      wordInstToInstruction, registerOfNat, hfresh, haddressSsa, execute]
+  · simpa [execute, writeRegister, readRegister, hdestinationNonzero,
+      hfreshNonzero] using hloadValue
+  · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+
 theorem wordSsaRenameInst_div
     (ssa : WordSsaState) (destination dividend divisor : Nat) :
     wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =

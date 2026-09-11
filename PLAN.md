@@ -2388,6 +2388,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   declaration-call continuation evaluation.
 - [x] Invert the compiled call/continuation sequence, separating normal
   continuation execution from short-circuiting Crep control results.
+- [x] Compose declaration-prefix and call-sequence inversion into a complete
+  successful compiled decCall inversion theorem.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

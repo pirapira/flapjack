@@ -2366,6 +2366,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add the two-word structured-record expression contract instance.
 - [x] Generalize the structured-record expression contract to arbitrary
   lists of scalar word fields, retaining the 32-word payload bound.
+- [x] Lift the arbitrary scalar-word record expression contract through the
+  generic program return constructor.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

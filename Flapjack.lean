@@ -49,6 +49,7 @@ import Flapjack.PanShapeMatches
 import Flapjack.PanValueShapeInversion
 import Flapjack.CrepeProgramSourceAssignmentInversion
 import Flapjack.CrepeProgramRecordAssignmentConstructor
+import Flapjack.CrepeNestedDecsAssignmentInversion
 import Flapjack.CrepeSequenceCorrectness
 import Flapjack.CrepeConditionalCorrectness
 import Flapjack.CrepeLoopCorrectness

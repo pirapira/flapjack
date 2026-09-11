@@ -1588,6 +1588,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   embedded return programs, handler labels, and paired FFI cut sets; preserve
   that metadata through SSA, clash analysis, colouring, executable semantics,
   and the RISC-V/Word-to-Stack consumers.
+- [x] Preserve SSA-generated embedded return and handler programs through the
+  fixed-width Word-to-Nat adapter, so StackLang lowering does not erase caller
+  restoration, ABI return moves, or continuation code.
 - [x] Port CakeML's downstream StackAlloc insertion traversal and section
   compiler, including fresh-label reservation, continuation recursion, and
   the generated GC-stub section. The collector body remains a separate

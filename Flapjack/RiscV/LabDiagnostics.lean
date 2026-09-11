@@ -14,7 +14,6 @@ namespace Flapjack.RiscV
 
 inductive LabUnsupportedFeature where
   | heapAlloc
-  | install
   | halt
   | loweringFailure
   deriving DecidableEq, Repr
@@ -35,7 +34,6 @@ def labCompileAsmChecked [NeZero width] (context : WordFfiContext)
     Except LabLoweringError (List (Instruction width)) :=
   match operation with
   | .heapAlloc _ => .error (labLoweringError sectionId position .heapAlloc)
-  | .install => .error (labLoweringError sectionId position .install)
   | .halt => .error (labLoweringError sectionId position .halt)
   | operation =>
       match labCompileAsm context sectionId labels position operation with

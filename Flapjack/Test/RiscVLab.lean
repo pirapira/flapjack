@@ -12,7 +12,14 @@ example :
 example :
     compileLabSectionChecked (width := 64) { services := [] }
       ⟨8, [.labAsm (.install : LabAsm (Word 64)) [] 0]⟩ =
-      .error { sectionId := 8, position := 0, feature := .install } := by
+      .ok [.jal 0 (0 - BitVec.ofNat 64 32)] := by
+  rfl
+
+example :
+    compileLabSectionChecked (width := 64) { services := [] }
+      ⟨8, [.asm (.tick : LabPlain (Word 64)) [] 0,
+        .labAsm (.install : LabAsm (Word 64)) [] 0]⟩ =
+      .ok [.addi 0 0 0, .jal 0 (0 - BitVec.ofNat 64 36)] := by
   rfl
 
 example :

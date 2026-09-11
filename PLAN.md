@@ -2289,6 +2289,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add the compositional source-word shared-memory store correctness rule,
   including value-first lowering, fresh temporary stability, handler state,
   and restoration of the temporary local.
+- [x] Add the compositional source-word shared-memory load correctness rule,
+  connecting word-destination validity, source memory reads, and the Crep
+  shared-memory handler state relation.
 - [x] Add the relation-aware normally-completing sequence rule for the program
   correctness induction.
 - [x] Add relation-aware conditional branch rules for both source condition

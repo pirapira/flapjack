@@ -79,4 +79,114 @@ theorem sourceCompiledCalleeEntry_of_lookup
       { context with functions := functionInfos declarations } declaration
   · exact hstate
 
+theorem sourceCompiledCalleeState_of_lookup
+    [LawfulBEq String] [BEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α)
+    (declarations : List (Decl α))
+    (functions : List (CompiledFunction α))
+    (name : FunName) (sourceParams : List VarName) (sourceBody : Prog α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepMemory : α → Option α)
+    (values : List (PanValue α))
+    (targetParameters : List Nat) (targetBody : CrepProg α)
+    (calleeLocals : VarName → Option (PanValue α))
+    (targetCalleeLocals : Nat → Option α)
+    (hlookup : lookupPanFunction name (sourceFunctionEntries declarations) =
+      some (sourceParams, sourceBody))
+    (hfunctions : functions = compileToCrepe context declarations)
+    (hvaluesLength : sourceParams.length = values.length)
+    (hglobals : sourceGlobals = (fun _ => none))
+    (hmemory : panValueWordMemory sourceMemory = crepMemory)
+    (hcontext : context.vars = [])
+    (hnames : sourceParams.Nodup)
+    (hshape : ∀ (parameters : List (VarName × Shape)) (returnShape : Shape),
+      lookupInfo name (functionInfos declarations) =
+        some (parameters, returnShape) →
+      ∀ parameter ∈ compileCalleeParameterList parameters values 0,
+        panShapeMatches (panValueShape structs parameter.value) parameter.shape = true)
+    (hparameterLength : ∀ (parameters : List (VarName × Shape)) (returnShape : Shape),
+      lookupInfo name (functionInfos declarations) =
+        some (parameters, returnShape) →
+      ∀ parameter ∈ compileCalleeParameterList parameters values 0,
+        parameter.slots.length = parameter.values.length)
+    (hlookupCompiled : lookupCompiledFunction name functions =
+      some (targetParameters, targetBody))
+    (hbind : bindPanValueParameters sourceParams values = some calleeLocals)
+    (hassign : assignCrepValues (fun _ => none) targetParameters
+        (values.flatMap panValueFlatWords) = some targetCalleeLocals) :
+    ∃ declaration : FunDecl α,
+      declaration.name = name ∧
+      declaration.params.map Prod.fst = sourceParams ∧
+      declaration.body = sourceBody ∧
+      targetParameters =
+        (compileFunDecl
+          { context with functions := functionInfos declarations } declaration).params ∧
+      targetBody =
+        (compileFunDecl
+          { context with functions := functionInfos declarations } declaration).body ∧
+      panValueCrepStateRel structs
+        { context with
+            functions := functionInfos declarations
+            vars := (compileParamVars declaration.params 0).1 }
+        calleeLocals sourceGlobals sourceMemory
+        { locals := targetCalleeLocals, memory := crepMemory } := by
+  obtain ⟨declaration, hname, hparams, hbody, hinfo, hcompiled, _⟩ :=
+    sourceCompiledCalleeEntry_of_lookup structs context declarations functions name
+      sourceParams sourceBody sourceGlobals sourceMemory crepMemory values hlookup
+      hfunctions hvaluesLength hglobals hmemory hcontext hnames hshape hparameterLength
+  have hcompiled' : lookupCompiledFunction name functions =
+      some ((compileFunDecl
+        { context with functions := functionInfos declarations } declaration).params,
+        (compileFunDecl
+          { context with functions := functionInfos declarations } declaration).body) := by
+    simpa [hfunctions] using hcompiled
+  have hentry : (targetParameters, targetBody) =
+      ((compileFunDecl
+        { context with functions := functionInfos declarations } declaration).params,
+        (compileFunDecl
+          { context with functions := functionInfos declarations } declaration).body) := by
+    exact Option.some.inj (hlookupCompiled.symm.trans hcompiled')
+  have hdeclarationLength : declaration.params.length = values.length := by
+    calc
+      declaration.params.length = sourceParams.length :=
+        by simpa using congrArg List.length hparams
+      _ = values.length := hvaluesLength
+  have htargetParameters : targetParameters =
+      (compileFunDecl
+        { context with functions := functionInfos declarations } declaration).params :=
+    congrArg Prod.fst hentry
+  have htargetBody : targetBody =
+      (compileFunDecl
+        { context with functions := functionInfos declarations } declaration).body :=
+    congrArg Prod.snd hentry
+  have hdeclarationNodup : (declaration.params.map Prod.fst).Nodup := by
+    rw [hparams]
+    exact hnames
+  have hbindDeclaration : bindPanValueParameters
+      (declaration.params.map Prod.fst) values = some calleeLocals := by
+    simpa [hparams] using hbind
+  have hassignCompiled : assignCrepValues (fun _ => none)
+      (compileFunDecl
+        { context with functions := functionInfos declarations } declaration).params
+      (values.flatMap panValueFlatWords) = some targetCalleeLocals := by
+    rw [← htargetParameters]
+    exact hassign
+  have hassignDeclaration : assignCrepValues (fun _ => none)
+      (compileParamVars declaration.params 0).2.1
+      (values.flatMap panValueFlatWords) = some targetCalleeLocals := by
+    rw [← compileFunDecl_params_eq_compileParamVars
+      { context with functions := functionInfos declarations } declaration]
+    exact hassignCompiled
+  have hstate := panValueCrepStateRel_compileCalleeParameterList_of_source_bind_assign
+    structs { context with functions := functionInfos declarations }
+    sourceGlobals sourceMemory crepMemory declaration.params values 0
+    hdeclarationLength calleeLocals targetCalleeLocals hglobals hmemory
+    hcontext hdeclarationNodup
+    (hshape declaration.params declaration.returnShape hinfo)
+    (hparameterLength declaration.params declaration.returnShape hinfo)
+    hbindDeclaration hassignDeclaration
+  exact ⟨declaration, hname, hparams, hbody,
+    htargetParameters, htargetBody, hstate⟩
+
 end Flapjack

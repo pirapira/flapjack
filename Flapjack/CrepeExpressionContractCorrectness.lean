@@ -134,4 +134,134 @@ theorem panValueCrepExpressionCorrect_two_word_record
                 panValueFlatValueFuel.panValueFlatValueListFuel]
             simpa [hflat] using hcompiled
 
+theorem panValueCrepExpressionCorrect_word_record
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (fields : List (SourceWordExp α))
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hsize : fields.length ≤ 32) :
+    PanValueCrepExpressionCorrect
+      (.rStruct (fields.map SourceWordExp.toExp)) := by
+  intro context structs sourceLocals sourceGlobals sourceMemory state
+    baseAddress topAddress bytesInWord sourceValue hrel hsource
+  have hwordValues : ∀ (expressions : List (SourceWordExp α))
+      (values : List (PanValue α)),
+      evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord
+        (expressions.map SourceWordExp.toExp) = some values →
+      ∃ words : List α, values = words.map (fun value => .word value) ∧
+        words.length = expressions.length := by
+    intro expressions
+    induction expressions with
+    | nil =>
+        intro values hvalues
+        cases values with
+        | nil => exact ⟨[], rfl, rfl⟩
+        | cons value values =>
+            simp [evalPanValueExps, evalPanValueExp.evalPanValueExps] at hvalues
+    | cons expression expressions ih =>
+        intro values hvalues
+        change evalPanValueExp.evalPanValueExps structs sourceLocals
+          sourceGlobals sourceMemory baseAddress topAddress bytesInWord
+          (List.map SourceWordExp.toExp (expression :: expressions)) =
+          some values at hvalues
+        cases hfield : evalPanValueExp structs sourceLocals sourceGlobals
+            sourceMemory baseAddress topAddress bytesInWord expression.toExp with
+        | none =>
+            simp [evalPanValueExp.evalPanValueExps, hfield] at hvalues
+        | some fieldValue =>
+            cases htail : evalPanValueExp.evalPanValueExps structs sourceLocals sourceGlobals
+                sourceMemory baseAddress topAddress bytesInWord
+                (expressions.map SourceWordExp.toExp) with
+            | none =>
+                simp [evalPanValueExp.evalPanValueExps, hfield, htail] at hvalues
+            | some tailValues =>
+                have hvalues' : fieldValue :: tailValues = values := by
+                    simpa [evalPanValueExp.evalPanValueExps, hfield, htail] using hvalues
+                obtain ⟨fieldWord, hfieldWord⟩ :=
+                  evalPanValueExp_sourceWord_inv structs sourceLocals sourceGlobals
+                    sourceMemory baseAddress topAddress bytesInWord context hrel.2.1
+                    (fun name value hvalue =>
+                      hlookup context sourceLocals name value hvalue)
+                    expression fieldValue hfield
+                obtain ⟨tailWords, htailWords, htailLength⟩ := ih tailValues (by
+                  simpa [evalPanValueExps] using htail)
+                refine ⟨fieldWord :: tailWords, ?_, ?_⟩
+                · simpa [hfieldWord, htailWords] using hvalues'.symm
+                · simp [htailLength]
+  have hsourceDecomp : ∃ values,
+      evalPanValueExp.evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord (fields.map SourceWordExp.toExp) =
+        some values ∧ .rStruct values = sourceValue := by
+    simpa [evalPanValueExp] using hsource
+  obtain ⟨values, hfields, hsourceValue⟩ := hsourceDecomp
+  obtain ⟨words, hwords, hwordslength⟩ := hwordValues fields values (by
+    simpa [evalPanValueExps] using hfields)
+  cases hsourceValue
+  cases hwords
+  have hsourceFields :
+      evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord
+        (fields.map SourceWordExp.toExp) =
+        some (words.map (fun value => .word value)) := by
+    simpa [evalPanValueExps] using hfields
+  obtain ⟨compiled, hcompile, hcompiled⟩ :=
+    compileSourceWordRecordExp_relation context structs sourceLocals
+      sourceGlobals sourceMemory state.locals state.memory
+      baseAddress topAddress bytesInWord
+      (hbytesInWord context bytesInWord) hrel.2.1
+      (fun name value hvalue =>
+        hlookup context sourceLocals name value hvalue)
+      fields words hsourceFields
+  have hlistFuel : ∀ values : List α,
+      panValueFlatValueFuel.panValueFlatValueListFuel
+        (values.map PanValue.word) = values.length := by
+    intro values
+    induction values with
+    | nil => simp [panValueFlatValueFuel.panValueFlatValueListFuel]
+    | cons value values ih =>
+        simp [panValueFlatValueFuel.panValueFlatValueListFuel,
+          panValueFlatValueFuel, ih, Nat.add_comm]
+  have hsizeFuel : ∀ (fuel : Nat) (values : List α),
+      values.length < fuel →
+        panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel fuel structs
+          (values.map PanValue.word) = values.length := by
+    intro fuel values
+    induction values generalizing fuel with
+    | nil => intro; simp [panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel]
+    | cons value values ih =>
+        cases fuel with
+        | zero => simp_all
+        | succ fuel =>
+            intro hlength
+            cases fuel with
+            | zero => simp_all
+            | succ fuel =>
+                simp only [List.length_cons] at hlength
+                have htail : values.length < fuel + 1 := by omega
+                simp [panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel,
+                  panValuePayloadSizeFuel, ih (fuel + 1) htail, Nat.add_comm]
+  have hlimit : panValuePayloadWithinLimit structs
+      (.rStruct (words.map (fun value => .word value))) = true := by
+    simp only [panValuePayloadWithinLimit, panValueFlatValueFuel]
+    rw [hlistFuel words]
+    have hsize :
+        panValuePayloadSizeFuel.panValuePayloadSizeFieldsFuel
+            (1 + words.length) structs (words.map PanValue.word) = words.length := by
+      simpa [Nat.add_comm] using
+        hsizeFuel (words.length + 1) words (by omega)
+    simp [panValuePayloadSizeFuel, hsize]
+    omega
+  refine ⟨hlimit, compiled, ?_, ?_⟩
+  · simpa [panValueShape, Function.comp_def] using hcompile
+  · simpa [panValueFlatWords_rStruct_word_list] using hcompiled
+
 end Flapjack

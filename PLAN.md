@@ -2382,6 +2382,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   flattened words from the resulting Crep locals.
 - [x] Couple destination-aware normal-call evaluation with the flattened
   destination read-back equation for callee correctness.
+- [x] Package destination-aware normal calls with the complete extended
+  source-to-Crep state relation required by declaration continuations.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

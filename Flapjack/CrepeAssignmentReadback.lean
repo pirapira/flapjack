@@ -116,4 +116,64 @@ theorem assignCrepValues_read_back
   rw [← hfold]
   exact hread locals names values hlength hdistinct
 
+theorem assignCrepValues_read_preserve
+    (locals : Nat → Option α) (names : List Nat) (values : List α)
+    (resultLocals : Nat → Option α) (slots : List Nat)
+    (hassign : assignCrepValues locals names values = some resultLocals)
+    (hnot : ∀ name, name ∈ names → name ∉ slots) :
+    readCrepLocals resultLocals slots = readCrepLocals locals slots := by
+  have hfold : ∀ (base : Nat → Option α) (entries : List (Nat × α)),
+      (∀ entry, entry ∈ entries → entry.1 ∉ slots) →
+      readCrepLocals
+          (entries.foldl
+            (fun current (name, value) => updateCrepLocal current name value)
+            base) slots = readCrepLocals base slots := by
+    intro base entries
+    induction entries generalizing base with
+    | nil =>
+        intro _
+        rfl
+    | cons entry entries ih =>
+        rcases entry with ⟨entryName, entryValue⟩
+        intro hentries
+        have hentry : entryName ∉ slots := by
+          exact hentries (entryName, entryValue) (by simp)
+        have htail : ∀ current, current ∈ entries → current.1 ∉ slots := by
+          intro current hcurrent
+          exact hentries current (by simp [hcurrent])
+        simp only [List.foldl]
+        rw [ih (base := updateCrepLocal base entryName entryValue) htail]
+        exact readCrepLocals_update_of_not_mem base entryName entryValue slots hentry
+  have hassign' := hassign
+  simp [assignCrepValues] at hassign'
+  rcases hassign' with ⟨_, hfoldAssign⟩
+  rw [← hfoldAssign]
+  have hzipFstMem : ∀ (remaining : List Nat)
+      (remainingValues : List α) (entry : Nat × α),
+      entry ∈ remaining.zip remainingValues → entry.1 ∈ remaining := by
+    intro remaining
+    induction remaining with
+    | nil =>
+        intro remainingValues entry hentry
+        simp at hentry
+    | cons current remaining ihRemaining =>
+        intro remainingValues entry
+        cases remainingValues with
+        | nil =>
+            intro hentry
+            simp at hentry
+        | cons currentValue remainingValues =>
+            intro hentry
+            simp only [List.zip_cons_cons, List.mem_cons] at hentry
+            rcases hentry with hentry | hentry
+            · cases hentry
+              simp
+            · exact List.mem_cons_of_mem current
+                (ihRemaining remainingValues entry hentry)
+  apply hfold
+  intro entry hentry
+  have hnameMem : entry.1 ∈ names := by
+    exact hzipFstMem names values entry hentry
+  exact hnot entry.1 hnameMem
+
 end Flapjack

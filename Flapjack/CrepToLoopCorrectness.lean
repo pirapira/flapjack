@@ -405,6 +405,85 @@ theorem crepToLoop_storeByte_const_agreement
     loopStateOfCrepState, updateMemory, updateLoopMemory,
     updateLoopLocal]
 
+/-!
+The source shared-memory handler is an explicit effect, whereas the Loop
+evaluator models the same operations through its executable memory.  These
+lemmas are the boundary contract needed to connect the two presentations.
+The handler hypotheses intentionally expose only the observation used by the
+caller: stores need the resulting memory cell, and loads need the resulting
+local.  This keeps the contract applicable to handlers that carry additional
+state in their other fields.
+-/
+
+theorem crepToLoop_shMem_store_agreement
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state targetState : CrepState α) (live : List Nat)
+    (operator : CrepMemOp) (name : Nat) (address value : α)
+    (hoperator : operator = .store ∨ operator = .store8 ∨
+      operator = .store16 ∨ operator = .store32)
+    (hvalue : state.locals name = some value)
+    (hshared : sharedMem operator name address state = some targetState)
+    (htargetMemory : targetState.memory address = some value) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.shMem operator name (.const address))).map
+        (crepControlMemoryAt address) =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 2)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.shMem operator name (.const address)))).map
+        (loopControlMemoryAt address) := by
+  rcases hoperator with rfl | rfl | rfl | rfl <;>
+    simp [evalCrepFullProg, evalCrepFullExp, hshared,
+      crepControlMemoryAt, loopControlMemoryAt,
+      loopCompileProg, loopCompileExp, loopNestedSeq,
+      evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+      loopStateOfCrepState, updateLoopMemory, hvalue,
+      htargetMemory]
+
+theorem crepToLoop_shMem_load_agreement
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state targetState : CrepState α) (live : List Nat)
+    (operator : CrepMemOp) (name : Nat) (address value : α)
+    (hoperator : operator = .load ∨ operator = .load8 ∨
+      operator = .load16 ∨ operator = .load32)
+    (hmemory : state.memory address = some value)
+    (hshared : sharedMem operator name address state = some targetState)
+    (htargetLocal : targetState.locals name = some value) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.shMem operator name (.const address))).map
+        (crepControlLocal name) =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 2)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.shMem operator name (.const address)))).map
+        (loopControlLocal name) := by
+  rcases hoperator with rfl | rfl | rfl | rfl <;>
+    simp [evalCrepFullProg, evalCrepFullExp, hmemory, hshared,
+      crepControlLocal, loopControlLocal,
+      loopCompileProg, loopCompileExp, loopNestedSeq,
+      evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+      loopStateOfCrepState, updateLoopLocal, htargetLocal]
+
 theorem crepToLoop_return_const_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

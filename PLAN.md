@@ -2390,6 +2390,11 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   continuation execution from short-circuiting Crep control results.
 - [x] Compose declaration-prefix and call-sequence inversion into a complete
   successful compiled decCall inversion theorem.
+- [x] Invert successful source decCall evaluation into either a shape-checked
+  one-value callee return followed by body evaluation or direct exception
+  propagation.
+- [x] Invert normal destination-aware Crep calls, distinguishing a normally
+  finishing callee from a returned-value destination assignment.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

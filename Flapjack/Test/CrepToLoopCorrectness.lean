@@ -30,6 +30,24 @@ def crepLoopLoadState : CrepState Nat :=
   { locals := fun name => if name == 5 then some 1 else none
     memory := fun address => if address == 100 then some 42 else none }
 
+theorem crepToLoop_store_const_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 3 crepLoopAssignState
+      (.store (.const 200) (.const 42))).map
+        (crepControlMemoryAt 200) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      6 (loopStateOfCrepState crepLoopAssignState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.store (.const 200) (.const 42)))).map
+        (loopControlMemoryAt 200) := by
+  exact crepToLoop_store_const_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 2 crepLoopAssignState [] 200 42
+
 theorem crepToLoop_assign_load32_const_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ _ _ => none) 0 100 3 crepLoopLoadState

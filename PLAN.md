@@ -2182,6 +2182,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   temporary-address sequence and memory-state regression.
 - [x] Prove the constant-address `loadByte` assignment boundary and regress
   its temporary-address sequence against the Loop memory semantics.
+- [x] Prove constant store Crep-to-Loop agreement through an explicit memory
+  projection and executable memory-update regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

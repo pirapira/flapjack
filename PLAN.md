@@ -2370,6 +2370,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   correctness rule, applying recursive body correctness.
 - [x] Generalize declaration-call source/Crep composition to independent
   source and target fuels.
+- [x] Prove raised declaration-call propagation through temporary-local
+  restoration, including independent source/target fuel accounting.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

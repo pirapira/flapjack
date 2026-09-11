@@ -1127,6 +1127,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   updates, including spilled source materialization.
 - [x] Extend the Word-to-Stack boundary through conditions, loops, returns,
   calls, exception handlers, special stores, and FFI operations.
+- [x] Port the CakeML `num_stack_ret`/`copy_ret` StackLang carriers, including
+  the handler-frame offset and conditional stack-free operation, with ordinary
+  and handler-return regressions. Wiring this carrier into the complete
+  allocator-aware call lowering remains part of the full pass theorem.
 - [x] Marshal Word-to-Stack FFI arguments into the x10--x13 ABI registers,
   including spilled sources and an explicit clobber-safety boundary.
 - [x] Prove the individual Word-to-Stack FFI argument move preserves its

@@ -2388,6 +2388,11 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   are arbitrary scalar source expressions.
 - [x] Lift generalized record-field projection correctness through the generic
   program return constructor.
+- [x] Add the closed-constant external-call correctness constructor, with an
+  explicit source/Crep FFI correspondence and target final-event guard.
+- [x] Add the whole-program syntax induction assembly for the compositional
+  source-to-Crep correctness predicate, including explicit handler-aware call
+  and recursive declaration-call premises.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

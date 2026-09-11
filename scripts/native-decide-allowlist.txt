@@ -48,9 +48,10 @@
 # Two named executions are intentional here: one checks the linked RISC-V
 # image and one checks the compiled Loop evaluator before the image backend.
 # The third theorem is a named source-to-Crep semantic agreement for the
-# caught-handler FFI path; kernel reduction stalls in compileExp, so it cannot
-# be replaced by decide +kernel or #guard.
-3 Flapjack/Test/FullSsaHandlerFfi.lean
+# caught-handler FFI path.  The fourth checks the consolidated Crepe/Loop
+# caught-handler FFI result; both run compileExp, where kernel reduction
+# stalls, so they cannot be replaced by decide +kernel or #guard.
+4 Flapjack/Test/FullSsaHandlerFfi.lean
 1 Flapjack/Test/CorrectnessFfi.lean
 1 Flapjack/Test/SourceToLoop.lean
 

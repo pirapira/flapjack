@@ -13,7 +13,10 @@ instantiate it once its callee/handler relation is available.
 
 This theorem is the Lean counterpart of the case-assembly layer surrounding
 CakeML's `pc_compile_correct`: individual constructor proofs remain separate,
-and this result performs only the final syntax induction.
+and this result performs the final syntax induction.  In particular, the
+handler stored in a call's metadata is included in the well-founded induction;
+call correctness therefore receives the handler proof instead of treating it
+as an unrelated top-level obligation.
 -/
 
 namespace Flapjack
@@ -56,6 +59,10 @@ theorem panValueCrepProgramCorrect_induction
       (info : Option (Option (VarKind × VarName) ×
         Option (ExceptionId × VarName × Prog α)))
       (name : FunName) (args : List (Exp α)),
+      (match info with
+       | some (_, some (_, _, handler)) =>
+           PanValueCrepProgramCorrect handler
+       | _ => True) →
       PanValueCrepProgramCorrect (.call info name args))
     (hdecCall : ∀ (name : VarName) (shape : Shape) (function : FunName)
       (args : List (Exp α)) (body : Prog α),
@@ -92,7 +99,21 @@ theorem panValueCrepProgramCorrect_induction
     | .while condition body => hwhile condition body (go body)
     | .break => hbreak
     | .continue => hcontinue
-    | .call info name args => hcall info name args
+    | .call info name args =>
+        hcall info name args (by
+          cases info with
+          | none => exact True.intro
+          | some info =>
+              cases info with
+              | mk destination handlerInfo =>
+                  cases handlerInfo with
+                  | none => exact True.intro
+                  | some handler =>
+                      cases handler with
+                      | mk exception handlerInfo =>
+                          cases handlerInfo with
+                          | mk handlerVar handlerProgram =>
+                              exact go handlerProgram)
     | .decCall name shape function args body =>
         hdecCall name shape function args body (go body)
     | .extCall function configuration configurationLength array arrayLength =>

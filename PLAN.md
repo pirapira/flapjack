@@ -2393,6 +2393,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add the whole-program syntax induction assembly for the compositional
   source-to-Crep correctness predicate, including explicit handler-aware call
   and recursive declaration-call premises.
+- [x] Make the program-correctness induction recurse through call-handler
+  programs stored in call metadata, so handler correctness is supplied by the
+  same well-founded induction rather than as an unrelated external premise.
 - [x] Expose the source ExtCall intermediate argument-list and FFI-result
   boundary for the generalized correctness constructor.
 - [x] Invert a successful source ExtCall value-pattern match into four word
@@ -2478,6 +2481,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   temporary-path obligation.
 - [x] Re-express temporary-expression freshness as a compiled-variable bound,
   with a shared arithmetic lemma deriving exclusion of all fresh names.
+- [x] Add reusable variable-support lemmas for compiled `loadShape`, field
+  selection, and expression-list heads, preparing the compiler-side bound
+  proof for nested `Exp` recursion.
 - [x] Move temporary-assignment destination and fresh-slot derivation into the
   generic constructor, leaving compiled-expression freshness as the remaining
   temporary-path obligation.

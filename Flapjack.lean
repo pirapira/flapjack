@@ -13,6 +13,7 @@ import Flapjack.Static
 import Flapjack.Parser
 import Flapjack.Crepe
 import Flapjack.PanToCrep
+import Flapjack.CrepeCompileExpVariables
 import Flapjack.Compile
 import Flapjack.Semantics
 import Flapjack.CrepeSemantics

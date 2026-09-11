@@ -2437,6 +2437,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   recovering the structured record of evaluated words.
 - [x] Invert matching flattened word-record shapes to recover the exact
   `Shape.comb` destination shape used by the assignment case.
+- [x] Package successful source local-assignment evaluation into explicit
+  right-hand-side, old-destination, shape-preservation, and updated-result
+  witnesses for the compositional assignment constructor.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

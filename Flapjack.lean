@@ -33,6 +33,7 @@ import Flapjack.CrepeRaiseCorrectness
 import Flapjack.CrepeReturnCorrectness
 import Flapjack.CrepeSourceWordReturnCorrectness
 import Flapjack.CrepeSourceWordAssignmentCorrectness
+import Flapjack.CrepeSourceWordStoreCorrectness
 import Flapjack.CrepeSequenceControlRelation
 import Flapjack.CrepeCallRelation
 import Flapjack.CrepeFfiRelation

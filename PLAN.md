@@ -2433,6 +2433,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   shapes for reuse by the full assignment induction case.
 - [x] Add converse inversion for successful flattened assignment sequences,
   recovering the exact target local update at arbitrary fuel.
+- [x] Add source-side inversion for successful scalar-word record expressions,
+  recovering the structured record of evaluated words.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

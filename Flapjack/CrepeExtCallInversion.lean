@@ -57,4 +57,36 @@ theorem evalPanValueExtCall_values
       unfold evalPanValueExtCallValues
       exact hsource'
 
+theorem evalPanValueExtCallValues_word_inv
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (handler : PanValueFfiHandler α) (function : FunName)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (values : List (PanValue α))
+    (sourceResult : PanValueControlResult α)
+    (hresult : evalPanValueExtCallValues handler function locals globals memory
+      values = some sourceResult) :
+    ∃ configuration configurationLength array arrayLength locals',
+      values = [.word configuration, .word configurationLength,
+        .word array, .word arrayLength] ∧
+      handler function configuration configurationLength array arrayLength locals =
+        some locals' ∧
+      sourceResult = .normal locals' globals memory := by
+  simp only [evalPanValueExtCallValues] at hresult
+  split at hresult
+  · rename_i _ _ _ _ _ _ _ _ _ _ _ _ _ _ values configuration
+      configurationLength array arrayLength
+    cases hhandler : handler function configuration configurationLength array
+        arrayLength locals with
+    | none =>
+        simp [hhandler] at hresult
+    | some locals' =>
+        refine ⟨configuration, configurationLength, array, arrayLength,
+          locals', rfl, hhandler, ?_⟩
+        simp [hhandler] at hresult
+        exact hresult.symm
+  · simp_all
+
 end Flapjack

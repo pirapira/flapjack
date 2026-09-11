@@ -2176,6 +2176,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   generated empty-prefix sequence and assigned-local observation.
 - [x] Prove the local-variable assignment Crep-to-Loop boundary and regress
   its state-observation behavior with an executable test.
+- [x] Factor assignment simulation through a reusable empty-prefix
+  Crep-to-Loop theorem with an explicit expression-value relation.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

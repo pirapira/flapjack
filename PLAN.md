@@ -2372,6 +2372,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   source and target fuels.
 - [x] Prove raised declaration-call propagation through temporary-local
   restoration, including independent source/target fuel accounting.
+- [x] Generalize declaration restoration and control transport to arbitrary
+  temporary lists and shapes.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

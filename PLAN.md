@@ -2416,6 +2416,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   the normally completed recursive callee body.
 - [x] Compose recursive callee program correctness with an ordinary returned
   call and its caller-local/callee-memory result state.
+- [x] Compose recursive callee program correctness with an ordinary raised
+  call and its caller-local/callee-memory result state.
 - [x] Generalize state extension across callee-produced globals and memory,
   and connect recursive callee correctness to destination-aware call state.
 - [x] Prove structured source and compiled Crep branch selection agree for a

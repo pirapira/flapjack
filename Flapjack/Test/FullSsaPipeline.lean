@@ -59,6 +59,34 @@ def fullSsaMainGraphImage : Option (List (RiscV.Instruction 64)) :=
     (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
     fullSsaPipelineRemoveConfig fullSsaMainDeclarations
 
+def fullSsaBitmapLookupEntry (label : Nat)
+    : List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64)) →
+      Option (RiscV.Word 64)
+  | [] => none
+  | (candidate, entry, _) :: sections =>
+      if candidate == label then some entry
+      else fullSsaBitmapLookupEntry label sections
+
+def fullSsaMainBitmapSimpleGcMachineResult :
+    Option (List (RiscV.Word 64)) := do
+  let result ← fullSsaMainBitmapSimpleGcTargetLinked
+  let sections := result.2
+  let entry ← fullSsaBitmapLookupEntry 3 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  let returnAddress := BitVec.ofNat 64 (4 * image.length)
+  RiscV.executeFunctionAt 10000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
+
+def fullSsaEntryBitmapSimpleGcMachineResult :
+    Option (List (RiscV.Word 64)) := do
+  let result ← fullSsaEntryBitmapSimpleGcLinked
+  let sections := result.2
+  let entry ← fullSsaBitmapLookupEntry 3 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  let returnAddress := BitVec.ofNat 64 (4 * image.length)
+  RiscV.executeFunctionAt 10000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
+
 /-! Regression for the full-SSA entry sequence through graph allocation and
     Word-to-Stack lowering. -/
 
@@ -96,6 +124,14 @@ example :
 
 #guard
     fullSsaMainGraphImage.isSome
+
+theorem fullSsaMain_bitmap_simple_gc_machine_execution :
+    fullSsaMainBitmapSimpleGcMachineResult = some [BitVec.ofNat 64 7] := by
+  native_decide
+
+theorem fullSsaEntry_bitmap_simple_gc_machine_execution :
+    fullSsaEntryBitmapSimpleGcMachineResult = some [BitVec.ofNat 64 9] := by
+  native_decide
 
 theorem fullSsaMain_compiled_execution :
     (do

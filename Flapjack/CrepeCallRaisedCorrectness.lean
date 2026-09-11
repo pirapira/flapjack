@@ -35,7 +35,9 @@ theorem compile_full_pan_value_call_raised_of_body_correct
     (sourceException : ExceptionId) (sourceValue : PanValue α)
     (argumentValues : List α) (targetCalleeLocals : Nat → Option α)
     (targetCallee : CrepState α) (target : CrepState α)
-    (crepException : α) (targetParameters : List Nat)
+    (crepException : α)
+    (destinations : Option (List Nat))
+    (targetParameters : List Nat)
     (sourceBody : Prog α) (targetBody : CrepProg α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (hbodyCorrect : PanValueCrepProgramCorrect sourceBody)
@@ -60,7 +62,8 @@ theorem compile_full_pan_value_call_raised_of_body_correct
     (hassign : assignCrepValues (fun _ => none) targetParameters argumentValues =
       some targetCalleeLocals)
     (hcrepCall : evalCrepFullCall functions crepPrimitive ffi sharedMem
-      baseAddress topAddress (targetFuel + 1) caller none function
+      baseAddress topAddress (targetFuel + 1) caller
+        (destinations.map (fun ds => (ds, (none : Option (α × CrepProg α))))) function
       compiledArguments = some (.raised target crepException)) :
     panValueCrepControlRel structs context exceptionRel
       (.raised (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
@@ -88,8 +91,13 @@ theorem compile_full_pan_value_call_raised_of_body_correct
         some (CrepControlResult.raised
           { caller with memory := targetCallee.memory } crepException) =
           some (CrepControlResult.raised target crepException) := by
-      simpa [evalCrepFullCall, hcrepArguments, hlookup, hassign, hcrepBody]
-        using hcrepCall
+      cases destinations with
+      | none =>
+          simpa [evalCrepFullCall, hcrepArguments, hlookup, hassign, hcrepBody]
+            using hcrepCall
+      | some destinations =>
+          simpa [evalCrepFullCall, hcrepArguments, hlookup, hassign, hcrepBody]
+            using hcrepCall
     have hresult := Option.some.inj hsome
     injection hresult
   have hcallRel := panValueCrepControlRel_call_raised_of_contexts

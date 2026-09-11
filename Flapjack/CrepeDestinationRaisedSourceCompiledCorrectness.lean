@@ -1,14 +1,15 @@
-import Flapjack.SourceCompiledRaisedCallPair
+import Flapjack.SourceCompiledDestinationRaisedCallPair
 import Flapjack.CrepeCallRaisedCorrectness
 
 /-!
-End-to-end correctness for an ordinary raised call from paired source/Crep
-evaluation witnesses.
+Correctness composition for a raised call whose Crep metadata carries
+destinations.  Raised results bypass destination assignment, but the
+destination-aware call is the form generated for declaration calls.
 -/
 
 namespace Flapjack
 
-theorem compile_full_pan_value_call_raised_of_source_compiled_call
+theorem compile_full_pan_value_destination_call_raised_of_source_compiled_call
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -28,7 +29,7 @@ theorem compile_full_pan_value_call_raised_of_source_compiled_call
     (baseAddress topAddress bytesInWord : α)
     (sourceFuel targetFuel : Nat)
     (function : FunName) (arguments : List (Exp α))
-    (compiledArguments : List (CrepExp α))
+    (compiledArguments : List (CrepExp α)) (destinations : List Nat)
     (sourceCalleeLocals sourceBodyLocals : VarName → Option (PanValue α))
     (sourceCalleeGlobals : VarName → Option (PanValue α))
     (sourceCalleeMemory : α → Option (PanValue α))
@@ -69,7 +70,8 @@ theorem compile_full_pan_value_call_raised_of_source_compiled_call
       some (.raised (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
         sourceException sourceValue))
     (hcrepCall : evalCrepFullCall functions crepPrimitive ffi sharedMem
-      baseAddress topAddress (targetFuel + 1) caller none function compiledArguments =
+      baseAddress topAddress (targetFuel + 1) caller
+      (some (destinations, none)) function compiledArguments =
       some (.raised target crepException))
     (hcalleeCorrect : ∀ declaration : FunDecl α,
       PanValueCrepProgramCorrect declaration.body) :
@@ -83,16 +85,15 @@ theorem compile_full_pan_value_call_raised_of_source_compiled_call
       hsourceArguments, hlookupSource, hbind, hsourceBody, hnameDeclaration,
       hparams, hbodyDeclaration, hcompiledValues, hlookupCompiled,
       htargetParameters, htargetBody, hcompileBody, hassign, hcrepBody,
-      htarget, hstate⟩ := sourceCompiledRaisedCallPair
+      htarget, hstate⟩ := sourceCompiledDestinationRaisedCallPair
     functionContext structs declarations sourceFunctions functions
     (fun _ => none) sourceGlobals sourceMemory caller caller.memory
     primitive sourceHandler crepPrimitive ffi sharedMem
-    baseAddress topAddress bytesInWord sourceFuel targetFuel
-    function arguments compiledArguments sourceCalleeGlobals sourceCalleeMemory
-    sourceException sourceValue target crepException hsourceFunctions hfunctions
-    hcontext hglobals hmemory hshape hparameterLength hnames
-    (fun sourceValues targetValues => by
-      exact hargumentValues sourceValues targetValues)
+    baseAddress topAddress bytesInWord sourceFuel targetFuel none none none
+    function arguments compiledArguments destinations sourceCalleeGlobals
+    sourceCalleeMemory sourceException sourceValue target crepException
+    hsourceFunctions hfunctions hcontext hglobals hmemory hshape hparameterLength hnames
+    (fun sourceValues targetValues => hargumentValues sourceValues targetValues)
     hsourceCall hcrepCall
   let calleeContext : CompileContext α :=
     { functionContext with
@@ -126,7 +127,8 @@ theorem compile_full_pan_value_call_raised_of_source_compiled_call
     baseAddress topAddress bytesInWord sourceFuel targetFuel function compiledArguments
     sourceCalleeLocals sourceBodyLocals sourceCalleeGlobals sourceMemory sourceCalleeMemory
     sourceException sourceValue compiledValues targetCalleeLocals targetCallee target
-    crepException none targetParameters sourceBody targetBody exceptionRel hbodyCorrect hstate'
+    crepException (some destinations) targetParameters sourceBody targetBody
+    exceptionRel hbodyCorrect hstate'
     hsourceBody hcompileBody' hcrepBody hcompiledValues hlookupCompiled hassign hcrepCall
 
 end Flapjack

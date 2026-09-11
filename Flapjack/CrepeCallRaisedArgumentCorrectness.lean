@@ -98,7 +98,7 @@ theorem compile_full_pan_value_call_raised_of_expression_correct
     bytesInWord sourceFuel targetFuel function compiledArguments sourceCalleeLocals
     sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory sourceCalleeMemory
     sourceException sourceValue
-    argumentValues targetCalleeLocals targetCallee target crepException
+    argumentValues targetCalleeLocals targetCallee target crepException none
     targetParameters sourceBody targetBody exceptionRel hbodyCorrect hrelCallee
     hsourceBody hcompileBody hcrepBody hcompiledTarget hlookup hassign hcrepCall
 

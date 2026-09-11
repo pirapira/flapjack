@@ -2484,6 +2484,15 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add reusable variable-support lemmas for compiled `loadShape`, field
   selection, and expression-list heads, preparing the compiler-side bound
   proof for nested `Exp` recursion.
+- [x] Prove that every variable emitted by `compileExp` is below the
+  compilation context bound whenever all referenced context slots are bounded,
+  including nested expression-list recursion and all lowering fallbacks.
+- [x] Integrate the compiler-side `compileExp` bound into the local-assignment
+  correctness dispatcher, deriving temporary-expression freshness instead of
+  requiring it as a separate compiled-list premise.
+- [x] Prove that every slot emitted by `compileParamVars` is below the final
+  parameter offset, exposing both strict and non-strict forms for generated
+  compiler contexts.
 - [x] Move temporary-assignment destination and fresh-slot derivation into the
   generic constructor, leaving compiled-expression freshness as the remaining
   temporary-path obligation.

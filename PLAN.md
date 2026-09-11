@@ -2414,6 +2414,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   ordinary callee state to the caller-local/callee-memory result state.
 - [x] Invert normal ordinary Crep calls with no destination metadata, exposing
   the normally completed recursive callee body.
+- [x] Compose recursive callee program correctness with an ordinary returned
+  call and its caller-local/callee-memory result state.
 - [x] Generalize state extension across callee-produced globals and memory,
   and connect recursive callee correctness to destination-aware call state.
 - [x] Prove structured source and compiled Crep branch selection agree for a

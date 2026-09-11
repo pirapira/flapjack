@@ -18,6 +18,66 @@ example :
   all_goals decide
 
 example :
+    (evalWordProg (zeroState 32)
+        (.shareInst .store8 1 (.const (BitVec.ofNat 32 16)))).map
+        (fun state => state.memory) =
+      (evalWordProg (zeroState 32)
+        (wordSsaRenameProgram
+          ({ current := [], next := 4 } : WordSsaState)
+          (.shareInst .store8 1 (.const (BitVec.ofNat 32 16)))).2).map
+        (fun state => state.memory) := by
+  apply evalWordProg_ssaRename_program_share_store8_const
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  · rfl
+  all_goals decide
+
+example :
+    (evalWordProg (zeroState 32)
+        (.shareInst .store16 1 (.const (BitVec.ofNat 32 16)))).map
+        (fun state => state.memory) =
+      (evalWordProg (zeroState 32)
+        (wordSsaRenameProgram
+          ({ current := [], next := 4 } : WordSsaState)
+          (.shareInst .store16 1 (.const (BitVec.ofNat 32 16)))).2).map
+        (fun state => state.memory) := by
+  apply evalWordProg_ssaRename_program_share_store16_const
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  · rfl
+  all_goals decide
+
+example :
+    (evalWordProg (zeroState 32)
+        (.shareInst .store32 1 (.const (BitVec.ofNat 32 16)))).map
+        (fun state => state.memory) =
+      (evalWordProg (zeroState 32)
+        (wordSsaRenameProgram
+          ({ current := [], next := 4 } : WordSsaState)
+          (.shareInst .store32 1 (.const (BitVec.ofNat 32 16)))).2).map
+        (fun state => state.memory) := by
+  apply evalWordProg_ssaRename_program_share_store32_const
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  · rfl
+  all_goals decide
+
+example :
     ∃ source' target',
       evalWordProg (zeroState 32) (.inst (.mem .load 1 2)) = some source' ∧
       evalWordProg (zeroState 32)

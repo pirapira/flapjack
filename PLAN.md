@@ -2442,6 +2442,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   witnesses for the compositional assignment constructor.
 - [x] Prove transitivity of the Pancake shape-matching relation, composing
   source assignment preservation with the compiler-context shape relation.
+- [x] Invert a successful match against a flat word-record shape, recovering
+  the anonymous record and its word payload length.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

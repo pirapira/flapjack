@@ -240,6 +240,7 @@ import Flapjack.RiscV.CorrectnessColour
 import Flapjack.RiscV.CorrectnessFullSsaCounted
 import Flapjack.RiscV.AllocatorDriver
 import Flapjack.RiscV.WordToStack
+import Flapjack.RiscV.CorrectnessColourConditional
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.CorrectnessBackend
 import Flapjack.RiscV.StepCorrectness

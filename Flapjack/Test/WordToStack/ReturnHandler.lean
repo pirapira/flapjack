@@ -9,6 +9,14 @@ namespace Flapjack.RiscV
 def returnHandlerConversionProgram : WordProg (Word 64) :=
   .seq (.move 0 [(2, 4)]) (.return 0 [2])
 
+def returnHandlerCodeConfig : WordStackConfig :=
+  { locations := [(7, .register 5)]
+    scratch := 31
+    stackBase := 10 }
+
+def returnHandlerNatProgram : WordProg Nat :=
+  .assign 7 (.const 9)
+
 example :
     wordProgToNat
         (.call (some ([2], ([], []), returnHandlerConversionProgram, 7, 8))
@@ -17,6 +25,30 @@ example :
         (some ([2], ([], []), wordProgToNat returnHandlerConversionProgram, 7, 8))
         (some 3) [] none := by
   simp [wordProgToNat]
+
+example :
+    wordStackEmbeddedReturnCode returnHandlerCodeConfig
+      (some ([2], ([], []), returnHandlerNatProgram, 7, 8)) =
+      some (.const 5 9) := by
+  simp [wordStackEmbeddedReturnCode, wordToStackProgNat,
+    wordStackCompileExpNat, wordStackWritePhysicalNat,
+    wordStackLocation, lookupNatInfo, returnHandlerCodeConfig,
+    returnHandlerNatProgram]
+
+example :
+    wordToStackProgNat returnHandlerCodeConfig
+      (.call (some ([7], ([], []), returnHandlerNatProgram, 12, 13))
+        (some 3) [] none) =
+      some (wordToStackCallNoHandler false 3 0 0 31 [7]
+        (.const 5 9) 0 0) := by
+  simp [wordToStackProgNat,
+    wordStackCompileExpNat, wordStackWritePhysicalNat,
+    wordStackLocation, lookupNatInfo, wordStackMovesToPhysical,
+    wordStackPhysicalMovesTo, wordStackParallelLocationMove,
+    wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
+    wordStackLocationMoveRemoveDestination, wordStackLocationMove,
+    wordStackJoin,
+    returnHandlerCodeConfig, returnHandlerNatProgram]
 
 example :
     wordProgToNat

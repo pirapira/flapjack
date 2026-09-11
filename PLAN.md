@@ -286,6 +286,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   calls, exceptions, returns, shared memory, and FFI.
 - [x] Add the initial Word IR and Loop-to-Word lowering for register mapping,
   expressions, memory instructions, loops, calls, returns, and FFI.
+- [x] Preserve and recursively lower embedded SSA return continuations at the
+  concrete Word-to-Stack boundary, including handler-bearing calls, and update
+  the pipeline address regression for the resulting emitted layout.
 - [x] Port the HOL `pan_simp` sequence-association and tail-call normalization
   pass, including recursive call-handler traversal.
 - [x] Port the core `pan_structs` named-shape, field-reordering, expression,

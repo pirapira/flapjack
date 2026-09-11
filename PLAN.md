@@ -2458,6 +2458,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   compiler's `distinctLists` guard.
 - [x] Generalize the direct local-assignment correctness constructor from
   flat word records to arbitrary flattened Pancake values.
+- [x] Generalize the temporary local-assignment correctness constructor to
+  arbitrary flattened Pancake values, composing fresh nested declarations,
+  assignment-sequence inversion, restoration, and generic state updates.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

@@ -11,6 +11,69 @@ callee-entry correctness theorem.
 
 namespace Flapjack
 
+theorem lookupInfo_none_of_name_not_mem
+    [LawfulBEq String]
+    (name : String) (entries : InfoMap β)
+    (hname : name ∉ entries.map Prod.fst) :
+    lookupInfo name entries = none := by
+  induction entries with
+  | nil => rfl
+  | cons entry entries ih =>
+      rcases entry with ⟨candidate, value⟩
+      simp only [List.map_cons, List.mem_cons] at hname
+      by_cases hcandidate : candidate = name
+      · exact False.elim (hname (Or.inl hcandidate.symm))
+      · simp [lookupInfo, hcandidate]
+        exact ih (fun hmem => hname (Or.inr hmem))
+
+theorem lookupInfo_some_mem
+    [LawfulBEq String]
+    (name : String) (entries : InfoMap β) (value : β)
+    (hlookup : lookupInfo name entries = some value) :
+    (name, value) ∈ entries := by
+  induction entries with
+  | nil => simp [lookupInfo] at hlookup
+  | cons entry entries ih =>
+      rcases entry with ⟨candidate, candidateValue⟩
+      by_cases hcandidate : candidate = name
+      · subst candidate
+        simp [lookupInfo] at hlookup
+        cases hlookup
+        simp
+      · simp [lookupInfo, hcandidate] at hlookup
+        have hmem := ih hlookup
+        simp [hmem]
+
+theorem lookupInfo_compileParamVars_none_of_name_not_mem
+    [LawfulBEq String]
+    (params : List (VarName × Shape)) (offset : Nat) (name : String)
+    (hname : name ∉ params.map Prod.fst) :
+    lookupInfo name (compileParamVars params offset).1 = none := by
+  apply lookupInfo_none_of_name_not_mem
+  intro hmem
+  apply hname
+  have hshapes := compileParamVars_preserves_parameter_shapes params offset
+  have hnames :
+      (compileParamVars params offset).1.map Prod.fst = params.map Prod.fst := by
+    simpa [Function.comp_def] using congrArg (List.map Prod.fst) hshapes
+  have hmem' : name ∈
+      (compileParamVars params offset).1.map Prod.fst := by
+    exact hmem
+  rw [hnames] at hmem'
+  exact hmem'
+
+theorem lookupInfo_compileCalleeParameterList_none_of_name_not_mem
+    [LawfulBEq String]
+    (params : List (VarName × Shape)) (values : List (PanValue α))
+    (offset : Nat) (hlength : params.length = values.length)
+    (name : String) (hname : name ∉ params.map Prod.fst) :
+    lookupInfo name
+        ((compileCalleeParameterList params values offset).map
+          (fun parameter =>
+            (parameter.name, (parameter.shape, parameter.slots)))) = none := by
+  rw [compileCalleeParameterList_metadata params values offset hlength]
+  exact lookupInfo_compileParamVars_none_of_name_not_mem params offset name hname
+
 theorem compileCalleeParameterList_slots_ge
     (params : List (VarName × Shape)) (values : List (PanValue α))
     (offset : Nat) (hlength : params.length = values.length) :

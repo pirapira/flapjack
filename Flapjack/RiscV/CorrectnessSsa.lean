@@ -491,4 +491,214 @@ theorem evalWordProg_ssaRename_longMul_destinations [NeZero width]
         hfreshLeftNonzero, hfreshRightNonzero]
     exact hsourceMemory.trans (hmemory.trans htargetMemory.symm)
 
+theorem evalWordProg_ssaRename_addCarry_destinations [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (first second : WordSsaState) (freshDestination freshCarry : Nat)
+    (destination resultCarry sourceLeft sourceRight carryIn : Nat)
+    (hfirst : wordSsaFresh ssa destination = (first, freshDestination))
+    (hsecond : wordSsaFresh first resultCarry = (second, freshCarry))
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (hdestination : destination < 32) (hresultCarry : resultCarry < 32)
+    (hsourceLeft : sourceLeft < 32) (hsourceRight : sourceRight < 32)
+    (hcarryIn : carryIn < 32)
+    (hsourceZero : readRegister source 0 = 0)
+    (htargetZero : readRegister target 0 = 0)
+    (hdestinationNonzero : destination ≠ 0)
+    (hresultCarryNonzero : resultCarry ≠ 0)
+    (hdestinationDistinct : destination ≠ resultCarry)
+    (hdestinationSourceRight : destination ≠ sourceRight)
+    (hdestinationScratch : destination ≠ 31)
+    (hresultCarryScratch : resultCarry ≠ 31)
+    (hsourceLeftScratch : sourceLeft ≠ 31)
+    (hsourceRightScratch : sourceRight ≠ 31)
+    (hcarryInScratch : carryIn ≠ 31)
+    (hsourceLeftSsa : wordSsaRead ssa sourceLeft < 32)
+    (hsourceRightSsa : wordSsaRead ssa sourceRight < 32)
+    (hcarryInSsa : wordSsaRead ssa carryIn < 32)
+    (hfreshDestinationBound : freshDestination < 32)
+    (hfreshCarryBound : freshCarry < 32)
+    (hfreshDestinationNonzero : freshDestination ≠ 0)
+    (hfreshCarryNonzero : freshCarry ≠ 0)
+    (hfreshDistinct : freshDestination ≠ freshCarry)
+    (hfreshDestinationSourceRight :
+      freshDestination ≠ wordSsaRead ssa sourceRight)
+    (hfreshDestinationScratch : freshDestination ≠ 31)
+    (hfreshCarryScratch : freshCarry ≠ 31)
+    (hfreshSourceLeftScratch : wordSsaRead ssa sourceLeft ≠ 31)
+    (hfreshSourceRightScratch : wordSsaRead ssa sourceRight ≠ 31)
+    (hfreshCarryInScratch : wordSsaRead ssa carryIn ≠ 31) :
+    ∃ source' target',
+      evalWordProg source
+          (.inst (.arith (.addCarry destination resultCarry
+            sourceLeft sourceRight carryIn))) = some source' ∧
+      evalWordProg target
+          (.inst (wordSsaRenameInst ssa
+            (.arith (.addCarry destination resultCarry
+              sourceLeft sourceRight carryIn) : WordInst)).2) = some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨freshDestination, hfreshDestinationBound⟩ ∧
+      readRegister source' ⟨resultCarry, hresultCarry⟩ =
+        readRegister target' ⟨freshCarry, hfreshCarryBound⟩ ∧
+      source'.memory = target'.memory := by
+  have hsourceLeftValue :
+      readRegister source ⟨sourceLeft, hsourceLeft⟩ =
+        readRegister target ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩ := by
+    have h := hregister sourceLeft
+    simpa [registerOfNat, hsourceLeft, hsourceLeftSsa] using h
+  have hsourceRightValue :
+      readRegister source ⟨sourceRight, hsourceRight⟩ =
+        readRegister target ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩ := by
+    have h := hregister sourceRight
+    simpa [registerOfNat, hsourceRight, hsourceRightSsa] using h
+  have hcarryInValue :
+      readRegister source ⟨carryIn, hcarryIn⟩ =
+        readRegister target ⟨wordSsaRead ssa carryIn, hcarryInSsa⟩ := by
+    have h := hregister carryIn
+    simpa [registerOfNat, hcarryIn, hcarryInSsa] using h
+  rw [wordSsaRenameInst]
+  simp only [hfirst, hsecond]
+  let sourceCode : List (Instruction width) :=
+    [.sltu 31 0 ⟨carryIn, hcarryIn⟩,
+     .add ⟨destination, hdestination⟩
+       ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩,
+     .sltu ⟨resultCarry, hresultCarry⟩
+       ⟨destination, hdestination⟩ ⟨sourceRight, hsourceRight⟩,
+     .add ⟨destination, hdestination⟩
+       ⟨destination, hdestination⟩ 31,
+     .sltu 31 ⟨destination, hdestination⟩ 31,
+     .or ⟨resultCarry, hresultCarry⟩
+       ⟨resultCarry, hresultCarry⟩ 31]
+  let targetCode : List (Instruction width) :=
+    [.sltu 31 0 ⟨wordSsaRead ssa carryIn, hcarryInSsa⟩,
+     .add ⟨freshDestination, hfreshDestinationBound⟩
+       ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+       ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩,
+     .sltu ⟨freshCarry, hfreshCarryBound⟩
+       ⟨freshDestination, hfreshDestinationBound⟩
+       ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩,
+     .add ⟨freshDestination, hfreshDestinationBound⟩
+       ⟨freshDestination, hfreshDestinationBound⟩ 31,
+     .sltu 31 ⟨freshDestination, hfreshDestinationBound⟩ 31,
+     .or ⟨freshCarry, hfreshCarryBound⟩
+       ⟨freshCarry, hfreshCarryBound⟩ 31]
+  refine ⟨executeInstructions source sourceCode,
+    executeInstructions target targetCode, ?_, ?_, ?_, ?_, ?_⟩
+  · simp [sourceCode, evalWordProg, wordArithToInstructions,
+      registerOfNat, hdestination, hresultCarry, hsourceLeft, hsourceRight,
+      hcarryIn, hdestinationScratch, hresultCarryScratch,
+      hsourceLeftScratch, hsourceRightScratch, hcarryInScratch,
+      executeInstructions]
+  · simp [targetCode, evalWordProg, wordArithToInstructions,
+      registerOfNat, hfreshDestinationBound, hfreshCarryBound,
+      hsourceLeftSsa, hsourceRightSsa, hcarryInSsa,
+      hfreshDestinationScratch, hfreshCarryScratch,
+      hfreshSourceLeftScratch, hfreshSourceRightScratch,
+      hfreshCarryInScratch, executeInstructions]
+  · have hsource := executeInstructions_addCarry_general source
+        ⟨destination, hdestination⟩ ⟨resultCarry, hresultCarry⟩
+        ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩
+        ⟨carryIn, hcarryIn⟩ hsourceZero
+        (by intro heq; apply hdestinationNonzero; exact congrArg Fin.val heq)
+        (by intro heq; apply hresultCarryNonzero; exact congrArg Fin.val heq)
+        (by intro heq; apply hdestinationDistinct; exact congrArg Fin.val heq)
+        (by intro heq; apply hdestinationSourceRight; exact congrArg Fin.val heq)
+        (by intro heq; apply hdestinationScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hresultCarryScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hsourceLeftScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hsourceRightScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hcarryInScratch; exact congrArg Fin.val heq)
+    have htarget := executeInstructions_addCarry_general target
+        ⟨freshDestination, hfreshDestinationBound⟩
+        ⟨freshCarry, hfreshCarryBound⟩
+        ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+        ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩
+        ⟨wordSsaRead ssa carryIn, hcarryInSsa⟩ htargetZero
+        (by intro heq; apply hfreshDestinationNonzero; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshCarryNonzero; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshDistinct; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshDestinationSourceRight; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshDestinationScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshCarryScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshSourceLeftScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshSourceRightScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshCarryInScratch; exact congrArg Fin.val heq)
+    have hsourceLeftResult := congrArg Prod.fst hsource
+    have htargetLeftResult := congrArg Prod.fst htarget
+    calc
+      readRegister (executeInstructions source sourceCode)
+          ⟨destination, hdestination⟩ =
+          (addCarryWords (readRegister source ⟨sourceLeft, hsourceLeft⟩)
+            (readRegister source ⟨sourceRight, hsourceRight⟩)
+            (readRegister source ⟨carryIn, hcarryIn⟩)).1 := by
+              exact hsourceLeftResult
+      _ = (addCarryWords (readRegister target
+            ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩)
+            (readRegister target ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩)
+            (readRegister target ⟨wordSsaRead ssa carryIn, hcarryInSsa⟩)).1 := by
+              rw [hsourceLeftValue, hsourceRightValue, hcarryInValue]
+      _ = readRegister (executeInstructions target targetCode)
+          ⟨freshDestination, hfreshDestinationBound⟩ := by
+              exact htargetLeftResult.symm
+  · have hsource := executeInstructions_addCarry_general source
+        ⟨destination, hdestination⟩ ⟨resultCarry, hresultCarry⟩
+        ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩
+        ⟨carryIn, hcarryIn⟩ hsourceZero
+        (by intro heq; apply hdestinationNonzero; exact congrArg Fin.val heq)
+        (by intro heq; apply hresultCarryNonzero; exact congrArg Fin.val heq)
+        (by intro heq; apply hdestinationDistinct; exact congrArg Fin.val heq)
+        (by intro heq; apply hdestinationSourceRight; exact congrArg Fin.val heq)
+        (by intro heq; apply hdestinationScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hresultCarryScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hsourceLeftScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hsourceRightScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hcarryInScratch; exact congrArg Fin.val heq)
+    have htarget := executeInstructions_addCarry_general target
+        ⟨freshDestination, hfreshDestinationBound⟩
+        ⟨freshCarry, hfreshCarryBound⟩
+        ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+        ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩
+        ⟨wordSsaRead ssa carryIn, hcarryInSsa⟩ htargetZero
+        (by intro heq; apply hfreshDestinationNonzero; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshCarryNonzero; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshDistinct; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshDestinationSourceRight; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshDestinationScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshCarryScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshSourceLeftScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshSourceRightScratch; exact congrArg Fin.val heq)
+        (by intro heq; apply hfreshCarryInScratch; exact congrArg Fin.val heq)
+    have hsourceCarryResult := congrArg Prod.snd hsource
+    have htargetCarryResult := congrArg Prod.snd htarget
+    calc
+      readRegister (executeInstructions source sourceCode)
+          ⟨resultCarry, hresultCarry⟩ =
+          (addCarryWords (readRegister source ⟨sourceLeft, hsourceLeft⟩)
+            (readRegister source ⟨sourceRight, hsourceRight⟩)
+            (readRegister source ⟨carryIn, hcarryIn⟩)).2 := by
+              exact hsourceCarryResult
+      _ = (addCarryWords (readRegister target
+            ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩)
+            (readRegister target ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩)
+            (readRegister target ⟨wordSsaRead ssa carryIn, hcarryInSsa⟩)).2 := by
+              rw [hsourceLeftValue, hsourceRightValue, hcarryInValue]
+      _ = readRegister (executeInstructions target targetCode)
+          ⟨freshCarry, hfreshCarryBound⟩ := by
+              exact htargetCarryResult.symm
+  · have hsourceMemory :
+        (executeInstructions source sourceCode).memory = source.memory := by
+      simp [sourceCode, executeInstructions, execute, writeRegister,
+        hsourceZero, hdestinationNonzero, hresultCarryNonzero]
+    have htargetMemory :
+        (executeInstructions target targetCode).memory = target.memory := by
+      simp [targetCode, executeInstructions, execute, writeRegister,
+        htargetZero, hfreshDestinationNonzero, hfreshCarryNonzero]
+    exact hsourceMemory.trans (hmemory.trans htargetMemory.symm)
+
 end Flapjack.RiscV

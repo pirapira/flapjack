@@ -91,4 +91,32 @@ example :
   · rfl
   all_goals decide
 
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32)
+          (.inst (.arith (.addCarry 1 2 6 7 9))) = some source' ∧
+      evalWordProg (zeroState 32)
+          (.inst (wordSsaRenameInst
+            ({ current := [], next := 4 } : WordSsaState)
+            (.arith (.addCarry 1 2 6 7 9) : WordInst)).2) = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨2, by decide⟩ =
+        readRegister target' ⟨8, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_addCarry_destinations
+    (ssa := ({ current := [], next := 4 } : WordSsaState))
+    (source := zeroState 32) (target := zeroState 32)
+    (first := ({ current := [(1, 4)], next := 8 } : WordSsaState))
+    (second := ({ current := [(2, 8), (1, 4)], next := 12 } : WordSsaState))
+    (freshDestination := 4) (freshCarry := 8)
+    (destination := 1) (resultCarry := 2)
+    (sourceLeft := 6) (sourceRight := 7) (carryIn := 9)
+  · rfl
+  · rfl
+  · intro name
+    rfl
+  · rfl
+  all_goals decide
+
 end Flapjack.RiscV

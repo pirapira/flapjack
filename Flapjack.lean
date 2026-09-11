@@ -313,6 +313,7 @@ import Flapjack.StackRemove
 import Flapjack.Lab
 import Flapjack.RiscV.Lab
 import Flapjack.RiscV.LabDiagnostics
+import Flapjack.RiscV.WordDiagnostics
 import Flapjack.RiscV.CorrectnessPipelineFfi
 
 /-!

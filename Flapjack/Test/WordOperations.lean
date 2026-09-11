@@ -1,4 +1,5 @@
 import Flapjack.RiscV.WordToStack
+import Flapjack.RiscV.WordDiagnostics
 
 namespace Flapjack
 
@@ -9,6 +10,20 @@ def wordOperationTestConfig : WordStackConfig :=
       (2, .register 7), (3, .register 8)]
     scratch := 31
     stackBase := 10 }
+
+example :
+    RiscV.wordToStackProgNatChecked wordOperationTestConfig
+        (.alloc 0 ([], []) : WordProg Nat) =
+      .error { path := [], feature := .alloc } := by
+  simp [RiscV.wordToStackProgNatChecked, wordToStackProgNat,
+    RiscV.wordProgFirstUnsupported]
+
+example :
+    RiscV.wordToStackProgNatChecked wordOperationTestConfig
+        (.seq .skip (.storeConsts 0 1 2 3 [] : WordProg Nat)) =
+      .error { path := [1], feature := .storeConsts } := by
+  simp [RiscV.wordToStackProgNatChecked, wordToStackProgNat,
+    RiscV.wordProgFirstUnsupported]
 
 example :
     wordStackStoreNameNat (.bitmapBase : WordStore Nat) = some .bitmapBase := by

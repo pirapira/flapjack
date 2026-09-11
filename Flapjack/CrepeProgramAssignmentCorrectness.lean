@@ -81,8 +81,8 @@ theorem panValueCrepProgramCorrect_assign_local_of_expression_contract
       compileShape = panValueShape structs _sourceValue →
       panShapeMatches (panValueShape structs _sourceValue) shape = true →
       distinctLists slots (compiled.flatMap crepExpVars) = false ∧
-      (∀ temporary ∈ freshNames context slots.length 1,
-        ∀ expression ∈ compiled, temporary ∉ crepExpVars expression))
+      (∀ expression ∈ compiled, ∀ varName ∈ crepExpVars expression,
+        varName ≤ context.maxVar))
     (hlookup : ∀ (context : CompileContext α)
       (sourceLocals : VarName → Option (PanValue α)) (oldValue : PanValue α),
       sourceLocals name = some oldValue →

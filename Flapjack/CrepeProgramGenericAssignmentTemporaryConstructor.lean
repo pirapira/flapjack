@@ -1,3 +1,4 @@
+import Flapjack.CrepeAllocationNameLemmas
 import Flapjack.CrepeAssignmentSequenceInversion
 import Flapjack.CrepeDistinctLists
 import Flapjack.CrepeLocalsRelationUpdateGeneral
@@ -36,19 +37,26 @@ theorem panValueCrepProgramCorrect_assign_local_temporary
         evalCrepFullExps state.locals state.memory baseAddress topAddress
           compiled = some values ∧
         panValueFlatWords sourceValue = values)
-    (htemporaryPath : ∀ (context : CompileContext α)
-      (_sourceValue : PanValue α) (values : List α) (compiled : List (CrepExp α))
+    (htemporaryPath : ∀ (context : CompileContext α) (structs : StructContext)
+      (_sourceValue : PanValue α) (_values : List α) (compiled : List (CrepExp α))
       (compileShape shape : Shape) (slots : List Nat),
       lookupInfo name context.vars = some (shape, slots) →
       compileExp context expression = (compiled, compileShape) →
+      compileShape = panValueShape structs _sourceValue →
+      panShapeMatches (panValueShape structs _sourceValue) shape = true →
       distinctLists slots (compiled.flatMap crepExpVars) = false ∧
-      slots.length = values.length ∧
-      CrepDistinctNames slots ∧
       (∀ temporary ∈ freshNames context slots.length 1,
-        ∀ expression ∈ compiled, temporary ∉ crepExpVars expression) ∧
-      CrepDistinctNames (freshNames context slots.length 1) ∧
-      (∀ slot ∈ slots, ∀ temporary ∈ freshNames context slots.length 1,
-        slot ≠ temporary))
+        ∀ expression ∈ compiled, temporary ∉ crepExpVars expression))
+    (hmetadata : ∀ (context : CompileContext α) (structs : StructContext)
+      (sourceValue : PanValue α)
+      (compileShape shape : Shape) (slots : List Nat) (values : List α),
+      lookupInfo name context.vars = some (shape, slots) →
+      compileShape = panValueShape structs sourceValue →
+      panShapeMatches (panValueShape structs sourceValue) shape = true →
+      slots.length = values.length ∧ CrepDistinctNames slots)
+    (hbounded : ∀ (context : CompileContext α) oldName oldShape oldSlots,
+      lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+      ∀ slot ∈ oldSlots, slot ≤ context.maxVar)
     (hlookup : ∀ (context : CompileContext α)
       (sourceLocals : VarName → Option (PanValue α)) (oldValue : PanValue α),
       sourceLocals name = some oldValue →
@@ -98,9 +106,16 @@ theorem panValueCrepProgramCorrect_assign_local_temporary
     exact panShapeMatches_trans
       (panValueShape structs sourceValue) (panValueShape structs oldValue) shape
       hvalid holdRel.1
-  obtain ⟨hnotDistinct, hslotLength, hslotsDistinct, hcompiledFresh,
-      htemporaryDistinct, hnoOverlap⟩ := htemporaryPath context sourceValue values
-    compiled compileShape shape slots hlookupName hcompile
+  obtain ⟨hnotDistinct, hcompiledFresh⟩ := htemporaryPath context structs
+    sourceValue values compiled compileShape shape slots hlookupName hcompile
+    hcompileShape hshapeNewContext
+  obtain ⟨hslotLength, hslotsDistinct⟩ := hmetadata context structs sourceValue
+    compileShape shape slots values hlookupName hcompileShape hshapeNewContext
+  have htemporaryDistinct := crepDistinctNames_freshNames context slots.length 1
+  have hslotBound : ∀ slot ∈ slots, slot ≤ context.maxVar :=
+    hbounded context name shape slots hlookupName
+  have hnoOverlap := freshNames_not_mem_of_bounded context slots.length 1 slots
+    (by omega) hslotBound
   let temporarySlots := freshNames context slots.length 1
   have htemporaryLength : temporarySlots.length = values.length := by
     simp [temporarySlots, freshNames, hslotLength]
@@ -141,8 +156,11 @@ theorem panValueCrepProgramCorrect_assign_local_temporary
       obtain ⟨temporary, htemporaryMem, htemporaryEq⟩ :=
         List.mem_map.1 hexpression
       subst expression
-      simpa [crepExpVars] using
-        (hnoOverlap slot hslot temporary htemporaryMem))
+      have hne : slot ≠ temporary := by
+        intro heq
+        apply hnoOverlap temporary htemporaryMem
+        simpa [heq] using hslot
+      simpa [crepExpVars] using hne)
     hbodyEval hbodyResult
   have hinner : innerResult = .normal { state with
       locals := updateCrepLocalList
@@ -154,8 +172,8 @@ theorem panValueCrepProgramCorrect_assign_local_temporary
     temporarySlots slots values state.memory htemporaryLength hslotLength
     hslotsDistinct
     (by
-      intro temporary htemporaryMem hslot
-      exact (hnoOverlap temporary hslot temporary htemporaryMem) rfl)
+      intro temporary htemporaryMem
+      exact hnoOverlap temporary htemporaryMem)
     rfl
   have hcrepResult : crepResult = .normal { state with
       locals := updateCrepLocalList state.locals slots values } := by

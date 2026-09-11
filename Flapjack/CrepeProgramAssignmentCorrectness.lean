@@ -73,23 +73,23 @@ theorem panValueCrepProgramCorrect_assign_local_of_expression_contract
       compileShape = panValueShape structs sourceValue →
       panShapeMatches (panValueShape structs sourceValue) shape = true →
       slots.length = values.length ∧ CrepDistinctNames slots)
-    (htemporaryPath : ∀ (context : CompileContext α)
-      (_sourceValue : PanValue α) (values : List α) (compiled : List (CrepExp α))
+    (htemporaryPath : ∀ (context : CompileContext α) (structs : StructContext)
+      (_sourceValue : PanValue α) (_values : List α) (compiled : List (CrepExp α))
       (compileShape shape : Shape) (slots : List Nat),
       lookupInfo name context.vars = some (shape, slots) →
       compileExp context expression = (compiled, compileShape) →
+      compileShape = panValueShape structs _sourceValue →
+      panShapeMatches (panValueShape structs _sourceValue) shape = true →
       distinctLists slots (compiled.flatMap crepExpVars) = false ∧
-      slots.length = values.length ∧
-      CrepDistinctNames slots ∧
       (∀ temporary ∈ freshNames context slots.length 1,
-        ∀ expression ∈ compiled, temporary ∉ crepExpVars expression) ∧
-      CrepDistinctNames (freshNames context slots.length 1) ∧
-      (∀ slot ∈ slots, ∀ temporary ∈ freshNames context slots.length 1,
-        slot ≠ temporary))
+        ∀ expression ∈ compiled, temporary ∉ crepExpVars expression))
     (hlookup : ∀ (context : CompileContext α)
       (sourceLocals : VarName → Option (PanValue α)) (oldValue : PanValue α),
       sourceLocals name = some oldValue →
       ∃ shape slots, lookupInfo name context.vars = some (shape, slots))
+    (hbounded : ∀ (context : CompileContext α) oldName oldShape oldSlots,
+      lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+      ∀ slot ∈ oldSlots, slot ≤ context.maxVar)
     (hnoalias : ∀ (context : CompileContext α) (shape : Shape) (slots : List Nat),
       lookupInfo name context.vars = some (shape, slots) →
       ∀ oldName oldShape oldSlots,
@@ -167,7 +167,7 @@ theorem panValueCrepProgramCorrect_assign_local_of_expression_contract
       ffi sharedMem baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
       sourceResult crepResult hrel hsource hcrep
   · exact panValueCrepProgramCorrect_assign_local_temporary name expression hcontract
-      htemporaryPath hlookup hnoalias context structs sourceFunctions functions
+      htemporaryPath hmetadata hbounded hlookup hnoalias context structs sourceFunctions functions
       sourceLocals sourceGlobals sourceMemory state primitive sourceHandler crepPrimitive
       ffi sharedMem baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
       sourceResult crepResult hrel hsource hcrep

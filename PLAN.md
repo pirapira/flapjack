@@ -2473,6 +2473,12 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   and discharge allocated-name distinctness inside declaration correctness.
 - [x] Derive declaration fresh-name non-overlap from the static bound that
   existing context slots lie below `context.maxVar`.
+- [x] Move temporary-assignment destination and fresh-slot derivation into the
+  generic constructor, leaving compiled-expression freshness as the remaining
+  temporary-path obligation.
+- [x] Move temporary-assignment destination and fresh-slot derivation into the
+  generic constructor, leaving compiled-expression freshness as the remaining
+  temporary-path obligation.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

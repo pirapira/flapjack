@@ -2355,6 +2355,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   temporaries and returning to the outer compilation context.
 - [x] Lift declaration restoration through the complete source/Crep control
   result relation, including raised outcomes and spill-address witnesses.
+- [x] Add the compositional arbitrary-body two-word declaration constructor,
+  applying recursive body correctness in the extended context.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

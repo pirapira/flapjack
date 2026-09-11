@@ -2431,6 +2431,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   compiler's fresh-temporary lowering path.
 - [x] Generalize local relation updates to arbitrary flattened values and
   shapes for reuse by the full assignment induction case.
+- [x] Add converse inversion for successful flattened assignment sequences,
+  recovering the exact target local update at arbitrary fuel.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

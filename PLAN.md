@@ -2409,6 +2409,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   list, isolating fresh-temporary non-interference for the `Dec` correctness case.
 - [x] Add the converse nested-declaration body extraction theorem, identifying
   target temporary values with the flat expression result.
+- [x] Prove read-back of a distinct fresh-local list after nested declaration
+  updates, recovering the flattened source value payload.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

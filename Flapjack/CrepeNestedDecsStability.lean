@@ -18,6 +18,64 @@ def updateCrepLocalList (locals : Nat → Option α) :
       updateCrepLocalList (updateCrepLocal locals name value) names values
   | _, _ => locals
 
+theorem updateCrepLocalList_of_not_mem
+    (locals : Nat → Option α) (names : List Nat) (values : List α)
+    (name : Nat) (hlength : names.length = values.length)
+    (hnot : name ∉ names) :
+    updateCrepLocalList locals names values name = locals name := by
+  induction names generalizing locals values with
+  | nil =>
+      cases values with
+      | nil => rfl
+      | cons value values => simp at hlength
+  | cons head names ih =>
+      cases values with
+      | nil => simp at hlength
+      | cons value values =>
+          have hlengthTail : names.length = values.length := by
+            simp at hlength
+            exact hlength
+          have hhead : name ≠ head := by
+            intro heq
+            apply hnot
+            simp [heq]
+          have htail : name ∉ names := by
+            intro hmem
+            apply hnot
+            simp [hmem]
+          simp only [updateCrepLocalList]
+          rw [ih (locals := updateCrepLocal locals head value)
+            (values := values) hlengthTail htail]
+          simp [updateCrepLocal, hhead]
+
+theorem readCrepLocals_updateCrepLocalList
+    [OfNat α 0]
+    (locals : Nat → Option α) (names : List Nat) (values : List α)
+    (hlength : names.length = values.length)
+    (hdistinct : CrepDistinctNames names) :
+    readCrepLocals (updateCrepLocalList locals names values) names =
+      some values := by
+  induction names generalizing locals values with
+  | nil =>
+      cases values with
+      | nil => simp [readCrepLocals]
+      | cons value values => simp at hlength
+  | cons name names ih =>
+      rcases hdistinct with ⟨hnot, htailDistinct⟩
+      cases values with
+      | nil => simp at hlength
+      | cons value values =>
+          have hlengthTail : names.length = values.length := by
+            simp at hlength
+            exact hlength
+          have htail := ih (locals := updateCrepLocal locals name value)
+            (values := values) hlengthTail htailDistinct
+          have hnameValue := updateCrepLocalList_of_not_mem
+            (updateCrepLocal locals name value) names values name
+            hlengthTail hnot
+          simp only [updateCrepLocalList, readCrepLocals]
+          simp [hnameValue, updateCrepLocal, htail]
+
 theorem crepNestedDecsEval_of_evalExps_stable
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

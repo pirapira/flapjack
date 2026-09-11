@@ -23,6 +23,7 @@ import Flapjack.CrepeRuntime
 import Flapjack.CrepeCorrectness
 import Flapjack.CrepeStateRelation
 import Flapjack.CrepeExpressionRelation
+import Flapjack.CrepeWordExpressionContract
 import Flapjack.CrepeExpressionContractCorrectness
 import Flapjack.CrepeExpressionFieldContractCorrectness
 import Flapjack.CrepeExpressionFieldGeneralCorrectness

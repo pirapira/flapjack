@@ -1,5 +1,6 @@
 import Flapjack.CrepeProgramReturnFuelRelation
 import Flapjack.CrepeProgramRelation
+import Flapjack.CrepeExpressionRelation
 
 /-!
 Program-level correctness for an arbitrary source return expression.  The
@@ -17,19 +18,7 @@ theorem panValueCrepProgramCorrect_return_of_expression_relation
     [ShiftLeft α] [ShiftRight α] [LT α]
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (expression : Exp α)
-    (hvalue : ∀ (context : CompileContext α) (structs : StructContext)
-      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
-      (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
-      (baseAddress topAddress bytesInWord : α) (sourceValue : PanValue α),
-      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
-        baseAddress topAddress bytesInWord expression = some sourceValue →
-      panValuePayloadWithinLimit structs sourceValue = true ∧
-      ∃ compiled,
-        compileExp context expression =
-          (compiled, panValueShape structs sourceValue) ∧
-        evalCrepFullExps state.locals state.memory
-          baseAddress topAddress compiled =
-          some (panValueFlatWords sourceValue)) :
+    (hvalue : PanValueCrepExpressionCorrect expression) :
     PanValueCrepProgramCorrect (.return expression) := by
   intro context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
@@ -50,7 +39,7 @@ theorem panValueCrepProgramCorrect_return_of_expression_relation
           | some sourceValue =>
               obtain ⟨hvalid, compiled, hcompile, hcompiled⟩ := hvalue
                 context structs sourceLocals sourceGlobals sourceMemory state
-                baseAddress topAddress bytesInWord sourceValue hsourceValue
+                baseAddress topAddress bytesInWord sourceValue hrel hsourceValue
               have hresult := compile_full_pan_value_return_relation_fuel
                 context structs sourceFunctions functions sourceLocals sourceGlobals
                 sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem

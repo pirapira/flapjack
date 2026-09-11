@@ -20,6 +20,7 @@ import Flapjack.CrepeRuntime
 import Flapjack.CrepeCorrectness
 import Flapjack.CrepeStateRelation
 import Flapjack.CrepeExpressionRelation
+import Flapjack.CrepeExpressionContractCorrectness
 import Flapjack.CrepeBasicControlRelation
 import Flapjack.CrepeStoreRelation
 import Flapjack.CrepeSharedMemoryRelation

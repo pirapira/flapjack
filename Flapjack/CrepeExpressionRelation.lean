@@ -17,6 +17,31 @@ cases can use this lemma without unfolding either evaluator.
 
 namespace Flapjack
 
+/-! A reusable expression contract for the program correctness induction.  The
+state relation is an explicit premise because local variables are represented
+by slots in Crep. -/
+def PanValueCrepExpressionCorrect
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (expression : Exp α) : Prop :=
+  ∀ (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (baseAddress topAddress bytesInWord : α) (sourceValue : PanValue α),
+    panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state →
+    evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression = some sourceValue →
+    panValuePayloadWithinLimit structs sourceValue = true ∧
+    ∃ compiled,
+      compileExp context expression =
+        (compiled, panValueShape structs sourceValue) ∧
+      evalCrepFullExps state.locals state.memory
+        baseAddress topAddress compiled =
+        some (panValueFlatWords sourceValue)
+
 def localisedExp (expression : Exp α) : Prop :=
   expGlobalVars expression = []
 

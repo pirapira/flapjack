@@ -107,6 +107,18 @@ theorem sourceCompiledReturnedCallPair
       evalCrepFullExps caller.locals caller.memory
         baseAddress topAddress compiledArguments = some compiledValues ∧
       lookupCompiledFunction function functions = some (targetParameters, targetBody) ∧
+      targetParameters =
+        (compileFunDecl
+          { functionContext with functions := functionInfos declarations } declaration).params ∧
+      targetBody =
+        (compileFunDecl
+          { functionContext with functions := functionInfos declarations } declaration).body ∧
+      compileProg
+          { functionContext with
+              functions := functionInfos declarations
+              vars := (compileParamVars declaration.params 0).1
+              maxVar := (compileParamVars declaration.params 0).2.2 }
+          declaration.body = targetBody ∧
       assignCrepValues (fun _ => none) targetParameters compiledValues =
         some targetCalleeLocals ∧
       evalCrepFullProg functions crepPrimitive ffi sharedMem
@@ -138,7 +150,7 @@ theorem sourceCompiledReturnedCallPair
       (sourceFunctionEntries declarations) = some (sourceParameters, sourceBody) := by
     simpa [hsourceFunctions] using hlookupSource
   obtain ⟨declaration, hname, hparams, hbody, htargetParams, htargetBody,
-      _, hstate⟩ := sourceCompiledCalleeState_of_lookup
+      hcompileBody, hstate⟩ := sourceCompiledCalleeState_of_lookup
     structs functionContext declarations functions function sourceParameters sourceBody
     sourceGlobals sourceMemory crepMemory sourceArgumentValues targetParameters targetBody
     sourceCalleeLocals targetCalleeLocals hlookupSourceDecl hfunctions
@@ -157,7 +169,7 @@ theorem sourceCompiledReturnedCallPair
     sourceBodyLocals, declaration, compiledValues, targetParameters, targetBody,
     targetCalleeLocals,
     targetCallee, hsourceArguments, hlookupSourceDecl, hbind, hsourceBody, hname,
-    hparams, hbody, hcompiledValues, hlookupCompiled, hassign, hcrepBody, htarget,
-    hstate⟩
+    hparams, hbody, hcompiledValues, hlookupCompiled, htargetParams, htargetBody,
+    hcompileBody, hassign, hcrepBody, htarget, hstate⟩
 
 end Flapjack

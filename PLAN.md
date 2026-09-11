@@ -2578,6 +2578,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   the word-valued theorem retained as a specialization.
 - [x] Assemble the word-valued ordinary-call constructor into
   `PanValueCrepProgramCorrect`, ready for the full program induction.
+- [x] Generalize the program-level call constructor to arbitrary expression
+  contracts, retaining the word-valued constructor as a specialization.
 - [x] Connect generic expression-list argument preparation to recursively
   correct returned ordinary calls and their flattened callee-result relation.
 - [x] Connect generic expression-list argument preparation to recursively

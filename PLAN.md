@@ -2380,6 +2380,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   source-to-Crep state relation for declaration/call correctness.
 - [x] Prove that distinct destination assignment reads back the assigned
   flattened words from the resulting Crep locals.
+- [x] Couple destination-aware normal-call evaluation with the flattened
+  destination read-back equation for callee correctness.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

@@ -139,6 +139,7 @@ import Flapjack.CrepeReturnedBranchSelection
 import Flapjack.CrepeDestinationReturnedInversion
 import Flapjack.SourceCompiledDestinationCallPair
 import Flapjack.SourceCompiledDestinationReturnedCall
+import Flapjack.CrepeDeclarationCallSourceCompiledCorrectness
 import Flapjack.CrepeDeclarationCallRaisedCorrectness
 import Flapjack.CrepeCallRaisedInversion
 import Flapjack.CrepeCallReturnedInversion

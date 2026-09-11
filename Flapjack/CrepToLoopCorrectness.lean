@@ -81,6 +81,41 @@ theorem crepToLoop_return_const_agreement
     evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
     loopReadLocals, updateLoopLocal, loopResultValues]
 
+/-!
+The assignment case is the first state-transforming Crep-to-Loop boundary.
+`loopCompileProg` introduces the same constant assignment after an empty
+expression-code prefix; the extra unit of fuel accounts for that generated
+sequence node.  The theorem observes the assigned slot rather than equating
+the two state representations wholesale, which is the relation consumed by
+the later Loop-to-Word proof.
+-/
+theorem crepToLoop_assign_const_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (name : Nat) (value : α) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.assign name (.const value))).map
+        (crepControlLocal name) =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 2)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live (.assign name (.const value)))).map
+        (loopControlLocal name) := by
+  simp [evalCrepFullProg, evalCrepFullExp, updateCrepLocal,
+    crepControlLocal, loopCompileProg, loopCompileExp,
+    loopNestedSeq,
+    evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+    updateLoopLocal, loopControlLocal]
+
 theorem crepToLoop_raise_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

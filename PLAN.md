@@ -2172,6 +2172,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   FFI continuation regression that observes the returned value.
 - [x] Generalize full-Crepe sequencing over source and compiled function tables
   and prove caught-handler returns short-circuit following continuations.
+- [x] Prove the constant-assignment Crep-to-Loop boundary, including its
+  generated empty-prefix sequence and assigned-local observation.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

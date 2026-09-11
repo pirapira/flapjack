@@ -69,4 +69,61 @@ theorem panValueCrepStateRel_sourceFunctionParameters_of_lookup
     structs context sourceGlobals sourceMemory crepMemory declaration values
     hdeclLength hglobals hmemory hcontext hdeclarationNames hshape hparameterLength
 
+theorem panValueCrepStateRel_sourceFunctionParameters_of_source_lookup
+    [OfNat α 0]
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (declarations : List (Decl α))
+    (name : FunName) (sourceParams : List VarName) (sourceBody : Prog α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepMemory : α → Option α)
+    (values : List (PanValue α))
+    (hlookup : lookupPanFunction name (sourceFunctionEntries declarations) =
+      some (sourceParams, sourceBody))
+    (hfunctions : context.functions = functionInfos declarations)
+    (hvaluesLength : sourceParams.length = values.length)
+    (hglobals : sourceGlobals = (fun _ => none))
+    (hmemory : panValueWordMemory sourceMemory = crepMemory)
+    (hcontext : context.vars = [])
+    (hnames : sourceParams.Nodup)
+    (hshape : ∀ (parameters : List (VarName × Shape)) (returnShape : Shape),
+      lookupInfo name (functionInfos declarations) =
+        some (parameters, returnShape) →
+      ∀ parameter ∈ compileCalleeParameterList parameters values 0,
+        panShapeMatches (panValueShape structs parameter.value) parameter.shape = true)
+    (hparameterLength : ∀ (parameters : List (VarName × Shape)) (returnShape : Shape),
+      lookupInfo name (functionInfos declarations) =
+        some (parameters, returnShape) →
+      ∀ parameter ∈ compileCalleeParameterList parameters values 0,
+        parameter.slots.length = parameter.values.length) :
+    ∃ declaration : FunDecl α,
+      declaration.name = name ∧
+      declaration.params.map Prod.fst = sourceParams ∧
+      declaration.body = sourceBody ∧
+      panValueCrepStateRel structs
+        { context with vars := (compileParamVars declaration.params 0).1 }
+        (foldCalleeParameterSource (fun _ => none)
+          (compileCalleeParameterList declaration.params values 0))
+        sourceGlobals sourceMemory
+        { locals := foldCalleeParameterLocals (fun _ => none)
+            (compileCalleeParameterList declaration.params values 0),
+          memory := crepMemory } := by
+  obtain ⟨found, hname, hparams, hbody, hinfo⟩ :=
+    lookupInfo_functionInfos_of_source_lookup
+      declarations name sourceParams sourceBody hlookup
+  have hinfoContext : lookupInfo name context.functions =
+      some (found.params, found.returnShape) := by
+    rw [hfunctions]
+    exact hinfo
+  obtain ⟨declaration, hfoundName, hfoundParams, hfoundBody,
+      hdeclarationParams, hdeclarationReturn, hstate⟩ :=
+    panValueCrepStateRel_sourceFunctionParameters_of_lookup
+      structs context declarations name sourceParams sourceBody
+      found.params found.returnShape sourceGlobals sourceMemory crepMemory values
+      hlookup hinfoContext hfunctions hvaluesLength hglobals hmemory hcontext hnames
+      (hshape found.params found.returnShape hinfo)
+      (hparameterLength found.params found.returnShape hinfo)
+  exact ⟨declaration, hfoundName, hfoundParams, hfoundBody, hstate⟩
+
 end Flapjack

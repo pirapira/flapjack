@@ -135,6 +135,40 @@ def crepLoopSharedStoreState : CrepState Nat :=
   { locals := fun name => if name == 5 then some 42 else none
     memory := fun _ => none }
 
+def crepLoopRuntimeGlobalState : CrepRuntimeState Nat Unit :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    functions := []
+    memory := fun _ => none
+    memaddrs := fun _ => true
+    shMemaddrs := fun _ => true
+    byteAlign := id
+    clock := 10
+    bigEndian := false
+    ffi := ()
+    baseAddress := 0
+    topAddress := 100 }
+
+def crepLoopRuntimeHandler : CrepRuntimeFfiHandler Nat Unit Unit :=
+  fun _ state => .returned state
+
+theorem crepRuntimeToLoop_storeGlob_regression :
+    (evalCrepRuntimeResult crepLoopRuntimeHandler (fun _ _ => none) 2
+      crepLoopRuntimeGlobalState (.storeGlob 200 (.const 42))).map
+        (fun result => result.2.globals 200) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      3 (loopStateOfCrepRuntimeState crepLoopRuntimeGlobalState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.storeGlob 200 (.const 42)))).map
+        (fun result => (loopResultState result).globals 200) := by
+  exact crepRuntimeToLoop_storeGlob_const_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] crepLoopRuntimeHandler (fun _ _ => none) 1
+    crepLoopRuntimeGlobalState [] 200 42
+
 theorem crepToLoop_control_regressions :
     ((evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ _ _ => none) 0 100 2 crepSeqInitial (.skip)).map

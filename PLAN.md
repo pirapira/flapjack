@@ -2198,6 +2198,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   and `continue`, with a combined executable regression.
 - [x] Exercise the constant-condition `ite` lowering, including its generated
   condition temporary and selected branch.
+- [x] Add the first global-aware Crep-runtime-to-Loop bridge for `storeGlob`,
+  preserving the Loop global environment and its executable regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

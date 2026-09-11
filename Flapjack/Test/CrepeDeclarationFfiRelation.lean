@@ -424,4 +424,46 @@ theorem declaration_ffi_source_to_crep_relation :
       allocatedNames, hsourceRestoredFinal, htargetRestoredFinal] using
         hresult.2.2
 
+/-! A failed host service must remain failed through the complete
+    declaration-call lowering.  This is the negative counterpart to
+    `declaration_ffi_source_to_crep_relation`: the source callee cannot
+    complete its `extCall`, and the lowered Crep callee must stop at the same
+    unavailable FFI boundary rather than accidentally reaching its return. -/
+
+def declarationFfiUnavailableSourceHandler : PanValueFfiHandler (Word 64) :=
+  fun _ _ _ _ _ _ => none
+
+def declarationFfiUnavailableCrepHandler : CrepFfiHandler (Word 64) :=
+  fun _ _ _ _ _ _ => none
+
+theorem declaration_ffi_failure_propagates :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      (fun _ _ => none) declarationFfiUnavailableSourceHandler []
+      declarationFfiSourceFunctions
+      0 100 8 21
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      declarationFfiMain = none ∧
+    evalCrepFullProg
+      (compileToCrepe declarationFfiContext declarationFfiDeclarations)
+      (fun _ _ => none) declarationFfiUnavailableCrepHandler
+      defaultCrepSharedMem 0 100 23 declarationFfiInitialState
+      (compileProg declarationFfiContext declarationFfiMain) = none := by
+  constructor
+  · simp [declarationFfiMain, declarationFfiSourceFunctions,
+      declarationFfiCalleeBody, declarationFfiUnavailableSourceHandler,
+      evalPanValueProgWithPrimitiveCallsAndFfi,
+      evalPanValueCallWithPrimitiveCallsAndFfi,
+      evalPanValueExps, evalPanValueExp, evalPanValueExp.evalPanValueExps,
+      lookupPanFunction,
+      bindPanValueParameters, updatePanValueMap]
+  · simp [declarationFfiContext, declarationFfiDeclarations,
+      declarationFfiMain, declarationFfiCalleeBody,
+      declarationFfiUnavailableCrepHandler, compileToCrepe,
+      compileFunctions, compileFunDecl, compileParamVars, functionInfos,
+      compileProg, compileExp, compileArgs, allocatedNames,
+      firstCompiledExp, nestedDecs, evalCrepFullProg,
+      evalCrepFullCall, evalCrepFullExps, evalCrepFullExp,
+      lookupCompiledFunction, assignCrepValues, updateCrepLocal,
+      restoreCrepResult]
+
 end Flapjack

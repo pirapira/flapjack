@@ -2376,6 +2376,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   temporary lists and shapes.
 - [x] Prove compositional declaration-call correctness for arbitrary result
   shapes using the generalized restoration relation.
+- [x] Lift arbitrary flattened-value local extension to a complete
+  source-to-Crep state relation for declaration/call correctness.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

@@ -2429,6 +2429,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   variable-list readback and nested-declaration restoration.
 - [x] Prove the arbitrary-word-record assignment correctness theorem for the
   compiler's fresh-temporary lowering path.
+- [x] Generalize local relation updates to arbitrary flattened values and
+  shapes for reuse by the full assignment induction case.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

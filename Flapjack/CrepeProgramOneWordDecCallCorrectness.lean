@@ -1,4 +1,4 @@
-import Flapjack.CrepeDecCallRelation
+import Flapjack.CrepeDecCallIndependentFuelRelation
 import Flapjack.CrepeProgramOneWordDeclarationControlRestoration
 import Flapjack.CrepeProgramRelation
 
@@ -30,7 +30,7 @@ theorem panValueCrepDecCall_one_normal_of_body_correct
     (crepPrimitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord : α)
-    (fuel : Nat)
+    (sourceFuel targetFuel : Nat)
     (name : VarName) (function : FunName)
     (arguments : List (Exp α)) (body : Prog α)
     (compiledArguments : List (CrepExp α))
@@ -49,7 +49,7 @@ theorem panValueCrepDecCall_one_normal_of_body_correct
     (hcompileArgs : compileArgs context arguments = compiledArguments)
     (hsourceCall : evalPanValueCallWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
-      baseAddress topAddress bytesInWord fuel
+      baseAddress topAddress bytesInWord sourceFuel
       sourceLocals sourceGlobals sourceMemory none function arguments
       =
       some (.returned (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
@@ -58,18 +58,18 @@ theorem panValueCrepDecCall_one_normal_of_body_correct
       (panValueShape structs sourceValue) .one = true)
     (hsourceBody : evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
-      baseAddress topAddress bytesInWord fuel
+      baseAddress topAddress bytesInWord sourceFuel
       (updatePanValueMap sourceLocals name sourceValue)
       sourceCalleeGlobals sourceCalleeMemory body = some sourceResult)
     (hcrepCall : evalCrepFullCall functions crepPrimitive ffi sharedMem
-      baseAddress topAddress fuel
+      baseAddress topAddress targetFuel
       { state with
           locals := initializeCrepLocals state.locals
             (allocatedNames context .one) }
       (some (allocatedNames context .one, none)) function compiledArguments =
       some (.normal callState))
     (hcrepBody : evalCrepFullProg functions crepPrimitive ffi sharedMem
-      baseAddress topAddress (fuel + 1) callState
+      baseAddress topAddress (targetFuel + 1) callState
       (compileProg
         { context with
             vars := (name, (.one, allocatedNames context .one)) :: context.vars
@@ -82,12 +82,12 @@ theorem panValueCrepDecCall_one_normal_of_body_correct
       context.maxVar + 1 ∉ oldSlots) :
     evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
-      baseAddress topAddress bytesInWord (fuel + 1)
+      baseAddress topAddress bytesInWord (sourceFuel + 1)
       sourceLocals sourceGlobals sourceMemory
       (.decCall name .one function arguments body) =
       some (restorePanValueControlLocal name (sourceLocals name) sourceResult) ∧
     evalCrepFullProg functions crepPrimitive ffi sharedMem
-      baseAddress topAddress (fuel + 3) state
+      baseAddress topAddress (targetFuel + 3) state
       (compileProg context (.decCall name .one function arguments body)) =
       some (restoreCrepResultList state.locals
         (allocatedNames context .one) crepResult) ∧
@@ -103,7 +103,7 @@ theorem panValueCrepDecCall_one_normal_of_body_correct
     (updatePanValueMap sourceLocals name sourceValue)
     sourceCalleeGlobals sourceCalleeMemory callState
     primitive sourceHandler crepPrimitive ffi sharedMem
-    baseAddress topAddress bytesInWord fuel (fuel + 1)
+    baseAddress topAddress bytesInWord sourceFuel (targetFuel + 1)
     exceptionRel sourceResult crepResult hrelBody hsourceBody hcrepBody
   have hbodyRel' : panValueCrepControlRel structs
       { context with
@@ -120,11 +120,11 @@ theorem panValueCrepDecCall_one_normal_of_body_correct
         (allocatedNames context .one) crepResult) := by
     simpa [allocatedNames, Shape.shapeSize, List.range, List.range.loop] using
       houterRel
-  have hresult := compile_full_pan_value_decCall_relation
+  have hresult := compile_full_pan_value_decCall_relation_independent_fuel
     context structs sourceFunctions functions
     sourceLocals sourceGlobals sourceMemory state callState
     primitive sourceHandler crepPrimitive ffi sharedMem
-    baseAddress topAddress bytesInWord fuel none none none
+    baseAddress topAddress bytesInWord sourceFuel targetFuel none none none
     name .one function arguments body compiledArguments
     sourceCalleeGlobals sourceCalleeMemory sourceValue sourceResult crepResult
     exceptionRel hcompileArgs hsourceCall hsourceShape hsourceBody hcrepCall

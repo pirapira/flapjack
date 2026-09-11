@@ -2594,6 +2594,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   all-word compiled function formals.
 - [x] Generalize fresh callee-parameter state transport from scalar words to
   arbitrary flattened structured values and expose the empty-callee wrapper.
+- [x] Generalize callee-entry transport to lists of arbitrary structured
+  parameters, including flattened assignment and concrete bind witnesses.
 - [x] Connect generic expression-list argument preparation to recursively
   correct returned ordinary calls and their flattened callee-result relation.
 - [x] Connect generic expression-list argument preparation to recursively

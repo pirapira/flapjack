@@ -2539,7 +2539,7 @@ theorem evalWordCallWithHandlersAndFfi_raiseHandler_applyColour_general
       mode := targetBodyState.mode }
     hreturned handlerName hsourceHandlerName
     (BitVec.ofNat width sourceException) (BitVec.ofNat width targetException)
-    (by simpa [hexception])
+    (by simp [hexception])
   have hsourceCall := evalWordCallWithHandlersAndFfi_raise_handler_of_eval
     sourceFunctions sourceHandler fuel sourceState sourceCallee sourceBodyState
     functionLabel parameters arguments sourceBody argumentValues sourceException

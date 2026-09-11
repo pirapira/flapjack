@@ -4,6 +4,7 @@ import Flapjack.Test.ParserStaticExamples
 import Flapjack.Test.PanSteppedSemantics
 import Flapjack.Test.Backend
 import Flapjack.Test.Correctness
+import Flapjack.Test.CompileFunctionDistinct
 import Flapjack.Test.Runtime
 import Flapjack.Test.CollectorSemantics
 import Flapjack.Test.SpillAllocation
@@ -79,6 +80,7 @@ import Flapjack.Test.WordToStack.StatefulIte
 import Flapjack.Test.WordToStack.StatefulLoop
 import Flapjack.Test.WordToStack.HeapLowering
 import Flapjack.Test.WordToStack.ControlLeaves
+import Flapjack.Test.WordToStack.ReturnCopy
 import Flapjack.Test.StatefulPipeline
 import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.CorrectnessFfiRiscVLoop

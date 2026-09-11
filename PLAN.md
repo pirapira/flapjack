@@ -1127,6 +1127,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   updates, including spilled source materialization.
 - [x] Extend the Word-to-Stack boundary through conditions, loops, returns,
   calls, exception handlers, special stores, and FFI operations.
+- [x] Port the CakeML `num_stack_ret`/`copy_ret` StackLang carriers, including
+  the handler-frame offset and conditional stack-free operation, with ordinary
+  and handler-return regressions. Wiring this carrier into the complete
+  allocator-aware call lowering remains part of the full pass theorem.
 - [x] Marshal Word-to-Stack FFI arguments into the x10--x13 ABI registers,
   including spilled sources and an explicit clobber-safety boundary.
 - [x] Prove the individual Word-to-Stack FFI argument move preserves its
@@ -2168,6 +2172,20 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   FFI continuation regression that observes the returned value.
 - [x] Generalize full-Crepe sequencing over source and compiled function tables
   and prove caught-handler returns short-circuit following continuations.
+- [x] Prove the constant-assignment Crep-to-Loop boundary, including its
+  generated empty-prefix sequence and assigned-local observation.
+- [x] Prove the local-variable assignment Crep-to-Loop boundary and regress
+  its state-observation behavior with an executable test.
+- [x] Factor assignment simulation through a reusable empty-prefix
+  Crep-to-Loop theorem with an explicit expression-value relation.
+- [x] Prove the constant-address `load32` assignment boundary, including its
+  temporary-address sequence and memory-state regression.
+- [x] Prove the constant-address `loadByte` assignment boundary and regress
+  its temporary-address sequence against the Loop memory semantics.
+- [x] Prove constant store Crep-to-Loop agreement through an explicit memory
+  projection and executable memory-update regression.
+- [x] Add a reusable normal-sequence Crep-to-Loop composition theorem and an
+  executable two-assignment state-threading regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI
@@ -2313,6 +2331,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add relation-aware loop-control rules for body break and continue.
 - [x] Prove the compiled declaration-table head lookup exposes flattened
   parameter slots and the exact compiled function body.
+- [x] Prove compilation preserves the source declaration list's distinct
+  function-name invariant after filtering non-function declarations, providing
+  the table uniqueness boundary used by source-to-Crep call correctness.
 - [x] Prove source/Crep expression agreement for constants, word locals, and
   recursive records of word constants using the flattened-local relation.
 - [x] Prove binary-operation expression agreement for word constants through

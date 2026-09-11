@@ -23,10 +23,6 @@ theorem panValueCrepProgramCorrect_dec_of_expression_contract
     (hbounded : ∀ (context : CompileContext α) oldName oldShape oldSlots,
       lookupInfo oldName context.vars = some (oldShape, oldSlots) →
       ∀ slot ∈ oldSlots, slot ≤ context.maxVar)
-    (hcompiledFresh : ∀ (context : CompileContext α)
-      (compiled : List (CrepExp α)),
-      ∀ temporary, temporary ∈ allocatedNames context shape →
-        ∀ expression ∈ compiled, temporary ∉ crepExpVars expression)
     (hcompile : ∀ (context : CompileContext α),
       ∃ compiledValues,
         compileExp context value = (compiledValues, shape) ∧
@@ -71,7 +67,7 @@ theorem panValueCrepProgramCorrect_dec_of_expression_contract
     exact allocatedNames_not_mem_of_bounded context shape oldSlots
       (hbounded context oldName oldShape oldSlots hlookupOld)
   exact panValueCrepProgramCorrect_dec_general name shape value body hbody hname
-    hfresh hcompiledFresh hcompile hshape hcompiledEval
+    hbounded hfresh hcompile hshape hcompiledEval
       (fun context => crepDistinctNames_allocatedNames context shape)
 
 end Flapjack

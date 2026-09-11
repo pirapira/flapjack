@@ -72,4 +72,22 @@ theorem freshNames_length
     (freshNames context count start).length = count := by
   simp [freshNames]
 
+theorem freshNames_not_mem_of_bounded
+    (context : CompileContext α) (count start : Nat) (slots : List Nat)
+    (hstart : 0 < start)
+    (hbound : ∀ slot ∈ slots, slot ≤ context.maxVar) :
+    ∀ temporary ∈ freshNames context count start, temporary ∉ slots := by
+  intro temporary htemporary hslot
+  obtain ⟨offset, hoffset, htemporaryEq⟩ := List.mem_map.mp htemporary
+  have hoffsetBound : offset < count := List.mem_range.mp hoffset
+  have hslotBound := hbound temporary hslot
+  omega
+
+theorem allocatedNames_not_mem_of_bounded
+    (context : CompileContext α) (shape : Shape) (slots : List Nat)
+    (hbound : ∀ slot ∈ slots, slot ≤ context.maxVar) :
+    ∀ temporary ∈ allocatedNames context shape, temporary ∉ slots := by
+  exact freshNames_not_mem_of_bounded context (Shape.shapeSize shape) 1 slots
+    (by omega) hbound
+
 end Flapjack

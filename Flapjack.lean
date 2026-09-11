@@ -171,6 +171,7 @@ import Flapjack.CompileCalleeParameterFreshness
 import Flapjack.CompileCalleeParameterStateRelation
 import Flapjack.CompileFunctionLookup
 import Flapjack.SourceCompiledFunctionLookup
+import Flapjack.SourceCompiledFunctionCalleeContext
 import Flapjack.SourceCalleeParameterStateRelation
 import Flapjack.CrepeCalleeParameterRelation
 import Flapjack.CrepeCalleeParameterListGeneralRelation

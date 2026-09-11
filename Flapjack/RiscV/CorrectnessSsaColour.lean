@@ -1245,6 +1245,79 @@ theorem evalWordFunction_ssaRenameAssignShift_applyColourExcept
       exact ⟨_, _, hsourceEval, htargetEval, hrelation'⟩
   | ror => exact (hoperator rfl).elim
 
+theorem evalWordFunction_ssaRenameAssignExcept
+    [NeZero width]
+    (ssa : WordSsaState) (name : Nat) (value : WordExp (Word width))
+    (valid : wordColourValid (ssaAssignmentColour ssa name))
+    (injective : Function.Injective (ssaAssignmentColour ssa name))
+    (colourZero : ssaAssignmentColour ssa name 0 = 0)
+    (source target : State width)
+    (hrelation : WordColourStateRelationExcept
+      (ssaAssignmentColour ssa name) name source target)
+    (hzeroSource : ZeroRegister source) (hzeroTarget : ZeroRegister target)
+    (hprogram : WordVarStraightLine width (.assign name value))
+    (hnot : name ∉ wordExpReadVars value) :
+    ∃ source' target',
+      evalWordFunction source (.assign name value) = some (source', []) ∧
+      evalWordFunction target
+          (wordSsaRenameProgram ssa (.assign name value)).2 =
+        some (target', []) ∧
+      WordColourStateRelation (ssaAssignmentColour ssa name) source' target' := by
+  cases hprogram with
+  | assign name sourceName hname hsource =>
+      have hsourceNe : sourceName ≠ name := by
+        intro heq
+        apply hnot
+        simp [wordExpReadVars, heq]
+      exact evalWordFunction_ssaRenameAssignVar_applyColourExcept
+        ssa name sourceName valid injective colourZero source target hrelation
+        hzeroSource hzeroTarget hname hsource hsourceNe
+  | assignConst name value hname =>
+      exact evalWordFunction_ssaRenameAssignConst_applyColourExcept
+        ssa name value valid injective colourZero source target hrelation
+        hzeroSource hzeroTarget hname
+  | assignBinary operator name left right hname hleft hright =>
+      have hleftNe : left ≠ name := by
+        intro heq
+        apply hnot
+        simp [wordExpReadVars, heq]
+      have hrightNe : right ≠ name := by
+        intro heq
+        apply hnot
+        simp [wordExpReadVars, heq]
+      exact evalWordFunction_ssaRenameAssignBinary_applyColourExcept
+        ssa operator name left right valid injective colourZero source target
+        hrelation hzeroSource hzeroTarget hname hleft hright hleftNe hrightNe
+  | assignImmediate operator name sourceName value hname hsource =>
+      have hsourceNe : sourceName ≠ name := by
+        intro heq
+        apply hnot
+        simp [wordExpReadVars, heq]
+      exact evalWordFunction_ssaRenameAssignImmediate_applyColourExcept
+        ssa operator name sourceName value valid injective colourZero source target
+        hrelation hzeroSource hzeroTarget hname hsource hsourceNe
+  | assignShift operator name left right hoperator hname hleft hright =>
+      have hleftNe : left ≠ name := by
+        intro heq
+        apply hnot
+        simp [wordExpReadVars, heq]
+      have hrightNe : right ≠ name := by
+        intro heq
+        apply hnot
+        simp [wordExpReadVars, heq]
+      exact evalWordFunction_ssaRenameAssignShift_applyColourExcept
+        ssa operator name left right valid injective colourZero source target
+        hrelation hzeroSource hzeroTarget hoperator hname hleft hright
+        hleftNe hrightNe
+  | assignShiftImmediate operator name left amount hoperator hname hleft =>
+      have hleftNe : left ≠ name := by
+        intro heq
+        apply hnot
+        simp [wordExpReadVars, heq]
+      exact evalWordFunction_ssaRenameAssignShiftImmediate_applyColourExcept
+        ssa operator name left amount valid injective colourZero source target
+        hrelation hzeroSource hzeroTarget hoperator hname hleft hleftNe
+
 theorem evalWordFunction_ssaRenameAssign_applyColour
     [NeZero width]
     (ssa : WordSsaState) (name : Nat) (value : WordExp (Word width))

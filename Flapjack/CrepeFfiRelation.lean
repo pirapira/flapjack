@@ -18,6 +18,8 @@ theorem compile_full_pan_value_extCall_relation
     [ShiftLeft α] [ShiftRight α] [LT α]
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
     (sourceLocals sourceLocals' : VarName → Option (PanValue α))
     (sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α))
@@ -81,13 +83,14 @@ theorem compile_full_pan_value_extCall_relation
             (context.maxVar + 4) arrayLengthValue }) = some state')
     (hrel : panValueCrepStateRel structs context sourceLocals' sourceGlobals
       sourceMemory (restoreCrepFfiTemps state' state context.maxVar)) :
-    evalPanValueProgWithPrimitiveCallsAndFfi primitive sourceHandler structs []
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive sourceHandler structs
+      sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory
       (.extCall function configuration configurationLength array arrayLength)
       (contracts := none) (memoryHandler := none) =
       some (.normal sourceLocals' sourceGlobals sourceMemory) ∧
-    evalCrepFullProg [] crepPrimitive ffi sharedMem baseAddress topAddress
+    evalCrepFullProg functions crepPrimitive ffi sharedMem baseAddress topAddress
       (fuel + 5) state
       (compileProg context
         (.extCall function configuration configurationLength array arrayLength)) =
@@ -97,7 +100,7 @@ theorem compile_full_pan_value_extCall_relation
       (.normal sourceLocals' sourceGlobals sourceMemory)
       (.normal (restoreCrepFfiTemps state' state context.maxVar)) := by
   have hresult := compile_full_pan_value_extCall_simulation
-    context structs sourceLocals sourceLocals' sourceGlobals sourceMemory
+    context structs sourceFunctions functions sourceLocals sourceLocals' sourceGlobals sourceMemory
     state state' primitive crepPrimitive ffi sharedMem sourceHandler
     baseAddress topAddress bytesInWord fuel function
     configuration configurationLength array arrayLength

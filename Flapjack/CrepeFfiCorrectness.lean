@@ -120,6 +120,8 @@ theorem compile_full_pan_value_extCall_simulation
     [ShiftLeft α] [ShiftRight α] [LT α]
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
     (sourceLocals sourceLocals' : VarName → Option (PanValue α))
     (sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α))
@@ -181,12 +183,13 @@ theorem compile_full_pan_value_extCall_simulation
                 (context.maxVar + 2) configurationLengthValue)
               (context.maxVar + 3) arrayValue)
             (context.maxVar + 4) arrayLengthValue }) = some state') :
-    evalCrepFullProg [] crepPrimitive ffi sharedMem baseAddress topAddress
+    evalCrepFullProg functions crepPrimitive ffi sharedMem baseAddress topAddress
         (fuel + 5) state
         (compileProg context
           (.extCall function configuration configurationLength array arrayLength)) =
       some (.normal (restoreCrepFfiTemps state' state context.maxVar)) ∧
-    evalPanValueProgWithPrimitiveCallsAndFfi primitive sourceHandler structs []
+    evalPanValueProgWithPrimitiveCallsAndFfi primitive sourceHandler structs
+      sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory
       (.extCall function configuration configurationLength array arrayLength)

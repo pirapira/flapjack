@@ -402,6 +402,58 @@ theorem evalWordProg_ssaRename_locValue_destination [NeZero width]
       hfreshNonzero, hzero']
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
+theorem wordSsaRenameProgram_assign_var
+    (ssa : WordSsaState) (destination source : Nat) :
+    wordSsaRenameProgram ssa
+        (.assign destination (.var source) : WordProg α) =
+      ((wordSsaFresh ssa destination).1,
+        .assign (wordSsaFresh ssa destination).2
+          (.var (wordSsaRead ssa source))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp]
+
+theorem evalWordProg_ssaRename_assign_var_destination [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (destination sourceName : Nat)
+    (hdestination : destination < 32) (hsource : sourceName < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hsourceSsa : wordSsaRead ssa sourceName < 32)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0) :
+    ∃ source' target',
+      evalWordProg source (.assign destination (.var sourceName)) = some source' ∧
+      evalWordProg target
+          (wordSsaRenameProgram ssa
+            (.assign destination (.var sourceName))).2 = some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
+      source'.memory = target'.memory := by
+  have hsourceValue :
+      readRegister source ⟨sourceName, hsource⟩ =
+        readRegister target ⟨wordSsaRead ssa sourceName, hsourceSsa⟩ := by
+    have h := hregister sourceName
+    simpa [registerOfNat, hsource, hsourceSsa] using h
+  rw [wordSsaRenameProgram_assign_var]
+  refine ⟨execute source (.addi ⟨destination, hdestination⟩
+      ⟨sourceName, hsource⟩ 0),
+    execute target (.addi ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+      ⟨wordSsaRead ssa sourceName, hsourceSsa⟩ 0), ?_, ?_, ?_, ?_⟩
+  · simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+      registerOfNat, hdestination, hsource, executeInstructions]
+  · simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+      registerOfNat, hfresh, hsourceSsa, executeInstructions]
+  · simpa [execute, writeRegister, readRegister, hdestinationNonzero,
+      hfreshNonzero] using hsourceValue
+  · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+
 theorem wordSsaRenameInst_div
     (ssa : WordSsaState) (destination dividend divisor : Nat) :
     wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =

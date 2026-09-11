@@ -84,6 +84,7 @@ import Flapjack.Test.FullSsa
 import Flapjack.Test.FullSsaPipeline
 import Flapjack.Test.FullSsaCorrectness
 import Flapjack.Test.CorrectnessSsa
+import Flapjack.Test.CorrectnessGraphCoverage
 import Flapjack.Test.FullSsaCounted
 import Flapjack.Test.FullSsaHandler
 import Flapjack.Test.FullSsaFfiCall

@@ -780,9 +780,13 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
           wordSsaRenameProgramWithLoops frames exceptionState body
         let exceptionHandler := wordSsaSeq restoreMove
           (wordSsaSeq (.move 0 [(exceptionName, 2)]) body)
-        let names := wordSsaBranchNames restoreState returnState exceptionState
+        let preferred := match returnHandler, exceptionHandler with
+          | .skip, _ => some true
+          | _, .skip => some false
+          | _, _ => none
         let (state, returnMoves, exceptionMoves) :=
-          wordSsaReconcile names returnState exceptionState exceptionState.next
+          wordSsaFixInconsistencies preferred returnState exceptionState
+            exceptionState.next
         let returnHandler := wordSsaSeq returnHandler returnMoves
         let exceptionHandler := wordSsaSeq exceptionHandler exceptionMoves
         (state, wordSsaSeq stackMove

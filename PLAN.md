@@ -2351,6 +2351,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   preserving the outer state while propagating the break control result.
 - [x] Add the two-word record declaration-continue correctness constructor,
   preserving the outer state while propagating the continue control result.
+- [x] Add the relation transport lemma for restoring two-word declaration
+  temporaries and returning to the outer compilation context.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

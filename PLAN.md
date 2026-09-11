@@ -2578,6 +2578,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   the word-valued theorem retained as a specialization.
 - [x] Assemble the word-valued ordinary-call constructor into
   `PanValueCrepProgramCorrect`, ready for the full program induction.
+- [x] Connect generic expression-list argument preparation to recursively
+  correct returned ordinary calls and their flattened callee-result relation.
 - [x] Generalize state extension across callee-produced globals and memory,
   and connect recursive callee correctness to destination-aware call state.
 - [x] Prove structured source and compiled Crep branch selection agree for a

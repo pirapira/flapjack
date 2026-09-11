@@ -158,6 +158,7 @@ import Flapjack.CrepeProgramRecordFieldReturnCorrectness
 import Flapjack.CrepeProgramCallCorrectness
 import Flapjack.CrepeCallArgumentCorrectness
 import Flapjack.CrepeProgramWordCallCorrectness
+import Flapjack.CrepeCallReturnedArgumentCorrectness
 import Flapjack.CrepeProgramAssignmentFuelRelation
 import Flapjack.CrepeProgramAssignmentCorrectness
 import Flapjack.CrepeProgramPrimitiveRelation

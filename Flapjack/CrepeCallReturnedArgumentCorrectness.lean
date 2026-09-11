@@ -94,7 +94,7 @@ theorem compile_full_pan_value_call_returned_of_expression_correct
     context calleeContext structs sourceFunctions functions sourceGlobals caller
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
     bytesInWord sourceFuel targetFuel function compiledArguments sourceCalleeLocals
-    sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory sourceValues
+    sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory sourceCalleeMemory sourceValues
     argumentValues targetCalleeLocals targetCallee target targetValues
     targetParameters sourceBody targetBody exceptionRel hbodyCorrect hrelCallee
     hsourceBody hcompileBody hcrepBody hcompiledTarget hlookup hassign hcrepCall

@@ -63,6 +63,7 @@ import Flapjack.CrepeProgramPrimitiveRelation
 import Flapjack.CrepeProgramConditionalFuelRelation
 import Flapjack.CrepeProgramLoopFuelRelation
 import Flapjack.CrepeLoopComposeFuelRelation
+import Flapjack.CrepeLoopBreakComposeFuelRelation
 import Flapjack.CrepeIdentityCallCorrectness
 import Flapjack.CrepeFfiCorrectness
 import Flapjack.PanValues

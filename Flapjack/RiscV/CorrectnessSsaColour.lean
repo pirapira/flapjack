@@ -16,6 +16,39 @@ def ssaAssignmentColour (ssa : WordSsaState) (name : Nat) : Nat → Nat :=
   fun current => if current = name then (wordSsaFresh ssa name).2
     else wordSsaRead ssa current
 
+theorem lookupNatInfo_filter_ne (entries : NatInfoMap α) (current name : Nat)
+    (hne : current ≠ name) :
+    lookupNatInfo current (entries.filter (fun entry => entry.1 != name)) =
+      lookupNatInfo current entries := by
+  induction entries with
+  | nil => rfl
+  | cons entry entries ih =>
+      by_cases hcurrent : entry.1 = current
+      · have hentryName : entry.1 ≠ name := by
+          intro heq
+          exact hne (hcurrent.symm.trans heq)
+        rw [show (entry :: entries).filter (fun entry => entry.1 != name) =
+            entry :: entries.filter (fun entry => entry.1 != name) by
+          simp [hentryName]]
+        simp [lookupNatInfo, hcurrent]
+      · by_cases hentry : entry.1 = name
+        · have hnameCurrent : name ≠ current := Ne.symm hne
+          simp [List.filter, lookupNatInfo, hentry, hnameCurrent, ih]
+        · simp [lookupNatInfo, hcurrent, hentry, ih]
+
+theorem ssaAssignmentColour_eq_wordSsaRead_fresh
+    (ssa : WordSsaState) (name current : Nat) :
+    ssaAssignmentColour ssa name current =
+      wordSsaRead (wordSsaFresh ssa name).1 current := by
+  by_cases hcurrent : current = name
+  · subst current
+    simp [ssaAssignmentColour, wordSsaRead, wordSsaFresh, lookupNatInfo]
+  · simp only [ssaAssignmentColour, if_neg hcurrent]
+    have hnameCurrent : name ≠ current := Ne.symm hcurrent
+    simp only [wordSsaRead, wordSsaFresh]
+    simp [lookupNatInfo, hnameCurrent,
+      lookupNatInfo_filter_ne ssa.current current name hcurrent]
+
 /-! Before an SSA assignment, the destination's old value need not satisfy the
     eventual colouring relation: the generated code overwrites it. -/
 

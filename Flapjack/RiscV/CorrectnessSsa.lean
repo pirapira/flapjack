@@ -454,6 +454,46 @@ theorem evalWordProg_ssaRename_assign_var_destination [NeZero width]
       hfreshNonzero] using hsourceValue
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
+theorem wordSsaRenameProgram_assign_const
+    (ssa : WordSsaState) (destination : Nat) (value : Word width) :
+    wordSsaRenameProgram ssa
+        (.assign destination (.const value) : WordProg (Word width)) =
+      ((wordSsaFresh ssa destination).1,
+        .assign (wordSsaFresh ssa destination).2 (.const value)) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp]
+
+theorem evalWordProg_ssaRename_assign_const_destination [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hmemory : source.memory = target.memory)
+    (hzero : readRegister source 0 = readRegister target 0)
+    (destination : Nat) (value : Word width)
+    (hdestination : destination < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0) :
+    ∃ source' target',
+      evalWordProg source (.assign destination (.const value)) = some source' ∧
+      evalWordProg target
+          (wordSsaRenameProgram ssa
+            (.assign destination (.const value))).2 = some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
+      source'.memory = target'.memory := by
+  rw [wordSsaRenameProgram_assign_const]
+  have hzero' : source.registers 0 = target.registers 0 := by
+    simpa [readRegister] using hzero
+  refine ⟨execute source (.addi ⟨destination, hdestination⟩ 0 value),
+    execute target (.addi ⟨(wordSsaFresh ssa destination).2, hfresh⟩ 0 value),
+    ?_, ?_, ?_, ?_⟩
+  · simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+      registerOfNat, hdestination, executeInstructions]
+  · simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+      registerOfNat, hfresh, executeInstructions]
+  · simp [execute, writeRegister, readRegister, hdestinationNonzero,
+      hfreshNonzero, hzero']
+  · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+
 theorem wordSsaRenameInst_div
     (ssa : WordSsaState) (destination dividend divisor : Nat) :
     wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =

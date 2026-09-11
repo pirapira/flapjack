@@ -198,4 +198,20 @@ example :
   · rfl
   all_goals decide
 
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32)
+          (.assign 1 (.const (BitVec.ofNat 32 17))) = some source' ∧
+      evalWordProg (zeroState 32)
+          (wordSsaRenameProgram
+            ({ current := [], next := 4 } : WordSsaState)
+            (.assign 1 (.const (BitVec.ofNat 32 17)))).2 = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_assign_const_destination
+  · rfl
+  · rfl
+  all_goals decide
+
 end Flapjack.RiscV

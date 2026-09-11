@@ -76,4 +76,24 @@ theorem peerCrepRuntimeToLoop_storeGlob_loadGlob_sequence_regression :
     [] globalLoadRuntimeHandler (fun _ _ => none) 1
     { globalLoadRuntimeState with globals := fun _ => none } 5 200 42
 
+theorem peerCrepRuntimeToLoop_storeGlob_state_regression :
+    ∃ sourceTarget loopTarget,
+      evalCrepRuntimeResult globalLoadRuntimeHandler (fun _ _ => none) 2
+        globalLoadRuntimeState (.storeGlob 200 (.const 42)) =
+        some (.normal, sourceTarget) ∧
+      evalLoopProgWithCallsAndFfi []
+        (fun _ _ _ _ _ loopState => some loopState) 3
+        (loopStateOfCrepRuntimeStateForGlobals globalLoadRuntimeState)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+            LoopContext Nat)
+          [] (.storeGlob 200 (.const 42))) =
+        some (.normal loopTarget) ∧
+      crepRuntimeLoopStateRel sourceTarget loopTarget := by
+  exact crepRuntimeToLoop_storeGlob_state_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] globalLoadRuntimeHandler (fun _ _ => none) 1
+    globalLoadRuntimeState [] 200 42
+
 end Flapjack

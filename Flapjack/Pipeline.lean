@@ -785,6 +785,36 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcTargetL
       (functions.map (fun (label, _, body) => (label, body)))
   pure (bitmaps, sections)
 
+/-! Exact source-entry form of the complete bitmap/simple-GC linked artifact.
+    As with the non-GC entry wrapper below, keep the source lookup and
+    initializer wrapper visible by using compileFlapjackEntry before the
+    allocator and runtime sections are assembled. -/
+def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcEntryLinked
+    [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig) (start : FunName)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (RiscV.WordStackBitmapState ×
+      List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
+  let pipeline ← compileFlapjackEntry architecture bytesInWord fromNat start declarations
+  let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
+  let (functions, bitmaps) ←
+    pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps
+      (RiscV.wordStackInitialBitmaps false) loop
+  let initialLabel := fullSsaInitialLabLabel functions
+  let sections ←
+    RiscV.compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscV
+      { services := services } removeConfig
+      { gcStubLocation := stackGcStubLocation, returnLabel := 0,
+        firstFreshLabel := stackFunctionFirstLabel }
+      { } stackStoreConstsStubLocation wordAllocatableRegisters.length 0 initialLabel
+      (functions.map (fun (label, _, body) => (label, body)))
+  pure (bitmaps, sections)
+
 def compileFlapjackRiscVViaStack [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
     [Add (RiscV.Word width)] [Mul (RiscV.Word width)]

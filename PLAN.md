@@ -2699,6 +2699,12 @@ stack now also has the HOL-aligned `localisedExp`/`localisedProg` boundary in
 `CrepeExpressionRelation.lean`; the next proof slice should use this domain to
 complete the nested-inductive expression simulation lemma.
 
+The correctness stack now also includes expression and expression-list
+non-interference lemmas for fresh Crep locals in
+`CrepeExpressionStability.lean`. These are the pending side conditions for
+replacing the explicit temporary-stability premise in the source-word
+`ExtCall` theorem with compiler-derived freshness facts.
+
 ## Verification workflow
 
 - Lean: `lake build` from the repository root.

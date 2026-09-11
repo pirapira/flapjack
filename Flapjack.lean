@@ -103,6 +103,7 @@ import Flapjack.CrepeProgramRaiseCorrectness
 import Flapjack.CrepeProgramStoreCorrectness
 import Flapjack.CrepeProgramStoreByteCorrectness
 import Flapjack.CrepeProgramGenericStoreCorrectness
+import Flapjack.CrepeWordEffectProgramCases
 import Flapjack.CrepeProgramPrimitiveCorrectness
 import Flapjack.CrepeProgramSharedMemoryCorrectness
 import Flapjack.CrepeProgramSharedMemoryLoadCorrectness

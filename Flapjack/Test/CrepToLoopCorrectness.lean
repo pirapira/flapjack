@@ -304,6 +304,39 @@ theorem crepToLoop_ite_const_regression :
     loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
     evalLoopCondition]
 
+theorem crepToLoop_ite_zero_compose_regression :
+    evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        (fun _ _ _ _ => none) 0 100 2 crepSeqInitial
+        (.ite (.const 0) (.skip) (.assign 5 (.const 42))) =
+      some (.normal crepSeqMiddle) ∧
+    evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+        6 (loopStateOfCrepState crepSeqInitial)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+            LoopContext Nat)
+          [] (.ite (.const 0) (.skip) (.assign 5 (.const 42)))) =
+      some (.normal
+        { loopStateOfCrepState crepSeqInitial with
+          locals := updateLoopLocal
+            (updateLoopLocal crepSeqInitial.locals 1 0) 5 42 }) := by
+  apply crepToLoop_ite_const_zero_compose
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 1 crepSeqInitial []
+    (.skip) (.assign 5 (.const 42))
+    (.normal
+      { crepSeqInitial with
+        locals := updateCrepLocal crepSeqInitial.locals 5 42 })
+    (.normal
+      { loopStateOfCrepState crepSeqInitial with
+        locals := updateLoopLocal
+          (updateLoopLocal crepSeqInitial.locals 1 0) 5 42 })
+  · simp [crepSeqInitial, evalCrepFullProg, evalCrepFullExp]
+  · simp [crepSeqInitial, loopStateOfCrepState, loopCompileProg,
+      loopCompileExp, loopNestedSeq, evalLoopProgWithCallsAndFfi,
+      evalLoopProg, evalLoopExp]
+
 theorem crepToLoop_shMem_store_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       defaultCrepSharedMemHandler 0 100 3 crepLoopSharedStoreState

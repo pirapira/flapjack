@@ -922,6 +922,43 @@ theorem crepToLoop_while_const_zero_agreement
     evalLoopRepeatWithCallsAndFfi,
     evalLoopCondition, updateLoopLocal, hname]
 
+theorem crepToLoop_ite_const_zero_compose
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (thenBranch elseBranch : CrepProg α)
+    (result : CrepControlResult α) (loopResult : LoopResult α)
+    (hcrepElse : evalCrepFullProg [] primitive ffi sharedMem
+      baseAddress topAddress fuel state elseBranch = some result)
+    (hloopElse : evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 2)
+      { loopStateOfCrepState state with
+        locals := updateLoopLocal (loopStateOfCrepState state).locals
+          (context.maxVar + 1) 0 }
+      (loopCompileProg context live elseBranch) = some loopResult) :
+    evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state
+      (.ite (.const (by exact 0)) thenBranch elseBranch) = some result ∧
+    evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 5)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.ite (.const (by exact 0)) thenBranch elseBranch)) =
+      some loopResult := by
+  constructor
+  · simp [evalCrepFullProg, evalCrepFullExp, hcrepElse]
+  · simp [loopCompileProg, loopCompileExp, loopNestedSeq,
+      evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+      evalLoopCondition, updateLoopLocal, hloopElse]
+
 theorem crepToLoop_return_const_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

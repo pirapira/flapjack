@@ -119,4 +119,52 @@ example :
   · rfl
   all_goals decide
 
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32) (.inst (.mem .load8 1 2)) = some source' ∧
+      evalWordProg (zeroState 32)
+          (.inst (wordSsaRenameInst
+            ({ current := [], next := 4 } : WordSsaState)
+            (.mem .load8 1 2 : WordInst)).2) = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_load8_destination
+  · intro name
+    rfl
+  · rfl
+  all_goals decide
+
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32) (.inst (.mem .load16 1 2)) = some source' ∧
+      evalWordProg (zeroState 32)
+          (.inst (wordSsaRenameInst
+            ({ current := [], next := 4 } : WordSsaState)
+            (.mem .load16 1 2 : WordInst)).2) = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_load16_destination
+  · intro name
+    rfl
+  · rfl
+  all_goals decide
+
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32) (.inst (.mem .load32 1 2)) = some source' ∧
+      evalWordProg (zeroState 32)
+          (.inst (wordSsaRenameInst
+            ({ current := [], next := 4 } : WordSsaState)
+            (.mem .load32 1 2 : WordInst)).2) = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_load32_destination
+  · intro name
+    rfl
+  · rfl
+  all_goals decide
+
 end Flapjack.RiscV

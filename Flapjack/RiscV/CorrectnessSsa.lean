@@ -223,6 +223,146 @@ theorem evalWordProg_ssaRename_load_destination [NeZero width]
       hfreshNonzero] using hloadValue
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
+theorem evalWordProg_ssaRename_load8_destination [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (destination address : Nat)
+    (hdestination : destination < 32) (haddress : address < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (haddressSsa : wordSsaRead ssa address < 32)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0) :
+    ∃ source' target',
+      evalWordProg source (.inst (.mem .load8 destination address)) = some source' ∧
+      evalWordProg target
+          (.inst (wordSsaRenameInst ssa
+            (.mem .load8 destination address : WordInst)).2) = some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
+      source'.memory = target'.memory := by
+  have haddressValue :
+      readRegister source ⟨address, haddress⟩ =
+        readRegister target ⟨wordSsaRead ssa address, haddressSsa⟩ := by
+    have h := hregister address
+    simpa [registerOfNat, haddress, haddressSsa] using h
+  have hloadValue :
+      BitVec.ofNat width
+          (readByte source (readRegister source ⟨address, haddress⟩)).toNat =
+        BitVec.ofNat width
+          (readByte target
+            (readRegister target ⟨wordSsaRead ssa address, haddressSsa⟩)).toNat := by
+    rw [haddressValue]
+    simp [readByte, hmemory]
+  rw [wordSsaRenameInst]
+  refine ⟨execute source (.loadByte ⟨destination, hdestination⟩
+      ⟨address, haddress⟩),
+    execute target (.loadByte ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+      ⟨wordSsaRead ssa address, haddressSsa⟩), ?_, ?_, ?_, ?_⟩
+  · simp [evalWordProg, registerOfNat, hdestination, haddress, execute]
+  · simp [evalWordProg, registerOfNat, hfresh, haddressSsa, execute]
+  · simpa [execute, writeRegister, readRegister, hdestinationNonzero,
+      hfreshNonzero] using hloadValue
+  · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+
+theorem evalWordProg_ssaRename_load16_destination [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (destination address : Nat)
+    (hdestination : destination < 32) (haddress : address < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (haddressSsa : wordSsaRead ssa address < 32)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0) :
+    ∃ source' target',
+      evalWordProg source (.inst (.mem .load16 destination address)) = some source' ∧
+      evalWordProg target
+          (.inst (wordSsaRenameInst ssa
+            (.mem .load16 destination address : WordInst)).2) = some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
+      source'.memory = target'.memory := by
+  have haddressValue :
+      readRegister source ⟨address, haddress⟩ =
+        readRegister target ⟨wordSsaRead ssa address, haddressSsa⟩ := by
+    have h := hregister address
+    simpa [registerOfNat, haddress, haddressSsa] using h
+  have hloadValue :
+      readWord16 source (readRegister source ⟨address, haddress⟩) =
+        readWord16 target
+          (readRegister target ⟨wordSsaRead ssa address, haddressSsa⟩) := by
+    rw [haddressValue]
+    simp [readWord16, readByte, byteAddress, hmemory]
+  rw [wordSsaRenameInst]
+  refine ⟨execute source (.loadHalf ⟨destination, hdestination⟩
+      ⟨address, haddress⟩),
+    execute target (.loadHalf ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+      ⟨wordSsaRead ssa address, haddressSsa⟩), ?_, ?_, ?_, ?_⟩
+  · simp [evalWordProg, registerOfNat, hdestination, haddress, execute]
+  · simp [evalWordProg, registerOfNat, hfresh, haddressSsa, execute]
+  · simpa [execute, writeRegister, readRegister, hdestinationNonzero,
+      hfreshNonzero] using hloadValue
+  · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+
+theorem evalWordProg_ssaRename_load32_destination [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (destination address : Nat)
+    (hdestination : destination < 32) (haddress : address < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (haddressSsa : wordSsaRead ssa address < 32)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0) :
+    ∃ source' target',
+      evalWordProg source (.inst (.mem .load32 destination address)) = some source' ∧
+      evalWordProg target
+          (.inst (wordSsaRenameInst ssa
+            (.mem .load32 destination address : WordInst)).2) = some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
+      source'.memory = target'.memory := by
+  have haddressValue :
+      readRegister source ⟨address, haddress⟩ =
+        readRegister target ⟨wordSsaRead ssa address, haddressSsa⟩ := by
+    have h := hregister address
+    simpa [registerOfNat, haddress, haddressSsa] using h
+  have hloadValue :
+      readWord32 source (readRegister source ⟨address, haddress⟩) =
+        readWord32 target
+          (readRegister target ⟨wordSsaRead ssa address, haddressSsa⟩) := by
+    rw [haddressValue]
+    simp [readWord32, readByte, byteAddress, hmemory]
+  rw [wordSsaRenameInst]
+  refine ⟨execute source (.load32 ⟨destination, hdestination⟩
+      ⟨address, haddress⟩),
+    execute target (.load32 ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+      ⟨wordSsaRead ssa address, haddressSsa⟩), ?_, ?_, ?_, ?_⟩
+  · simp [evalWordProg, registerOfNat, hdestination, haddress, execute]
+  · simp [evalWordProg, registerOfNat, hfresh, haddressSsa, execute]
+  · simpa [execute, writeRegister, readRegister, hdestinationNonzero,
+      hfreshNonzero] using hloadValue
+  · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+
 theorem wordSsaRenameInst_div
     (ssa : WordSsaState) (destination dividend divisor : Nat) :
     wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =

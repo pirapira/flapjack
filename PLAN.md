@@ -2410,6 +2410,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   the recursive callee-body witness needed by function-call correctness.
 - [x] Invert returned ordinary Crep calls with no destination metadata,
   exposing the propagated flattened values and callee memory.
+- [x] Transport recursive returned and raised control relations from an
+  ordinary callee state to the caller-local/callee-memory result state.
 - [x] Generalize state extension across callee-produced globals and memory,
   and connect recursive callee correctness to destination-aware call state.
 - [x] Prove structured source and compiled Crep branch selection agree for a

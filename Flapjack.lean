@@ -50,6 +50,7 @@ import Flapjack.PanValueShapeInversion
 import Flapjack.CrepeProgramSourceAssignmentInversion
 import Flapjack.CrepeProgramRecordAssignmentConstructor
 import Flapjack.CrepeNestedDecsAssignmentInversion
+import Flapjack.CrepeProgramRecordAssignmentTemporaryConstructor
 import Flapjack.CrepeSequenceCorrectness
 import Flapjack.CrepeConditionalCorrectness
 import Flapjack.CrepeLoopCorrectness

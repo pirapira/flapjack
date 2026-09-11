@@ -210,6 +210,25 @@ theorem crepRuntimeToLoop_store_load_regression :
     evalLoopExp, loopResultState, updateMemory, updateLoopGlobal,
     updateCrepLocal, updateLoopLocal]
 
+theorem crepToLoop_while_zero_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 2 crepSeqInitial
+      (.while (.const 0) (.assign 5 (.const 42)))).map
+        (crepControlLocal 5) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      13 (loopStateOfCrepState crepSeqInitial)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.while (.const 0) (.assign 5 (.const 42))))).map
+        (loopControlLocal 5) := by
+  exact crepToLoop_while_const_zero_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 1 crepSeqInitial [] 5
+    (.assign 5 (.const 42)) (by decide)
+
 theorem crepToLoop_control_regressions :
     ((evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ _ _ => none) 0 100 2 crepSeqInitial (.skip)).map

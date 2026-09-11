@@ -2200,6 +2200,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   condition temporary and selected branch.
 - [x] Add the first global-aware Crep-runtime-to-Loop bridge for `storeGlob`,
   preserving the Loop global environment and its executable regression.
+- [x] Complete the paired global-aware runtime bridge for `loadGlob`, with a
+  store/load-oriented global lookup regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

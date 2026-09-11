@@ -2419,6 +2419,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add the generic ordinary-declaration correctness constructor, separating
   expression compilation/evaluation witnesses from recursive body simulation
   and fresh temporary restoration.
+- [x] Generalize the structured scalar-record local relation update from two
+  words to arbitrary distinct slot/value lists.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

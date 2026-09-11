@@ -264,4 +264,64 @@ theorem evalWordStackMachine_parallelLocationMove_acyclic_preserves_move_value
   exact evalWordStackMachine_sequentialLocationMove_preserves_move_value
     config state final moves target hdestinations hnoSource hreserved htarget heval
 
+/-! The location-level frame theorem lifts directly to the allocator's
+    variable-to-location relation.  This is the useful boundary for function
+    entry: parameter destinations may be overwritten, while every unrelated
+    mapped variable keeps its value through the physical move prefix. -/
+theorem evalWordStackMachine_parallelLocationMove_acyclic_preserves_mapped_values_outside
+    [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (moves : List (WordLocation × WordLocation))
+    (values : Nat → Option (Word width))
+    (hdestinations : (moves.map Prod.fst).Nodup)
+    (hnoSource : ∀ move, move ∈ moves →
+      move.2 ∉ moves.map Prod.fst)
+    (hreserved : ∀ move, move ∈ moves →
+      move.1 ≠ .register config.scratch ∧
+      move.1 ≠ .register config.addressScratch ∧
+      move.2 ≠ .register config.scratch ∧
+      move.2 ≠ .register config.addressScratch)
+    (hvalues : wordStackMappedValues config values state)
+    (houtside : ∀ name value location,
+      values name = some value →
+      wordStackLocation config name = some location →
+      location ∉ moves.map Prod.fst)
+    (hnotScratch : ∀ name value location,
+      values name = some value →
+      wordStackLocation config name = some location →
+      location ≠ .register config.scratch)
+    (heval : (wordStackParallelLocationMove config moves).bind
+      (evalWordStackMachine state) = some final) :
+    wordStackMappedValues config values final := by
+  rw [wordStackParallelLocationMove_acyclic_eq_sequential config moves
+    hdestinations hnoSource hreserved] at heval
+  intro name value location hvalue hlocation
+  change lookupNatInfo name config.locations = some location at hlocation
+  have hstateValue := hvalues name value location hvalue hlocation
+  have hstateLocationValue :
+      wordStackLocationValue config state location = value := by
+    cases location with
+    | register register =>
+        simpa [wordStackMachineValue, wordStackLocation,
+          wordStackLocationValue, hlocation] using hstateValue
+    | stack slot =>
+        simpa [wordStackMachineValue, wordStackLocation,
+          wordStackLocationValue, hlocation] using hstateValue
+  have hpreserved :=
+    evalWordStackMachine_sequentialLocationMove_preserves_other_value
+      config state final moves location hdestinations hreserved
+      (houtside name value location hvalue hlocation)
+      (hnotScratch name value location hvalue hlocation) heval
+  have hfinalLocationValue :
+      wordStackLocationValue config final location = value := by
+    rw [hpreserved]
+    exact hstateLocationValue
+  cases location with
+  | register register =>
+      simpa [wordStackMachineValue, wordStackLocation,
+        wordStackLocationValue, hlocation] using hfinalLocationValue
+  | stack slot =>
+      simpa [wordStackMachineValue, wordStackLocation,
+        wordStackLocationValue, hlocation] using hfinalLocationValue
+
 end Flapjack.RiscV

@@ -45,4 +45,32 @@ example [NeZero width]
   exact evalWordStackMachine_parallelLocationMove_acyclic_preserves_move_value
     config state final moves target hdestinations hnoSource hreserved htarget heval
 
+example [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (moves : List (WordLocation × WordLocation))
+    (values : Nat → Option (Word width))
+    (hdestinations : (moves.map Prod.fst).Nodup)
+    (hnoSource : ∀ move, move ∈ moves →
+      move.2 ∉ moves.map Prod.fst)
+    (hreserved : ∀ move, move ∈ moves →
+      move.1 ≠ .register config.scratch ∧
+      move.1 ≠ .register config.addressScratch ∧
+      move.2 ≠ .register config.scratch ∧
+      move.2 ≠ .register config.addressScratch)
+    (hvalues : wordStackMappedValues config values state)
+    (houtside : ∀ name value location,
+      values name = some value →
+      wordStackLocation config name = some location →
+      location ∉ moves.map Prod.fst)
+    (hnotScratch : ∀ name value location,
+      values name = some value →
+      wordStackLocation config name = some location →
+      location ≠ .register config.scratch)
+    (heval : (wordStackParallelLocationMove config moves).bind
+      (evalWordStackMachine state) = some final) :
+    wordStackMappedValues config values final := by
+  exact evalWordStackMachine_parallelLocationMove_acyclic_preserves_mapped_values_outside
+    config state final moves values hdestinations hnoSource hreserved hvalues
+    houtside hnotScratch heval
+
 end Flapjack.RiscV

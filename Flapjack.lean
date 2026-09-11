@@ -41,6 +41,7 @@ import Flapjack.CrepeSourceWordStoreLoadCorrectness
 import Flapjack.CrepeSourceWordFixedWidthLoadReturnCorrectness
 import Flapjack.CrepeSourceWordStoreByteLoadCorrectness
 import Flapjack.CrepeSourceWordGenericStoreCorrectness
+import Flapjack.CrepeSourceWordRecordCorrectness
 import Flapjack.CrepeSourceWordLoopCorrectness
 import Flapjack.CrepeSequenceControlRelation
 import Flapjack.CrepeCallRelation

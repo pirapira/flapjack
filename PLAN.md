@@ -2398,7 +2398,7 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Invert a successful source ExtCall value-pattern match into four word
   arguments, a successful FFI handler result, and normal control completion.
 - [x] Add the generalized source-word ExtCall correctness constructor, with
-  explicit temporary-expression stability obligations.
+  compiler-freshness obligations discharged by expression non-interference.
 - [x] Add the compositional one-word declaration correctness constructor,
   applying recursive body correctness across a fresh Crep slot.
 - [x] Add one-word declaration state and control-result restoration

@@ -1,6 +1,7 @@
 import Flapjack.CrepeProgramExtCallCorrectness
 import Flapjack.CrepeExtCallInversion
 import Flapjack.CrepeExpressionRelation
+import Flapjack.CrepeExpressionStability
 
 /-!
 Correctness for an ExtCall whose four arguments are scalar source-word
@@ -28,13 +29,11 @@ theorem panValueCrepProgramCorrect_extCall_source_word
       (name : VarName) (value : PanValue α),
       sourceLocals name = some value →
       ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
-    (hstable : ∀ (state : CrepState α) (baseAddress topAddress : α)
-      (temporary : Nat) (compiled : CrepExp α) (value updateValue : α),
-      evalCrepFullExp state.locals state.memory baseAddress topAddress compiled =
-        some value →
-      evalCrepFullExp
-        (updateCrepLocal state.locals temporary updateValue) state.memory
-        baseAddress topAddress compiled = some value) :
+    (hfresh : ∀ (context : CompileContext α) (expression : SourceWordExp α)
+      (compiled : CrepExp α),
+      compileExp context expression.toExp = ([compiled], .one) →
+      ∀ temporary, context.maxVar < temporary →
+        temporary ∉ crepExpVars compiled) :
     PanValueCrepProgramCorrect
       (.extCall function configuration.toExp configurationLength.toExp
         array.toExp arrayLength.toExp) := by
@@ -153,35 +152,62 @@ theorem panValueCrepProgramCorrect_extCall_source_word
                           rw [hcompile] at hcrep
                           simp [evalCrepFullProg] at hcrep
                       | succ targetFuel =>
-                          have hconfigurationLengthEval' := hstable state
-                            baseAddress topAddress (context.maxVar + 1)
-                            configurationLengthCompiled configurationLengthValue
-                            configurationValue hconfigurationLengthEval
-                          have harrayEval' := hstable state baseAddress topAddress
-                            (context.maxVar + 1) arrayCompiled arrayValue
-                            configurationValue harrayEval
-                          have harrayEval'' := hstable
-                            { state with locals := (updateCrepLocal state.locals
-                                (context.maxVar + 1) configurationValue) }
-                            baseAddress topAddress (context.maxVar + 2)
-                            arrayCompiled arrayValue configurationLengthValue harrayEval'
-                          have harrayLengthEval' := hstable state baseAddress topAddress
-                            (context.maxVar + 1) arrayLengthCompiled arrayLengthValue
-                            configurationValue harrayLengthEval
-                          have harrayLengthEval'' := hstable
-                            { state with locals := (updateCrepLocal state.locals
-                                (context.maxVar + 1) configurationValue) }
-                            baseAddress topAddress (context.maxVar + 2)
-                            arrayLengthCompiled arrayLengthValue configurationLengthValue
-                            harrayLengthEval'
-                          have harrayLengthEval''' := hstable
-                            { state with locals := (updateCrepLocal
+                          have hconfigurationLengthFresh := hfresh context
+                            configurationLength configurationLengthCompiled
+                            hcompileConfigurationLength (context.maxVar + 1)
+                            (by omega)
+                          have harrayFresh := hfresh context array arrayCompiled
+                            hcompileArray (context.maxVar + 1) (by omega)
+                          have harrayFresh' := hfresh context array arrayCompiled
+                            hcompileArray (context.maxVar + 2) (by omega)
+                          have harrayLengthFresh := hfresh context arrayLength
+                            arrayLengthCompiled hcompileArrayLength
+                            (context.maxVar + 1) (by omega)
+                          have harrayLengthFresh' := hfresh context arrayLength
+                            arrayLengthCompiled hcompileArrayLength
+                            (context.maxVar + 2) (by omega)
+                          have harrayLengthFresh'' := hfresh context arrayLength
+                            arrayLengthCompiled hcompileArrayLength
+                            (context.maxVar + 3) (by omega)
+                          have hconfigurationLengthEval' :=
+                            evalCrepFullExp_update_of_not_mem state.locals state.memory
+                              baseAddress topAddress configurationLengthCompiled
+                              (context.maxVar + 1) configurationLengthValue
+                              configurationValue hconfigurationLengthFresh
+                              hconfigurationLengthEval
+                          have harrayEval' :=
+                            evalCrepFullExp_update_of_not_mem state.locals state.memory
+                              baseAddress topAddress arrayCompiled
+                              (context.maxVar + 1) arrayValue configurationValue
+                              harrayFresh harrayEval
+                          have harrayEval'' :=
+                            evalCrepFullExp_update_of_not_mem
+                              (updateCrepLocal state.locals (context.maxVar + 1)
+                                configurationValue) state.memory
+                              baseAddress topAddress arrayCompiled
+                              (context.maxVar + 2) arrayValue configurationLengthValue
+                              harrayFresh' harrayEval'
+                          have harrayLengthEval' :=
+                            evalCrepFullExp_update_of_not_mem state.locals state.memory
+                              baseAddress topAddress arrayLengthCompiled
+                              (context.maxVar + 1) arrayLengthValue configurationValue
+                              harrayLengthFresh harrayLengthEval
+                          have harrayLengthEval'' :=
+                            evalCrepFullExp_update_of_not_mem
+                              (updateCrepLocal state.locals (context.maxVar + 1)
+                                configurationValue) state.memory
+                              baseAddress topAddress arrayLengthCompiled
+                              (context.maxVar + 2) arrayLengthValue configurationLengthValue
+                              harrayLengthFresh' harrayLengthEval'
+                          have harrayLengthEval''' :=
+                            evalCrepFullExp_update_of_not_mem
+                              (updateCrepLocal
                                 (updateCrepLocal state.locals (context.maxVar + 1)
                                   configurationValue)
-                                (context.maxVar + 2) configurationLengthValue) }
-                            baseAddress topAddress (context.maxVar + 3)
-                            arrayLengthCompiled arrayLengthValue arrayValue
-                            harrayLengthEval''
+                                (context.maxVar + 2) configurationLengthValue) state.memory
+                              baseAddress topAddress arrayLengthCompiled
+                              (context.maxVar + 3) arrayLengthValue arrayValue
+                              harrayLengthFresh'' harrayLengthEval''
                           let callLocals : Nat → Option α :=
                             updateCrepLocal
                               (updateCrepLocal

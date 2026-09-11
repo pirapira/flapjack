@@ -334,59 +334,17 @@ theorem panValueCrepExpressionCorrect_word_record
       (.rStruct (fields.map SourceWordExp.toExp)) := by
   intro context structs sourceLocals sourceGlobals sourceMemory state
     baseAddress topAddress bytesInWord sourceValue hrel hsource
-  have hwordValues : ∀ (expressions : List (SourceWordExp α))
-      (values : List (PanValue α)),
-      evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
-        baseAddress topAddress bytesInWord
-        (expressions.map SourceWordExp.toExp) = some values →
-      ∃ words : List α, values = words.map (fun value => .word value) ∧
-        words.length = expressions.length := by
-    intro expressions
-    induction expressions with
-    | nil =>
-        intro values hvalues
-        cases values with
-        | nil => exact ⟨[], rfl, rfl⟩
-        | cons value values =>
-            simp [evalPanValueExps, evalPanValueExp.evalPanValueExps] at hvalues
-    | cons expression expressions ih =>
-        intro values hvalues
-        change evalPanValueExp.evalPanValueExps structs sourceLocals
-          sourceGlobals sourceMemory baseAddress topAddress bytesInWord
-          (List.map SourceWordExp.toExp (expression :: expressions)) =
-          some values at hvalues
-        cases hfield : evalPanValueExp structs sourceLocals sourceGlobals
-            sourceMemory baseAddress topAddress bytesInWord expression.toExp with
-        | none =>
-            simp [evalPanValueExp.evalPanValueExps, hfield] at hvalues
-        | some fieldValue =>
-            cases htail : evalPanValueExp.evalPanValueExps structs sourceLocals sourceGlobals
-                sourceMemory baseAddress topAddress bytesInWord
-                (expressions.map SourceWordExp.toExp) with
-            | none =>
-                simp [evalPanValueExp.evalPanValueExps, hfield, htail] at hvalues
-            | some tailValues =>
-                have hvalues' : fieldValue :: tailValues = values := by
-                    simpa [evalPanValueExp.evalPanValueExps, hfield, htail] using hvalues
-                obtain ⟨fieldWord, hfieldWord⟩ :=
-                  evalPanValueExp_sourceWord_inv structs sourceLocals sourceGlobals
-                    sourceMemory baseAddress topAddress bytesInWord context hrel.2.1
-                    (fun name value hvalue =>
-                      hlookup context sourceLocals name value hvalue)
-                    expression fieldValue hfield
-                obtain ⟨tailWords, htailWords, htailLength⟩ := ih tailValues (by
-                  simpa [evalPanValueExps] using htail)
-                refine ⟨fieldWord :: tailWords, ?_, ?_⟩
-                · simpa [hfieldWord, htailWords] using hvalues'.symm
-                · simp [htailLength]
   have hsourceDecomp : ∃ values,
       evalPanValueExp.evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
         baseAddress topAddress bytesInWord (fields.map SourceWordExp.toExp) =
         some values ∧ .rStruct values = sourceValue := by
     simpa [evalPanValueExp] using hsource
   obtain ⟨values, hfields, hsourceValue⟩ := hsourceDecomp
-  obtain ⟨words, hwords, hwordslength⟩ := hwordValues fields values (by
-    simpa [evalPanValueExps] using hfields)
+  obtain ⟨words, hwords, hwordslength⟩ := evalSourceWordExpList_inv
+    structs sourceLocals sourceGlobals sourceMemory baseAddress topAddress
+    bytesInWord context state.locals hrel.2.1
+    (fun name value hvalue => hlookup context sourceLocals name value hvalue)
+    fields values (by simpa [evalPanValueExps] using hfields)
   cases hsourceValue
   cases hwords
   have hsourceFields :

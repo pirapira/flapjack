@@ -10,6 +10,80 @@ evaluated against the flattened word list in source order.
 
 namespace Flapjack
 
+/-! A scalar source-word list cannot evaluate to structured values.  This is
+    the list analogue of `evalPanValueExp_sourceWord_inv`, and is shared by
+    record expression and declaration correctness proofs. -/
+theorem evalSourceWordExpList_inv
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (context : CompileContext α)
+    (crepLocals : Nat → Option α)
+    (hlocals : panValueCrepLocalsRel structs context sourceLocals crepLocals)
+    (hlookup : ∀ name value, sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (fields : List (SourceWordExp α))
+    (values : List (PanValue α))
+    (hsource : evalPanValueExp.evalPanValueExps structs sourceLocals sourceGlobals
+      sourceMemory baseAddress topAddress bytesInWord
+      (fields.map SourceWordExp.toExp) = some values) :
+    ∃ words : List α, values = words.map (fun value => .word value) ∧
+      words.length = fields.length := by
+  induction fields generalizing values with
+  | nil =>
+      cases values with
+      | nil => exact ⟨[], rfl, rfl⟩
+      | cons value values =>
+          simp [evalPanValueExp.evalPanValueExps] at hsource
+  | cons field fields ih =>
+      cases values with
+      | nil =>
+          cases hfield : evalPanValueExp structs sourceLocals sourceGlobals
+              sourceMemory baseAddress topAddress bytesInWord field.toExp with
+          | none =>
+              simp [evalPanValueExp.evalPanValueExps, hfield] at hsource
+          | some fieldValue =>
+              cases htail : evalPanValueExp.evalPanValueExps structs sourceLocals
+                  sourceGlobals sourceMemory baseAddress topAddress bytesInWord
+                  (fields.map SourceWordExp.toExp) with
+              | none =>
+                  simp [evalPanValueExp.evalPanValueExps, hfield, htail] at hsource
+              | some tailValues =>
+                  simp [evalPanValueExp.evalPanValueExps, hfield, htail] at hsource
+      | cons value values =>
+          cases hfield : evalPanValueExp structs sourceLocals sourceGlobals
+              sourceMemory baseAddress topAddress bytesInWord field.toExp with
+          | none =>
+              simp [evalPanValueExp.evalPanValueExps, hfield] at hsource
+          | some fieldValue =>
+              cases htail : evalPanValueExp.evalPanValueExps structs sourceLocals
+                  sourceGlobals sourceMemory baseAddress topAddress bytesInWord
+                  (fields.map SourceWordExp.toExp) with
+              | none =>
+                  simp [evalPanValueExp.evalPanValueExps, hfield, htail] at hsource
+              | some tailValues =>
+                  have hvalues : fieldValue :: tailValues = value :: values := by
+                    simpa [evalPanValueExp.evalPanValueExps, hfield, htail] using hsource
+                  have hfieldWord := evalPanValueExp_sourceWord_inv
+                    structs sourceLocals sourceGlobals sourceMemory
+                    baseAddress topAddress bytesInWord context hlocals hlookup
+                    field fieldValue hfield
+                  obtain ⟨fieldWord, hfieldWord⟩ := hfieldWord
+                  have htailSource :
+                      evalPanValueExp.evalPanValueExps structs sourceLocals sourceGlobals
+                        sourceMemory baseAddress topAddress bytesInWord
+                        (fields.map SourceWordExp.toExp) = some tailValues := htail
+                  obtain ⟨tailWords, htailWords, htailLength⟩ :=
+                    ih tailValues htailSource
+                  refine ⟨fieldWord :: tailWords, ?_, ?_⟩
+                  · simpa [hfieldWord, htailWords] using hvalues.symm
+                  · simp [htailLength]
+
 theorem compileSourceWordExpList_relation
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

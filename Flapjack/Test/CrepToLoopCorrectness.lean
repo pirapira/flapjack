@@ -68,6 +68,57 @@ theorem crepToLoop_extCall_failure_regression :
   · simp [crepLoopFfiState]
   · simp [crepLoopUnavailableFfi]
 
+def crepLoopFinalEvent : FfiFinalEvent :=
+  { name := .extCall "halt", configuration := [41], bytes := [0],
+    outcome := .failed }
+
+def crepLoopFinalFfi : CrepFfiHandler Nat :=
+  fun _ _ _ _ _ _ => some (.final crepLoopFinalEvent)
+
+theorem crepToLoop_extCall_final_projection_regression :
+    evalCrepFullResult [] (fun _ _ => none) crepLoopFinalFfi
+        (fun _ _ _ _ => none) 0 100 4 crepLoopFfiState
+        (.extCall "halt" 1 2 3 4) = none ∧
+    evalLoopProgWithCallsAndFfi [] (loopFfiOfCrepFfi crepLoopFinalFfi) 4
+        (loopStateOfCrepState crepLoopFfiState)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+            LoopContext Nat)
+          [9] (.extCall "halt" 1 2 3 4)) = none := by
+  apply crepToLoop_extCall_final_projection_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] [] (fun _ _ => none) crepLoopFinalFfi (fun _ _ _ _ => none)
+    0 100 3 crepLoopFfiState [9] "halt" 1 2 3 4 41 0 0 0
+    crepLoopFinalEvent
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFinalFfi, crepLoopFinalEvent]
+
+theorem crepToLoop_seq_extCall_final_projection_regression :
+    evalCrepFullResult [] (fun _ _ => none) crepLoopFinalFfi
+        (fun _ _ _ _ => none) 0 100 5 crepLoopFfiState
+        (.seq (.extCall "halt" 1 2 3 4) (.return [.const 99])) = none ∧
+    evalLoopProgWithCallsAndFfi [] (loopFfiOfCrepFfi crepLoopFinalFfi) 5
+        (loopStateOfCrepState crepLoopFfiState)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+            LoopContext Nat)
+          [9] (.seq (.extCall "halt" 1 2 3 4) (.return [.const 99]))) = none := by
+  apply crepToLoop_seq_extCall_final_projection_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] [] (fun _ _ => none) crepLoopFinalFfi (fun _ _ _ _ => none)
+    0 100 3 crepLoopFfiState [9] "halt" 1 2 3 4 41 0 0 0
+    crepLoopFinalEvent (.return [.const 99])
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFfiState]
+  · simp [crepLoopFinalFfi, crepLoopFinalEvent]
+
 theorem crepToLoop_seq_extCall_failure_regression :
     evalCrepFullProg [] (fun _ _ => none) crepLoopUnavailableFfi
         (fun _ _ _ _ => none) 0 100 5 crepLoopFfiState

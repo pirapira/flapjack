@@ -29,4 +29,19 @@ example :
     RiscV.wordToStackProgNatChecked, RiscV.wordToStackProgNat,
     RiscV.wordProgFirstUnsupported, RiscV.wordProgToNat]
 
+def checkedPipelineDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "main", inline := false, exported := true, params := [],
+      body := .return (.const (BitVec.ofNat 64 7)), returnShape := .one }]
+
+def checkedPipelineRemoveConfig : StackRemoveConfig :=
+  { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
+    stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
+
+example :
+    (compileFlapjackRiscVViaStackChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      checkedPipelineRemoveConfig checkedPipelineDeclarations).isOk := by
+  native_decide
+
 end Flapjack

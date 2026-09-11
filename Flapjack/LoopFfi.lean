@@ -296,4 +296,18 @@ theorem loopFfiSharedLoad_final [BEq α] [OfNat α 1] [Add α]
   rcases hname with ⟨value, hname⟩
   simp [loopFfiSharedLoad, hname, hvalid', horacle]
 
+theorem loopFfiExtCall_final [BEq α] [OfNat α 1] [Add α]
+    (state : LoopFfiState α σ) (function : FunName)
+    (configuration configurationLength array arrayLength : α)
+    (configurationBytes arrayBytes : List UInt8) (event : FfiFinalEvent)
+    (hconfiguration : loopFfiReadBytes state configuration
+      (state.valueToNat configurationLength) = some configurationBytes)
+    (harray : loopFfiReadBytes state array
+      (state.valueToNat arrayLength) = some arrayBytes)
+    (horacle : callFfi state.ffi (.extCall function)
+      configurationBytes arrayBytes = .final event) :
+    (loopFfiExtCall state function configuration configurationLength array arrayLength).1 =
+      .finalFfi (loopFfiClearLocals state) event := by
+  simp [loopFfiExtCall, hconfiguration, harray, horacle]
+
 end Flapjack

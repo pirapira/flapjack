@@ -2370,6 +2370,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   generic program return constructor.
 - [x] Add the one-word shaped-load expression contract, reusing the source
   word-memory relation at the Crep expression boundary.
+- [x] Lift the one-word shaped-load contract through the generic program
+  return constructor.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

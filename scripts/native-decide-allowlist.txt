@@ -47,7 +47,10 @@
 1 Flapjack/Test/FullSsaFfiCall.lean
 # Two named executions are intentional here: one checks the linked RISC-V
 # image and one checks the compiled Loop evaluator before the image backend.
-2 Flapjack/Test/FullSsaHandlerFfi.lean
+# The third theorem is a named source-to-Crep semantic agreement for the
+# caught-handler FFI path; kernel reduction stalls in compileExp, so it cannot
+# be replaced by decide +kernel or #guard.
+3 Flapjack/Test/FullSsaHandlerFfi.lean
 1 Flapjack/Test/CorrectnessFfi.lean
 1 Flapjack/Test/SourceToLoop.lean
 

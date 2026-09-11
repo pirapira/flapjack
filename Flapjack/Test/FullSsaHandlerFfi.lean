@@ -1,4 +1,5 @@
 import Flapjack.Test.FullSsaPipeline
+import Flapjack.CrepeSemantics
 import Flapjack.LoopSemantics
 
 namespace Flapjack
@@ -147,5 +148,62 @@ theorem fullSsaHandlerFfi_source_loop_simulation :
   calc
     _ = some [BitVec.ofNat 64 4] := fullSsaHandlerFfi_source_execution
     _ = _ := fullSsaHandlerFfi_loop_execution.symm
+
+/-! The same caught-handler/FFI program is also checked at the complete
+    source-to-Crep boundary.  This closes the gap between the structured
+    declaration-call proof and the later Loop/RISC-V regressions: the callee's
+    FFI-produced result is raised, caught, and returned by the lowered Crep
+    program. -/
+
+def fullSsaHandlerFfiCrepState : CrepState (RiscV.Word 64) :=
+  { locals := fun _ => none
+    memory := fun _ => none }
+
+def fullSsaHandlerFfiCrepHandler : CrepFfiHandler (RiscV.Word 64) :=
+  fun function configuration _ _ _ state =>
+    if function == "inc" then
+      some (.returned { state with
+        locals := updateCrepLocal state.locals 1 (configuration + 1) })
+    else none
+
+def fullSsaHandlerFfiCrepResult : Option (List (RiscV.Word 64)) :=
+  evalCrepFullResult
+    (compileToCrepe fullSsaHandlerFfiLoopContext
+      fullSsaHandlerFfiDeclarations)
+    (fun _ _ => none) fullSsaHandlerFfiCrepHandler
+    defaultCrepSharedMemHandler 0 100 100 fullSsaHandlerFfiCrepState
+    (compileProg fullSsaHandlerFfiLoopContext fullSsaHandlerFfiSourceMain)
+
+theorem fullSsaHandlerFfi_source_crep_simulation :
+    (evalPanProgWithCallsAndFfi fullSsaHandlerFfiSourceFunctions
+      fullSsaHandlerFfiSourceHandler 40
+      (fun _ => none) fullSsaHandlerFfiSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = fullSsaHandlerFfiCrepResult := by
+  native_decide
+
+theorem fullSsaHandlerFfi_source_crep_loop_machine_simulation :
+    (evalPanProgWithCallsAndFfi fullSsaHandlerFfiSourceFunctions
+      fullSsaHandlerFfiSourceHandler 40
+      (fun _ => none) fullSsaHandlerFfiSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = fullSsaHandlerFfiCrepResult ∧
+    (evalPanProgWithCallsAndFfi fullSsaHandlerFfiSourceFunctions
+      fullSsaHandlerFfiSourceHandler 40
+      (fun _ => none) fullSsaHandlerFfiSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = fullSsaHandlerFfiLoopResult ∧
+    (evalPanProgWithCallsAndFfi fullSsaHandlerFfiSourceFunctions
+      fullSsaHandlerFfiSourceHandler 40
+      (fun _ => none) fullSsaHandlerFfiSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = fullSsaHandlerFfiMachineResult := by
+  exact ⟨fullSsaHandlerFfi_source_crep_simulation,
+    fullSsaHandlerFfi_source_loop_simulation,
+    fullSsaHandlerFfi_source_machine_simulation⟩
 
 end Flapjack

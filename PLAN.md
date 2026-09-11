@@ -2412,6 +2412,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   exposing the propagated flattened values and callee memory.
 - [x] Transport recursive returned and raised control relations from an
   ordinary callee state to the caller-local/callee-memory result state.
+- [x] Invert normal ordinary Crep calls with no destination metadata, exposing
+  the normally completed recursive callee body.
 - [x] Generalize state extension across callee-produced globals and memory,
   and connect recursive callee correctness to destination-aware call state.
 - [x] Prove structured source and compiled Crep branch selection agree for a

@@ -29,6 +29,7 @@ import Flapjack.CrepeProgramInduction
 import Flapjack.CrepeExtCallInversion
 import Flapjack.CrepeProgramExtCallSourceWordCorrectness
 import Flapjack.CrepeExpressionStability
+import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeProgramOneWordDeclarationCorrectness
 import Flapjack.CrepeExpressionListRelation
 import Flapjack.CrepeBasicControlRelation

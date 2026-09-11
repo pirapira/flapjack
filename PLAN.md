@@ -2281,6 +2281,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   invariants.
 - [x] Add the compositional source-word `Store32` correctness rule, threading
   scalar expression compilation and the structured/flattened memory update.
+- [x] Add the compositional source-word `StoreByte` correctness rule, reusing
+  the fixed-width store relation at arbitrary positive target fuel.
 - [x] Add the relation-aware normally-completing sequence rule for the program
   correctness induction.
 - [x] Add relation-aware conditional branch rules for both source condition

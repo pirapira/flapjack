@@ -95,6 +95,7 @@ import Flapjack.Test.FullSsaTarget
 import Flapjack.Test.CrepeArith
 import Flapjack.Test.CrepePrimitive
 import Flapjack.Test.CrepeExpressionRelation
+import Flapjack.Test.CrepeProgramRelation
 import Flapjack.Test.CrepeSourceWordReturnCorrectness
 import Flapjack.Test.CrepeSourceWordAssignmentCorrectness
 import Flapjack.Test.CrepeSourceWordStoreCorrectness

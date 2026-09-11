@@ -40,7 +40,123 @@ def PanValueCrepProgramCorrect
     evalCrepFullProg functions crepPrimitive ffi sharedMem
       baseAddress topAddress targetFuel state
       (compileProg context program) = some crepResult →
-    panValueCrepControlRel structs context exceptionRel sourceResult crepResult
+      panValueCrepControlRel structs context exceptionRel sourceResult crepResult
+
+/-! Leaf cases for the program induction.  These are deliberately stated at
+the relation boundary rather than as concrete examples: the source and Crep
+evaluators must agree for every related environment and every successful fuel
+bound. -/
+
+theorem panValueCrepProgramCorrect_skip
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    PanValueCrepProgramCorrect (.skip : Prog α) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  cases sourceFuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases targetFuel with
+      | zero => simp [evalCrepFullProg] at hcrep
+      | succ targetFuel =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, compileProg,
+            evalCrepFullProg] at hsource hcrep
+          cases hsource
+          cases hcrep
+          simpa [panValueCrepControlRel] using hrel
+
+theorem panValueCrepProgramCorrect_tick
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    PanValueCrepProgramCorrect (.tick : Prog α) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  cases sourceFuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases targetFuel with
+      | zero => simp [evalCrepFullProg] at hcrep
+      | succ targetFuel =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, compileProg,
+            evalCrepFullProg] at hsource hcrep
+          cases hsource
+          cases hcrep
+          simpa [panValueCrepControlRel] using hrel
+
+theorem panValueCrepProgramCorrect_annot
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (tag text : String) :
+    PanValueCrepProgramCorrect (.annot tag text : Prog α) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  cases sourceFuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases targetFuel with
+      | zero => simp [evalCrepFullProg] at hcrep
+      | succ targetFuel =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, compileProg,
+            evalCrepFullProg] at hsource hcrep
+          cases hsource
+          cases hcrep
+          simpa [panValueCrepControlRel] using hrel
+
+theorem panValueCrepProgramCorrect_break
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    PanValueCrepProgramCorrect (.break : Prog α) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  cases sourceFuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases targetFuel with
+      | zero => simp [evalCrepFullProg] at hcrep
+      | succ targetFuel =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, compileProg,
+            evalCrepFullProg] at hsource hcrep
+          cases hsource
+          cases hcrep
+          simpa [panValueCrepControlRel] using hrel
+
+theorem panValueCrepProgramCorrect_continue
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    PanValueCrepProgramCorrect (.continue : Prog α) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  cases sourceFuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases targetFuel with
+      | zero => simp [evalCrepFullProg] at hcrep
+      | succ targetFuel =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, compileProg,
+            evalCrepFullProg] at hsource hcrep
+          cases hsource
+          cases hcrep
+          simpa [panValueCrepControlRel] using hrel
 
 theorem panValueCrepProgramCorrect_seq
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

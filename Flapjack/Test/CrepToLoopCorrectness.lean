@@ -131,6 +131,58 @@ def crepLoopLoadState : CrepState Nat :=
   { locals := fun name => if name == 5 then some 1 else none
     memory := fun address => if address == 100 then some 42 else none }
 
+def crepLoopSharedStoreState : CrepState Nat :=
+  { locals := fun name => if name == 5 then some 42 else none
+    memory := fun _ => none }
+
+theorem crepToLoop_shMem_store_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      defaultCrepSharedMemHandler 0 100 3 crepLoopSharedStoreState
+      (.shMem .store 5 (.const 200))).map
+        (crepControlMemoryAt 200) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      4 (loopStateOfCrepState crepLoopSharedStoreState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.shMem .store 5 (.const 200)))).map
+        (loopControlMemoryAt 200) := by
+  apply crepToLoop_shMem_store_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    defaultCrepSharedMemHandler 0 100 2 crepLoopSharedStoreState
+    ({ crepLoopSharedStoreState with
+      memory := updateMemory crepLoopSharedStoreState.memory 200 42 }) []
+    .store 5 200 42
+    (Or.inl rfl)
+  · simp [crepLoopSharedStoreState]
+  · simp [defaultCrepSharedMemHandler, crepLoopSharedStoreState]
+  · rfl
+
+theorem crepToLoop_shMem_load_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      defaultCrepSharedMemHandler 0 100 3 crepLoopLoadState
+      (.shMem .load 5 (.const 100))).map (crepControlLocal 5) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      4 (loopStateOfCrepState crepLoopLoadState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.shMem .load 5 (.const 100)))).map (loopControlLocal 5) := by
+  apply crepToLoop_shMem_load_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    defaultCrepSharedMemHandler 0 100 2 crepLoopLoadState
+    ({ crepLoopLoadState with
+      locals := updateCrepLocal crepLoopLoadState.locals 5 42 }) []
+    .load 5 100 42
+    (Or.inl rfl)
+  · simp [crepLoopLoadState]
+  · simp [defaultCrepSharedMemHandler, crepLoopLoadState]
+  · rfl
+
 theorem crepToLoop_store_const_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ _ _ => none) 0 100 3 crepLoopAssignState

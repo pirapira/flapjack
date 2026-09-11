@@ -192,4 +192,28 @@ theorem lookupInfo_functionInfos_of_source_lookup
           refine ⟨found, hfoundName, hfoundParams, hfoundBody, ?_⟩
           simpa [functionInfos] using hfoundInfo
 
+theorem lookupInfo_functionInfos_of_source_lookup_eq
+    [LawfulBEq String]
+    (declarations : List (Decl α))
+    (name : FunName) (sourceParams : List VarName) (sourceBody : Prog α)
+    (parameters : List (VarName × Shape)) (returnShape : Shape)
+    (hlookup : lookupPanFunction name (sourceFunctionEntries declarations) =
+      some (sourceParams, sourceBody))
+    (hinfo : lookupInfo name (functionInfos declarations) =
+      some (parameters, returnShape)) :
+    ∃ declaration : FunDecl α,
+      declaration.name = name ∧
+      declaration.params.map Prod.fst = sourceParams ∧
+      declaration.body = sourceBody ∧
+      declaration.params = parameters ∧
+      declaration.returnShape = returnShape := by
+  obtain ⟨declaration, hname, hparams, hbody, hdeclarationInfo⟩ :=
+    lookupInfo_functionInfos_of_source_lookup declarations name sourceParams sourceBody
+      hlookup
+  have hpair :
+      (declaration.params, declaration.returnShape) = (parameters, returnShape) := by
+    exact Option.some.inj (hdeclarationInfo.symm.trans hinfo)
+  cases hpair
+  exact ⟨declaration, hname, hparams, hbody, rfl, rfl⟩
+
 end Flapjack

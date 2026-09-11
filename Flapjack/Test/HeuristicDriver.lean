@@ -82,4 +82,20 @@ example (parameters : List Nat) (program : WordProg Nat)
     parameters program fixedSources algorithm currentFunction colours stackStart
     oracle state renamedParameters allocation renamedProgram halloc).1
 
+example (parameters : List Nat) (program : WordProg Nat)
+    (fixedSources : List Nat)
+    (algorithm currentFunction colours stackStart : Nat)
+    (oracle : NatInfoMap Nat) (state : WordSsaState)
+    (renamedParameters : List Nat) (allocation : WordSpillState)
+    (renamedProgram : WordProg Nat)
+    (halloc :
+      wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry parameters
+        program fixedSources algorithm currentFunction colours stackStart oracle =
+        some (.spill state renamedParameters allocation renamedProgram)) :
+    ∀ name, name ∈ parameters →
+      lookupNatInfo name allocation.locations = some (.register name) := by
+  exact (wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_spill_sound
+    parameters program fixedSources algorithm currentFunction colours stackStart
+    oracle state renamedParameters allocation renamedProgram halloc).2.2.2
+
 end Flapjack

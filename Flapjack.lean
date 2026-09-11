@@ -160,6 +160,7 @@ import Flapjack.CrepeProgramConditionalFuelRelation
 import Flapjack.CrepeProgramLoopFuelRelation
 import Flapjack.CrepeProgramSourceWordLoopFuelRelation
 import Flapjack.CrepeProgramIteCorrectness
+import Flapjack.CrepeWordProgramCases
 import Flapjack.CrepeProgramWhileCorrectness
 import Flapjack.CrepeLoopComposeFuelRelation
 import Flapjack.CrepeLoopBreakComposeFuelRelation

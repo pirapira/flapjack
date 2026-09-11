@@ -2484,6 +2484,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Bridge the scalar `SourceWordExp` proof interface back to arbitrary
   original `Exp` terms satisfying the compiler's `wordExp` invariant, and
   expose the resulting expression-correctness contract.
+- [x] Lift source-word return and conditional correctness constructors from
+  `SourceWordExp` to original `Exp` terms satisfying `wordExp`.
 - [x] Add reusable variable-support lemmas for compiled `loadShape`, field
   selection, and expression-list heads, preparing the compiler-side bound
   proof for nested `Exp` recursion.

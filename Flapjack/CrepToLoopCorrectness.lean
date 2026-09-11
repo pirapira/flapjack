@@ -258,6 +258,53 @@ theorem crepToLoop_seq_terminal_compose
     | broke state label => rfl
     | continued state label => rfl
 
+theorem crepToLoop_seq_terminal_compose_loop_extra
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (crepFunctions : List (CompiledFunction α))
+    (loopFunctions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (loopFfi : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α)
+    (first second : CrepProg α)
+    (result : CrepControlResult α) (loopResult : LoopResult α)
+    (hfirst : evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state first = some result)
+    (hloopFirst : evalLoopProgWithCallsAndFfi loopFunctions loopFfi
+      (fuel + 2) (loopStateOfCrepState state)
+      (loopCompileProg context [] first) = some loopResult)
+    (hcrepTerminal : ∀ middle : CrepState α, result ≠ .normal middle)
+    (hloopTerminal : ∀ middle : LoopState α, loopResult ≠ .normal middle) :
+    evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state (.seq first second) = some result ∧
+    evalLoopProgWithCallsAndFfi loopFunctions loopFfi
+      (fuel + 3) (loopStateOfCrepState state)
+      (loopCompileProg context [] (.seq first second)) = some loopResult := by
+  constructor
+  · simp only [evalCrepFullProg]
+    rw [hfirst]
+    cases result with
+    | normal middle => exact (hcrepTerminal middle rfl).elim
+    | returned state values => rfl
+    | raised state exception => rfl
+    | broke state label => rfl
+    | continued state label => rfl
+    | finalFfi state event => rfl
+  · simp only [loopCompileProg_seq, evalLoopProgWithCallsAndFfi]
+    rw [hloopFirst]
+    cases loopResult with
+    | normal middle => exact (hloopTerminal middle rfl).elim
+    | returned state values => rfl
+    | raised state exception => rfl
+    | broke state label => rfl
+    | continued state label => rfl
+
 theorem crepToLoop_assign_agreement_of_empty_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

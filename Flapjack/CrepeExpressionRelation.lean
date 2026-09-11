@@ -173,4 +173,42 @@ theorem compileSourceWordExp_op_relation
       hleftCompile, hrightCompile]
   · simp [evalCrepFullExp, hleftEval, hrightEval, hvalue]
 
+theorem compileSourceWordExp_mul_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (crepLocals : Nat → Option α)
+    (crepMemory : α → Option α) (baseAddress topAddress bytesInWord : α)
+    (left right : SourceWordExp α)
+    (leftCompiled rightCompiled : CrepExp α)
+    (leftValue rightValue value : α)
+    (hleftSource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord left.toExp = some (.word leftValue))
+    (hrightSource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord right.toExp = some (.word rightValue))
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.panOp .mul [left.toExp, right.toExp]) = some (.word value))
+    (hleftCompile : compileExp context left.toExp = ([leftCompiled], .one))
+    (hrightCompile : compileExp context right.toExp = ([rightCompiled], .one))
+    (hleftEval : evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+      leftCompiled = some leftValue)
+    (hrightEval : evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+      rightCompiled = some rightValue) :
+    compileExp context (.panOp .mul [left.toExp, right.toExp]) =
+        ([.crepOp .mul [leftCompiled, rightCompiled]], .one) ∧
+      evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+        (.crepOp .mul [leftCompiled, rightCompiled]) = some value := by
+  have hvalue : leftValue * rightValue = value := by
+    have hvalue' := hsource
+    simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+      hleftSource, hrightSource] at hvalue'
+    exact hvalue'
+  constructor
+  · simp [compileExp, compileExp.compileExpList, cexpHeads,
+      hleftCompile, hrightCompile]
+  · simp [evalCrepFullExp, hleftEval, hrightEval, hvalue]
+
 end Flapjack

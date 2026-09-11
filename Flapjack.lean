@@ -5,6 +5,7 @@ import Flapjack.PanSimp
 import Flapjack.PanStructs
 import Flapjack.PanGlobals
 import Flapjack.Pipeline
+import Flapjack.RiscV.PipelineDiagnostics
 import Flapjack.Correctness
 import Flapjack.CorrectnessCalls
 import Flapjack.FlatCorrectness
@@ -312,6 +313,8 @@ import Flapjack.StackAlloc.BitmapSemantics
 import Flapjack.StackRemove
 import Flapjack.Lab
 import Flapjack.RiscV.Lab
+import Flapjack.RiscV.LabDiagnostics
+import Flapjack.RiscV.WordDiagnostics
 import Flapjack.RiscV.CorrectnessPipelineFfi
 
 /-!

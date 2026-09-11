@@ -202,27 +202,33 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
       if labIsSkip thenBranch && labIsSkip elseBranch then
         ⟨[], false, counter⟩
       else if labIsSkip thenBranch then
-        ⟨[labJumpCmp operator condition right sectionId counter] ++
-          elseResult.lines ++ [labLabel sectionId counter],
-          false, elseResult.nextLabel + 1⟩
+        let joinLabel := elseResult.nextLabel
+        ⟨[labJumpCmp operator condition right sectionId joinLabel] ++
+          elseResult.lines ++ [labLabel sectionId joinLabel],
+          false, joinLabel + 1⟩
       else if labIsSkip elseBranch then
-        ⟨[labJumpCmp operator condition right sectionId counter] ++
-          thenResult.lines ++ [labLabel sectionId counter],
-          false, thenResult.nextLabel + 1⟩
+        let joinLabel := thenResult.nextLabel
+        ⟨[labJumpCmp operator condition right sectionId joinLabel] ++
+          thenResult.lines ++ [labLabel sectionId joinLabel],
+          false, joinLabel + 1⟩
       else if thenResult.terminal then
-        ⟨[labJumpCmp operator condition right sectionId counter] ++
-          thenResult.lines ++ [labLabel sectionId counter] ++ elseResult.lines,
-          elseResult.terminal, elseResult.nextLabel + 1⟩
+        let joinLabel := elseResult.nextLabel
+        ⟨[labJumpCmp operator condition right sectionId joinLabel] ++
+          thenResult.lines ++ [labLabel sectionId joinLabel] ++ elseResult.lines,
+          elseResult.terminal, joinLabel + 1⟩
       else if elseResult.terminal then
-        ⟨[labJumpCmp (labNegateCmp operator) condition right sectionId counter] ++
-          elseResult.lines ++ [labLabel sectionId counter] ++ thenResult.lines,
-          thenResult.terminal, thenResult.nextLabel + 1⟩
+        let joinLabel := elseResult.nextLabel
+        ⟨[labJumpCmp (labNegateCmp operator) condition right sectionId joinLabel] ++
+          elseResult.lines ++ [labLabel sectionId joinLabel] ++ thenResult.lines,
+          thenResult.terminal, joinLabel + 1⟩
       else
-        ⟨[labJumpCmp (labNegateCmp operator) condition right sectionId counter] ++
-          elseResult.lines ++ [labJump sectionId (elseResult.nextLabel + 1),
-            labLabel sectionId counter] ++ thenResult.lines ++
-          [labLabel sectionId (elseResult.nextLabel + 1)],
-          thenResult.terminal && elseResult.terminal, elseResult.nextLabel + 2⟩
+        let thenLabel := elseResult.nextLabel
+        let joinLabel := thenLabel + 1
+        ⟨[labJumpCmp (labNegateCmp operator) condition right sectionId joinLabel] ++
+          elseResult.lines ++ [labJump sectionId joinLabel,
+            labLabel sectionId thenLabel] ++ thenResult.lines ++
+          [labLabel sectionId joinLabel],
+          thenResult.terminal && elseResult.terminal, joinLabel + 1⟩
   | .loop body =>
       let continueLabel := counter
       let breakLabel := counter + 1

@@ -335,4 +335,37 @@ theorem fullSsaCaughtHandlerFfi_source_loop_simulation :
     _ = some [BitVec.ofNat 64 4] := fullSsaCaughtHandlerFfi_source_execution
     _ = _ := fullSsaCaughtHandlerFfi_compiled_results.2.symm
 
+def fullSsaCaughtHandlerFfiHost : RiscV.WordFfiHost 64 :=
+  fun service configuration _ _ _ state =>
+    if service = 7 then
+      some { (RiscV.writeRegister state 10 (configuration + 1)) with
+        pc := state.pc + 4 }
+    else none
+
+def fullSsaCaughtHandlerFfiMachineResult : Option (List (RiscV.Word 64)) := do
+  let sections ← compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) [("inc", 7)]
+    fullSsaHandlerFfiRemoveConfig fullSsaCaughtHandlerFfiDeclarations
+  let entry ← fullSsaHandlerFfiLookupEntry 2 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  let returnAddress := BitVec.ofNat 64 (4 * image.length)
+  RiscV.executeFunctionAtWithFfi fullSsaCaughtHandlerFfiHost 8000 0 entry
+    returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
+
+theorem fullSsaCaughtHandlerFfi_machine_execution :
+    fullSsaCaughtHandlerFfiMachineResult = some [BitVec.ofNat 64 4] := by
+  native_decide
+
+theorem fullSsaCaughtHandlerFfi_source_machine_simulation :
+    (evalPanProgWithCallsAndFfi fullSsaCaughtHandlerFfiSourceFunctions
+      fullSsaCaughtHandlerFfiSourceHandler 40
+      (fun _ => none) fullSsaCaughtHandlerFfiSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = fullSsaCaughtHandlerFfiMachineResult := by
+  calc
+    _ = some [BitVec.ofNat 64 4] := fullSsaCaughtHandlerFfi_source_execution
+    _ = _ := fullSsaCaughtHandlerFfi_machine_execution.symm
+
 end Flapjack

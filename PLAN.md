@@ -2469,6 +2469,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add the declaration correctness wrapper that consumes the universal
   expression contract while exposing allocated-name freshness and shape
   obligations as the remaining static-context interface.
+- [x] Factor range-based allocated/fresh-name length and distinctness lemmas,
+  and discharge allocated-name distinctness inside declaration correctness.
+- [x] Derive declaration fresh-name non-overlap from the static bound that
+  existing context slots lie below `context.maxVar`.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

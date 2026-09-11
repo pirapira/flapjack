@@ -1,5 +1,6 @@
 import Flapjack.CrepeDeclarationExpressionAdapter
 import Flapjack.CrepeProgramDeclarationGeneralCorrectness
+import Flapjack.CrepeAllocationNameLemmas
 
 /-!
 Declaration correctness with the universal expression contract.  The
@@ -19,11 +20,9 @@ theorem panValueCrepProgramCorrect_dec_of_expression_contract
     (hbody : PanValueCrepProgramCorrect body)
     (hname : ∀ (context : CompileContext α),
       lookupInfo name context.vars = none)
-    (hfresh : ∀ (context : CompileContext α) oldName oldShape oldSlots,
-      oldName ≠ name →
+    (hbounded : ∀ (context : CompileContext α) oldName oldShape oldSlots,
       lookupInfo oldName context.vars = some (oldShape, oldSlots) →
-      ∀ temporary, temporary ∈ allocatedNames context shape →
-        temporary ∉ oldSlots)
+      ∀ slot ∈ oldSlots, slot ≤ context.maxVar)
     (hcompiledFresh : ∀ (context : CompileContext α)
       (compiled : List (CrepExp α)),
       ∀ temporary, temporary ∈ allocatedNames context shape →
@@ -40,9 +39,7 @@ theorem panValueCrepProgramCorrect_dec_of_expression_contract
         evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
           baseAddress topAddress bytesInWord value = some sourceValue ∧
         panShapeMatches (panValueShape structs sourceValue) shape = true)
-    (hvalue : PanValueCrepExpressionCorrect value)
-    (hdistinct : ∀ (context : CompileContext α),
-      CrepDistinctNames (allocatedNames context shape)) :
+    (hvalue : PanValueCrepExpressionCorrect value) :
     PanValueCrepProgramCorrect (.dec name shape value body) := by
   have hcompiledEval : ∀ (context : CompileContext α) (structs : StructContext)
       (sourceLocals sourceGlobals : VarName → Option (PanValue α))
@@ -65,7 +62,16 @@ theorem panValueCrepProgramCorrect_dec_of_expression_contract
     exact panValueCrepExpressionCorrect_compiled_list value hvalue context structs
       sourceLocals sourceGlobals sourceMemory state baseAddress topAddress
       bytesInWord compiledValues shape sourceValue hrel hcompileValue hsource
+  have hfresh : ∀ (context : CompileContext α) oldName oldShape oldSlots,
+      oldName ≠ name →
+      lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+      ∀ temporary, temporary ∈ allocatedNames context shape →
+        temporary ∉ oldSlots := by
+    intro context oldName oldShape oldSlots _ hlookupOld
+    exact allocatedNames_not_mem_of_bounded context shape oldSlots
+      (hbounded context oldName oldShape oldSlots hlookupOld)
   exact panValueCrepProgramCorrect_dec_general name shape value body hbody hname
-    hfresh hcompiledFresh hcompile hshape hcompiledEval hdistinct
+    hfresh hcompiledFresh hcompile hshape hcompiledEval
+      (fun context => crepDistinctNames_allocatedNames context shape)
 
 end Flapjack

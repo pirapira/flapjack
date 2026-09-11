@@ -104,6 +104,50 @@ theorem panValueCrepStateRel_compileCalleeParameterList_of_folds
     sourceGlobals sourceMemory crepMemory
     (compileCalleeParameterList params values offset) hglobals hmemory hfresh hvars
 
+theorem panValueCrepStateRel_compileCalleeParameterList_of_source_bind_assign
+    [OfNat α 0]
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepMemory : α → Option α)
+    (params : List (VarName × Shape)) (values : List (PanValue α))
+    (offset : Nat) (hlength : params.length = values.length)
+    (calleeLocals : VarName → Option (PanValue α))
+    (targetCalleeLocals : Nat → Option α)
+    (hglobals : sourceGlobals = (fun _ => none))
+    (hmemory : panValueWordMemory sourceMemory = crepMemory)
+    (hcontext : context.vars = [])
+    (hnames : (params.map Prod.fst).Nodup)
+    (hshape : ∀ parameter ∈ compileCalleeParameterList params values offset,
+      panShapeMatches (panValueShape structs parameter.value) parameter.shape = true)
+    (hparameterLength : ∀ parameter ∈ compileCalleeParameterList params values offset,
+      parameter.slots.length = parameter.values.length)
+    (hbind : bindPanValueParameters (params.map Prod.fst) values = some calleeLocals)
+    (hassign : assignCrepValues (fun _ => none)
+        (compileParamVars params offset).2.1
+        (values.flatMap panValueFlatWords) = some targetCalleeLocals) :
+    panValueCrepStateRel structs
+      { context with vars := (compileParamVars params offset).1 }
+      calleeLocals sourceGlobals sourceMemory
+      { locals := targetCalleeLocals, memory := crepMemory } := by
+  have hsource := bindPanValueParameters_compileCalleeParameterList_source
+    params values offset hlength
+  have hcallee : calleeLocals = foldCalleeParameterSource (fun _ => none)
+      (compileCalleeParameterList params values offset) := by
+    exact Option.some.inj (hbind.symm.trans hsource)
+  have hgenerated := bindPanValueParameters_compileCalleeParameterList
+    params values offset hlength
+  have hbindGenerated : bindPanValueParameters
+      ((compileCalleeParameterList params values offset).map CalleeParameter.name)
+      ((compileCalleeParameterList params values offset).map CalleeParameter.value) =
+      some calleeLocals := by
+    simpa [hcallee] using hgenerated
+  exact panValueCrepStateRel_compileCalleeParameterList structs context
+    sourceGlobals sourceMemory crepMemory params values offset hlength calleeLocals
+    targetCalleeLocals hglobals hmemory hcontext hnames hshape hparameterLength
+    hbindGenerated hassign
+
 theorem compileFunDecl_params_eq_compileParamVars
     [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (declaration : FunDecl α) :

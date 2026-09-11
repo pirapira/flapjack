@@ -94,6 +94,48 @@ theorem compileCalleeParameterList_flattened_values
               simp only [compileCalleeParameterList, List.flatMap_cons]
               rw [ih values (offset + Shape.shapeSize shape) htail]
 
+theorem compileCalleeParameterList_values
+    (params : List (VarName × Shape)) (values : List (PanValue α))
+    (offset : Nat) (hlength : params.length = values.length) :
+    (compileCalleeParameterList params values offset).map
+        CalleeParameter.value = values := by
+  induction params generalizing values offset with
+  | nil =>
+      cases values with
+      | nil => rfl
+      | cons value values => simp at hlength
+  | cons param params ih =>
+      cases param with
+      | mk name shape =>
+          cases values with
+          | nil => simp at hlength
+          | cons value values =>
+              have htail : params.length = values.length := by
+                simpa using hlength
+              simp only [compileCalleeParameterList, List.map_cons]
+              rw [ih values (offset + Shape.shapeSize shape) htail]
+
+theorem compileCalleeParameterList_names_of_length
+    (params : List (VarName × Shape)) (values : List (PanValue α))
+    (offset : Nat) (hlength : params.length = values.length) :
+    (compileCalleeParameterList params values offset).map
+        CalleeParameter.name = params.map Prod.fst := by
+  induction params generalizing values offset with
+  | nil =>
+      cases values with
+      | nil => rfl
+      | cons value values => simp at hlength
+  | cons param params ih =>
+      cases param with
+      | mk name shape =>
+          cases values with
+          | nil => simp at hlength
+          | cons value values =>
+              have htail : params.length = values.length := by
+                simpa using hlength
+              simp only [compileCalleeParameterList, List.map_cons]
+              rw [ih values (offset + Shape.shapeSize shape) htail]
+
 theorem bindPanValueParameters_compileCalleeParameterList
     (params : List (VarName × Shape)) (values : List (PanValue α))
     (offset : Nat) (_hlength : params.length = values.length) :
@@ -106,6 +148,16 @@ theorem bindPanValueParameters_compileCalleeParameterList
         (compileCalleeParameterList params values offset)) := by
   exact bindPanValueParameters_parameters
     (compileCalleeParameterList params values offset)
+
+theorem bindPanValueParameters_compileCalleeParameterList_source
+    (params : List (VarName × Shape)) (values : List (PanValue α))
+    (offset : Nat) (hlength : params.length = values.length) :
+    bindPanValueParameters (params.map Prod.fst) values =
+      some (foldCalleeParameterSource (fun _ => none)
+        (compileCalleeParameterList params values offset)) := by
+  simpa [compileCalleeParameterList_names_of_length params values offset hlength,
+    compileCalleeParameterList_values params values offset hlength] using
+    bindPanValueParameters_compileCalleeParameterList params values offset hlength
 
 theorem assignCrepValues_compileCalleeParameterList
     [OfNat α 0]

@@ -169,6 +169,7 @@ import Flapjack.CompileParamVarsSlotBounds
 import Flapjack.CompileCalleeParameterList
 import Flapjack.CompileCalleeParameterFreshness
 import Flapjack.CompileCalleeParameterStateRelation
+import Flapjack.CompileFunctionLookup
 import Flapjack.CrepeCalleeParameterRelation
 import Flapjack.CrepeCalleeParameterListGeneralRelation
 import Flapjack.CrepeCalleeParameterAppendRelation

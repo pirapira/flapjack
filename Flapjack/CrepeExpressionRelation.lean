@@ -97,6 +97,61 @@ theorem localisedProg_assign_global_false (name : VarName) (value : Exp α) :
     ¬ localisedProg (.assign .global name value : Prog α) := by
   simp [localisedProg]
 
+/-! Successful word operations cannot hide a failed or structured operand.
+This is the source-side inversion lemma needed before applying the
+compositional operation boundaries below. -/
+set_option linter.unnecessarySimpa false in
+theorem evalPanValueExp_op_word_inv
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α) (operator : BinOp)
+    (left right : Exp α) (value : α)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord (.op operator [left, right]) =
+      some (.word value)) :
+    ∃ leftValue rightValue,
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord left = some (.word leftValue) ∧
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord right = some (.word rightValue) ∧
+      evalPanBinOp operator leftValue rightValue = value := by
+  cases hleft : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord left with
+  | none =>
+      simp [evalPanValueExp, evalPanValueExp.evalPanValueExps, hleft] at hsource
+  | some leftValue =>
+      cases hright : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord right with
+      | none =>
+          simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+            hleft, hright] at hsource
+      | some rightValue =>
+          cases leftValue with
+          | word leftValue =>
+              cases rightValue with
+              | word rightValue =>
+                  refine ⟨leftValue, rightValue, ?_, ?_, ?_⟩
+                  · simpa using hleft
+                  · simpa using hright
+                  simpa [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                    hleft, hright] using hsource
+              | rStruct fields =>
+                  simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                    hleft, hright] at hsource
+              | nStruct name fields =>
+                  simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                    hleft, hright] at hsource
+          | rStruct fields =>
+              simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                hleft, hright] at hsource
+          | nStruct name fields =>
+              simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+                hleft, hright] at hsource
+
 /-! The local-variable leaf of the source expression simulation.  The
 compiler-context lookup is deliberately an explicit premise: it is the Lean
 counterpart of the HOL proof's `FLOOKUP ctxt.vars` obligation. -/

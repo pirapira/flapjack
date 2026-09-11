@@ -2416,6 +2416,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Prove compositional correctness for arbitrary scalar-word record
   declarations, including expression-list compilation, nested evaluation,
   fresh-local read-back, and restoration of the surrounding control result.
+- [x] Add the generic ordinary-declaration correctness constructor, separating
+  expression compilation/evaluation witnesses from recursive body simulation
+  and fresh temporary restoration.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

@@ -86,6 +86,49 @@ def panValueCrepStateRel {α : Type u}
   panValueCrepLocalsRel structs context sourceLocals crepState.locals ∧
   panValueCrepMemoryRel sourceMemory crepState.memory
 
+/-! A state relation that tolerates compiler-owned memory locations.  This is
+needed after a raised callee has written its flattened payload to the Crep
+return area and a caller handler continues execution. -/
+def panValueCrepStateRelExcept {α : Type u}
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepState : CrepState α) (excluded : α → Prop) : Prop :=
+  sourceGlobals = (fun _ => none) ∧
+  panValueCrepLocalsRel structs context sourceLocals crepState.locals ∧
+  panValueCrepMemoryRelExcept sourceMemory crepState.memory excluded
+
+theorem panValueCrepStateRelExcept_of_state_rel
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (excluded : α → Prop)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state) :
+    panValueCrepStateRelExcept structs context sourceLocals sourceGlobals
+      sourceMemory state excluded := by
+  refine ⟨hrel.1, hrel.2.1, ?_⟩
+  intro address _
+  exact congrFun hrel.2.2 address
+
+theorem panValueCrepStateRelExcept_update_crep_at_excluded
+    [BEq α] [LawfulBEq α]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (address value : α) (excluded : α → Prop)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state) (hexcluded : excluded address) :
+    panValueCrepStateRelExcept structs context sourceLocals sourceGlobals
+      sourceMemory { state with memory := updateMemory state.memory address value }
+      excluded := by
+  refine ⟨hrel.1, hrel.2.1, ?_⟩
+  have hexcept := panValueCrepStateRelExcept_of_state_rel structs context
+    sourceLocals sourceGlobals sourceMemory state excluded hrel
+  exact panValueCrepMemoryRelExcept_update_crep_at_excluded
+    sourceMemory state.memory address value excluded
+    hexcept.2.2 hexcluded
+
 def panValueCrepRaisedStateRelExcept {α : Type u}
     (structs : StructContext) (context : CompileContext α)
     (sourceGlobals : VarName → Option (PanValue α))
@@ -154,6 +197,38 @@ def panValueCrepRaisedControlRelExcept {α : Type u}
   panValueCrepRaisedStateRelExcept structs context sourceGlobals sourceMemory
     crepState excluded ∧
   exceptionRel sourceException sourceValue exceptionCode
+
+/-! Control results after a handler may still carry the callee's reserved
+payload spill.  The ordinary relation remains exact-memory; this companion
+relation makes the owned locations explicit for normal and returned handler
+results as well. -/
+def panValueCrepControlRelExcept {α : Type u}
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α) (excluded : α → Prop) : Prop :=
+  match sourceResult, crepResult with
+  | .normal sourceLocals sourceGlobals sourceMemory,
+      .normal crepState =>
+      panValueCrepStateRelExcept structs context sourceLocals sourceGlobals
+        sourceMemory crepState excluded
+  | .returned sourceLocals sourceGlobals sourceMemory sourceValues,
+      .returned crepState crepValues =>
+      panValueCrepStateRelExcept structs context sourceLocals sourceGlobals
+        sourceMemory crepState excluded ∧
+      panValueCrepValuesRel sourceValues crepValues
+  | .raised _sourceLocals sourceGlobals sourceMemory exception value,
+      .raised crepState exceptionCode =>
+      panValueCrepRaisedControlRelExcept structs context exceptionRel
+        sourceGlobals sourceMemory exception value crepState exceptionCode
+        excluded
+  | .broke sourceLocals sourceGlobals sourceMemory, .broke crepState _ =>
+      panValueCrepStateRelExcept structs context sourceLocals sourceGlobals
+        sourceMemory crepState excluded
+  | .continued sourceLocals sourceGlobals sourceMemory, .continued crepState _ =>
+      panValueCrepStateRelExcept structs context sourceLocals sourceGlobals
+        sourceMemory crepState excluded
+  | _, _ => False
 
 theorem panValueCrepRaisedStateRel_word_spill
     [BEq α] [LawfulBEq α]

@@ -1,5 +1,6 @@
 import Flapjack.CrepeFfiCorrectness
 import Flapjack.CrepeCallHandlerCorrectness
+import Flapjack.CrepeStateRelation
 import Flapjack.RiscV.Model
 
 /-! Concrete caught-call regression for the full-Crepe handler boundary. -/
@@ -140,6 +141,32 @@ theorem crepe_handler_call_destination_compile_regression :
     (handlerProgram := .return (.var .local "exn"))
     (handlerNames := [1]) (compiledArguments := [])
   all_goals simp [crepeHandlerCallContext, lookupInfo, compileArgs]
+
+theorem crepe_handler_call_returned_relation_except_regression :
+    panValueCrepControlRelExcept [] crepeHandlerCallContext
+        (fun _ _ _ => True)
+        (.returned (fun _ => none) (fun _ => none) (fun _ => none)
+          [.word (BitVec.ofNat 64 7)])
+        (.returned crepeHandlerCallReturnedState
+          [BitVec.ofNat 64 7])
+        (fun address => address = BitVec.ofNat 64 0) := by
+  change panValueCrepStateRelExcept [] crepeHandlerCallContext
+      (fun _ => none) (fun _ => none) (fun _ => none)
+      crepeHandlerCallReturnedState (fun address => address = 0) ∧
+    panValueCrepValuesRel
+      [.word (BitVec.ofNat 64 7)] [BitVec.ofNat 64 7]
+  constructor
+  · refine ⟨rfl, ?_, ?_⟩
+    · intro name value shape slots hsource hlookup
+      simp at hsource
+    · intro address hnot
+      by_cases haddress : address == (BitVec.ofNat 64 0)
+      · have heq : address = BitVec.ofNat 64 0 := by simpa using haddress
+        exact False.elim (hnot heq)
+      · simp [crepeHandlerCallReturnedState, panValueWordMemory,
+          updateMemory, haddress]
+  · simp [panValueCrepValuesRel, panValueFlatWords,
+      panValueFlatWordsFuel]
 
 theorem crepe_handler_call_return_short_circuits_regression :
     evalCrepFullProg crepeHandlerCallFunctions

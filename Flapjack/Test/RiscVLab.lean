@@ -1,6 +1,25 @@
 import Flapjack.RiscV.Lab
+import Flapjack.RiscV.LabDiagnostics
 
 namespace Flapjack.RiscV
+
+example :
+    compileLabSectionChecked (width := 64) { services := [] }
+      ⟨7, [.labAsm (.heapAlloc 3) [] 0]⟩ =
+      .error { sectionId := 7, position := 0, feature := .heapAlloc } := by
+  rfl
+
+example :
+    compileLabSectionChecked (width := 64) { services := [] }
+      ⟨8, [.labAsm (.install : LabAsm (Word 64)) [] 0]⟩ =
+      .error { sectionId := 8, position := 0, feature := .install } := by
+  rfl
+
+example :
+    compileLabSectionChecked (width := 64) { services := [] }
+      ⟨9, [.labAsm (.halt : LabAsm (Word 64)) [] 0]⟩ =
+      .error { sectionId := 9, position := 0, feature := .halt } := by
+  rfl
 
 def stackRemoveRiscVConfig : StackRemoveConfig :=
   { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,

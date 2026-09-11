@@ -2582,6 +2582,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   contracts, retaining the word-valued constructor as a specialization.
 - [x] Expose state-level one-word local/slot update transport for subsequent
   callee-parameter and result-state correctness proofs.
+- [x] Prove the one-word callee-parameter state boundary from the exact source
+  binding and Crep slot-assignment equations, including its state relation.
 - [x] Connect generic expression-list argument preparation to recursively
   correct returned ordinary calls and their flattened callee-result relation.
 - [x] Connect generic expression-list argument preparation to recursively

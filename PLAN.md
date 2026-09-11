@@ -2384,6 +2384,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   destination read-back equation for callee correctness.
 - [x] Package destination-aware normal calls with the complete extended
   source-to-Crep state relation required by declaration continuations.
+- [x] Invert generated zero-initializer declarations to recover the compiled
+  declaration-call continuation evaluation.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

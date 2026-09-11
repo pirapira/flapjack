@@ -204,13 +204,11 @@ def wordProgPrioritizedMoves : WordProg α → List WordMove
   | .ite _ _ _ thenBranch elseBranch =>
       wordProgPrioritizedMoves thenBranch ++ wordProgPrioritizedMoves elseBranch
   | .loop _ body _ | .mustTerminate body => wordProgPrioritizedMoves body
-  | .call returns _ _ handler =>
-      (match returns with
-      | none => []
-      | some (_, _, returnCode, _, _) => wordProgPrioritizedMoves returnCode) ++
-      (match handler with
-      | none => []
-      | some (_, body, _, _) => wordProgPrioritizedMoves body)
+  | .call none _ _ _ => []
+  | .call (some (_, _, returnCode, _, _)) _ _ none =>
+      wordProgPrioritizedMoves returnCode
+  | .call (some (_, _, returnCode, _, _)) _ _ (some (_, body, _, _)) =>
+      wordProgPrioritizedMoves body ++ wordProgPrioritizedMoves returnCode
   | _ => []
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial

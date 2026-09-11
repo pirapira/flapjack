@@ -1015,8 +1015,11 @@ def wordProgPreferenceEdges : WordProg α → List (Nat × Nat)
       wordProgPreferenceEdges thenBranch ++ wordProgPreferenceEdges elseBranch
   | .loop _ body _ => wordProgPreferenceEdges body
   | .mustTerminate body => wordProgPreferenceEdges body
-  | .call _ _ _ none => []
-  | .call _ _ _ (some (_, body, _, _)) => wordProgPreferenceEdges body
+  | .call none _ _ _ => []
+  | .call (some (_, _, returnCode, _, _)) _ _ none =>
+      wordProgPreferenceEdges returnCode
+  | .call (some (_, _, returnCode, _, _)) _ _ (some (_, body, _, _)) =>
+      wordProgPreferenceEdges body ++ wordProgPreferenceEdges returnCode
   | _ => []
 
 /-! CakeML's `full_ssa_cc_trans` starts a function by giving each formal

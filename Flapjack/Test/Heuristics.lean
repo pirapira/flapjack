@@ -45,6 +45,27 @@ example :
        { priority := 0, left := 3, right := 4 }] := by
   decide +kernel
 
+def preferenceReturnCode : WordProg Nat :=
+  .move 3 [(10, 11)]
+
+def preferenceHandlerCode : WordProg Nat :=
+  .move 5 [(20, 21)]
+
+example :
+    wordProgPreferenceEdges
+        (.call (some ([1], ([], []), preferenceReturnCode, 0, 0)) none []
+          (some (2, preferenceHandlerCode, 0, 0)) : WordProg Nat) =
+      [(20, 21), (10, 11)] := by
+  decide +kernel
+
+example :
+    wordProgPrioritizedMoves
+        (.call (some ([1], ([], []), preferenceReturnCode, 0, 0)) none []
+          (some (2, preferenceHandlerCode, 0, 0)) : WordProg Nat) =
+      [{ priority := 5, left := 20, right := 21 },
+       { priority := 3, left := 10, right := 11 }] := by
+  decide +kernel
+
 example :
     (wordAllocateGraphProgramWithPriorities
       (.move 9 [(0, 1)] : WordProg Nat) [] 13 26).isSome = true := by

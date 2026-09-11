@@ -2006,6 +2006,18 @@ theorem evalWordStackMachine_div_preserves_value [NeZero width]
       hdivisorNonzero', hdividendSafe, hdivisorSafe,
       hscratch, BitVec.udiv_def]
 
+/- The reduced Loop-to-Word carrier currently uses zero placeholders for the
+   handler label and entry section.  The surrounding pipeline supplies the
+   concrete function section in the Stack configuration; preserve explicit
+   nonzero metadata when it is already available. -/
+def wordStackHandlerLabel (config : WordStackConfig) : Nat → Nat
+  | 0 => config.handlerLabel
+  | label + 1 => label + 1
+
+def wordStackHandlerEntryLabel (config : WordStackConfig) : Nat → Nat
+  | 0 => config.sectionId
+  | entry + 1 => entry + 1
+
 def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
@@ -2067,7 +2079,9 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let handlerCode ← wordToStackProg config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch returnCode handlerCode
-        config.returnLabel config.entryLabel config.sectionId config.handlerLabel exception
+        config.returnLabel config.entryLabel
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config entryLabel) exception
       pure (wordStackJoin argumentMoves callCode)
   | .opCurrHeap operator destination source =>
       wordStackOpCurrHeap config operator destination source
@@ -2125,22 +2139,35 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       pure (wordStackJoin argumentMoves
         (.call none (.label target) none))
   | .tick => pure .tick
-  | .call returns (some target) arguments none => do
+  | .call (some (destinations, _cutsets, returnProgram, returnLabel, entryLabel))
+      (some target) arguments none => do
       let argumentMoves ← wordStackMovesToPhysical config arguments 2
-      let returnCode ← wordStackReturnCode config returns
-      let destinations := returns.map (fun result => result.1) |>.getD []
+      let returnCode ← wordToStackProgNat config returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
         config.frameOffset config.scratch destinations returnCode
-        config.returnLabel config.entryLabel
+        returnLabel entryLabel
       pure (wordStackJoin argumentMoves callCode)
-  | .call returns (some target) arguments
-      (some (exception, body, _handlerLabel, _entryLabel)) => do
+  | .call none (some target) arguments
+      (some (exception, body, handlerLabel, handlerEntryLabel)) => do
       let argumentMoves ← wordStackMovesToPhysical config arguments 2
-      let returnCode ← wordStackReturnCode config returns
+      let handlerCode ← wordToStackProgNat config body
+      let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
+        config.frameOffset config.scratch .skip handlerCode
+        config.returnLabel config.entryLabel
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
+      pure (wordStackJoin argumentMoves callCode)
+  | .call (some (_destinations, _cutsets, returnProgram, returnLabel, entryLabel))
+      (some target) arguments
+      (some (exception, body, handlerLabel, handlerEntryLabel)) => do
+      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let returnCode ← wordToStackProgNat config returnProgram
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch returnCode handlerCode
-        config.returnLabel config.entryLabel config.sectionId config.handlerLabel exception
+        returnLabel entryLabel
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
       pure (wordStackJoin argumentMoves callCode)
   | .call _ none _ _ => none
   | .opCurrHeap operator destination source =>
@@ -2158,6 +2185,25 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       wordStackCompileSharedNat config operator name address
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
+
+/- Compile the continuation carried in a Word call's return metadata.  The
+   older `wordStackReturnCode` helper only reconstructs the ABI destination
+   move for reduced fixtures; this boundary retains the actual SSA-generated
+   continuation so the complete call lowering can consume it. -/
+def wordStackEmbeddedReturnCode [BEq Nat] (config : WordStackConfig)
+    (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat)) :
+    Option (StackProg Nat) :=
+  match returns with
+  | none => some .skip
+  | some (_, _, returnProgram, _, _) => wordToStackProgNat config returnProgram
+
+def wordStackReturnLabel (config : WordStackConfig)
+    (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat)) : Nat :=
+  returns.map (fun result => result.2.2.2.fst) |>.getD config.returnLabel
+
+def wordStackEntryLabel (config : WordStackConfig)
+    (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat)) : Nat :=
+  returns.map (fun result => result.2.2.2.snd) |>.getD config.entryLabel
 
 /-! Stateful variant of the Word-to-Stack compiler.
 
@@ -2199,15 +2245,17 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
       wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount bitmapRegister frameSlots
         wordBits storeConstsStub state body
   | .call returns (some target) arguments
-      (some (exception, body, _handlerLabel, _entryLabel)) => do
+      (some (exception, body, handlerLabel, handlerEntryLabel)) => do
       let argumentMoves ← wordStackMovesToPhysical config arguments 2
-      let returnCode ← wordStackReturnCode config returns
+      let returnCode ← wordStackEmbeddedReturnCode config returns
       let _destinations := returns.map (fun result => result.1) |>.getD []
       let (handlerCode, state) ← wordToStackProgNatWithBitmapBuilder config
         bitmapBuilder registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch returnCode handlerCode
-        config.returnLabel config.entryLabel config.sectionId config.handlerLabel exception
+        (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
       pure (wordStackJoin argumentMoves callCode, state)
   | .alloc _ (_, live) =>
       let (program, state) := wordStackAllocWithBitmapBuilder config bitmapRegister
@@ -2391,7 +2439,7 @@ theorem wordToStackProgNatWithBitmapBuilder_preserves_length
               cases argsResult with
               | none => simp_all
               | some argumentMoves =>
-                  generalize hreturnResult : wordStackReturnCode config returns =
+                  generalize hreturnResult : wordStackEmbeddedReturnCode config returns =
                     returnResult at hresult
                   cases returnResult with
                   | none => simp_all

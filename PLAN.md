@@ -286,6 +286,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   calls, exceptions, returns, shared memory, and FFI.
 - [x] Add the initial Word IR and Loop-to-Word lowering for register mapping,
   expressions, memory instructions, loops, calls, returns, and FFI.
+- [x] Preserve and recursively lower embedded SSA return continuations at the
+  concrete Word-to-Stack boundary, including handler-bearing calls, and update
+  the pipeline address regression for the resulting emitted layout.
 - [x] Port the HOL `pan_simp` sequence-association and tail-call normalization
   pass, including recursive call-handler traversal.
 - [x] Port the core `pan_structs` named-shape, field-reordering, expression,
@@ -2857,6 +2860,17 @@ non-interference lemmas for fresh Crep locals in
 `CrepeExpressionStability.lean`. These are the pending side conditions for
 replacing the explicit temporary-stability premise in the source-word
 `ExtCall` theorem with compiler-derived freshness facts.
+
+The Word-to-Stack slice now preserves embedded SSA return continuations in
+handler-bearing calls, carries explicit handler label/entry metadata through
+the StackLang helper, and uses the enclosing function configuration for the
+zero placeholders produced by the reduced Loop-to-Word boundary.  Focused
+handler, pipeline, and full-SSA machine regressions cover this behavior.
+
+The handler-bearing StackLang call now wraps its normal return continuation
+with CakeML's `PopHandler`, so successful calls release the handler frame while
+raised calls continue through the raise stub.  The linked handler-address
+regression covers the resulting layout relocation.
 
 ## Verification workflow
 

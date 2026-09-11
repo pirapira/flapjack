@@ -2408,4 +2408,153 @@ theorem evalWordCallWithHandlersAndFfi_return_applyColour_general [NeZero width]
       exact hcallerRelation.register name hname hcolour
   exact ⟨hsourceResult, htargetResult, hfinal, hvalues⟩
 
+/-! The raised-call counterpart carries an exception through the coloured
+    handler register before running the two related handler bodies.  Keeping
+    the handler-entry relation explicit makes this usable for nested caught
+    calls and for handlers that contain FFI leaves. -/
+
+theorem evalWordCallWithHandlersAndFfi_raiseHandler_applyColour_general
+    [NeZero width]
+    (colour : Nat → Nat)
+    (sourceFunctions targetFunctions : List
+      (Nat × List Nat × WordProg (Word width)))
+    (sourceHandler targetHandler : FunName → Word width → Word width →
+      Word width → Word width → State width → Option (State width))
+    (fuel functionLabel : Nat) (parameters : List Nat)
+    (arguments colouredArguments : List Nat)
+    (argumentValues : List (Word width))
+    (sourceBody targetBody : WordProg (Word width))
+    (sourceState targetState : State width)
+    (sourceCallee targetCallee : State width)
+    (sourceBodyState targetBodyState : State width)
+    (sourceException targetException handlerName : Nat)
+    (handlerLabel entryLabel : Nat)
+    (sourceHandlerBody targetHandlerBody : WordProg (Word width))
+    (sourceHandlerState targetHandlerState : State width)
+    (sourceValues targetValues : List (Word width))
+    (valid : wordColourValid colour)
+    (injective : Function.Injective colour)
+    (colourZero : colour 0 = 0)
+    (hlookupSource : lookupWordFunction functionLabel sourceFunctions =
+      some (parameters, sourceBody))
+    (hlookupTarget : lookupWordFunction functionLabel targetFunctions =
+      some (parameters.map colour, targetBody))
+    (hargumentsSource : readWordRegisters sourceState arguments =
+      some argumentValues)
+    (hargumentsTarget : readWordRegisters targetState colouredArguments =
+      some argumentValues)
+    (hbindSource : bindWordRegisters sourceState parameters argumentValues =
+      some sourceCallee)
+    (hbindTarget : bindWordRegisters targetState (parameters.map colour)
+      argumentValues = some targetCallee)
+    (hbodySource : evalWordFunctionWithHandlersAndFfi sourceFunctions
+      sourceHandler fuel sourceCallee sourceBody =
+      some (.raised sourceBodyState sourceException))
+    (hbodyTarget : evalWordFunctionWithHandlersAndFfi targetFunctions
+      targetHandler fuel targetCallee targetBody =
+      some (.raised targetBodyState targetException))
+    (hsourceHandlerName : handlerName < 32)
+    (hsourceHandlerRegister : registerOfNat handlerName =
+      some ⟨handlerName, hsourceHandlerName⟩)
+    (htargetHandlerRegister : registerOfNat (colour handlerName) =
+      some ⟨colour handlerName, valid handlerName hsourceHandlerName⟩)
+    (hhandlerSource : evalWordFunctionWithHandlersAndFfi sourceFunctions
+      sourceHandler fuel
+      (writeRegister
+        { sourceState with
+          memory := sourceBodyState.memory
+          privilege := sourceBodyState.privilege
+          mode := sourceBodyState.mode }
+        ⟨handlerName, hsourceHandlerName⟩
+        (BitVec.ofNat width sourceException)) sourceHandlerBody =
+      some (.returned sourceHandlerState sourceValues))
+    (hhandlerTarget : evalWordFunctionWithHandlersAndFfi targetFunctions
+      targetHandler fuel
+      (writeRegister
+        { targetState with
+          memory := targetBodyState.memory
+          privilege := targetBodyState.privilege
+          mode := targetBodyState.mode }
+        ⟨colour handlerName, valid handlerName hsourceHandlerName⟩
+        (BitVec.ofNat width targetException)) targetHandlerBody =
+      some (.returned targetHandlerState targetValues))
+    (hcallerRelation : WordColourStateRelation colour sourceState targetState)
+    (hbodyRelation : WordColourStateRelation colour
+      sourceBodyState targetBodyState)
+    (hhandlerRelation : WordColourStateRelation colour
+      sourceHandlerState targetHandlerState)
+    (hexception : targetException = sourceException)
+    (hvalues : targetValues = sourceValues) :
+    evalWordCallWithHandlersAndFfi sourceFunctions sourceHandler (fuel + 1)
+      sourceState (some ([], ([], []), .skip, 0, 0)) (some functionLabel)
+      arguments (some (handlerName, sourceHandlerBody, handlerLabel, entryLabel)) =
+        some (.returned sourceHandlerState sourceValues) ∧
+    evalWordCallWithHandlersAndFfi targetFunctions targetHandler (fuel + 1)
+      targetState (some ([], ([], []), .skip, 0, 0)) (some functionLabel)
+      colouredArguments
+      (some (colour handlerName, targetHandlerBody, handlerLabel, entryLabel)) =
+        some (.returned targetHandlerState targetValues) ∧
+    WordColourStateRelation colour
+      (writeRegister
+        { sourceState with
+          memory := sourceBodyState.memory
+          privilege := sourceBodyState.privilege
+          mode := sourceBodyState.mode }
+        ⟨handlerName, hsourceHandlerName⟩
+        (BitVec.ofNat width sourceException))
+      (writeRegister
+        { targetState with
+          memory := targetBodyState.memory
+          privilege := targetBodyState.privilege
+          mode := targetBodyState.mode }
+        ⟨colour handlerName, valid handlerName hsourceHandlerName⟩
+        (BitVec.ofNat width targetException)) ∧
+    WordColourStateRelation colour sourceHandlerState targetHandlerState ∧
+    targetValues = sourceValues := by
+  have hreturned : WordColourStateRelation colour
+      { sourceState with
+        memory := sourceBodyState.memory
+        privilege := sourceBodyState.privilege
+        mode := sourceBodyState.mode }
+      { targetState with
+        memory := targetBodyState.memory
+        privilege := targetBodyState.privilege
+        mode := targetBodyState.mode } := by
+    constructor
+    · exact hcallerRelation.pc
+    · exact hbodyRelation.memory
+    · exact hbodyRelation.privilege
+    · exact hbodyRelation.mode
+    · intro name hname hcolour
+      exact hcallerRelation.register name hname hcolour
+  have hentry := wordColourStateRelation_writeRegister colour valid injective
+    colourZero
+    { sourceState with
+      memory := sourceBodyState.memory
+      privilege := sourceBodyState.privilege
+      mode := sourceBodyState.mode }
+    { targetState with
+      memory := targetBodyState.memory
+      privilege := targetBodyState.privilege
+      mode := targetBodyState.mode }
+    hreturned handlerName hsourceHandlerName
+    (BitVec.ofNat width sourceException) (BitVec.ofNat width targetException)
+    (by simpa [hexception])
+  have hsourceCall := evalWordCallWithHandlersAndFfi_raise_handler_of_eval
+    sourceFunctions sourceHandler fuel sourceState sourceCallee sourceBodyState
+    functionLabel parameters arguments sourceBody argumentValues sourceException
+    handlerName handlerLabel entryLabel sourceHandlerBody
+    ⟨handlerName, hsourceHandlerName⟩ (.returned sourceHandlerState sourceValues)
+    hlookupSource hargumentsSource hbindSource hbodySource
+    hsourceHandlerRegister hhandlerSource
+  have htargetCall := evalWordCallWithHandlersAndFfi_raise_handler_of_eval
+    targetFunctions targetHandler fuel targetState targetCallee targetBodyState
+    functionLabel (parameters.map colour) colouredArguments targetBody
+    argumentValues targetException (colour handlerName) handlerLabel entryLabel
+    targetHandlerBody ⟨colour handlerName, valid handlerName hsourceHandlerName⟩
+    (.returned targetHandlerState targetValues)
+    hlookupTarget hargumentsTarget hbindTarget hbodyTarget
+    htargetHandlerRegister hhandlerTarget
+  exact ⟨hsourceCall, htargetCall, hentry, hhandlerRelation, hvalues⟩
+
 end Flapjack.RiscV

@@ -207,6 +207,69 @@ theorem calleeParameterListFreshAppend_of_conditions
   · exact hflat
   · exact hseparate
 
+theorem pairwise_symmetric_relation_of_mem
+    {β : Type u} (relation : β → β → Prop) (entries : List β)
+    (hpairwise : List.Pairwise
+      (fun left right => relation left right ∧ relation right left) entries) :
+    ∀ left ∈ entries, ∀ right ∈ entries, left ≠ right →
+      relation left right := by
+  induction entries with
+  | nil => simp
+  | cons head tail ih =>
+      simp only [List.pairwise_cons] at hpairwise
+      intro left hleft right hright hne
+      simp only [List.mem_cons] at hleft hright
+      rcases hleft with rfl | hleft
+      · rcases hright with rfl | hright
+        · exact False.elim (hne rfl)
+        · exact (hpairwise.1 right hright).1
+      · rcases hright with rfl | hright
+        · exact (hpairwise.1 left hleft).2
+        · exact ih hpairwise.2 left hleft right hright hne
+
+theorem compileCalleeParameterList_names
+    (params : List (VarName × Shape)) (values : List (PanValue α))
+    (offset : Nat) (hlength : params.length = values.length) :
+    (compileCalleeParameterList params values offset).map
+        CalleeParameter.name = params.map Prod.fst := by
+  have hmetadata := compileCalleeParameterList_metadata params values offset hlength
+  have hnamesMetadata := congrArg (List.map Prod.fst) hmetadata
+  have hnamesParams := compileParamVars_preserves_parameter_shapes params offset
+  have hnamesCompiled :
+      (compileParamVars params offset).1.map Prod.fst = params.map Prod.fst := by
+    simpa [Function.comp_def] using congrArg (List.map Prod.fst) hnamesParams
+  calc
+    (compileCalleeParameterList params values offset).map CalleeParameter.name =
+        ((compileCalleeParameterList params values offset).map (fun parameter =>
+          (parameter.name, (parameter.shape, parameter.slots)))).map Prod.fst := by
+            simp [List.map_map, Function.comp_def]
+    _ = (compileParamVars params offset).1.map Prod.fst := hnamesMetadata
+    _ = params.map Prod.fst := hnamesCompiled
+
+theorem compileCalleeParameterList_flattening_of_mem
+    (params : List (VarName × Shape)) (values : List (PanValue α))
+    (offset : Nat) (hlength : params.length = values.length)
+    (parameter : CalleeParameter α)
+    (hparameter : parameter ∈ compileCalleeParameterList params values offset) :
+    panValueFlatWords parameter.value = parameter.values := by
+  induction params generalizing values offset with
+  | nil =>
+      cases values with
+      | nil => simp [compileCalleeParameterList] at hparameter
+      | cons value values => simp at hlength
+  | cons param params ih =>
+      cases param with
+      | mk name shape =>
+          cases values with
+          | nil => simp at hlength
+          | cons value values =>
+              have htail : params.length = values.length := by
+                simpa using hlength
+              simp only [compileCalleeParameterList, List.mem_cons] at hparameter
+              rcases hparameter with rfl | hparameter
+              · rfl
+              · exact ih values (offset + Shape.shapeSize shape) htail hparameter
+
 theorem compileCalleeParameterList_slots_ge
     (params : List (VarName × Shape)) (values : List (PanValue α))
     (offset : Nat) (hlength : params.length = values.length) :
@@ -347,5 +410,46 @@ theorem compileCalleeParameterList_distinct_slots
               · exact hdistinctRange offset (Shape.shapeSize shape)
               · exact ih values (offset + Shape.shapeSize shape) htail
                   parameter hparameter
+
+theorem compileCalleeParameterList_separate
+    (params : List (VarName × Shape)) (values : List (PanValue α))
+    (offset : Nat) (hlength : params.length = values.length) :
+    ∀ left ∈ compileCalleeParameterList params values offset,
+      ∀ right ∈ compileCalleeParameterList params values offset, left ≠ right →
+        ∀ slot ∈ left.slots, slot ∉ right.slots := by
+  have hpairwise := compileCalleeParameterList_slots_pairwise_disjoint
+    params values offset hlength
+  intro left hleft right hright hne
+  exact (pairwise_symmetric_relation_of_mem
+    (fun left right : CalleeParameter α =>
+      ∀ slot ∈ left.slots, slot ∉ right.slots)
+    (compileCalleeParameterList params values offset) hpairwise
+    left hleft right hright hne)
+
+theorem compileCalleeParameterList_fresh_append
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (params : List (VarName × Shape)) (values : List (PanValue α))
+    (offset : Nat) (hlength : params.length = values.length)
+    (hcontext : context.vars = [])
+    (hnames : (params.map Prod.fst).Nodup)
+    (hshape : ∀ parameter ∈ compileCalleeParameterList params values offset,
+      panShapeMatches (panValueShape structs parameter.value) parameter.shape = true)
+    (hparameterLength : ∀ parameter ∈ compileCalleeParameterList params values offset,
+      parameter.slots.length = parameter.values.length) :
+    CalleeParameterListFreshAppend structs context
+      (compileCalleeParameterList params values offset) := by
+  apply calleeParameterListFreshAppend_of_conditions structs context
+    (compileCalleeParameterList params values offset)
+  · exact hcontext
+  · rw [compileCalleeParameterList_names params values offset hlength]
+    exact hnames
+  · exact hshape
+  · exact hparameterLength
+  · exact compileCalleeParameterList_distinct_slots params values offset hlength
+  · exact fun parameter hparameter =>
+      compileCalleeParameterList_flattening_of_mem params values offset hlength
+        parameter hparameter
+  · exact compileCalleeParameterList_separate params values offset hlength
 
 end Flapjack

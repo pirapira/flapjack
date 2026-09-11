@@ -68,6 +68,33 @@ theorem crepToLoop_seq_normal_regression :
     evalCrepFullProg, evalCrepFullExp, loopCompileProg, loopCompileExp,
     loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp]
 
+theorem crepToLoop_seq_terminal_regression :
+    evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        (fun _ _ _ _ => none) 0 100 4 crepSeqInitial
+        (.seq (.break 0) (.assign 5 (.const 42))) =
+      some (.broke crepSeqInitial 0) ∧
+    evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+        4 (loopStateOfCrepState crepSeqInitial)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+            LoopContext Nat)
+          [] (.seq (.break 0) (.assign 5 (.const 42)))) =
+      some (.broke (loopStateOfCrepState crepSeqInitial) 0) := by
+  apply crepToLoop_seq_terminal_compose
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ _ loopState => some loopState) (fun _ _ _ _ => none)
+    0 100 2 crepSeqInitial [] (.break 0) (.assign 5 (.const 42))
+    (.broke crepSeqInitial 0) (.broke (loopStateOfCrepState crepSeqInitial) 0)
+  · simp [crepSeqInitial, evalCrepFullProg]
+  · simp [crepSeqInitial, loopStateOfCrepState, loopCompileProg,
+      evalLoopProgWithCallsAndFfi, evalLoopProg]
+  · intro middle h
+    cases h
+  · intro middle h
+    cases h
+
 def crepLoopLoadState : CrepState Nat :=
   { locals := fun name => if name == 5 then some 1 else none
     memory := fun address => if address == 100 then some 42 else none }
@@ -89,6 +116,42 @@ theorem crepToLoop_store_const_regression :
       LoopContext Nat)
     [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
     (fun _ _ _ _ => none) 0 100 2 crepLoopAssignState [] 200 42
+
+theorem crepToLoop_store32_const_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 3 crepLoopAssignState
+      (.store32 (.const 200) (.const 43))).map
+        (crepControlMemoryAt 200) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      7 (loopStateOfCrepState crepLoopAssignState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.store32 (.const 200) (.const 43)))).map
+        (loopControlMemoryAt 200) := by
+  exact crepToLoop_store32_const_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 2 crepLoopAssignState [] 200 43
+
+theorem crepToLoop_storeByte_const_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 3 crepLoopAssignState
+      (.storeByte (.const 201) (.const 44))).map
+        (crepControlMemoryAt 201) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      7 (loopStateOfCrepState crepLoopAssignState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.storeByte (.const 201) (.const 44)))).map
+        (loopControlMemoryAt 201) := by
+  exact crepToLoop_storeByte_const_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 2 crepLoopAssignState [] 201 44
 
 theorem crepToLoop_assign_load32_const_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)

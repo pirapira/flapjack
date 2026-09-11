@@ -2596,6 +2596,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   arbitrary flattened structured values and expose the empty-callee wrapper.
 - [x] Generalize callee-entry transport to lists of arbitrary structured
   parameters, including flattened assignment and concrete bind witnesses.
+- [x] Align list-level callee-entry transport with source-order compiler
+  contexts by adding append-order lookup and state-extension rules.
 - [x] Connect generic expression-list argument preparation to recursively
   correct returned ordinary calls and their flattened callee-result relation.
 - [x] Connect generic expression-list argument preparation to recursively

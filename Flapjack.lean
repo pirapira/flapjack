@@ -67,6 +67,7 @@ import Flapjack.CrepeProgramStoreCorrectness
 import Flapjack.CrepeProgramStoreByteCorrectness
 import Flapjack.CrepeProgramPrimitiveCorrectness
 import Flapjack.CrepeProgramSharedMemoryCorrectness
+import Flapjack.CrepeProgramSharedMemoryLoadCorrectness
 import Flapjack.CrepeProgramAssignmentFuelRelation
 import Flapjack.CrepeProgramAssignmentCorrectness
 import Flapjack.CrepeProgramPrimitiveRelation

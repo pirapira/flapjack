@@ -41,3 +41,40 @@ theorem panValueCrepStateRel_extend
     state.locals name shape slots value hsource hshape hread hold
 
 end Flapjack
+
+namespace Flapjack
+
+/-! The corresponding extension rule when a callee has also produced a new
+    source global environment and memory relation.  The local proof still
+    uses the caller relation for pre-existing bindings, while the global and
+    memory components come from the callee simulation. -/
+theorem panValueCrepStateRel_extend_environment
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceLocals' : VarName → Option (PanValue α))
+    (sourceGlobals' : VarName → Option (PanValue α))
+    (sourceMemory' : α → Option (PanValue α)) (state : CrepState α)
+    (name : VarName) (shape : Shape) (slots : List Nat)
+    (value : PanValue α)
+    (hsource : sourceLocals' = updatePanValueMap sourceLocals name value)
+    (hshape : panShapeMatches (panValueShape structs value) shape = true)
+    (hread : readCrepLocals state.locals slots =
+      some (panValueFlatWords value))
+    (hold : ∀ oldName oldValue oldShape oldSlots,
+      oldName ≠ name →
+      sourceLocals oldName = some oldValue →
+      lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+      panShapeMatches (panValueShape structs oldValue) oldShape = true ∧
+      readCrepLocals state.locals oldSlots =
+        some (panValueFlatWords oldValue))
+    (hglobals : sourceGlobals' = (fun _ => none))
+    (hmemory : panValueCrepMemoryRel sourceMemory' state.memory) :
+    panValueCrepStateRel structs
+      { context with
+          vars := (name, (shape, slots)) :: context.vars }
+      sourceLocals' sourceGlobals' sourceMemory' state := by
+  have hlocals := panValueCrepLocalsRel_extend structs context sourceLocals
+    sourceLocals' state.locals name shape slots value hsource hshape hread hold
+  exact ⟨hglobals, hlocals, hmemory⟩
+
+end Flapjack

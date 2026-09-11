@@ -2283,6 +2283,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   scalar expression compilation and the structured/flattened memory update.
 - [x] Add the compositional source-word `StoreByte` correctness rule, reusing
   the fixed-width store relation at arbitrary positive target fuel.
+- [x] Add the compositional source-word general `Store` correctness rule,
+  covering its two temporary declarations, flat word store, and restoration
+  at arbitrary positive target fuel.
 - [x] Add the compositional structured `addCarry` primitive correctness rule,
   including typed destination slots, fresh temporaries, and the flattened
   primitive result relation.

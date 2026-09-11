@@ -223,4 +223,64 @@ theorem evalWordProg_ssaRename_load_destination [NeZero width]
       hfreshNonzero] using hloadValue
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
+theorem wordSsaRenameInst_div
+    (ssa : WordSsaState) (destination dividend divisor : Nat) :
+    wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =
+      ((wordSsaFresh ssa destination).1,
+        .arith (.div (wordSsaFresh ssa destination).2
+          (wordSsaRead ssa dividend) (wordSsaRead ssa divisor))) := by
+  rfl
+
+theorem evalWordProg_ssaRename_div_destination [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (destination dividend divisor : Nat)
+    (hdestination : destination < 32) (hdividend : dividend < 32)
+    (hdivisor : divisor < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hdividendSsa : wordSsaRead ssa dividend < 32)
+    (hdivisorSsa : wordSsaRead ssa divisor < 32)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0) :
+    ∃ source' target',
+      evalWordProg source (.inst (.arith (.div destination dividend divisor))) =
+          some source' ∧
+      evalWordProg target
+          (.inst (wordSsaRenameInst ssa
+            (.arith (.div destination dividend divisor) : WordInst)).2) =
+          some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
+      source'.memory = target'.memory := by
+  have hdividendValue :
+      readRegister source ⟨dividend, hdividend⟩ =
+        readRegister target ⟨wordSsaRead ssa dividend, hdividendSsa⟩ := by
+    have h := hregister dividend
+    simpa [registerOfNat, hdividend, hdividendSsa] using h
+  have hdivisorValue :
+      readRegister source ⟨divisor, hdivisor⟩ =
+        readRegister target ⟨wordSsaRead ssa divisor, hdivisorSsa⟩ := by
+    have h := hregister divisor
+    simpa [registerOfNat, hdivisor, hdivisorSsa] using h
+  rw [wordSsaRenameInst_div]
+  refine ⟨execute source (.divU ⟨destination, hdestination⟩
+      ⟨dividend, hdividend⟩ ⟨divisor, hdivisor⟩),
+    execute target (.divU ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+      ⟨wordSsaRead ssa dividend, hdividendSsa⟩
+      ⟨wordSsaRead ssa divisor, hdivisorSsa⟩), ?_, ?_, ?_, ?_⟩
+  · simp [evalWordProg, wordArithToInstructions, wordArithToInstruction,
+      registerOfNat, hdestination, hdividend, hdivisor, executeInstructions]
+  · simp [evalWordProg, wordArithToInstructions, wordArithToInstruction,
+      registerOfNat, hfresh, hdividendSsa, hdivisorSsa, executeInstructions]
+  · rw [execute_divU, execute_divU]
+    simp [hdestinationNonzero, hfreshNonzero, hdividendValue, hdivisorValue]
+  · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+
 end Flapjack.RiscV

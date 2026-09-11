@@ -2486,6 +2486,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   expose the resulting expression-correctness contract.
 - [x] Lift source-word return and conditional correctness constructors from
   `SourceWordExp` to original `Exp` terms satisfying `wordExp`.
+- [x] Lift the source-word loop correctness constructor to original `Exp`
+  conditions, retaining the loop-control safety invariant.
 - [x] Add reusable variable-support lemmas for compiled `loadShape`, field
   selection, and expression-list heads, preparing the compiler-side bound
   proof for nested `Exp` recursion.

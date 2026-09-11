@@ -168,6 +168,45 @@ theorem crepe_handler_call_returned_relation_except_regression :
   · simp [panValueCrepValuesRel, panValueFlatWords,
       panValueFlatWordsFuel]
 
+theorem crepe_handler_call_destination_simulation_regression :
+    evalCrepFullProg crepeHandlerCallFunctions
+        (fun _ _ => none) (noCrepFfi (Word 64))
+        defaultCrepSharedMem 0 100 9 crepeHandlerCallCaller
+        (compileProg crepeHandlerCallContext
+          (.call (some (some (.local, "exn"),
+            some ("E", "exn", (.return (.var .local "exn")))))
+            "raise" [])) =
+      some crepeHandlerCallResult := by
+  apply compile_full_call_handler_destination_simulation
+    (context := crepeHandlerCallContext)
+    (functions := crepeHandlerCallFunctions)
+    (primitive := fun _ _ => none)
+    (ffi := noCrepFfi (Word 64))
+    (sharedMem := defaultCrepSharedMem)
+    (baseAddress := 0) (topAddress := 100) (fuel := 8)
+    (caller := crepeHandlerCallCaller) (function := "raise")
+    (arguments := []) (compiledArguments := [])
+    (destination := some (.local, "exn"))
+    (returnNames := [1]) (returnShape := .one)
+    (exception := "E") (handlerVar := "exn")
+    (exceptionCode := BitVec.ofNat 64 7)
+    (handlerProgram := .return (.var .local "exn"))
+    (handlerNames := [1]) (result := crepeHandlerCallResult)
+  · simp [crepeHandlerCallContext, lookupInfo]
+  · simp [crepeHandlerCallContext, lookupInfo]
+  · simp [crepeHandlerCallContext, lookupInfo]
+  · simp [compileArgs]
+  · simp [crepeHandlerCallContext, lookupInfo]
+  · have hexn : lookupInfo "exn" [("exn", (Shape.one, [1]))] =
+        some (Shape.one, [1]) := by
+      simp [lookupInfo]
+    simp [crepeHandlerCallContext, crepeHandlerCallFunctions,
+      crepeHandlerCallCaller, crepeHandlerCallResult,
+      crepeHandlerCallReturnedState, evalCrepFullCall, evalCrepFullProg,
+      evalCrepFullExps, evalCrepFullExp, assignCrepValues, assignRet,
+      crepNestedSeq, loadGlobals, compileProg, compileExp,
+      updateCrepLocal, updateMemory, lookupCompiledFunction, hexn]
+
 theorem crepe_handler_call_return_short_circuits_regression :
     evalCrepFullProg crepeHandlerCallFunctions
         (fun _ _ => none) (noCrepFfi (Word 64))

@@ -1,4 +1,5 @@
 import Flapjack.CrepeCorrectness
+import Flapjack.CrepeCallHandlerCorrectness
 
 /-!
 Correctness boundary for the FFI part of `pan_to_crep`.
@@ -493,6 +494,61 @@ theorem compile_full_call_handler_simulation
   rw [compileProg_call_handler_of_compiled context function arguments returnShape
     exception handlerVar exceptionCode handlerProgram handlerNames
     compiledArguments hfunction hexception hhandler harguments]
+  simpa [evalCrepFullProg] using hcall
+
+/-! Destination-aware counterpart of the caught-handler call boundary.  The
+return slots are supplied explicitly because a destination may select a
+different flattened local shape from the callee's declared return shape. -/
+theorem compile_full_call_handler_destination_simulation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α)
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat) (caller : CrepState α)
+    (function : FunName) (arguments : List (Exp α))
+    (compiledArguments : List (CrepExp α))
+    (destination : Option (VarKind × VarName))
+    (returnNames : List Nat) (returnShape : Shape)
+    (exception handlerVar : VarName) (exceptionCode : α)
+    (handlerProgram : Prog α) (handlerNames : List Nat)
+    (result : CrepControlResult α)
+    (hfunction : lookupInfo function context.functions =
+      some ([], returnShape))
+    (hexception : lookupInfo exception context.exceptions = some exceptionCode)
+    (hhandler : ∃ shape,
+      lookupInfo handlerVar context.vars = some (shape, handlerNames))
+    (harguments : compileArgs context arguments = compiledArguments)
+    (hreturnNames :
+      (match destination with
+       | none => functionReturnNames context function
+       | some (kind, name) =>
+           match kind with
+           | .local =>
+               match lookupInfo name context.vars with
+               | some (_, names) => names
+               | none => []
+           | .global => []) = returnNames)
+    (hcall : evalCrepFullCall functions primitive ffi sharedMem
+      baseAddress topAddress fuel caller
+      (some (returnNames,
+        some (exceptionCode,
+          .seq (assignRet context.bytesInWord handlerNames)
+            (compileProg context handlerProgram)))) function compiledArguments =
+      some result) :
+    evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) caller
+      (compileProg context
+        (.call (some (destination,
+          some (exception, handlerVar, handlerProgram))) function arguments)) =
+      some result := by
+  rw [compileProg_call_handler_destination_of_compiled context function arguments
+    destination returnNames returnShape exception handlerVar exceptionCode
+    handlerProgram handlerNames compiledArguments hfunction hexception hhandler
+    harguments hreturnNames]
   simpa [evalCrepFullProg] using hcall
 
 /-! Exception production is the other handler-facing lowering in `pan_to_crep`.

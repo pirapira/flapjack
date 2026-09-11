@@ -2395,6 +2395,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   propagation.
 - [x] Invert normal destination-aware Crep calls, distinguishing a normally
   finishing callee from a returned-value destination assignment.
+- [x] Invert successful source function calls to expose argument evaluation,
+  parameter binding, callee-body return, and result-validation witnesses.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

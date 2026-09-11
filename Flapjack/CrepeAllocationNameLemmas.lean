@@ -90,4 +90,17 @@ theorem allocatedNames_not_mem_of_bounded
   exact freshNames_not_mem_of_bounded context (Shape.shapeSize shape) 1 slots
     (by omega) hbound
 
+theorem freshNames_not_mem_of_expVars_bounded
+    (context : CompileContext α) (count start : Nat)
+    (compiled : List (CrepExp α)) (hstart : 0 < start)
+    (hbound : ∀ expression ∈ compiled, ∀ varName ∈ crepExpVars expression,
+      varName ≤ context.maxVar) :
+    ∀ temporary ∈ freshNames context count start,
+      ∀ expression ∈ compiled, temporary ∉ crepExpVars expression := by
+  intro temporary htemporary expression hexpression hvariable
+  obtain ⟨offset, hoffset, htemporaryEq⟩ := List.mem_map.mp htemporary
+  have hoffsetBound : offset < count := List.mem_range.mp hoffset
+  have hvariableBound := hbound expression hexpression temporary hvariable
+  omega
+
 end Flapjack

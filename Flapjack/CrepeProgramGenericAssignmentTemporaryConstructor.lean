@@ -45,8 +45,8 @@ theorem panValueCrepProgramCorrect_assign_local_temporary
       compileShape = panValueShape structs _sourceValue →
       panShapeMatches (panValueShape structs _sourceValue) shape = true →
       distinctLists slots (compiled.flatMap crepExpVars) = false ∧
-      (∀ temporary ∈ freshNames context slots.length 1,
-        ∀ expression ∈ compiled, temporary ∉ crepExpVars expression))
+      (∀ expression ∈ compiled, ∀ varName ∈ crepExpVars expression,
+        varName ≤ context.maxVar))
     (hmetadata : ∀ (context : CompileContext α) (structs : StructContext)
       (sourceValue : PanValue α)
       (compileShape shape : Shape) (slots : List Nat) (values : List α),
@@ -106,7 +106,7 @@ theorem panValueCrepProgramCorrect_assign_local_temporary
     exact panShapeMatches_trans
       (panValueShape structs sourceValue) (panValueShape structs oldValue) shape
       hvalid holdRel.1
-  obtain ⟨hnotDistinct, hcompiledFresh⟩ := htemporaryPath context structs
+  obtain ⟨hnotDistinct, hcompiledBounded⟩ := htemporaryPath context structs
     sourceValue values compiled compileShape shape slots hlookupName hcompile
     hcompileShape hshapeNewContext
   obtain ⟨hslotLength, hslotsDistinct⟩ := hmetadata context structs sourceValue
@@ -114,6 +114,9 @@ theorem panValueCrepProgramCorrect_assign_local_temporary
   have htemporaryDistinct := crepDistinctNames_freshNames context slots.length 1
   have hslotBound : ∀ slot ∈ slots, slot ≤ context.maxVar :=
     hbounded context name shape slots hlookupName
+  have hcompiledFresh := freshNames_not_mem_of_expVars_bounded context
+    slots.length 1 compiled (by omega)
+    hcompiledBounded
   have hnoOverlap := freshNames_not_mem_of_bounded context slots.length 1 slots
     (by omega) hslotBound
   let temporarySlots := freshNames context slots.length 1

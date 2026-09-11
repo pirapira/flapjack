@@ -2476,6 +2476,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Move temporary-assignment destination and fresh-slot derivation into the
   generic constructor, leaving compiled-expression freshness as the remaining
   temporary-path obligation.
+- [x] Re-express temporary-expression freshness as a compiled-variable bound,
+  with a shared arithmetic lemma deriving exclusion of all fresh names.
 - [x] Move temporary-assignment destination and fresh-slot derivation into the
   generic constructor, leaving compiled-expression freshness as the remaining
   temporary-path obligation.

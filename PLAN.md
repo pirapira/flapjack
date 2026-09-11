@@ -2464,6 +2464,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add a reusable length inversion for successful Crep expression-list
   evaluation and dispatch local-assignment correctness through the compiler's
   direct-versus-temporary lowering choice.
+- [x] Adapt the universal expression-correctness contract to the compiled
+  list/shape/value witness consumed by declaration correctness.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

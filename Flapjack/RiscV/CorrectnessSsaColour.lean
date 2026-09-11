@@ -84,6 +84,33 @@ theorem wordSsaRenameProgram_seq
       (ssaSecond, .seq renamedFirst renamedSecond) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops]
 
+theorem evalWordFunction_ssaRenameSeq_compose
+    [NeZero width]
+    (ssa : WordSsaState) (first second : WordProg (Word width))
+    (ssaFirst ssaSecond : WordSsaState)
+    (renamedFirst renamedSecond : WordProg (Word width))
+    (hfirstRename : wordSsaRenameProgram ssa first =
+      (ssaFirst, renamedFirst))
+    (hsecondRename : wordSsaRenameProgram ssaFirst second =
+      (ssaSecond, renamedSecond))
+    (source target sourceMiddle targetMiddle sourceFinal targetFinal : State width)
+    (hfirstSource : evalWordFunction source first = some (sourceMiddle, []))
+    (hfirstTarget : evalWordFunction target renamedFirst =
+      some (targetMiddle, []))
+    (hsecondSource : evalWordFunction sourceMiddle second =
+      some (sourceFinal, []))
+    (hsecondTarget : evalWordFunction targetMiddle renamedSecond =
+      some (targetFinal, [])) :
+    evalWordFunction source (.seq first second) = some (sourceFinal, []) ∧
+    evalWordFunction target
+        (wordSsaRenameProgram ssa (.seq first second)).2 =
+      some (targetFinal, []) := by
+  constructor
+  · simp [evalWordFunction, hfirstSource, hsecondSource]
+  · rw [wordSsaRenameProgram_seq]
+    simp [hfirstRename, hsecondRename, evalWordFunction,
+      hfirstTarget, hsecondTarget]
+
 /-! Before an SSA assignment, the destination's old value need not satisfy the
     eventual colouring relation: the generated code overwrites it. -/
 

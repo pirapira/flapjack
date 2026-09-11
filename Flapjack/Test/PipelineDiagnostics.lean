@@ -38,10 +38,9 @@ def checkedPipelineRemoveConfig : StackRemoveConfig :=
   { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
     stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
 
-example :
+#guard
     (compileFlapjackRiscVViaStackChecked (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
-      checkedPipelineRemoveConfig checkedPipelineDeclarations).isOk := by
-  native_decide
+      checkedPipelineRemoveConfig checkedPipelineDeclarations).isOk
 
 end Flapjack

@@ -108,6 +108,18 @@ theorem sourceCompiledDestinationCallPair
           baseAddress topAddress compiledArguments = some targetArgumentValues ∧
         lookupCompiledFunction function functions =
           some (targetParameters, targetBody) ∧
+        targetParameters =
+          (compileFunDecl
+            { functionContext with functions := functionInfos declarations } declaration).params ∧
+        targetBody =
+          (compileFunDecl
+            { functionContext with functions := functionInfos declarations } declaration).body ∧
+        compileProg
+            { functionContext with
+                functions := functionInfos declarations
+                vars := (compileParamVars declaration.params 0).1
+                maxVar := (compileParamVars declaration.params 0).2.2 }
+            declaration.body = targetBody ∧
         assignCrepValues (fun _ => none) targetParameters targetArgumentValues =
           some targetCalleeLocals ∧
         evalCrepFullProg functions crepPrimitive ffi sharedMem
@@ -129,6 +141,18 @@ theorem sourceCompiledDestinationCallPair
           baseAddress topAddress compiledArguments = some targetArgumentValues ∧
         lookupCompiledFunction function functions =
           some (targetParameters, targetBody) ∧
+        targetParameters =
+          (compileFunDecl
+            { functionContext with functions := functionInfos declarations } declaration).params ∧
+        targetBody =
+          (compileFunDecl
+            { functionContext with functions := functionInfos declarations } declaration).body ∧
+        compileProg
+            { functionContext with
+                functions := functionInfos declarations
+                vars := (compileParamVars declaration.params 0).1
+                maxVar := (compileParamVars declaration.params 0).2.2 }
+            declaration.body = targetBody ∧
         assignCrepValues (fun _ => none) targetParameters targetArgumentValues =
           some targetCalleeLocals ∧
         evalCrepFullProg functions crepPrimitive ffi sharedMem
@@ -152,7 +176,8 @@ theorem sourceCompiledDestinationCallPair
         hassign, hcrepBody, htarget⟩ := hnormal
     obtain ⟨sourceArgumentValues, sourceParameters, sourceBody, sourceCalleeLocals,
         sourceBodyLocals, declaration, hsourceArguments, hlookupSource, hbind,
-        hsourceBody, hname, hparams, hbody, hstate⟩ :=
+        hsourceBody, hname, hparams, hbody, htargetParameters, htargetBody,
+        hcompileBody, hstate⟩ :=
       sourceCompiledCalleeState_of_returned_call functionContext structs declarations
         sourceFunctions functions sourceLocals sourceGlobals sourceMemory crepMemory
         primitive handler baseAddress topAddress bytesInWord sourceFuel contracts
@@ -165,8 +190,10 @@ theorem sourceCompiledDestinationCallPair
         hassign
     exact ⟨sourceArgumentValues, sourceParameters, sourceBody, sourceCalleeLocals,
       sourceBodyLocals, declaration, hsourceArguments, hlookupSource, hbind, hsourceBody,
-      hname, hparams, hbody, Or.inl ⟨targetArgumentValues, targetParameters, targetBody,
-        targetCalleeLocals, targetCallee, htargetValues, hlookupCompiled, hassign, hcrepBody,
+      hname, hparams, hbody,
+      Or.inl ⟨targetArgumentValues, targetParameters, targetBody,
+        targetCalleeLocals, targetCallee, htargetValues, hlookupCompiled,
+        htargetParameters, htargetBody, hcompileBody, hassign, hcrepBody,
         htarget, hstate⟩⟩
   · obtain ⟨targetArgumentValues, targetParameters, targetBody,
         targetCalleeLocals, targetCallee, targetCalleeValues, targetCallerLocals,
@@ -174,7 +201,8 @@ theorem sourceCompiledDestinationCallPair
       hreturned
     obtain ⟨sourceArgumentValues, sourceParameters, sourceBody, sourceCalleeLocals,
         sourceBodyLocals, declaration, hsourceArguments, hlookupSource, hbind,
-        hsourceBody, hname, hparams, hbody, hstate⟩ :=
+        hsourceBody, hname, hparams, hbody, htargetParameters, htargetBody,
+        hcompileBody, hstate⟩ :=
       sourceCompiledCalleeState_of_returned_call functionContext structs declarations
         sourceFunctions functions sourceLocals sourceGlobals sourceMemory crepMemory
         primitive handler baseAddress topAddress bytesInWord sourceFuel contracts
@@ -187,8 +215,10 @@ theorem sourceCompiledDestinationCallPair
         hassign
     exact ⟨sourceArgumentValues, sourceParameters, sourceBody, sourceCalleeLocals,
       sourceBodyLocals, declaration, hsourceArguments, hlookupSource, hbind, hsourceBody,
-      hname, hparams, hbody, Or.inr ⟨targetArgumentValues, targetParameters, targetBody,
+      hname, hparams, hbody,
+      Or.inr ⟨targetArgumentValues, targetParameters, targetBody,
         targetCalleeLocals, targetCallee, targetCalleeValues, targetCallerLocals,
-        htargetValues, hlookupCompiled, hassign, hcrepBody, hdestinations, htarget, hstate⟩⟩
+        htargetValues, hlookupCompiled, htargetParameters, htargetBody, hcompileBody,
+        hassign, hcrepBody, hdestinations, htarget, hstate⟩⟩
 
 end Flapjack

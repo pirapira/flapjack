@@ -125,6 +125,12 @@ theorem sourceCompiledCalleeState_of_lookup
       targetBody =
         (compileFunDecl
           { context with functions := functionInfos declarations } declaration).body ∧
+      compileProg
+          { context with
+              functions := functionInfos declarations
+              vars := (compileParamVars declaration.params 0).1
+              maxVar := (compileParamVars declaration.params 0).2.2 }
+          declaration.body = targetBody ∧
       panValueCrepStateRel structs
         { context with
             functions := functionInfos declarations
@@ -186,7 +192,16 @@ theorem sourceCompiledCalleeState_of_lookup
     (hshape declaration.params declaration.returnShape hinfo)
     (hparameterLength declaration.params declaration.returnShape hinfo)
     hbindDeclaration hassignDeclaration
+  have hcompileBody : compileProg
+      { context with
+          functions := functionInfos declarations
+          vars := (compileParamVars declaration.params 0).1
+          maxVar := (compileParamVars declaration.params 0).2.2 }
+      declaration.body = targetBody := by
+    rw [htargetBody]
+    exact compileFunDecl_body_eq_compileProg_parameter_context
+      { context with functions := functionInfos declarations } declaration
   exact ⟨declaration, hname, hparams, hbody,
-    htargetParameters, htargetBody, hstate⟩
+    htargetParameters, htargetBody, hcompileBody, hstate⟩
 
 end Flapjack

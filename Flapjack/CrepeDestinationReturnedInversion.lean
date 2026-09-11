@@ -84,7 +84,7 @@ theorem evalCrepFullCall_normal_returned_inversion_of_body_correct
       exact hcallee
     exact False.elim (crepReturnedCall_normal_branch_impossible_of_body_correct
       calleeContext structs sourceFunctions functions sourceCalleeLocals sourceGlobals
-      sourceCalleeMemory caller primitive sourceHandler crepPrimitive ffi sharedMem
+      sourceCalleeMemory sourceCalleeMemory caller primitive sourceHandler crepPrimitive ffi sharedMem
       baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel sourceBody
       targetBody sourceBodyLocals sourceCalleeGlobals sourceValues
       calleeLocals callee hbodyCorrect

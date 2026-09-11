@@ -138,7 +138,7 @@ theorem sourceCompiledReturnedCallPair
       (sourceFunctionEntries declarations) = some (sourceParameters, sourceBody) := by
     simpa [hsourceFunctions] using hlookupSource
   obtain ⟨declaration, hname, hparams, hbody, htargetParams, htargetBody,
-      hstate⟩ := sourceCompiledCalleeState_of_lookup
+      _, hstate⟩ := sourceCompiledCalleeState_of_lookup
     structs functionContext declarations functions function sourceParameters sourceBody
     sourceGlobals sourceMemory crepMemory sourceArgumentValues targetParameters targetBody
     sourceCalleeLocals targetCalleeLocals hlookupSourceDecl hfunctions

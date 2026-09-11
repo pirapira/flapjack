@@ -1663,6 +1663,52 @@ theorem evalWordProg_ssaRename_program_share_store [NeZero width]
   apply writeWordValue_memory_congr
   rfl
 
+theorem wordSsaRenameProgram_shareInst_store8_var
+    (ssa : WordSsaState) (value address : Nat) :
+    wordSsaRenameProgram ssa
+        (.shareInst .store8 value (.var address) : WordProg α) =
+      (ssa, .shareInst .store8 (wordSsaRead ssa value)
+        (.var (wordSsaRead ssa address))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp]
+
+theorem evalWordProg_ssaRename_program_share_store8 [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (value address : Nat)
+    (hvalue : value < 32) (haddress : address < 32)
+    (hvalueSsa : wordSsaRead ssa value < 32)
+    (haddressSsa : wordSsaRead ssa address < 32) :
+    (evalWordProg source (.shareInst .store8 value (.var address))).map
+        (fun state => state.memory) =
+      (evalWordProg target
+        (wordSsaRenameProgram ssa
+          (.shareInst .store8 value (.var address))).2).map
+        (fun state => state.memory) := by
+  have hvalueValue :
+      readRegister source ⟨value, hvalue⟩ =
+        readRegister target ⟨wordSsaRead ssa value, hvalueSsa⟩ := by
+    have h := hregister value
+    simpa [registerOfNat, hvalue, hvalueSsa] using h
+  have haddressValue :
+      readRegister source ⟨address, haddress⟩ =
+        readRegister target ⟨wordSsaRead ssa address, haddressSsa⟩ := by
+    have h := hregister address
+    simpa [registerOfNat, haddress, haddressSsa] using h
+  rw [wordSsaRenameProgram_shareInst_store8_var]
+  simp [evalWordProg, evalWordShareInst, wordShareInstToInstructions,
+    wordInstToInstruction, registerOfNat, hvalue, haddress,
+    hvalueSsa, haddressSsa, hvalueValue, haddressValue, hmemory, execute]
+  apply writeByte_memory_congr
+  rfl
+
 theorem wordSsaRenameInst_div
     (ssa : WordSsaState) (destination dividend divisor : Nat) :
     wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =

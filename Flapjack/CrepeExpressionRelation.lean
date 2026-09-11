@@ -97,4 +97,39 @@ theorem localisedProg_assign_global_false (name : VarName) (value : Exp α) :
     ¬ localisedProg (.assign .global name value : Prog α) := by
   simp [localisedProg]
 
+/-! The local-variable leaf of the source expression simulation.  The
+compiler-context lookup is deliberately an explicit premise: it is the Lean
+counterpart of the HOL proof's `FLOOKUP ctxt.vars` obligation. -/
+theorem compileSourceWordExp_local_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (crepLocals : Nat → Option α)
+    (crepMemory : α → Option α) (baseAddress topAddress bytesInWord : α)
+    (name : VarName) (value : α)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord (.var .local name) = some (.word value))
+    (hlookup : ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hlocals : panValueCrepLocalsRel structs context sourceLocals crepLocals) :
+    ∃ slot,
+      compileExp context (.var .local name) = ([.var slot], .one) ∧
+      evalCrepFullExp crepLocals crepMemory baseAddress topAddress (.var slot) =
+        some value := by
+  obtain ⟨slot, hslot⟩ := hlookup
+  have hsource' : sourceLocals name = some (.word value) := by
+    simpa [evalPanValueExp] using hsource
+  have hrel := hlocals name (.word value) .one [slot] hsource' hslot
+  refine ⟨slot, ?_, ?_⟩
+  · simp [compileExp, hslot]
+  · have hslotValue : crepLocals slot = some value := by
+      cases hslotValue : crepLocals slot with
+      | none => simp [readCrepLocals, hslotValue] at hrel
+      | some current =>
+          simp [readCrepLocals, hslotValue, panValueFlatWords,
+            panValueFlatWordsFuel] at hrel ⊢
+          simpa using hrel.2
+    simpa [evalCrepFullExp] using hslotValue
+
 end Flapjack

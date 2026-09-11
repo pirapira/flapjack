@@ -42,4 +42,14 @@ example [NeZero width] (ssa : WordSsaState) (value : Word width) :
   · exact .assignImmediate .and 3 2 value (by omega) (by omega)
   · simp [wordExpReadVars]
 
+example [NeZero width] (ssa : WordSsaState) (amount : Word width) :
+    (wordSsaRenameProgram ssa
+      (.assign 3 (.shift .lsl (.var 2) (.const amount)) : WordProg (Word width))).2 =
+      wordApplyColour (ssaAssignmentColour ssa 3)
+        (.assign 3 (.shift .lsl (.var 2) (.const amount))) := by
+  apply ssaRenameAssign_eq_applyColour ssa 3
+    (.shift .lsl (.var 2) (.const amount))
+  · exact .assignShiftImmediate .lsl 3 2 amount (by decide) (by omega) (by omega)
+  · simp [wordExpReadVars]
+
 end Flapjack.Test.CorrectnessSsaColour

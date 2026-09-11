@@ -33,4 +33,18 @@ example :
   · rfl
   all_goals decide
 
+example :
+    (evalWordProg (zeroState 32)
+      (.inst (.mem .store32 1 2))).map (fun state => state.memory) =
+      (evalWordProg (zeroState 32)
+        (.inst (wordSsaRenameInst
+          ({ current := [], next := 4 } : WordSsaState)
+          (.mem .store32 1 2)).2)).map (fun state => state.memory) := by
+  apply evalWordProg_ssaRename_store_family
+  · intro name
+    rfl
+  · rfl
+  · exact Or.inr (Or.inr (Or.inr rfl))
+  all_goals decide
+
 end Flapjack.RiscV

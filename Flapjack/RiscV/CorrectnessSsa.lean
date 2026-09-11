@@ -108,6 +108,75 @@ theorem evalWordProg_ssaRename_store [NeZero width]
   apply writeWordValue_memory_congr
   rfl
 
+theorem writeByte_memory_congr
+    (left right : State width) (address : Word width) (value : BitVec 8)
+    (hmemory : left.memory = right.memory) :
+    (writeByte left address value).memory =
+      (writeByte right address value).memory := by
+  simp [writeByte, hmemory]
+
+theorem writeWord16_memory_congr
+    (left right : State width) (address value : Word width)
+    (hmemory : left.memory = right.memory) :
+    (writeWord16 left address value).memory =
+      (writeWord16 right address value).memory := by
+  simp [writeWord16, writeByte, byteAddress, hmemory]
+
+theorem writeWord32_memory_congr
+    (left right : State width) (address value : Word width)
+    (hmemory : left.memory = right.memory) :
+    (writeWord32 left address value).memory =
+      (writeWord32 right address value).memory := by
+  simp [writeWord32, writeByte, byteAddress, hmemory]
+
+theorem evalWordProg_ssaRename_store_family [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (operator : WordMemOp) (sourceName address : Nat)
+    (hoperator : operator = .store ∨ operator = .store8 ∨
+      operator = .store16 ∨ operator = .store32)
+    (hsource : sourceName < 32) (haddress : address < 32)
+    (hsourceSsa : wordSsaRead ssa sourceName < 32)
+    (haddressSsa : wordSsaRead ssa address < 32) :
+    (evalWordProg source (.inst (.mem operator sourceName address))).map
+        (fun state => state.memory) =
+      (evalWordProg target
+        (.inst (wordSsaRenameInst ssa
+          (.mem operator sourceName address : WordInst)).2)).map
+        (fun state => state.memory) := by
+  have hsourceValue :
+      readRegister source ⟨sourceName, hsource⟩ =
+        readRegister target ⟨wordSsaRead ssa sourceName, hsourceSsa⟩ := by
+    have h := hregister sourceName
+    simpa [registerOfNat, hsource, hsourceSsa] using h
+  have haddressValue :
+      readRegister source ⟨address, haddress⟩ =
+        readRegister target ⟨wordSsaRead ssa address, haddressSsa⟩ := by
+    have h := hregister address
+    simpa [registerOfNat, haddress, haddressSsa] using h
+  rcases hoperator with rfl | rfl | rfl | rfl
+  · exact evalWordProg_ssaRename_store ssa source target hregister hmemory
+      sourceName address hsource haddress hsourceSsa haddressSsa
+  · simp [wordSsaRenameInst, evalWordProg, registerOfNat, hsource, haddress,
+      hsourceSsa, haddressSsa, hsourceValue, haddressValue, hmemory, execute]
+    apply writeByte_memory_congr
+    rfl
+  · simp [wordSsaRenameInst, evalWordProg, registerOfNat, hsource, haddress,
+      hsourceSsa, haddressSsa, hsourceValue, haddressValue, hmemory, execute]
+    apply writeWord16_memory_congr
+    rfl
+  · simp [wordSsaRenameInst, evalWordProg, registerOfNat, hsource, haddress,
+      hsourceSsa, haddressSsa, hsourceValue, haddressValue, hmemory, execute]
+    apply writeWord32_memory_congr
+    rfl
+
 theorem evalWordProg_ssaRename_load_destination [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hregister : ∀ name,

@@ -1028,8 +1028,11 @@ def wordListMaximum : List Nat → Nat
 termination_by values => sizeOf values
 decreasing_by all_goals decreasing_trivial
 
-def wordSsaLimitVar (parameters : List Nat) (program : WordProg α) : Nat :=
-  let maximum := wordListMaximum (parameters ++ wordProgVariables program)
+/-! CakeML's `limit_var` scans the Word program, not the ABI formal list.
+    Formals are the even architectural names and may be unused by the body;
+    including them here would change `full_ssa_cc_trans`'s fresh-name stream. -/
+def wordSsaLimitVar (_parameters : List Nat) (program : WordProg α) : Nat :=
+  let maximum := wordListMaximum (wordProgVariables program)
   maximum + (4 - maximum % 4) + 1
 
 def wordSsaSetupParameters (parameters : List Nat) (program : WordProg α) :

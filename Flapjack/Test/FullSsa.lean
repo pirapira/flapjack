@@ -27,6 +27,20 @@ example :
     wordSsaAbiParameters 3 = [0, 2, 4] := by
   rfl
 
+/- CakeML's fresh-name limit scans the body only, so unused ABI formals do not
+   move the full-SSA name stream. -/
+example :
+    wordSsaRenameFunctionWithEntry [0, 2, 4]
+        (.skip : WordProg Nat) =
+      ({ current := [(4, 13), (2, 9), (0, 5)], next := 17 },
+        [5, 9, 13],
+        .seq (.move 1 [(5, 0), (9, 2), (13, 4)]) .skip) := by
+  simp [wordSsaRenameFunctionWithEntry, wordSsaEntryMove,
+    wordSsaRenameFunction, wordSsaSetupParameters, wordSsaLimitVar,
+    wordListMaximum, wordProgVariables, wordProgReadVars, wordProgWriteVars,
+    wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaFreshList, wordSsaFresh]
+
 example :
     wordFullSsaCcTrans 2
         (.return 0 [0, 2] : WordProg Nat) =

@@ -132,4 +132,45 @@ theorem compileSourceWordExp_local_relation
           simpa using hrel.2
     simpa [evalCrepFullExp] using hslotValue
 
+/-! Binary operations compose the two child expression witnesses.  The source
+and target equations are intentionally both hypotheses here; the upcoming
+recursive expression theorem will obtain them from its induction hypotheses. -/
+theorem compileSourceWordExp_op_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (crepLocals : Nat → Option α)
+    (crepMemory : α → Option α) (baseAddress topAddress bytesInWord : α)
+    (operator : BinOp) (left right : SourceWordExp α)
+    (leftCompiled rightCompiled : CrepExp α)
+    (leftValue rightValue value : α)
+    (hleftSource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord left.toExp = some (.word leftValue))
+    (hrightSource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord right.toExp = some (.word rightValue))
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.op operator [left.toExp, right.toExp]) = some (.word value))
+    (hleftCompile : compileExp context left.toExp = ([leftCompiled], .one))
+    (hrightCompile : compileExp context right.toExp = ([rightCompiled], .one))
+    (hleftEval : evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+      leftCompiled = some leftValue)
+    (hrightEval : evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+      rightCompiled = some rightValue) :
+    compileExp context (.op operator [left.toExp, right.toExp]) =
+        ([.op operator [leftCompiled, rightCompiled]], .one) ∧
+      evalCrepFullExp crepLocals crepMemory baseAddress topAddress
+        (.op operator [leftCompiled, rightCompiled]) = some value := by
+  have hvalue : evalPanBinOp operator leftValue rightValue = value := by
+    have hvalue' := hsource
+    simp [evalPanValueExp, evalPanValueExp.evalPanValueExps,
+      hleftSource, hrightSource] at hvalue'
+    exact hvalue'
+  constructor
+  · simp [compileExp, compileExp.compileExpList, cexpHeads,
+      hleftCompile, hrightCompile]
+  · simp [evalCrepFullExp, hleftEval, hrightEval, hvalue]
+
 end Flapjack

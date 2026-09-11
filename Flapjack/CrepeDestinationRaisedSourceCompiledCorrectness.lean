@@ -30,7 +30,7 @@ theorem compile_full_pan_value_destination_call_raised_of_source_compiled_call
     (sourceFuel targetFuel : Nat)
     (function : FunName) (arguments : List (Exp α))
     (compiledArguments : List (CrepExp α)) (destinations : List Nat)
-    (sourceCalleeLocals sourceBodyLocals : VarName → Option (PanValue α))
+    (_sourceCalleeLocals _sourceBodyLocals : VarName → Option (PanValue α))
     (sourceCalleeGlobals : VarName → Option (PanValue α))
     (sourceCalleeMemory : α → Option (PanValue α))
     (sourceException : ExceptionId) (sourceValue : PanValue α)

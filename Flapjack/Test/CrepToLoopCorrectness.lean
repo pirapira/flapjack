@@ -117,6 +117,42 @@ theorem crepToLoop_store_const_regression :
     [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
     (fun _ _ _ _ => none) 0 100 2 crepLoopAssignState [] 200 42
 
+theorem crepToLoop_store32_const_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 3 crepLoopAssignState
+      (.store32 (.const 200) (.const 43))).map
+        (crepControlMemoryAt 200) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      7 (loopStateOfCrepState crepLoopAssignState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.store32 (.const 200) (.const 43)))).map
+        (loopControlMemoryAt 200) := by
+  exact crepToLoop_store32_const_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 2 crepLoopAssignState [] 200 43
+
+theorem crepToLoop_storeByte_const_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 3 crepLoopAssignState
+      (.storeByte (.const 201) (.const 44))).map
+        (crepControlMemoryAt 201) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      7 (loopStateOfCrepState crepLoopAssignState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.storeByte (.const 201) (.const 44)))).map
+        (loopControlMemoryAt 201) := by
+  exact crepToLoop_storeByte_const_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 2 crepLoopAssignState [] 201 44
+
 theorem crepToLoop_assign_load32_const_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ _ _ => none) 0 100 3 crepLoopLoadState

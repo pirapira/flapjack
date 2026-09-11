@@ -179,9 +179,11 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 5. **Target and end-to-end correctness**
    - Port the word-level/target interface and one concrete backend first.
    - **In progress:** execute CakeML's normalized two-word `LongDiv` in the
-     abstract StackLang machine. Its RISC-V target boundary remains separate:
-     CakeML's RISC-V encoder lowers `LongDiv` through runtime support rather
-     than a native instruction.
+     abstract StackLang machine. The executable evaluator and quotient/
+     remainder preservation contract now cover register-resident and spilled
+     divisors. Its RISC-V target boundary remains separate: CakeML's RISC-V
+     encoder lowers `LongDiv` through runtime support rather than a native
+     instruction.
    - **In progress:** make WordLang `LocValue` label-aware in allocator
    analyses. The destination is an SSA variable; the label is code metadata,
    not a source register. The executable Loop/Word/Stack semantics and their
@@ -1163,7 +1165,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   including the target's high-destination/source non-aliasing precondition and
   a register-parametric machine execution contract.
 - [x] Port CakeML's normalized fixed-register `LongDiv` Word-to-Stack
-  lowering, including divisor spill materialization and fixed-register guards.
+  lowering, including divisor spill materialization, fixed-register guards,
+  and normalization of arbitrary source metadata to CakeML's fixed convention.
 - [x] Carry register-resident `LongMul` and `AddCarry` Word arithmetic through
   Word-to-Stack and multi-instruction LabLang expansion; spilled multi-result
   arithmetic remains part of the allocator/backend work.

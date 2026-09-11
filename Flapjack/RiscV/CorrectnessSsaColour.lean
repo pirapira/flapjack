@@ -49,6 +49,31 @@ theorem ssaAssignmentColour_eq_wordSsaRead_fresh
     simp [lookupNatInfo, hnameCurrent,
       lookupNatInfo_filter_ne ssa.current current name hcurrent]
 
+theorem wordSsaRenameProgram_assign_state
+    (ssa : WordSsaState) (name : Nat) (value : WordExp (Word width))
+    (hprogram : WordVarStraightLine width (.assign name value)) :
+    (wordSsaRenameProgram ssa (.assign name value)).1 =
+      (wordSsaFresh ssa name).1 := by
+  cases hprogram with
+  | assign name source hname hsource =>
+      simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+        wordSsaFresh, wordSsaRenameExp]
+  | assignConst name value hname =>
+      simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+        wordSsaFresh, wordSsaRenameExp]
+  | assignBinary operator name left right hname hleft hright =>
+      simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+        wordSsaFresh, wordSsaRenameExp]
+  | assignImmediate operator name source value hname hsource =>
+      simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+        wordSsaFresh, wordSsaRenameExp]
+  | assignShift operator name left right hoperator hname hleft hright =>
+      simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+        wordSsaFresh, wordSsaRenameExp]
+  | assignShiftImmediate operator name left amount hoperator hname hleft =>
+      simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+        wordSsaFresh, wordSsaRenameExp]
+
 /-! Before an SSA assignment, the destination's old value need not satisfy the
     eventual colouring relation: the generated code overwrites it. -/
 
@@ -62,6 +87,23 @@ structure WordColourStateRelationExcept (colour : Nat → Nat) (excluded : Nat)
       (_hnot : current ≠ excluded) (hcolour : colour current < 32),
     readRegister source ⟨current, hcurrent⟩ =
       readRegister target ⟨colour current, hcolour⟩
+
+theorem wordColourStateRelation_toAssignmentExcept
+    [NeZero width]
+    (ssa : WordSsaState) (name : Nat) (source target : State width)
+    (hrelation : WordColourStateRelation (wordSsaRead ssa) source target) :
+    WordColourStateRelationExcept (ssaAssignmentColour ssa name) name source target := by
+  constructor
+  · exact hrelation.pc
+  · exact hrelation.memory
+  · exact hrelation.privilege
+  · exact hrelation.mode
+  · intro current hcurrent hnot hcolour
+    have hread : ssaAssignmentColour ssa name current = wordSsaRead ssa current := by
+      simp [ssaAssignmentColour, hnot]
+    have hcolour' : wordSsaRead ssa current < 32 := by
+      simpa [hread] using hcolour
+    simpa [hread] using hrelation.register current hcurrent hcolour'
 
 theorem wordColourStateRelationExcept_nextPc
     (colour : Nat → Nat) (excluded : Nat)
@@ -1350,6 +1392,39 @@ theorem evalWordFunction_ssaRenameAssignExcept
       exact evalWordFunction_ssaRenameAssignShiftImmediate_applyColourExcept
         ssa operator name left amount valid injective colourZero source target
         hrelation hzeroSource hzeroTarget hoperator hname hleft hleftNe
+
+theorem evalWordFunction_ssaRenameAssign_wordSsaRead
+    [NeZero width]
+    (ssa : WordSsaState) (name : Nat) (value : WordExp (Word width))
+    (valid : wordColourValid (ssaAssignmentColour ssa name))
+    (injective : Function.Injective (ssaAssignmentColour ssa name))
+    (colourZero : ssaAssignmentColour ssa name 0 = 0)
+    (source target : State width)
+    (hrelation : WordColourStateRelation (wordSsaRead ssa) source target)
+    (hzeroSource : ZeroRegister source) (hzeroTarget : ZeroRegister target)
+    (hprogram : WordVarStraightLine width (.assign name value))
+    (hnot : name ∉ wordExpReadVars value) :
+    ∃ source' target',
+      evalWordFunction source (.assign name value) = some (source', []) ∧
+      evalWordFunction target
+          (wordSsaRenameProgram ssa (.assign name value)).2 =
+        some (target', []) ∧
+      WordColourStateRelation
+        (wordSsaRead (wordSsaRenameProgram ssa (.assign name value)).1)
+        source' target' := by
+  have hexcept := wordColourStateRelation_toAssignmentExcept
+    ssa name source target hrelation
+  rcases evalWordFunction_ssaRenameAssignExcept ssa name value valid injective
+    colourZero source target hexcept hzeroSource hzeroTarget hprogram hnot with
+    ⟨source', target', hsource, htarget, hresult⟩
+  have hstate := wordSsaRenameProgram_assign_state ssa name value hprogram
+  have hcolour :
+      ssaAssignmentColour ssa name =
+        wordSsaRead (wordSsaRenameProgram ssa (.assign name value)).1 := by
+    funext current
+    rw [ssaAssignmentColour_eq_wordSsaRead_fresh ssa name current, ← hstate]
+  rw [hcolour] at hresult
+  exact ⟨source', target', hsource, htarget, hresult⟩
 
 theorem evalWordFunction_ssaRenameAssign_applyColour
     [NeZero width]

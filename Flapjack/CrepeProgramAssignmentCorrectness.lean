@@ -1,4 +1,5 @@
 import Flapjack.CrepeExpressionRelation
+import Flapjack.CrepeCompileExpVariables
 import Flapjack.CrepeProgramGenericAssignmentConstructor
 import Flapjack.CrepeProgramGenericAssignmentTemporaryConstructor
 
@@ -80,9 +81,7 @@ theorem panValueCrepProgramCorrect_assign_local_of_expression_contract
       compileExp context expression = (compiled, compileShape) →
       compileShape = panValueShape structs _sourceValue →
       panShapeMatches (panValueShape structs _sourceValue) shape = true →
-      distinctLists slots (compiled.flatMap crepExpVars) = false ∧
-      (∀ expression ∈ compiled, ∀ varName ∈ crepExpVars expression,
-        varName ≤ context.maxVar))
+      distinctLists slots (compiled.flatMap crepExpVars) = false)
     (hlookup : ∀ (context : CompileContext α)
       (sourceLocals : VarName → Option (PanValue α)) (oldValue : PanValue α),
       sourceLocals name = some oldValue →
@@ -160,6 +159,31 @@ theorem panValueCrepProgramCorrect_assign_local_of_expression_contract
     exact panShapeMatches_trans
       (panValueShape structs sourceValue) (panValueShape structs oldValue) shape
       hvalid holdRel.1
+  have htemporaryPath' : ∀ (context : CompileContext α) (structs : StructContext)
+      (_sourceValue : PanValue α) (_values : List α) (compiled : List (CrepExp α))
+      (compileShape shape : Shape) (slots : List Nat),
+      lookupInfo name context.vars = some (shape, slots) →
+      compileExp context expression = (compiled, compileShape) →
+      compileShape = panValueShape structs _sourceValue →
+      panShapeMatches (panValueShape structs _sourceValue) shape = true →
+      distinctLists slots (compiled.flatMap crepExpVars) = false ∧
+      (∀ expression ∈ compiled, ∀ varName ∈ crepExpVars expression,
+        varName ≤ context.maxVar) := by
+    intro context structs sourceValue values compiled compileShape shape slots
+      hlookupName hcompile hcompileShape hshape
+    constructor
+    · exact htemporaryPath context structs sourceValue values compiled compileShape
+        shape slots hlookupName hcompile hcompileShape hshape
+    · intro compiledExpression hcompiledExpression varName hvar
+      have hslotBound : ∀ oldName oldShape oldSlots,
+          lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+          ∀ slot ∈ oldSlots, slot ≤ context.maxVar := by
+        intro oldName oldShape oldSlots hlookupOld
+        exact hbounded context oldName oldShape oldSlots hlookupOld
+      have hboundAll := compileExp_vars_bounded context hslotBound expression
+      rw [hcompile] at hboundAll
+      apply hboundAll
+      exact List.mem_flatMap.2 ⟨compiledExpression, hcompiledExpression, hvar⟩
   by_cases hdirectMode : distinctLists slots (compiled.flatMap crepExpVars) = true
   · exact panValueCrepProgramCorrect_assign_local_direct name expression hcontract
       hdirect hmetadata hlookup hnoalias context structs sourceFunctions functions
@@ -167,7 +191,7 @@ theorem panValueCrepProgramCorrect_assign_local_of_expression_contract
       ffi sharedMem baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
       sourceResult crepResult hrel hsource hcrep
   · exact panValueCrepProgramCorrect_assign_local_temporary name expression hcontract
-      htemporaryPath hmetadata hbounded hlookup hnoalias context structs sourceFunctions functions
+      htemporaryPath' hmetadata hbounded hlookup hnoalias context structs sourceFunctions functions
       sourceLocals sourceGlobals sourceMemory state primitive sourceHandler crepPrimitive
       ffi sharedMem baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
       sourceResult crepResult hrel hsource hcrep

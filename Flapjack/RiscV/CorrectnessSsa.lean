@@ -918,6 +918,124 @@ theorem evalWordProg_ssaRename_assign_shift_var_const_destination [NeZero width]
       · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
   | ror => exact (hoperator rfl).elim
 
+theorem wordSsaRenameProgram_assign_shift_var_var
+    (ssa : WordSsaState) (destination : Nat) (operator : Shift)
+    (left right : Nat) :
+    wordSsaRenameProgram ssa
+        (.assign destination (.shift operator (.var left) (.var right)) :
+          WordProg α) =
+      ((wordSsaFresh ssa destination).1,
+        .assign (wordSsaFresh ssa destination).2
+          (.shift operator (.var (wordSsaRead ssa left))
+            (.var (wordSsaRead ssa right)))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp]
+
+theorem evalWordProg_ssaRename_assign_shift_var_var_destination [NeZero width]
+    (ssa : WordSsaState) (sourceState targetState : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister sourceState register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister targetState register)))
+    (hmemory : sourceState.memory = targetState.memory)
+    (destination left right : Nat) (operator : Shift)
+    (hdestination : destination < 32) (hleft : left < 32) (hright : right < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hleftSsa : wordSsaRead ssa left < 32)
+    (hrightSsa : wordSsaRead ssa right < 32)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0)
+    (hoperator : operator ≠ .ror) :
+    ∃ source' target',
+      evalWordProg sourceState
+          (.assign destination (.shift operator (.var left) (.var right))) = some source' ∧
+      evalWordProg targetState
+          (wordSsaRenameProgram ssa
+            (.assign destination (.shift operator (.var left) (.var right)))).2 =
+        some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
+      source'.memory = target'.memory := by
+  have hleftValue :
+      readRegister sourceState ⟨left, hleft⟩ =
+        readRegister targetState ⟨wordSsaRead ssa left, hleftSsa⟩ := by
+    have h := hregister left
+    simpa [registerOfNat, hleft, hleftSsa] using h
+  have hrightValue :
+      readRegister sourceState ⟨right, hright⟩ =
+        readRegister targetState ⟨wordSsaRead ssa right, hrightSsa⟩ := by
+    have h := hregister right
+    simpa [registerOfNat, hright, hrightSsa] using h
+  rw [wordSsaRenameProgram_assign_shift_var_var]
+  cases operator with
+  | lsl =>
+      have hvalue :
+          BitVec.shiftLeft (readRegister sourceState ⟨left, hleft⟩)
+              (shiftAmount (readRegister sourceState ⟨right, hright⟩)) =
+            BitVec.shiftLeft
+              (readRegister targetState ⟨wordSsaRead ssa left, hleftSsa⟩)
+              (shiftAmount
+                (readRegister targetState ⟨wordSsaRead ssa right, hrightSsa⟩)) := by
+        rw [hleftValue, hrightValue]
+      refine ⟨execute sourceState (.sll ⟨destination, hdestination⟩
+          ⟨left, hleft⟩ ⟨right, hright⟩),
+        execute targetState (.sll ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+          ⟨wordSsaRead ssa left, hleftSsa⟩
+          ⟨wordSsaRead ssa right, hrightSsa⟩), ?_, ?_, ?_, ?_⟩
+      · simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, hdestination, hleft, hright, executeInstructions]
+      · simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, hfresh, hleftSsa, hrightSsa, executeInstructions]
+      · simpa [execute, writeRegister, readRegister, hdestinationNonzero,
+          hfreshNonzero] using hvalue
+      · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+  | lsr =>
+      have hvalue :
+          BitVec.ushiftRight (readRegister sourceState ⟨left, hleft⟩)
+              (shiftAmount (readRegister sourceState ⟨right, hright⟩)) =
+            BitVec.ushiftRight
+              (readRegister targetState ⟨wordSsaRead ssa left, hleftSsa⟩)
+              (shiftAmount
+                (readRegister targetState ⟨wordSsaRead ssa right, hrightSsa⟩)) := by
+        rw [hleftValue, hrightValue]
+      refine ⟨execute sourceState (.srl ⟨destination, hdestination⟩
+          ⟨left, hleft⟩ ⟨right, hright⟩),
+        execute targetState (.srl ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+          ⟨wordSsaRead ssa left, hleftSsa⟩
+          ⟨wordSsaRead ssa right, hrightSsa⟩), ?_, ?_, ?_, ?_⟩
+      · simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, hdestination, hleft, hright, executeInstructions]
+      · simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, hfresh, hleftSsa, hrightSsa, executeInstructions]
+      · simpa [execute, writeRegister, readRegister, hdestinationNonzero,
+          hfreshNonzero] using hvalue
+      · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+  | asr =>
+      have hvalue :
+          BitVec.sshiftRight (readRegister sourceState ⟨left, hleft⟩)
+              (shiftAmount (readRegister sourceState ⟨right, hright⟩)) =
+            BitVec.sshiftRight
+              (readRegister targetState ⟨wordSsaRead ssa left, hleftSsa⟩)
+              (shiftAmount
+                (readRegister targetState ⟨wordSsaRead ssa right, hrightSsa⟩)) := by
+        rw [hleftValue, hrightValue]
+      refine ⟨execute sourceState (.sra ⟨destination, hdestination⟩
+          ⟨left, hleft⟩ ⟨right, hright⟩),
+        execute targetState (.sra ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+          ⟨wordSsaRead ssa left, hleftSsa⟩
+          ⟨wordSsaRead ssa right, hrightSsa⟩), ?_, ?_, ?_, ?_⟩
+      · simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, hdestination, hleft, hright, executeInstructions]
+      · simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, hfresh, hleftSsa, hrightSsa, executeInstructions]
+      · simpa [execute, writeRegister, readRegister, hdestinationNonzero,
+          hfreshNonzero] using hvalue
+      · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+  | ror => exact (hoperator rfl).elim
+
 theorem wordSsaRenameInst_div
     (ssa : WordSsaState) (destination dividend divisor : Nat) :
     wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =

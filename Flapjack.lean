@@ -64,6 +64,7 @@ import Flapjack.CrepeProgramSourceWordReturnCorrectness
 import Flapjack.CrepeProgramRaiseSourceWordRelation
 import Flapjack.CrepeProgramRaiseCorrectness
 import Flapjack.CrepeProgramStoreCorrectness
+import Flapjack.CrepeProgramStoreByteCorrectness
 import Flapjack.CrepeProgramAssignmentFuelRelation
 import Flapjack.CrepeProgramAssignmentCorrectness
 import Flapjack.CrepeProgramPrimitiveRelation

@@ -2393,6 +2393,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add the whole-program syntax induction assembly for the compositional
   source-to-Crep correctness predicate, including explicit handler-aware call
   and recursive declaration-call premises.
+- [x] Expose the source ExtCall intermediate argument-list and FFI-result
+  boundary for the generalized correctness constructor.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

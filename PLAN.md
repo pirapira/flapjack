@@ -1165,7 +1165,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   including the target's high-destination/source non-aliasing precondition and
   a register-parametric machine execution contract.
 - [x] Port CakeML's normalized fixed-register `LongDiv` Word-to-Stack
-  lowering, including divisor spill materialization and fixed-register guards.
+  lowering, including divisor spill materialization, fixed-register guards,
+  and normalization of arbitrary source metadata to CakeML's fixed convention.
 - [x] Carry register-resident `LongMul` and `AddCarry` Word arithmetic through
   Word-to-Stack and multi-instruction LabLang expansion; spilled multi-result
   arithmetic remains part of the allocator/backend work.

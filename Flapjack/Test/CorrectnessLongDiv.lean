@@ -23,4 +23,9 @@ def longDivCorrectnessSpillConfig : WordStackConfig :=
 #guard (wordStackLongDivInst (α := Nat) longDivCorrectnessSpillConfig
   (.longDiv 0 3 3 0 4)).isSome
 
+/-! The first four source fields are normalized away, as in CakeML's
+    `word_to_stack` definition. -/
+#guard (wordStackLongDivInst (α := Nat) longDivCorrectnessRegisterConfig
+  (.longDiv 17 18 19 20 4)).isSome
+
 end Flapjack.RiscV

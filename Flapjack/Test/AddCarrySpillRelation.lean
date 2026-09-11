@@ -73,4 +73,18 @@ example :
       wordStackOffset, evalWordStackMachine, wordStackMachineWriteRegister,
       wordStackMachineWriteSlot, lookupNatInfo]
 
+example :
+    let final := ((wordStackAddCarryInst addCarrySpillConfig
+      (.addCarry 0 1 2 3 4)).bind
+      (evalWordStackMachine addCarrySpillState)).getD addCarrySpillState
+    wordStackMachineValue addCarrySpillConfig final 0 =
+        some (BitVec.ofNat 8 1) ∧
+      wordStackMachineValue addCarrySpillConfig final 1 =
+        some (BitVec.ofNat 8 1) := by
+  simp [addCarrySpillConfig, addCarrySpillState, wordStackAddCarryInst,
+    wordStackAddCarryLocationSafe, wordStackLongMulMoveToPhysical,
+    wordStackLongMulMoveFromPhysical, wordStackJoin, wordStackLocation,
+    wordStackOffset, evalWordStackMachine, wordStackMachineWriteRegister,
+    wordStackMachineWriteSlot, wordStackMachineValue, lookupNatInfo]
+
 end Flapjack.RiscV

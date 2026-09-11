@@ -109,8 +109,8 @@ example :
           some (.seq (.stackLoad 29 14)
             (.seq (.stackLoad 28 15)
               (.seq (.stackLoad 27 16)
-                (.seq (.inst (.arith (.addCarry 27 28 29 28 27)))
-                  (.seq (.stackStore 27 12) (.stackStore 28 13))))) :
+                (.seq (.inst (.arith (.addCarry 27 29 29 28 27)))
+                  (.seq (.stackStore 27 12) (.stackStore 29 13))))) :
             StackProg Nat) := by
       simp [addCarrySpillConfig, wordToStackProg, wordToStackInst,
         wordStackArithInst, wordStackAddCarryInst,

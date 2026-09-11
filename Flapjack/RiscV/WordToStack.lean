@@ -363,13 +363,13 @@ def wordStackAddCarryInst (config : WordStackConfig)
             let writeDestination ← wordStackLongMulMoveFromPhysical config destination
               config.carryScratch
             let writeResultCarry ← wordStackLongMulMoveFromPhysical config resultCarry
-              config.specialScratch
+              config.addressScratch
             pure (wordStackJoin loadLeft
               (wordStackJoin loadRight
                 (wordStackJoin loadCarry
                   (wordStackJoin
                     (.inst (.arith (.addCarry config.carryScratch
-                      config.specialScratch config.addressScratch
+                      config.addressScratch config.addressScratch
                       config.specialScratch config.carryScratch)))
                     (wordStackJoin writeDestination writeResultCarry)))))
       else

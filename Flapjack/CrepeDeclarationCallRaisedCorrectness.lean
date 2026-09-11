@@ -5,7 +5,7 @@ import Flapjack.CrepeRaisedDecCallRelation
 Direct raised-callee declaration-call correctness.
 
 The compiled declaration-call inversion identifies the call fuel and result.
-The control relation rules out every call result except an uncaught raised
+The supplied call relation rules out every result except an uncaught raised
 result, after which the generated zero-declaration prefix is evaluated and
 its local restoration is related to the source raised result.
 -/

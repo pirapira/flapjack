@@ -2216,6 +2216,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   initialization, destination assignment, continuation execution, and restore.
 - [x] Generalize fresh zero-slot initialization and restoration to arbitrary
   flattened declaration results via a reusable `nestedDecs` evaluator theorem.
+- [x] Prove the converse nested-declaration evaluator inversion, recovering
+  continuation fuel, result, and restored locals from a successful target run.
 - [x] Compose arbitrary-shape target `decCall` lowering from fresh-slot setup,
   destination-aware call execution, and the compiled continuation.
 - [x] Add the target normal-return call rule that assigns callee words to

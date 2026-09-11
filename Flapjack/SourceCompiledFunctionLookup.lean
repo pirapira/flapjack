@@ -127,4 +127,69 @@ theorem lookupCompiledFunction_compileToCrepe_of_source_lookup
   refine ⟨declaration, hname, hparams, hbody, ?_⟩
   simpa [compileToCrepe] using hcompiled
 
+theorem lookupInfo_functionInfos_of_source_lookup
+    [LawfulBEq String]
+    (declarations : List (Decl α))
+    (name : FunName) (sourceParams : List VarName) (sourceBody : Prog α)
+    (hlookup : lookupPanFunction name (sourceFunctionEntries declarations) =
+      some (sourceParams, sourceBody)) :
+    ∃ declaration : FunDecl α,
+      declaration.name = name ∧
+      declaration.params.map Prod.fst = sourceParams ∧
+      declaration.body = sourceBody ∧
+      lookupInfo name (functionInfos declarations) =
+        some (declaration.params, declaration.returnShape) := by
+  induction declarations with
+  | nil =>
+      simp [sourceFunctionEntries, lookupPanFunction] at hlookup
+  | cons declaration declarations ih =>
+      cases declaration with
+      | function declaration =>
+          by_cases hname : name = declaration.name
+          · have hpair :
+                (declaration.params.map Prod.fst, declaration.body) =
+                  (sourceParams, sourceBody) := by
+                exact Option.some.inj (by
+                  simpa [sourceFunctionEntries, lookupPanFunction, hname] using
+                    hlookup)
+            cases hpair
+            refine ⟨declaration, hname.symm, rfl, rfl, ?_⟩
+            simp [functionInfos, lookupInfo, hname]
+          · have hlookupTail :
+                lookupPanFunction name (sourceFunctionEntries declarations) =
+                  some (sourceParams, sourceBody) := by
+                simpa [sourceFunctionEntries, lookupPanFunction, hname] using
+                  hlookup
+            obtain ⟨found, hfoundName, hfoundParams, hfoundBody, hfoundInfo⟩ :=
+              ih hlookupTail
+            refine ⟨found, hfoundName, hfoundParams, hfoundBody, ?_⟩
+            simpa [functionInfos, lookupInfo, Ne.symm hname] using hfoundInfo
+      | decl shape declaration value =>
+          have hlookupTail :
+              lookupPanFunction name (sourceFunctionEntries declarations) =
+                some (sourceParams, sourceBody) := by
+            simpa [sourceFunctionEntries, lookupPanFunction] using hlookup
+          obtain ⟨found, hfoundName, hfoundParams, hfoundBody, hfoundInfo⟩ :=
+            ih hlookupTail
+          refine ⟨found, hfoundName, hfoundParams, hfoundBody, ?_⟩
+          simpa [functionInfos] using hfoundInfo
+      | exnDecl exception shape =>
+          have hlookupTail :
+              lookupPanFunction name (sourceFunctionEntries declarations) =
+                some (sourceParams, sourceBody) := by
+            simpa [sourceFunctionEntries, lookupPanFunction] using hlookup
+          obtain ⟨found, hfoundName, hfoundParams, hfoundBody, hfoundInfo⟩ :=
+            ih hlookupTail
+          refine ⟨found, hfoundName, hfoundParams, hfoundBody, ?_⟩
+          simpa [functionInfos] using hfoundInfo
+      | name struct fields =>
+          have hlookupTail :
+              lookupPanFunction name (sourceFunctionEntries declarations) =
+                some (sourceParams, sourceBody) := by
+            simpa [sourceFunctionEntries, lookupPanFunction] using hlookup
+          obtain ⟨found, hfoundName, hfoundParams, hfoundBody, hfoundInfo⟩ :=
+            ih hlookupTail
+          refine ⟨found, hfoundName, hfoundParams, hfoundBody, ?_⟩
+          simpa [functionInfos] using hfoundInfo
+
 end Flapjack

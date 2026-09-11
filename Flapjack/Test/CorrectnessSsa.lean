@@ -502,4 +502,22 @@ example :
   · rfl
   all_goals decide
 
+example :
+    (evalWordProg (zeroState 32) (.shareInst .store16 1 (.var 2))).map
+        (fun state => state.memory) =
+      (evalWordProg (zeroState 32)
+        (wordSsaRenameProgram
+          ({ current := [], next := 4 } : WordSsaState)
+          (.shareInst .store16 1 (.var 2))).2).map
+        (fun state => state.memory) := by
+  apply evalWordProg_ssaRename_program_share_store16
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  all_goals decide
+
 end Flapjack.RiscV

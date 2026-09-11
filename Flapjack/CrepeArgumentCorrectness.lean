@@ -1,4 +1,5 @@
 import Flapjack.CrepeExpressionContractCorrectness
+import Flapjack.CrepeWordExpressionContract
 
 /-!
 List-level argument correctness.
@@ -15,13 +16,13 @@ theorem compileArgs_evalCrepFullExps_of_expression_correct
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (expressionCorrect : ∀ expression : Exp α,
-      PanValueCrepExpressionCorrect expression)
     (context : CompileContext α) (structs : StructContext)
     (sourceLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
     (baseAddress topAddress bytesInWord : α)
     (expressions : List (Exp α)) (values : List (PanValue α))
+    (expressionCorrect : ∀ expression : Exp α,
+      expression ∈ expressions → PanValueCrepExpressionCorrect expression)
     (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
       sourceMemory state)
     (hsource : evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
@@ -105,16 +106,53 @@ theorem compileArgs_evalCrepFullExps_of_expression_correct
                 exact (Option.some.inj hsome).symm
               subst values
               obtain ⟨_, compiledHead, hcompileHead, hcompiledHead⟩ :=
-                expressionCorrect expression context structs sourceLocals
+                expressionCorrect expression (by simp) context structs sourceLocals
                   sourceGlobals sourceMemory state baseAddress topAddress
                   bytesInWord value hrel hhead
               obtain ⟨compiledTail, hcompileTail, hcompiledTail⟩ :=
-                ih tailValues htail
+                ih tailValues
+                  (fun expression hmember =>
+                    expressionCorrect expression (by simp [hmember])) htail
               refine ⟨compiledHead ++ compiledTail, ?_, ?_⟩
               · simp [compileArgs, hcompileHead, hcompileTail]
               · exact evalAppend compiledHead compiledTail
                   (panValueFlatWords value)
                   (tailValues.flatMap panValueFlatWords)
                   hcompiledHead hcompiledTail
+
+theorem compileArgs_evalCrepFullExps_of_wordExp
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (baseAddress topAddress bytesInWord : α)
+    (expressions : List (Exp α)) (values : List (PanValue α))
+    (hword : ∀ expression ∈ expressions, wordExp expression)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expressions = some values) :
+    ∃ compiled,
+      compileArgs context expressions = compiled ∧
+      evalCrepFullExps state.locals state.memory
+        baseAddress topAddress compiled =
+        some (values.flatMap panValueFlatWords) := by
+  exact compileArgs_evalCrepFullExps_of_expression_correct context structs
+    sourceLocals sourceGlobals sourceMemory state baseAddress topAddress bytesInWord
+    expressions values
+    (fun expression hmember =>
+      panValueCrepExpressionCorrect_wordExp expression (hword expression hmember)
+        hbytesInWord hlookup)
+    hrel hsource
 
 end Flapjack

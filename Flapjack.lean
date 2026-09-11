@@ -32,6 +32,7 @@ import Flapjack.CrepeProgramExtCallCorrectness
 import Flapjack.CrepeProgramInduction
 import Flapjack.CrepeExtCallInversion
 import Flapjack.CrepeProgramExtCallSourceWordCorrectness
+import Flapjack.CrepeWordExtCallProgramCase
 import Flapjack.CrepeExpressionStability
 import Flapjack.CrepeNestedDecsStability
 import Flapjack.CrepeProgramOneWordDeclarationCorrectness

@@ -2492,6 +2492,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   original `Exp` operands satisfying `wordExp`.
 - [x] Lift shared-memory load and store correctness constructors to original
   `Exp` operands satisfying `wordExp`.
+- [x] Lift the scalar external-call correctness constructor to original
+  `Exp` operands satisfying `wordExp`.
 - [x] Add reusable variable-support lemmas for compiled `loadShape`, field
   selection, and expression-list heads, preparing the compiler-side bound
   proof for nested `Exp` recursion.

@@ -154,7 +154,7 @@ theorem panValueFlatWords_rStruct_word_list (values : List α) :
                   panValueFlatWordsFuel, ih (fuel + 1) htail]
   rw [panValueFlatWords, hvalueFuel values]
   simp only [panValueFlatWordsFuel]
-  exact hwordsFuel (values.length + 1) values (by omega)
+  exact hwordsFuel (2 * (values.length + 1)) values (by omega)
 
 theorem compile_full_pan_value_return_record_source_word_relation
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

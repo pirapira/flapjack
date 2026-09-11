@@ -18,6 +18,15 @@ example : panValueWords (.rStruct [.word (3 : Nat), .word 5]) = [3, 5] := by
   rfl
 
 example :
+    panValueFlatWords (.rStruct [.rStruct [.word (3 : Nat)]]) = [3] := by
+  rfl
+
+example :
+    panValueFlatWords
+        (.nStruct "Outer" [("inner", .rStruct [.word (3 : Nat)])]) = [3] := by
+  rfl
+
+example :
     panFlatLoad structuredValueTestContext flatPairDomain flatPairMemory 1 10
       (.comb [.one, .one]) =
       some (.rStruct [.word 3, .word 5]) := by

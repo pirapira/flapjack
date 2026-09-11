@@ -216,7 +216,11 @@ where
           panValueFlatWordsFieldListFuel fuel fields
 
 def panValueFlatWords (value : PanValue α) : List α :=
-  panValueFlatWordsFuel (panValueFlatValueFuel value + 1) value
+  -- The list helper consumes one unit both when descending through a
+  -- container and when entering each contained value.  Twice the structural
+  -- fuel is therefore needed to flatten nested records without truncating
+  -- their leaves.
+  panValueFlatWordsFuel (2 * panValueFlatValueFuel value + 1) value
 
 def panValueFlatShapeFuel : Shape → Nat
   | .one => 1

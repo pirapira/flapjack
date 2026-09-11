@@ -2359,6 +2359,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   applying recursive body correctness in the extended context.
 - [x] Add the arbitrary-expression return correctness constructor, consuming
   expression compilation/evaluation witnesses at independent positive fuels.
+- [x] Add the program-level ordinary-call constructor from a callee simulation
+  relation, with independent source and target fuels.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

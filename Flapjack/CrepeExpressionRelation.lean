@@ -53,6 +53,42 @@ def wordExp : Exp α → Prop
   | .cmp _ left right | .shift _ left right => wordExp left ∧ wordExp right
   | _ => False
 
+/-! An auxiliary inductive syntax avoids Lean's nested-inductive restriction
+when carrying the expression induction used below.  `toExp` is deliberately
+small: it is exactly the scalar expression fragment accepted by Crep. -/
+inductive SourceWordExp (α : Type u) where
+  | const (value : α)
+  | «local» (name : VarName)
+  | op (operator : BinOp) (left right : SourceWordExp α)
+  | mul (left right : SourceWordExp α)
+  | cmp (operator : Cmp) (left right : SourceWordExp α)
+  | shift (operator : Shift) (left right : SourceWordExp α)
+  | baseAddr
+  | topAddr
+  | bytesInWord
+
+def SourceWordExp.toExp : SourceWordExp α → Exp α
+  | .const value => .const value
+  | .«local» name => .var .local name
+  | .op operator left right => .op operator [left.toExp, right.toExp]
+  | .mul left right => .panOp .mul [left.toExp, right.toExp]
+  | .cmp operator left right => .cmp operator left.toExp right.toExp
+  | .shift operator left right => .shift operator left.toExp right.toExp
+  | .baseAddr => .baseAddr
+  | .topAddr => .topAddr
+  | .bytesInWord => .bytesInWord
+
+theorem SourceWordExp.toExp_word (expression : SourceWordExp α) :
+    wordExp expression.toExp := by
+  induction expression with
+  | const | «local» | baseAddr | topAddr | bytesInWord => simp [SourceWordExp.toExp, wordExp]
+  | op operator left right ihLeft ihRight =>
+      simp [SourceWordExp.toExp, wordExp, ihLeft, ihRight]
+  | mul left right ihLeft ihRight =>
+      simp [SourceWordExp.toExp, wordExp, ihLeft, ihRight]
+  | cmp operator left right ihLeft ihRight | shift operator left right ihLeft ihRight =>
+      simp [SourceWordExp.toExp, wordExp, ihLeft, ihRight]
+
 theorem localisedExp_iff_no_global (expression : Exp α) :
     localisedExp expression ↔ expGlobalVars expression = [] := by
   rfl

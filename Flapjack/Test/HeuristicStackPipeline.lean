@@ -59,4 +59,17 @@ example [NeZero width]
     [] (.skip : WordProg (Word width)) [] 1 0 2 0
     ssaState renamedParameters allocation renamedProgram halloc
 
+example [NeZero width]
+    (halloc : wordAllocateGraphFunctionWithHeuristicsEntryRenamed
+      [] (.skip : WordProg (Word width)) [] 1 0 2 0 =
+      some (ssaState, renamedParameters, allocation, renamedProgram)) :
+    ∀ name, name ∈ wordClashTreeNames
+        ((WordClashTree.set renamedParameters).seq
+          (wordClashTree renamedProgram [])) →
+      ∃ location,
+        lookupNatInfo name (wordGraphLocations allocation 2 0) = some location := by
+  exact wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_locations
+    [] (.skip : WordProg (Word width)) [] 1 0 2 0
+    ssaState renamedParameters allocation renamedProgram halloc
+
 end Flapjack.RiscV

@@ -67,6 +67,12 @@ example :
       some [.storeByte 6 7] := by
   decide
 
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.dataBufferWrite 7 6) [] 0]⟩ =
+      some [.storeWord 6 7] := by
+  decide
+
 def haltLabProgram : LabProgram (Word 64) :=
   [⟨1, [.labAsm (.halt : LabAsm (Word 64)) [] 0]⟩]
 

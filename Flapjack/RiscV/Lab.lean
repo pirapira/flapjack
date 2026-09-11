@@ -129,6 +129,8 @@ def labCompilePlain [NeZero width] :
       wordShareInstToInstructions operator register (.var address)
   | .codeBufferWrite address value =>
       (wordInstToInstruction (.mem .store8 value address)).map List.singleton
+  | .dataBufferWrite address value =>
+      (wordInstToInstruction (.mem .store value address)).map List.singleton
 
 def labCompileAsm [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat) :
@@ -220,6 +222,7 @@ def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
   | .tick => .tick
   | .jumpReg register => .jumpReg register
   | .codeBufferWrite address value => .codeBufferWrite address value
+  | .dataBufferWrite address value => .dataBufferWrite address value
   | .shareMem operator register address =>
       .shareMem operator register address
 

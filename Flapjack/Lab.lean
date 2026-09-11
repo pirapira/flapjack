@@ -44,6 +44,7 @@ inductive LabPlain (α : Type u) where
   | tick
   | jumpReg (register : Nat)
   | codeBufferWrite (address value : Nat)
+  | dataBufferWrite (address value : Nat)
   | shareMem (operator : WordMemOp) (register address : Nat)
   deriving Repr
 
@@ -141,6 +142,8 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         .labAsm .install [] 0, labLabel sectionId counter], false, counter + 1⟩
   | .codeBufferWrite address value =>
       ⟨[.asm (.codeBufferWrite address value) [] 0], false, counter⟩
+  | .dataBufferWrite address value =>
+      ⟨[.asm (.dataBufferWrite address value) [] 0], false, counter⟩
   | .ffi function _ _ _ _ returnAddress =>
       ⟨[.labAsm (.locValue returnAddress ⟨sectionId, counter⟩) [] 0,
         .labAsm (.callFfi function) [] 0, labLabel sectionId counter],
@@ -157,7 +160,7 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
     | .storeConsts _ _ _ | .stackAlloc _ | .stackFree _ | .stackStore _ _
     | .stackStoreAny _ _
     | .stackLoad _ _ | .stackLoadAny _ _ | .stackGetSize _ | .stackSetSize _
-    | .bitmapLoad _ _ | .dataBufferWrite _ _ =>
+    | .bitmapLoad _ _ =>
       ⟨[], false, counter⟩
   | .call none target none =>
       ⟨[match labCompileJump target with

@@ -426,6 +426,15 @@ theorem labCompilePlain_codeBufferWrite
     haddress, hvalue]
   congr
 
+theorem labCompilePlain_dataBufferWrite
+    [NeZero width] (address value : Nat)
+    (haddress : address < 32) (hvalue : value < 32) :
+    labCompilePlain (.dataBufferWrite address value : LabPlain (Word width)) =
+      some [.storeWord ⟨value, hvalue⟩ ⟨address, haddress⟩] := by
+  simp [labCompilePlain, wordInstToInstruction, registerOfNat,
+    haddress, hvalue]
+  congr
+
 theorem wordStackRegisterRelation_executeTick
     [NeZero width] (source : WordStackMachineState width)
     (target : State width) (hrel : WordStackRegisterRelation source target) :

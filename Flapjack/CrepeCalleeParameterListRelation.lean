@@ -168,4 +168,40 @@ theorem panValueCrepCalleeStateRel_word_parameters
     { locals := (fun _ => none), memory := crepMemory }
     parameters hrel hfresh
 
+theorem panValueCrepCalleeStateRel_word_parameters_of_bind_assign
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepMemory : α → Option α)
+    (parameters : List (WordParameter α))
+    (calleeLocals : VarName → Option (PanValue α))
+    (targetCalleeLocals : Nat → Option α)
+    (hglobals : sourceGlobals = (fun _ => none))
+    (hmemory : panValueWordMemory sourceMemory = crepMemory)
+    (hbind : bindPanValueParameters
+        (parameters.map (fun (name, _, _) => name))
+        (parameters.map (fun (_, _, value) => PanValue.word value)) =
+      some calleeLocals)
+    (hassign : assignCrepValues (fun _ => none)
+        (parameters.map (fun (_, slot, _) => slot))
+        (parameters.map (fun (_, _, value) => value)) =
+      some targetCalleeLocals)
+    (hfresh : WordParameterListFresh context parameters) :
+    panValueCrepStateRel structs
+      (foldWordParameterContext context parameters) calleeLocals sourceGlobals
+      sourceMemory
+      { locals := targetCalleeLocals, memory := crepMemory } := by
+  have hbound := bindPanValueParameters_word_parameters parameters
+  have hcallee : calleeLocals = foldWordParameterSource
+      (fun _ => none) parameters := by
+    exact Option.some.inj (hbind.symm.trans hbound)
+  have hassigned := assignCrepValues_word_parameters parameters
+  have htarget : targetCalleeLocals = foldWordParameterLocals
+      (fun _ => none) parameters := by
+    exact Option.some.inj (hassign.symm.trans hassigned)
+  have hrel := panValueCrepCalleeStateRel_word_parameters structs context
+    sourceGlobals sourceMemory crepMemory parameters hglobals hmemory hfresh
+  simpa [hcallee, htarget] using hrel
+
 end Flapjack

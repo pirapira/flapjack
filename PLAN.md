@@ -2404,6 +2404,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Compose a recursively correct returned callee with destination read-back,
   callee-produced globals/memory, and the declaration continuation correctness
   boundary.
+- [x] Compose direct raised-callee declaration calls from compiled inversion,
+  call correctness, and raised-result restoration.
 - [x] Generalize state extension across callee-produced globals and memory,
   and connect recursive callee correctness to destination-aware call state.
 - [x] Prove structured source and compiled Crep branch selection agree for a

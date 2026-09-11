@@ -86,34 +86,6 @@ def panValueCrepStateRel {α : Type u}
   panValueCrepLocalsRel structs context sourceLocals crepState.locals ∧
   panValueCrepMemoryRel sourceMemory crepState.memory
 
-def panValueCrepControlRel {α : Type u}
-    (structs : StructContext) (context : CompileContext α)
-    (exceptionRel : ExceptionId → PanValue α → α → Prop)
-    (sourceResult : PanValueControlResult α)
-    (crepResult : CrepControlResult α) : Prop :=
-  match sourceResult, crepResult with
-  | .normal sourceLocals sourceGlobals sourceMemory,
-      .normal crepState =>
-      panValueCrepStateRel structs context sourceLocals sourceGlobals
-        sourceMemory crepState
-  | .returned sourceLocals sourceGlobals sourceMemory sourceValues,
-      .returned crepState crepValues =>
-      panValueCrepStateRel structs context sourceLocals sourceGlobals
-        sourceMemory crepState ∧
-      panValueCrepValuesRel sourceValues crepValues
-  | .raised sourceLocals sourceGlobals sourceMemory exception value,
-      .raised crepState exceptionCode =>
-      panValueCrepStateRel structs context sourceLocals sourceGlobals
-        sourceMemory crepState ∧
-      exceptionRel exception value exceptionCode
-  | .broke sourceLocals sourceGlobals sourceMemory, .broke crepState _ =>
-      panValueCrepStateRel structs context sourceLocals sourceGlobals
-        sourceMemory crepState
-  | .continued sourceLocals sourceGlobals sourceMemory, .continued crepState _ =>
-      panValueCrepStateRel structs context sourceLocals sourceGlobals
-        sourceMemory crepState
-  | _, _ => False
-
 def panValueCrepRaisedStateRelExcept {α : Type u}
     (structs : StructContext) (context : CompileContext α)
     (sourceGlobals : VarName → Option (PanValue α))
@@ -141,6 +113,35 @@ def panValueCrepRaisedControlRel {α : Type u}
   panValueCrepRaisedStateRel structs context sourceGlobals sourceMemory
     crepState spillAddress ∧
   exceptionRel sourceException sourceValue exceptionCode
+
+def panValueCrepControlRel {α : Type u}
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α) : Prop :=
+  match sourceResult, crepResult with
+  | .normal sourceLocals sourceGlobals sourceMemory,
+      .normal crepState =>
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory crepState
+  | .returned sourceLocals sourceGlobals sourceMemory sourceValues,
+      .returned crepState crepValues =>
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory crepState ∧
+      panValueCrepValuesRel sourceValues crepValues
+  | .raised _sourceLocals sourceGlobals sourceMemory exception value,
+      .raised crepState exceptionCode =>
+      ∃ spillAddress,
+        panValueCrepRaisedControlRel structs context exceptionRel
+          sourceGlobals sourceMemory exception value crepState exceptionCode
+            spillAddress
+  | .broke sourceLocals sourceGlobals sourceMemory, .broke crepState _ =>
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory crepState
+  | .continued sourceLocals sourceGlobals sourceMemory, .continued crepState _ =>
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory crepState
+  | _, _ => False
 
 def panValueCrepRaisedControlRelExcept {α : Type u}
     (structs : StructContext) (context : CompileContext α)

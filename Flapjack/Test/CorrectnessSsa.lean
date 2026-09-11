@@ -606,4 +606,20 @@ example :
   · rfl
   all_goals decide
 
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32)
+          (.shareInst .load32 1 (.const (BitVec.ofNat 32 16))) = some source' ∧
+      evalWordProg (zeroState 32)
+          (wordSsaRenameProgram
+            ({ current := [], next := 4 } : WordSsaState)
+            (.shareInst .load32 1 (.const (BitVec.ofNat 32 16)))).2 = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_program_share_load32_const
+  · rfl
+  · rfl
+  all_goals decide
+
 end Flapjack.RiscV

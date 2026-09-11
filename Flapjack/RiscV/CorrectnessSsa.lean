@@ -2075,6 +2075,71 @@ theorem evalWordProg_ssaRename_program_share_load16_const [NeZero width]
   · simp [sourceCode, targetCode, executeInstructions, execute,
       writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
+theorem wordSsaRenameProgram_shareInst_load32_const
+    (ssa : WordSsaState) (destination : Nat) (address : Word width) :
+    wordSsaRenameProgram ssa
+        (.shareInst .load32 destination (.const address) : WordProg (Word width)) =
+      ((wordSsaFresh ssa destination).1,
+        .shareInst .load32 (wordSsaFresh ssa destination).2 (.const address)) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp]
+
+theorem evalWordProg_ssaRename_program_share_load32_const [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hmemory : source.memory = target.memory)
+    (hzeroSource : readRegister source 0 = 0)
+    (hzeroTarget : readRegister target 0 = 0)
+    (destination : Nat) (address : Word width)
+    (hdestination : destination < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hdestinationScratch : destination ≠ 31)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0)
+    (hfreshScratch : (wordSsaFresh ssa destination).2 ≠ 31) :
+    ∃ source' target',
+      evalWordProg source (.shareInst .load32 destination (.const address)) = some source' ∧
+      evalWordProg target
+          (wordSsaRenameProgram ssa
+            (.shareInst .load32 destination (.const address))).2 = some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
+      source'.memory = target'.memory := by
+  have hzeroSource' : source.registers 0 = 0 := by
+    simpa [readRegister] using hzeroSource
+  have hzeroTarget' : target.registers 0 = 0 := by
+    simpa [readRegister] using hzeroTarget
+  rw [wordSsaRenameProgram_shareInst_load32_const]
+  let sourceCode : List (Instruction width) :=
+    [.addi 31 0 address, .load32 ⟨destination, hdestination⟩ 31]
+  let targetCode : List (Instruction width) :=
+    [.addi 31 0 address,
+     .load32 ⟨(wordSsaFresh ssa destination).2, hfresh⟩ 31]
+  have hsourceCompile :
+      wordShareInstToInstructions (width := width) .load32 destination (.const address) =
+        some sourceCode := by
+    simp [sourceCode, wordShareInstToInstructions, wordExpToInstructions,
+      wordExpToInstruction, wordInstToInstruction, registerOfNat,
+      hdestination, hdestinationScratch]
+  have htargetCompile :
+      wordShareInstToInstructions (width := width) .load32
+        (wordSsaFresh ssa destination).2 (.const address) =
+        some targetCode := by
+    simp [targetCode, wordShareInstToInstructions, wordExpToInstructions,
+      wordExpToInstruction, wordInstToInstruction, registerOfNat,
+      hfresh, hfreshScratch]
+  refine ⟨executeInstructions source sourceCode,
+    executeInstructions target targetCode, ?_, ?_, ?_, ?_⟩
+  · simp [sourceCode, evalWordProg, evalWordShareInst,
+      hsourceCompile, executeInstructions]
+  · simp [targetCode, evalWordProg, evalWordShareInst,
+      htargetCompile, executeInstructions]
+  · simp [sourceCode, targetCode, executeInstructions, execute,
+      writeRegister, readRegister, hdestinationNonzero, hfreshNonzero,
+      hzeroSource', hzeroTarget']
+    simp [readWord32, readByte, byteAddress, hmemory]
+  · simp [sourceCode, targetCode, executeInstructions, execute,
+      writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+
 theorem wordSsaRenameInst_div
     (ssa : WordSsaState) (destination dividend divisor : Nat) :
     wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =

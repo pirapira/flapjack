@@ -484,6 +484,94 @@ theorem crepToLoop_shMem_load_agreement
       evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
       loopStateOfCrepState, updateLoopLocal, htargetLocal]
 
+theorem crepToLoop_skip_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat) (name : Nat) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.skip)).map (crepControlLocal name) =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 1)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live (.skip))).map (loopControlLocal name) := by
+  simp [evalCrepFullProg, loopCompileProg,
+    evalLoopProgWithCallsAndFfi, evalLoopProg,
+    loopStateOfCrepState, crepControlLocal, loopControlLocal]
+
+theorem crepToLoop_tick_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat) (name : Nat) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.tick)).map (crepControlLocal name) =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 1)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live (.tick))).map (loopControlLocal name) := by
+  simp [evalCrepFullProg, loopCompileProg,
+    evalLoopProgWithCallsAndFfi, evalLoopProg,
+    loopStateOfCrepState, crepControlLocal, loopControlLocal]
+
+theorem crepToLoop_break_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat) (label name : Nat) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.break label)).map (crepControlLocal name) =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 1)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live (.break label))).map (loopControlLocal name) := by
+  simp [evalCrepFullProg, loopCompileProg,
+    evalLoopProgWithCallsAndFfi, evalLoopProg,
+    loopStateOfCrepState, crepControlLocal, loopControlLocal]
+
+theorem crepToLoop_continue_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat) (label name : Nat) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.continue label)).map (crepControlLocal name) =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 1)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live (.continue label))).map (loopControlLocal name) := by
+  simp [evalCrepFullProg, loopCompileProg,
+    evalLoopProgWithCallsAndFfi, evalLoopProg,
+    loopStateOfCrepState, crepControlLocal, loopControlLocal]
+
 theorem crepToLoop_return_const_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

@@ -2194,6 +2194,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   destination-local regression.
 - [x] Prove the Crep shared-memory handler boundary for constant-address
   loads and stores, including default-handler regressions.
+- [x] Add direct-control Crep-to-Loop agreements for `skip`, `tick`, `break`,
+  and `continue`, with a combined executable regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

@@ -156,6 +156,7 @@ import Flapjack.CrepeProgramLoad32ReturnCorrectness
 import Flapjack.CrepeProgramLoadByteReturnCorrectness
 import Flapjack.CrepeProgramRecordFieldReturnCorrectness
 import Flapjack.CrepeProgramCallCorrectness
+import Flapjack.CrepeCallArgumentCorrectness
 import Flapjack.CrepeProgramAssignmentFuelRelation
 import Flapjack.CrepeProgramAssignmentCorrectness
 import Flapjack.CrepeProgramPrimitiveRelation

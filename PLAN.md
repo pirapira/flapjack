@@ -2570,6 +2570,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   list evaluation to obtain flattened argument values.
 - [x] Scope the `compileArgs` correctness premise to the actual argument list
   and provide a `wordExp` specialization for localized source calls.
+- [x] Package localized word-valued argument evaluation and compilation into
+  `PanValueCrepCallCorrect`, leaving recursive callee/handler simulation as
+  the explicit call relation premise.
 - [x] Generalize state extension across callee-produced globals and memory,
   and connect recursive callee correctness to destination-aware call state.
 - [x] Prove structured source and compiled Crep branch selection agree for a

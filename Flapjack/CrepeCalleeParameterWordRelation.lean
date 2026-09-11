@@ -84,4 +84,49 @@ theorem panValueCrepStateRel_add_word_parameter
       simp [updatePanValueMap, hcurrent]
   simpa [hsourceUpdate] using hupdated
 
+theorem panValueCrepCalleeStateRel_single_word
+    [LawfulBEq String] [OfNat α 0]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (crepMemory : α → Option α)
+    (name : VarName) (slot : Nat) (value : α)
+    (hglobals : sourceGlobals = (fun _ => none))
+    (hmemory : panValueWordMemory sourceMemory = crepMemory)
+    (hnoalias : ∀ oldName oldShape oldSlots,
+      oldName ≠ name →
+      lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+      slot ∉ oldSlots) :
+    panValueCrepStateRel structs
+      { context with vars := (name, (.one, [slot])) :: context.vars }
+      (updatePanValueMap (fun _ => none) name (.word value)) sourceGlobals
+      sourceMemory
+      { locals := updateCrepLocal (fun _ => none) slot value,
+        memory := crepMemory } := by
+  have hrel : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory
+      { locals := (fun _ => none), memory := crepMemory } := by
+    refine ⟨hglobals, panValueCrepLocalsRel_empty structs context (fun _ => none), ?_⟩
+    exact hmemory
+  let parameterContext :=
+    { context with vars := (name, (.one, [slot])) :: context.vars }
+  have hbase : panValueCrepStateRel structs parameterContext
+      (fun _ => none) sourceGlobals sourceMemory
+      { locals := (fun _ => none), memory := crepMemory } := by
+    refine ⟨hglobals, panValueCrepLocalsRel_empty structs parameterContext
+      (fun _ => none), hmemory⟩
+  have hlookupNew : lookupInfo name parameterContext.vars = some (.one, [slot]) := by
+    simp [parameterContext, lookupInfo]
+  have hupdated := panValueCrepStateRel_update_word structs parameterContext
+    (fun _ => none) sourceGlobals sourceMemory
+    { locals := (fun _ => none), memory := crepMemory }
+    name slot value hbase hlookupNew
+    (by
+      intro oldName oldShape oldSlots hne hlookupOld
+      have hlookupContext : lookupInfo oldName context.vars =
+          some (oldShape, oldSlots) := by
+        simpa [parameterContext, lookupInfo, hne, Ne.symm hne] using hlookupOld
+      exact hnoalias oldName oldShape oldSlots hne hlookupContext)
+  simpa [parameterContext] using hupdated
+
 end Flapjack

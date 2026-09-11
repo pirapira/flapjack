@@ -18,7 +18,7 @@ theorem compile_full_pan_value_call_raised_of_source_compiled_call
     (declarations : List (Decl α))
     (sourceFunctions : List (FunName × List VarName × Prog α))
     (functions : List (CompiledFunction α))
-    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α))
     (caller : CrepState α)
     (primitive : PanPrimitiveHandler α)
@@ -57,7 +57,7 @@ theorem compile_full_pan_value_call_raised_of_source_compiled_call
         some (parameters, body) → parameters.Nodup)
     (hargumentValues : ∀ (sourceValues : List (PanValue α))
       (targetValues : List α),
-      evalPanValueExps structs (fun _ => none) sourceGlobals sourceMemory
+      evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
         baseAddress topAddress bytesInWord arguments = some sourceValues →
       evalCrepFullExps caller.locals caller.memory
         baseAddress topAddress compiledArguments = some targetValues →
@@ -65,7 +65,7 @@ theorem compile_full_pan_value_call_raised_of_source_compiled_call
     (hsourceCall : evalPanValueCallWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (sourceFuel + 1)
-      (fun _ => none) sourceGlobals sourceMemory none function arguments =
+      sourceLocals sourceGlobals sourceMemory none function arguments =
       some (.raised (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
         sourceException sourceValue))
     (hcrepCall : evalCrepFullCall functions crepPrimitive ffi sharedMem
@@ -85,7 +85,7 @@ theorem compile_full_pan_value_call_raised_of_source_compiled_call
       htargetParameters, htargetBody, hcompileBody, hassign, hcrepBody,
       htarget, hstate⟩ := sourceCompiledRaisedCallPair
     functionContext structs declarations sourceFunctions functions
-    (fun _ => none) sourceGlobals sourceMemory caller caller.memory
+    sourceLocals sourceGlobals sourceMemory caller caller.memory
     primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel
     function arguments compiledArguments sourceCalleeGlobals sourceCalleeMemory

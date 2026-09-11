@@ -283,4 +283,212 @@ theorem evalWordProg_ssaRename_div_destination [NeZero width]
     simp [hdestinationNonzero, hfreshNonzero, hdividendValue, hdivisorValue]
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
+theorem wordSsaRenameInst_longMul
+    (ssa : WordSsaState) (destinationLeft destinationRight sourceLeft sourceRight : Nat) :
+    wordSsaRenameInst ssa
+        (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) : WordInst) =
+      (let sourceLeft := wordSsaRead ssa sourceLeft
+       let sourceRight := wordSsaRead ssa sourceRight
+       let (ssa, freshLeft) := wordSsaFresh ssa destinationLeft
+       let (ssa, freshRight) := wordSsaFresh ssa destinationRight
+       (ssa, .arith (.longMul freshLeft freshRight
+         sourceLeft sourceRight))) := by
+  rfl
+
+theorem evalWordProg_ssaRename_longMul_destinations [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (first second : WordSsaState) (freshLeft freshRight : Nat)
+    (destinationLeft destinationRight sourceLeft sourceRight : Nat)
+    (hfirst : wordSsaFresh ssa destinationLeft = (first, freshLeft))
+    (hsecond : wordSsaFresh first destinationRight = (second, freshRight))
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (hdestinationLeft : destinationLeft < 32)
+    (hdestinationRight : destinationRight < 32)
+    (hsourceLeft : sourceLeft < 32) (hsourceRight : sourceRight < 32)
+    (hdestinationLeftNonzero : destinationLeft ≠ 0)
+    (hdestinationRightNonzero : destinationRight ≠ 0)
+    (hdestinationDistinct : destinationLeft ≠ destinationRight)
+    (hdestinationLeftSourceLeft : destinationLeft ≠ sourceLeft)
+    (hdestinationLeftSourceRight : destinationLeft ≠ sourceRight)
+    (hsourceLeftSsa : wordSsaRead ssa sourceLeft < 32)
+    (hsourceRightSsa : wordSsaRead ssa sourceRight < 32)
+    (hfreshLeftBound : freshLeft < 32) (hfreshRightBound : freshRight < 32)
+    (hfreshLeftNonzero : freshLeft ≠ 0) (hfreshRightNonzero : freshRight ≠ 0)
+    (hfreshDistinct : freshLeft ≠ freshRight)
+    (hfreshLeftSourceLeft : freshLeft ≠ wordSsaRead ssa sourceLeft)
+    (hfreshLeftSourceRight : freshLeft ≠ wordSsaRead ssa sourceRight) :
+    ∃ source' target',
+      evalWordProg source
+          (.inst (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight))) =
+          some source' ∧
+      evalWordProg target
+          (.inst (wordSsaRenameInst ssa
+            (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) : WordInst)).2) =
+          some target' ∧
+      readRegister source' ⟨destinationLeft, hdestinationLeft⟩ =
+        readRegister target' ⟨freshLeft, hfreshLeftBound⟩ ∧
+      readRegister source' ⟨destinationRight, hdestinationRight⟩ =
+        readRegister target' ⟨freshRight, hfreshRightBound⟩ ∧
+      source'.memory = target'.memory := by
+  have hsourceLeftValue :
+      readRegister source ⟨sourceLeft, hsourceLeft⟩ =
+        readRegister target ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩ := by
+    have h := hregister sourceLeft
+    simpa [registerOfNat, hsourceLeft, hsourceLeftSsa] using h
+  have hsourceRightValue :
+      readRegister source ⟨sourceRight, hsourceRight⟩ =
+        readRegister target ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩ := by
+    have h := hregister sourceRight
+    simpa [registerOfNat, hsourceRight, hsourceRightSsa] using h
+  rw [wordSsaRenameInst]
+  simp only [hfirst, hsecond]
+  have hdestinationLeftNonzero' :
+      (⟨destinationLeft, hdestinationLeft⟩ : Fin 32) ≠ 0 := by
+    simp [hdestinationLeftNonzero]
+  have hdestinationRightNonzero' :
+      (⟨destinationRight, hdestinationRight⟩ : Fin 32) ≠ 0 := by
+    simp [hdestinationRightNonzero]
+  have hfreshLeftNonzero' :
+      (⟨freshLeft, hfreshLeftBound⟩ : Fin 32) ≠ 0 := by
+    simp [hfreshLeftNonzero]
+  have hfreshRightNonzero' :
+      (⟨freshRight, hfreshRightBound⟩ : Fin 32) ≠ 0 := by
+    simp [hfreshRightNonzero]
+  have hdestinationDistinct' :
+      (⟨destinationLeft, hdestinationLeft⟩ : Fin 32) ≠
+        ⟨destinationRight, hdestinationRight⟩ := by
+    simp [hdestinationDistinct]
+  have hfreshDistinct' :
+      (⟨freshLeft, hfreshLeftBound⟩ : Fin 32) ≠
+        ⟨freshRight, hfreshRightBound⟩ := by
+    simp [hfreshDistinct]
+  have hdestinationLeftSourceLeft' :
+      (⟨destinationLeft, hdestinationLeft⟩ : Fin 32) ≠
+        ⟨sourceLeft, hsourceLeft⟩ := by
+    simp [hdestinationLeftSourceLeft]
+  have hdestinationLeftSourceRight' :
+      (⟨destinationLeft, hdestinationLeft⟩ : Fin 32) ≠
+        ⟨sourceRight, hsourceRight⟩ := by
+    simp [hdestinationLeftSourceRight]
+  have hfreshLeftSourceLeft' :
+      (⟨freshLeft, hfreshLeftBound⟩ : Fin 32) ≠
+        ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩ := by
+    simp [hfreshLeftSourceLeft]
+  have hfreshLeftSourceRight' :
+      (⟨freshLeft, hfreshLeftBound⟩ : Fin 32) ≠
+        ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩ := by
+    simp [hfreshLeftSourceRight]
+  refine ⟨executeInstructions source
+      [.mulHU ⟨destinationLeft, hdestinationLeft⟩
+          ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩,
+       .mul ⟨destinationRight, hdestinationRight⟩
+          ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩],
+    executeInstructions target
+      [.mulHU ⟨freshLeft, hfreshLeftBound⟩
+          ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+          ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩,
+       .mul ⟨freshRight, hfreshRightBound⟩
+          ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+          ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩], ?_, ?_, ?_, ?_, ?_⟩
+  · simp [evalWordProg, wordArithToInstructions, registerOfNat,
+      hdestinationLeft, hdestinationRight, hsourceLeft, hsourceRight,
+      hdestinationLeftSourceLeft, hdestinationLeftSourceRight,
+      executeInstructions]
+  · simp [evalWordProg, wordArithToInstructions, registerOfNat,
+      hfreshLeftBound, hfreshRightBound, hsourceLeftSsa, hsourceRightSsa,
+      hfreshLeftSourceLeft, hfreshLeftSourceRight, executeInstructions]
+  · have hresult := executeInstructions_longMul_general source
+        ⟨destinationLeft, hdestinationLeft⟩ ⟨destinationRight, hdestinationRight⟩
+        ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩
+        hdestinationLeftNonzero' hdestinationRightNonzero'
+        hdestinationDistinct' hdestinationLeftSourceLeft'
+        hdestinationLeftSourceRight'
+    have hleft := congrArg Prod.fst hresult
+    have htarget := executeInstructions_longMul_general target
+        ⟨freshLeft, hfreshLeftBound⟩ ⟨freshRight, hfreshRightBound⟩
+        ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+        ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩
+        hfreshLeftNonzero' hfreshRightNonzero' hfreshDistinct'
+        hfreshLeftSourceLeft' hfreshLeftSourceRight'
+    have htargetLeft := congrArg Prod.fst htarget
+    calc
+      readRegister (executeInstructions source
+        [.mulHU ⟨destinationLeft, hdestinationLeft⟩
+            ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩,
+         .mul ⟨destinationRight, hdestinationRight⟩
+            ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩])
+          ⟨destinationLeft, hdestinationLeft⟩ = _ := hleft
+      _ = BitVec.ofNat width
+          ((readRegister target ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩).toNat *
+            (readRegister target ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩).toNat /
+            2 ^ width) := by rw [hsourceLeftValue, hsourceRightValue]
+      _ = readRegister (executeInstructions target
+        [.mulHU ⟨freshLeft, hfreshLeftBound⟩
+            ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+            ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩,
+         .mul ⟨freshRight, hfreshRightBound⟩
+            ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+            ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩])
+          ⟨freshLeft, hfreshLeftBound⟩ := htargetLeft.symm
+  · have hresult := executeInstructions_longMul_general source
+        ⟨destinationLeft, hdestinationLeft⟩ ⟨destinationRight, hdestinationRight⟩
+        ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩
+        hdestinationLeftNonzero' hdestinationRightNonzero'
+        hdestinationDistinct' hdestinationLeftSourceLeft'
+        hdestinationLeftSourceRight'
+    have hright := congrArg Prod.snd hresult
+    have htarget := executeInstructions_longMul_general target
+        ⟨freshLeft, hfreshLeftBound⟩ ⟨freshRight, hfreshRightBound⟩
+        ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+        ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩
+        hfreshLeftNonzero' hfreshRightNonzero' hfreshDistinct'
+        hfreshLeftSourceLeft' hfreshLeftSourceRight'
+    have htargetRight := congrArg Prod.snd htarget
+    calc
+      readRegister (executeInstructions source
+        [.mulHU ⟨destinationLeft, hdestinationLeft⟩
+            ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩,
+         .mul ⟨destinationRight, hdestinationRight⟩
+            ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩])
+          ⟨destinationRight, hdestinationRight⟩ = _ := hright
+      _ = readRegister target ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩ *
+          readRegister target ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩ := by
+            rw [hsourceLeftValue, hsourceRightValue]
+      _ = readRegister (executeInstructions target
+        [.mulHU ⟨freshLeft, hfreshLeftBound⟩
+            ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+            ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩,
+         .mul ⟨freshRight, hfreshRightBound⟩
+            ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+            ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩])
+          ⟨freshRight, hfreshRightBound⟩ := htargetRight.symm
+  · have hsourceMemory :
+        (executeInstructions source
+          [.mulHU ⟨destinationLeft, hdestinationLeft⟩
+              ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩,
+           .mul ⟨destinationRight, hdestinationRight⟩
+              ⟨sourceLeft, hsourceLeft⟩ ⟨sourceRight, hsourceRight⟩]).memory =
+          source.memory := by
+      simp [executeInstructions, execute, writeRegister,
+        hdestinationLeftNonzero, hdestinationRightNonzero]
+    have htargetMemory :
+        (executeInstructions target
+          [.mulHU ⟨freshLeft, hfreshLeftBound⟩
+              ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+              ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩,
+           .mul ⟨freshRight, hfreshRightBound⟩
+              ⟨wordSsaRead ssa sourceLeft, hsourceLeftSsa⟩
+              ⟨wordSsaRead ssa sourceRight, hsourceRightSsa⟩]).memory =
+          target.memory := by
+      simp [executeInstructions, execute, writeRegister,
+        hfreshLeftNonzero, hfreshRightNonzero]
+    exact hsourceMemory.trans (hmemory.trans htargetMemory.symm)
+
 end Flapjack.RiscV

@@ -2586,6 +2586,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   binding and Crep slot-assignment equations, including its state relation.
 - [x] Derive the standalone one-word callee-entry relation from empty locals,
   initialized argument slots, and the preserved memory relation.
+- [x] Generalize callee-entry state transport to left-folded lists of fresh
+  word parameters, with exact source binding and Crep assignment equations.
 - [x] Connect generic expression-list argument preparation to recursively
   correct returned ordinary calls and their flattened callee-result relation.
 - [x] Connect generic expression-list argument preparation to recursively

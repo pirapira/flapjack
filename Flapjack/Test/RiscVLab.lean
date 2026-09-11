@@ -61,6 +61,12 @@ example :
       some [.add 4 5 6] := by
   decide
 
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.codeBufferWrite 7 6) [] 0]⟩ =
+      some [.storeByte 6 7] := by
+  decide
+
 def haltLabProgram : LabProgram (Word 64) :=
   [⟨1, [.labAsm (.halt : LabAsm (Word 64)) [] 0]⟩]
 
@@ -104,6 +110,13 @@ example :
       stackRemoveRiscVConfig 2 3
       (.dataBufferWrite 7 6 : StackProg (Word 64)) =
       some [.storeWord 6 7] := by
+  decide +kernel
+
+example :
+    compileStackProgramToRiscV (width := 64) { services := [] }
+      stackRemoveRiscVConfig 2 3
+      (.codeBufferWrite 7 6 : StackProg (Word 64)) =
+      some [.storeByte 6 7] := by
   decide +kernel
 
 example :

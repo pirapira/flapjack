@@ -11,6 +11,20 @@ callee-entry correctness theorem.
 
 namespace Flapjack
 
+theorem nodup_append_cons_not_mem
+    {β : Type u} (previous tail : List β) (value : β)
+    (h : (previous ++ value :: tail).Nodup) : value ∉ previous := by
+  induction previous with
+  | nil => simp
+  | cons head previous ih =>
+      have h' := List.nodup_cons.mp h
+      intro hmem
+      simp only [List.mem_cons] at hmem
+      rcases hmem with heq | hmem
+      · subst value
+        exact h'.1 (by simp)
+      · exact ih h'.2 hmem
+
 theorem lookupInfo_none_of_name_not_mem
     [LawfulBEq String]
     (name : String) (entries : InfoMap β)
@@ -73,6 +87,125 @@ theorem lookupInfo_compileCalleeParameterList_none_of_name_not_mem
             (parameter.name, (parameter.shape, parameter.slots)))) = none := by
   rw [compileCalleeParameterList_metadata params values offset hlength]
   exact lookupInfo_compileParamVars_none_of_name_not_mem params offset name hname
+
+theorem calleeParameterListFreshAppend_of_conditions_aux
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (previous remaining all : List (CalleeParameter α))
+    (hcontext : context.vars = previous.map
+      (fun parameter =>
+        (parameter.name, (parameter.shape, parameter.slots))))
+    (hdecomp : previous ++ remaining = all)
+    (hnames : (previous.map CalleeParameter.name ++
+      remaining.map CalleeParameter.name).Nodup)
+    (hshape : ∀ parameter ∈ all,
+      panShapeMatches (panValueShape structs parameter.value) parameter.shape = true)
+    (hlength : ∀ parameter ∈ all,
+      parameter.slots.length = parameter.values.length)
+    (hdistinct : ∀ parameter ∈ all,
+      CrepDistinctNames parameter.slots)
+    (hflat : ∀ parameter ∈ all,
+      panValueFlatWords parameter.value = parameter.values)
+    (hseparate : ∀ left ∈ all, ∀ right ∈ all, left ≠ right →
+      ∀ slot ∈ left.slots, slot ∉ right.slots) :
+    CalleeParameterListFreshAppend structs context remaining := by
+  induction remaining generalizing previous context with
+  | nil => simp [CalleeParameterListFreshAppend]
+  | cons parameter parameters ih =>
+      have hnames' : (previous.map CalleeParameter.name ++ parameter.name ::
+          parameters.map CalleeParameter.name).Nodup := by
+        simpa [List.map_cons] using hnames
+      have hnamePrefix : parameter.name ∉ previous.map CalleeParameter.name :=
+        nodup_append_cons_not_mem (previous.map CalleeParameter.name)
+          (parameters.map CalleeParameter.name) parameter.name hnames'
+      have hmetadataName : parameter.name ∉
+          (previous.map (fun oldParameter =>
+            (oldParameter.name, (oldParameter.shape, oldParameter.slots)))).map
+              Prod.fst := by
+        simpa [List.map_map, Function.comp_def] using hnamePrefix
+      have hname : lookupInfo parameter.name context.vars = none := by
+        rw [hcontext]
+        exact lookupInfo_none_of_name_not_mem parameter.name _ hmetadataName
+      have hparameterAll : parameter ∈ all := by
+        rw [← hdecomp]
+        simp
+      have hnoalias : ∀ oldName oldShape oldSlots,
+          oldName ≠ parameter.name →
+          lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+          ∀ slot ∈ parameter.slots, slot ∉ oldSlots := by
+        intro oldName oldShape oldSlots hne hlookup slot hslot
+        have hmetadataMem : (oldName, (oldShape, oldSlots)) ∈
+            previous.map (fun oldParameter =>
+              (oldParameter.name, (oldParameter.shape, oldParameter.slots))) := by
+          have hlookupMem := lookupInfo_some_mem oldName context.vars
+            (oldShape, oldSlots) hlookup
+          simpa [hcontext] using hlookupMem
+        obtain ⟨oldParameter, holdPrefix, hmetadata⟩ :=
+          List.mem_map.mp hmetadataMem
+        have holdName : oldParameter.name = oldName :=
+          congrArg (fun entry => entry.1) hmetadata
+        have holdSlots : oldParameter.slots = oldSlots :=
+          congrArg (fun entry => entry.2.2) hmetadata
+        have holdAll : oldParameter ∈ all := by
+          rw [← hdecomp]
+          simp [holdPrefix]
+        have hneParameter : parameter ≠ oldParameter := by
+          intro heq
+          apply hne
+          calc
+            oldName = oldParameter.name := holdName.symm
+            _ = parameter.name := by simp [heq]
+        have hseparated := hseparate parameter hparameterAll oldParameter
+          holdAll hneParameter slot hslot
+        intro holdSlot
+        apply hseparated
+        rw [holdSlots]
+        exact holdSlot
+      have hcontextTail :
+          (addCalleeParameterContextAppend context parameter).vars =
+          (previous ++ [parameter]).map (fun oldParameter =>
+              (oldParameter.name, (oldParameter.shape, oldParameter.slots))) := by
+        simp [addCalleeParameterContextAppend, hcontext, List.map_append]
+      have hdecompTail : (previous ++ [parameter]) ++ parameters = all := by
+        simpa [List.append_assoc] using hdecomp
+      have hnamesTail :
+          ((previous ++ [parameter]).map CalleeParameter.name ++
+            parameters.map CalleeParameter.name).Nodup := by
+        simpa [List.map_append, List.map_cons, List.append_assoc] using hnames
+      refine ⟨hname, hshape parameter hparameterAll,
+        hlength parameter hparameterAll, hdistinct parameter hparameterAll,
+        hflat parameter hparameterAll, hnoalias, ?_⟩
+      exact ih (previous := previous ++ [parameter])
+        (context := addCalleeParameterContextAppend context parameter)
+        hcontextTail hdecompTail hnamesTail
+
+theorem calleeParameterListFreshAppend_of_conditions
+    [LawfulBEq String]
+    (structs : StructContext) (context : CompileContext α)
+    (parameters : List (CalleeParameter α))
+    (hcontext : context.vars = [])
+    (hnames : (parameters.map CalleeParameter.name).Nodup)
+    (hshape : ∀ parameter ∈ parameters,
+      panShapeMatches (panValueShape structs parameter.value) parameter.shape = true)
+    (hlength : ∀ parameter ∈ parameters,
+      parameter.slots.length = parameter.values.length)
+    (hdistinct : ∀ parameter ∈ parameters,
+      CrepDistinctNames parameter.slots)
+    (hflat : ∀ parameter ∈ parameters,
+      panValueFlatWords parameter.value = parameter.values)
+    (hseparate : ∀ left ∈ parameters, ∀ right ∈ parameters, left ≠ right →
+      ∀ slot ∈ left.slots, slot ∉ right.slots) :
+    CalleeParameterListFreshAppend structs context parameters := by
+  apply calleeParameterListFreshAppend_of_conditions_aux structs context [] parameters
+    parameters
+  · simp [hcontext]
+  · simp
+  · exact hnames
+  · exact hshape
+  · exact hlength
+  · exact hdistinct
+  · exact hflat
+  · exact hseparate
 
 theorem compileCalleeParameterList_slots_ge
     (params : List (VarName × Shape)) (values : List (PanValue α))

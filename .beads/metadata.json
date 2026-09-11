@@ -1,9 +1,0 @@
-{
-  "database": "dolt",
-  "backend": "dolt",
-  "dolt_mode": "server",
-  "dolt_database": "flapjack",
-  "project_id": "03fa9f86-a7ba-4b7f-bb1c-19fe6f9b5e52",
-  "global_dolt_database": "beads_global",
-  "global_project_id": "00000000-0000-0000-0000-000000000000"
-}

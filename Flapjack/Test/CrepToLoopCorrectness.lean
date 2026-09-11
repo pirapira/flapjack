@@ -47,6 +47,23 @@ theorem crepToLoop_assign_load32_const_regression :
     (fun _ _ _ _ => none) 0 100 2 crepLoopLoadState [] 5 100 42
   simp [crepLoopLoadState]
 
+theorem crepToLoop_assign_loadByte_const_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 3 crepLoopLoadState
+      (.assign 5 (.loadByte (.const 100)))).map (crepControlLocal 5) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      7 (loopStateOfCrepState crepLoopLoadState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.assign 5 (.loadByte (.const 100))))).map (loopControlLocal 5) := by
+  apply crepToLoop_assign_loadByte_const_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 2 crepLoopLoadState [] 5 100 42
+  simp [crepLoopLoadState]
+
 theorem crepToLoop_assign_var_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ _ _ => none) 0 100 3 crepLoopAssignState

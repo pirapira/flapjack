@@ -2180,6 +2180,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   Crep-to-Loop theorem with an explicit expression-value relation.
 - [x] Prove the constant-address `load32` assignment boundary, including its
   temporary-address sequence and memory-state regression.
+- [x] Prove the constant-address `loadByte` assignment boundary and regress
+  its temporary-address sequence against the Loop memory semantics.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

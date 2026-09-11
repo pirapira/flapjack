@@ -12,6 +12,15 @@ layout-aware RISC-V runtime convention is connected.
 
 namespace Flapjack.RiscV
 
+theorem wordStackLongDivInst_metadata_irrel {α : Type}
+    (config : WordStackConfig) (left₁ right₁ left₂ right₂ : Nat)
+    (left₁' right₁' left₂' right₂' divisor : Nat) :
+    wordStackLongDivInst (α := α) config
+        (.longDiv left₁ right₁ left₂ right₂ divisor) =
+      wordStackLongDivInst (α := α) config
+        (.longDiv left₁' right₁' left₂' right₂' divisor) := by
+  rfl
+
 theorem evalWordStackMachine_longDiv_preserves_values [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)
     (divisor : Nat)

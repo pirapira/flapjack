@@ -28,4 +28,11 @@ def longDivCorrectnessSpillConfig : WordStackConfig :=
 #guard (wordStackLongDivInst (α := Nat) longDivCorrectnessRegisterConfig
   (.longDiv 17 18 19 20 4)).isSome
 
+example :
+    wordStackLongDivInst (α := Nat) longDivCorrectnessRegisterConfig
+        (.longDiv 17 18 19 20 4) =
+      wordStackLongDivInst (α := Nat) longDivCorrectnessRegisterConfig
+        (.longDiv 0 3 3 0 4) := by
+  exact wordStackLongDivInst_metadata_irrel _ _ _ _ _ _ _ _ _ _
+
 end Flapjack.RiscV

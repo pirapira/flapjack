@@ -2395,6 +2395,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   and recursive declaration-call premises.
 - [x] Expose the source ExtCall intermediate argument-list and FFI-result
   boundary for the generalized correctness constructor.
+- [x] Invert a successful source ExtCall value-pattern match into four word
+  arguments, a successful FFI handler result, and normal control completion.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

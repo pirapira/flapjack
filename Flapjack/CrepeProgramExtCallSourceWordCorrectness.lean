@@ -182,16 +182,18 @@ theorem panValueCrepProgramCorrect_extCall_source_word
                             baseAddress topAddress (context.maxVar + 3)
                             arrayLengthCompiled arrayLengthValue arrayValue
                             harrayLengthEval''
-                          cases hcall : ffi function configurationValue
-                              configurationLengthValue arrayValue arrayLengthValue
-                              ({ state with locals := (updateCrepLocal
+                          let callLocals : Nat → Option α :=
+                            updateCrepLocal
+                              (updateCrepLocal
                                 (updateCrepLocal
-                                  (updateCrepLocal
-                                    (updateCrepLocal state.locals (context.maxVar + 1)
-                                      configurationValue)
-                                    (context.maxVar + 2) configurationLengthValue)
-                                  (context.maxVar + 3) arrayValue)
-                                (context.maxVar + 4) arrayLengthValue) }) with
+                                  (updateCrepLocal state.locals (context.maxVar + 1)
+                                    configurationValue)
+                                  (context.maxVar + 2) configurationLengthValue)
+                                (context.maxVar + 3) arrayValue)
+                              (context.maxVar + 4) arrayLengthValue
+                          let callState : CrepState α := { state with locals := callLocals }
+                          cases hcall : ffi function configurationValue
+                              configurationLengthValue arrayValue arrayLengthValue callState with
                           | none =>
                               rw [compileProg_extCall_of_compiled context function
                                 configuration.toExp configurationLength.toExp array.toExp
@@ -200,6 +202,7 @@ theorem panValueCrepProgramCorrect_extCall_source_word
                                 arrayLengthCompiled hfirstConfiguration
                                 hfirstConfigurationLength hfirstArray hfirstArrayLength] at hcrep
                               simp [nestedDecs, evalCrepFullProg, updateCrepLocal,
+                                callState, callLocals,
                                 hconfigurationEval, hconfigurationLengthEval', harrayEval'',
                                 harrayLengthEval''', hcall] at hcrep
                           | some result =>
@@ -207,7 +210,8 @@ theorem panValueCrepProgramCorrect_extCall_source_word
                                 hffi sourceHandler ffi context structs sourceLocals
                                   sourceLocals' sourceGlobals sourceMemory state function
                                   configurationValue configurationLengthValue arrayValue
-                                  arrayLengthValue result hsourceHandler hcall
+                                  arrayLengthValue result hsourceHandler
+                                  (by simpa [callState, callLocals] using hcall)
                               cases hreturned
                               have hsim := compile_full_pan_value_extCall_simulation
                                 context structs sourceFunctions functions sourceLocals
@@ -226,7 +230,7 @@ theorem panValueCrepProgramCorrect_extCall_source_word
                                   harraySource, harrayLengthSource])
                                 hconfigurationEval hconfigurationLengthEval'
                                 harrayEval'' harrayLengthEval'''
-                                hsourceHandler hcall
+                                hsourceHandler (by simpa [callState, callLocals] using hcall)
                               have hcrep' :
                                   evalCrepFullProg functions crepPrimitive ffi sharedMem
                                     baseAddress topAddress (targetFuel + 5) state

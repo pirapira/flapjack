@@ -2419,6 +2419,11 @@ def wordRegImmToNat : WordRegImm (Word width) → WordRegImm Nat
   | .imm value => .imm value.toNat
   | .reg name => .reg name
 
+/- SSA-generated calls carry their complete return continuation and, when
+   present, their exception handler as nested Word programs.  Preserve both
+   programs at this representation boundary; replacing them with `skip`
+   would make the generated call return without restoring the caller state or
+   running its continuation. -/
 def wordProgToNat : WordProg (Word width) → WordProg Nat
   | .skip => .skip
   | .move priority moves => .move priority moves
@@ -2440,15 +2445,21 @@ def wordProgToNat : WordProg (Word width) → WordProg Nat
   | .return label values => .return label values
   | .tick => .tick
   | .locValue destination source => .locValue destination source
-  | .call returns target arguments none =>
-      .call (returns.map (fun (values, cutsets, _returnCode, returnLabel, entryLabel) =>
-        (values, cutsets, .skip, returnLabel, entryLabel))) target
-        arguments none
-  | .call returns target arguments
+  | .call none target arguments none =>
+      .call none target arguments none
+  | .call (some (values, cutsets, returnCode, returnLabel, entryLabel)) target
+      arguments none =>
+      .call (some (values, cutsets, wordProgToNat returnCode, returnLabel, entryLabel))
+        target arguments none
+  | .call none target arguments
       (some (exception, body, handlerLabel, entryLabel)) =>
-      .call (returns.map (fun (values, cutsets, _returnCode, returnLabel, entryLabel) =>
-        (values, cutsets, .skip, returnLabel, entryLabel))) target
-        arguments (some (exception, wordProgToNat body, handlerLabel, entryLabel))
+      .call none target arguments
+        (some (exception, wordProgToNat body, handlerLabel, entryLabel))
+  | .call (some (values, cutsets, returnCode, returnLabel, entryLabel)) target
+      arguments (some (exception, body, handlerLabel, handlerEntryLabel)) =>
+      .call (some (values, cutsets, wordProgToNat returnCode, returnLabel, entryLabel))
+        target arguments
+          (some (exception, wordProgToNat body, handlerLabel, handlerEntryLabel))
   | .alloc destination (nonGc, gc) =>
       .alloc destination (nonGc, gc)
   | .storeConsts source bitmap codeLength dataLength constants =>

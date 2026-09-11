@@ -2286,6 +2286,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add the compositional structured `addCarry` primitive correctness rule,
   including typed destination slots, fresh temporaries, and the flattened
   primitive result relation.
+- [x] Add the compositional source-word shared-memory store correctness rule,
+  including value-first lowering, fresh temporary stability, handler state,
+  and restoration of the temporary local.
 - [x] Add the relation-aware normally-completing sequence rule for the program
   correctness induction.
 - [x] Add relation-aware conditional branch rules for both source condition

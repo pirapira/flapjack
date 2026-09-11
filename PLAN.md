@@ -2466,6 +2466,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   direct-versus-temporary lowering choice.
 - [x] Adapt the universal expression-correctness contract to the compiled
   list/shape/value witness consumed by declaration correctness.
+- [x] Add the declaration correctness wrapper that consumes the universal
+  expression contract while exposing allocated-name freshness and shape
+  obligations as the remaining static-context interface.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

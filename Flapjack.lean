@@ -63,6 +63,7 @@ import Flapjack.CrepeProgramPrimitiveRelation
 import Flapjack.CrepeProgramConditionalFuelRelation
 import Flapjack.CrepeProgramLoopFuelRelation
 import Flapjack.CrepeProgramSourceWordLoopFuelRelation
+import Flapjack.CrepeProgramIteCorrectness
 import Flapjack.CrepeLoopComposeFuelRelation
 import Flapjack.CrepeLoopBreakComposeFuelRelation
 import Flapjack.CrepeLoopContinueComposeFuelRelation

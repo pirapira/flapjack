@@ -38,6 +38,7 @@ import Flapjack.CrepeSharedMemoryRelation
 import Flapjack.CrepePrimitiveRelation
 import Flapjack.CrepeExpCorrectness
 import Flapjack.CrepeAssignmentCorrectness
+import Flapjack.CrepeAssignmentSequenceCorrectness
 import Flapjack.CrepeSequenceCorrectness
 import Flapjack.CrepeConditionalCorrectness
 import Flapjack.CrepeLoopCorrectness

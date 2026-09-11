@@ -215,7 +215,7 @@ def wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry
     | some (state, renamedParameters, allocation, renamedProgram) =>
         some (.graph state renamedParameters allocation renamedProgram)
     | none =>
-        match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences
+        match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
             parameters program with
         | none => none
         | some (state, renamedParameters, renamedProgram, allocation) =>
@@ -247,7 +247,7 @@ theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_graph_sound
       program fixedSources algorithm currentFunction colours stackStart with
     | none =>
         cases hspill :
-            wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences
+            wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
               parameters program with
         | none => simp [hgraph, hspill] at halloc
         | some value => simp [hgraph, hspill] at halloc
@@ -289,7 +289,7 @@ theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_oracle_sound
     | some value => simp [hgraph] at halloc
     | none =>
         cases hspill :
-            wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences
+            wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
               parameters program with
         | none => simp [hgraph, hspill] at halloc
         | some value => simp [hgraph, hspill] at halloc
@@ -313,7 +313,9 @@ theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_spill_sound
         (wordSsaRenameFunctionWithEntry parameters program).2.snd = true ∧
       wordSpillClashTreeChecked
         (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
-        allocation.locations = true := by
+        allocation.locations = true ∧
+      (∀ name, name ∈ parameters →
+        lookupNatInfo name allocation.locations = some (.register name)) := by
   simp [wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry] at halloc
   split at halloc
   · simp_all
@@ -322,7 +324,7 @@ theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_spill_sound
     | some value => simp [hgraph] at halloc
     | none =>
         cases hspill :
-            wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences
+            wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
               parameters program with
         | none => simp [hgraph, hspill] at halloc
         | some value =>
@@ -334,8 +336,14 @@ theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_spill_sound
                     | mk spillProgram spillAllocation =>
                         simp [hgraph, hspill] at halloc
                         rcases halloc with ⟨rfl, rfl, rfl, rfl⟩
-                        exact wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences_sound
-                          parameters program spillState spillParameters spillProgram
-                          spillAllocation hspill
+                        have hsound :=
+                          wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_sound
+                            parameters program spillState spillParameters spillProgram
+                            spillAllocation hspill
+                        have hparameters :=
+                          wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_preserves_parameters
+                            parameters program spillState spillParameters spillProgram
+                            spillAllocation hspill
+                        exact ⟨hsound.1, hsound.2.1, hsound.2.2, hparameters⟩
 
 end Flapjack

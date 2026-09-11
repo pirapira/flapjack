@@ -47,4 +47,20 @@ example :
   · exact Or.inr (Or.inr (Or.inr rfl))
   all_goals decide
 
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32) (.inst (.arith (.div 1 2 3))) = some source' ∧
+      evalWordProg (zeroState 32)
+          (.inst (wordSsaRenameInst
+            ({ current := [], next := 4 } : WordSsaState)
+            (.arith (.div 1 2 3) : WordInst)).2) = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_div_destination
+  · intro name
+    rfl
+  · rfl
+  all_goals decide
+
 end Flapjack.RiscV

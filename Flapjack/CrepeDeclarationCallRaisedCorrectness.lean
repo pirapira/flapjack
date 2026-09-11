@@ -52,7 +52,22 @@ theorem compile_full_pan_value_decCall_raised_of_compiled_inversion
       baseAddress topAddress targetFuel state
       (compileProg context (.decCall name shape function arguments body)) =
       some crepResult)
-    (hcallRel : ∀ targetResult : CrepControlResult α,
+    (hcallCorrect : ∀ (callFuel : Nat) (targetResult : CrepControlResult α),
+      evalPanValueCallWithPrimitiveCallsAndFfi
+        primitive sourceHandler structs sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel
+        sourceLocals sourceGlobals sourceMemory none function arguments
+        (memoryAccess := memoryAccess) (contracts := contracts)
+        (memoryHandler := memoryHandler) =
+        some (.raised (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
+          sourceException sourceValue) →
+      evalCrepFullCall functions crepPrimitive ffi sharedMem
+        baseAddress topAddress callFuel
+        { state with
+            locals := initializeCrepLocals state.locals
+              (allocatedNames context shape) }
+        (some (allocatedNames context shape, none)) function compiledArguments =
+        some targetResult →
       panValueCrepControlRel structs context exceptionRel
         (.raised (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
           sourceException sourceValue) targetResult) :
@@ -78,15 +93,18 @@ theorem compile_full_pan_value_decCall_raised_of_compiled_inversion
       context functions crepPrimitive ffi sharedMem
       baseAddress topAddress targetFuel state name shape function arguments body
       compiledArguments crepResult hcompileArgs hcrep
+  have hcallRel :
+      panValueCrepControlRel structs context exceptionRel
+        (.raised (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
+          sourceException sourceValue) callResult := by
+    exact hcallCorrect innerFuel callResult hsourceCall hcall
   cases callResult with
   | normal callState =>
-      have hfalse := hcallRel (.normal callState)
-      simp [panValueCrepControlRel] at hfalse
+      simp [panValueCrepControlRel] at hcallRel
   | returned callState values =>
-      have hfalse := hcallRel (.returned callState values)
-      simp [panValueCrepControlRel] at hfalse
+      simp [panValueCrepControlRel] at hcallRel
   | raised callState crepException =>
-      have hrel := hcallRel (.raised callState crepException)
+      have hrel := hcallRel
       have hsourceResult :
           evalPanValueProgWithPrimitiveCallsAndFfi
             primitive sourceHandler structs sourceFunctions
@@ -182,13 +200,10 @@ theorem compile_full_pan_value_decCall_raised_of_compiled_inversion
       · rw [hrestore'] at houterRel
         exact houterRel
   | broke callState label =>
-      have hfalse := hcallRel (.broke callState label)
-      simp [panValueCrepControlRel] at hfalse
+      simp [panValueCrepControlRel] at hcallRel
   | continued callState label =>
-      have hfalse := hcallRel (.continued callState label)
-      simp [panValueCrepControlRel] at hfalse
+      simp [panValueCrepControlRel] at hcallRel
   | finalFfi callState event =>
-      have hfalse := hcallRel (.finalFfi callState event)
-      simp [panValueCrepControlRel] at hfalse
+      simp [panValueCrepControlRel] at hcallRel
 
 end Flapjack

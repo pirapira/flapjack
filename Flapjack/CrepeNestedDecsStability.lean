@@ -1,0 +1,211 @@
+import Flapjack.CrepeDeclarationRelation
+import Flapjack.CrepeExpressionStability
+
+/-!
+Stable evaluation of the expression prefix generated for a Pancake
+declaration.  `nestedDecs` evaluates each expression after installing the
+previous values in fresh locals; if those locals do not occur in the
+expressions, the prefix has the same result as one flat expression-list
+evaluation.
+-/
+
+namespace Flapjack
+
+def updateCrepLocalList (locals : Nat → Option α) :
+    List Nat → List α → Nat → Option α
+  | [], [] => locals
+  | name :: names, value :: values =>
+      updateCrepLocalList (updateCrepLocal locals name value) names values
+  | _, _ => locals
+
+theorem crepNestedDecsEval_of_evalExps_stable
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (names : List Nat)
+    (expressions : List (CrepExp α)) (body : CrepProg α)
+    (result : CrepControlResult α) (values : List α)
+    (hlength : names.length = expressions.length)
+    (hnot : ∀ name ∈ names, ∀ expression ∈ expressions,
+      name ∉ crepExpVars expression)
+    (heval : evalCrepFullExps state.locals state.memory
+      baseAddress topAddress expressions = some values)
+    (hbody : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with locals := updateCrepLocalList state.locals names values } body =
+      some result) :
+    CrepNestedDecsEval functions primitive ffi sharedMem
+      baseAddress topAddress fuel state names expressions body result := by
+  induction names generalizing state expressions values with
+  | nil =>
+      cases expressions with
+      | nil =>
+          cases values with
+          | nil =>
+              simpa [CrepNestedDecsEval, updateCrepLocalList] using hbody
+          | cons value values =>
+              simp [evalCrepFullExps] at heval
+      | cons expression expressions =>
+          simp at hlength
+  | cons name names ih =>
+      cases expressions with
+      | nil =>
+          simp at hlength
+      | cons expression expressions =>
+          cases values with
+          | nil =>
+              cases hhead : evalCrepFullExp state.locals state.memory
+                  baseAddress topAddress expression with
+              | none => simp [evalCrepFullExps, hhead] at heval
+              | some headValue =>
+                  cases htail : evalCrepFullExps state.locals state.memory
+                      baseAddress topAddress expressions with
+                  | none => simp [evalCrepFullExps, hhead, htail] at heval
+                  | some tailValues =>
+                      simp [evalCrepFullExps, hhead, htail] at heval
+          | cons value values =>
+              have hlengthTail : names.length = expressions.length := by
+                simp at hlength
+                exact hlength
+              cases hhead : evalCrepFullExp state.locals state.memory
+                  baseAddress topAddress expression with
+              | none =>
+                  simp [evalCrepFullExps, hhead] at heval
+              | some headValue =>
+                  cases htail : evalCrepFullExps state.locals state.memory
+                      baseAddress topAddress expressions with
+                  | none =>
+                      simp [evalCrepFullExps, hhead, htail] at heval
+                  | some tailValues =>
+                      have hvalues : headValue :: tailValues = value :: values := by
+                        simpa [evalCrepFullExps, hhead, htail] using heval
+                      cases hvalues
+                      have htailStable :
+                          evalCrepFullExps
+                            (updateCrepLocal state.locals name value)
+                            state.memory baseAddress topAddress expressions =
+                            some values := by
+                        exact evalCrepFullExps_update_of_forall_not_mem
+                          state.locals state.memory baseAddress topAddress expressions
+                          name value
+                          (fun current hcurrent =>
+                            hnot name (by simp) current (by simp [hcurrent]))
+                          values htail
+                      have hnotTail : ∀ current ∈ names, ∀ currentExpression ∈ expressions,
+                          current ∉ crepExpVars currentExpression := by
+                        intro current hcurrent currentExpression hcurrentExpression
+                        exact hnot current (by simp [hcurrent]) currentExpression
+                          (by simp [hcurrentExpression])
+                      have hbodyTail :
+                          evalCrepFullProg functions primitive ffi sharedMem
+                            baseAddress topAddress fuel
+                            { state with
+                                locals := (updateCrepLocalList
+                                  (updateCrepLocal state.locals name value)
+                                  names values) } body = some result := by
+                        simpa [updateCrepLocalList] using hbody
+                      refine ⟨value, hhead, ?_⟩
+                      exact ih (state := { state with
+                          locals := updateCrepLocal state.locals name value })
+                        (expressions := expressions) (values := values)
+                        hlengthTail hnotTail htailStable hbodyTail
+
+theorem crepNestedDecsEval_body_of_evalExps_stable
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (names : List Nat)
+    (expressions : List (CrepExp α)) (body : CrepProg α)
+    (result : CrepControlResult α) (values : List α)
+    (hlength : names.length = expressions.length)
+    (hnot : ∀ name ∈ names, ∀ expression ∈ expressions,
+      name ∉ crepExpVars expression)
+    (heval : evalCrepFullExps state.locals state.memory
+      baseAddress topAddress expressions = some values)
+    (hnested : CrepNestedDecsEval functions primitive ffi sharedMem
+      baseAddress topAddress fuel state names expressions body result) :
+    evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with locals := updateCrepLocalList state.locals names values } body =
+      some result := by
+  induction names generalizing state expressions values with
+  | nil =>
+      cases expressions with
+      | nil =>
+          cases values with
+          | nil =>
+              simpa [CrepNestedDecsEval, updateCrepLocalList] using hnested
+          | cons value values =>
+              simp [evalCrepFullExps] at heval
+      | cons expression expressions =>
+          simp at hlength
+  | cons name names ih =>
+      cases expressions with
+      | nil =>
+          simp at hlength
+      | cons expression expressions =>
+          cases values with
+          | nil =>
+              cases hhead : evalCrepFullExp state.locals state.memory
+                  baseAddress topAddress expression with
+              | none => simp [evalCrepFullExps, hhead] at heval
+              | some headValue =>
+                  cases htail : evalCrepFullExps state.locals state.memory
+                      baseAddress topAddress expressions with
+                  | none => simp [evalCrepFullExps, hhead, htail] at heval
+                  | some tailValues =>
+                      simp [evalCrepFullExps, hhead, htail] at heval
+          | cons value values =>
+              have hlengthTail : names.length = expressions.length := by
+                simp at hlength
+                exact hlength
+              rcases hnested with ⟨targetValue, htargetValue, htailNested⟩
+              cases hhead : evalCrepFullExp state.locals state.memory
+                  baseAddress topAddress expression with
+              | none =>
+                  simp [evalCrepFullExps, hhead] at heval
+              | some headValue =>
+                  cases htail : evalCrepFullExps state.locals state.memory
+                      baseAddress topAddress expressions with
+                  | none =>
+                      simp [evalCrepFullExps, hhead, htail] at heval
+                  | some tailValues =>
+                      have hvalues : headValue :: tailValues = value :: values := by
+                        simpa [evalCrepFullExps, hhead, htail] using heval
+                      cases hvalues
+                      have htargetEq : targetValue = value := by
+                        exact Option.some.inj (htargetValue.symm.trans hhead)
+                      cases htargetEq
+                      have htailStable :
+                          evalCrepFullExps
+                            (updateCrepLocal state.locals name value)
+                            state.memory baseAddress topAddress expressions =
+                            some values := by
+                        exact evalCrepFullExps_update_of_forall_not_mem
+                          state.locals state.memory baseAddress topAddress expressions
+                          name value
+                          (fun current hcurrent =>
+                            hnot name (by simp) current (by simp [hcurrent]))
+                          values htail
+                      have hnotTail : ∀ current ∈ names,
+                          ∀ currentExpression ∈ expressions,
+                            current ∉ crepExpVars currentExpression := by
+                        intro current hcurrent currentExpression hcurrentExpression
+                        exact hnot current (by simp [hcurrent]) currentExpression
+                          (by simp [hcurrentExpression])
+                      exact ih (state := { state with
+                          locals := updateCrepLocal state.locals name value })
+                        (expressions := expressions) (values := values)
+                        hlengthTail hnotTail htailStable htailNested
+
+end Flapjack

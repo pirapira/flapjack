@@ -2405,6 +2405,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   list order, evaluation, and one-word shape flattening for record payloads.
 - [x] Factor source-word list inversion into a reusable theorem and consume it
   from the generic word-record expression correctness contract.
+- [x] Prove stable nested-declaration evaluation from a flat Crep expression
+  list, isolating fresh-temporary non-interference for the `Dec` correctness case.
+- [x] Add the converse nested-declaration body extraction theorem, identifying
+  target temporary values with the flat expression result.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

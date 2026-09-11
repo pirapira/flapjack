@@ -1121,7 +1121,20 @@ def wordProgClashAnalysis : WordProg α → List Nat →
       let (bodyLive, bodyEdges) :=
         wordProgClashAnalysis body (wordListUnion liveIn (liveOut ++ liveAfter))
       (wordListUnion liveIn bodyLive, bodyEdges)
+  | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments none, liveAfter =>
+      let (returnLive, returnEdges) :=
+        wordProgClashAnalysis returnCode liveAfter
+      let callProgram : WordProg α :=
+        .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+          target arguments none
+      (wordListUnion returnLive (wordProgLiveBefore callProgram liveAfter),
+        returnEdges ++ wordProgAtomicClashes callProgram liveAfter)
   | .call returns target arguments (some (exception, body, _, _)), liveAfter =>
+      let (returnLive, returnEdges) := match returns with
+        | none => ([], [])
+        | some (_, _, returnCode, _, _) =>
+            wordProgClashAnalysis returnCode liveAfter
       let (handlerLive, handlerEdges) :=
         wordProgClashAnalysis body liveAfter
       let callProgram : WordProg α :=
@@ -1129,8 +1142,8 @@ def wordProgClashAnalysis : WordProg α → List Nat →
       let handlerEntryEdges :=
         wordClashPairs [exception] (handlerLive ++ liveAfter)
       (wordListUnion (exception :: handlerLive)
-          (wordProgLiveBefore callProgram liveAfter),
-        handlerEntryEdges ++ handlerEdges ++
+          (wordListUnion returnLive (wordProgLiveBefore callProgram liveAfter)),
+        handlerEntryEdges ++ handlerEdges ++ returnEdges ++
           wordProgAtomicClashes callProgram liveAfter)
   | program, liveOut =>
       (wordProgLiveBefore program liveOut, wordProgAtomicClashes program liveOut)

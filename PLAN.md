@@ -2186,6 +2186,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   projection and executable memory-update regression.
 - [x] Add a reusable normal-sequence Crep-to-Loop composition theorem and an
   executable two-assignment state-threading regression.
+- [x] Add terminal-sequence short-circuit composition for non-normal control
+  results, with a break-before-continuation regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

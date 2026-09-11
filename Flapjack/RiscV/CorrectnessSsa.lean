@@ -1171,6 +1171,173 @@ theorem evalWordProg_ssaRename_assign_rotate_var_const_destination [NeZero width
   · simp [sourceCode, targetCode, executeInstructions, execute, writeRegister,
       hmemory, hdestinationNonzero, hfreshNonzero]
 
+theorem wordSsaRenameProgram_assign_rotate_var_var
+    (ssa : WordSsaState) (destination left right : Nat) :
+    wordSsaRenameProgram ssa
+        (.assign destination (.shift .ror (.var left) (.var right)) :
+          WordProg α) =
+      ((wordSsaFresh ssa destination).1,
+        .assign (wordSsaFresh ssa destination).2
+          (.shift .ror (.var (wordSsaRead ssa left))
+            (.var (wordSsaRead ssa right)))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp]
+
+theorem evalWordProg_ssaRename_assign_rotate_var_var_destination [NeZero width]
+    (ssa : WordSsaState) (sourceState targetState : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister sourceState register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister targetState register)))
+    (hmemory : sourceState.memory = targetState.memory)
+    (destination left right : Nat)
+    (hdestination : destination < 32) (hleft : left < 32) (hright : right < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hdestinationScratch : destination ≠ 31)
+    (hleftScratch : left ≠ 31) (hrightScratch : right ≠ 31)
+    (hleftSsa : wordSsaRead ssa left < 32)
+    (hrightSsa : wordSsaRead ssa right < 32)
+    (hdestinationSsaScratch :
+      (wordSsaFresh ssa destination).2 ≠ 31)
+    (hleftSsaScratch : wordSsaRead ssa left ≠ 31)
+    (hrightSsaScratch : wordSsaRead ssa right ≠ 31)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0)
+    (hzeroSource : readRegister sourceState 0 = 0)
+    (hzeroTarget : readRegister targetState 0 = 0)
+    (hwidth : width = 32 ∨ width = 64) :
+    ∃ source' target',
+      evalWordProg sourceState
+          (.assign destination (.shift .ror (.var left) (.var right))) = some source' ∧
+      evalWordProg targetState
+          (wordSsaRenameProgram ssa
+            (.assign destination (.shift .ror (.var left) (.var right)))).2 =
+        some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
+      source'.memory = target'.memory := by
+  have hleftValue :
+      readRegister sourceState ⟨left, hleft⟩ =
+        readRegister targetState ⟨wordSsaRead ssa left, hleftSsa⟩ := by
+    have h := hregister left
+    simpa [registerOfNat, hleft, hleftSsa] using h
+  have hrightValue :
+      readRegister sourceState ⟨right, hright⟩ =
+        readRegister targetState ⟨wordSsaRead ssa right, hrightSsa⟩ := by
+    have h := hregister right
+    simpa [registerOfNat, hright, hrightSsa] using h
+  have hleftFinScratch :
+      (⟨left, hleft⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hleftScratch
+    exact congrArg Fin.val heq
+  have hrightFinScratch :
+      (⟨right, hright⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hrightScratch
+    exact congrArg Fin.val heq
+  have hleftSsaFinScratch :
+      (⟨wordSsaRead ssa left, hleftSsa⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hleftSsaScratch
+    exact congrArg Fin.val heq
+  have hrightSsaFinScratch :
+      (⟨wordSsaRead ssa right, hrightSsa⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hrightSsaScratch
+    exact congrArg Fin.val heq
+  have hdestinationFinNonzero :
+      (⟨destination, hdestination⟩ : Fin 32) ≠ 0 := by
+    intro heq
+    apply hdestinationNonzero
+    exact congrArg Fin.val heq
+  have hdestinationFinScratch :
+      (⟨destination, hdestination⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hdestinationScratch
+    exact congrArg Fin.val heq
+  have hfreshFinNonzero :
+      (⟨(wordSsaFresh ssa destination).2, hfresh⟩ : Fin 32) ≠ 0 := by
+    intro heq
+    apply hfreshNonzero
+    exact congrArg Fin.val heq
+  have hfreshFinScratch :
+      (⟨(wordSsaFresh ssa destination).2, hfresh⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hdestinationSsaScratch
+    exact congrArg Fin.val heq
+  have hshift (value : Word width) :
+      shiftAmount (BitVec.ofNat width width - value) =
+        (width - shiftAmount value) % width := by
+    rcases hwidth with rfl | rfl <;>
+      simp [shiftAmount, BitVec.toNat_sub] <;> omega
+  have hzeroSource' : sourceState.registers 0 = 0 := by
+    simpa [readRegister] using hzeroSource
+  have hzeroTarget' : targetState.registers 0 = 0 := by
+    simpa [readRegister] using hzeroTarget
+  have hvalue :
+      rotateRight
+          (readRegister sourceState ⟨left, hleft⟩)
+          (shiftAmount (readRegister sourceState ⟨right, hright⟩)) =
+        rotateRight
+          (readRegister targetState ⟨wordSsaRead ssa left, hleftSsa⟩)
+          (shiftAmount
+            (readRegister targetState ⟨wordSsaRead ssa right, hrightSsa⟩)) := by
+    rw [hleftValue, hrightValue]
+  rw [wordSsaRenameProgram_assign_rotate_var_var]
+  let sourceCode : List (Instruction width) :=
+    [.ori 31 0 (BitVec.ofNat width width),
+     .sub 31 31 ⟨right, hright⟩,
+     .sll 31 ⟨left, hleft⟩ 31,
+     .srl ⟨destination, hdestination⟩ ⟨left, hleft⟩ ⟨right, hright⟩,
+     .or ⟨destination, hdestination⟩ ⟨destination, hdestination⟩ 31]
+  let targetCode : List (Instruction width) :=
+    [.ori 31 0 (BitVec.ofNat width width),
+     .sub 31 31 ⟨wordSsaRead ssa right, hrightSsa⟩,
+     .sll 31 ⟨wordSsaRead ssa left, hleftSsa⟩ 31,
+     .srl ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+       ⟨wordSsaRead ssa left, hleftSsa⟩
+       ⟨wordSsaRead ssa right, hrightSsa⟩,
+     .or ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+       ⟨(wordSsaFresh ssa destination).2, hfresh⟩ 31]
+  have hsourceDestination :
+      readRegister (executeInstructions sourceState sourceCode)
+          ⟨destination, hdestination⟩ =
+        rotateRight
+          (readRegister sourceState ⟨left, hleft⟩)
+          (shiftAmount (readRegister sourceState ⟨right, hright⟩)) := by
+    simp [sourceCode, executeInstructions, execute, readRegister, writeRegister,
+      hzeroSource', hleftFinScratch, hrightFinScratch,
+      hdestinationFinNonzero, Ne.symm hdestinationFinScratch]
+    rw [hshift]
+    simp [rotateRight, shiftAmount]
+  have htargetDestination :
+      readRegister (executeInstructions targetState targetCode)
+          ⟨(wordSsaFresh ssa destination).2, hfresh⟩ =
+        rotateRight
+          (readRegister targetState ⟨wordSsaRead ssa left, hleftSsa⟩)
+          (shiftAmount
+            (readRegister targetState ⟨wordSsaRead ssa right, hrightSsa⟩)) := by
+    simp [targetCode, executeInstructions, execute, readRegister, writeRegister,
+      hzeroTarget', hleftSsaFinScratch, hrightSsaFinScratch,
+      hfreshFinNonzero, Ne.symm hfreshFinScratch]
+    rw [hshift]
+    simp [rotateRight, shiftAmount]
+  refine ⟨executeInstructions sourceState sourceCode,
+    executeInstructions targetState targetCode, ?_, ?_, ?_, ?_⟩
+  · simp [sourceCode, evalWordProg, wordExpToInstructions, registerOfNat,
+      hdestination, hleft, hright, hdestinationScratch, hleftScratch,
+      hrightScratch, executeInstructions]
+  · simp [targetCode, evalWordProg, wordExpToInstructions, registerOfNat,
+      hfresh, hleftSsa, hrightSsa, hdestinationSsaScratch,
+      hleftSsaScratch, hrightSsaScratch, executeInstructions]
+  · exact (hsourceDestination.trans hvalue).trans htargetDestination.symm
+  · simp [sourceCode, targetCode, executeInstructions, execute, writeRegister,
+      hmemory, hdestinationNonzero, hfreshNonzero]
+
 theorem wordSsaRenameInst_div
     (ssa : WordSsaState) (destination dividend divisor : Nat) :
     wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =

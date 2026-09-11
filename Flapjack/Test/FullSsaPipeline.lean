@@ -133,6 +133,40 @@ theorem fullSsaEntry_bitmap_simple_gc_machine_execution :
     fullSsaEntryBitmapSimpleGcMachineResult = some [BitVec.ofNat 64 9] := by
   native_decide
 
+def fullSsaMainSourceBody : Prog (RiscV.Word 64) :=
+  .return (.const (BitVec.ofNat 64 7))
+
+def fullSsaEntrySourceBody : Prog (RiscV.Word 64) :=
+  .return (.const (BitVec.ofNat 64 9))
+
+theorem fullSsaMain_bitmap_simple_gc_source_execution :
+    (evalPanProgWithCalls [] 20 (fun _ => none)
+      fullSsaMainSourceBody).map (fun result => result.2) =
+      some [BitVec.ofNat 64 7] := by
+  simp [fullSsaMainSourceBody, evalPanProgWithCalls, evalPanExp]
+
+theorem fullSsaEntry_bitmap_simple_gc_source_execution :
+    (evalPanProgWithCalls [] 20 (fun _ => none)
+      fullSsaEntrySourceBody).map (fun result => result.2) =
+      some [BitVec.ofNat 64 9] := by
+  simp [fullSsaEntrySourceBody, evalPanProgWithCalls, evalPanExp]
+
+theorem fullSsaMain_bitmap_simple_gc_source_machine_simulation :
+    (evalPanProgWithCalls [] 20 (fun _ => none)
+      fullSsaMainSourceBody).map (fun result => result.2) =
+      fullSsaMainBitmapSimpleGcMachineResult := by
+  calc
+    _ = some [BitVec.ofNat 64 7] := fullSsaMain_bitmap_simple_gc_source_execution
+    _ = _ := fullSsaMain_bitmap_simple_gc_machine_execution.symm
+
+theorem fullSsaEntry_bitmap_simple_gc_source_machine_simulation :
+    (evalPanProgWithCalls [] 20 (fun _ => none)
+      fullSsaEntrySourceBody).map (fun result => result.2) =
+      fullSsaEntryBitmapSimpleGcMachineResult := by
+  calc
+    _ = some [BitVec.ofNat 64 9] := fullSsaEntry_bitmap_simple_gc_source_execution
+    _ = _ := fullSsaEntry_bitmap_simple_gc_machine_execution.symm
+
 theorem fullSsaMain_compiled_execution :
     (do
       let image ← fullSsaMainImage

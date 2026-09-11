@@ -2374,6 +2374,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   return constructor.
 - [x] Add the `Load32` expression contract, reusing the source/Crep word
   memory relation at the fixed-width load boundary.
+- [x] Lift the `Load32` expression contract through the generic program
+  return constructor.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

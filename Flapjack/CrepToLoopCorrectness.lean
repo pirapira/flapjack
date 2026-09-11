@@ -71,6 +71,71 @@ def loopControlMemoryAt (address : α) : LoopResult α → Option α
   | .broke state _ => state.memory address
   | .continued state _ => state.memory address
 
+theorem crepToLoop_full_primitive_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (loopFfi : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (destinations : List Nat) (operator : PrimOp) (arguments : List Nat)
+    (name : Nat) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.primitive destinations operator arguments)).map
+        (crepControlLocal name) =
+    (evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopFfi (fuel + 1)
+      (loopStateOfCrepState state)
+    (loopCompileProg context live
+        (.primitive destinations operator arguments))).map
+        (loopControlLocal name) := by
+  have hread : arguments.mapM state.locals = loopReadLocals state.locals arguments := by
+    induction arguments with
+    | nil => rfl
+    | cons argument arguments ih =>
+        simp [loopReadLocals, ih]
+  have hfold (base : Nat → Option α) (entries : List (Nat × α)) :
+      List.foldl (fun locals entry =>
+        updateCrepLocal locals entry.fst entry.snd) base entries =
+      List.foldl (fun locals entry =>
+        updateLoopLocal locals entry.fst entry.snd) base entries := by
+    induction entries generalizing base with
+    | nil => rfl
+    | cons entry entries ih =>
+        cases entry with
+        | mk name value =>
+            simp only [List.foldl]
+            rw [show updateCrepLocal base name value =
+              updateLoopLocal base name value by rfl]
+            exact ih _
+  cases hargs : loopReadLocals state.locals arguments with
+  | none =>
+      simp [evalCrepFullProg, loopCompileProg,
+        evalLoopProgWithPrimitiveCallsAndFfi, assignCrepValues,
+        loopAssignValues, hread, hargs, loopStateOfCrepState]
+  | some values =>
+      cases hprimitive : primitive operator values with
+      | none =>
+          simp [evalCrepFullProg, loopCompileProg,
+            evalLoopProgWithPrimitiveCallsAndFfi, assignCrepValues,
+            loopAssignValues, hread, hargs, hprimitive,
+            loopStateOfCrepState]
+      | some result =>
+          by_cases hlength : destinations.length = result.length
+          · simp [evalCrepFullProg, loopCompileProg,
+              evalLoopProgWithPrimitiveCallsAndFfi, assignCrepValues,
+              loopAssignValues, hread, hargs, hprimitive, hlength, hfold,
+              loopStateOfCrepState, crepControlLocal, loopControlLocal]
+          · simp [evalCrepFullProg, loopCompileProg,
+              evalLoopProgWithPrimitiveCallsAndFfi, assignCrepValues,
+              loopAssignValues, hread, hargs, hprimitive, hlength, hfold,
+              loopStateOfCrepState]
+
 theorem crepToLoop_seq_normal_compose
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

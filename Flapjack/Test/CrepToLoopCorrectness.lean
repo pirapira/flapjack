@@ -38,6 +38,38 @@ def crepSeqFinal : CrepState Nat :=
   { crepSeqMiddle with
     locals := updateCrepLocal crepSeqMiddle.locals 6 42 }
 
+def crepLoopPrimitiveState : CrepState Nat :=
+  { locals := fun name =>
+      if name == 1 then some 10
+      else if name == 2 then some 32
+      else if name == 3 then some 0
+      else none
+    memory := fun _ => none }
+
+def crepLoopAddPrimitive : CrepPrimitiveHandler Nat :=
+  fun operator arguments =>
+    match operator, arguments with
+    | .addCarry, [left, right, carry] => some [left + right, carry]
+    | _, _ => none
+
+theorem crepToLoop_primitive_regression :
+    (evalCrepFullProg [] crepLoopAddPrimitive (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 3 crepLoopPrimitiveState
+      (.primitive [5, 6] .addCarry [1, 2, 3])).map (crepControlLocal 5) =
+    (evalLoopProgWithPrimitiveCallsAndFfi crepLoopAddPrimitive []
+      (fun _ _ _ _ _ loopState => some loopState) 3
+      (loopStateOfCrepState crepLoopPrimitiveState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.primitive [5, 6] .addCarry [1, 2, 3]))).map (loopControlLocal 5) := by
+  exact crepToLoop_full_primitive_agreement
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] crepLoopAddPrimitive (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ _ loopState => some loopState) (fun _ _ _ _ => none)
+    0 100 2 crepLoopPrimitiveState [] [5, 6] .addCarry [1, 2, 3] 5
+
 theorem crepToLoop_seq_normal_regression :
     evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         (fun _ _ _ _ => none) 0 100 4 crepSeqInitial

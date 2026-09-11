@@ -2190,6 +2190,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   executable two-assignment state-threading regression.
 - [x] Add terminal-sequence short-circuit composition for non-normal control
   results, with a break-before-continuation regression.
+- [x] Add full primitive-handler Crep-to-Loop agreement with a successful
+  destination-local regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

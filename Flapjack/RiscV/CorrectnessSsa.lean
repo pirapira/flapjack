@@ -2140,6 +2140,243 @@ theorem evalWordProg_ssaRename_program_share_load32_const [NeZero width]
   · simp [sourceCode, targetCode, executeInstructions, execute,
       writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
+theorem wordSsaRenameProgram_shareInst_store8_const
+    (ssa : WordSsaState) (value : Nat) (address : Word width) :
+    wordSsaRenameProgram ssa
+        (.shareInst .store8 value (.const address) : WordProg (Word width)) =
+      (ssa, .shareInst .store8 (wordSsaRead ssa value) (.const address)) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp]
+
+theorem evalWordProg_ssaRename_program_share_store8_const [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (hzeroSource : readRegister source 0 = 0)
+    (hzeroTarget : readRegister target 0 = 0)
+    (value : Nat) (address : Word width)
+    (hvalue : value < 32)
+    (hvalueScratch : value ≠ 31)
+    (hvalueSsa : wordSsaRead ssa value < 32)
+    (hvalueSsaScratch : wordSsaRead ssa value ≠ 31) :
+    (evalWordProg source (.shareInst .store8 value (.const address))).map
+        (fun state => state.memory) =
+      (evalWordProg target
+        (wordSsaRenameProgram ssa
+          (.shareInst .store8 value (.const address))).2).map
+        (fun state => state.memory) := by
+  have hzeroSource' : source.registers 0 = 0 := by
+    simpa [readRegister] using hzeroSource
+  have hzeroTarget' : target.registers 0 = 0 := by
+    simpa [readRegister] using hzeroTarget
+  have hvalueValue :
+      readRegister source ⟨value, hvalue⟩ =
+        readRegister target ⟨wordSsaRead ssa value, hvalueSsa⟩ := by
+    have h := hregister value
+    simpa [registerOfNat, hvalue, hvalueSsa] using h
+  have hvalueValue' :
+      source.registers ⟨value, hvalue⟩ =
+        target.registers ⟨wordSsaRead ssa value, hvalueSsa⟩ := by
+    simpa [readRegister] using hvalueValue
+  have hvalueScratch' : (⟨value, hvalue⟩ : Fin 32) ≠ 31 := by
+    intro h
+    apply hvalueScratch
+    exact congrArg Fin.val h
+  have hvalueSsaScratch' :
+      (⟨wordSsaRead ssa value, hvalueSsa⟩ : Fin 32) ≠ 31 := by
+    intro h
+    apply hvalueSsaScratch
+    exact congrArg Fin.val h
+  rw [wordSsaRenameProgram_shareInst_store8_const]
+  let sourceCode : List (Instruction width) :=
+    [.addi 31 0 address, .storeByte ⟨value, hvalue⟩ 31]
+  let targetCode : List (Instruction width) :=
+    [.addi 31 0 address,
+     .storeByte ⟨wordSsaRead ssa value, hvalueSsa⟩ 31]
+  have hsourceCompile :
+      wordShareInstToInstructions (width := width) .store8 value (.const address) =
+        some sourceCode := by
+    simp [sourceCode, wordShareInstToInstructions, wordExpToInstructions,
+      wordExpToInstruction, wordInstToInstruction, registerOfNat,
+      hvalue, hvalueScratch]
+  have htargetCompile :
+      wordShareInstToInstructions (width := width) .store8
+        (wordSsaRead ssa value) (.const address) =
+        some targetCode := by
+    simp [targetCode, wordShareInstToInstructions, wordExpToInstructions,
+      wordExpToInstruction, wordInstToInstruction, registerOfNat,
+      hvalueSsa, hvalueSsaScratch]
+  simp [evalWordProg, evalWordShareInst, hsourceCompile, htargetCompile,
+    sourceCode, targetCode, executeInstructions, execute, writeRegister,
+    readRegister, hvalueValue', hzeroSource', hzeroTarget',
+    hvalueScratch', hvalueSsaScratch', hmemory]
+  apply writeByte_memory_congr
+  rfl
+
+theorem wordSsaRenameProgram_shareInst_store16_const
+    (ssa : WordSsaState) (value : Nat) (address : Word width) :
+    wordSsaRenameProgram ssa
+        (.shareInst .store16 value (.const address) : WordProg (Word width)) =
+      (ssa, .shareInst .store16 (wordSsaRead ssa value) (.const address)) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp]
+
+theorem evalWordProg_ssaRename_program_share_store16_const [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (hzeroSource : readRegister source 0 = 0)
+    (hzeroTarget : readRegister target 0 = 0)
+    (value : Nat) (address : Word width)
+    (hvalue : value < 32)
+    (hvalueScratch : value ≠ 31)
+    (hvalueSsa : wordSsaRead ssa value < 32)
+    (hvalueSsaScratch : wordSsaRead ssa value ≠ 31) :
+    (evalWordProg source (.shareInst .store16 value (.const address))).map
+        (fun state => state.memory) =
+      (evalWordProg target
+        (wordSsaRenameProgram ssa
+          (.shareInst .store16 value (.const address))).2).map
+        (fun state => state.memory) := by
+  have hzeroSource' : source.registers 0 = 0 := by
+    simpa [readRegister] using hzeroSource
+  have hzeroTarget' : target.registers 0 = 0 := by
+    simpa [readRegister] using hzeroTarget
+  have hvalueValue :
+      readRegister source ⟨value, hvalue⟩ =
+        readRegister target ⟨wordSsaRead ssa value, hvalueSsa⟩ := by
+    have h := hregister value
+    simpa [registerOfNat, hvalue, hvalueSsa] using h
+  have hvalueValue' :
+      source.registers ⟨value, hvalue⟩ =
+        target.registers ⟨wordSsaRead ssa value, hvalueSsa⟩ := by
+    simpa [readRegister] using hvalueValue
+  have hvalueScratch' : (⟨value, hvalue⟩ : Fin 32) ≠ 31 := by
+    intro h
+    apply hvalueScratch
+    exact congrArg Fin.val h
+  have hvalueSsaScratch' :
+      (⟨wordSsaRead ssa value, hvalueSsa⟩ : Fin 32) ≠ 31 := by
+    intro h
+    apply hvalueSsaScratch
+    exact congrArg Fin.val h
+  rw [wordSsaRenameProgram_shareInst_store16_const]
+  let sourceCode : List (Instruction width) :=
+    [.addi 31 0 address, .storeHalf ⟨value, hvalue⟩ 31]
+  let targetCode : List (Instruction width) :=
+    [.addi 31 0 address,
+     .storeHalf ⟨wordSsaRead ssa value, hvalueSsa⟩ 31]
+  have hsourceCompile :
+      wordShareInstToInstructions (width := width) .store16 value (.const address) =
+        some sourceCode := by
+    simp [sourceCode, wordShareInstToInstructions, wordExpToInstructions,
+      wordExpToInstruction, wordInstToInstruction, registerOfNat,
+      hvalue, hvalueScratch]
+  have htargetCompile :
+      wordShareInstToInstructions (width := width) .store16
+        (wordSsaRead ssa value) (.const address) =
+        some targetCode := by
+    simp [targetCode, wordShareInstToInstructions, wordExpToInstructions,
+      wordExpToInstruction, wordInstToInstruction, registerOfNat,
+      hvalueSsa, hvalueSsaScratch]
+  simp [evalWordProg, evalWordShareInst, hsourceCompile, htargetCompile,
+    sourceCode, targetCode, executeInstructions, execute, writeRegister,
+    readRegister, hvalueValue', hzeroSource', hzeroTarget',
+    hvalueScratch', hvalueSsaScratch', hmemory]
+  apply writeWord16_memory_congr
+  rfl
+
+theorem wordSsaRenameProgram_shareInst_store32_const
+    (ssa : WordSsaState) (value : Nat) (address : Word width) :
+    wordSsaRenameProgram ssa
+        (.shareInst .store32 value (.const address) : WordProg (Word width)) =
+      (ssa, .shareInst .store32 (wordSsaRead ssa value) (.const address)) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp]
+
+theorem evalWordProg_ssaRename_program_share_store32_const [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister source register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister target register)))
+    (hmemory : source.memory = target.memory)
+    (hzeroSource : readRegister source 0 = 0)
+    (hzeroTarget : readRegister target 0 = 0)
+    (value : Nat) (address : Word width)
+    (hvalue : value < 32)
+    (hvalueScratch : value ≠ 31)
+    (hvalueSsa : wordSsaRead ssa value < 32)
+    (hvalueSsaScratch : wordSsaRead ssa value ≠ 31) :
+    (evalWordProg source (.shareInst .store32 value (.const address))).map
+        (fun state => state.memory) =
+      (evalWordProg target
+        (wordSsaRenameProgram ssa
+          (.shareInst .store32 value (.const address))).2).map
+        (fun state => state.memory) := by
+  have hzeroSource' : source.registers 0 = 0 := by
+    simpa [readRegister] using hzeroSource
+  have hzeroTarget' : target.registers 0 = 0 := by
+    simpa [readRegister] using hzeroTarget
+  have hvalueValue :
+      readRegister source ⟨value, hvalue⟩ =
+        readRegister target ⟨wordSsaRead ssa value, hvalueSsa⟩ := by
+    have h := hregister value
+    simpa [registerOfNat, hvalue, hvalueSsa] using h
+  have hvalueValue' :
+      source.registers ⟨value, hvalue⟩ =
+        target.registers ⟨wordSsaRead ssa value, hvalueSsa⟩ := by
+    simpa [readRegister] using hvalueValue
+  have hvalueScratch' : (⟨value, hvalue⟩ : Fin 32) ≠ 31 := by
+    intro h
+    apply hvalueScratch
+    exact congrArg Fin.val h
+  have hvalueSsaScratch' :
+      (⟨wordSsaRead ssa value, hvalueSsa⟩ : Fin 32) ≠ 31 := by
+    intro h
+    apply hvalueSsaScratch
+    exact congrArg Fin.val h
+  rw [wordSsaRenameProgram_shareInst_store32_const]
+  let sourceCode : List (Instruction width) :=
+    [.addi 31 0 address, .store32 ⟨value, hvalue⟩ 31]
+  let targetCode : List (Instruction width) :=
+    [.addi 31 0 address,
+     .store32 ⟨wordSsaRead ssa value, hvalueSsa⟩ 31]
+  have hsourceCompile :
+      wordShareInstToInstructions (width := width) .store32 value (.const address) =
+        some sourceCode := by
+    simp [sourceCode, wordShareInstToInstructions, wordExpToInstructions,
+      wordExpToInstruction, wordInstToInstruction, registerOfNat,
+      hvalue, hvalueScratch]
+  have htargetCompile :
+      wordShareInstToInstructions (width := width) .store32
+        (wordSsaRead ssa value) (.const address) =
+        some targetCode := by
+    simp [targetCode, wordShareInstToInstructions, wordExpToInstructions,
+      wordExpToInstruction, wordInstToInstruction, registerOfNat,
+      hvalueSsa, hvalueSsaScratch]
+  simp [evalWordProg, evalWordShareInst, hsourceCompile, htargetCompile,
+    sourceCode, targetCode, executeInstructions, execute, writeRegister,
+    readRegister, hvalueValue', hzeroSource', hzeroTarget',
+    hvalueScratch', hvalueSsaScratch', hmemory]
+  apply writeWord32_memory_congr
+  rfl
+
 theorem wordSsaRenameInst_div
     (ssa : WordSsaState) (destination dividend divisor : Nat) :
     wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =

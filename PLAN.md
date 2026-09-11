@@ -2447,6 +2447,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add the direct structured local-assignment constructor to
   `PanValueCrepProgramCorrect`, using explicit source-record expression and
   compiler-directness contracts.
+- [x] Invert fresh nested-declaration evaluation into the body evaluation over
+  the corresponding flattened local update.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

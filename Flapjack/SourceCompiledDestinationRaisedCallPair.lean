@@ -1,17 +1,16 @@
-import Flapjack.CrepeCallRaisedInversion
+import Flapjack.CrepeRaisedCallInversion
 import Flapjack.SourceCompiledCalleeEntry
 
 /-!
-Paired source/compiled inversion for an ordinary raised call.
-
-This packages the source and Crep call inversions with the compiled callee
-state theorem.  The result is the witness boundary used by the raised-call
-correctness composition.
+Paired source/compiled inversion for a raised call carrying compiled
+destinations.  Raised results do not assign destinations, but the destination
+metadata is present in declaration-call lowering and must be retained while
+inverting the target evaluator.
 -/
 
 namespace Flapjack
 
-theorem sourceCompiledRaisedCallPair
+theorem sourceCompiledDestinationRaisedCallPair
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -23,15 +22,17 @@ theorem sourceCompiledRaisedCallPair
     (functions : List (CompiledFunction α))
     (sourceLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α))
-    (caller : CrepState α)
-    (crepMemory : α → Option α)
+    (caller : CrepState α) (crepMemory : α → Option α)
     (primitive : PanPrimitiveHandler α) (handler : PanValueFfiHandler α)
     (crepPrimitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
     (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord : α)
     (sourceFuel targetFuel : Nat)
+    (contracts : Option PanValueCallContracts)
+    (memoryAccess : Option (PanValueMemoryAccess α))
+    (memoryHandler : Option (PanValueAcceleratorFfiHandler α))
     (function : FunName) (arguments : List (Exp α))
-    (compiledArguments : List (CrepExp α))
+    (compiledArguments : List (CrepExp α)) (destinations : List Nat)
     (sourceCalleeGlobals : VarName → Option (PanValue α))
     (sourceCalleeMemory : α → Option (PanValue α))
     (sourceException : ExceptionId) (sourceValue : PanValue α)
@@ -59,7 +60,8 @@ theorem sourceCompiledRaisedCallPair
     (hargumentValues : ∀ (sourceValues : List (PanValue α))
       (targetValues : List α),
       evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
-        baseAddress topAddress bytesInWord arguments = some sourceValues →
+        baseAddress topAddress bytesInWord arguments
+        (memoryAccess := memoryAccess) = some sourceValues →
       evalCrepFullExps caller.locals caller.memory
         baseAddress topAddress compiledArguments = some targetValues →
       targetValues = sourceValues.flatMap panValueFlatWords)
@@ -67,11 +69,13 @@ theorem sourceCompiledRaisedCallPair
       primitive handler structs sourceFunctions
       baseAddress topAddress bytesInWord (sourceFuel + 1)
       sourceLocals sourceGlobals sourceMemory none function arguments
-      =
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
       some (.raised (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
         sourceException sourceValue))
     (hcrepCall : evalCrepFullCall functions crepPrimitive ffi sharedMem
-      baseAddress topAddress (targetFuel + 1) caller none function compiledArguments =
+      baseAddress topAddress (targetFuel + 1) caller
+      (some (destinations, none)) function compiledArguments =
       some (.raised target crepException)) :
     ∃ (sourceArgumentValues : List (PanValue α))
         (sourceParameters : List VarName) (sourceBody : Prog α)
@@ -80,7 +84,8 @@ theorem sourceCompiledRaisedCallPair
         (targetParameters : List Nat) (targetBody : CrepProg α)
         (targetCalleeLocals : Nat → Option α) (targetCallee : CrepState α),
       evalPanValueExps structs sourceLocals sourceGlobals sourceMemory
-        baseAddress topAddress bytesInWord arguments = some sourceArgumentValues ∧
+        baseAddress topAddress bytesInWord arguments
+        (memoryAccess := memoryAccess) = some sourceArgumentValues ∧
       lookupPanFunction function (sourceFunctionEntries declarations) =
         some (sourceParameters, sourceBody) ∧
       bindPanValueParameters sourceParameters sourceArgumentValues =
@@ -88,7 +93,9 @@ theorem sourceCompiledRaisedCallPair
       evalPanValueProgWithPrimitiveCallsAndFfi
         primitive handler structs sourceFunctions
         baseAddress topAddress bytesInWord sourceFuel
-        sourceCalleeLocals sourceGlobals sourceMemory sourceBody =
+        sourceCalleeLocals sourceGlobals sourceMemory sourceBody
+        (memoryAccess := memoryAccess) (contracts := contracts)
+        (memoryHandler := memoryHandler) =
           some (.raised sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory
             sourceException sourceValue) ∧
       declaration.name = function ∧
@@ -125,16 +132,15 @@ theorem sourceCompiledRaisedCallPair
         { locals := targetCalleeLocals, memory := crepMemory } := by
   obtain ⟨compiledValues, targetParameters, targetBody, targetCalleeLocals,
       targetCallee, hcompiledValues, hlookupCompiled, hassign, hcrepBody, htarget⟩ :=
-    evalCrepFullCall_none_raised_inversion functions crepPrimitive ffi sharedMem
-      baseAddress topAddress targetFuel caller function compiledArguments crepException
-      target hcrepCall
+    evalCrepFullCall_raised_inversion functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel caller destinations function compiledArguments
+      crepException target hcrepCall
   obtain ⟨sourceArgumentValues, sourceParameters, sourceBody, sourceCalleeLocals,
       sourceBodyLocals, hsourceArguments, hlookupSource, _, hbind, hsourceBody, _, _⟩ :=
     evalPanValueCall_raised_inversion primitive handler structs sourceFunctions
       sourceLocals sourceGlobals sourceMemory baseAddress topAddress bytesInWord sourceFuel
-      none none none function arguments sourceCalleeGlobals sourceCalleeMemory
-      sourceException sourceValue
-      hsourceCall
+      contracts memoryAccess memoryHandler function arguments sourceCalleeGlobals
+      sourceCalleeMemory sourceException sourceValue hsourceCall
   have hlookupSourceDecl : lookupPanFunction function
       (sourceFunctionEntries declarations) = some (sourceParameters, sourceBody) := by
     simpa [hsourceFunctions] using hlookupSource

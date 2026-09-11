@@ -91,6 +91,7 @@ import Flapjack.PanValueDecCallInversion
 import Flapjack.CrepeCallNormalInversion
 import Flapjack.PanValueCallReturnedInversion
 import Flapjack.CrepeCalleeStateExtensionCorrectness
+import Flapjack.CrepeRaisedCallInversion
 import Flapjack.CrepeProgramDeclarationRestoration
 import Flapjack.CrepeProgramDeclarationCallCorrectness
 import Flapjack.CrepeDecCallIndependentFuelRelation

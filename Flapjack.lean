@@ -55,6 +55,7 @@ import Flapjack.CrepeProgramRecordExpressionContract
 import Flapjack.CrepeDistinctLists
 import Flapjack.CrepeProgramGenericAssignmentConstructor
 import Flapjack.CrepeProgramGenericAssignmentTemporaryConstructor
+import Flapjack.CrepeProgramAssignmentCorrectness
 import Flapjack.CrepeSequenceCorrectness
 import Flapjack.CrepeConditionalCorrectness
 import Flapjack.CrepeLoopCorrectness

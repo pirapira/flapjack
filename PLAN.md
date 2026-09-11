@@ -2461,6 +2461,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Generalize the temporary local-assignment correctness constructor to
   arbitrary flattened Pancake values, composing fresh nested declarations,
   assignment-sequence inversion, restoration, and generic state updates.
+- [x] Add a reusable length inversion for successful Crep expression-list
+  evaluation and dispatch local-assignment correctness through the compiler's
+  direct-versus-temporary lowering choice.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

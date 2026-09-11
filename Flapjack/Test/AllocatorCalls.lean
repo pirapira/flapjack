@@ -1,4 +1,4 @@
-import Flapjack.RiscV.Allocator
+import Flapjack.RiscV.RegAlloc
 
 namespace Flapjack
 
@@ -34,6 +34,14 @@ example :
       .set [8] := by
   simp [wordClashTree, List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop]
+
+example :
+    wordProgForcedClashes
+        (.call (some ([5], ([], []),
+            .inst (.arith (.longMul 1 2 3 4)), 0, 0)) none []
+          (some (9, .inst (.arith (.addCarry 5 6 7 8 10)), 0, 0)) : WordProg Nat) =
+      [(5, 6), (5, 7), (5, 8), (1, 2), (1, 3), (1, 4)] := by
+  simp [wordProgForcedClashes, wordInstForcedClashes]
 
 example :
     wordClashTree

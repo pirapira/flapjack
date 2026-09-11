@@ -760,6 +760,59 @@ theorem evalWordProg_ssaRename_assign_binary_var_const_destination [NeZero width
           hfreshNonzero] using hvalue
       · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
+theorem wordSsaRenameProgram_assign_binary_const_const
+    (ssa : WordSsaState) (destination : Nat) (operator : BinOp)
+    (left right : Word width) :
+    wordSsaRenameProgram ssa
+        (.assign destination (.op operator [.const left, .const right]) :
+          WordProg (Word width)) =
+      ((wordSsaFresh ssa destination).1,
+        .assign (wordSsaFresh ssa destination).2
+          (.op operator [.const left, .const right])) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp]
+
+theorem evalWordProg_ssaRename_assign_binary_const_const_destination [NeZero width]
+    (ssa : WordSsaState) (source target : State width)
+    (hmemory : source.memory = target.memory)
+    (hzero : readRegister source 0 = readRegister target 0)
+    (destination : Nat) (operator : BinOp) (left right : Word width)
+    (hdestination : destination < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0) :
+    ∃ source' target',
+      evalWordProg source
+          (.assign destination (.op operator [.const left, .const right])) = some source' ∧
+      evalWordProg target
+          (wordSsaRenameProgram ssa
+            (.assign destination (.op operator [.const left, .const right]))).2 =
+        some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
+      source'.memory = target'.memory := by
+  let result : Word width := match operator with
+    | .add => left + right
+    | .sub => left - right
+    | .and => left &&& right
+    | .or => left ||| right
+    | .xor => left ^^^ right
+  rw [wordSsaRenameProgram_assign_binary_const_const]
+  have hzero' : source.registers 0 = target.registers 0 := by
+    simpa [readRegister] using hzero
+  refine ⟨execute source (.addi ⟨destination, hdestination⟩ 0 result),
+    execute target (.addi ⟨(wordSsaFresh ssa destination).2, hfresh⟩ 0 result),
+    ?_, ?_, ?_, ?_⟩
+  · cases operator <;>
+      simp [result, evalWordProg, wordExpToInstructions,
+        wordExpToInstruction, registerOfNat, hdestination, executeInstructions]
+  · cases operator <;>
+      simp [result, evalWordProg, wordExpToInstructions,
+        wordExpToInstruction, registerOfNat, hfresh, executeInstructions]
+  · simp [execute, writeRegister, readRegister, hdestinationNonzero,
+      hfreshNonzero, hzero']
+  · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
+
 theorem wordSsaRenameInst_div
     (ssa : WordSsaState) (destination dividend divisor : Nat) :
     wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =

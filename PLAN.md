@@ -2403,6 +2403,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   applying recursive body correctness across a fresh Crep slot.
 - [x] Add the list-level source-word expression relation, preserving compiled
   list order, evaluation, and one-word shape flattening for record payloads.
+- [x] Factor source-word list inversion into a reusable theorem and consume it
+  from the generic word-record expression correctness contract.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

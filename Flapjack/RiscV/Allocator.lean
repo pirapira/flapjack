@@ -1247,15 +1247,20 @@ def wordClashTree : WordProg α → List (List Nat × List Nat) → WordClashTre
             .seq (.set (wordClashTreeCallSet values cutSet))
               (wordClashTree _returnCode frames)
           .seq (.set liveSet) returnTree
-  | .call returns _ arguments (some (exception, body, _, _)), frames =>
-      let cutSet := wordClashTreeCallCutSet returns
+  | .call none _ arguments (some _), _ =>
+      /- CakeML's `get_clash_tree (Call NONE ...)` is a tail-call
+         boundary: only the argument set participates in this function's
+         clash tree.  In particular, a handler carried by the reduced Word
+         carrier is not recursively coloured here, matching the upstream
+         return-free equation. -/
+      .set arguments.eraseDups
+  | .call (some (values, cutsets, returnCode, _, _)) _
+      arguments (some (exception, body, _, _)), frames =>
+      let cutSet := wordClashTreeCallSet cutsets.1 cutsets.2
       let liveSet := wordClashTreeCallSet cutSet arguments
       .branch (some liveSet)
-        (match returns with
-        | none => .set liveSet
-        | some (values, _, _returnCode, _, _) =>
-            .seq (.set (wordClashTreeCallSet values cutSet))
-              (wordClashTree _returnCode frames))
+        (.seq (.set (wordClashTreeCallSet values cutSet))
+          (wordClashTree returnCode frames))
         (.seq (.set (wordClashTreeCallSet [exception] cutSet))
           (wordClashTree body frames))
   | .alloc destination (nonGc, gc), _ =>

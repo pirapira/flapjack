@@ -20,8 +20,19 @@ example :
       .branch (some [6, 8])
         (.seq (.set [5, 6]) (.delta [] []))
         (.seq (.set [9, 6]) (.delta [] [10])) := by
-  simp [wordClashTree, wordClashTreeCallSet, wordClashTreeCallCutSet,
+  simp [wordClashTree, wordClashTreeCallSet,
     List.eraseDups,
+    List.eraseDupsBy, List.eraseDupsBy.loop]
+
+/- CakeML's return-free call equation ignores a carried handler when building
+   this function's clash tree; the handler is entered by the callee's control
+   path rather than coloured as a continuation of the caller. -/
+example :
+    wordClashTree
+      (.call none (some 7) [8]
+          (some (9, .return 0 [10], 0, 0)) : WordProg Nat) [] =
+      .set [8] := by
+  simp [wordClashTree, List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop]
 
 example :

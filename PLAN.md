@@ -2425,6 +2425,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   with list evaluation preserved under destination non-interference.
 - [x] Add the direct arbitrary-word-record assignment correctness boundary,
   coupling source shape-preserving assignment with flattened Crep slots.
+- [x] Add the temporary-assignment evaluator boundary, including fresh
+  variable-list readback and nested-declaration restoration.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

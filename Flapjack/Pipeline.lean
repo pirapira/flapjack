@@ -145,8 +145,15 @@ def pipelineWordFunctionsAllocatedWithSpills [NeZero width] :
           addressScratch := 29
           sectionId := label
           handlerLabel := label }
-      let stackBody ← RiscV.wordToStackFunctionWithParameters config renamedParameters
-        renamedBody
+      /- CakeML's spill path carries allocator-owned heap operations through
+         the bitmap-threaded word_to_stack compiler.  Keep the historical
+         flat result shape here, but do not fall back to the stateless wrapper:
+         that wrapper deliberately rejects Alloc and StoreConsts. -/
+      let (stackBody, _) ←
+        RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+          renamedParameters wordAllocatableRegisters.length config.scratch
+          allocation.nextSpill (some 1)
+          (RiscV.wordStackInitialBitmaps false) renamedBody
       let rest ← pipelineWordFunctionsAllocatedWithSpills functions
       pure ((label, wordParameters, stackBody) :: rest)
 

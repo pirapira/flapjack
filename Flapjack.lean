@@ -94,6 +94,7 @@ import Flapjack.CrepeCalleeStateExtensionCorrectness
 import Flapjack.CrepeRaisedCallInversion
 import Flapjack.CrepeDeclarationCallReturnedCorrectness
 import Flapjack.CrepeDeclarationCallRaisedCorrectness
+import Flapjack.CrepeCallRaisedInversion
 import Flapjack.CrepeProgramDeclarationRestoration
 import Flapjack.CrepeProgramDeclarationCallCorrectness
 import Flapjack.CrepeDecCallIndependentFuelRelation

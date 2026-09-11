@@ -2406,6 +2406,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   boundary.
 - [x] Compose direct raised-callee declaration calls from compiled inversion,
   call correctness, and raised-result restoration.
+- [x] Invert raised ordinary Crep calls with no destination metadata, exposing
+  the recursive callee-body witness needed by function-call correctness.
 - [x] Generalize state extension across callee-produced globals and memory,
   and connect recursive callee correctness to destination-aware call state.
 - [x] Prove structured source and compiled Crep branch selection agree for a

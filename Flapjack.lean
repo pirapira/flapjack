@@ -5,6 +5,7 @@ import Flapjack.PanSimp
 import Flapjack.PanStructs
 import Flapjack.PanGlobals
 import Flapjack.Pipeline
+import Flapjack.RiscV.PipelineDiagnostics
 import Flapjack.Correctness
 import Flapjack.CorrectnessCalls
 import Flapjack.FlatCorrectness

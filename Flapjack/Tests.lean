@@ -80,6 +80,7 @@ import Flapjack.Test.WordToStack.StatefulLoop
 import Flapjack.Test.WordToStack.HeapLowering
 import Flapjack.Test.WordToStack.ControlLeaves
 import Flapjack.Test.StatefulPipeline
+import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.CorrectnessFfiRiscVLoop
 import Flapjack.Test.FullSsa
 import Flapjack.Test.FullSsaPipeline

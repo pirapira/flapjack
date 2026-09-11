@@ -74,4 +74,9 @@ def wordToStackProgNatChecked [BEq Nat]
       | some (path, feature) => .error { path, feature }
       | none => .error { path := [], feature := .loweringFailure }
 
+def wordToStackProgWordChecked [NeZero width]
+    (config : WordStackConfig) (program : WordProg (Word width)) :
+    Except WordLoweringError (StackProg Nat) :=
+  wordToStackProgNatChecked config (wordProgToNat program)
+
 end Flapjack.RiscV

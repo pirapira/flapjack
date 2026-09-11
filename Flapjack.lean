@@ -90,6 +90,7 @@ import Flapjack.CrepeDecCallInversion
 import Flapjack.PanValueDecCallInversion
 import Flapjack.CrepeCallNormalInversion
 import Flapjack.CrepeCallReturnedCorrectness
+import Flapjack.CrepeCallRaisedCorrectness
 import Flapjack.PanValueCallReturnedInversion
 import Flapjack.CrepeCalleeStateExtensionCorrectness
 import Flapjack.CrepeRaisedCallInversion

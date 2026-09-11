@@ -2423,6 +2423,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   words to arbitrary distinct slot/value lists.
 - [x] Prove evaluator correctness for the flattened local assignment sequence,
   with list evaluation preserved under destination non-interference.
+- [x] Add the direct arbitrary-word-record assignment correctness boundary,
+  coupling source shape-preserving assignment with flattened Crep slots.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

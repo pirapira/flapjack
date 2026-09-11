@@ -17,4 +17,20 @@ example :
   · rfl
   all_goals decide
 
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32) (.inst (.mem .load 1 2)) = some source' ∧
+      evalWordProg (zeroState 32)
+          (.inst (wordSsaRenameInst
+            ({ current := [], next := 4 } : WordSsaState)
+            (.mem .load 1 2)).2) = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_load_destination
+  · intro name
+    rfl
+  · rfl
+  all_goals decide
+
 end Flapjack.RiscV

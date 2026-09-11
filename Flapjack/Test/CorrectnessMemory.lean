@@ -329,4 +329,41 @@ example :
         decide
       · simp [memoryCorrectnessLoopState, hname] at hcurrent)
 
+example :
+    ∀ resultState,
+      RiscV.evalWordProg memoryCorrectnessWordState
+        (loopToWordProg memoryCorrectnessContext
+          (.shMem .load 2 (.const (BitVec.ofNat 64 16)))) = some resultState →
+      loopLocalsMappedToRiscV memoryCorrectnessContext
+        (updateLoopLocal memoryCorrectnessLoopState.locals 2
+          (BitVec.ofNat 64 42)) resultState := by
+  apply loopToWord_shMem_load_const_preserves_mapped_locals
+    (context := memoryCorrectnessContext)
+    (loopState := memoryCorrectnessLoopState)
+    (state := memoryCorrectnessWordState)
+    (address := BitVec.ofNat 64 16) (destination := 2)
+    (destinationRegister := 2) (value := BitVec.ofNat 64 42)
+    (zero := by
+      change memoryCorrectnessWordState.registers (0 : Fin 32) = 0
+      simp [memoryCorrectnessWordState, RiscV.writeRegister,
+        RiscV.zeroState, RiscV.writeWord32, RiscV.writeByte])
+    (hlocals := memoryCorrectness_mappedLocals)
+    (hmachine := by decide)
+    (hdestination := by decide)
+    (hdestination_nonzero := by decide)
+    (hdestination_scratch := by decide)
+    (hnoalias := memoryCorrectness_noalias)
+    (hscratch := by
+      intro name current hcurrent register hregister
+      by_cases hname : name = 1
+      · subst name
+        simp [memoryCorrectnessContext, wordFindVar, lookupNatInfo] at hregister
+        have hthree : RiscV.registerOfNat 3 = some (3 : Fin 32) := by
+          decide
+        have hregister' : register = (3 : Fin 32) := by
+          exact Option.some.inj (hregister.symm.trans hthree)
+        rw [hregister']
+        decide
+      · simp [memoryCorrectnessLoopState, hname] at hcurrent)
+
 end Flapjack

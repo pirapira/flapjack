@@ -161,16 +161,16 @@ theorem wordColourStateRelationExcept_executeAddi
     (hrelation : WordColourStateRelationExcept colour excluded source target)
     (hzeroSource : ZeroRegister source) (hzeroTarget : ZeroRegister target)
     (hname : excluded < 32) (sourceName : Nat) (hsource : sourceName < 32)
-    (hsourceNe : sourceName ≠ excluded) :
+    (hsourceNe : sourceName ≠ excluded) (immediate : Word width) :
     WordColourStateRelation colour
-      (execute source (.addi ⟨excluded, hname⟩ ⟨sourceName, hsource⟩ 0))
+      (execute source (.addi ⟨excluded, hname⟩ ⟨sourceName, hsource⟩ immediate))
       (execute target
         (.addi ⟨colour excluded, valid excluded hname⟩
-          ⟨colour sourceName, valid sourceName hsource⟩ 0)) := by
+          ⟨colour sourceName, valid sourceName hsource⟩ immediate)) := by
   have hnext := wordColourStateRelationExcept_nextPc colour excluded source target hrelation
   have hvalue :
-      readRegister source ⟨sourceName, hsource⟩ + 0 =
-        readRegister target ⟨colour sourceName, valid sourceName hsource⟩ + 0 := by
+      readRegister source ⟨sourceName, hsource⟩ + immediate =
+        readRegister target ⟨colour sourceName, valid sourceName hsource⟩ + immediate := by
     rw [hrelation.register sourceName hsource hsourceNe
       (valid sourceName hsource)]
   have hstate := wordColourStateRelationExcept_writeRegister colour excluded
@@ -178,8 +178,8 @@ theorem wordColourStateRelationExcept_executeAddi
     {target with pc := nextPc target} hnext
     (by simpa [ZeroRegister, readRegister, nextPc] using hzeroSource)
     (by simpa [ZeroRegister, readRegister, nextPc] using hzeroTarget)
-    hname (readRegister source ⟨sourceName, hsource⟩ + 0)
-    (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ + 0)
+    hname (readRegister source ⟨sourceName, hsource⟩ + immediate)
+    (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ + immediate)
     hvalue
   simpa [execute] using hstate
 
@@ -230,6 +230,7 @@ theorem wordColourStateRelationExcept_executeBinary
           (readRegister source ⟨left, hleft⟩ + readRegister source ⟨right, hright⟩)
           (readRegister target ⟨colour left, valid left hleft⟩ +
             readRegister target ⟨colour right, valid right hright⟩) hvalue)
+
   | sub =>
       have hvalue :
           readRegister source ⟨left, hleft⟩ - readRegister source ⟨right, hright⟩ =
@@ -298,6 +299,84 @@ theorem wordColourStateRelationExcept_executeBinary
           (readRegister source ⟨left, hleft⟩ ^^^ readRegister source ⟨right, hright⟩)
           (readRegister target ⟨colour left, valid left hleft⟩ ^^^
             readRegister target ⟨colour right, valid right hright⟩) hvalue)
+
+theorem wordColourStateRelationExcept_executeImmediateBinary
+    [NeZero width]
+    (colour : Nat → Nat) (excluded : Nat)
+    (valid : wordColourValid colour)
+    (injective : Function.Injective colour) (colourZero : colour 0 = 0)
+    (source target : State width)
+    (hrelation : WordColourStateRelationExcept colour excluded source target)
+    (hzeroSource : ZeroRegister source) (hzeroTarget : ZeroRegister target)
+    (operator : BinOp) (sourceName : Nat) (value : Word width)
+    (hname : excluded < 32) (hsource : sourceName < 32)
+    (hsourceNe : sourceName ≠ excluded) :
+    WordColourStateRelation colour
+      (execute source (match operator with
+        | .add => .addi ⟨excluded, hname⟩ ⟨sourceName, hsource⟩ value
+        | .sub => .addi ⟨excluded, hname⟩ ⟨sourceName, hsource⟩ (0 - value)
+        | .and => .andi ⟨excluded, hname⟩ ⟨sourceName, hsource⟩ value
+        | .or => .ori ⟨excluded, hname⟩ ⟨sourceName, hsource⟩ value
+        | .xor => .xori ⟨excluded, hname⟩ ⟨sourceName, hsource⟩ value))
+      (execute target (match operator with
+        | .add => .addi ⟨colour excluded, valid excluded hname⟩
+            ⟨colour sourceName, valid sourceName hsource⟩ value
+        | .sub => .addi ⟨colour excluded, valid excluded hname⟩
+            ⟨colour sourceName, valid sourceName hsource⟩ (0 - value)
+        | .and => .andi ⟨colour excluded, valid excluded hname⟩
+            ⟨colour sourceName, valid sourceName hsource⟩ value
+        | .or => .ori ⟨colour excluded, valid excluded hname⟩
+            ⟨colour sourceName, valid sourceName hsource⟩ value
+        | .xor => .xori ⟨colour excluded, valid excluded hname⟩
+            ⟨colour sourceName, valid sourceName hsource⟩ value)) := by
+  cases operator with
+  | add =>
+      simpa using wordColourStateRelationExcept_executeAddi colour excluded valid
+        injective colourZero source target hrelation hzeroSource hzeroTarget
+        hname sourceName hsource hsourceNe value
+  | sub =>
+      simpa using wordColourStateRelationExcept_executeAddi colour excluded valid
+        injective colourZero source target hrelation hzeroSource hzeroTarget
+        hname sourceName hsource hsourceNe (0 - value)
+  | and =>
+      have hvalue :
+          readRegister source ⟨sourceName, hsource⟩ &&& value =
+            readRegister target ⟨colour sourceName, valid sourceName hsource⟩ &&& value := by
+        rw [hrelation.register sourceName hsource hsourceNe (valid sourceName hsource)]
+      have hnext := wordColourStateRelationExcept_nextPc colour excluded source target hrelation
+      simpa [execute] using
+        (wordColourStateRelationExcept_writeRegister colour excluded valid injective colourZero
+          {source with pc := nextPc source} {target with pc := nextPc target} hnext
+          (by simpa [ZeroRegister, readRegister, nextPc] using hzeroSource)
+          (by simpa [ZeroRegister, readRegister, nextPc] using hzeroTarget)
+          hname (readRegister source ⟨sourceName, hsource⟩ &&& value)
+          (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ &&& value) hvalue)
+  | or =>
+      have hvalue :
+          readRegister source ⟨sourceName, hsource⟩ ||| value =
+            readRegister target ⟨colour sourceName, valid sourceName hsource⟩ ||| value := by
+        rw [hrelation.register sourceName hsource hsourceNe (valid sourceName hsource)]
+      have hnext := wordColourStateRelationExcept_nextPc colour excluded source target hrelation
+      simpa [execute] using
+        (wordColourStateRelationExcept_writeRegister colour excluded valid injective colourZero
+          {source with pc := nextPc source} {target with pc := nextPc target} hnext
+          (by simpa [ZeroRegister, readRegister, nextPc] using hzeroSource)
+          (by simpa [ZeroRegister, readRegister, nextPc] using hzeroTarget)
+          hname (readRegister source ⟨sourceName, hsource⟩ ||| value)
+          (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ ||| value) hvalue)
+  | xor =>
+      have hvalue :
+          readRegister source ⟨sourceName, hsource⟩ ^^^ value =
+            readRegister target ⟨colour sourceName, valid sourceName hsource⟩ ^^^ value := by
+        rw [hrelation.register sourceName hsource hsourceNe (valid sourceName hsource)]
+      have hnext := wordColourStateRelationExcept_nextPc colour excluded source target hrelation
+      simpa [execute] using
+        (wordColourStateRelationExcept_writeRegister colour excluded valid injective colourZero
+          {source with pc := nextPc source} {target with pc := nextPc target} hnext
+          (by simpa [ZeroRegister, readRegister, nextPc] using hzeroSource)
+          (by simpa [ZeroRegister, readRegister, nextPc] using hzeroTarget)
+          hname (readRegister source ⟨sourceName, hsource⟩ ^^^ value)
+          (readRegister target ⟨colour sourceName, valid sourceName hsource⟩ ^^^ value) hvalue)
 
 theorem ssaRenameAssign_eq_applyColour
     [NeZero width] (ssa : WordSsaState) (name : Nat)
@@ -465,7 +544,7 @@ theorem evalWordFunction_ssaRenameAssignVar_applyColourExcept
       executeInstructions]
   have hrelation' := wordColourStateRelationExcept_executeAddi
     colour name valid injective colourZero source target hrelation
-    hzeroSource hzeroTarget hname sourceName hsource hsourceNe
+    hzeroSource hzeroTarget hname sourceName hsource hsourceNe 0
   exact ⟨_, _, hsourceEval, htargetEval, hrelation'⟩
 
 theorem evalWordFunction_ssaRenameAssignBinary_applyColourExcept
@@ -628,6 +707,159 @@ theorem evalWordFunction_ssaRenameAssignBinary_applyColourExcept
         colour name valid injective colourZero source target hrelation
         hzeroSource hzeroTarget .xor left right hname hleft hright
         hleftNe hrightNe
+      exact ⟨_, _, hsourceEval, htargetEval, hrelation'⟩
+
+theorem evalWordFunction_ssaRenameAssignImmediate_applyColourExcept
+    [NeZero width]
+    (ssa : WordSsaState) (operator : BinOp) (name sourceName : Nat)
+    (value : Word width)
+    (valid : wordColourValid (ssaAssignmentColour ssa name))
+    (injective : Function.Injective (ssaAssignmentColour ssa name))
+    (colourZero : ssaAssignmentColour ssa name 0 = 0)
+    (source target : State width)
+    (hrelation : WordColourStateRelationExcept
+      (ssaAssignmentColour ssa name) name source target)
+    (hzeroSource : ZeroRegister source) (hzeroTarget : ZeroRegister target)
+    (hname : name < 32) (hsource : sourceName < 32)
+    (hsourceNe : sourceName ≠ name) :
+    ∃ source' target',
+      evalWordFunction source
+          (.assign name (.op operator [.var sourceName, .const value])) =
+        some (source', []) ∧
+      evalWordFunction target
+          (wordSsaRenameProgram ssa
+            (.assign name (.op operator [.var sourceName, .const value]))).2 =
+        some (target', []) ∧
+      WordColourStateRelation (ssaAssignmentColour ssa name) source' target' := by
+  let colour := ssaAssignmentColour ssa name
+  have hprogram : WordVarStraightLine width
+      (.assign name (.op operator [.var sourceName, .const value])) :=
+    .assignImmediate operator name sourceName value hname hsource
+  have hnot : name ∉ wordExpReadVars
+      (.op operator [.var sourceName, .const value] : WordExp (Word width)) := by
+    simp [wordExpReadVars, Ne.symm hsourceNe]
+  have hrename := ssaRenameAssign_eq_applyColour ssa name
+    (.op operator [.var sourceName, .const value]) hprogram hnot
+  cases operator with
+  | add =>
+      have hsourceEval :
+          evalWordFunction source
+              (.assign name (.op .add [.var sourceName, .const value])) =
+            some (execute source
+              (.addi ⟨name, hname⟩ ⟨sourceName, hsource⟩ value), []) := by
+        simp [evalWordFunction, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, hname, hsource, executeInstructions]
+      have htargetEval :
+          evalWordFunction target
+              (wordSsaRenameProgram ssa
+                (.assign name (.op .add [.var sourceName, .const value]))).2 =
+            some (execute target
+              (.addi ⟨colour name, valid name hname⟩
+                ⟨colour sourceName, valid sourceName hsource⟩ value), []) := by
+        rw [hrename]
+        simp [colour, evalWordFunction, wordApplyColour,
+          wordApplyColourExp, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, valid name hname, valid sourceName hsource,
+          executeInstructions]
+      have hrelation' := wordColourStateRelationExcept_executeImmediateBinary
+        colour name valid injective colourZero source target hrelation
+        hzeroSource hzeroTarget .add sourceName value hname hsource hsourceNe
+      exact ⟨_, _, hsourceEval, htargetEval, hrelation'⟩
+  | sub =>
+      have hsourceEval :
+          evalWordFunction source
+              (.assign name (.op .sub [.var sourceName, .const value])) =
+            some (execute source
+              (.addi ⟨name, hname⟩ ⟨sourceName, hsource⟩ (0 - value)), []) := by
+        simp [evalWordFunction, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, hname, hsource, executeInstructions]
+      have htargetEval :
+          evalWordFunction target
+              (wordSsaRenameProgram ssa
+                (.assign name (.op .sub [.var sourceName, .const value]))).2 =
+            some (execute target
+              (.addi ⟨colour name, valid name hname⟩
+                ⟨colour sourceName, valid sourceName hsource⟩ (0 - value)), []) := by
+        rw [hrename]
+        simp [colour, evalWordFunction, wordApplyColour,
+          wordApplyColourExp, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, valid name hname, valid sourceName hsource,
+          executeInstructions]
+      have hrelation' := wordColourStateRelationExcept_executeImmediateBinary
+        colour name valid injective colourZero source target hrelation
+        hzeroSource hzeroTarget .sub sourceName value hname hsource hsourceNe
+      exact ⟨_, _, hsourceEval, htargetEval, hrelation'⟩
+  | and =>
+      have hsourceEval :
+          evalWordFunction source
+              (.assign name (.op .and [.var sourceName, .const value])) =
+            some (execute source
+              (.andi ⟨name, hname⟩ ⟨sourceName, hsource⟩ value), []) := by
+        simp [evalWordFunction, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, hname, hsource, executeInstructions]
+      have htargetEval :
+          evalWordFunction target
+              (wordSsaRenameProgram ssa
+                (.assign name (.op .and [.var sourceName, .const value]))).2 =
+            some (execute target
+              (.andi ⟨colour name, valid name hname⟩
+                ⟨colour sourceName, valid sourceName hsource⟩ value), []) := by
+        rw [hrename]
+        simp [colour, evalWordFunction, wordApplyColour,
+          wordApplyColourExp, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, valid name hname, valid sourceName hsource,
+          executeInstructions]
+      have hrelation' := wordColourStateRelationExcept_executeImmediateBinary
+        colour name valid injective colourZero source target hrelation
+        hzeroSource hzeroTarget .and sourceName value hname hsource hsourceNe
+      exact ⟨_, _, hsourceEval, htargetEval, hrelation'⟩
+  | or =>
+      have hsourceEval :
+          evalWordFunction source
+              (.assign name (.op .or [.var sourceName, .const value])) =
+            some (execute source
+              (.ori ⟨name, hname⟩ ⟨sourceName, hsource⟩ value), []) := by
+        simp [evalWordFunction, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, hname, hsource, executeInstructions]
+      have htargetEval :
+          evalWordFunction target
+              (wordSsaRenameProgram ssa
+                (.assign name (.op .or [.var sourceName, .const value]))).2 =
+            some (execute target
+              (.ori ⟨colour name, valid name hname⟩
+                ⟨colour sourceName, valid sourceName hsource⟩ value), []) := by
+        rw [hrename]
+        simp [colour, evalWordFunction, wordApplyColour,
+          wordApplyColourExp, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, valid name hname, valid sourceName hsource,
+          executeInstructions]
+      have hrelation' := wordColourStateRelationExcept_executeImmediateBinary
+        colour name valid injective colourZero source target hrelation
+        hzeroSource hzeroTarget .or sourceName value hname hsource hsourceNe
+      exact ⟨_, _, hsourceEval, htargetEval, hrelation'⟩
+  | xor =>
+      have hsourceEval :
+          evalWordFunction source
+              (.assign name (.op .xor [.var sourceName, .const value])) =
+            some (execute source
+              (.xori ⟨name, hname⟩ ⟨sourceName, hsource⟩ value), []) := by
+        simp [evalWordFunction, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, hname, hsource, executeInstructions]
+      have htargetEval :
+          evalWordFunction target
+              (wordSsaRenameProgram ssa
+                (.assign name (.op .xor [.var sourceName, .const value]))).2 =
+            some (execute target
+              (.xori ⟨colour name, valid name hname⟩
+                ⟨colour sourceName, valid sourceName hsource⟩ value), []) := by
+        rw [hrename]
+        simp [colour, evalWordFunction, wordApplyColour,
+          wordApplyColourExp, wordExpToInstructions, wordExpToInstruction,
+          registerOfNat, valid name hname, valid sourceName hsource,
+          executeInstructions]
+      have hrelation' := wordColourStateRelationExcept_executeImmediateBinary
+        colour name valid injective colourZero source target hrelation
+        hzeroSource hzeroTarget .xor sourceName value hname hsource hsourceNe
       exact ⟨_, _, hsourceEval, htargetEval, hrelation'⟩
 
 theorem evalWordFunction_ssaRenameAssign_applyColour

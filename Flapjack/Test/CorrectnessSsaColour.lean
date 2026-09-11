@@ -32,4 +32,14 @@ example [NeZero width] (ssa : WordSsaState) :
   · exact .assignBinary .add 3 1 2 (by omega) (by omega) (by omega)
   · simp [wordExpReadVars]
 
+example [NeZero width] (ssa : WordSsaState) (value : Word width) :
+    (wordSsaRenameProgram ssa
+      (.assign 3 (.op .and [.var 2, .const value]) : WordProg (Word width))).2 =
+      wordApplyColour (ssaAssignmentColour ssa 3)
+        (.assign 3 (.op .and [.var 2, .const value])) := by
+  apply ssaRenameAssign_eq_applyColour ssa 3
+    (.op .and [.var 2, .const value])
+  · exact .assignImmediate .and 3 2 value (by omega) (by omega)
+  · simp [wordExpReadVars]
+
 end Flapjack.Test.CorrectnessSsaColour

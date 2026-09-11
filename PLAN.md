@@ -2368,6 +2368,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call
   correctness rule, applying recursive body correctness.
+- [x] Generalize declaration-call source/Crep composition to independent
+  source and target fuels.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

@@ -406,6 +406,49 @@ theorem crepToLoop_extCall_failure_agreement
     simp [loopFfiOfCrepFfi, crepStateOfLoopState, loopStateOfCrepState,
       hconfiguration, hconfigurationLength, harray, harrayLength, hffi]
 
+/-! Failure also short-circuits a continuation.  This is the negative
+    sequencing counterpart to `crepToLoop_seq_extCall_agreement`. -/
+theorem crepToLoop_seq_extCall_failure_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (crepFunctions : List (CompiledFunction α))
+    (loopFunctions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue : α)
+    (second : CrepProg α)
+    (hconfiguration : state.locals configuration = some configurationValue)
+    (hconfigurationLength :
+      state.locals configurationLength = some configurationLengthValue)
+    (harray : state.locals array = some arrayValue)
+    (harrayLength : state.locals arrayLength = some arrayLengthValue)
+    (hffi : ffi function configurationValue configurationLengthValue
+      arrayValue arrayLengthValue state = none) :
+    evalCrepFullProg crepFunctions primitive ffi sharedMem
+        baseAddress topAddress (fuel + 2) state
+        (.seq (.extCall function configuration configurationLength array arrayLength)
+          second) = none ∧
+    evalLoopProgWithCallsAndFfi loopFunctions (loopFfiOfCrepFfi ffi)
+        (fuel + 2) (loopStateOfCrepState state)
+        (loopCompileProg context live
+          (.seq (.extCall function configuration configurationLength array arrayLength)
+            second)) = none := by
+  have hfirst := crepToLoop_extCall_failure_agreement context crepFunctions
+    loopFunctions primitive ffi sharedMem baseAddress topAddress fuel state live
+    function configuration configurationLength array arrayLength
+    configurationValue configurationLengthValue arrayValue arrayLengthValue
+    hconfiguration hconfigurationLength harray harrayLength hffi
+  constructor
+  · simp [evalCrepFullProg, hfirst.1]
+  · simp [loopCompileProg_seq, evalLoopProgWithCallsAndFfi, hfirst.2]
+
 /-! Once the first FFI action has been related, sequence evaluation is just
     state-threaded composition.  The continuation hypothesis is deliberately
     arbitrary: this is the reusable boundary needed to grow the complete

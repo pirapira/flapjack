@@ -86,7 +86,8 @@ theorem evalCrepFullCall_returned_state_extension_of_body_correct
       some (.normal { locals := targetCallerLocals, memory := targetCallee.memory }) ∧
     panValueCrepStateRel structs
       { context with
-          vars := (name, (shape, allocatedNames context shape)) :: context.vars }
+          vars := (name, (shape, allocatedNames context shape)) :: context.vars
+          maxVar := context.maxVar + Shape.shapeSize shape }
       (updatePanValueMap sourceLocals name value) sourceCalleeGlobals
       sourceCalleeMemory
       { locals := targetCallerLocals, memory := targetCallee.memory } := by
@@ -147,6 +148,12 @@ theorem evalCrepFullCall_returned_state_extension_of_body_correct
     name shape (allocatedNames context shape) value rfl hshape
     (by simpa [hcalleeValues] using hread) hold
     hbodyStateRel.1 hbodyStateRel.2.2
+  change panValueCrepStateRel structs
+      { context with
+          vars := (name, (shape, allocatedNames context shape)) :: context.vars
+          maxVar := context.maxVar + Shape.shapeSize shape }
+      (updatePanValueMap sourceLocals name value) sourceCalleeGlobals sourceCalleeMemory
+      { locals := targetCallerLocals, memory := targetCallee.memory } at hstate
   exact ⟨hcall, hstate⟩
 
 end Flapjack

@@ -76,6 +76,34 @@ theorem readCrepLocals_updateCrepLocalList
           simp only [updateCrepLocalList, readCrepLocals]
           simp [hnameValue, updateCrepLocal, htail]
 
+theorem readCrepLocals_updateCrepLocalList_of_not_mem
+    (locals : Nat → Option α) (names : List Nat) (values : List α)
+    (slots : List Nat) (hlength : names.length = values.length)
+    (hnot : ∀ name ∈ names, name ∉ slots) :
+    readCrepLocals (updateCrepLocalList locals names values) slots =
+      readCrepLocals locals slots := by
+  induction names generalizing locals values slots with
+  | nil =>
+      cases values with
+      | nil => rfl
+      | cons value values => simp at hlength
+  | cons name names ih =>
+      cases values with
+      | nil => simp at hlength
+      | cons value values =>
+          have hlengthTail : names.length = values.length := by
+            simp at hlength
+            exact hlength
+          have hname : name ∉ slots := hnot name (by simp)
+          have htail : ∀ current ∈ names, current ∉ slots := by
+            intro current hcurrent
+            exact hnot current (by simp [hcurrent])
+          simp only [updateCrepLocalList]
+          rw [ih (locals := updateCrepLocal locals name value)
+            (values := values) (slots := slots) hlengthTail htail
+            ]
+          exact readCrepLocals_update_of_not_mem locals name value slots hname
+
 theorem crepNestedDecsEval_of_evalExps_stable
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

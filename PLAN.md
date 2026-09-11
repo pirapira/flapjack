@@ -2411,6 +2411,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   target temporary values with the flat expression result.
 - [x] Prove read-back of a distinct fresh-local list after nested declaration
   updates, recovering the flattened source value payload.
+- [x] Prove fresh nested temporary updates preserve read-back of all existing
+  local bindings.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

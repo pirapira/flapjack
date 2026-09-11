@@ -2590,6 +2590,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   word parameters, with exact source binding and Crep assignment equations.
 - [x] Adapt the list-level callee-entry relation to successful concrete source
   binding and Crep assignment witnesses for use by call inversion.
+- [x] Expose the exact recursive parameter-slot metadata equation for
+  all-word compiled function formals.
 - [x] Connect generic expression-list argument preparation to recursively
   correct returned ordinary calls and their flattened callee-result relation.
 - [x] Connect generic expression-list argument preparation to recursively

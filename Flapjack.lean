@@ -43,6 +43,7 @@ import Flapjack.CrepeProgramRecordAssignmentGeneralCorrectness
 import Flapjack.CrepeTemporaryAssignmentCorrectness
 import Flapjack.CrepeLocalsRelationUpdateGeneral
 import Flapjack.CrepeAssignmentSequenceInversion
+import Flapjack.CrepeSourceWordRecordExpressionInversion
 import Flapjack.CrepeSequenceCorrectness
 import Flapjack.CrepeConditionalCorrectness
 import Flapjack.CrepeLoopCorrectness

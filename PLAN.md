@@ -2386,6 +2386,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   program return constructor.
 - [x] Generalize record-field projection correctness to records whose fields
   are arbitrary scalar source expressions.
+- [x] Lift generalized record-field projection correctness through the generic
+  program return constructor.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

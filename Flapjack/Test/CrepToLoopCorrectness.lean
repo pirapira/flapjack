@@ -192,6 +192,24 @@ theorem crepToLoop_control_regressions :
       [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ _ _ => none) 0 100 1 crepSeqInitial [] 3 5
 
+theorem crepToLoop_ite_const_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 4 crepSeqInitial
+      (.ite (.const 1) (.assign 5 (.const 42)) (.assign 5 (.const 0)))).map
+        (crepControlLocal 5) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      10 (loopStateOfCrepState crepSeqInitial)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.ite (.const 1) (.assign 5 (.const 42)) (.assign 5 (.const 0))))).map
+        (loopControlLocal 5) := by
+  simp [evalCrepFullProg, evalCrepFullExp,
+    loopStateOfCrepState, updateCrepLocal, updateLoopLocal,
+    crepControlLocal, loopControlLocal, loopCompileProg, loopCompileExp,
+    loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+    evalLoopCondition]
+
 theorem crepToLoop_shMem_store_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       defaultCrepSharedMemHandler 0 100 3 crepLoopSharedStoreState

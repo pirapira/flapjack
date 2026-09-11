@@ -2196,6 +2196,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   loads and stores, including default-handler regressions.
 - [x] Add direct-control Crep-to-Loop agreements for `skip`, `tick`, `break`,
   and `continue`, with a combined executable regression.
+- [x] Exercise the constant-condition `ite` lowering, including its generated
+  condition temporary and selected branch.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

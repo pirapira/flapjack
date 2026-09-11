@@ -1,169 +1,175 @@
-import Flapjack.CrepeProgramAssignmentFuelRelation
-import Flapjack.CrepeProgramRelation
+import Flapjack.CrepeExpressionRelation
+import Flapjack.CrepeProgramGenericAssignmentConstructor
+import Flapjack.CrepeProgramGenericAssignmentTemporaryConstructor
 
 /-!
-The local-assignment constructor for the compositional Pancake-to-Crep
-correctness predicate.
-
-The compiler has two lowerings for a one-word assignment: a direct assignment
-when the destination is not read by the expression, and a temporary
-declaration otherwise.  The semantic invariants needed by the latter are
-kept explicit here.  They are the Lean counterparts of the source proof's
-fresh-slot and non-overlap obligations.
+The assignment proof dispatcher.  The compiler chooses direct or
+fresh-temporary lowering from `distinctLists`; this theorem packages that
+choice so the syntax-induction assignment case only supplies expression and
+static-context contracts.
 -/
 
 namespace Flapjack
 
-set_option linter.unusedSimpArgs false in
-theorem panValueCrepProgramCorrect_assign_local_source_word
+theorem evalCrepFullExps_length
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (locals : Nat → Option α) (memory : α → Option α)
+    (baseAddress topAddress : α) (expressions : List (CrepExp α))
+    (values : List α)
+    (h : evalCrepFullExps locals memory baseAddress topAddress expressions =
+      some values) :
+    expressions.length = values.length := by
+  induction expressions generalizing values with
+  | nil =>
+      cases values with
+      | nil => rfl
+      | cons value values =>
+          simp [evalCrepFullExps] at h
+  | cons expression expressions ih =>
+      cases values with
+      | nil =>
+          cases hhead : evalCrepFullExp locals memory baseAddress topAddress expression with
+          | none => simp [evalCrepFullExps, hhead] at h
+          | some headValue =>
+              cases htail : evalCrepFullExps locals memory baseAddress topAddress expressions with
+              | none => simp [evalCrepFullExps, hhead, htail] at h
+              | some tailValues =>
+                  simp [evalCrepFullExps, hhead, htail] at h
+      | cons value values =>
+          cases hhead : evalCrepFullExp locals memory baseAddress topAddress expression with
+          | none =>
+              simp [evalCrepFullExps, hhead] at h
+          | some headValue =>
+              cases htail : evalCrepFullExps locals memory baseAddress topAddress expressions with
+              | none =>
+                  simp [evalCrepFullExps, hhead, htail] at h
+              | some tailValues =>
+                  have htailLength := ih tailValues htail
+                  have hvalues : headValue :: tailValues = value :: values := by
+                    simpa [evalCrepFullExps, hhead, htail] using h
+                  cases hvalues
+                  simp [htailLength]
+
+theorem panValueCrepProgramCorrect_assign_local_of_expression_contract
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (name : VarName) (expression : SourceWordExp α)
-    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
-      context.bytesInWord = bytesInWord)
+    (name : VarName) (expression : Exp α)
+    (hvalue : PanValueCrepExpressionCorrect expression)
+    (hdirect : ∀ (context : CompileContext α)
+      (compiled : List (CrepExp α)) (compileShape shape : Shape)
+      (slots : List Nat),
+      lookupInfo name context.vars = some (shape, slots) →
+      compileExp context expression = (compiled, compileShape) →
+      distinctLists slots (compiled.flatMap crepExpVars) = true)
+    (hmetadata : ∀ (context : CompileContext α) (structs : StructContext)
+      (sourceValue : PanValue α)
+      (compileShape shape : Shape) (slots : List Nat) (values : List α),
+      lookupInfo name context.vars = some (shape, slots) →
+      compileShape = panValueShape structs sourceValue →
+      panShapeMatches (panValueShape structs sourceValue) shape = true →
+      slots.length = values.length ∧ CrepDistinctNames slots)
+    (htemporaryPath : ∀ (context : CompileContext α)
+      (_sourceValue : PanValue α) (values : List α) (compiled : List (CrepExp α))
+      (compileShape shape : Shape) (slots : List Nat),
+      lookupInfo name context.vars = some (shape, slots) →
+      compileExp context expression = (compiled, compileShape) →
+      distinctLists slots (compiled.flatMap crepExpVars) = false ∧
+      slots.length = values.length ∧
+      CrepDistinctNames slots ∧
+      (∀ temporary ∈ freshNames context slots.length 1,
+        ∀ expression ∈ compiled, temporary ∉ crepExpVars expression) ∧
+      CrepDistinctNames (freshNames context slots.length 1) ∧
+      (∀ slot ∈ slots, ∀ temporary ∈ freshNames context slots.length 1,
+        slot ≠ temporary))
     (hlookup : ∀ (context : CompileContext α)
-      (sourceLocals : VarName → Option (PanValue α))
-      (current : VarName) (value : PanValue α),
-      sourceLocals current = some value →
-      ∃ slot, lookupInfo current context.vars = some (.one, [slot]))
-    (hnoalias : ∀ (context : CompileContext α) (slot : Nat),
-      lookupInfo name context.vars = some (.one, [slot]) →
+      (sourceLocals : VarName → Option (PanValue α)) (oldValue : PanValue α),
+      sourceLocals name = some oldValue →
+      ∃ shape slots, lookupInfo name context.vars = some (shape, slots))
+    (hnoalias : ∀ (context : CompileContext α) (shape : Shape) (slots : List Nat),
+      lookupInfo name context.vars = some (shape, slots) →
       ∀ oldName oldShape oldSlots,
         oldName ≠ name →
         lookupInfo oldName context.vars = some (oldShape, oldSlots) →
-        slot ∉ oldSlots)
-    (hfresh : ∀ (context : CompileContext α) (state : CrepState α),
-      state.locals (context.maxVar + 1) = none)
-    (hslotFresh : ∀ (context : CompileContext α) (slot : Nat),
-      lookupInfo name context.vars = some (.one, [slot]) →
-      context.maxVar + 1 ≠ slot) :
-    PanValueCrepProgramCorrect (.assign .local name expression.toExp) := by
+        ∀ slot ∈ slots, slot ∉ oldSlots) :
+    PanValueCrepProgramCorrect (.assign .local name expression) := by
   intro context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
     sourceResult crepResult hrel hsource hcrep
-  cases sourceFuel with
-  | zero =>
-      simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
-  | succ sourceFuel =>
-      have hsourceInfo : ∃ oldValue value,
-          sourceLocals name = some (.word oldValue) ∧
-          evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
-            baseAddress topAddress bytesInWord expression.toExp =
-            some (.word value) := by
-        cases hvalue : evalPanValueExp structs sourceLocals sourceGlobals
-            sourceMemory baseAddress topAddress bytesInWord expression.toExp with
-        | none =>
-            simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue] at hsource
-        | some sourceValue =>
-            obtain ⟨value, hword⟩ := evalPanValueExp_sourceWord_inv
-              structs sourceLocals sourceGlobals sourceMemory baseAddress topAddress
-              bytesInWord context hrel.2.1
-              (fun current currentValue hcurrent =>
-                hlookup context sourceLocals current currentValue hcurrent)
-              expression sourceValue hvalue
-            have hsourceValue : some sourceValue = some (.word value) :=
-              congrArg some hword
-            have hsource' := hsource
-            simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue, hword] at hsource'
-            have hlocal : ∃ oldValue,
-                sourceLocals name = some (.word oldValue) := by
-              cases hlocal : sourceLocals name with
-              | none =>
-                  simp [panValueAssignmentValid, hlocal] at hsource'
-              | some oldValue =>
-                  cases oldValue with
-                  | word oldValue =>
-                      exact ⟨oldValue, by simp [hlocal]⟩
-                  | rStruct fields =>
-                      simp [panValueAssignmentValid, hlocal,
-                        panValueShape, panShapeMatches] at hsource'
-                  | nStruct oldName fields =>
-                      simp [panValueAssignmentValid, hlocal,
-                        panValueShape, panShapeMatches] at hsource'
-            obtain ⟨oldValue, hold⟩ := hlocal
-            exact ⟨oldValue, value, hold, hsourceValue⟩
-      rcases hsourceInfo with ⟨oldValue, value, hold, hsourceValue⟩
-      obtain ⟨slot, hslot⟩ :=
-        hlookup context sourceLocals name (.word oldValue) hold
-      obtain ⟨compiled, hcompile, hcompiled⟩ :=
-        compileSourceWordExp_relation context structs sourceLocals sourceGlobals
-          sourceMemory state.locals state.memory baseAddress topAddress bytesInWord
-          (hbytesInWord context bytesInWord) hrel.2.1
-          (fun current currentValue hcurrent => by
-            obtain ⟨currentSlot, hcurrentSlot⟩ :=
-              hlookup context sourceLocals current currentValue hcurrent
-            exact ⟨currentSlot, hcurrentSlot⟩)
-          expression value hsourceValue
-      have hnoalias' := hnoalias context slot hslot
-      by_cases hdistinct : distinctLists [slot] (crepExpVars compiled) = true
-      · cases targetFuel with
-        | zero =>
-            simp [compileProg, hslot, hcompile, hdistinct,
-              crepNestedSeq, evalCrepFullProg] at hcrep
-        | succ targetFuel =>
-            cases targetFuel with
-            | zero =>
-                simp [compileProg, hslot, hcompile, hdistinct,
-                  crepNestedSeq, evalCrepFullProg] at hcrep
-            | succ targetFuel =>
-                have hresult :=
-                  compile_full_pan_value_local_assign_source_word_relation_fuel
-                    context structs sourceFunctions functions sourceLocals sourceGlobals
-                    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
-                    baseAddress topAddress bytesInWord sourceFuel targetFuel name slot
-                    oldValue value expression compiled hslot hold hsourceValue hcompile
-                    hcompiled hdistinct hrel hnoalias'
-                have hcrepEq :
-                    CrepControlResult.normal
-                        { state with locals := updateCrepLocal state.locals slot value } =
-                      crepResult := by
-                  exact Option.some.inj (hresult.2.1.symm.trans hcrep)
-                have hsourceEq :=
-                  Option.some.inj (hresult.1.symm.trans hsource)
-                cases hsourceEq
-                cases hcrepEq
-                exact hresult.2.2
-      · have hnotDistinct : distinctLists [slot] (crepExpVars compiled) = false := by
-          simpa using hdistinct
-        have htemporary : state.locals (context.maxVar + 1) = none :=
-          hfresh context state
-        have htemporaryNe : context.maxVar + 1 ≠ slot :=
-          hslotFresh context slot hslot
-        cases targetFuel with
-        | zero =>
-            simp [compileProg, hslot, hcompile, hnotDistinct, freshNames,
-              nestedDecs, crepNestedSeq, evalCrepFullProg] at hcrep
-        | succ targetFuel =>
-            cases targetFuel with
-            | zero =>
-                simp [compileProg, hslot, hcompile, hnotDistinct, freshNames,
-                  nestedDecs, crepNestedSeq, evalCrepFullProg] at hcrep
-            | succ targetFuel =>
-                cases targetFuel with
-                | zero =>
-                    simp [compileProg, hslot, hcompile, hnotDistinct, freshNames,
-                      nestedDecs, crepNestedSeq, evalCrepFullProg] at hcrep
-                | succ targetFuel =>
-                    have hresult :=
-                      compile_full_pan_value_local_assign_source_word_temporary_relation_fuel
-                        context structs sourceFunctions functions sourceLocals sourceGlobals
-                        sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
-                        baseAddress topAddress bytesInWord sourceFuel targetFuel name slot
-                        (context.maxVar + 1) oldValue value expression compiled hslot hold
-                        hsourceValue hcompile hcompiled hnotDistinct rfl htemporary
-                        htemporaryNe hrel hnoalias'
-                    have hcrepEq :
-                        CrepControlResult.normal
-                            { state with locals := updateCrepLocal state.locals slot value } =
-                          crepResult := by
-                      exact Option.some.inj (hresult.2.1.symm.trans hcrep)
-                    have hsourceEq :=
-                      Option.some.inj (hresult.1.symm.trans hsource)
-                    cases hsourceEq
-                    cases hcrepEq
-                    exact hresult.2.2
+  have hsourceInfo : ∃ sourceValue oldValue,
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord expression = some sourceValue ∧
+      sourceLocals name = some oldValue ∧
+      panShapeMatches (panValueShape structs sourceValue)
+        (panValueShape structs oldValue) = true ∧
+      sourceResult = .normal (updatePanValueMap sourceLocals name sourceValue)
+        sourceGlobals sourceMemory := by
+    cases sourceFuel with
+    | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+    | succ sourceFuel =>
+        have hsource' : evalPanValueProgWithPrimitiveCallsAndFfi
+            primitive sourceHandler structs sourceFunctions
+            baseAddress topAddress bytesInWord (sourceFuel + 1)
+            sourceLocals sourceGlobals sourceMemory
+            (.assign .local name expression) = some sourceResult := by
+          simpa using hsource
+        obtain ⟨sourceValue, oldValue, hvalue', hold, hvalid, hresult⟩ :=
+          evalPanValueProg_assign_local_inv primitive sourceHandler structs sourceFunctions
+            baseAddress topAddress bytesInWord sourceFuel sourceLocals sourceGlobals
+            sourceMemory name expression sourceResult hsource'
+        exact ⟨sourceValue, oldValue, hvalue', hold, hvalid, hresult⟩
+  obtain ⟨sourceValue, oldValue, hsourceValue, hold, hvalid, hsourceResult⟩ := hsourceInfo
+  have hcontract : ∀ (context : CompileContext α) (structs : StructContext)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+      (baseAddress topAddress bytesInWord : α) (sourceValue : PanValue α),
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory state →
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord expression = some sourceValue →
+      ∃ compiled compileShape values,
+        compileExp context expression = (compiled, compileShape) ∧
+        compileShape = panValueShape structs sourceValue ∧
+        compiled.length = values.length ∧
+        evalCrepFullExps state.locals state.memory baseAddress topAddress
+          compiled = some values ∧
+        panValueFlatWords sourceValue = values := by
+    intro context structs sourceLocals sourceGlobals sourceMemory state
+      baseAddress topAddress bytesInWord sourceValue hrel hsource
+    obtain ⟨hlimit, compiled, hcompile, hcompiled⟩ :=
+      hvalue context structs sourceLocals sourceGlobals sourceMemory state
+        baseAddress topAddress bytesInWord sourceValue hrel hsource
+    let values := panValueFlatWords sourceValue
+    refine ⟨compiled, panValueShape structs sourceValue, values, hcompile, rfl, ?_, ?_, rfl⟩
+    · exact evalCrepFullExps_length state.locals state.memory baseAddress topAddress
+        compiled values (by simpa [values] using hcompiled)
+    · simpa [values] using hcompiled
+  obtain ⟨compiled, compileShape, values, hcompile, hcompileShape,
+      hcompiledLength, hcompiled, hflat⟩ :=
+    hcontract context structs sourceLocals sourceGlobals sourceMemory state
+      baseAddress topAddress bytesInWord sourceValue hrel hsourceValue
+  obtain ⟨shape, slots, hlookupName⟩ := hlookup context sourceLocals oldValue hold
+  have holdRel := hrel.2.1 name oldValue shape slots hold hlookupName
+  have hshapeNewContext : panShapeMatches
+      (panValueShape structs sourceValue) shape = true := by
+    exact panShapeMatches_trans
+      (panValueShape structs sourceValue) (panValueShape structs oldValue) shape
+      hvalid holdRel.1
+  by_cases hdirectMode : distinctLists slots (compiled.flatMap crepExpVars) = true
+  · exact panValueCrepProgramCorrect_assign_local_direct name expression hcontract
+      hdirect hmetadata hlookup hnoalias context structs sourceFunctions functions
+      sourceLocals sourceGlobals sourceMemory state primitive sourceHandler crepPrimitive
+      ffi sharedMem baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+      sourceResult crepResult hrel hsource hcrep
+  · exact panValueCrepProgramCorrect_assign_local_temporary name expression hcontract
+      htemporaryPath hlookup hnoalias context structs sourceFunctions functions
+      sourceLocals sourceGlobals sourceMemory state primitive sourceHandler crepPrimitive
+      ffi sharedMem baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+      sourceResult crepResult hrel hsource hcrep
 
 end Flapjack

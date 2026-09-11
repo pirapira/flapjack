@@ -2232,6 +2232,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   word-memory relation preservation after the update.
 - [x] Prove the relation-aware `StoreByte` source-to-Crep case under the
   abstract word-memory model.
+- [x] Lift shared-memory load and store equations to relation-aware
+  source-to-Crep induction boundaries with explicit post-handler witnesses.
 - [x] Prove preservation of the flattened-local relation when a structured
   declaration local is extended with a shape and its Crep slot witness.
 - [x] Prove preservation of the flattened-local relation under a word local

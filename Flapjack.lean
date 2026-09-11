@@ -135,6 +135,7 @@ import Flapjack.PanValueCallReturnedInversion
 import Flapjack.CrepeCalleeStateExtensionCorrectness
 import Flapjack.CrepeRaisedCallInversion
 import Flapjack.CrepeDeclarationCallReturnedCorrectness
+import Flapjack.CrepeReturnedBranchSelection
 import Flapjack.CrepeDeclarationCallRaisedCorrectness
 import Flapjack.CrepeCallRaisedInversion
 import Flapjack.CrepeCallReturnedInversion

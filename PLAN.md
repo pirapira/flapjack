@@ -2421,6 +2421,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   and fresh temporary restoration.
 - [x] Generalize the structured scalar-record local relation update from two
   words to arbitrary distinct slot/value lists.
+- [x] Prove evaluator correctness for the flattened local assignment sequence,
+  with list evaluation preserved under destination non-interference.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

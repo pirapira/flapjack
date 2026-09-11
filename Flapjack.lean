@@ -46,6 +46,7 @@ import Flapjack.CrepeAssignmentSequenceInversion
 import Flapjack.CrepeSourceWordRecordExpressionInversion
 import Flapjack.CrepeShapeInversion
 import Flapjack.PanShapeMatches
+import Flapjack.PanValueShapeInversion
 import Flapjack.CrepeProgramSourceAssignmentInversion
 import Flapjack.CrepeSequenceCorrectness
 import Flapjack.CrepeConditionalCorrectness

@@ -29,6 +29,7 @@ theorem compile_full_pan_value_decCall_returned_of_body_correct
     (sourceCallFuel targetCallFuel : Nat)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (name : VarName) (shape : Shape) (function : FunName)
+    (calleeContext : CompileContext α)
     (arguments : List (Exp α)) (body : Prog α)
     (sourceCalleeBody : Prog α) (targetCalleeBody : CrepProg α)
     (compiledArguments : List (CrepExp α))
@@ -42,17 +43,10 @@ theorem compile_full_pan_value_decCall_returned_of_body_correct
     (crepResult : CrepControlResult α)
     (hcontinuation : PanValueCrepProgramCorrect body)
     (hcalleeCorrect : PanValueCrepProgramCorrect sourceCalleeBody)
-    (hrelCallee : panValueCrepStateRel structs
-      { context with
-          vars := (name, (shape, allocatedNames context shape)) :: context.vars
-          maxVar := context.maxVar + Shape.shapeSize shape }
+    (hrelCallee : panValueCrepStateRel structs calleeContext
       sourceCalleeLocals sourceGlobals sourceMemory
       { locals := targetCalleeLocals, memory := state.memory })
-    (hcompileCalleeBody : compileProg
-      { context with
-          vars := (name, (shape, allocatedNames context shape)) :: context.vars
-          maxVar := context.maxVar + Shape.shapeSize shape }
-      sourceCalleeBody = targetCalleeBody)
+    (hcompileCalleeBody : compileProg calleeContext sourceCalleeBody = targetCalleeBody)
     (hsourceCalleeBody : evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord sourceCallFuel
@@ -128,7 +122,7 @@ theorem compile_full_pan_value_decCall_returned_of_body_correct
         locals := initializeCrepLocals state.locals (allocatedNames context shape) }
     primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceCallFuel targetCallFuel exceptionRel
-    name shape function sourceCalleeBody targetCalleeBody compiledArguments
+    name shape function calleeContext sourceCalleeBody targetCalleeBody compiledArguments
     sourceCalleeLocals sourceCalleeGlobals sourceCalleeMemory sourceBodyLocals
     [sourceValue] argumentValues targetValues parameters targetCalleeLocals
     targetCallee targetCallerLocals sourceValue hcalleeCorrect hcompileCalleeBody

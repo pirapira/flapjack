@@ -30,6 +30,7 @@ theorem evalCrepFullCall_returned_state_extension_of_body_correct
     (sourceFuel targetFuel : Nat)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (name : VarName) (shape : Shape) (function : FunName)
+    (calleeContext : CompileContext α)
     (sourceBody : Prog α) (targetBody : CrepProg α)
     (compiledArguments : List (CrepExp α))
     (sourceCalleeLocals : VarName → Option (PanValue α))
@@ -42,15 +43,9 @@ theorem evalCrepFullCall_returned_state_extension_of_body_correct
     (targetCallee : CrepState α) (targetCallerLocals : Nat → Option α)
     (value : PanValue α)
     (hbody : PanValueCrepProgramCorrect sourceBody)
-    (hcompileBody : compileProg
-      { context with
-          vars := (name, (shape, allocatedNames context shape)) :: context.vars
-          maxVar := context.maxVar + Shape.shapeSize shape }
-      sourceBody = targetBody)
+    (hcompileBody : compileProg calleeContext sourceBody = targetBody)
     (hrelCallee : panValueCrepStateRel structs
-      { context with
-          vars := (name, (shape, allocatedNames context shape)) :: context.vars
-          maxVar := context.maxVar + Shape.shapeSize shape }
+      calleeContext
       sourceCalleeLocals sourceGlobals sourceMemory
       { locals := targetCalleeLocals, memory := caller.memory })
     (hsourceBody : evalPanValueProgWithPrimitiveCallsAndFfi
@@ -94,17 +89,10 @@ theorem evalCrepFullCall_returned_state_extension_of_body_correct
   have hcrepBody' : evalCrepFullProg functions crepPrimitive ffi sharedMem
       baseAddress topAddress targetFuel
       { locals := targetCalleeLocals, memory := caller.memory }
-      (compileProg
-        { context with
-            vars := (name, (shape, allocatedNames context shape)) :: context.vars
-            maxVar := context.maxVar + Shape.shapeSize shape }
-        sourceBody) = some (.returned targetCallee targetValues) := by
+      (compileProg calleeContext sourceBody) = some (.returned targetCallee targetValues) := by
     rw [hcompileBody]
     exact hcrepBody
-  have hbodyRel := hbody
-    { context with
-        vars := (name, (shape, allocatedNames context shape)) :: context.vars
-        maxVar := context.maxVar + Shape.shapeSize shape }
+  have hbodyRel := hbody calleeContext
     structs sourceFunctions functions sourceCalleeLocals sourceGlobals
     sourceMemory { locals := targetCalleeLocals, memory := caller.memory }
     primitive sourceHandler crepPrimitive ffi sharedMem
@@ -112,9 +100,7 @@ theorem evalCrepFullCall_returned_state_extension_of_body_correct
     (.returned sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory sourceValues)
     (.returned targetCallee targetValues) hrelCallee hsourceBody hcrepBody'
   have hbodyStateRel : panValueCrepStateRel structs
-      { context with
-          vars := (name, (shape, allocatedNames context shape)) :: context.vars
-          maxVar := context.maxVar + Shape.shapeSize shape }
+      calleeContext
       sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory targetCallee :=
     hbodyRel.1
   have hread : readCrepLocals targetCallerLocals

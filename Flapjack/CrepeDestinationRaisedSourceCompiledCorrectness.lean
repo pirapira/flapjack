@@ -1,17 +1,15 @@
-import Flapjack.SourceCompiledReturnedCallPair
-import Flapjack.CrepeCallReturnedCorrectness
+import Flapjack.SourceCompiledDestinationRaisedCallPair
+import Flapjack.CrepeCallRaisedCorrectness
 
 /-!
-End-to-end correctness for an ordinary returned call.
-
-Source/compiled call inversion supplies the callee entry and state relation;
-recursive correctness supplies the flattened returned values; the ordinary
-call boundary then transports the result back to the caller.
+Correctness composition for a raised call whose Crep metadata carries
+destinations.  Raised results bypass destination assignment, but the
+destination-aware call is the form generated for declaration calls.
 -/
 
 namespace Flapjack
 
-theorem compile_full_pan_value_call_returned_of_source_compiled_call
+theorem compile_full_pan_value_destination_call_raised_of_source_compiled_call
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -31,12 +29,12 @@ theorem compile_full_pan_value_call_returned_of_source_compiled_call
     (baseAddress topAddress bytesInWord : α)
     (sourceFuel targetFuel : Nat)
     (function : FunName) (arguments : List (Exp α))
-    (compiledArguments : List (CrepExp α))
+    (compiledArguments : List (CrepExp α)) (destinations : List Nat)
     (_sourceCalleeLocals _sourceBodyLocals : VarName → Option (PanValue α))
     (sourceCalleeGlobals : VarName → Option (PanValue α))
     (sourceCalleeMemory : α → Option (PanValue α))
-    (sourceValue : PanValue α)
-    (target : CrepState α) (targetValues : List α)
+    (sourceException : ExceptionId) (sourceValue : PanValue α)
+    (target : CrepState α) (crepException : α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (hsourceFunctions : sourceFunctions = sourceFunctionEntries declarations)
     (hfunctions : functions = compileToCrepe functionContext declarations)
@@ -69,33 +67,33 @@ theorem compile_full_pan_value_call_returned_of_source_compiled_call
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (sourceFuel + 1)
       sourceLocals sourceGlobals sourceMemory none function arguments =
-      some (.returned (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
-        [sourceValue]))
+      some (.raised (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
+        sourceException sourceValue))
     (hcrepCall : evalCrepFullCall functions crepPrimitive ffi sharedMem
-      baseAddress topAddress (targetFuel + 1) caller none function compiledArguments =
-      some (.returned target targetValues))
+      baseAddress topAddress (targetFuel + 1) caller
+      (some (destinations, none)) function compiledArguments =
+      some (.raised target crepException))
     (hcalleeCorrect : ∀ declaration : FunDecl α,
       PanValueCrepProgramCorrect declaration.body) :
     panValueCrepControlRel structs context exceptionRel
-      (.returned (fun _ => none) sourceCalleeGlobals sourceCalleeMemory [sourceValue])
-      (.returned target targetValues) := by
+      (.raised (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
+        sourceException sourceValue)
+      (.raised target crepException) := by
   obtain ⟨sourceArgumentValues, sourceParameters, sourceBody,
       sourceCalleeLocals, sourceBodyLocals, declaration, compiledValues,
       targetParameters, targetBody, targetCalleeLocals, targetCallee,
       hsourceArguments, hlookupSource, hbind, hsourceBody, hnameDeclaration,
       hparams, hbodyDeclaration, hcompiledValues, hlookupCompiled,
       htargetParameters, htargetBody, hcompileBody, hassign, hcrepBody,
-      htarget, hstate⟩ := sourceCompiledReturnedCallPair
+      htarget, hstate⟩ := sourceCompiledDestinationRaisedCallPair
     functionContext structs declarations sourceFunctions functions
     sourceLocals sourceGlobals sourceMemory caller caller.memory
     primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel none none none
-    function arguments compiledArguments sourceCalleeGlobals sourceCalleeMemory
-    sourceValue target targetValues hsourceFunctions hfunctions hcontext hglobals hmemory hshape
-    hparameterLength hnames
-    (fun sourceValues targetValues => by
-      intro hsource htarget
-      exact hargumentValues sourceValues targetValues hsource htarget)
+    function arguments compiledArguments destinations sourceCalleeGlobals
+    sourceCalleeMemory sourceException sourceValue target crepException
+    hsourceFunctions hfunctions hcontext hglobals hmemory hshape hparameterLength hnames
+    (fun sourceValues targetValues => hargumentValues sourceValues targetValues)
     hsourceCall hcrepCall
   let calleeContext : CompileContext α :=
     { functionContext with
@@ -113,27 +111,24 @@ theorem compile_full_pan_value_call_returned_of_source_compiled_call
   have hcompileBody' : compileProg calleeContext sourceBody = targetBody := by
     rw [← hbodyDeclaration]
     simpa [calleeContext] using hcompileBody
-  have hcrepBody' : evalCrepFullProg functions crepPrimitive ffi sharedMem
-      baseAddress topAddress targetFuel
-      { locals := targetCalleeLocals, memory := caller.memory }
-      (compileProg calleeContext sourceBody) =
-        some (.returned targetCallee targetValues) := by
-    rw [hcompileBody']
-    exact hcrepBody
   have hbodyRel := hbodyCorrect calleeContext structs sourceFunctions functions
     sourceCalleeLocals sourceGlobals sourceMemory
     { locals := targetCalleeLocals, memory := caller.memory }
     primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
-    (.returned sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory [sourceValue])
-    (.returned targetCallee targetValues) hstate' hsourceBody hcrepBody'
-  exact compile_full_pan_value_call_returned_of_body_correct
+    (.raised sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory
+      sourceException sourceValue)
+    (.raised targetCallee crepException) hstate' hsourceBody (by
+      rw [hcompileBody']
+      exact hcrepBody)
+  exact compile_full_pan_value_call_raised_of_body_correct
     context calleeContext structs sourceFunctions functions sourceGlobals caller
     primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel function compiledArguments
     sourceCalleeLocals sourceBodyLocals sourceCalleeGlobals sourceMemory sourceCalleeMemory
-    [sourceValue] compiledValues targetCalleeLocals targetCallee target targetValues
-    targetParameters sourceBody targetBody exceptionRel hbodyCorrect hstate'
+    sourceException sourceValue compiledValues targetCalleeLocals targetCallee target
+    crepException (some destinations) targetParameters sourceBody targetBody
+    exceptionRel hbodyCorrect hstate'
     hsourceBody hcompileBody' hcrepBody hcompiledValues hlookupCompiled hassign hcrepCall
 
 end Flapjack

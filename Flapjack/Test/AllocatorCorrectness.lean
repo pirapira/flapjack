@@ -300,6 +300,21 @@ example
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
+    (allocation : WordGraphAllocation) (colouredProgram : WordProg α)
+    (halloc : wordAllocateGraphFunctionWithEntry parameters program
+      fixedSources colours stackStart =
+      some (state, renamedParameters, allocation, colouredProgram)) :
+    wordGraphTagsAreFixed allocation.graph = true ∧
+      wordGraphColouringRespectsEdges allocation.graph = true := by
+  have hsound := wordAllocateGraphFunctionWithEntry_sound
+    parameters program fixedSources colours stackStart state renamedParameters
+    allocation colouredProgram halloc
+  exact ⟨hsound.1, hsound.2.1⟩
+
+example
+    (parameters : List Nat) (program : WordProg α)
+    (fixedSources : List Nat) (colours stackStart : Nat)
+    (state : WordSsaState) (renamedParameters : List Nat)
     (allocation : WordGraphAllocation) (renamedProgram : WordProg α)
     (halloc : wordAllocateGraphFunctionWithEntryRenamed parameters program
       fixedSources colours stackStart =

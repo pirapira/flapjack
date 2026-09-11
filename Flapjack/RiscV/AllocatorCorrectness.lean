@@ -162,6 +162,38 @@ theorem wordAllocateGraphFunctionWithEntryRenamed_maps_parameters
   simpa [wordInitRegAlloc, wordMkBijection,
     wordAllocateGraphFunctionWithEntryRenamed, wordClashTreeBijection] using hnode
 
+/-! The coloured full-SSA entry variant exposes the same allocator witness as
+    the renamed variant.  Keeping this theorem at the coloured boundary is
+    useful for the RISC-V correctness theorem: clients can obtain the graph
+    checks directly from the exact result whose body they execute, without
+    unfolding the allocator and re-proving the entry clash-tree equation. -/
+
+theorem wordAllocateGraphFunctionWithEntry_sound
+    (parameters : List Nat) (program : WordProg α)
+    (fixedSources : List Nat) (colours stackStart : Nat)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (allocation : WordGraphAllocation) (colouredProgram : WordProg α)
+    (halloc : wordAllocateGraphFunctionWithEntry parameters program fixedSources
+      colours stackStart =
+      some (state, renamedParameters, allocation, colouredProgram)) :
+    wordGraphTagsAreFixed allocation.graph = true ∧
+      wordGraphColouringRespectsEdges allocation.graph = true ∧
+      (wordClashTreeCheck (wordGraphColouringAt allocation.colouring)
+        (WordClashTree.seq
+          (.set (wordSsaRenameFunctionWithEntry parameters program).2.fst)
+          (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd []))
+        [] []).isSome = true := by
+  simp [wordAllocateGraphFunctionWithEntry] at halloc
+  rcases halloc with ⟨allocation', hgraph, rfl, rfl, rfl, rfl⟩
+  exact wordAllocateGraph_sound
+    (WordClashTree.seq
+      (.set (wordSsaRenameFunctionWithEntry parameters program).2.fst)
+      (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd []))
+    (wordProgForcedClashes (wordSsaRenameFunctionWithEntry parameters program).2.snd)
+    fixedSources
+    (wordProgPreferenceEdges (wordSsaRenameFunctionWithEntry parameters program).2.snd)
+    colours stackStart allocation' hgraph
+
 theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_sound
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)

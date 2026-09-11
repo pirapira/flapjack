@@ -2481,6 +2481,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   temporary-path obligation.
 - [x] Re-express temporary-expression freshness as a compiled-variable bound,
   with a shared arithmetic lemma deriving exclusion of all fresh names.
+- [x] Add reusable variable-support lemmas for compiled `loadShape`, field
+  selection, and expression-list heads, preparing the compiler-side bound
+  proof for nested `Exp` recursion.
 - [x] Move temporary-assignment destination and fresh-slot derivation into the
   generic constructor, leaving compiled-expression freshness as the remaining
   temporary-path obligation.

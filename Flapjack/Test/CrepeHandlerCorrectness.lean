@@ -107,6 +107,7 @@ theorem pan_value_caught_handler_equation_regression :
     (calleeGlobals := fun _ => none) (calleeMemory := fun _ => none)
     (sourceException := "E")
     (sourceValue := .word (BitVec.ofNat 64 7))
+    (destination := none)
     (caught := "E") (handlerVariable := "exn")
     (handlerProgram := .return (.var .local "exn"))
     (sourceResult := .returned (fun _ => none) (fun _ => none)
@@ -119,6 +120,26 @@ theorem pan_value_caught_handler_equation_regression :
       panValueExceptionValid, panValuePayloadWithinLimit,
       panValueHandlerValid]
   all_goals decide
+
+theorem crepe_handler_call_destination_compile_regression :
+    compileProg crepeHandlerCallContext
+        (.call (some (some (.local, "exn"),
+          some ("E", "exn", (.return (.var .local "exn")))))
+          "raise" []) =
+      .call (some ([1],
+        some (BitVec.ofNat 64 7,
+          .seq (assignRet (BitVec.ofNat 64 8) [1])
+            (compileProg crepeHandlerCallContext
+              (.return (.var .local "exn")))))) "raise" [] := by
+  apply compileProg_call_handler_destination_of_compiled
+    (context := crepeHandlerCallContext) (function := "raise")
+    (arguments := []) (destination := some (.local, "exn"))
+    (returnNames := [1]) (returnShape := .one)
+    (exception := "E") (handlerVar := "exn")
+    (exceptionCode := BitVec.ofNat 64 7)
+    (handlerProgram := .return (.var .local "exn"))
+    (handlerNames := [1]) (compiledArguments := [])
+  all_goals simp [crepeHandlerCallContext, lookupInfo, compileArgs]
 
 theorem crepe_handler_call_return_short_circuits_regression :
     evalCrepFullProg crepeHandlerCallFunctions

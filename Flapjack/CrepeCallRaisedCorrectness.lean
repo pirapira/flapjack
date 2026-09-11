@@ -30,21 +30,24 @@ theorem compile_full_pan_value_call_raised_of_body_correct
     (function : FunName) (compiledArguments : List (CrepExp α))
     (sourceCalleeLocals sourceBodyLocals : VarName → Option (PanValue α))
     (sourceCalleeGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
     (sourceCalleeMemory : α → Option (PanValue α))
     (sourceException : ExceptionId) (sourceValue : PanValue α)
     (argumentValues : List α) (targetCalleeLocals : Nat → Option α)
     (targetCallee : CrepState α) (target : CrepState α)
-    (crepException : α) (targetParameters : List Nat)
+    (crepException : α)
+    (destinations : Option (List Nat))
+    (targetParameters : List Nat)
     (sourceBody : Prog α) (targetBody : CrepProg α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (hbodyCorrect : PanValueCrepProgramCorrect sourceBody)
     (hrelCallee : panValueCrepStateRel structs calleeContext
-      sourceCalleeLocals sourceGlobals sourceCalleeMemory
+      sourceCalleeLocals sourceGlobals sourceMemory
       { locals := targetCalleeLocals, memory := caller.memory })
     (hsourceBody : evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord sourceFuel
-      sourceCalleeLocals sourceGlobals sourceCalleeMemory sourceBody =
+      sourceCalleeLocals sourceGlobals sourceMemory sourceBody =
       some (.raised sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory
         sourceException sourceValue))
     (hcompileBody : compileProg calleeContext sourceBody = targetBody)
@@ -59,7 +62,8 @@ theorem compile_full_pan_value_call_raised_of_body_correct
     (hassign : assignCrepValues (fun _ => none) targetParameters argumentValues =
       some targetCalleeLocals)
     (hcrepCall : evalCrepFullCall functions crepPrimitive ffi sharedMem
-      baseAddress topAddress (targetFuel + 1) caller none function
+      baseAddress topAddress (targetFuel + 1) caller
+        (destinations.map (fun ds => (ds, (none : Option (α × CrepProg α))))) function
       compiledArguments = some (.raised target crepException)) :
     panValueCrepControlRel structs context exceptionRel
       (.raised (fun _ => none) sourceCalleeGlobals sourceCalleeMemory
@@ -73,7 +77,7 @@ theorem compile_full_pan_value_call_raised_of_body_correct
     rw [hcompileBody]
     exact hcrepBody
   have hbodyRel := hbodyCorrect calleeContext structs sourceFunctions functions
-    sourceCalleeLocals sourceGlobals sourceCalleeMemory
+    sourceCalleeLocals sourceGlobals sourceMemory
     { locals := targetCalleeLocals, memory := caller.memory }
     primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
@@ -87,8 +91,13 @@ theorem compile_full_pan_value_call_raised_of_body_correct
         some (CrepControlResult.raised
           { caller with memory := targetCallee.memory } crepException) =
           some (CrepControlResult.raised target crepException) := by
-      simpa [evalCrepFullCall, hcrepArguments, hlookup, hassign, hcrepBody]
-        using hcrepCall
+      cases destinations with
+      | none =>
+          simpa [evalCrepFullCall, hcrepArguments, hlookup, hassign, hcrepBody]
+            using hcrepCall
+      | some destinations =>
+          simpa [evalCrepFullCall, hcrepArguments, hlookup, hassign, hcrepBody]
+            using hcrepCall
     have hresult := Option.some.inj hsome
     injection hresult
   have hcallRel := panValueCrepControlRel_call_raised_of_contexts

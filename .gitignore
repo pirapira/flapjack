@@ -1,5 +1,10 @@
 /.lake
 
+# Beads is an optional local collaboration tool; its configuration and state
+# are not part of the Lean project and may require access unavailable to most
+# contributors.
+.beads/
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db

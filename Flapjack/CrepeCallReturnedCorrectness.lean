@@ -32,6 +32,7 @@ theorem compile_full_pan_value_call_returned_of_body_correct
     (compiledArguments : List (CrepExp α))
     (sourceCalleeLocals sourceBodyLocals : VarName → Option (PanValue α))
     (sourceCalleeGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
     (sourceCalleeMemory : α → Option (PanValue α))
     (sourceValues : List (PanValue α))
     (argumentValues : List α)
@@ -42,12 +43,12 @@ theorem compile_full_pan_value_call_returned_of_body_correct
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (hbodyCorrect : PanValueCrepProgramCorrect sourceBody)
     (hrelCallee : panValueCrepStateRel structs calleeContext
-      sourceCalleeLocals sourceGlobals sourceCalleeMemory
+      sourceCalleeLocals sourceGlobals sourceMemory
       { locals := targetCalleeLocals, memory := caller.memory })
     (hsourceBody : evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord sourceFuel
-      sourceCalleeLocals sourceGlobals sourceCalleeMemory sourceBody =
+      sourceCalleeLocals sourceGlobals sourceMemory sourceBody =
       some (.returned sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory
         sourceValues))
     (hcompileBody : compileProg calleeContext sourceBody = targetBody)
@@ -75,7 +76,7 @@ theorem compile_full_pan_value_call_returned_of_body_correct
     rw [hcompileBody]
     exact hcrepBody
   have hbodyRel := hbodyCorrect calleeContext structs sourceFunctions functions
-    sourceCalleeLocals sourceGlobals sourceCalleeMemory
+    sourceCalleeLocals sourceGlobals sourceMemory
     { locals := targetCalleeLocals, memory := caller.memory }
     primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel

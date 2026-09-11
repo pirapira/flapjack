@@ -4152,6 +4152,85 @@ theorem loopToWord_shMem_store16_preserves_mapped_locals [NeZero width]
   intro name current hcurrent
   exact hlocals name current hcurrent
 
+theorem loopToWord_shMem_load_const_preserves_mapped_locals [NeZero width]
+    (context : WordContext) (loopState : LoopState (RiscV.Word width))
+    (state : RiscV.State width) (address : RiscV.Word width) (destination : Nat)
+    (destinationRegister : Fin 32) (value : RiscV.Word width)
+    (zero : RiscV.ZeroRegister state)
+    (hlocals : loopLocalsMappedToRiscV context loopState.locals state)
+    (hmachine : RiscV.readWordValue state address = value)
+    (hdestination :
+      RiscV.registerOfNat (wordFindVar context destination) =
+        some destinationRegister)
+    (hdestination_nonzero : destinationRegister ≠ 0)
+    (hdestination_scratch : destinationRegister ≠ 31)
+    (hnoalias :
+      ∀ name, name ≠ destination →
+        ∀ register,
+          RiscV.registerOfNat (wordFindVar context name) = some register →
+            register ≠ destinationRegister)
+    (hscratch :
+      ∀ name current, loopState.locals name = some current →
+        ∀ register,
+          RiscV.registerOfNat (wordFindVar context name) = some register →
+            register ≠ 31) :
+    ∀ resultState,
+      RiscV.evalWordProg state
+        (loopToWordProg context
+          (.shMem .load destination (.const address))) = some resultState →
+      loopLocalsMappedToRiscV context
+        (updateLoopLocal loopState.locals destination value) resultState := by
+  intro resultState hresult
+  have hdestination_lt : wordFindVar context destination < 32 :=
+    RiscV.registerOfNat_some_lt hdestination
+  have hdestination_fin :
+      (⟨wordFindVar context destination, hdestination_lt⟩ : Fin 32) =
+        destinationRegister := by
+    have h := hdestination
+    simp [RiscV.registerOfNat, hdestination_lt] at h
+    exact h
+  have hdestination_not_scratch : wordFindVar context destination ≠ 31 := by
+    intro h
+    have hregister := hdestination
+    simp [RiscV.registerOfNat, h] at hregister
+    exact hdestination_scratch hregister.symm
+  have hmachine' :
+      RiscV.readWordValue
+        { pc := state.pc + 4#width,
+          registers := fun current => if current = 31 then address else state.registers current,
+          memory := state.memory, privilege := state.privilege, mode := state.mode }
+        address = value := by
+    simpa [RiscV.readWordValue, RiscV.readByte] using hmachine
+  have hzero : state.registers 0 = 0 := by
+    exact zero
+  simp [loopToWordProg, wordMemOp, wordCompileExp,
+    RiscV.evalWordProg, RiscV.evalWordShareInst,
+    RiscV.wordShareInstToInstructions, RiscV.wordExpToInstructions,
+    RiscV.wordExpToInstruction, RiscV.wordInstToInstruction,
+    RiscV.executeInstructions, RiscV.execute, RiscV.writeRegister,
+    RiscV.readRegister, RiscV.nextPc, RiscV.registerOfNat,
+    hdestination_lt, hdestination_fin, hdestination_not_scratch,
+    hzero, hmachine'] at hresult
+  subst resultState
+  intro name current hcurrent
+  by_cases hname : name = destination
+  · subst name
+    have hvalue : value = current := by
+      simpa [updateLoopLocal] using hcurrent
+    subst current
+    refine ⟨destinationRegister, hdestination, ?_⟩
+    simp [RiscV.readRegister, hdestination_nonzero]
+  · have hcurrent' : loopState.locals name = some current := by
+      simpa [updateLoopLocal, hname] using hcurrent
+    rcases hlocals name current hcurrent' with
+      ⟨register, hregister, hregister_value⟩
+    refine ⟨register, hregister, ?_⟩
+    have hregister_nonalias := hnoalias name hname register hregister
+    have hregister_noscratch := hscratch name current hcurrent' register hregister
+    simp [RiscV.readRegister, hdestination_nonzero,
+      hregister_nonalias, hregister_noscratch]
+    exact hregister_value
+
 theorem loopToWord_shMem_load_preserves_mapped_locals [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width) (address destination : Nat)

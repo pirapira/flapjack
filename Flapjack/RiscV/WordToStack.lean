@@ -378,13 +378,14 @@ def wordStackAddCarryInst (config : WordStackConfig)
 
 /-! CakeML's `LongDiv` uses a fixed four-register convention: the two-word
     dividend is in x3:x0, the quotient is written to x0, and the remainder to
-    x3.  Only the divisor operand remains allocator-dependent.  Keep this
-    normalized shape explicit so an unnormalized operation cannot silently
-    acquire the special calling convention. -/
+    x3.  The source operation's first four register fields are metadata for
+    this convention; only the divisor operand remains allocator-dependent.
+    Match CakeML's `wInst` by accepting those fields and normalizing the
+    emitted StackLang operation to `LongDiv 0 3 3 0 divisor`. -/
 def wordStackLongDivInst (config : WordStackConfig)
     (operation : WordArith) : Option (StackProg α) :=
   match operation with
-  | .longDiv 0 3 3 0 divisor => do
+  | .longDiv _ _ _ _ divisor => do
       let location ← wordStackLocation config divisor
       match location with
       | .register divisorRegister =>
@@ -2473,6 +2474,11 @@ def wordRegImmToNat : WordRegImm (Word width) → WordRegImm Nat
   | .imm value => .imm value.toNat
   | .reg name => .reg name
 
+/- SSA-generated calls carry their complete return continuation and, when
+   present, their exception handler as nested Word programs.  Preserve both
+   programs at this representation boundary; replacing them with `skip`
+   would make the generated call return without restoring the caller state or
+   running its continuation. -/
 def wordProgToNat : WordProg (Word width) → WordProg Nat
   | .skip => .skip
   | .move priority moves => .move priority moves
@@ -2494,15 +2500,21 @@ def wordProgToNat : WordProg (Word width) → WordProg Nat
   | .return label values => .return label values
   | .tick => .tick
   | .locValue destination source => .locValue destination source
-  | .call returns target arguments none =>
-      .call (returns.map (fun (values, cutsets, _returnCode, returnLabel, entryLabel) =>
-        (values, cutsets, .skip, returnLabel, entryLabel))) target
-        arguments none
-  | .call returns target arguments
+  | .call none target arguments none =>
+      .call none target arguments none
+  | .call (some (values, cutsets, returnCode, returnLabel, entryLabel)) target
+      arguments none =>
+      .call (some (values, cutsets, wordProgToNat returnCode, returnLabel, entryLabel))
+        target arguments none
+  | .call none target arguments
       (some (exception, body, handlerLabel, entryLabel)) =>
-      .call (returns.map (fun (values, cutsets, _returnCode, returnLabel, entryLabel) =>
-        (values, cutsets, .skip, returnLabel, entryLabel))) target
-        arguments (some (exception, wordProgToNat body, handlerLabel, entryLabel))
+      .call none target arguments
+        (some (exception, wordProgToNat body, handlerLabel, entryLabel))
+  | .call (some (values, cutsets, returnCode, returnLabel, entryLabel)) target
+      arguments (some (exception, body, handlerLabel, handlerEntryLabel)) =>
+      .call (some (values, cutsets, wordProgToNat returnCode, returnLabel, entryLabel))
+        target arguments
+          (some (exception, wordProgToNat body, handlerLabel, handlerEntryLabel))
   | .alloc destination (nonGc, gc) =>
       .alloc destination (nonGc, gc)
   | .storeConsts source bitmap codeLength dataLength constants =>

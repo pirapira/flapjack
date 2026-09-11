@@ -140,6 +140,9 @@ import Flapjack.CrepeReturnedBranchSelection
 import Flapjack.CrepeDestinationReturnedInversion
 import Flapjack.SourceCompiledDestinationCallPair
 import Flapjack.SourceCompiledDestinationReturnedCall
+import Flapjack.CrepeDeclarationCallSourceCompiledCorrectness
+import Flapjack.CrepeCallSourceCompiledCorrectness
+import Flapjack.CrepeCallRaisedSourceCompiledCorrectness
 import Flapjack.CrepeDeclarationCallRaisedCorrectness
 import Flapjack.CrepeCallRaisedInversion
 import Flapjack.CrepeCallReturnedInversion
@@ -181,6 +184,9 @@ import Flapjack.SourceCompiledFunctionCalleeEntry
 import Flapjack.SourceCompiledCalleeEntry
 import Flapjack.SourceCompiledCalleeCallState
 import Flapjack.SourceCompiledReturnedCallPair
+import Flapjack.SourceCompiledRaisedCallPair
+import Flapjack.SourceCompiledDestinationRaisedCallPair
+import Flapjack.CrepeDestinationRaisedSourceCompiledCorrectness
 import Flapjack.SourceCalleeParameterStateRelation
 import Flapjack.CrepeCalleeParameterRelation
 import Flapjack.CrepeCalleeParameterListGeneralRelation
@@ -236,6 +242,9 @@ import Flapjack.RiscV.CorrectnessLinearScanStack
 import Flapjack.RiscV.AllocationModePipeline
 import Flapjack.RiscV.OracleAllocator
 import Flapjack.RiscV.AllocatorCorrectness
+import Flapjack.RiscV.CorrectnessSsa
+import Flapjack.RiscV.CorrectnessGraphCoverage
+import Flapjack.RiscV.CorrectnessLongDiv
 import Flapjack.RiscV.AllocatorBridgeCorrectness
 import Flapjack.RiscV.CorrectnessColour
 import Flapjack.RiscV.CorrectnessSsaColour

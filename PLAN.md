@@ -2374,6 +2374,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   restoration, including independent source/target fuel accounting.
 - [x] Generalize declaration restoration and control transport to arbitrary
   temporary lists and shapes.
+- [x] Prove compositional declaration-call correctness for arbitrary result
+  shapes using the generalized restoration relation.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

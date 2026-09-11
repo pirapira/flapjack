@@ -1057,6 +1057,26 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaTargetLinkedChecked
     staticOk (compileFlapjackRiscVViaAllocatedStackWithFullSsaTargetLinked
       architecture bytesInWord fromNat services removeConfig declarations))
 
+/-! Exact source-entry sibling of the target-facing full-SSA linked pipeline.
+    `compileFlapjackEntry` performs the CakeML-style source lookup, renaming,
+    initializer wrapper, and reference permutation before the allocator sees
+    the program.  Keep the `Option` result visible so a missing requested
+    entry is reported instead of silently synthesizing `main`. -/
+def compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig) (start : FunName)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
+  let pipeline ← compileFlapjackEntry architecture bytesInWord fromNat start declarations
+  let functions ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa pipeline.loop
+  let initialLabel := fullSsaInitialLabLabel functions
+  RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscV { services := services }
+    removeConfig 0 initialLabel (functions.map (fun (label, _, body) => (label, body)))
+
 def compileFlapjackChecked [BEq String] [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :

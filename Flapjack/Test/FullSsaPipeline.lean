@@ -26,6 +26,17 @@ def fullSsaMainTargetLinked :
     (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
     fullSsaPipelineRemoveConfig fullSsaMainDeclarations
 
+def fullSsaEntryDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "entry", inline := false, exported := true, params := [],
+      body := .return (.const (BitVec.ofNat 64 9)), returnShape := .one }]
+
+def fullSsaEntryLinked :
+    Option (List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
+  compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+    fullSsaPipelineRemoveConfig "entry" fullSsaEntryDeclarations
+
 def fullSsaMainBitmapSimpleGcTargetLinked :
     Option (RiscV.WordStackBitmapState ×
       List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
@@ -66,6 +77,9 @@ example :
 
 #guard
     fullSsaMainTargetLinked.isSome
+
+#guard
+    fullSsaEntryLinked.isSome
 
 #guard
     fullSsaMainBitmapSimpleGcTargetLinked.isSome

@@ -2178,6 +2178,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   its state-observation behavior with an executable test.
 - [x] Factor assignment simulation through a reusable empty-prefix
   Crep-to-Loop theorem with an explicit expression-value relation.
+- [x] Prove the constant-address `load32` assignment boundary, including its
+  temporary-address sequence and memory-state regression.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

@@ -96,6 +96,35 @@ theorem crepToLoop_assign_agreement_of_empty_prefix
     loopStateOfCrepState, updateCrepLocal, updateLoopLocal,
     crepControlLocal, loopControlLocal]
 
+theorem crepToLoop_assign_load32_const_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (name : Nat) (address value : α)
+    (hmemory : state.memory address = some value) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.assign name (.load32 (.const address)))).map
+        (crepControlLocal name) =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 5)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.assign name (.load32 (.const address))))).map
+        (loopControlLocal name) := by
+  simp [evalCrepFullProg, evalCrepFullExp, hmemory,
+    loopCompileProg, loopCompileExp, loopNestedSeq,
+    evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+    loopStateOfCrepState, updateCrepLocal, updateLoopLocal,
+    crepControlLocal, loopControlLocal]
+
 theorem crepToLoop_return_const_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

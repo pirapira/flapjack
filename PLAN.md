@@ -2592,6 +2592,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   binding and Crep assignment witnesses for use by call inversion.
 - [x] Expose the exact recursive parameter-slot metadata equation for
   all-word compiled function formals.
+- [x] Generalize fresh callee-parameter state transport from scalar words to
+  arbitrary flattened structured values and expose the empty-callee wrapper.
 - [x] Connect generic expression-list argument preparation to recursively
   correct returned ordinary calls and their flattened callee-result relation.
 - [x] Connect generic expression-list argument preparation to recursively

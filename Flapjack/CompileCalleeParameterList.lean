@@ -72,6 +72,58 @@ theorem compileCalleeParameterList_flattened_slots
                 List.flatMap_cons]
               rw [ih values (offset + Shape.shapeSize shape) htail]
 
+theorem compileCalleeParameterList_flattened_values
+    (params : List (VarName × Shape)) (values : List (PanValue α))
+    (offset : Nat) (hlength : params.length = values.length) :
+    (compileCalleeParameterList params values offset).flatMap
+        CalleeParameter.values =
+      values.flatMap panValueFlatWords := by
+  induction params generalizing values offset with
+  | nil =>
+      cases values with
+      | nil => simp [compileCalleeParameterList]
+      | cons value values => simp at hlength
+  | cons param params ih =>
+      cases param with
+      | mk name shape =>
+          cases values with
+          | nil => simp at hlength
+          | cons value values =>
+              have htail : params.length = values.length := by
+                simpa using hlength
+              simp only [compileCalleeParameterList, List.flatMap_cons]
+              rw [ih values (offset + Shape.shapeSize shape) htail]
+
+theorem bindPanValueParameters_compileCalleeParameterList
+    (params : List (VarName × Shape)) (values : List (PanValue α))
+    (offset : Nat) (_hlength : params.length = values.length) :
+    bindPanValueParameters
+        ((compileCalleeParameterList params values offset).map
+          CalleeParameter.name)
+        ((compileCalleeParameterList params values offset).map
+          CalleeParameter.value) =
+      some (foldCalleeParameterSource (fun _ => none)
+        (compileCalleeParameterList params values offset)) := by
+  exact bindPanValueParameters_parameters
+    (compileCalleeParameterList params values offset)
+
+theorem assignCrepValues_compileCalleeParameterList
+    [OfNat α 0]
+    (params : List (VarName × Shape)) (values : List (PanValue α))
+    (offset : Nat) (hlength : params.length = values.length)
+    (hparameterLength : ∀ parameter ∈
+      compileCalleeParameterList params values offset,
+      parameter.slots.length = parameter.values.length) :
+    assignCrepValues (fun _ => none)
+        (compileParamVars params offset).2.1
+        (values.flatMap panValueFlatWords) =
+      some (foldCalleeParameterLocals (fun _ => none)
+        (compileCalleeParameterList params values offset)) := by
+  rw [← compileCalleeParameterList_flattened_slots params values offset hlength,
+    ← compileCalleeParameterList_flattened_values params values offset hlength]
+  exact assignCrepValues_parameters
+    (compileCalleeParameterList params values offset) hparameterLength
+
 theorem foldCalleeParameterContextAppend_empty_compile
     [OfNat α 0]
     (params : List (VarName × Shape)) (values : List (PanValue α))

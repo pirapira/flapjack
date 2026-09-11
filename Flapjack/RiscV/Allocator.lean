@@ -2164,9 +2164,12 @@ def wordProgSpecialLocationsSafe (locations : NatInfoMap WordLocation) :
         wordProgSpecialLocationsSafe locations elseBranch
   | .loop _ body _ => wordProgSpecialLocationsSafe locations body
   | .mustTerminate body => wordProgSpecialLocationsSafe locations body
-  | .call _ _ _ none => true
-  | .call _ _ _ (some (_, body, _, _)) =>
-      wordProgSpecialLocationsSafe locations body
+  | .call none _ _ _ => true
+  | .call (some (_, _, returnCode, _, _)) _ _ none =>
+      wordProgSpecialLocationsSafe locations returnCode
+  | .call (some (_, _, returnCode, _, _)) _ _ (some (_, body, _, _)) =>
+      wordProgSpecialLocationsSafe locations body &&
+        wordProgSpecialLocationsSafe locations returnCode
   | .alloc _ _ | .storeConsts _ _ _ _ _ | .opCurrHeap _ _ _ |
       .install _ _ _ _ _ | .codeBufferWrite _ _ | .dataBufferWrite _ _ => true
   | .shareInst _ _ _ => true

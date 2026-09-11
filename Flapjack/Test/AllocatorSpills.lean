@@ -238,4 +238,13 @@ example :
         ((.inst (.arith (.addCarry 0 1 2 3 4))) : WordProg Nat) = true := by
   decide +kernel
 
+example :
+    wordProgSpecialLocationsSafe
+        [(0, .register 5), (1, .register 5),
+          (2, .register 6), (3, .register 7)]
+        ((.call (some ([0], ([], []),
+            .inst (.arith (.longMul 0 1 2 3)), 0, 0)) none [] none) :
+          WordProg Nat) = false := by
+  decide +kernel
+
 end Flapjack

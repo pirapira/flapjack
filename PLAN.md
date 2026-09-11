@@ -2573,6 +2573,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Package localized word-valued argument evaluation and compilation into
   `PanValueCrepCallCorrect`, leaving recursive callee/handler simulation as
   the explicit call relation premise.
+- [x] Assemble the word-valued ordinary-call constructor into
+  `PanValueCrepProgramCorrect`, ready for the full program induction.
 - [x] Generalize state extension across callee-produced globals and memory,
   and connect recursive callee correctness to destination-aware call state.
 - [x] Prove structured source and compiled Crep branch selection agree for a

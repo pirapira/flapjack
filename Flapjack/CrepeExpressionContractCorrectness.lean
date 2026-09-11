@@ -1,4 +1,5 @@
 import Flapjack.CrepeExpressionRelation
+import Flapjack.CrepeExpressionListRelation
 import Flapjack.CrepeSourceWordRecordCorrectness
 import Flapjack.CrepeSourceWordLoadCorrectness
 
@@ -395,7 +396,7 @@ theorem panValueCrepExpressionCorrect_word_record
         some (words.map (fun value => .word value)) := by
     simpa [evalPanValueExps] using hfields
   obtain ⟨compiled, hcompile, hcompiled⟩ :=
-    compileSourceWordRecordExp_relation context structs sourceLocals
+    compileSourceWordExp_rStruct_list_relation context structs sourceLocals
       sourceGlobals sourceMemory state.locals state.memory
       baseAddress topAddress bytesInWord
       (hbytesInWord context bytesInWord) hrel.2.1

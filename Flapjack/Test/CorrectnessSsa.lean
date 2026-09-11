@@ -18,6 +18,66 @@ example :
   all_goals decide
 
 example :
+    (evalWordProg (zeroState 32)
+        (.shareInst .store8 1 (.const (BitVec.ofNat 32 16)))).map
+        (fun state => state.memory) =
+      (evalWordProg (zeroState 32)
+        (wordSsaRenameProgram
+          ({ current := [], next := 4 } : WordSsaState)
+          (.shareInst .store8 1 (.const (BitVec.ofNat 32 16)))).2).map
+        (fun state => state.memory) := by
+  apply evalWordProg_ssaRename_program_share_store8_const
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  · rfl
+  all_goals decide
+
+example :
+    (evalWordProg (zeroState 32)
+        (.shareInst .store16 1 (.const (BitVec.ofNat 32 16)))).map
+        (fun state => state.memory) =
+      (evalWordProg (zeroState 32)
+        (wordSsaRenameProgram
+          ({ current := [], next := 4 } : WordSsaState)
+          (.shareInst .store16 1 (.const (BitVec.ofNat 32 16)))).2).map
+        (fun state => state.memory) := by
+  apply evalWordProg_ssaRename_program_share_store16_const
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  · rfl
+  all_goals decide
+
+example :
+    (evalWordProg (zeroState 32)
+        (.shareInst .store32 1 (.const (BitVec.ofNat 32 16)))).map
+        (fun state => state.memory) =
+      (evalWordProg (zeroState 32)
+        (wordSsaRenameProgram
+          ({ current := [], next := 4 } : WordSsaState)
+          (.shareInst .store32 1 (.const (BitVec.ofNat 32 16)))).2).map
+        (fun state => state.memory) := by
+  apply evalWordProg_ssaRename_program_share_store32_const
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  · rfl
+  all_goals decide
+
+example :
     ∃ source' target',
       evalWordProg (zeroState 32) (.inst (.mem .load 1 2)) = some source' ∧
       evalWordProg (zeroState 32)
@@ -481,6 +541,144 @@ example :
     · simp_all
     · have hlt : ¬ name < 32 := by omega
       simp [hlt]
+  · rfl
+  all_goals decide
+
+example :
+    (evalWordProg (zeroState 32) (.shareInst .store8 1 (.var 2))).map
+        (fun state => state.memory) =
+      (evalWordProg (zeroState 32)
+        (wordSsaRenameProgram
+          ({ current := [], next := 4 } : WordSsaState)
+          (.shareInst .store8 1 (.var 2))).2).map
+        (fun state => state.memory) := by
+  apply evalWordProg_ssaRename_program_share_store8
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  all_goals decide
+
+example :
+    (evalWordProg (zeroState 32) (.shareInst .store16 1 (.var 2))).map
+        (fun state => state.memory) =
+      (evalWordProg (zeroState 32)
+        (wordSsaRenameProgram
+          ({ current := [], next := 4 } : WordSsaState)
+          (.shareInst .store16 1 (.var 2))).2).map
+        (fun state => state.memory) := by
+  apply evalWordProg_ssaRename_program_share_store16
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  all_goals decide
+
+example :
+    (evalWordProg (zeroState 32) (.shareInst .store32 1 (.var 2))).map
+        (fun state => state.memory) =
+      (evalWordProg (zeroState 32)
+        (wordSsaRenameProgram
+          ({ current := [], next := 4 } : WordSsaState)
+          (.shareInst .store32 1 (.var 2))).2).map
+        (fun state => state.memory) := by
+  apply evalWordProg_ssaRename_program_share_store32
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  all_goals decide
+
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32)
+          (.shareInst .load 1 (.const (BitVec.ofNat 32 16))) = some source' ∧
+      evalWordProg (zeroState 32)
+          (wordSsaRenameProgram
+            ({ current := [], next := 4 } : WordSsaState)
+            (.shareInst .load 1 (.const (BitVec.ofNat 32 16)))).2 = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_program_share_load_const
+  · rfl
+  · rfl
+  all_goals decide
+
+example :
+    (evalWordProg (zeroState 32)
+        (.shareInst .store 1 (.const (BitVec.ofNat 32 16)))).map
+        (fun state => state.memory) =
+      (evalWordProg (zeroState 32)
+        (wordSsaRenameProgram
+          ({ current := [], next := 4 } : WordSsaState)
+          (.shareInst .store 1 (.const (BitVec.ofNat 32 16)))).2).map
+        (fun state => state.memory) := by
+  apply evalWordProg_ssaRename_program_share_store_const
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  · rfl
+  all_goals decide
+
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32)
+          (.shareInst .load8 1 (.const (BitVec.ofNat 32 16))) = some source' ∧
+      evalWordProg (zeroState 32)
+          (wordSsaRenameProgram
+            ({ current := [], next := 4 } : WordSsaState)
+            (.shareInst .load8 1 (.const (BitVec.ofNat 32 16)))).2 = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_program_share_load8_const
+  · rfl
+  · rfl
+  all_goals decide
+
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32)
+          (.shareInst .load16 1 (.const (BitVec.ofNat 32 16))) = some source' ∧
+      evalWordProg (zeroState 32)
+          (wordSsaRenameProgram
+            ({ current := [], next := 4 } : WordSsaState)
+            (.shareInst .load16 1 (.const (BitVec.ofNat 32 16)))).2 = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_program_share_load16_const
+  · rfl
+  · rfl
+  all_goals decide
+
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32)
+          (.shareInst .load32 1 (.const (BitVec.ofNat 32 16))) = some source' ∧
+      evalWordProg (zeroState 32)
+          (wordSsaRenameProgram
+            ({ current := [], next := 4 } : WordSsaState)
+            (.shareInst .load32 1 (.const (BitVec.ofNat 32 16)))).2 = some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_program_share_load32_const
+  · rfl
   · rfl
   all_goals decide
 

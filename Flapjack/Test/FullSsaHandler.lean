@@ -27,8 +27,8 @@ def fullSsaHandlerMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← fullSsaHandlerLinkedSections
   let entry ← fullSsaHandlerSectionEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 324 [] image [2] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 324)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 244 [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 244)
 
 def fullSsaHandlerSourceMain : Prog (RiscV.Word 64) :=
   .dec "exception" .one (.const (BitVec.ofNat 64 0))
@@ -47,6 +47,7 @@ theorem fullSsaHandler_source_execution :
 
 #guard fullSsaHandlerLinkedSections.isSome
 #guard fullSsaHandlerMachineResult == some [BitVec.ofNat 64 7]
+
 
 theorem fullSsaHandler_machine_execution :
     fullSsaHandlerMachineResult = some [BitVec.ofNat 64 7] := by

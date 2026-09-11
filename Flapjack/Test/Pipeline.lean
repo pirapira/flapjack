@@ -78,7 +78,6 @@ def pipelineHandlerHasCrossSectionAddress : Bool :=
   | none => false
 
 #guard pipelineHandlerHasCrossSectionAddress
-
 #guard
     (compileFlapjackRiscVViaAllocatedStack (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []

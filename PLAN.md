@@ -2861,6 +2861,12 @@ non-interference lemmas for fresh Crep locals in
 replacing the explicit temporary-stability premise in the source-word
 `ExtCall` theorem with compiler-derived freshness facts.
 
+The Word-to-Stack slice now preserves embedded SSA return continuations in
+handler-bearing calls, carries explicit handler label/entry metadata through
+the StackLang helper, and uses the enclosing function configuration for the
+zero placeholders produced by the reduced Loop-to-Word boundary.  Focused
+handler, pipeline, and full-SSA machine regressions cover this behavior.
+
 ## Verification workflow
 
 - Lean: `lake build` from the repository root.

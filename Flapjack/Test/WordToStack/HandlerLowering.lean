@@ -24,7 +24,13 @@ example :
       (.call (some ([], ([], []), .skip, 0, 0)) (some 7) []
         (some (1, handlerLoweringBody, 30, 21))) =
       some (wordToStackCallWithHandlerInSection false 7 0 0 31 .skip
-        (.seq .skip (.call none (.label 0) none)) 20 21 0 30 1,
+        (.seq .skip (.call none (.label 0) none))
+          (wordStackReturnLabel handlerLoweringConfig
+            (some ([], ([], []), .skip, 0, 0)))
+          (wordStackEntryLabel handlerLoweringConfig
+            (some ([], ([], []), .skip, 0, 0)))
+          (wordStackHandlerLabel handlerLoweringConfig 30)
+          (wordStackHandlerEntryLabel handlerLoweringConfig 21) 1,
         handlerLoweringInitial) := by
   apply wordToStackProgNatWithBitmapBuilder_call_handler
     (config := handlerLoweringConfig) (bitmapBuilder := fun live => live)
@@ -40,11 +46,7 @@ example :
       wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
       wordStackLocationMoveRemoveDestination,
       wordStackLocationMove]
-  · simp [handlerLoweringConfig, wordStackReturnCode,
-      wordStackMovesFromPhysical, wordStackPhysicalMovesFrom,
-      wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
-      wordStackLocationMoveDestinations,
-      wordStackLocationMoveRemoveDestination, wordStackLocationMove]
+  · simp [wordStackEmbeddedReturnCode, wordToStackProgNat]
   · simp [handlerLoweringConfig, handlerLoweringInitial,
       handlerLoweringBody, wordToStackProgNatWithBitmapBuilder,
       wordToStackProgNat, wordToStackRaise, stackRaiseStubLocation]

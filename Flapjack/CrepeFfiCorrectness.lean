@@ -453,6 +453,47 @@ theorem compile_full_seq_after_return_simulation
     simp [evalCrepFullProg, hfirstCrep]
   · simp [evalPanProgWithCallsAndFfi, hfirstSource]
 
+/-! A raised first component also short-circuits the continuation.  Keeping
+the source payload and compiled exception code explicit lets a caller supply
+the separate exception/payload agreement established by the raise lowering
+theorem, while this lemma handles only control propagation. -/
+
+theorem compile_full_seq_after_raise_simulation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α)
+    (functions : List (CompiledFunction α))
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (sourceLocals sourceLocals' : VarName → Option α)
+    (state state' : CrepState α)
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (sourceHandler : PanFfiHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (first : Prog α) (compiledFirst : CrepProg α)
+    (second : Prog α) (compiledSecond : CrepProg α)
+    (sourceException : ExceptionId) (sourceValue compiledException : α)
+    (hfirstCompile : compileProg context first = compiledFirst)
+    (hsecondCompile : compileProg context second = compiledSecond)
+    (hfirstCrep : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state compiledFirst =
+      some (.raised state' compiledException))
+    (hfirstSource : evalPanProgWithCallsAndFfi sourceFunctions sourceHandler
+      (fuel + 1) sourceLocals first =
+      some (.raised sourceLocals' sourceException sourceValue)) :
+    evalCrepFullProg functions primitive ffi sharedMem baseAddress topAddress
+      (fuel + 2) state (compileProg context (.seq first second)) =
+      some (.raised state' compiledException) ∧
+    evalPanProgWithCallsAndFfi sourceFunctions sourceHandler (fuel + 2)
+      sourceLocals (.seq first second) =
+      some (.raised sourceLocals' sourceException sourceValue) := by
+  constructor
+  · rw [compileProg_seq, hfirstCompile, hsecondCompile]
+    simp [evalCrepFullProg, hfirstCrep]
+  · simp [evalPanProgWithCallsAndFfi, hfirstSource]
+
 /-! The corresponding call equation keeps the lowered handler visible.  The
     caller supplies the result of the full Crepe call evaluator, so this lemma
     can be composed with either the caught- or uncaught-callee contracts in

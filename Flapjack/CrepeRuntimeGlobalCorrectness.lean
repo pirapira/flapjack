@@ -11,6 +11,12 @@ def loopStateOfCrepRuntimeStateForGlobals (state : CrepRuntimeState α σ) : Loo
     globals := state.globals
     memory := state.memory }
 
+def crepRuntimeLocalProjection (name : Nat)
+    (step : CrepRuntimeStep α σ ε) : Option α :=
+  match step.1 with
+  | .error => none
+  | _ => step.2.locals name
+
 theorem crepRuntimeToLoop_loadGlob_assign_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -36,6 +42,39 @@ theorem crepRuntimeToLoop_loadGlob_assign_agreement
     loopStateOfCrepRuntimeStateForGlobals, loopCompileProg, loopCompileExp,
     loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
     loopResultState, updateLoopLocal, updateCrepLocal, hglobal]
+
+theorem crepRuntimeToLoop_loadGlob_assign_failure_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (handler : CrepRuntimeFfiHandler α σ ε)
+    (primitive : CrepPrimitiveHandler α)
+    (fuel : Nat) (state : CrepRuntimeState α σ) (live : List Nat)
+    (name : Nat) (address : α) :
+    (evalCrepRuntimeResult handler primitive (fuel + 1) state
+      (.assign name (.loadGlob address))).bind
+        (crepRuntimeLocalProjection name) =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 2)
+      (loopStateOfCrepRuntimeStateForGlobals state)
+      (loopCompileProg context live
+        (.assign name (.loadGlob address)))).map
+        (fun result => (loopResultState result).locals name) := by
+  cases hglobal : state.globals address with
+  | none =>
+      simp [evalCrepRuntimeResult, evalCrepRuntimeProg, evalCrepRuntimeExp,
+        loopStateOfCrepRuntimeStateForGlobals, loopCompileProg, loopCompileExp,
+        loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+        loopResultState, crepRuntimeLocalProjection, hglobal]
+  | some value =>
+      simp [evalCrepRuntimeResult, evalCrepRuntimeProg, evalCrepRuntimeExp,
+        loopStateOfCrepRuntimeStateForGlobals, loopCompileProg, loopCompileExp,
+        loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+        loopResultState, crepRuntimeLocalProjection, updateCrepLocal,
+        updateLoopLocal, hglobal]
 
 theorem crepRuntimeToLoop_storeGlob_loadGlob_sequence_agreement
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

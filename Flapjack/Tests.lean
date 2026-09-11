@@ -66,6 +66,7 @@ import Flapjack.Test.CrepeHandlerCorrectness
 import Flapjack.Test.CrepToLoopCorrectness
 import Flapjack.Test.CorrectnessConditional
 import Flapjack.Test.CorrectnessColour
+import Flapjack.Test.CorrectnessSsaColour
 import Flapjack.Test.FrameMachineCalls
 import Flapjack.Test.StackMachineCalls
 import Flapjack.Test.WordCallEquations

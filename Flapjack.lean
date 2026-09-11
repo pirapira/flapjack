@@ -237,6 +237,7 @@ import Flapjack.RiscV.OracleAllocator
 import Flapjack.RiscV.AllocatorCorrectness
 import Flapjack.RiscV.AllocatorBridgeCorrectness
 import Flapjack.RiscV.CorrectnessColour
+import Flapjack.RiscV.CorrectnessSsaColour
 import Flapjack.RiscV.CorrectnessFullSsaCounted
 import Flapjack.RiscV.AllocatorDriver
 import Flapjack.RiscV.WordToStack

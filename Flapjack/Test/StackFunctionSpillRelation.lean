@@ -30,4 +30,19 @@ example [NeZero width]
     storeConstsStub bitmapState bitmapFinal program body moves state middle final
     hbody hmoves hentry hbodyEval
 
+example [NeZero width]
+    (config : WordStackConfig) (parameters : List Nat)
+    (allocation : WordSpillState)
+    (registerCount bitmapRegister frameSlots : Nat)
+    (storeConstsStub : Option Nat) (bitmapState finalState : WordStackBitmapState)
+    (program : WordProg (Word width)) (stackProgram : StackProg Nat)
+    (hstate : bitmapState.length = bitmapState.data.length)
+    (hresult : wordToStackFunctionWithSpillStateAndLocationBitmaps config parameters
+      allocation registerCount bitmapRegister frameSlots storeConstsStub bitmapState
+      program = some (stackProgram, finalState)) :
+    finalState.length = finalState.data.length := by
+  exact wordToStackFunctionWithSpillStateAndLocationBitmaps_preserves_bitmap_length
+    config parameters allocation registerCount bitmapRegister frameSlots storeConstsStub
+    bitmapState finalState program stackProgram hstate hresult
+
 end Flapjack.RiscV

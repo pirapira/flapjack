@@ -2342,6 +2342,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   relating flattened Crep words to the source structured result.
 - [x] Verify the structured return boundary on closed records of word
   constants through the actual compiler and full Crep evaluator.
+- [x] Add the compositional two-word record declaration-return correctness
+  constructor, including source declaration restoration, fresh Crep slots,
+  and flattened returned-value agreement.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

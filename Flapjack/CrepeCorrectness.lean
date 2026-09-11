@@ -518,7 +518,7 @@ theorem compile_full_pan_value_record_return_const_correct
     intro values
     rw [panValueFlatWords, hvalueFuel values]
     simp only [panValueFlatWordsFuel]
-    exact hwordsFuel (values.length + 1) values (by omega)
+    exact hwordsFuel (2 * (values.length + 1)) values (by omega)
   exact compile_full_pan_value_return_of_exp context structs locals globals
     state primitive ffi sharedMem baseAddress topAddress bytesInWord
     (.rStruct (values.map (fun value => .const value)))
@@ -707,7 +707,7 @@ theorem compile_full_pan_value_dec_two_word_record_return_correct
       panValueFlatValueFuel.panValueFlatValueListFuel]
   have hflatListFuel :
       panValueFlatWordsFuel.panValueFlatWordsListFuel
-          (panValueFlatValueFuel
+          (2 * panValueFlatValueFuel
             (PanValue.rStruct [PanValue.word left, PanValue.word right]))
           [PanValue.word left, PanValue.word right] = [left, right] := by
     simp [panValueFlatWordsFuel, panValueFlatValueFuel,
@@ -884,7 +884,7 @@ theorem compile_full_pan_value_local_assign_record_return_correct
     simp [evalPanValueExp.evalPanValueExps, evalPanValueExp]
   have hflatListFuel :
       panValueFlatWordsFuel.panValueFlatWordsListFuel
-          (panValueFlatValueFuel
+          (2 * panValueFlatValueFuel
             (PanValue.rStruct [PanValue.word left, PanValue.word right]))
           [PanValue.word left, PanValue.word right] = [left, right] := by
     simp [panValueFlatWordsFuel, panValueFlatValueFuel,

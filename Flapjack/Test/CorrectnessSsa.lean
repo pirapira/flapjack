@@ -320,4 +320,26 @@ example :
   · rfl
   all_goals decide
 
+example :
+    ∃ source' target',
+      evalWordProg (zeroState 32)
+          (.assign 1 (.shift .ror (.var 2) (.const (BitVec.ofNat 32 3)))) = some source' ∧
+      evalWordProg (zeroState 32)
+          (wordSsaRenameProgram
+            ({ current := [], next := 4 } : WordSsaState)
+            (.assign 1 (.shift .ror (.var 2) (.const (BitVec.ofNat 32 3))))).2 =
+        some target' ∧
+      readRegister source' ⟨1, by decide⟩ =
+        readRegister target' ⟨4, by decide⟩ ∧
+      source'.memory = target'.memory := by
+  apply evalWordProg_ssaRename_assign_rotate_var_const_destination
+  · intro name
+    simp [registerOfNat, wordSsaRead, lookupNatInfo]
+    split
+    · simp_all
+    · have hlt : ¬ name < 32 := by omega
+      simp [hlt]
+  · rfl
+  all_goals decide
+
 end Flapjack.RiscV

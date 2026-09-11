@@ -1036,6 +1036,141 @@ theorem evalWordProg_ssaRename_assign_shift_var_var_destination [NeZero width]
       · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
   | ror => exact (hoperator rfl).elim
 
+theorem wordSsaRenameProgram_assign_rotate_var_const
+    (ssa : WordSsaState) (destination : Nat) (source : Nat)
+    (amount : Word width) :
+    wordSsaRenameProgram ssa
+        (.assign destination (.shift .ror (.var source) (.const amount)) :
+          WordProg (Word width)) =
+      ((wordSsaFresh ssa destination).1,
+        .assign (wordSsaFresh ssa destination).2
+          (.shift .ror (.var (wordSsaRead ssa source)) (.const amount))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameExp]
+
+theorem evalWordProg_ssaRename_assign_rotate_var_const_destination [NeZero width]
+    (ssa : WordSsaState) (sourceState targetState : State width)
+    (hregister : ∀ name,
+      (do
+        let register ← registerOfNat name
+        pure (readRegister sourceState register)) =
+      (do
+        let register ← registerOfNat (wordSsaRead ssa name)
+        pure (readRegister targetState register)))
+    (hmemory : sourceState.memory = targetState.memory)
+    (destination source : Nat) (amount : Word width)
+    (hdestination : destination < 32) (hsource : source < 32)
+    (hdestinationNonzero : destination ≠ 0)
+    (hdestinationScratch : destination ≠ 31)
+    (hsourceScratch : source ≠ 31)
+    (hsourceSsa : wordSsaRead ssa source < 32)
+    (hsourceSsaScratch : wordSsaRead ssa source ≠ 31)
+    (hfresh : (wordSsaFresh ssa destination).2 < 32)
+    (hfreshNonzero : (wordSsaFresh ssa destination).2 ≠ 0)
+    (hfreshScratch : (wordSsaFresh ssa destination).2 ≠ 31) :
+    ∃ source' target',
+      evalWordProg sourceState
+          (.assign destination (.shift .ror (.var source) (.const amount))) = some source' ∧
+      evalWordProg targetState
+          (wordSsaRenameProgram ssa
+            (.assign destination (.shift .ror (.var source) (.const amount)))).2 =
+        some target' ∧
+      readRegister source' ⟨destination, hdestination⟩ =
+        readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
+      source'.memory = target'.memory := by
+  have hsourceValue :
+      readRegister sourceState ⟨source, hsource⟩ =
+        readRegister targetState ⟨wordSsaRead ssa source, hsourceSsa⟩ := by
+    have h := hregister source
+    simpa [registerOfNat, hsource, hsourceSsa] using h
+  have amount_lt : shiftAmount amount < width :=
+    Nat.mod_lt _ (Nat.pos_of_ne_zero (NeZero.ne width))
+  have complement_lt : (width - shiftAmount amount) % width < width :=
+    Nat.mod_lt _ (Nat.pos_of_ne_zero (NeZero.ne width))
+  have hsourceFinScratch :
+      (⟨source, hsource⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hsourceScratch
+    exact congrArg Fin.val heq
+  have hsourceSsaFinScratch :
+      (⟨wordSsaRead ssa source, hsourceSsa⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hsourceSsaScratch
+    exact congrArg Fin.val heq
+  have hdestinationFinNonzero :
+      (⟨destination, hdestination⟩ : Fin 32) ≠ 0 := by
+    intro heq
+    apply hdestinationNonzero
+    exact congrArg Fin.val heq
+  have hdestinationFinScratch :
+      (⟨destination, hdestination⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hdestinationScratch
+    exact congrArg Fin.val heq
+  have hfreshFinNonzero :
+      (⟨(wordSsaFresh ssa destination).2, hfresh⟩ : Fin 32) ≠ 0 := by
+    intro heq
+    apply hfreshNonzero
+    exact congrArg Fin.val heq
+  have hfreshFinScratch :
+      (⟨(wordSsaFresh ssa destination).2, hfresh⟩ : Fin 32) ≠ 31 := by
+    intro heq
+    apply hfreshScratch
+    exact congrArg Fin.val heq
+  rw [wordSsaRenameProgram_assign_rotate_var_const]
+  let sourceCode : List (Instruction width) :=
+    [.srli 31 ⟨source, hsource⟩ (shiftAmount amount),
+     .slli ⟨destination, hdestination⟩ ⟨source, hsource⟩
+       (BitVec.ofNat width ((width - shiftAmount amount) % width)),
+     .or ⟨destination, hdestination⟩ ⟨destination, hdestination⟩ 31]
+  let targetCode : List (Instruction width) :=
+    [.srli 31 ⟨wordSsaRead ssa source, hsourceSsa⟩ (shiftAmount amount),
+     .slli ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+       ⟨wordSsaRead ssa source, hsourceSsa⟩
+       (BitVec.ofNat width ((width - shiftAmount amount) % width)),
+     .or ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+       ⟨(wordSsaFresh ssa destination).2, hfresh⟩ 31]
+  have hvalue :
+      rotateRight (readRegister sourceState ⟨source, hsource⟩)
+          (shiftAmount amount) =
+        rotateRight
+          (readRegister targetState ⟨wordSsaRead ssa source, hsourceSsa⟩)
+          (shiftAmount amount) := by
+    rw [hsourceValue]
+  have hsourceDestination :
+      readRegister (executeInstructions sourceState sourceCode)
+          ⟨destination, hdestination⟩ =
+        rotateRight (readRegister sourceState ⟨source, hsource⟩)
+          (shiftAmount amount) := by
+    simp [sourceCode, executeInstructions, execute, writeRegister, readRegister,
+      hsourceFinScratch, hdestinationFinNonzero,
+      Ne.symm hdestinationFinScratch]
+    rw [shiftAmount_ofNat_of_lt complement_lt,
+      shiftAmount_ofNat_of_lt amount_lt]
+    simp [rotateRight, shiftAmount, BitVec.or_comm]
+  have htargetDestination :
+      readRegister (executeInstructions targetState targetCode)
+          ⟨(wordSsaFresh ssa destination).2, hfresh⟩ =
+        rotateRight
+          (readRegister targetState ⟨wordSsaRead ssa source, hsourceSsa⟩)
+          (shiftAmount amount) := by
+    simp [targetCode, executeInstructions, execute, writeRegister, readRegister,
+      hsourceSsaFinScratch, hfreshFinNonzero,
+      Ne.symm hfreshFinScratch]
+    rw [shiftAmount_ofNat_of_lt complement_lt,
+      shiftAmount_ofNat_of_lt amount_lt]
+    simp [rotateRight, shiftAmount, BitVec.or_comm]
+  refine ⟨executeInstructions sourceState sourceCode,
+    executeInstructions targetState targetCode, ?_, ?_, ?_, ?_⟩
+  · simp [sourceCode, evalWordProg, wordExpToInstructions, registerOfNat,
+      hdestination, hsource, hdestinationScratch, hsourceScratch,
+      executeInstructions]
+  · simp [targetCode, evalWordProg, wordExpToInstructions, registerOfNat,
+      hfresh, hsourceSsa, hsourceSsaScratch, hfreshScratch, executeInstructions]
+  · exact (hsourceDestination.trans hvalue).trans htargetDestination.symm
+  · simp [sourceCode, targetCode, executeInstructions, execute, writeRegister,
+      hmemory, hdestinationNonzero, hfreshNonzero]
+
 theorem wordSsaRenameInst_div
     (ssa : WordSsaState) (destination dividend divisor : Nat) :
     wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =

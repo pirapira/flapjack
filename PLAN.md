@@ -2363,6 +2363,7 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   relation, with independent source and target fuels.
 - [x] Package expression compilation/evaluation witnesses as a reusable
   state-aware expression contract, with a source-word instance.
+- [x] Add the two-word structured-record expression contract instance.
 - [x] Prove structured source and compiled Crep branch selection agree for a
   closed equality conditional with word-valued branches.
 - [x] Prove the compositional structured conditional correctness boundary,

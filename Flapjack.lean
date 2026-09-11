@@ -53,6 +53,7 @@ import Flapjack.CrepeNestedDecsAssignmentInversion
 import Flapjack.CrepeProgramRecordAssignmentTemporaryConstructor
 import Flapjack.CrepeProgramRecordExpressionContract
 import Flapjack.CrepeDistinctLists
+import Flapjack.CrepeProgramGenericAssignmentConstructor
 import Flapjack.CrepeSequenceCorrectness
 import Flapjack.CrepeConditionalCorrectness
 import Flapjack.CrepeLoopCorrectness

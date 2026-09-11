@@ -2427,6 +2427,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   coupling source shape-preserving assignment with flattened Crep slots.
 - [x] Add the temporary-assignment evaluator boundary, including fresh
   variable-list readback and nested-declaration restoration.
+- [x] Prove the arbitrary-word-record assignment correctness theorem for the
+  compiler's fresh-temporary lowering path.
 - [x] Add one-word declaration state and control-result restoration
   relations for scalar declaration-call lowering.
 - [x] Add the compositional one-word normal-return declaration-call

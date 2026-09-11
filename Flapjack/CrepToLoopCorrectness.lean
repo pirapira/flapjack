@@ -71,6 +71,43 @@ def loopControlMemoryAt (address : α) : LoopResult α → Option α
   | .broke state _ => state.memory address
   | .continued state _ => state.memory address
 
+theorem crepToLoop_seq_normal_compose
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (crepFunctions : List (CompiledFunction α))
+    (loopFunctions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (loopFfi : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state middle : CrepState α) (live : List Nat)
+    (first second : CrepProg α)
+    (result : CrepControlResult α) (loopResult : LoopResult α)
+    (hfirst : evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state first = some (.normal middle))
+    (hloopFirst : evalLoopProgWithCallsAndFfi loopFunctions
+      loopFfi (fuel + 1) (loopStateOfCrepState state)
+      (loopCompileProg context live first) =
+      some (.normal (loopStateOfCrepState middle)))
+    (hsecond : evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) middle second = some result)
+    (hloopSecond : evalLoopProgWithCallsAndFfi loopFunctions
+      loopFfi (fuel + 1) (loopStateOfCrepState middle)
+      (loopCompileProg context live second) = some loopResult) :
+    evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state (.seq first second) = some result ∧
+    evalLoopProgWithCallsAndFfi loopFunctions loopFfi
+      (fuel + 2) (loopStateOfCrepState state)
+      (loopCompileProg context live (.seq first second)) = some loopResult := by
+  constructor
+  · simp [evalCrepFullProg, hfirst, hsecond]
+  · simp [loopCompileProg_seq, evalLoopProgWithCallsAndFfi,
+      hloopFirst, hloopSecond]
+
 theorem crepToLoop_assign_agreement_of_empty_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

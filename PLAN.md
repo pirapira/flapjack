@@ -2399,6 +2399,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   parameter binding, callee-body return, and result-validation witnesses.
 - [x] Generalize state extension across callee-produced globals and memory,
   and connect recursive callee correctness to destination-aware call state.
+- [x] Invert raised source and target calls so exceptional declaration-call
+  propagation has explicit callee-body witnesses.
 - [x] Generalize state extension across callee-produced globals and memory,
   and connect recursive callee correctness to destination-aware call state.
 - [x] Prove structured source and compiled Crep branch selection agree for a

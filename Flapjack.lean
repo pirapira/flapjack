@@ -18,6 +18,7 @@ import Flapjack.CrepeCompileExpVariables
 import Flapjack.CompileParamVarsBounds
 import Flapjack.CrepeContextBounds
 import Flapjack.Compile
+import Flapjack.CompileFunctionDistinct
 import Flapjack.Semantics
 import Flapjack.CrepeSemantics
 import Flapjack.CrepeRuntime

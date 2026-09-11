@@ -2317,6 +2317,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add relation-aware loop-control rules for body break and continue.
 - [x] Prove the compiled declaration-table head lookup exposes flattened
   parameter slots and the exact compiled function body.
+- [x] Prove compilation preserves the source declaration list's distinct
+  function-name invariant after filtering non-function declarations, providing
+  the table uniqueness boundary used by source-to-Crep call correctness.
 - [x] Prove source/Crep expression agreement for constants, word locals, and
   recursive records of word constants using the flattened-local relation.
 - [x] Prove binary-operation expression agreement for word constants through

@@ -4,6 +4,7 @@ import Flapjack.Test.ParserStaticExamples
 import Flapjack.Test.PanSteppedSemantics
 import Flapjack.Test.Backend
 import Flapjack.Test.Correctness
+import Flapjack.Test.CompileFunctionDistinct
 import Flapjack.Test.Runtime
 import Flapjack.Test.CollectorSemantics
 import Flapjack.Test.SpillAllocation

@@ -27,6 +27,7 @@ import Flapjack.CrepeProgramRecordFieldGeneralReturnCorrectness
 import Flapjack.CrepeProgramExtCallCorrectness
 import Flapjack.CrepeProgramInduction
 import Flapjack.CrepeExtCallInversion
+import Flapjack.CrepeProgramExtCallSourceWordCorrectness
 import Flapjack.CrepeBasicControlRelation
 import Flapjack.CrepeStoreRelation
 import Flapjack.CrepeSharedMemoryRelation

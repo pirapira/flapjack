@@ -1,5 +1,6 @@
 import Flapjack.CrepeDeclarationExpressionAdapter
 import Flapjack.CrepeProgramDeclarationGeneralCorrectness
+import Flapjack.CrepeAllocationNameLemmas
 
 /-!
 Declaration correctness with the universal expression contract.  The
@@ -40,9 +41,7 @@ theorem panValueCrepProgramCorrect_dec_of_expression_contract
         evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
           baseAddress topAddress bytesInWord value = some sourceValue ∧
         panShapeMatches (panValueShape structs sourceValue) shape = true)
-    (hvalue : PanValueCrepExpressionCorrect value)
-    (hdistinct : ∀ (context : CompileContext α),
-      CrepDistinctNames (allocatedNames context shape)) :
+    (hvalue : PanValueCrepExpressionCorrect value) :
     PanValueCrepProgramCorrect (.dec name shape value body) := by
   have hcompiledEval : ∀ (context : CompileContext α) (structs : StructContext)
       (sourceLocals sourceGlobals : VarName → Option (PanValue α))
@@ -66,6 +65,7 @@ theorem panValueCrepProgramCorrect_dec_of_expression_contract
       sourceLocals sourceGlobals sourceMemory state baseAddress topAddress
       bytesInWord compiledValues shape sourceValue hrel hcompileValue hsource
   exact panValueCrepProgramCorrect_dec_general name shape value body hbody hname
-    hfresh hcompiledFresh hcompile hshape hcompiledEval hdistinct
+    hfresh hcompiledFresh hcompile hshape hcompiledEval
+      (fun context => crepDistinctNames_allocatedNames context shape)
 
 end Flapjack

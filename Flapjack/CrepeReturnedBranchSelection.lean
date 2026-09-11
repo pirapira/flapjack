@@ -21,6 +21,7 @@ theorem crepReturnedCall_normal_branch_impossible_of_body_correct
     (functions : List (CompiledFunction α))
     (sourceCalleeLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceCalleeMemory : α → Option (PanValue α))
+    (sourceBodyMemory : α → Option (PanValue α))
     (caller : CrepState α)
     (primitive : PanPrimitiveHandler α)
     (sourceHandler : PanValueFfiHandler α)
@@ -43,7 +44,7 @@ theorem crepReturnedCall_normal_branch_impossible_of_body_correct
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord sourceFuel
       sourceCalleeLocals sourceGlobals sourceCalleeMemory sourceBody =
-      some (.returned sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory
+      some (.returned sourceBodyLocals sourceCalleeGlobals sourceBodyMemory
         sourceValues))
     (hcompileBody : compileProg calleeContext sourceBody = targetBody)
     (hcrepBody : evalCrepFullProg functions crepPrimitive ffi sharedMem
@@ -62,7 +63,7 @@ theorem crepReturnedCall_normal_branch_impossible_of_body_correct
     { locals := targetCalleeLocals, memory := caller.memory }
     primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
-    (.returned sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory sourceValues)
+    (.returned sourceBodyLocals sourceCalleeGlobals sourceBodyMemory sourceValues)
     (.normal targetCallee) hrelCallee hsourceBody hcrepBody'
   simp [panValueCrepControlRel] at hbodyRel
 

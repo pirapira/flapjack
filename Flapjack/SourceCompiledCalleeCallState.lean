@@ -95,6 +95,18 @@ theorem sourceCompiledCalleeState_of_returned_call
       declaration.name = function ∧
       declaration.params.map Prod.fst = parameters ∧
       declaration.body = body ∧
+      targetParameters =
+        (compileFunDecl
+          { functionContext with functions := functionInfos declarations } declaration).params ∧
+      targetBody =
+        (compileFunDecl
+          { functionContext with functions := functionInfos declarations } declaration).body ∧
+      compileProg
+          { functionContext with
+              functions := functionInfos declarations
+              vars := (compileParamVars declaration.params 0).1
+              maxVar := (compileParamVars declaration.params 0).2.2 }
+          declaration.body = targetBody ∧
       panValueCrepStateRel structs
         { functionContext with
             functions := functionInfos declarations
@@ -125,9 +137,10 @@ theorem sourceCompiledCalleeState_of_returned_call
       rw [hargumentValues argumentValues harguments] at hassign
       exact hassign)
   obtain ⟨declaration, hname, hparams, hbodyDeclaration,
-      _, _, hrel⟩ := hstate
+      htargetParameters, htargetBody, hcompileBody, hrel⟩ := hstate
   exact ⟨argumentValues, parameters, body, calleeLocals, bodyLocals, declaration,
-    harguments, hlookupDecl, hbind, hbody, hname, hparams, hbodyDeclaration, hrel⟩
+    harguments, hlookupDecl, hbind, hbody, hname, hparams, hbodyDeclaration,
+    htargetParameters, htargetBody, hcompileBody, hrel⟩
 
 theorem sourceCompiledCalleeState_of_returned_call_callee_memory
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -238,7 +251,7 @@ theorem sourceCompiledCalleeState_of_returned_call_callee_memory
     (fun parameters returnShape => hparameterLength parameters returnShape argumentValues)
     hlookupCompiled hbind (by
       simpa [hargumentValues argumentValues harguments] using hassign)
-  obtain ⟨declaration, hname, hparams, hbodyDeclaration, _, _, hstate⟩ := hstate
+  obtain ⟨declaration, hname, hparams, hbodyDeclaration, _, _, _, hstate⟩ := hstate
   exact ⟨argumentValues, parameters, body, calleeLocals, bodyLocals, declaration,
     harguments, hlookupDecl, hbind, hbody, hname, hparams, hbodyDeclaration, hstate⟩
 

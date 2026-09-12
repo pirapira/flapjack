@@ -2219,6 +2219,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Prove no-global expression and expression-list compatibility between the
   legacy and global-aware Crepe evaluators, providing an incremental migration
   seam for localized correctness proofs.
+- [x] Prove that scalar source-word compilation emits no-global expressions and
+  expose the first state-aware source-word expression contract.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

@@ -53,6 +53,68 @@ theorem panValueCrepExpressionCorrect_source_word
   · simp [evalCrepFullExps, hcompiled, panValueFlatWords,
       panValueFlatWordsFuel]
 
+theorem panValueCrepExpressionStateCorrect_source_word
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (expression : SourceWordExp α)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepExpressionStateCorrect expression.toExp := by
+  intro context structs sourceLocals sourceGlobals sourceMemory state
+    baseAddress topAddress bytesInWord sourceValue hrel hsource
+  obtain ⟨value, hword⟩ := evalPanValueExp_sourceWord_inv
+    structs sourceLocals sourceGlobals sourceMemory
+    baseAddress topAddress bytesInWord context hrel.2.1
+    (fun name value hvalue =>
+      hlookup context sourceLocals name value hvalue)
+    expression sourceValue hsource
+  cases hword
+  have hsourceValue :
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord expression.toExp =
+        some (.word value) := by
+    exact hsource
+  obtain ⟨compiled, hcompile, hnoGlobal⟩ :=
+    compileSourceWordExp_noGlobal context structs sourceLocals sourceGlobals
+      sourceMemory baseAddress topAddress bytesInWord
+      (fun name value hvalue =>
+        hlookup context sourceLocals name value hvalue)
+      expression value hsourceValue
+  obtain ⟨compiled', hcompile', hcompiled'⟩ :=
+    compileSourceWordExp_relation context structs sourceLocals sourceGlobals
+      sourceMemory state.locals state.memory baseAddress topAddress bytesInWord
+      (hbytesInWord context bytesInWord) hrel.2.1
+      (fun name value hvalue =>
+        hlookup context sourceLocals name value hvalue)
+      expression value hsourceValue
+  have hcompiledEq : compiled = compiled' := by
+    have hpair : ([compiled], Shape.one) = ([compiled'], Shape.one) :=
+      hcompile.symm.trans hcompile'
+    exact (List.cons.inj (congrArg Prod.fst hpair)).1
+  subst compiled'
+  refine ⟨by simp, [compiled], ?_, ?_⟩
+  · simpa [panValueShape] using hcompile
+  · have hcompat := evalCrepFullExpsState_eq_of_noGlobals state
+      baseAddress topAddress [compiled]
+      (by
+        intro current hcurrent
+        have hcurrent' : current = compiled := by simpa using hcurrent
+        simpa [hcurrent'] using hnoGlobal)
+    calc
+      evalCrepFullExpsState state baseAddress topAddress [compiled] =
+          evalCrepFullExps state.locals state.memory
+            baseAddress topAddress [compiled] := hcompat
+      _ = some [value] := by simp [evalCrepFullExps, hcompiled']
+      _ = some (panValueFlatWords (.word value)) := by
+        simp [panValueFlatWords, panValueFlatWordsFuel]
+
 theorem panValueCrepExpressionCorrect_load_one
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

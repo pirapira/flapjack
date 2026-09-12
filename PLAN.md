@@ -2258,6 +2258,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   evaluator, including temporary-slot stability and result restoration.
 - [x] Port the arbitrary-body two-word record declaration constructor to the
   stateful evaluator, including nested-body fuel inversion and restoration.
+- [x] Add the state-aware scalar-expression-list relation used by record
+  declarations.
+- [x] Port the two-word record declaration `skip` constructor to the stateful
+  evaluator.
 - [x] Add stateful source-word program constructors for `Store32` and
   `StoreByte`, including no-global expression compatibility and memory
   relation transport.

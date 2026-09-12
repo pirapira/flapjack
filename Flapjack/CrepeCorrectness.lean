@@ -242,6 +242,29 @@ theorem compile_full_local_assign_return_const_correct
     evalPanMemExp, updateCrepLocal, updatePanLocal,
     distinctLists]
 
+theorem compile_full_local_assign_return_const_state_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (locals : VarName → Option α)
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (name : VarName) (slot : Nat) (value : α)
+    (lookup : lookupInfo name context.vars = some (.one, [slot])) :
+    evalCrepFullResultState [] primitive ffi sharedMem
+        baseAddress topAddress 20 state
+        (compileProg context
+          (.seq (.assign .local name (.const value))
+            (.return (.var .local name)))) =
+      evalPanMemResult locals state.memory
+        (.seq (.assign .local name (.const value))
+          (.return (.var .local name))) := by
+  simp [compileProg, compileExp, crepNestedSeq, lookup,
+    evalCrepFullResultState, evalCrepFullProgState, evalCrepFullExpsState,
+    evalCrepFullExpState, evalPanMemResult, evalPanMemProg,
+    evalPanMemExp, updateCrepLocal, updatePanLocal, distinctLists]
+
 theorem compile_full_local_return_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

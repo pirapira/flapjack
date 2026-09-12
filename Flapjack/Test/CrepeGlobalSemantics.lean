@@ -20,6 +20,10 @@ def crepeGlobalSkipContext : CompileContext Nat :=
   { vars := [], functions := [], exceptions := [], maxVar := 0,
     bytesInWord := 1 }
 
+def crepeGlobalLocalContext : CompileContext Nat :=
+  { vars := [("x", (.one, [1]))], functions := [], exceptions := [],
+    maxVar := 0, bytesInWord := 1 }
+
 theorem compile_full_skip_state_correct_regression :
     evalCrepFullResultState [] (fun _ _ => none) (noCrepFfi Nat)
         (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1
@@ -85,6 +89,22 @@ theorem compile_full_ite_const_state_correct_regression :
     (fun _ => none) crepeGlobalSemanticsState (fun _ _ => none)
     (noCrepFfi Nat) (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat)
     0 100 1 7 9
+
+theorem compile_full_local_assign_return_const_state_correct_regression :
+    evalCrepFullResultState [] (fun _ _ => none) (noCrepFfi Nat)
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 20
+        crepeGlobalSemanticsState
+        (compileProg crepeGlobalLocalContext
+          (.seq (.assign .local "x" (.const 7))
+            (.return (.var .local "x")) : Prog Nat)) =
+      evalPanMemResult (fun _ => none) crepeGlobalSemanticsState.memory
+        (.seq (.assign .local "x" (.const 7))
+          (.return (.var .local "x")) : Prog Nat) := by
+  exact compile_full_local_assign_return_const_state_correct
+    crepeGlobalLocalContext (fun _ => none) crepeGlobalSemanticsState
+    (fun _ _ => none) (noCrepFfi Nat)
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 "x" 1 7
+    (by simp [crepeGlobalLocalContext, lookupInfo])
 
 #guard evalCrepFullExpState crepeGlobalSemanticsState 0 100
   (CrepExp.loadGlob 200) = some 42

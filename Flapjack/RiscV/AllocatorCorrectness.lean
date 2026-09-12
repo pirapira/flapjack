@@ -399,7 +399,8 @@ theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixe
   subst renamedParameters
   subst renamedProgram
   subst allocation
-  have hclash := wordAllocateVarsWithFixedSources_sound _ _ _ _ inner hinner
+  have hclashAll := wordAllocateVarsWithFixedSources_sound _ _ _ _ inner hinner
+  have hclash := wordSpillAllocationRespectsClashes_append_left _ _ _ hclashAll
   exact ⟨hclash, hspecial, htreeChecked⟩
 
 theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_maps_variables
@@ -418,20 +419,7 @@ theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixe
   rcases halloc with ⟨_, rfl, rfl, rfl, rfl⟩
   rename_i _ alloc _ hallocation
   have hslots := wordAllocateVarsWithFixedSources_maps_slots
-    ((wordSsaRenameFunctionWithEntry parameters program).2.fst ++
-      (wordProgVariables (wordSsaRenameFunctionWithEntry parameters program).2.snd ++
-        ((wordClashTreeAnalyze
-            (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
-            []).fst ++
-          (wordClashTreeAnalyze
-            (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
-            []).snd.flatMap (fun edge => [edge.1, edge.2]))))
-    (wordClashTreeAnalyze
-      (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd []) []).snd
-    (wordProgPreferenceEdges
-      (wordSsaRenameFunctionWithEntry parameters program).2.snd)
-    (wordPhysicalFixedSources parameters
-      (wordSsaRenameFunctionWithEntry parameters program).2.snd) alloc hallocation
+    _ _ _ _ alloc hallocation
   intro name hname
   apply hslots name
   simp [hname]

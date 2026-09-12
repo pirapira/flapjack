@@ -4054,6 +4054,82 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_binop_const_const
           intro current hcurrent
           rfl
 
+theorem crepToLoopProgramCorrectWithPrimitive_assign_binop_const_var
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (name : Nat) (operator : BinOp) (value : α) (source : Nat) :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign name (.op operator [.const value, .var source]) : CrepProg α) := by
+  intro context functions crepFunctions primitive ffi sharedMem
+    baseAddress topAddress sourceFuel targetFuel state live crepResult loopResult
+    hcrep hloop
+  simp [evalCrepFullProg, evalCrepFullExp] at hcrep
+  cases hsource : state.locals source with
+  | none => simp [hsource] at hcrep
+  | some sourceValue =>
+      simp [hsource, evalPanBinOp] at hcrep
+      subst crepResult
+      cases targetFuel with
+      | zero => simp [evalLoopProgWithPrimitiveCallsAndFfi] at hloop
+      | succ targetFuel =>
+          cases targetFuel with
+          | zero =>
+              simp [loopCompileProg, loopCompileExp,
+                evalLoopProgWithPrimitiveCallsAndFfi] at hloop
+          | succ targetFuel =>
+              have hloopSource :
+                  (loopStateOfCrepState state).locals source = some sourceValue := by
+                simpa [loopStateOfCrepState] using hsource
+              simp [loopCompileProg, loopCompileExp,
+                loopCompileExp.loopCompileExps, loopNestedSeq,
+                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+                evalLoopExp, evalLoopBinOp] at hloop
+              simp [hloopSource] at hloop
+              cases hloop
+              cases operator <;>
+                simp [crepToLoopControlRel, crepToLoopStateRel,
+                  loopStateOfCrepState, updateCrepLocal, updateLoopLocal]
+
+theorem crepToLoopProgramCorrectWithPrimitive_assign_binop_var_const
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (name : Nat) (operator : BinOp) (source : Nat) (value : α) :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign name (.op operator [.var source, .const value]) : CrepProg α) := by
+  intro context functions crepFunctions primitive ffi sharedMem
+    baseAddress topAddress sourceFuel targetFuel state live crepResult loopResult
+    hcrep hloop
+  simp [evalCrepFullProg, evalCrepFullExp] at hcrep
+  cases hsource : state.locals source with
+  | none => simp [hsource] at hcrep
+  | some sourceValue =>
+      simp [hsource, evalPanBinOp] at hcrep
+      subst crepResult
+      cases targetFuel with
+      | zero => simp [evalLoopProgWithPrimitiveCallsAndFfi] at hloop
+      | succ targetFuel =>
+          cases targetFuel with
+          | zero =>
+              simp [loopCompileProg, loopCompileExp,
+                evalLoopProgWithPrimitiveCallsAndFfi] at hloop
+          | succ targetFuel =>
+              have hloopSource :
+                  (loopStateOfCrepState state).locals source = some sourceValue := by
+                simpa [loopStateOfCrepState] using hsource
+              simp [loopCompileProg, loopCompileExp,
+                loopCompileExp.loopCompileExps, loopNestedSeq,
+                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+                evalLoopExp, evalLoopBinOp] at hloop
+              simp [hloopSource] at hloop
+              cases hloop
+              cases operator <;>
+                simp [crepToLoopControlRel, crepToLoopStateRel,
+                  loopStateOfCrepState, updateCrepLocal, updateLoopLocal]
+
 theorem crepToLoopProgramCorrectWithPrimitive_assign_add_var_var
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

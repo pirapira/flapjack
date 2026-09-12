@@ -2268,6 +2268,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   evaluator, including arbitrary-shape expression evaluation and restoration.
 - [x] Port the one-word declaration-call normal-return constructor to the
   stateful evaluator using the independent-fuel state relation.
+- [x] Add the state-aware ordinary-call predicate and program-level call
+  constructor.
 - [x] Port the two-word record declaration `skip` constructor to the stateful
   evaluator.
 - [x] Port the two-word record declaration `break` and `continue` constructors

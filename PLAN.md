@@ -2297,6 +2297,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   state-aware load expression contract.
 - [x] Add the stateful byte-load return constructor through its explicit
   state-aware load expression contract.
+- [x] Add the stateful `load32` return constructor through its explicit
+  state-aware load expression contract.
 - [x] Generalize global-aware source-word `raise` lowering to arbitrary
   compiled functions and lift it into the stateful program relation.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite

@@ -71,6 +71,13 @@ checker previously searched only locals for the destination and rejected the
 global, while `nonWordSharedLoadSource` loads into a tuple-shaped local, which
 the reference compiler rejects.  Together the fixtures pin both directions of
 the shared-memory load destination check.
+
+`rotateSource` rotates a word right (`x #>> 1`) and adds it to the operand.
+RISC-V has no rotate instruction, so the encoder expands `.ror` through the
+reserved scratch register `31`; the word-to-stack pass used to leave the rotate
+result in `31` whenever the destination happened to be the scratch register,
+which the encoder then rejected.  `rotate*` pins the reference sections and
+asserts the byte entry point accepts the fixture.
 -/
 
 namespace Flapjack.Test.SourceGlobalParity
@@ -144,6 +151,12 @@ while the static checker previously accepted any local destination. -/
 def nonWordSharedLoadSource : String :=
   "fun 1 f () {\n  var {1} x = <1>;\n  !ldw x, 0;\n  return 1;\n}\n" ++
     "fun 1 main() { return 0; }"
+
+/-- Rotate-right program: the reserved-scratch regression.  The word-to-stack
+pass used to leave the `.ror` result in the reserved scratch register `31`
+instead of moving it out, which the RISC-V encoder rejects. -/
+def rotateSource : String :=
+  "fun 1 main() { var x = 5; return x + (x #>> 1); }"
 
 /-- CakeML `cml_generated_main` for `globalSource` (offset 1000, 28 bytes). -/
 def cakeGlobalGeneratedMain : List (BitVec 8) :=
@@ -351,6 +364,24 @@ def cakeGlobalSharedLoadMain : List (BitVec 8) :=
 /-- CakeML `cml_f` for `globalSharedLoadSource` (36 bytes). -/
 def cakeGlobalSharedLoadFLength : Nat := 36
 
+/-- CakeML `cml_generated_main` for `rotateSource` (4 bytes). -/
+def cakeRotateGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `rotateSource` (28 bytes). -/
+def cakeRotateMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0xB7, BitVec.ofNat 8 0x0F, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x8F,
+    BitVec.ofNat 8 0x7F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x37,
+    BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x80,
+    BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x05,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x15,
+    BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x02, BitVec.ofNat 8 0x33,
+    BitVec.ofNat 8 0x65, BitVec.ofNat 8 0xF5, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x00 ]
+
 /-- Run a source program through the checked RV64I byte entry point. -/
 def compileSourceBytes (source : String) : Option (List (BitVec 8)) :=
   match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
@@ -440,6 +471,13 @@ reference compiler rejects it and the static checker now matches. -/
 def nonWordSharedLoadRejected : Bool :=
   (compileSourceBytes nonWordSharedLoadSource).isNone
 
+/-- The rotate-right fixture must be accepted; the word-to-stack pass previously
+left a `.ror` result in the reserved scratch register `31`. -/
+def rotateBytesAccepted : Bool :=
+  match compileSourceBytes rotateSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
@@ -453,7 +491,8 @@ def cakeGoldenShape : Bool :=
     cakeShadowGeneratedMain.length == 28 && cakeShadowMain.length == 4 &&
     cakeShadowG.length == 8 && cakeShadowFLength == 144 &&
     cakeGlobalSharedLoadGeneratedMain.length == 28 &&
-    cakeGlobalSharedLoadMain.length == 4 && cakeGlobalSharedLoadFLength == 36
+    cakeGlobalSharedLoadMain.length == 4 && cakeGlobalSharedLoadFLength == 36 &&
+    cakeRotateGeneratedMain.length == 4 && cakeRotateMain.length == 28
 
 #guard globalBytesAccepted
 #guard nestedGlobalBytesAccepted
@@ -465,6 +504,7 @@ def cakeGoldenShape : Bool :=
 #guard shadowingBytesAccepted
 #guard globalSharedLoadBytesAccepted
 #guard nonWordSharedLoadRejected
+#guard rotateBytesAccepted
 #guard initializerChangesArtifact
 #guard cakeGoldenShape
 
@@ -498,6 +538,8 @@ def runChecks : IO Bool := do
       globalSharedLoadBytesAccepted,
     checkBool "Pancake non-word shared-memory load destination rejected"
       nonWordSharedLoadRejected,
+    checkBool "Pancake rotate-right source compiles (bytes)"
+      rotateBytesAccepted,
     checkBool "Pancake global source compiles (runtime image)"
       (runtimeImageAccepted globalSource),
     checkBool "Pancake global initializer changes artifact"

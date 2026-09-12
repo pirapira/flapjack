@@ -958,11 +958,50 @@ def wordStackCompileExpToRegisterNat (config : WordStackConfig)
           (wordStackJoin left (.arith operator target target rightTarget)))
   | .shift operator left right => do
       if wordStackExpressionIsAtom left && wordStackExpressionIsAtom right then
-        let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
-        let rightTemporary := available.head?.getD config.addressScratch
-        let (rightPrelude, rightRegister) ← wordStackAtomNat config rightTemporary right
-        pure (wordStackJoin leftPrelude
-          (wordStackJoin rightPrelude (.shift operator target leftRegister rightRegister)))
+        if operator == .ror then
+          let destinationRegister :=
+            if target == config.scratch then
+              (available.find? (fun register => register != config.scratch)).getD
+                config.addressScratch
+            else target
+          let operandRegisters :=
+            [config.addressScratch, config.specialScratch, config.carryScratch]
+              |>.filter (fun register => register != destinationRegister)
+          let leftTemporary := operandRegisters.head?.getD config.addressScratch
+          let rightTemporary := operandRegisters.tail.head?.getD config.specialScratch
+          let (leftPrelude, leftRegister) ← wordStackAtomNat config leftTemporary left
+          let (rightPrelude, rightRegister) ←
+            wordStackAtomNat config rightTemporary right
+          let rotate :=
+            .shift operator destinationRegister leftRegister rightRegister
+          let body :=
+            if destinationRegister = target then rotate
+            else .seq rotate (.arith .or target destinationRegister destinationRegister)
+          pure (wordStackJoin leftPrelude (wordStackJoin rightPrelude body))
+        else
+          let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
+          let rightTemporary := available.head?.getD config.addressScratch
+          let (rightPrelude, rightRegister) ← wordStackAtomNat config rightTemporary right
+          pure (wordStackJoin leftPrelude
+            (wordStackJoin rightPrelude (.shift operator target leftRegister rightRegister)))
+      else if operator == .ror then
+        let destinationRegister :=
+          if target == config.scratch then
+            (available.find? (fun register => register != config.scratch)).getD
+              config.addressScratch
+          else target
+        let pool :=
+          available.filter (fun register =>
+            register != destinationRegister && register != config.scratch)
+        let rightTarget ← pool.head?
+        let remaining := pool.tail
+        let right ← wordStackCompileExpToRegisterNat config rightTarget remaining right
+        let left ← wordStackCompileExpToRegisterNat config destinationRegister remaining left
+        let rotate := .shift operator destinationRegister destinationRegister rightTarget
+        let body :=
+          if destinationRegister = target then rotate
+          else .seq rotate (.arith .or target destinationRegister destinationRegister)
+        pure (wordStackJoin right (wordStackJoin left body))
       else
         let rightTarget ← available.head?
         let remaining := available.tail
@@ -1072,15 +1111,18 @@ def wordStackCompileExpNat (config : WordStackConfig) (destination : Nat) :
   | .op operator arguments =>
       wordStackCompileExpToPhysicalNat config destination (.op operator arguments)
   | .shift operator left right =>
-      match left with
-      | .const _ | .var _ | .lookup _ =>
-          match right with
-          | .const _ | .var _ | .lookup _ =>
-              wordStackCompileShiftNat config destination operator left right
-          | _ =>
-              wordStackCompileExpToPhysicalNat config destination (.shift operator left right)
-      | _ =>
-          wordStackCompileExpToPhysicalNat config destination (.shift operator left right)
+      if operator == .ror then
+        wordStackCompileExpToPhysicalNat config destination (.shift operator left right)
+      else
+        match left with
+        | .const _ | .var _ | .lookup _ =>
+            match right with
+            | .const _ | .var _ | .lookup _ =>
+                wordStackCompileShiftNat config destination operator left right
+            | _ =>
+                wordStackCompileExpToPhysicalNat config destination (.shift operator left right)
+        | _ =>
+            wordStackCompileExpToPhysicalNat config destination (.shift operator left right)
 
 def wordStackSetNat (config : WordStackConfig) (store : WordStore Nat)
     (value : WordExp Nat) : Option (StackProg Nat) := do

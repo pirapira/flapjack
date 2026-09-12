@@ -97,7 +97,7 @@ theorem compile_full_pan_value_local_assign_record_source_word_relation
       oldName ≠ name →
       lookupInfo oldName context.vars = some (oldShape, oldSlots) →
       slotLeft ∉ oldSlots ∧ slotRight ∉ oldSlots) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 30 state
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 30 state
         (compileProg context
           (.seq (.assign .local name
               (.rStruct [.const left, .const right]))

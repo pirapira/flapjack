@@ -553,10 +553,12 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         staticBind (checkProg handlerContext handlerProgram) (fun _ =>
                           checkCallDestination context returnShape destination))
   | .decCall name shape function arguments body =>
-      if (lookupInfo name context.locals).isSome ||
-          (lookupInfo name context.globals).isSome then
-        staticError (.scope ("local declaration redeclares: " ++ name))
-      else if !isWfShape context.structs shape then
+      let redeclarationWarnings :=
+        if (lookupInfo name context.locals).isSome ||
+            (lookupInfo name context.globals).isSome then
+          [StatErr.warning ("local declaration redeclares: " ++ name)]
+        else []
+      if !isWfShape context.structs shape then
         staticError (.shape "declaration-call result has an invalid shape")
       else
         match lookupInfo function context.functions with
@@ -575,7 +577,8 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                     let nextContext := { context with locals :=
                       (name, { shapedBased := shaped }) :: context.locals }
                     staticBind (checkProg nextContext body) (fun result =>
-                      staticOk { result with variableDelta := [] }))
+                      (Except.ok { result with variableDelta := [] },
+                        redeclarationWarnings)))
   | .extCall function configuration configurationLength array arrayLength =>
       staticBind (checkCallArgs context
         [configuration, configurationLength, array, arrayLength])
@@ -602,9 +605,18 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
             else
               staticError (.shape "return expression has the wrong shape"))
   | .shMemLoad _ _ name address =>
-      match lookupInfo name context.locals with
+      let destinationIsWord : Option Bool :=
+        match lookupInfo name context.locals with
+        | some info => some (shapedBasedIsWord info.shapedBased)
+        | none =>
+            match lookupInfo name context.globals with
+            | some info => (shapedBasedFromShape context.structs info.shape).map shapedBasedIsWord
+            | none => none
+      match destinationIsWord with
       | none => staticError (.scope ("unknown shared-memory destination: " ++ name))
-      | some _ =>
+      | some false =>
+          staticError (.shape ("shared-memory load destination is not a word: " ++ name))
+      | some true =>
           staticBind (checkExp context address) (fun result =>
             if shapedBasedIsWord result.shapedBased then
               progOk .otherLast false false context.location

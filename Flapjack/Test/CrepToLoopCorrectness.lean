@@ -337,6 +337,46 @@ theorem crepToLoop_storeByte_var_address_contract_regression :
     0 100 2 crepLoopAssignState [] 1 5 42
     (by simp [crepLoopAssignState])
 
+theorem crepToLoop_store32_vars_contract_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 3 crepLoopStoreVarsState
+      (.store32 (.var 5) (.var 6))).map
+        (crepControlMemoryAt 1) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      7 (loopStateOfCrepState crepLoopStoreVarsState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 6, target := .rv64i } :
+          LoopContext Nat)
+        [] (.store32 (.var 5) (.var 6)))).map
+        (loopControlMemoryAt 1) := by
+  exact crepToLoop_store32_vars_agreement
+    ({ vars := [], functions := [], maxVar := 6, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+    0 100 2 crepLoopStoreVarsState [] 1 42 5 6
+    (by change 6 ≤ 6; omega)
+    (by simp [crepLoopStoreVarsState]) (by simp [crepLoopStoreVarsState])
+
+theorem crepToLoop_storeByte_vars_contract_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 3 crepLoopStoreVarsState
+      (.storeByte (.var 5) (.var 6))).map
+        (crepControlMemoryAt 1) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      7 (loopStateOfCrepState crepLoopStoreVarsState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 6, target := .rv64i } :
+          LoopContext Nat)
+        [] (.storeByte (.var 5) (.var 6)))).map
+        (loopControlMemoryAt 1) := by
+  exact crepToLoop_storeByte_vars_agreement
+    ({ vars := [], functions := [], maxVar := 6, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+    0 100 2 crepLoopStoreVarsState [] 1 42 5 6
+    (by change 6 ≤ 6; omega)
+    (by simp [crepLoopStoreVarsState]) (by simp [crepLoopStoreVarsState])
+
 theorem crepToLoop_primitive_seq_normal_regression :
     evalCrepFullProg [] (fun _ _ => none)
         (fun _ _ _ _ _ state => some (.returned state))

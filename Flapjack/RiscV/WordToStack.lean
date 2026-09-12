@@ -969,6 +969,33 @@ def wordStackCompileExpToPhysicalNat (config : WordStackConfig)
       pure (wordStackJoin code
         (.stackStore config.scratch (wordStackOffset config slot)))
 
+/- A store has two simultaneously live results: its computed address and its
+   value. Keep the other result's reserved register out of the recursive
+   expression pool so evaluating a nested expression cannot destroy it. -/
+def wordStackExpressionTemporariesExcluding (config : WordStackConfig)
+    (target forbidden : Nat) : List Nat :=
+  [config.scratch, config.addressScratch, config.specialScratch, config.carryScratch]
+    |>.filter (fun register => register != target && register != forbidden)
+
+def wordStackCompileStoreNatNested (config : WordStackConfig) (address : WordExp Nat)
+    (value : WordExp Nat) : Option (StackProg Nat) := do
+  let addressPrelude ← wordStackCompileExpToRegisterNat config config.addressScratch
+    (wordStackExpressionTemporaries config config.addressScratch) address
+  let valuePrelude ← wordStackCompileExpToRegisterNat config config.scratch
+    (wordStackExpressionTemporariesExcluding config config.scratch config.addressScratch)
+    value
+  pure (wordStackJoin addressPrelude
+    (wordStackJoin valuePrelude
+      (.inst (.mem .store config.scratch config.addressScratch))))
+
+def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
+    (address : WordExp Nat) : Option (StackProg Nat) := do
+  let addressPrelude ← wordStackCompileExpToRegisterNat config config.addressScratch
+    (wordStackExpressionTemporaries config config.addressScratch) address
+  let body ← wordStackWritePhysicalNat config destination
+    (fun register => .inst (.mem .load register config.addressScratch))
+  pure (wordStackJoin addressPrelude body)
+
 def wordStackCompileSharedNat (config : WordStackConfig)
     (operator : WordMemOp) (destination : Nat) (address : WordExp Nat) :
     Option (StackProg Nat) := do
@@ -988,12 +1015,32 @@ def wordStackCompileExpNat (config : WordStackConfig) (destination : Nat) :
       let body ← wordStackWritePhysicalNat config destination
         (.get · store)
       pure body
-  | .load address => wordStackCompileLoadNat config destination address
+  | .load address =>
+      match address with
+      | .const _ | .var _ | .lookup _ =>
+          wordStackCompileLoadNat config destination address
+      | _ => wordStackCompileLoadNatNested config destination address
   | .op operator [left, right] =>
-      wordStackCompileBinaryNat config destination operator left right
+      match left with
+      | .const _ | .var _ | .lookup _ =>
+          match right with
+          | .const _ | .var _ | .lookup _ =>
+              wordStackCompileBinaryNat config destination operator left right
+          | _ =>
+              wordStackCompileExpToPhysicalNat config destination (.op operator [left, right])
+      | _ =>
+          wordStackCompileExpToPhysicalNat config destination (.op operator [left, right])
   | .op _ _ => none
   | .shift operator left right =>
-      wordStackCompileShiftNat config destination operator left right
+      match left with
+      | .const _ | .var _ | .lookup _ =>
+          match right with
+          | .const _ | .var _ | .lookup _ =>
+              wordStackCompileShiftNat config destination operator left right
+          | _ =>
+              wordStackCompileExpToPhysicalNat config destination (.shift operator left right)
+      | _ =>
+          wordStackCompileExpToPhysicalNat config destination (.shift operator left right)
 
 def wordStackSetNat (config : WordStackConfig) (store : WordStore Nat)
     (value : WordExp Nat) : Option (StackProg Nat) := do
@@ -2190,7 +2237,10 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .inst instruction => wordToStackInst config instruction
   | .get destination store => wordStackGet config destination store
   | .store address value =>
-      wordStackCompileStoreNat config address (.var value)
+      match address with
+      | .const _ | .var _ | .lookup _ =>
+          wordStackCompileStoreNat config address (.var value)
+      | _ => wordStackCompileStoreNatNested config address (.var value)
   | .set store value => wordStackSetNat config store value
   | .seq first second => do
       let first ← wordToStackProgNat config first

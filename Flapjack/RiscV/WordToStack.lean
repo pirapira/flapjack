@@ -928,14 +928,12 @@ def wordStackCompileExpToRegisterNat (config : WordStackConfig)
         pure (wordStackJoin leftPrelude
           (wordStackJoin rightPrelude (.arith operator target leftRegister rightRegister)))
       else
-        let leftTarget ← available.head?
-        let rightTarget ← available.tail.head?
-        let remaining := available.drop 2
-        let left ← wordStackCompileExpToRegisterNat config leftTarget
-          (rightTarget :: remaining) left
+        let rightTarget ← available.head?
+        let remaining := available.tail
         let right ← wordStackCompileExpToRegisterNat config rightTarget remaining right
-        pure (wordStackJoin left
-          (wordStackJoin right (.arith operator target leftTarget rightTarget)))
+        let left ← wordStackCompileExpToRegisterNat config target remaining left
+        pure (wordStackJoin right
+          (wordStackJoin left (.arith operator target target rightTarget)))
   | .shift operator left right => do
       if wordStackExpressionIsAtom left && wordStackExpressionIsAtom right then
         let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
@@ -944,14 +942,12 @@ def wordStackCompileExpToRegisterNat (config : WordStackConfig)
         pure (wordStackJoin leftPrelude
           (wordStackJoin rightPrelude (.shift operator target leftRegister rightRegister)))
       else
-        let leftTarget ← available.head?
-        let rightTarget ← available.tail.head?
-        let remaining := available.drop 2
-        let left ← wordStackCompileExpToRegisterNat config leftTarget
-          (rightTarget :: remaining) left
+        let rightTarget ← available.head?
+        let remaining := available.tail
         let right ← wordStackCompileExpToRegisterNat config rightTarget remaining right
-        pure (wordStackJoin left
-          (wordStackJoin right (.shift operator target leftTarget rightTarget)))
+        let left ← wordStackCompileExpToRegisterNat config target remaining left
+        pure (wordStackJoin right
+          (wordStackJoin left (.shift operator target target rightTarget)))
   | .op _ _ => none
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial

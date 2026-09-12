@@ -2229,6 +2229,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   correctness theorem for direct program-induction use.
 - [x] Add the stateful program-correctness predicate, its return and sequence
   constructors, and terminal leaves for skip/tick/annotation/break/continue.
+- [x] Migrate the concrete fuel-polymorphic source-word return theorem to the
+  stateful evaluator and return boundary.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

@@ -65,6 +65,12 @@ body.  The reference compiler only logs a warning for the redeclaration, while
 the static checker previously rejected the call-initialized declaration as a
 scope error; `shadowing*` pins the reference sections and asserts the byte entry
 point accepts the fixture.
+
+`globalSharedLoadSource` loads into a word global (`!ldw g, 0`).  The static
+checker previously searched only locals for the destination and rejected the
+global, while `nonWordSharedLoadSource` loads into a tuple-shaped local, which
+the reference compiler rejects.  Together the fixtures pin both directions of
+the shared-memory load destination check.
 -/
 
 namespace Flapjack.Test.SourceGlobalParity
@@ -122,6 +128,22 @@ def shadowingSource : String :=
     "fun 1 g() { return 9; }\n" ++
     "fun 1 f() {\n  var 1 x = 0;\n  var 1 x = g();\n  return x;\n}\n" ++
     "fun 1 main() { return f(); }"
+
+/-- Shared-memory load into a global word destination: the destination-lookup
+regression.  The reference compiler accepts `!ldw g, 0` when `g` is a word
+global, while the static checker previously only searched locals and reported
+an unknown destination. -/
+def globalSharedLoadSource : String :=
+  "var 1 g = 1;\n" ++
+    "fun 1 f () {\n  !ldw g, 0;\n  return 1;\n}\n" ++
+    "fun 1 main() { return f(); }"
+
+/-- Shared-memory load into a non-word local: the destination-shape regression.
+The reference compiler rejects `!ldw x, 0` when `x` has a tuple/struct shape,
+while the static checker previously accepted any local destination. -/
+def nonWordSharedLoadSource : String :=
+  "fun 1 f () {\n  var {1} x = <1>;\n  !ldw x, 0;\n  return 1;\n}\n" ++
+    "fun 1 main() { return 0; }"
 
 /-- CakeML `cml_generated_main` for `globalSource` (offset 1000, 28 bytes). -/
 def cakeGlobalGeneratedMain : List (BitVec 8) :=
@@ -308,6 +330,27 @@ def cakeShadowG : List (BitVec 8) :=
 /-- CakeML `cml_f` for `shadowingSource`; only its reference length is pinned. -/
 def cakeShadowFLength : Nat := 144
 
+/-- CakeML `cml_generated_main` for `globalSharedLoadSource` (28 bytes). -/
+def cakeGlobalSharedLoadGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xB5, BitVec.ofNat 8 0x8C,
+    BitVec.ofNat 8 0xFE, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x15,
+    BitVec.ofNat 8 0x15, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x33,
+    BitVec.ofNat 8 0x05, BitVec.ofNat 8 0xA5, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x85,
+    BitVec.ofNat 8 0xFF, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x65,
+    BitVec.ofNat 8 0x10, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x23,
+    BitVec.ofNat 8 0x30, BitVec.ofNat 8 0xB5, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `globalSharedLoadSource` (4 bytes). -/
+def cakeGlobalSharedLoadMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_f` for `globalSharedLoadSource` (36 bytes). -/
+def cakeGlobalSharedLoadFLength : Nat := 36
+
 /-- Run a source program through the checked RV64I byte entry point. -/
 def compileSourceBytes (source : String) : Option (List (BitVec 8)) :=
   match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
@@ -385,6 +428,18 @@ def shadowingBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The global shared-memory load destination fixture must be accepted; the
+static checker previously looked only at locals. -/
+def globalSharedLoadBytesAccepted : Bool :=
+  match compileSourceBytes globalSharedLoadSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
+/-- The non-word shared-memory load destination fixture must be rejected; the
+reference compiler rejects it and the static checker now matches. -/
+def nonWordSharedLoadRejected : Bool :=
+  (compileSourceBytes nonWordSharedLoadSource).isNone
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
@@ -396,7 +451,9 @@ def cakeGoldenShape : Bool :=
     cakeSharedMemoryGeneratedMain.length == 4 && cakeSharedMemoryMain.length == 4 &&
     cakeSharedMemoryTest.length == 12 &&
     cakeShadowGeneratedMain.length == 28 && cakeShadowMain.length == 4 &&
-    cakeShadowG.length == 8 && cakeShadowFLength == 144
+    cakeShadowG.length == 8 && cakeShadowFLength == 144 &&
+    cakeGlobalSharedLoadGeneratedMain.length == 28 &&
+    cakeGlobalSharedLoadMain.length == 4 && cakeGlobalSharedLoadFLength == 36
 
 #guard globalBytesAccepted
 #guard nestedGlobalBytesAccepted
@@ -406,6 +463,8 @@ def cakeGoldenShape : Bool :=
 #guard namedStructBytesAccepted
 #guard sharedMemoryBytesAccepted
 #guard shadowingBytesAccepted
+#guard globalSharedLoadBytesAccepted
+#guard nonWordSharedLoadRejected
 #guard initializerChangesArtifact
 #guard cakeGoldenShape
 
@@ -435,6 +494,10 @@ def runChecks : IO Bool := do
       sharedMemoryBytesAccepted,
     checkBool "Pancake shadowed local declaration source compiles (bytes)"
       shadowingBytesAccepted,
+    checkBool "Pancake global shared-memory load destination compiles (bytes)"
+      globalSharedLoadBytesAccepted,
+    checkBool "Pancake non-word shared-memory load destination rejected"
+      nonWordSharedLoadRejected,
     checkBool "Pancake global source compiles (runtime image)"
       (runtimeImageAccepted globalSource),
     checkBool "Pancake global initializer changes artifact"

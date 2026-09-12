@@ -605,9 +605,18 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
             else
               staticError (.shape "return expression has the wrong shape"))
   | .shMemLoad _ _ name address =>
-      match lookupInfo name context.locals with
+      let destinationIsWord : Option Bool :=
+        match lookupInfo name context.locals with
+        | some info => some (shapedBasedIsWord info.shapedBased)
+        | none =>
+            match lookupInfo name context.globals with
+            | some info => (shapedBasedFromShape context.structs info.shape).map shapedBasedIsWord
+            | none => none
+      match destinationIsWord with
       | none => staticError (.scope ("unknown shared-memory destination: " ++ name))
-      | some _ =>
+      | some false =>
+          staticError (.shape ("shared-memory load destination is not a word: " ++ name))
+      | some true =>
           staticBind (checkExp context address) (fun result =>
             if shapedBasedIsWord result.shapedBased then
               progOk .otherLast false false context.location

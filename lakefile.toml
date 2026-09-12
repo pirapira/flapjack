@@ -9,3 +9,7 @@ name = "Flapjack"
 [[lean_exe]]
 name = "FlapjackTest"
 root = "Flapjack.Test.CompilerParity"
+
+[[lean_exe]]
+name = "flapjack-compile"
+root = "Flapjack.CompileMain"

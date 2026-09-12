@@ -13,8 +13,61 @@ Pancake source text can be parsed into Flapjack AST values with
 `Flapjack.Parser.parseTopDecs (BitVec.ofInt 64) source` returns either a list
 of declarations or a list of positioned errors. The module map, the divergences
 from upstream, and the omissions are documented in
-[`Flapjack/Parser/README.md`](Flapjack/Parser/README.md); there are no new
-user-facing commands.
+[`Flapjack/Parser/README.md`](Flapjack/Parser/README.md).
+
+## Current status
+
+The port has a working, checked RV64I source-entry path for a growing subset
+of Pancake and a large collection of pass-level and machine-level correctness
+lemmas. It is not yet a complete replacement for CakeML's Pancake compiler:
+full runtime-image generation, broad source coverage, exact artifact parity,
+and the complete Pancake correctness theorem still require work. The current
+claims and limitations are recorded explicitly in
+[`docs/SOUNDNESS.md`](docs/SOUNDNESS.md).
+
+Backends other than RISC-V are out of scope for this port.
+
+## Usage
+
+Install the pinned Lean toolchain and build the library:
+
+```sh
+lake build
+```
+
+Run the executable regression suite, including the CakeML-derived RISC-V
+byte goldens:
+
+```sh
+lake test
+```
+
+Compile a Pancake source file through the current source-facing RV64I path:
+
+```sh
+lake exe flapjack-compile program.pnk > program.riscv.hex
+```
+
+The compiler also reads source from standard input:
+
+```sh
+printf 'fun 1 main() { return 7; }\n' | lake exe flapjack-compile
+```
+
+The output is one space-separated line of lowercase hexadecimal bytes in
+little-endian RISC-V encoding. A nonzero exit status reports a parse, static,
+entry-point, or lowering error. This is currently a raw byte artifact, not
+CakeML's complete `.S` assembly/runtime output or an ELF file. The original
+reference compiler can be run locally with:
+
+```sh
+cakeml/developers/bin/cake --pancake --target=riscv < program.pnk > program.cake.S
+```
+
+Use the parity tests and `docs/SOUNDNESS.md` when interpreting comparisons
+between the two outputs.
+
+## Project map
 
 The Lean library currently contains the core Pancake syntax in
 [`Flapjack/Language.lean`](Flapjack/Language.lean) and the static-checker

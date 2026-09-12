@@ -2237,6 +2237,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   stateful evaluator, including its updated local-state relation.
 - [x] Port the complementary scalar temporary-assignment relation, including
   temporary-slot evaluation and restoration under the stateful evaluator.
+- [x] Port the generic and scalar source-word `Store32` relations to the
+  stateful evaluator, including source/target memory transitions.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

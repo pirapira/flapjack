@@ -18,6 +18,8 @@ import Flapjack.Test.HeuristicDriver
 import Flapjack.Test.HeuristicPipeline
 import Flapjack.Test.HeuristicStackPipeline
 import Flapjack.RiscV.CorrectnessHeuristicStack
+import Flapjack.Test.RiscVEncoding
+import Flapjack.Test.CorrectnessEncoding
 import Flapjack.RiscV.CorrectnessGraphLocations
 import Flapjack.RiscV.CorrectnessStackRiscVDivision
 import Flapjack.RiscV.CorrectnessStackRiscVLongMul
@@ -87,6 +89,7 @@ import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.CorrectnessFfiRiscVLoop
 import Flapjack.Test.FullSsa
 import Flapjack.Test.FullSsaPipeline
+import Flapjack.Test.ParsedFullSsaPipeline
 import Flapjack.Test.FullSsaCorrectness
 import Flapjack.Test.CorrectnessSsa
 import Flapjack.Test.CorrectnessGraphCoverage

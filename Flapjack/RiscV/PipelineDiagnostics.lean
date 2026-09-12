@@ -1,4 +1,7 @@
 import Flapjack.Pipeline
+import Flapjack.Parser
+import Flapjack.RiscV.Encoding
+import Flapjack.RiscV.LabDiagnostics
 import Flapjack.RiscV.WordDiagnostics
 
 /-!
@@ -41,8 +44,36 @@ namespace Flapjack
 
 inductive PipelineRiscVLoweringError where
   | wordToStack (error : RiscV.PipelineWordLoweringError)
+  | labToRiscV (error : RiscV.LabLoweringError)
   | stackToRiscV
   deriving DecidableEq, Repr
+
+inductive SourceRiscVCompileError where
+  | parse (errors : List Parser.ParseError)
+  | static (error : StatErr)
+  | entryNotFound
+  | lowering (error : PipelineRiscVLoweringError)
+  deriving Repr
+
+structure SourceRiscVArtifact (width : Nat) where
+  bytes : List (BitVec 8)
+  warnings : List StatErr
+
+inductive SourceRiscVImageError where
+  | parse (errors : List Parser.ParseError)
+  | static (error : StatErr)
+  | entryNotFound
+  | artifactFailure
+  deriving Repr
+
+structure SourceRiscVImage (width : Nat) where
+  sections : List (RiscV.EncodedRiscVSection width)
+  warnings : List StatErr
+
+structure SourceRiscVRuntimeImage (width : Nat) where
+  bitmaps : RiscV.WordStackBitmapState
+  sections : List (RiscV.EncodedRiscVSection width)
+  warnings : List StatErr
 
 /-! Checked sibling of `compileFlapjackRiscVViaStack`.  The historical
     `Option` entrypoint remains available for compatibility; this form makes
@@ -61,10 +92,117 @@ def compileFlapjackRiscVViaStackChecked [NeZero width]
   match RiscV.pipelineWordFunctionsToStackChecked pipeline.word with
   | .error error => .error (.wordToStack error)
   | .ok functions =>
-      match RiscV.compileStackProgramNatListWithRaiseStubToRiscV
+      match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
           { services := services } removeConfig 0 0
           (functions.map (fun (label, _, body) => (label, body))) with
-      | some instructions => .ok instructions
-      | none => .error .stackToRiscV
+      | .ok instructions => .ok instructions
+      | .error error => .error (.labToRiscV error)
+
+/-! Artifact-facing sibling of the checked instruction pipeline.  CakeML's
+    RISC-V target exposes a little-endian byte list, so keep lowering errors
+    intact while applying the concrete encoder only to successful code. -/
+def compileFlapjackRiscVViaStackBytesChecked [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Except PipelineRiscVLoweringError (List (BitVec 8)) :=
+  (compileFlapjackRiscVViaStackChecked architecture bytesInWord fromNat services
+    removeConfig declarations).map RiscV.encodeInstructions
+
+/-! Source-facing entrypoint. Parsing and static checking are kept ahead of
+    the existing entry-aware pipeline so callers can distinguish front-end,
+    missing-entry, and target-lowering failures. -/
+def compileFlapjackRiscVSourceBytesChecked [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Int → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig) (start : FunName) (source : String) :
+    Except SourceRiscVCompileError (SourceRiscVArtifact width) :=
+  match Parser.parseTopDecs fromNat source with
+  | .error errors => .error (.parse errors)
+  | .ok declarations =>
+      let checked := staticCheck declarations
+      match checked.1 with
+      | .error error => .error (.static error)
+      | .ok _ =>
+          let warnings := checked.2
+          match compileFlapjackEntry architecture bytesInWord
+              (fun value => fromNat value) start declarations with
+          | none => .error .entryNotFound
+          | some pipeline =>
+              match RiscV.pipelineWordFunctionsToStackChecked pipeline.word with
+              | .error error => .error (.lowering (.wordToStack error))
+              | .ok functions =>
+                  match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
+                      (width := width)
+                      { services := services } removeConfig 0 0
+                      (functions.map (fun (label, _, body) => (label, body))) with
+                  | .error error => .error (.lowering (.labToRiscV error))
+                  | .ok instructions =>
+                      .ok { bytes := RiscV.encodeInstructions instructions, warnings }
+
+/-! Linked source-entry image. The full-SSA entry pipeline retains the same
+    section labels and byte addresses used by the machine correctness harness;
+    encoding is applied section-by-section so that metadata is not lost. -/
+def compileFlapjackRiscVSourceImageChecked [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Int → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig) (start : FunName) (source : String) :
+    Except SourceRiscVImageError (SourceRiscVImage width) :=
+  match Parser.parseTopDecs fromNat source with
+  | .error errors => .error (.parse errors)
+  | .ok declarations =>
+      let checked := staticCheck declarations
+      match checked.1 with
+      | .error error => .error (.static error)
+      | .ok _ =>
+          let warnings := checked.2
+          match pipelineFindFunction start (structCompileTop (panSimpDecls declarations)) with
+          | none => .error .entryNotFound
+          | some _ =>
+              match compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked
+                  architecture bytesInWord (fun value => fromNat value) services
+                  removeConfig start declarations with
+              | none => .error .artifactFailure
+              | some sections =>
+                  .ok { sections := RiscV.encodeLinkedSections sections, warnings }
+
+/-! Runtime image variant carrying the bitmap table emitted by the
+    full-SSA SimpleGC pipeline. This is the metadata consumed by the collector
+    before the encoded code sections execute. -/
+def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Int → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig) (start : FunName) (source : String) :
+    Except SourceRiscVImageError (SourceRiscVRuntimeImage width) :=
+  match Parser.parseTopDecs fromNat source with
+  | .error errors => .error (.parse errors)
+  | .ok declarations =>
+      let checked := staticCheck declarations
+      match checked.1 with
+      | .error error => .error (.static error)
+      | .ok _ =>
+          let warnings := checked.2
+          match pipelineFindFunction start (structCompileTop (panSimpDecls declarations)) with
+          | none => .error .entryNotFound
+          | some _ =>
+              match compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcEntryLinked
+                  architecture bytesInWord (fun value => fromNat value) services
+                  removeConfig start declarations with
+              | none => .error .artifactFailure
+              | some (bitmaps, sections) =>
+                  .ok { bitmaps, sections := RiscV.encodeLinkedSections sections, warnings }
 
 end Flapjack

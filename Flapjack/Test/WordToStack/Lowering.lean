@@ -459,4 +459,32 @@ example :
     lookupNatInfo, wordToStackRaise,
     wordStackJoin]
 
+/-! The full-SSA path uses recursive expression lowering for the address of
+    global storage.  This concrete machine theorem checks the nested
+    add/shift/sub shape emitted by CakeML's global initialization pass. -/
+theorem nestedGlobalAddressLowering_correct :
+    let config : WordStackConfig :=
+      { locations := [(0, .register 11)], scratch := 31, stackBase := 0,
+        addressScratch := 29, specialScratch := 28, carryScratch := 27 }
+    let state : WordStackMachineState 64 :=
+      { registers := fun _ => 0,
+        stack := fun _ => 0,
+        stores := fun store =>
+          if store = .currHeap then BitVec.ofNat 64 1000
+          else if store = .heapLength then BitVec.ofNat 64 4
+          else 0,
+        memory := fun _ => 0,
+        sharedMemory := fun _ => 0 }
+    let expression : WordExp Nat :=
+      .op .sub
+        [.op .add
+          [.lookup .currHeap,
+           .shift .lsl (.lookup .heapLength) (.const 1)],
+         .const 8]
+    ((wordStackCompileExpToPhysicalNat config 0 expression).bind
+      (evalWordStackMachine state)).bind
+        (fun final => some (final.registers 11)) =
+      some (BitVec.ofNat 64 1000) := by
+  native_decide
+
 end Flapjack.RiscV

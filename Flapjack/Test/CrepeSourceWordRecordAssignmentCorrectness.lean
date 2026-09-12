@@ -12,7 +12,7 @@ def sourceWordRecordAssignmentState : CrepState Nat :=
     memory := fun _ => none }
 
 theorem closed_source_word_record_assignment_relation :
-    evalCrepFullResult [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    evalCrepFullResultState [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         (fun _ _ _ _ => none) 0 0 30 sourceWordRecordAssignmentState
         (compileProg sourceWordRecordAssignmentContext
           (.seq (.assign .local "x"

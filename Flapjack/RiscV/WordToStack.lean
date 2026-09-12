@@ -923,7 +923,8 @@ def wordStackCompileExpToRegisterNat (config : WordStackConfig)
   | .op operator [left, right] => do
       if wordStackExpressionIsAtom left && wordStackExpressionIsAtom right then
         let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
-        let (rightPrelude, rightRegister) ← wordStackAtomNat config config.addressScratch right
+        let rightTemporary := available.head?.getD config.addressScratch
+        let (rightPrelude, rightRegister) ← wordStackAtomNat config rightTemporary right
         pure (wordStackJoin leftPrelude
           (wordStackJoin rightPrelude (.arith operator target leftRegister rightRegister)))
       else
@@ -938,7 +939,8 @@ def wordStackCompileExpToRegisterNat (config : WordStackConfig)
   | .shift operator left right => do
       if wordStackExpressionIsAtom left && wordStackExpressionIsAtom right then
         let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
-        let (rightPrelude, rightRegister) ← wordStackAtomNat config config.addressScratch right
+        let rightTemporary := available.head?.getD config.addressScratch
+        let (rightPrelude, rightRegister) ← wordStackAtomNat config rightTemporary right
         pure (wordStackJoin leftPrelude
           (wordStackJoin rightPrelude (.shift operator target leftRegister rightRegister)))
       else

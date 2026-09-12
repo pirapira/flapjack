@@ -66,6 +66,10 @@
 # execution out of repeated kernel reductions during fresh CI builds.
 1 Flapjack/Test/ParsedFullSsaPipeline.lean
 
+# Concrete nested global-address expression execution cannot be reduced by
+# the kernel through the recursive expression compiler.
+1 Flapjack/Test/WordToStack/Lowering.lean
+
 # --- Declaration-driven parameter-shape regressions -------------------------
 # These regressions execute the declaration compiler over Word expressions;
 # kernel reduction stalls in `compileExp`, so the named correctness check and

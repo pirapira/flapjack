@@ -471,6 +471,34 @@ theorem crepToLoop_while_var_false_regression :
   · simp [crepZeroConditionState, crepSeqInitial, loopStateOfCrepState,
       loopCompileExp, evalLoopExp, updateCrepLocal]
 
+theorem crepToLoop_while_var_true_break_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 2 crepOneConditionState
+      (.while (.var 1) (.break 0))).map
+        (crepControlLocal 5) =
+    (evalLoopProgWithCallsAndFfi []
+      (fun _ _ _ _ _ loopState => some loopState) 13
+      (loopStateOfCrepState crepOneConditionState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 2, target := .rv64i } :
+          LoopContext Nat)
+        [] (.while (.var 1) (.break 0)))).map
+        (loopControlLocal 5) := by
+  apply crepToLoop_while_true_break_of_empty_prefix
+    ({ vars := [], functions := [], maxVar := 2, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 0 crepOneConditionState []
+    (.var 1) 5
+  · decide
+  · simp [loopCompileExp]
+  · simp [loopCompileExp]
+  · simp [loopCompileExp]
+  · simp [crepOneConditionState, crepSeqInitial, evalCrepFullExp,
+      updateCrepLocal]
+  · simp [crepOneConditionState, crepSeqInitial, loopStateOfCrepState,
+      loopCompileExp, evalLoopExp, updateCrepLocal]
+
 theorem crepToLoop_store_var_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ _ _ => none) 0 100 2 crepStoreExpressionState

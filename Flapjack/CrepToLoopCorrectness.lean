@@ -3785,6 +3785,73 @@ theorem crepToLoopWithPrimitive_seq_terminal_compose_loop_extra
     | broke state label => rfl
     | continued state label => rfl
 
+theorem crepToLoopWithPrimitive_while_const_zero_agreement
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat) (name : Nat)
+    (body : CrepProg α)
+    (hname : name ≠ context.maxVar + 1) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.while (.const (by exact 0)) body)).map
+        (crepControlLocal name) =
+    (evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      (loopFfiOfCrepFfi ffi) (fuel + 12)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.while (.const (by exact 0)) body))).map
+        (loopControlLocal name) := by
+  simp [evalCrepFullProg, evalCrepFullExp,
+    loopStateOfCrepState, crepControlLocal, loopControlLocal,
+    loopCompileProg, loopCompileExp, loopNestedSeq,
+    evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg, evalLoopExp,
+    evalLoopRepeatWithPrimitiveCallsAndFfi,
+    evalLoopCondition, updateLoopLocal, hname]
+
+theorem crepToLoopWithPrimitive_ite_const_zero_compose
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (thenBranch elseBranch : CrepProg α)
+    (result : CrepControlResult α) (loopResult : LoopResult α)
+    (hcrepElse : evalCrepFullProg [] primitive ffi sharedMem
+      baseAddress topAddress fuel state elseBranch = some result)
+    (hloopElse : evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      (loopFfiOfCrepFfi ffi) (fuel + 2)
+      { loopStateOfCrepState state with
+        locals := updateLoopLocal (loopStateOfCrepState state).locals
+          (context.maxVar + 1) 0 }
+      (loopCompileProg context live elseBranch) = some loopResult) :
+    evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state
+      (.ite (.const (by exact 0)) thenBranch elseBranch) = some result ∧
+    evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      (loopFfiOfCrepFfi ffi) (fuel + 5)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.ite (.const (by exact 0)) thenBranch elseBranch)) =
+      some loopResult := by
+  constructor
+  · simp [evalCrepFullProg, evalCrepFullExp, hcrepElse]
+  · simp [loopCompileProg, loopCompileExp, loopNestedSeq,
+      evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg, evalLoopExp,
+      evalLoopCondition, updateLoopLocal, hloopElse]
+
 /-!
 CrepToLoopProgramCorrect is the complete-pass induction boundary.  It keeps
 the source and target fuel bounds independent because lowering introduces

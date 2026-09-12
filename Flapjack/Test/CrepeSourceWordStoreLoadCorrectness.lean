@@ -10,7 +10,7 @@ def sourceWordStoreLoadState : CrepState Nat :=
 
 theorem closed_source_word_store32_load_one_bridge :
     ∃ result,
-      evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      evalCrepFullProgState [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         (fun _ _ _ _ => none) 0 0 2 sourceWordStoreLoadState
         (compileProg sourceWordStoreLoadContext
           (.seq

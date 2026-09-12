@@ -1914,6 +1914,52 @@ theorem compile_full_pan_value_identity_declaration_call_correct
     source and Crep callee simulations are supplied as witnesses; this rule
     accounts for the surrounding evaluator step and the compiler's argument
     lowering. -/
+theorem compile_full_pan_value_call_state_compose
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (compiledInfo : Option (List Nat × Option (α × CrepProg α)))
+    (function : FunName) (arguments : List (Exp α))
+    (compiledArguments : List (CrepExp α))
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α)
+    (hcompileArgs : compileArgs context arguments = compiledArguments)
+    (hcompileProg : compileProg context (.call info function arguments) =
+      .call compiledInfo function (compileArgs context arguments))
+    (hsourceCall : evalPanValueCallWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord fuel
+      sourceLocals sourceGlobals sourceMemory info function arguments =
+      some sourceResult)
+    (hcrepCall : evalCrepFullCallState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress fuel state compiledInfo function compiledArguments =
+      some crepResult) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory
+      (.call info function arguments) = some sourceResult ∧
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state
+      (compileProg context (.call info function arguments)) = some crepResult := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceCall]
+  · rw [hcompileProg, hcompileArgs]
+    simp [evalCrepFullProgState, hcrepCall]
+
 theorem compile_full_pan_value_call_compose
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

@@ -2241,6 +2241,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   stateful evaluator, including source/target memory transitions.
 - [x] Port the generic `StoreByte` relation to the stateful evaluator, keeping
   both fixed-width memory constructors available to the stateful induction.
+- [x] Add stateful call composition and relation boundaries, preserving
+  explicit callee/handler witnesses for later global-state simulation.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

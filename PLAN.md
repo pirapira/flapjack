@@ -2285,6 +2285,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   the handler-produced state and destination-local update.
 - [x] Port stateful source-word external-call correctness, including
   four-argument temporary threading, FFI state transition, and restoration.
+- [x] Port stateful closed-constant external-call correctness, including
+  explicit-state constant evaluation, FFI transition, and temporary restoration.
 - [x] Add a reusable state-aware scalar expression relation, transporting
   source-word compilation through the generated expression's no-global proof.
 - [x] Add the stateful source-word `return` constructor, including the

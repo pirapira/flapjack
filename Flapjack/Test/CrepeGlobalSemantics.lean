@@ -24,6 +24,11 @@ def crepeGlobalLocalContext : CompileContext Nat :=
   { vars := [("x", (.one, [1]))], functions := [], exceptions := [],
     maxVar := 0, bytesInWord := 1 }
 
+def crepeGlobalBoundLocalState : CrepState Nat :=
+  { locals := fun slot => if slot = 1 then some 7 else none
+    memory := crepeGlobalSemanticsState.memory
+    globals := crepeGlobalSemanticsState.globals }
+
 theorem compile_full_skip_state_correct_regression :
     evalCrepFullResultState [] (fun _ _ => none) (noCrepFfi Nat)
         (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1
@@ -105,6 +110,22 @@ theorem compile_full_local_assign_return_const_state_correct_regression :
     (fun _ _ => none) (noCrepFfi Nat)
     (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 "x" 1 7
     (by simp [crepeGlobalLocalContext, lookupInfo])
+
+theorem compile_full_local_return_state_correct_regression :
+    evalCrepFullResultState [] (fun _ _ => none) (noCrepFfi Nat)
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 5
+        crepeGlobalBoundLocalState
+        (compileProg crepeGlobalLocalContext
+          (.return (.var .local "x") : Prog Nat)) =
+      evalPanMemResult (fun name => if name == "x" then some 7 else none)
+        crepeGlobalBoundLocalState.memory
+        (.return (.var .local "x") : Prog Nat) := by
+  exact compile_full_local_return_state_correct crepeGlobalLocalContext
+    (fun name => if name == "x" then some 7 else none)
+    crepeGlobalBoundLocalState (fun _ _ => none) (noCrepFfi Nat)
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 "x" 1
+    (by simp [crepeGlobalLocalContext, lookupInfo])
+    (by simp [crepeGlobalBoundLocalState])
 
 #guard evalCrepFullExpState crepeGlobalSemanticsState 0 100
   (CrepExp.loadGlob 200) = some 42

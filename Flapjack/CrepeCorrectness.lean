@@ -287,6 +287,27 @@ theorem compile_full_local_return_correct
     environment_agrees]
   cases h : locals name <;> simp []
 
+theorem compile_full_local_return_state_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (locals : VarName → Option α)
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (name : VarName) (slot : Nat)
+    (lookup : lookupInfo name context.vars = some (.one, [slot]))
+    (environment_agrees : state.locals slot = locals name) :
+    evalCrepFullResultState [] primitive ffi sharedMem
+        baseAddress topAddress 5 state
+        (compileProg context (.return (.var .local name))) =
+      evalPanMemResult locals state.memory
+        (.return (.var .local name) : Prog α) := by
+  simp [compileProg, compileExp, lookup, evalCrepFullResultState,
+    evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
+    evalPanMemResult, evalPanMemProg, evalPanMemExp, environment_agrees]
+  cases h : locals name <;> simp []
+
 theorem compile_full_extCall_const_noop_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

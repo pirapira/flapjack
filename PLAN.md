@@ -2311,6 +2311,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   local-assignment sequences, including non-interference under local updates.
 - [x] Lift the generic direct local-assignment constructor to the stateful
   evaluator for arbitrary flattened Pancake values.
+- [x] Lift the generic temporary local-assignment constructor and assignment
+  dispatcher to the stateful evaluator, including fresh-slot restoration.
 - [x] Generalize global-aware source-word `raise` lowering to arbitrary
   compiled functions and lift it into the stateful program relation.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite

@@ -209,6 +209,34 @@ theorem evalCrepFullExps_varList_updateCrepLocalList
   rw [hvars]
   exact hread
 
+theorem evalCrepFullExpsState_varList_updateCrepLocalList
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepState α) (baseAddress topAddress : α)
+    (names : List Nat) (values : List α)
+    (hlength : names.length = values.length)
+    (hdistinct : CrepDistinctNames names) :
+    evalCrepFullExpsState
+        { state with locals := updateCrepLocalList state.locals names values }
+        baseAddress topAddress (names.map (fun name => .var name)) =
+      some values := by
+  have hread := readCrepLocals_updateCrepLocalList state.locals names values
+    hlength hdistinct
+  have hvars : ∀ (current : CrepState α) (currentNames : List Nat),
+      evalCrepFullExpsState current baseAddress topAddress
+          (currentNames.map (fun name => .var name)) =
+        readCrepLocals current.locals currentNames := by
+    intro current currentNames
+    induction currentNames with
+    | nil => simp [evalCrepFullExpsState, readCrepLocals]
+    | cons name currentNames ih =>
+        simp only [List.map_cons, evalCrepFullExpsState,
+          evalCrepFullExpState, readCrepLocals]
+        rw [ih]
+  rw [hvars]
+  exact hread
+
 theorem evalCrepFullProg_nestedDecs_assignList
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

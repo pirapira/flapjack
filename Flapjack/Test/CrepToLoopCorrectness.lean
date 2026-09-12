@@ -490,6 +490,45 @@ theorem crepToLoop_dec_return_const_regression :
       evalCrepFullExp, crepControlValues, updateCrepLocal,
       restoreCrepResult]
 
+theorem crepToLoop_dec_compose_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 2 crepSeqInitial
+      (.dec 5 (.const 42) (.return [.var 5]))).map crepControlValues =
+    (evalLoopProgWithCallsAndFfi []
+      (fun _ _ _ _ _ loopState => some loopState) 20
+      (loopStateOfCrepState crepSeqInitial)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.dec 5 (.const 42) (.return [.var 5])))).map loopResultValues := by
+  apply crepToLoop_dec_compose_of_empty_prefix
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 0 crepSeqInitial [] 5
+    (.const 42) (.return [.var 5]) 42
+    (.returned
+      { crepSeqInitial with
+        locals := updateCrepLocal crepSeqInitial.locals 5 42 } [42])
+    (.returned
+      { loopStateOfCrepState crepSeqInitial with
+        locals := updateLoopLocal
+          (updateLoopLocal crepSeqInitial.locals 5 42) 2 42 } [42])
+  · simp [loopCompileExp]
+  · simp [loopCompileExp]
+  · simp [loopCompileExp]
+  · simp [crepSeqInitial, evalCrepFullExp]
+  · simp [crepSeqInitial, loopStateOfCrepState, loopCompileExp,
+      evalLoopExp]
+  · simp [crepSeqInitial, evalCrepFullProg, evalCrepFullExps,
+      evalCrepFullExp, updateCrepLocal]
+  · simp [crepSeqInitial, loopStateOfCrepState, loopCompileProg,
+      loopCompileExp, loopCompileExp.loopCompileExps, loopCompileExps,
+      loopNestedSeq, loopTempNames, loopAssignTemps,
+      evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+      loopReadLocals, updateLoopLocal]
+  · rfl
+
 theorem crepToLoop_return_var_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ _ _ => none) 0 100 1 crepSeqMiddle

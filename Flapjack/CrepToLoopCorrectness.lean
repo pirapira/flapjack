@@ -1220,6 +1220,77 @@ theorem crepToLoop_dec_return_of_empty_prefix
     loopStateOfCrepState, loopResultValues, updateCrepLocal,
     updateLoopLocal, hcode, hloopValue']
 
+theorem crepToLoop_dec_compose_of_empty_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (name : Nat) (expression : CrepExp α) (body : CrepProg α)
+    (value : α) (crepResult : CrepControlResult α)
+    (loopResult : LoopResult α)
+    (hcode : (loopCompileExp context (context.maxVar + 1) live expression).code = [])
+    (hnext : (loopCompileExp context (context.maxVar + 1) live expression).nextTemp =
+      context.maxVar + 1)
+    (hlive : (loopCompileExp context (context.maxVar + 1) live expression).live = live)
+    (hvalue : evalCrepFullExp state.locals state.memory baseAddress topAddress
+      expression = some value)
+    (hloopValue : evalLoopExp (loopStateOfCrepState state)
+      (loopCompileExp context (context.maxVar + 1) live expression).expression =
+      some value)
+    (hcrepBody : evalCrepFullProg [] primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1)
+      { state with locals := updateCrepLocal state.locals name value } body =
+      some crepResult)
+    (hloopBody : evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 18)
+      { loopStateOfCrepState state with
+        locals := updateLoopLocal (loopStateOfCrepState state).locals name value }
+      (loopCompileProg
+        { context with
+          vars := (name, context.maxVar + 1) :: context.vars
+          maxVar := context.maxVar + 1 }
+        ((context.maxVar + 1) :: live) body) = some loopResult)
+    (hresult : crepControlValues
+        (restoreCrepResult name (state.locals name) crepResult) =
+      loopResultValues loopResult) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 2) state (.dec name expression body)).map crepControlValues =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 20)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live (.dec name expression body))).map
+      loopResultValues := by
+  have hloopValue' :
+      evalLoopExp
+          ({ locals := state.locals, globals := fun _ => none,
+             memory := state.memory } : LoopState α)
+          (loopCompileExp context (context.maxVar + 1) live expression).expression =
+        some value := by
+    simpa [loopStateOfCrepState] using hloopValue
+  have hloopBody' :
+      evalLoopProgWithCallsAndFfi functions
+        (fun _ _ _ _ _ loopState => some loopState) (fuel + 18)
+        { locals := updateLoopLocal state.locals name value,
+          globals := fun _ => none, memory := state.memory }
+        (loopCompileProg
+          { context with
+            vars := (name, context.maxVar + 1) :: context.vars
+            maxVar := context.maxVar + 1 }
+          ((context.maxVar + 1) :: live) body) = some loopResult := by
+    simpa [loopStateOfCrepState] using hloopBody
+  simp [evalCrepFullProg, hvalue, hcrepBody, crepControlValues,
+    restoreCrepResult, loopCompileProg, loopNestedSeq,
+    evalLoopProgWithCallsAndFfi, evalLoopProg, loopStateOfCrepState,
+    hcode, hnext, hlive, hloopValue', hloopBody']
+  exact hresult
+
 /-!
 The assignment case is the first state-transforming Crep-to-Loop boundary.
 `loopCompileProg` introduces the same constant assignment after an empty

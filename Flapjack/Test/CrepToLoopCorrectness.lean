@@ -30,6 +30,10 @@ def crepSeqInitial : CrepState Nat :=
   { locals := fun _ => none
     memory := fun _ => none }
 
+def crepZeroConditionState : CrepState Nat :=
+  { crepSeqInitial with
+    locals := updateCrepLocal crepSeqInitial.locals 1 0 }
+
 def crepSeqMiddle : CrepState Nat :=
   { crepSeqInitial with
     locals := updateCrepLocal crepSeqInitial.locals 5 42 }
@@ -336,6 +340,49 @@ theorem crepToLoop_ite_zero_compose_regression :
   · simp [crepSeqInitial, loopStateOfCrepState, loopCompileProg,
       loopCompileExp, loopNestedSeq, evalLoopProgWithCallsAndFfi,
       evalLoopProg, evalLoopExp]
+
+theorem crepToLoop_ite_var_false_regression :
+    evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        (fun _ _ _ _ => none) 0 100 2 crepZeroConditionState
+        (.ite (.var 1) (.skip) (.assign 5 (.const 42))) =
+      some (.normal
+        { crepZeroConditionState with
+          locals := updateCrepLocal crepZeroConditionState.locals 5 42 }) ∧
+    evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+        6 (loopStateOfCrepState crepZeroConditionState)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+            LoopContext Nat)
+          [] (.ite (.var 1) (.skip) (.assign 5 (.const 42)))) =
+      some (.normal
+        { loopStateOfCrepState crepZeroConditionState with
+          locals := updateLoopLocal
+            (updateLoopLocal crepZeroConditionState.locals 1 0) 5 42 }) := by
+  apply crepToLoop_ite_false_of_empty_prefix
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 1 crepZeroConditionState []
+    (.var 1) (.skip) (.assign 5 (.const 42))
+    (.normal
+      { crepZeroConditionState with
+        locals := updateCrepLocal crepZeroConditionState.locals 5 42 })
+    (.normal
+      { loopStateOfCrepState crepZeroConditionState with
+        locals := updateLoopLocal
+          (updateLoopLocal crepZeroConditionState.locals 1 0) 5 42 })
+  · simp [loopCompileExp]
+  · simp [loopCompileExp]
+  · simp [loopCompileExp]
+  · simp [crepZeroConditionState, crepSeqInitial, evalCrepFullExp,
+      updateCrepLocal]
+  · simp [crepZeroConditionState, crepSeqInitial, loopStateOfCrepState,
+      loopCompileExp, evalLoopExp, updateCrepLocal]
+  · simp [crepZeroConditionState, crepSeqInitial, evalCrepFullProg,
+      evalCrepFullExp]
+  · simp [crepZeroConditionState, crepSeqInitial, loopStateOfCrepState,
+      loopCompileProg, loopCompileExp, loopNestedSeq,
+      evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp]
 
 theorem crepToLoop_dec_return_const_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)

@@ -2130,16 +2130,19 @@ inductive WordLocation where
   | stack (slot : Nat)
   deriving DecidableEq, Repr
 
-/-! Give spilled values colours outside the physical-register range so the
-    clash-tree oracle can validate register/register conflicts while treating
-    distinct stack slots as distinct locations. -/
+/-! Encode locations as colours for the clash-tree oracle.  The encoding is
+    injective on `WordLocation` by tagging each constructor with a distinct
+    residue modulo three.  In particular physical-register colours and
+    stack/unknown colours live in provably disjoint namespaces, so a stack
+    slot (or an unallocated name) can never be mistaken for a register even
+    when its numeric index would otherwise coincide with a register number. -/
 
 def wordSpillLocationColour (locations : NatInfoMap WordLocation)
     (name : Nat) : Nat :=
   match lookupNatInfo name locations with
-  | some (.register register) => register
-  | some (.stack slot) => 32 + slot
-  | none => 32 + name
+  | some (.register register) => 3 * register
+  | some (.stack slot) => 3 * slot + 1
+  | none => 3 * name + 2
 
 def wordSpillClashTreeChecked (tree : WordClashTree)
     (locations : NatInfoMap WordLocation) : Bool :=

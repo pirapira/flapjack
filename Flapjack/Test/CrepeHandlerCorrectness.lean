@@ -35,6 +35,14 @@ def crepeHandlerCallReturnedState : CrepState (Word 64) :=
     memory := updateMemory (fun _ => none) (BitVec.ofNat 64 0)
       (BitVec.ofNat 64 7) }
 
+def crepeHandlerCallStateReturnedState : CrepState (Word 64) :=
+  { locals := updateCrepLocal (fun _ => none) 1 (BitVec.ofNat 64 7)
+    memory := fun _ => none
+    globals := updateMemory (fun _ => none) (BitVec.ofNat 64 0)
+      (BitVec.ofNat 64 7) }
+
+def crepeHandlerCallStateResult : CrepControlResult (Word 64) :=
+  .returned crepeHandlerCallStateReturnedState [BitVec.ofNat 64 7]
 def crepeHandlerCallResult : CrepControlResult (Word 64) :=
   .returned crepeHandlerCallReturnedState [BitVec.ofNat 64 7]
 
@@ -148,12 +156,12 @@ theorem crepe_handler_call_returned_relation_except_regression :
         (fun _ _ _ => True)
         (.returned (fun _ => none) (fun _ => none) (fun _ => none)
           [.word (BitVec.ofNat 64 7)])
-        (.returned crepeHandlerCallReturnedState
+        (.returned crepeHandlerCallStateReturnedState
           [BitVec.ofNat 64 7])
         (fun address => address = BitVec.ofNat 64 0) := by
   change panValueCrepStateRelExcept [] crepeHandlerCallContext
       (fun _ => none) (fun _ => none) (fun _ => none)
-      crepeHandlerCallReturnedState (fun address => address = 0) ∧
+      crepeHandlerCallStateReturnedState (fun address => address = 0) ∧
     panValueCrepValuesRel
       [.word (BitVec.ofNat 64 7)] [BitVec.ofNat 64 7]
   constructor
@@ -164,8 +172,7 @@ theorem crepe_handler_call_returned_relation_except_regression :
       by_cases haddress : address == (BitVec.ofNat 64 0)
       · have heq : address = BitVec.ofNat 64 0 := by simpa using haddress
         exact False.elim (hnot heq)
-      · simp [crepeHandlerCallReturnedState, panValueWordMemory,
-          updateMemory, haddress]
+      · simp [crepeHandlerCallStateReturnedState, panValueWordMemory]
   · simp [panValueCrepValuesRel, panValueFlatWords,
       panValueFlatWordsFuel]
 
@@ -219,23 +226,23 @@ theorem crepe_handler_call_destination_relation_regression :
           "raise" []) =
       some (.returned (fun _ => none) (fun _ => none) (fun _ => none)
         [.word (BitVec.ofNat 64 7)]) ∧
-    evalCrepFullProg crepeHandlerCallFunctions
+    evalCrepFullProgState crepeHandlerCallFunctions
         (fun _ _ => none) (noCrepFfi (Word 64))
         defaultCrepSharedMem 0 100 (9 + 1) crepeHandlerCallCaller
         (compileProg crepeHandlerCallContext
           (.call (some (some (.local, "exn"),
             some ("E", "exn", (.return (.var .local "exn")))))
             "raise" [])) =
-      some (.returned crepeHandlerCallReturnedState
+      some (.returned crepeHandlerCallStateReturnedState
         [BitVec.ofNat 64 7]) ∧
     panValueCrepControlRelExcept [] crepeHandlerCallContext
         (fun _ _ _ => True)
         (.returned (fun _ => none) (fun _ => none) (fun _ => none)
           [.word (BitVec.ofNat 64 7)])
-        (.returned crepeHandlerCallReturnedState
+        (.returned crepeHandlerCallStateReturnedState
           [BitVec.ofNat 64 7])
         (fun address => address = BitVec.ofNat 64 0) := by
-  apply compile_full_pan_value_call_relation_except
+  apply compile_full_pan_value_call_state_relation_except
     (context := crepeHandlerCallContext)
     (structs := []) (sourceFunctions := crepeHandlerCallSourceFunctions)
     (functions := crepeHandlerCallFunctions)
@@ -259,7 +266,7 @@ theorem crepe_handler_call_destination_relation_regression :
     (sourceResult :=
       .returned (fun _ => none) (fun _ => none) (fun _ => none)
         [.word (BitVec.ofNat 64 7)])
-    (crepResult := crepeHandlerCallResult)
+    (crepResult := crepeHandlerCallStateResult)
     (exceptionRel := fun _ _ _ => True)
     (excluded := fun address => address = BitVec.ofNat 64 0)
   · simp [compileArgs]
@@ -300,9 +307,10 @@ theorem crepe_handler_call_destination_relation_regression :
         some (Shape.one, [1]) := by
       simp [lookupInfo]
     simp [crepeHandlerCallContext, crepeHandlerCallFunctions,
-      crepeHandlerCallCaller, crepeHandlerCallResult,
-      crepeHandlerCallReturnedState, evalCrepFullCall, evalCrepFullProg,
-      evalCrepFullExps, evalCrepFullExp, assignCrepValues, assignRet,
+      crepeHandlerCallCaller, crepeHandlerCallStateResult,
+      crepeHandlerCallStateReturnedState, evalCrepFullCallState,
+      evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
+      assignCrepValues, assignRet,
       crepNestedSeq, loadGlobals, compileProg, compileExp,
       updateCrepLocal, updateMemory, lookupCompiledFunction, hexn]
   · exact crepe_handler_call_returned_relation_except_regression

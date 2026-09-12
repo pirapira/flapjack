@@ -45,4 +45,81 @@ theorem crepNestedDecsEval_const_zero_inv
           locals := updateCrepLocal state.locals name 0 }) htail
       simpa [initializeCrepLocals] using hbody
 
+theorem crepNestedDecsStateEval_const_zero_inv
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (names : List Nat) (body : CrepProg α)
+    (result : CrepControlResult α)
+    (hrel : CrepNestedDecsStateEval functions primitive ffi sharedMem
+      baseAddress topAddress fuel state names
+      (names.map (fun _ => .const 0)) body result) :
+    evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with locals := initializeCrepLocals state.locals names } body =
+      some result := by
+  induction names generalizing state with
+  | nil =>
+      simpa [CrepNestedDecsStateEval, initializeCrepLocals] using hrel
+  | cons name names ih =>
+      simp only [List.map] at hrel
+      rcases hrel with ⟨value, hvalue, htail⟩
+      have hvalue' : value = 0 := by
+        have hzero : (0 : α) = value := by
+          simpa [evalCrepFullExpState] using hvalue
+        exact hzero.symm
+      subst value
+      have hbody := ih
+        (state := { state with
+          locals := updateCrepLocal state.locals name 0 }) htail
+      simpa [initializeCrepLocals] using hbody
+
+theorem evalCrepFullProgState_nestedDecs_const_zero_local
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (names : List Nat) (body : CrepProg α)
+    (result : CrepControlResult α)
+    (hbody : evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with locals := initializeCrepLocals state.locals names } body =
+      some result) :
+    evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + names.length) state
+      (nestedDecs names (names.map (fun _ => .const 0)) body) =
+      some (restoreCrepResultList state.locals names result) := by
+  induction names generalizing state result with
+  | nil =>
+      simpa [nestedDecs, initializeCrepLocals, restoreCrepResultList] using hbody
+  | cons name names ih =>
+      have hbody' : evalCrepFullProgState functions primitive ffi sharedMem
+          baseAddress topAddress fuel
+          { state with
+              locals := initializeCrepLocals
+                (updateCrepLocal state.locals name 0) names } body =
+          some result := by
+        simpa [initializeCrepLocals] using hbody
+      have htail := ih
+        (state := { state with
+          locals := updateCrepLocal state.locals name 0 })
+        (result := result) hbody'
+      change evalCrepFullProgState functions primitive ffi sharedMem
+        baseAddress topAddress ((fuel + names.length) + 1) state
+        (.dec name (.const 0)
+          (nestedDecs names (names.map (fun _ => .const 0)) body)) =
+        some (restoreCrepResult name (state.locals name)
+          (restoreCrepResultList (updateCrepLocal state.locals name 0)
+            names result))
+      simp [evalCrepFullProgState, evalCrepFullExpState, htail]
+
 end Flapjack

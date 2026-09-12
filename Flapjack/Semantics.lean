@@ -87,6 +87,32 @@ def evalPanExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | _ => none
 termination_by structural expression
 
+def evalPanExpFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    (locals : VarName → Option α) (expression : Exp α) : Option α :=
+  match expression with
+  | .const value => some value
+  | .var .local name => locals name
+  | .op operator [left, right] => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      pure (evalPanBinOp operator left right)
+  | .panOp .mul [left, right] => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      pure (left * right)
+  | .cmp operator left right => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      pure (evalPanCmp operator left right)
+  | .shift operator left right => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      evalPanShiftFull operator left right
+  | _ => none
+termination_by structural expression
+
 def evalPanCondition [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [PanCmp α]
@@ -113,6 +139,34 @@ def evalPanCondition [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
         | .notTest => AndOp.and left right != 0)
   | expression => do
       let value ← evalPanExp locals expression
+      pure (value != 0)
+
+def evalPanConditionFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    (locals : VarName → Option α) : Exp α → Option Bool
+  | .cmp .equal left right => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      pure (left == right)
+  | .cmp .notEqual left right => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      pure (left != right)
+  | .cmp operator left right => do
+      let left ← evalPanExpFull locals left
+      let right ← evalPanExpFull locals right
+      pure (match operator with
+        | .equal => left == right
+        | .notEqual => left != right
+        | .lower => PanCmp.lower left right
+        | .less => PanCmp.less left right
+        | .notLower => !PanCmp.lower left right
+        | .notLess => !PanCmp.less left right
+        | .test => AndOp.and left right == 0
+        | .notTest => AndOp.and left right != 0)
+  | expression => do
+      let value ← evalPanExpFull locals expression
       pure (value != 0)
 
 def evalCrepExp [Add α] [Mul α]
@@ -155,6 +209,25 @@ def evalPanProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let condition ← evalPanCondition locals condition
       if condition then evalPanProg locals thenBranch
       else evalPanProg locals elseBranch
+  | _ => none
+
+def evalPanProgFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    (locals : VarName → Option α) : Prog α → Option (List α)
+  | .skip => some []
+  | .dec name _ value body => do
+      let value ← evalPanExpFull locals value
+      evalPanProgFull (updatePanLocal locals name value) body
+  | .return expression => (evalPanExpFull locals expression).map (fun value => [value])
+  | .seq first second => do
+      let firstResult ← evalPanProgFull locals first
+      if firstResult.isEmpty then evalPanProgFull locals second else pure firstResult
+  | .ite condition thenBranch elseBranch => do
+      let condition ← evalPanConditionFull locals condition
+      if condition then evalPanProgFull locals thenBranch
+      else evalPanProgFull locals elseBranch
   | _ => none
 
 def evalCrepProg [Add α] [Mul α] (locals : Nat → Option α) : CrepProg α → Option (List α)

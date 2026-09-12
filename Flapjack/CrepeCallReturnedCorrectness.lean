@@ -100,4 +100,98 @@ theorem compile_full_pan_value_call_returned_of_body_correct
   cases htarget
   exact hcallRel
 
+theorem compile_full_pan_value_call_state_returned_of_body_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context calleeContext : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceGlobals : VarName → Option (PanValue α))
+    (caller : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (function : FunName)
+    (compiledArguments : List (CrepExp α))
+    (sourceCalleeLocals sourceBodyLocals : VarName → Option (PanValue α))
+    (sourceCalleeGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceCalleeMemory : α → Option (PanValue α))
+    (sourceValues : List (PanValue α))
+    (argumentValues : List α)
+    (targetCalleeLocals : Nat → Option α)
+    (targetCallee : CrepState α) (target : CrepState α)
+    (targetValues : List α) (targetParameters : List Nat)
+    (sourceBody : Prog α) (targetBody : CrepProg α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (hbodyCorrect : PanValueCrepProgramStateCorrect sourceBody)
+    (hrelCallee : panValueCrepStateRel structs calleeContext
+      sourceCalleeLocals sourceGlobals sourceMemory
+      { locals := targetCalleeLocals, memory := caller.memory,
+        globals := caller.globals })
+    (hsourceBody : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel
+      sourceCalleeLocals sourceGlobals sourceMemory sourceBody =
+      some (.returned sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory
+        sourceValues))
+    (hcompileBody : compileProg calleeContext sourceBody = targetBody)
+    (hcrepBody : evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel
+      { locals := targetCalleeLocals, memory := caller.memory,
+        globals := caller.globals } targetBody =
+      some (.returned targetCallee targetValues))
+    (hcrepArguments : evalCrepFullExpsState caller baseAddress topAddress
+      compiledArguments = some argumentValues)
+    (hlookup : lookupCompiledFunction function functions =
+      some (targetParameters, targetBody))
+    (hassign : assignCrepValues (fun _ => none) targetParameters argumentValues =
+      some targetCalleeLocals)
+    (hcrepCall : evalCrepFullCallState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (targetFuel + 1) caller none function
+      compiledArguments = some (.returned target targetValues)) :
+    panValueCrepControlRel structs context exceptionRel
+      (.returned (fun _ => none) sourceCalleeGlobals sourceCalleeMemory sourceValues)
+      (.returned target targetValues) := by
+  have hcrepBody' : evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel
+      { locals := targetCalleeLocals, memory := caller.memory,
+        globals := caller.globals }
+      (compileProg calleeContext sourceBody) =
+      some (.returned targetCallee targetValues) := by
+    rw [hcompileBody]
+    exact hcrepBody
+  have hbodyRel := hbodyCorrect calleeContext structs sourceFunctions functions
+    sourceCalleeLocals sourceGlobals sourceMemory
+    { locals := targetCalleeLocals, memory := caller.memory,
+      globals := caller.globals }
+    primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    (.returned sourceBodyLocals sourceCalleeGlobals sourceCalleeMemory sourceValues)
+    (.returned targetCallee targetValues)
+    hrelCallee hsourceBody hcrepBody'
+  have htarget :
+      { locals := caller.locals, memory := targetCallee.memory,
+        globals := targetCallee.globals } = target := by
+    have hsome :
+        some (CrepControlResult.returned
+          { locals := caller.locals, memory := targetCallee.memory,
+            globals := targetCallee.globals } targetValues) =
+          some (CrepControlResult.returned target targetValues) := by
+      simpa [evalCrepFullCallState, hcrepArguments, hlookup, hassign, hcrepBody]
+        using hcrepCall
+    have hresult := Option.some.inj hsome
+    injection hresult
+  have hcallRel := panValueCrepControlRel_call_returned_of_contexts
+    structs calleeContext context exceptionRel
+    sourceCalleeGlobals sourceCalleeMemory sourceBodyLocals targetCallee
+    caller.locals sourceValues targetValues hbodyRel
+  cases htarget
+  exact hcallRel
+
 end Flapjack

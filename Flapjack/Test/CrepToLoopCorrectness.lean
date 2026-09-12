@@ -109,6 +109,11 @@ theorem crepToLoop_primitive_assign_loadByte_var_contract_regression :
       (.assign 2 (.loadByte (.var 1)) : CrepProg Nat) := by
   exact crepToLoopProgramCorrectWithPrimitive_assign_loadByte_var 2 1
 
+theorem crepToLoop_primitive_store_var_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.store (.const (200 : Nat)) (.var 1) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_store_var 200 1
+
 theorem crepToLoop_primitive_seq_normal_regression :
     evalCrepFullProg [] (fun _ _ => none)
         (fun _ _ _ _ _ state => some (.returned state))

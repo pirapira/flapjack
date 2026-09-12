@@ -209,6 +209,11 @@ theorem crepToLoop_primitive_return_or_const_const_contract_regression :
       (.return [.op .or [.const (3 : Nat), .const 4]] : CrepProg Nat) := by
   exact crepToLoopProgramCorrectWithPrimitive_return_binop_const_const .or 3 4
 
+theorem crepToLoop_primitive_return_lsl_const_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.return [.shift .lsl (.const (3 : Nat)) (.const 1)] : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_return_lsl_const_const 3 1
+
 theorem crepToLoop_primitive_seq_normal_regression :
     evalCrepFullProg [] (fun _ _ => none)
         (fun _ _ _ _ _ state => some (.returned state))

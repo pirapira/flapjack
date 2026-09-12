@@ -136,6 +136,12 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
               (fun value => fromNat value) start declarations with
           | none => .error .entryNotFound
           | some pipeline =>
+              let discoveredNames :=
+                (pipeline.word.flatMap
+                  (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
+                    RiscV.wordProgFfiNames entry.2.2)).eraseDups
+              let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
+              let services := services ++ discoveredServices
               let identityResult :
                   Except PipelineRiscVLoweringError (List (BitVec 8)) :=
                 match RiscV.pipelineWordFunctionsToStackChecked pipeline.word with

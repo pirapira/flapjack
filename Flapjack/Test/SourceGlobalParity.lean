@@ -91,6 +91,12 @@ and asserts the byte entry point accepts the fixture.
 flattens its value and accepts any shape, but the static checker demanded a word
 value and rejected this program.  The checker now only requires a word address,
 and `structStore*` pins the reference sections and asserts acceptance.
+
+`ffiCallSource` calls an external service with `@foo(1,2,3,4)`.  The original
+compiler emits a call to an external symbol, but the byte entry point passed an
+empty service table and rejected the program.  The entry point now discovers the
+foreign-function names in the lowered Word program and registers them, and
+`ffiCall*` pins the reference sections and asserts acceptance.
 -/
 
 namespace Flapjack.Test.SourceGlobalParity
@@ -186,6 +192,11 @@ value and rejected this original-Pancake-accepted program. -/
 def structStoreSource : String :=
   "struct s { 1 a, 1 b } fun 1 main() { var s x = s <a = 1, b = 2>; " ++
     "st 1000, x; return 0; }"
+
+/-- Foreign-function call: the original compiler accepts a four-argument `@foo`.
+The byte entry point used to reject it because no service id was registered. -/
+def ffiCallSource : String :=
+  "fun 1 main() { @foo(1,2,3,4); return 0; }"
 
 /-- CakeML `cml_generated_main` for `globalSource` (offset 1000, 28 bytes). -/
 def cakeGlobalGeneratedMain : List (BitVec 8) :=
@@ -443,6 +454,14 @@ def cakeStructStoreMain : List (BitVec 8) :=
     BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80,
     BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00 ]
 
+/-- CakeML `cml_generated_main` for `ffiCallSource` (4 bytes). -/
+def cakeFfiCallGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` length for `ffiCallSource` (64 bytes). -/
+def cakeFfiCallMainLength : Nat := 64
+
 /-- Run a source program through the checked RV64I byte entry point. -/
 def compileSourceBytes (source : String) : Option (List (BitVec 8)) :=
   match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
@@ -553,6 +572,13 @@ def structStoreBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The FFI fixture must be accepted: an original-Pancake `@foo` call resolves
+to a registered service id once the entry point discovers the name. -/
+def ffiCallBytesAccepted : Bool :=
+  match compileSourceBytes ffiCallSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
@@ -570,7 +596,8 @@ def cakeGoldenShape : Bool :=
     cakeRotateGeneratedMain.length == 4 && cakeRotateMain.length == 28 &&
     cakeLargeShapeGeneratedMain.length == 4 && cakeLargeShapeMain.length == 4 &&
     cakeLargeShapeFLength == 8 &&
-    cakeStructStoreGeneratedMain.length == 4 && cakeStructStoreMain.length == 32
+    cakeStructStoreGeneratedMain.length == 4 && cakeStructStoreMain.length == 32 &&
+    cakeFfiCallGeneratedMain.length == 4 && cakeFfiCallMainLength == 64
 
 #guard globalBytesAccepted
 #guard nestedGlobalBytesAccepted
@@ -585,6 +612,7 @@ def cakeGoldenShape : Bool :=
 #guard rotateBytesAccepted
 #guard largeShapeBytesAccepted
 #guard structStoreBytesAccepted
+#guard ffiCallBytesAccepted
 #guard initializerChangesArtifact
 #guard cakeGoldenShape
 
@@ -624,6 +652,8 @@ def runChecks : IO Bool := do
       largeShapeBytesAccepted,
     checkBool "Pancake struct-valued local store source compiles (bytes)"
       structStoreBytesAccepted,
+    checkBool "Pancake four-argument FFI call source compiles (bytes)"
+      ffiCallBytesAccepted,
     checkBool "Pancake global source compiles (runtime image)"
       (runtimeImageAccepted globalSource),
     checkBool "Pancake global initializer changes artifact"

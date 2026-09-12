@@ -193,6 +193,31 @@ theorem compile_full_ite_const_correct
   split <;> simp_all [
     ]
 
+theorem compile_full_ite_const_state_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (locals : VarName → Option α)
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress condition thenValue elseValue : α) :
+    evalCrepFullResultState [] primitive ffi sharedMem
+        baseAddress topAddress 20 state
+        (compileProg context
+          (.ite (.const condition)
+            (.return (.const thenValue))
+            (.return (.const elseValue)))) =
+      evalPanMemResult locals state.memory
+        (.ite (.const condition)
+          (.return (.const thenValue))
+          (.return (.const elseValue))) := by
+  simp [compileProg, compileExp, evalCrepFullResultState,
+    evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
+    evalPanMemResult, evalPanMemProg, evalPanMemCondition,
+    evalPanMemExp]
+  split <;> simp_all
+
 theorem compile_full_local_assign_return_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

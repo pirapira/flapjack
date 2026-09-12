@@ -149,6 +149,11 @@ theorem crepToLoop_primitive_assign_lsr_var_var_contract_regression :
       (.assign 2 (.shift .lsr (.var 0) (.var 1)) : CrepProg Nat) := by
   exact crepToLoopProgramCorrectWithPrimitive_assign_lsr_var_var 2 0 1
 
+theorem crepToLoop_primitive_assign_cmp_equal_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.cmp .equal (.const (3 : Nat)) (.const 3)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_cmp_equal_const 2 3 3
+
 theorem crepToLoop_primitive_seq_normal_regression :
     evalCrepFullProg [] (fun _ _ => none)
         (fun _ _ _ _ _ state => some (.returned state))

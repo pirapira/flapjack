@@ -81,6 +81,15 @@ def checkedPipelineRemoveConfig : StackRemoveConfig :=
     | .ok artifact => artifact.bytes.length > 0
     | .error _ => false
 
+/-! The public source entrypoint must accept calls as well as closed returns. -/
+#guard
+    match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main"
+      "fun 1 id(1 x) { return x; }\nfun 1 main() { var 1 answer = id(41); return answer; }" with
+    | .ok artifact => artifact.bytes.length > 0
+    | .error _ => false
+
 #guard
     match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
       (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig

@@ -2254,6 +2254,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   consumes a stateful body-correctness hypothesis.
 - [x] Port nested-declaration forward/inversion fuel relations and the
   one-word declaration correctness constructor to the stateful evaluator.
+- [x] Port the two-word record declaration return constructor to the stateful
+  evaluator, including temporary-slot stability and result restoration.
 - [x] Add stateful source-word program constructors for `Store32` and
   `StoreByte`, including no-global expression compatibility and memory
   relation transport.

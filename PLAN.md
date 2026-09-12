@@ -2291,6 +2291,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   source-word compilation through the generated expression's no-global proof.
 - [x] Add the stateful source-word `return` constructor, including the
   positive-fuel boundary and global-aware flattened-expression evaluation.
+- [x] Port the scalar constant-return constructor to the stateful evaluator,
+  including source-local clearing and value-list relation transport.
 - [x] Generalize global-aware source-word `raise` lowering to arbitrary
   compiled functions and lift it into the stateful program relation.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite

@@ -12,22 +12,6 @@ and FFI.
 
 namespace Flapjack
 
-theorem compile_full_skip_compat_correct
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress : α) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 1 state
-        (compileProg context (.skip : Prog α)) =
-      evalPanMemResult locals state.memory (.skip : Prog α) := by
-  simp [compileProg, evalCrepFullResult, evalCrepFullProg,
-    evalPanMemResult, evalPanMemProg]
-
 /-! The first compact correctness leaf at the global-aware evaluator
     boundary.  `skip` leaves the separately threaded global environment
     unchanged, so its observable result remains the source memory result. -/
@@ -47,24 +31,6 @@ theorem compile_full_skip_correct
   simp [compileProg, evalCrepFullResultState, evalCrepFullProgState,
     evalPanMemResult, evalPanMemProg]
 
-theorem compile_full_return_const_compat_correct
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress value : α) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 1 state
-        (compileProg context (.return (.const value))) =
-      evalPanMemResult locals state.memory
-        (.return (.const value) : Prog α) := by
-  simp [compileProg, compileExp, evalCrepFullResult, evalCrepFullProg,
-    evalCrepFullExps, evalCrepFullExp, evalPanMemResult,
-    evalPanMemProg, evalPanMemExp]
-
 theorem compile_full_return_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -82,26 +48,6 @@ theorem compile_full_return_const_correct
   simp [compileProg, compileExp, evalCrepFullResultState,
     evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
     evalPanMemResult, evalPanMemProg, evalPanMemExp]
-
-theorem compile_full_add_const_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress left right : α) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 10 state
-        (compileProg context
-          (.return (.op .add [.const left, .const right]))) =
-      evalPanMemResult locals state.memory
-        (.return (.op .add [.const left, .const right]) : Prog α) := by
-  simp [compileProg, compileExp, compileExp.compileExpList, cexpHeads,
-    evalCrepFullResult, evalCrepFullProg,
-    evalCrepFullExps, evalCrepFullExp, evalPanMemResult,
-    evalPanMemProg, evalPanMemExp, evalPanBinOp]
 
 theorem compile_full_add_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -122,28 +68,6 @@ theorem compile_full_add_const_correct
     evalCrepFullResultState, evalCrepFullProgState,
     evalCrepFullExpsState, evalCrepFullExpState, evalPanMemResult,
     evalPanMemProg, evalPanMemExp, evalPanBinOp]
-
-theorem compile_full_store_load_const_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress address value : α) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 20 state
-        (compileProg context
-          (.seq (.store (.const address) (.const value))
-            (.return (.load .one (.const address))))) =
-      evalPanMemResult locals state.memory
-        (.seq (.store (.const address) (.const value))
-          (.return (.load .one (.const address)))) := by
-  simp [compileProg, compileExp, freshNames, nestedDecs, stores, crepNestedSeq,
-    loadShape, evalCrepFullResult, evalCrepFullProg, evalCrepFullExps,
-    evalCrepFullExp, evalPanMemResult, evalPanMemProg, evalPanMemExp,
-    updateMemory, updateCrepLocal, restoreCrepResult]
 
 theorem compile_full_store_load_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

@@ -2070,18 +2070,27 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       pure (wordStackJoin argumentMoves
         (.call none (.label target) none))
   | .tick => pure .tick
-  | .call returns (some target) arguments none => do
+  | .call (some (destinations, _cutsets, returnProgram, _returnLabel, _entryLabel))
+      (some target) arguments none => do
       let argumentMoves ← wordStackMovesToPhysical config arguments 2
-      let returnCode ← wordStackReturnCode config returns
-      let destinations := returns.map (fun result => result.1) |>.getD []
+      let returnCode ← wordToStackProgNat config returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
         config.frameOffset config.scratch destinations returnCode
         config.returnLabel config.entryLabel
       pure (wordStackJoin argumentMoves callCode)
-  | .call returns (some target) arguments
-      (some (exception, body, _handlerLabel, _entryLabel)) => do
+  | .call none (some target) arguments
+      (some (exception, body, _handlerLabel, _handlerEntryLabel)) => do
       let argumentMoves ← wordStackMovesToPhysical config arguments 2
-      let returnCode ← wordStackReturnCode config returns
+      let handlerCode ← wordToStackProgNat config body
+      let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
+        config.frameOffset config.scratch .skip handlerCode
+        config.returnLabel config.entryLabel config.sectionId config.handlerLabel exception
+      pure (wordStackJoin argumentMoves callCode)
+  | .call (some (_destinations, _cutsets, returnProgram, _returnLabel, _entryLabel))
+      (some target) arguments
+      (some (exception, body, _handlerLabel, _handlerEntryLabel)) => do
+      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let returnCode ← wordToStackProgNat config returnProgram
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch returnCode handlerCode
@@ -2103,6 +2112,17 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       wordStackCompileSharedNat config operator name address
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
+
+/- Compile the continuation carried in a Word call's return metadata.  The
+   older `wordStackReturnCode` helper only reconstructs the ABI destination
+   move for reduced fixtures; this boundary retains the actual SSA-generated
+   continuation so the complete call lowering can consume it. -/
+def wordStackEmbeddedReturnCode [BEq Nat] (config : WordStackConfig)
+    (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat)) :
+    Option (StackProg Nat) :=
+  match returns with
+  | none => some .skip
+  | some (_, _, returnProgram, _, _) => wordToStackProgNat config returnProgram
 
 /-! Stateful variant of the Word-to-Stack compiler.
 

@@ -524,7 +524,7 @@ theorem wordToStackProgNatWithBitmapBuilder_call_no_handler
     (target : Nat) (arguments : List Nat)
     (argumentMoves returnCode : StackProg Nat)
     (hargs : wordStackMovesToPhysical config arguments 2 = some argumentMoves)
-    (hreturn : wordStackReturnCode config returns = some returnCode)
+    (hreturn : wordStackEmbeddedReturnCode config returns = some returnCode)
     (hreturns : returns ≠ none) :
     wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount
       bitmapRegister frameSlots wordBits storeConstsStub state
@@ -535,9 +535,17 @@ theorem wordToStackProgNatWithBitmapBuilder_call_no_handler
           (returns.map (fun result => result.1) |>.getD []) returnCode
           config.returnLabel config.entryLabel), state) := by
   simp only [wordToStackProgNatWithBitmapBuilder]
-  rw [wordToStackProgNat]
-  simp_all [wordStackReturnCode]
-  all_goals exact hreturns
+  cases returns with
+  | none => simp at hreturns
+  | some returnData =>
+      rcases returnData with
+        ⟨destinations, cutsets, returnProgram, returnLabel, entryLabel⟩
+      simp only [wordToStackProgNat]
+      have hreturn' : wordToStackProgNat config returnProgram =
+          some returnCode := by
+        simpa [wordStackEmbeddedReturnCode] using hreturn
+      rw [hreturn']
+      simp [hargs]
 
 theorem wordToStackProgNatWithBitmapBuilder_call_no_handler_none
     [BEq Nat] (config : WordStackConfig)
@@ -907,7 +915,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
     (argumentMoves returnCode : StackProg Nat)
     (result : StackMachineControl width)
     (hargs : wordStackMovesToPhysical config arguments 2 = some argumentMoves)
-    (hreturn : wordStackReturnCode config returns = some returnCode)
+    (hreturn : wordStackEmbeddedReturnCode config returns = some returnCode)
     (hreturns : returns ≠ none)
     (hargumentMovesNe : argumentMoves ≠ .skip)
     (hmove : evalStackProgFuelWithCodeAndFfi host fuel code machineState

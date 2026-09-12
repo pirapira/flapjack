@@ -3852,6 +3852,44 @@ theorem crepToLoopWithPrimitive_ite_const_zero_compose
       evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg, evalLoopExp,
       evalLoopCondition, updateLoopLocal, hloopElse]
 
+theorem crepToLoopWithPrimitive_ite_const_one_compose
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (thenBranch elseBranch : CrepProg α)
+    (result : CrepControlResult α) (loopResult : LoopResult α)
+    (hone : (1 : α) ≠ 0)
+    (hcrepThen : evalCrepFullProg [] primitive ffi sharedMem
+      baseAddress topAddress fuel state thenBranch = some result)
+    (hloopThen : evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      (loopFfiOfCrepFfi ffi) (fuel + 2)
+      { loopStateOfCrepState state with
+        locals := updateLoopLocal (loopStateOfCrepState state).locals
+          (context.maxVar + 1) 1 }
+      (loopCompileProg context live thenBranch) = some loopResult) :
+    evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state
+      (.ite (.const (by exact 1)) thenBranch elseBranch) = some result ∧
+    evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      (loopFfiOfCrepFfi ffi) (fuel + 5)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.ite (.const (by exact 1)) thenBranch elseBranch)) =
+      some loopResult := by
+  constructor
+  · simp [evalCrepFullProg, evalCrepFullExp, hone, hcrepThen]
+  · simp [loopCompileProg, loopCompileExp, loopNestedSeq,
+      evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg, evalLoopExp,
+      evalLoopCondition, updateLoopLocal, hone, hloopThen]
+
 /-!
 CrepToLoopProgramCorrect is the complete-pass induction boundary.  It keeps
 the source and target fuel bounds independent because lowering introduces

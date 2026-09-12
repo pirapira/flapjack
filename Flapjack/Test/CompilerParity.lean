@@ -369,6 +369,52 @@ def naryGlobalArtifactMatchesGolden : Bool :=
       Flapjack.Test.SourceGlobalParity.naryGlobalSource with
   | some bytes => bytes == naryGlobalArtifactGolden
   | none => false
+/-! Exact source-entry golden for the existing global multiplication fixture. -/
+def longMulGlobalArtifactGolden : List (BitVec 8) :=
+  [
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41,
+    BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0f, BitVec.ofNat 8 0x30, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x9e, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x33, BitVec.ofNat 8 0xea, BitVec.ofNat 8 0x5a, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x0a, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41,
+    BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xde, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0f, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x0a, BitVec.ofNat 8 0xfa, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0f, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41,
+    BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x10, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x9e, BitVec.ofNat 8 0xce, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x61, BitVec.ofNat 8 0xc6, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x81, BitVec.ofNat 8 0xd1, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x81, BitVec.ofNat 8 0xf1, BitVec.ofNat 8 0x41,
+    BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x02, BitVec.ofNat 8 0x30, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x62, BitVec.ofNat 8 0x42, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0x51, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0f, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41,
+    BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x10, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x9e, BitVec.ofNat 8 0xce, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x61, BitVec.ofNat 8 0xc6, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x81, BitVec.ofNat 8 0xd1, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x81, BitVec.ofNat 8 0xf1, BitVec.ofNat 8 0x41,
+    BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x02, BitVec.ofNat 8 0x40, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x62, BitVec.ofNat 8 0x42, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0x51, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0f, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41, BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0d, BitVec.ofNat 8 0x10, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x1e, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0xc6, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x8e, BitVec.ofNat 8 0xce, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x8e, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x41, BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xb1, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0f, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41, BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0d, BitVec.ofNat 8 0x10, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x1e, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0xc6, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x8e, BitVec.ofNat 8 0xce, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x8e, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x41, BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xb2, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xb2, BitVec.ofNat 8 0x41, BitVec.ofNat 8 0x02, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x82, BitVec.ofNat 8 0x41, BitVec.ofNat 8 0x02,
+    BitVec.ofNat 8 0x33, BitVec.ofNat 8 0xe3, BitVec.ofNat 8 0x52, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x61, BitVec.ofNat 8 0x63, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00,
+  ]
+
+def longMulGlobalArtifactMatchesGolden : Bool :=
+  match Flapjack.Test.SourceGlobalParity.compileSourceBytes
+      Flapjack.Test.SourceGlobalParity.longMulGlobalSource with
+  | some bytes => bytes == longMulGlobalArtifactGolden
+  | none => false
+
 
 
 
@@ -412,6 +458,8 @@ def main : IO Unit := do
       multiGlobalArtifactMatchesGolden,
     checkBool "Lean n-ary global exact source artifact bytes"
       naryGlobalArtifactMatchesGolden,
+    checkBool "Lean global multiplication exact source artifact bytes"
+      longMulGlobalArtifactMatchesGolden,
     checkBool "Lean source entry produces an artifact" minimalSourceArtifact,
     checkBool "Pancake computed local-store address compiles" nestedLocalStoreBytesAccepted,
     Flapjack.Test.SourceGlobalParity.runChecks

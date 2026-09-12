@@ -892,6 +892,81 @@ def wordStackCompileStoreNat (config : WordStackConfig) (address : WordExp Nat)
   pure (wordStackJoin addressPrelude
     (wordStackJoin valuePrelude (.inst (.mem .store valueRegister addressRegister))))
 
+def wordStackExpressionIsAtom : WordExp Nat → Bool
+  | .const _ | .var _ | .lookup _ => true
+  | .load _ | .op _ _ | .shift _ _ _ => false
+
+/-! Compile a possibly nested expression into a physical register.  The
+    earlier atom compiler is sufficient for most Word expressions, but global
+    initialization and global reads produce nested address arithmetic.  Use a
+    small, explicit pool of reserved registers for the two children of each
+    binary node; each recursive child receives the remaining pool, so a child
+    cannot clobber a sibling that has already been evaluated. -/
+def wordStackExpressionTemporaries (config : WordStackConfig)
+    (target : Nat) : List Nat :=
+  [config.scratch, config.addressScratch, config.specialScratch, config.carryScratch]
+    |>.filter (fun register => register != target)
+
+def wordStackCompileExpToRegisterNat (config : WordStackConfig)
+    (target : Nat) (available : List Nat) : WordExp Nat → Option (StackProg Nat)
+  | .const value => some (.const target value)
+  | .var name => do
+      let (prelude, source) ← wordStackReadRegister config name target
+      pure (wordStackJoin prelude
+        (if source = target then .skip else .arith .or target source source))
+  | .lookup store => do
+      let store ← wordStackStoreNameNat store
+      pure (.get target store)
+  | .load address => do
+      let address ← wordStackCompileExpToRegisterNat config target available address
+      pure (.seq address (.inst (.mem .load target target)))
+  | .op operator [left, right] => do
+      if wordStackExpressionIsAtom left && wordStackExpressionIsAtom right then
+        let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
+        let (rightPrelude, rightRegister) ← wordStackAtomNat config config.addressScratch right
+        pure (wordStackJoin leftPrelude
+          (wordStackJoin rightPrelude (.arith operator target leftRegister rightRegister)))
+      else
+        let leftTarget ← available.head?
+        let rightTarget ← available.tail.head?
+        let remaining := available.drop 2
+        let left ← wordStackCompileExpToRegisterNat config leftTarget
+          (rightTarget :: remaining) left
+        let right ← wordStackCompileExpToRegisterNat config rightTarget remaining right
+        pure (wordStackJoin left
+          (wordStackJoin right (.arith operator target leftTarget rightTarget)))
+  | .shift operator left right => do
+      if wordStackExpressionIsAtom left && wordStackExpressionIsAtom right then
+        let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
+        let (rightPrelude, rightRegister) ← wordStackAtomNat config config.addressScratch right
+        pure (wordStackJoin leftPrelude
+          (wordStackJoin rightPrelude (.shift operator target leftRegister rightRegister)))
+      else
+        let leftTarget ← available.head?
+        let rightTarget ← available.tail.head?
+        let remaining := available.drop 2
+        let left ← wordStackCompileExpToRegisterNat config leftTarget
+          (rightTarget :: remaining) left
+        let right ← wordStackCompileExpToRegisterNat config rightTarget remaining right
+        pure (wordStackJoin left
+          (wordStackJoin right (.shift operator target leftTarget rightTarget)))
+  | .op _ _ => none
+termination_by expression => sizeOf expression
+decreasing_by all_goals decreasing_trivial
+
+def wordStackCompileExpToPhysicalNat (config : WordStackConfig)
+    (destination : Nat) (expression : WordExp Nat) : Option (StackProg Nat) := do
+  let location ← wordStackLocation config destination
+  match location with
+  | .register register =>
+      wordStackCompileExpToRegisterNat config register
+        (wordStackExpressionTemporaries config register) expression
+  | .stack slot =>
+      let code ← wordStackCompileExpToRegisterNat config config.scratch
+        (wordStackExpressionTemporaries config config.scratch) expression
+      pure (wordStackJoin code
+        (.stackStore config.scratch (wordStackOffset config slot)))
+
 def wordStackCompileSharedNat (config : WordStackConfig)
     (operator : WordMemOp) (destination : Nat) (address : WordExp Nat) :
     Option (StackProg Nat) := do
@@ -2260,6 +2335,9 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
   | .mustTerminate body =>
       wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount bitmapRegister frameSlots
         wordBits storeConstsStub state body
+  | .assign destination value =>
+      (wordStackCompileExpToPhysicalNat config destination value).map
+        (fun program => (program, state))
   | .call returns (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
       let argumentMoves ← wordStackMovesToPhysical config arguments 2

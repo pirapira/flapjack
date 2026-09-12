@@ -395,4 +395,144 @@ theorem panValueCrepExpressionCorrect_rField_word_record
             simp [evalCrepFullExps, hselectedEval, panValueFlatWords,
               panValueFlatWordsFuel]
 
+theorem evalCrepFullExpsState_index
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepState α) (baseAddress topAddress : α)
+    (expressions : List (CrepExp α)) (values : List α)
+    (index : Nat) (expression : CrepExp α) (value : α)
+    (hexpressions : expressions[index]? = some expression)
+    (hvalues : values[index]? = some value)
+    (heval : evalCrepFullExpsState state baseAddress topAddress expressions =
+      some values) :
+    evalCrepFullExpState state baseAddress topAddress expression =
+      some value := by
+  induction expressions generalizing values index expression value with
+  | nil => simp at hexpressions
+  | cons head tail ih =>
+      cases values with
+      | nil => simp at hvalues
+      | cons first rest =>
+          cases index with
+          | zero =>
+              simp at hexpressions hvalues
+              subst expression
+              subst value
+              cases hhead : evalCrepFullExpState state baseAddress topAddress head with
+              | none => simp [evalCrepFullExpsState, hhead] at heval
+              | some headValue =>
+                  cases htail : evalCrepFullExpsState state baseAddress topAddress tail with
+                  | none => simp [evalCrepFullExpsState, hhead, htail] at heval
+                  | some tailValues =>
+                      have hvalues : headValue :: tailValues = first :: rest := by
+                        simpa [evalCrepFullExpsState, hhead, htail] using heval
+                      have hheadValue : headValue = first := by injection hvalues
+                      exact congrArg some hheadValue
+          | succ index =>
+              have htailExpressions : tail[index]? = some expression := by
+                simpa using hexpressions
+              have htailValues : rest[index]? = some value := by
+                simpa using hvalues
+              have htailEval :
+                  evalCrepFullExpsState state baseAddress topAddress tail =
+                    some rest := by
+                cases hhead : evalCrepFullExpState state baseAddress topAddress head with
+                | none => simp [evalCrepFullExpsState, hhead] at heval
+                | some headValue =>
+                    cases htail : evalCrepFullExpsState state baseAddress topAddress tail with
+                    | none => simp [evalCrepFullExpsState, hhead, htail] at heval
+                    | some tailValues =>
+                        have hvalues : headValue :: tailValues = first :: rest := by
+                          simpa [evalCrepFullExpsState, hhead, htail] using heval
+                        have htailValues : tailValues = rest := by injection hvalues
+                        exact congrArg some htailValues
+              exact ih rest index expression value htailExpressions
+                htailValues htailEval
+
+theorem panValueCrepExpressionStateCorrect_rField_word_record
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (fields : List (SourceWordExp α)) (index : Nat)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepExpressionStateCorrect
+      (.rField index (.rStruct (fields.map SourceWordExp.toExp))) := by
+  intro context structs sourceLocals sourceGlobals sourceMemory state
+    baseAddress topAddress bytesInWord sourceValue hrel hsource
+  cases hrecord : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.rStruct (fields.map SourceWordExp.toExp)) with
+  | none => simp [evalPanValueExp, hrecord] at hsource
+  | some recordValue =>
+      cases recordValue with
+      | word value => simp [evalPanValueExp, hrecord] at hsource
+      | nStruct name values => simp [evalPanValueExp, hrecord] at hsource
+      | rStruct recordValues =>
+          have hrecordFields :
+              evalPanValueExp.evalPanValueExps structs sourceLocals sourceGlobals
+                sourceMemory baseAddress topAddress bytesInWord
+                (fields.map SourceWordExp.toExp) = some recordValues := by
+            simpa [evalPanValueExp] using hrecord
+          obtain ⟨values, hrecordValues⟩ := evalSourceWordExps_words
+            structs sourceLocals sourceGlobals sourceMemory baseAddress
+            topAddress bytesInWord context state.locals hrel.2.1
+            (fun name value hvalue => hlookup context sourceLocals name value hvalue)
+            fields recordValues hrecordFields
+          have hselectedRecord : recordValues[index]? = some sourceValue := by
+            simpa [evalPanValueExp, hrecord] using hsource
+          obtain ⟨value, hsourceValue⟩ := list_get_map_word values index
+            sourceValue (by simpa [hrecordValues] using hselectedRecord)
+          have hselectedValue : values[index]? = some value := by
+            simpa [hsourceValue, hrecordValues] using hselectedRecord
+          obtain ⟨compiled, hcompileList, hcompiled, hcompiledLength⟩ :=
+            compileSourceWordExpList_state_relation context structs sourceLocals
+              sourceGlobals sourceMemory state baseAddress topAddress bytesInWord
+              (hbytesInWord context bytesInWord) hrel.2.1
+              (fun name value hvalue =>
+                hlookup context sourceLocals name value hvalue)
+              fields values
+              (by simpa [hrecordValues] using hrecordFields)
+          obtain ⟨selected, hselectedCompile, hcompileField⟩ :=
+            compileField_one_selection values compiled index value
+              hcompiledLength.symm hselectedValue
+          have hvalid : panValuePayloadWithinLimit structs sourceValue = true := by
+            simp [hsourceValue, panValuePayloadWithinLimit_word]
+          have hshape : values.map (fun _ => Shape.one) =
+              compiled.map (fun _ => Shape.one) := by
+            clear hrecordValues hselectedRecord hsourceValue hselectedValue
+              hcompiled hcompileList hcompileField hselectedCompile
+            induction values generalizing compiled with
+            | nil =>
+                cases compiled with
+                | nil => rfl
+                | cons head tail => simp at hcompiledLength
+            | cons head tail ih =>
+                cases compiled with
+                | nil => simp at hcompiledLength
+                | cons head' tail' =>
+                    simp only [List.length_cons] at hcompiledLength
+                    have htailLength : tail.length = tail'.length := by omega
+                    simp [ih tail' htailLength.symm]
+          have hcompileField' := hcompileField
+          rw [hshape] at hcompileField'
+          have hflat := list_flatMap_singletons compiled
+          refine ⟨hvalid, [selected], ?_, ?_⟩
+          · simp [compileExp, hcompileList, hcompileField', hsourceValue,
+              panValueShape, Function.comp_def, hflat]
+          · have hselectedEval := evalCrepFullExpsState_index
+              state baseAddress topAddress compiled values
+              index selected value hselectedCompile hselectedValue hcompiled
+            rw [hsourceValue]
+            simp [hselectedEval, evalCrepFullExpsState, panValueFlatWords,
+              panValueFlatWordsFuel]
+
 end Flapjack

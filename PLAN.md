@@ -2301,6 +2301,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   state-aware load expression contract.
 - [x] Add the stateful scalar-word record return constructor, including
   state-aware list evaluation and the arbitrary 32-word payload bound.
+- [x] Add the stateful arbitrary record-field return constructor, including
+  indexed stateful list evaluation and field-shape selection.
 - [x] Generalize global-aware source-word `raise` lowering to arbitrary
   compiled functions and lift it into the stateful program relation.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite

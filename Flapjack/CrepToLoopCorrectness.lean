@@ -2526,6 +2526,109 @@ theorem crepToLoopProgramCorrect_return_add_const
                   intro name hname htemp
                   omega
 
+theorem crepToLoopProgramCorrect_return_mul_const
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (left right : α) :
+    CrepToLoopProgramCorrect
+      (.return [.crepOp .mul [.const left, .const right]] : CrepProg α) := by
+  intro context functions crepFunctions primitive ffi sharedMem
+    baseAddress topAddress sourceFuel targetFuel state live crepResult loopResult
+    hcrep hloop
+  simp [evalCrepFullProg, evalCrepFullExps, evalCrepFullExp] at hcrep
+  subst crepResult
+  have hargs :
+      loopCompileExp.loopCompileExps context (context.maxVar + 1) live
+        [.const left, .const right] =
+      { expressions := [.const left, .const right], code := [],
+        nextTemp := context.maxVar + 1, live := live } := by
+    rw [loopCompileExp.loopCompileExps.eq_2, loopCompileExp.eq_1,
+      loopCompileExp.loopCompileExps.eq_2, loopCompileExp.eq_1,
+      loopCompileExp.loopCompileExps.eq_1]
+    rfl
+  have hargsExpressions :
+      (loopCompileExp.loopCompileExps context (context.maxVar + 1) live
+        [.const left, .const right]).expressions =
+        [.const left, .const right] := by
+    simpa using congrArg (fun result => result.expressions) hargs
+  have hmulExp :
+      loopCompileExp context (context.maxVar + 1) live
+        (.crepOp .mul [.const left, .const right]) =
+      { code :=
+          [.assign (context.maxVar + 1) (.const left),
+           .assign (context.maxVar + 1 + 1) (.const right),
+           .arith (.longMul (context.maxVar + 1 + 1 + 1)
+             (context.maxVar + 1 + 1 + 1) (context.maxVar + 1)
+             (context.maxVar + 1 + 1))],
+        expression := .var (context.maxVar + 1 + 1 + 1),
+        nextTemp := context.maxVar + 1 + 1 + 1 + 1,
+        live := (context.maxVar + 1 + 1 + 1) :: (context.maxVar + 1) ::
+          (context.maxVar + 1 + 1) :: live } := by
+    rw [loopCompileExp.eq_8 (context := context)
+      (tmp := context.maxVar + 1) (live := live)
+      (arguments := [.const left, .const right])
+      (left := .const left) (right := .const right) hargsExpressions]
+    simp [hargs]
+  cases targetFuel with
+  | zero => simp [evalLoopProgWithCallsAndFfi] at hloop
+  | succ targetFuel =>
+      cases targetFuel with
+      | zero =>
+          simp [hmulExp, loopCompileProg, loopCompileExp.loopCompileExps,
+            loopCompileExps, loopTempNames, loopAssignTemps,
+            evalLoopProgWithCallsAndFfi] at hloop
+      | succ targetFuel =>
+          cases targetFuel with
+          | zero =>
+              simp [hmulExp, loopCompileProg, loopCompileExp.loopCompileExps,
+                loopCompileExps, loopNestedSeq,
+                loopTempNames, loopAssignTemps,
+                evalLoopProgWithCallsAndFfi, evalLoopProg] at hloop
+          | succ targetFuel =>
+              cases targetFuel with
+              | zero =>
+                  simp [hmulExp, loopCompileProg, loopCompileExp.loopCompileExps,
+                    loopCompileExps, loopNestedSeq,
+                    loopTempNames, loopAssignTemps,
+                    evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+                    loopReadLocals, loopStateOfCrepState] at hloop
+              | succ targetFuel =>
+                  cases targetFuel with
+                  | zero =>
+                      simp [hmulExp, loopCompileProg,
+                        loopCompileExp.loopCompileExps,
+                        loopCompileExps, loopNestedSeq, loopTempNames,
+                        loopAssignTemps, evalLoopProgWithCallsAndFfi,
+                        evalLoopProg, evalLoopExp, loopReadLocals,
+                        loopStateOfCrepState] at hloop
+                  | succ targetFuel =>
+                      cases targetFuel with
+                      | zero =>
+                          simp [hmulExp, loopCompileProg,
+                            loopCompileExp.loopCompileExps,
+                            loopCompileExps, loopNestedSeq, loopTempNames,
+                            loopAssignTemps, evalLoopProgWithCallsAndFfi,
+                            evalLoopProg, evalLoopExp, loopReadLocals,
+                            loopStateOfCrepState, updateLoopLocal] at hloop
+                      | succ targetFuel =>
+                          simp [hmulExp, loopCompileProg,
+                            loopCompileExp.loopCompileExps,
+                            loopCompileExps, loopNestedSeq, loopTempNames,
+                            loopAssignTemps, evalLoopProgWithCallsAndFfi,
+                            evalLoopProg, evalLoopExp, loopReadLocals,
+                            loopStateOfCrepState, updateLoopLocal] at hloop
+                          cases hloop
+                          simp [crepToLoopControlRel, crepToLoopStateRel,
+                            updateLoopLocal]
+                          intro name hname
+                          have h1 : name ≠ context.maxVar + 1 := by omega
+                          have h2 : name ≠ context.maxVar + 1 + 1 := by omega
+                          have h3 : name ≠ context.maxVar + 1 + 1 + 1 := by omega
+                          have h4 : name ≠ context.maxVar + 1 + 1 + 1 + 1 := by omega
+                          simp [h1, h2, h3, h4]
+
 theorem crepToLoopProgramCorrect_return_var
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

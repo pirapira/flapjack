@@ -984,6 +984,49 @@ theorem crepToLoop_return_const_agreement
     evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
     loopReadLocals, updateLoopLocal, loopResultValues]
 
+theorem crepToLoop_dec_return_of_empty_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (name : Nat) (expression : CrepExp α) (value : α)
+    (hcode : (loopCompileExp context (context.maxVar + 1) live expression).code = [])
+    (hvalue : evalCrepFullExp state.locals state.memory baseAddress topAddress
+      expression = some value)
+    (hloopValue : evalLoopExp (loopStateOfCrepState state)
+      (loopCompileExp context (context.maxVar + 1) live expression).expression =
+      some value) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 2) state
+      (.dec name expression (.return [.var name]))).map crepControlValues =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 20)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.dec name expression (.return [.var name])))).map
+      loopResultValues := by
+  have hloopValue' :
+      evalLoopExp
+          ({ locals := state.locals, globals := fun _ => none,
+             memory := state.memory } : LoopState α)
+          (loopCompileExp context (context.maxVar + 1) live expression).expression =
+        some value := by
+    simpa [loopStateOfCrepState] using hloopValue
+  simp [evalCrepFullProg, evalCrepFullExps, evalCrepFullExp, hvalue,
+    crepControlValues, loopCompileProg, loopCompileExp,
+    loopCompileExp.loopCompileExps, loopCompileExps, loopNestedSeq,
+    loopTempNames, loopAssignTemps, evalLoopProgWithCallsAndFfi,
+    evalLoopProg, evalLoopExp, loopReadLocals, restoreCrepResult,
+    loopStateOfCrepState, loopResultValues, updateCrepLocal,
+    updateLoopLocal, hcode, hloopValue']
+
 /-!
 The assignment case is the first state-transforming Crep-to-Loop boundary.
 `loopCompileProg` introduces the same constant assignment after an empty

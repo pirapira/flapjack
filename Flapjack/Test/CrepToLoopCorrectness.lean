@@ -337,6 +337,36 @@ theorem crepToLoop_ite_zero_compose_regression :
       loopCompileExp, loopNestedSeq, evalLoopProgWithCallsAndFfi,
       evalLoopProg, evalLoopExp]
 
+theorem crepToLoop_dec_return_const_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 2 crepSeqInitial
+      (.dec 5 (.const 42) (.return [.var 5]))).map crepControlValues =
+    (evalLoopProgWithCallsAndFfi []
+      (fun _ _ _ _ _ loopState => some loopState) 20
+      (loopStateOfCrepState crepSeqInitial)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.dec 5 (.const 42) (.return [.var 5])))).map loopResultValues ∧
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 2 crepSeqInitial
+      (.dec 5 (.const 42) (.return [.var 5]))).map crepControlValues =
+      some [42] := by
+  have h := crepToLoop_dec_return_of_empty_prefix
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 0 crepSeqInitial [] 5 (.const 42) 42
+    (by simp [loopCompileExp])
+    (by simp [crepSeqInitial, evalCrepFullExp])
+    (by simp [crepSeqInitial, loopStateOfCrepState, loopCompileExp,
+      evalLoopExp])
+  constructor
+  · simpa [crepSeqInitial] using h
+  · simp [crepSeqInitial, evalCrepFullProg, evalCrepFullExps,
+      evalCrepFullExp, crepControlValues, updateCrepLocal,
+      restoreCrepResult]
+
 theorem crepToLoop_shMem_store_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       defaultCrepSharedMemHandler 0 100 3 crepLoopSharedStoreState

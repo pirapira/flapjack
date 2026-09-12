@@ -2352,17 +2352,18 @@ theorem crepToLoopWithPrimitive_assign_agreement_of_empty_prefix
       (loopCompileProg context live (.assign name expression))).map
         (loopControlLocal name) := by
   have heval' : evalLoopExp
-      ({ locals := state.locals
-         globals := fun _ => none
+      ({ locals := state.locals, globals := state.globals,
          memory := state.memory } : LoopState α)
       (loopCompileExp context (context.maxVar + 1) live expression).expression =
       some value := by
     simpa [loopStateOfCrepState] using heval
   simp [evalCrepFullProg, hvalue,
     loopCompileProg, hcode, loopNestedSeq,
-    evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg, heval',
-    loopStateOfCrepState, updateCrepLocal, updateLoopLocal,
-    crepControlLocal, loopControlLocal]
+    evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+    loopStateOfCrepState, updateCrepLocal,
+    crepControlLocal]
+  rw [heval']
+  simp [loopControlLocal, updateLoopLocal]
 
 theorem crepToLoop_call_skip_primitive_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

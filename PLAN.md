@@ -2202,6 +2202,14 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   preserving the Loop global environment and its executable regression.
 - [x] Complete the paired global-aware runtime bridge for `loadGlob`, with a
   store/load-oriented global lookup regression.
+- [x] Add a separate global environment to compact `CrepState` and preserve it
+  across the Crep-to-Loop state boundary and temporary-assignment restoration.
+- [x] Add a parallel global-aware full-Crep evaluator, with executable
+  store/load and missing-global regressions and a direct global-store
+  Crep-to-Loop agreement theorem.
+- [ ] Migrate the existing compact source-to-Crep correctness theorem suite
+  from the compatibility evaluator to the global-aware evaluator, then remove
+  the compatibility path once all CakeML global-state obligations are proved.
 - [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI

@@ -26,6 +26,14 @@ def loopStateOfCrepRuntimeState (state : CrepRuntimeState α σ) : LoopState α 
     globals := state.globals
     memory := state.memory }
 
+def crepControlGlobalAt (address : α) : CrepControlResult α → Option α
+  | .normal state => state.globals address
+  | .returned state _ => state.globals address
+  | .raised state _ => state.globals address
+  | .broke state _ => state.globals address
+  | .continued state _ => state.globals address
+  | .finalFfi state _ => state.globals address
+
 theorem crepRuntimeToLoop_storeGlob_const_agreement
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -76,6 +84,32 @@ theorem crepRuntimeToLoop_loadGlob_const_agreement
     loopStateOfCrepRuntimeState, loopCompileProg, loopCompileExp,
     loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg,
     evalLoopExp, loopResultState, updateCrepLocal, updateLoopLocal, hglobal]
+
+theorem crepFullStateToLoop_storeGlob_const_agreement
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat) (state : CrepState α) (live : List Nat)
+    (address value : α) :
+    (evalCrepFullProgState [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state
+      (.storeGlob address (.const value))).map
+        (crepControlGlobalAt address) =
+    (evalLoopProgWithCallsAndFfi []
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 2)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.storeGlob address (.const value)))).map
+        (fun result => (loopResultState result).globals address) := by
+  simp [evalCrepFullProgState, evalCrepFullExpState,
+    loopStateOfCrepState, loopCompileProg, loopCompileExp,
+    loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg,
+    evalLoopExp, loopResultState, updateMemory, updateLoopGlobal,
+    crepControlGlobalAt]
 
 def crepStateOfLoopState (state : LoopState α) : CrepState α :=
   { locals := state.locals

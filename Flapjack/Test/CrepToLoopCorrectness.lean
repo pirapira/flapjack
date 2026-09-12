@@ -164,6 +164,11 @@ theorem crepToLoop_primitive_assign_cmp_lower_const_contract_regression :
       (.assign 2 (.cmp .lower (.const (3 : Nat)) (.const 4)) : CrepProg Nat) := by
   exact crepToLoopProgramCorrectWithPrimitive_assign_cmp_lower_const 2 3 4
 
+theorem crepToLoop_primitive_assign_cmp_less_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.cmp .less (.const (3 : Nat)) (.const 4)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_cmp_less_const 2 3 4
+
 theorem crepToLoop_primitive_seq_normal_regression :
     evalCrepFullProg [] (fun _ _ => none)
         (fun _ _ _ _ _ state => some (.returned state))

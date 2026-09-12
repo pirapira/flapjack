@@ -2214,6 +2214,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Port the scalar source-word `raise` lowering relation to the
   global-aware evaluator, including the compiled global payload and exception
   code relation.
+- [x] Add the global-aware structured return fuel relation, exposing the
+  state-aware flattened-expression witness needed by source-word migration.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

@@ -78,7 +78,7 @@ example :
       (wordStackInitialBitmaps false) wordBitmapHandlerProgram).map
         (fun result => (result.2.data, result.2.length)) =
       some ([4, 24, 28], 3) := by
-  native_decide
+  decide +kernel
 
 def wordBitmapBranchProgram : WordProg Nat :=
   .ite .equal 1 (.imm 0)

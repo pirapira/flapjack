@@ -47,6 +47,12 @@ product aliased onto one destination; the special-location contract used to
 reject the alias even though only the low word is observed.  Both `naryGlobal*`
 and `longMulGlobal*` definitions pin the reference sections and assert the byte
 entry point accepts them.
+
+`namedStructSource` declares a named struct and accesses its fields.  The
+static checker used to leave the field list of a named shape empty, so any
+`s.field` access was reported as an invalid named field even though the
+reference compiler accepts it; `namedStruct*` pins the reference sections and
+asserts the byte entry point accepts the fixture.
 -/
 
 namespace Flapjack.Test.SourceGlobalParity
@@ -79,6 +85,14 @@ def longMulGlobalSource : String :=
 
 /-- Global-free baseline used to show the initializer reaches the artifact. -/
 def plainSource : String := "fun 1 main() { return 7; }"
+
+/-- Named-struct program: the static field-list regression.  The reference
+compiler accepted this while the static checker rejected every named field
+access because a named shape carried no fields. -/
+def namedStructSource : String :=
+  "struct my_struct {\n  1 a,\n  1 b\n}\n" ++
+    "fun 1 f(my_struct s) {\n  return s.a + s.b;\n}\n" ++
+    "fun 1 main() { return f(my_struct <a = 3, b = 4>); }"
 
 /-- CakeML `cml_generated_main` for `globalSource` (offset 1000, 28 bytes). -/
 def cakeGlobalGeneratedMain : List (BitVec 8) :=
@@ -203,6 +217,24 @@ def cakeMulMain : List (BitVec 8) :=
     BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x06,
     BitVec.ofNat 8 0x00 ]
 
+/-- CakeML `cml_generated_main` for `namedStructSource` (4 bytes). -/
+def cakeNamedStructGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `namedStructSource` (12 bytes). -/
+def cakeNamedStructMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x65, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x65,
+    BitVec.ofNat 8 0x30, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x6F,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40, BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_f` for `namedStructSource` (8 bytes). -/
+def cakeNamedStructF : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x85, BitVec.ofNat 8 0xA5,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00 ]
+
 /-- Run a source program through the checked RV64I byte entry point. -/
 def compileSourceBytes (source : String) : Option (List (BitVec 8)) :=
   match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
@@ -259,18 +291,28 @@ def longMulGlobalBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The named-struct fixture must be accepted; the static checker previously
+left named shapes with an empty field list and rejected every field access. -/
+def namedStructBytesAccepted : Bool :=
+  match compileSourceBytes namedStructSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
     cakeMultiGeneratedMain.length == 40 && cakeMultiMain.length == 28 &&
     cakeNaryGeneratedMain.length == 52 && cakeNaryMain.length == 36 &&
-    cakeMulGeneratedMain.length == 40 && cakeMulMain.length == 40
+    cakeMulGeneratedMain.length == 40 && cakeMulMain.length == 40 &&
+    cakeNamedStructGeneratedMain.length == 4 && cakeNamedStructMain.length == 12 &&
+    cakeNamedStructF.length == 8
 
 #guard globalBytesAccepted
 #guard nestedGlobalBytesAccepted
 #guard multiGlobalBytesAccepted
 #guard naryGlobalBytesAccepted
 #guard longMulGlobalBytesAccepted
+#guard namedStructBytesAccepted
 #guard initializerChangesArtifact
 #guard cakeGoldenShape
 
@@ -294,6 +336,8 @@ def runChecks : IO Bool := do
       naryGlobalBytesAccepted,
     checkBool "Pancake multiplication source compiles (bytes)"
       longMulGlobalBytesAccepted,
+    checkBool "Pancake named-struct source compiles (bytes)"
+      namedStructBytesAccepted,
     checkBool "Pancake global source compiles (runtime image)"
       (runtimeImageAccepted globalSource),
     checkBool "Pancake global initializer changes artifact"

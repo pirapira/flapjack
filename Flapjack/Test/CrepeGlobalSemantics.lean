@@ -58,6 +58,21 @@ theorem compile_full_add_const_state_correct_regression :
     (noCrepFfi Nat) (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat)
     0 100 3 4
 
+theorem compile_full_store_load_const_state_correct_regression :
+    evalCrepFullResultState [] (fun _ _ => none) (noCrepFfi Nat)
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 20
+        crepeGlobalSemanticsState
+        (compileProg crepeGlobalSkipContext
+          (.seq (.store (.const 200) (.const 42))
+            (.return (.load .one (.const 200))) : Prog Nat)) =
+      evalPanMemResult (fun _ => none) crepeGlobalSemanticsState.memory
+        (.seq (.store (.const 200) (.const 42))
+          (.return (.load .one (.const 200))) : Prog Nat) := by
+  exact compile_full_store_load_const_state_correct crepeGlobalSkipContext
+    (fun _ => none) crepeGlobalSemanticsState (fun _ _ => none)
+    (noCrepFfi Nat) (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat)
+    0 100 200 42
+
 #guard evalCrepFullExpState crepeGlobalSemanticsState 0 100
   (CrepExp.loadGlob 200) = some 42
 

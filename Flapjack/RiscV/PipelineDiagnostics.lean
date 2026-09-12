@@ -1,4 +1,5 @@
 import Flapjack.Pipeline
+import Flapjack.RiscV.LabDiagnostics
 import Flapjack.RiscV.WordDiagnostics
 
 /-!
@@ -41,6 +42,7 @@ namespace Flapjack
 
 inductive PipelineRiscVLoweringError where
   | wordToStack (error : RiscV.PipelineWordLoweringError)
+  | labToRiscV (error : RiscV.LabLoweringError)
   | stackToRiscV
   deriving DecidableEq, Repr
 
@@ -61,10 +63,10 @@ def compileFlapjackRiscVViaStackChecked [NeZero width]
   match RiscV.pipelineWordFunctionsToStackChecked pipeline.word with
   | .error error => .error (.wordToStack error)
   | .ok functions =>
-      match RiscV.compileStackProgramNatListWithRaiseStubToRiscV
+      match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
           { services := services } removeConfig 0 0
           (functions.map (fun (label, _, body) => (label, body))) with
-      | some instructions => .ok instructions
-      | none => .error .stackToRiscV
+      | .ok instructions => .ok instructions
+      | .error error => .error (.labToRiscV error)
 
 end Flapjack

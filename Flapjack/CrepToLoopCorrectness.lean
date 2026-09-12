@@ -3261,11 +3261,11 @@ theorem crepToLoopProgramCorrectWithPrimitive_store_var
                           · subst current
                             simp [updateLoopMemory, updateMemory]
                           · have h' : address ≠ current := Ne.symm h
-                            simp [loopStateOfCrepState, updateLoopMemory,
+                            simp [updateLoopMemory,
                               updateMemory, h, h']
                         · intro name hname
                           have htemp : name ≠ context.maxVar + 1 := by omega
-                          simp [loopStateOfCrepState, updateLoopLocal, htemp]
+                          simp [updateLoopLocal, htemp]
                   | succ targetFuel =>
                       simp [loopCompileProg, loopCompileExp, loopNestedSeq,
                         evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
@@ -3281,11 +3281,11 @@ theorem crepToLoopProgramCorrectWithPrimitive_store_var
                           · subst current
                             simp [updateLoopMemory, updateMemory]
                           · have h' : address ≠ current := Ne.symm h
-                            simp [loopStateOfCrepState, updateLoopMemory,
+                            simp [updateLoopMemory,
                               updateMemory, h, h']
                         · intro name hname
                           have htemp : name ≠ context.maxVar + 1 := by omega
-                          simp [loopStateOfCrepState, updateLoopLocal, htemp]
+                          simp [updateLoopLocal, htemp]
 
 theorem crepToLoopProgramCorrectWithPrimitive_store32_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

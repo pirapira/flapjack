@@ -1,4 +1,6 @@
 import Flapjack.CrepeSemantics
+import Flapjack.Compile
+import Flapjack.CrepToLoopCorrectness
 
 /-!
 Focused executable regressions for the separate global environment introduced
@@ -50,5 +52,15 @@ def crepeGlobalCallProgram : CrepProg Nat :=
 #guard evalCrepFullResultState [crepeGlobalCallee] (fun _ _ => none)
     (noCrepFfi Nat) (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat)
     0 100 20 crepeGlobalSemanticsState crepeGlobalCallProgram = some [42]
+
+def crepeGlobalRaiseContext : CompileContext Nat :=
+  { vars := [], functions := [], exceptions := [("E", 9)], maxVar := 0,
+    bytesInWord := 1 }
+
+#guard (evalCrepFullProgState [] (fun _ _ => none) (noCrepFfi Nat)
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 20
+    crepeGlobalSemanticsState
+    (compileProg crepeGlobalRaiseContext (.raise "E" (.const 42)))).map
+      (crepControlGlobalAt 0) = some (some 42)
 
 end Flapjack

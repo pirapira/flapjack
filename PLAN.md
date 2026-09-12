@@ -2235,6 +2235,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   including recursive call-handler obligations.
 - [x] Port the fuel-polymorphic direct scalar local-assignment relation to the
   stateful evaluator, including its updated local-state relation.
+- [x] Port the complementary scalar temporary-assignment relation, including
+  temporary-slot evaluation and restoration under the stateful evaluator.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

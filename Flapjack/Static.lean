@@ -10,9 +10,23 @@ context construction and function-body validation.
 
 namespace Flapjack
 
+inductive Based where
+  | based
+  | notBased
+  | trusted
+  | notTrusted
+  deriving Repr
+
+inductive ShapedBased where
+  | word (basedness : Based)
+  | struct (fields : List ShapedBased)
+  | named (name : StructName) (fields : List (FieldName × ShapedBased))
+  deriving Repr
+
 structure StructInfo where
   fields : List (FieldName × Shape)
   size : Nat
+  shapedFields : List (FieldName × ShapedBased) := []
   deriving Repr
 
 abbrev StructContext := List (StructName × StructInfo)
@@ -78,19 +92,6 @@ def staticResultErrorMessage (result : StaticResult α) : Option String :=
   match result.1 with
   | Except.ok _ => none
   | Except.error error => some (statErrMessage error)
-
-inductive Based where
-  | based
-  | notBased
-  | trusted
-  | notTrusted
-  deriving Repr
-
-inductive ShapedBased where
-  | word (basedness : Based)
-  | struct (fields : List ShapedBased)
-  | named (name : StructName) (fields : List (FieldName × ShapedBased))
-  deriving Repr
 
 inductive Reachable where
   | isReach
@@ -199,7 +200,7 @@ def shapedBasedFromShape (context : StructContext) : Shape → Option ShapedBase
       | none => none
   | .named name =>
       match lookupInfo name context with
-      | some _ => some (.named name [])
+      | some info => some (.named name info.shapedFields)
       | none => none
 termination_by shape => sizeOf shape
 decreasing_by
@@ -679,9 +680,13 @@ def staticCheckNames [BEq String] (context : StructContext) :
             staticError (.scope ("structure field is redeclared: " ++ field))
         | none =>
             staticBind (checkShapeFields context fields) (fun _ =>
+              let shapedFields :=
+                fields.map (fun (fieldName, shape) =>
+                  (fieldName, (shapedBasedFromShape context shape).getD (.word .trusted)))
               let info : StructInfo :=
                 { fields := fields
-                  size := shapeSizeWithContext context (.comb (fields.map Prod.snd)) }
+                  size := shapeSizeWithContext context (.comb (fields.map Prod.snd))
+                  shapedFields := shapedFields }
               staticBind (staticCheckNames ((name, info) :: context) declarations)
                 (fun result => staticOk result))
   | _ :: declarations => staticCheckNames context declarations

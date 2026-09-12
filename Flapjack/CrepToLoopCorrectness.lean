@@ -2289,6 +2289,46 @@ theorem crepToLoopProgramCorrectWithPrimitive_primitive
               · simp [evalCrepFullProg, hread, hargs,
                 hprimitive, hlength, hfold, assignCrepValues] at hcrep hloop
 
+theorem crepToLoop_call_skip_primitive_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (crepFunctions : List (CompiledFunction α))
+    (loopFunctions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat) (function : FunName)
+    (target : Nat)
+    (hcrep : lookupCompiledFunction function crepFunctions =
+      some ([], (.skip : CrepProg α)))
+    (hcontext : lookupInfo function context.functions = some (target, 0))
+    (hloop : lookupLoopFunction target loopFunctions =
+      some ([], (.skip : LoopProg α))) :
+    evalCrepFullProg crepFunctions primitive ffi sharedMem baseAddress topAddress
+        (fuel + 4) state (.call none function []) =
+      some (.normal state) ∧
+    evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions
+        (loopFfiOfCrepFfi ffi) (fuel + 4)
+        (loopStateOfCrepState state)
+        (loopCompileProg context live (.call none function [])) =
+      some (.normal (loopStateOfCrepState state)) := by
+  constructor
+  · simp [evalCrepFullProg, evalCrepFullCall, evalCrepFullExps,
+      assignCrepValues, hcrep]
+  · have hskip (n : Nat) (loopState : LoopState α) :
+        evalLoopProg (n + 1) loopState (.skip : LoopProg α) =
+          some (.normal loopState) := by
+      simp [evalLoopProg]
+    simp [loopCompileProg, loopCompileExps,
+      loopCompileExp.loopCompileExps, loopTempNames, loopAssignTemps,
+      loopNestedSeq, evalLoopProgWithPrimitiveCallsAndFfi,
+      evalLoopCallWithPrimitiveCallsAndFfi, loopReadLocals,
+      loopBindParameters, hcontext, hloop, hskip]
+
 theorem crepToLoopWithPrimitive_shMem_store_agreement
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

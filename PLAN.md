@@ -2293,6 +2293,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   positive-fuel boundary and global-aware flattened-expression evaluation.
 - [x] Port the scalar constant-return constructor to the stateful evaluator,
   including source-local clearing and value-list relation transport.
+- [x] Add the stateful one-word load-return constructor through the
+  state-aware load expression contract.
 - [x] Generalize global-aware source-word `raise` lowering to arbitrary
   compiled functions and lift it into the stateful program relation.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite

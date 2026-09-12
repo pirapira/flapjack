@@ -28,4 +28,22 @@ theorem panValueCrepProgramCorrect_return_load_one
     (.load .one address.toExp)
     (panValueCrepExpressionCorrect_load_one address hbytesInWord hlookup)
 
+theorem panValueCrepProgramStateCorrect_return_load_one
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (address : SourceWordExp α)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect (.return (.load .one address.toExp)) := by
+  exact panValueCrepProgramStateCorrect_return_of_expression_relation
+    (.load .one address.toExp)
+    (panValueCrepExpressionStateCorrect_load_one address hbytesInWord hlookup)
+
 end Flapjack

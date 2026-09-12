@@ -30,4 +30,23 @@ theorem crepe_memory_load_remains_in_memory :
       (CrepExp.load (CrepExp.const 200)) = some 7 := by
   native_decide
 
+def crepeGlobalStoreLoadProgram : CrepProg Nat :=
+  .seq
+    (.storeGlob 200 (.const 42))
+    (.return [.loadGlob 200])
+
+theorem crepe_global_store_load_program :
+    evalCrepFullResultState [] (fun _ _ => none) (noCrepFfi Nat)
+      (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 10
+      crepeGlobalSemanticsState
+      crepeGlobalStoreLoadProgram = some [42] := by
+  native_decide
+
+theorem crepe_global_load_missing_fails :
+    evalCrepFullResultState [] (fun _ _ => none) (noCrepFfi Nat)
+      (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 10
+      { crepeGlobalSemanticsState with globals := fun _ => none }
+      (.return [.loadGlob 200]) = none := by
+  native_decide
+
 end Flapjack

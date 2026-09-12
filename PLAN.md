@@ -2257,6 +2257,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   relation transport.
 - [x] Add the stateful generic source-word `Store` constructor, threading
   fresh address/value temporaries and the updated flat memory relation.
+- [x] Port stateful source-word shared-memory store correctness, threading
+  the handler transition and restoration of the value temporary.
+- [x] Port stateful source-word shared-memory load correctness, preserving
+  the handler-produced state and destination-local update.
 - [x] Add the stateful source-word `return` constructor, including the
   positive-fuel boundary and global-aware flattened-expression evaluation.
 - [x] Generalize global-aware source-word `raise` lowering to arbitrary

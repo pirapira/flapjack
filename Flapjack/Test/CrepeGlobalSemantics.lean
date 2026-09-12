@@ -140,6 +140,22 @@ theorem compile_full_extCall_const_noop_state_correct_regression :
     (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1 2 3 4
     "noop"
 
+theorem compile_full_pan_value_return_word_state_correct_regression :
+    evalCrepFullResultState [] (fun _ _ => none) (noCrepFfi Nat)
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1
+        crepeGlobalSemanticsState
+        (compileProg crepeGlobalSkipContext
+          (.return (.const 7) : Prog Nat)) =
+      (evalPanValueProg ([] : StructContext) 0 100 1
+        (fun _ => none) (fun _ => none)
+        (fun address => (crepeGlobalSemanticsState.memory address).map PanValue.word)
+        (.return (.const 7) : Prog Nat)).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  exact compile_full_pan_value_return_word_correct crepeGlobalSkipContext
+    ([] : StructContext) (fun _ => none) (fun _ => none)
+    crepeGlobalSemanticsState (fun _ _ => none) (noCrepFfi Nat)
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1 7
+
 #guard evalCrepFullExpState crepeGlobalSemanticsState 0 100
   (CrepExp.loadGlob 200) = some 42
 

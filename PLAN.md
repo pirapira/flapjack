@@ -2262,6 +2262,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   declarations.
 - [x] Port the two-word record declaration `skip` constructor to the stateful
   evaluator.
+- [x] Port the two-word record declaration `break` and `continue` constructors
+  to the stateful evaluator.
 - [x] Add stateful source-word program constructors for `Store32` and
   `StoreByte`, including no-global expression compatibility and memory
   relation transport.

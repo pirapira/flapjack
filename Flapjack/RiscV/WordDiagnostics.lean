@@ -64,6 +64,27 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-- Collect the foreign-function names referenced by `ffi` nodes in a Word
+    program.  The source-facing entrypoint uses this to register the services
+    that an original Pancake program may call. -/
+def wordProgFfiNames : WordProg α → List FunName
+  | .seq first second => wordProgFfiNames first ++ wordProgFfiNames second
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordProgFfiNames thenBranch ++ wordProgFfiNames elseBranch
+  | .loop _ body _ | .mustTerminate body => wordProgFfiNames body
+  | .call returns _ _ handler =>
+      (match returns with
+       | some (_, _, returnCode, _, _) => wordProgFfiNames returnCode
+       | none => []) ++
+        (match handler with
+         | some (_, body, _, _) => wordProgFfiNames body
+         | none => [])
+  | .ffi function _ _ _ _ _ => [function]
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def wordToStackProgNatChecked [BEq Nat]
     (config : WordStackConfig) (program : WordProg Nat) :
     Except WordLoweringError (StackProg Nat) :=

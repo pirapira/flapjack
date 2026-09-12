@@ -2222,6 +2222,80 @@ def CrepToLoopProgramCorrect
       (loopCompileProg context live program) = some loopResult →
     crepToLoopControlRel crepResult loopResult
 
+theorem crepToLoopProgramCorrect_skip
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    CrepToLoopProgramCorrect (.skip : CrepProg α) := by
+  intro context functions crepFunctions primitive ffi sharedMem
+    baseAddress topAddress sourceFuel targetFuel state live crepResult loopResult
+    hcrep hloop
+  simp [evalCrepFullProg] at hcrep
+  subst crepResult
+  cases targetFuel with
+  | zero => simp [evalLoopProgWithCallsAndFfi] at hloop
+  | succ targetFuel =>
+      simp [loopCompileProg, evalLoopProgWithCallsAndFfi] at hloop
+      cases hloop
+      simp [crepToLoopControlRel]
+
+theorem crepToLoopProgramCorrect_tick
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α] :
+    CrepToLoopProgramCorrect (.tick : CrepProg α) := by
+  intro context functions crepFunctions primitive ffi sharedMem
+    baseAddress topAddress sourceFuel targetFuel state live crepResult loopResult
+    hcrep hloop
+  simp [evalCrepFullProg] at hcrep
+  subst crepResult
+  cases targetFuel with
+  | zero => simp [evalLoopProgWithCallsAndFfi] at hloop
+  | succ targetFuel =>
+      simp [loopCompileProg, evalLoopProgWithCallsAndFfi] at hloop
+      cases hloop
+      simp [crepToLoopControlRel]
+
+theorem crepToLoopProgramCorrect_break
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (label : Nat) :
+    CrepToLoopProgramCorrect (.break label) := by
+  intro context functions crepFunctions primitive ffi sharedMem
+    baseAddress topAddress sourceFuel targetFuel state live crepResult loopResult
+    hcrep hloop
+  simp [evalCrepFullProg] at hcrep
+  subst crepResult
+  cases targetFuel with
+  | zero => simp [evalLoopProgWithCallsAndFfi] at hloop
+  | succ targetFuel =>
+      simp [loopCompileProg, evalLoopProgWithCallsAndFfi] at hloop
+      cases hloop
+      simp [crepToLoopControlRel]
+
+theorem crepToLoopProgramCorrect_continue
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (label : Nat) :
+    CrepToLoopProgramCorrect (.continue label) := by
+  intro context functions crepFunctions primitive ffi sharedMem
+    baseAddress topAddress sourceFuel targetFuel state live crepResult loopResult
+    hcrep hloop
+  simp [evalCrepFullProg] at hcrep
+  subst crepResult
+  cases targetFuel with
+  | zero => simp [evalLoopProgWithCallsAndFfi] at hloop
+  | succ targetFuel =>
+      simp [loopCompileProg, evalLoopProgWithCallsAndFfi] at hloop
+      cases hloop
+      simp [crepToLoopControlRel]
+
 theorem crepToLoopProgramCorrect_induction
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

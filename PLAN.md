@@ -2394,6 +2394,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add the compositional structured `addCarry` primitive correctness rule,
   including typed destination slots, fresh temporaries, and the flattened
   primitive result relation.
+- [x] Port the structured `addCarry` primitive correctness rule to the
+  global-aware state evaluator, including state-aware argument witnesses and
+  fresh-temporary restoration.
 - [x] Add the compositional source-word shared-memory store correctness rule,
   including value-first lowering, fresh temporary stability, handler state,
   and restoration of the temporary local.

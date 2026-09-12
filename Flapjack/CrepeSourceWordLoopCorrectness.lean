@@ -43,17 +43,17 @@ theorem compile_full_pan_value_while_source_word_zero_relation
       sourceLocals sourceGlobals sourceMemory
       (.while condition.toExp body) =
       some (.normal sourceLocals sourceGlobals sourceMemory) ∧
-    evalCrepFullProg functions crepPrimitive ffi sharedMem
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state
       (compileProg context (.while condition.toExp body)) =
       some (.normal state) ∧
     panValueCrepControlRel structs context exceptionRel
       (.normal sourceLocals sourceGlobals sourceMemory) (.normal state) := by
   obtain ⟨compiledCondition, hcompileCondition, hcrepCondition⟩ :=
-    compileSourceWordExp_relation context structs sourceLocals sourceGlobals
-      sourceMemory state.locals state.memory baseAddress topAddress bytesInWord
+    compileSourceWordExp_state_relation context structs sourceLocals sourceGlobals
+      sourceMemory state baseAddress topAddress bytesInWord
       hbytesInWord hlocals.2.1 hlookup condition sourceCondition hsourceCondition
-  have hcrepCondition' : evalCrepFullExp state.locals state.memory
+  have hcrepCondition' : evalCrepFullExpState state
       baseAddress topAddress compiledCondition = some targetCondition := by
     simpa [hconditionAgreement] using hcrepCondition
   have hzero' : sourceCondition == 0 := by
@@ -102,7 +102,7 @@ theorem compile_full_pan_value_while_source_word_nonzero_relation
       baseAddress topAddress bytesInWord fuel
       sourceLocals sourceGlobals sourceMemory body =
       some (.normal sourceNextLocals sourceNextGlobals sourceNextMemory))
-    (hcrepBody : evalCrepFullProg functions crepPrimitive ffi sharedMem
+    (hcrepBody : evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress fuel state compiledBody =
       some (.normal nextState))
     (hsourceLoop : evalPanValueProgWithPrimitiveCallsAndFfi
@@ -111,7 +111,7 @@ theorem compile_full_pan_value_while_source_word_nonzero_relation
       sourceNextLocals sourceNextGlobals sourceNextMemory
       (.while condition.toExp body) = some sourceResult)
     (hcrepLoop : ∀ compiledCondition,
-      evalCrepFullProg functions crepPrimitive ffi sharedMem
+      evalCrepFullProgState functions crepPrimitive ffi sharedMem
         baseAddress topAddress fuel nextState
         (.while compiledCondition compiledBody) = some crepResult)
     (hloopRel : panValueCrepControlRel structs context exceptionRel
@@ -121,15 +121,15 @@ theorem compile_full_pan_value_while_source_word_nonzero_relation
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory (.while condition.toExp body) =
       some sourceResult ∧
-    evalCrepFullProg functions crepPrimitive ffi sharedMem
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state
       (compileProg context (.while condition.toExp body)) = some crepResult ∧
     panValueCrepControlRel structs context exceptionRel sourceResult crepResult := by
   obtain ⟨compiledCondition, hcompileCondition, hcrepCondition⟩ :=
-    compileSourceWordExp_relation context structs sourceLocals sourceGlobals
-      sourceMemory state.locals state.memory baseAddress topAddress bytesInWord
+    compileSourceWordExp_state_relation context structs sourceLocals sourceGlobals
+      sourceMemory state baseAddress topAddress bytesInWord
       hbytesInWord hlocals.2.1 hlookup condition sourceCondition hsourceCondition
-  have hcrepCondition' : evalCrepFullExp state.locals state.memory
+  have hcrepCondition' : evalCrepFullExpState state
       baseAddress topAddress compiledCondition = some targetCondition := by
     simpa [hconditionAgreement] using hcrepCondition
   exact compile_full_pan_value_while_nonzero_relation context structs sourceFunctions

@@ -82,4 +82,19 @@ def checkedPipelineRemoveConfig : StackRemoveConfig :=
     | .error (.parse _) => true
     | _ => false
 
+#guard
+    match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" "fun main() { return 7; }" with
+    | .ok image => image.sections.length > 0 &&
+        image.sections.all (fun entry => entry.bytes.length % 4 == 0)
+    | .error _ => false
+
+#guard
+    match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "missing" "fun main() { return 7; }" with
+    | .error .entryNotFound => true
+    | _ => false
+
 end Flapjack

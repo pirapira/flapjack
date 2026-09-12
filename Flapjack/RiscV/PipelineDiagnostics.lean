@@ -59,6 +59,17 @@ structure SourceRiscVArtifact (width : Nat) where
   bytes : List (BitVec 8)
   warnings : List StatErr
 
+inductive SourceRiscVImageError where
+  | parse (errors : List Parser.ParseError)
+  | static (error : StatErr)
+  | entryNotFound
+  | artifactFailure
+  deriving Repr
+
+structure SourceRiscVImage (width : Nat) where
+  sections : List (RiscV.EncodedRiscVSection width)
+  warnings : List StatErr
+
 /-! Checked sibling of `compileFlapjackRiscVViaStack`.  The historical
     `Option` entrypoint remains available for compatibility; this form makes
     a failed Word section distinguishable from a later StackRemove/Lab/RISC-V
@@ -130,5 +141,34 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
                   | .error error => .error (.lowering (.labToRiscV error))
                   | .ok instructions =>
                       .ok { bytes := RiscV.encodeInstructions instructions, warnings }
+
+/-! Linked source-entry image. The full-SSA entry pipeline retains the same
+    section labels and byte addresses used by the machine correctness harness;
+    encoding is applied section-by-section so that metadata is not lost. -/
+def compileFlapjackRiscVSourceImageChecked [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Int → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig) (start : FunName) (source : String) :
+    Except SourceRiscVImageError (SourceRiscVImage width) :=
+  match Parser.parseTopDecs fromNat source with
+  | .error errors => .error (.parse errors)
+  | .ok declarations =>
+      let checked := staticCheck declarations
+      match checked.1 with
+      | .error error => .error (.static error)
+      | .ok _ =>
+          let warnings := checked.2
+          match pipelineFindFunction start (structCompileTop (panSimpDecls declarations)) with
+          | none => .error .entryNotFound
+          | some _ =>
+              match compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked
+                  architecture bytesInWord (fun value => fromNat value) services
+                  removeConfig start declarations with
+              | none => .error .artifactFailure
+              | some sections =>
+                  .ok { sections := RiscV.encodeLinkedSections sections, warnings }
 
 end Flapjack

@@ -175,6 +175,20 @@ def encodeInstructions [NeZero width] : List (Instruction width) → List (BitVe
   | instruction :: instructions =>
       encodeInstructionBytes instruction ++ encodeInstructions instructions
 
+structure EncodedRiscVSection (width : Nat) where
+  label : Nat
+  address : Word width
+  bytes : List (BitVec 8)
+  deriving Repr
+
+def encodeLinkedSections [NeZero width] :
+    List (Nat × Word width × List (Instruction width)) →
+      List (EncodedRiscVSection width)
+  | [] => []
+  | (label, address, instructions) :: sections =>
+      { label, address, bytes := encodeInstructions instructions } ::
+        encodeLinkedSections sections
+
 @[simp] theorem encodeInstructionBytes_length [NeZero width]
     (instruction : Instruction width) :
     (encodeInstructionBytes instruction).length = 4 := by

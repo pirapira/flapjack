@@ -2698,6 +2698,136 @@ theorem crepToLoopWithPrimitive_shMem_load_state_agreement
       evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg, evalLoopExp,
       loopStateOfCrepState, hlocalUpdate]
 
+theorem crepToLoopWithPrimitive_seq_normal_compose_loop_extra_live_pre
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (crepFunctions : List (CompiledFunction α))
+    (loopFunctions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (loopFfi : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state middle : CrepState α) (live : List Nat)
+    (first second : CrepProg α)
+    (result : CrepControlResult α) (loopResult : LoopResult α)
+    (hfirst : evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state first = some (.normal middle))
+    (hloopFirst : evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions
+      loopFfi (fuel + 2) (loopStateOfCrepState state)
+      (loopCompileProg context live first) =
+      some (.normal (loopStateOfCrepState middle)))
+    (hsecond : evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) middle second = some result)
+    (hloopSecond : evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions
+      loopFfi (fuel + 2) (loopStateOfCrepState middle)
+      (loopCompileProg context live second) = some loopResult) :
+    evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state (.seq first second) = some result ∧
+    evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions loopFfi
+      (fuel + 3) (loopStateOfCrepState state)
+      (loopCompileProg context live (.seq first second)) =
+      some loopResult := by
+  constructor
+  · simp [evalCrepFullProg, hfirst, hsecond]
+  · simp [loopCompileProg_seq, evalLoopProgWithPrimitiveCallsAndFfi,
+      hloopFirst, hloopSecond]
+
+theorem crepToLoopWithPrimitive_shMem_store_seq_agreement
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state targetState : CrepState α) (live : List Nat)
+    (operator : CrepMemOp) (name : Nat) (address value : α)
+    (second : CrepProg α) (result : CrepControlResult α)
+    (loopResult : LoopResult α)
+    (hoperator : operator = .store ∨ operator = .store8 ∨
+      operator = .store16 ∨ operator = .store32)
+    (hvalue : state.locals name = some value)
+    (hshared : sharedMem operator name address state = some targetState)
+    (htarget : targetState =
+      { state with memory := updateMemory state.memory address value })
+    (hsecond : evalCrepFullProg [] primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) targetState second = some result)
+    (hloopSecond : evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      (loopFfiOfCrepFfi ffi) (fuel + 2)
+      (loopStateOfCrepState targetState)
+      (loopCompileProg context live second) = some loopResult) :
+    evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 2) state
+      (.seq (.shMem operator name (.const address)) second) = some result ∧
+    evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      (loopFfiOfCrepFfi ffi) (fuel + 3)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.seq (.shMem operator name (.const address)) second)) =
+      some loopResult := by
+  have hfirst := crepToLoopWithPrimitive_shMem_store_state_agreement
+    context functions primitive ffi sharedMem baseAddress topAddress fuel
+    state targetState live operator name address value hoperator hvalue hshared
+    htarget
+  exact crepToLoopWithPrimitive_seq_normal_compose_loop_extra_live_pre
+    context [] functions primitive ffi (loopFfiOfCrepFfi ffi) sharedMem
+    baseAddress topAddress fuel state targetState live
+    (.shMem operator name (.const address)) second result loopResult
+    hfirst.1 hfirst.2 hsecond hloopSecond
+
+theorem crepToLoopWithPrimitive_shMem_load_seq_agreement
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state targetState : CrepState α) (live : List Nat)
+    (operator : CrepMemOp) (name : Nat) (address value : α)
+    (second : CrepProg α) (result : CrepControlResult α)
+    (loopResult : LoopResult α)
+    (hoperator : operator = .load ∨ operator = .load8 ∨
+      operator = .load16 ∨ operator = .load32)
+    (hmemory : state.memory address = some value)
+    (hshared : sharedMem operator name address state = some targetState)
+    (htarget : targetState =
+      { state with locals := updateCrepLocal state.locals name value })
+    (hsecond : evalCrepFullProg [] primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) targetState second = some result)
+    (hloopSecond : evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      (loopFfiOfCrepFfi ffi) (fuel + 2)
+      (loopStateOfCrepState targetState)
+      (loopCompileProg context live second) = some loopResult) :
+    evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 2) state
+      (.seq (.shMem operator name (.const address)) second) = some result ∧
+    evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      (loopFfiOfCrepFfi ffi) (fuel + 3)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.seq (.shMem operator name (.const address)) second)) =
+      some loopResult := by
+  have hfirst := crepToLoopWithPrimitive_shMem_load_state_agreement
+    context functions primitive ffi sharedMem baseAddress topAddress fuel
+    state targetState live operator name address value hoperator hmemory hshared
+    htarget
+  exact crepToLoopWithPrimitive_seq_normal_compose_loop_extra_live_pre
+    context [] functions primitive ffi (loopFfiOfCrepFfi ffi) sharedMem
+    baseAddress topAddress fuel state targetState live
+    (.shMem operator name (.const address)) second result loopResult
+    hfirst.1 hfirst.2 hsecond hloopSecond
+
 theorem crepToLoopProgramCorrectWithPrimitive_skip
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -3867,44 +3997,6 @@ theorem crepToLoopWithPrimitive_seq_terminal_compose_loop_extra
     | raised state exception => rfl
     | broke state label => rfl
     | continued state label => rfl
-
-theorem crepToLoopWithPrimitive_seq_normal_compose_loop_extra_live
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : LoopContext α)
-    (crepFunctions : List (CompiledFunction α))
-    (loopFunctions : List (Nat × List Nat × LoopProg α))
-    (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α)
-    (loopFfi : FunName → α → α → α → α → LoopState α → Option (LoopState α))
-    (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress : α) (fuel : Nat)
-    (state middle : CrepState α) (live : List Nat)
-    (first second : CrepProg α)
-    (result : CrepControlResult α) (loopResult : LoopResult α)
-    (hfirst : evalCrepFullProg crepFunctions primitive ffi sharedMem
-      baseAddress topAddress (fuel + 1) state first = some (.normal middle))
-    (hloopFirst : evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions
-      loopFfi (fuel + 2) (loopStateOfCrepState state)
-      (loopCompileProg context live first) =
-      some (.normal (loopStateOfCrepState middle)))
-    (hsecond : evalCrepFullProg crepFunctions primitive ffi sharedMem
-      baseAddress topAddress (fuel + 1) middle second = some result)
-    (hloopSecond : evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions
-      loopFfi (fuel + 2) (loopStateOfCrepState middle)
-      (loopCompileProg context live second) = some loopResult) :
-    evalCrepFullProg crepFunctions primitive ffi sharedMem
-      baseAddress topAddress (fuel + 2) state (.seq first second) = some result ∧
-    evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions loopFfi
-      (fuel + 3) (loopStateOfCrepState state)
-      (loopCompileProg context live (.seq first second)) =
-      some loopResult := by
-  constructor
-  · simp [evalCrepFullProg, hfirst, hsecond]
-  · simp [loopCompileProg_seq, evalLoopProgWithPrimitiveCallsAndFfi,
-      hloopFirst, hloopSecond]
 
 theorem crepToLoopWithPrimitive_while_const_zero_agreement
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

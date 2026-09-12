@@ -53,6 +53,12 @@ static checker used to leave the field list of a named shape empty, so any
 `s.field` access was reported as an invalid named field even though the
 reference compiler accepts it; `namedStruct*` pins the reference sections and
 asserts the byte entry point accepts the fixture.
+
+`sharedMemorySource` performs a shared-memory load (`!ld8`) from a computed
+address expression.  The shared-memory lowering only accepted atomic addresses,
+so a non-constant address such as `1000 + 12` failed even though the reference
+compiler accepts it; `sharedMemory*` pins the reference sections and asserts the
+byte entry point accepts the fixture.
 -/
 
 namespace Flapjack.Test.SourceGlobalParity
@@ -93,6 +99,13 @@ def namedStructSource : String :=
   "struct my_struct {\n  1 a,\n  1 b\n}\n" ++
     "fun 1 f(my_struct s) {\n  return s.a + s.b;\n}\n" ++
     "fun 1 main() { return f(my_struct <a = 3, b = 4>); }"
+
+/-- Shared-memory load with a computed address: the nested-address shared
+lowering regression.  The reference compiler accepts `!ld8 v, 1000 + 12` while
+the shared-memory path previously required an atomic address. -/
+def sharedMemorySource : String :=
+  "fun 1 test() {\n  var v = 12;\n  !ld8 v, 1000 + 12;\n  return v;\n}\n" ++
+    "fun 1 main() { return test(); }"
 
 /-- CakeML `cml_generated_main` for `globalSource` (offset 1000, 28 bytes). -/
 def cakeGlobalGeneratedMain : List (BitVec 8) :=
@@ -235,6 +248,23 @@ def cakeNamedStructF : List (BitVec 8) :=
     BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80,
     BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00 ]
 
+/-- CakeML `cml_generated_main` for `sharedMemorySource` (4 bytes). -/
+def cakeSharedMemoryGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `sharedMemorySource` (4 bytes). -/
+def cakeSharedMemoryMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_test` for `sharedMemorySource` (12 bytes). -/
+def cakeSharedMemoryTest : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x65, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x3F, BitVec.ofNat 8 0x03, BitVec.ofNat 8 0x45,
+    BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x67,
+    BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00 ]
+
 /-- Run a source program through the checked RV64I byte entry point. -/
 def compileSourceBytes (source : String) : Option (List (BitVec 8)) :=
   match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
@@ -298,6 +328,13 @@ def namedStructBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The shared-memory computed-address fixture must be accepted; the shared
+lowering previously required an atomic address. -/
+def sharedMemoryBytesAccepted : Bool :=
+  match compileSourceBytes sharedMemorySource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
@@ -305,7 +342,9 @@ def cakeGoldenShape : Bool :=
     cakeNaryGeneratedMain.length == 52 && cakeNaryMain.length == 36 &&
     cakeMulGeneratedMain.length == 40 && cakeMulMain.length == 40 &&
     cakeNamedStructGeneratedMain.length == 4 && cakeNamedStructMain.length == 12 &&
-    cakeNamedStructF.length == 8
+    cakeNamedStructF.length == 8 &&
+    cakeSharedMemoryGeneratedMain.length == 4 && cakeSharedMemoryMain.length == 4 &&
+    cakeSharedMemoryTest.length == 12
 
 #guard globalBytesAccepted
 #guard nestedGlobalBytesAccepted
@@ -313,6 +352,7 @@ def cakeGoldenShape : Bool :=
 #guard naryGlobalBytesAccepted
 #guard longMulGlobalBytesAccepted
 #guard namedStructBytesAccepted
+#guard sharedMemoryBytesAccepted
 #guard initializerChangesArtifact
 #guard cakeGoldenShape
 
@@ -338,6 +378,8 @@ def runChecks : IO Bool := do
       longMulGlobalBytesAccepted,
     checkBool "Pancake named-struct source compiles (bytes)"
       namedStructBytesAccepted,
+    checkBool "Pancake shared-memory computed-address source compiles (bytes)"
+      sharedMemoryBytesAccepted,
     checkBool "Pancake global source compiles (runtime image)"
       (runtimeImageAccepted globalSource),
     checkBool "Pancake global initializer changes artifact"

@@ -1029,11 +1029,20 @@ def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
 def wordStackCompileSharedNat (config : WordStackConfig)
     (operator : WordMemOp) (destination : Nat) (address : WordExp Nat) :
     Option (StackProg Nat) := do
-  let (addressPrelude, addressRegister) ←
-    wordStackAtomNat config config.addressScratch address
-  let body ← wordStackWritePhysicalNat config destination
-    (fun register => .shMem operator register addressRegister)
-  pure (wordStackJoin addressPrelude body)
+  match address with
+  | .const _ | .var _ | .lookup _ =>
+      let (addressPrelude, addressRegister) ←
+        wordStackAtomNat config config.addressScratch address
+      let body ← wordStackWritePhysicalNat config destination
+        (fun register => .shMem operator register addressRegister)
+      pure (wordStackJoin addressPrelude body)
+  | _ =>
+      let addressPrelude ←
+        wordStackCompileExpToRegisterNat config config.addressScratch
+          (wordStackExpressionTemporaries config config.addressScratch) address
+      let body ← wordStackWritePhysicalNat config destination
+        (fun register => .shMem operator register config.addressScratch)
+      pure (wordStackJoin addressPrelude body)
 
 def wordStackCompileExpNat (config : WordStackConfig) (destination : Nat) :
     WordExp Nat → Option (StackProg Nat)

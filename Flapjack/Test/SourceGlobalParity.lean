@@ -86,6 +86,11 @@ landed in register `29` or `31`, and `registerOfNat` rejected names above `31`.
 The checked byte entry point now uses the same allocator-aware full-SSA
 pipeline as the image entry points, so `largeShape*` pins the reference sections
 and asserts the byte entry point accepts the fixture.
+
+`structStoreSource` stores a struct-valued local with `st`.  The original `st`
+flattens its value and accepts any shape, but the static checker demanded a word
+value and rejected this program.  The checker now only requires a word address,
+and `structStore*` pins the reference sections and asserts acceptance.
 -/
 
 namespace Flapjack.Test.SourceGlobalParity
@@ -174,6 +179,13 @@ def largeShapeSource : String :=
   "fun 1 f () {\n  var 33 x = <" ++
     String.intercalate "," (List.replicate 33 "0") ++
     ">;\n  return 1;\n}\nfun 1 main() { return f(); }"
+
+/-- Structured local store: the original `st` flattens its value, so a named
+struct is stored word by word.  The static checker used to require a word
+value and rejected this original-Pancake-accepted program. -/
+def structStoreSource : String :=
+  "struct s { 1 a, 1 b } fun 1 main() { var s x = s <a = 1, b = 2>; " ++
+    "st 1000, x; return 0; }"
 
 /-- CakeML `cml_generated_main` for `globalSource` (offset 1000, 28 bytes). -/
 def cakeGlobalGeneratedMain : List (BitVec 8) :=
@@ -412,6 +424,25 @@ def cakeLargeShapeMain : List (BitVec 8) :=
 /-- CakeML `cml_f` for `largeShapeSource` (8 bytes). -/
 def cakeLargeShapeFLength : Nat := 8
 
+/-- CakeML `cml_generated_main` for `structStoreSource` (4 bytes). -/
+def cakeStructStoreGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `structStoreSource` (32 bytes). -/
+def cakeStructStoreMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x65, BitVec.ofNat 8 0x10,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x65,
+    BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x3E, BitVec.ofNat 8 0x23,
+    BitVec.ofNat 8 0xB0, BitVec.ofNat 8 0xA5, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x65, BitVec.ofNat 8 0x20,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x65,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x3F, BitVec.ofNat 8 0x23,
+    BitVec.ofNat 8 0xB0, BitVec.ofNat 8 0xA5, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x65, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00 ]
+
 /-- Run a source program through the checked RV64I byte entry point. -/
 def compileSourceBytes (source : String) : Option (List (BitVec 8)) :=
   match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
@@ -515,6 +546,13 @@ def largeShapeBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The structured-store fixture must be accepted: the original `st` flattens
+its value, so a struct-valued local is a legal store source. -/
+def structStoreBytesAccepted : Bool :=
+  match compileSourceBytes structStoreSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
@@ -531,7 +569,8 @@ def cakeGoldenShape : Bool :=
     cakeGlobalSharedLoadMain.length == 4 && cakeGlobalSharedLoadFLength == 36 &&
     cakeRotateGeneratedMain.length == 4 && cakeRotateMain.length == 28 &&
     cakeLargeShapeGeneratedMain.length == 4 && cakeLargeShapeMain.length == 4 &&
-    cakeLargeShapeFLength == 8
+    cakeLargeShapeFLength == 8 &&
+    cakeStructStoreGeneratedMain.length == 4 && cakeStructStoreMain.length == 32
 
 #guard globalBytesAccepted
 #guard nestedGlobalBytesAccepted
@@ -545,6 +584,7 @@ def cakeGoldenShape : Bool :=
 #guard nonWordSharedLoadRejected
 #guard rotateBytesAccepted
 #guard largeShapeBytesAccepted
+#guard structStoreBytesAccepted
 #guard initializerChangesArtifact
 #guard cakeGoldenShape
 
@@ -582,6 +622,8 @@ def runChecks : IO Bool := do
       rotateBytesAccepted,
     checkBool "Pancake large-shape local source compiles (bytes)"
       largeShapeBytesAccepted,
+    checkBool "Pancake struct-valued local store source compiles (bytes)"
+      structStoreBytesAccepted,
     checkBool "Pancake global source compiles (runtime image)"
       (runtimeImageAccepted globalSource),
     checkBool "Pancake global initializer changes artifact"

@@ -473,11 +473,10 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                 else staticError (.shape "primitive result shape does not match")))
   | .store address value =>
       staticBind (checkExp context address) (fun addressResult =>
-        staticBind (checkExp context value) (fun valueResult =>
-          if shapedBasedIsWord addressResult.shapedBased &&
-              shapedBasedIsWord valueResult.shapedBased then
+        staticBind (checkExp context value) (fun _valueResult =>
+          if shapedBasedIsWord addressResult.shapedBased then
             progOk .otherLast false false context.location
-          else staticError (.shape "store operands are not words")))
+          else staticError (.shape "store address is not a word")))
   | .store32 address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>

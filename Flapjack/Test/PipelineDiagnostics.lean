@@ -63,4 +63,9 @@ def checkedPipelineRemoveConfig : StackRemoveConfig :=
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
       checkedPipelineRemoveConfig checkedPipelineDeclarations).isOk
 
+#guard
+    (compileFlapjackRiscVViaStackBytesChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      checkedPipelineRemoveConfig checkedPipelineDeclarations).isOk
+
 end Flapjack

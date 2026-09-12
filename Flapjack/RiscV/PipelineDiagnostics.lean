@@ -1,4 +1,5 @@
 import Flapjack.Pipeline
+import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.LabDiagnostics
 import Flapjack.RiscV.WordDiagnostics
 
@@ -68,5 +69,20 @@ def compileFlapjackRiscVViaStackChecked [NeZero width]
           (functions.map (fun (label, _, body) => (label, body))) with
       | .ok instructions => .ok instructions
       | .error error => .error (.labToRiscV error)
+
+/-! Artifact-facing sibling of the checked instruction pipeline.  CakeML's
+    RISC-V target exposes a little-endian byte list, so keep lowering errors
+    intact while applying the concrete encoder only to successful code. -/
+def compileFlapjackRiscVViaStackBytesChecked [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Except PipelineRiscVLoweringError (List (BitVec 8)) :=
+  (compileFlapjackRiscVViaStackChecked architecture bytesInWord fromNat services
+    removeConfig declarations).map RiscV.encodeInstructions
 
 end Flapjack

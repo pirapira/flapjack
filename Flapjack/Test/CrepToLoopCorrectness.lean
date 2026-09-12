@@ -38,6 +38,13 @@ def crepOneConditionState : CrepState Nat :=
   { crepSeqInitial with
     locals := updateCrepLocal crepSeqInitial.locals 1 1 }
 
+def crepStoreExpressionState : CrepState Nat :=
+  { locals := fun name =>
+      if name == 1 then some 200
+      else if name == 2 then some 42
+      else none
+    memory := fun _ => none }
+
 def crepSeqMiddle : CrepState Nat :=
   { crepSeqInitial with
     locals := updateCrepLocal crepSeqInitial.locals 5 42 }
@@ -459,6 +466,37 @@ theorem crepToLoop_while_var_false_regression :
       updateCrepLocal]
   · simp [crepZeroConditionState, crepSeqInitial, loopStateOfCrepState,
       loopCompileExp, evalLoopExp, updateCrepLocal]
+
+theorem crepToLoop_store_var_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 2 crepStoreExpressionState
+      (.store (.var 1) (.var 2))).map (crepControlMemoryAt 200) =
+    (evalLoopProgWithCallsAndFfi []
+      (fun _ _ _ _ _ loopState => some loopState) 5
+      (loopStateOfCrepState crepStoreExpressionState)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 2, target := .rv64i } :
+          LoopContext Nat)
+        [] (.store (.var 1) (.var 2)))).map (loopControlMemoryAt 200) := by
+  apply crepToLoop_store_of_empty_prefix
+    ({ vars := [], functions := [], maxVar := 2, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 1 crepStoreExpressionState []
+    (.var 1) (.var 2) 200 42
+  · simp [loopCompileExp]
+  · simp [loopCompileExp]
+  · simp [loopCompileExp]
+  · simp [loopCompileExp]
+  · simp [loopCompileExp]
+  · simp [crepStoreExpressionState, evalCrepFullExp]
+  · simp [crepStoreExpressionState, evalCrepFullExp]
+  · simp [crepStoreExpressionState, loopStateOfCrepState,
+      loopCompileExp, evalLoopExp]
+  · simp [crepStoreExpressionState, loopStateOfCrepState,
+      loopCompileExp, evalLoopExp]
+  · simp [crepStoreExpressionState, loopCompileExp, evalLoopExp,
+      updateLoopLocal]
 
 theorem crepToLoop_dec_return_const_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)

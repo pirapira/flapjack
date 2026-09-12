@@ -1146,6 +1146,75 @@ theorem crepToLoop_call_caught_return_regression :
   · simp [crepHandlerLoopFunctions, crepHandlerContext, crepCallSkipContext,
       loopCompileProg, lookupLoopFunction]
 
+theorem crepToLoop_call_caught_ffi_handler_regression :
+    (evalCrepFullProg crepHandlerFunctions (fun _ _ => none)
+        crepLoopFfi (fun _ _ _ _ => none) 0 100 4 crepLoopFfiState
+        (.call (some ([], some (17, .extCall "inc" 1 2 3 4))) "raise" [])).map
+        crepControlValues =
+      (evalLoopProgWithCallsAndFfi
+        [(7, [], loopCompileProg crepHandlerContext [] (.raise 17))]
+        (loopFfiOfCrepFfi crepLoopFfi) 4
+        (loopStateOfCrepState crepLoopFfiState)
+        (.call (some ([], [])) (some 7) []
+          (some (8, loopCompileProg crepHandlerContext []
+            (.extCall "inc" 1 2 3 4), .skip, [])))).map
+        loopResultValues := by
+  apply crepToLoop_call_caught_handler_agreement
+    crepHandlerFunctions
+    [(7, [], loopCompileProg crepHandlerContext [] (.raise 17))]
+    (fun _ _ => none) crepLoopFfi (fun _ _ _ _ => none)
+    0 100 2 crepLoopFfiState (loopStateOfCrepState crepLoopFfiState)
+    "raise" 7 8 17 17
+    (.raise 17)
+    (loopCompileProg crepHandlerContext [] (.raise 17))
+    (.extCall "inc" 1 2 3 4)
+    (loopCompileProg crepHandlerContext [] (.extCall "inc" 1 2 3 4))
+    { locals := fun _ => none, memory := crepLoopFfiState.memory }
+    { locals := updateLoopLocal (fun _ => none) 1 17,
+      globals := fun _ => none,
+      memory := crepLoopFfiState.memory }
+    (.normal
+      { crepLoopFfiState with
+        locals := updateCrepLocal crepLoopFfiState.locals 9 42 })
+    (.normal
+      { loopStateOfCrepState crepLoopFfiState with
+        locals := updateLoopLocal
+          (updateLoopLocal
+            (loopStateOfCrepState crepLoopFfiState).locals 8 17) 9 42 })
+  · rfl
+  · simp [crepHandlerFunctions, lookupCompiledFunction]
+  · simp [lookupLoopFunction]
+  · decide
+  · simp [crepHandlerFunctions, evalCrepFullProg]
+  · simp [crepHandlerContext,
+      loopCompileProg, evalLoopProgWithCallsAndFfi, evalLoopProg,
+      evalLoopExp, updateLoopLocal, loopStateOfCrepState]
+  · apply evalCrepFullProg_extCall
+      crepHandlerFunctions (fun _ _ => none) crepLoopFfi
+      (fun _ _ _ _ => none) 0 100 1
+      { locals := crepLoopFfiState.locals,
+        memory := crepLoopFfiState.memory }
+      { crepLoopFfiState with
+        locals := updateCrepLocal crepLoopFfiState.locals 9 42 }
+      "inc" 1 2 3 4 41 0 0 0
+    · simp [crepLoopFfiState]
+    · simp [crepLoopFfiState]
+    · simp [crepLoopFfiState]
+    · simp [crepLoopFfiState]
+    · simp [crepLoopFfi, crepLoopFfiState]
+  · rw [loopCompileProg_extCall]
+    rw [evalLoopProgWithCallsAndFfi_ffi]
+    simp [crepLoopFfi, crepLoopFfiState, loopFfiOfCrepFfi,
+      crepStateOfLoopState, updateLoopLocal, loopStateOfCrepState]
+    funext current
+    by_cases h9 : current = 9
+    · simp [updateCrepLocal, updateLoopLocal, h9]
+    · by_cases h8 : current = 8
+      · subst current
+        simp [updateCrepLocal, updateLoopLocal]
+      · simp [updateCrepLocal, updateLoopLocal, h9, h8]
+  · rfl
+
 theorem crepToLoop_seq_extCall_return_regression :
     (evalCrepFullProg [] (fun _ _ => none) crepLoopFfi
         (fun _ _ _ _ => none) 0 100 20 crepLoopFfiState

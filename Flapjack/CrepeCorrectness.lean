@@ -1091,12 +1091,13 @@ theorem compile_full_pan_value_dec_two_word_simulation
       some (.rStruct [.word left, .word right]))
     (hcompile : compileExp context expression =
       ([compiledLeft, compiledRight], .comb [.one, .one]))
-    (hcompiledLeft : evalCrepFullExp state.locals state.memory
+    (hcompiledLeft : evalCrepFullExpState state
       baseAddress topAddress compiledLeft = some left)
-    (hcompiledRight : ∀ value : α, evalCrepFullExp
-      (updateCrepLocal state.locals (context.maxVar + 1) value)
-      state.memory baseAddress topAddress compiledRight = some right)
-    (hbody : evalCrepFullResult [] primitive ffi sharedMem
+    (hcompiledRight : ∀ value : α, evalCrepFullExpState
+      { state with locals :=
+          updateCrepLocal state.locals (context.maxVar + 1) value }
+      baseAddress topAddress compiledRight = some right)
+    (hbody : evalCrepFullResultState [] primitive ffi sharedMem
       baseAddress topAddress 8
       { state with locals :=
           updateCrepLocal (updateCrepLocal state.locals
@@ -1112,7 +1113,7 @@ theorem compile_full_pan_value_dec_two_word_simulation
         globals (fun address =>
           (state.memory address).map PanValue.word) body).map
         (fun result => result.2.2.2.flatMap panValueFlatWords)) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 10 state
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 10 state
         (compileProg context
           (.dec name (.comb [.one, .one]) expression body)) =
       (evalPanValueProg structs baseAddress topAddress bytesInWord
@@ -1140,7 +1141,7 @@ theorem compile_full_pan_value_dec_two_word_simulation
     simp
   rw [hprogram]
   have hcrepNested :
-      evalCrepFullResult [] primitive ffi sharedMem
+      evalCrepFullResultState [] primitive ffi sharedMem
         baseAddress topAddress 10 state
         (nestedDecs [context.maxVar + 1, context.maxVar + 2]
           [compiledLeft, compiledRight]
@@ -1150,7 +1151,7 @@ theorem compile_full_pan_value_dec_two_word_simulation
                   [context.maxVar + 1, context.maxVar + 2])) :: context.vars
                 maxVar := context.maxVar + 2 }
             body)) =
-      evalCrepFullResult [] primitive ffi sharedMem
+      evalCrepFullResultState [] primitive ffi sharedMem
         baseAddress topAddress 8
         { state with locals :=
             updateCrepLocal (updateCrepLocal state.locals
@@ -1161,10 +1162,10 @@ theorem compile_full_pan_value_dec_two_word_simulation
                 [context.maxVar + 1, context.maxVar + 2])) :: context.vars
               maxVar := context.maxVar + 2 }
             body) := by
-    simp only [nestedDecs, evalCrepFullResult, evalCrepFullProg,
+    simp only [nestedDecs, evalCrepFullResultState, evalCrepFullProgState,
       hcompiledLeft]
     simp [Option.bind, hcompiledRight]
-    generalize hraw : evalCrepFullProg [] primitive ffi sharedMem
+    generalize hraw : evalCrepFullProgState [] primitive ffi sharedMem
       baseAddress topAddress 8
       { state with locals :=
           updateCrepLocal (updateCrepLocal state.locals
@@ -1208,7 +1209,7 @@ theorem compile_full_pan_value_local_assign_record_return_correct
       some (.comb [.one, .one], [slotLeft, slotRight]))
     (hdistinct : slotLeft ≠ slotRight)
     (hlocals : locals name = some (.rStruct [.word oldLeft, .word oldRight])) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 30 state
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 30 state
         (compileProg context
           (.seq
             (.assign .local name
@@ -1238,8 +1239,9 @@ theorem compile_full_pan_value_local_assign_record_return_correct
       panValueFlatWordsFuel.panValueFlatWordsListFuel,
       panValueFlatValueFuel.panValueFlatValueListFuel]
   simp [compileProg, compileExp, compileExp.compileExpList, hlookup,
-    hlocals, evalCrepFullResult, evalCrepFullProg, evalCrepFullExps,
-    evalCrepFullExp, evalPanValueProg, evalPanValueProgWithPrimitive,
+    hlocals, evalCrepFullResultState, evalCrepFullProgState,
+    evalCrepFullExpsState, evalCrepFullExpState,
+    evalPanValueProg, evalPanValueProgWithPrimitive,
     evalPanValueExp, panValueAssignmentValid, panValueShape,
     panShapeMatches, panShapeMatches.panShapeListMatches,
     crepNestedSeq, distinctLists, hdistinct, updateCrepLocal,
@@ -1258,7 +1260,7 @@ theorem compile_full_pan_value_store_load_word_correct
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord address value : α) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 80 state
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 80 state
         (compileProg context
           (.seq
             (.store (.const address) (.const value))
@@ -1271,8 +1273,8 @@ theorem compile_full_pan_value_store_load_word_correct
           (.return (.load .one (.const address))))).map
     (fun result => result.2.2.2.flatMap panValueFlatWords) := by
   simp [Option.bind, compileProg, compileExp, freshNames,
-    nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResult,
-    evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+    nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResultState,
+    evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
     restoreCrepResult,
     evalPanValueProg, evalPanValueProgWithPrimitive, evalPanValueExp,
     panValueFlatLoad, panValueFlatLoadFuel,
@@ -1477,7 +1479,7 @@ theorem compile_full_pan_value_while_zero_correct
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord : α) (fuel : Nat)
     (body : Prog α) :
-    evalCrepFullResult [] primitive ffi sharedMem
+    evalCrepFullResultState [] primitive ffi sharedMem
         baseAddress topAddress (fuel + 1) state
         (compileProg context (.while (.const 0) body)) =
       (evalPanValueProgWithPrimitiveCallsAndFfi
@@ -1489,8 +1491,9 @@ theorem compile_full_pan_value_while_zero_correct
         | .returned _ _ _ values => values.flatMap panValueFlatWords
         | .raised _ _ _ _ _ => []
         | .broke _ _ _ | .continued _ _ _ => []) := by
-  simp [compileProg, compileExp, evalCrepFullResult, evalCrepFullProg,
-    evalCrepFullExp, evalPanValueProgWithPrimitiveCallsAndFfi,
+  simp [compileProg, compileExp, evalCrepFullResultState,
+    evalCrepFullProgState, evalCrepFullExpState,
+    evalPanValueProgWithPrimitiveCallsAndFfi,
     evalPanValueExp]
 
 /-! Loop-control transfers are observable at the full result boundary as
@@ -1507,7 +1510,7 @@ theorem compile_full_pan_value_break_correct
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord : α) (fuel : Nat) :
-    evalCrepFullResult [] primitive ffi sharedMem
+    evalCrepFullResultState [] primitive ffi sharedMem
         baseAddress topAddress (fuel + 1) state
         (compileProg context (.break : Prog α)) =
       (evalPanValueProgWithPrimitiveCallsAndFfi
@@ -1518,7 +1521,7 @@ theorem compile_full_pan_value_break_correct
         | .normal _ _ _ => some []
         | .returned _ _ _ values => some (values.flatMap panValueFlatWords)
         | .raised _ _ _ _ _ | .broke _ _ _ | .continued _ _ _ => none) := by
-  simp [compileProg, evalCrepFullResult, evalCrepFullProg,
+  simp [compileProg, evalCrepFullResultState, evalCrepFullProgState,
     evalPanValueProgWithPrimitiveCallsAndFfi]
 
 /-! The analogous `continue` transfer also agrees at the result boundary;
@@ -1534,7 +1537,7 @@ theorem compile_full_pan_value_continue_correct
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord : α) (fuel : Nat) :
-    evalCrepFullResult [] primitive ffi sharedMem
+    evalCrepFullResultState [] primitive ffi sharedMem
         baseAddress topAddress (fuel + 1) state
         (compileProg context (.continue : Prog α)) =
       (evalPanValueProgWithPrimitiveCallsAndFfi
@@ -1545,7 +1548,7 @@ theorem compile_full_pan_value_continue_correct
         | .normal _ _ _ => some []
         | .returned _ _ _ values => some (values.flatMap panValueFlatWords)
         | .raised _ _ _ _ _ | .broke _ _ _ | .continued _ _ _ => none) := by
-  simp [compileProg, evalCrepFullResult, evalCrepFullProg,
+  simp [compileProg, evalCrepFullResultState, evalCrepFullProgState,
     evalPanValueProgWithPrimitiveCallsAndFfi]
 
 /-! Nonzero loop execution is the main induction interface for the full

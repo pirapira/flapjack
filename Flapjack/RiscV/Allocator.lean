@@ -1332,24 +1332,48 @@ theorem wordClashTree_loop_break_continue :
     computed for both paths.  `Set` is a cut-set boundary supplied by the
     source allocator. -/
 
+/-- Interference edges contributed by introducing `names` into a live set, in
+    the exact order `wordCheckPartialColour` consumes them: each newly added
+    name clashes with every name already live at that point. -/
+def wordClashAnalyzeIntros (names : List Nat) (live : List Nat) :
+    List Nat × List (Nat × Nat) :=
+  match names with
+  | [] => (live, [])
+  | name :: rest =>
+      if name ∈ live then
+        wordClashAnalyzeIntros rest live
+      else
+        let edges := (live.filter (fun other => other != name)).map
+          (fun other => (name, other))
+        let (live', edges') := wordClashAnalyzeIntros rest (name :: live)
+        (live', edges ++ edges')
+
 def wordClashTreeAnalyze : WordClashTree → List Nat →
     List Nat × List (Nat × Nat)
   | .delta writes reads, liveAfter =>
-      (wordListUnion reads (liveAfter.filter (fun name => name ∉ writes)),
-        wordClashPairs writes liveAfter)
+      let (liveAfterWrites, writeEdges) := wordClashAnalyzeIntros writes liveAfter
+      let (liveOut, readEdges) :=
+        wordClashAnalyzeIntros reads
+          (liveAfterWrites.filter (fun name => name ∉ writes))
+      (liveOut, writeEdges ++ readEdges)
   | .seq first second, liveAfter =>
       let (liveMiddle, secondEdges) := wordClashTreeAnalyze second liveAfter
       let (liveIn, firstEdges) := wordClashTreeAnalyze first liveMiddle
       (liveIn, firstEdges ++ secondEdges)
   | .branch branchLive thenBranch elseBranch, liveAfter =>
-      let branchOut := match branchLive with
-        | some names => names
-        | none => liveAfter
-      let (thenLive, thenEdges) := wordClashTreeAnalyze thenBranch branchOut
-      let (elseLive, elseEdges) := wordClashTreeAnalyze elseBranch branchOut
-      (wordListUnion branchOut (wordListUnion thenLive elseLive),
-        thenEdges ++ elseEdges)
-  | .set names, _ => (names, [])
+      let (thenLive, thenEdges) := wordClashTreeAnalyze thenBranch liveAfter
+      let (elseLive, elseEdges) := wordClashTreeAnalyze elseBranch liveAfter
+      match branchLive with
+      | none =>
+          let elseOnly := elseLive.filter (fun name => name ∉ thenLive)
+          let (merged, crossEdges) := wordClashAnalyzeIntros elseOnly thenLive
+          (merged, thenEdges ++ elseEdges ++ crossEdges)
+      | some names =>
+          let names := names.eraseDups
+          (names, thenEdges ++ elseEdges ++ wordPairwiseClashes names)
+  | .set names, _ =>
+      let names := names.eraseDups
+      (names, wordPairwiseClashes names)
 
 def wordNumSetDelete : List Nat → List Nat → List Nat
   | [], live => live
@@ -1382,7 +1406,7 @@ def wordClashTreeCheck (colour : Nat → Nat) : WordClashTree →
           wordCheckPartialColour colour reads
             (wordNumSetDelete writes live)
             (wordNumSetDelete (writes.map colour) flive)
-  | .set names, _, _ => wordCheckColour colour names
+  | .set names, _, _ => wordCheckColour colour names.eraseDups
   | .branch branchLive thenBranch elseBranch, live, flive =>
       match wordClashTreeCheck colour thenBranch live flive with
       | none => none
@@ -1395,7 +1419,7 @@ def wordClashTreeCheck (colour : Nat → Nat) : WordClashTree →
                   wordCheckPartialColour colour
                     (elseOut.filter (fun name => name ∉ thenOut))
                     thenOut fThenOut
-              | some names => wordCheckColour colour names
+              | some names => wordCheckColour colour names.eraseDups
   | .seq first second, live, flive =>
       match wordClashTreeCheck colour second live flive with
       | none => none
@@ -1536,14 +1560,14 @@ theorem wordClashTreeCheck_sound (colour : Nat → Nat)
           (wordNumSetDelete (writes.map colour) flive)
           live' flive' hdeletedLive hdeletedFlive hdeletedImage hreads
   | set names =>
-      have hcheck' : wordCheckColour colour names =
+      have hcheck' : wordCheckColour colour names.eraseDups =
           some (live', flive') := by
         simpa [wordClashTreeCheck] using hcheck
-      have hcolour := wordCheckColour_sound colour names live' flive' hcheck'
+      have hcolour := wordCheckColour_sound colour names.eraseDups live' flive' hcheck'
       rcases hcolour with ⟨hnames, hmap, hcoloured⟩
       subst live'
       subst flive'
-      exact ⟨wordMap_nodup_source colour names hcoloured, hcoloured, rfl⟩
+      exact ⟨wordMap_nodup_source colour names.eraseDups hcoloured, hcoloured, rfl⟩
   | branch branchLive thenBranch elseBranch ihThen ihElse =>
       cases hthen : wordClashTreeCheck colour thenBranch live flive with
       | none =>
@@ -1583,16 +1607,16 @@ theorem wordClashTreeCheck_sound (colour : Nat → Nat)
                             thenOut fThenOut live' flive'
                             hthen'.1 hthen'.2.1 hthen'.2.2 hfinal
                       | some names =>
-                          have hfinal : wordCheckColour colour names =
+                          have hfinal : wordCheckColour colour names.eraseDups =
                               some (live', flive') := by
                             simpa only [wordClashTreeCheck, hthen, helse] using
                               hcheck
                           have hcolour := wordCheckColour_sound colour
-                            names live' flive' hfinal
+                            names.eraseDups live' flive' hfinal
                           rcases hcolour with ⟨hnames, hmap, hcoloured⟩
                           subst live'
                           subst flive'
-                          exact ⟨wordMap_nodup_source colour names hcoloured,
+                          exact ⟨wordMap_nodup_source colour names.eraseDups hcoloured,
                             hcoloured, rfl⟩
   | seq first second ihFirst ihSecond =>
       cases hsecond : wordClashTreeCheck colour second live flive with
@@ -1625,9 +1649,8 @@ theorem wordClashTreeAnalyze_assign (name source : Nat)
         (wordClashTree (.assign name (.var source) : WordProg α) []) [source] =
       ([source], [(name, source)]) := by
   have hneq' : source ≠ name := Ne.symm hneq
-  simp [wordClashTree, wordClashTreeAnalyze, wordExpReadVars,
-    wordClashPairs, wordListUnion, hneq', List.eraseDups,
-    List.eraseDupsBy, List.eraseDupsBy.loop]
+  simp [wordClashTree, wordClashTreeAnalyze, wordClashAnalyzeIntros,
+    wordExpReadVars, hneq, hneq']
 
 theorem wordClashTreeAnalyze_seq (first second : WordProg α)
     (liveAfter : List Nat) :
@@ -2838,8 +2861,10 @@ def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
   let tree := wordClashTree program []
   let (liveIn, edges) := wordClashTreeAnalyze tree []
   let preferences := wordProgPreferenceEdges program
-  match wordAllocateVarsWithFixedSources
-      (renamedParameters ++ wordProgVariables program ++ liveIn)
+  let slots :=
+    renamedParameters ++ wordProgVariables program ++ liveIn ++
+      edges.flatMap (fun edge => [edge.1, edge.2])
+  match wordAllocateVarsWithFixedSources slots
       edges preferences (wordPhysicalFixedSources parameters program) with
   | none => none
   | some allocation =>
@@ -2887,9 +2912,12 @@ theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixe
   have hslots := wordAllocateVarsWithFixedSources_maps_slots
     ((wordSsaRenameFunctionWithEntry parameters program).2.fst ++
       (wordProgVariables (wordSsaRenameFunctionWithEntry parameters program).2.snd ++
-        (wordClashTreeAnalyze
-          (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
-          []).fst))
+        ((wordClashTreeAnalyze
+            (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
+            []).fst ++
+          (wordClashTreeAnalyze
+            (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
+            []).snd.flatMap (fun edge => [edge.1, edge.2]))))
     (wordClashTreeAnalyze
       (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd []) []).snd
     (wordProgPreferenceEdges

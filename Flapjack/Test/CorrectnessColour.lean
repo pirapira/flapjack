@@ -274,8 +274,8 @@ example [NeZero 64] (state : State 64) :
       wordAllocateContextWithClashes, wordAllocateVarsWithClashes,
       wordGreedyColour, wordColouringUsesAllocatable,
       wordColouringRespectsClashes, wordClashTreeAnalyze, wordClashTree,
-      wordProgVariables, wordProgReadVars, wordProgWriteVars, wordClashPairs,
-      wordListUnion, wordApplyColour, context]
+      wordProgVariables, wordProgReadVars, wordProgWriteVars,
+      wordClashAnalyzeIntros, wordApplyColour, context]
   have hvalid : wordColourValid (wordFindVar context) := by
     intro name hname
     simpa [context, wordFindVar, lookupNatInfo] using hname

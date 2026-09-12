@@ -48,6 +48,8 @@ FIXED = (
 
 
 class Gen:
+    max_extra_words = 6
+
     def __init__(self):
         self.words = []
         self.structs = []
@@ -133,7 +135,7 @@ class Gen:
     def program(self):
         self.words = ["x"]
         body = ["  var 1 x = %s;" % random.choice(CONSTS)]
-        for _ in range(random.randint(0, 2)):
+        for _ in range(random.randint(0, Gen.max_extra_words)):
             name = "y%d" % random.randint(0, 999)
             initialiser = self.top_expr()
             self.words.append(name)
@@ -148,7 +150,7 @@ class Gen:
             initialiser = "pair(%s, %s)" % (self.expr(), self.expr())
             self.pairs.append(name)
             body.append("  var {1,1} %s = %s;" % (name, initialiser))
-        for _ in range(random.randint(1, 6)):
+        for _ in range(random.randint(1, Gen.max_extra_words)):
             body.append(self.stmt(2))
         body.append("  return %s;" % self.top_expr())
         return FIXED + "fun 1 main() {\n" + "\n".join(body) + "\n}\n"
@@ -162,6 +164,7 @@ def main(argv=None):
     parser.add_argument("--flapjack", default=os.environ.get("FLAPJACK", DEFAULT_FLAPJACK), help="path to flapjack-compile")
     parser.add_argument("--out", default=None, help="directory for generated programs (default: a temporary directory)")
     parser.add_argument("--quiet", action="store_true", help="do not print individual gaps/opposites")
+    parser.add_argument("--extra-locals", type=int, default=6, help="upper bound on extra random locals per program (register pressure)")
     args = parser.parse_args(argv)
 
     if not os.path.exists(args.cake):
@@ -170,6 +173,7 @@ def main(argv=None):
         parser.error("flapjack-compile not found at %s (set $FLAPJACK or --flapjack)" % args.flapjack)
 
     random.seed(args.seed)
+    Gen.max_extra_words = args.extra_locals
     scratch_root = "/var/tmp" if os.path.isdir("/var/tmp") else None
     out_dir = args.out or tempfile.mkdtemp(prefix="flapjack-parity-fuzz-", dir=scratch_root)
     os.makedirs(out_dir, exist_ok=True)

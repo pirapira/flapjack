@@ -2923,6 +2923,70 @@ theorem crepToLoopProgramCorrect_assign_sub_const
           simp [crepToLoopControlRel, crepToLoopStateRel,
             loopStateOfCrepState, updateCrepLocal, updateLoopLocal]
 
+theorem crepToLoopProgramCorrect_extCall
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (function : FunName)
+    (configuration configurationLength array arrayLength : Nat) :
+    CrepToLoopProgramCorrect
+      (.extCall function configuration configurationLength array arrayLength : CrepProg α) := by
+  intro context functions crepFunctions primitive ffi sharedMem
+    baseAddress topAddress sourceFuel targetFuel state live crepResult loopResult
+    hcrep hloop
+  simp [evalCrepFullProg] at hcrep
+  cases hc : state.locals configuration with
+  | none => simp [hc] at hcrep
+  | some configurationValue =>
+      cases hcl : state.locals configurationLength with
+      | none => simp [hc, hcl] at hcrep
+      | some configurationLengthValue =>
+          cases ha : state.locals array with
+          | none => simp [hc, hcl, ha] at hcrep
+          | some arrayValue =>
+              cases hal : state.locals arrayLength with
+              | none => simp [hc, hcl, ha, hal] at hcrep
+              | some arrayLengthValue =>
+                  cases hffi : ffi function configurationValue configurationLengthValue
+                      arrayValue arrayLengthValue state with
+                  | none => simp [hc, hcl, ha, hal, hffi] at hcrep
+                  | some ffiResult =>
+                      cases ffiResult with
+                      | returned state' =>
+                          simp [hc, hcl, ha, hal, hffi] at hcrep
+                          subst crepResult
+                          have hffi' :
+                              ffi function configurationValue configurationLengthValue
+                                arrayValue arrayLengthValue
+                                ({ locals := state.locals, memory := state.memory } : CrepState α) =
+                                some (.returned state') := by
+                            simpa using hffi
+                          cases targetFuel with
+                          | zero => simp [evalLoopProgWithCallsAndFfi] at hloop
+                          | succ targetFuel =>
+                              simp [loopCompileProg] at hloop
+                              rw [evalLoopProgWithCallsAndFfi_ffi] at hloop
+                              simp [loopFfiOfCrepFfi, crepStateOfLoopState,
+                                loopStateOfCrepState, hc, hcl, ha, hal, hffi'] at hloop
+                              cases hloop
+                              simp [crepToLoopControlRel, crepToLoopStateRel]
+                      | final event =>
+                          simp [hc, hcl, ha, hal, hffi] at hcrep
+                          have hffi' :
+                              ffi function configurationValue configurationLengthValue
+                                arrayValue arrayLengthValue
+                                ({ locals := state.locals, memory := state.memory } : CrepState α) =
+                                some (.final event) := by
+                            simpa using hffi
+                          cases targetFuel with
+                          | zero => simp [evalLoopProgWithCallsAndFfi] at hloop
+                          | succ targetFuel =>
+                              simp [loopCompileProg] at hloop
+                              rw [evalLoopProgWithCallsAndFfi_ffi] at hloop
+                              simp [loopFfiOfCrepFfi, crepStateOfLoopState,
+                                loopStateOfCrepState, hc, hcl, ha, hal, hffi'] at hloop
+
 theorem crepToLoopProgramCorrect_induction
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

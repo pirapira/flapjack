@@ -2221,6 +2221,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   seam for localized correctness proofs.
 - [x] Prove that scalar source-word compilation emits no-global expressions and
   expose the first state-aware source-word expression contract.
+- [x] Lift the state-aware expression contract to the complete localized
+  `wordExp` fragment used by argument and program-constructor proofs.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

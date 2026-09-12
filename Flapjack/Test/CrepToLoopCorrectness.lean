@@ -169,6 +169,27 @@ theorem crepToLoop_primitive_assign_cmp_equal_const_contract_regression :
       (.assign 2 (.cmp .equal (.const (3 : Nat)) (.const 3)) : CrepProg Nat) := by
   exact crepToLoopProgramCorrectWithPrimitive_assign_cmp_equal_const 2 3 3
 
+theorem crepToLoop_assign_cmp_equal_vars_contract_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 3 crepLoopStoreVarsState
+      (.assign 7 (.cmp .equal (.var 5) (.var 6)))).map
+        (crepControlLocal 7) =
+    (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+      9 (loopStateOfCrepState crepLoopStoreVarsState)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 7, target := .rv64i } :
+            LoopContext Nat)
+          [] (.assign 7 (.cmp .equal (.var 5) (.var 6))))).map
+          (loopControlLocal 7) := by
+  exact crepToLoop_assign_cmp_equal_vars_agreement
+    ({ vars := [], functions := [], maxVar := 7, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+    0 100 2 crepLoopStoreVarsState [] 7 5 6 1 42
+    (by change 7 ≤ 7; omega) (by change 5 ≤ 7; omega)
+    (by change 6 ≤ 7; omega) (by simp [crepLoopStoreVarsState])
+    (by simp [crepLoopStoreVarsState])
+
 theorem crepToLoop_primitive_assign_cmp_notEqual_const_contract_regression :
     CrepToLoopProgramCorrectWithPrimitive
       (.assign 2 (.cmp .notEqual (.const (3 : Nat)) (.const 4)) : CrepProg Nat) := by

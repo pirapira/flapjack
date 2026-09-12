@@ -94,6 +94,40 @@ theorem crepToLoop_primitive_correctness_contract_regression :
       (.return [.const (42 : Nat)] : CrepProg Nat) := by
   exact crepToLoopProgramCorrectWithPrimitive_return_const 42
 
+theorem crepToLoop_primitive_seq_normal_regression :
+    evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        (fun _ _ _ _ => none) 0 100 4 crepSeqInitial
+        (.seq (.assign 5 (.const 42)) (.assign 6 (.var 5))) =
+      some (.normal crepSeqFinal) ∧
+    evalLoopProgWithPrimitiveCallsAndFfi (fun _ _ => none) []
+        (fun _ _ _ _ _ loopState => some loopState)
+        4 (loopStateOfCrepState crepSeqInitial)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+            LoopContext Nat)
+          [] (.seq (.assign 5 (.const 42)) (.assign 6 (.var 5)))) =
+      some (.normal (loopStateOfCrepState crepSeqFinal)) := by
+  have hupdate : ∀ (locals : Nat → Option Nat) (name value : Nat),
+      updateLoopLocal locals name value = updateCrepLocal locals name value := by
+    intro locals name value
+    funext current
+    simp [updateLoopLocal, updateCrepLocal]
+  apply crepToLoopWithPrimitive_seq_normal_compose
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ _ loopState => some loopState) (fun _ _ _ _ => none)
+    0 100 2 crepSeqInitial crepSeqMiddle []
+    (.assign 5 (.const 42) : CrepProg Nat)
+    (.assign 6 (.var 5) : CrepProg Nat)
+    (.normal crepSeqFinal : CrepControlResult Nat)
+    (.normal (loopStateOfCrepState crepSeqFinal) : LoopResult Nat)
+  all_goals simp [crepSeqInitial, crepSeqMiddle, crepSeqFinal,
+    loopStateOfCrepState, updateCrepLocal, hupdate,
+    evalCrepFullProg, evalCrepFullExp, loopCompileProg, loopCompileExp,
+    loopNestedSeq, evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+    evalLoopExp]
+
 theorem crepToLoop_seq_normal_regression :
     evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         (fun _ _ _ _ => none) 0 100 4 crepSeqInitial

@@ -2303,6 +2303,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   state-aware list evaluation and the arbitrary 32-word payload bound.
 - [x] Add the stateful arbitrary record-field return constructor, including
   indexed stateful list evaluation and field-shape selection.
+- [x] Add the stateful two-word record expression wrapper used by the
+  fixed-shape declaration and return correctness cases.
 - [x] Port closed constant record-field returns through the stateful expression
   and program return contracts.
 - [x] Add stateful argument-list and word-call correctness adapters, preserving

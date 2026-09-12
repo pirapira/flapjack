@@ -855,4 +855,22 @@ theorem panValueCrepExpressionStateCorrect_word_record
   · simpa [panValueShape, Function.comp_def] using hcompile
   · simpa [panValueFlatWords_rStruct_word_list] using hcompiled
 
+theorem panValueCrepExpressionStateCorrect_two_word_record
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (left right : SourceWordExp α)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepExpressionStateCorrect
+      (.rStruct [left.toExp, right.toExp]) := by
+  simpa using panValueCrepExpressionStateCorrect_word_record
+    [left, right] hbytesInWord hlookup (by simp)
+
 end Flapjack

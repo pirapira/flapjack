@@ -1,5 +1,6 @@
 import Flapjack.CrepeSemantics
 import Flapjack.Compile
+import Flapjack.CrepeCorrectness
 import Flapjack.CrepToLoopCorrectness
 
 /-!
@@ -15,6 +16,22 @@ def crepeGlobalSemanticsState : CrepState Nat :=
     memory := fun address => if address == 200 then some 7 else none
     globals := fun address => if address == 200 then some 42 else none }
 
+def crepeGlobalSkipContext : CompileContext Nat :=
+  { vars := [], functions := [], exceptions := [], maxVar := 0,
+    bytesInWord := 1 }
+
+theorem compile_full_skip_state_correct_regression :
+    evalCrepFullResultState [] (fun _ _ => none) (noCrepFfi Nat)
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1
+        crepeGlobalSemanticsState
+        (compileProg crepeGlobalSkipContext (.skip : Prog Nat)) =
+      evalPanMemResult (fun _ => none) crepeGlobalSemanticsState.memory
+        (.skip : Prog Nat) := by
+  exact compile_full_skip_state_correct crepeGlobalSkipContext
+    (fun _ => none) crepeGlobalSemanticsState (fun _ _ => none)
+    (noCrepFfi Nat) (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat)
+    0 100
+
 #guard evalCrepFullExpState crepeGlobalSemanticsState 0 100
   (CrepExp.loadGlob 200) = some 42
 
@@ -25,6 +42,11 @@ def crepeGlobalSemanticsState : CrepState Nat :=
 
 #guard evalCrepFullExpState crepeGlobalSemanticsState 0 100
   (CrepExp.load (CrepExp.const 200)) = some 7
+
+#guard evalCrepFullResultState [] (fun _ _ => none) (noCrepFfi Nat)
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1
+    crepeGlobalSemanticsState
+    (compileProg crepeGlobalSkipContext (.skip : Prog Nat)) = some []
 
 def crepeGlobalStoreLoadProgram : CrepProg Nat :=
   .seq

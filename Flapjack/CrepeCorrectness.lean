@@ -28,6 +28,25 @@ theorem compile_full_skip_correct
   simp [compileProg, evalCrepFullResult, evalCrepFullProg,
     evalPanMemResult, evalPanMemProg]
 
+/-! The first compact correctness leaf at the global-aware evaluator
+    boundary.  `skip` leaves the separately threaded global environment
+    unchanged, so its observable result remains the source memory result. -/
+theorem compile_full_skip_state_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (locals : VarName → Option α)
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) :
+    evalCrepFullResultState [] primitive ffi sharedMem
+        baseAddress topAddress 1 state
+        (compileProg context (.skip : Prog α)) =
+      evalPanMemResult locals state.memory (.skip : Prog α) := by
+  simp [compileProg, evalCrepFullResultState, evalCrepFullProgState,
+    evalPanMemResult, evalPanMemProg]
+
 theorem compile_full_return_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

@@ -225,6 +225,7 @@ import Flapjack.PanValueFfiClockCorrectness
 import Flapjack.PanValueFfiClockProjection
 import Flapjack.PanCost
 import Flapjack.RiscV.Model
+import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.PanMemory
 import Flapjack.RiscV.PanSemantics
 import Flapjack.RiscV.Allocator

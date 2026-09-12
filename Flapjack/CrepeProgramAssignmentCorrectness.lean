@@ -2,6 +2,8 @@ import Flapjack.CrepeExpressionRelation
 import Flapjack.CrepeCompileExpVariables
 import Flapjack.CrepeProgramGenericAssignmentConstructor
 import Flapjack.CrepeProgramGenericAssignmentTemporaryConstructor
+import Flapjack.CrepeProgramAssignmentFuelRelation
+import Flapjack.PanValueShapeInversion
 
 /-!
 The assignment proof dispatcher.  The compiler chooses direct or
@@ -195,5 +197,116 @@ theorem panValueCrepProgramCorrect_assign_local_of_expression_contract
       sourceLocals sourceGlobals sourceMemory state primitive sourceHandler crepPrimitive
       ffi sharedMem baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
       sourceResult crepResult hrel hsource hcrep
+
+theorem panValueCrepProgramStateCorrect_assign_local_source_word_direct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (name : VarName) (expression : SourceWordExp α)
+    (hdirect : ∀ (context : CompileContext α) (compiled : CrepExp α)
+      (slot : Nat),
+      lookupInfo name context.vars = some (.one, [slot]) →
+      compileExp context expression.toExp = ([compiled], .one) →
+      distinctLists [slot] (crepExpVars compiled) = true)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (oldValue : PanValue α),
+      sourceLocals name = some oldValue →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hlookupAll : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (localName : VarName) (localValue : PanValue α),
+      sourceLocals localName = some localValue →
+      ∃ slot, lookupInfo localName context.vars = some (.one, [slot]))
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hnoalias : ∀ (context : CompileContext α)
+      (slot : Nat),
+      lookupInfo name context.vars = some (.one, [slot]) →
+      ∀ oldName oldShape oldSlots,
+        oldName ≠ name →
+        lookupInfo oldName context.vars = some (oldShape, oldSlots) →
+        slot ∉ oldSlots) :
+    PanValueCrepProgramStateCorrect
+      (.assign .local name expression.toExp) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  have hsourceInfo : ∃ sourceValue oldValue,
+      evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+        baseAddress topAddress bytesInWord expression.toExp = some sourceValue ∧
+      sourceLocals name = some oldValue ∧
+      panShapeMatches (panValueShape structs sourceValue)
+        (panValueShape structs oldValue) = true ∧
+      sourceResult = .normal (updatePanValueMap sourceLocals name sourceValue)
+        sourceGlobals sourceMemory := by
+    cases sourceFuel with
+    | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+    | succ sourceFuel =>
+        have hsource' : evalPanValueProgWithPrimitiveCallsAndFfi
+            primitive sourceHandler structs sourceFunctions
+            baseAddress topAddress bytesInWord (sourceFuel + 1)
+            sourceLocals sourceGlobals sourceMemory
+            (.assign .local name expression.toExp) = some sourceResult := by
+          simpa using hsource
+        obtain ⟨sourceValue, oldValue, hvalue, hold, hvalid, hresult⟩ :=
+          evalPanValueProg_assign_local_inv primitive sourceHandler structs sourceFunctions
+            baseAddress topAddress bytesInWord sourceFuel sourceLocals sourceGlobals
+            sourceMemory name expression.toExp sourceResult hsource'
+        exact ⟨sourceValue, oldValue, hvalue, hold, hvalid, hresult⟩
+  obtain ⟨sourceValue, oldValue, hsourceValue, hold, hvalid, hsourceResult⟩ := hsourceInfo
+  obtain ⟨slot, hlookupName⟩ := hlookup context sourceLocals oldValue hold
+  have holdRel := hrel.2.1 name oldValue .one [slot] hold hlookupName
+  obtain ⟨oldWord, holdWord⟩ := panValueShape_matches_one_inv structs oldValue holdRel.1
+  obtain ⟨value, hsourceWord⟩ := evalPanValueExp_sourceWord_inv
+    structs sourceLocals sourceGlobals sourceMemory
+    baseAddress topAddress bytesInWord context hrel.2.1
+    (hlookupAll context sourceLocals) expression sourceValue hsourceValue
+  subst sourceValue
+  subst oldValue
+  obtain ⟨compiled, hcompile, hcompiled⟩ := compileSourceWordExp_relation
+    context structs sourceLocals sourceGlobals sourceMemory state.locals state.memory
+    baseAddress topAddress bytesInWord (hbytesInWord context bytesInWord)
+    hrel.2.1 (hlookupAll context sourceLocals) expression value hsourceValue
+  have hcompile' : compileExp context expression.toExp = ([compiled], .one) := by
+    simpa using hcompile
+  have hdistinct := hdirect context compiled slot hlookupName hcompile'
+  have hcompileProg : compileProg context
+      (.assign .local name expression.toExp) =
+      .seq (.assign slot compiled) .skip := by
+    simp [compileProg, hlookupName, hcompile', hdistinct, crepNestedSeq]
+  rw [hcompileProg] at hcrep
+  cases sourceFuel with
+  | zero => simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases targetFuel with
+      | zero => simp [evalCrepFullProgState] at hcrep
+      | succ targetFuel =>
+          cases targetFuel with
+          | zero => simp [evalCrepFullProgState] at hcrep
+          | succ targetFuel =>
+              have hcrepOriginal :
+                  evalCrepFullProgState functions crepPrimitive ffi sharedMem
+                    baseAddress topAddress (targetFuel + 2) state
+                    (compileProg context (.assign .local name expression.toExp)) =
+                    some crepResult := by
+                simpa [hcompileProg] using hcrep
+              obtain ⟨hsourceExpected, hcrepExpected, hrelation⟩ :=
+                compile_full_pan_value_local_assign_source_word_state_relation_fuel
+                  context structs sourceFunctions functions sourceLocals sourceGlobals
+                  sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+                  baseAddress topAddress bytesInWord sourceFuel targetFuel name slot
+                  oldWord value expression compiled hlookupName
+                  (hlookupAll context sourceLocals) hold hsourceValue hcompile'
+                  hcompiled hdistinct hrel
+                  (hnoalias context slot hlookupName)
+              have hsourceEq := Option.some.inj (hsourceExpected.symm.trans hsource)
+              have hcrepEq := Option.some.inj
+                (hcrepExpected.symm.trans hcrepOriginal)
+              cases hsourceEq
+              cases hcrepEq
+              exact hrelation
 
 end Flapjack

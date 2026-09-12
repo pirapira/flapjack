@@ -2255,6 +2255,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add stateful source-word program constructors for `Store32` and
   `StoreByte`, including no-global expression compatibility and memory
   relation transport.
+- [x] Add the stateful generic source-word `Store` constructor, threading
+  fresh address/value temporaries and the updated flat memory relation.
 - [x] Add the stateful source-word `return` constructor, including the
   positive-fuel boundary and global-aware flattened-expression evaluation.
 - [x] Generalize global-aware source-word `raise` lowering to arbitrary

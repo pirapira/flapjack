@@ -1,6 +1,7 @@
 import Flapjack.RiscV.Encoding
 import Flapjack.Test.CorrectnessTarget
 import Flapjack.Test.PipelineDiagnostics
+import Flapjack.Test.SourceGlobalParity
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -64,7 +65,8 @@ def main : IO Unit := do
       (leanReturnWords 7) (cakeReturnWords 7),
     checkEq "Lean target linked image"
       pipelineCallTargetLinkedImage (some pipelineCallTargetImage),
-    checkBool "Lean source entry produces an artifact" minimalSourceArtifact
+    checkBool "Lean source entry produces an artifact" minimalSourceArtifact,
+    Flapjack.Test.SourceGlobalParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

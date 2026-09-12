@@ -2248,6 +2248,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   correctness induction.
 - [x] Add the independent-fuel recursive declaration-call constructor that
   consumes a stateful body-correctness hypothesis.
+- [x] Add stateful source-word program constructors for `Store32` and
+  `StoreByte`, including no-global expression compatibility and memory
+  relation transport.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

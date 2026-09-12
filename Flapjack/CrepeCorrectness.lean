@@ -527,7 +527,7 @@ theorem compile_full_pan_value_return_word_of_exp
 /-! Shape-preserving local assignment is the next stateful source boundary.
     The source variable is already bound to a word, so CakeML's assignment
     validity check and the flattened Crep slot update can be related directly. -/
-theorem compile_full_pan_value_local_assign_return_word_correct
+theorem compile_full_pan_value_local_assign_return_word_compat_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -557,6 +557,36 @@ theorem compile_full_pan_value_local_assign_return_word_correct
     crepNestedSeq, distinctLists, updateCrepLocal, updatePanValueMap,
     panValueFlatWords,
     panValueFlatWordsFuel]
+
+theorem compile_full_pan_value_local_assign_return_word_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (name : VarName) (slot : Nat) (oldValue value : α)
+    (hlookup : lookupInfo name context.vars = some (.one, [slot]))
+    (hlocals : locals name = some (.word oldValue)) :
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 20 state
+        (compileProg context
+          (.seq (.assign .local name (.const value))
+            (.return (.var .local name)))) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.seq (.assign .local name (.const value))
+          (.return (.var .local name)))).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp [compileProg, compileExp, hlookup, hlocals, evalCrepFullResultState,
+    evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
+    evalPanValueProg, evalPanValueProgWithPrimitive, evalPanValueExp,
+    panValueAssignmentValid, panValueShape, panShapeMatches,
+    crepNestedSeq, distinctLists, updateCrepLocal, updatePanValueMap,
+    panValueFlatWords, panValueFlatWordsFuel]
 
 /-! Sequence evaluation can now be composed at the structured source boundary.
     The first component is required to complete normally in both semantics;

@@ -29,7 +29,7 @@ theorem compile_full_pan_value_local_assign_return_word_rel
       oldName ≠ name →
       lookupInfo oldName context.vars = some (oldShape, oldSlots) →
       slot ∉ oldSlots) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 20 state
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 20 state
         (compileProg context
           (.seq (.assign .local name (.const value))
             (.return (.var .local name)))) =

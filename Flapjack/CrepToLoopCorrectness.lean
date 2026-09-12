@@ -984,6 +984,46 @@ theorem crepToLoop_return_const_agreement
     evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
     loopReadLocals, updateLoopLocal, loopResultValues]
 
+theorem crepToLoop_return_of_empty_prefix
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (expression : CrepExp α) (value : α)
+    (hcode : (loopCompileExp context (context.maxVar + 1) live expression).code = [])
+    (hvalue : evalCrepFullExp state.locals state.memory baseAddress topAddress
+      expression = some value)
+    (hloopValue : evalLoopExp (loopStateOfCrepState state)
+      (loopCompileExp context (context.maxVar + 1) live expression).expression =
+      some value) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.return [expression])).map crepControlValues =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 12)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live (.return [expression]))).map
+      loopResultValues := by
+  have hloopValue' :
+      evalLoopExp
+          ({ locals := state.locals, globals := fun _ => none,
+             memory := state.memory } : LoopState α)
+          (loopCompileExp context (context.maxVar + 1) live expression).expression =
+        some value := by
+    simpa [loopStateOfCrepState] using hloopValue
+  simp [evalCrepFullProg, evalCrepFullExps, hvalue,
+    crepControlValues, loopCompileProg,
+    loopCompileExp.loopCompileExps, loopCompileExps, loopNestedSeq,
+    loopTempNames, loopAssignTemps, evalLoopProgWithCallsAndFfi,
+    evalLoopProg, loopReadLocals, loopStateOfCrepState,
+    loopResultValues, updateLoopLocal, hcode, hloopValue']
+
 theorem crepToLoop_dec_return_of_empty_prefix
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

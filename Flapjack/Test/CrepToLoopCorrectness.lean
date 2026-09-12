@@ -367,6 +367,34 @@ theorem crepToLoop_dec_return_const_regression :
       evalCrepFullExp, crepControlValues, updateCrepLocal,
       restoreCrepResult]
 
+theorem crepToLoop_return_var_regression :
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 1 crepSeqMiddle
+      (.return [.var 5])).map crepControlValues =
+    (evalLoopProgWithCallsAndFfi []
+      (fun _ _ _ _ _ loopState => some loopState) 12
+      (loopStateOfCrepState crepSeqMiddle)
+      (loopCompileProg
+        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+          LoopContext Nat)
+        [] (.return [.var 5]))).map loopResultValues ∧
+    (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      (fun _ _ _ _ => none) 0 100 1 crepSeqMiddle
+      (.return [.var 5])).map crepControlValues = some [42] := by
+  have h := crepToLoop_return_of_empty_prefix
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 0 crepSeqMiddle [] (.var 5) 42
+    (by simp [loopCompileExp])
+    (by simp [crepSeqMiddle, evalCrepFullExp, updateCrepLocal])
+    (by simp [crepSeqMiddle, loopStateOfCrepState, loopCompileExp,
+      evalLoopExp, updateCrepLocal])
+  constructor
+  · simpa [crepSeqMiddle] using h
+  · simp [crepSeqMiddle, evalCrepFullProg, evalCrepFullExps,
+      evalCrepFullExp, crepControlValues, updateCrepLocal]
+
 theorem crepToLoop_shMem_store_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       defaultCrepSharedMemHandler 0 100 3 crepLoopSharedStoreState

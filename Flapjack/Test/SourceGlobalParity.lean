@@ -192,6 +192,40 @@ def largeShapeSource : String :=
     String.intercalate "," (List.replicate 33 "0") ++
     ">;\n  return 1;\n}\nfun 1 main() { return f(); }"
 
+/-- Register-pressure fixture minimised from an original-Pancake program that
+lowered under many live locals.  It stresses the clash-tree analysis: the flat
+`wordClashTreeAnalyze` used to under-approximate CakeML's interference, so the
+spill allocator rejected `main` and the allocated source path returned none. -/
+def pressureSource : String :=
+  "fun 1 add1(1 a, 1 b) { return a + b; }\n" ++
+  "fun 1 sub1(1 a) { return a - 1; }\n" ++
+  "fun {1,1} pair(1 a, 1 b) { return <a, b>; }\n" ++
+  "struct S { 1 f1, 1 f2 }\n" ++
+  "fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }\n" ++
+  "exception E : 1;\n" ++
+  "fun 1 main() {\n" ++
+  "  var 1 x = 1;\n" ++
+  "  var 1 y543 = add1(((7 >>> 7) * (lds 1 (1000 + 12))), ((2 - 2) << (ld8 1024)));\n" ++
+  "  var 1 y987 = sub1((7 - 1000));\n" ++
+  "  var 1 y923 = 1;\n" ++
+  "  var 1 y493 = sub1(7);\n" ++
+  "  var 1 y598 = sub1(1000);\n" ++
+  "  var 1 y751 = (0 >>> 1);\n" ++
+  "  var 1 y336 = (lds 1 (1000 + 24));\n" ++
+  "  var 1 y861 = ((y987 ^ 1000) & (ld8 0));\n" ++
+  "  var 1 y986 = sub1((lds 1 (1016)));\n" ++
+  "  var 1 y167 = (lds 1 (1016));\n" ++
+  "  var 1 y978 = 0;\n" ++
+  "  var 1 y150 = y598;\n" ++
+  "  var 1 y376 = (lds 1 (1000));\n" ++
+  "  var 1 y545 = ((x * 1000) & y336);\n" ++
+  "  var 1 y937 = add1(((lds 1 (1000 + 24)) & 1), 1000);\n" ++
+  "  var 1 y84 = 1;\n" ++
+  "  var 1 y630 = y987;\n" ++
+  "  y598 = add1(((y543 << 2) & (lds 1 (1008))), ((7 #>> 7) * (2 #>> 2)));\n" ++
+  "  return (lds 1 ((1000 + 8)));\n" ++
+  "}"
+
 /-- Structured local store: the original `st` flattens its value, so a named
 struct is stored word by word.  The static checker used to require a word
 value and rejected this original-Pancake-accepted program. -/
@@ -458,6 +492,14 @@ def cakeLargeShapeMain : List (BitVec 8) :=
 /-- CakeML `cml_f` for `largeShapeSource` (8 bytes). -/
 def cakeLargeShapeFLength : Nat := 8
 
+/-- CakeML `cml_generated_main` for `pressureSource` (4 bytes). -/
+def cakePressureGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `pressureSource` (924 bytes). -/
+def cakePressureMainLength : Nat := 924
+
 /-- CakeML `cml_generated_main` for `structStoreSource` (4 bytes). -/
 def cakeStructStoreGeneratedMain : List (BitVec 8) :=
   [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
@@ -601,6 +643,14 @@ def largeShapeBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The register-pressure fixture must be accepted: the clash-tree analysis now
+matches CakeML's Delta/Set/Branch/Seq interference families, so allocation
+succeeds even with many simultaneously-live locals. -/
+def pressureBytesAccepted : Bool :=
+  match compileSourceBytes pressureSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The structured-store fixture must be accepted: the original `st` flattens
 its value, so a struct-valued local is a legal store source. -/
 def structStoreBytesAccepted : Bool :=
@@ -639,6 +689,7 @@ def cakeGoldenShape : Bool :=
     cakeRotateGeneratedMain.length == 4 && cakeRotateMain.length == 28 &&
     cakeLargeShapeGeneratedMain.length == 4 && cakeLargeShapeMain.length == 4 &&
     cakeLargeShapeFLength == 8 &&
+    cakePressureGeneratedMain.length == 4 && cakePressureMainLength == 924 &&
     cakeStructStoreGeneratedMain.length == 4 && cakeStructStoreMain.length == 32 &&
     cakeFfiCallGeneratedMain.length == 4 && cakeFfiCallMainLength == 64 &&
     cakeFfiRegisterGeneratedMain.length == 4 && cakeFfiRegisterC.length == 4 &&
@@ -656,6 +707,7 @@ def cakeGoldenShape : Bool :=
 #guard nonWordSharedLoadRejected
 #guard rotateBytesAccepted
 #guard largeShapeBytesAccepted
+#guard pressureBytesAccepted
 #guard structStoreBytesAccepted
 #guard ffiCallBytesAccepted
 #guard ffiRegisterBytesAccepted
@@ -696,6 +748,8 @@ def runChecks : IO Bool := do
       rotateBytesAccepted,
     checkBool "Pancake large-shape local source compiles (bytes)"
       largeShapeBytesAccepted,
+    checkBool "Pancake register-pressure source compiles (bytes)"
+      pressureBytesAccepted,
     checkBool "Pancake struct-valued local store source compiles (bytes)"
       structStoreBytesAccepted,
     checkBool "Pancake four-argument FFI call source compiles (bytes)"

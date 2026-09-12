@@ -420,9 +420,12 @@ theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixe
   have hslots := wordAllocateVarsWithFixedSources_maps_slots
     ((wordSsaRenameFunctionWithEntry parameters program).2.fst ++
       (wordProgVariables (wordSsaRenameFunctionWithEntry parameters program).2.snd ++
-        (wordClashTreeAnalyze
-          (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
-          []).fst))
+        ((wordClashTreeAnalyze
+            (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
+            []).fst ++
+          (wordClashTreeAnalyze
+            (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
+            []).snd.flatMap (fun edge => [edge.1, edge.2]))))
     (wordClashTreeAnalyze
       (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd []) []).snd
     (wordProgPreferenceEdges

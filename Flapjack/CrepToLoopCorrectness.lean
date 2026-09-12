@@ -2177,17 +2177,25 @@ full Crepe-to-Loop proof.  This relation packages their common result shape:
 Loop has no terminal-FFI constructor, so a final Crepe FFI event is
 intentionally outside the successful simulation relation.
 -/
-def crepToLoopControlRel : CrepControlResult α → LoopResult α → Prop
+def crepToLoopStateRel (context : LoopContext α)
+    (crepState : CrepState α) (loopState : LoopState α) : Prop :=
+  loopState.globals = (fun _ => none) ∧
+  loopState.memory = crepState.memory ∧
+  ∀ name, name ≤ context.maxVar →
+    loopState.locals name = crepState.locals name
+
+def crepToLoopControlRel (context : LoopContext α) :
+    CrepControlResult α → LoopResult α → Prop
   | .normal crepState, .normal loopState =>
-      loopState = loopStateOfCrepState crepState
+      crepToLoopStateRel context crepState loopState
   | .returned crepState values, .returned loopState loopValues =>
-      loopState = loopStateOfCrepState crepState ∧ values = loopValues
+      crepToLoopStateRel context crepState loopState ∧ values = loopValues
   | .raised crepState exception, .raised loopState loopException =>
-      loopState = loopStateOfCrepState crepState ∧ exception = loopException
+      crepToLoopStateRel context crepState loopState ∧ exception = loopException
   | .broke crepState label, .broke loopState loopLabel =>
-      loopState = loopStateOfCrepState crepState ∧ label = loopLabel
+      crepToLoopStateRel context crepState loopState ∧ label = loopLabel
   | .continued crepState label, .continued loopState loopLabel =>
-      loopState = loopStateOfCrepState crepState ∧ label = loopLabel
+      crepToLoopStateRel context crepState loopState ∧ label = loopLabel
   | _, _ => False
 
 /-!
@@ -2220,7 +2228,7 @@ def CrepToLoopProgramCorrect
     evalLoopProgWithCallsAndFfi functions (loopFfiOfCrepFfi ffi)
       targetFuel (loopStateOfCrepState state)
       (loopCompileProg context live program) = some loopResult →
-    crepToLoopControlRel crepResult loopResult
+    crepToLoopControlRel context crepResult loopResult
 
 theorem crepToLoopProgramCorrect_skip
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -2238,7 +2246,7 @@ theorem crepToLoopProgramCorrect_skip
   | succ targetFuel =>
       simp [loopCompileProg, evalLoopProgWithCallsAndFfi] at hloop
       cases hloop
-      simp [crepToLoopControlRel]
+      simp [crepToLoopControlRel, crepToLoopStateRel, loopStateOfCrepState]
 
 theorem crepToLoopProgramCorrect_tick
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -2256,7 +2264,7 @@ theorem crepToLoopProgramCorrect_tick
   | succ targetFuel =>
       simp [loopCompileProg, evalLoopProgWithCallsAndFfi] at hloop
       cases hloop
-      simp [crepToLoopControlRel]
+      simp [crepToLoopControlRel, crepToLoopStateRel, loopStateOfCrepState]
 
 theorem crepToLoopProgramCorrect_break
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -2275,7 +2283,7 @@ theorem crepToLoopProgramCorrect_break
   | succ targetFuel =>
       simp [loopCompileProg, evalLoopProgWithCallsAndFfi] at hloop
       cases hloop
-      simp [crepToLoopControlRel]
+      simp [crepToLoopControlRel, crepToLoopStateRel, loopStateOfCrepState]
 
 theorem crepToLoopProgramCorrect_continue
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -2294,7 +2302,7 @@ theorem crepToLoopProgramCorrect_continue
   | succ targetFuel =>
       simp [loopCompileProg, evalLoopProgWithCallsAndFfi] at hloop
       cases hloop
-      simp [crepToLoopControlRel]
+      simp [crepToLoopControlRel, crepToLoopStateRel, loopStateOfCrepState]
 
 theorem crepToLoopProgramCorrect_induction
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

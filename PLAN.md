@@ -2207,6 +2207,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add a parallel global-aware full-Crep evaluator, with executable
   store/load and missing-global regressions and a direct global-store
   Crep-to-Loop agreement theorem.
+- [x] Execute the compiler's global exception-payload lowering through the
+  global-aware evaluator and regress the resulting global store.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

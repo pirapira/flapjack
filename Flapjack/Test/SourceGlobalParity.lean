@@ -97,6 +97,12 @@ compiler emits a call to an external symbol, but the byte entry point passed an
 empty service table and rejected the program.  The entry point now discovers the
 foreign-function names in the lowered Word program and registers them, and
 `ffiCall*` pins the reference sections and asserts acceptance.
+
+`ffiRegisterSource` is a larger FFI program whose arguments are held in the
+fixed ABI registers `x10`--`x13`.  The identity word-to-stack configuration used
+to reject any `@foo` whose source operand landed in one of those registers; the
+pass now copies the four arguments with a parallel move, and `ffiRegister*`
+pins the reference sections and asserts acceptance.
 -/
 
 namespace Flapjack.Test.SourceGlobalParity
@@ -197,6 +203,23 @@ def structStoreSource : String :=
 The byte entry point used to reject it because no service id was registered. -/
 def ffiCallSource : String :=
   "fun 1 main() { @foo(1,2,3,4); return 0; }"
+
+/-- Foreign-function call whose arguments are held in the ABI argument
+registers.  With enough locals, the identity word-to-stack configuration maps a
+source location onto one of the fixed FFI registers `x10`--`x13`; the byte
+entry point used to reject the program instead of copying the arguments in
+parallel. -/
+def ffiRegisterSource : String :=
+  "fun {1,1} c(1 a, 1 b) { return <a, b>; }\n" ++
+    "fun 1 main() {\n" ++
+    "  var 1 d = 1;\n" ++
+    "  var 1 e = 2;\n" ++
+    "  var 1 f = 3;\n" ++
+    "  var {1,1} g = c(0, ld8 4);\n" ++
+    "  if 0 != 5 { if 0 > d { } }\n" ++
+    "  @foo(ld8 0, 0, 1, 7);\n" ++
+    "  return 1;\n" ++
+    "}"
 
 /-- CakeML `cml_generated_main` for `globalSource` (offset 1000, 28 bytes). -/
 def cakeGlobalGeneratedMain : List (BitVec 8) :=
@@ -462,6 +485,19 @@ def cakeFfiCallGeneratedMain : List (BitVec 8) :=
 /-- CakeML `cml_main` length for `ffiCallSource` (64 bytes). -/
 def cakeFfiCallMainLength : Nat := 64
 
+/-- CakeML `cml_generated_main` for `ffiRegisterSource` (4 bytes). -/
+def cakeFfiRegisterGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_c` for `ffiRegisterSource` (4 bytes). -/
+def cakeFfiRegisterC : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` length for `ffiRegisterSource` (208 bytes). -/
+def cakeFfiRegisterMainLength : Nat := 208
+
 /-- Run a source program through the checked RV64I byte entry point. -/
 def compileSourceBytes (source : String) : Option (List (BitVec 8)) :=
   match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
@@ -579,6 +615,13 @@ def ffiCallBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The FFI fixture whose arguments sit in the ABI registers must be accepted:
+the word-to-stack pass copies them with a parallel move. -/
+def ffiRegisterBytesAccepted : Bool :=
+  match compileSourceBytes ffiRegisterSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
@@ -597,7 +640,9 @@ def cakeGoldenShape : Bool :=
     cakeLargeShapeGeneratedMain.length == 4 && cakeLargeShapeMain.length == 4 &&
     cakeLargeShapeFLength == 8 &&
     cakeStructStoreGeneratedMain.length == 4 && cakeStructStoreMain.length == 32 &&
-    cakeFfiCallGeneratedMain.length == 4 && cakeFfiCallMainLength == 64
+    cakeFfiCallGeneratedMain.length == 4 && cakeFfiCallMainLength == 64 &&
+    cakeFfiRegisterGeneratedMain.length == 4 && cakeFfiRegisterC.length == 4 &&
+    cakeFfiRegisterMainLength == 208
 
 #guard globalBytesAccepted
 #guard nestedGlobalBytesAccepted
@@ -613,6 +658,7 @@ def cakeGoldenShape : Bool :=
 #guard largeShapeBytesAccepted
 #guard structStoreBytesAccepted
 #guard ffiCallBytesAccepted
+#guard ffiRegisterBytesAccepted
 #guard initializerChangesArtifact
 #guard cakeGoldenShape
 
@@ -654,6 +700,8 @@ def runChecks : IO Bool := do
       structStoreBytesAccepted,
     checkBool "Pancake four-argument FFI call source compiles (bytes)"
       ffiCallBytesAccepted,
+    checkBool "Pancake FFI call with ABI-register sources compiles (bytes)"
+      ffiRegisterBytesAccepted,
     checkBool "Pancake global source compiles (runtime image)"
       (runtimeImageAccepted globalSource),
     checkBool "Pancake global initializer changes artifact"

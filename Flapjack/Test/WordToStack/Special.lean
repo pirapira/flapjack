@@ -88,7 +88,17 @@ example :
         { locations := [(0, .register 10), (1, .register 2),
             (2, .register 3), (3, .register 4)],
           scratch := 31, stackBase := 10 }
-        ((.ffi "sum" 0 1 2 3 ([], [])) : WordProg Nat) = none := by
-  decide +kernel
+        ((.ffi "sum" 0 1 2 3 ([], [])) : WordProg Nat) =
+      some (.seq
+        (.seq (.arith .or 11 2 2)
+          (.seq (.arith .or 12 3 3)
+            (.arith .or 13 4 4)))
+        (.ffi "sum" 10 11 12 13 0)) := by
+  simp [wordToStackProgNat, wordStackFfi, wordStackFfiSourcesSafe,
+    wordStackFfiSourceSafe, wordStackFfiRegisterSafe, wordStackLocation,
+    lookupNatInfo, wordStackParallelLocationMove,
+    wordStackParallelLocationMoveAux, wordStackLocationMove,
+    wordStackLocationMoveDestinations, wordStackLocationMoveReady,
+    wordStackLocationMoveRemoveDestination, wordStackJoin]
 
 end Flapjack.RiscV

@@ -1050,4 +1050,41 @@ theorem compileSourceWordExp_noGlobal
       exact ⟨.const context.bytesInWord,
         by simp [SourceWordExp.toExp, compileExp], .const _⟩
 
+/-! Stateful form of the scalar expression relation.  The compiler relation
+itself is unchanged; the no-global witness transports the compact evaluator
+result to the explicit global-aware evaluator. -/
+theorem compileSourceWordExp_state_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (baseAddress topAddress bytesInWord : α)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hlocals : panValueCrepLocalsRel structs context sourceLocals state.locals)
+    (hlookup : ∀ name value, sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (expression : SourceWordExp α) (value : α)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression.toExp =
+      some (.word value)) :
+    ∃ compiled, compileExp context expression.toExp = ([compiled], .one) ∧
+      evalCrepFullExpState state baseAddress topAddress compiled = some value := by
+  obtain ⟨compiled, hcompile, hcompiled⟩ := compileSourceWordExp_relation
+    context structs sourceLocals sourceGlobals sourceMemory state.locals state.memory
+    baseAddress topAddress bytesInWord hbytesInWord hlocals hlookup expression value hsource
+  obtain ⟨compiled', hcompile', hnoGlobal⟩ := compileSourceWordExp_noGlobal
+    context structs sourceLocals sourceGlobals sourceMemory
+    baseAddress topAddress bytesInWord hlookup expression value hsource
+  have hcompiledEq : compiled = compiled' := by
+    have hpair : ([compiled], Shape.one) = ([compiled'], Shape.one) :=
+      hcompile.symm.trans hcompile'
+    exact (List.cons.inj (congrArg Prod.fst hpair)).1
+  refine ⟨compiled, hcompile, ?_⟩
+  rw [hcompiledEq]
+  rw [evalCrepFullExpState_eq_of_noGlobal state baseAddress topAddress
+    compiled' hnoGlobal]
+  simpa [hcompiledEq] using hcompiled
+
 end Flapjack

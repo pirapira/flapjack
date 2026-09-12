@@ -1228,6 +1228,8 @@ theorem crepToLoop_call_caught_ffi_handler_regression :
   · simp [crepHandlerContext,
       loopCompileProg, evalLoopProgWithCallsAndFfi, evalLoopProg,
       evalLoopExp, updateLoopLocal, loopStateOfCrepState]
+    funext current
+    rfl
   · apply evalCrepFullProg_extCall
       crepHandlerFunctions (fun _ _ => none) crepLoopFfi
       (fun _ _ _ _ => none) 0 100 1

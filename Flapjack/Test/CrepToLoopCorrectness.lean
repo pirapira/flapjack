@@ -89,6 +89,11 @@ theorem crepToLoop_primitive_regression :
     (fun _ _ _ _ _ loopState => some loopState) (fun _ _ _ _ => none)
     0 100 2 crepLoopPrimitiveState [] [5, 6] .addCarry [1, 2, 3] 5
 
+theorem crepToLoop_primitive_correctness_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.return [.const (42 : Nat)] : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_return_const 42
+
 theorem crepToLoop_seq_normal_regression :
     evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         (fun _ _ _ _ => none) 0 100 4 crepSeqInitial

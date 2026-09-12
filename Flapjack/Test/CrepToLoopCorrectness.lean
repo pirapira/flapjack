@@ -199,6 +199,11 @@ theorem crepToLoop_primitive_assign_lsl_const_const_contract_regression :
       (.assign 2 (.shift .lsl (.const (3 : Nat)) (.const 1)) : CrepProg Nat) := by
   exact crepToLoopProgramCorrectWithPrimitive_assign_lsl_const_const 2 3 1
 
+theorem crepToLoop_primitive_assign_lsr_const_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.shift .lsr (.const (8 : Nat)) (.const 1)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_lsr_const_const 2 8 1
+
 theorem crepToLoop_primitive_seq_normal_regression :
     evalCrepFullProg [] (fun _ _ => none)
         (fun _ _ _ _ _ state => some (.returned state))

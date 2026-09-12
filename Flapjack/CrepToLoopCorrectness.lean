@@ -4589,6 +4589,52 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_equal_const
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
                             simp [htemp, htemp']
 
+theorem crepToLoop_assign_cmp_equal_vars_agreement
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (name left right : Nat) (leftValue rightValue : α)
+    (hnameBound : name ≤ context.maxVar)
+    (hleftBound : left ≤ context.maxVar)
+    (hrightBound : right ≤ context.maxVar)
+    (hleft : state.locals left = some leftValue)
+    (hright : state.locals right = some rightValue) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state
+      (.assign name (.cmp .equal (.var left) (.var right)))).map
+        (crepControlLocal name) =
+    (evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 7)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.assign name (.cmp .equal (.var left) (.var right))))).map
+        (loopControlLocal name) := by
+  have htemp : name ≠ context.maxVar + 1 := by omega
+  have htemp' : name ≠ context.maxVar + 1 + 1 := by omega
+  have hleftTemp : left ≠ context.maxVar + 1 := by omega
+  have hleftTemp' : left ≠ context.maxVar + 1 + 1 := by omega
+  have hrightTemp : right ≠ context.maxVar + 1 := by omega
+  have hrightTemp' : right ≠ context.maxVar + 1 + 1 := by omega
+  by_cases heq : (leftValue == rightValue) = true
+  · simp [evalCrepFullProg, evalCrepFullExp, evalPanCmp,
+      crepControlLocal, loopControlLocal, loopCompileProg,
+      loopCompileExp, loopNestedSeq, evalLoopProgWithCallsAndFfi,
+      evalLoopProg, evalLoopExp, evalLoopCondition, loopStateOfCrepState,
+      updateCrepLocal, updateLoopLocal, hleft, hright, heq, hrightTemp]
+  · simp [evalCrepFullProg, evalCrepFullExp, evalPanCmp,
+      crepControlLocal, loopControlLocal, loopCompileProg,
+      loopCompileExp, loopNestedSeq, evalLoopProgWithCallsAndFfi,
+      evalLoopProg, evalLoopExp, evalLoopCondition, loopStateOfCrepState,
+      updateCrepLocal, updateLoopLocal, hleft, hright, heq, hrightTemp]
+
 theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notEqual_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

@@ -2202,7 +2202,7 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   preserving the Loop global environment and its executable regression.
 - [x] Complete the paired global-aware runtime bridge for `loadGlob`, with a
   store/load-oriented global lookup regression.
-- [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
+- [x] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI
   handler declines an external call, including the clocked evaluator boundary.

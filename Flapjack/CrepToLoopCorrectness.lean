@@ -2171,4 +2171,151 @@ theorem crepToLoop_seq_extCall_agreement
   · simp [evalCrepFullProg, hfirst.1, hsecond]
   · simp [loopCompileProg_seq, evalLoopProgWithCallsAndFfi, hfirst.2, hloopSecond]
 
+/-!
+The individual constructors above are the executable boundaries used by the
+full Crepe-to-Loop proof.  This relation packages their common result shape:
+Loop has no terminal-FFI constructor, so a final Crepe FFI event is
+intentionally outside the successful simulation relation.
+-/
+def crepToLoopControlRel : CrepControlResult α → LoopResult α → Prop
+  | .normal crepState, .normal loopState =>
+      loopState = loopStateOfCrepState crepState
+  | .returned crepState values, .returned loopState loopValues =>
+      loopState = loopStateOfCrepState crepState ∧ values = loopValues
+  | .raised crepState exception, .raised loopState loopException =>
+      loopState = loopStateOfCrepState crepState ∧ exception = loopException
+  | .broke crepState label, .broke loopState loopLabel =>
+      loopState = loopStateOfCrepState crepState ∧ label = loopLabel
+  | .continued crepState label, .continued loopState loopLabel =>
+      loopState = loopStateOfCrepState crepState ∧ label = loopLabel
+  | _, _ => False
+
+/-!
+CrepToLoopProgramCorrect is the complete-pass induction boundary.  It keeps
+the source and target fuel bounds independent because lowering introduces
+temporary sequences whose cost depends on the constructor and expression
+shape.  Constructor lemmas therefore supply the exact fuel inequalities they
+need, while the assembled predicate records the resulting control/state
+simulation uniformly.
+-/
+def CrepToLoopProgramCorrect
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : CrepProg α) : Prop :=
+  ∀ (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (crepFunctions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α)
+    (sourceFuel targetFuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (crepResult : CrepControlResult α) (loopResult : LoopResult α),
+    evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (sourceFuel + 1) state program =
+        some crepResult →
+    evalLoopProgWithCallsAndFfi functions (loopFfiOfCrepFfi ffi)
+      targetFuel (loopStateOfCrepState state)
+      (loopCompileProg context live program) = some loopResult →
+    crepToLoopControlRel crepResult loopResult
+
+theorem crepToLoopProgramCorrect_induction
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (hskip : CrepToLoopProgramCorrect (.skip : CrepProg α))
+    (hdec : ∀ (name : Nat) (value : CrepExp α) (body : CrepProg α),
+      CrepToLoopProgramCorrect body →
+      CrepToLoopProgramCorrect (.dec name value body))
+    (hassign : ∀ (name : Nat) (value : CrepExp α),
+      CrepToLoopProgramCorrect (.assign name value))
+    (hprimitive : ∀ (names : List Nat) (operator : PrimOp)
+      (arguments : List Nat),
+      CrepToLoopProgramCorrect
+        (@CrepProg.primitive α names operator arguments))
+    (hstore : ∀ (address value : CrepExp α),
+      CrepToLoopProgramCorrect (.store address value))
+    (hstore32 : ∀ (address value : CrepExp α),
+      CrepToLoopProgramCorrect (.store32 address value))
+    (hstoreByte : ∀ (address value : CrepExp α),
+      CrepToLoopProgramCorrect (.storeByte address value))
+    (hstoreGlob : ∀ (address : α) (value : CrepExp α),
+      CrepToLoopProgramCorrect (.storeGlob address value))
+    (hseq : ∀ (first second : CrepProg α),
+      CrepToLoopProgramCorrect first →
+      CrepToLoopProgramCorrect second →
+      CrepToLoopProgramCorrect (.seq first second))
+    (hite : ∀ (condition : CrepExp α) (thenBranch elseBranch : CrepProg α),
+      CrepToLoopProgramCorrect thenBranch →
+      CrepToLoopProgramCorrect elseBranch →
+      CrepToLoopProgramCorrect (.ite condition thenBranch elseBranch))
+    (hwhile : ∀ (condition : CrepExp α) (body : CrepProg α),
+      CrepToLoopProgramCorrect body →
+      CrepToLoopProgramCorrect (.while condition body))
+    (hbreak : ∀ (label : Nat),
+      CrepToLoopProgramCorrect (@CrepProg.break α label))
+    (hcontinue : ∀ (label : Nat),
+      CrepToLoopProgramCorrect (@CrepProg.continue α label))
+    (hcall : ∀
+      (returnInfo : Option (List Nat × Option (α × CrepProg α)))
+      (name : FunName) (arguments : List (CrepExp α)),
+      (match returnInfo with
+       | some (_, some (_, handler)) => CrepToLoopProgramCorrect handler
+       | _ => True) →
+      CrepToLoopProgramCorrect (.call returnInfo name arguments))
+    (hextCall : ∀ (function : FunName)
+      (configuration configurationLength array arrayLength : Nat),
+      CrepToLoopProgramCorrect
+        (@CrepProg.extCall α function configuration configurationLength array
+          arrayLength))
+    (hraise : ∀ (exception : α),
+      CrepToLoopProgramCorrect (.raise exception))
+    (hreturn : ∀ (values : List (CrepExp α)),
+      CrepToLoopProgramCorrect (.return values))
+    (hshMem : ∀ (operator : CrepMemOp) (name : Nat) (address : CrepExp α),
+      CrepToLoopProgramCorrect (.shMem operator name address))
+    (htick : CrepToLoopProgramCorrect (.tick : CrepProg α)) :
+    ∀ program : CrepProg α, CrepToLoopProgramCorrect program := by
+  let rec go : (program : CrepProg α) → CrepToLoopProgramCorrect program
+    | .skip => hskip
+    | .dec name value body => hdec name value body (go body)
+    | .assign name value => hassign name value
+    | .primitive names operator arguments =>
+        hprimitive names operator arguments
+    | .store address value => hstore address value
+    | .store32 address value => hstore32 address value
+    | .storeByte address value => hstoreByte address value
+    | .storeGlob address value => hstoreGlob address value
+    | .seq first second => hseq first second (go first) (go second)
+    | .ite condition thenBranch elseBranch =>
+        hite condition thenBranch elseBranch (go thenBranch) (go elseBranch)
+    | .while condition body => hwhile condition body (go body)
+    | .break label => hbreak label
+    | .continue label => hcontinue label
+    | .call returnInfo name arguments =>
+        hcall returnInfo name arguments (by
+          cases returnInfo with
+          | none => exact True.intro
+          | some info =>
+              cases info with
+              | mk destinations handlerInfo =>
+                  cases handlerInfo with
+                  | none => exact True.intro
+                  | some handler =>
+                      cases handler with
+                      | mk exception handlerProgram =>
+                          exact go handlerProgram)
+    | .extCall function configuration configurationLength array arrayLength =>
+        hextCall function configuration configurationLength array arrayLength
+    | .raise exception => hraise exception
+    | .return values => hreturn values
+    | .shMem operator name address => hshMem operator name address
+    | .tick => htick
+    termination_by program => sizeOf program
+  exact fun program => go program
+
 end Flapjack

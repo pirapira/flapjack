@@ -2215,6 +2215,37 @@ def wordProgSpecialLocationsSafe (locations : NatInfoMap WordLocation) :
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
+/-- Backend operand-distinctness conflicts that the CakeML-shaped clash tree
+    does not record.  The RISC-V `LongMul` selection writes the high word
+    before the low word, so the high destination must differ from both
+    operand registers; `AddCarry` likewise requires its destination to differ
+    from the operand registers.  These extra edges make the spill allocator
+    satisfy `wordSpecialArithLocationsSafe` directly instead of relying on the
+    post-allocation check to reject the layout. -/
+def wordArithSpecialConflictEdges (operation : WordArith) : List (Nat × Nat) :=
+  let distinct (edge : Nat × Nat) : Bool := edge.1 != edge.2
+  match operation with
+  | .longMul destinationLeft _ sourceLeft sourceRight =>
+      ([(destinationLeft, sourceLeft), (destinationLeft, sourceRight)]).filter
+        distinct
+  | .addCarry destination _ sourceLeft sourceRight _ =>
+      ([(destination, sourceLeft), (destination, sourceRight)]).filter distinct
+  | _ => []
+
+def wordProgSpecialConflictEdges : WordProg α → List (Nat × Nat)
+  | .inst (.arith operation) => wordArithSpecialConflictEdges operation
+  | .seq first second =>
+      wordProgSpecialConflictEdges first ++ wordProgSpecialConflictEdges second
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordProgSpecialConflictEdges thenBranch ++ wordProgSpecialConflictEdges elseBranch
+  | .loop _ body _ => wordProgSpecialConflictEdges body
+  | .mustTerminate body => wordProgSpecialConflictEdges body
+  | .call (some (_, _, returnCode, _, _)) _ _ none =>
+      wordProgSpecialConflictEdges returnCode
+  | .call (some (_, _, returnCode, _, _)) _ _ (some (_, body, _, _)) =>
+      wordProgSpecialConflictEdges body ++ wordProgSpecialConflictEdges returnCode
+  | _ => []
+
 structure WordSpillState where
   locations : NatInfoMap WordLocation
   nextSpill : Nat
@@ -2305,6 +2336,20 @@ def wordAllocateVarsWithSpills (slots : List Nat)
     { locations := [], nextSpill := 0 }
   if wordSpillAllocationRespectsClashes edges state.locations then some state
   else none
+
+/-- Respecting a superset of interference edges implies respecting any prefix
+    of them.  Used when a caller adds backend-specific conflict edges after the
+    CakeML-shaped clash-tree edges. -/
+theorem wordSpillAllocationRespectsClashes_append_left
+    (edges extra : List (Nat × Nat)) (locations : NatInfoMap WordLocation)
+    (h : wordSpillAllocationRespectsClashes (edges ++ extra) locations = true) :
+    wordSpillAllocationRespectsClashes edges locations = true := by
+  induction edges with
+  | nil => rfl
+  | cons head tail ih =>
+      obtain ⟨left, right⟩ := head
+      simp only [List.cons_append, wordSpillAllocationRespectsClashes] at h ⊢
+      split at h <;> simp_all
 
 def wordAllocateVarsWithSpillsAndPreferences (slots : List Nat)
     (edges preferences : List (Nat × Nat)) : Option WordSpillState :=
@@ -2863,6 +2908,7 @@ def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
     wordSsaRenameFunctionWithEntry parameters program
   let tree := wordClashTree program []
   let (liveIn, edges) := wordClashTreeAnalyze tree []
+  let edges := edges ++ wordProgSpecialConflictEdges program
   let preferences := wordProgPreferenceEdges program
   let slots :=
     renamedParameters ++ wordProgVariables program ++ liveIn ++
@@ -2913,20 +2959,7 @@ theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixe
   rcases halloc with ⟨_, rfl, rfl, rfl, rfl⟩
   rename_i _ alloc _ hallocation
   have hslots := wordAllocateVarsWithFixedSources_maps_slots
-    ((wordSsaRenameFunctionWithEntry parameters program).2.fst ++
-      (wordProgVariables (wordSsaRenameFunctionWithEntry parameters program).2.snd ++
-        ((wordClashTreeAnalyze
-            (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
-            []).fst ++
-          (wordClashTreeAnalyze
-            (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
-            []).snd.flatMap (fun edge => [edge.1, edge.2]))))
-    (wordClashTreeAnalyze
-      (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd []) []).snd
-    (wordProgPreferenceEdges
-      (wordSsaRenameFunctionWithEntry parameters program).2.snd)
-    (wordPhysicalFixedSources parameters
-      (wordSsaRenameFunctionWithEntry parameters program).2.snd) alloc hallocation
+    _ _ _ _ alloc hallocation
   intro name hname
   apply hslots name
   simp [hname]

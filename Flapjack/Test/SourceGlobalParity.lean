@@ -226,6 +226,19 @@ def pressureSource : String :=
   "  return (lds 1 ((1000 + 8)));\n" ++
   "}"
 
+/-- Register-pressure fixture exercising the backend `LongMul`
+    operand-distinctness contract.  With 22 live locals the spill allocator
+    used to place the high product destination in the same register as an
+    operand, so `wordProgSpecialLocationsSafe` failed after allocation and the
+    source entry point returned none.  The allocator now records those
+    conflicts as extra interference edges. -/
+def longMulPressureSource : String :=
+  "fun 1 main() {\n" ++
+    String.intercalate "\n"
+      ((List.range 22).map (fun index =>
+        "  var 1 y" ++ toString index ++ " = " ++ toString index ++ ";")) ++
+    "\n  y0 = y1 * y2;\n  return y0 + y3;\n}"
+
 /-- Structured local store: the original `st` flattens its value, so a named
 struct is stored word by word.  The static checker used to require a word
 value and rejected this original-Pancake-accepted program. -/
@@ -500,6 +513,14 @@ def cakePressureGeneratedMain : List (BitVec 8) :=
 /-- CakeML `cml_main` for `pressureSource` (924 bytes). -/
 def cakePressureMainLength : Nat := 924
 
+/-- CakeML `cml_generated_main` for `longMulPressureSource` (4 bytes). -/
+def cakeLongMulPressureGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `longMulPressureSource` (28 bytes). -/
+def cakeLongMulPressureMainLength : Nat := 28
+
 /-- CakeML `cml_generated_main` for `structStoreSource` (4 bytes). -/
 def cakeStructStoreGeneratedMain : List (BitVec 8) :=
   [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
@@ -651,6 +672,14 @@ def pressureBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The `LongMul` register-pressure fixture must be accepted: the allocator
+    records the backend operand-distinctness conflicts so the high product
+    destination cannot alias an operand. -/
+def longMulPressureBytesAccepted : Bool :=
+  match compileSourceBytes longMulPressureSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The structured-store fixture must be accepted: the original `st` flattens
 its value, so a struct-valued local is a legal store source. -/
 def structStoreBytesAccepted : Bool :=
@@ -690,6 +719,8 @@ def cakeGoldenShape : Bool :=
     cakeLargeShapeGeneratedMain.length == 4 && cakeLargeShapeMain.length == 4 &&
     cakeLargeShapeFLength == 8 &&
     cakePressureGeneratedMain.length == 4 && cakePressureMainLength == 924 &&
+    cakeLongMulPressureGeneratedMain.length == 4 &&
+    cakeLongMulPressureMainLength == 28 &&
     cakeStructStoreGeneratedMain.length == 4 && cakeStructStoreMain.length == 32 &&
     cakeFfiCallGeneratedMain.length == 4 && cakeFfiCallMainLength == 64 &&
     cakeFfiRegisterGeneratedMain.length == 4 && cakeFfiRegisterC.length == 4 &&
@@ -708,6 +739,7 @@ def cakeGoldenShape : Bool :=
 #guard rotateBytesAccepted
 #guard largeShapeBytesAccepted
 #guard pressureBytesAccepted
+#guard longMulPressureBytesAccepted
 #guard structStoreBytesAccepted
 #guard ffiCallBytesAccepted
 #guard ffiRegisterBytesAccepted
@@ -750,6 +782,8 @@ def runChecks : IO Bool := do
       largeShapeBytesAccepted,
     checkBool "Pancake register-pressure source compiles (bytes)"
       pressureBytesAccepted,
+    checkBool "Pancake LongMul register-pressure source compiles (bytes)"
+      longMulPressureBytesAccepted,
     checkBool "Pancake struct-valued local store source compiles (bytes)"
       structStoreBytesAccepted,
     checkBool "Pancake four-argument FFI call source compiles (bytes)"

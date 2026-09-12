@@ -152,11 +152,14 @@ theorem crepToLoop_full_primitive_agreement
     (loopCompileProg context live
         (.primitive destinations operator arguments))).map
         (loopControlLocal name) := by
-  have hread : arguments.mapM state.locals = loopReadLocals state.locals arguments := by
-    induction arguments with
+  have hreadAux : ∀ args : List Nat,
+      args.mapM state.locals = loopReadLocals state.locals args := by
+    intro args
+    induction args with
     | nil => rfl
     | cons argument arguments ih =>
         simp [loopReadLocals, ih]
+  have hread := hreadAux arguments
   have hfold (base : Nat → Option α) (entries : List (Nat × α)) :
       List.foldl (fun locals entry =>
         updateCrepLocal locals entry.fst entry.snd) base entries =
@@ -2197,6 +2200,94 @@ def crepToLoopControlRel (context : LoopContext α) :
   | .continued crepState label, .continued loopState loopLabel =>
       crepToLoopStateRel context crepState loopState ∧ label = loopLabel
   | _, _ => False
+
+/-!
+Primitive-aware source-to-Loop correctness boundary.  The legacy
+CrepToLoopProgramCorrect below predates the combined Loop evaluator and is
+kept for existing proofs; this boundary makes primitive execution
+non-vacuous by threading the primitive handler into the Loop semantics.
+-/
+def CrepToLoopProgramCorrectWithPrimitive
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : CrepProg α) : Prop :=
+  ∀ (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (crepFunctions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α)
+    (sourceFuel targetFuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (crepResult : CrepControlResult α) (loopResult : LoopResult α),
+    evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (sourceFuel + 1) state program =
+        some crepResult →
+    evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      (loopFfiOfCrepFfi ffi) targetFuel (loopStateOfCrepState state)
+      (loopCompileProg context live program) = some loopResult →
+    crepToLoopControlRel context crepResult loopResult
+
+theorem mapM_eq_loopReadLocals (locals : Nat → Option α) (arguments : List Nat) :
+    arguments.mapM locals = loopReadLocals locals arguments := by
+  induction arguments with
+  | nil => rfl
+  | cons argument arguments ih =>
+      simp [loopReadLocals, ih]
+
+theorem crepToLoopProgramCorrectWithPrimitive_primitive
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (names : List Nat) (operator : PrimOp) (arguments : List Nat) :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.primitive names operator arguments : CrepProg α) := by
+  intro context functions crepFunctions primitive ffi sharedMem
+    baseAddress topAddress sourceFuel targetFuel state live crepResult loopResult
+    hcrep hloop
+  have hread := mapM_eq_loopReadLocals state.locals arguments
+  have hfold (base : Nat → Option α) (entries : List (Nat × α)) :
+      List.foldl (fun locals entry =>
+        updateCrepLocal locals entry.fst entry.snd) base entries =
+      List.foldl (fun locals entry =>
+        updateLoopLocal locals entry.fst entry.snd) base entries := by
+    induction entries generalizing base with
+    | nil => rfl
+    | cons entry entries ih =>
+        cases entry with
+        | mk name value =>
+            simp only [List.foldl]
+            rw [show updateCrepLocal base name value =
+              updateLoopLocal base name value by rfl]
+            exact ih _
+  cases targetFuel with
+  | zero =>
+      simp [evalLoopProgWithPrimitiveCallsAndFfi] at hloop
+  | succ targetFuel =>
+      cases hargs : loopReadLocals state.locals arguments with
+      | none =>
+          simp [evalCrepFullProg, hread, hargs,
+            assignCrepValues] at hcrep hloop
+      | some values =>
+          cases hprimitive : primitive operator values with
+          | none =>
+              simp [evalCrepFullProg, hread, hargs,
+                hprimitive, assignCrepValues] at hcrep hloop
+          | some result =>
+              by_cases hlength : names.length = result.length
+              · simp [evalCrepFullProg, loopCompileProg,
+                  evalLoopProgWithPrimitiveCallsAndFfi, hread, hargs,
+                  hprimitive, hlength, hfold, assignCrepValues,
+                  loopAssignValues, loopStateOfCrepState] at hcrep hloop
+                cases hcrep
+                cases hloop
+                simp [crepToLoopControlRel, crepToLoopStateRel]
+              · simp [evalCrepFullProg, hread, hargs,
+                hprimitive, hlength, hfold, assignCrepValues] at hcrep hloop
 
 /-!
 CrepToLoopProgramCorrect is the complete-pass induction boundary.  It keeps

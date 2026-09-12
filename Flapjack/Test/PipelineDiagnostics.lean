@@ -29,6 +29,26 @@ example :
     RiscV.wordToStackProgNatChecked, RiscV.wordToStackProgNat,
     RiscV.wordProgFirstUnsupported, RiscV.wordProgToNat]
 
+example :
+    RiscV.compileLabProgramChecked (width := 64) { services := [] }
+      [⟨17, [.labAsm (.heapAlloc 3) [] 0]⟩] =
+        .error { sectionId := 17, position := 0, feature := .heapAlloc } := by
+  rfl
+
+example :
+    RiscV.compileLabProgramChecked (width := 64) { services := [] }
+      [⟨19, [.asm (.const 1 7) [] 0]⟩] =
+        .ok [.addi 1 0 (BitVec.ofNat 64 7)] := by
+  rfl
+
+example :
+    RiscV.compileLabProgramChecked (width := 64) { services := [] }
+      [⟨1, [.labAsm (.jump ⟨2, 0⟩) [] 0]⟩,
+       ⟨2, [.label 2 0 0, .asm (.const 1 7) [] 0]⟩] =
+        .ok [.jal 0 (BitVec.ofNat 64 4),
+          .addi 1 0 (BitVec.ofNat 64 7)] := by
+  rfl
+
 def checkedPipelineDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function
     { name := "main", inline := false, exported := true, params := [],

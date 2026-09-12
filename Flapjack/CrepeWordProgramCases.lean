@@ -53,4 +53,46 @@ theorem panValueCrepProgramCorrect_ite_wordExp
       (sourceWordExpOf condition hcondition) thenBranch elseBranch hthen helse
       hbytesInWord hlookup)
 
+theorem panValueCrepProgramStateCorrect_return_wordExp
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (expression : Exp α) (hword : wordExp expression)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect (.return expression) := by
+  exact panValueCrepProgramStateCorrect_return_of_expression_relation expression
+    (panValueCrepExpressionStateCorrect_wordExp expression hword hbytesInWord hlookup)
+
+theorem panValueCrepProgramStateCorrect_ite_wordExp
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (condition : Exp α) (hcondition : wordExp condition)
+    (thenBranch elseBranch : Prog α)
+    (hthen : PanValueCrepProgramStateCorrect thenBranch)
+    (helse : PanValueCrepProgramStateCorrect elseBranch)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect (.ite condition thenBranch elseBranch) := by
+  have hconditionToExp :
+      (sourceWordExpOf condition hcondition).toExp = condition :=
+    sourceWordExpOf_toExp condition hcondition
+  simpa [hconditionToExp] using
+    (panValueCrepProgramStateCorrect_ite_source_word
+      (sourceWordExpOf condition hcondition) thenBranch elseBranch hthen helse
+      hbytesInWord hlookup)
+
 end Flapjack

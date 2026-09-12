@@ -157,6 +157,21 @@ def evalLoopShift [ShiftLeft α] [ShiftRight α]
   | .lsr => some (ShiftRight.shiftRight left right)
   | .asr | .ror => none
 
+/-! Complete source-compatible shift semantics.  The original evaluator is
+    retained for the small historical Loop fragment; this sibling adds the
+    target-supplied arithmetic-right and rotate-right operations and preserves
+    Pancake's invalid shift-count rule. -/
+def evalLoopShiftFull [PanShiftWidth α] [ShiftLeft α] [ShiftRight α]
+    [ArithmeticShiftRight α] [RotateRightOp α]
+    (operator : Shift) (left right : α) : Option α :=
+  let amount := PanShiftWidth.amount (α := α) right
+  if amount ≠ 0 ∧ PanShiftWidth.width (α := α) ≤ amount then none else
+    match operator with
+    | .lsl => some (ShiftLeft.shiftLeft left right)
+    | .lsr => some (ShiftRight.shiftRight left right)
+    | .asr => some (ArithmeticShiftRight.arithmeticShiftRight left right)
+    | .ror => some (RotateRightOp.rotateRight left right)
+
 def evalLoopCmp [BEq α] [OfNat α 0] [OfNat α 1] [AndOp α] [PanCmp α]
     (operator : Cmp) (left right : α) : α :=
   match operator with
@@ -196,6 +211,36 @@ def evalLoopExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let left ← evalLoopExp state left
       let right ← evalLoopExp state right
       evalLoopShift operator left right
+  | _ => none
+termination_by structural expression
+
+def evalLoopExpFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    (state : LoopState α) (expression : LoopExp α) : Option α :=
+  match expression with
+  | .const value => some value
+  | .var name => state.locals name
+  | .lookup address => state.globals address
+  | .load address => do
+      let address ← evalLoopExpFull state address
+      state.memory address
+  | .op operator [left, right] => do
+      let left ← evalLoopExpFull state left
+      let right ← evalLoopExpFull state right
+      pure (evalLoopBinOp operator left right)
+  | .crepOp .mul [left, right] => do
+      let left ← evalLoopExpFull state left
+      let right ← evalLoopExpFull state right
+      pure (left * right)
+  | .cmp operator left right => do
+      let left ← evalLoopExpFull state left
+      let right ← evalLoopExpFull state right
+      pure (evalLoopCmp operator left right)
+  | .shift operator left right => do
+      let left ← evalLoopExpFull state left
+      let right ← evalLoopExpFull state right
+      evalLoopShiftFull operator left right
   | _ => none
 termination_by structural expression
 
@@ -1928,6 +1973,17 @@ theorem evalLoopExp_shift [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (hvalue : evalLoopShift operator leftValue rightValue = some value) :
     evalLoopExp state (.shift operator left right) = some value := by
   simp [evalLoopExp, hleft, hright, hvalue]
+
+theorem evalLoopExpFull_shift [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    (state : LoopState α) (operator : Shift) (left right : LoopExp α)
+    (leftValue rightValue : α) (value : α)
+    (hleft : evalLoopExpFull state left = some leftValue)
+    (hright : evalLoopExpFull state right = some rightValue)
+    (hvalue : evalLoopShiftFull operator leftValue rightValue = some value) :
+    evalLoopExpFull state (.shift operator left right) = some value := by
+  simp [evalLoopExpFull, hleft, hright, hvalue]
 
 theorem evalLoopProg_seq_normal [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

@@ -89,6 +89,7 @@ import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.CorrectnessFfiRiscVLoop
 import Flapjack.Test.FullSsa
 import Flapjack.Test.FullSsaPipeline
+import Flapjack.Test.ParsedFullSsaPipeline
 import Flapjack.Test.FullSsaCorrectness
 import Flapjack.Test.CorrectnessSsa
 import Flapjack.Test.CorrectnessGraphCoverage

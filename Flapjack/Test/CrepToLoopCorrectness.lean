@@ -498,6 +498,40 @@ theorem crepToLoop_store_var_regression :
   · simp [crepStoreExpressionState, loopCompileExp, evalLoopExp,
       updateLoopLocal]
 
+theorem crepToLoop_shMem_store_var_regression :
+    evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        defaultCrepSharedMemHandler 0 100 2 crepStoreExpressionState
+        (.shMem .store 2 (.var 1)) =
+      some (.normal
+        { crepStoreExpressionState with
+          memory := updateMemory crepStoreExpressionState.memory 200 42 }) ∧
+    evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+        3 (loopStateOfCrepState crepStoreExpressionState)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 2, target := .rv64i } :
+            LoopContext Nat)
+          [] (.shMem .store 2 (.var 1))) =
+      some (.normal
+        (loopStateOfCrepState
+          { crepStoreExpressionState with
+            memory := updateMemory crepStoreExpressionState.memory 200 42 })) := by
+  apply crepToLoop_shMem_store_of_empty_prefix
+    ({ vars := [], functions := [], maxVar := 2, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    defaultCrepSharedMemHandler 0 100 1 crepStoreExpressionState
+    { crepStoreExpressionState with
+      memory := updateMemory crepStoreExpressionState.memory 200 42 } []
+    .store 2 (.var 1) 200 42
+  · simp
+  · simp [loopCompileExp]
+  · simp [crepStoreExpressionState, evalCrepFullExp]
+  · simp [crepStoreExpressionState, loopStateOfCrepState,
+      loopCompileExp, evalLoopExp]
+  · simp [crepStoreExpressionState]
+  · simp [defaultCrepSharedMemHandler, crepStoreExpressionState]
+  · rfl
+
 theorem crepToLoop_dec_return_const_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
       (fun _ _ _ _ => none) 0 100 2 crepSeqInitial

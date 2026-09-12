@@ -665,6 +665,64 @@ theorem crepToLoop_shMem_store_agreement
       loopStateOfCrepState, updateLoopMemory, hvalue,
       htargetMemory]
 
+theorem crepToLoop_shMem_store_of_empty_prefix
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state targetState : CrepState α) (live : List Nat)
+    (operator : CrepMemOp) (name : Nat)
+    (addressExpression : CrepExp α) (address : α) (value : α)
+    (hoperator : operator = .store ∨ operator = .store8 ∨
+      operator = .store16 ∨ operator = .store32)
+    (hcode : (loopCompileExp context (context.maxVar + 1) live
+      addressExpression).code = [])
+    (haddress : evalCrepFullExp state.locals state.memory baseAddress topAddress
+      addressExpression = some address)
+    (hloopAddress : evalLoopExp (loopStateOfCrepState state)
+      (loopCompileExp context (context.maxVar + 1) live addressExpression).expression =
+      some address)
+    (hvalue : state.locals name = some value)
+    (hshared : sharedMem operator name address state = some targetState)
+    (htarget : targetState =
+      { state with memory := updateMemory state.memory address value }) :
+    evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.shMem operator name addressExpression) =
+        some (.normal targetState) ∧
+    evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 2)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.shMem operator name addressExpression)) =
+        some (.normal (loopStateOfCrepState targetState)) := by
+  have hloopAddress' :
+      evalLoopExp
+          ({ locals := state.locals, globals := fun _ => none,
+             memory := state.memory } : LoopState α)
+          (loopCompileExp context (context.maxVar + 1) live addressExpression).expression =
+        some address := by
+    simpa [loopStateOfCrepState] using hloopAddress
+  rcases hoperator with rfl | rfl | rfl | rfl
+  all_goals
+    subst targetState
+    have hmemoryUpdate : updateLoopMemory state.memory address value =
+        updateMemory state.memory address value := by
+      funext current
+      by_cases h : address = current
+      · subst current
+        simp [updateLoopMemory, updateMemory]
+      · have h' : current ≠ address := Ne.symm h
+        simp [updateLoopMemory, updateMemory, h, h']
+    simp [evalCrepFullProg, haddress, hshared, hcode, loopCompileProg,
+      loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg,
+      loopStateOfCrepState, hvalue, hmemoryUpdate, hloopAddress']
+
 theorem crepToLoop_shMem_store_state_agreement
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

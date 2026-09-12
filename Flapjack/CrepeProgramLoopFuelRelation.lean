@@ -68,4 +68,80 @@ theorem compile_full_pan_value_while_source_word_zero_relation_fuel
   · simp [evalCrepFullProg, hcrepCondition, hsourceZero, htargetZero]
   · exact hrel
 
+theorem compile_full_pan_value_while_source_word_zero_state_relation_fuel
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (condition : SourceWordExp α) (body : Prog α) (compiledBody : CrepProg α)
+    (sourceCondition targetCondition : α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hlookup : ∀ name value, sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (hsourceCondition : evalPanValueExp structs sourceLocals sourceGlobals
+      sourceMemory baseAddress topAddress bytesInWord condition.toExp =
+      some (.word sourceCondition))
+    (hconditionAgreement : targetCondition = sourceCondition)
+    (hzero : sourceCondition = 0)
+    (hcompileBody : compileProg context body = compiledBody) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (sourceFuel + 1)
+      sourceLocals sourceGlobals sourceMemory (.while condition.toExp body) =
+      some (.normal sourceLocals sourceGlobals sourceMemory) ∧
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (targetFuel + 1) state
+      (compileProg context (.while condition.toExp body)) =
+      some (.normal state) ∧
+    panValueCrepControlRel structs context exceptionRel
+      (.normal sourceLocals sourceGlobals sourceMemory) (.normal state) := by
+  obtain ⟨compiledCondition, hcompileCondition, hcrepCondition⟩ :=
+    compileSourceWordExp_relation context structs sourceLocals sourceGlobals
+      sourceMemory state.locals state.memory baseAddress topAddress bytesInWord
+      hbytesInWord hrel.2.1 hlookup condition sourceCondition hsourceCondition
+  obtain ⟨compiledCondition', hcompileCondition', hnoGlobal⟩ :=
+    compileSourceWordExp_noGlobal context structs sourceLocals sourceGlobals
+      sourceMemory baseAddress topAddress bytesInWord hlookup condition
+      sourceCondition hsourceCondition
+  have hcompiledEq : compiledCondition = compiledCondition' := by
+    have hpair : ([compiledCondition], Shape.one) =
+        ([compiledCondition'], Shape.one) :=
+      hcompileCondition.symm.trans hcompileCondition'
+    exact (List.cons.inj (congrArg Prod.fst hpair)).1
+  have hcrepCondition' :
+      evalCrepFullExp state.locals state.memory baseAddress topAddress
+        compiledCondition' = some sourceCondition := by
+    simpa [hcompiledEq] using hcrepCondition
+  have hcrepConditionState :
+      evalCrepFullExpState state baseAddress topAddress compiledCondition =
+        some targetCondition := by
+    rw [hcompiledEq]
+    rw [evalCrepFullExpState_eq_of_noGlobal state baseAddress topAddress
+      compiledCondition' hnoGlobal]
+    simpa [hconditionAgreement] using hcrepCondition'
+  have hcompile : compileProg context (.while condition.toExp body) =
+    .while compiledCondition compiledBody := by
+    simp [compileProg, hcompileCondition, hcompileBody]
+  rw [hcompile]
+  constructor
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceCondition,
+      hzero]
+  constructor
+  · simp [evalCrepFullProgState, hcrepConditionState, hzero,
+      hconditionAgreement]
+  · exact hrel
+
 end Flapjack

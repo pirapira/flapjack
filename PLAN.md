@@ -2417,6 +2417,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   global-aware state evaluator, transporting no-global condition expressions.
 - [x] Add relation-aware zero-condition and recursive nonzero loop rules for
   the program correctness induction.
+- [x] Port zero-condition and normal/break/continue loop fuel composition
+  rules to the global-aware state evaluator.
 - [x] Add relation-aware loop-control rules for body break and continue.
 - [x] Prove the compiled declaration-table head lookup exposes flattened
   parameter slots and the exact compiled function body.

@@ -211,7 +211,7 @@ theorem compile_full_pan_value_return_local_binop_correct
     (hrightSource : sourceLocals rightName = some (.word rightValue))
     (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
       (fun address => (state.memory address).map PanValue.word) state) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 1 state
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 1 state
         (compileProg context
           (.return (.op operator
             [.var .local leftName, .var .local rightName]))) =
@@ -227,12 +227,28 @@ theorem compile_full_pan_value_return_local_binop_correct
     state.locals state.memory baseAddress topAddress bytesInWord operator
     leftName rightName leftSlot rightSlot leftValue rightValue
     hleftLookup hrightLookup hleftSource hrightSource hrel.2.1
+  have hnoGlobal : CrepExpNoGlobal (α := α)
+      (CrepExp.op (α := α) operator
+        [CrepExp.var (α := α) leftSlot, CrepExp.var (α := α) rightSlot]) :=
+    CrepExpNoGlobal.op (operator := operator)
+      (left := CrepExp.var (α := α) leftSlot)
+      (right := CrepExp.var (α := α) rightSlot)
+      (CrepExpNoGlobal.var (α := α) leftSlot)
+      (CrepExpNoGlobal.var (α := α) rightSlot)
+  have hcompiledState :
+      evalCrepFullExpState state baseAddress topAddress
+        (CrepExp.op operator [CrepExp.var leftSlot, CrepExp.var rightSlot]) =
+      some (evalPanBinOp operator leftValue rightValue) := by
+    rw [evalCrepFullExpState_eq_of_noGlobal state baseAddress topAddress
+      (CrepExp.op operator [CrepExp.var leftSlot, CrepExp.var rightSlot])
+      hnoGlobal]
+    exact hexp.2.2
   exact compile_full_pan_value_return_word_of_exp context structs
     sourceLocals sourceGlobals state primitive ffi sharedMem
     baseAddress topAddress bytesInWord (evalPanBinOp operator leftValue rightValue)
     (.op operator [.var .local leftName, .var .local rightName])
     (CrepExp.op operator [CrepExp.var leftSlot, CrepExp.var rightSlot])
-    hexp.2.1 hexp.1 hexp.2.2
+    hexp.2.1 hexp.1 hcompiledState
 
 theorem compileExp_cmp_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

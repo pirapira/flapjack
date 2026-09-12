@@ -2211,6 +2211,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   global-aware evaluator and regress the resulting global store.
 - [x] Add the raised-state relation for exception payloads spilled into the
   separate Crep global area while preserving the ordinary memory relation.
+- [x] Port the scalar source-word `raise` lowering relation to the
+  global-aware evaluator, including the compiled global payload and exception
+  code relation.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

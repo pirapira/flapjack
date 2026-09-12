@@ -866,7 +866,7 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   location-aware StackLang boundary; color only the register-semantic result.
 - [x] Prove the reserved-x31 five-instruction rotate-right colouring boundary
   under explicit scratch non-aliasing hypotheses.
-- [ ] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
+- [x] Port CakeML's full SSA/clash-colouring Word allocator and its spill-aware
   RISC-V contracts before claiming general call-aware allocation correctness.
 - [x] Add a unified source-faithful function allocator dispatcher that records
   the CakeML linear-scan mode separately from graph and spill allocation.

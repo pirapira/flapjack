@@ -2205,6 +2205,22 @@ def wordStackEntryLabel (config : WordStackConfig)
     (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat)) : Nat :=
   returns.map (fun result => result.2.2.2.snd) |>.getD config.entryLabel
 
+/-! CakeML's `comp` emits the live bitmap for a returning call before it
+    compiles the return continuation.  The live set is the GCed component of
+    the call cut-set; keeping this as a separate state transition makes the
+    order explicit for the stateful compiler below. -/
+def wordStackCallLiveBitmap [BEq Nat]
+    (config : WordStackConfig) (bitmapBuilder : List Nat → List Nat)
+    (bitmapRegister frameSlots : Nat)
+    (state : WordStackBitmapState)
+    (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat)) :
+    StackProg Nat × WordStackBitmapState :=
+  match returns with
+  | none => (.skip, state)
+  | some (_, (_, live), _, _, _) =>
+      wordStackBitmapWriteWithBuilder config bitmapRegister frameSlots state live
+        bitmapBuilder
+
 /-! Stateful variant of the Word-to-Stack compiler.
 
     The ordinary compiler above intentionally has no bitmap accumulator and
@@ -2247,8 +2263,15 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
   | .call returns (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
       let argumentMoves ← wordStackMovesToPhysical config arguments 2
-      let returnCode ← wordStackEmbeddedReturnCode config returns
-      let _destinations := returns.map (fun result => result.1) |>.getD []
+      let (liveCode, state) := wordStackCallLiveBitmap config bitmapBuilder
+        bitmapRegister frameSlots state returns
+      let (returnCode, state) ←
+        match returns with
+        | some (_, _, returnProgram, _, _) =>
+            wordToStackProgNatWithBitmapBuilder config bitmapBuilder
+              registerCount bitmapRegister frameSlots wordBits storeConstsStub state
+              returnProgram
+        | none => pure (.skip, state)
       let (handlerCode, state) ← wordToStackProgNatWithBitmapBuilder config
         bitmapBuilder registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
@@ -2256,7 +2279,19 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
         (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
-      pure (wordStackJoin argumentMoves callCode, state)
+      pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
+  | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
+      (some target) arguments none => do
+      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let (liveCode, state) := wordStackCallLiveBitmap config bitmapBuilder
+        bitmapRegister frameSlots state
+        (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
+      let (returnCode, state) ← wordToStackProgNatWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
+      let callCode := wordToStackCallNoHandler config.perf target arguments.length
+        config.frameOffset config.scratch destinations returnCode
+        returnLabel entryLabel
+      pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .alloc _ (_, live) =>
       let (program, state) := wordStackAllocWithBitmapBuilder config bitmapRegister
         frameSlots state live bitmapBuilder
@@ -2310,6 +2345,26 @@ theorem wordStackBitmapState_storeConsts_length
       (wordStackStoreConstsWithBitmaps config registerCount specialScratch wordBits
         storeConstsStub state constants).2.data.length := by
   simp [wordStackStoreConstsWithBitmaps, wordStackInsertBitmap, hstate]
+
+theorem wordStackCallLiveBitmap_length
+    (config : WordStackConfig) (bitmapBuilder : List Nat → List Nat)
+    (bitmapRegister frameSlots : Nat) (state : WordStackBitmapState)
+    (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat))
+    (hstate : state.length = state.data.length) :
+    (wordStackCallLiveBitmap config bitmapBuilder bitmapRegister frameSlots state
+      returns).2.length =
+      (wordStackCallLiveBitmap config bitmapBuilder bitmapRegister frameSlots state
+        returns).2.data.length := by
+  cases returns with
+  | none => exact hstate
+  | some returnData =>
+      rcases returnData with ⟨destinations, cutsets, returnProgram, returnLabel,
+        entryLabel⟩
+      by_cases hframes : frameSlots = 0
+      · simp [wordStackCallLiveBitmap, wordStackBitmapWriteWithBuilder, hframes,
+          hstate]
+      · simp [wordStackCallLiveBitmap, wordStackBitmapWriteWithBuilder,
+          wordStackInsertBitmap, hframes, hstate]
 
 theorem wordToStackProgNatWithBitmapBuilder_preserves_length
     [BEq Nat] (config : WordStackConfig)
@@ -2425,35 +2480,141 @@ theorem wordToStackProgNatWithBitmapBuilder_preserves_length
       | some target =>
           cases handler with
           | none =>
-              simp [wordToStackProgNatWithBitmapBuilder] at hresult
-              rcases hresult with ⟨_, _, rfl, rfl⟩
-              exact hstate
+              cases returns with
+              | none =>
+                  simp [wordToStackProgNatWithBitmapBuilder] at hresult
+                  rcases hresult with ⟨_, _, rfl, rfl⟩
+                  exact hstate
+              | some returnData =>
+                  rcases returnData with
+                    ⟨destinations, cutsets, returnProgram, returnLabel, entryLabel⟩
+                  simp only [wordToStackProgNatWithBitmapBuilder] at hresult
+                  cases hargs : wordStackMovesToPhysical config arguments 2 with
+                  | none =>
+                      rw [hargs] at hresult
+                      simp at hresult
+                  | some argumentMoves =>
+                      cases hlive : wordStackCallLiveBitmap config bitmapBuilder
+                        bitmapRegister frameSlots state
+                        (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) with
+                      | mk liveCode liveState =>
+                          simp [hargs, hlive] at hresult
+                          cases hreturn : wordToStackProgNatWithBitmapBuilder
+                            config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
+                            storeConstsStub liveState returnProgram with
+                          | none =>
+                              rw [hreturn] at hresult
+                              simp at hresult
+                          | some returnPair =>
+                              cases returnPair with
+                              | mk returnCode finalState =>
+                                  have hliveInv : liveState.length = liveState.data.length := by
+                                    have hlive0 := wordStackCallLiveBitmap_length config bitmapBuilder
+                                      bitmapRegister frameSlots state
+                                      (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
+                                      hstate
+                                    have hliveState : (wordStackCallLiveBitmap config bitmapBuilder
+                                      bitmapRegister frameSlots state
+                                      (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))).snd =
+                                      liveState := by
+                                      simpa using congrArg Prod.snd hlive
+                                    rw [← hliveState]
+                                    exact hlive0
+                                  have hreturnInv := wordToStackProgNatWithBitmapBuilder_preserves_length
+                                    config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
+                                    storeConstsStub liveState returnProgram hliveInv returnCode finalState
+                                    hreturn
+                                  simp [hreturn] at hresult
+                                  rcases hresult with ⟨_, rfl, rfl⟩
+                                  exact hreturnInv
           | some handlerData =>
               rcases handlerData with ⟨exception, body, handlerLabel, entryLabel⟩
-              generalize hhandlerResult : wordToStackProgNatWithBitmapBuilder config bitmapBuilder
-                registerCount bitmapRegister frameSlots wordBits storeConstsStub state body =
-                handlerResult at hresult
-              simp [wordToStackProgNatWithBitmapBuilder, hhandlerResult] at hresult
-              generalize hargsResult : wordStackMovesToPhysical config arguments 2 =
-                argsResult at hresult
-              cases argsResult with
-              | none => simp_all
+              simp only [wordToStackProgNatWithBitmapBuilder] at hresult
+              cases hargs : wordStackMovesToPhysical config arguments 2 with
+              | none =>
+                  rw [hargs] at hresult
+                  simp at hresult
               | some argumentMoves =>
-                  generalize hreturnResult : wordStackEmbeddedReturnCode config returns =
-                    returnResult at hresult
-                  cases returnResult with
-                  | none => simp_all
-                  | some returnCode =>
-                      cases handlerResult with
-                      | none => simp_all
-                      | some handlerPair =>
-                          cases handlerPair with
-                          | mk handlerCode finalResult =>
-                              have hfinal := wordToStackProgNatWithBitmapBuilder_preserves_length
-                                config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
-                                storeConstsStub state body hstate handlerCode finalResult hhandlerResult
-                              rcases hresult with ⟨_, rfl⟩
-                              exact hfinal
+                  cases returns with
+                  | none =>
+                      cases hlive : wordStackCallLiveBitmap config bitmapBuilder
+                        bitmapRegister frameSlots state none with
+                      | mk liveCode liveState =>
+                          simp [hargs, hlive] at hresult
+                          cases hhandler : wordToStackProgNatWithBitmapBuilder
+                            config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
+                            storeConstsStub liveState body with
+                          | none =>
+                              rw [hhandler] at hresult
+                              simp at hresult
+                          | some handlerPair =>
+                              cases handlerPair with
+                              | mk handlerCode finalResult =>
+                                  have hliveInv : liveState.length = liveState.data.length := by
+                                    have hlive0 := wordStackCallLiveBitmap_length config bitmapBuilder
+                                      bitmapRegister frameSlots state none hstate
+                                    have hliveState : (wordStackCallLiveBitmap config bitmapBuilder
+                                      bitmapRegister frameSlots state none).snd = liveState := by
+                                      simpa using congrArg Prod.snd hlive
+                                    rw [← hliveState]
+                                    exact hlive0
+                                  have hhandlerInv := wordToStackProgNatWithBitmapBuilder_preserves_length
+                                    config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
+                                    storeConstsStub liveState body hliveInv handlerCode finalResult
+                                    hhandler
+                                  simp [hhandler] at hresult
+                                  rcases hresult with ⟨_, rfl, rfl⟩
+                                  exact hhandlerInv
+                  | some returnData =>
+                      rcases returnData with
+                        ⟨destinations, cutsets, returnProgram, returnLabel, entryLabel⟩
+                      cases hlive : wordStackCallLiveBitmap config bitmapBuilder
+                        bitmapRegister frameSlots state
+                        (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) with
+                      | mk liveCode liveState =>
+                          simp [hargs, hlive] at hresult
+                          cases hreturn : wordToStackProgNatWithBitmapBuilder
+                            config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
+                            storeConstsStub liveState returnProgram with
+                          | none =>
+                              rw [hreturn] at hresult
+                              simp at hresult
+                          | some returnPair =>
+                              cases returnPair with
+                              | mk returnCode returnState =>
+                                  simp [hreturn] at hresult
+                                  cases hhandler : wordToStackProgNatWithBitmapBuilder
+                                    config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
+                                    storeConstsStub returnState body with
+                                  | none =>
+                                      rw [hhandler] at hresult
+                                      simp at hresult
+                                  | some handlerPair =>
+                                      cases handlerPair with
+                                      | mk handlerCode finalResult =>
+                                          have hliveInv : liveState.length = liveState.data.length := by
+                                            have hlive0 := wordStackCallLiveBitmap_length config bitmapBuilder
+                                              bitmapRegister frameSlots state
+                                              (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
+                                              hstate
+                                            have hliveState : (wordStackCallLiveBitmap config bitmapBuilder
+                                              bitmapRegister frameSlots state
+                                              (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))).snd =
+                                              liveState := by
+                                              simpa using congrArg Prod.snd hlive
+                                            rw [← hliveState]
+                                            exact hlive0
+                                          have hreturnInv := wordToStackProgNatWithBitmapBuilder_preserves_length
+                                            config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
+                                            storeConstsStub liveState returnProgram hliveInv returnCode returnState
+                                            hreturn
+                                          have hhandlerInv := wordToStackProgNatWithBitmapBuilder_preserves_length
+                                            config bitmapBuilder registerCount bitmapRegister frameSlots wordBits
+                                            storeConstsStub returnState body hreturnInv handlerCode finalResult
+                                            hhandler
+                                          simp [hhandler] at hresult
+                                          rcases hresult with ⟨_, rfl, rfl⟩
+                                          exact hhandlerInv
   case alloc destination cutsets =>
       rw [wordToStackProgNatWithBitmapBuilder] at hresult
       generalize hallocResult : wordStackAllocWithBitmapBuilder config bitmapRegister frameSlots

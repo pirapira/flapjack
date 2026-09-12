@@ -283,6 +283,19 @@ example
 
 example
     (parameters : List Nat) (program : WordProg α)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (renamedProgram : WordProg α) (allocation : WordSpillState)
+    (halloc :
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+        parameters program =
+        some (state, renamedParameters, renamedProgram, allocation)) :
+    ∀ name, name ∈ wordProgVariables renamedProgram →
+      ∃ location, lookupNatInfo name allocation.locations = some location := by
+  exact wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_maps_variables
+    parameters program state renamedParameters renamedProgram allocation halloc
+
+example
+    (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
     (allocation : WordGraphAllocation) (renamedProgram : WordProg α)

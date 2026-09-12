@@ -2309,6 +2309,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   the callee simulation premise under the stateful call evaluator.
 - [x] Add state-aware forward and converse evaluation theorems for flattened
   local-assignment sequences, including non-interference under local updates.
+- [x] Lift the generic direct local-assignment constructor to the stateful
+  evaluator for arbitrary flattened Pancake values.
 - [x] Generalize global-aware source-word `raise` lowering to arbitrary
   compiled functions and lift it into the stateful program relation.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite

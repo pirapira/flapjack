@@ -197,16 +197,16 @@ theorem crepe_full_ffi_final_semantics :
     crepeSemanticsFinalState, crepeSemanticsFinalEvent]
 
 theorem crepe_full_ffi_lowering_noop :
-    evalCrepFullProg [] crepeSemanticsPrimitive
-      (fun _ _ _ _ _ state => some state) crepeSemanticsSharedMem
+    evalCrepFullProgState [] crepeSemanticsPrimitive
+      (fun _ _ _ _ _ state => some (.returned state)) crepeSemanticsSharedMem
       0 100 30 crepeSemanticsState
       (compileProg crepeFfiContext
         (.extCall "noop" (.const 10) (.const 1) (.const 20) (.const 2))) =
       some (.normal crepeSemanticsState) := by
-  exact (compile_full_extCall_const_noop_correct
-    crepeFfiContext (fun _ => none) crepeSemanticsState
+  exact compile_full_extCall_const_noop_correct
+    crepeFfiContext crepeSemanticsState
     crepeSemanticsPrimitive crepeSemanticsSharedMem
-    0 100 10 1 20 2 "noop").1
+    0 100 10 1 20 2 "noop"
 
 theorem crepe_runtime_extCall_final :
     (crepRuntimeExtCall crepeRuntimeFinalHandler crepeRuntimeState

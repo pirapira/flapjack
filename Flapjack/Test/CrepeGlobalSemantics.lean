@@ -36,7 +36,7 @@ theorem compile_full_skip_state_correct_regression :
         (compileProg crepeGlobalSkipContext (.skip : Prog Nat)) =
       evalPanMemResult (fun _ => none) crepeGlobalSemanticsState.memory
         (.skip : Prog Nat) := by
-  exact compile_full_skip_state_correct crepeGlobalSkipContext
+  exact compile_full_skip_correct crepeGlobalSkipContext
     (fun _ => none) crepeGlobalSemanticsState (fun _ _ => none)
     (noCrepFfi Nat) (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat)
     0 100
@@ -49,7 +49,7 @@ theorem compile_full_return_const_state_correct_regression :
           (.return (.const 7) : Prog Nat)) =
       evalPanMemResult (fun _ => none) crepeGlobalSemanticsState.memory
         (.return (.const 7) : Prog Nat) := by
-  exact compile_full_return_const_state_correct crepeGlobalSkipContext
+  exact compile_full_return_const_correct crepeGlobalSkipContext
     (fun _ => none) crepeGlobalSemanticsState (fun _ _ => none)
     (noCrepFfi Nat) (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat)
     0 100 7
@@ -62,7 +62,7 @@ theorem compile_full_add_const_state_correct_regression :
           (.return (.op .add [.const 3, .const 4]) : Prog Nat)) =
       evalPanMemResult (fun _ => none) crepeGlobalSemanticsState.memory
         (.return (.op .add [.const 3, .const 4]) : Prog Nat) := by
-  exact compile_full_add_const_state_correct crepeGlobalSkipContext
+  exact compile_full_add_const_correct crepeGlobalSkipContext
     (fun _ => none) crepeGlobalSemanticsState (fun _ _ => none)
     (noCrepFfi Nat) (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat)
     0 100 3 4
@@ -77,7 +77,7 @@ theorem compile_full_store_load_const_state_correct_regression :
       evalPanMemResult (fun _ => none) crepeGlobalSemanticsState.memory
         (.seq (.store (.const 200) (.const 42))
           (.return (.load .one (.const 200))) : Prog Nat) := by
-  exact compile_full_store_load_const_state_correct crepeGlobalSkipContext
+  exact compile_full_store_load_const_correct crepeGlobalSkipContext
     (fun _ => none) crepeGlobalSemanticsState (fun _ _ => none)
     (noCrepFfi Nat) (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat)
     0 100 200 42
@@ -90,7 +90,7 @@ theorem compile_full_ite_const_state_correct_regression :
           (.ite (.const 1) (.return (.const 7)) (.return (.const 9)) : Prog Nat)) =
       evalPanMemResult (fun _ => none) crepeGlobalSemanticsState.memory
         (.ite (.const 1) (.return (.const 7)) (.return (.const 9)) : Prog Nat) := by
-  exact compile_full_ite_const_state_correct crepeGlobalSkipContext
+  exact compile_full_ite_const_correct crepeGlobalSkipContext
     (fun _ => none) crepeGlobalSemanticsState (fun _ _ => none)
     (noCrepFfi Nat) (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat)
     0 100 1 7 9
@@ -105,7 +105,7 @@ theorem compile_full_local_assign_return_const_state_correct_regression :
       evalPanMemResult (fun _ => none) crepeGlobalSemanticsState.memory
         (.seq (.assign .local "x" (.const 7))
           (.return (.var .local "x")) : Prog Nat) := by
-  exact compile_full_local_assign_return_const_state_correct
+  exact compile_full_local_assign_return_const_correct
     crepeGlobalLocalContext (fun _ => none) crepeGlobalSemanticsState
     (fun _ _ => none) (noCrepFfi Nat)
     (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 "x" 1 7
@@ -120,7 +120,7 @@ theorem compile_full_local_return_state_correct_regression :
       evalPanMemResult (fun name => if name == "x" then some 7 else none)
         crepeGlobalBoundLocalState.memory
         (.return (.var .local "x") : Prog Nat) := by
-  exact compile_full_local_return_state_correct crepeGlobalLocalContext
+  exact compile_full_local_return_correct crepeGlobalLocalContext
     (fun name => if name == "x" then some 7 else none)
     crepeGlobalBoundLocalState (fun _ _ => none) (noCrepFfi Nat)
     (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 "x" 1
@@ -135,7 +135,7 @@ theorem compile_full_extCall_const_noop_state_correct_regression :
         (compileProg crepeGlobalSkipContext
           (.extCall "noop" (.const 1) (.const 2) (.const 3) (.const 4) :
             Prog Nat)) = some (.normal crepeGlobalSemanticsState) := by
-  exact compile_full_extCall_const_noop_state_correct crepeGlobalSkipContext
+  exact compile_full_extCall_const_noop_correct crepeGlobalSkipContext
     crepeGlobalSemanticsState (fun _ _ => none)
     (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1 2 3 4
     "noop"

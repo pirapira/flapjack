@@ -2289,6 +2289,41 @@ theorem crepToLoopProgramCorrectWithPrimitive_primitive
               · simp [evalCrepFullProg, hread, hargs,
                 hprimitive, hlength, hfold, assignCrepValues] at hcrep hloop
 
+theorem crepToLoopWithPrimitive_shMem_store_agreement
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state targetState : CrepState α) (live : List Nat)
+    (operator : CrepMemOp) (name : Nat) (address value : α)
+    (hoperator : operator = .store ∨ operator = .store8 ∨
+      operator = .store16 ∨ operator = .store32)
+    (hvalue : state.locals name = some value)
+    (hshared : sharedMem operator name address state = some targetState)
+    (htargetMemory : targetState.memory address = some value) :
+    (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.shMem operator name (.const address))).map
+        (crepControlMemoryAt address) =
+    (evalLoopProgWithPrimitiveCallsAndFfi primitive functions
+      (loopFfiOfCrepFfi ffi) (fuel + 2)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.shMem operator name (.const address)))).map
+        (loopControlMemoryAt address) := by
+  rcases hoperator with rfl | rfl | rfl | rfl <;>
+    simp [evalCrepFullProg, evalCrepFullExp, hshared,
+      crepControlMemoryAt, loopControlMemoryAt,
+      loopCompileProg, loopCompileExp, loopNestedSeq,
+      evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg, evalLoopExp,
+      loopStateOfCrepState, updateLoopMemory, hvalue,
+      htargetMemory]
+
 /-!
 CrepToLoopProgramCorrect is the complete-pass induction boundary.  It keeps
 the source and target fuel bounds independent because lowering introduces

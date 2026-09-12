@@ -177,8 +177,7 @@ theorem panValueCrepProgramCorrect_store_source_word
                                       (compileProg context
                                         (.store address.toExp value.toExp)) =
                                     some (.normal
-                                      (CrepState.mk state.locals
-                                        (updateMemory state.memory addressValue valueValue))) := by
+                                      ({ locals := state.locals, memory := updateMemory state.memory addressValue valueValue, globals := state.globals } : CrepState α)) := by
                                 rw [hcompile]
                                 simp [nestedDecs, crepNestedSeq, stores,
                                   evalCrepFullProg, evalCrepFullExp,
@@ -203,8 +202,7 @@ theorem panValueCrepProgramCorrect_store_source_word
                                       (updatePanValueMemory sourceMemory
                                         addressValue (.word valueValue)))
                                     (.normal
-                                      (CrepState.mk state.locals
-                                        (updateMemory state.memory addressValue valueValue))) := by
+                                      ({ locals := state.locals, memory := updateMemory state.memory addressValue valueValue, globals := state.globals } : CrepState α)) := by
                                 exact ⟨htargetRel.1, htargetRel.2.1,
                                   htargetRel.2.2⟩
                               rw [hsourceEq, hcrepEq] at hcontrol

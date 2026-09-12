@@ -60,6 +60,10 @@ termination_by expressions => sizeOf expressions
 structure CrepState (α : Type u) where
   locals : Nat → Option α
   memory : α → Option α
+  /-- Global words are kept separate from ordinary memory, as in CakeML's
+      `crepSem` state.  The default preserves the compact-state API for
+      localized programs. -/
+  globals : α → Option α := fun _ => none
 
 inductive CrepControlResult (α : Type u) where
   | normal (state : CrepState α)
@@ -113,6 +117,52 @@ def defaultCrepSharedMemHandler [BEq α]
 
 def noCrepFfi (α : Type u) : CrepFfiHandler α :=
   fun _ _ _ _ _ _ => none
+
+/-! State-aware expression evaluation for the forthcoming global-aware full
+    evaluator.  The existing compact evaluator remains available while the
+    source-to-Crep proof suite is migrated in smaller slices. -/
+def evalCrepFullExpState [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepState α) (baseAddress topAddress : α) : CrepExp α → Option α
+  | .const value => some value
+  | .var name => state.locals name
+  | .load address | .load32 address | .loadByte address => do
+      let address ← evalCrepFullExpState state baseAddress topAddress address
+      state.memory address
+  | .loadGlob address => state.globals address
+  | .op operator [left, right] => do
+      let left ← evalCrepFullExpState state baseAddress topAddress left
+      let right ← evalCrepFullExpState state baseAddress topAddress right
+      pure (evalPanBinOp operator left right)
+  | .crepOp .mul [left, right] => do
+      let left ← evalCrepFullExpState state baseAddress topAddress left
+      let right ← evalCrepFullExpState state baseAddress topAddress right
+      pure (left * right)
+  | .cmp operator left right => do
+      let left ← evalCrepFullExpState state baseAddress topAddress left
+      let right ← evalCrepFullExpState state baseAddress topAddress right
+      pure (evalPanCmp operator left right)
+  | .shift operator left right => do
+      let left ← evalCrepFullExpState state baseAddress topAddress left
+      let right ← evalCrepFullExpState state baseAddress topAddress right
+      evalPanShift operator left right
+  | .baseAddr => some baseAddress
+  | .topAddr => some topAddress
+  | _ => none
+termination_by expression => sizeOf expression
+
+def evalCrepFullExpsState [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepState α) (baseAddress topAddress : α) :
+    List (CrepExp α) → Option (List α)
+  | [] => some []
+  | expression :: expressions => do
+      let value ← evalCrepFullExpState state baseAddress topAddress expression
+      let values ← evalCrepFullExpsState state baseAddress topAddress expressions
+      pure (value :: values)
+termination_by expressions => sizeOf expressions
 
 mutual
   def evalCrepFullCall

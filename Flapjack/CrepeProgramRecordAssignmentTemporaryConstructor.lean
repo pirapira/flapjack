@@ -162,7 +162,7 @@ theorem panValueCrepProgramCorrect_assign_local_record_temporary
   have hrestored := restoreCrepResultList_normal_updateList state.locals
     (updateCrepLocalList
       (updateCrepLocalList state.locals temporarySlots values) slots values)
-    temporarySlots slots values state.memory htemporaryLength hslotLength
+    temporarySlots slots values state.memory state.globals htemporaryLength hslotLength
     hslotsDistinct
     (by
       intro temporary htemporaryMem hslot

@@ -15,7 +15,7 @@ namespace Flapjack
 
 def loopStateOfCrepState (state : CrepState α) : LoopState α :=
   { locals := state.locals
-    globals := fun _ => none
+    globals := state.globals
     memory := state.memory }
 
 /-! The runtime evaluator retains the global environment that the compact
@@ -79,7 +79,8 @@ theorem crepRuntimeToLoop_loadGlob_const_agreement
 
 def crepStateOfLoopState (state : LoopState α) : CrepState α :=
   { locals := state.locals
-    memory := state.memory }
+    memory := state.memory
+    globals := state.globals }
 
 def loopFfiOfCrepFfi (ffi : CrepFfiHandler α) :
     FunName → α → α → α → α → LoopState α → Option (LoopState α) :=
@@ -308,17 +309,17 @@ theorem crepToLoop_assign_agreement_of_empty_prefix
       (loopCompileProg context live (.assign name expression))).map
         (loopControlLocal name) := by
   have heval' : evalLoopExp
-      ({ locals := state.locals
-         globals := fun _ => none
+      ({ locals := state.locals, globals := state.globals,
          memory := state.memory } : LoopState α)
       (loopCompileExp context (context.maxVar + 1) live expression).expression =
       some value := by
     simpa [loopStateOfCrepState] using heval
   simp [evalCrepFullProg, hvalue,
     loopCompileProg, hcode, loopNestedSeq,
-    evalLoopProgWithCallsAndFfi, evalLoopProg, heval',
-    loopStateOfCrepState, updateCrepLocal, updateLoopLocal,
-    crepControlLocal, loopControlLocal]
+    evalLoopProgWithCallsAndFfi, evalLoopProg,
+    loopStateOfCrepState, updateCrepLocal, crepControlLocal]
+  rw [heval']
+  simp [loopControlLocal, updateLoopLocal]
 
 theorem crepToLoop_assign_load32_const_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

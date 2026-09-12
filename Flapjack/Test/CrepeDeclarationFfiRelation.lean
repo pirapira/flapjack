@@ -76,7 +76,8 @@ def declarationFfiCallState : CrepState (Word 64) :=
 
 theorem crepState_eq {α : Type} (left right : CrepState α)
     (hlocals : left.locals = right.locals)
-    (hmemory : left.memory = right.memory) : left = right := by
+    (hmemory : left.memory = right.memory)
+    (hglobals : left.globals = right.globals) : left = right := by
   cases left
   cases right
   simp_all
@@ -277,6 +278,7 @@ theorem declaration_ffi_source_to_crep_relation :
             by_cases h4 : current = 4 <;> by_cases h5 : current = 5 <;>
             all_goals simp [calleeOutput, calleeBase,
               restoreCrepLocal, updateCrepLocal, h0, h2, h3, h4, h5]
+        · rfl
         · rfl
       have hnested' :
           evalCrepFullProg

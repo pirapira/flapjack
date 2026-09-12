@@ -57,10 +57,11 @@ set_option linter.unusedSimpArgs false in
 theorem restoreCrepResultList_normal_explicit
     [OfNat α 0]
     (locals resultLocals : Nat → Option α) (memory : α → Option α)
-    (names : List Nat) :
-    restoreCrepResultList locals names (.normal (CrepState.mk resultLocals memory)) =
+    (names : List Nat) (globals : α → Option α := fun _ => none) :
+    restoreCrepResultList locals names
+        (.normal (CrepState.mk resultLocals memory globals)) =
       .normal (CrepState.mk (restoredCrepLocals locals resultLocals names)
-        memory) := by
+        memory globals) := by
   induction names generalizing locals resultLocals with
   | nil =>
       simp [restoreCrepResultList, restoredCrepLocals]
@@ -96,14 +97,15 @@ theorem restoreCrepResultList_normal_explicit
                     hcurrent]
           simp [restoredCrepLocals, restoreCrepLocal, hcurrent, hinv names]
       exact congrArg CrepControlResult.normal
-        (congrArg (fun currentLocals => CrepState.mk currentLocals memory)
-          hlocals)
+        (congrArg (fun currentLocals =>
+          ({ locals := currentLocals, memory := memory, globals := globals } :
+            CrepState α)) hlocals)
 
 theorem restoreCrepResultList_normal_updateList
     [OfNat α 0]
     (locals resultLocals : Nat → Option α)
     (temporarySlots destinationSlots : List Nat) (values : List α)
-    (memory : α → Option α)
+    (memory globals : α → Option α)
     (htemporaryLength : temporarySlots.length = values.length)
     (hdestinationLength : destinationSlots.length = values.length)
     (hdestinationDistinct : CrepDistinctNames destinationSlots)
@@ -114,9 +116,9 @@ theorem restoreCrepResultList_normal_updateList
         (updateCrepLocalList locals temporarySlots values)
         destinationSlots values) :
     restoreCrepResultList locals temporarySlots
-        (.normal (CrepState.mk resultLocals memory)) =
+        (.normal (CrepState.mk resultLocals memory globals)) =
       .normal (CrepState.mk (updateCrepLocalList locals destinationSlots values)
-        memory) := by
+        memory globals) := by
   have hrestored :
       restoredCrepLocals locals resultLocals temporarySlots =
         updateCrepLocalList locals destinationSlots values := by
@@ -174,7 +176,8 @@ theorem restoreCrepResultList_normal_updateList
         have hreadDestination' := updateCrepLocalList_of_not_mem
           locals destinationSlots values current hdestinationLength hdestination
         rw [hreadDestination, hreadTemporary, hreadDestination']
-  rw [restoreCrepResultList_normal_explicit locals resultLocals memory temporarySlots]
+  rw [restoreCrepResultList_normal_explicit locals resultLocals memory
+    temporarySlots globals]
   simp [hrestored]
 
 theorem evalCrepFullExps_varList_updateCrepLocalList
@@ -386,7 +389,7 @@ theorem compile_full_pan_value_local_assign_record_source_word_temporary_general
     state.locals
     (updateCrepLocalList
       (updateCrepLocalList state.locals temporarySlots values) slots values)
-    temporarySlots slots values state.memory
+    temporarySlots slots values state.memory state.globals
     htemporaryLength hlength hdistinct
     (by
       intro temporary htemporaryMem hslot
@@ -410,8 +413,8 @@ theorem compile_full_pan_value_local_assign_record_source_word_temporary_general
               locals := updateCrepLocalList
                 (updateCrepLocalList state.locals temporarySlots values) slots values })) := by
             simpa [Nat.add_assoc] using hnested
-      _ = some (.normal { state with
-          locals := updateCrepLocalList state.locals slots values }) := by
+      _ = some (.normal ({ state with
+          locals := updateCrepLocalList state.locals slots values } : CrepState α)) := by
             rw [hrestored]
   · refine ⟨hrel.1, ?_, hrel.2.2⟩
     exact panValueCrepLocalsRel_update_word_list structs context sourceLocals

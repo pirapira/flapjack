@@ -33,6 +33,59 @@ def leanReturnWords (value : Nat) : List (BitVec 8) :=
   RiscV.encodeInstructions
     [.ori 10 0 (BitVec.ofNat 64 value), .jalr 0 1 0]
 
+/-! The exact Lean source-entry bytes are pinned separately from the
+    Cake-derived section-shape golden in SourceGlobalParity. -/
+def rotateArtifactGolden : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x80,
+    BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e,
+    BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41, BitVec.ofNat 8 0x83,
+    BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0f, BitVec.ofNat 8 0x30,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x9e,
+    BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x33,
+    BitVec.ofNat 8 0xea, BitVec.ofNat 8 0x5a, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x0a, BitVec.ofNat 8 0xda,
+    BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0xb3,
+    BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e,
+    BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xb3,
+    BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41,
+    BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xde,
+    BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e,
+    BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0xb3,
+    BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0f,
+    BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x33,
+    BitVec.ofNat 8 0x0a, BitVec.ofNat 8 0xfa, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x0e,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x40, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93,
+    BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x50, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0d, BitVec.ofNat 8 0x10,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6f,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x04, BitVec.ofNat 8 0xb3,
+    BitVec.ofNat 8 0x8f, BitVec.ofNat 8 0xbf, BitVec.ofNat 8 0x41,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x9f, BitVec.ofNat 8 0xf1,
+    BitVec.ofNat 8 0x01, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xde,
+    BitVec.ofNat 8 0xb1, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0xb3,
+    BitVec.ofNat 8 0xee, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xef, BitVec.ofNat 8 0xde,
+    BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x33, BitVec.ofNat 8 0xe2,
+    BitVec.ofNat 8 0x31, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x33,
+    BitVec.ofNat 8 0x02, BitVec.ofNat 8 0xf2, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x61, BitVec.ofNat 8 0x42,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00 ]
+
+def rotateArtifactMatchesGolden : Bool :=
+  match Flapjack.Test.SourceGlobalParity.compileSourceBytes
+      Flapjack.Test.SourceGlobalParity.rotateSource with
+  | some bytes => bytes == rotateArtifactGolden
+  | none => false
+
 def minimalSourceArtifact : Bool :=
   match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
       (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
@@ -65,6 +118,8 @@ def main : IO Unit := do
       (leanReturnWords 7) (cakeReturnWords 7),
     checkEq "Lean target linked image"
       pipelineCallTargetLinkedImage (some pipelineCallTargetImage),
+    checkBool "Lean rotate-right exact source artifact bytes"
+      rotateArtifactMatchesGolden,
     checkBool "Lean source entry produces an artifact" minimalSourceArtifact,
     checkBool "Pancake computed local-store address compiles" nestedLocalStoreBytesAccepted,
     Flapjack.Test.SourceGlobalParity.runChecks

@@ -1,10 +1,21 @@
-import Flapjack.Test.FullSsaPipeline
+import Flapjack.Pipeline
 import Flapjack.Parser
 import Flapjack.Static
+import Flapjack.Semantics
+import Flapjack.LoopSemantics
 
 namespace Flapjack
 
 open RiscV
+
+def parsedCallPipelineRemoveConfig : StackRemoveConfig :=
+  { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
+    stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
+
+def parsedCallLoopState : LoopState (RiscV.Word 64) :=
+  { locals := fun _ => none
+    globals := fun _ => none
+    memory := fun _ => none }
 
 /-! A source-facing execution regression.  The declarations are obtained from
     the Pancake parser rather than assembled directly as Lean AST values. -/
@@ -37,7 +48,7 @@ def parsedCallLinked :
   parsedCallDeclarations.bind (fun declarations =>
     compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
-      fullSsaPipelineRemoveConfig "main" declarations)
+      parsedCallPipelineRemoveConfig "main" declarations)
 
 def parsedCallLookupEntry (label : Nat) :
     List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64)) →
@@ -49,7 +60,7 @@ def parsedCallLookupEntry (label : Nat) :
 
 def parsedCallMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← parsedCallLinked
-  let entry ← parsedCallLookupEntry 2 sections
+  let entry ← parsedCallLookupEntry 3 sections
   let image := sections.flatMap (fun (_, _, code) => code)
   RiscV.executeFunctionAtAfterEntry 4000 0 entry 172 [] image [2] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
@@ -64,37 +75,43 @@ def parsedCallLoopResult : Option (List (RiscV.Word 64)) := do
   let declarations ← parsedCallDeclarations
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
     (fun value => BitVec.ofNat 64 value) "main" declarations
-  let (_, body) ← lookupLoopFunction 1 pipeline.loop
+  let (_, body) ← lookupLoopFunction 3 pipeline.loop
   let result ← evalLoopProgWithFunctions pipeline.loop 100
-    identityCallLoopState body
+    parsedCallLoopState body
   pure (loopResultValues result)
 
 def parsedCallWordResult : Option (List (RiscV.Word 64)) := do
   let declarations ← parsedCallDeclarations
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
     (fun value => BitVec.ofNat 64 value) "main" declarations
-  let (_, body) ← RiscV.lookupWordFunction 2 pipeline.word
+  let (_, body) ← RiscV.lookupWordFunction 3 pipeline.word
   let result ← RiscV.evalWordFunctionWithCalls pipeline.word 100
     (RiscV.zeroState 64) body
   pure result.2
 
 #guard parsedCallDeclarations.isSome
-#guard parsedCallLinked.isSome
-#guard parsedCallMachineResult = some [BitVec.ofNat 64 41]
-#guard parsedCallSourceResult = some [BitVec.ofNat 64 41]
-#guard parsedCallLoopResult = some [BitVec.ofNat 64 41]
-#guard parsedCallWordResult = some [BitVec.ofNat 64 41]
+
+/-! Keep the expensive parser/pipeline reduction in one native executable
+    decision.  Repeating it in separate `#guard`s made every fresh CI build
+    re-elaborate the full compiler several times. -/
+
+theorem parsedCall_all_agreement :
+    parsedCallSourceResult = parsedCallMachineResult ∧
+    parsedCallSourceResult = parsedCallLoopResult ∧
+    parsedCallSourceResult = parsedCallWordResult := by
+  native_decide
+
 
 theorem parsedCall_source_machine_agreement :
     parsedCallSourceResult = parsedCallMachineResult := by
-  decide +kernel
+  exact parsedCall_all_agreement.1
 
 theorem parsedCall_source_loop_agreement :
     parsedCallSourceResult = parsedCallLoopResult := by
-  decide +kernel
+  exact parsedCall_all_agreement.2.1
 
 theorem parsedCall_source_word_agreement :
     parsedCallSourceResult = parsedCallWordResult := by
-  decide +kernel
+  exact parsedCall_all_agreement.2.2
 
 end Flapjack

@@ -62,6 +62,10 @@
 1 Flapjack/Test/CorrectnessFfi.lean
 1 Flapjack/Test/SourceToLoop.lean
 
+# One consolidated parsed-source full-SSA agreement keeps parser/pipeline
+# execution out of repeated kernel reductions during fresh CI builds.
+1 Flapjack/Test/ParsedFullSsaPipeline.lean
+
 # --- Declaration-driven parameter-shape regressions -------------------------
 # These regressions execute the declaration compiler over Word expressions;
 # kernel reduction stalls in `compileExp`, so the named correctness check and

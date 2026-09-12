@@ -2246,6 +2246,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add state-aware nested-declaration expansion and declaration-call
   composition, so arbitrary-shape `decCall` can be consumed by the stateful
   correctness induction.
+- [x] Add the independent-fuel recursive declaration-call constructor that
+  consumes a stateful body-correctness hypothesis.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

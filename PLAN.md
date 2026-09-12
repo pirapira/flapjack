@@ -2421,6 +2421,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   the program correctness induction.
 - [x] Port zero-condition and normal/break/continue loop fuel composition
   rules to the global-aware state evaluator.
+- [x] Port the fuel-recursive source-word while correctness constructor to
+  the global-aware evaluator, including normal iteration and control exits.
 - [x] Add relation-aware loop-control rules for body break and continue.
 - [x] Prove the compiled declaration-table head lookup exposes flattened
   parameter slots and the exact compiled function body.

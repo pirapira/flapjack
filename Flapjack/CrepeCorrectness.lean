@@ -12,7 +12,7 @@ and FFI.
 
 namespace Flapjack
 
-theorem compile_full_skip_correct
+theorem compile_full_skip_compat_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -31,7 +31,7 @@ theorem compile_full_skip_correct
 /-! The first compact correctness leaf at the global-aware evaluator
     boundary.  `skip` leaves the separately threaded global environment
     unchanged, so its observable result remains the source memory result. -/
-theorem compile_full_skip_state_correct
+theorem compile_full_skip_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -47,7 +47,7 @@ theorem compile_full_skip_state_correct
   simp [compileProg, evalCrepFullResultState, evalCrepFullProgState,
     evalPanMemResult, evalPanMemProg]
 
-theorem compile_full_return_const_correct
+theorem compile_full_return_const_compat_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -65,7 +65,7 @@ theorem compile_full_return_const_correct
     evalCrepFullExps, evalCrepFullExp, evalPanMemResult,
     evalPanMemProg, evalPanMemExp]
 
-theorem compile_full_return_const_state_correct
+theorem compile_full_return_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -83,7 +83,7 @@ theorem compile_full_return_const_state_correct
     evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
     evalPanMemResult, evalPanMemProg, evalPanMemExp]
 
-theorem compile_full_add_const_correct
+theorem compile_full_add_const_compat_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -103,7 +103,7 @@ theorem compile_full_add_const_correct
     evalCrepFullExps, evalCrepFullExp, evalPanMemResult,
     evalPanMemProg, evalPanMemExp, evalPanBinOp]
 
-theorem compile_full_add_const_state_correct
+theorem compile_full_add_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -123,7 +123,7 @@ theorem compile_full_add_const_state_correct
     evalCrepFullExpsState, evalCrepFullExpState, evalPanMemResult,
     evalPanMemProg, evalPanMemExp, evalPanBinOp]
 
-theorem compile_full_store_load_const_correct
+theorem compile_full_store_load_const_compat_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -145,7 +145,7 @@ theorem compile_full_store_load_const_correct
     evalCrepFullExp, evalPanMemResult, evalPanMemProg, evalPanMemExp,
     updateMemory, updateCrepLocal, restoreCrepResult]
 
-theorem compile_full_store_load_const_state_correct
+theorem compile_full_store_load_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -168,7 +168,7 @@ theorem compile_full_store_load_const_state_correct
     evalPanMemProg, evalPanMemExp, updateMemory, updateCrepLocal,
     restoreCrepResult]
 
-theorem compile_full_ite_const_correct
+theorem compile_full_ite_const_compat_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -193,7 +193,7 @@ theorem compile_full_ite_const_correct
   split <;> simp_all [
     ]
 
-theorem compile_full_ite_const_state_correct
+theorem compile_full_ite_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -218,7 +218,7 @@ theorem compile_full_ite_const_state_correct
     evalPanMemExp]
   split <;> simp_all
 
-theorem compile_full_local_assign_return_const_correct
+theorem compile_full_local_assign_return_const_compat_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -242,7 +242,7 @@ theorem compile_full_local_assign_return_const_correct
     evalPanMemExp, updateCrepLocal, updatePanLocal,
     distinctLists]
 
-theorem compile_full_local_assign_return_const_state_correct
+theorem compile_full_local_assign_return_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -265,7 +265,7 @@ theorem compile_full_local_assign_return_const_state_correct
     evalCrepFullExpState, evalPanMemResult, evalPanMemProg,
     evalPanMemExp, updateCrepLocal, updatePanLocal, distinctLists]
 
-theorem compile_full_local_return_correct
+theorem compile_full_local_return_compat_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -287,7 +287,7 @@ theorem compile_full_local_return_correct
     environment_agrees]
   cases h : locals name <;> simp []
 
-theorem compile_full_local_return_state_correct
+theorem compile_full_local_return_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -308,7 +308,7 @@ theorem compile_full_local_return_state_correct
     evalPanMemResult, evalPanMemProg, evalPanMemExp, environment_agrees]
   cases h : locals name <;> simp []
 
-theorem compile_full_extCall_const_noop_correct
+theorem compile_full_extCall_const_noop_compat_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -360,7 +360,7 @@ theorem compile_full_extCall_const_noop_correct
     evalCrepFullProg, evalCrepFullExp, evalPanExp, evalPanFfiProg, evalPanExtCall,
     updateCrepLocal, restoreCrepResult, hrestoreFour]
 
-theorem compile_full_extCall_const_noop_state_correct
+theorem compile_full_extCall_const_noop_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]

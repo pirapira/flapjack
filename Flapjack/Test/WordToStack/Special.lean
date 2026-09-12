@@ -17,6 +17,17 @@ example :
 
 example :
     wordStackArithInst
+        { locations := [(0, .register 4), (1, .register 4),
+            (2, .register 3), (3, .register 5)],
+          scratch := 31, stackBase := 10 } (.longMul 0 1 2 3) =
+      some (.inst (.arith (.longMul 4 4 3 5)) : StackProg Nat) := by
+  simp [wordStackArithInst, wordSpecialArithLocationsSafe,
+    wordStackLongMulInst, wordStackLongMulLocationsSafe,
+    wordStackLongMulLocationSafe, wordStackLongMulAliasLocationsSafe,
+    wordStackLocation, lookupNatInfo]
+
+example :
+    wordStackArithInst
         { locations := [(0, .register 4), (1, .register 5),
             (2, .register 6), (3, .register 7), (4, .register 8)],
           scratch := 31, stackBase := 10 } (.addCarry 0 1 2 3 4) =
@@ -33,7 +44,7 @@ example :
           scratch := 31, stackBase := 10 } (.longMul 0 1 2 3) =
       (none : Option (StackProg Nat)) := by
   simp [wordStackArithInst, wordSpecialArithLocationsSafe,
-    lookupNatInfo]
+    wordStackLongMulAliasLocationsSafe, wordStackLocation, lookupNatInfo]
 
 example :
     wordStackArithInst
@@ -70,7 +81,7 @@ example :
           scratch := 31, stackBase := 10 } (.addCarry 0 1 2 3 4) =
       (none : Option (StackProg Nat)) := by
   simp [wordStackArithInst, wordSpecialArithLocationsSafe,
-    lookupNatInfo]
+    wordStackLongMulAliasLocationsSafe, lookupNatInfo]
 
 example :
     wordToStackProgNat

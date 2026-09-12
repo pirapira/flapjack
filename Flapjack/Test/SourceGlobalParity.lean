@@ -38,6 +38,15 @@ which exhausted the four reserved registers once both operands were nested
 global addresses.  The `multiGlobal*` and `cakeMulti*` definitions pin the
 reference sections and assert the byte and runtime-image entry points accept
 it.
+
+Two further fixtures cover arithmetic shapes the reference compiler accepts.
+`naryGlobalSource` folds `a + b + c` into one flat associative `Add` node, which
+the arity-2 expression lowering used to reject.  `longMulGlobalSource` uses
+`a * b`, which the compiler lowers to `LongMul d d l r` with the high and low
+product aliased onto one destination; the special-location contract used to
+reject the alias even though only the low word is observed.  Both `naryGlobal*`
+and `longMulGlobal*` definitions pin the reference sections and assert the byte
+entry point accepts them.
 -/
 
 namespace Flapjack.Test.SourceGlobalParity
@@ -55,6 +64,18 @@ def nestedGlobalSource : String :=
 /-- Two-global binary-operator program: the recursive-lowering regression. -/
 def multiGlobalSource : String :=
   "var 1 a = 1; var 1 b = 2; fun 1 main() { return a + b; }"
+
+/-- Three-global associative-addition program: the n-ary Word arithmetic
+regression.  The original Pancake parser folds `a + b + c` into one flat
+`Add` node over three operands. -/
+def naryGlobalSource : String :=
+  "var 1 a = 1; var 1 b = 2; var 1 c = 3; fun 1 main() { return a + b + c; }"
+
+/-- Two-global multiplication program: the low-word `LongMul` alias
+regression.  The compiler emits `LongMul d d l r`, writing the high word and
+then the low word to the same destination. -/
+def longMulGlobalSource : String :=
+  "var 1 a = 3; var 1 b = 4; fun 1 main() { return a * b; }"
 
 /-- Global-free baseline used to show the initializer reaches the artifact. -/
 def plainSource : String := "fun 1 main() { return 7; }"
@@ -112,6 +133,76 @@ def cakeMultiMain : List (BitVec 8) :=
     BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00,
     BitVec.ofNat 8 0x00 ]
 
+/-- CakeML `cml_generated_main` for `naryGlobalSource` (52 bytes). -/
+def cakeNaryGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xB5, BitVec.ofNat 8 0x8C,
+    BitVec.ofNat 8 0xFE, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x15,
+    BitVec.ofNat 8 0x15, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x33,
+    BitVec.ofNat 8 0x05, BitVec.ofNat 8 0xA5, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x85,
+    BitVec.ofNat 8 0xFF, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x66,
+    BitVec.ofNat 8 0x10, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x23,
+    BitVec.ofNat 8 0xB0, BitVec.ofNat 8 0xC5, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x05,
+    BitVec.ofNat 8 0xFF, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x66,
+    BitVec.ofNat 8 0x20, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x23,
+    BitVec.ofNat 8 0xB0, BitVec.ofNat 8 0xC5, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x85,
+    BitVec.ofNat 8 0xFE, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x65,
+    BitVec.ofNat 8 0x30, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x23,
+    BitVec.ofNat 8 0x30, BitVec.ofNat 8 0xB5, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `naryGlobalSource` (36 bytes). -/
+def cakeNaryMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xB5, BitVec.ofNat 8 0x8C,
+    BitVec.ofNat 8 0xFE, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x15,
+    BitVec.ofNat 8 0x15, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x33,
+    BitVec.ofNat 8 0x05, BitVec.ofNat 8 0xA5, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x83, BitVec.ofNat 8 0x35, BitVec.ofNat 8 0x85,
+    BitVec.ofNat 8 0xFE, BitVec.ofNat 8 0x03, BitVec.ofNat 8 0x36,
+    BitVec.ofNat 8 0x05, BitVec.ofNat 8 0xFF, BitVec.ofNat 8 0xB3,
+    BitVec.ofNat 8 0x85, BitVec.ofNat 8 0xC5, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x03, BitVec.ofNat 8 0x35, BitVec.ofNat 8 0x85,
+    BitVec.ofNat 8 0xFF, BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x85,
+    BitVec.ofNat 8 0xA5, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x67,
+    BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_generated_main` for `longMulGlobalSource` (40 bytes). -/
+def cakeMulGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xB5, BitVec.ofNat 8 0x8C,
+    BitVec.ofNat 8 0xFE, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x15,
+    BitVec.ofNat 8 0x15, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x33,
+    BitVec.ofNat 8 0x05, BitVec.ofNat 8 0xA5, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x85,
+    BitVec.ofNat 8 0xFF, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x66,
+    BitVec.ofNat 8 0x30, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x23,
+    BitVec.ofNat 8 0xB0, BitVec.ofNat 8 0xC5, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x05,
+    BitVec.ofNat 8 0xFF, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x65,
+    BitVec.ofNat 8 0x40, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x23,
+    BitVec.ofNat 8 0x30, BitVec.ofNat 8 0xB5, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `longMulGlobalSource` (40 bytes). -/
+def cakeMulMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0xB3, BitVec.ofNat 8 0xE6, BitVec.ofNat 8 0x10,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xB0,
+    BitVec.ofNat 8 0x8C, BitVec.ofNat 8 0xFE, BitVec.ofNat 8 0x93,
+    BitVec.ofNat 8 0x90, BitVec.ofNat 8 0x10, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x85, BitVec.ofNat 8 0xA0,
+    BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x83, BitVec.ofNat 8 0x30,
+    BitVec.ofNat 8 0x85, BitVec.ofNat 8 0xFF, BitVec.ofNat 8 0x83,
+    BitVec.ofNat 8 0x35, BitVec.ofNat 8 0x05, BitVec.ofNat 8 0xFF,
+    BitVec.ofNat 8 0x33, BitVec.ofNat 8 0xB6, BitVec.ofNat 8 0xB0,
+    BitVec.ofNat 8 0x02, BitVec.ofNat 8 0xB3, BitVec.ofNat 8 0x80,
+    BitVec.ofNat 8 0xB0, BitVec.ofNat 8 0x02, BitVec.ofNat 8 0x33,
+    BitVec.ofNat 8 0xE5, BitVec.ofNat 8 0x10, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x06,
+    BitVec.ofNat 8 0x00 ]
+
 /-- Run a source program through the checked RV64I byte entry point. -/
 def compileSourceBytes (source : String) : Option (List (BitVec 8)) :=
   match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
@@ -154,14 +245,32 @@ def multiGlobalBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The three-global n-ary addition fixture must be accepted; the flat `Add`
+node previously fell through the arity-2 match and failed lowering. -/
+def naryGlobalBytesAccepted : Bool :=
+  match compileSourceBytes naryGlobalSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
+/-- The multiplication fixture must be accepted; the low-word `LongMul` alias
+previously failed the special-location contract. -/
+def longMulGlobalBytesAccepted : Bool :=
+  match compileSourceBytes longMulGlobalSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
-    cakeMultiGeneratedMain.length == 40 && cakeMultiMain.length == 28
+    cakeMultiGeneratedMain.length == 40 && cakeMultiMain.length == 28 &&
+    cakeNaryGeneratedMain.length == 52 && cakeNaryMain.length == 36 &&
+    cakeMulGeneratedMain.length == 40 && cakeMulMain.length == 40
 
 #guard globalBytesAccepted
 #guard nestedGlobalBytesAccepted
 #guard multiGlobalBytesAccepted
+#guard naryGlobalBytesAccepted
+#guard longMulGlobalBytesAccepted
 #guard initializerChangesArtifact
 #guard cakeGoldenShape
 
@@ -181,6 +290,10 @@ def runChecks : IO Bool := do
       nestedGlobalBytesAccepted,
     checkBool "Pancake two-global source compiles (bytes)"
       multiGlobalBytesAccepted,
+    checkBool "Pancake three-global n-ary source compiles (bytes)"
+      naryGlobalBytesAccepted,
+    checkBool "Pancake multiplication source compiles (bytes)"
+      longMulGlobalBytesAccepted,
     checkBool "Pancake global source compiles (runtime image)"
       (runtimeImageAccepted globalSource),
     checkBool "Pancake global initializer changes artifact"

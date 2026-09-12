@@ -398,6 +398,26 @@ def wordStackLongDivInst (config : WordStackConfig)
             (.inst (.arith (.longDiv 0 3 3 0 config.scratch))))
   | _ => none
 
+/-- `LongMul` may write its high and low words to the same location when only
+    the low product is observed, exactly as the compiler emits for `a * b`.
+    The shared special-location contract rejects that alias; this relaxed
+    contract keeps the source-distinctness requirement so the high product
+    cannot clobber an operand before the low product is formed. -/
+def wordStackLongMulAliasLocationsSafe (config : WordStackConfig)
+    (operation : WordArith) : Bool :=
+  match operation with
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      match wordStackLocation config destinationLeft,
+        wordStackLocation config destinationRight,
+        wordStackLocation config sourceLeft,
+        wordStackLocation config sourceRight with
+      | some destinationLeft, some destinationRight,
+          some sourceLeft, some sourceRight =>
+          destinationLeft = destinationRight &&
+            destinationLeft != sourceLeft && destinationLeft != sourceRight
+      | _, _, _, _ => false
+  | _ => false
+
 def wordStackArithInst (config : WordStackConfig) (operation : WordArith) :
     Option (StackProg α) :=
   if wordSpecialArithLocationsSafe operation config.locations = true then
@@ -409,6 +429,8 @@ def wordStackArithInst (config : WordStackConfig) (operation : WordArith) :
     | .div destination dividend divisor =>
       wordStackDivInst config destination dividend divisor
     | .longDiv _ _ _ _ _ => wordStackLongDivInst config operation
+  else if wordStackLongMulAliasLocationsSafe config operation then
+    wordStackLongMulInst config operation
   else
     none
 
@@ -948,6 +970,18 @@ def wordStackCompileExpToRegisterNat (config : WordStackConfig)
         let left ← wordStackCompileExpToRegisterNat config target remaining left
         pure (wordStackJoin right
           (wordStackJoin left (.shift operator target target rightTarget)))
+  | .op operator (first :: rest) => do
+      let firstCode ←
+        wordStackCompileExpToRegisterNat config target available first
+      rest.foldlM
+        (fun accumulated argument => do
+          let temporary ← available.head?
+          let argumentCode ← wordStackCompileExpToRegisterNat config temporary
+            available.tail argument
+          pure (wordStackJoin accumulated
+            (wordStackJoin argumentCode
+              (.arith operator target target temporary))))
+        firstCode
   | .op _ _ => none
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
@@ -1026,7 +1060,8 @@ def wordStackCompileExpNat (config : WordStackConfig) (destination : Nat) :
               wordStackCompileExpToPhysicalNat config destination (.op operator [left, right])
       | _ =>
           wordStackCompileExpToPhysicalNat config destination (.op operator [left, right])
-  | .op _ _ => none
+  | .op operator arguments =>
+      wordStackCompileExpToPhysicalNat config destination (.op operator arguments)
   | .shift operator left right =>
       match left with
       | .const _ | .var _ | .lookup _ =>

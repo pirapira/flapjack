@@ -45,6 +45,10 @@ def crepStoreExpressionState : CrepState Nat :=
       else none
     memory := fun _ => none }
 
+def crepLoadExpressionState : CrepState Nat :=
+  { locals := fun name => if name == 1 then some 100 else none
+    memory := fun address => if address == 100 then some 42 else none }
+
 def crepSeqMiddle : CrepState Nat :=
   { crepSeqInitial with
     locals := updateCrepLocal crepSeqInitial.locals 5 42 }
@@ -530,6 +534,40 @@ theorem crepToLoop_shMem_store_var_regression :
       loopCompileExp, evalLoopExp]
   · simp [crepStoreExpressionState]
   · simp [defaultCrepSharedMemHandler, crepStoreExpressionState]
+  · rfl
+
+theorem crepToLoop_shMem_load_var_regression :
+    evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        defaultCrepSharedMemHandler 0 100 2 crepLoadExpressionState
+        (.shMem .load 2 (.var 1)) =
+      some (.normal
+        { crepLoadExpressionState with
+          locals := updateCrepLocal crepLoadExpressionState.locals 2 42 }) ∧
+    evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+        3 (loopStateOfCrepState crepLoadExpressionState)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 2, target := .rv64i } :
+            LoopContext Nat)
+          [] (.shMem .load 2 (.var 1))) =
+      some (.normal
+        (loopStateOfCrepState
+          { crepLoadExpressionState with
+            locals := updateCrepLocal crepLoadExpressionState.locals 2 42 })) := by
+  apply crepToLoop_shMem_load_of_empty_prefix
+    ({ vars := [], functions := [], maxVar := 2, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    defaultCrepSharedMemHandler 0 100 1 crepLoadExpressionState
+    { crepLoadExpressionState with
+      locals := updateCrepLocal crepLoadExpressionState.locals 2 42 } []
+    .load 2 (.var 1) 100 42
+  · simp
+  · simp [loopCompileExp]
+  · simp [crepLoadExpressionState, evalCrepFullExp]
+  · simp [crepLoadExpressionState, loopStateOfCrepState,
+      loopCompileExp, evalLoopExp]
+  · simp [crepLoadExpressionState]
+  · simp [defaultCrepSharedMemHandler, crepLoadExpressionState]
   · rfl
 
 theorem crepToLoop_dec_return_const_regression :

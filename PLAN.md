@@ -2225,6 +2225,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   `wordExp` fragment used by argument and program-constructor proofs.
 - [x] Lift the state-aware expression contract through argument lists, with a
   `wordExp` wrapper for call and primitive correctness migration.
+- [x] Wire the state-aware expression contract into a fuel-polymorphic return
+  correctness theorem for direct program-induction use.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

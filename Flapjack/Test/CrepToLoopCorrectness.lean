@@ -95,7 +95,8 @@ theorem crepToLoop_primitive_correctness_contract_regression :
   exact crepToLoopProgramCorrectWithPrimitive_return_const 42
 
 theorem crepToLoop_primitive_seq_normal_regression :
-    evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    evalCrepFullProg [] (fun _ _ => none)
+        (fun _ _ _ _ _ state => some (.returned state))
         (fun _ _ _ _ => none) 0 100 4 crepSeqInitial
         (.seq (.assign 5 (.const 42)) (.assign 6 (.var 5))) =
       some (.normal crepSeqFinal) ∧
@@ -115,7 +116,7 @@ theorem crepToLoop_primitive_seq_normal_regression :
   apply crepToLoopWithPrimitive_seq_normal_compose
     ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
       LoopContext Nat)
-    [] [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    [] [] (fun _ _ => none) (fun _ _ _ _ _ state => some (.returned state))
     (fun _ _ _ _ _ loopState => some loopState) (fun _ _ _ _ => none)
     0 100 2 crepSeqInitial crepSeqMiddle []
     (.assign 5 (.const 42) : CrepProg Nat)
@@ -602,6 +603,45 @@ theorem crepToLoop_shMem_store_var_regression :
   · simp [crepStoreExpressionState]
   · simp [defaultCrepSharedMemHandler, crepStoreExpressionState]
   · rfl
+
+theorem crepToLoop_primitive_shMem_store_seq_regression :
+    evalCrepFullProg [] (fun _ _ => none)
+        (fun _ _ _ _ _ state => some (.returned state))
+        defaultCrepSharedMemHandler 0 100 3 crepStoreExpressionState
+        (.seq (.shMem .store 2 (.const 200)) (.skip)) =
+      some (.normal
+        { crepStoreExpressionState with
+          memory := updateMemory crepStoreExpressionState.memory 200 42 }) ∧
+    evalLoopProgWithPrimitiveCallsAndFfi (fun _ _ => none) []
+        (loopFfiOfCrepFfi (fun _ _ _ _ _ state => some (.returned state))) 4
+        (loopStateOfCrepState crepStoreExpressionState)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 2, target := .rv64i } :
+            LoopContext Nat)
+          [] (.seq (.shMem .store 2 (.const 200)) (.skip))) =
+      some (.normal
+        (loopStateOfCrepState
+          { crepStoreExpressionState with
+            memory := updateMemory crepStoreExpressionState.memory 200 42 })) := by
+  apply crepToLoopWithPrimitive_shMem_store_seq_agreement
+    ({ vars := [], functions := [], maxVar := 2, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none)
+    (fun _ _ _ _ _ state => some (.returned state)) defaultCrepSharedMemHandler
+    0 100 1 crepStoreExpressionState
+    { crepStoreExpressionState with
+      memory := updateMemory crepStoreExpressionState.memory 200 42 } []
+    .store 2 200 42 (.skip : CrepProg Nat)
+    (.normal
+      { crepStoreExpressionState with
+        memory := updateMemory crepStoreExpressionState.memory 200 42 })
+    (.normal
+      (loopStateOfCrepState
+        { crepStoreExpressionState with
+          memory := updateMemory crepStoreExpressionState.memory 200 42 }))
+  all_goals simp [crepStoreExpressionState, defaultCrepSharedMemHandler,
+    loopStateOfCrepState, loopCompileProg, evalCrepFullProg,
+    evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg]
 
 theorem crepToLoop_shMem_load_var_regression :
     evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)

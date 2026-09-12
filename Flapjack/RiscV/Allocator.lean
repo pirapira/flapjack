@@ -780,9 +780,13 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
           wordSsaRenameProgramWithLoops frames exceptionState body
         let exceptionHandler := wordSsaSeq restoreMove
           (wordSsaSeq (.move 0 [(exceptionName, 2)]) body)
-        let names := wordSsaBranchNames restoreState returnState exceptionState
+        let preferred := match returnHandler, exceptionHandler with
+          | .skip, _ => some true
+          | _, .skip => some false
+          | _, _ => none
         let (state, returnMoves, exceptionMoves) :=
-          wordSsaReconcile names returnState exceptionState exceptionState.next
+          wordSsaFixInconsistencies preferred returnState exceptionState
+            exceptionState.next
         let returnHandler := wordSsaSeq returnHandler returnMoves
         let exceptionHandler := wordSsaSeq exceptionHandler exceptionMoves
         (state, wordSsaSeq stackMove
@@ -1011,8 +1015,11 @@ def wordProgPreferenceEdges : WordProg α → List (Nat × Nat)
       wordProgPreferenceEdges thenBranch ++ wordProgPreferenceEdges elseBranch
   | .loop _ body _ => wordProgPreferenceEdges body
   | .mustTerminate body => wordProgPreferenceEdges body
-  | .call _ _ _ none => []
-  | .call _ _ _ (some (_, body, _, _)) => wordProgPreferenceEdges body
+  | .call none _ _ _ => []
+  | .call (some (_, _, returnCode, _, _)) _ _ none =>
+      wordProgPreferenceEdges returnCode
+  | .call (some (_, _, returnCode, _, _)) _ _ (some (_, body, _, _)) =>
+      wordProgPreferenceEdges body ++ wordProgPreferenceEdges returnCode
   | _ => []
 
 /-! CakeML's `full_ssa_cc_trans` starts a function by giving each formal
@@ -1028,8 +1035,11 @@ def wordListMaximum : List Nat → Nat
 termination_by values => sizeOf values
 decreasing_by all_goals decreasing_trivial
 
-def wordSsaLimitVar (parameters : List Nat) (program : WordProg α) : Nat :=
-  let maximum := wordListMaximum (parameters ++ wordProgVariables program)
+/-! CakeML's `limit_var` scans the Word program, not the ABI formal list.
+    Formals are the even architectural names and may be unused by the body;
+    including them here would change `full_ssa_cc_trans`'s fresh-name stream. -/
+def wordSsaLimitVar (_parameters : List Nat) (program : WordProg α) : Nat :=
+  let maximum := wordListMaximum (wordProgVariables program)
   maximum + (4 - maximum % 4) + 1
 
 def wordSsaSetupParameters (parameters : List Nat) (program : WordProg α) :
@@ -1111,7 +1121,20 @@ def wordProgClashAnalysis : WordProg α → List Nat →
       let (bodyLive, bodyEdges) :=
         wordProgClashAnalysis body (wordListUnion liveIn (liveOut ++ liveAfter))
       (wordListUnion liveIn bodyLive, bodyEdges)
+  | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments none, liveAfter =>
+      let (returnLive, returnEdges) :=
+        wordProgClashAnalysis returnCode liveAfter
+      let callProgram : WordProg α :=
+        .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+          target arguments none
+      (wordListUnion returnLive (wordProgLiveBefore callProgram liveAfter),
+        returnEdges ++ wordProgAtomicClashes callProgram liveAfter)
   | .call returns target arguments (some (exception, body, _, _)), liveAfter =>
+      let (returnLive, returnEdges) := match returns with
+        | none => ([], [])
+        | some (_, _, returnCode, _, _) =>
+            wordProgClashAnalysis returnCode liveAfter
       let (handlerLive, handlerEdges) :=
         wordProgClashAnalysis body liveAfter
       let callProgram : WordProg α :=
@@ -1119,8 +1142,8 @@ def wordProgClashAnalysis : WordProg α → List Nat →
       let handlerEntryEdges :=
         wordClashPairs [exception] (handlerLive ++ liveAfter)
       (wordListUnion (exception :: handlerLive)
-          (wordProgLiveBefore callProgram liveAfter),
-        handlerEntryEdges ++ handlerEdges ++
+          (wordListUnion returnLive (wordProgLiveBefore callProgram liveAfter)),
+        handlerEntryEdges ++ handlerEdges ++ returnEdges ++
           wordProgAtomicClashes callProgram liveAfter)
   | program, liveOut =>
       (wordProgLiveBefore program liveOut, wordProgAtomicClashes program liveOut)
@@ -1247,15 +1270,20 @@ def wordClashTree : WordProg α → List (List Nat × List Nat) → WordClashTre
             .seq (.set (wordClashTreeCallSet values cutSet))
               (wordClashTree _returnCode frames)
           .seq (.set liveSet) returnTree
-  | .call returns _ arguments (some (exception, body, _, _)), frames =>
-      let cutSet := wordClashTreeCallCutSet returns
+  | .call none _ arguments (some _), _ =>
+      /- CakeML's `get_clash_tree (Call NONE ...)` is a tail-call
+         boundary: only the argument set participates in this function's
+         clash tree.  In particular, a handler carried by the reduced Word
+         carrier is not recursively coloured here, matching the upstream
+         return-free equation. -/
+      .set arguments.eraseDups
+  | .call (some (values, cutsets, returnCode, _, _)) _
+      arguments (some (exception, body, _, _)), frames =>
+      let cutSet := wordClashTreeCallSet cutsets.1 cutsets.2
       let liveSet := wordClashTreeCallSet cutSet arguments
       .branch (some liveSet)
-        (match returns with
-        | none => .set liveSet
-        | some (values, _, _returnCode, _, _) =>
-            .seq (.set (wordClashTreeCallSet values cutSet))
-              (wordClashTree _returnCode frames))
+        (.seq (.set (wordClashTreeCallSet values cutSet))
+          (wordClashTree returnCode frames))
         (.seq (.set (wordClashTreeCallSet [exception] cutSet))
           (wordClashTree body frames))
   | .alloc destination (nonGc, gc), _ =>
@@ -2149,9 +2177,12 @@ def wordProgSpecialLocationsSafe (locations : NatInfoMap WordLocation) :
         wordProgSpecialLocationsSafe locations elseBranch
   | .loop _ body _ => wordProgSpecialLocationsSafe locations body
   | .mustTerminate body => wordProgSpecialLocationsSafe locations body
-  | .call _ _ _ none => true
-  | .call _ _ _ (some (_, body, _, _)) =>
-      wordProgSpecialLocationsSafe locations body
+  | .call none _ _ _ => true
+  | .call (some (_, _, returnCode, _, _)) _ _ none =>
+      wordProgSpecialLocationsSafe locations returnCode
+  | .call (some (_, _, returnCode, _, _)) _ _ (some (_, body, _, _)) =>
+      wordProgSpecialLocationsSafe locations body &&
+        wordProgSpecialLocationsSafe locations returnCode
   | .alloc _ _ | .storeConsts _ _ _ _ _ | .opCurrHeap _ _ _ |
       .install _ _ _ _ _ | .codeBufferWrite _ _ | .dataBufferWrite _ _ => true
   | .shareInst _ _ _ => true

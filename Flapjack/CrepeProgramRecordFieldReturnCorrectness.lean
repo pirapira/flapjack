@@ -22,4 +22,17 @@ theorem panValueCrepProgramCorrect_return_rField_const_words
     (.rField index (.rStruct (values.map (fun value => .const value))))
     (panValueCrepExpressionCorrect_rField_const_words values index value hfield)
 
+theorem panValueCrepProgramStateCorrect_return_rField_const_words
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (values : List α) (index : Nat) (value : α)
+    (hfield : values[index]? = some value) :
+    PanValueCrepProgramStateCorrect
+      (.return (.rField index (.rStruct (values.map (fun value => .const value))))) := by
+  exact panValueCrepProgramStateCorrect_return_of_expression_relation
+    (.rField index (.rStruct (values.map (fun value => .const value))))
+    (panValueCrepExpressionStateCorrect_rField_const_words values index value hfield)
+
 end Flapjack

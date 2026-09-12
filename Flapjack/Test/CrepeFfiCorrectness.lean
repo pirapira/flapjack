@@ -178,4 +178,63 @@ theorem sourceToCrepeFfi_sequence_simulation :
 
 #guard sourceToCrepeFfiSourceAfter "result" = some (BitVec.ofNat 64 42)
 
+/-! Exception propagation regression for the reusable sequencing boundary. -/
+
+def raisedSequenceContext : CompileContext Nat :=
+  { vars := [], functions := [], exceptions := [("E", 9)],
+    maxVar := 0, bytesInWord := 8 }
+
+def raisedSequenceFirst : Prog Nat :=
+  .raise "E" (.const 3)
+
+def raisedSequenceSecond : Prog Nat :=
+  .return (.const 99)
+
+def raisedSequenceState : CrepState Nat :=
+  { locals := fun _ => none, memory := fun _ => none }
+
+def raisedSequenceTargetState : CrepState Nat :=
+  { raisedSequenceState with memory := updateMemory raisedSequenceState.memory 0 3 }
+
+theorem raised_sequence_short_circuits_continuation :
+    evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      defaultCrepSharedMemHandler 0 100 11 raisedSequenceState
+      (compileProg raisedSequenceContext
+        (.seq raisedSequenceFirst raisedSequenceSecond)) =
+        some (.raised raisedSequenceTargetState 9) ∧
+      evalPanProgWithCallsAndFfi [] (fun _ _ _ _ _ _ => none) 11
+        (fun _ => none) (.seq raisedSequenceFirst raisedSequenceSecond) =
+        some (.raised (fun _ => none) "E" 3) := by
+  apply compile_full_seq_after_raise_simulation
+    (context := raisedSequenceContext)
+    (functions := []) (sourceFunctions := [])
+    (sourceLocals := fun _ => none)
+    (sourceLocals' := fun _ => none)
+    (state := raisedSequenceState)
+    (state' := raisedSequenceTargetState)
+    (primitive := fun _ _ => none)
+    (ffi := fun _ _ _ _ _ _ => none)
+    (sharedMem := defaultCrepSharedMemHandler)
+    (sourceHandler := fun _ _ _ _ _ _ => none)
+    (baseAddress := 0) (topAddress := 100) (fuel := 9)
+    (first := raisedSequenceFirst)
+    (compiledFirst := compileProg raisedSequenceContext raisedSequenceFirst)
+    (second := raisedSequenceSecond)
+    (compiledSecond := compileProg raisedSequenceContext raisedSequenceSecond)
+    (sourceException := "E") (sourceValue := 3) (compiledException := 9)
+    (hfirstCompile := rfl) (hsecondCompile := rfl)
+    (hfirstCrep := by
+      have hrestore :
+          restoreCrepLocal (α := Nat) (fun _ => none) 1 none =
+            (fun _ => none) := by
+        funext current
+        simp [restoreCrepLocal]
+      simp [raisedSequenceFirst, raisedSequenceContext, compileProg,
+        compileExp, freshNames, nestedDecs, storeGlobals, crepNestedSeq,
+        evalCrepFullProg, evalCrepFullExp, updateCrepLocal,
+        restoreCrepResult, raisedSequenceState, raisedSequenceTargetState,
+        lookupInfo, hrestore])
+    (hfirstSource := by
+      simp [raisedSequenceFirst, evalPanProgWithCallsAndFfi, evalPanExp])
+
 end Flapjack

@@ -73,4 +73,26 @@ def fullSsaGeneratedMainSource : Prog (RiscV.Word 64) :=
       | .returned _ values => values
       | _ => []) = some [BitVec.ofNat 64 0]
 
+theorem fullSsaGeneratedMain_source_execution :
+    (evalPanProgWithCallsAndFfi [] (fun _ _ _ _ _ locals => some locals) 10
+      (fun _ => none) fullSsaGeneratedMainSource).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = some [BitVec.ofNat 64 0] := by
+  decide +kernel
+
+theorem fullSsaGeneratedMain_machine_execution :
+    fullSsaGeneratedMainMachineResult = some [BitVec.ofNat 64 0] := by
+  native_decide
+
+theorem fullSsaGeneratedMain_source_machine_simulation :
+    (evalPanProgWithCallsAndFfi [] (fun _ _ _ _ _ locals => some locals) 10
+      (fun _ => none) fullSsaGeneratedMainSource).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = fullSsaGeneratedMainMachineResult := by
+  calc
+    _ = some [BitVec.ofNat 64 0] := fullSsaGeneratedMain_source_execution
+    _ = _ := fullSsaGeneratedMain_machine_execution.symm
+
 end Flapjack

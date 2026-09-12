@@ -4,6 +4,7 @@ import Flapjack.Test.ParserStaticExamples
 import Flapjack.Test.PanSteppedSemantics
 import Flapjack.Test.Backend
 import Flapjack.Test.Correctness
+import Flapjack.Test.CompileFunctionDistinct
 import Flapjack.Test.Runtime
 import Flapjack.Test.CollectorSemantics
 import Flapjack.Test.SpillAllocation
@@ -64,8 +65,10 @@ import Flapjack.Test.CrepeFfiSequenceRelation
 import Flapjack.Test.CrepeDeclarationFfiRelation
 import Flapjack.Test.CrepeHandlerCorrectness
 import Flapjack.Test.CrepToLoopCorrectness
+import Flapjack.Test.CrepeRuntimeGlobalCorrectness
 import Flapjack.Test.CorrectnessConditional
 import Flapjack.Test.CorrectnessColour
+import Flapjack.Test.CorrectnessSsaColour
 import Flapjack.Test.FrameMachineCalls
 import Flapjack.Test.StackMachineCalls
 import Flapjack.Test.WordCallEquations
@@ -78,7 +81,9 @@ import Flapjack.Test.WordToStack.StatefulIte
 import Flapjack.Test.WordToStack.StatefulLoop
 import Flapjack.Test.WordToStack.HeapLowering
 import Flapjack.Test.WordToStack.ControlLeaves
+import Flapjack.Test.WordToStack.ReturnCopy
 import Flapjack.Test.StatefulPipeline
+import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.CorrectnessFfiRiscVLoop
 import Flapjack.Test.FullSsa
 import Flapjack.Test.FullSsaPipeline
@@ -96,7 +101,9 @@ import Flapjack.Test.PanValueFfiClockMemoryFfi
 import Flapjack.Test.FullSsaTarget
 import Flapjack.Test.CrepeArith
 import Flapjack.Test.CrepePrimitive
+import Flapjack.Test.CrepeGlobalSemantics
 import Flapjack.Test.CrepeExpressionRelation
+import Flapjack.Test.CrepeProgramRelation
 import Flapjack.Test.CrepeSourceWordReturnCorrectness
 import Flapjack.Test.CrepeSourceWordAssignmentCorrectness
 import Flapjack.Test.CrepeSourceWordStoreCorrectness

@@ -86,6 +86,30 @@ def CrepNestedDecsEval
           names expressions body result
   | _, _, _, _ => False
 
+def CrepNestedDecsStateEval
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) :
+    List Nat → List (CrepExp α) → CrepProg α → CrepControlResult α → Prop
+  | [], [], body, result =>
+      evalCrepFullProgState functions primitive ffi sharedMem
+        baseAddress topAddress fuel state body = some result
+  | name :: names, expression :: expressions, body, result =>
+      ∃ value,
+        evalCrepFullExpState state baseAddress topAddress expression =
+          some value ∧
+        CrepNestedDecsStateEval functions primitive ffi sharedMem
+          baseAddress topAddress fuel
+          { state with locals := updateCrepLocal state.locals name value }
+          names expressions body result
+  | _, _, _, _ => False
+
 theorem evalCrepFullProg_nestedDecs_of_eval
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -131,6 +155,55 @@ theorem evalCrepFullProg_nestedDecs_of_eval
             baseAddress topAddress (fuel + names.length + 1) state
             (.dec name expression (nestedDecs names expressions body)) = _
           simp only [evalCrepFullProg, hvalue]
+          simp [Option.bind]
+          rw [htail']
+          simp [hrest, restoreCrepResultList, restoreCrepResult]
+
+theorem evalCrepFullProgState_nestedDecs_of_eval
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (names : List Nat)
+    (expressions : List (CrepExp α)) (body : CrepProg α)
+    (result : CrepControlResult α)
+    (hdistinct : CrepDistinctNames names)
+    (heval : CrepNestedDecsStateEval functions primitive ffi sharedMem
+      baseAddress topAddress fuel state names expressions body result) :
+    evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + names.length) state
+      (nestedDecs names expressions body) =
+      some (restoreCrepResultList state.locals names result) := by
+  induction names generalizing state expressions with
+  | nil =>
+      simp [CrepDistinctNames] at hdistinct
+      cases expressions with
+      | nil =>
+          simpa [CrepNestedDecsStateEval, nestedDecs,
+            restoreCrepResultList] using heval
+      | cons expression expressions =>
+          simp [CrepNestedDecsStateEval] at heval
+  | cons name names ih =>
+      rcases hdistinct with ⟨hnotmem, htailDistinct⟩
+      cases expressions with
+      | nil =>
+          simp [CrepNestedDecsStateEval] at heval
+      | cons expression expressions =>
+          rcases heval with ⟨value, hvalue, htail⟩
+          have htail' := ih
+            (state := { state with
+              locals := updateCrepLocal state.locals name value })
+            (expressions := expressions) htailDistinct htail
+          have hrest := restoreCrepResultList_update_of_not_mem
+            state.locals name value names result hnotmem
+          change evalCrepFullProgState functions primitive ffi sharedMem
+            baseAddress topAddress (fuel + names.length + 1) state
+            (.dec name expression (nestedDecs names expressions body)) = _
+          simp only [evalCrepFullProgState, hvalue]
           simp [Option.bind]
           rw [htail']
           simp [hrest, restoreCrepResultList, restoreCrepResult]

@@ -146,6 +146,39 @@ def stackPopHandler (perf : Bool) (register : Nat) (program : StackProg α) :
     program
   ]
 
+/-! The callee-return part of CakeML's Word-to-Stack calling convention.
+
+    `num_stack_ret` counts values that were returned in the caller's stack
+    frame rather than in the first `k` ABI result registers.  `copy_ret_aux`
+    copies the stack-resident suffix from the old frame into the current one,
+    starting at its highest slot just as CakeML's recursive definition does.
+    Keeping these as StackLang carriers makes the convention available before
+    the complete allocator supplies concrete frame sizes. -/
+def stackNumReturnSlots (k : Nat) (values : List Nat) : Nat :=
+  values.length + 1 - k
+
+def stackCopyReturnAux (register frameOffset : Nat) : Nat → StackProg α
+  | 0 => .skip
+  | count + 1 =>
+      stackSeq [
+        .stackLoad register count,
+        .stackStore register (count + frameOffset),
+        stackCopyReturnAux register frameOffset count
+      ]
+
+def stackFreeIfNonzero (count : Nat) (program : StackProg α) : StackProg α :=
+  if count = 0 then program else .seq (.stackFree count) program
+
+def stackCopyReturn (perf isHandler : Bool) (k register frameOffset : Nat)
+    (values : List Nat) (continuation : StackProg α) : StackProg α :=
+  let count := stackNumReturnSlots k values
+  if count = 0 then
+    continuation
+  else
+    .seq (stackCopyReturnAux register
+      (if isHandler then frameOffset + stackHandlerSlots perf else frameOffset) count)
+      (stackFreeIfNonzero count continuation)
+
 def stackRaiseStub (perf : Bool) (register : Nat) : StackProg α :=
   stackSeq [
     .get register .handler,
@@ -200,12 +233,13 @@ def wordToStackCallNoHandler (_perf : Bool) (target : Nat)
 def wordToStackCallWithHandlerInSection (perf : Bool) (target : Nat)
     (argumentCount frameOffset scratch : Nat)
     (returnCode handlerCode : StackProg α)
-    (returnLabel entryLabel sectionId handlerLabel exceptionLabel : Nat) : StackProg α :=
+    (returnLabel entryLabel handlerLabel handlerEntryLabel exceptionLabel : Nat) : StackProg α :=
+  let returnCode := stackPopHandler perf scratch returnCode
   let callCode :=
     .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target)
       (some (handlerCode, exceptionLabel, handlerLabel))
   stackSeq [
-    stackPushHandler perf sectionId handlerLabel scratch,
+    stackPushHandler perf handlerLabel handlerEntryLabel scratch,
     stackHandlerArgs perf (argumentCount + 1) frameOffset scratch,
     callCode
   ]

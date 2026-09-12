@@ -1,6 +1,32 @@
 import Flapjack.RiscV.Lab
+import Flapjack.RiscV.LabDiagnostics
 
 namespace Flapjack.RiscV
+
+example :
+    compileLabSectionChecked (width := 64) { services := [] }
+      ⟨7, [.labAsm (.heapAlloc 3) [] 0]⟩ =
+      .error { sectionId := 7, position := 0, feature := .heapAlloc } := by
+  rfl
+
+example :
+    compileLabSectionChecked (width := 64) { services := [] }
+      ⟨8, [.labAsm (.install : LabAsm (Word 64)) [] 0]⟩ =
+      .ok [.jal 0 (0 - BitVec.ofNat 64 32)] := by
+  rfl
+
+example :
+    compileLabSectionChecked (width := 64) { services := [] }
+      ⟨8, [.asm (.tick : LabPlain (Word 64)) [] 0,
+        .labAsm (.install : LabAsm (Word 64)) [] 0]⟩ =
+      .ok [.addi 0 0 0, .jal 0 (0 - BitVec.ofNat 64 36)] := by
+  rfl
+
+example :
+    compileLabSectionChecked (width := 64) { services := [] }
+      ⟨9, [.labAsm (.halt : LabAsm (Word 64)) [] 0]⟩ =
+      .error { sectionId := 9, position := 0, feature := .halt } := by
+  rfl
 
 def stackRemoveRiscVConfig : StackRemoveConfig :=
   { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
@@ -61,6 +87,18 @@ example :
       some [.add 4 5 6] := by
   decide
 
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.codeBufferWrite 7 6) [] 0]⟩ =
+      some [.storeByte 6 7] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.dataBufferWrite 7 6) [] 0]⟩ =
+      some [.storeWord 6 7] := by
+  decide
+
 def haltLabProgram : LabProgram (Word 64) :=
   [⟨1, [.labAsm (.halt : LabAsm (Word 64)) [] 0]⟩]
 
@@ -104,6 +142,13 @@ example :
       stackRemoveRiscVConfig 2 3
       (.dataBufferWrite 7 6 : StackProg (Word 64)) =
       some [.storeWord 6 7] := by
+  decide +kernel
+
+example :
+    compileStackProgramToRiscV (width := 64) { services := [] }
+      stackRemoveRiscVConfig 2 3
+      (.codeBufferWrite 7 6 : StackProg (Word 64)) =
+      some [.storeByte 6 7] := by
   decide +kernel
 
 example :

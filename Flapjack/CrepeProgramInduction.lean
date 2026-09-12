@@ -127,4 +127,110 @@ theorem panValueCrepProgramCorrect_induction
     termination_by program => sizeOf program
   exact fun program => go program
 
+theorem panValueCrepProgramStateCorrect_induction
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (hskip : PanValueCrepProgramStateCorrect (.skip : Prog α))
+    (hdec : ∀ (name : VarName) (shape : Shape) (value : Exp α)
+      (body : Prog α),
+      PanValueCrepProgramStateCorrect body →
+      PanValueCrepProgramStateCorrect (.dec name shape value body))
+    (hassign : ∀ (kind : VarKind) (name : VarName) (value : Exp α),
+      PanValueCrepProgramStateCorrect (.assign kind name value))
+    (hprimitive : ∀ (name : VarName) (operator : PrimOp)
+      (args : List (Exp α)),
+      PanValueCrepProgramStateCorrect (.primitive name operator args))
+    (hstore : ∀ (address value : Exp α),
+      PanValueCrepProgramStateCorrect (.store address value))
+    (hstore32 : ∀ (address value : Exp α),
+      PanValueCrepProgramStateCorrect (.store32 address value))
+    (hstoreByte : ∀ (address value : Exp α),
+      PanValueCrepProgramStateCorrect (.storeByte address value))
+    (hseq : ∀ (first second : Prog α),
+      PanValueCrepProgramStateCorrect first →
+      PanValueCrepProgramStateCorrect second →
+      PanValueCrepProgramStateCorrect (.seq first second))
+    (hite : ∀ (condition : Exp α) (thenBranch elseBranch : Prog α),
+      PanValueCrepProgramStateCorrect thenBranch →
+      PanValueCrepProgramStateCorrect elseBranch →
+      PanValueCrepProgramStateCorrect (.ite condition thenBranch elseBranch))
+    (hwhile : ∀ (condition : Exp α) (body : Prog α),
+      PanValueCrepProgramStateCorrect body →
+      PanValueCrepProgramStateCorrect (.while condition body))
+    (hbreak : PanValueCrepProgramStateCorrect (.break : Prog α))
+    (hcontinue : PanValueCrepProgramStateCorrect (.continue : Prog α))
+    (hcall : ∀
+      (info : Option (Option (VarKind × VarName) ×
+        Option (ExceptionId × VarName × Prog α)))
+      (name : FunName) (args : List (Exp α)),
+      (match info with
+       | some (_, some (_, _, handler)) =>
+           PanValueCrepProgramStateCorrect handler
+       | _ => True) →
+      PanValueCrepProgramStateCorrect (.call info name args))
+    (hdecCall : ∀ (name : VarName) (shape : Shape) (function : FunName)
+      (args : List (Exp α)) (body : Prog α),
+      PanValueCrepProgramStateCorrect body →
+      PanValueCrepProgramStateCorrect (.decCall name shape function args body))
+    (hextCall : ∀ (function : FunName)
+      (configuration configurationLength array arrayLength : Exp α),
+      PanValueCrepProgramStateCorrect
+        (.extCall function configuration configurationLength array arrayLength))
+    (hraise : ∀ (exception : ExceptionId) (value : Exp α),
+      PanValueCrepProgramStateCorrect (.raise exception value))
+    (hreturn : ∀ (value : Exp α),
+      PanValueCrepProgramStateCorrect (.return value))
+    (hshMemLoad : ∀ (size : OpSize) (kind : VarKind) (name : VarName)
+      (address : Exp α),
+      PanValueCrepProgramStateCorrect (.shMemLoad size kind name address))
+    (hshMemStore : ∀ (size : OpSize) (address value : Exp α),
+      PanValueCrepProgramStateCorrect (.shMemStore size address value))
+    (htick : PanValueCrepProgramStateCorrect (.tick : Prog α))
+    (hannot : ∀ (tag text : String),
+      PanValueCrepProgramStateCorrect (@Prog.annot α tag text)) :
+    ∀ program : Prog α, PanValueCrepProgramStateCorrect program := by
+  let rec go : (program : Prog α) → PanValueCrepProgramStateCorrect program
+    | .skip => hskip
+    | .dec name shape value body => hdec name shape value body (go body)
+    | .assign kind name value => hassign kind name value
+    | .primitive name operator args => hprimitive name operator args
+    | .store address value => hstore address value
+    | .store32 address value => hstore32 address value
+    | .storeByte address value => hstoreByte address value
+    | .seq first second => hseq first second (go first) (go second)
+    | .ite condition thenBranch elseBranch =>
+        hite condition thenBranch elseBranch (go thenBranch) (go elseBranch)
+    | .while condition body => hwhile condition body (go body)
+    | .break => hbreak
+    | .continue => hcontinue
+    | .call info name args =>
+        hcall info name args (by
+          cases info with
+          | none => exact True.intro
+          | some info =>
+              cases info with
+              | mk destination handlerInfo =>
+                  cases handlerInfo with
+                  | none => exact True.intro
+                  | some handler =>
+                      cases handler with
+                      | mk exception handlerInfo =>
+                          cases handlerInfo with
+                          | mk handlerVar handlerProgram =>
+                              exact go handlerProgram)
+    | .decCall name shape function args body =>
+        hdecCall name shape function args body (go body)
+    | .extCall function configuration configurationLength array arrayLength =>
+        hextCall function configuration configurationLength array arrayLength
+    | .raise exception value => hraise exception value
+    | .return value => hreturn value
+    | .shMemLoad size kind name address => hshMemLoad size kind name address
+    | .shMemStore size address value => hshMemStore size address value
+    | .tick => htick
+    | .annot tag text => hannot tag text
+    termination_by program => sizeOf program
+  exact fun program => go program
+
 end Flapjack

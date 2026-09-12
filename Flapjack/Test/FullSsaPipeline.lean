@@ -26,12 +26,30 @@ def fullSsaMainTargetLinked :
     (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
     fullSsaPipelineRemoveConfig fullSsaMainDeclarations
 
+def fullSsaEntryDeclarations : List (Decl (RiscV.Word 64)) :=
+  [.function
+    { name := "entry", inline := false, exported := true, params := [],
+      body := .return (.const (BitVec.ofNat 64 9)), returnShape := .one }]
+
+def fullSsaEntryLinked :
+    Option (List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
+  compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+    fullSsaPipelineRemoveConfig "entry" fullSsaEntryDeclarations
+
 def fullSsaMainBitmapSimpleGcTargetLinked :
     Option (RiscV.WordStackBitmapState ×
       List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
   compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcTargetLinked
     .rv64i (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
     fullSsaPipelineRemoveConfig fullSsaMainDeclarations
+
+def fullSsaEntryBitmapSimpleGcLinked :
+    Option (RiscV.WordStackBitmapState ×
+      List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
+  compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcEntryLinked
+    .rv64i (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+    fullSsaPipelineRemoveConfig "entry" fullSsaEntryDeclarations
 
 def fullSsaMainImage : Option (List (RiscV.Instruction 64)) :=
   fullSsaMainLinked.map (List.flatMap (fun (_, _, code) => code))
@@ -40,6 +58,34 @@ def fullSsaMainGraphImage : Option (List (RiscV.Instruction 64)) :=
   compileFlapjackRiscVViaGraphStackWithFullSsa .rv64i
     (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
     fullSsaPipelineRemoveConfig fullSsaMainDeclarations
+
+def fullSsaBitmapLookupEntry (label : Nat)
+    : List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64)) →
+      Option (RiscV.Word 64)
+  | [] => none
+  | (candidate, entry, _) :: sections =>
+      if candidate == label then some entry
+      else fullSsaBitmapLookupEntry label sections
+
+def fullSsaMainBitmapSimpleGcMachineResult :
+    Option (List (RiscV.Word 64)) := do
+  let result ← fullSsaMainBitmapSimpleGcTargetLinked
+  let sections := result.2
+  let entry ← fullSsaBitmapLookupEntry 3 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  let returnAddress := BitVec.ofNat 64 (4 * image.length)
+  RiscV.executeFunctionAt 10000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
+
+def fullSsaEntryBitmapSimpleGcMachineResult :
+    Option (List (RiscV.Word 64)) := do
+  let result ← fullSsaEntryBitmapSimpleGcLinked
+  let sections := result.2
+  let entry ← fullSsaBitmapLookupEntry 3 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  let returnAddress := BitVec.ofNat 64 (4 * image.length)
+  RiscV.executeFunctionAt 10000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 /-! Regression for the full-SSA entry sequence through graph allocation and
     Word-to-Stack lowering. -/
@@ -68,10 +114,58 @@ example :
     fullSsaMainTargetLinked.isSome
 
 #guard
+    fullSsaEntryLinked.isSome
+
+#guard
     fullSsaMainBitmapSimpleGcTargetLinked.isSome
 
 #guard
+  fullSsaEntryBitmapSimpleGcLinked.isSome
+
+#guard
     fullSsaMainGraphImage.isSome
+
+theorem fullSsaMain_bitmap_simple_gc_machine_execution :
+    fullSsaMainBitmapSimpleGcMachineResult = some [BitVec.ofNat 64 7] := by
+  native_decide
+
+theorem fullSsaEntry_bitmap_simple_gc_machine_execution :
+    fullSsaEntryBitmapSimpleGcMachineResult = some [BitVec.ofNat 64 9] := by
+  native_decide
+
+def fullSsaMainSourceBody : Prog (RiscV.Word 64) :=
+  .return (.const (BitVec.ofNat 64 7))
+
+def fullSsaEntrySourceBody : Prog (RiscV.Word 64) :=
+  .return (.const (BitVec.ofNat 64 9))
+
+theorem fullSsaMain_bitmap_simple_gc_source_execution :
+    (evalPanProgWithCalls [] 20 (fun _ => none)
+      fullSsaMainSourceBody).map (fun result => result.2) =
+      some [BitVec.ofNat 64 7] := by
+  simp [fullSsaMainSourceBody, evalPanProgWithCalls, evalPanExp]
+
+theorem fullSsaEntry_bitmap_simple_gc_source_execution :
+    (evalPanProgWithCalls [] 20 (fun _ => none)
+      fullSsaEntrySourceBody).map (fun result => result.2) =
+      some [BitVec.ofNat 64 9] := by
+  simp [fullSsaEntrySourceBody, evalPanProgWithCalls, evalPanExp]
+
+theorem fullSsaMain_bitmap_simple_gc_source_machine_simulation :
+    (evalPanProgWithCalls [] 20 (fun _ => none)
+      fullSsaMainSourceBody).map (fun result => result.2) =
+      fullSsaMainBitmapSimpleGcMachineResult := by
+  calc
+    _ = some [BitVec.ofNat 64 7] := fullSsaMain_bitmap_simple_gc_source_execution
+    _ = _ := fullSsaMain_bitmap_simple_gc_machine_execution.symm
+
+theorem fullSsaEntry_bitmap_simple_gc_source_machine_simulation :
+    (evalPanProgWithCalls [] 20 (fun _ => none)
+      fullSsaEntrySourceBody).map (fun result => result.2) =
+      fullSsaEntryBitmapSimpleGcMachineResult := by
+  calc
+    _ = some [BitVec.ofNat 64 9] := fullSsaEntry_bitmap_simple_gc_source_execution
+    _ = _ := fullSsaEntry_bitmap_simple_gc_machine_execution.symm
 
 theorem fullSsaMain_compiled_execution :
     (do

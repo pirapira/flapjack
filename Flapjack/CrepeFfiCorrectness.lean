@@ -1,4 +1,5 @@
 import Flapjack.CrepeCorrectness
+import Flapjack.CrepeCallHandlerCorrectness
 
 /-!
 Correctness boundary for the FFI part of `pan_to_crep`.
@@ -306,6 +307,112 @@ theorem compile_full_seq_after_normal_simulation
     simp [evalCrepFullProg, hfirstCrep, hsecondCrep]
   · simp [evalPanProgWithCallsAndFfi, hfirstSource, hsecondSource]
 
+/-! Specialize the normal sequence boundary to the compiler's four-word FFI
+    protocol.  This is the reusable handler-body theorem: an FFI step lowers
+    through its four fresh temporaries, restores the caller state, and then
+    an arbitrary compiled/source continuation runs from the related states. -/
+
+theorem compile_full_extCall_seq_simulation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α)
+    (functions : List (CompiledFunction α))
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (sourceLocals sourceLocals' : VarName → Option α)
+    (state state' : CrepState α)
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (sourceHandler : PanFfiHandler α)
+    (baseAddress topAddress : α) (fuel : Nat) (function : FunName)
+    (configuration configurationLength array arrayLength : Exp α)
+    (configuration' configurationLength' array' arrayLength' : CrepExp α)
+    (configurationValue configurationLengthValue arrayValue arrayLengthValue : α)
+    (second : Prog α) (compiledSecond : CrepProg α)
+    (sourceResult : PanControlResult α) (crepResult : CrepControlResult α)
+    (hconfiguration : firstCompiledExp context configuration = some configuration')
+    (hconfigurationLength :
+      firstCompiledExp context configurationLength = some configurationLength')
+    (harray : firstCompiledExp context array = some array')
+    (harrayLength : firstCompiledExp context arrayLength = some arrayLength')
+    (hconfigurationValue :
+      evalCrepFullExp state.locals state.memory baseAddress topAddress
+        configuration' = some configurationValue)
+    (hconfigurationLengthValue :
+      evalCrepFullExp
+        (updateCrepLocal state.locals (context.maxVar + 1) configurationValue)
+        state.memory baseAddress topAddress configurationLength' =
+        some configurationLengthValue)
+    (harrayValue :
+      evalCrepFullExp
+        (updateCrepLocal
+          (updateCrepLocal state.locals (context.maxVar + 1) configurationValue)
+          (context.maxVar + 2) configurationLengthValue)
+        state.memory baseAddress topAddress array' = some arrayValue)
+    (harrayLengthValue :
+      evalCrepFullExp
+        (updateCrepLocal
+          (updateCrepLocal
+            (updateCrepLocal state.locals (context.maxVar + 1) configurationValue)
+            (context.maxVar + 2) configurationLengthValue)
+          (context.maxVar + 3) arrayValue)
+        state.memory baseAddress topAddress arrayLength' =
+        some arrayLengthValue)
+    (hsource : evalPanExtCall sourceHandler sourceLocals function
+      configuration configurationLength array arrayLength = some sourceLocals')
+    (hffi : ffi function configurationValue configurationLengthValue arrayValue
+      arrayLengthValue
+      ({ state with
+        locals :=
+          updateCrepLocal
+            (updateCrepLocal
+              (updateCrepLocal
+                (updateCrepLocal state.locals (context.maxVar + 1)
+                  configurationValue)
+                (context.maxVar + 2) configurationLengthValue)
+              (context.maxVar + 3) arrayValue)
+            (context.maxVar + 4) arrayLengthValue }) = some state')
+    (hsecondCompile : compileProg context second = compiledSecond)
+    (hsecondCrep : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 5)
+      (restoreCrepFfiTemps state' state context.maxVar) compiledSecond =
+      some crepResult)
+    (hsecondSource : evalPanProgWithCallsAndFfi sourceFunctions sourceHandler
+      (fuel + 5) sourceLocals' second = some sourceResult) :
+    evalCrepFullProg functions primitive ffi sharedMem baseAddress topAddress
+      (fuel + 6) state
+      (compileProg context
+        (.seq (.extCall function configuration configurationLength array arrayLength)
+          second)) = some crepResult ∧
+    evalPanProgWithCallsAndFfi sourceFunctions sourceHandler (fuel + 6)
+      sourceLocals
+      (.seq (.extCall function configuration configurationLength array arrayLength)
+        second) = some sourceResult := by
+  have hfirst := compile_full_extCall_simulation context functions sourceLocals
+    sourceLocals' state state' primitive ffi sharedMem sourceHandler
+    baseAddress topAddress fuel function configuration configurationLength array
+    arrayLength configuration' configurationLength' array' arrayLength'
+    configurationValue configurationLengthValue arrayValue arrayLengthValue
+    hconfiguration hconfigurationLength harray harrayLength hconfigurationValue
+    hconfigurationLengthValue harrayValue harrayLengthValue hsource hffi
+  have hfirstSource :
+      evalPanProgWithCallsAndFfi sourceFunctions sourceHandler (fuel + 5)
+        sourceLocals
+        (.extCall function configuration configurationLength array arrayLength) =
+        some (.normal sourceLocals') := by
+    simp [evalPanProgWithCallsAndFfi, hsource]
+  have hresult := compile_full_seq_after_normal_simulation
+    context functions sourceFunctions sourceLocals sourceLocals'
+    state (restoreCrepFfiTemps state' state context.maxVar)
+    primitive ffi sharedMem sourceHandler baseAddress topAddress (fuel + 4)
+    (.extCall function configuration configurationLength array arrayLength)
+    (compileProg context
+      (.extCall function configuration configurationLength array arrayLength))
+    second compiledSecond sourceResult crepResult rfl hsecondCompile hfirst.1
+    hfirstSource hsecondCrep hsecondSource
+  simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hresult
+
 /-! A return from the first component must short-circuit the continuation.
 This is the control-flow counterpart of the normal-step theorem and is
 needed for caught call handlers, whose handler body may itself return. -/
@@ -341,6 +448,47 @@ theorem compile_full_seq_after_return_simulation
     evalPanProgWithCallsAndFfi sourceFunctions sourceHandler (fuel + 2)
       sourceLocals (.seq first second) =
       some (.returned sourceLocals' sourceValues) := by
+  constructor
+  · rw [compileProg_seq, hfirstCompile, hsecondCompile]
+    simp [evalCrepFullProg, hfirstCrep]
+  · simp [evalPanProgWithCallsAndFfi, hfirstSource]
+
+/-! A raised first component also short-circuits the continuation.  Keeping
+the source payload and compiled exception code explicit lets a caller supply
+the separate exception/payload agreement established by the raise lowering
+theorem, while this lemma handles only control propagation. -/
+
+theorem compile_full_seq_after_raise_simulation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α)
+    (functions : List (CompiledFunction α))
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (sourceLocals sourceLocals' : VarName → Option α)
+    (state state' : CrepState α)
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (sourceHandler : PanFfiHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (first : Prog α) (compiledFirst : CrepProg α)
+    (second : Prog α) (compiledSecond : CrepProg α)
+    (sourceException : ExceptionId) (sourceValue compiledException : α)
+    (hfirstCompile : compileProg context first = compiledFirst)
+    (hsecondCompile : compileProg context second = compiledSecond)
+    (hfirstCrep : evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state compiledFirst =
+      some (.raised state' compiledException))
+    (hfirstSource : evalPanProgWithCallsAndFfi sourceFunctions sourceHandler
+      (fuel + 1) sourceLocals first =
+      some (.raised sourceLocals' sourceException sourceValue)) :
+    evalCrepFullProg functions primitive ffi sharedMem baseAddress topAddress
+      (fuel + 2) state (compileProg context (.seq first second)) =
+      some (.raised state' compiledException) ∧
+    evalPanProgWithCallsAndFfi sourceFunctions sourceHandler (fuel + 2)
+      sourceLocals (.seq first second) =
+      some (.raised sourceLocals' sourceException sourceValue) := by
   constructor
   · rw [compileProg_seq, hfirstCompile, hsecondCompile]
     simp [evalCrepFullProg, hfirstCrep]
@@ -387,6 +535,61 @@ theorem compile_full_call_handler_simulation
   rw [compileProg_call_handler_of_compiled context function arguments returnShape
     exception handlerVar exceptionCode handlerProgram handlerNames
     compiledArguments hfunction hexception hhandler harguments]
+  simpa [evalCrepFullProg] using hcall
+
+/-! Destination-aware counterpart of the caught-handler call boundary.  The
+return slots are supplied explicitly because a destination may select a
+different flattened local shape from the callee's declared return shape. -/
+theorem compile_full_call_handler_destination_simulation
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α)
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat) (caller : CrepState α)
+    (function : FunName) (arguments : List (Exp α))
+    (compiledArguments : List (CrepExp α))
+    (destination : Option (VarKind × VarName))
+    (returnNames : List Nat) (returnShape : Shape)
+    (exception handlerVar : VarName) (exceptionCode : α)
+    (handlerProgram : Prog α) (handlerNames : List Nat)
+    (result : CrepControlResult α)
+    (hfunction : lookupInfo function context.functions =
+      some ([], returnShape))
+    (hexception : lookupInfo exception context.exceptions = some exceptionCode)
+    (hhandler : ∃ shape,
+      lookupInfo handlerVar context.vars = some (shape, handlerNames))
+    (harguments : compileArgs context arguments = compiledArguments)
+    (hreturnNames :
+      (match destination with
+       | none => functionReturnNames context function
+       | some (kind, name) =>
+           match kind with
+           | .local =>
+               match lookupInfo name context.vars with
+               | some (_, names) => names
+               | none => []
+           | .global => []) = returnNames)
+    (hcall : evalCrepFullCall functions primitive ffi sharedMem
+      baseAddress topAddress fuel caller
+      (some (returnNames,
+        some (exceptionCode,
+          .seq (assignRet context.bytesInWord handlerNames)
+            (compileProg context handlerProgram)))) function compiledArguments =
+      some result) :
+    evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) caller
+      (compileProg context
+        (.call (some (destination,
+          some (exception, handlerVar, handlerProgram))) function arguments)) =
+      some result := by
+  rw [compileProg_call_handler_destination_of_compiled context function arguments
+    destination returnNames returnShape exception handlerVar exceptionCode
+    handlerProgram handlerNames compiledArguments hfunction hexception hhandler
+    harguments hreturnNames]
   simpa [evalCrepFullProg] using hcall
 
 /-! Exception production is the other handler-facing lowering in `pan_to_crep`.

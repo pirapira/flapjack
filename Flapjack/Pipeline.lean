@@ -145,8 +145,15 @@ def pipelineWordFunctionsAllocatedWithSpills [NeZero width] :
           addressScratch := 29
           sectionId := label
           handlerLabel := label }
-      let stackBody ← RiscV.wordToStackFunctionWithParameters config renamedParameters
-        renamedBody
+      /- CakeML's spill path carries allocator-owned heap operations through
+         the bitmap-threaded word_to_stack compiler.  Keep the historical
+         flat result shape here, but do not fall back to the stateless wrapper:
+         that wrapper deliberately rejects Alloc and StoreConsts. -/
+      let (stackBody, _) ←
+        RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+          renamedParameters wordAllocatableRegisters.length config.scratch
+          allocation.nextSpill (some 1)
+          (RiscV.wordStackInitialBitmaps false) renamedBody
       let rest ← pipelineWordFunctionsAllocatedWithSpills functions
       pure ((label, wordParameters, stackBody) :: rest)
 
@@ -785,6 +792,36 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcTargetL
       (functions.map (fun (label, _, body) => (label, body)))
   pure (bitmaps, sections)
 
+/-! Exact source-entry form of the complete bitmap/simple-GC linked artifact.
+    As with the non-GC entry wrapper below, keep the source lookup and
+    initializer wrapper visible by using compileFlapjackEntry before the
+    allocator and runtime sections are assembled. -/
+def compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcEntryLinked
+    [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig) (start : FunName)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (RiscV.WordStackBitmapState ×
+      List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
+  let pipeline ← compileFlapjackEntry architecture bytesInWord fromNat start declarations
+  let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
+  let (functions, bitmaps) ←
+    pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps
+      (RiscV.wordStackInitialBitmaps false) loop
+  let initialLabel := fullSsaInitialLabLabel functions
+  let sections ←
+    RiscV.compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscV
+      { services := services } removeConfig
+      { gcStubLocation := stackGcStubLocation, returnLabel := 0,
+        firstFreshLabel := stackFunctionFirstLabel }
+      { } stackStoreConstsStubLocation wordAllocatableRegisters.length 0 initialLabel
+      (functions.map (fun (label, _, body) => (label, body)))
+  pure (bitmaps, sections)
+
 def compileFlapjackRiscVViaStack [NeZero width] [BEq (RiscV.Word width)]
     [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
     [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
@@ -1056,6 +1093,26 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaTargetLinkedChecked
   staticBind (staticCheck prepared) (fun _ =>
     staticOk (compileFlapjackRiscVViaAllocatedStackWithFullSsaTargetLinked
       architecture bytesInWord fromNat services removeConfig declarations))
+
+/-! Exact source-entry sibling of the target-facing full-SSA linked pipeline.
+    `compileFlapjackEntry` performs the CakeML-style source lookup, renaming,
+    initializer wrapper, and reference permutation before the allocator sees
+    the program.  Keep the `Option` result visible so a missing requested
+    entry is reported instead of silently synthesizing `main`. -/
+def compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Nat → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig) (start : FunName)
+    (declarations : List (Decl (RiscV.Word width))) :
+    Option (List (Nat × RiscV.Word width × List (RiscV.Instruction width))) := do
+  let pipeline ← compileFlapjackEntry architecture bytesInWord fromNat start declarations
+  let functions ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa pipeline.loop
+  let initialLabel := fullSsaInitialLabLabel functions
+  RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscV { services := services }
+    removeConfig 0 initialLabel (functions.map (fun (label, _, body) => (label, body)))
 
 def compileFlapjackChecked [BEq String] [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)

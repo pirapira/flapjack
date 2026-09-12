@@ -84,6 +84,19 @@ example :
     loopFfiReadBytes, callFfi, loopFfiClearLocals]
 
 example :
+    (loopFfiExtCall terminalLoopFfiState "echo" 10 1 20 2).1 =
+      .finalFfi (loopFfiClearLocals terminalLoopFfiState)
+        { name := .extCall "echo", configuration := [42], bytes := [9, 8],
+          outcome := .failed } := by
+  apply loopFfiExtCall_final (state := terminalLoopFfiState)
+    (function := "echo") (configuration := 10) (configurationLength := 1)
+    (array := 20) (arrayLength := 2) (configurationBytes := [42])
+    (arrayBytes := [9, 8])
+  · simp [terminalLoopFfiState, loopByteFfiTestState, loopFfiReadBytes]
+  · simp [terminalLoopFfiState, loopByteFfiTestState, loopFfiReadBytes]
+  · simp [terminalLoopFfiState, loopByteFfiTestState, callFfi]
+
+example :
     match loopFfiProgramBoundary loopByteFfiTestState
       (.shMem .load8 5 (.var 1)) with
     | some ((.normal state, _)) => state.locals 5 = some 10

@@ -55,6 +55,14 @@ def pipelineHandlerMachineValues : Option (List (RiscV.Word 64)) := do
       (RiscV.writeRegister (RiscV.zeroState 64) 1 100)
   result = some [BitVec.ofNat 64 7]
 
+theorem pipelineHandler_machine_execution :
+    pipelineHandlerMachineResult = some [] := by
+  native_decide
+
+theorem pipelineHandler_machine_values_execution :
+    pipelineHandlerMachineValues = some [BitVec.ofNat 64 7] := by
+  native_decide
+
 def pipelineHandlerSourceMachineAgreement : Bool :=
   let sourceResult :=
     (evalPanProgWithHandlers pipelineHandlerSourceFunctions 20 (fun _ => none)
@@ -65,5 +73,15 @@ def pipelineHandlerSourceMachineAgreement : Bool :=
   sourceResult == pipelineHandlerMachineValues
 
 #guard pipelineHandlerSourceMachineAgreement
+
+theorem pipelineHandler_source_machine_simulation :
+    (evalPanProgWithHandlers pipelineHandlerSourceFunctions 20 (fun _ => none)
+      pipelineHandlerSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = pipelineHandlerMachineValues := by
+  calc
+    _ = some [BitVec.ofNat 64 7] := pipelineHandler_source_semantics
+    _ = _ := pipelineHandler_machine_values_execution.symm
 
 end Flapjack

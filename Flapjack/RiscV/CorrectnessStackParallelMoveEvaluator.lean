@@ -264,4 +264,119 @@ theorem evalWordStackMachine_parallelLocationMove_acyclic_preserves_move_value
   exact evalWordStackMachine_sequentialLocationMove_preserves_move_value
     config state final moves target hdestinations hnoSource hreserved htarget heval
 
+/-! The location-level frame theorem lifts directly to the allocator's
+    variable-to-location relation.  This is the useful boundary for function
+    entry: parameter destinations may be overwritten, while every unrelated
+    mapped variable keeps its value through the physical move prefix. -/
+theorem evalWordStackMachine_parallelLocationMove_acyclic_preserves_mapped_values_outside
+    [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (moves : List (WordLocation × WordLocation))
+    (values : Nat → Option (Word width))
+    (hdestinations : (moves.map Prod.fst).Nodup)
+    (hnoSource : ∀ move, move ∈ moves →
+      move.2 ∉ moves.map Prod.fst)
+    (hreserved : ∀ move, move ∈ moves →
+      move.1 ≠ .register config.scratch ∧
+      move.1 ≠ .register config.addressScratch ∧
+      move.2 ≠ .register config.scratch ∧
+      move.2 ≠ .register config.addressScratch)
+    (hvalues : wordStackMappedValues config values state)
+    (houtside : ∀ name value location,
+      values name = some value →
+      wordStackLocation config name = some location →
+      location ∉ moves.map Prod.fst)
+    (hnotScratch : ∀ name value location,
+      values name = some value →
+      wordStackLocation config name = some location →
+      location ≠ .register config.scratch)
+    (heval : (wordStackParallelLocationMove config moves).bind
+      (evalWordStackMachine state) = some final) :
+    wordStackMappedValues config values final := by
+  rw [wordStackParallelLocationMove_acyclic_eq_sequential config moves
+    hdestinations hnoSource hreserved] at heval
+  intro name value location hvalue hlocation
+  change lookupNatInfo name config.locations = some location at hlocation
+  have hstateValue := hvalues name value location hvalue hlocation
+  have hstateLocationValue :
+      wordStackLocationValue config state location = value := by
+    cases location with
+    | register register =>
+        simpa [wordStackMachineValue, wordStackLocation,
+          wordStackLocationValue, hlocation] using hstateValue
+    | stack slot =>
+        simpa [wordStackMachineValue, wordStackLocation,
+          wordStackLocationValue, hlocation] using hstateValue
+  have hpreserved :=
+    evalWordStackMachine_sequentialLocationMove_preserves_other_value
+      config state final moves location hdestinations hreserved
+      (houtside name value location hvalue hlocation)
+      (hnotScratch name value location hvalue hlocation) heval
+  have hfinalLocationValue :
+      wordStackLocationValue config final location = value := by
+    rw [hpreserved]
+    exact hstateLocationValue
+  cases location with
+  | register register =>
+      simpa [wordStackMachineValue, wordStackLocation,
+        wordStackLocationValue, hlocation] using hfinalLocationValue
+  | stack slot =>
+      simpa [wordStackMachineValue, wordStackLocation,
+        wordStackLocationValue, hlocation] using hfinalLocationValue
+
+theorem wordStackPhysicalMovesFromSpec_mem_source
+    (locations : List WordLocation) (source : Nat)
+    (move : WordLocation × WordLocation)
+    (hmove : move ∈ wordStackPhysicalMovesFromSpec locations source) :
+    ∃ index, move.2 = .register (source + 2 * index) := by
+  induction locations generalizing source with
+  | nil => simp [wordStackPhysicalMovesFromSpec] at hmove
+  | cons location locations ih =>
+      simp only [wordStackPhysicalMovesFromSpec, List.mem_cons] at hmove
+      rcases hmove with rfl | hmove
+      · exact ⟨0, by simp⟩
+      · obtain ⟨index, hindex⟩ := ih (source := source + 2) hmove
+        refine ⟨index + 1, ?_⟩
+        simpa [Nat.mul_succ, Nat.add_assoc, Nat.add_left_comm,
+          Nat.add_comm] using hindex
+
+/-! Physical parameter moves retain the source-register shape introduced by
+    the ABI lowering.  This is the list-level bridge needed by callers that
+    reason about all generated entry moves at once, rather than a selected
+    location move. -/
+theorem evalWordStackMachine_movesFromPhysical_preserves_source_shape
+    [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (destinations : List Nat) (source : Nat) (locations : List WordLocation)
+    (moves : List (WordLocation × WordLocation))
+    (hdestinations : (moves.map Prod.fst).Nodup)
+    (hnoSource : ∀ move, move ∈ moves →
+      move.2 ∉ moves.map Prod.fst)
+    (hreserved : ∀ move, move ∈ moves →
+      move.1 ≠ .register config.scratch ∧
+      move.1 ≠ .register config.addressScratch ∧
+      move.2 ≠ .register config.scratch ∧
+      move.2 ≠ .register config.addressScratch)
+    (hlookup : destinations.mapM (wordStackLocation config) = some locations)
+    (hphysical : wordStackPhysicalMovesFrom config destinations source = some moves)
+    (heval : (wordStackParallelLocationMove config moves).bind
+      (evalWordStackMachine state) = some final) :
+    ∀ move, move ∈ moves →
+      ∃ index,
+        move.2 = .register (source + 2 * index) ∧
+        wordStackLocationValue config final move.1 =
+          wordStackLocationValue config state move.2 := by
+  have hspec := wordStackPhysicalMovesFrom_eq_spec config destinations source
+    locations hlookup
+  have hmoveSpec : moves = wordStackPhysicalMovesFromSpec locations source := by
+    exact (Option.some.inj (hspec.symm.trans hphysical)).symm
+  intro move hmove
+  have hmoveSpec' : move ∈ wordStackPhysicalMovesFromSpec locations source := by
+    simpa [hmoveSpec] using hmove
+  obtain ⟨index, hsource⟩ := wordStackPhysicalMovesFromSpec_mem_source
+    locations source move hmoveSpec'
+  refine ⟨index, hsource, ?_⟩
+  exact evalWordStackMachine_parallelLocationMove_acyclic_preserves_move_value
+    config state final moves move hdestinations hnoSource hreserved hmove heval
+
 end Flapjack.RiscV

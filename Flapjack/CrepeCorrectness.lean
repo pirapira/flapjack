@@ -1914,6 +1914,52 @@ theorem compile_full_pan_value_identity_declaration_call_correct
     source and Crep callee simulations are supplied as witnesses; this rule
     accounts for the surrounding evaluator step and the compiler's argument
     lowering. -/
+theorem compile_full_pan_value_call_state_compose
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (info : Option (Option (VarKind × VarName) ×
+      Option (ExceptionId × VarName × Prog α)))
+    (compiledInfo : Option (List Nat × Option (α × CrepProg α)))
+    (function : FunName) (arguments : List (Exp α))
+    (compiledArguments : List (CrepExp α))
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α)
+    (hcompileArgs : compileArgs context arguments = compiledArguments)
+    (hcompileProg : compileProg context (.call info function arguments) =
+      .call compiledInfo function (compileArgs context arguments))
+    (hsourceCall : evalPanValueCallWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord fuel
+      sourceLocals sourceGlobals sourceMemory info function arguments =
+      some sourceResult)
+    (hcrepCall : evalCrepFullCallState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress fuel state compiledInfo function compiledArguments =
+      some crepResult) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord (fuel + 1)
+      sourceLocals sourceGlobals sourceMemory
+      (.call info function arguments) = some sourceResult ∧
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state
+      (compileProg context (.call info function arguments)) = some crepResult := by
+  constructor
+  · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceCall]
+  · rw [hcompileProg, hcompileArgs]
+    simp [evalCrepFullProgState, hcrepCall]
+
 theorem compile_full_pan_value_call_compose
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -2131,6 +2177,49 @@ theorem evalCrepFullProg_nestedDecs_const_zero
             names result))
       simp [evalCrepFullProg, evalCrepFullExp, htail]
 
+theorem evalCrepFullProgState_nestedDecs_const_zero
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (names : List Nat) (body : CrepProg α)
+    (result : CrepControlResult α)
+    (hbody : evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with locals := initializeCrepLocals state.locals names } body =
+      some result) :
+    evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + names.length) state
+      (nestedDecs names (names.map (fun _ => .const 0)) body) =
+      some (restoreCrepResultList state.locals names result) := by
+  induction names generalizing state result with
+  | nil =>
+      simpa [nestedDecs, initializeCrepLocals, restoreCrepResultList] using hbody
+  | cons name names ih =>
+      have hbody' : evalCrepFullProgState functions primitive ffi sharedMem
+          baseAddress topAddress fuel
+          { state with
+              locals := initializeCrepLocals
+                (updateCrepLocal state.locals name 0) names } body =
+          some result := by
+        simpa [initializeCrepLocals] using hbody
+      have htail := ih
+        (state := { state with
+          locals := updateCrepLocal state.locals name 0 })
+        (result := result) hbody'
+      change evalCrepFullProgState functions primitive ffi sharedMem
+        baseAddress topAddress ((fuel + names.length) + 1) state
+        (.dec name (.const 0)
+          (nestedDecs names (names.map (fun _ => .const 0)) body)) =
+        some (restoreCrepResult name (state.locals name)
+          (restoreCrepResultList (updateCrepLocal state.locals name 0)
+            names result))
+      simp [evalCrepFullProgState, evalCrepFullExpState, htail]
+
 /-! With the generic nested-declaration rule, the destination-aware lowering
     of `decCall` composes for every flattened result shape. -/
 theorem compile_full_pan_value_decCall_compose
@@ -2181,6 +2270,66 @@ theorem compile_full_pan_value_decCall_compose
           body)) = some result := by
     simp [evalCrepFullProg, hcall, hbody]
   have hnested := evalCrepFullProg_nestedDecs_const_zero
+    functions primitive ffi sharedMem baseAddress topAddress (fuel + 2) state
+    (allocatedNames context shape)
+    (.seq
+      (.call (some (allocatedNames context shape, none)) function compiledArguments)
+      (compileProg
+        { context with
+            vars := (name, (shape, allocatedNames context shape)) :: context.vars
+            maxVar := context.maxVar + Shape.shapeSize shape }
+        body)) result hseq
+  simpa [compileProg, allocatedNames, nestedDecs, hcompileArgs, Nat.add_assoc,
+    Nat.add_comm, Nat.add_left_comm] using hnested
+
+theorem compile_full_pan_value_decCall_state_compose
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state callState : CrepState α) (result : CrepControlResult α)
+    (name : VarName) (shape : Shape) (function : FunName)
+    (arguments : List (Exp α)) (body : Prog α)
+    (compiledArguments : List (CrepExp α))
+    (hcompileArgs : compileArgs context arguments = compiledArguments)
+    (hcall : evalCrepFullCallState functions primitive ffi sharedMem
+      baseAddress topAddress fuel
+      { state with
+          locals := initializeCrepLocals state.locals
+            (allocatedNames context shape) }
+      (some (allocatedNames context shape, none)) function compiledArguments =
+      some (.normal callState))
+    (hbody : evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) callState
+      (compileProg
+        { context with
+            vars := (name, (shape, allocatedNames context shape)) :: context.vars
+            maxVar := context.maxVar + Shape.shapeSize shape }
+        body) = some result) :
+    evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress
+      (fuel + (allocatedNames context shape).length + 2) state
+      (compileProg context (.decCall name shape function arguments body)) =
+      some (restoreCrepResultList state.locals
+        (allocatedNames context shape) result) := by
+  have hseq : evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 2)
+      { state with
+          locals := initializeCrepLocals state.locals
+            (allocatedNames context shape) }
+      (.seq
+        (.call (some (allocatedNames context shape, none)) function compiledArguments)
+        (compileProg
+          { context with
+              vars := (name, (shape, allocatedNames context shape)) :: context.vars
+              maxVar := context.maxVar + Shape.shapeSize shape }
+          body)) = some result := by
+    simp [evalCrepFullProgState, hcall, hbody]
+  have hnested := evalCrepFullProgState_nestedDecs_const_zero
     functions primitive ffi sharedMem baseAddress topAddress (fuel + 2) state
     (allocatedNames context shape)
     (.seq

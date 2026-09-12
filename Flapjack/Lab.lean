@@ -44,6 +44,7 @@ inductive LabPlain (α : Type u) where
   | tick
   | jumpReg (register : Nat)
   | codeBufferWrite (address value : Nat)
+  | dataBufferWrite (address value : Nat)
   | shareMem (operator : WordMemOp) (register address : Nat)
   deriving Repr
 
@@ -141,6 +142,8 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         .labAsm .install [] 0, labLabel sectionId counter], false, counter + 1⟩
   | .codeBufferWrite address value =>
       ⟨[.asm (.codeBufferWrite address value) [] 0], false, counter⟩
+  | .dataBufferWrite address value =>
+      ⟨[.asm (.dataBufferWrite address value) [] 0], false, counter⟩
   | .ffi function _ _ _ _ returnAddress =>
       ⟨[.labAsm (.locValue returnAddress ⟨sectionId, counter⟩) [] 0,
         .labAsm (.callFfi function) [] 0, labLabel sectionId counter],
@@ -157,7 +160,7 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
     | .storeConsts _ _ _ | .stackAlloc _ | .stackFree _ | .stackStore _ _
     | .stackStoreAny _ _
     | .stackLoad _ _ | .stackLoadAny _ _ | .stackGetSize _ | .stackSetSize _
-    | .bitmapLoad _ _ | .dataBufferWrite _ _ =>
+    | .bitmapLoad _ _ =>
       ⟨[], false, counter⟩
   | .call none target none =>
       ⟨[match labCompileJump target with
@@ -202,27 +205,33 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
       if labIsSkip thenBranch && labIsSkip elseBranch then
         ⟨[], false, counter⟩
       else if labIsSkip thenBranch then
-        ⟨[labJumpCmp operator condition right sectionId counter] ++
-          elseResult.lines ++ [labLabel sectionId counter],
-          false, elseResult.nextLabel + 1⟩
+        let joinLabel := elseResult.nextLabel
+        ⟨[labJumpCmp operator condition right sectionId joinLabel] ++
+          elseResult.lines ++ [labLabel sectionId joinLabel],
+          false, joinLabel + 1⟩
       else if labIsSkip elseBranch then
-        ⟨[labJumpCmp operator condition right sectionId counter] ++
-          thenResult.lines ++ [labLabel sectionId counter],
-          false, thenResult.nextLabel + 1⟩
+        let joinLabel := thenResult.nextLabel
+        ⟨[labJumpCmp operator condition right sectionId joinLabel] ++
+          thenResult.lines ++ [labLabel sectionId joinLabel],
+          false, joinLabel + 1⟩
       else if thenResult.terminal then
-        ⟨[labJumpCmp operator condition right sectionId counter] ++
-          thenResult.lines ++ [labLabel sectionId counter] ++ elseResult.lines,
-          elseResult.terminal, elseResult.nextLabel + 1⟩
+        let joinLabel := elseResult.nextLabel
+        ⟨[labJumpCmp operator condition right sectionId joinLabel] ++
+          thenResult.lines ++ [labLabel sectionId joinLabel] ++ elseResult.lines,
+          elseResult.terminal, joinLabel + 1⟩
       else if elseResult.terminal then
-        ⟨[labJumpCmp (labNegateCmp operator) condition right sectionId counter] ++
-          elseResult.lines ++ [labLabel sectionId counter] ++ thenResult.lines,
-          thenResult.terminal, thenResult.nextLabel + 1⟩
+        let joinLabel := elseResult.nextLabel
+        ⟨[labJumpCmp (labNegateCmp operator) condition right sectionId joinLabel] ++
+          elseResult.lines ++ [labLabel sectionId joinLabel] ++ thenResult.lines,
+          thenResult.terminal, joinLabel + 1⟩
       else
-        ⟨[labJumpCmp (labNegateCmp operator) condition right sectionId counter] ++
-          elseResult.lines ++ [labJump sectionId (elseResult.nextLabel + 1),
-            labLabel sectionId counter] ++ thenResult.lines ++
-          [labLabel sectionId (elseResult.nextLabel + 1)],
-          thenResult.terminal && elseResult.terminal, elseResult.nextLabel + 2⟩
+        let thenLabel := elseResult.nextLabel
+        let joinLabel := thenLabel + 1
+        ⟨[labJumpCmp (labNegateCmp operator) condition right sectionId joinLabel] ++
+          elseResult.lines ++ [labJump sectionId joinLabel,
+            labLabel sectionId thenLabel] ++ thenResult.lines ++
+          [labLabel sectionId joinLabel],
+          thenResult.terminal && elseResult.terminal, joinLabel + 1⟩
   | .loop body =>
       let continueLabel := counter
       let breakLabel := counter + 1

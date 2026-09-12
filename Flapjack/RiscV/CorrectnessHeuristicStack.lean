@@ -1,5 +1,8 @@
 import Flapjack.RiscV.HeuristicStackPipeline
 import Flapjack.RiscV.CorrectnessStackFunctionEntry
+import Flapjack.RiscV.CorrectnessGraphLocations
+import Flapjack.RiscV.CorrectnessGraphCoverage
+import Flapjack.RiscV.OracleAllocator
 import Flapjack.RiscV.AllocatorCorrectness
 
 /-!
@@ -113,6 +116,66 @@ theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_parameters
       { toNode := [], fromNode := [], next := 0 }) name hname'
   simpa [hstate, hparameters, hprogram, hbij, wordInitRegAlloc,
     wordMkBijection, wordClashTreeBijection] using hnode
+
+theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_locations
+    (parameters : List Nat) (program : WordProg α)
+    (fixedSources : List Nat)
+    (algorithm currentFunction colours stackStart : Nat)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (allocation : WordGraphAllocation)
+    (renamedProgram : WordProg α)
+    (halloc : wordAllocateGraphFunctionWithHeuristicsEntryRenamed parameters program
+      fixedSources algorithm currentFunction colours stackStart =
+      some (state, renamedParameters, allocation, renamedProgram)) :
+    ∀ name, name ∈ wordClashTreeNames
+        ((WordClashTree.set renamedParameters).seq
+          (wordClashTree renamedProgram [])) →
+      ∃ location,
+        lookupNatInfo name (wordGraphLocations allocation colours stackStart) =
+          some location := by
+  simp [wordAllocateGraphFunctionWithHeuristicsEntryRenamed] at halloc
+  rcases halloc with ⟨allocation', hgraph, hstate, hparameters,
+    hallocation, hprogram⟩
+  subst allocation'
+  have hgraphFull :
+      wordAllocateGraphForHeuristics algorithm
+        ((WordClashTree.set renamedParameters).seq
+          (wordClashTree renamedProgram []))
+        (wordProgForcedClashes renamedProgram)
+        (wordStackOnlyUnion fixedSources
+          (wordStackOnly renamedProgram).forced)
+        (wordGetHeuristics algorithm currentFunction renamedProgram).1
+        (wordProgPrioritizedMoves renamedProgram) colours stackStart
+        (wordGetHeuristics algorithm currentFunction renamedProgram).2 =
+        some allocation := by
+    simpa [hstate, hparameters, hprogram] using hgraph
+  have hbij := wordAllocateGraphForHeuristics_bijection algorithm
+    ((WordClashTree.set renamedParameters).seq
+      (wordClashTree renamedProgram []))
+    (wordProgForcedClashes renamedProgram)
+    (wordStackOnlyUnion fixedSources
+      (wordStackOnly renamedProgram).forced)
+    (wordGetHeuristics algorithm currentFunction renamedProgram).1
+    (wordProgPrioritizedMoves renamedProgram) colours stackStart
+    (wordGetHeuristics algorithm currentFunction renamedProgram).2
+    allocation hgraphFull
+  intro name hname
+  have hnode := wordClashTreeBijection_maps_names
+    ((WordClashTree.set renamedParameters).seq
+      (wordClashTree renamedProgram []))
+    { toNode := [], fromNode := [], next := 0 } name hname
+  rcases hnode with ⟨node, hnode⟩
+  have hnode' : lookupNatInfo name
+      (wordMkBijection
+        ((WordClashTree.set renamedParameters).seq
+          (wordClashTree renamedProgram []))).toNode = some node := by
+    simpa [wordMkBijection] using hnode
+  have hinverse := wordMkBijection_lookup_inverse
+    ((WordClashTree.set renamedParameters).seq
+      (wordClashTree renamedProgram [])) name node hnode'
+  apply wordGraphLocations_lookup_of_fromNode
+  simpa [hstate, hparameters, hprogram, hbij, wordInitRegAlloc,
+    wordMkBijection, wordClashTreeBijection] using hinverse
 
 theorem evalWordStackMachine_wordAllocateGraphFunctionWithHeuristicsEntryToStack
     [NeZero width]

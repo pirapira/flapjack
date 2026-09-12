@@ -127,7 +127,10 @@ def labCompilePlain [NeZero width] :
       pure [.jalr 0 register 0]
   | .shareMem operator register address =>
       wordShareInstToInstructions operator register (.var address)
-  | .codeBufferWrite _ _ => none
+  | .codeBufferWrite address value =>
+      (wordInstToInstruction (.mem .store8 value address)).map List.singleton
+  | .dataBufferWrite address value =>
+      (wordInstToInstruction (.mem .store value address)).map List.singleton
 
 def labCompileAsm [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat) :
@@ -156,7 +159,9 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
   | .callFfi function => do
       let service ← lookupWordFfiService function context.services
       pure [.addi 14 0 (BitVec.ofNat width service), .ecall]
-  | .heapAlloc _ | .install | .halt => none
+  | .install =>
+      pure [.jal 0 (0 - BitVec.ofNat width (position + 2 * 16))]
+  | .heapAlloc _ | .halt => none
 
 def labCompileLines [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat) :
@@ -219,6 +224,7 @@ def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
   | .tick => .tick
   | .jumpReg register => .jumpReg register
   | .codeBufferWrite address value => .codeBufferWrite address value
+  | .dataBufferWrite address value => .dataBufferWrite address value
   | .shareMem operator register address =>
       .shareMem operator register address
 
@@ -313,7 +319,9 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
   | .callFfi function => do
       let service ← lookupWordFfiService function context.services
       pure [.addi 14 0 (BitVec.ofNat width service), .ecall]
-  | .heapAlloc _ | .install | .halt => none
+  | .install =>
+      pure [.jal 0 (0 - BitVec.ofNat width (position + 2 * 16))]
+  | .heapAlloc _ | .halt => none
 
 def labCompileProgramLines [NeZero width] (context : WordFfiContext)
     (labels : List (Nat × Nat × Nat)) (position : Nat) :
@@ -379,7 +387,9 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       let service ← lookupWordFfiService function context.services
       pure [.addi 14 0 (BitVec.ofNat width service), .ecall]
   | .halt => pure [.jal 0 (labOffset haltPc position)]
-  | .heapAlloc _ | .install => none
+  | .install =>
+      pure [.jal 0 (0 - BitVec.ofNat width (position + 2 * 16))]
+  | .heapAlloc _ => none
 
 def labCompileProgramLinesWithHalt [NeZero width]
     (context : WordFfiContext) (labels : List (Nat × Nat × Nat))

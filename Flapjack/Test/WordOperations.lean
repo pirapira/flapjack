@@ -1,4 +1,5 @@
 import Flapjack.RiscV.WordToStack
+import Flapjack.RiscV.WordDiagnostics
 
 namespace Flapjack
 
@@ -9,6 +10,20 @@ def wordOperationTestConfig : WordStackConfig :=
       (2, .register 7), (3, .register 8)]
     scratch := 31
     stackBase := 10 }
+
+example :
+    RiscV.wordToStackProgNatChecked wordOperationTestConfig
+        (.alloc 0 ([], []) : WordProg Nat) =
+      .error { path := [], feature := .alloc } := by
+  simp [RiscV.wordToStackProgNatChecked, wordToStackProgNat,
+    RiscV.wordProgFirstUnsupported]
+
+example :
+    RiscV.wordToStackProgNatChecked wordOperationTestConfig
+        (.seq .skip (.storeConsts 0 1 2 3 [] : WordProg Nat)) =
+      .error { path := [1], feature := .storeConsts } := by
+  simp [RiscV.wordToStackProgNatChecked, wordToStackProgNat,
+    RiscV.wordProgFirstUnsupported]
 
 example :
     wordStackStoreNameNat (.bitmapBase : WordStore Nat) = some .bitmapBase := by
@@ -37,6 +52,19 @@ example :
   simp [wordToStackProgNat, wordStackInstall, wordStackLocation,
     lookupNatInfo, wordOperationTestConfig]
 
+/- Alloc and StoreConsts carry allocator/bitmap state which the stateless
+   entrypoint cannot preserve.  They must be rejected explicitly rather than
+   being replaced by a semantically successful Skip. -/
+example :
+    wordToStackProgNat wordOperationTestConfig
+        (.alloc 0 ([], []) : WordProg Nat) = none := by
+  simp [wordToStackProgNat]
+
+example :
+    wordToStackProgNat wordOperationTestConfig
+        (.storeConsts 0 1 2 3 [] : WordProg Nat) = none := by
+  simp [wordToStackProgNat]
+
 example :
     wordToStackProgNat wordOperationTestConfig
         (.codeBufferWrite 0 1 : WordProg Nat) =
@@ -55,6 +83,64 @@ def wordOperationSpillConfig : WordStackConfig :=
   { locations := [(0, .stack 3), (1, .register 6)]
     scratch := 31
     stackBase := 10 }
+
+example :
+    wordToStackProgNat wordOperationSpillConfig
+        (.install 1 1 0 1 ([], []) : WordProg Nat) =
+      some (.seq (.stackLoad 31 13)
+        (.install 6 6 31 6 0)) := by
+  simp [wordToStackProgNat, wordStackInstall, wordStackLocation,
+    wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat
+        { wordOperationSpillConfig with locations :=
+            [(0, .register 5), (1, .stack 2)] }
+        (.install 0 0 1 1 ([], []) : WordProg Nat) =
+      some (.seq (.stackLoad 31 12)
+        (.seq (.stackLoad 29 12)
+          (.install 5 5 31 29 0))) := by
+  simp [wordToStackProgNat, wordStackInstall, wordStackLocation,
+    wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat
+        { wordOperationSpillConfig with locations :=
+            [(0, .register 5), (1, .register 6),
+             (2, .stack 3), (3, .stack 2)] }
+        (.install 0 1 2 3 ([], []) : WordProg Nat) =
+      some (.seq (.stackLoad 31 13)
+        (.seq (.stackLoad 29 12)
+          (.install 5 6 31 29 0))) := by
+  simp [wordToStackProgNat, wordStackInstall, wordStackLocation,
+    wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat wordOperationSpillConfig
+        (.codeBufferWrite 0 1 : WordProg Nat) =
+      some (.seq (.stackLoad 29 13)
+        (.codeBufferWrite 29 6)) := by
+  simp [wordToStackProgNat, wordStackBufferWrite, wordStackLocation,
+    wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat wordOperationSpillConfig
+        (.dataBufferWrite 1 0 : WordProg Nat) =
+      some (.seq (.stackLoad 31 13)
+        (.dataBufferWrite 6 31)) := by
+  simp [wordToStackProgNat, wordStackBufferWrite, wordStackLocation,
+    wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
+
+example :
+    wordToStackProgNat
+        { wordOperationSpillConfig with locations :=
+            [(0, .stack 3), (1, .stack 2)] }
+        (.codeBufferWrite 0 1 : WordProg Nat) =
+      some (.seq (.stackLoad 29 13)
+        (.seq (.stackLoad 31 12)
+          (.codeBufferWrite 29 31))) := by
+  simp [wordToStackProgNat, wordStackBufferWrite, wordStackLocation,
+    wordStackOffset, wordStackJoin, lookupNatInfo, wordOperationSpillConfig]
 
 example :
     wordToStackProgNat wordOperationSpillConfig

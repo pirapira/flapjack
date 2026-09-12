@@ -204,4 +204,166 @@ theorem panValueCrepProgramCorrect_extCall_const
                               cases hcrepEq
                               simpa [panValueCrepControlRel] using hstate
 
+theorem panValueCrepProgramStateCorrect_extCall_const
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (function : FunName)
+    (configuration configurationLength array arrayLength : α)
+    (hffi : ∀ (sourceHandler : PanValueFfiHandler α)
+      (ffi : CrepFfiHandler α), panValueCrepExtCallCorrect sourceHandler ffi) :
+    PanValueCrepProgramStateCorrect
+      (.extCall function (.const configuration) (.const configurationLength)
+        (.const array) (.const arrayLength)) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  cases sourceFuel with
+  | zero =>
+      simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases hsourceHandler : sourceHandler function configuration configurationLength
+          array arrayLength sourceLocals with
+      | none =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExps,
+            evalPanValueExp.evalPanValueExps, evalPanValueExp, hsourceHandler] at hsource
+      | some sourceLocals' =>
+          have hsourceResult :
+              PanValueControlResult.normal sourceLocals' sourceGlobals sourceMemory =
+                sourceResult := by
+            have hsource' := hsource
+            simp [evalPanValueProgWithPrimitiveCallsAndFfi, evalPanValueExps,
+              evalPanValueExp.evalPanValueExps, evalPanValueExp, hsourceHandler] at hsource'
+            exact hsource'
+          cases hsourceResult
+          have hcompile :
+              compileProg context
+                (.extCall function (.const configuration)
+                  (.const configurationLength) (.const array) (.const arrayLength)) =
+                .dec (context.maxVar + 1) (.const configuration)
+                  (.dec (context.maxVar + 2) (.const configurationLength)
+                    (.dec (context.maxVar + 3) (.const array)
+                      (.dec (context.maxVar + 4) (.const arrayLength)
+                        (.extCall function (context.maxVar + 1) (context.maxVar + 2)
+                          (context.maxVar + 3) (context.maxVar + 4))))) := by
+            simp [compileProg, firstCompiledExp, compileExp, nestedDecs]
+          cases targetFuel with
+          | zero =>
+              rw [hcompile] at hcrep
+              simp [evalCrepFullProgState] at hcrep
+          | succ targetFuel =>
+              cases targetFuel with
+              | zero =>
+                  rw [hcompile] at hcrep
+                  simp [evalCrepFullProgState, evalCrepFullExpState] at hcrep
+              | succ targetFuel =>
+                  cases targetFuel with
+                  | zero =>
+                      rw [hcompile] at hcrep
+                      simp [evalCrepFullProgState, evalCrepFullExpState] at hcrep
+                  | succ targetFuel =>
+                      cases targetFuel with
+                      | zero =>
+                          rw [hcompile] at hcrep
+                          simp [evalCrepFullProgState, evalCrepFullExpState] at hcrep
+                      | succ targetFuel =>
+                          cases targetFuel with
+                          | zero =>
+                              rw [hcompile] at hcrep
+                              simp [evalCrepFullProgState, evalCrepFullExpState] at hcrep
+                          | succ targetFuel =>
+                              have hconfigurationValue :
+                                  evalCrepFullExpState state baseAddress topAddress
+                                    (.const configuration) = some configuration := by
+                                simp [evalCrepFullExpState]
+                              have hconfigurationLengthValue :
+                                  evalCrepFullExpState
+                                    { state with
+                                      locals := updateCrepLocal state.locals
+                                        (context.maxVar + 1) configuration }
+                                    baseAddress topAddress (.const configurationLength) =
+                                    some configurationLength := by
+                                simp [evalCrepFullExpState]
+                              have harrayValue :
+                                  evalCrepFullExpState
+                                    { state with
+                                      locals := updateCrepLocal
+                                        (updateCrepLocal state.locals
+                                          (context.maxVar + 1) configuration)
+                                        (context.maxVar + 2) configurationLength }
+                                    baseAddress topAddress (.const array) = some array := by
+                                simp [evalCrepFullExpState]
+                              have harrayLengthValue :
+                                  evalCrepFullExpState
+                                    { state with
+                                      locals := updateCrepLocal
+                                        (updateCrepLocal
+                                          (updateCrepLocal state.locals
+                                            (context.maxVar + 1) configuration)
+                                          (context.maxVar + 2) configurationLength)
+                                        (context.maxVar + 3) array }
+                                    baseAddress topAddress (.const arrayLength) =
+                                    some arrayLength := by
+                                simp [evalCrepFullExpState]
+                              cases hcall : ffi function configuration configurationLength array
+                                  arrayLength
+                                  ({ state with
+                                    locals :=
+                                      updateCrepLocal
+                                        (updateCrepLocal
+                                          (updateCrepLocal
+                                            (updateCrepLocal state.locals (context.maxVar + 1)
+                                              configuration)
+                                            (context.maxVar + 2) configurationLength)
+                                          (context.maxVar + 3) array)
+                                        (context.maxVar + 4) arrayLength }) with
+                              | none =>
+                                  rw [compileProg_extCall_of_compiled context function
+                                    (.const configuration) (.const configurationLength)
+                                    (.const array) (.const arrayLength)
+                                    (.const configuration) (.const configurationLength)
+                                    (.const array) (.const arrayLength)
+                                    (by simp [firstCompiledExp, compileExp])
+                                    (by simp [firstCompiledExp, compileExp])
+                                    (by simp [firstCompiledExp, compileExp])
+                                    (by simp [firstCompiledExp, compileExp])] at hcrep
+                                  simp [nestedDecs, evalCrepFullProgState,
+                                    evalCrepFullExpState, updateCrepLocal,
+                                    hconfigurationValue, hcall] at hcrep
+                              | some result =>
+                                  obtain ⟨state', hreturned, hstate⟩ :=
+                                    hffi sourceHandler ffi context structs sourceLocals
+                                      sourceLocals' sourceGlobals sourceMemory state function
+                                      configuration configurationLength array arrayLength result
+                                      hsourceHandler hcall
+                                  cases hreturned
+                                  have htargetExpected :
+                                      evalCrepFullProgState functions crepPrimitive ffi sharedMem
+                                        baseAddress topAddress (targetFuel + 5) state
+                                        (compileProg context
+                                          (.extCall function (.const configuration)
+                                            (.const configurationLength) (.const array)
+                                            (.const arrayLength))) =
+                                      some (.normal
+                                        (restoreCrepFfiTemps state' state context.maxVar)) := by
+                                    rw [hcompile]
+                                    simp [evalCrepFullProgState, evalCrepFullExpState,
+                                      updateCrepLocal, hconfigurationValue,
+                                      hcall, restoreCrepResult,
+                                      restoreCrepFfiTemps]
+                                  have hcrep' :
+                                      evalCrepFullProgState functions crepPrimitive ffi sharedMem
+                                        baseAddress topAddress (targetFuel + 5) state
+                                        (compileProg context
+                                          (.extCall function (.const configuration)
+                                            (.const configurationLength) (.const array)
+                                            (.const arrayLength))) = some crepResult := by
+                                    simpa [Nat.add_assoc] using hcrep
+                                  have hcrepEq := Option.some.inj
+                                    (htargetExpected.symm.trans hcrep')
+                                  cases hcrepEq
+                                  simpa [panValueCrepControlRel] using hstate
+
 end Flapjack

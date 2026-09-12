@@ -96,6 +96,13 @@ example :
       [4]).1
 
 #guard
+    (10, 13) ∈ (wordProgClashAnalysis
+      ((.call (some ([20], ([], []),
+          (.seq (.assign 10 (.var 11))
+            (.assign 12 (.op .add [.var 10, .var 13]))), 0, 0))
+        none [] none) : WordProg Nat) []).2
+
+#guard
     (wordAllocateSsaProgram
       ({ current := [], next := 10 } : WordSsaState)
       ((.ite .equal 0 (.reg 0)

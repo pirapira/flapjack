@@ -41,13 +41,24 @@
 # `executeFunctionAtWithFfi`) or evaluate a compiled Loop program. Execution is
 # past what kernel reduction will unfold, so `native_decide` is what lets these
 # results be stated with a name at all.
-3 Flapjack/Test/FullSsaPipeline.lean
+# These five named machine/source execution theorems are used by the
+# Full-SSA pipeline simulation regressions; their compiled image execution
+# cannot be discharged by kernel reduction.
+5 Flapjack/Test/FullSsaPipeline.lean
 1 Flapjack/Test/FullSsaCorrectness.lean
 1 Flapjack/Test/FullSsaHandler.lean
 1 Flapjack/Test/FullSsaFfiCall.lean
 # Two named executions are intentional here: one checks the linked RISC-V
 # image and one checks the compiled Loop evaluator before the image backend.
-2 Flapjack/Test/FullSsaHandlerFfi.lean
+# The third theorem is a named source-to-Crep semantic agreement for the
+# caught-handler FFI path.  The fourth checks the consolidated Crepe/Loop
+# caught-handler FFI result; both run compileExp, where kernel reduction
+# stalls, so they cannot be replaced by decide +kernel or #guard.
+5 Flapjack/Test/FullSsaHandlerFfi.lean
+# The handler execution theorem pair and their named machine values are used
+# by the source-to-machine simulation regressions.
+2 Flapjack/Test/HandlerExecution.lean
+1 Flapjack/Test/FullSsaTarget.lean
 1 Flapjack/Test/CorrectnessFfi.lean
 1 Flapjack/Test/SourceToLoop.lean
 

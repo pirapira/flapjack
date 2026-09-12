@@ -40,7 +40,7 @@ example :
       (.call (some ([7], ([], []), returnHandlerNatProgram, 12, 13))
         (some 3) [] none) =
       some (wordToStackCallNoHandler false 3 0 0 31 [7]
-        (.const 5 9) 0 0) := by
+        (.const 5 9) 12 13) := by
   simp [wordToStackProgNat,
     wordStackCompileExpNat, wordStackWritePhysicalNat,
     wordStackLocation, lookupNatInfo, wordStackMovesToPhysical,

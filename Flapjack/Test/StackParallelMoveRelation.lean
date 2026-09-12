@@ -1,4 +1,4 @@
-import Flapjack.RiscV.CorrectnessStackParallelMove
+import Flapjack.RiscV.CorrectnessStackParallelMoveEvaluator
 
 /-! Regression coverage for the singleton physical parallel-move boundary. -/
 
@@ -90,5 +90,37 @@ example :
   apply wordStackPhysicalMovesFrom_eq_spec
     (locations := [.register 5])
   simp [entryMoveConfig, wordStackLocation, lookupNatInfo]
+
+example :
+    ∀ move, move ∈ [(.register 5, .register 2)] →
+      ∃ index,
+        move.2 = .register (2 + 2 * index) ∧
+        wordStackLocationValue entryMoveConfig
+            (wordStackMachineWriteRegister entryMoveState 5
+              (BitVec.ofNat 8 17)) move.1 =
+          wordStackLocationValue entryMoveConfig entryMoveState move.2 := by
+  apply evalWordStackMachine_movesFromPhysical_preserves_source_shape
+    (config := entryMoveConfig) (state := entryMoveState)
+    (final := wordStackMachineWriteRegister entryMoveState 5
+      (BitVec.ofNat 8 17)) (destinations := [1]) (source := 2)
+    (locations := [.register 5]) (moves := [(.register 5, .register 2)])
+  · simp
+  · intro move hmove
+    simp at hmove ⊢
+    subst move
+    simp
+  · intro move hmove
+    simp at hmove ⊢
+    subst move
+    simp [entryMoveConfig]
+  · simp [entryMoveConfig, wordStackLocation, lookupNatInfo]
+  · simp [entryMoveConfig, wordStackPhysicalMovesFrom,
+      wordStackLocation, lookupNatInfo]
+  · simp [entryMoveConfig, entryMoveState,
+      wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
+      wordStackLocationMoveDestinations, wordStackLocationMoveReady,
+      wordStackLocationMoveRemoveDestination, wordStackLocationMove,
+      wordStackJoin, evalWordStackMachine,
+      wordStackMachineWriteRegister, wordStackMachineBinOp]
 
 end Flapjack.RiscV

@@ -5,6 +5,7 @@ import Flapjack.PanSimp
 import Flapjack.PanStructs
 import Flapjack.PanGlobals
 import Flapjack.Pipeline
+import Flapjack.RiscV.PipelineDiagnostics
 import Flapjack.Correctness
 import Flapjack.CorrectnessCalls
 import Flapjack.FlatCorrectness
@@ -17,10 +18,12 @@ import Flapjack.CrepeCompileExpVariables
 import Flapjack.CompileParamVarsBounds
 import Flapjack.CrepeContextBounds
 import Flapjack.Compile
+import Flapjack.CompileFunctionDistinct
 import Flapjack.Semantics
 import Flapjack.CrepeSemantics
 import Flapjack.CrepeRuntime
 import Flapjack.CrepeCorrectness
+import Flapjack.CrepeCallHandlerCorrectness
 import Flapjack.CrepeStateRelation
 import Flapjack.CrepeExpressionRelation
 import Flapjack.CrepeWordExpressionContract
@@ -32,6 +35,7 @@ import Flapjack.CrepeProgramExtCallCorrectness
 import Flapjack.CrepeProgramInduction
 import Flapjack.CrepeExtCallInversion
 import Flapjack.CrepeProgramExtCallSourceWordCorrectness
+import Flapjack.CrepeProgramExtCallSourceWordStateCorrectness
 import Flapjack.CrepeWordExtCallProgramCase
 import Flapjack.CrepeExpressionStability
 import Flapjack.CrepeNestedDecsStability
@@ -104,10 +108,15 @@ import Flapjack.CrepeProgramRaiseCorrectness
 import Flapjack.CrepeProgramStoreCorrectness
 import Flapjack.CrepeProgramStoreByteCorrectness
 import Flapjack.CrepeProgramGenericStoreCorrectness
+import Flapjack.CrepeProgramGenericStoreStateCorrectness
 import Flapjack.CrepeWordEffectProgramCases
 import Flapjack.CrepeProgramPrimitiveCorrectness
+import Flapjack.CrepeProgramPrimitiveStateRelation
+import Flapjack.CrepeProgramPrimitiveStateCorrectness
 import Flapjack.CrepeProgramSharedMemoryCorrectness
 import Flapjack.CrepeProgramSharedMemoryLoadCorrectness
+import Flapjack.CrepeProgramSharedMemoryStateCorrectness
+import Flapjack.CrepeProgramSharedMemoryLoadStateCorrectness
 import Flapjack.CrepeWordSharedMemoryProgramCases
 import Flapjack.CrepeProgramRecordDeclarationCorrectness
 import Flapjack.CrepeProgramRecordDeclarationSkipCorrectness
@@ -246,9 +255,11 @@ import Flapjack.RiscV.CorrectnessGraphCoverage
 import Flapjack.RiscV.CorrectnessLongDiv
 import Flapjack.RiscV.AllocatorBridgeCorrectness
 import Flapjack.RiscV.CorrectnessColour
+import Flapjack.RiscV.CorrectnessSsaColour
 import Flapjack.RiscV.CorrectnessFullSsaCounted
 import Flapjack.RiscV.AllocatorDriver
 import Flapjack.RiscV.WordToStack
+import Flapjack.RiscV.CorrectnessColourConditional
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.CorrectnessBackend
 import Flapjack.RiscV.StepCorrectness
@@ -309,6 +320,8 @@ import Flapjack.StackAlloc.BitmapSemantics
 import Flapjack.StackRemove
 import Flapjack.Lab
 import Flapjack.RiscV.Lab
+import Flapjack.RiscV.LabDiagnostics
+import Flapjack.RiscV.WordDiagnostics
 import Flapjack.RiscV.CorrectnessPipelineFfi
 
 /-!

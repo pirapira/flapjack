@@ -92,4 +92,84 @@ theorem crepNestedDecsEval_of_eval
                         rw [htailRestoreZero] at hrestore'
                         simpa [restoreCrepResultList] using hrestore'
 
+theorem crepNestedDecsStateEval_of_eval
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (targetFuel : Nat)
+    (state : CrepState α) (names : List Nat)
+    (expressions : List (CrepExp α)) (body : CrepProg α)
+    (result : CrepControlResult α)
+    (hdistinct : CrepDistinctNames names)
+    (hlength : names.length = expressions.length)
+    (heval : evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress targetFuel state
+      (nestedDecs names expressions body) = some result) :
+    ∃ fuel innerResult,
+      targetFuel = fuel + names.length ∧
+      CrepNestedDecsStateEval functions primitive ffi sharedMem
+        baseAddress topAddress fuel state names expressions body innerResult ∧
+      restoreCrepResultList state.locals names innerResult = result := by
+  induction names generalizing targetFuel state expressions result with
+  | nil =>
+      cases expressions with
+      | nil =>
+          refine ⟨targetFuel, result, ?_, ?_, ?_⟩
+          · simp
+          · simpa [CrepNestedDecsStateEval, nestedDecs] using heval
+          · simp [restoreCrepResultList]
+      | cons expression expressions =>
+          simp at hlength
+  | cons name names ih =>
+      rcases hdistinct with ⟨hnotmem, htailDistinct⟩
+      cases expressions with
+      | nil =>
+          simp at hlength
+      | cons expression expressions =>
+          have hlength' : names.length = expressions.length := by
+            simpa using hlength
+          cases targetFuel with
+          | zero =>
+              simp [nestedDecs, evalCrepFullProgState] at heval
+          | succ targetFuel =>
+              cases hvalue : evalCrepFullExpState state baseAddress topAddress
+                  expression with
+              | none =>
+                  simp [nestedDecs, evalCrepFullProgState, hvalue] at heval
+              | some value =>
+                  cases hbody : evalCrepFullProgState functions primitive ffi sharedMem
+                      baseAddress topAddress targetFuel
+                      { state with locals := updateCrepLocal state.locals name value }
+                      (nestedDecs names expressions body) with
+                  | none =>
+                      simp [nestedDecs, evalCrepFullProgState, hvalue, hbody] at heval
+                  | some innerResult =>
+                      have hrestore :
+                          restoreCrepResult name (state.locals name) innerResult =
+                            result := by
+                        simpa [nestedDecs, evalCrepFullProgState, hvalue, hbody] using heval
+                      have htail := ih
+                        (targetFuel := targetFuel)
+                        (state := { state with
+                          locals := updateCrepLocal state.locals name value })
+                        (expressions := expressions) (result := innerResult)
+                        htailDistinct hlength' hbody
+                      rcases htail with
+                        ⟨fuel, bodyResult, hfuel, hnested, htailRestore⟩
+                      refine ⟨fuel, bodyResult, ?_, ?_, ?_⟩
+                      · simp only [List.length]
+                        omega
+                      · exact ⟨value, hvalue, hnested⟩
+                      · have htailRestoreZero :=
+                          restoreCrepResultList_update_of_not_mem
+                            state.locals name value names bodyResult hnotmem
+                        have hrestore' := hrestore
+                        rw [← htailRestore] at hrestore'
+                        rw [htailRestoreZero] at hrestore'
+                        simpa [restoreCrepResultList] using hrestore'
+
 end Flapjack

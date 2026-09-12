@@ -1838,8 +1838,11 @@ def wordProgForcedClashes : WordProg α → List (Nat × Nat)
   | .ite _ _ _ thenBranch elseBranch =>
       wordProgForcedClashes thenBranch ++ wordProgForcedClashes elseBranch
   | .loop _ body _ => wordProgForcedClashes body
-  | .call _ _ _ none => []
-  | .call _ _ _ (some (_, body, _, _)) => wordProgForcedClashes body
+  | .call none _ _ _ => []
+  | .call (some (_, _, returnCode, _, _)) _ _ none =>
+      wordProgForcedClashes returnCode
+  | .call (some (_, _, returnCode, _, _)) _ _ (some (_, body, _, _)) =>
+      wordProgForcedClashes body ++ wordProgForcedClashes returnCode
   | .shareInst _ _ _ => []
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial

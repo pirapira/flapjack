@@ -92,31 +92,6 @@ theorem compile_full_store_load_const_correct
     evalPanMemProg, evalPanMemExp, updateMemory, updateCrepLocal,
     restoreCrepResult]
 
-theorem compile_full_ite_const_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress condition thenValue elseValue : α) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 20 state
-        (compileProg context
-          (.ite (.const condition)
-            (.return (.const thenValue))
-            (.return (.const elseValue)))) =
-      evalPanMemResult locals state.memory
-        (.ite (.const condition)
-          (.return (.const thenValue))
-          (.return (.const elseValue))) := by
-  simp [compileProg, compileExp, evalCrepFullResult, evalCrepFullProg,
-    evalCrepFullExps, evalCrepFullExp, evalPanMemResult,
-    evalPanMemProg, evalPanMemCondition, evalPanMemExp]
-  split <;> simp_all [
-    ]
-
 theorem compile_full_ite_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -142,30 +117,6 @@ theorem compile_full_ite_const_correct
     evalPanMemExp]
   split <;> simp_all
 
-theorem compile_full_local_assign_return_const_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress : α) (name : VarName) (slot : Nat) (value : α)
-    (lookup : lookupInfo name context.vars = some (.one, [slot])) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 20 state
-        (compileProg context
-          (.seq (.assign .local name (.const value))
-            (.return (.var .local name)))) =
-      evalPanMemResult locals state.memory
-        (.seq (.assign .local name (.const value))
-          (.return (.var .local name))) := by
-  simp [compileProg, compileExp, crepNestedSeq, lookup,
-    evalCrepFullResult, evalCrepFullProg, evalCrepFullExps,
-    evalCrepFullExp, evalPanMemResult, evalPanMemProg,
-    evalPanMemExp, updateCrepLocal, updatePanLocal,
-    distinctLists]
-
 theorem compile_full_local_assign_return_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -189,28 +140,6 @@ theorem compile_full_local_assign_return_const_correct
     evalCrepFullExpState, evalPanMemResult, evalPanMemProg,
     evalPanMemExp, updateCrepLocal, updatePanLocal, distinctLists]
 
-theorem compile_full_local_return_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress : α) (name : VarName) (slot : Nat)
-    (lookup : lookupInfo name context.vars = some (.one, [slot]))
-    (environment_agrees : state.locals slot = locals name) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 5 state
-        (compileProg context (.return (.var .local name))) =
-      evalPanMemResult locals state.memory
-        (.return (.var .local name) : Prog α) := by
-  simp [compileProg, compileExp, lookup, evalCrepFullResult,
-    evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
-    evalPanMemResult, evalPanMemProg, evalPanMemExp,
-    environment_agrees]
-  cases h : locals name <;> simp []
-
 theorem compile_full_local_return_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -231,58 +160,6 @@ theorem compile_full_local_return_correct
     evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
     evalPanMemResult, evalPanMemProg, evalPanMemExp, environment_agrees]
   cases h : locals name <;> simp []
-
-theorem compile_full_extCall_const_noop_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress configuration configurationLength array arrayLength : α)
-    (function : FunName) :
-    evalCrepFullProg [] primitive
-        (fun _ _ _ _ _ sourceState => some sourceState) sharedMem
-        baseAddress topAddress 30 state
-        (compileProg context
-          (.extCall function (.const configuration)
-            (.const configurationLength) (.const array) (.const arrayLength))) =
-      some (.normal state) ∧
-    evalPanFfiProg
-        (fun _ _ _ _ _ sourceLocals => some sourceLocals) locals
-        (.extCall function (.const configuration)
-          (.const configurationLength) (.const array) (.const arrayLength)) =
-      some locals := by
-  have hrestoreFour (base : Nat → Option α) (offset : Nat)
-      (value1 value2 value3 value4 : α) :
-      restoreCrepLocal
-          (restoreCrepLocal
-            (restoreCrepLocal
-              (restoreCrepLocal
-                (updateCrepLocal
-                  (updateCrepLocal
-                    (updateCrepLocal (updateCrepLocal base (offset + 1) value1)
-                      (offset + 2) value2)
-                    (offset + 3) value3)
-                  (offset + 4) value4)
-                (offset + 4) (base (offset + 4)))
-              (offset + 3) (base (offset + 3)))
-            (offset + 2) (base (offset + 2)))
-          (offset + 1) (base (offset + 1)) = base := by
-    funext current
-    by_cases h1 : current = offset + 1
-    · simp [restoreCrepLocal, h1]
-    by_cases h2 : current = offset + 2
-    · simp [restoreCrepLocal, h2]
-    by_cases h3 : current = offset + 3
-    · simp [restoreCrepLocal, h3]
-    by_cases h4 : current = offset + 4
-    · simp [restoreCrepLocal, h4]
-    · simp [restoreCrepLocal, updateCrepLocal, h1, h2, h3, h4]
-  simp [compileProg, firstCompiledExp, compileExp, nestedDecs,
-    evalCrepFullProg, evalCrepFullExp, evalPanExp, evalPanFfiProg, evalPanExtCall,
-    updateCrepLocal, restoreCrepResult, hrestoreFour]
 
 theorem compile_full_extCall_const_noop_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

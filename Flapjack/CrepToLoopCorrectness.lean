@@ -2417,6 +2417,59 @@ theorem crepToLoopProgramCorrect_assign_var
               simp [crepToLoopControlRel, crepToLoopStateRel,
                 updateCrepLocal, updateLoopLocal]
 
+theorem crepToLoopProgramCorrect_return_const
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (value : α) :
+    CrepToLoopProgramCorrect (.return [.const value] : CrepProg α) := by
+  intro context functions crepFunctions primitive ffi sharedMem
+    baseAddress topAddress sourceFuel targetFuel state live crepResult loopResult
+    hcrep hloop
+  simp [evalCrepFullProg, evalCrepFullExps, evalCrepFullExp] at hcrep
+  subst crepResult
+  cases targetFuel with
+  | zero => simp [evalLoopProgWithCallsAndFfi] at hloop
+  | succ targetFuel =>
+      cases targetFuel with
+      | zero =>
+          simp [loopCompileProg, loopCompileExp.loopCompileExps,
+            loopCompileExps, loopTempNames,
+            loopAssignTemps, evalLoopProgWithCallsAndFfi] at hloop
+      | succ targetFuel =>
+          cases targetFuel with
+          | zero =>
+              simp [loopCompileProg, loopCompileExp.loopCompileExps,
+                loopCompileExp, loopCompileExps, loopNestedSeq,
+                loopTempNames, loopAssignTemps,
+                evalLoopProgWithCallsAndFfi, evalLoopProg,
+                loopReadLocals, loopStateOfCrepState] at hloop
+          | succ targetFuel =>
+              cases targetFuel with
+              | zero =>
+                  simp [loopCompileProg, loopCompileExp.loopCompileExps,
+                    loopCompileExp, loopCompileExps, loopNestedSeq,
+                    loopTempNames, loopAssignTemps,
+                    evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+                    loopReadLocals, loopStateOfCrepState, updateLoopLocal] at hloop
+                  cases hloop
+                  simp [crepToLoopControlRel, crepToLoopStateRel,
+                    updateLoopLocal]
+                  intro name hname htemp
+                  omega
+              | succ targetFuel =>
+                  simp [loopCompileProg, loopCompileExp.loopCompileExps,
+                    loopCompileExp, loopCompileExps, loopNestedSeq,
+                    loopTempNames, loopAssignTemps,
+                    evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+                    loopReadLocals, loopStateOfCrepState, updateLoopLocal] at hloop
+                  cases hloop
+                  simp [crepToLoopControlRel, crepToLoopStateRel,
+                    updateLoopLocal]
+                  intro name hname htemp
+                  omega
+
 theorem crepToLoopProgramCorrect_induction
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

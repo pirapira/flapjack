@@ -12,22 +12,6 @@ and FFI.
 
 namespace Flapjack
 
-theorem compile_full_skip_compat_correct
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress : α) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 1 state
-        (compileProg context (.skip : Prog α)) =
-      evalPanMemResult locals state.memory (.skip : Prog α) := by
-  simp [compileProg, evalCrepFullResult, evalCrepFullProg,
-    evalPanMemResult, evalPanMemProg]
-
 /-! The first compact correctness leaf at the global-aware evaluator
     boundary.  `skip` leaves the separately threaded global environment
     unchanged, so its observable result remains the source memory result. -/
@@ -47,24 +31,6 @@ theorem compile_full_skip_correct
   simp [compileProg, evalCrepFullResultState, evalCrepFullProgState,
     evalPanMemResult, evalPanMemProg]
 
-theorem compile_full_return_const_compat_correct
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress value : α) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 1 state
-        (compileProg context (.return (.const value))) =
-      evalPanMemResult locals state.memory
-        (.return (.const value) : Prog α) := by
-  simp [compileProg, compileExp, evalCrepFullResult, evalCrepFullProg,
-    evalCrepFullExps, evalCrepFullExp, evalPanMemResult,
-    evalPanMemProg, evalPanMemExp]
-
 theorem compile_full_return_const_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -82,26 +48,6 @@ theorem compile_full_return_const_correct
   simp [compileProg, compileExp, evalCrepFullResultState,
     evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
     evalPanMemResult, evalPanMemProg, evalPanMemExp]
-
-theorem compile_full_add_const_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress left right : α) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 10 state
-        (compileProg context
-          (.return (.op .add [.const left, .const right]))) =
-      evalPanMemResult locals state.memory
-        (.return (.op .add [.const left, .const right]) : Prog α) := by
-  simp [compileProg, compileExp, compileExp.compileExpList, cexpHeads,
-    evalCrepFullResult, evalCrepFullProg,
-    evalCrepFullExps, evalCrepFullExp, evalPanMemResult,
-    evalPanMemProg, evalPanMemExp, evalPanBinOp]
 
 theorem compile_full_add_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -122,28 +68,6 @@ theorem compile_full_add_const_correct
     evalCrepFullResultState, evalCrepFullProgState,
     evalCrepFullExpsState, evalCrepFullExpState, evalPanMemResult,
     evalPanMemProg, evalPanMemExp, evalPanBinOp]
-
-theorem compile_full_store_load_const_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress address value : α) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 20 state
-        (compileProg context
-          (.seq (.store (.const address) (.const value))
-            (.return (.load .one (.const address))))) =
-      evalPanMemResult locals state.memory
-        (.seq (.store (.const address) (.const value))
-          (.return (.load .one (.const address)))) := by
-  simp [compileProg, compileExp, freshNames, nestedDecs, stores, crepNestedSeq,
-    loadShape, evalCrepFullResult, evalCrepFullProg, evalCrepFullExps,
-    evalCrepFullExp, evalPanMemResult, evalPanMemProg, evalPanMemExp,
-    updateMemory, updateCrepLocal, restoreCrepResult]
 
 theorem compile_full_store_load_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -167,31 +91,6 @@ theorem compile_full_store_load_const_correct
     evalCrepFullExpsState, evalCrepFullExpState, evalPanMemResult,
     evalPanMemProg, evalPanMemExp, updateMemory, updateCrepLocal,
     restoreCrepResult]
-
-theorem compile_full_ite_const_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress condition thenValue elseValue : α) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 20 state
-        (compileProg context
-          (.ite (.const condition)
-            (.return (.const thenValue))
-            (.return (.const elseValue)))) =
-      evalPanMemResult locals state.memory
-        (.ite (.const condition)
-          (.return (.const thenValue))
-          (.return (.const elseValue))) := by
-  simp [compileProg, compileExp, evalCrepFullResult, evalCrepFullProg,
-    evalCrepFullExps, evalCrepFullExp, evalPanMemResult,
-    evalPanMemProg, evalPanMemCondition, evalPanMemExp]
-  split <;> simp_all [
-    ]
 
 theorem compile_full_ite_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -218,30 +117,6 @@ theorem compile_full_ite_const_correct
     evalPanMemExp]
   split <;> simp_all
 
-theorem compile_full_local_assign_return_const_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress : α) (name : VarName) (slot : Nat) (value : α)
-    (lookup : lookupInfo name context.vars = some (.one, [slot])) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 20 state
-        (compileProg context
-          (.seq (.assign .local name (.const value))
-            (.return (.var .local name)))) =
-      evalPanMemResult locals state.memory
-        (.seq (.assign .local name (.const value))
-          (.return (.var .local name))) := by
-  simp [compileProg, compileExp, crepNestedSeq, lookup,
-    evalCrepFullResult, evalCrepFullProg, evalCrepFullExps,
-    evalCrepFullExp, evalPanMemResult, evalPanMemProg,
-    evalPanMemExp, updateCrepLocal, updatePanLocal,
-    distinctLists]
-
 theorem compile_full_local_assign_return_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -265,28 +140,6 @@ theorem compile_full_local_assign_return_const_correct
     evalCrepFullExpState, evalPanMemResult, evalPanMemProg,
     evalPanMemExp, updateCrepLocal, updatePanLocal, distinctLists]
 
-theorem compile_full_local_return_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress : α) (name : VarName) (slot : Nat)
-    (lookup : lookupInfo name context.vars = some (.one, [slot]))
-    (environment_agrees : state.locals slot = locals name) :
-    evalCrepFullResult [] primitive ffi sharedMem
-        baseAddress topAddress 5 state
-        (compileProg context (.return (.var .local name))) =
-      evalPanMemResult locals state.memory
-        (.return (.var .local name) : Prog α) := by
-  simp [compileProg, compileExp, lookup, evalCrepFullResult,
-    evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
-    evalPanMemResult, evalPanMemProg, evalPanMemExp,
-    environment_agrees]
-  cases h : locals name <;> simp []
-
 theorem compile_full_local_return_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -307,58 +160,6 @@ theorem compile_full_local_return_correct
     evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
     evalPanMemResult, evalPanMemProg, evalPanMemExp, environment_agrees]
   cases h : locals name <;> simp []
-
-theorem compile_full_extCall_const_noop_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress configuration configurationLength array arrayLength : α)
-    (function : FunName) :
-    evalCrepFullProg [] primitive
-        (fun _ _ _ _ _ sourceState => some sourceState) sharedMem
-        baseAddress topAddress 30 state
-        (compileProg context
-          (.extCall function (.const configuration)
-            (.const configurationLength) (.const array) (.const arrayLength))) =
-      some (.normal state) ∧
-    evalPanFfiProg
-        (fun _ _ _ _ _ sourceLocals => some sourceLocals) locals
-        (.extCall function (.const configuration)
-          (.const configurationLength) (.const array) (.const arrayLength)) =
-      some locals := by
-  have hrestoreFour (base : Nat → Option α) (offset : Nat)
-      (value1 value2 value3 value4 : α) :
-      restoreCrepLocal
-          (restoreCrepLocal
-            (restoreCrepLocal
-              (restoreCrepLocal
-                (updateCrepLocal
-                  (updateCrepLocal
-                    (updateCrepLocal (updateCrepLocal base (offset + 1) value1)
-                      (offset + 2) value2)
-                    (offset + 3) value3)
-                  (offset + 4) value4)
-                (offset + 4) (base (offset + 4)))
-              (offset + 3) (base (offset + 3)))
-            (offset + 2) (base (offset + 2)))
-          (offset + 1) (base (offset + 1)) = base := by
-    funext current
-    by_cases h1 : current = offset + 1
-    · simp [restoreCrepLocal, h1]
-    by_cases h2 : current = offset + 2
-    · simp [restoreCrepLocal, h2]
-    by_cases h3 : current = offset + 3
-    · simp [restoreCrepLocal, h3]
-    by_cases h4 : current = offset + 4
-    · simp [restoreCrepLocal, h4]
-    · simp [restoreCrepLocal, updateCrepLocal, h1, h2, h3, h4]
-  simp [compileProg, firstCompiledExp, compileExp, nestedDecs,
-    evalCrepFullProg, evalCrepFullExp, evalPanExp, evalPanFfiProg, evalPanExtCall,
-    updateCrepLocal, restoreCrepResult, hrestoreFour]
 
 theorem compile_full_extCall_const_noop_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -412,31 +213,6 @@ theorem compile_full_extCall_const_noop_correct
     structured Pancake evaluator and in the full Crepe evaluator.  Keeping
     the source result in its structured form makes this lemma composable with
     the later environment and memory relations. -/
-theorem compile_full_pan_value_return_word_compat_correct
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (structs : StructContext)
-    (locals globals : VarName → Option (PanValue α))
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress bytesInWord value : α) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 1 state
-        (compileProg context (.return (.const value))) =
-      (evalPanValueProg structs baseAddress topAddress bytesInWord
-        locals globals (fun address =>
-          (state.memory address).map PanValue.word)
-        (.return (.const value))).map
-        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
-  simp [compileProg, compileExp, evalCrepFullResult, evalCrepFullProg,
-    evalCrepFullExps, evalCrepFullExp, evalPanValueProg,
-    evalPanValueProgWithPrimitive, evalPanValueExp, panValueFlatWords,
-    panValueFlatWordsFuel]
-
-/-! The closed word return boundary also holds for the global-aware evaluator.
-    Keeping this as the public theorem makes the structured correctness API
-    state-preserving even when the returned expression does not touch globals. -/
 theorem compile_full_pan_value_return_word_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -462,39 +238,6 @@ theorem compile_full_pan_value_return_word_correct
 /-! The return boundary is also useful with a non-constant source expression.
     Its two hypotheses are precisely the source-expression and lowered-Crep
     expression obligations that a later expression pass theorem supplies. -/
-theorem compile_full_pan_value_return_word_of_exp_compat_correct
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (structs : StructContext)
-    (locals globals : VarName → Option (PanValue α))
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress bytesInWord value : α)
-    (expression : Exp α) (compiled : CrepExp α)
-    (hsource : evalPanValueExp structs locals globals (fun address =>
-      (state.memory address).map PanValue.word)
-      baseAddress topAddress bytesInWord expression = some (.word value))
-    (hcompile : compileExp context expression = ([compiled], .one))
-    (hcompiled : evalCrepFullExp state.locals state.memory baseAddress topAddress
-      compiled = some value) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 1 state
-        (compileProg context (.return expression)) =
-      (evalPanValueProg structs baseAddress topAddress bytesInWord
-        locals globals (fun address =>
-          (state.memory address).map PanValue.word)
-        (.return expression)).map
-        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
-  simp [compileProg, hcompile, evalCrepFullResult, evalCrepFullProg,
-    evalCrepFullExps, hcompiled, evalPanValueProg,
-    evalPanValueProgWithPrimitive, hsource, panValueFlatWords,
-    panValueFlatWordsFuel]
-
-/-! Stateful counterpart of the general word-return boundary.  The compiled
-    expression is evaluated against the complete Crep state, so callers may
-    retain the global environment while proving a no-global expression
-    contract. -/
 theorem compile_full_pan_value_return_word_of_exp
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -527,37 +270,6 @@ theorem compile_full_pan_value_return_word_of_exp
 /-! Shape-preserving local assignment is the next stateful source boundary.
     The source variable is already bound to a word, so CakeML's assignment
     validity check and the flattened Crep slot update can be related directly. -/
-theorem compile_full_pan_value_local_assign_return_word_compat_correct
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (structs : StructContext)
-    (locals globals : VarName → Option (PanValue α))
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress bytesInWord : α)
-    (name : VarName) (slot : Nat) (oldValue value : α)
-    (hlookup : lookupInfo name context.vars = some (.one, [slot]))
-    (hlocals : locals name = some (.word oldValue)) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 20 state
-        (compileProg context
-          (.seq (.assign .local name (.const value))
-            (.return (.var .local name)))) =
-      (evalPanValueProg structs baseAddress topAddress bytesInWord
-        locals globals (fun address =>
-          (state.memory address).map PanValue.word)
-        (.seq (.assign .local name (.const value))
-          (.return (.var .local name)))).map
-        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
-  simp [compileProg, compileExp, hlookup, hlocals, evalCrepFullResult,
-    evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
-    evalPanValueProg, evalPanValueProgWithPrimitive, evalPanValueExp,
-    panValueAssignmentValid, panValueShape, panShapeMatches,
-    crepNestedSeq, distinctLists, updateCrepLocal, updatePanValueMap,
-    panValueFlatWords,
-    panValueFlatWordsFuel]
-
 theorem compile_full_pan_value_local_assign_return_word_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -658,36 +370,6 @@ theorem compile_full_pan_value_seq_normal_compose
     structured form is the one needed for record-valued Pancake expressions:
     the compiler emits the flattened Crep words, while the source evaluator
     retains the original structured value until the final observation. -/
-theorem compile_full_pan_value_return_of_exp_compat_correct
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (structs : StructContext)
-    (locals globals : VarName → Option (PanValue α))
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress bytesInWord : α) (expression : Exp α)
-    (value : PanValue α) (compiled : List (CrepExp α))
-    (hsource : evalPanValueExp structs locals globals (fun address =>
-      (state.memory address).map PanValue.word)
-      baseAddress topAddress bytesInWord expression = some value)
-    (hvalid : panValuePayloadWithinLimit structs value = true)
-    (hcompile : compileExp context expression =
-      (compiled, panValueShape structs value))
-    (hcompiled : evalCrepFullExps state.locals state.memory baseAddress topAddress
-      compiled = some (panValueFlatWords value)) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 1 state
-        (compileProg context (.return expression)) =
-      (evalPanValueProg structs baseAddress topAddress bytesInWord
-        locals globals (fun address =>
-          (state.memory address).map PanValue.word)
-        (.return expression)).map
-        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
-  simp [compileProg, hcompile, evalCrepFullResult, evalCrepFullProg,
-    hcompiled, evalPanValueProg,
-    evalPanValueProgWithPrimitive, hsource, hvalid]
-
 theorem compile_full_pan_value_return_of_exp
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -844,39 +526,6 @@ theorem compile_full_pan_value_record_return_const_correct
 /-! The structured source boundary also covers branch selection.  This closed
     equality conditional exercises the source boolean interpretation and the
     compiled Crep nonzero test, while both branches retain word-shaped values. -/
-theorem compile_full_pan_value_ite_word_const_compat_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (structs : StructContext)
-    (locals globals : VarName → Option (PanValue α))
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress bytesInWord conditionLeft conditionRight : α)
-    (thenValue elseValue : α) (one_ne_zero : (1 : α) ≠ 0) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 20 state
-        (compileProg context
-          (.ite (.cmp .equal (.const conditionLeft) (.const conditionRight))
-            (.return (.const thenValue)) (.return (.const elseValue)))) =
-      (evalPanValueProg structs baseAddress topAddress bytesInWord
-        locals globals (fun address =>
-          (state.memory address).map PanValue.word)
-        (.ite (.cmp .equal (.const conditionLeft) (.const conditionRight))
-          (.return (.const thenValue)) (.return (.const elseValue)))).map
-        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
-  by_cases hcondition : conditionLeft == conditionRight
-  · simp [compileProg, compileExp, evalCrepFullResult, evalCrepFullProg,
-      evalCrepFullExp, evalCrepFullExps, evalPanValueProg,
-      evalPanValueProgWithPrimitive, evalPanValueExp,
-      evalPanCmp, hcondition, one_ne_zero,
-      panValueFlatWords, panValueFlatWordsFuel]
-  · simp [compileProg, compileExp, evalCrepFullResult, evalCrepFullProg,
-      evalCrepFullExp, evalCrepFullExps, evalPanValueProg,
-      evalPanValueProgWithPrimitive, evalPanValueExp,
-      evalPanCmp, hcondition,
-      panValueFlatWords, panValueFlatWordsFuel]
-
 theorem compile_full_pan_value_ite_word_const_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -1300,7 +949,7 @@ theorem compile_full_pan_value_store_load_two_word_correct
     (hbytesInWord : context.bytesInWord = bytesInWord)
     (hzeroAdd : 0 + bytesInWord = bytesInWord)
     (haddZero : ∀ value : α, value + 0 = value) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 120 state
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 120 state
         (compileProg context
           (.seq
             (.store (.const address)
@@ -1330,8 +979,8 @@ theorem compile_full_pan_value_store_load_two_word_correct
     · simp [Option.bind, compileProg, hcompile, hsize, hrange, hbytesInWord,
         hzeroAdd, haddZero, hzero, hbytesZero, haddr, hnames, compileExp,
     Function.comp_def, freshNames,
-    nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResult,
-    evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+    nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResultState,
+    evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
     restoreCrepResult, evalPanValueProg,
     evalPanValueProgWithPrimitive, evalPanValueExp,
     evalPanValueExp.evalPanValueExps, panValueFlatLoad,
@@ -1348,8 +997,8 @@ theorem compile_full_pan_value_store_load_two_word_correct
         panValueFlatWords, panValueFlatWordsFuel]
     · simp [Option.bind, compileProg, hcompile, hsize, hrange, hbytesInWord,
         hzeroAdd, haddZero, hzero, hbytesZero, haddr, hnames, compileExp,
-        nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResult,
-        evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+        nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResultState,
+        evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
         restoreCrepResult, evalPanValueProg,
         evalPanValueProgWithPrimitive, evalPanValueExp,
         evalPanValueExp.evalPanValueExps, panValueFlatLoad,
@@ -1367,8 +1016,8 @@ theorem compile_full_pan_value_store_load_two_word_correct
   · by_cases haddr : address == address + bytesInWord
     · simp [Option.bind, compileProg, hcompile, hsize, hrange, hbytesInWord,
         hzeroAdd, haddZero, hzero, haddr, hnames, compileExp,
-        nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResult,
-      evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+        nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResultState,
+      evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
       restoreCrepResult, evalPanValueProg,
       evalPanValueProgWithPrimitive, evalPanValueExp,
       evalPanValueExp.evalPanValueExps, panValueFlatLoad,
@@ -1385,8 +1034,8 @@ theorem compile_full_pan_value_store_load_two_word_correct
         panValueFlatWords, panValueFlatWordsFuel]
     · simp [Option.bind, compileProg, hcompile, hsize, hrange, hbytesInWord,
         hzeroAdd, haddZero, hzero, haddr, hnames, compileExp,
-        nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResult,
-        evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+        nestedDecs, crepNestedSeq, stores, loadShape, evalCrepFullResultState,
+        evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
         restoreCrepResult, evalPanValueProg,
         evalPanValueProgWithPrimitive, evalPanValueExp,
         evalPanValueExp.evalPanValueExps, panValueFlatLoad,
@@ -1414,7 +1063,7 @@ theorem compile_full_pan_value_store32_load32_word_correct
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord address value : α) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 20 state
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 20 state
         (compileProg context
           (.seq
             (.store32 (.const address) (.const value))
@@ -1426,8 +1075,8 @@ theorem compile_full_pan_value_store32_load32_word_correct
           (.store32 (.const address) (.const value))
           (.return (.load32 (.const address))))).map
         (fun result => result.2.2.2.flatMap panValueFlatWords) := by
-  simp [Option.bind, compileProg, compileExp, evalCrepFullResult,
-    evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+  simp [Option.bind, compileProg, compileExp, evalCrepFullResultState,
+    evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
     evalPanValueProg, evalPanValueProgWithPrimitive, evalPanValueExp,
     updateMemory,
     updatePanValueMemory, updatePanValueMap, panValueFlatWords,
@@ -1445,7 +1094,7 @@ theorem compile_full_pan_value_storeByte_loadByte_word_correct
     (state : CrepState α) (primitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord address value : α) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 20 state
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 20 state
         (compileProg context
           (.seq
             (.storeByte (.const address) (.const value))
@@ -1457,8 +1106,8 @@ theorem compile_full_pan_value_storeByte_loadByte_word_correct
           (.storeByte (.const address) (.const value))
           (.return (.loadByte (.const address))))).map
         (fun result => result.2.2.2.flatMap panValueFlatWords) := by
-  simp [Option.bind, compileProg, compileExp, evalCrepFullResult,
-    evalCrepFullProg, evalCrepFullExps, evalCrepFullExp,
+  simp [Option.bind, compileProg, compileExp, evalCrepFullResultState,
+    evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
     evalPanValueProg, evalPanValueProgWithPrimitive, evalPanValueExp,
     updateMemory, updatePanValueMemory, updatePanValueMap,
     panValueFlatWords, panValueFlatWordsFuel]
@@ -1774,7 +1423,7 @@ theorem compile_full_pan_value_seq_normal_compose_full
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory first =
       some (.normal sourceFirstLocals sourceFirstGlobals sourceFirstMemory))
-    (hcrepFirst : evalCrepFullProg functions crepPrimitive ffi sharedMem
+    (hcrepFirst : evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.normal firstState))
     (hsourceSecond : evalPanValueProgWithPrimitiveCallsAndFfi
@@ -1782,7 +1431,7 @@ theorem compile_full_pan_value_seq_normal_compose_full
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceFirstLocals sourceFirstGlobals sourceFirstMemory second =
       some sourceResult)
-    (hcrepSecond : evalCrepFullProg functions crepPrimitive ffi sharedMem
+    (hcrepSecond : evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) firstState compiledSecond =
       some crepResult) :
     evalPanValueProgWithPrimitiveCallsAndFfi
@@ -1790,14 +1439,14 @@ theorem compile_full_pan_value_seq_normal_compose_full
       baseAddress topAddress bytesInWord (fuel + 2)
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
       some sourceResult ∧
-    evalCrepFullProg functions crepPrimitive ffi sharedMem
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 2) state
       (compileProg context (.seq first second)) = some crepResult := by
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst,
       hsourceSecond]
   · simp [compileProg, hcompileFirst, hcompileSecond,
-      evalCrepFullProg, hcrepFirst, hcrepSecond]
+      evalCrepFullProgState, hcrepFirst, hcrepSecond]
 
 /-! A returned first component short-circuits a structured sequence. -/
 theorem compile_full_pan_value_seq_return_compose_full
@@ -1829,7 +1478,7 @@ theorem compile_full_pan_value_seq_return_compose_full
       sourceLocals sourceGlobals sourceMemory first =
       some (.returned sourceFirstLocals sourceFirstGlobals sourceFirstMemory
         sourceValues))
-    (hcrepFirst : evalCrepFullProg functions crepPrimitive ffi sharedMem
+    (hcrepFirst : evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.returned firstState crepValues)) :
     evalPanValueProgWithPrimitiveCallsAndFfi
@@ -1838,14 +1487,14 @@ theorem compile_full_pan_value_seq_return_compose_full
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
       some (.returned sourceFirstLocals sourceFirstGlobals sourceFirstMemory
         sourceValues) ∧
-    evalCrepFullProg functions crepPrimitive ffi sharedMem
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 2) state
       (compileProg context (.seq first second)) =
       some (.returned firstState crepValues) := by
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst]
   · simp [compileProg, hcompileFirst, hcompileSecond,
-      evalCrepFullProg, hcrepFirst]
+      evalCrepFullProgState, hcrepFirst]
 
 /-! Non-normal first components also short-circuit structured sequences. -/
 theorem compile_full_pan_value_seq_raise_compose_full
@@ -1878,7 +1527,7 @@ theorem compile_full_pan_value_seq_raise_compose_full
       sourceLocals sourceGlobals sourceMemory first =
       some (.raised sourceFirstLocals sourceFirstGlobals sourceFirstMemory
         sourceException sourceValue))
-    (hcrepFirst : evalCrepFullProg functions crepPrimitive ffi sharedMem
+    (hcrepFirst : evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.raised firstState crepException)) :
     evalPanValueProgWithPrimitiveCallsAndFfi
@@ -1887,14 +1536,14 @@ theorem compile_full_pan_value_seq_raise_compose_full
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
       some (.raised sourceFirstLocals sourceFirstGlobals sourceFirstMemory
         sourceException sourceValue) ∧
-    evalCrepFullProg functions crepPrimitive ffi sharedMem
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 2) state
       (compileProg context (.seq first second)) =
       some (.raised firstState crepException) := by
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst]
   · simp [compileProg, hcompileFirst, hcompileSecond,
-      evalCrepFullProg, hcrepFirst]
+      evalCrepFullProgState, hcrepFirst]
 
 theorem compile_full_pan_value_seq_break_compose_full
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -1923,7 +1572,7 @@ theorem compile_full_pan_value_seq_break_compose_full
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory first =
       some (.broke sourceFirstLocals sourceFirstGlobals sourceFirstMemory))
-    (hcrepFirst : evalCrepFullProg functions crepPrimitive ffi sharedMem
+    (hcrepFirst : evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.broke firstState 0)) :
     evalPanValueProgWithPrimitiveCallsAndFfi
@@ -1931,14 +1580,14 @@ theorem compile_full_pan_value_seq_break_compose_full
       baseAddress topAddress bytesInWord (fuel + 2)
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
       some (.broke sourceFirstLocals sourceFirstGlobals sourceFirstMemory) ∧
-    evalCrepFullProg functions crepPrimitive ffi sharedMem
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 2) state
       (compileProg context (.seq first second)) =
       some (.broke firstState 0) := by
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst]
   · simp [compileProg, hcompileFirst, hcompileSecond,
-      evalCrepFullProg, hcrepFirst]
+      evalCrepFullProgState, hcrepFirst]
 
 theorem compile_full_pan_value_seq_continue_compose_full
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -1967,7 +1616,7 @@ theorem compile_full_pan_value_seq_continue_compose_full
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory first =
       some (.continued sourceFirstLocals sourceFirstGlobals sourceFirstMemory))
-    (hcrepFirst : evalCrepFullProg functions crepPrimitive ffi sharedMem
+    (hcrepFirst : evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.continued firstState 0)) :
     evalPanValueProgWithPrimitiveCallsAndFfi
@@ -1975,14 +1624,14 @@ theorem compile_full_pan_value_seq_continue_compose_full
       baseAddress topAddress bytesInWord (fuel + 2)
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
       some (.continued sourceFirstLocals sourceFirstGlobals sourceFirstMemory) ∧
-    evalCrepFullProg functions crepPrimitive ffi sharedMem
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 2) state
       (compileProg context (.seq first second)) =
       some (.continued firstState 0) := by
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst]
   · simp [compileProg, hcompileFirst, hcompileSecond,
-      evalCrepFullProg, hcrepFirst]
+      evalCrepFullProgState, hcrepFirst]
 
 /-! Shared-memory loads are word assignments in Pancake and dispatch through
     the corresponding Crep shared-memory handler operation. -/

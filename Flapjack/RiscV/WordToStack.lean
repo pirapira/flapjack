@@ -398,6 +398,26 @@ def wordStackLongDivInst (config : WordStackConfig)
             (.inst (.arith (.longDiv 0 3 3 0 config.scratch))))
   | _ => none
 
+/-- `LongMul` may write its high and low words to the same location when only
+    the low product is observed, exactly as the compiler emits for `a * b`.
+    The shared special-location contract rejects that alias; this relaxed
+    contract keeps the source-distinctness requirement so the high product
+    cannot clobber an operand before the low product is formed. -/
+def wordStackLongMulAliasLocationsSafe (config : WordStackConfig)
+    (operation : WordArith) : Bool :=
+  match operation with
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      match wordStackLocation config destinationLeft,
+        wordStackLocation config destinationRight,
+        wordStackLocation config sourceLeft,
+        wordStackLocation config sourceRight with
+      | some destinationLeft, some destinationRight,
+          some sourceLeft, some sourceRight =>
+          destinationLeft = destinationRight &&
+            destinationLeft != sourceLeft && destinationLeft != sourceRight
+      | _, _, _, _ => false
+  | _ => false
+
 def wordStackArithInst (config : WordStackConfig) (operation : WordArith) :
     Option (StackProg α) :=
   if wordSpecialArithLocationsSafe operation config.locations = true then
@@ -409,6 +429,8 @@ def wordStackArithInst (config : WordStackConfig) (operation : WordArith) :
     | .div destination dividend divisor =>
       wordStackDivInst config destination dividend divisor
     | .longDiv _ _ _ _ _ => wordStackLongDivInst config operation
+  else if wordStackLongMulAliasLocationsSafe config operation then
+    wordStackLongMulInst config operation
   else
     none
 
@@ -547,22 +569,6 @@ def wordStackFfiMove (config : WordStackConfig) (source destination : Nat) :
       else pure (.arith .or destination register register)
   | .stack slot =>
       pure (.stackLoad destination (wordStackOffset config slot))
-
-def wordStackFfi (config : WordStackConfig) (function : FunName)
-    (configuration configurationLength array arrayLength : Nat) :
-    Option (StackProg α) := do
-  let sources := [configuration, configurationLength, array, arrayLength]
-  if wordStackFfiSourcesSafe config sources then
-    let configurationMove ← wordStackFfiMove config configuration 10
-    let configurationLengthMove ← wordStackFfiMove config configurationLength 11
-    let arrayMove ← wordStackFfiMove config array 12
-    let arrayLengthMove ← wordStackFfiMove config arrayLength 13
-    pure (wordStackJoin configurationMove
-      (wordStackJoin configurationLengthMove
-        (wordStackJoin arrayMove
-          (wordStackJoin arrayLengthMove
-            (.ffi function 10 11 12 13 0)))))
-  else none
 
 def wordStackStoreName : WordStore α → Option StackStore
   | .temp _ => none
@@ -928,30 +934,77 @@ def wordStackCompileExpToRegisterNat (config : WordStackConfig)
         pure (wordStackJoin leftPrelude
           (wordStackJoin rightPrelude (.arith operator target leftRegister rightRegister)))
       else
-        let leftTarget ← available.head?
-        let rightTarget ← available.tail.head?
-        let remaining := available.drop 2
-        let left ← wordStackCompileExpToRegisterNat config leftTarget
-          (rightTarget :: remaining) left
+        let rightTarget ← available.head?
+        let remaining := available.tail
         let right ← wordStackCompileExpToRegisterNat config rightTarget remaining right
-        pure (wordStackJoin left
-          (wordStackJoin right (.arith operator target leftTarget rightTarget)))
+        let left ← wordStackCompileExpToRegisterNat config target remaining left
+        pure (wordStackJoin right
+          (wordStackJoin left (.arith operator target target rightTarget)))
   | .shift operator left right => do
       if wordStackExpressionIsAtom left && wordStackExpressionIsAtom right then
-        let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
-        let rightTemporary := available.head?.getD config.addressScratch
-        let (rightPrelude, rightRegister) ← wordStackAtomNat config rightTemporary right
-        pure (wordStackJoin leftPrelude
-          (wordStackJoin rightPrelude (.shift operator target leftRegister rightRegister)))
-      else
-        let leftTarget ← available.head?
-        let rightTarget ← available.tail.head?
-        let remaining := available.drop 2
-        let left ← wordStackCompileExpToRegisterNat config leftTarget
-          (rightTarget :: remaining) left
+        if operator == .ror then
+          let destinationRegister :=
+            if target == config.scratch then
+              (available.find? (fun register => register != config.scratch)).getD
+                config.addressScratch
+            else target
+          let operandRegisters :=
+            [config.addressScratch, config.specialScratch, config.carryScratch]
+              |>.filter (fun register => register != destinationRegister)
+          let leftTemporary := operandRegisters.head?.getD config.addressScratch
+          let rightTemporary := operandRegisters.tail.head?.getD config.specialScratch
+          let (leftPrelude, leftRegister) ← wordStackAtomNat config leftTemporary left
+          let (rightPrelude, rightRegister) ←
+            wordStackAtomNat config rightTemporary right
+          let rotate :=
+            .shift operator destinationRegister leftRegister rightRegister
+          let body :=
+            if destinationRegister = target then rotate
+            else .seq rotate (.arith .or target destinationRegister destinationRegister)
+          pure (wordStackJoin leftPrelude (wordStackJoin rightPrelude body))
+        else
+          let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
+          let rightTemporary := available.head?.getD config.addressScratch
+          let (rightPrelude, rightRegister) ← wordStackAtomNat config rightTemporary right
+          pure (wordStackJoin leftPrelude
+            (wordStackJoin rightPrelude (.shift operator target leftRegister rightRegister)))
+      else if operator == .ror then
+        let destinationRegister :=
+          if target == config.scratch then
+            (available.find? (fun register => register != config.scratch)).getD
+              config.addressScratch
+          else target
+        let pool :=
+          available.filter (fun register =>
+            register != destinationRegister && register != config.scratch)
+        let rightTarget ← pool.head?
+        let remaining := pool.tail
         let right ← wordStackCompileExpToRegisterNat config rightTarget remaining right
-        pure (wordStackJoin left
-          (wordStackJoin right (.shift operator target leftTarget rightTarget)))
+        let left ← wordStackCompileExpToRegisterNat config destinationRegister remaining left
+        let rotate := .shift operator destinationRegister destinationRegister rightTarget
+        let body :=
+          if destinationRegister = target then rotate
+          else .seq rotate (.arith .or target destinationRegister destinationRegister)
+        pure (wordStackJoin right (wordStackJoin left body))
+      else
+        let rightTarget ← available.head?
+        let remaining := available.tail
+        let right ← wordStackCompileExpToRegisterNat config rightTarget remaining right
+        let left ← wordStackCompileExpToRegisterNat config target remaining left
+        pure (wordStackJoin right
+          (wordStackJoin left (.shift operator target target rightTarget)))
+  | .op operator (first :: rest) => do
+      let firstCode ←
+        wordStackCompileExpToRegisterNat config target available first
+      rest.foldlM
+        (fun accumulated argument => do
+          let temporary ← available.head?
+          let argumentCode ← wordStackCompileExpToRegisterNat config temporary
+            available.tail argument
+          pure (wordStackJoin accumulated
+            (wordStackJoin argumentCode
+              (.arith operator target target temporary))))
+        firstCode
   | .op _ _ => none
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
@@ -969,14 +1022,50 @@ def wordStackCompileExpToPhysicalNat (config : WordStackConfig)
       pure (wordStackJoin code
         (.stackStore config.scratch (wordStackOffset config slot)))
 
+/- A store has two simultaneously live results: its computed address and its
+   value. Keep the other result's reserved register out of the recursive
+   expression pool so evaluating a nested expression cannot destroy it. -/
+def wordStackExpressionTemporariesExcluding (config : WordStackConfig)
+    (target forbidden : Nat) : List Nat :=
+  [config.scratch, config.addressScratch, config.specialScratch, config.carryScratch]
+    |>.filter (fun register => register != target && register != forbidden)
+
+def wordStackCompileStoreNatNested (config : WordStackConfig) (address : WordExp Nat)
+    (value : WordExp Nat) : Option (StackProg Nat) := do
+  let addressPrelude ← wordStackCompileExpToRegisterNat config config.addressScratch
+    (wordStackExpressionTemporaries config config.addressScratch) address
+  let valuePrelude ← wordStackCompileExpToRegisterNat config config.scratch
+    (wordStackExpressionTemporariesExcluding config config.scratch config.addressScratch)
+    value
+  pure (wordStackJoin addressPrelude
+    (wordStackJoin valuePrelude
+      (.inst (.mem .store config.scratch config.addressScratch))))
+
+def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
+    (address : WordExp Nat) : Option (StackProg Nat) := do
+  let addressPrelude ← wordStackCompileExpToRegisterNat config config.addressScratch
+    (wordStackExpressionTemporaries config config.addressScratch) address
+  let body ← wordStackWritePhysicalNat config destination
+    (fun register => .inst (.mem .load register config.addressScratch))
+  pure (wordStackJoin addressPrelude body)
+
 def wordStackCompileSharedNat (config : WordStackConfig)
     (operator : WordMemOp) (destination : Nat) (address : WordExp Nat) :
     Option (StackProg Nat) := do
-  let (addressPrelude, addressRegister) ←
-    wordStackAtomNat config config.addressScratch address
-  let body ← wordStackWritePhysicalNat config destination
-    (fun register => .shMem operator register addressRegister)
-  pure (wordStackJoin addressPrelude body)
+  match address with
+  | .const _ | .var _ | .lookup _ =>
+      let (addressPrelude, addressRegister) ←
+        wordStackAtomNat config config.addressScratch address
+      let body ← wordStackWritePhysicalNat config destination
+        (fun register => .shMem operator register addressRegister)
+      pure (wordStackJoin addressPrelude body)
+  | _ =>
+      let addressPrelude ←
+        wordStackCompileExpToRegisterNat config config.addressScratch
+          (wordStackExpressionTemporaries config config.addressScratch) address
+      let body ← wordStackWritePhysicalNat config destination
+        (fun register => .shMem operator register config.addressScratch)
+      pure (wordStackJoin addressPrelude body)
 
 def wordStackCompileExpNat (config : WordStackConfig) (destination : Nat) :
     WordExp Nat → Option (StackProg Nat)
@@ -988,12 +1077,36 @@ def wordStackCompileExpNat (config : WordStackConfig) (destination : Nat) :
       let body ← wordStackWritePhysicalNat config destination
         (.get · store)
       pure body
-  | .load address => wordStackCompileLoadNat config destination address
+  | .load address =>
+      match address with
+      | .const _ | .var _ | .lookup _ =>
+          wordStackCompileLoadNat config destination address
+      | _ => wordStackCompileLoadNatNested config destination address
   | .op operator [left, right] =>
-      wordStackCompileBinaryNat config destination operator left right
-  | .op _ _ => none
+      match left with
+      | .const _ | .var _ | .lookup _ =>
+          match right with
+          | .const _ | .var _ | .lookup _ =>
+              wordStackCompileBinaryNat config destination operator left right
+          | _ =>
+              wordStackCompileExpToPhysicalNat config destination (.op operator [left, right])
+      | _ =>
+          wordStackCompileExpToPhysicalNat config destination (.op operator [left, right])
+  | .op operator arguments =>
+      wordStackCompileExpToPhysicalNat config destination (.op operator arguments)
   | .shift operator left right =>
-      wordStackCompileShiftNat config destination operator left right
+      if operator == .ror then
+        wordStackCompileExpToPhysicalNat config destination (.shift operator left right)
+      else
+        match left with
+        | .const _ | .var _ | .lookup _ =>
+            match right with
+            | .const _ | .var _ | .lookup _ =>
+                wordStackCompileShiftNat config destination operator left right
+            | _ =>
+                wordStackCompileExpToPhysicalNat config destination (.shift operator left right)
+        | _ =>
+            wordStackCompileExpToPhysicalNat config destination (.shift operator left right)
 
 def wordStackSetNat (config : WordStackConfig) (store : WordStore Nat)
     (value : WordExp Nat) : Option (StackProg Nat) := do
@@ -1119,6 +1232,38 @@ def wordStackParallelLocationMoveAux (config : WordStackConfig) :
 def wordStackParallelLocationMove (config : WordStackConfig)
     (moves : List (WordLocation × WordLocation)) : Option (StackProg α) :=
   wordStackParallelLocationMoveAux config (moves.length + 1) moves
+
+/-- Materialize the four FFI arguments into the fixed RISC-V ABI registers
+    x10--x13.  When the sources already avoid those registers we keep the
+    original sequential move chain; otherwise we fall back to a parallel move
+    so a source that already lives in one of the destination registers is not
+    clobbered before it is read. -/
+def wordStackFfi (config : WordStackConfig) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat) :
+    Option (StackProg α) := do
+  let sources := [configuration, configurationLength, array, arrayLength]
+  if wordStackFfiSourcesSafe config sources then
+    let configurationMove ← wordStackFfiMove config configuration 10
+    let configurationLengthMove ← wordStackFfiMove config configurationLength 11
+    let arrayMove ← wordStackFfiMove config array 12
+    let arrayLengthMove ← wordStackFfiMove config arrayLength 13
+    pure (wordStackJoin configurationMove
+      (wordStackJoin configurationLengthMove
+        (wordStackJoin arrayMove
+          (wordStackJoin arrayLengthMove
+            (.ffi function 10 11 12 13 0)))))
+  else
+    let configurationLocation ← wordStackLocation config configuration
+    let configurationLengthLocation ← wordStackLocation config configurationLength
+    let arrayLocation ← wordStackLocation config array
+    let arrayLengthLocation ← wordStackLocation config arrayLength
+    let moves : List (WordLocation × WordLocation) :=
+      [ (.register 10, configurationLocation),
+        (.register 11, configurationLengthLocation),
+        (.register 12, arrayLocation),
+        (.register 13, arrayLengthLocation) ]
+    let prelude ← wordStackParallelLocationMove config moves
+    pure (.seq prelude (.ffi function 10 11 12 13 0))
 
 def wordStackPhysicalMovesFrom (config : WordStackConfig) :
     List Nat → Nat → Option (List (WordLocation × WordLocation))
@@ -2190,7 +2335,10 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .inst instruction => wordToStackInst config instruction
   | .get destination store => wordStackGet config destination store
   | .store address value =>
-      wordStackCompileStoreNat config address (.var value)
+      match address with
+      | .const _ | .var _ | .lookup _ =>
+          wordStackCompileStoreNat config address (.var value)
+      | _ => wordStackCompileStoreNatNested config address (.var value)
   | .set store value => wordStackSetNat config store value
   | .seq first second => do
       let first ← wordToStackProgNat config first

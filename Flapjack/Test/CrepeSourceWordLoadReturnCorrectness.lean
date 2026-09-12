@@ -11,7 +11,7 @@ def sourceWordLoadReturnState : CrepState Nat :=
 
 theorem closed_source_word_load_return_bridge :
     ∃ result,
-      evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      evalCrepFullProgState [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         (fun _ _ _ _ => none) 0 0 1 sourceWordLoadReturnState
         (compileProg sourceWordLoadReturnContext
           (.return (.load .one (SourceWordExp.const (4 : Nat)).toExp))) =

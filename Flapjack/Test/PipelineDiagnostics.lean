@@ -90,10 +90,27 @@ def checkedPipelineRemoveConfig : StackRemoveConfig :=
     | .ok artifact => artifact.bytes.length > 0
     | .error _ => false
 
+/-! Cake-compatible structured store addresses must survive the source-facing
+    pipeline as well as the parser/static checker. -/
+#guard
+    match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main"
+      "fun 1 main() { var {1} x = <1>; st x.0, x.0; return 1; }" with
+    | .ok artifact => artifact.bytes.length > 0
+    | .error _ => false
+
 #guard
     match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
       (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
       "main" "var 1 global = 7;\nfun 1 main() { return global; }" with
+    | .ok image => image.sections.length > 0 && image.bitmaps.data.length > 0
+    | .error _ => false
+
+#guard
+    match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" "var {1} global = <7>;\nfun 1 main() { return global.0; }" with
     | .ok image => image.sections.length > 0 && image.bitmaps.data.length > 0
     | .error _ => false
 
@@ -126,5 +143,26 @@ def checkedPipelineRemoveConfig : StackRemoveConfig :=
     | .ok image => image.bitmaps.data.length > 0 && image.sections.length > 0 &&
         image.sections.all (fun entry => entry.bytes.length % 4 == 0)
     | .error _ => false
+
+/-! Original Pancake also accepts a computed address for an ordinary local
+    store.  Keep this source-facing regression separate from the structured
+    address case above: the address is a nested expression and the value is a
+    scalar local. -/
+def nestedLocalStoreSource : String :=
+  "fun 1 main() { var 1 x = 7; st 1000 + 12, x; return x; }"
+
+#guard
+    match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" nestedLocalStoreSource with
+    | .ok artifact => artifact.bytes.length > 0 && artifact.bytes.length % 4 == 0
+    | .error _ => false
+
+def nestedLocalStoreBytesAccepted : Bool :=
+  match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" nestedLocalStoreSource with
+  | .ok artifact => artifact.bytes.length > 0 && artifact.bytes.length % 4 == 0
+  | .error _ => false
 
 end Flapjack

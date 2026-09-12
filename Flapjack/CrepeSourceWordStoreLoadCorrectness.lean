@@ -57,7 +57,7 @@ theorem compile_full_pan_value_store32_load_one_source_word_relation
       some (.returned (fun _ => none) sourceGlobals
         (updatePanValueMemory sourceMemory storeAddressValue (.word storeValueValue))
         [.word loadValue]) ∧
-    evalCrepFullProg functions crepPrimitive ffi sharedMem
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress 2 state
       (compileProg context
         (.seq (.store32 storeAddress.toExp storeValue.toExp)
@@ -73,7 +73,7 @@ theorem compile_full_pan_value_store32_load_one_source_word_relation
         { state with memory := updateMemory state.memory storeAddressValue storeValueValue }
         [loadValue]) := by
   obtain ⟨storeSource, ⟨_, _, _, _, storeCrepEval, storeRel⟩⟩ :=
-    compile_full_pan_value_store32_source_word_relation context structs
+    compile_full_pan_value_store32_source_word_state_relation context structs
       sourceFunctions functions sourceLocals sourceGlobals sourceMemory state
       primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
       bytesInWord 0 storeAddress storeValue storeAddressValue storeValueValue

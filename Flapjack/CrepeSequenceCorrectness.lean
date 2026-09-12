@@ -40,7 +40,7 @@ theorem compile_full_pan_value_seq_normal_relation
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceLocals sourceGlobals sourceMemory first =
       some (.normal sourceFirstLocals sourceFirstGlobals sourceFirstMemory))
-    (hcrepFirst : evalCrepFullProg functions crepPrimitive ffi sharedMem
+    (hcrepFirst : evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) state compiledFirst =
       some (.normal firstState))
     (hsourceSecond : evalPanValueProgWithPrimitiveCallsAndFfi
@@ -48,7 +48,7 @@ theorem compile_full_pan_value_seq_normal_relation
       baseAddress topAddress bytesInWord (fuel + 1)
       sourceFirstLocals sourceFirstGlobals sourceFirstMemory second =
       some sourceResult)
-    (hcrepSecond : evalCrepFullProg functions crepPrimitive ffi sharedMem
+    (hcrepSecond : evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 1) firstState compiledSecond =
       some crepResult)
     (hsecondRel : panValueCrepControlRel structs context exceptionRel
@@ -58,7 +58,7 @@ theorem compile_full_pan_value_seq_normal_relation
       baseAddress topAddress bytesInWord (fuel + 2)
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
       some sourceResult ∧
-    evalCrepFullProg functions crepPrimitive ffi sharedMem
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (fuel + 2) state
       (compileProg context (.seq first second)) =
       some crepResult ∧
@@ -108,7 +108,7 @@ theorem compile_full_pan_value_seq_normal_relation_mixed_fuel
       baseAddress topAddress bytesInWord (sourceFuel + 1)
       sourceLocals sourceGlobals sourceMemory first =
       some (.normal sourceFirstLocals sourceFirstGlobals sourceFirstMemory))
-    (hcrepFirst : evalCrepFullProg functions crepPrimitive ffi sharedMem
+    (hcrepFirst : evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (targetFuel + 1) state compiledFirst =
       some (.normal firstState))
     (hsourceSecond : evalPanValueProgWithPrimitiveCallsAndFfi
@@ -116,7 +116,7 @@ theorem compile_full_pan_value_seq_normal_relation_mixed_fuel
       baseAddress topAddress bytesInWord (sourceFuel + 1)
       sourceFirstLocals sourceFirstGlobals sourceFirstMemory second =
       some sourceResult)
-    (hcrepSecond : evalCrepFullProg functions crepPrimitive ffi sharedMem
+    (hcrepSecond : evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (targetFuel + 1) firstState compiledSecond =
       some crepResult)
     (hsecondRel : panValueCrepControlRel structs context exceptionRel
@@ -126,7 +126,7 @@ theorem compile_full_pan_value_seq_normal_relation_mixed_fuel
       baseAddress topAddress bytesInWord (sourceFuel + 2)
       sourceLocals sourceGlobals sourceMemory (.seq first second) =
       some sourceResult ∧
-    evalCrepFullProg functions crepPrimitive ffi sharedMem
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (targetFuel + 2) state
       (compileProg context (.seq first second)) =
       some crepResult ∧
@@ -141,7 +141,7 @@ theorem compile_full_pan_value_seq_normal_relation_mixed_fuel
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceFirst,
       hsourceSecond]
   · constructor
-    · simp [evalCrepFullProg, hcrepFirst, hcrepSecond]
+    · simp [evalCrepFullProgState, hcrepFirst, hcrepSecond]
     · exact hsecondRel
 
 end Flapjack

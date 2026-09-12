@@ -1,5 +1,6 @@
 import Flapjack.CrepeSourceWordLoadCorrectness
 import Flapjack.CrepeReturnCorrectness
+import Flapjack.CrepeProgramReturnFuelRelation
 
 /-!
 Package a one-word source load into the full source-to-Crep return boundary.
@@ -41,27 +42,29 @@ theorem compile_full_pan_value_return_load_one_relation
       baseAddress topAddress bytesInWord 1 sourceLocals sourceGlobals sourceMemory
       (.return (.load .one address.toExp)) =
       some (.returned (fun _ => none) sourceGlobals sourceMemory [.word value]) ∧
-    evalCrepFullProg functions crepPrimitive ffi sharedMem
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress 1 state
       (compileProg context (.return (.load .one address.toExp))) =
       some (.returned state [value]) ∧
     panValueCrepControlRel structs context exceptionRel
       (.returned (fun _ => none) sourceGlobals sourceMemory [.word value])
       (.returned state [value]) := by
-  obtain ⟨compiled, hcompile, hcompiled⟩ := compileSourceWord_load_one_relation
+  obtain ⟨compiled, hcompile, hcompiled⟩ := compileSourceWord_load_one_state_relation
     context structs sourceLocals sourceGlobals sourceMemory state baseAddress
     topAddress bytesInWord address addressValue value hbytesInWord hlocals hlookup
     hsourceAddress hsource
   have hcompileShape : compileExp context (.load .one address.toExp) =
       ([compiled], panValueShape structs (.word value)) := by
     simpa [panValueShape] using hcompile
-  have hcompiledList : evalCrepFullExps state.locals state.memory
-      baseAddress topAddress [compiled] = some [value] := by
-    simp [evalCrepFullExps, hcompiled]
-  exact compile_full_pan_value_return_relation context structs sourceFunctions
+  have hcompiledList : evalCrepFullExpsState state
+      baseAddress topAddress [compiled] =
+      some (panValueFlatWords (.word value)) := by
+    simp [evalCrepFullExpsState, hcompiled, panValueFlatWords,
+      panValueFlatWordsFuel]
+  exact compile_full_pan_value_return_state_relation_fuel context structs sourceFunctions
     functions sourceLocals sourceGlobals sourceMemory state primitive sourceHandler
     crepPrimitive ffi sharedMem baseAddress topAddress bytesInWord
-    (.load .one address.toExp) (.word value) [compiled] exceptionRel hsource
-    (panValuePayloadWithinLimit_word structs value) hcompileShape hcompiledList hlocals
+    0 0 (.load .one address.toExp) (.word value) [compiled] exceptionRel hsource
+    (by simp) hcompileShape hcompiledList hlocals
 
 end Flapjack

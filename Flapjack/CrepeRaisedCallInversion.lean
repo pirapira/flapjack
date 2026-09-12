@@ -215,4 +215,92 @@ theorem evalCrepFullCall_raised_inversion
                       | finalFfi calleeState event =>
                           simp [evalCrepFullCall, hvalues, hlookup, hassign, hcallee] at hcall
 
+theorem evalCrepFullCallState_raised_inversion
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (caller : CrepState α) (destinations : List Nat)
+    (function : FunName) (arguments : List (CrepExp α))
+    (exception : α) (target : CrepState α)
+    (hcall : evalCrepFullCallState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) caller
+      (some (destinations, none)) function arguments =
+      some (.raised target exception)) :
+    ∃ values parameters body calleeLocals callee,
+      evalCrepFullExpsState caller baseAddress topAddress arguments =
+        some values ∧
+      lookupCompiledFunction function functions = some (parameters, body) ∧
+      assignCrepValues (fun _ => none) parameters values =
+        some calleeLocals ∧
+      evalCrepFullProgState functions primitive ffi sharedMem
+        baseAddress topAddress fuel
+        { locals := calleeLocals, memory := caller.memory,
+          globals := caller.globals } body =
+          some (.raised callee exception) ∧
+      target = CrepState.mk caller.locals callee.memory callee.globals := by
+  cases hvalues : evalCrepFullExpsState caller baseAddress topAddress arguments with
+  | none =>
+      simp [evalCrepFullCallState, hvalues] at hcall
+  | some values =>
+      cases hlookup : lookupCompiledFunction function functions with
+      | none =>
+          simp [evalCrepFullCallState, hvalues, hlookup] at hcall
+      | some functionInfo =>
+          cases functionInfo with
+          | mk parameters body =>
+              cases hassign : assignCrepValues (fun _ => none) parameters values with
+              | none =>
+                  simp [evalCrepFullCallState, hvalues, hlookup, hassign] at hcall
+              | some calleeLocals =>
+                  cases hcallee : evalCrepFullProgState functions primitive ffi sharedMem
+                      baseAddress topAddress fuel
+                      { locals := calleeLocals, memory := caller.memory,
+                        globals := caller.globals } body with
+                  | none =>
+                      simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee] at hcall
+                  | some calleeResult =>
+                      cases calleeResult with
+                      | raised callee calleeException =>
+                          have hsome :
+                              some (CrepControlResult.raised
+                                (CrepState.mk caller.locals callee.memory callee.globals)
+                                calleeException) =
+                                some (CrepControlResult.raised target exception) := by
+                            simpa [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee]
+                              using hcall
+                          have hresult := Option.some.inj hsome
+                          have hexception : calleeException = exception := by
+                            injection hresult with _ hexception
+                          cases hexception
+                          refine ⟨values, parameters, body, calleeLocals, callee,
+                            ?_, ?_, ?_, ?_, ?_⟩
+                          · rfl
+                          · rfl
+                          · exact hassign
+                          · exact hcallee
+                          · have htarget :
+                                some (CrepState.mk caller.locals callee.memory callee.globals) =
+                                  some target := by
+                              simpa [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee]
+                                using hcall
+                            exact (Option.some.inj htarget).symm
+                      | normal callee =>
+                          simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee] at hcall
+                      | returned callee values =>
+                          cases hdest : assignCrepValues caller.locals destinations values with
+                          | none =>
+                              simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee,
+                                hdest] at hcall
+                          | some callerLocals =>
+                              simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee,
+                                hdest] at hcall
+                      | broke callee label
+                      | continued callee label
+                      | finalFfi callee event =>
+                          simp [evalCrepFullCallState, hvalues, hlookup, hassign, hcallee] at hcall
 end Flapjack

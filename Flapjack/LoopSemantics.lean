@@ -370,6 +370,90 @@ mutual
         | result => pure result
 end
 
+/-! Program evaluator paired with `evalLoopExpFull`.  This preserves the
+    established evaluator for compatibility while exposing the source-
+    compatible shift semantics through the straight-line and conditional
+    Loop fragment used by the source-to-Loop correctness bridge. -/
+def evalLoopProgFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    : Nat → LoopState α → LoopProg α → Option (LoopResult α)
+  | 0, _, _ => none
+  | _fuel + 1, state, .skip => some (.normal state)
+  | _fuel + 1, state, .assign name expression => do
+      let value ← evalLoopExpFull state expression
+      pure (.normal { state with
+        locals := updateLoopLocal state.locals name value })
+  | _fuel + 1, state, .store address value => do
+      let address ← evalLoopExpFull state address
+      let value ← state.locals value
+      pure (.normal { state with
+        memory := updateLoopMemory state.memory address value })
+  | _fuel + 1, state, .load32 address destination => do
+      let address ← state.locals address
+      let value ← state.memory address
+      pure (.normal { state with
+        locals := updateLoopLocal state.locals destination value })
+  | _fuel + 1, state, .loadByte address destination => do
+      let address ← state.locals address
+      let value ← state.memory address
+      pure (.normal { state with
+        locals := updateLoopLocal state.locals destination value })
+  | _fuel + 1, state, .setGlobal address value => do
+      let value ← evalLoopExpFull state value
+      pure (.normal { state with
+        globals := updateLoopGlobal state.globals address value })
+  | _fuel + 1, state, .store32 address value => do
+      let address ← state.locals address
+      let value ← state.locals value
+      pure (.normal { state with
+        memory := updateLoopMemory state.memory address value })
+  | _fuel + 1, state, .storeByte address value => do
+      let address ← state.locals address
+      let value ← state.locals value
+      pure (.normal { state with
+        memory := updateLoopMemory state.memory address value })
+  | fuel + 1, state, .seq first second => do
+      let result ← evalLoopProgFull fuel state first
+      match result with
+      | .normal state => evalLoopProgFull fuel state second
+      | result => pure result
+  | fuel + 1, state, .ite operator condition right thenBranch elseBranch _ => do
+      let left ← state.locals condition
+      let right ← match right with
+        | .imm value => some value
+        | .reg name => state.locals name
+      let choose ← evalLoopCondition operator left right
+      if choose then evalLoopProgFull fuel state thenBranch
+      else evalLoopProgFull fuel state elseBranch
+  | _fuel + 1, state, .return values => do
+      let values ← loopReadLocals state.locals values
+      pure (.returned state values)
+  | _fuel + 1, state, .break label => some (.broke state label)
+  | _fuel + 1, state, .continue label => some (.continued state label)
+  | _fuel + 1, state, .raise exception => do
+      let exception ← state.locals exception
+      pure (.raised state exception)
+  | _fuel + 1, state, .locValue destination source => do
+      let value ← state.locals source
+      pure (.normal { state with
+        locals := updateLoopLocal state.locals destination value })
+  | _fuel + 1, state, .shMem operator name address => do
+      let address ← evalLoopExpFull state address
+      match operator with
+      | .load | .load8 | .load16 | .load32 => do
+          let value ← state.memory address
+          pure (.normal { state with
+            locals := updateLoopLocal state.locals name value })
+      | .store | .store8 | .store16 | .store32 => do
+          let value ← state.locals name
+          pure (.normal { state with
+            memory := updateLoopMemory state.memory address value })
+  | _fuel + 1, state, .tick => some (.normal state)
+  | fuel + 1, state, .mark body => evalLoopProgFull fuel state body
+  | _, _, .fail | _, _, .loop _ _ _ | _, _, .primitive _ _ _
+  | _, _, .arith _ | _, _, .call _ _ _ _ | _, _, .ffi _ _ _ _ _ _ => none
+
 /-!
 At one unit of fuel, a Loop program classified as not writing `name` leaves
 that local unchanged whenever it produces a result.  This is the local

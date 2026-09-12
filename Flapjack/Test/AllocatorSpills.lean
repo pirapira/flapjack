@@ -149,7 +149,7 @@ example :
   simp [wordAllocateSsaProgramWithClashTreeWithSpills,
     wordSsaRenameProgram, wordSsaRenameProgramWithLoops, wordSsaRenameExp,
     wordSsaFresh, wordSsaRead, wordClashTree, wordClashTreeAnalyze,
-    wordClashPairs, wordListUnion, wordProgVariables, wordProgReadVars,
+    wordClashAnalyzeIntros, wordProgVariables, wordProgReadVars,
     wordProgWriteVars, wordExpReadVars, wordAllocateVarsWithSpills,
     wordGreedyAllocateWithSpills, wordUsedLocationRegisters,
     wordColourCandidates, wordFirstAvailable, wordNeighbours,
@@ -187,7 +187,7 @@ example :
   simp [wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences,
     wordSsaRenameProgram, wordSsaRenameProgramWithLoops, wordSsaRenameExp,
     wordSsaFresh, wordSsaRead, wordClashTree, wordClashTreeAnalyze,
-    wordClashPairs, wordListUnion, wordProgVariables, wordProgReadVars,
+    wordClashAnalyzeIntros, wordProgVariables, wordProgReadVars,
     wordProgWriteVars, wordExpReadVars,
     wordAllocateVarsWithSpillsAndPreferences,
     wordGreedyAllocateWithSpillsAndPreferences,
@@ -245,6 +245,22 @@ example :
         ((.call (some ([0], ([], []),
             .inst (.arith (.longMul 0 1 2 3)), 0, 0)) none [] none) :
           WordProg Nat) = false := by
+  decide +kernel
+
+/-- A physical register whose numeric index coincides with a stack slot's
+    offset must still be treated as a distinct location by the clash oracle.
+    `wordSpillLocationColour` tags register and stack/unknown colours into
+    disjoint namespaces, so this set is accepted. -/
+example :
+    wordSpillClashTreeChecked (.set [0, 1])
+        [(0, .register 32), (1, .stack 0)] = true := by
+  decide +kernel
+
+/-- The unallocated-name colour namespace is likewise disjoint from register
+    colours even when the name's numeric value matches a register number. -/
+example :
+    wordSpillClashTreeChecked (.set [0, 1])
+        [(0, .register 32)] = true := by
   decide +kernel
 
 end Flapjack

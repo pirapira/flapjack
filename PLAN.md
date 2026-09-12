@@ -2264,7 +2264,7 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.
-- [ ] Port remaining handler/FFI lowering and a semantic simulation theorem
+- [x] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI
   handler declines an external call, including the clocked evaluator boundary.

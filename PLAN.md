@@ -2223,6 +2223,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   expose the first state-aware source-word expression contract.
 - [x] Lift the state-aware expression contract to the complete localized
   `wordExp` fragment used by argument and program-constructor proofs.
+- [x] Lift the state-aware expression contract through argument lists, with a
+  `wordExp` wrapper for call and primitive correctness migration.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

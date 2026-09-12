@@ -144,4 +144,25 @@ def checkedPipelineRemoveConfig : StackRemoveConfig :=
         image.sections.all (fun entry => entry.bytes.length % 4 == 0)
     | .error _ => false
 
+/-! Original Pancake also accepts a computed address for an ordinary local
+    store.  Keep this source-facing regression separate from the structured
+    address case above: the address is a nested expression and the value is a
+    scalar local. -/
+def nestedLocalStoreSource : String :=
+  "fun 1 main() { var 1 x = 7; st 1000 + 12, x; return x; }"
+
+#guard
+    match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" nestedLocalStoreSource with
+    | .ok artifact => artifact.bytes.length > 0 && artifact.bytes.length % 4 == 0
+    | .error _ => false
+
+def nestedLocalStoreBytesAccepted : Bool :=
+  match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" nestedLocalStoreSource with
+  | .ok artifact => artifact.bytes.length > 0 && artifact.bytes.length % 4 == 0
+  | .error _ => false
+
 end Flapjack

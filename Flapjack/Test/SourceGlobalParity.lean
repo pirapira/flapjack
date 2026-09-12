@@ -78,6 +78,14 @@ reserved scratch register `31`; the word-to-stack pass used to leave the rotate
 result in `31` whenever the destination happened to be the scratch register,
 which the encoder then rejected.  `rotate*` pins the reference sections and
 asserts the byte entry point accepts the fixture.
+
+`largeShapeSource` declares a 33-word shape local, larger than the reserved
+scratch range.  The identity word-to-stack path mapped every variable name
+directly to a physical register, so the final return move failed once a value
+landed in register `29` or `31`, and `registerOfNat` rejected names above `31`.
+The checked byte entry point now uses the same allocator-aware full-SSA
+pipeline as the image entry points, so `largeShape*` pins the reference sections
+and asserts the byte entry point accepts the fixture.
 -/
 
 namespace Flapjack.Test.SourceGlobalParity
@@ -157,6 +165,15 @@ pass used to leave the `.ror` result in the reserved scratch register `31`
 instead of moving it out, which the RISC-V encoder rejects. -/
 def rotateSource : String :=
   "fun 1 main() { var x = 5; return x + (x #>> 1); }"
+
+/-- Large-shape local: a 33-word shape local occupies registers beyond the
+reserved scratch range.  The identity Word-to-Stack path used to reject the
+resulting move/encoding; the checked byte entry point now uses the
+allocator-aware full-SSA pipeline, as the image entry points already did. -/
+def largeShapeSource : String :=
+  "fun 1 f () {\n  var 33 x = <" ++
+    String.intercalate "," (List.replicate 33 "0") ++
+    ">;\n  return 1;\n}\nfun 1 main() { return f(); }"
 
 /-- CakeML `cml_generated_main` for `globalSource` (offset 1000, 28 bytes). -/
 def cakeGlobalGeneratedMain : List (BitVec 8) :=
@@ -382,6 +399,19 @@ def cakeRotateMain : List (BitVec 8) :=
     BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00,
     BitVec.ofNat 8 0x00 ]
 
+/-- CakeML `cml_generated_main` for `largeShapeSource` (4 bytes). -/
+def cakeLargeShapeGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `largeShapeSource` (4 bytes). -/
+def cakeLargeShapeMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_f` for `largeShapeSource` (8 bytes). -/
+def cakeLargeShapeFLength : Nat := 8
+
 /-- Run a source program through the checked RV64I byte entry point. -/
 def compileSourceBytes (source : String) : Option (List (BitVec 8)) :=
   match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
@@ -478,6 +508,13 @@ def rotateBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The large-shape local fixture must be accepted; the identity source path
+previously failed once a local needed register 29/31 or above. -/
+def largeShapeBytesAccepted : Bool :=
+  match compileSourceBytes largeShapeSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
@@ -492,7 +529,9 @@ def cakeGoldenShape : Bool :=
     cakeShadowG.length == 8 && cakeShadowFLength == 144 &&
     cakeGlobalSharedLoadGeneratedMain.length == 28 &&
     cakeGlobalSharedLoadMain.length == 4 && cakeGlobalSharedLoadFLength == 36 &&
-    cakeRotateGeneratedMain.length == 4 && cakeRotateMain.length == 28
+    cakeRotateGeneratedMain.length == 4 && cakeRotateMain.length == 28 &&
+    cakeLargeShapeGeneratedMain.length == 4 && cakeLargeShapeMain.length == 4 &&
+    cakeLargeShapeFLength == 8
 
 #guard globalBytesAccepted
 #guard nestedGlobalBytesAccepted
@@ -505,6 +544,7 @@ def cakeGoldenShape : Bool :=
 #guard globalSharedLoadBytesAccepted
 #guard nonWordSharedLoadRejected
 #guard rotateBytesAccepted
+#guard largeShapeBytesAccepted
 #guard initializerChangesArtifact
 #guard cakeGoldenShape
 
@@ -540,6 +580,8 @@ def runChecks : IO Bool := do
       nonWordSharedLoadRejected,
     checkBool "Pancake rotate-right source compiles (bytes)"
       rotateBytesAccepted,
+    checkBool "Pancake large-shape local source compiles (bytes)"
+      largeShapeBytesAccepted,
     checkBool "Pancake global source compiles (runtime image)"
       (runtimeImageAccepted globalSource),
     checkBool "Pancake global initializer changes artifact"

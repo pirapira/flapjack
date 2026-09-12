@@ -570,22 +570,6 @@ def wordStackFfiMove (config : WordStackConfig) (source destination : Nat) :
   | .stack slot =>
       pure (.stackLoad destination (wordStackOffset config slot))
 
-def wordStackFfi (config : WordStackConfig) (function : FunName)
-    (configuration configurationLength array arrayLength : Nat) :
-    Option (StackProg α) := do
-  let sources := [configuration, configurationLength, array, arrayLength]
-  if wordStackFfiSourcesSafe config sources then
-    let configurationMove ← wordStackFfiMove config configuration 10
-    let configurationLengthMove ← wordStackFfiMove config configurationLength 11
-    let arrayMove ← wordStackFfiMove config array 12
-    let arrayLengthMove ← wordStackFfiMove config arrayLength 13
-    pure (wordStackJoin configurationMove
-      (wordStackJoin configurationLengthMove
-        (wordStackJoin arrayMove
-          (wordStackJoin arrayLengthMove
-            (.ffi function 10 11 12 13 0)))))
-  else none
-
 def wordStackStoreName : WordStore α → Option StackStore
   | .temp _ => none
   | .nextFree => some .nextFree
@@ -1248,6 +1232,38 @@ def wordStackParallelLocationMoveAux (config : WordStackConfig) :
 def wordStackParallelLocationMove (config : WordStackConfig)
     (moves : List (WordLocation × WordLocation)) : Option (StackProg α) :=
   wordStackParallelLocationMoveAux config (moves.length + 1) moves
+
+/-- Materialize the four FFI arguments into the fixed RISC-V ABI registers
+    x10--x13.  When the sources already avoid those registers we keep the
+    original sequential move chain; otherwise we fall back to a parallel move
+    so a source that already lives in one of the destination registers is not
+    clobbered before it is read. -/
+def wordStackFfi (config : WordStackConfig) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat) :
+    Option (StackProg α) := do
+  let sources := [configuration, configurationLength, array, arrayLength]
+  if wordStackFfiSourcesSafe config sources then
+    let configurationMove ← wordStackFfiMove config configuration 10
+    let configurationLengthMove ← wordStackFfiMove config configurationLength 11
+    let arrayMove ← wordStackFfiMove config array 12
+    let arrayLengthMove ← wordStackFfiMove config arrayLength 13
+    pure (wordStackJoin configurationMove
+      (wordStackJoin configurationLengthMove
+        (wordStackJoin arrayMove
+          (wordStackJoin arrayLengthMove
+            (.ffi function 10 11 12 13 0)))))
+  else
+    let configurationLocation ← wordStackLocation config configuration
+    let configurationLengthLocation ← wordStackLocation config configurationLength
+    let arrayLocation ← wordStackLocation config array
+    let arrayLengthLocation ← wordStackLocation config arrayLength
+    let moves : List (WordLocation × WordLocation) :=
+      [ (.register 10, configurationLocation),
+        (.register 11, configurationLengthLocation),
+        (.register 12, arrayLocation),
+        (.register 13, arrayLengthLocation) ]
+    let prelude ← wordStackParallelLocationMove config moves
+    pure (.seq prelude (.ffi function 10 11 12 13 0))
 
 def wordStackPhysicalMovesFrom (config : WordStackConfig) :
     List Nat → Nat → Option (List (WordLocation × WordLocation))

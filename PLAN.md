@@ -2235,6 +2235,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   including recursive call-handler obligations.
 - [x] Port the fuel-polymorphic direct scalar local-assignment relation to the
   stateful evaluator, including its updated local-state relation.
+- [x] Add the stateful direct source-word local-assignment constructor,
+  including scalar destination inversion and flattened-local update.
 - [x] Port the complementary scalar temporary-assignment relation, including
   temporary-slot evaluation and restoration under the stateful evaluator.
 - [x] Port the generic and scalar source-word `Store32` relations to the

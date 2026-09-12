@@ -2307,6 +2307,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   and program return contracts.
 - [x] Add stateful argument-list and word-call correctness adapters, preserving
   the callee simulation premise under the stateful call evaluator.
+- [x] Add state-aware forward and converse evaluation theorems for flattened
+  local-assignment sequences, including non-interference under local updates.
 - [x] Generalize global-aware source-word `raise` lowering to arbitrary
   compiled functions and lift it into the stateful program relation.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite

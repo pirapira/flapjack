@@ -294,8 +294,7 @@ theorem panValueCrepProgramStateCorrect_dec_two_word_record_skip
                       evalPanValueExp, evalPanValueExp.evalPanValueExps,
                       hleftSource, hrightSource, panValueShape, panShapeMatches,
                       panShapeMatches.panShapeListMatches,
-                      restorePanValueControlLocal, hrestoreSource,
-                      updatePanValueMap]
+                      restorePanValueControlLocal, hrestoreSource]
               obtain ⟨compiledLeft, hcompileLeft, hcrepLeft⟩ :=
                 compileSourceWordExp_state_relation context structs sourceLocals
                   sourceGlobals sourceMemory state
@@ -327,9 +326,7 @@ theorem panValueCrepProgramStateCorrect_dec_two_word_record_skip
                     nestedDecs [context.maxVar + 1, context.maxVar + 2]
                       [compiledLeft, compiledRight] .skip := by
                 simp [compileProg, hcompile, allocatedNames, Shape.shapeSize,
-                  List.range, List.range.loop, compileExp,
-                  compileExp.compileExpList, hcompileLeft, hcompileRight,
-                  lookupInfo, Nat.add_assoc]
+                  List.range, List.range.loop, Nat.add_assoc]
               have hrestore :
                   restoreCrepLocal
                       (restoreCrepLocal

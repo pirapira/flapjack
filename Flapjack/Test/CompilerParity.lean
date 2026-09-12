@@ -438,6 +438,32 @@ def namedStructArtifactMatchesGolden : Bool :=
       Flapjack.Test.SourceGlobalParity.namedStructSource with
   | some bytes => bytes == namedStructArtifactGolden
   | none => false
+/-! Exact source-entry golden for the existing shared-memory fixture. -/
+def sharedMemoryArtifactGolden : List (BitVec 8) :=
+  [
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41,
+    BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0f, BitVec.ofNat 8 0x30, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x9e, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x33, BitVec.ofNat 8 0xea, BitVec.ofNat 8 0x5a, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x0a, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41,
+    BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xde, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbe, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0f, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x0a, BitVec.ofNat 8 0xfa, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40, BitVec.ofNat 8 0x02,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x01, BitVec.ofNat 8 0xc0, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x3e,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0f, BitVec.ofNat 8 0xc0, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x8e, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xc1, BitVec.ofNat 8 0x0e, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x33, BitVec.ofNat 8 0xe2, BitVec.ofNat 8 0x31, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x33, BitVec.ofNat 8 0x61, BitVec.ofNat 8 0x42, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0xf0, BitVec.ofNat 8 0x1f, BitVec.ofNat 8 0xfe,
+  ]
+
+def sharedMemoryArtifactMatchesGolden : Bool :=
+  match Flapjack.Test.SourceGlobalParity.compileSourceBytes
+      Flapjack.Test.SourceGlobalParity.sharedMemorySource with
+  | some bytes => bytes == sharedMemoryArtifactGolden
+  | none => false
+
 
 
 
@@ -487,6 +513,8 @@ def main : IO Unit := do
       longMulGlobalArtifactMatchesGolden,
     checkBool "Lean named-struct exact source artifact bytes"
       namedStructArtifactMatchesGolden,
+    checkBool "Lean shared-memory exact source artifact bytes"
+      sharedMemoryArtifactMatchesGolden,
     checkBool "Lean source entry produces an artifact" minimalSourceArtifact,
     checkBool "Pancake computed local-store address compiles" nestedLocalStoreBytesAccepted,
     Flapjack.Test.SourceGlobalParity.runChecks

@@ -323,6 +323,8 @@ mutual
     | _fuel + 1, state, .tick => pure (.normal state)
     termination_by fuel _ _ => fuel
 
+end
+
 def evalCrepFullResultState
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -339,7 +341,36 @@ def evalCrepFullResultState
       | .normal _ => some []
       | .raised _ _ | .broke _ _ | .continued _ _ | .finalFfi _ _ => none
 
-end
+theorem evalCrepFullProgState_storeGlob_const
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat) (state : CrepState α)
+    (address value : α) :
+    evalCrepFullProgState [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.storeGlob address (.const value)) =
+      some (.normal { state with
+        globals := updateMemory state.globals address value }) := by
+  simp [evalCrepFullProgState, evalCrepFullExpState]
+
+theorem evalCrepFullProgState_storeGlob_loadGlob
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat) (state : CrepState α)
+    (address value : α) :
+    evalCrepFullProgState [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 2) state
+      (.seq (.storeGlob address (.const value))
+        (.return [.loadGlob address])) =
+      some (.returned { state with
+        globals := updateMemory state.globals address value } [value]) := by
+  simp [evalCrepFullProgState, evalCrepFullExpState, evalCrepFullExpsState,
+    updateMemory]
 
 mutual
   def evalCrepFullCall

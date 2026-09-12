@@ -2329,6 +2329,45 @@ theorem crepToLoop_call_skip_primitive_agreement
       evalLoopCallWithPrimitiveCallsAndFfi, loopReadLocals,
       loopBindParameters, hcontext, hloop, hskip]
 
+theorem crepToLoop_call_return_const_primitive_agreement
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (crepFunctions : List (CompiledFunction α))
+    (loopFunctions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat) (function : FunName)
+    (target parameter destination : Nat) (value : α)
+    (hcrep : lookupCompiledFunction function crepFunctions =
+      some ([parameter], (.return [.var parameter] : CrepProg α)))
+    (hcontext : lookupInfo function context.functions = some (target, 1))
+    (hloop : lookupLoopFunction target loopFunctions =
+      some ([parameter], (.return [parameter] : LoopProg α))) :
+    (evalCrepFullProg crepFunctions primitive ffi sharedMem baseAddress topAddress
+        (fuel + 8) state
+        (.call (some ([destination], none)) function [.const value])).map
+        (crepControlLocal destination) =
+      (evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions
+        (loopFfiOfCrepFfi ffi) (fuel + 8)
+        (loopStateOfCrepState state)
+        (loopCompileProg context live
+          (.call (some ([destination], none)) function [.const value]))).map
+        (loopControlLocal destination) := by
+  simp [evalCrepFullProg, evalCrepFullCall, evalCrepFullExps,
+    evalCrepFullExp, assignCrepValues, updateCrepLocal,
+    crepControlLocal, hcrep, loopCompileProg, loopCompileExps,
+    loopCompileExp.loopCompileExps, loopCompileExp_const, loopTempNames,
+    loopAssignTemps, loopNestedSeq,
+    evalLoopProgWithPrimitiveCallsAndFfi,
+    evalLoopCallWithPrimitiveCallsAndFfi, evalLoopProg, evalLoopExp,
+    loopReadLocals, loopBindParameters, loopAssignValues, updateLoopLocal,
+    loopControlLocal, hcontext, hloop]
+
 theorem crepToLoopWithPrimitive_shMem_store_agreement
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

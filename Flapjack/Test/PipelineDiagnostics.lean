@@ -37,6 +37,12 @@ example :
 
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
+      [⟨29, [.asm (.word (.arith (.longDiv 0 3 3 0 6))) [] 0]⟩] =
+        .error { sectionId := 29, position := 0, feature := .longDiv } := by
+  rfl
+
+example :
+    RiscV.compileLabProgramChecked (width := 64) { services := [] }
       [⟨19, [.asm (.const 1 7) [] 0]⟩] =
         .ok [.addi 1 0 (BitVec.ofNat 64 7)] := by
   rfl

@@ -15,6 +15,7 @@ namespace Flapjack.RiscV
 inductive LabUnsupportedFeature where
   | heapAlloc
   | halt
+  | longDiv
   | loweringFailure
   deriving DecidableEq, Repr
 
@@ -27,6 +28,16 @@ structure LabLoweringError where
 def labLoweringError (sectionId position : Nat)
     (feature : LabUnsupportedFeature) : LabLoweringError :=
   { sectionId, position, feature }
+
+def labPlainUnsupportedFeature [NeZero width] :
+    LabPlain (Word width) → Option LabUnsupportedFeature
+  | .word (.arith (.longDiv _ _ _ _ _)) => some .longDiv
+  | _ => none
+
+def labPlainLoweringError [NeZero width] (sectionId position : Nat)
+    (operation : LabPlain (Word width)) : LabLoweringError :=
+  { sectionId, position,
+    feature := (labPlainUnsupportedFeature operation).getD .loweringFailure }
 
 def labCompileAsmChecked [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat)
@@ -49,7 +60,7 @@ def labCompileLinesChecked [NeZero width] (context : WordFfiContext)
       labCompileLinesChecked context sectionId labels position lines
   | .asm operation _ _ :: lines =>
       match labCompilePlain operation with
-      | none => .error (labLoweringError sectionId position .loweringFailure)
+      | none => .error (labPlainLoweringError sectionId position operation)
       | some code =>
           match labCompileLinesChecked context sectionId labels
               (position + 4 * labLineInstructionCount (.asm operation [] 0)) lines with
@@ -94,7 +105,7 @@ def labCompileProgramLinesChecked [NeZero width] (context : WordFfiContext)
       labCompileProgramLinesChecked context labels sectionId position lines
   | .asm operation _ _ :: lines =>
       match labCompilePlain operation with
-      | none => .error (labLoweringError sectionId position .loweringFailure)
+      | none => .error (labPlainLoweringError sectionId position operation)
       | some code =>
           match labCompileProgramLinesChecked context labels sectionId
               (position + 4 * labLineInstructionCount (.asm operation [] 0)) lines with

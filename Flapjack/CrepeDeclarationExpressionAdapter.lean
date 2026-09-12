@@ -44,4 +44,37 @@ theorem panValueCrepExpressionCorrect_compiled_list
   · exact evalCrepFullExps_length state.locals state.memory baseAddress topAddress
       compiledValues values (by simpa [values] using hcompiled)
 
+theorem panValueCrepExpressionStateCorrect_compiled_list
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (expression : Exp α) (hvalue : PanValueCrepExpressionStateCorrect expression)
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (baseAddress topAddress bytesInWord : α)
+    (compiledValues : List (CrepExp α)) (shape : Shape)
+    (sourceValue : PanValue α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hcompile : compileExp context expression = (compiledValues, shape))
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression = some sourceValue) :
+    ∃ values,
+      evalCrepFullExpsState state baseAddress topAddress compiledValues = some values ∧
+      compiledValues.length = values.length ∧
+      panValueFlatWords sourceValue = values := by
+  obtain ⟨_hlimit, compiled, hcompiledShape, hcompiled⟩ :=
+    hvalue context structs sourceLocals sourceGlobals sourceMemory state
+      baseAddress topAddress bytesInWord sourceValue hrel hsource
+  have hpair : (compiled, panValueShape structs sourceValue) =
+      (compiledValues, shape) := hcompiledShape.symm.trans hcompile
+  cases hpair
+  let values := panValueFlatWords sourceValue
+  refine ⟨values, ?_, ?_, rfl⟩
+  · simpa [values] using hcompiled
+  · exact evalCrepFullExpsState_length state baseAddress topAddress compiledValues values
+      (by simpa [values] using hcompiled)
+
 end Flapjack

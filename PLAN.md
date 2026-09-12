@@ -2315,6 +2315,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   dispatcher to the stateful evaluator, including fresh-slot restoration.
 - [x] Add the generic stateful program-level call constructor, consuming
   arbitrary stateful expression contracts for its argument list.
+- [x] Add the stateful universal declaration expression adapter and declaration
+  correctness wrapper, preserving allocated-name freshness obligations.
 - [x] Generalize global-aware source-word `raise` lowering to arbitrary
   compiled functions and lift it into the stateful program relation.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite

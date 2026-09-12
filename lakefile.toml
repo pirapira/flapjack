@@ -1,6 +1,11 @@
 name = "Flapjack"
 version = "0.1.0"
+testDriver = "FlapjackTest"
 defaultTargets = ["Flapjack"]
 
 [[lean_lib]]
 name = "Flapjack"
+
+[[lean_exe]]
+name = "FlapjackTest"
+root = "Flapjack.Test.CompilerParity"

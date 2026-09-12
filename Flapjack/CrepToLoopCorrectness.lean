@@ -3616,6 +3616,91 @@ theorem crepToLoopProgramCorrectWithPrimitive_extCall
                                 loopStateOfCrepState, hc, hcl, ha, hal,
                                 hffi'] at hloop
 
+theorem crepToLoopWithPrimitive_seq_normal_compose
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (crepFunctions : List (CompiledFunction α))
+    (loopFunctions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (loopFfi : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state middle : CrepState α) (live : List Nat)
+    (first second : CrepProg α)
+    (result : CrepControlResult α) (loopResult : LoopResult α)
+    (hfirst : evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state first = some (.normal middle))
+    (hloopFirst : evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions
+      loopFfi (fuel + 1) (loopStateOfCrepState state)
+      (loopCompileProg context live first) =
+      some (.normal (loopStateOfCrepState middle)))
+    (hsecond : evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) middle second = some result)
+    (hloopSecond : evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions
+      loopFfi (fuel + 1) (loopStateOfCrepState middle)
+      (loopCompileProg context live second) = some loopResult) :
+    evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state (.seq first second) = some result ∧
+    evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions loopFfi
+      (fuel + 2) (loopStateOfCrepState state)
+      (loopCompileProg context live (.seq first second)) =
+      some loopResult := by
+  constructor
+  · simp [evalCrepFullProg, hfirst, hsecond]
+  · simp [loopCompileProg_seq, evalLoopProgWithPrimitiveCallsAndFfi,
+      hloopFirst, hloopSecond]
+
+theorem crepToLoopWithPrimitive_seq_terminal_compose
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (crepFunctions : List (CompiledFunction α))
+    (loopFunctions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (loopFfi : FunName → α → α → α → α → LoopState α → Option (LoopState α))
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (first second : CrepProg α)
+    (result : CrepControlResult α) (loopResult : LoopResult α)
+    (hfirst : evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) state first = some result)
+    (hloopFirst : evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions
+      loopFfi (fuel + 1) (loopStateOfCrepState state)
+      (loopCompileProg context live first) = some loopResult)
+    (hcrepTerminal : ∀ middle : CrepState α, result ≠ .normal middle)
+    (hloopTerminal : ∀ middle : LoopState α, loopResult ≠ .normal middle) :
+    evalCrepFullProg crepFunctions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state (.seq first second) = some result ∧
+    evalLoopProgWithPrimitiveCallsAndFfi primitive loopFunctions loopFfi
+      (fuel + 2) (loopStateOfCrepState state)
+      (loopCompileProg context live (.seq first second)) = some loopResult := by
+  constructor
+  · simp only [evalCrepFullProg]
+    rw [hfirst]
+    cases result with
+    | normal middle => exact (hcrepTerminal middle rfl).elim
+    | returned state values => rfl
+    | raised state exception => rfl
+    | broke state label => rfl
+    | continued state label => rfl
+    | finalFfi state event => rfl
+  · simp only [loopCompileProg_seq, evalLoopProgWithPrimitiveCallsAndFfi]
+    rw [hloopFirst]
+    cases loopResult with
+    | normal middle => exact (hloopTerminal middle rfl).elim
+    | returned state values => rfl
+    | raised state exception => rfl
+    | broke state label => rfl
+    | continued state label => rfl
+
 /-!
 CrepToLoopProgramCorrect is the complete-pass induction boundary.  It keeps
 the source and target fuel bounds independent because lowering introduces

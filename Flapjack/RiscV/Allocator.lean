@@ -2221,15 +2221,22 @@ decreasing_by all_goals decreasing_trivial
     operand registers; `AddCarry` likewise requires its destination to differ
     from the operand registers.  These extra edges make the spill allocator
     satisfy `wordSpecialArithLocationsSafe` directly instead of relying on the
-    post-allocation check to reject the layout. -/
+    post-allocation check to reject the layout.  The destination-pair edge is
+    also present from the clash tree's write/write interference, but it is
+    listed here so the conflict set is self-contained; `distinct` keeps the
+    low-only `LongMul` alias (both destinations equal) allocatable.  The
+    remaining `x31` exclusions in `wordSpecialArithLocationsSafe` cannot arise
+    in this source path: allocation uses registers 2..26 and physical fixed
+    sources are even names, so neither yields register 31. -/
 def wordArithSpecialConflictEdges (operation : WordArith) : List (Nat × Nat) :=
   let distinct (edge : Nat × Nat) : Bool := edge.1 != edge.2
   match operation with
-  | .longMul destinationLeft _ sourceLeft sourceRight =>
-      ([(destinationLeft, sourceLeft), (destinationLeft, sourceRight)]).filter
-        distinct
-  | .addCarry destination _ sourceLeft sourceRight _ =>
-      ([(destination, sourceLeft), (destination, sourceRight)]).filter distinct
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      ([(destinationLeft, destinationRight), (destinationLeft, sourceLeft),
+        (destinationLeft, sourceRight)]).filter distinct
+  | .addCarry destination resultCarry sourceLeft sourceRight _ =>
+      ([(destination, resultCarry), (destination, sourceLeft),
+        (destination, sourceRight)]).filter distinct
   | _ => []
 
 def wordProgSpecialConflictEdges : WordProg α → List (Nat × Nat)

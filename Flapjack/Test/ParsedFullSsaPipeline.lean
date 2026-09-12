@@ -60,13 +60,27 @@ def parsedCallSourceResult : Option (List (RiscV.Word 64)) := do
   let result ← evalPanProgWithCalls functions 30 (fun _ => none) body
   pure result.2
 
+def parsedCallLoopResult : Option (List (RiscV.Word 64)) := do
+  let declarations ← parsedCallDeclarations
+  let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
+    (fun value => BitVec.ofNat 64 value) "main" declarations
+  let (_, body) ← lookupLoopFunction 1 pipeline.loop
+  let result ← evalLoopProgWithFunctions pipeline.loop 100
+    identityCallLoopState body
+  pure (loopResultValues result)
+
 #guard parsedCallDeclarations.isSome
 #guard parsedCallLinked.isSome
 #guard parsedCallMachineResult = some [BitVec.ofNat 64 41]
 #guard parsedCallSourceResult = some [BitVec.ofNat 64 41]
+#guard parsedCallLoopResult = some [BitVec.ofNat 64 41]
 
 theorem parsedCall_source_machine_agreement :
     parsedCallSourceResult = parsedCallMachineResult := by
+  decide +kernel
+
+theorem parsedCall_source_loop_agreement :
+    parsedCallSourceResult = parsedCallLoopResult := by
   decide +kernel
 
 end Flapjack

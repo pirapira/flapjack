@@ -157,6 +157,57 @@ def panValueCrepRaisedControlRel {α : Type u}
     crepState spillAddress ∧
   exceptionRel sourceException sourceValue exceptionCode
 
+theorem panValueCrepRaisedStateRel_global_spill
+    [BEq α] [LawfulBEq α]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α) (spillAddress value : α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state) :
+    panValueCrepRaisedStateRel structs context sourceGlobals sourceMemory
+      { state with globals := updateMemory state.globals spillAddress value }
+      spillAddress := by
+  have hlocals : panValueCrepLocalsRel structs context (fun _ => none)
+      state.locals := by
+    intro name currentValue shape slots hsource _
+    simp at hsource
+  refine ⟨hrel.1, hlocals, ?_⟩
+  intro address _
+  exact congrFun hrel.2.2 address
+
+/-! The global-aware evaluator stores the reserved exception payload in the
+    global area.  This companion relation keeps the existing memory relation
+    intact while making the global spill observable to its callers. -/
+def panValueCrepRaisedGlobalSpillRel {α : Type u}
+    (structs : StructContext) (context : CompileContext α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceValue : PanValue α) (value : α)
+    (crepState : CrepState α) (spillAddress : α) : Prop :=
+  panValueCrepRaisedStateRel structs context sourceGlobals sourceMemory
+    crepState spillAddress ∧
+  crepState.globals spillAddress = some value ∧
+  sourceValue = .word value
+
+theorem panValueCrepRaisedGlobalSpillRel_word
+    [BEq α] [LawfulBEq α]
+    (structs : StructContext) (context : CompileContext α)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (state : CrepState α) (spillAddress value : α)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state) :
+    panValueCrepRaisedGlobalSpillRel structs context sourceGlobals sourceMemory
+      (.word value) value
+      { state with globals := updateMemory state.globals spillAddress value }
+      spillAddress := by
+  have hstate := panValueCrepRaisedStateRel_global_spill
+    structs context sourceLocals sourceGlobals sourceMemory state
+    spillAddress value hrel
+  refine ⟨hstate, ?_, rfl⟩
+  simp [updateMemory]
+
 def panValueCrepControlRel {α : Type u}
     (structs : StructContext) (context : CompileContext α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)

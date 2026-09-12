@@ -1,5 +1,6 @@
 import Flapjack.CrepeProgramReturnFuelRelation
 import Flapjack.CrepeExpressionRelation
+import Flapjack.CrepeProgramRelation
 
 /-!
 Source-word return correctness.
@@ -147,5 +148,74 @@ theorem compile_full_pan_value_return_source_word_state_relation_fuel
     (by simp) hcompileShape
     (by simpa [panValueFlatWords, panValueFlatWordsFuel] using hcompiledState) hrel
   exact ⟨compiled, hcompile, hcompiledState, hresult.1, hresult.2.1, hresult.2.2⟩
+
+theorem panValueCrepProgramStateCorrect_return_source_word
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (expression : SourceWordExp α)
+    (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
+      context.bytesInWord = bytesInWord)
+    (hlookup : ∀ (context : CompileContext α)
+      (sourceLocals : VarName → Option (PanValue α))
+      (name : VarName) (value : PanValue α),
+      sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot])) :
+    PanValueCrepProgramStateCorrect (.return expression.toExp) := by
+  intro context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
+    sourceResult crepResult hrel hsource hcrep
+  cases sourceFuel with
+  | zero =>
+      simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
+  | succ sourceFuel =>
+      cases hvalue : evalPanValueExp structs sourceLocals sourceGlobals
+          sourceMemory baseAddress topAddress bytesInWord expression.toExp with
+      | none =>
+          simp [evalPanValueProgWithPrimitiveCallsAndFfi, hvalue] at hsource
+      | some sourceValue' =>
+          obtain ⟨value, hword⟩ := evalPanValueExp_sourceWord_inv
+            structs sourceLocals sourceGlobals sourceMemory
+            baseAddress topAddress bytesInWord context hrel.2.1
+            (fun name value hvalue =>
+              hlookup context sourceLocals name value hvalue)
+            expression sourceValue' hvalue
+          have hsourceValue :
+              evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+                baseAddress topAddress bytesInWord expression.toExp =
+                some (.word value) := by
+            rw [hvalue, hword]
+          have hsourceExpected :
+              evalPanValueProgWithPrimitiveCallsAndFfi
+                primitive sourceHandler structs sourceFunctions
+                baseAddress topAddress bytesInWord (sourceFuel + 1)
+                sourceLocals sourceGlobals sourceMemory
+                (.return expression.toExp) =
+                some (.returned (fun _ => none) sourceGlobals sourceMemory
+                  [.word value]) := by
+            simp [evalPanValueProgWithPrimitiveCallsAndFfi, hsourceValue]
+          cases targetFuel with
+          | zero =>
+              simp [evalCrepFullProgState] at hcrep
+          | succ targetFuel =>
+              obtain ⟨compiled, hcompile, hcompiled, _, hcrepExpected,
+                hrelation⟩ :=
+                compile_full_pan_value_return_source_word_state_relation_fuel
+                  context structs sourceFunctions functions sourceLocals sourceGlobals
+                  sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+                  baseAddress topAddress bytesInWord sourceFuel targetFuel expression value
+                  exceptionRel (hbytesInWord context bytesInWord)
+                  (fun name value hvalue =>
+                    hlookup context sourceLocals name value hvalue)
+                  hrel hsourceValue
+              have hsourceEq := Option.some.inj
+                (hsourceExpected.symm.trans hsource)
+              have hcrepEq := Option.some.inj
+                (hcrepExpected.symm.trans hcrep)
+              cases hsourceEq
+              cases hcrepEq
+              exact hrelation
 
 end Flapjack

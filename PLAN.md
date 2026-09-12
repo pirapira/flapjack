@@ -2413,6 +2413,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   correctness induction.
 - [x] Add relation-aware conditional branch rules for both source condition
   outcomes and their selected control-result relations.
+- [x] Port the conditional branch rules and source-word ITE constructor to the
+  global-aware state evaluator, transporting no-global condition expressions.
 - [x] Add relation-aware zero-condition and recursive nonzero loop rules for
   the program correctness induction.
 - [x] Add relation-aware loop-control rules for body break and continue.

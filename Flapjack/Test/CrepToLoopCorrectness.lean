@@ -149,6 +149,66 @@ theorem crepToLoop_primitive_assign_lsr_var_var_contract_regression :
       (.assign 2 (.shift .lsr (.var 0) (.var 1)) : CrepProg Nat) := by
   exact crepToLoopProgramCorrectWithPrimitive_assign_lsr_var_var 2 0 1
 
+theorem crepToLoop_primitive_assign_cmp_equal_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.cmp .equal (.const (3 : Nat)) (.const 3)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_cmp_equal_const 2 3 3
+
+theorem crepToLoop_primitive_assign_cmp_notEqual_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.cmp .notEqual (.const (3 : Nat)) (.const 4)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_cmp_notEqual_const 2 3 4
+
+theorem crepToLoop_primitive_assign_cmp_lower_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.cmp .lower (.const (3 : Nat)) (.const 4)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_cmp_lower_const 2 3 4
+
+theorem crepToLoop_primitive_assign_cmp_less_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.cmp .less (.const (3 : Nat)) (.const 4)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_cmp_less_const 2 3 4
+
+theorem crepToLoop_primitive_assign_cmp_notLower_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.cmp .notLower (.const (3 : Nat)) (.const 4)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_cmp_notLower_const 2 3 4
+
+theorem crepToLoop_primitive_assign_cmp_notLess_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.cmp .notLess (.const (3 : Nat)) (.const 4)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_cmp_notLess_const 2 3 4
+
+theorem crepToLoop_primitive_assign_cmp_test_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.cmp .test (.const (3 : Nat)) (.const 4)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_cmp_test_const 2 3 4
+
+theorem crepToLoop_primitive_assign_cmp_notTest_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.cmp .notTest (.const (3 : Nat)) (.const 4)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_cmp_notTest_const 2 3 4
+
+theorem crepToLoop_primitive_assign_and_const_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.op .and [.const (3 : Nat), .const 4]) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_binop_const_const 2 .and 3 4
+
+theorem crepToLoop_primitive_assign_lsl_const_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.shift .lsl (.const (3 : Nat)) (.const 1)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_lsl_const_const 2 3 1
+
+theorem crepToLoop_primitive_assign_lsr_const_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.shift .lsr (.const (8 : Nat)) (.const 1)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_lsr_const_const 2 8 1
+
+theorem crepToLoop_primitive_return_or_const_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.return [.op .or [.const (3 : Nat), .const 4]] : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_return_binop_const_const .or 3 4
+
 theorem crepToLoop_primitive_seq_normal_regression :
     evalCrepFullProg [] (fun _ _ => none)
         (fun _ _ _ _ _ state => some (.returned state))

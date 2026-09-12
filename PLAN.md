@@ -2264,6 +2264,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   lemmas for nested declarations.
 - [x] Port the arbitrary-length scalar-word record declaration constructor to
   the stateful evaluator.
+- [x] Port the generic ordinary declaration constructor to the stateful
+  evaluator, including arbitrary-shape expression evaluation and restoration.
 - [x] Port the two-word record declaration `skip` constructor to the stateful
   evaluator.
 - [x] Port the two-word record declaration `break` and `continue` constructors

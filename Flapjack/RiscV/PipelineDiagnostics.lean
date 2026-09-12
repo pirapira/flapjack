@@ -136,16 +136,31 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
               (fun value => fromNat value) start declarations with
           | none => .error .entryNotFound
           | some pipeline =>
-              match RiscV.pipelineWordFunctionsToStackChecked pipeline.word with
-              | .error error => .error (.lowering (.wordToStack error))
-              | .ok functions =>
-                  match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
-                      (width := width)
-                      { services := services } removeConfig 0 0
-                      (functions.map (fun (label, _, body) => (label, body))) with
-                  | .error error => .error (.lowering (.labToRiscV error))
-                  | .ok instructions =>
-                      .ok { bytes := RiscV.encodeInstructions instructions, warnings }
+              let identityResult :
+                  Except PipelineRiscVLoweringError (List (BitVec 8)) :=
+                match RiscV.pipelineWordFunctionsToStackChecked pipeline.word with
+                | .error error => .error (.wordToStack error)
+                | .ok functions =>
+                    match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
+                        (width := width)
+                        { services := services } removeConfig 0 0
+                        (functions.map (fun (label, _, body) => (label, body))) with
+                    | .error error => .error (.labToRiscV error)
+                    | .ok instructions => .ok (RiscV.encodeInstructions instructions)
+              match identityResult with
+              | .ok bytes => .ok { bytes := bytes, warnings }
+              | .error identityError =>
+                  match pipelineWordFunctionsAllocatedWithSpillsAndFullSsa pipeline.loop with
+                  | none => .error (.lowering identityError)
+                  | some functions =>
+                      let initialLabel := fullSsaInitialLabLabel functions
+                      match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
+                          (width := width)
+                          { services := services } removeConfig 0 initialLabel
+                          (functions.map (fun (label, _, body) => (label, body))) with
+                      | .error error => .error (.lowering (.labToRiscV error))
+                      | .ok instructions =>
+                          .ok { bytes := RiscV.encodeInstructions instructions, warnings }
 
 /-! Linked source-entry image. The full-SSA entry pipeline retains the same
     section labels and byte addresses used by the machine correctness harness;

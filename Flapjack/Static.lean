@@ -10,9 +10,23 @@ context construction and function-body validation.
 
 namespace Flapjack
 
+inductive Based where
+  | based
+  | notBased
+  | trusted
+  | notTrusted
+  deriving Repr
+
+inductive ShapedBased where
+  | word (basedness : Based)
+  | struct (fields : List ShapedBased)
+  | named (name : StructName) (fields : List (FieldName × ShapedBased))
+  deriving Repr
+
 structure StructInfo where
   fields : List (FieldName × Shape)
   size : Nat
+  shapedFields : List (FieldName × ShapedBased) := []
   deriving Repr
 
 abbrev StructContext := List (StructName × StructInfo)
@@ -78,19 +92,6 @@ def staticResultErrorMessage (result : StaticResult α) : Option String :=
   match result.1 with
   | Except.ok _ => none
   | Except.error error => some (statErrMessage error)
-
-inductive Based where
-  | based
-  | notBased
-  | trusted
-  | notTrusted
-  deriving Repr
-
-inductive ShapedBased where
-  | word (basedness : Based)
-  | struct (fields : List ShapedBased)
-  | named (name : StructName) (fields : List (FieldName × ShapedBased))
-  deriving Repr
 
 inductive Reachable where
   | isReach
@@ -199,7 +200,7 @@ def shapedBasedFromShape (context : StructContext) : Shape → Option ShapedBase
       | none => none
   | .named name =>
       match lookupInfo name context with
-      | some _ => some (.named name [])
+      | some info => some (.named name info.shapedFields)
       | none => none
 termination_by shape => sizeOf shape
 decreasing_by
@@ -472,11 +473,10 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                 else staticError (.shape "primitive result shape does not match")))
   | .store address value =>
       staticBind (checkExp context address) (fun addressResult =>
-        staticBind (checkExp context value) (fun valueResult =>
-          if shapedBasedIsWord addressResult.shapedBased &&
-              shapedBasedIsWord valueResult.shapedBased then
+        staticBind (checkExp context value) (fun _valueResult =>
+          if shapedBasedIsWord addressResult.shapedBased then
             progOk .otherLast false false context.location
-          else staticError (.shape "store operands are not words")))
+          else staticError (.shape "store address is not a word")))
   | .store32 address value =>
       staticBind (checkExp context address) (fun addressResult =>
         staticBind (checkExp context value) (fun valueResult =>
@@ -552,10 +552,12 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                         staticBind (checkProg handlerContext handlerProgram) (fun _ =>
                           checkCallDestination context returnShape destination))
   | .decCall name shape function arguments body =>
-      if (lookupInfo name context.locals).isSome ||
-          (lookupInfo name context.globals).isSome then
-        staticError (.scope ("local declaration redeclares: " ++ name))
-      else if !isWfShape context.structs shape then
+      let redeclarationWarnings :=
+        if (lookupInfo name context.locals).isSome ||
+            (lookupInfo name context.globals).isSome then
+          [StatErr.warning ("local declaration redeclares: " ++ name)]
+        else []
+      if !isWfShape context.structs shape then
         staticError (.shape "declaration-call result has an invalid shape")
       else
         match lookupInfo function context.functions with
@@ -574,7 +576,8 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                     let nextContext := { context with locals :=
                       (name, { shapedBased := shaped }) :: context.locals }
                     staticBind (checkProg nextContext body) (fun result =>
-                      staticOk { result with variableDelta := [] }))
+                      (Except.ok { result with variableDelta := [] },
+                        redeclarationWarnings)))
   | .extCall function configuration configurationLength array arrayLength =>
       staticBind (checkCallArgs context
         [configuration, configurationLength, array, arrayLength])
@@ -601,9 +604,18 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
             else
               staticError (.shape "return expression has the wrong shape"))
   | .shMemLoad _ _ name address =>
-      match lookupInfo name context.locals with
+      let destinationIsWord : Option Bool :=
+        match lookupInfo name context.locals with
+        | some info => some (shapedBasedIsWord info.shapedBased)
+        | none =>
+            match lookupInfo name context.globals with
+            | some info => (shapedBasedFromShape context.structs info.shape).map shapedBasedIsWord
+            | none => none
+      match destinationIsWord with
       | none => staticError (.scope ("unknown shared-memory destination: " ++ name))
-      | some _ =>
+      | some false =>
+          staticError (.shape ("shared-memory load destination is not a word: " ++ name))
+      | some true =>
           staticBind (checkExp context address) (fun result =>
             if shapedBasedIsWord result.shapedBased then
               progOk .otherLast false false context.location
@@ -679,9 +691,13 @@ def staticCheckNames [BEq String] (context : StructContext) :
             staticError (.scope ("structure field is redeclared: " ++ field))
         | none =>
             staticBind (checkShapeFields context fields) (fun _ =>
+              let shapedFields :=
+                fields.map (fun (fieldName, shape) =>
+                  (fieldName, (shapedBasedFromShape context shape).getD (.word .trusted)))
               let info : StructInfo :=
                 { fields := fields
-                  size := shapeSizeWithContext context (.comb (fields.map Prod.snd)) }
+                  size := shapeSizeWithContext context (.comb (fields.map Prod.snd))
+                  shapedFields := shapedFields }
               staticBind (staticCheckNames ((name, info) :: context) declarations)
                 (fun result => staticOk result))
   | _ :: declarations => staticCheckNames context declarations

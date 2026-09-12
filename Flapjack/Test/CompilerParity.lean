@@ -66,6 +66,7 @@ def main : IO Unit := do
     checkEq "Lean target linked image"
       pipelineCallTargetLinkedImage (some pipelineCallTargetImage),
     checkBool "Lean source entry produces an artifact" minimalSourceArtifact,
+    checkBool "Pancake computed local-store address compiles" nestedLocalStoreBytesAccepted,
     Flapjack.Test.SourceGlobalParity.runChecks
     ].mapM id
   unless results.all id do

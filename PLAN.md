@@ -2216,6 +2216,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   code relation.
 - [x] Add the global-aware structured return fuel relation, exposing the
   state-aware flattened-expression witness needed by source-word migration.
+- [x] Prove no-global expression and expression-list compatibility between the
+  legacy and global-aware Crepe evaluators, providing an incremental migration
+  seam for localized correctness proofs.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

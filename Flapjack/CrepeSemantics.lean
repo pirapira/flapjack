@@ -164,6 +164,85 @@ def evalCrepFullExpsState [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       pure (value :: values)
 termination_by expressions => sizeOf expressions
 
+/-! Syntactic support for migrating localized expression proofs.  Compiled
+    expressions in the localized source fragment cannot contain `loadGlob`;
+    this predicate makes that fact an explicit premise of the compatibility
+    theorem below. -/
+inductive CrepExpNoGlobal {α : Type u} : CrepExp α → Prop where
+  | const (value : α) : CrepExpNoGlobal (.const value)
+  | var (name : Nat) : CrepExpNoGlobal (.var name)
+  | load {address : CrepExp α} :
+      CrepExpNoGlobal address → CrepExpNoGlobal (.load address)
+  | load32 {address : CrepExp α} :
+      CrepExpNoGlobal address → CrepExpNoGlobal (.load32 address)
+  | loadByte {address : CrepExp α} :
+      CrepExpNoGlobal address → CrepExpNoGlobal (.loadByte address)
+  | op {operator : BinOp} {left right : CrepExp α} :
+      CrepExpNoGlobal left → CrepExpNoGlobal right →
+      CrepExpNoGlobal (.op operator [left, right])
+  | crepMul {left right : CrepExp α} :
+      CrepExpNoGlobal left → CrepExpNoGlobal right →
+      CrepExpNoGlobal (.crepOp .mul [left, right])
+  | cmp {operator : Cmp} {left right : CrepExp α} :
+      CrepExpNoGlobal left → CrepExpNoGlobal right →
+      CrepExpNoGlobal (.cmp operator left right)
+  | shift {operator : Shift} {left right : CrepExp α} :
+      CrepExpNoGlobal left → CrepExpNoGlobal right →
+      CrepExpNoGlobal (.shift operator left right)
+  | baseAddr : CrepExpNoGlobal (.baseAddr : CrepExp α)
+  | topAddr : CrepExpNoGlobal (.topAddr : CrepExp α)
+
+theorem evalCrepFullExpState_eq_of_noGlobal
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepState α) (baseAddress topAddress : α)
+    (expression : CrepExp α) (hnoGlobal : CrepExpNoGlobal expression) :
+    evalCrepFullExpState state baseAddress topAddress expression =
+      evalCrepFullExp state.locals state.memory baseAddress topAddress expression := by
+  induction hnoGlobal with
+  | const => simp [evalCrepFullExpState, evalCrepFullExp]
+  | var => simp [evalCrepFullExpState, evalCrepFullExp]
+  | load hnoGlobal ih =>
+      simp [evalCrepFullExpState, evalCrepFullExp, ih]
+  | load32 hnoGlobal ih =>
+      simp [evalCrepFullExpState, evalCrepFullExp, ih]
+  | loadByte hnoGlobal ih =>
+      simp [evalCrepFullExpState, evalCrepFullExp, ih]
+  | op hleft hright ihLeft ihRight =>
+      simp [evalCrepFullExpState, evalCrepFullExp, ihLeft, ihRight]
+  | crepMul hleft hright ihLeft ihRight =>
+      simp [evalCrepFullExpState, evalCrepFullExp, ihLeft, ihRight]
+  | cmp hleft hright ihLeft ihRight =>
+      simp [evalCrepFullExpState, evalCrepFullExp, ihLeft, ihRight]
+  | shift hleft hright ihLeft ihRight =>
+      simp [evalCrepFullExpState, evalCrepFullExp, ihLeft, ihRight]
+  | baseAddr => simp [evalCrepFullExpState, evalCrepFullExp]
+  | topAddr => simp [evalCrepFullExpState, evalCrepFullExp]
+
+theorem evalCrepFullExpsState_eq_of_noGlobals
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepState α) (baseAddress topAddress : α)
+    (expressions : List (CrepExp α))
+    (hnoGlobal : ∀ expression ∈ expressions, CrepExpNoGlobal expression) :
+    evalCrepFullExpsState state baseAddress topAddress expressions =
+      evalCrepFullExps state.locals state.memory baseAddress topAddress expressions := by
+  induction expressions with
+  | nil => simp [evalCrepFullExpsState, evalCrepFullExps]
+  | cons expression expressions ih =>
+      have hexpression := hnoGlobal expression (by simp)
+      have htail : ∀ current ∈ expressions, CrepExpNoGlobal current := by
+        intro current hcurrent
+        exact hnoGlobal current (by simp [hcurrent])
+      simp [evalCrepFullExpsState, evalCrepFullExps,
+        evalCrepFullExpState_eq_of_noGlobal state baseAddress topAddress
+          expression hexpression,
+        ih htail]
+
 /-! A global-aware full evaluator.  This is intentionally parallel to the
     compact compatibility evaluator below: it provides the CakeML state shape
     needed for the migration of source-to-Crepe correctness without changing

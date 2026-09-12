@@ -462,7 +462,7 @@ theorem compile_full_pan_value_return_word_correct
 /-! The return boundary is also useful with a non-constant source expression.
     Its two hypotheses are precisely the source-expression and lowered-Crep
     expression obligations that a later expression pass theorem supplies. -/
-theorem compile_full_pan_value_return_word_of_exp
+theorem compile_full_pan_value_return_word_of_exp_compat_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -491,10 +491,43 @@ theorem compile_full_pan_value_return_word_of_exp
     evalPanValueProgWithPrimitive, hsource, panValueFlatWords,
     panValueFlatWordsFuel]
 
+/-! Stateful counterpart of the general word-return boundary.  The compiled
+    expression is evaluated against the complete Crep state, so callers may
+    retain the global environment while proving a no-global expression
+    contract. -/
+theorem compile_full_pan_value_return_word_of_exp
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord value : α)
+    (expression : Exp α) (compiled : CrepExp α)
+    (hsource : evalPanValueExp structs locals globals (fun address =>
+      (state.memory address).map PanValue.word)
+      baseAddress topAddress bytesInWord expression = some (.word value))
+    (hcompile : compileExp context expression = ([compiled], .one))
+    (hcompiled : evalCrepFullExpState state baseAddress topAddress
+      compiled = some value) :
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 1 state
+        (compileProg context (.return expression)) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.return expression)).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp [compileProg, hcompile, evalCrepFullResultState,
+    evalCrepFullProgState, evalCrepFullExpsState, hcompiled,
+    evalPanValueProg, evalPanValueProgWithPrimitive, hsource,
+    panValueFlatWords, panValueFlatWordsFuel]
+
 /-! Shape-preserving local assignment is the next stateful source boundary.
     The source variable is already bound to a word, so CakeML's assignment
     validity check and the flattened Crep slot update can be related directly. -/
-theorem compile_full_pan_value_local_assign_return_word_correct
+theorem compile_full_pan_value_local_assign_return_word_compat_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -524,6 +557,36 @@ theorem compile_full_pan_value_local_assign_return_word_correct
     crepNestedSeq, distinctLists, updateCrepLocal, updatePanValueMap,
     panValueFlatWords,
     panValueFlatWordsFuel]
+
+theorem compile_full_pan_value_local_assign_return_word_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (name : VarName) (slot : Nat) (oldValue value : α)
+    (hlookup : lookupInfo name context.vars = some (.one, [slot]))
+    (hlocals : locals name = some (.word oldValue)) :
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 20 state
+        (compileProg context
+          (.seq (.assign .local name (.const value))
+            (.return (.var .local name)))) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.seq (.assign .local name (.const value))
+          (.return (.var .local name)))).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp [compileProg, compileExp, hlookup, hlocals, evalCrepFullResultState,
+    evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
+    evalPanValueProg, evalPanValueProgWithPrimitive, evalPanValueExp,
+    panValueAssignmentValid, panValueShape, panShapeMatches,
+    crepNestedSeq, distinctLists, updateCrepLocal, updatePanValueMap,
+    panValueFlatWords, panValueFlatWordsFuel]
 
 /-! Sequence evaluation can now be composed at the structured source boundary.
     The first component is required to complete normally in both semantics;
@@ -595,7 +658,7 @@ theorem compile_full_pan_value_seq_normal_compose
     structured form is the one needed for record-valued Pancake expressions:
     the compiler emits the flattened Crep words, while the source evaluator
     retains the original structured value until the final observation. -/
-theorem compile_full_pan_value_return_of_exp
+theorem compile_full_pan_value_return_of_exp_compat_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -625,6 +688,36 @@ theorem compile_full_pan_value_return_of_exp
     hcompiled, evalPanValueProg,
     evalPanValueProgWithPrimitive, hsource, hvalid]
 
+theorem compile_full_pan_value_return_of_exp
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (locals globals : VarName → Option (PanValue α))
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (expression : Exp α)
+    (value : PanValue α) (compiled : List (CrepExp α))
+    (hsource : evalPanValueExp structs locals globals (fun address =>
+      (state.memory address).map PanValue.word)
+      baseAddress topAddress bytesInWord expression = some value)
+    (hvalid : panValuePayloadWithinLimit structs value = true)
+    (hcompile : compileExp context expression =
+      (compiled, panValueShape structs value))
+    (hcompiled : evalCrepFullExpsState state baseAddress topAddress
+      compiled = some (panValueFlatWords value)) :
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 1 state
+        (compileProg context (.return expression)) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        locals globals (fun address =>
+          (state.memory address).map PanValue.word)
+        (.return expression)).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp [compileProg, hcompile, evalCrepFullResultState,
+    evalCrepFullProgState, hcompiled, evalPanValueProg,
+    evalPanValueProgWithPrimitive, hsource, hvalid]
+
 /-! A concrete structured witness for the preceding abstraction: a record of
     closed word constants is flattened by the real compiler and returned by
     the full Crep evaluator with the same words as the source semantics. -/
@@ -640,7 +733,7 @@ theorem compile_full_pan_value_record_return_const_correct
     (baseAddress topAddress bytesInWord : α) (values : List α)
     (hvalid : panValuePayloadWithinLimit structs
       (.rStruct (values.map PanValue.word)) = true) :
-    evalCrepFullResult [] primitive ffi sharedMem baseAddress topAddress 1 state
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 1 state
         (compileProg context
           (.return (.rStruct (values.map (fun value => .const value))))) =
       (evalPanValueProg structs baseAddress topAddress bytesInWord
@@ -691,14 +784,14 @@ theorem compile_full_pan_value_record_return_const_correct
     intro values
     simp [compileExp, hcompileExpList, hflatCompilePairs,
       Function.comp_def]
-  have hcompiled : ∀ values : List α, evalCrepFullExps state.locals state.memory
+  have hcompiled : ∀ values : List α, evalCrepFullExpsState state
       baseAddress topAddress (values.map (fun value => .const value)) =
       some values := by
     intro values
     induction values with
-    | nil => simp [evalCrepFullExps]
+    | nil => simp [evalCrepFullExpsState]
     | cons value values ih =>
-        simp [evalCrepFullExps, evalCrepFullExp, ih]
+        simp [evalCrepFullExpsState, evalCrepFullExpState, ih]
   have hlistFuel : ∀ values : List α,
       panValueFlatValueFuel.panValueFlatValueListFuel
         (values.map PanValue.word) = values.length := by

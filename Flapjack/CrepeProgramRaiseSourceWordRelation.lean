@@ -107,6 +107,7 @@ theorem compile_full_pan_value_raise_source_word_global_relation_fuel
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (context : CompileContext α) (structs : StructContext)
     (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
     (sourceLocals sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
     (primitive : PanPrimitiveHandler α)
@@ -136,7 +137,7 @@ theorem compile_full_pan_value_raise_source_word_global_relation_fuel
       (.raise exception expression.toExp) =
       some (.raised (fun _ => none) sourceGlobals sourceMemory
         exception (.word value)) ∧
-    evalCrepFullProgState [] crepPrimitive ffi sharedMem
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress (targetFuel + 4) state
       (compileProg context (.raise exception expression.toExp)) =
       some (.raised

@@ -2251,6 +2251,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add stateful source-word program constructors for `Store32` and
   `StoreByte`, including no-global expression compatibility and memory
   relation transport.
+- [x] Generalize global-aware source-word `raise` lowering to arbitrary
+  compiled functions and lift it into the stateful program relation.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

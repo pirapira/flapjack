@@ -214,6 +214,11 @@ theorem crepToLoop_primitive_return_lsl_const_const_contract_regression :
       (.return [.shift .lsl (.const (3 : Nat)) (.const 1)] : CrepProg Nat) := by
   exact crepToLoopProgramCorrectWithPrimitive_return_lsl_const_const 3 1
 
+theorem crepToLoop_primitive_return_lsr_const_const_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.return [.shift .lsr (.const (8 : Nat)) (.const 1)] : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_return_lsr_const_const 8 1
+
 theorem crepToLoop_primitive_seq_normal_regression :
     evalCrepFullProg [] (fun _ _ => none)
         (fun _ _ _ _ _ state => some (.returned state))

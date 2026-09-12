@@ -10,7 +10,7 @@ def sourceWordLoopState : CrepState Nat :=
 
 theorem closed_source_word_while_zero_bridge :
     ∃ result,
-      evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+      evalCrepFullProgState [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
         (fun _ _ _ _ => none) 0 0 2 sourceWordLoopState
         (compileProg sourceWordLoopContext
           (.while (SourceWordExp.const (0 : Nat)).toExp .skip)) = some result := by

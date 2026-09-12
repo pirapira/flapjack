@@ -1013,6 +1013,60 @@ theorem crepToLoop_ite_false_of_empty_prefix
       hloopValue']
     exact hloopElse
 
+theorem crepToLoop_ite_true_of_empty_prefix
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (functions : List (Nat × List Nat × LoopProg α))
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state : CrepState α) (live : List Nat)
+    (condition : CrepExp α) (thenBranch elseBranch : CrepProg α)
+    (result : CrepControlResult α) (loopResult : LoopResult α)
+    (hcode : (loopCompileExp context (context.maxVar + 1) live condition).code = [])
+    (hnext : (loopCompileExp context (context.maxVar + 1) live condition).nextTemp =
+      context.maxVar + 1)
+    (hlive : (loopCompileExp context (context.maxVar + 1) live condition).live = live)
+    (hvalue : evalCrepFullExp state.locals state.memory baseAddress topAddress
+      condition = some 1)
+    (hone : (1 : α) ≠ 0)
+    (hloopValue : evalLoopExp (loopStateOfCrepState state)
+      (loopCompileExp context (context.maxVar + 1) live condition).expression =
+      some 1)
+    (hcrepThen : evalCrepFullProg [] primitive ffi sharedMem
+      baseAddress topAddress fuel state thenBranch = some result)
+    (hloopThen : evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 2)
+      { loopStateOfCrepState state with
+        locals := updateLoopLocal (loopStateOfCrepState state).locals
+          (context.maxVar + 1) 1 }
+      (loopCompileProg context live thenBranch) = some loopResult) :
+    evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state (.ite condition thenBranch elseBranch) = some result ∧
+    evalLoopProgWithCallsAndFfi functions
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 5)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live (.ite condition thenBranch elseBranch)) =
+      some loopResult := by
+  have hloopValue' :
+      evalLoopExp
+          ({ locals := state.locals, globals := fun _ => none,
+             memory := state.memory } : LoopState α)
+          (loopCompileExp context (context.maxVar + 1) live condition).expression =
+        some 1 := by
+    simpa [loopStateOfCrepState] using hloopValue
+  constructor
+  · simp [evalCrepFullProg, hvalue, hone, hcrepThen]
+  · simp [loopCompileProg, loopNestedSeq,
+      evalLoopProgWithCallsAndFfi, evalLoopProg,
+      evalLoopCondition, loopStateOfCrepState, updateLoopLocal,
+      hcode, hnext, hlive, hone, hloopValue']
+    exact hloopThen
+
 theorem crepToLoop_return_const_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

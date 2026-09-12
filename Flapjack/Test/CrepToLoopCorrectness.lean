@@ -34,6 +34,10 @@ def crepZeroConditionState : CrepState Nat :=
   { crepSeqInitial with
     locals := updateCrepLocal crepSeqInitial.locals 1 0 }
 
+def crepOneConditionState : CrepState Nat :=
+  { crepSeqInitial with
+    locals := updateCrepLocal crepSeqInitial.locals 1 1 }
+
 def crepSeqMiddle : CrepState Nat :=
   { crepSeqInitial with
     locals := updateCrepLocal crepSeqInitial.locals 5 42 }
@@ -381,6 +385,50 @@ theorem crepToLoop_ite_var_false_regression :
   · simp [crepZeroConditionState, crepSeqInitial, evalCrepFullProg,
       evalCrepFullExp]
   · simp [crepZeroConditionState, crepSeqInitial, loopStateOfCrepState,
+      loopCompileProg, loopCompileExp, loopNestedSeq,
+      evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp]
+
+theorem crepToLoop_ite_var_true_regression :
+    evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+        (fun _ _ _ _ => none) 0 100 2 crepOneConditionState
+        (.ite (.var 1) (.assign 5 (.const 42)) (.skip)) =
+      some (.normal
+        { crepOneConditionState with
+          locals := updateCrepLocal crepOneConditionState.locals 5 42 }) ∧
+    evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
+        6 (loopStateOfCrepState crepOneConditionState)
+        (loopCompileProg
+          ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+            LoopContext Nat)
+          [] (.ite (.var 1) (.assign 5 (.const 42)) (.skip))) =
+      some (.normal
+        { loopStateOfCrepState crepOneConditionState with
+          locals := updateLoopLocal
+            (updateLoopLocal crepOneConditionState.locals 1 1) 5 42 }) := by
+  apply crepToLoop_ite_true_of_empty_prefix
+    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      LoopContext Nat)
+    [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)
+    (fun _ _ _ _ => none) 0 100 1 crepOneConditionState []
+    (.var 1) (.assign 5 (.const 42)) (.skip)
+    (.normal
+      { crepOneConditionState with
+        locals := updateCrepLocal crepOneConditionState.locals 5 42 })
+    (.normal
+      { loopStateOfCrepState crepOneConditionState with
+        locals := updateLoopLocal
+          (updateLoopLocal crepOneConditionState.locals 1 1) 5 42 })
+  · simp [loopCompileExp]
+  · simp [loopCompileExp]
+  · simp [loopCompileExp]
+  · simp [crepOneConditionState, crepSeqInitial, evalCrepFullExp,
+      updateCrepLocal]
+  · simp
+  · simp [crepOneConditionState, crepSeqInitial, loopStateOfCrepState,
+      loopCompileExp, evalLoopExp, updateCrepLocal]
+  · simp [crepOneConditionState, crepSeqInitial, evalCrepFullProg,
+      evalCrepFullExp]
+  · simp [crepOneConditionState, crepSeqInitial, loopStateOfCrepState,
       loopCompileProg, loopCompileExp, loopNestedSeq,
       evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp]
 

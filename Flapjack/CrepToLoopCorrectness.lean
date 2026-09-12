@@ -15,7 +15,7 @@ namespace Flapjack
 
 def loopStateOfCrepState (state : CrepState α) : LoopState α :=
   { locals := state.locals
-    globals := fun _ => none
+    globals := state.globals
     memory := state.memory }
 
 /-! Runtime state adapter retaining the explicit global environment. -/
@@ -23,6 +23,14 @@ def loopStateOfCrepRuntimeState (state : CrepRuntimeState α σ) : LoopState α 
   { locals := state.locals
     globals := state.globals
     memory := state.memory }
+
+def crepControlGlobalAt (address : α) : CrepControlResult α → Option α
+  | .normal state => state.globals address
+  | .returned state _ => state.globals address
+  | .raised state _ => state.globals address
+  | .broke state _ => state.globals address
+  | .continued state _ => state.globals address
+  | .finalFfi state _ => state.globals address
 
 theorem crepRuntimeToLoop_storeGlob_const_agreement
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -75,9 +83,36 @@ theorem crepRuntimeToLoop_loadGlob_const_agreement
     loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg,
     evalLoopExp, loopResultState, updateCrepLocal, updateLoopLocal, hglobal]
 
+theorem crepFullStateToLoop_storeGlob_const_agreement
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : LoopContext α)
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat) (state : CrepState α) (live : List Nat)
+    (address value : α) :
+    (evalCrepFullProgState [] primitive ffi sharedMem baseAddress topAddress
+      (fuel + 1) state
+      (.storeGlob address (.const value))).map
+        (crepControlGlobalAt address) =
+    (evalLoopProgWithCallsAndFfi []
+      (fun _ _ _ _ _ loopState => some loopState) (fuel + 2)
+      (loopStateOfCrepState state)
+      (loopCompileProg context live
+        (.storeGlob address (.const value)))).map
+        (fun result => (loopResultState result).globals address) := by
+  simp [evalCrepFullProgState, evalCrepFullExpState,
+    loopStateOfCrepState, loopCompileProg, loopCompileExp,
+    loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg,
+    evalLoopExp, loopResultState, updateMemory, updateLoopGlobal,
+    crepControlGlobalAt]
+
 def crepStateOfLoopState (state : LoopState α) : CrepState α :=
   { locals := state.locals
-    memory := state.memory }
+    memory := state.memory
+    globals := state.globals }
 
 def loopFfiOfCrepFfi (ffi : CrepFfiHandler α) :
     FunName → α → α → α → α → LoopState α → Option (LoopState α) :=
@@ -394,17 +429,17 @@ theorem crepToLoop_assign_agreement_of_empty_prefix
       (loopCompileProg context live (.assign name expression))).map
         (loopControlLocal name) := by
   have heval' : evalLoopExp
-      ({ locals := state.locals
-         globals := fun _ => none
+      ({ locals := state.locals, globals := state.globals,
          memory := state.memory } : LoopState α)
       (loopCompileExp context (context.maxVar + 1) live expression).expression =
       some value := by
     simpa [loopStateOfCrepState] using heval
   simp [evalCrepFullProg, hvalue,
     loopCompileProg, hcode, loopNestedSeq,
-    evalLoopProgWithCallsAndFfi, evalLoopProg, heval',
-    loopStateOfCrepState, updateCrepLocal, updateLoopLocal,
-    crepControlLocal, loopControlLocal]
+    evalLoopProgWithCallsAndFfi, evalLoopProg,
+    loopStateOfCrepState, updateCrepLocal, crepControlLocal]
+  rw [heval']
+  simp [loopControlLocal, updateLoopLocal]
 
 theorem crepToLoop_assign_load32_const_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -532,7 +567,7 @@ theorem crepToLoop_store_of_empty_prefix
     (hloopAddressAfter :
       evalLoopExp
         ({ locals := updateLoopLocal state.locals (context.maxVar + 1) value,
-           globals := fun _ => none, memory := state.memory } : LoopState α)
+           globals := state.globals, memory := state.memory } : LoopState α)
         (loopCompileExp context (context.maxVar + 1) live addressExpression).expression =
       some address) :
     (evalCrepFullProg [] primitive ffi sharedMem baseAddress topAddress
@@ -545,14 +580,14 @@ theorem crepToLoop_store_of_empty_prefix
         (loopControlMemoryAt address) := by
   have hloopAddress' :
       evalLoopExp
-          ({ locals := state.locals, globals := fun _ => none,
+          ({ locals := state.locals, globals := state.globals,
              memory := state.memory } : LoopState α)
           (loopCompileExp context (context.maxVar + 1) live addressExpression).expression =
         some address := by
     simpa [loopStateOfCrepState] using hloopAddress
   have hloopValue' :
       evalLoopExp
-          ({ locals := state.locals, globals := fun _ => none,
+          ({ locals := state.locals, globals := state.globals,
              memory := state.memory } : LoopState α)
           (loopCompileExp context (context.maxVar + 1) live valueExpression).expression =
         some value := by
@@ -706,7 +741,7 @@ theorem crepToLoop_shMem_store_of_empty_prefix
         some (.normal (loopStateOfCrepState targetState)) := by
   have hloopAddress' :
       evalLoopExp
-          ({ locals := state.locals, globals := fun _ => none,
+          ({ locals := state.locals, globals := state.globals,
              memory := state.memory } : LoopState α)
           (loopCompileExp context (context.maxVar + 1) live addressExpression).expression =
         some address := by
@@ -889,7 +924,7 @@ theorem crepToLoop_shMem_load_of_empty_prefix
         some (.normal (loopStateOfCrepState targetState)) := by
   have hloopAddress' :
       evalLoopExp
-          ({ locals := state.locals, globals := fun _ => none,
+          ({ locals := state.locals, globals := state.globals,
              memory := state.memory } : LoopState α)
           (loopCompileExp context (context.maxVar + 1) live addressExpression).expression =
         some address := by
@@ -1185,7 +1220,7 @@ theorem crepToLoop_ite_false_of_empty_prefix
       some loopResult := by
   have hloopValue' :
       evalLoopExp
-          ({ locals := state.locals, globals := fun _ => none,
+          ({ locals := state.locals, globals := state.globals,
              memory := state.memory } : LoopState α)
           (loopCompileExp context (context.maxVar + 1) live condition).expression =
         some 0 := by
@@ -1240,7 +1275,7 @@ theorem crepToLoop_ite_true_of_empty_prefix
       some loopResult := by
   have hloopValue' :
       evalLoopExp
-          ({ locals := state.locals, globals := fun _ => none,
+          ({ locals := state.locals, globals := state.globals,
              memory := state.memory } : LoopState α)
           (loopCompileExp context (context.maxVar + 1) live condition).expression =
         some 1 := by
@@ -1287,7 +1322,7 @@ theorem crepToLoop_while_false_of_empty_prefix
         (loopControlLocal name) := by
   have hloopValue' :
       evalLoopExp
-          ({ locals := state.locals, globals := fun _ => none,
+          ({ locals := state.locals, globals := state.globals,
              memory := state.memory } : LoopState α)
           (loopCompileExp context (context.maxVar + 1) live condition).expression =
         some 0 := by
@@ -1331,7 +1366,7 @@ theorem crepToLoop_while_true_break_of_empty_prefix
         (loopControlLocal name) := by
   have hloopValue' :
       evalLoopExp
-          ({ locals := state.locals, globals := fun _ => none,
+          ({ locals := state.locals, globals := state.globals,
              memory := state.memory } : LoopState α)
           (loopCompileExp context (context.maxVar + 1) live condition).expression =
         some 1 := by
@@ -1396,7 +1431,7 @@ theorem crepToLoop_return_of_empty_prefix
       loopResultValues := by
   have hloopValue' :
       evalLoopExp
-          ({ locals := state.locals, globals := fun _ => none,
+          ({ locals := state.locals, globals := state.globals,
              memory := state.memory } : LoopState α)
           (loopCompileExp context (context.maxVar + 1) live expression).expression =
         some value := by
@@ -1438,7 +1473,7 @@ theorem crepToLoop_dec_return_of_empty_prefix
       loopResultValues := by
   have hloopValue' :
       evalLoopExp
-          ({ locals := state.locals, globals := fun _ => none,
+          ({ locals := state.locals, globals := state.globals,
              memory := state.memory } : LoopState α)
           (loopCompileExp context (context.maxVar + 1) live expression).expression =
         some value := by
@@ -1500,7 +1535,7 @@ theorem crepToLoop_dec_compose_of_empty_prefix
       loopResultValues := by
   have hloopValue' :
       evalLoopExp
-          ({ locals := state.locals, globals := fun _ => none,
+          ({ locals := state.locals, globals := state.globals,
              memory := state.memory } : LoopState α)
           (loopCompileExp context (context.maxVar + 1) live expression).expression =
         some value := by
@@ -1509,7 +1544,7 @@ theorem crepToLoop_dec_compose_of_empty_prefix
       evalLoopProgWithCallsAndFfi functions
         (fun _ _ _ _ _ loopState => some loopState) (fuel + 18)
         { locals := updateLoopLocal state.locals name value,
-          globals := fun _ => none, memory := state.memory }
+          globals := state.globals, memory := state.memory }
         (loopCompileProg
           { context with
             vars := (name, context.maxVar + 1) :: context.vars
@@ -2182,7 +2217,7 @@ intentionally outside the successful simulation relation.
 -/
 def crepToLoopStateRel (context : LoopContext α)
     (crepState : CrepState α) (loopState : LoopState α) : Prop :=
-  loopState.globals = (fun _ => none) ∧
+  loopState.globals = crepState.globals ∧
   loopState.memory = crepState.memory ∧
   ∀ name, name ≤ context.maxVar →
     loopState.locals name = crepState.locals name
@@ -2317,17 +2352,18 @@ theorem crepToLoopWithPrimitive_assign_agreement_of_empty_prefix
       (loopCompileProg context live (.assign name expression))).map
         (loopControlLocal name) := by
   have heval' : evalLoopExp
-      ({ locals := state.locals
-         globals := fun _ => none
+      ({ locals := state.locals, globals := state.globals,
          memory := state.memory } : LoopState α)
       (loopCompileExp context (context.maxVar + 1) live expression).expression =
       some value := by
     simpa [loopStateOfCrepState] using heval
   simp [evalCrepFullProg, hvalue,
     loopCompileProg, hcode, loopNestedSeq,
-    evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg, heval',
-    loopStateOfCrepState, updateCrepLocal, updateLoopLocal,
-    crepControlLocal, loopControlLocal]
+    evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+    loopStateOfCrepState, updateCrepLocal,
+    crepControlLocal]
+  rw [heval']
+  simp [loopControlLocal, updateLoopLocal]
 
 theorem crepToLoop_call_skip_primitive_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -5620,7 +5656,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_extCall
                           have hffi' :
                               ffi function configurationValue configurationLengthValue
                                 arrayValue arrayLengthValue
-                                ({ locals := state.locals, memory := state.memory } :
+                                ({ locals := state.locals, memory := state.memory,
+                                   globals := state.globals } :
                                   CrepState α) = some (.returned state') := by
                             simpa using hffi
                           cases targetFuel with
@@ -5639,7 +5676,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_extCall
                           have hffi' :
                               ffi function configurationValue configurationLengthValue
                                 arrayValue arrayLengthValue
-                                ({ locals := state.locals, memory := state.memory } :
+                                ({ locals := state.locals, memory := state.memory,
+                                   globals := state.globals } :
                                   CrepState α) = some (.final event) := by
                             simpa using hffi
                           cases targetFuel with
@@ -6902,7 +6940,8 @@ theorem crepToLoopProgramCorrect_extCall
                           have hffi' :
                               ffi function configurationValue configurationLengthValue
                                 arrayValue arrayLengthValue
-                                ({ locals := state.locals, memory := state.memory } : CrepState α) =
+                                ({ locals := state.locals, memory := state.memory,
+                                   globals := state.globals } : CrepState α) =
                                 some (.returned state') := by
                             simpa using hffi
                           cases targetFuel with
@@ -6919,7 +6958,8 @@ theorem crepToLoopProgramCorrect_extCall
                           have hffi' :
                               ffi function configurationValue configurationLengthValue
                                 arrayValue arrayLengthValue
-                                ({ locals := state.locals, memory := state.memory } : CrepState α) =
+                                ({ locals := state.locals, memory := state.memory,
+                                   globals := state.globals } : CrepState α) =
                                 some (.final event) := by
                             simpa using hffi
                           cases targetFuel with

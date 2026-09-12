@@ -113,4 +113,104 @@ theorem evalCrepFullProg_assignList
                       rw [htailResult]
                       rfl
 
+theorem evalCrepFullProgState_assignList
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat) (state : CrepState α)
+    (slots : List Nat) (expressions : List (CrepExp α)) (values : List α)
+    (hlength : slots.length = expressions.length)
+    (hdistinct : CrepDistinctNames slots)
+    (hnot : ∀ slot ∈ slots, ∀ expression ∈ expressions,
+      slot ∉ crepExpVars expression)
+    (heval : evalCrepFullExpsState state baseAddress topAddress expressions =
+      some values) :
+    evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + slots.length + 1) state
+      (crepNestedSeq (slots.zipWith
+        (fun name expression => .assign name expression) expressions)) =
+      some (.normal { state with
+        locals := updateCrepLocalList state.locals slots values }) := by
+  induction slots generalizing expressions values state with
+  | nil =>
+      cases expressions with
+      | nil =>
+          cases values with
+          | nil =>
+              simpa [crepNestedSeq, updateCrepLocalList] using
+                (show evalCrepFullProgState functions primitive ffi sharedMem
+                  baseAddress topAddress (fuel + 1) state .skip =
+                    some (.normal state) by
+                  simp [evalCrepFullProgState])
+          | cons value values =>
+              simp [evalCrepFullExpsState] at heval
+      | cons expression expressions =>
+          simp at hlength
+  | cons slot slots ih =>
+      rcases hdistinct with ⟨hslotNotTail, htailDistinct⟩
+      cases expressions with
+      | nil => simp at hlength
+      | cons expression expressions =>
+          cases values with
+          | nil =>
+              cases hhead : evalCrepFullExpState state
+                  baseAddress topAddress expression with
+              | none =>
+                  simp [evalCrepFullExpsState, hhead] at heval
+              | some headValue =>
+                  cases htail : evalCrepFullExpsState state baseAddress topAddress
+                      expressions with
+                  | none =>
+                      simp [evalCrepFullExpsState, hhead, htail] at heval
+                  | some tailValues =>
+                      simp [evalCrepFullExpsState, hhead, htail] at heval
+          | cons value values =>
+              have hlengthTail : slots.length = expressions.length := by
+                simp only [List.length_cons] at hlength
+                omega
+              cases hhead : evalCrepFullExpState state
+                  baseAddress topAddress expression with
+              | none =>
+                  simp [evalCrepFullExpsState, hhead] at heval
+              | some headValue =>
+                  cases htail : evalCrepFullExpsState state baseAddress topAddress
+                      expressions with
+                  | none =>
+                      simp [evalCrepFullExpsState, hhead, htail] at heval
+                  | some tailValues =>
+                      have hvalues : headValue :: tailValues = value :: values := by
+                        simpa [evalCrepFullExpsState, hhead, htail] using heval
+                      cases hvalues
+                      have htailStable :
+                          evalCrepFullExpsState
+                            { state with locals := updateCrepLocal state.locals slot value }
+                            baseAddress topAddress expressions = some values := by
+                        exact evalCrepFullExpsState_update_of_forall_not_mem
+                          state baseAddress topAddress expressions slot value
+                          (fun current hcurrent =>
+                            hnot slot (by simp) current (by simp [hcurrent]))
+                          values htail
+                      have htailResult := ih
+                        (state := { state with
+                          locals := updateCrepLocal state.locals slot value })
+                        (expressions := expressions) (values := values)
+                        hlengthTail htailDistinct
+                        (fun current hcurrent expression' hexpression' =>
+                          hnot current (by simp [hcurrent]) expression'
+                            (by simp [hexpression']))
+                        htailStable
+                      change evalCrepFullProgState functions primitive ffi sharedMem
+                        baseAddress topAddress
+                        ((fuel + slots.length + 1) + 1) state
+                        (.seq (.assign slot expression)
+                          (crepNestedSeq (List.zipWith
+                            (fun name expression => .assign name expression)
+                            slots expressions))) = _
+                      simp [evalCrepFullProgState, hhead]
+                      rw [htailResult]
+                      rfl
+
 end Flapjack

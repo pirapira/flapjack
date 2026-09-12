@@ -101,6 +101,7 @@ import Flapjack.Test.PanValueFfiClockMemoryFfi
 import Flapjack.Test.FullSsaTarget
 import Flapjack.Test.CrepeArith
 import Flapjack.Test.CrepePrimitive
+import Flapjack.Test.CrepeGlobalSemantics
 import Flapjack.Test.CrepeExpressionRelation
 import Flapjack.Test.CrepeProgramRelation
 import Flapjack.Test.CrepeSourceWordReturnCorrectness

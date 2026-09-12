@@ -1,19 +1,17 @@
-import Flapjack.CrepeSourceWordGenericStoreCorrectness
+import Flapjack.CrepeProgramGenericStoreCorrectness
 import Flapjack.CrepeProgramRelation
 
 /-!
-Program-level source-word correctness for the general `Store` statement.
+Stateful source-word correctness for the general `Store` statement.
 
-The general store lowering materializes the address and value in two fresh
-temporaries before issuing the flat word store.  This theorem lifts the
-source-word expression relation through that lowering for arbitrary source
-and target fuel.
+The legacy generic-store proof is retained for compatibility while this
+module provides the global-aware evaluator boundary used by the migrating
+program relation.
 -/
 
 namespace Flapjack
 
-set_option linter.unusedSimpArgs false in
-theorem panValueCrepProgramCorrect_store_source_word
+theorem panValueCrepProgramStateCorrect_store_source_word
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
     [ShiftLeft α] [ShiftRight α] [LT α]
@@ -33,11 +31,41 @@ theorem panValueCrepProgramCorrect_store_source_word
       evalCrepFullExp
         (updateCrepLocal state.locals temporary updateValue) state.memory
         baseAddress topAddress compiled = some value) :
-    PanValueCrepProgramCorrect (.store address.toExp value.toExp) := by
+    PanValueCrepProgramStateCorrect (.store address.toExp value.toExp) := by
   intro context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
     baseAddress topAddress bytesInWord sourceFuel targetFuel exceptionRel
     sourceResult crepResult hrel hsource hcrep
+  have hstateExpFromLegacy :
+      ∀ (sourceExpression : SourceWordExp α) (sourceValue : α)
+        (compiled : CrepExp α) (targetState : CrepState α),
+        evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord sourceExpression.toExp =
+          some (.word sourceValue) →
+        compileExp context sourceExpression.toExp = ([compiled], .one) →
+        evalCrepFullExp targetState.locals targetState.memory
+          baseAddress topAddress compiled = some sourceValue →
+        evalCrepFullExpState targetState baseAddress topAddress compiled =
+          some sourceValue := by
+    intro sourceExpression sourceValue compiled targetState hsourceExpression
+      hcompileExpression hcompiledExpression
+    obtain ⟨compiled', hcompile', hnoGlobal⟩ :=
+      compileSourceWordExp_noGlobal context structs sourceLocals sourceGlobals
+        sourceMemory baseAddress topAddress bytesInWord
+        (fun name value hvalue =>
+          hlookup context sourceLocals name value hvalue)
+        sourceExpression sourceValue hsourceExpression
+    have hcompiledEq : compiled = compiled' := by
+      have hpair : ([compiled], Shape.one) = ([compiled'], Shape.one) :=
+        hcompileExpression.symm.trans hcompile'
+      exact (List.cons.inj (congrArg Prod.fst hpair)).1
+    have hcompiled' :
+        evalCrepFullExp targetState.locals targetState.memory
+          baseAddress topAddress compiled' = some sourceValue := by
+      simpa [hcompiledEq] using hcompiledExpression
+    rw [hcompiledEq]
+    exact (evalCrepFullExpState_eq_of_noGlobal targetState
+      baseAddress topAddress compiled' hnoGlobal).trans hcompiled'
   cases sourceFuel with
   | zero =>
       simp [evalPanValueProgWithPrimitiveCallsAndFfi] at hsource
@@ -135,20 +163,20 @@ theorem panValueCrepProgramCorrect_store_source_word
               rw [hcompile] at hcrep
               cases targetFuel with
               | zero =>
-                  simp [nestedDecs, evalCrepFullProg] at hcrep
+                  simp [nestedDecs, evalCrepFullProgState] at hcrep
               | succ targetFuel =>
                   cases targetFuel with
                   | zero =>
-                      simp [nestedDecs, evalCrepFullProg] at hcrep
+                      simp [nestedDecs, evalCrepFullProgState] at hcrep
                   | succ targetFuel =>
                       cases targetFuel with
                       | zero =>
-                          simp [nestedDecs, evalCrepFullProg] at hcrep
+                          simp [nestedDecs, evalCrepFullProgState] at hcrep
                       | succ targetFuel =>
                           cases targetFuel with
                           | zero =>
                               simp [nestedDecs, crepNestedSeq, stores,
-                                evalCrepFullProg, evalCrepFullExp] at hcrep
+                                evalCrepFullProgState] at hcrep
                           | succ targetFuel =>
                               have hrestore :
                                   restoreCrepLocal
@@ -166,27 +194,42 @@ theorem panValueCrepProgramCorrect_store_source_word
                                 by_cases haddress :
                                     current = context.maxVar + 1
                                 · simp [restoreCrepLocal, haddress]
-                                by_cases hvalue : current = context.maxVar + 2
+                                by_cases hvalue :
+                                    current = context.maxVar + 2
                                 · simp [restoreCrepLocal, hvalue]
                                 · simp [restoreCrepLocal, updateCrepLocal,
                                     haddress, hvalue]
                               have htargetExpected :
-                                  evalCrepFullProg functions crepPrimitive ffi
+                                  evalCrepFullProgState functions crepPrimitive ffi
                                       sharedMem baseAddress topAddress
                                       (targetFuel + 4) state
                                       (compileProg context
                                         (.store address.toExp value.toExp)) =
                                     some (.normal
-                                      ({ locals := state.locals, memory := updateMemory state.memory addressValue valueValue, globals := state.globals } : CrepState α)) := by
+                                      ({ locals := state.locals,
+                                         memory := updateMemory state.memory
+                                           addressValue valueValue,
+                                         globals := state.globals } : CrepState α)) := by
                                 rw [hcompile]
+                                have hcrepAddressState := hstateExpFromLegacy
+                                  address addressValue compiledAddress state
+                                  hsourceAddress hcompileAddress hcrepAddress
+                                let stateAfterAddress : CrepState α :=
+                                  { state with
+                                    locals := updateCrepLocal state.locals
+                                      (context.maxVar + 1) addressValue }
+                                have hvalueAfterState := hstateExpFromLegacy
+                                  value valueValue compiledValue stateAfterAddress
+                                  hsourceValue hcompileValue hvalueAfter
+                                dsimp [stateAfterAddress] at hvalueAfterState
                                 simp [nestedDecs, crepNestedSeq, stores,
-                                  evalCrepFullProg, evalCrepFullExp,
-                                  hcrepAddress, hvalueAfter, updateCrepLocal,
-                                  restoreCrepResult, hrestore, Nat.add_assoc]
+                                  evalCrepFullProgState, evalCrepFullExpState,
+                                  hcrepAddressState, hvalueAfterState, updateCrepLocal,
+                                  restoreCrepResult, hrestore]
                               have hsourceEq :=
                                 Option.some.inj (hsourceExpected.symm.trans hsource)
                               have hcrepForRelation :
-                                  evalCrepFullProg functions crepPrimitive ffi
+                                  evalCrepFullProgState functions crepPrimitive ffi
                                       sharedMem baseAddress topAddress
                                       (targetFuel + 4) state
                                       (compileProg context
@@ -202,7 +245,10 @@ theorem panValueCrepProgramCorrect_store_source_word
                                       (updatePanValueMemory sourceMemory
                                         addressValue (.word valueValue)))
                                     (.normal
-                                      ({ locals := state.locals, memory := updateMemory state.memory addressValue valueValue, globals := state.globals } : CrepState α)) := by
+                                      ({ locals := state.locals,
+                                         memory := updateMemory state.memory addressValue
+                                           valueValue,
+                                         globals := state.globals } : CrepState α)) := by
                                 exact ⟨htargetRel.1, htargetRel.2.1,
                                   htargetRel.2.2⟩
                               rw [hsourceEq, hcrepEq] at hcontrol

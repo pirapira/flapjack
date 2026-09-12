@@ -49,7 +49,7 @@ example :
         wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
         wordStackLocationMoveRemoveDestination, wordStackLocationMove])
     (hlive := by
-      simp [handlerLoweringConfig, handlerLoweringInitial, wordStackCallLiveBitmap,
+      simp [handlerLoweringInitial, wordStackCallLiveBitmap,
         wordStackBitmapWriteWithBuilder])
     (hreturnSome := by
       intro returnData hreturn

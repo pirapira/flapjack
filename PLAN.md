@@ -2202,6 +2202,128 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   preserving the Loop global environment and its executable regression.
 - [x] Complete the paired global-aware runtime bridge for `loadGlob`, with a
   store/load-oriented global lookup regression.
+- [x] Add a separate global environment to compact `CrepState` and preserve it
+  across the Crep-to-Loop state boundary and temporary-assignment restoration.
+- [x] Add a parallel global-aware full-Crep evaluator, with executable
+  store/load and missing-global regressions and a direct global-store
+  Crep-to-Loop agreement theorem.
+- [x] Execute the compiler's global exception-payload lowering through the
+  global-aware evaluator and regress the resulting global store.
+- [x] Add the raised-state relation for exception payloads spilled into the
+  separate Crep global area while preserving the ordinary memory relation.
+- [x] Port the scalar source-word `raise` lowering relation to the
+  global-aware evaluator, including the compiled global payload and exception
+  code relation.
+- [x] Add the global-aware structured return fuel relation, exposing the
+  state-aware flattened-expression witness needed by source-word migration.
+- [x] Prove no-global expression and expression-list compatibility between the
+  legacy and global-aware Crepe evaluators, providing an incremental migration
+  seam for localized correctness proofs.
+- [x] Prove that scalar source-word compilation emits no-global expressions and
+  expose the first state-aware source-word expression contract.
+- [x] Lift the state-aware expression contract to the complete localized
+  `wordExp` fragment used by argument and program-constructor proofs.
+- [x] Lift the state-aware expression contract through argument lists, with a
+  `wordExp` wrapper for call and primitive correctness migration.
+- [x] Wire the state-aware expression contract into a fuel-polymorphic return
+  correctness theorem for direct program-induction use.
+- [x] Add the stateful program-correctness predicate, its return and sequence
+  constructors, and terminal leaves for skip/tick/annotation/break/continue.
+- [x] Migrate the concrete fuel-polymorphic source-word return theorem to the
+  stateful evaluator and return boundary.
+- [x] Add the stateful syntax-induction assembly over all program constructors,
+  including recursive call-handler obligations.
+- [x] Port the fuel-polymorphic direct scalar local-assignment relation to the
+  stateful evaluator, including its updated local-state relation.
+- [x] Add the stateful direct source-word local-assignment constructor,
+  including scalar destination inversion and flattened-local update.
+- [x] Add the stateful temporary source-word local-assignment constructor,
+  including fresh-slot evaluation and restoration.
+- [x] Port the complementary scalar temporary-assignment relation, including
+  temporary-slot evaluation and restoration under the stateful evaluator.
+- [x] Port the generic and scalar source-word `Store32` relations to the
+  stateful evaluator, including source/target memory transitions.
+- [x] Port the generic `StoreByte` relation to the stateful evaluator, keeping
+  both fixed-width memory constructors available to the stateful induction.
+- [x] Add stateful call composition and relation boundaries, preserving
+  explicit callee/handler witnesses for later global-state simulation.
+- [x] Add state-aware nested-declaration expansion and declaration-call
+  composition, so arbitrary-shape `decCall` can be consumed by the stateful
+  correctness induction.
+- [x] Add the independent-fuel recursive declaration-call constructor that
+  consumes a stateful body-correctness hypothesis.
+- [x] Port nested-declaration forward/inversion fuel relations and the
+  one-word declaration correctness constructor to the stateful evaluator.
+- [x] Port the two-word record declaration return constructor to the stateful
+  evaluator, including temporary-slot stability and result restoration.
+- [x] Port the arbitrary-body two-word record declaration constructor to the
+  stateful evaluator, including nested-body fuel inversion and restoration.
+- [x] Add the state-aware scalar-expression-list relation used by record
+  declarations.
+- [x] Add explicit-state expression and expression-list fresh-local stability
+  lemmas for nested declarations.
+- [x] Port the arbitrary-length scalar-word record declaration constructor to
+  the stateful evaluator.
+- [x] Port the generic ordinary declaration constructor to the stateful
+  evaluator, including arbitrary-shape expression evaluation and restoration.
+- [x] Port the one-word declaration-call normal-return constructor to the
+  stateful evaluator using the independent-fuel state relation.
+- [x] Add the state-aware ordinary-call predicate and program-level call
+  constructor.
+- [x] Port the two-word record declaration `skip` constructor to the stateful
+  evaluator.
+- [x] Port the two-word record declaration `break` and `continue` constructors
+  to the stateful evaluator.
+- [x] Add stateful source-word program constructors for `Store32` and
+  `StoreByte`, including no-global expression compatibility and memory
+  relation transport.
+- [x] Add the stateful generic source-word `Store` constructor, threading
+  fresh address/value temporaries and the updated flat memory relation.
+- [x] Port stateful source-word shared-memory store correctness, threading
+  the handler transition and restoration of the value temporary.
+- [x] Port stateful source-word shared-memory load correctness, preserving
+  the handler-produced state and destination-local update.
+- [x] Port stateful source-word external-call correctness, including
+  four-argument temporary threading, FFI state transition, and restoration.
+- [x] Port stateful closed-constant external-call correctness, including
+  explicit-state constant evaluation, FFI transition, and temporary restoration.
+- [x] Add a reusable state-aware scalar expression relation, transporting
+  source-word compilation through the generated expression's no-global proof.
+- [x] Add the stateful source-word `return` constructor, including the
+  positive-fuel boundary and global-aware flattened-expression evaluation.
+- [x] Port the scalar constant-return constructor to the stateful evaluator,
+  including source-local clearing and value-list relation transport.
+- [x] Add the stateful one-word load-return constructor through the
+  state-aware load expression contract.
+- [x] Add the stateful byte-load return constructor through its explicit
+  state-aware load expression contract.
+- [x] Add the stateful `load32` return constructor through its explicit
+  state-aware load expression contract.
+- [x] Add the stateful scalar-word record return constructor, including
+  state-aware list evaluation and the arbitrary 32-word payload bound.
+- [x] Add the stateful arbitrary record-field return constructor, including
+  indexed stateful list evaluation and field-shape selection.
+- [x] Add the stateful two-word record expression wrapper used by the
+  fixed-shape declaration and return correctness cases.
+- [x] Port closed constant record-field returns through the stateful expression
+  and program return contracts.
+- [x] Add stateful argument-list and word-call correctness adapters, preserving
+  the callee simulation premise under the stateful call evaluator.
+- [x] Add state-aware forward and converse evaluation theorems for flattened
+  local-assignment sequences, including non-interference under local updates.
+- [x] Lift the generic direct local-assignment constructor to the stateful
+  evaluator for arbitrary flattened Pancake values.
+- [x] Lift the generic temporary local-assignment constructor and assignment
+  dispatcher to the stateful evaluator, including fresh-slot restoration.
+- [x] Add the generic stateful program-level call constructor, consuming
+  arbitrary stateful expression contracts for its argument list.
+- [x] Add the stateful universal declaration expression adapter and declaration
+  correctness wrapper, preserving allocated-name freshness obligations.
+- [x] Generalize global-aware source-word `raise` lowering to arbitrary
+  compiled functions and lift it into the stateful program relation.
+- [ ] Migrate the existing compact source-to-Crep correctness theorem suite
+  from the compatibility evaluator to the global-aware evaluator, then remove
+  the compatibility path once all CakeML global-state obligations are proved.
 - [x] Port remaining handler/FFI lowering and a semantic simulation theorem
   for the complete pass.
 - [x] Preserve the oracle's terminal `FinalFFI` outcome when a memory FFI
@@ -2332,6 +2454,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Add the compositional structured `addCarry` primitive correctness rule,
   including typed destination slots, fresh temporaries, and the flattened
   primitive result relation.
+- [x] Port the structured `addCarry` primitive correctness rule to the
+  global-aware state evaluator, including state-aware argument witnesses and
+  fresh-temporary restoration.
 - [x] Add the compositional source-word shared-memory store correctness rule,
   including value-first lowering, fresh temporary stability, handler state,
   and restoration of the temporary local.
@@ -2342,8 +2467,14 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   correctness induction.
 - [x] Add relation-aware conditional branch rules for both source condition
   outcomes and their selected control-result relations.
+- [x] Port the conditional branch rules and source-word ITE constructor to the
+  global-aware state evaluator, transporting no-global condition expressions.
 - [x] Add relation-aware zero-condition and recursive nonzero loop rules for
   the program correctness induction.
+- [x] Port zero-condition and normal/break/continue loop fuel composition
+  rules to the global-aware state evaluator.
+- [x] Port the fuel-recursive source-word while correctness constructor to
+  the global-aware evaluator, including normal iteration and control exits.
 - [x] Add relation-aware loop-control rules for body break and continue.
 - [x] Prove the compiled declaration-table head lookup exposes flattened
   parameter slots and the exact compiled function body.

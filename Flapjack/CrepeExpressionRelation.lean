@@ -42,6 +42,31 @@ def PanValueCrepExpressionCorrect
         baseAddress topAddress compiled =
         some (panValueFlatWords sourceValue)
 
+/-! State-aware counterpart used while the program proof migrates from the
+    compact evaluator.  Its shape is intentionally identical apart from the
+    evaluator, so individual expression contracts can be switched over
+    independently. -/
+def PanValueCrepExpressionStateCorrect
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (expression : Exp α) : Prop :=
+  ∀ (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (baseAddress topAddress bytesInWord : α) (sourceValue : PanValue α),
+    panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state →
+    evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression = some sourceValue →
+    panValuePayloadWithinLimit structs sourceValue = true ∧
+    ∃ compiled,
+      compileExp context expression =
+        (compiled, panValueShape structs sourceValue) ∧
+      evalCrepFullExpsState state baseAddress topAddress compiled =
+        some (panValueFlatWords sourceValue)
+
 def localisedExp (expression : Exp α) : Prop :=
   expGlobalVars expression = []
 
@@ -932,5 +957,134 @@ theorem compileSourceWordExp_relation
       subst value
       exact ⟨.const context.bytesInWord, by simp [SourceWordExp.toExp, compileExp],
         by simp [hbytesInWord, evalCrepFullExp]⟩
+
+/-! The scalar compiler relation also gives a syntactic guarantee: generated
+    expressions in this fragment never read the separate Crep global area. -/
+theorem compileSourceWordExp_noGlobal
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (baseAddress topAddress bytesInWord : α)
+    (hlookup : ∀ name value, sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (expression : SourceWordExp α) (value : α)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression.toExp = some (.word value)) :
+    ∃ compiled, compileExp context expression.toExp = ([compiled], .one) ∧
+      CrepExpNoGlobal compiled := by
+  induction expression generalizing value with
+  | const constant =>
+      have hvalue : constant = value := by
+        simpa [SourceWordExp.toExp, evalPanValueExp] using hsource
+      subst value
+      exact ⟨.const constant, by simp [SourceWordExp.toExp, compileExp], .const _⟩
+  | «local» name =>
+      have hsource' : sourceLocals name = some (.word value) := by
+        simpa [SourceWordExp.toExp, evalPanValueExp] using hsource
+      obtain ⟨slot, hslot⟩ := hlookup name (.word value) hsource'
+      refine ⟨.var slot, ?_, .var _⟩
+      simp [SourceWordExp.toExp, compileExp, hslot]
+  | op operator left right ihLeft ihRight =>
+      obtain ⟨leftValue, rightValue, hleftSource, hrightSource, _⟩ :=
+        evalPanValueExp_op_word_inv structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord operator left.toExp right.toExp value hsource
+      obtain ⟨leftCompiled, hleftCompile, hleftNoGlobal⟩ :=
+        ihLeft leftValue hleftSource
+      obtain ⟨rightCompiled, hrightCompile, hrightNoGlobal⟩ :=
+        ihRight rightValue hrightSource
+      refine ⟨.op operator [leftCompiled, rightCompiled], ?_,
+        .op hleftNoGlobal hrightNoGlobal⟩
+      simp [SourceWordExp.toExp, compileExp, compileExp.compileExpList,
+        cexpHeads, hleftCompile, hrightCompile]
+  | mul left right ihLeft ihRight =>
+      obtain ⟨leftValue, rightValue, hleftSource, hrightSource, _⟩ :=
+        evalPanValueExp_mul_word_inv structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord left.toExp right.toExp value hsource
+      obtain ⟨leftCompiled, hleftCompile, hleftNoGlobal⟩ :=
+        ihLeft leftValue hleftSource
+      obtain ⟨rightCompiled, hrightCompile, hrightNoGlobal⟩ :=
+        ihRight rightValue hrightSource
+      refine ⟨.crepOp .mul [leftCompiled, rightCompiled], ?_,
+        .crepMul hleftNoGlobal hrightNoGlobal⟩
+      simp [SourceWordExp.toExp, compileExp, compileExp.compileExpList,
+        cexpHeads, hleftCompile, hrightCompile]
+  | cmp operator left right ihLeft ihRight =>
+      obtain ⟨leftValue, rightValue, hleftSource, hrightSource, _⟩ :=
+        evalPanValueExp_cmp_word_inv structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord operator left.toExp right.toExp value hsource
+      obtain ⟨leftCompiled, hleftCompile, hleftNoGlobal⟩ :=
+        ihLeft leftValue hleftSource
+      obtain ⟨rightCompiled, hrightCompile, hrightNoGlobal⟩ :=
+        ihRight rightValue hrightSource
+      refine ⟨.cmp operator leftCompiled rightCompiled, ?_,
+        .cmp hleftNoGlobal hrightNoGlobal⟩
+      simp [SourceWordExp.toExp, compileExp, hleftCompile, hrightCompile]
+  | shift operator left right ihLeft ihRight =>
+      obtain ⟨leftValue, rightValue, hleftSource, hrightSource, _⟩ :=
+        evalPanValueExp_shift_word_inv structs sourceLocals sourceGlobals sourceMemory
+          baseAddress topAddress bytesInWord operator left.toExp right.toExp value hsource
+      obtain ⟨leftCompiled, hleftCompile, hleftNoGlobal⟩ :=
+        ihLeft leftValue hleftSource
+      obtain ⟨rightCompiled, hrightCompile, hrightNoGlobal⟩ :=
+        ihRight rightValue hrightSource
+      refine ⟨.shift operator leftCompiled rightCompiled, ?_,
+        .shift hleftNoGlobal hrightNoGlobal⟩
+      simp [SourceWordExp.toExp, compileExp, hleftCompile, hrightCompile]
+  | baseAddr =>
+      have hvalue : baseAddress = value := by
+        simpa [SourceWordExp.toExp, evalPanValueExp] using hsource
+      subst value
+      exact ⟨.baseAddr, by simp [SourceWordExp.toExp, compileExp], .baseAddr⟩
+  | topAddr =>
+      have hvalue : topAddress = value := by
+        simpa [SourceWordExp.toExp, evalPanValueExp] using hsource
+      subst value
+      exact ⟨.topAddr, by simp [SourceWordExp.toExp, compileExp], .topAddr⟩
+  | bytesInWord =>
+      have hvalue : bytesInWord = value := by
+        simpa [SourceWordExp.toExp, evalPanValueExp] using hsource
+      subst value
+      exact ⟨.const context.bytesInWord,
+        by simp [SourceWordExp.toExp, compileExp], .const _⟩
+
+/-! Stateful form of the scalar expression relation.  The compiler relation
+itself is unchanged; the no-global witness transports the compact evaluator
+result to the explicit global-aware evaluator. -/
+theorem compileSourceWordExp_state_relation
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (baseAddress topAddress bytesInWord : α)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hlocals : panValueCrepLocalsRel structs context sourceLocals state.locals)
+    (hlookup : ∀ name value, sourceLocals name = some value →
+      ∃ slot, lookupInfo name context.vars = some (.one, [slot]))
+    (expression : SourceWordExp α) (value : α)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression.toExp =
+      some (.word value)) :
+    ∃ compiled, compileExp context expression.toExp = ([compiled], .one) ∧
+      evalCrepFullExpState state baseAddress topAddress compiled = some value := by
+  obtain ⟨compiled, hcompile, hcompiled⟩ := compileSourceWordExp_relation
+    context structs sourceLocals sourceGlobals sourceMemory state.locals state.memory
+    baseAddress topAddress bytesInWord hbytesInWord hlocals hlookup expression value hsource
+  obtain ⟨compiled', hcompile', hnoGlobal⟩ := compileSourceWordExp_noGlobal
+    context structs sourceLocals sourceGlobals sourceMemory
+    baseAddress topAddress bytesInWord hlookup expression value hsource
+  have hcompiledEq : compiled = compiled' := by
+    have hpair : ([compiled], Shape.one) = ([compiled'], Shape.one) :=
+      hcompile.symm.trans hcompile'
+    exact (List.cons.inj (congrArg Prod.fst hpair)).1
+  refine ⟨compiled, hcompile, ?_⟩
+  rw [hcompiledEq]
+  rw [evalCrepFullExpState_eq_of_noGlobal state baseAddress topAddress
+    compiled' hnoGlobal]
+  simpa [hcompiledEq] using hcompiled
 
 end Flapjack

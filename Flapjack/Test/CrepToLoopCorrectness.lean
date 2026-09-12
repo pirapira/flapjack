@@ -94,6 +94,16 @@ theorem crepToLoop_primitive_correctness_contract_regression :
       (.return [.const (42 : Nat)] : CrepProg Nat) := by
   exact crepToLoopProgramCorrectWithPrimitive_return_const 42
 
+theorem crepToLoop_primitive_assign_load_var_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.load (.var 1)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_load_var 2 1
+
+theorem crepToLoop_primitive_assign_load32_var_contract_regression :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign 2 (.load32 (.var 1)) : CrepProg Nat) := by
+  exact crepToLoopProgramCorrectWithPrimitive_assign_load32_var 2 1
+
 theorem crepToLoop_primitive_seq_normal_regression :
     evalCrepFullProg [] (fun _ _ => none)
         (fun _ _ _ _ _ state => some (.returned state))

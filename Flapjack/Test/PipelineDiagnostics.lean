@@ -90,6 +90,16 @@ def checkedPipelineRemoveConfig : StackRemoveConfig :=
     | .ok artifact => artifact.bytes.length > 0
     | .error _ => false
 
+/-! Cake-compatible structured store addresses must survive the source-facing
+    pipeline as well as the parser/static checker. -/
+#guard
+    match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main"
+      "fun 1 main() { var {1} x = <1>; st x.0, x.0; return 1; }" with
+    | .ok artifact => artifact.bytes.length > 0
+    | .error _ => false
+
 #guard
     match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
       (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig

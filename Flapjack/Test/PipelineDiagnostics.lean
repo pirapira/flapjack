@@ -68,4 +68,18 @@ def checkedPipelineRemoveConfig : StackRemoveConfig :=
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
       checkedPipelineRemoveConfig checkedPipelineDeclarations).isOk
 
+#guard
+    match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" "fun main() { return 7; }" with
+    | .ok artifact => artifact.bytes.length > 0
+    | .error _ => false
+
+#guard
+    match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" "fun main() {" with
+    | .error (.parse _) => true
+    | _ => false
+
 end Flapjack

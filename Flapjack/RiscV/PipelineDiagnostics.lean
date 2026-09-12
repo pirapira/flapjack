@@ -1,4 +1,5 @@
 import Flapjack.Pipeline
+import Flapjack.Parser
 import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.LabDiagnostics
 import Flapjack.RiscV.WordDiagnostics
@@ -47,6 +48,17 @@ inductive PipelineRiscVLoweringError where
   | stackToRiscV
   deriving DecidableEq, Repr
 
+inductive SourceRiscVCompileError where
+  | parse (errors : List Parser.ParseError)
+  | static (error : StatErr)
+  | entryNotFound
+  | lowering (error : PipelineRiscVLoweringError)
+  deriving Repr
+
+structure SourceRiscVArtifact (width : Nat) where
+  bytes : List (BitVec 8)
+  warnings : List StatErr
+
 /-! Checked sibling of `compileFlapjackRiscVViaStack`.  The historical
     `Option` entrypoint remains available for compatibility; this form makes
     a failed Word section distinguishable from a later StackRemove/Lab/RISC-V
@@ -84,5 +96,39 @@ def compileFlapjackRiscVViaStackBytesChecked [NeZero width]
     Except PipelineRiscVLoweringError (List (BitVec 8)) :=
   (compileFlapjackRiscVViaStackChecked architecture bytesInWord fromNat services
     removeConfig declarations).map RiscV.encodeInstructions
+
+/-! Source-facing entrypoint. Parsing and static checking are kept ahead of
+    the existing entry-aware pipeline so callers can distinguish front-end,
+    missing-entry, and target-lowering failures. -/
+def compileFlapjackRiscVSourceBytesChecked [NeZero width]
+    [BEq (RiscV.Word width)]
+    [OfNat (RiscV.Word width) 0] [OfNat (RiscV.Word width) 1]
+    [Add (RiscV.Word width)] [Mul (RiscV.Word width)]
+    (architecture : RiscV.Architecture) (bytesInWord : RiscV.Word width)
+    (fromNat : Int → RiscV.Word width) (services : List (FunName × Nat))
+    (removeConfig : StackRemoveConfig) (start : FunName) (source : String) :
+    Except SourceRiscVCompileError (SourceRiscVArtifact width) :=
+  match Parser.parseTopDecs fromNat source with
+  | .error errors => .error (.parse errors)
+  | .ok declarations =>
+      let checked := staticCheck declarations
+      match checked.1 with
+      | .error error => .error (.static error)
+      | .ok _ =>
+          let warnings := checked.2
+          match compileFlapjackEntry architecture bytesInWord
+              (fun value => fromNat value) start declarations with
+          | none => .error .entryNotFound
+          | some pipeline =>
+              match RiscV.pipelineWordFunctionsToStackChecked pipeline.word with
+              | .error error => .error (.lowering (.wordToStack error))
+              | .ok functions =>
+                  match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
+                      (width := width)
+                      { services := services } removeConfig 0 0
+                      (functions.map (fun (label, _, body) => (label, body))) with
+                  | .error error => .error (.lowering (.labToRiscV error))
+                  | .ok instructions =>
+                      .ok { bytes := RiscV.encodeInstructions instructions, warnings }
 
 end Flapjack

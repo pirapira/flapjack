@@ -2233,6 +2233,8 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   stateful evaluator and return boundary.
 - [x] Add the stateful syntax-induction assembly over all program constructors,
   including recursive call-handler obligations.
+- [x] Port the fuel-polymorphic direct scalar local-assignment relation to the
+  stateful evaluator, including its updated local-state relation.
 - [ ] Migrate the existing compact source-to-Crep correctness theorem suite
   from the compatibility evaluator to the global-aware evaluator, then remove
   the compatibility path once all CakeML global-state obligations are proved.

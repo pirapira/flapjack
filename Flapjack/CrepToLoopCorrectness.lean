@@ -4286,6 +4286,73 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_less_const
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
                             simp [htemp, htemp']
 
+theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notLower_const
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (name : Nat) (left right : α) :
+    CrepToLoopProgramCorrectWithPrimitive
+      (.assign name (.cmp .notLower (.const left) (.const right)) : CrepProg α) := by
+  intro context functions crepFunctions primitive ffi sharedMem
+    baseAddress topAddress sourceFuel targetFuel state live crepResult loopResult
+    hcrep hloop
+  simp [evalCrepFullProg, evalCrepFullExp, evalPanCmp] at hcrep
+  subst crepResult
+  cases targetFuel with
+  | zero => simp [evalLoopProgWithPrimitiveCallsAndFfi] at hloop
+  | succ targetFuel =>
+      cases targetFuel with
+      | zero =>
+          simp [loopCompileProg, loopCompileExp, loopNestedSeq,
+            evalLoopProgWithPrimitiveCallsAndFfi] at hloop
+      | succ targetFuel =>
+          cases targetFuel with
+          | zero =>
+              simp [loopCompileProg, loopCompileExp, loopNestedSeq,
+                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+                evalLoopExp] at hloop
+          | succ targetFuel =>
+              cases targetFuel with
+              | zero =>
+                  simp [loopCompileProg, loopCompileExp, loopNestedSeq,
+                    evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+                    evalLoopExp] at hloop
+              | succ targetFuel =>
+                  cases targetFuel with
+                  | zero =>
+                      simp [loopCompileProg, loopCompileExp, loopNestedSeq,
+                        evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+                        evalLoopExp, loopStateOfCrepState] at hloop
+                  | succ targetFuel =>
+                      cases targetFuel with
+                      | zero =>
+                          simp [loopCompileProg, loopCompileExp, loopNestedSeq,
+                            evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+                            evalLoopExp, evalLoopCondition, loopStateOfCrepState] at hloop
+                      | succ targetFuel =>
+                          simp [loopCompileProg, loopCompileExp, loopNestedSeq,
+                            evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+                            evalLoopExp, evalLoopCondition, loopStateOfCrepState,
+                            updateLoopLocal] at hloop
+                          by_cases hlower : PanCmp.lower left right = true
+                          · simp [hlower, updateLoopLocal] at hloop
+                            cases hloop
+                            simp [hlower, crepToLoopControlRel, crepToLoopStateRel,
+                              updateCrepLocal, updateLoopLocal]
+                            intro current hcurrent
+                            have htemp : current ≠ context.maxVar + 1 := by omega
+                            have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
+                            simp [htemp, htemp']
+                          · simp_all [updateLoopLocal]
+                            cases hloop
+                            simp [crepToLoopControlRel, crepToLoopStateRel,
+                              updateCrepLocal, updateLoopLocal]
+                            intro current hcurrent
+                            have htemp : current ≠ context.maxVar + 1 := by omega
+                            have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
+                            simp [htemp, htemp']
+
 theorem crepToLoopProgramCorrectWithPrimitive_assign_sub_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

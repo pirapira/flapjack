@@ -38,4 +38,17 @@ def crepeGlobalStoreLoadProgram : CrepProg Nat :=
     { crepeGlobalSemanticsState with globals := fun _ => none }
     (.return [.loadGlob 200]) = none
 
+def crepeGlobalCallee : CompiledFunction Nat :=
+  { name := "setGlobal"
+    params := []
+    body := .seq (.storeGlob 200 (.const 42)) (.return [])
+    returnShape := .comb [] }
+
+def crepeGlobalCallProgram : CrepProg Nat :=
+  .seq (.call (some ([], none)) "setGlobal" []) (.return [.loadGlob 200])
+
+#guard evalCrepFullResultState [crepeGlobalCallee] (fun _ _ => none)
+    (noCrepFfi Nat) (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat)
+    0 100 20 crepeGlobalSemanticsState crepeGlobalCallProgram = some [42]
+
 end Flapjack

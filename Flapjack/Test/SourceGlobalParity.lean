@@ -59,6 +59,12 @@ address expression.  The shared-memory lowering only accepted atomic addresses,
 so a non-constant address such as `1000 + 12` failed even though the reference
 compiler accepts it; `sharedMemory*` pins the reference sections and asserts the
 byte entry point accepts the fixture.
+
+`shadowingSource` redeclares a local (`var 1 x = 0; var 1 x = g();`) in one
+body.  The reference compiler only logs a warning for the redeclaration, while
+the static checker previously rejected the call-initialized declaration as a
+scope error; `shadowing*` pins the reference sections and asserts the byte entry
+point accepts the fixture.
 -/
 
 namespace Flapjack.Test.SourceGlobalParity
@@ -106,6 +112,16 @@ the shared-memory path previously required an atomic address. -/
 def sharedMemorySource : String :=
   "fun 1 test() {\n  var v = 12;\n  !ld8 v, 1000 + 12;\n  return v;\n}\n" ++
     "fun 1 main() { return test(); }"
+
+/-- Shadowed local declaration program: the redeclaration regression.  The
+reference compiler accepts `var 1 x = 0; var 1 x = g();` in one body (it logs a
+warning and keeps going), while the static checker previously rejected the
+second declaration as a scope error. -/
+def shadowingSource : String :=
+  "var 1 x = 1;\n" ++
+    "fun 1 g() { return 9; }\n" ++
+    "fun 1 f() {\n  var 1 x = 0;\n  var 1 x = g();\n  return x;\n}\n" ++
+    "fun 1 main() { return f(); }"
 
 /-- CakeML `cml_generated_main` for `globalSource` (offset 1000, 28 bytes). -/
 def cakeGlobalGeneratedMain : List (BitVec 8) :=
@@ -265,6 +281,33 @@ def cakeSharedMemoryTest : List (BitVec 8) :=
     BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x67,
     BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00 ]
 
+/-- CakeML `cml_generated_main` for `shadowingSource` (28 bytes). -/
+def cakeShadowGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xB5, BitVec.ofNat 8 0x8C,
+    BitVec.ofNat 8 0xFE, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x15,
+    BitVec.ofNat 8 0x15, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x33,
+    BitVec.ofNat 8 0x05, BitVec.ofNat 8 0xA5, BitVec.ofNat 8 0x01,
+    BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x85,
+    BitVec.ofNat 8 0xFF, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x65,
+    BitVec.ofNat 8 0x10, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x23,
+    BitVec.ofNat 8 0x30, BitVec.ofNat 8 0xB5, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `shadowingSource` (4 bytes). -/
+def cakeShadowMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0xC0,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_g` for `shadowingSource` (8 bytes). -/
+def cakeShadowG : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x65, BitVec.ofNat 8 0x90,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80,
+    BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_f` for `shadowingSource`; only its reference length is pinned. -/
+def cakeShadowFLength : Nat := 144
+
 /-- Run a source program through the checked RV64I byte entry point. -/
 def compileSourceBytes (source : String) : Option (List (BitVec 8)) :=
   match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
@@ -335,6 +378,13 @@ def sharedMemoryBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The shadowed local declaration fixture must be accepted; the static checker
+previously treated the second declaration in a body as a hard scope error. -/
+def shadowingBytesAccepted : Bool :=
+  match compileSourceBytes shadowingSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
@@ -344,7 +394,9 @@ def cakeGoldenShape : Bool :=
     cakeNamedStructGeneratedMain.length == 4 && cakeNamedStructMain.length == 12 &&
     cakeNamedStructF.length == 8 &&
     cakeSharedMemoryGeneratedMain.length == 4 && cakeSharedMemoryMain.length == 4 &&
-    cakeSharedMemoryTest.length == 12
+    cakeSharedMemoryTest.length == 12 &&
+    cakeShadowGeneratedMain.length == 28 && cakeShadowMain.length == 4 &&
+    cakeShadowG.length == 8 && cakeShadowFLength == 144
 
 #guard globalBytesAccepted
 #guard nestedGlobalBytesAccepted
@@ -353,6 +405,7 @@ def cakeGoldenShape : Bool :=
 #guard longMulGlobalBytesAccepted
 #guard namedStructBytesAccepted
 #guard sharedMemoryBytesAccepted
+#guard shadowingBytesAccepted
 #guard initializerChangesArtifact
 #guard cakeGoldenShape
 
@@ -380,6 +433,8 @@ def runChecks : IO Bool := do
       namedStructBytesAccepted,
     checkBool "Pancake shared-memory computed-address source compiles (bytes)"
       sharedMemoryBytesAccepted,
+    checkBool "Pancake shadowed local declaration source compiles (bytes)"
+      shadowingBytesAccepted,
     checkBool "Pancake global source compiles (runtime image)"
       (runtimeImageAccepted globalSource),
     checkBool "Pancake global initializer changes artifact"

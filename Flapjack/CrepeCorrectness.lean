@@ -360,6 +360,53 @@ theorem compile_full_extCall_const_noop_correct
     evalCrepFullProg, evalCrepFullExp, evalPanExp, evalPanFfiProg, evalPanExtCall,
     updateCrepLocal, restoreCrepResult, hrestoreFour]
 
+theorem compile_full_extCall_const_noop_state_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α)
+    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress configuration configurationLength array arrayLength : α)
+    (function : FunName) :
+    evalCrepFullProgState [] primitive
+        (fun _ _ _ _ _ sourceState => some (.returned sourceState)) sharedMem
+        baseAddress topAddress 30 state
+        (compileProg context
+          (.extCall function (.const configuration)
+            (.const configurationLength) (.const array) (.const arrayLength))) =
+      some (.normal state) := by
+  have hrestoreFour (base : Nat → Option α) (offset : Nat)
+      (value1 value2 value3 value4 : α) :
+      restoreCrepLocal
+          (restoreCrepLocal
+            (restoreCrepLocal
+              (restoreCrepLocal
+                (updateCrepLocal
+                  (updateCrepLocal
+                    (updateCrepLocal (updateCrepLocal base (offset + 1) value1)
+                      (offset + 2) value2)
+                    (offset + 3) value3)
+                  (offset + 4) value4)
+                (offset + 4) (base (offset + 4)))
+              (offset + 3) (base (offset + 3)))
+            (offset + 2) (base (offset + 2)))
+          (offset + 1) (base (offset + 1)) = base := by
+    funext current
+    by_cases h1 : current = offset + 1
+    · simp [restoreCrepLocal, h1]
+    by_cases h2 : current = offset + 2
+    · simp [restoreCrepLocal, h2]
+    by_cases h3 : current = offset + 3
+    · simp [restoreCrepLocal, h3]
+    by_cases h4 : current = offset + 4
+    · simp [restoreCrepLocal, h4]
+    · simp [restoreCrepLocal, updateCrepLocal, h1, h2, h3, h4]
+  simp [compileProg, firstCompiledExp, compileExp, nestedDecs,
+    evalCrepFullProgState, evalCrepFullExpState, updateCrepLocal,
+    restoreCrepResult, hrestoreFour]
+
 /-! A first structured source-to-Crep boundary for the correctness theorem.
     A closed word return has the same observable flattened result in the
     structured Pancake evaluator and in the full Crepe evaluator.  Keeping

@@ -127,6 +127,19 @@ theorem compile_full_local_return_state_correct_regression :
     (by simp [crepeGlobalLocalContext, lookupInfo])
     (by simp [crepeGlobalBoundLocalState])
 
+theorem compile_full_extCall_const_noop_state_correct_regression :
+    evalCrepFullProgState [] (fun _ _ => none)
+        (fun _ _ _ _ _ sourceState => some (.returned sourceState))
+        (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 30
+        crepeGlobalSemanticsState
+        (compileProg crepeGlobalSkipContext
+          (.extCall "noop" (.const 1) (.const 2) (.const 3) (.const 4) :
+            Prog Nat)) = some (.normal crepeGlobalSemanticsState) := by
+  exact compile_full_extCall_const_noop_state_correct crepeGlobalSkipContext
+    crepeGlobalSemanticsState (fun _ _ => none)
+    (defaultCrepSharedMemHandler : CrepSharedMemHandler Nat) 0 100 1 2 3 4
+    "noop"
+
 #guard evalCrepFullExpState crepeGlobalSemanticsState 0 100
   (CrepExp.loadGlob 200) = some 42
 

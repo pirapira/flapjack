@@ -51,6 +51,9 @@ def successEvaluate (clock : Nat) : LoopMachineStep :=
   else
     (some (.result []), { state with clock := clock - 1 })
 
+def finalFfiEvaluate (_clock : Nat) : LoopMachineStep :=
+  (some (.finalFfi (.word 9)), emptyState 0)
+
 def forbiddenEvaluate (_clock : Nat) : LoopMachineStep :=
   (some .error, emptyState 0)
 
@@ -90,6 +93,17 @@ theorem successNoForbidden :
       change loopForbiddenResult (successEvaluate (clock + 1)).1 at hclock
       simp [successEvaluate, loopForbiddenResult] at hclock
 
+theorem finalFfiBranch :
+    loopHasSuccessfulRun (hooksFor finalFfiEvaluate) := by
+  refine ⟨0, some (.finalFfi (.word 9)), emptyState 0, .ffi .failed, ?_, ?_⟩
+  · rfl
+  · simp [loopResultOutcome, hooksFor]
+
+theorem finalFfiNoForbidden :
+    ¬ loopHasForbiddenRun (hooksFor finalFfiEvaluate) := by
+  rintro ⟨clock, hclock⟩
+  simp [loopForbiddenResult, hooksFor, finalFfiEvaluate] at hclock
+
 theorem forbiddenBranch :
     loopHasForbiddenRun (hooksFor forbiddenEvaluate) := by
   exact ⟨0, by simp [loopForbiddenResult, hooksFor, forbiddenEvaluate]⟩
@@ -119,6 +133,16 @@ theorem semanticsSuccess :
   · by_cases successful : loopHasSuccessfulRun (hooksFor successEvaluate)
     · simp [loopSemantics, forbidden, successful]
     · exact (successful successBranch).elim
+
+theorem semanticsFinalFfi :
+    loopSemantics (hooksFor finalFfiEvaluate) emptyLprefixLub =
+      loopChooseTermination (hooksFor finalFfiEvaluate) finalFfiBranch := by
+  classical
+  by_cases forbidden : loopHasForbiddenRun (hooksFor finalFfiEvaluate)
+  · exact (finalFfiNoForbidden forbidden).elim
+  · by_cases successful : loopHasSuccessfulRun (hooksFor finalFfiEvaluate)
+    · simp [loopSemantics, forbidden, successful]
+    · exact (successful finalFfiBranch).elim
 
 theorem semanticsDivergence :
     loopSemantics (hooksFor divergingEvaluate) emptyLprefixLub =

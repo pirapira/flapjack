@@ -224,6 +224,77 @@ theorem panValuePcExceptionResultRel_of_raised_word_global_spill
       panValueFlatWordsFuel, updateMemory]
   · simp [panValueShape]
 
+/-! Concrete two-word counterpart of the scalar global payload observation.
+    The two flattened words occupy the consecutive compiler-owned global
+    slots used by `storeGlobals`; the distinctness premise prevents the
+    second update from overwriting slot zero. -/
+def crepPcTwoWordGlobalsLookup [OfNat α 0] [Add α]
+    (bytesInWord : α) (state : CrepState α) (value : PanValue α) :
+    Option (List α) :=
+  match value with
+  | .rStruct [.word _, .word _] =>
+      match state.globals 0, state.globals (0 + bytesInWord) with
+      | some left', some right' => some [left', right']
+      | _, _ => none
+  | _ => none
+
+theorem panValuePcExceptionResultRel_of_raised_two_word_global_spill
+    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (bytesInWord left right : α)
+    (state : CrepState α) (targetException : α)
+    (hstate : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory state)
+    (hexception : exceptionRel sourceException
+      (.rStruct [.word left, .word right]) targetException)
+    (hcode : exceptionCode sourceException = some targetException)
+    (hdistinct : (0 : α) ≠ 0 + bytesInWord) :
+    panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+      (crepPcTwoWordGlobalsLookup bytesInWord) (fun _ => none) sourceMemory
+      sourceException (.rStruct [.word left, .word right])
+      { state with globals :=
+          (updateMemory (updateMemory state.globals 0 left)
+            (0 + bytesInWord) right) }
+      targetException := by
+  have hlocals : panValueCrepLocalsRel structs context (fun _ => none)
+      state.locals := panValueCrepLocalsRel_empty structs context state.locals
+  have hraisedState : panValueCrepRaisedStateRel structs context
+      sourceGlobals sourceMemory
+      { state with globals :=
+          (updateMemory (updateMemory state.globals 0 left)
+            (0 + bytesInWord) right) } 0 := by
+    refine ⟨hstate.1, hlocals, ?_⟩
+    intro address _
+    exact congrFun (show panValueWordMemory sourceMemory = state.memory
+      from hstate.2.2) address
+  have hcontrol : panValueCrepRaisedControlRel structs context exceptionRel
+      sourceGlobals sourceMemory sourceException
+      (.rStruct [.word left, .word right])
+      { state with globals :=
+          (updateMemory (updateMemory state.globals 0 left)
+            (0 + bytesInWord) right) }
+      targetException 0 := ⟨hraisedState, hexception⟩
+  rw [hstate.1] at hcontrol
+  apply panValuePcExceptionResultRel_of_raised_control structs context
+    exceptionRel exceptionCode (crepPcTwoWordGlobalsLookup bytesInWord)
+    (fun _ => none) sourceMemory sourceException
+    (.rStruct [.word left, .word right])
+    { state with globals :=
+        (updateMemory (updateMemory state.globals 0 left)
+          (0 + bytesInWord) right) }
+    targetException 0 hcontrol hcode
+  · intro _
+    simp [crepPcTwoWordGlobalsLookup, panValueFlatWords,
+      panValueFlatWordsFuel, panValueFlatValueFuel,
+      panValueFlatWordsFuel.panValueFlatWordsListFuel,
+      panValueFlatValueFuel.panValueFlatValueListFuel,
+      updateMemory, hdistinct]
+  · simp [panValueShape, Shape.shapeSize]
+
 /-! Semantic word-raise lift.  The source and target evaluator equations are
     supplied by the existing fuel-polymorphic Pancake-to-Crep raise theorem;
     this wrapper turns its global spill result into the exact Pc result

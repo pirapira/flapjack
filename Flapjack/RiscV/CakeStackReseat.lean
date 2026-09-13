@@ -1,5 +1,6 @@
 import Flapjack.RiscV.RegisterTransfer
 import Flapjack.RiscV.WordToStack
+import Flapjack.StackRemove
 
 /-!
 # Reseating backend configuration to CakeML's stack-register convention
@@ -126,5 +127,38 @@ theorem reseat_scratch_roles_distinct (config : WordStackConfig)
   simp only [reseatWordStackConfig]
   rw [haddress, hspecial, hcarry]
   simp [portToStack, riscvInverseName]
+
+/-- Reseat a `StackRemoveConfig` so its heap/store roles carry CakeML stack
+register numbers (store base `10`->`1`, current heap `12`->`3`, address scratch
+`29`->`12`); the remaining roles already sit at fixed points of `riscv_names`. -/
+def reseatStackRemoveConfig (config : StackRemoveConfig) : StackRemoveConfig :=
+  { config with
+      storeBase := portToStack config.storeBase
+      currHeap := portToStack config.currHeap
+      addressScratch := portToStack config.addressScratch }
+
+@[simp] theorem portToStack_portStoreBase : portToStack 10 = cakeStoreBase := rfl
+
+@[simp] theorem portToStack_portCurrHeap : portToStack 12 = cakeCurrHeap := rfl
+
+/-- Reseating a `StackRemoveConfig` sends each role back to the original
+hardware register through `riscv_names`. -/
+theorem riscvRegisterName_reseat_storeBase (config : StackRemoveConfig)
+    (h : config.storeBase < 32) :
+    riscvRegisterName (reseatStackRemoveConfig config).storeBase =
+      config.storeBase := by
+  simpa [reseatStackRemoveConfig] using riscvRegisterName_portToStack h
+
+theorem riscvRegisterName_reseat_currHeap (config : StackRemoveConfig)
+    (h : config.currHeap < 32) :
+    riscvRegisterName (reseatStackRemoveConfig config).currHeap =
+      config.currHeap := by
+  simpa [reseatStackRemoveConfig] using riscvRegisterName_portToStack h
+
+theorem riscvRegisterName_reseat_stackRemoveAddressScratch
+    (config : StackRemoveConfig) (h : config.addressScratch < 32) :
+    riscvRegisterName (reseatStackRemoveConfig config).addressScratch =
+      config.addressScratch := by
+  simpa [reseatStackRemoveConfig] using riscvRegisterName_portToStack h
 
 end Flapjack.RiscV

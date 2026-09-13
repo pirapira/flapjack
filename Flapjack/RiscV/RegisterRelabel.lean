@@ -69,4 +69,45 @@ theorem writeRegister_relabel (forward : Fin 32 → Fin 32)
           fun hsame => hcurrent (hinjective hsame)
         simp [hcurrent, hforwardCurrent]
 
+/-- Writing an internal register when the hardwired zero register is not at
+internal index `0`.  Under the CakeML numbering the zero register is stack
+register `27`, whose hardware image is `0`; this variant skips the write when
+the register's hardware image is the zero register, matching the hardware
+`writeRegister` behavior. -/
+def writeRegisterInternal (forward : Fin 32 → Fin 32) (state : State width)
+    (name : Fin 32) (value : Word width) : State width :=
+  if forward name = 0 then state
+  else
+    { state with
+      registers := fun current => if current = name then value else state.registers current }
+
+/-- Writing an internal register under the relabeling is the same as writing
+its hardware image in the original state, for any injective relabeling.  This
+is the zero-image-aware companion of `writeRegister_relabel` and does not
+assume that the internal zero register sits at internal index `0`. -/
+theorem writeRegisterInternal_relabel (forward : Fin 32 → Fin 32)
+    (hinjective : Function.Injective forward) (state : State width) (name : Fin 32)
+    (value : Word width) :
+    writeRegisterInternal forward (relabelRegisters forward state) name value =
+      relabelRegisters forward (writeRegister state (forward name) value) := by
+  by_cases hzeroImage : forward name = 0
+  · simp [writeRegisterInternal, relabelRegisters, hzeroImage, writeRegister]
+  · have hwrite : writeRegister state (forward name) value =
+        { state with
+          registers := fun current =>
+            if current = forward name then value else state.registers current } := by
+      simp [writeRegister, hzeroImage]
+    rw [hwrite]
+    cases state with
+    | mk pc registers memory privilege mode =>
+      simp only [writeRegisterInternal, relabelRegisters, hzeroImage, ↓reduceIte]
+      congr 1
+      funext current
+      by_cases hcurrent : current = name
+      · subst hcurrent
+        simp
+      · have hforwardCurrent : forward current ≠ forward name :=
+          fun hsame => hcurrent (hinjective hsame)
+        simp [hcurrent, hforwardCurrent]
+
 end Flapjack.RiscV

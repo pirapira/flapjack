@@ -2,8 +2,11 @@ import Flapjack.CrepeSemantics
 import Flapjack.CrepeCorrectness
 import Flapjack.CrepeRuntime
 import Flapjack.Test.CrepCalls
+import Flapjack.Test.OriginalPancakeProbes
 
 namespace Flapjack
+
+open Flapjack.Test.OriginalPancakeProbes
 
 /-! Small executable witnesses for every control-result constructor in the
     full Crepe evaluator. These are deliberately word-polymorphic in the
@@ -12,6 +15,75 @@ namespace Flapjack
 def crepeSemanticsState : CrepState Nat :=
   { locals := fun _ => none
     memory := fun _ => none }
+
+/-! CakeML crepSem's set_var_def (crepSemScript.sml:55-57) updates exactly
+    one local in the finite-map state and leaves every other local unchanged.
+    updateCrepLocal is exercised at both the updated and untouched keys here. -/
+def crepeSetVarLocals : Nat → Option Nat :=
+  updateCrepLocal (fun name => if name == 2 then some 7 else none) 2 11
+
+/- The source probe is the original Pancake redeclaration program.  Its
+   Cake-derived RISC-V output is pinned in `setVar`; the two equations below
+   check the corresponding `set_var_def` state transition in the Lean port. -/
+#guard setVar.source =
+  "fun 1 main() { var 1 x = 7; var 1 x = 11; return x; }"
+#guard setVar.cakeByteCount == 1012
+
+def crepeSetGlobals : Nat → Option Nat :=
+  updateMemory (fun name => if name == 7 then some 3 else none) 7 11
+
+/- CakeML crepSem's set_globals_def (crepSemScript.sml:61-63) updates one
+   global binding.  The matching original Pancake global-initializer probe is
+   checked in as `set_globals.pnk` and its generated output is pinned in
+   `OriginalPancakeProbes.setGlobals`. -/
+#guard setGlobals.source = "var 1 g = 7; fun 1 main() { return g; }"
+#guard setGlobals.cakeByteCount == 1048
+
+example : crepeSetGlobals 7 = some 11 := by
+  decide
+
+example : crepeSetGlobals 8 = none := by
+  decide
+
+def crepeUpdLocals : Option (Nat → Option Nat) :=
+  assignCrepValues (fun _ => none) [1, 2] [7, 8]
+
+/- CakeML crepSem's upd_locals_def (crepSemScript.sml:66-68) starts from an
+   empty local map and installs the argument bindings.  The original Pancake
+   call probe is `upd_locals.pnk`; its complete Cake output is pinned in
+   `OriginalPancakeProbes.updLocals`. -/
+#guard updLocals.source =
+  "fun 1 id(1 x) { return x; } fun 1 main() { return id(7); }"
+#guard updLocals.cakeByteCount == 1016
+
+example :
+    crepeUpdLocals.map (fun locals => (locals 1, locals 2)) =
+      some (some 7, some 8) := by
+  decide
+
+example : crepeUpdLocals.map (fun locals => locals 3) = some none := by
+  decide
+
+def crepeEmptyLocals : Nat → Option Nat := fun _ => none
+
+/- CakeML crepSem's empty_locals_def (crepSemScript.sml:71) clears the local
+   map before evaluating a zero-argument callee.  The matching original probe
+   and its complete generated-output hash are pinned in `emptyLocals`. -/
+#guard emptyLocals.source =
+  "fun 1 zero() { return 7; } fun 1 main() { return zero(); }"
+#guard emptyLocals.cakeByteCount == 1016
+
+example : crepeEmptyLocals 1 = none := by
+  rfl
+
+example : crepeEmptyLocals 2 = none := by
+  rfl
+
+example : crepeSetVarLocals 2 = some 11 := by
+  decide
+
+example : crepeSetVarLocals 3 = none := by
+  decide
 
 def crepeSemanticsPrimitive : CrepPrimitiveHandler Nat
   | .addCarry, [left, right, carry] => some [left + right + carry, 0]

@@ -1,0 +1,2 @@
+var 1 g = 7;
+fun 1 main() { return g; }

@@ -1,0 +1,2 @@
+fun 1 zero() { return 7; }
+fun 1 main() { return zero(); }

@@ -352,4 +352,24 @@ theorem wordRegisterToRiscv_injective_of_lt_28 {left right : Nat}
   · exact absurd hsame hne
   · exact heq
 
+/-- Under CakeML's `riscv_names` the only stack register that maps to the
+hardware zero register `x0` is stack register `27`.  This identifies the
+internal zero register of the Cake stack convention and is the precondition
+needed to relabel a register file whose zero slot is not hardware index `0`. -/
+theorem riscvRegisterName_eq_zero_iff {name : Nat} (h : name < 32) :
+    riscvRegisterName name = 0 ↔ name = 27 := by
+  constructor
+  · intro hzero
+    have hcheck : (List.range 32).all (fun candidate =>
+        (riscvRegisterName candidate != 0) || (candidate == 27)) = true := by
+      decide
+    have heval := List.all_eq_true.mp hcheck name (List.mem_range.mpr h)
+    simp only [Bool.or_eq_true, bne_iff_ne, beq_iff_eq] at heval
+    rcases heval with hne | htwentySeven
+    · exact absurd hzero hne
+    · exact htwentySeven
+  · intro htwentySeven
+    subst htwentySeven
+    exact (by decide : riscvRegisterName 27 = 0)
+
 end Flapjack.RiscV

@@ -29,6 +29,25 @@ example : portToStack portLinkRegister = 0 := rfl
 #guard riscvRegisterName (portToStack portZeroRegister) == portZeroRegister
 #guard riscvRegisterName (portToStack portLinkRegister) == portLinkRegister
 
+def removeConfig : Flapjack.StackRemoveConfig :=
+  { storeBase := 10
+    currHeap := 12
+    scratch := 31
+    addressScratch := 29
+    stackPointer := 20
+    bytesInWord := 8
+    stackBase := 21
+    wordShift := 3 }
+
+#guard (reseatStackRemoveConfig removeConfig).storeBase == 1
+#guard (reseatStackRemoveConfig removeConfig).currHeap == 3
+#guard (reseatStackRemoveConfig removeConfig).addressScratch == 12
+#guard (reseatStackRemoveConfig removeConfig).scratch == 31
+#guard (reseatStackRemoveConfig removeConfig).stackPointer == 20
+#guard riscvRegisterName (reseatStackRemoveConfig removeConfig).storeBase == 10
+#guard riscvRegisterName (reseatStackRemoveConfig removeConfig).currHeap == 12
+#guard riscvRegisterName (reseatStackRemoveConfig removeConfig).addressScratch == 29
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("port zero role reseats to CakeML zero register 27",
@@ -44,7 +63,17 @@ def runChecks : IO Bool := do
       ("reseated scratch roles are pairwise distinct",
         portToStack portAddressScratch != portToStack portSpecialScratch &&
           portToStack portAddressScratch != portToStack portCarryScratch &&
-          portToStack portSpecialScratch != portToStack portCarryScratch) ]
+          portToStack portSpecialScratch != portToStack portCarryScratch),
+      ("stack-remove store base reseats to CakeML stack register 1",
+        (reseatStackRemoveConfig removeConfig).storeBase == 1),
+      ("stack-remove current heap reseats to CakeML stack register 3",
+        (reseatStackRemoveConfig removeConfig).currHeap == 3),
+      ("stack-remove address scratch reseats to CakeML stack register 12",
+        (reseatStackRemoveConfig removeConfig).addressScratch == 12),
+      ("reseated stack-remove roles invert through riscv_names",
+        riscvRegisterName (reseatStackRemoveConfig removeConfig).storeBase == 10 &&
+          riscvRegisterName (reseatStackRemoveConfig removeConfig).currHeap == 12 &&
+          riscvRegisterName (reseatStackRemoveConfig removeConfig).addressScratch == 29) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

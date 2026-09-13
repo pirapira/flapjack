@@ -1,0 +1,7 @@
+byte_store_hit=SOME (Word 0x80706050403AA01w)
+
+byte_store_miss=NONE
+
+store32_hit=SOME (Word 0x807060511223344w)
+
+store32_unaligned=NONE

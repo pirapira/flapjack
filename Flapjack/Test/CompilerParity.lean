@@ -5,6 +5,7 @@ import Flapjack.Test.SourceGlobalParity
 import Flapjack.Test.RegisterTransfer
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
+import Flapjack.Test.ParsedFullSsaPipeline
 
 /-!
 # Pancake/RISC-V compiler parity tests

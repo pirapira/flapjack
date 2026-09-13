@@ -233,12 +233,17 @@ def crepRuntimeExtCallValues [BEq α] [Add α] [OfNat α 1]
       crepRuntimeReadBytes state array
         (state.ffiContext.valueToNat arrayLength) with
   | some configurationBytes, some arrayBytes =>
-      match handler (.extCall function configurationBytes arrayBytes) state with
-      | .returned state bytes =>
-          match crepRuntimeWriteBytes state array bytes with
-          | some state => (.normal, state)
-          | none => (.error, state)
-      | .final event => (.finalFfi event, state)
+      if function == "" then
+        match crepRuntimeWriteBytes state array arrayBytes with
+        | some state => (.normal, state)
+        | none => (.error, state)
+      else
+        match handler (.extCall function configurationBytes arrayBytes) state with
+        | .returned state bytes =>
+            match crepRuntimeWriteBytes state array bytes with
+            | some state => (.normal, state)
+            | none => (.error, state)
+        | .final event => (.finalFfi event, state)
   | _, _ => (.error, state)
 
 def crepRuntimeExtCall [BEq α] [Add α] [OfNat α 1]

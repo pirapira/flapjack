@@ -3,7 +3,16 @@
 This note documents the RISC-V artifact format produced by the original
 Pancake compiler and the format the Flapjack port emits, so the two can be
 compared directly without a conversion layer (beads `flapjack-pxn.8.5.11` and
-`flapjack-pxn.8.5.11.2`).
+`flapjack-pxn.8.5.11.4.1`).  The upstream reference used for the format
+contract is the checked-in CakeML executable invoked as:
+
+```
+cake --pancake --target=riscv < SOURCE.pnk
+```
+
+The serializer regression checks in `Flapjack/Test/ArtifactFormat.lean` pin
+the envelope markers, byte-line grouping/casing, and symbol-name conventions;
+the direct corpus audit separately compares the emitted section payloads.
 
 ## Original Pancake (`cake --pancake --target=riscv`)
 

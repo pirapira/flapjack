@@ -10,6 +10,7 @@ import Flapjack.RiscV.CorrectnessTraps
 import Flapjack.RiscV.RegisterRelabel
 import Flapjack.RiscV.RegisterTransfer
 import Flapjack.RiscV.InstructionRelabel
+import Flapjack.RiscV.InstructionCommutation
 import Flapjack.Correctness
 import Flapjack.CorrectnessCalls
 import Flapjack.FlatCorrectness

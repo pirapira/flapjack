@@ -51,6 +51,11 @@ The following are open review or verification obligations:
    Pancake compiler. The current executable parity suite contains only a small
    set of CakeML-derived byte vectors and Lean pipeline goldens; it is not a
    differential test of the full Pancake corpus.
+   This limitation applies to internal and intermediate regression tests as
+   well: a test that compares two Lean definitions is not evidence of Pancake
+   equivalence. New porting tests must use an original CakeML executable run
+   or an original HOL EVAL/probe, and record the exact source definition,
+   fixture, comparison boundary, and regeneration command.
 4. The compiler does not yet cover every Pancake construct or emit the same
    complete runtime/ELF artifacts as CakeML. The current command emits a
    Pancake-shaped checked RV64I assembly image for its supported source subset;
@@ -77,6 +82,12 @@ record the source program, the exact reference command/output boundary, and
 any normalization of labels or names. A fixture that fails against CakeML is a
 compiler-parity bug and must remain tracked as high-priority work until fixed
 or its reference interpretation is corrected.
+
+The checked-in HOL probes under `scripts/hol-probes` provide the same evidence
+for intermediate definitions that cannot be observed through the source
+compiler command. They are optional for normal Lean builds, but their outputs
+must be regenerated from the original CakeML/HOL source before the associated
+porting bead is closed.
 
 ## Required next evidence for a stronger claim
 

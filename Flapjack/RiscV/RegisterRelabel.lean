@@ -1,4 +1,4 @@
-import Flapjack.RiscV.Model
+import Flapjack.RiscV.RegisterNames
 
 /-!
 # Register-file relabeling for the `riscv_names` rebase
@@ -109,5 +109,31 @@ theorem writeRegisterInternal_relabel (forward : Fin 32 → Fin 32)
       · have hforwardCurrent : forward current ≠ forward name :=
           fun hsame => hcurrent (hinjective hsame)
         simp [hcurrent, hforwardCurrent]
+
+/-- Reading an internal register in the `riscvForward`-relabeled state is
+reading its `riscv_names` hardware index in the original state. -/
+theorem readRegister_relabel_riscvForward (state : State width) (name : Fin 32) :
+    readRegister (relabelRegisters riscvForward state) name =
+      readRegister state (riscvForward name) :=
+  readRegister_relabel riscvForward state name
+
+/-- Writing an internal register in the `riscvForward`-relabeled state is the
+same as writing its `riscv_names` hardware index in the original state.  This
+instantiates the zero-image-aware write with the concrete CakeML register map;
+its internal zero register is stack register `27`, whose image is `x0`. -/
+theorem writeRegisterInternal_relabel_riscvForward (state : State width) (name : Fin 32)
+    (value : Word width) :
+    writeRegisterInternal riscvForward (relabelRegisters riscvForward state) name value =
+      relabelRegisters riscvForward (writeRegister state (riscvForward name) value) :=
+  writeRegisterInternal_relabel riscvForward riscvForward_injective state name value
+
+/-- The CakeML internal zero register `27` is not stored by the internal write,
+matching the hardware hardwired zero. -/
+@[simp] theorem writeRegisterInternal_riscvForward_zero (state : State width)
+    (value : Word width) :
+    writeRegisterInternal riscvForward state 27 value = state := by
+  have hzero : riscvForward (27 : Fin 32) = 0 :=
+    (riscvForward_eq_zero_iff (register := 27)).mpr (by decide)
+  simp [writeRegisterInternal, hzero]
 
 end Flapjack.RiscV

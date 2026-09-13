@@ -1,0 +1,9 @@
+one_hit=SOME (ValWord 3w)
+
+one_miss=NONE
+
+comb_hit=SOME (RStruct [ValWord 3w; ValWord 5w])
+
+named_hit=SOME (NStruct «Pair» [(«left»,ValWord 3w); («right»,ValWord 5w)])
+
+named_suffix_blocked=NONE

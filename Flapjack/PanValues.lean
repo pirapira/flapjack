@@ -11,11 +11,36 @@ matches the value/shape checks in CakeML's `panSem` evaluator.
 
 namespace Flapjack
 
+/-! CakeML's `word_lab` wrapper is currently a one-constructor type.  Keeping
+    it explicit makes the four small `panSem` helper definitions faithful even
+    though the executable `PanValue.word` constructor stores the payload
+    directly. -/
+inductive PanWordLab (α : Type u) where
+  | word (value : α)
+  deriving Repr
+
+def panIsWord : PanWordLab α → Bool
+  | .word _ => true
+
+def panTheWord : PanWordLab α → α
+  | .word value => value
+
 inductive PanValue (α : Type u) where
   | word (value : α)
   | rStruct (fields : List (PanValue α))
   | nStruct (name : StructName) (fields : List (FieldName × PanValue α))
   deriving Repr
+
+def panIsValWord : PanValue α → Bool
+  | .word _ => true
+  | .rStruct _ | .nStruct _ _ => false
+
+/- `theValWord` is only defined by CakeML on a word value.  The `Option`
+   result records that definedness instead of introducing an arbitrary value
+   for structured inputs. -/
+def panTheValWord : PanValue α → Option α
+  | .word value => some value
+  | .rStruct _ | .nStruct _ _ => none
 
 /-! Target-supplied byte-addressed operations for structured source memory.
 
@@ -263,8 +288,8 @@ mutual
         (panValueFlatLoadListFuel structs readWord bytesInWord fuel shapes address).map
           .rStruct
     | fuel + 1, .named name, address => do
-        let info ← lookupInfo name structs
-        let fields ← panValueFlatLoadFieldsFuel structs readWord bytesInWord fuel
+        let (info, structs') ← lookupInfoWithRest name structs
+        let fields ← panValueFlatLoadFieldsFuel structs' readWord bytesInWord fuel
           info.fields address
         pure (.nStruct name fields)
   termination_by fuel _shape _address => fuel

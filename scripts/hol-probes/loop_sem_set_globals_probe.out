@@ -1,0 +1,7 @@
+set_globals_new=SOME (Word 5w)
+
+set_globals_overwrite=SOME (Word 5w)
+
+set_globals_miss=NONE
+
+set_globals_sibling=SOME (Word 1w)

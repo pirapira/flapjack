@@ -105,4 +105,42 @@ theorem riscvRegisterName_injective_lt_32 {left right : Nat}
   · exact absurd hsame hne
   · exact heq
 
+/-- CakeML's stack-register convention for the RISC-V target: stack register
+`27` is the hardware zero register, `0` is the link register, and `1`-`4` are
+the first argument/return registers `a0`-`a3`. -/
+abbrev zeroStackRegister : Nat := 27
+
+abbrev linkStackRegister : Nat := 0
+
+/-- Convert a CakeML stack register number to a hardware RISC-V register by
+applying `riscv_names` once at the Lab-to-RISC-V encoding boundary. -/
+def labRegisterOfNat (name : Nat) : Option (Fin 32) :=
+  registerOfNat (riscvRegisterName name)
+
+/-- The CakeML zero stack register maps to hardware `x0`. -/
+@[simp] theorem labRegisterOfNat_zeroStack : labRegisterOfNat 27 = some 0 := by
+  simp [labRegisterOfNat]
+
+/-- The CakeML link stack register maps to hardware `x1`. -/
+@[simp] theorem labRegisterOfNat_link : labRegisterOfNat 0 = some 1 := by
+  decide
+
+/-- The first argument/return stack register maps to hardware `a0`. -/
+@[simp] theorem labRegisterOfNat_argument0 : labRegisterOfNat 1 = some 10 := by
+  decide
+
+@[simp] theorem labRegisterOfNat_argument1 : labRegisterOfNat 2 = some 11 := by
+  decide
+
+@[simp] theorem labRegisterOfNat_argument2 : labRegisterOfNat 3 = some 12 := by
+  decide
+
+@[simp] theorem labRegisterOfNat_argument3 : labRegisterOfNat 4 = some 13 := by
+  decide
+
+/-- The mapped register is in range whenever the stack register is. -/
+theorem labRegisterOfNat_eq {name : Nat} (h : riscvRegisterName name < 32) :
+    labRegisterOfNat name = some ⟨riscvRegisterName name, h⟩ := by
+  simp [labRegisterOfNat, registerOfNat, h]
+
 end Flapjack.RiscV

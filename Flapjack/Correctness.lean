@@ -3,6 +3,7 @@ import Flapjack.Semantics
 import Flapjack.PanValues
 import Flapjack.LoopSemantics
 import Flapjack.RiscV.Backend
+import Flapjack.RiscV.StepCorrectness
 import Flapjack.WordSemantics
 
 /-!
@@ -16,6 +17,23 @@ ported.
 -/
 
 namespace Flapjack
+
+/-! Generic source-to-machine contract for the straight-line Word fragment.
+    The compiler witness remains explicit, while StepCorrectness supplies the
+    exact instruction-counted execution relation. -/
+
+theorem wordProgToRiscV_straightLine_execution_contract [NeZero width]
+    (state : RiscV.State width) (program : WordProg (RiscV.Word width))
+    (hstraight : RiscV.WordRiscVStraightLine program)
+    (code : List (RiscV.Instruction width))
+    (hcompile : RiscV.wordProgToRiscV program = some code) :
+    (RiscV.evalWordProg state program).map
+        (fun final => (final, code.length)) =
+      some (RiscV.executeInstructions state code, code.length) := by
+  have hcount := RiscV.wordProgToRiscV_counted_sound_of_straightLine
+    state program hstraight code hcompile
+  rw [RiscV.executeInstructionsCounted_spec] at hcount
+  exact hcount.symm
 
 def pipelineAddDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function

@@ -28,7 +28,7 @@ example [OfNat α 1] :
     wordProgClashAnalysis, wordProgVariables, wordProgReadVars,
     wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
     wordClashPairs,
-    wordExpReadVars, loopAccVars, loopVarsOfExp, loopInsertAll, loopInsert,
+    wordExpReadVars, loopAccVars, loopInsert,
     loopToWordProg, wordCompileExp, wordFindVar, wordMapVars, lookupNatInfo,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
 
@@ -44,8 +44,8 @@ example [OfNat α 1] :
     wordColouringUsesAllocatable, wordColouringRespectsClashes,
     wordProgClashAnalysis, wordProgVariables, wordProgReadVars,
     wordProgWriteVars, wordProgLiveBefore, wordProgAtomicClashes,
-    wordClashPairs, wordExpReadVars, loopAccVars, loopVarsOfExp,
-    loopInsertAll, loopInsert, loopToWordProg, wordCompileExp, wordFindVar,
+    wordClashPairs, wordExpReadVars, loopAccVars, loopInsert,
+    loopToWordProg, wordCompileExp, wordFindVar,
     wordApplyColour, wordApplyColourExp, wordMapVars, lookupNatInfo,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
 

@@ -189,4 +189,82 @@ theorem portRegisterToRiscv_lt_32 {name : Nat} (h : name < 32) :
   · have hname : name - 1 < 32 := Nat.lt_of_le_of_lt (Nat.sub_le _ _) h
     exact riscvRegisterName_lt_32 hname
 
+/-! ## CakeML stack-convention register assignments for the backend config
+
+The port's backend configuration currently stores hardware register numbers
+directly (scratch `31`, address scratch `29`, special scratch `28`, carry
+scratch `27`, stack pointer `20`, stack base `21`, store base `10`, current heap
+`12`, zero `0`).  To apply `riscv_names` exactly once at encoding we re-express
+each of those roles as the CakeML *stack* register whose image under the map is
+the hardware register the port already uses.  The lemmas below record the image
+of every assignment, so the config can be reseated without changing emitted
+hardware registers. -/
+
+/-- Stack register for the hardware zero register (`x0`). -/
+abbrev cakeZeroRegister : Nat := 27
+
+/-- Stack register for the link register (`ra`, `x1`). -/
+abbrev cakeLinkRegister : Nat := 0
+
+/-- Stack register for the first argument/return word (`a0`, `x10`). -/
+abbrev cakeArgumentBase : Nat := 1
+
+/-- Stack register the port currently uses as its general scratch (`x31`). -/
+abbrev cakeScratchRegister : Nat := 31
+
+/-- Stack register for the stack-pointer role (`x20`). -/
+abbrev cakeStackPointer : Nat := 20
+
+/-- Stack register for the stack-base role (`x21`). -/
+abbrev cakeStackBase : Nat := 21
+
+/-- Stack register that maps to the address-scratch hardware register (`x29`). -/
+abbrev cakeAddressScratch : Nat := 12
+
+/-- Stack register that maps to the special-scratch hardware register (`x28`). -/
+abbrev cakeSpecialScratch : Nat := 11
+
+/-- Stack register that maps to the carry-scratch hardware register (`x27`). -/
+abbrev cakeCarryScratch : Nat := 10
+
+/-- Stack register for the store-constant base (`x10`), which coincides with the
+first argument/return word. -/
+abbrev cakeStoreBase : Nat := 1
+
+/-- Stack register that maps to the compile-time current-heap register (`x12`). -/
+abbrev cakeCurrHeap : Nat := 3
+
+@[simp] theorem riscvRegisterName_cakeZeroRegister :
+    riscvRegisterName cakeZeroRegister = 0 := rfl
+
+@[simp] theorem riscvRegisterName_cakeLinkRegister :
+    riscvRegisterName cakeLinkRegister = 1 := rfl
+
+@[simp] theorem riscvRegisterName_cakeArgumentBase :
+    riscvRegisterName cakeArgumentBase = 10 := rfl
+
+@[simp] theorem riscvRegisterName_cakeScratchRegister :
+    riscvRegisterName cakeScratchRegister = 31 := rfl
+
+@[simp] theorem riscvRegisterName_cakeStackPointer :
+    riscvRegisterName cakeStackPointer = 20 := rfl
+
+@[simp] theorem riscvRegisterName_cakeStackBase :
+    riscvRegisterName cakeStackBase = 21 := rfl
+
+@[simp] theorem riscvRegisterName_cakeAddressScratch :
+    riscvRegisterName cakeAddressScratch = 29 := rfl
+
+@[simp] theorem riscvRegisterName_cakeSpecialScratch :
+    riscvRegisterName cakeSpecialScratch = 28 := rfl
+
+@[simp] theorem riscvRegisterName_cakeCarryScratch :
+    riscvRegisterName cakeCarryScratch = 27 := rfl
+
+@[simp] theorem riscvRegisterName_cakeStoreBase :
+    riscvRegisterName cakeStoreBase = 10 := rfl
+
+@[simp] theorem riscvRegisterName_cakeCurrHeap :
+    riscvRegisterName cakeCurrHeap = 12 := rfl
+
 end Flapjack.RiscV

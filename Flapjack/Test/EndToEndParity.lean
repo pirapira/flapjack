@@ -222,6 +222,47 @@ def memoryOriginalProbeResult : Option (List (RiscV.Word 64)) :=
 #guard memoryDeclarations.isSome
 #guard memoryMachineResult == memoryOriginalProbeResult
 
+/-! The FFI fixture exercises the source-facing external-call boundary with a
+    deterministic host that accepts only service 7 and the four expected ABI
+    arguments; its expected return value comes from the original panSem FFI
+    probe. -/
+def ffiSource : String :=
+  "fun 1 main() { @foo(1,2,3,4); return 0; }"
+
+def ffiDeclarations : Option (List (Decl (RiscV.Word 64))) :=
+  (Parser.parseTopDecs (BitVec.ofInt 64) ffiSource).toOption
+
+def ffiPipeline : Option (FlapjackRiscVResult 64) := do
+  let declarations ← ffiDeclarations
+  pure (compileFlapjackRiscVWithFfi .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+    [("foo", 7)] declarations)
+
+def ffiLinked : Option
+    (List (Nat × RiscV.Word 64 × List Nat ×
+      List (RiscV.Instruction 64) × List (Fin 32))) :=
+  ffiPipeline.bind (fun pipeline => pipeline.callLinkedFunctions)
+
+def ffiHost : RiscV.WordFfiHost 64 :=
+  fun service configuration configurationLength array arrayLength state =>
+    if service == 7 && configuration == 1 && configurationLength == 2 &&
+        array == 3 && arrayLength == 4 then
+      some { state with pc := state.pc + 4 }
+    else none
+
+def ffiMachineResult : Option (List (RiscV.Word 64)) := do
+  let sections ← ffiLinked
+  let entry ← lookupLinkedEntry 1 sections
+  let image := sections.flatMap (fun (_, _, _, code, _) => code)
+  RiscV.executeFunctionAtWithFfi ffiHost 4000 0 entry 6 [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
+
+def ffiOriginalProbeResult : Option (List (RiscV.Word 64)) :=
+  some [BitVec.ofNat 64 0]
+
+#guard ffiDeclarations.isSome
+#guard ffiMachineResult == ffiOriginalProbeResult
+
 def runChecks : IO Bool := do
   let returnPass := machineResult == originalProbeResult
   let addPass := addMachineResult == originalAddProbeResult
@@ -231,6 +272,7 @@ def runChecks : IO Bool := do
   let callPass := callMachineResult == callOriginalProbeResult
   let globalPass := globalMachineResult == globalOriginalProbeResult
   let memoryPass := memoryMachineResult == memoryOriginalProbeResult
+  let ffiPass := ffiMachineResult == ffiOriginalProbeResult
   if returnPass then
     IO.println "PASS return source-to-RISC-V execution matches original Pancake HOL probe"
   else
@@ -259,7 +301,11 @@ def runChecks : IO Bool := do
     IO.println "PASS Pancake memory-load source executes to original HOL result"
   else
     IO.println s!"FAIL Pancake memory-load execution: {memoryMachineResult}"
+  if ffiPass then
+    IO.println "PASS Pancake FFI source executes to original HOL result"
+  else
+    IO.println s!"FAIL Pancake FFI execution: {ffiMachineResult}"
   pure (returnPass && addPass && multiplicationPass && controlPass && callPass &&
-    globalPass && memoryPass)
+    globalPass && memoryPass && ffiPass)
 
 end Flapjack.Test.EndToEndParity

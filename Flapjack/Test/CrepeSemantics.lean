@@ -45,6 +45,25 @@ example : crepeSetGlobals 7 = some 11 := by
 example : crepeSetGlobals 8 = none := by
   decide
 
+def crepeUpdLocals : Option (Nat → Option Nat) :=
+  assignCrepValues (fun _ => none) [1, 2] [7, 8]
+
+/- CakeML crepSem's upd_locals_def (crepSemScript.sml:66-68) starts from an
+   empty local map and installs the argument bindings.  The original Pancake
+   call probe is `upd_locals.pnk`; its complete Cake output is pinned in
+   `OriginalPancakeProbes.updLocals`. -/
+#guard updLocals.source =
+  "fun 1 id(1 x) { return x; } fun 1 main() { return id(7); }"
+#guard updLocals.cakeByteCount == 1016
+
+example :
+    crepeUpdLocals.map (fun locals => (locals 1, locals 2)) =
+      some (some 7, some 8) := by
+  decide
+
+example : crepeUpdLocals.map (fun locals => locals 3) = some none := by
+  decide
+
 example : crepeSetVarLocals 2 = some 11 := by
   decide
 

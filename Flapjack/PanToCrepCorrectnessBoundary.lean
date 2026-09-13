@@ -1,4 +1,5 @@
 import Flapjack.CrepeProgramInduction
+import Flapjack.CrepeExpressionRelation
 
 /-!
 The checked Lean boundary corresponding to CakeML's
@@ -10,7 +11,11 @@ keeps the existing source-to-Crep state, global, memory, exception, and
 flattened-value relations, while adding those two result cases explicitly.
 The evaluator obligations are parameters: the theorem below is the
 kernel-checked assembly boundary to be discharged by the source and Crep
-semantic proofs for each supported compiler subset.
+semantic proofs for each supported compiler subset.  The current
+`panValueCrepStateRel` is deliberately a supported-empty-global relation
+(`sourceGlobals = fun _ => none`); the code and exception-shape relations,
+`globalsLookup`, and the localised-program premise remain explicit parameters
+until global lowering is completed.
 -/
 
 namespace Flapjack
@@ -49,12 +54,44 @@ inductive CrepPcResult (α : Type u) where
   | timeout (state : CrepState α)
   | finalFfi (state : CrepState α) (event : FfiFinalEvent)
 
+abbrev PanValuePcCodeRel α :=
+  CompileContext α → Prog α → CrepProg α → Prop
+
+abbrev PanValuePcExceptionShapeRel α :=
+  StructContext → CompileContext α → Prop
+
+/-! The exception clause of HOL `pc_compile_correct`: the target exception is
+the code looked up for the source exception, and a non-empty payload is
+available through `globalsLookup` with the same flattening and 32-word bound.
+The lookup functions are parameters because the current Lean state relation
+still models only the empty source-global boundary. -/
+def panValuePcExceptionResultRel
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (sourceValue : PanValue α)
+    (targetState : CrepState α) (targetException : α) : Prop :=
+  ∃ spillAddress code,
+    exceptionCode sourceException = some code ∧
+    targetException = code ∧
+    panValueCrepRaisedControlRel structs context exceptionRel
+      sourceGlobals sourceMemory sourceException sourceValue targetState
+      targetException spillAddress ∧
+    (1 ≤ Shape.shapeSize (panValueShape structs sourceValue) →
+      globalsLookup targetState sourceValue = some (panValueFlatWords sourceValue) ∧
+      Shape.shapeSize (panValueShape structs sourceValue) ≤ 32)
+
 /-! The explicit state/global/memory result relation.  The raised branch uses
 the compiler-owned spill relation already used by the downstream Crep
 correctness lemmas; timeout and FinalFFI retain the ordinary state relation. -/
 def panValuePcResultRel
     (structs : StructContext) (context : CompileContext α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
     : PanValuePcResult α → CrepPcResult α → Prop
   | .error, _ => False
   | .normal sourceLocals sourceGlobals sourceMemory,
@@ -68,10 +105,9 @@ def panValuePcResultRel
       panValueCrepValuesRel sourceValues targetValues
   | .raised _sourceLocals sourceGlobals sourceMemory sourceException sourceValue,
       .raised targetState targetException =>
-      ∃ spillAddress,
-        panValueCrepRaisedControlRel structs context exceptionRel
-          sourceGlobals sourceMemory sourceException sourceValue targetState
-          targetException spillAddress
+      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+        globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException
   | .broke sourceLocals sourceGlobals sourceMemory, .broke targetState _ =>
       panValueCrepStateRel structs context sourceLocals sourceGlobals
         sourceMemory targetState
@@ -99,23 +135,33 @@ abbrev CrepPcEvaluator (α : Type u) :=
   CompileContext α → CrepState α → CrepProg α → Option (CrepPcResult α)
 
 /-! The direct Lean analogue of the quantifier/implication shape of HOL
-`pc_compile_correct`: related initial source/target state, successful source
-and compiled-target evaluations, then the complete result relation. -/
+`pc_compile_correct`: code/exceptions/localisation assumptions, related
+initial source/target state, successful non-error source and compiled-target
+evaluations, then the complete result relation. -/
 def PanValuePcCompileCorrect
     [BEq α] [OfNat α 0] [Add α]
     (sourceEvaluate : PanValuePcEvaluator α)
     (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
     (program : Prog α) : Prop :=
   ∀ (context : CompileContext α) (structs : StructContext)
     (sourceInput : PanValuePcInput α) (targetState : CrepState α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (sourceResult : PanValuePcResult α) (targetResult : CrepPcResult α),
+    codeRel context program (compileProg context program) →
+    excpRel structs context →
+    localisedProg program →
     panValueCrepStateRel structs context sourceInput.locals sourceInput.globals
       sourceInput.memory targetState →
+    sourceResult ≠ .error →
     sourceEvaluate context sourceInput program = some sourceResult →
     targetEvaluate context targetState (compileProg context program) =
       some targetResult →
-    panValuePcResultRel structs context exceptionRel sourceResult targetResult
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      sourceResult targetResult
 
 /-! Packaging theorem for a supported compiler subset.  Every HOL result case
 is an explicit obligation; in particular no proof can discharge this
@@ -124,21 +170,31 @@ theorem panValuePcCompileCorrect_of_obligations
     [BEq α] [OfNat α 0] [Add α]
     (sourceEvaluate : PanValuePcEvaluator α)
     (targetEvaluate : CrepPcEvaluator α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
     (program : Prog α)
     (hobligation : ∀ (context : CompileContext α) (structs : StructContext)
       (sourceInput : PanValuePcInput α) (targetState : CrepState α)
       (exceptionRel : ExceptionId → PanValue α → α → Prop)
       (sourceResult : PanValuePcResult α) (targetResult : CrepPcResult α),
+      codeRel context program (compileProg context program) →
+      excpRel structs context →
+      localisedProg program →
       panValueCrepStateRel structs context sourceInput.locals sourceInput.globals
         sourceInput.memory targetState →
+      sourceResult ≠ .error →
       sourceEvaluate context sourceInput program = some sourceResult →
       targetEvaluate context targetState (compileProg context program) =
         some targetResult →
-      panValuePcResultRel structs context exceptionRel sourceResult targetResult) :
-    PanValuePcCompileCorrect sourceEvaluate targetEvaluate program := by
+      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+        sourceResult targetResult) :
+    PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
+      exceptionCode globalsLookup program := by
   intro context structs sourceInput targetState exceptionRel sourceResult targetResult
-    hstate hsource htarget
+    hcode hexcp hlocalised hstate hnonerror hsource htarget
   exact hobligation context structs sourceInput targetState exceptionRel
-    sourceResult targetResult hstate hsource htarget
+    sourceResult targetResult hcode hexcp hlocalised hstate hnonerror hsource htarget
 
 end Flapjack

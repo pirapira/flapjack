@@ -519,13 +519,14 @@ def crepLoopSharedStoreState : CrepState Nat :=
     memory := fun _ => none }
 
 def crepLoopRuntimeGlobalState : CrepRuntimeState Nat Unit :=
-  { locals := fun _ => none
+  { locals := fun name => if name == 5 then some 0 else none
     globals := fun _ => none
     functions := []
     memory := fun _ => none
     memaddrs := fun _ => true
     shMemaddrs := fun _ => true
-    byteAlign := id
+    memoryModel := natCrepRuntimeMemoryModel
+    bytesInWord := 1
     clock := 10
     bigEndian := false
     ffi := ()
@@ -573,6 +574,7 @@ theorem crepRuntimeToLoop_loadGlob_regression :
       LoopContext Nat)
     [] crepLoopRuntimeHandler (fun _ _ => none) 1
     crepLoopRuntimeGlobalLoadState [] 5 200 42
+    ⟨0, by simp [crepLoopRuntimeGlobalLoadState, crepLoopRuntimeGlobalState]⟩
   simp [crepLoopRuntimeGlobalLoadState]
 
 theorem crepRuntimeToLoop_store_load_regression :
@@ -588,10 +590,11 @@ theorem crepRuntimeToLoop_store_load_regression :
         [] (.seq (.storeGlob 200 (.const 42)) (.assign 5 (.loadGlob 200))))).map
         (fun result => (loopResultState result).locals 5) := by
   simp [evalCrepRuntimeResult, evalCrepRuntimeProg, evalCrepRuntimeExp,
-    loopStateOfCrepRuntimeState, loopCompileProg, loopCompileExp,
+    crepLoopRuntimeGlobalState, loopStateOfCrepRuntimeState,
+    loopCompileProg, loopCompileExp,
     loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg,
     evalLoopExp, loopResultState, updateMemory, updateLoopGlobal,
-    updateCrepLocal, updateLoopLocal]
+    updateCrepLocal, updateLoopLocal, fixCrepRuntimeClock]
 
 theorem crepToLoop_while_zero_regression :
     (evalCrepFullProg [] (fun _ _ => none) (fun _ _ _ _ _ _ => none)

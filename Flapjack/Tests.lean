@@ -58,7 +58,6 @@ import Flapjack.Test.CrepeFfiSequenceRelation
 import Flapjack.Test.CrepeDeclarationFfiRelation
 import Flapjack.Test.CrepeHandlerCorrectness
 import Flapjack.Test.CrepToLoopCorrectness
-import Flapjack.Test.CrepeRuntimeGlobalCorrectness
 import Flapjack.Test.CorrectnessConditional
 import Flapjack.Test.CorrectnessColour
 import Flapjack.Test.CorrectnessSsaColour

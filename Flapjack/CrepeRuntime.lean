@@ -17,6 +17,23 @@ the memory domains, clock, endianness, and FFI state explicit.
 
 namespace Flapjack
 
+/- A tiny Nat word-cell model used by the executable runtime fixtures.  The
+   production evaluator receives a target's `PanMemoryModel`; this fixture
+   keeps the existing Nat regression states explicit without smuggling in a
+   whole target backend. -/
+def natCrepRuntimeMemoryModel : PanMemoryModel Nat :=
+  { byteAlign := fun _ address => address
+    getByte := fun _ _ value _ => value
+    setByte := fun _ _ value _ _ => value
+    aligned := fun _ _ => true
+    wordOfBytes := fun _ bytes =>
+      match bytes with
+      | value :: _ => value
+      | [] => 0
+    wordOp := fun _ _ => none
+    compare := fun _ _ _ => 0
+    shift := fun _ _ _ => none }
+
 structure CrepRuntimeState (α σ : Type u) where
   locals : Nat → Option α
   globals : α → Option α
@@ -24,7 +41,10 @@ structure CrepRuntimeState (α σ : Type u) where
   memory : α → Option α
   memaddrs : α → Bool
   shMemaddrs : α → Bool
-  byteAlign : α → α
+  /-- The word-cell operations used by CakeML's `mem_load_byte` and
+      `mem_load_32` (panSemScript.sml:86-137). -/
+  memoryModel : PanMemoryModel α
+  bytesInWord : α
   clock : Nat
   bigEndian : Bool
   ffi : σ
@@ -78,7 +98,7 @@ def crepRuntimeMemWidth : CrepMemOp → Nat
 def crepRuntimeSharedAddress (state : CrepRuntimeState α σ)
     (operator : CrepMemOp) (address : α) : α :=
   if crepRuntimeMemWidth operator = 0 then address
-  else state.byteAlign address
+  else state.memoryModel.byteAlign state.bytesInWord address
 
 def crepRuntimeSharedAddressValid (state : CrepRuntimeState α σ)
     (operator : CrepMemOp) (address : α) : Bool :=
@@ -87,11 +107,77 @@ def crepRuntimeSharedAddressValid (state : CrepRuntimeState α σ)
 def crepRuntimeLoad (state : CrepRuntimeState α σ) (address : α) : Option α :=
   if state.memaddrs address then state.memory address else none
 
+def crepRuntimeLoadByte [Add α] [OfNat α 1]
+    (state : CrepRuntimeState α σ) (address : α) : Option α :=
+  let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
+  if state.memaddrs alignedAddress then do
+    let value ← state.memory alignedAddress
+    pure (state.memoryModel.getByte state.bytesInWord address value state.bigEndian)
+  else none
+
+def crepRuntimeLoad32 [Add α] [OfNat α 1]
+    (state : CrepRuntimeState α σ) (address : α) : Option α :=
+  if state.memoryModel.aligned 4 address then
+    let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
+    if state.memaddrs alignedAddress then do
+      let value ← state.memory alignedAddress
+      pure (state.memoryModel.wordOfBytes state.bigEndian
+        [state.memoryModel.getByte state.bytesInWord address value state.bigEndian,
+         state.memoryModel.getByte state.bytesInWord (address + 1) value state.bigEndian,
+         state.memoryModel.getByte state.bytesInWord (address + 1 + 1) value state.bigEndian,
+         state.memoryModel.getByte state.bytesInWord (address + 1 + 1 + 1)
+           value state.bigEndian])
+    else none
+  else none
+
 def crepRuntimeStore [BEq α] (state : CrepRuntimeState α σ)
     (address value : α) : Option (CrepRuntimeState α σ) :=
   if state.memaddrs address then
     some { state with memory := updateMemory state.memory address value }
   else none
+
+def crepRuntimeStoreByte [BEq α] [Add α] [OfNat α 1]
+    (state : CrepRuntimeState α σ) (address value : α) :
+    Option (CrepRuntimeState α σ) :=
+  let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
+  if state.memaddrs alignedAddress then do
+    let cell ← state.memory alignedAddress
+    let updated := state.memoryModel.setByte state.bytesInWord address value cell state.bigEndian
+    pure { state with memory := updateMemory state.memory alignedAddress updated }
+  else none
+
+def crepRuntimeStore32 [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
+    (state : CrepRuntimeState α σ) (address value : α) :
+    Option (CrepRuntimeState α σ) :=
+  if state.memoryModel.aligned 4 address then
+    let alignedAddress := state.memoryModel.byteAlign state.bytesInWord address
+    if state.memaddrs alignedAddress then do
+      let cell ← state.memory alignedAddress
+      let cell0 := state.memoryModel.setByte state.bytesInWord address
+        (state.memoryModel.getByte state.bytesInWord 0 value state.bigEndian)
+        cell state.bigEndian
+      let cell1 := state.memoryModel.setByte state.bytesInWord (address + 1)
+        (state.memoryModel.getByte state.bytesInWord 1 value state.bigEndian)
+        cell0 state.bigEndian
+      let cell2 := state.memoryModel.setByte state.bytesInWord (address + 1 + 1)
+        (state.memoryModel.getByte state.bytesInWord (1 + 1) value state.bigEndian)
+        cell1 state.bigEndian
+      let cell3 := state.memoryModel.setByte state.bytesInWord (address + 1 + 1 + 1)
+        (state.memoryModel.getByte state.bytesInWord (1 + 1 + 1) value state.bigEndian)
+        cell2 state.bigEndian
+      pure { state with memory := updateMemory state.memory alignedAddress cell3 }
+    else none
+  else none
+
+def crepRuntimeAssignExisting
+    (locals : Nat → Option α) (names : List Nat) (values : List α) :
+    Option (Nat → Option α) :=
+  if names.length != values.length then none
+  else if !names.all (fun name => (locals name).isSome) then none
+  else if names.eraseDups.length != names.length then none
+  else
+    some ((names.zip values).foldl
+      (fun locals (name, value) => updateCrepLocal locals name value) locals)
 
 def crepRuntimeExtCall (handler : CrepRuntimeFfiHandler α σ ε)
     (state : CrepRuntimeState α σ) (function : FunName)
@@ -108,10 +194,15 @@ def crepRuntimeExtCall (handler : CrepRuntimeFfiHandler α σ ε)
 def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
     (state : CrepRuntimeState α σ) (operator : CrepMemOp)
     (name : Nat) (address : α) : CrepRuntimeStep α σ ε :=
-  if crepRuntimeSharedAddressValid state operator address then
+    if crepRuntimeSharedAddressValid state operator address then
     match handler (.sharedMem operator name address) state with
     | .returned state => (.normal, state)
-    | .final event => (.finalFfi event, state)
+    | .final event =>
+        match operator with
+        | .load | .load8 | .load16 | .load32 =>
+            (.finalFfi event, clearCrepRuntimeLocals state)
+        | .store | .store8 | .store16 | .store32 =>
+            (.finalFfi event, state)
   else
     (.error, state)
 
@@ -159,9 +250,15 @@ def evalCrepRuntimeExp
     (state : CrepRuntimeState α σ) : CrepExp α → Option α
   | .const value => some value
   | .var name => state.locals name
-  | .load address | .load32 address | .loadByte address => do
+  | .load address => do
       let address ← evalCrepRuntimeExp state address
       crepRuntimeLoad state address
+  | .load32 address => do
+      let address ← evalCrepRuntimeExp state address
+      crepRuntimeLoad32 state address
+  | .loadByte address => do
+      let address ← evalCrepRuntimeExp state address
+      crepRuntimeLoadByte state address
   | .loadGlob address => state.globals address
   | .op operator [left, right] => do
       let left ← evalCrepRuntimeExp state left
@@ -210,12 +307,19 @@ def crepRuntimeCallerState (caller callee : CrepRuntimeState α σ) :
     memory := callee.memory
     memaddrs := callee.memaddrs
     shMemaddrs := callee.shMemaddrs
-    byteAlign := callee.byteAlign
     clock := callee.clock
     bigEndian := callee.bigEndian
     ffi := callee.ffi
     baseAddress := callee.baseAddress
     topAddress := callee.topAddress }
+
+/- CakeML's `fix_clock_def` clamps the post-command clock to the smaller of
+   the old and new clocks.  Keeping this boundary explicit matters when a
+   nested command or FFI handler returns a state with a stale clock. -/
+def fixCrepRuntimeClock (oldState : CrepRuntimeState α σ) :
+    CrepRuntimeStep α σ ε → CrepRuntimeStep α σ ε
+  | (result, newState) =>
+      (result, { newState with clock := min oldState.clock newState.clock })
 
 mutual
   def evalCrepRuntimeCall
@@ -252,9 +356,11 @@ mutual
                           | .normal => some (.normal, callerState)
                           | .returned values =>
                               match info with
-                              | none => some (.returned values, callerState)
+                              | none =>
+                                  some (.returned values, clearCrepRuntimeLocals callerState)
                               | some (destinations, _) =>
-                                  match assignCrepValues caller.locals destinations values with
+                                  match crepRuntimeAssignExisting
+                                      caller.locals destinations values with
                                   | some locals =>
                                       some (.normal, { callerState with locals := locals })
                                   | none => some (.error, callerState)
@@ -265,13 +371,14 @@ mutual
                                     evalCrepRuntimeProg handler primitive fuel
                                       { callerState with locals := caller.locals } continuation
                                   else
-                                    some (.raised exception, callerState)
-                              | _ => some (.raised exception, callerState)
-                          | .broke _label => some (.error, callerState)
-                          | .continued _label => some (.error, callerState)
-                          | .error => some (.error, callerState)
-                          | .timeout => some (.timeout, callerState)
-                          | .finalFfi event => some (.finalFfi event, callerState)
+                                    some (.raised exception, clearCrepRuntimeLocals callerState)
+                              | _ => some (.raised exception, clearCrepRuntimeLocals callerState)
+                          | .broke _label => some (.error, clearCrepRuntimeLocals callerState)
+                          | .continued _label => some (.error, clearCrepRuntimeLocals callerState)
+                          | .error => some (.error, clearCrepRuntimeLocals callerState)
+                          | .timeout => some (.timeout, clearCrepRuntimeLocals callerState)
+                          | .finalFfi event =>
+                              some (.finalFfi event, clearCrepRuntimeLocals callerState)
     termination_by fuel _ _ _ _ => fuel
 
   def evalCrepRuntimeProg
@@ -297,7 +404,10 @@ mutual
         match evalCrepRuntimeExp state value with
         | none => some (.error, state)
         | some value =>
-            some (.normal, { state with locals := updateCrepLocal state.locals name value })
+            match state.locals name with
+            | some _ =>
+                some (.normal, { state with locals := updateCrepLocal state.locals name value })
+            | none => some (.error, state)
     | _fuel + 1, state, .primitive names operator arguments =>
         match arguments.mapM state.locals with
         | none => some (.error, state)
@@ -305,7 +415,7 @@ mutual
             match primitive operator arguments with
             | none => some (.error, state)
             | some values =>
-                match assignCrepValues state.locals names values with
+                match crepRuntimeAssignExisting state.locals names values with
                 | some locals => some (.normal, { state with locals := locals })
                 | none => some (.error, state)
     | _fuel + 1, state, .store address value =>
@@ -315,11 +425,17 @@ mutual
             | some state => some (.normal, state)
             | none => some (.error, state)
         | _, _ => some (.error, state)
-    | _fuel + 1, state, .store32 address value
+    | _fuel + 1, state, .store32 address value =>
+        match evalCrepRuntimeExp state address, evalCrepRuntimeExp state value with
+        | some address, some value =>
+            match crepRuntimeStore32 state address value with
+            | some state => some (.normal, state)
+            | none => some (.error, state)
+        | _, _ => some (.error, state)
     | _fuel + 1, state, .storeByte address value =>
         match evalCrepRuntimeExp state address, evalCrepRuntimeExp state value with
         | some address, some value =>
-            match crepRuntimeStore state address value with
+            match crepRuntimeStoreByte state address value with
             | some state => some (.normal, state)
             | none => some (.error, state)
         | _, _ => some (.error, state)
@@ -331,11 +447,14 @@ mutual
     | fuel + 1, state, .seq first second =>
         match evalCrepRuntimeProg handler primitive fuel state first with
         | none => some (.error, state)
-        | some (.normal, state) =>
-            match evalCrepRuntimeProg handler primitive fuel state second with
-            | some result => some result
-            | none => some (.error, state)
-        | some result => some result
+        | some result =>
+            let (result, state) := fixCrepRuntimeClock state result
+            match result with
+            | .normal =>
+              match evalCrepRuntimeProg handler primitive fuel state second with
+              | some result => some result
+              | none => some (.error, state)
+            | _ => some (result, state)
     | fuel + 1, state, .ite condition thenBranch elseBranch =>
         match evalCrepRuntimeExp state condition with
         | none => some (.error, state)
@@ -351,22 +470,26 @@ mutual
             if conditionValue == 0 then
               some (.normal, state)
             else
-              match evalCrepRuntimeProg handler primitive fuel state body with
+              let decremented := decCrepClock state
+              match evalCrepRuntimeProg handler primitive fuel decremented body with
               | none => some (.error, state)
-              | some (.normal, state) =>
-                  match evalCrepRuntimeProg handler primitive fuel state
+              | some result =>
+                  let (result, state) := fixCrepRuntimeClock decremented result
+                  match result with
+                  | .normal =>
+                    match evalCrepRuntimeProg handler primitive fuel state
                     (.while condition body) with
-                  | some result => some result
-                  | none => some (.error, state)
-              | some (.continued 0, state) =>
-                  match evalCrepRuntimeProg handler primitive fuel state
-                    (.while condition body) with
-                  | some result => some result
-                  | none => some (.error, state)
-              | some (.broke 0, state) => some (.normal, state)
-              | some (.continued label, state) => some (.continued (label - 1), state)
-              | some (.broke label, state) => some (.broke (label - 1), state)
-              | some (result, state) => some (result, state)
+                    | some result => some result
+                    | none => some (.error, state)
+                  | .continued 0 =>
+                    match evalCrepRuntimeProg handler primitive fuel state
+                      (.while condition body) with
+                    | some result => some result
+                    | none => some (.error, state)
+                  | .broke 0 => some (.normal, state)
+                  | .continued label => some (.continued (label - 1), state)
+                  | .broke label => some (.broke (label - 1), state)
+                  | result => some (result, state)
     | _fuel + 1, state, .break label => some (.broke label, state)
     | _fuel + 1, state, .continue label => some (.continued label, state)
     | fuel + 1, state, .call info function arguments =>
@@ -374,13 +497,22 @@ mutual
     | _fuel + 1, state, .extCall function configuration configurationLength array arrayLength =>
         some (crepRuntimeExtCall handler state function
           configuration configurationLength array arrayLength)
-    | _fuel + 1, state, .raise exception => some (.raised exception, state)
+    | _fuel + 1, state, .raise exception =>
+        some (.raised exception, clearCrepRuntimeLocals state)
     | _fuel + 1, state, .return values =>
         match evalCrepRuntimeExps state values with
-        | some values => some (.returned values, state)
+        | some values => some (.returned values, clearCrepRuntimeLocals state)
         | none => some (.error, state)
     | _fuel + 1, state, .shMem operator name address =>
-        some (crepRuntimeSharedMemExp handler state operator name address)
+        match operator with
+        | .load | .load8 | .load16 | .load32 =>
+            match state.locals name with
+            | some _ => some (crepRuntimeSharedMemExp handler state operator name address)
+            | none => some (.error, state)
+        | .store | .store8 | .store16 | .store32 =>
+            match state.locals name with
+            | some _ => some (crepRuntimeSharedMemExp handler state operator name address)
+            | none => some (.error, state)
     | _fuel + 1, state, .tick =>
         if state.clock = 0 then some (.timeout, clearCrepRuntimeLocals state)
         else some (.normal, decCrepClock state)

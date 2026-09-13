@@ -239,13 +239,15 @@ def crepeRuntimeState : CrepRuntimeState Nat Unit :=
       | 2 => some 1
       | 3 => some 20
       | 4 => some 2
+      | 5 => some 0
       | _ => none
     globals := fun _ => none
     functions := []
     memory := fun address => if address == 10 then some 7 else none
     memaddrs := fun _ => true
     shMemaddrs := fun _ => true
-    byteAlign := id
+    memoryModel := natCrepRuntimeMemoryModel
+    bytesInWord := 1
     clock := 10
     bigEndian := false
     ffi := ()

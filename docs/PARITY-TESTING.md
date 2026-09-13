@@ -96,6 +96,6 @@ before starting a new slice, and report every content commit so the combined
 branch remains reproducible.
 
 This workflow concerns implementation parity and regression evidence. The
-validity and implications of theorems, including the not-yet-ported top-level
-compiler-correctness theorem, are documented separately in
+validity and implications of theorems, including the still-parameterized
+top-level compiler-correctness boundary, are documented separately in
 [`SOUNDNESS.md`](SOUNDNESS.md).

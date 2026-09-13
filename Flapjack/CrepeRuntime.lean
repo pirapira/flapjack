@@ -36,6 +36,12 @@ structure CrepRuntimeState (α σ : Type u) where
 def decCrepClock (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
   { state with clock := state.clock - 1 }
 
+/- Exact executable counterpart of CakeML Pancake's `empty_locals_def`
+   (`crepSemScript.sml:71`).  Terminal timeout and exception boundaries do not
+   expose the caller's transient locals. -/
+def clearCrepRuntimeLocals (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
+  { state with locals := fun _ => none }
+
 inductive CrepRuntimeRequest (α : Type u) where
   | extCall (function : FunName)
       (configuration configurationLength array arrayLength : α)
@@ -234,7 +240,7 @@ mutual
                 | none => some (.error, caller)
                 | some calleeLocals =>
                     if caller.clock = 0 then
-                      some (.timeout, caller)
+                      some (.timeout, clearCrepRuntimeLocals caller)
                     else
                       let callee := decCrepClock
                         { caller with locals := calleeLocals }
@@ -376,7 +382,7 @@ mutual
     | _fuel + 1, state, .shMem operator name address =>
         some (crepRuntimeSharedMemExp handler state operator name address)
     | _fuel + 1, state, .tick =>
-        if state.clock = 0 then some (.timeout, state)
+        if state.clock = 0 then some (.timeout, clearCrepRuntimeLocals state)
         else some (.normal, decCrepClock state)
     termination_by fuel _ _ => fuel
 end

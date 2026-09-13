@@ -1,4 +1,5 @@
 import Flapjack.PanValueFfiClockSemantics
+import Flapjack.PanValueFfiClockProjection
 import Flapjack.Test.PanValueFfiSemantics
 
 /-! Executable regressions for the CakeML clock boundary. -/
@@ -62,6 +63,14 @@ def clockedInvalidCallTerminal :
     (fun _ => none) (fun _ => none) (fun _ => none) statefulTestFfiState 5
     none "skip" []
 
+def clockedFinalFfi : Option (PanValueFfiClockResult (Word 64) Unit) :=
+  evalPanValueFfiClockProg statefulTestContext statefulTestPrimitive
+    statefulTestHandler [] [] (BitVec.ofNat 64 0) (BitVec.ofNat 64 100)
+    (BitVec.ofNat 64 8) 10 (fun _ => none) (fun _ => none) (fun _ => none)
+    statefulTestFinalState 10
+    ((.dec "x" .one (.const (BitVec.ofNat 64 0))
+      (.shMemLoad .op8 .local "x" (.const (BitVec.ofNat 64 10)))) : Prog (Word 64))
+
 #guard
   match clockedTickAtZero with
   | some (.timeout locals _ _ _, 0) => locals "x" = none
@@ -95,5 +104,29 @@ def clockedInvalidCallTerminal :
   | _ => false
 
 #guard clockedInvalidCallTerminal.isNone
+
+/- The named result projection keeps the exact source state and remaining
+   clock while making timeout and terminal FFI outcomes distinct. -/
+#guard
+  match clockedTickAtZero.map panValueFfiClockResultProjection with
+  | some (.timeout locals globals memory ffi 0) =>
+      locals "x" = none && globals "x" = none && memory (BitVec.ofNat 64 0) = none &&
+        ffi.state = ()
+  | _ => false
+
+#guard
+  match clockedTickAtOne.map panValueFfiClockResultProjection with
+  | some (.normal locals globals memory ffi 0) =>
+      locals "x" = none && globals "x" = none && memory (BitVec.ofNat 64 0) = none &&
+        ffi.state = ()
+  | _ => false
+
+#guard
+  match clockedFinalFfi.map panValueFfiClockResultProjection with
+  | some (.finalFfi locals globals memory ffi event 10) =>
+      locals "x" = none && globals "x" = none && memory (BitVec.ofNat 64 0) = none &&
+        ffi.state = () && event.name = .sharedMem .mappedRead &&
+        event.outcome = .failed
+  | _ => false
 
 end Flapjack

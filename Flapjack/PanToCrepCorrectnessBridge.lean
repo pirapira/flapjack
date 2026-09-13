@@ -177,6 +177,52 @@ theorem panValuePcExceptionResultRel_of_raised_control
   intro hnonempty
   exact ⟨hlookup hnonempty, hsize⟩
 
+/-! Concrete one-word instance of the HOL `globals_lookup` observation.  The
+    global-aware raise relation already proves that address zero contains the
+    flattened payload; this theorem supplies the exact Pc exception clause,
+    including its lower-bound guard and 32-word upper bound. -/
+def crepPcWordGlobalsLookup [OfNat α 0]
+    (state : CrepState α) (value : PanValue α) :
+    Option (List α) :=
+  match value with
+  | .word _ => (state.globals 0).map (fun stored => [stored])
+  | _ => none
+
+theorem panValuePcExceptionResultRel_of_raised_word_global_spill
+    [BEq α] [LawfulBEq α] [OfNat α 0]
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (sourceException : ExceptionId) (value : α)
+    (state : CrepState α) (targetException : α)
+    (hstate : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory state)
+    (hexception : exceptionRel sourceException (.word value) targetException)
+    (hcode : exceptionCode sourceException = some targetException) :
+    panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+      (crepPcWordGlobalsLookup (α := α)) (fun _ => none) sourceMemory
+      sourceException (.word value)
+      { state with globals := updateMemory state.globals 0 value }
+      targetException := by
+  have hraised := panValueCrepRaisedGlobalSpillRel_word
+    structs context (fun _ => none) sourceGlobals sourceMemory state 0 value hstate
+  have hcontrol : panValueCrepRaisedControlRel structs context exceptionRel
+      sourceGlobals sourceMemory sourceException (.word value)
+      { state with globals := updateMemory state.globals 0 value }
+      targetException 0 := ⟨hraised.1, hexception⟩
+  rw [hstate.1] at hcontrol
+  apply panValuePcExceptionResultRel_of_raised_control structs context
+    exceptionRel exceptionCode (crepPcWordGlobalsLookup (α := α))
+    (fun _ => none) sourceMemory sourceException (.word value)
+    { state with globals := updateMemory state.globals 0 value }
+    targetException 0 hcontrol hcode
+  · intro _
+    simp [crepPcWordGlobalsLookup, panValueFlatWords,
+      panValueFlatWordsFuel, updateMemory]
+  · simp [panValueShape]
+
 /-! The ordinary compact control cases are proved directly from the existing
 `panValueCrepControlRel`.  Only the raised payload needs an additional
 obligation because the exact Pc relation retains both the HOL post-state

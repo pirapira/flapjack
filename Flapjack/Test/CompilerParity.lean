@@ -7,6 +7,7 @@ import Flapjack.Test.LoopToWord
 import Flapjack.Test.PanMemoryParity
 import Flapjack.Test.PanShapeParity
 import Flapjack.Test.LoopGetVarsParity
+import Flapjack.Test.LoopSetGlobalsParity
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.ParsedFullSsaPipeline
@@ -608,7 +609,8 @@ def main : IO Unit := do
     checkBool "Pancake RISC-V artifact prologue" ArtifactFormat.pancakePrologueMatches,
     Flapjack.Test.SourceGlobalParity.runChecks,
     Flapjack.Test.LoopToWord.runChecks,
-    Flapjack.Test.LoopGetVarsParity.runChecks
+    Flapjack.Test.LoopGetVarsParity.runChecks,
+    Flapjack.Test.LoopSetGlobalsParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

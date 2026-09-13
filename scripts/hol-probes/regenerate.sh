@@ -48,3 +48,9 @@ sed -n '/^word=/,/^nstruct=/p' "$shape_tmp" > \
   "$hol_dir/bin/hol" run "$probe_dir/loop_sem_get_vars_probeScript.sml") >"$tmp"
 sed -n '/^get_vars_hit=/,/^get_vars_loc=/p' "$tmp" > \
   "$probe_dir/loop_sem_get_vars_probe.out"
+
+# The set_globals probe observes FLOOKUP after the original map update.
+(cd "$cake_dir/pancake" && \
+  "$hol_dir/bin/hol" run "$probe_dir/loop_sem_set_globals_probeScript.sml") >"$tmp"
+sed -n '/^set_globals_new=/,/^set_globals_sibling=/p' "$tmp" > \
+  "$probe_dir/loop_sem_set_globals_probe.out"

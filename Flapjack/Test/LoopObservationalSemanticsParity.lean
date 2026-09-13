@@ -8,7 +8,10 @@ records the clock-zero timeout and clock-one successful entry-call outcomes
 for the same `Call NONE (SOME 1) [] NONE` shape.  The Lean checks then exercise
 all three observational branches: forbidden result -> `Fail`, a successful
 `Result` witness -> `Terminate Success`, and timeout-only runs -> `Diverge`
-with the complete clock-indexed I/O-prefix family.
+with the complete clock-indexed I/O-prefix family.  HOL-EVAL leaves the
+top-level `semantics` equation symbolic because it contains Hilbert choice
+over all clocks; the finite clock observations are therefore the direct HOL
+comparison, while the branch/LUB equations are proved in Lean.
 -/
 
 namespace Flapjack.Test.LoopObservationalSemanticsParity
@@ -97,12 +100,18 @@ theorem finalFfiBranch :
     loopHasSuccessfulRun (hooksFor finalFfiEvaluate) := by
   refine ⟨0, some (.finalFfi (.word 9)), emptyState 0, .ffi .failed, ?_, ?_⟩
   · rfl
-  · simp [loopResultOutcome, hooksFor]
+  · rfl
+
+theorem finalFfiOutcome :
+    loopResultOutcome (hooksFor finalFfiEvaluate)
+        (some (.finalFfi (.word 9))) = some (.ffi .failed) := by
+  rfl
 
 theorem finalFfiNoForbidden :
     ¬ loopHasForbiddenRun (hooksFor finalFfiEvaluate) := by
   rintro ⟨clock, hclock⟩
-  simp [loopForbiddenResult, hooksFor, finalFfiEvaluate] at hclock
+  change loopForbiddenResult (finalFfiEvaluate clock).1 at hclock
+  simp [finalFfiEvaluate, loopForbiddenResult] at hclock
 
 theorem forbiddenBranch :
     loopHasForbiddenRun (hooksFor forbiddenEvaluate) := by

@@ -105,6 +105,22 @@ theorem riscvRegisterName_injective_lt_32 {left right : Nat}
   · exact absurd hsame hne
   · exact heq
 
+/-- The map is the identity on register numbers `32` and above, the range the
+port reserves for non-architectural values. -/
+theorem riscvRegisterName_id_of_ge_32 {name : Nat} (h : 32 ≤ name) :
+    riscvRegisterName name = name := by
+  unfold riscvRegisterName
+  split <;> first | omega | rfl
+
+/-- A mapped register number can only be an architectural register when the
+source number already is. -/
+theorem lt_32_of_riscvRegisterName_lt_32 {name : Nat}
+    (h : riscvRegisterName name < 32) : name < 32 := by
+  by_cases hge : 32 ≤ name
+  · rw [riscvRegisterName_id_of_ge_32 hge] at h
+    omega
+  · omega
+
 /-- CakeML's stack-register convention for the RISC-V target: stack register
 `27` is the hardware zero register, `0` is the link register, and `1`-`4` are
 the first argument/return registers `a0`-`a3`. -/

@@ -11,6 +11,101 @@ the clocked result and the exact accumulated source-step count across `seq`.
 
 namespace Flapjack
 
+/-! A named source-side view of a clocked result.  This is deliberately a
+    structural projection rather than a quotient: every source state field,
+    FFI terminal event, and the remaining clock stays observable.  In
+    particular, `timeout` is not conflated with a normal control result. -/
+inductive PanValueFfiClockResultProjection (α : Type u) (σ : Type v) where
+  | normal (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+  | returned (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+      (values : List (PanValue α)) (clock : Nat)
+  | raised (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+      (exception : ExceptionId) (value : PanValue α) (clock : Nat)
+  | broke (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+  | continued (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+  | timeout (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat)
+  | finalFfi (locals globals : VarName → Option (PanValue α))
+      (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+      (event : FfiFinalEvent) (clock : Nat)
+
+def panValueFfiClockResultProjection :
+    PanValueFfiClockResult α σ → PanValueFfiClockResultProjection α σ
+  | (.control (.normal locals globals memory ffi), clock) =>
+      .normal locals globals memory ffi clock
+  | (.control (.returned locals globals memory ffi values), clock) =>
+      .returned locals globals memory ffi values clock
+  | (.control (.raised locals globals memory ffi exception value), clock) =>
+      .raised locals globals memory ffi exception value clock
+  | (.control (.broke locals globals memory ffi), clock) =>
+      .broke locals globals memory ffi clock
+  | (.control (.continued locals globals memory ffi), clock) =>
+      .continued locals globals memory ffi clock
+  | (.timeout locals globals memory ffi, clock) =>
+      .timeout locals globals memory ffi clock
+  | (.control (.finalFfi locals globals memory ffi event), clock) =>
+      .finalFfi locals globals memory ffi event clock
+
+theorem panValueFfiClockResultProjection_finalFfi
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (event : FfiFinalEvent) (clock : Nat) :
+    panValueFfiClockResultProjection
+      (.control (.finalFfi locals globals memory ffi event), clock) =
+      .finalFfi locals globals memory ffi event clock := by
+  rfl
+
+theorem panValueFfiClockResultProjection_timeout
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) (clock : Nat) :
+    panValueFfiClockResultProjection
+      (.timeout locals globals memory ffi, clock) =
+      .timeout locals globals memory ffi clock := by
+  rfl
+
+theorem panValueFfiClockResultProjection_tick_zero
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) :
+    (evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi 0
+      .tick).map panValueFfiClockResultProjection =
+      some (.timeout (fun _ => none) globals memory ffi 0) := by
+  rw [evalPanValueFfiClockProg_tick_zero]
+  rfl
+
+theorem panValueFfiClockResultProjection_tick_succ
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel clock : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ) :
+    (evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi
+      (clock + 1) .tick).map panValueFfiClockResultProjection =
+      some (.normal locals globals memory ffi clock) := by
+  rw [evalPanValueFfiClockProg_tick_succ]
+  rfl
+
 theorem evalPanValueFfiClockProg_seq_projects_to_steps
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]

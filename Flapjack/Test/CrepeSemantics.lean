@@ -479,6 +479,21 @@ theorem crepe_runtime_call_result :
       some (.normal, some 42) := by
   decide +kernel
 
+def crepeRuntimeDuplicateParameterState : CrepRuntimeState Nat Unit :=
+  { crepeRuntimeState with
+    functions :=
+      [{ name := "bad"
+         params := [0, 0]
+         body := .return [.const 0]
+         returnShape := .one }] }
+
+theorem crepe_runtime_call_rejects_duplicate_parameters :
+    (evalCrepRuntimeResult crepeRuntimeSharedHandler
+      crepeSemanticsPrimitive 20 crepeRuntimeDuplicateParameterState
+      (.call none "bad" [.const 1, .const 2])).map Prod.fst =
+      some (.error : CrepRuntimeResult Nat String) := by
+  decide +kernel
+
 def crepeCallFullState : CrepState (RiscV.Word 64) :=
   { locals := fun _ => none
     memory := fun _ => none }

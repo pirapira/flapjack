@@ -405,48 +405,45 @@ mutual
         match evalCrepRuntimeExps caller arguments with
         | none => some (.error, caller)
         | some values =>
-            match lookupCompiledFunction function caller.functions with
+            match lookupCrepCode function values caller.functions with
             | none => some (.error, caller)
-            | some (parameters, body) =>
-                match assignCrepValues (fun _ => none) parameters values with
-                | none => some (.error, caller)
-                | some calleeLocals =>
-                    if caller.clock = 0 then
-                      some (.timeout, clearCrepRuntimeLocals caller)
-                    else
-                      let callee := decCrepClock
-                        { caller with locals := calleeLocals }
-                      match evalCrepRuntimeProg handler primitive fuel callee body with
-                      | none => some (.error, callee)
-                      | some (result, callee) =>
-                          let callerState := crepRuntimeCallerState caller callee
-                          match result with
-                          | .normal => some (.normal, callerState)
-                          | .returned values =>
-                              match info with
-                              | none =>
-                                  some (.returned values, clearCrepRuntimeLocals callerState)
-                              | some (destinations, _) =>
-                                  match crepRuntimeAssignExisting
-                                      caller.locals destinations values with
-                                  | some locals =>
-                                      some (.normal, { callerState with locals := locals })
-                                  | none => some (.error, callerState)
-                          | .raised exception =>
-                              match info with
-                              | some (_, some (caught, continuation)) =>
-                                  if caught == exception then
-                                    evalCrepRuntimeProg handler primitive fuel
-                                      { callerState with locals := caller.locals } continuation
-                                  else
-                                    some (.raised exception, clearCrepRuntimeLocals callerState)
-                              | _ => some (.raised exception, clearCrepRuntimeLocals callerState)
-                          | .broke _label => some (.error, clearCrepRuntimeLocals callerState)
-                          | .continued _label => some (.error, clearCrepRuntimeLocals callerState)
-                          | .error => some (.error, clearCrepRuntimeLocals callerState)
-                          | .timeout => some (.timeout, clearCrepRuntimeLocals callerState)
-                          | .finalFfi event =>
-                              some (.finalFfi event, clearCrepRuntimeLocals callerState)
+            | some (body, calleeLocals) =>
+                if caller.clock = 0 then
+                  some (.timeout, clearCrepRuntimeLocals caller)
+                else
+                  let callee := decCrepClock
+                    { caller with locals := calleeLocals }
+                  match evalCrepRuntimeProg handler primitive fuel callee body with
+                  | none => some (.error, callee)
+                  | some (result, callee) =>
+                      let callerState := crepRuntimeCallerState caller callee
+                      match result with
+                      | .normal => some (.normal, callerState)
+                      | .returned values =>
+                          match info with
+                          | none =>
+                              some (.returned values, clearCrepRuntimeLocals callerState)
+                          | some (destinations, _) =>
+                              match crepRuntimeAssignExisting
+                                  caller.locals destinations values with
+                              | some locals =>
+                                  some (.normal, { callerState with locals := locals })
+                              | none => some (.error, callerState)
+                      | .raised exception =>
+                          match info with
+                          | some (_, some (caught, continuation)) =>
+                              if caught == exception then
+                                evalCrepRuntimeProg handler primitive fuel
+                                  { callerState with locals := caller.locals } continuation
+                              else
+                                some (.raised exception, clearCrepRuntimeLocals callerState)
+                          | _ => some (.raised exception, clearCrepRuntimeLocals callerState)
+                      | .broke _label => some (.error, clearCrepRuntimeLocals callerState)
+                      | .continued _label => some (.error, clearCrepRuntimeLocals callerState)
+                      | .error => some (.error, clearCrepRuntimeLocals callerState)
+                      | .timeout => some (.timeout, clearCrepRuntimeLocals callerState)
+                      | .finalFfi event =>
+                          some (.finalFfi event, clearCrepRuntimeLocals callerState)
     termination_by fuel _ _ _ _ => fuel
 
   def evalCrepRuntimeProg

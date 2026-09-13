@@ -1,5 +1,6 @@
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.CrepeProgramRaiseSourceWordRelation
+import Flapjack.CrepeCorrectness
 
 /-!
 Bridge from the existing stateful source-to-Crep program correctness contract
@@ -373,6 +374,95 @@ theorem panValuePcRaisedWordSemanticLift
         (crepPcWordGlobalsLookup (α := α)) sourceGlobals sourceMemory
         exception (.word value)
         { state with globals := updateMemory state.globals 0 value }
+        exceptionCode := by
+    simpa [hrel.1] using hexceptionResult
+  exact ⟨hsourceEval, htargetEval, ⟨hpost, hexceptionResult'⟩⟩
+
+/-! Semantic two-word raise lift for the next supported payload fragment.  The
+    source and global-aware Crep equations are the checked two-word
+    `CrepeCorrectness` boundary; the result clause retains both global words
+    and its non-aliasing condition.  Clocked `TimeOut` and terminal `FinalFFI`
+    remain outside this compact evaluator fragment. -/
+theorem panValuePcRaisedTwoWordSemanticLift
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (exception : ExceptionId) (exceptionCode left right : α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (resultExceptionCode : ExceptionId → Option α)
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hcode : resultExceptionCode exception = some exceptionCode)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hdistinct : (0 : α) ≠ 0 + bytesInWord)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hexception : exceptionRel exception
+      (.rStruct [.word left, .word right]) exceptionCode) :
+    evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler structs sourceFunctions
+      baseAddress topAddress bytesInWord 5
+      sourceLocals sourceGlobals sourceMemory
+      (.raise exception (.rStruct [.const left, .const right])) =
+      some (.raised (fun _ => none) sourceGlobals sourceMemory
+        exception (.rStruct [.word left, .word right])) ∧
+    evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress 15 state
+      (compileProg context
+        (.raise exception (.rStruct [.const left, .const right]))) =
+      some (.raised
+        { state with globals :=
+            (updateMemory (updateMemory state.globals 0 left)
+              (0 + bytesInWord) right) }
+        exceptionCode) ∧
+    panValuePcResultRel structs context exceptionRel resultExceptionCode
+      (crepPcTwoWordGlobalsLookup bytesInWord)
+      (.raised (fun _ => none) sourceGlobals sourceMemory exception
+        (.rStruct [.word left, .word right]))
+      (.raised
+        { state with globals :=
+            (updateMemory (updateMemory state.globals 0 left)
+              (0 + bytesInWord) right) }
+        exceptionCode) := by
+  obtain ⟨hsourceEval, htargetEval⟩ :=
+    compile_full_pan_value_raise_two_word_state_correct
+      context structs sourceFunctions functions sourceLocals sourceGlobals
+      sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+      baseAddress topAddress bytesInWord left right exception exceptionCode
+      hlookup hbytesInWord
+  have hstateEmpty : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory state := by
+    refine ⟨hrel.1, panValueCrepLocalsRel_empty structs context state.locals, ?_⟩
+    exact hrel.2.2
+  have hexceptionResult :=
+    panValuePcExceptionResultRel_of_raised_two_word_global_spill
+      structs context exceptionRel resultExceptionCode sourceGlobals sourceMemory
+      exception bytesInWord left right state exceptionCode hstateEmpty hexception
+      hcode hdistinct
+  have hpost : panValueCrepStateRel structs context
+      (fun _ => none) sourceGlobals sourceMemory
+      { state with globals :=
+          (updateMemory (updateMemory state.globals 0 left)
+            (0 + bytesInWord) right) } := by
+    refine ⟨hrel.1, panValueCrepLocalsRel_empty structs context state.locals, ?_⟩
+    exact hrel.2.2
+  have hexceptionResult' :
+      panValuePcExceptionResultRel structs context exceptionRel resultExceptionCode
+        (crepPcTwoWordGlobalsLookup bytesInWord) sourceGlobals sourceMemory
+        exception (.rStruct [.word left, .word right])
+        { state with globals :=
+            (updateMemory (updateMemory state.globals 0 left)
+              (0 + bytesInWord) right) }
         exceptionCode := by
     simpa [hrel.1] using hexceptionResult
   exact ⟨hsourceEval, htargetEval, ⟨hpost, hexceptionResult'⟩⟩

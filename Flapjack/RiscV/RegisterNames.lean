@@ -372,4 +372,23 @@ theorem riscvRegisterName_eq_zero_iff {name : Nat} (h : name < 32) :
     subst htwentySeven
     exact (by decide : riscvRegisterName 27 = 0)
 
+/-- The CakeML `riscv_names` register map lifted to `Fin 32`.  This is the
+`forward` function used when relabeling the register file: an internal Cake
+stack register is stored at the hardware index it names.  Under the Cake stack
+convention the internal zero register is stack register `27`, which this map
+sends to hardware `x0`. -/
+def riscvForward (register : Fin 32) : Fin 32 :=
+  ⟨riscvRegisterName register.val, riscvRegisterName_lt_32 register.isLt⟩
+
+@[simp] theorem riscvForward_val (register : Fin 32) :
+    (riscvForward register).val = riscvRegisterName register.val := rfl
+
+/-- The lifted `riscv_names` map is injective on the hardware register file,
+so relabeling preserves distinctness of registers. -/
+theorem riscvForward_injective : Function.Injective riscvForward := by
+  intro left right hsame
+  apply Fin.ext
+  exact riscvRegisterName_injective_lt_32 left.isLt right.isLt
+    (by simpa [riscvForward] using congrArg Fin.val hsame)
+
 end Flapjack.RiscV

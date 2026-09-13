@@ -586,9 +586,26 @@ theorem evalWordExp_ssaRename [NeZero width]
                             all_goals
                               have hleftValue := hregister left
                               have hrightValue := hregister right
-                              simp_all [
-                                wordSsaRenameExp,
-                                evalWordExp]
+                              simp_all [wordSsaRenameExp, evalWordExp]
+                      | const right =>
+                          simp only [wordSsaRenameExp]
+                          simp only [evalWordExp]
+                          cases hleft : registerOfNat left <;>
+                            cases hleft' : registerOfNat (wordSsaRead ssa left) <;>
+                            all_goals
+                              have hleftValue := hregister left
+                              simp_all [wordSsaRenameExp, evalWordExp]
+                      | _ => simp [evalWordExp, wordSsaRenameExp]
+                  | const left =>
+                      cases right with
+                      | var right =>
+                          simp only [wordSsaRenameExp]
+                          simp only [evalWordExp]
+                          cases hright : registerOfNat right <;>
+                            cases hright' : registerOfNat (wordSsaRead ssa right) <;>
+                            all_goals
+                              have hrightValue := hregister right
+                              simp_all [wordSsaRenameExp, evalWordExp]
                       | _ => simp [evalWordExp, wordSsaRenameExp]
                   | _ => simp [evalWordExp, wordSsaRenameExp]
               | cons _ _ => simp [evalWordExp, wordSsaRenameExp]
@@ -670,9 +687,26 @@ theorem evalWordExp_applyColour [NeZero width]
                             all_goals
                               have hleftValue := hregister left
                               have hrightValue := hregister right
-                              simp_all [
-                                
-                                wordApplyColourExp, evalWordExp]
+                              simp_all [wordApplyColourExp, evalWordExp]
+                      | const right =>
+                          simp only [wordApplyColourExp]
+                          simp only [evalWordExp]
+                          cases hleft : registerOfNat left <;>
+                            cases hleft' : registerOfNat (colour left) <;>
+                            all_goals
+                              have hleftValue := hregister left
+                              simp_all [wordApplyColourExp, evalWordExp]
+                      | _ => simp [evalWordExp, wordApplyColourExp]
+                  | const left =>
+                      cases right with
+                      | var right =>
+                          simp only [wordApplyColourExp]
+                          simp only [evalWordExp]
+                          cases hright : registerOfNat right <;>
+                            cases hright' : registerOfNat (colour right) <;>
+                            all_goals
+                              have hrightValue := hregister right
+                              simp_all [wordApplyColourExp, evalWordExp]
                       | _ => simp [evalWordExp, wordApplyColourExp]
                   | _ => simp [evalWordExp, wordApplyColourExp]
               | cons _ _ => simp [evalWordExp, wordApplyColourExp]

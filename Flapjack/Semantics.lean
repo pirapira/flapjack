@@ -38,7 +38,20 @@ def evalPanShift [ShiftLeft α] [ShiftRight α]
   match operator with
   | .lsl => some (ShiftLeft.shiftLeft left right)
   | .lsr => some (ShiftRight.shiftRight left right)
-  | .asr | .ror => none
+    | .asr | .ror => none
+
+/-! Exact executable counterpart of CakeML Pancake's `pan_op_def`.
+
+The original definition accepts precisely two word operands for `Mul` and
+returns `NONE` for every other operator/operand shape. -/
+def evalPanOp [Mul α] (operator : PanOp) (values : List α) : Option α :=
+  match operator, values with
+  | .mul, [left, right] => some (left * right)
+  | _, _ => none
+
+@[simp] theorem evalPanOp_mul [Mul α] (left right : α) :
+    evalPanOp .mul [left, right] = some (left * right) := by
+  rfl
 
 /-!
 Complete shift semantics corresponding to CakeML's `word_sh`: ASR and ROR
@@ -72,10 +85,10 @@ def evalPanExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let left ← evalPanExp locals left
       let right ← evalPanExp locals right
       pure (evalPanBinOp operator left right)
-  | .panOp .mul [left, right] => do
+  | .panOp operator [left, right] => do
       let left ← evalPanExp locals left
       let right ← evalPanExp locals right
-      pure (left * right)
+      evalPanOp operator [left, right]
   | .cmp operator left right => do
       let left ← evalPanExp locals left
       let right ← evalPanExp locals right
@@ -98,10 +111,10 @@ def evalPanExpFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let left ← evalPanExpFull locals left
       let right ← evalPanExpFull locals right
       pure (evalPanBinOp operator left right)
-  | .panOp .mul [left, right] => do
+  | .panOp operator [left, right] => do
       let left ← evalPanExpFull locals left
       let right ← evalPanExpFull locals right
-      pure (left * right)
+      evalPanOp operator [left, right]
   | .cmp operator left right => do
       let left ← evalPanExpFull locals left
       let right ← evalPanExpFull locals right
@@ -184,6 +197,13 @@ def evalCrepExp [Add α] [Mul α]
       pure (left * right)
   | _ => none
 termination_by structural expression
+
+/- Exact executable counterpart of CakeML Pancake's `crep_op_def`
+   (`crepSemScript.sml:85-88`).  The operator is intentionally total over
+   malformed operand lists, just like the original definition. -/
+def evalCrepOp [Mul α] : CrepOp → List α → Option α
+  | .mul, [left, right] => some (left * right)
+  | _, _ => none
 
 def evalCrepExps [Add α] [Mul α] (locals : Nat → Option α) :
     List (CrepExp α) → Option (List α)
@@ -684,6 +704,23 @@ def lookupCompiledFunction [BEq String] (name : FunName)
       if name == function.name then some (function.params, function.body)
       else lookupCompiledFunction name functions
 
+/-! Exact executable counterpart of CakeML Pancake's
+    `crepSemScript.sml:76-84` `lookup_code_def`.  Code lookup and fresh local
+    map construction are one boundary: arity and distinct parameter names are
+    checked before a callee can run. -/
+def lookupCrepCode [BEq String] (name : FunName) (values : List α)
+    (functions : List (CompiledFunction α)) :
+    Option (CrepProg α × (Nat → Option α)) :=
+  match lookupCompiledFunction name functions with
+  | none => none
+  | some (parameters, body) =>
+      if parameters.length == values.length &&
+          parameters.eraseDups.length == parameters.length then
+        match assignCrepValues (fun _ => none) parameters values with
+        | some locals => some (body, locals)
+        | none => none
+      else none
+
 mutual
   def evalCrepCallWithFunctions [BEq String] [Add α] [Mul α]
       (functions : List (CompiledFunction α)) :
@@ -748,10 +785,10 @@ def evalPanMemExp [BEq α] [Add α] [Mul α]
       let left ← evalPanMemExp locals memory left
       let right ← evalPanMemExp locals memory right
       pure (left + right)
-  | .panOp .mul [left, right] => do
+  | .panOp operator [left, right] => do
       let left ← evalPanMemExp locals memory left
       let right ← evalPanMemExp locals memory right
-      pure (left * right)
+      evalPanOp operator [left, right]
   | _ => none
 termination_by expression => sizeOf expression
 
@@ -1206,6 +1243,6 @@ theorem compile_pan_mul_const_preserves_semantics
         (.return (.panOp .mul [.const left, .const right])) := by
   simp [compileProg, compileExp, compileExp.compileExpList, cexpHeads,
     compilePanOp, evalCrepProg, evalCrepExps, evalCrepExp, evalPanProg,
-    evalPanExp]
+    evalPanExp, evalPanOp]
 
 end Flapjack

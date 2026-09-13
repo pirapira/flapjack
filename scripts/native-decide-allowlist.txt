@@ -27,6 +27,7 @@
 # whether the result needs to be a theorem. An uncited execution check does
 # not, and `#guard` discharges it with no axiom (see #343).
 
+
 # --- Cited pipeline shape theorems -------------------------------------------
 # Each runs the compiler over a program and compares the result to a literal,
 # and each is cited by a neighbouring proof via `rw [...]`, so the equation has
@@ -58,7 +59,6 @@
 # The handler execution theorem pair and their named machine values are used
 # by the source-to-machine simulation regressions.
 2 Flapjack/Test/HandlerExecution.lean
-1 Flapjack/Test/FullSsaTarget.lean
 1 Flapjack/Test/CorrectnessFfi.lean
 1 Flapjack/Test/SourceToLoop.lean
 

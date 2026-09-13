@@ -24,7 +24,9 @@ implemented by `Flapjack.CompileMain`.
   Word, Stack, and RISC-V fragments.
 - The source-facing compiler reports parse, static-check, entry-point, and
   lowering failures instead of silently treating every unsupported construct as
-  compiled code.
+  compiled code. The default CLI artifact is Pancake-compatible RISC-V
+  assembly; `--hex` is an explicitly named compatibility mode for the historical
+  raw byte line.
 
 These checks establish useful local properties of the covered fragments. They
 do not establish whole-compiler equivalence.
@@ -33,10 +35,14 @@ do not establish whole-compiler equivalence.
 
 The following are open review or verification obligations:
 
-1. The theorem statements in the port have not yet been independently
-   reviewed for adequacy against the corresponding Pancake/HOL statements.
-   In particular, a true theorem about a weakened predicate can still be too
-   weak to serve as the intended compiler-correctness theorem.
+1. The checked boundary in
+   `Flapjack/PanToCrepCorrectnessBoundary.lean` maps the full HOL
+   `pc_compile_correct` result contract, including normal, return, exception,
+   break, continue, timeout, and FinalFFI cases. Its evaluator obligations
+   remain parameterized, and the complete Pancake compiler-correctness proof
+   has not yet been discharged in Flapjack. Therefore the current collection
+   of lower-level theorems does not imply soundness or semantic preservation
+   for the whole source-to-RISC-V compiler.
 2. The RISC-V semantics in Flapjack have not yet been compared systematically
    with the Sail RISC-V model. The HOL reference model is available at
    `/home/zksecurity/HOL/examples/l3-machine-code/riscv/model/riscv.sml` in the
@@ -45,9 +51,15 @@ The following are open review or verification obligations:
    Pancake compiler. The current executable parity suite contains only a small
    set of CakeML-derived byte vectors and Lean pipeline goldens; it is not a
    differential test of the full Pancake corpus.
+   This limitation applies to internal and intermediate regression tests as
+   well: a test that compares two Lean definitions is not evidence of Pancake
+   equivalence. New porting tests must use an original CakeML executable run
+   or an original HOL EVAL/probe, and record the exact source definition,
+   fixture, comparison boundary, and regeneration command.
 4. The compiler does not yet cover every Pancake construct or emit the same
-   complete runtime/assembly/ELF artifacts as CakeML. The current command
-   emits a checked raw RV64I byte list for its supported source subset.
+   complete runtime/ELF artifacts as CakeML. The current command emits a
+   Pancake-shaped checked RV64I assembly image for its supported source subset;
+   `--hex` is the raw-byte compatibility view.
 5. Proof work remains for the full source-to-target simulation, runtime image,
    collector/frame-machine behavior, calls and FFI in all configurations, and
    the complete Pancake correctness theorem.
@@ -70,6 +82,12 @@ record the source program, the exact reference command/output boundary, and
 any normalization of labels or names. A fixture that fails against CakeML is a
 compiler-parity bug and must remain tracked as high-priority work until fixed
 or its reference interpretation is corrected.
+
+The checked-in HOL probes under `scripts/hol-probes` provide the same evidence
+for intermediate definitions that cannot be observed through the source
+compiler command. They are optional for normal Lean builds, but their outputs
+must be regenerated from the original CakeML/HOL source before the associated
+porting bead is closed.
 
 ## Required next evidence for a stronger claim
 

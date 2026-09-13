@@ -37,6 +37,17 @@ def lookupInfo [BEq String] (name : String) : InfoMap α → Option α
   | (candidate, value) :: entries =>
       if candidate == name then some value else lookupInfo name entries
 
+/-! The original Pancake `mem_load` uses `dropWhile` to find a named
+    structure and then evaluates its fields against the remaining context.
+    Keeping the suffix is important: declarations only make earlier context
+    entries available to their fields. -/
+def lookupInfoWithRest [BEq String] (name : String) : StructContext →
+    Option (StructInfo × StructContext)
+  | [] => none
+  | (candidate, info) :: context =>
+      if candidate == name then some (info, context)
+      else lookupInfoWithRest name context
+
 def isWfShape (context : StructContext) : Shape → Bool
   | .one => true
   | .comb shapes => isWfShapeList context shapes

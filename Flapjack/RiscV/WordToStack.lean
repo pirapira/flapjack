@@ -529,8 +529,12 @@ def wordStackReadRegister (config : WordStackConfig) (name temporary : Nat) :
 def wordStackConditionOperands (config : WordStackConfig) (condition : Nat)
     (right : WordRegImm α) :
     Option (StackProg α × Nat × WordRegImm α) := do
+  let conditionTemporary :=
+    match right with
+    | .imm _ => config.addressScratch
+    | .reg _ => config.scratch
   let (conditionPrelude, conditionRegister) ←
-    wordStackReadRegister config condition config.scratch
+    wordStackReadRegister config condition conditionTemporary
   let (rightPrelude, rightOperand) ← match right with
     | .imm value => pure (.skip, .imm value)
     | .reg name => do

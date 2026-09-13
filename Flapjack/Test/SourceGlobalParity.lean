@@ -239,6 +239,45 @@ def longMulPressureSource : String :=
         "  var 1 y" ++ toString index ++ " = " ++ toString index ++ ";")) ++
     "\n  y0 = y1 * y2;\n  return y0 + y3;\n}"
 
+/-- Register-pressure fixture exercising condition lowering with a spilled
+    operand.  The condition value is loaded into scratch register 31, but the
+    RISC-V conditional-immediate encoder also needs 31 to materialize a
+    nonzero immediate, so lowering used to fail.  The stack compiler now loads
+    a spilled condition into the address scratch register when the right
+    operand is an immediate. -/
+def conditionPressureSource : String :=
+  "fun 1 add1(1 a, 1 b) { return a + b; }" ++ "\n" ++
+  "fun 1 sub1(1 a) { return a - 1; }" ++ "\n" ++
+  "fun {1,1} pair(1 a, 1 b) { return <a, b>; }" ++ "\n" ++
+  "struct S { 1 f1, 1 f2 }" ++ "\n" ++
+  "fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }" ++ "\n" ++
+  "exception E : 1;" ++ "\n" ++
+  "fun 1 main() {" ++ "\n" ++
+  "  var 1 y647 = (ld8 (1000 + 1000));" ++ "\n" ++
+  "  var 1 y496 = (lds 1 (1000));" ++ "\n" ++
+  "  var 1 y393 = (ld8 1000 + 24);" ++ "\n" ++
+  "  var 1 y889 = ((lds 1 (1008)) #>> 7);" ++ "\n" ++
+  "  var 1 y371 = add1(1000, (lds 1 (1000 + 24)));" ++ "\n" ++
+  "  var 1 y585 = sub1((lds 1 (1024)));" ++ "\n" ++
+  "  var 1 y997 = ((1000 ^ 1000) - 2);" ++ "\n" ++
+  "  var 1 y222 = 0;" ++ "\n" ++
+  "  var 1 y995 = ((ld8 1024) ^ (lds 1 (1008)));" ++ "\n" ++
+  "  var 1 y774 = add1((lds 1 (1000)), (lds 1 ((1000 + 12 + 12))));" ++ "\n" ++
+  "  var 1 y26 = sub1((lds 1 (1008)));" ++ "\n" ++
+  "  var 1 y305 = ((1 >>> y496) * 0);" ++ "\n" ++
+  "  var 1 y171 = ((y889 << 7) #>> 2);" ++ "\n" ++
+  "  var 1 y244 = sub1((0 >>> (y997 >>> y222)));" ++ "\n" ++
+  "  var 1 y24 = 3;" ++ "\n" ++
+  "  var S s566 = mks(1, (lds 1 (1016)));" ++ "\n" ++
+  "  var {1,1} p866 = pair(255, 3);" ++ "\n" ++
+  "  try" ++ "\n" ++
+  "    y222 = sub1((lds 1 ((1008 + 1000))))" ++ "\n" ++
+  "  catch E => y585 {" ++ "\n" ++
+  "      y496 = add1(((lds 1 (1024)) & (y24 #>> 1)), y371);" ++ "\n" ++
+  "  }" ++ "\n" ++
+  "  return add1((s566.f2 & (ld8 0)), (lds 1 ((1008 + 1000))));" ++ "\n" ++
+  "}"
+
 /-- Structured local store: the original `st` flattens its value, so a named
 struct is stored word by word.  The static checker used to require a word
 value and rejected this original-Pancake-accepted program. -/
@@ -521,6 +560,14 @@ def cakeLongMulPressureGeneratedMain : List (BitVec 8) :=
 /-- CakeML `cml_main` for `longMulPressureSource` (28 bytes). -/
 def cakeLongMulPressureMainLength : Nat := 28
 
+/-- CakeML `cml_generated_main` for `conditionPressureSource` (4 bytes). -/
+def cakeConditionPressureGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `conditionPressureSource` (1152 bytes). -/
+def cakeConditionPressureMainLength : Nat := 1152
+
 /-- CakeML `cml_generated_main` for `structStoreSource` (4 bytes). -/
 def cakeStructStoreGeneratedMain : List (BitVec 8) :=
   [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
@@ -575,6 +622,26 @@ def runtimeImageAccepted (source : String) : Bool :=
       (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
       "main" source with
   | .ok image => image.sections.length > 0 && image.bitmaps.data.length > 0
+  | .error _ => false
+
+/-- Run a source program through the checked linked-image entry point. Every
+encoded section must be non-empty and a whole number of RISC-V words. -/
+def imageAccepted (source : String) : Bool :=
+  match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" source with
+  | .ok image =>
+      image.sections.length > 0 &&
+        image.sections.all (fun encoded =>
+          encoded.bytes.length > 0 && encoded.bytes.length % 4 == 0)
+  | .error _ => false
+
+/-- Runtime-image entry point must expose at least one encoded section. -/
+def runtimeImageSectionsAccepted (source : String) : Bool :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" source with
+  | .ok image => image.sections.length > 0
   | .error _ => false
 
 /-- The global fixture must be accepted by the byte entry point. -/
@@ -680,6 +747,14 @@ def longMulPressureBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The condition register-pressure fixture must be accepted: a spilled
+    condition compared against a nonzero immediate no longer forces scratch
+    register 31 to hold both the condition and the immediate. -/
+def conditionPressureBytesAccepted : Bool :=
+  match compileSourceBytes conditionPressureSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The structured-store fixture must be accepted: the original `st` flattens
 its value, so a struct-valued local is a legal store source. -/
 def structStoreBytesAccepted : Bool :=
@@ -701,6 +776,87 @@ def ffiRegisterBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- A source program audited against original Pancake RISC-V coverage at the
+combined head: `cakeMainLength` is the byte length of the `cml_main_7` section
+produced by `cake --pancake --target=riscv`, and `source` must be accepted by
+the Flapjack source bytes entrypoint. -/
+structure AuditedSource where
+  label : String
+  cakeMainLength : Nat
+  source : String
+
+/-- Construct-level coverage audited beyond the earlier fixtures: exported
+functions, `tick`, shaped loads (`lds`), byte/word32 memory operations, the
+shared-memory instruction set (byte/16/32/word loads and stores), the
+`__add_with_carry__` primitive (declaration and assignment forms), exceptions
+with `throw`/`try`/`catch`, nested calls, conditionals, loops with
+`break`/`continue`, struct and pair arguments, tuple-shaped named struct
+fields, struct and pair returns, multi-word returns, and a computed global
+initializer.  Every entry is accepted by the original compiler. -/
+def auditedSources : List AuditedSource :=
+  [ { label := "export fun", cakeMainLength := 4,
+      source := "export fun f() { return 1; }\nfun 1 main() { return f(); }\n" },
+    { label := "tick", cakeMainLength := 8,
+      source := "fun 1 main() { var 1 x = 1; tick; return x; }\n" },
+    { label := "lds word", cakeMainLength := 12,
+      source := "fun 1 main() { var v = 0; v = lds 1 1000 + 8; return v; }\n" },
+    { label := "lds multi shape", cakeMainLength := 12,
+      source := "fun 1 main() { var {1,1,2} x = lds {1,1,2} 1000; return x.0; }\n" },
+    { label := "ld8", cakeMainLength := 12,
+      source := "fun 1 main() { var v = 0; v = ld8 1000 + 4 * 3; return v; }\n" },
+    { label := "ld32", cakeMainLength := 12,
+      source := "fun 1 main() { var v = 0; v = ld32 1000 + 4 * 3; return v; }\n" },
+    { label := "st computed", cakeMainLength := 20,
+      source := "fun 1 main() { var v = 7; st 1000 + 4, v + 1; return v; }\n" },
+    { label := "st8", cakeMainLength := 20,
+      source := "fun 1 main() { var v = 7; st8 1000 + 4, v; return v; }\n" },
+    { label := "shared memory set", cakeMainLength := 84,
+      source := "fun 1 main() { var v = 12; !st8 1000, v; !st16 1000, v; !st32 1000, v; !stw 1004, 1+1; !ld8 v, 1000 + 12; !ld16 v, 1000 + 12; !ld32 v, 1000 + 12; !ldw v, 1000 + 24; return v; }\n" },
+    { label := "add_with_carry declaration", cakeMainLength := 44,
+      source := "fun 1 main() { var a = 1; var b = 2; var c = 0; var {1,1} r = __add_with_carry__(a, b, c); return r.0; }\n" },
+    { label := "add_with_carry assignment", cakeMainLength := 48,
+      source := "fun 1 main() { var a = 1; var b = 2; var c = 0; var {1,1} r = <0,0>; r = __add_with_carry__(a, b, c); return r.1; }\n" },
+    { label := "exception throw catch", cakeMainLength := 156,
+      source := "exception E : 1;\nfun 1 f() { throw E 1; }\nfun 1 main() { var 1 x = 0; var 1 y = 0; try\n  y = f()\ncatch E => x {\n  y = x + 1;\n}\nreturn y; }\n" },
+    { label := "nested calls", cakeMainLength := 4,
+      source := "fun 1 a() { return 1; }\nfun 1 b() { var 1 t = a(); return t + 1; }\nfun 1 c() { var 1 t = b(); return t + 1; }\nfun 1 main() { return c(); }\n" },
+    { label := "conditional chain", cakeMainLength := 8,
+      source := "fun 1 main() { var x = 1; if (x == 0) { x = 2; } else { if (x == 1) { x = 3; } else { x = 4; } } return x; }\n" },
+    { label := "while break", cakeMainLength := 44,
+      source := "fun 1 main() { var x = 0; while (x < 10) { x = x + 1; if (x == 3) { break; } } return x; }\n" },
+    { label := "while continue", cakeMainLength := 52,
+      source := "fun 1 main() { var x = 0; var s = 0; while (x < 10) { x = x + 1; if (x == 3) { continue; } s = s + x; } return s; }\n" },
+    { label := "struct argument", cakeMainLength := 12,
+      source := "struct S { 1 a, 1 b }\nfun 1 f(S s) { return s.a + s.b; }\nfun 1 main() { var S x = S <a = 1, b = 2>; return f(x); }\n" },
+    { label := "pair argument", cakeMainLength := 12,
+      source := "fun 1 f({1,1} p) { return p.0 + p.1; }\nfun 1 main() { return f(<1,2>); }\n" },
+    { label := "tuple-shaped named struct", cakeMainLength := 152,
+      source := "struct my_struct {\n  2 tuple,\n  1 value\n}\nfun my_struct f(my_struct a) {\n  return my_struct <tuple = a.tuple, value = a.value>;\n}\nfun 1 main() {\n  var my_struct x = my_struct <tuple = <0,1>, value = 2>;\n  var my_struct y = f(x);\n  return y.value;\n}\n" },
+    { label := "struct return", cakeMainLength := 152,
+      source := "struct S { 1 a, 1 b }\nfun S mk(1 x, 1 y) { return S <a = x, b = y>; }\nfun 1 main() { var S s = mk(1,2); return s.a; }\n" },
+    { label := "pair return", cakeMainLength := 152,
+      source := "fun {1,1} mk(1 x, 1 y) { return <x, y>; }\nfun 1 main() { var {1,1} r = mk(1,2); return r.0; }\n" },
+    { label := "multi-word return", cakeMainLength := 144,
+      source := "fun 2 f() { return <1,2>; }\nfun 1 main() { var {1,1} r = f(); return r.0 + r.1; }\n" },
+    { label := "computed global initializer", cakeMainLength := 36,
+      source := "var 1 x = 1+1;\nfun 1 main() { x = x + 1; return x; }\n" }
+  ]
+
+/-- Every audited source is accepted by the Flapjack source bytes entrypoint and
+has a recorded original-compiler `cml_main_7` length. -/
+def auditedAccepted : Bool :=
+  auditedSources.all (fun entry =>
+    entry.cakeMainLength > 0 &&
+      match compileSourceBytes entry.source with
+      | some bytes => bytes.length > 0
+      | none => false)
+
+/-- Every audited source reaches all three checked source entry points: encoded
+bytes, the linked image, and the bitmap SimpleGC runtime image. -/
+def auditedEntrypointsAccepted : Bool :=
+  auditedSources.all (fun entry =>
+    imageAccepted entry.source && runtimeImageSectionsAccepted entry.source)
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
@@ -721,6 +877,8 @@ def cakeGoldenShape : Bool :=
     cakePressureGeneratedMain.length == 4 && cakePressureMainLength == 924 &&
     cakeLongMulPressureGeneratedMain.length == 4 &&
     cakeLongMulPressureMainLength == 28 &&
+    cakeConditionPressureGeneratedMain.length == 4 &&
+    cakeConditionPressureMainLength == 1152 &&
     cakeStructStoreGeneratedMain.length == 4 && cakeStructStoreMain.length == 32 &&
     cakeFfiCallGeneratedMain.length == 4 && cakeFfiCallMainLength == 64 &&
     cakeFfiRegisterGeneratedMain.length == 4 && cakeFfiRegisterC.length == 4 &&
@@ -740,10 +898,13 @@ def cakeGoldenShape : Bool :=
 #guard largeShapeBytesAccepted
 #guard pressureBytesAccepted
 #guard longMulPressureBytesAccepted
+#guard conditionPressureBytesAccepted
 #guard structStoreBytesAccepted
 #guard ffiCallBytesAccepted
 #guard ffiRegisterBytesAccepted
 #guard initializerChangesArtifact
+#guard auditedAccepted
+#guard auditedEntrypointsAccepted
 #guard cakeGoldenShape
 
 def checkBool (name : String) (condition : Bool) : IO Bool := do
@@ -784,6 +945,8 @@ def runChecks : IO Bool := do
       pressureBytesAccepted,
     checkBool "Pancake LongMul register-pressure source compiles (bytes)"
       longMulPressureBytesAccepted,
+    checkBool "Pancake condition register-pressure source compiles (bytes)"
+      conditionPressureBytesAccepted,
     checkBool "Pancake struct-valued local store source compiles (bytes)"
       structStoreBytesAccepted,
     checkBool "Pancake four-argument FFI call source compiles (bytes)"
@@ -794,6 +957,10 @@ def runChecks : IO Bool := do
       (runtimeImageAccepted globalSource),
     checkBool "Pancake global initializer changes artifact"
       initializerChangesArtifact,
+    checkBool "Pancake audited source constructs compile (bytes)"
+      auditedAccepted,
+    checkBool "Pancake audited source constructs reach image and runtime image"
+      auditedEntrypointsAccepted,
     checkBool "CakeML global golden sections pinned" cakeGoldenShape
     ].mapM id
   pure (results.all id)

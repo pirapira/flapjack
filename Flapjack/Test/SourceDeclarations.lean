@@ -1,6 +1,29 @@
 import Flapjack.PanProgramSemantics
+import Flapjack.Test.OriginalPancakeProbes
 
 namespace Flapjack
+
+open Flapjack.Test.OriginalPancakeProbes
+
+/- These are the exact source texts used for the original Pancake probes.  The
+   corresponding generated-output facts are checked in by
+   `OriginalPancakeProbes`; regenerate the full assembly with
+   `scripts/probe-original-pancake.sh INPUT.pnk OUTPUT.cake.S`. -/
+def evaluateDeclsProbeSource : String :=
+  "var 1 g = 41; fun 1 main() { return g; }"
+
+def decsStcnamesProbeSource : String :=
+  "struct Pair { 1 left, 1 right } fun 1 main() { return 0; }"
+
+def semanticsDeclsProbeSource : String :=
+  "var 1 g = 41; struct Pair { 1 left, 1 right } fun 1 main() { return g; }"
+
+#guard evaluateDeclsProbeSource = evaluateDecls.source
+#guard decsStcnamesProbeSource = decsStcnames.source
+#guard semanticsDeclsProbeSource = semanticsDecls.source
+#guard evaluateDecls.cakeByteCount == 1048
+#guard decsStcnames.cakeByteCount == 1012
+#guard semanticsDecls.cakeByteCount == 1048
 
 def sourceDeclarationInitialState : PanValueProgramState Nat :=
   { structs := []
@@ -22,6 +45,74 @@ def sourceDeclarationNoPrimitive : PanPrimitiveHandler Nat :=
 def sourceDeclarationSingleWord : List (PanValue Nat) → Option Nat
   | [.word value] => some value
   | _ => none
+
+/-! These declaration fixtures mirror CakeML's
+    panSemScript.sml:814-837 evaluate_decls_def: names are skipped,
+    globals are evaluated with empty locals and shape-checked, functions add
+    both code and parameter/return shape metadata, and exception declarations
+    reject duplicate names or invalid shapes.  The projections below compare
+    each observable state transition of the Lean port with that equation. -/
+example :
+    (evalPanValueDeclarations sourceDeclarationInitialState
+      [.name "Pair" [("left", .one), ("right", .one)]]).map
+      (fun state => state.structs.length) = some 1 := by
+  decide +kernel
+
+example :
+    (evalPanValueDeclarations sourceDeclarationInitialState
+      [.name "Pair" [("left", .one)],
+       .name "Pair" [("right", .one)]]).isNone = true := by
+  decide +kernel
+
+example :
+    (evalPanValueDeclarations sourceDeclarationInitialState
+      [.name "Pair" [("nested", .named "Missing")]]).isNone = true := by
+  decide +kernel
+
+example :
+    (evalPanValueDeclarations sourceDeclarationInitialState
+      [.decl .one "answer" (.const 41)]).map
+      (fun state => (state.globals "answer").bind (fun value =>
+        match value with
+        | .word value => some value
+        | _ => none)) = some (some 41) := by
+  decide +kernel
+
+example :
+    (evalPanValueDeclarations sourceDeclarationInitialState
+      [.decl (.comb [.one, .one]) "answer" (.const 41)]).isNone = true := by
+  decide +kernel
+
+example :
+    (evalPanValueDeclarations sourceDeclarationInitialState
+      [.exnDecl "E" .one, .exnDecl "E" .one]).isNone = true := by
+  decide +kernel
+
+/-! CakeML's panSemScript.sml:861-871 semantics_decls_def runs
+    decs_stcnames before evaluate_decls and therefore rejects a duplicate
+    structure before the entry function is evaluated. -/
+example :
+    (evalPanValueProgram sourceDeclarationInitialState
+      sourceDeclarationNoPrimitive sourceDeclarationNoFfi 20
+      [.name "Pair" [("left", .one)],
+       .name "Pair" [("right", .one)],
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .return (.const 0), returnShape := .one }]
+      "main" []).isNone = true := by
+  decide +kernel
+
+example :
+    (panValueProgramResult sourceDeclarationInitialState
+      sourceDeclarationNoPrimitive sourceDeclarationNoFfi 20
+      [.name "Pair" [("left", .one), ("right", .one)],
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .return (.nField "right"
+             (.nStruct "Pair" [("left", .const 3), ("right", .const 5)])),
+           returnShape := .one }]
+      "main" []).bind sourceDeclarationSingleWord = some 5 := by
+  decide +kernel
 
 example :
     (evalPanValueDeclarations sourceDeclarationInitialState

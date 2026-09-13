@@ -11,11 +11,36 @@ matches the value/shape checks in CakeML's `panSem` evaluator.
 
 namespace Flapjack
 
+/-! CakeML's `word_lab` wrapper is currently a one-constructor type.  Keeping
+    it explicit makes the four small `panSem` helper definitions faithful even
+    though the executable `PanValue.word` constructor stores the payload
+    directly. -/
+inductive PanWordLab (α : Type u) where
+  | word (value : α)
+  deriving Repr
+
+def panIsWord : PanWordLab α → Bool
+  | .word _ => true
+
+def panTheWord : PanWordLab α → α
+  | .word value => value
+
 inductive PanValue (α : Type u) where
   | word (value : α)
   | rStruct (fields : List (PanValue α))
   | nStruct (name : StructName) (fields : List (FieldName × PanValue α))
   deriving Repr
+
+def panIsValWord : PanValue α → Bool
+  | .word _ => true
+  | .rStruct _ | .nStruct _ _ => false
+
+/- `theValWord` is only defined by CakeML on a word value.  The `Option`
+   result records that definedness instead of introducing an arbitrary value
+   for structured inputs. -/
+def panTheValWord : PanValue α → Option α
+  | .word value => some value
+  | .rStruct _ | .nStruct _ _ => none
 
 /-! Target-supplied byte-addressed operations for structured source memory.
 
@@ -263,8 +288,8 @@ mutual
         (panValueFlatLoadListFuel structs readWord bytesInWord fuel shapes address).map
           .rStruct
     | fuel + 1, .named name, address => do
-        let info ← lookupInfo name structs
-        let fields ← panValueFlatLoadFieldsFuel structs readWord bytesInWord fuel
+        let (info, structs') ← lookupInfoWithRest name structs
+        let fields ← panValueFlatLoadFieldsFuel structs' readWord bytesInWord fuel
           info.fields address
         pure (.nStruct name fields)
   termination_by fuel _shape _address => fuel
@@ -593,11 +618,11 @@ def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
           | [left, right] => some (.word (evalPanBinOp operator left right))
           | _ => none
       | some access => (access.wordOp operator values).map .word
-  | .panOp .mul arguments, memoryAccess => do
+  | .panOp operator arguments, memoryAccess => do
       let values ← evalPanValueExps structs locals globals memory
         baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
       match values with
-      | [.word left, .word right] => some (.word (left * right))
+      | [.word left, .word right] => (evalPanOp operator [left, right]).map .word
       | _ => none
   | .cmp operator left right, memoryAccess => do
       let left ← evalPanValueExp structs locals globals memory
@@ -720,6 +745,14 @@ abbrev PanValueAcceleratorFfiHandler (α : Type u) :=
     (α → Option (PanValue α)) →
     Option ((VarName → Option (PanValue α)) ×
       (α → Option (PanValue α)))
+
+/-! Exact executable counterpart of Pancake's `res_var_def`: restore a
+    local binding after a scoped declaration, deleting it when the saved value
+    is `NONE` and updating it otherwise. -/
+def panValueResVar [BEq String]
+    (locals : VarName → Option (PanValue α)) (name : VarName)
+    (oldValue : Option (PanValue α)) : VarName → Option (PanValue α) :=
+  fun current => if current == name then oldValue else locals current
 
 def restorePanValueLocal [BEq String]
     (locals : VarName → Option (PanValue α)) (name : VarName)

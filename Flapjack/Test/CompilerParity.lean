@@ -2,6 +2,37 @@ import Flapjack.RiscV.Encoding
 import Flapjack.Test.CorrectnessTarget
 import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.SourceGlobalParity
+import Flapjack.Test.RegisterTransfer
+import Flapjack.Test.LoopToWord
+import Flapjack.Test.PanMemoryParity
+import Flapjack.Test.PanShapeParity
+import Flapjack.Test.PanWordParity
+import Flapjack.Test.PanOpParity
+import Flapjack.Test.PanFixedLoadParity
+import Flapjack.Test.PanFixedStoreParity
+import Flapjack.Test.PanFlatStoreParity
+import Flapjack.Test.PanFlattenParity
+import Flapjack.Test.PanResVarParity
+import Flapjack.Test.PanPrimopParity
+import Flapjack.Test.PanSetVarParity
+import Flapjack.Test.CakeStackReseatParity
+import Flapjack.Test.LoopGetVarsParity
+import Flapjack.Test.LoopSetGlobalsParity
+import Flapjack.Test.LoopSetVarsParity
+import Flapjack.Test.LoopSetVarParity
+import Flapjack.Test.LoopDecClockParity
+import Flapjack.Test.LoopFixClockParity
+import Flapjack.Test.LoopFindCodeParity
+import Flapjack.Test.LoopPrimopParity
+import Flapjack.Test.LoopArithParity
+import Flapjack.Test.LoopMemStoreParity
+import Flapjack.Test.LoopMemLoadParity
+import Flapjack.Test.LoopMemoryStateParity
+import Flapjack.Test.LoopStateResultParity
+import Flapjack.Test.InstructionTransfer
+import Flapjack.Test.ArtifactFormat
+import Flapjack.Test.ParsedFullSsaPipeline
+import Flapjack.Test.EndToEndParity
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -596,7 +627,27 @@ def main : IO Unit := do
       globalSharedLoadArtifactMatchesGolden,
     checkBool "Lean source entry produces an artifact" minimalSourceArtifact,
     checkBool "Pancake computed local-store address compiles" nestedLocalStoreBytesAccepted,
-    Flapjack.Test.SourceGlobalParity.runChecks
+    checkBool "Pancake RISC-V artifact envelope markers" ArtifactFormat.pancakeEnvelopeMatches,
+    checkBool "Pancake RISC-V artifact prologue" ArtifactFormat.pancakePrologueMatches,
+    Flapjack.Test.SourceGlobalParity.runChecks,
+    Flapjack.Test.LoopToWord.runChecks,
+    Flapjack.Test.LoopGetVarsParity.runChecks,
+    Flapjack.Test.LoopSetGlobalsParity.runChecks,
+    Flapjack.Test.LoopSetVarsParity.runChecks,
+    Flapjack.Test.LoopSetVarParity.runChecks,
+    Flapjack.Test.LoopDecClockParity.runChecks,
+    Flapjack.Test.LoopFixClockParity.runChecks,
+    Flapjack.Test.LoopFindCodeParity.runChecks,
+    Flapjack.Test.LoopPrimopParity.runChecks,
+    Flapjack.Test.LoopArithParity.runChecks,
+    Flapjack.Test.PanPrimopParity.runChecks,
+    Flapjack.Test.PanSetVarParity.runChecks,
+    Flapjack.Test.LoopMemStoreParity.runChecks,
+    Flapjack.Test.LoopMemLoadParity.runChecks,
+    Flapjack.Test.LoopMemoryStateParity.runChecks,
+    Flapjack.Test.LoopStateResultParity.runChecks,
+    Flapjack.Test.EndToEndParity.runChecks,
+    Flapjack.Test.CakeStackReseatParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

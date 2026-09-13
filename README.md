@@ -21,9 +21,12 @@ The port has a working, checked RV64I source-entry path for a growing subset
 of Pancake and a large collection of pass-level and machine-level correctness
 lemmas. It is not yet a complete replacement for CakeML's Pancake compiler:
 full runtime-image generation, broad source coverage, exact artifact parity,
-and the complete Pancake correctness theorem still require work. The current
+general executable source corpus and differential execution coverage, and the
+complete Pancake correctness theorem still require work. The current
 claims and limitations are recorded explicitly in
 [`docs/SOUNDNESS.md`](docs/SOUNDNESS.md).
+The required workflow for tying internal and end-to-end tests to the original
+Pancake implementation is in [`docs/PARITY-TESTING.md`](docs/PARITY-TESTING.md).
 
 Backends other than RISC-V are out of scope for this port.
 
@@ -42,10 +45,10 @@ byte goldens:
 lake test
 ```
 
-Compile a Pancake source file through the current source-facing RV64I path:
+Compile a Pancake source file through the source-facing RV64I path:
 
 ```sh
-lake exe flapjack-compile program.pnk > program.riscv.hex
+lake exe flapjack-compile program.pnk > program.riscv.S
 ```
 
 The compiler also reads source from standard input:
@@ -54,18 +57,25 @@ The compiler also reads source from standard input:
 printf 'fun 1 main() { return 7; }\n' | lake exe flapjack-compile
 ```
 
-The output is one space-separated line of lowercase hexadecimal bytes in
-little-endian RISC-V encoding. A nonzero exit status reports a parse, static,
-entry-point, or lowering error. This is currently a raw byte artifact, not
-CakeML's complete `.S` assembly/runtime output or an ELF file. The original
-reference compiler can be run locally with:
+The default output (also selected by `--assembly` or `--pancake`) follows the
+original Pancake/CakeML RISC-V assembly artifact boundary: runtime data and
+bitmap framing, `cml_main` startup, `cake_main`, linked code-section labels,
+`.byte` payloads, and `cake_codebuffer_*` markers. It is not an ELF file. For
+the historical raw byte artifact, use:
+
+```sh
+lake exe flapjack-compile --hex program.pnk > program.riscv.hex
+```
+
+The original reference compiler can be run locally with:
 
 ```sh
 cakeml/developers/bin/cake --pancake --target=riscv < program.pnk > program.cake.S
 ```
 
-Use the parity tests and `docs/SOUNDNESS.md` when interpreting comparisons
-between the two outputs.
+Use the parity tests, [`docs/PARITY-TESTING.md`](docs/PARITY-TESTING.md), and
+[`docs/SOUNDNESS.md`](docs/SOUNDNESS.md) when interpreting comparisons between
+the two outputs.
 
 ## Project map
 
@@ -85,10 +95,11 @@ The global heap-rewriting core is in
 The composed pass pipeline is in
 [`Flapjack/Pipeline.lean`](Flapjack/Pipeline.lean).
 It exposes both the lower-level pass pipeline and an explicit
-`compileFlapjackTarget` boundary matching CakeML's target convention: a user
-`main` is placed first, or a zero-returning `main` is generated when absent;
-the corresponding RISC-V entry points are `compileFlapjackRiscVTarget` and
-`compileFlapjackRiscVTargetWithFfi`.
+`compileFlapjackTarget` boundary matching CakeML's target convention: the
+requested source entry is located, renamed, and wrapped in a generated public
+`main` that runs global initializers before tail-calling it; a missing entry is
+an error. The corresponding RISC-V entry points are
+`compileFlapjackRiscVTarget` and `compileFlapjackRiscVTargetWithFfi`.
 
 The target-entry call regression in `Flapjack.Test.CorrectnessTarget` checks a
 reordered `main` plus callee through source evaluation, the call-aware Word

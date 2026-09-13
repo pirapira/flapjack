@@ -31,6 +31,11 @@ structure CrepRuntimeState (α σ : Type u) where
   baseAddress : α
   topAddress : α
 
+/- Exact executable counterpart of CakeML Pancake's `dec_clock_def`
+   (`crepSemScript.sml:145-148`).  The state is otherwise unchanged. -/
+def decCrepClock (state : CrepRuntimeState α σ) : CrepRuntimeState α σ :=
+  { state with clock := state.clock - 1 }
+
 inductive CrepRuntimeRequest (α : Type u) where
   | extCall (function : FunName)
       (configuration configurationLength array arrayLength : α)
@@ -231,10 +236,8 @@ mutual
                     if caller.clock = 0 then
                       some (.timeout, caller)
                     else
-                      let callee :=
-                        { caller with
-                          locals := calleeLocals
-                          clock := caller.clock - 1 }
+                      let callee := decCrepClock
+                        { caller with locals := calleeLocals }
                       match evalCrepRuntimeProg handler primitive fuel callee body with
                       | none => some (.error, callee)
                       | some (result, callee) =>
@@ -374,7 +377,7 @@ mutual
         some (crepRuntimeSharedMemExp handler state operator name address)
     | _fuel + 1, state, .tick =>
         if state.clock = 0 then some (.timeout, state)
-        else some (.normal, { state with clock := state.clock - 1 })
+        else some (.normal, decCrepClock state)
     termination_by fuel _ _ => fuel
 end
 

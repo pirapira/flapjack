@@ -1,0 +1,2 @@
+fun 1 id(1 x) { return x; }
+fun 1 main() { return id(7); }

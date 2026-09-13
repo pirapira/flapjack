@@ -1,4 +1,5 @@
 import Flapjack.CrepeProgramRelation
+import Flapjack.CrepeProgramReturnRelation
 
 /-!
 The induction assembly for the Pancake-to-Crep program relation.
@@ -232,5 +233,47 @@ theorem panValueCrepProgramStateCorrect_induction
     | .annot tag text => hannot tag text
     termination_by program => sizeOf program
   exact fun program => go program
+
+/-!
+The first assembled stateful fragment.  This deliberately keeps the source
+and compiled states in `PanValueCrepProgramStateCorrect`; it is therefore a
+small executable counterpart of CakeML's `state_rel_imp_semantics` boundary
+(`cakeml/pancake/proofs/pan_to_crepProofScript.sml:5005`) rather than a
+compatibility theorem over the legacy evaluator.
+
+The fragment is nontrivial because sequencing is recursive: a proof for each
+component is threaded through the target `CrepState` by the stateful sequence
+constructor.  More expression-, declaration-, and call-bearing constructors
+remain separate follow-up cases for the full induction.
+-/
+inductive StatefulCompactProg (α : Type u) : Prog α → Prop where
+  | skip : StatefulCompactProg α (.skip : Prog α)
+  | tick : StatefulCompactProg α (.tick : Prog α)
+  | controlBreak : StatefulCompactProg α (.break : Prog α)
+  | controlContinue : StatefulCompactProg α (.continue : Prog α)
+  | annot (tag text : String) : StatefulCompactProg α (.annot tag text : Prog α)
+  | returnConst (value : α) :
+      StatefulCompactProg α (.return (.const value) : Prog α)
+  | seq {first second : Prog α} :
+      StatefulCompactProg α first →
+      StatefulCompactProg α second →
+      StatefulCompactProg α (.seq first second)
+
+theorem panValueCrepProgramStateCorrect_statefulCompact
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α) (hprogram : StatefulCompactProg α program) :
+    PanValueCrepProgramStateCorrect program := by
+  induction hprogram with
+  | skip => exact panValueCrepProgramStateCorrect_skip
+  | tick => exact panValueCrepProgramStateCorrect_tick
+  | controlBreak => exact panValueCrepProgramStateCorrect_break
+  | controlContinue => exact panValueCrepProgramStateCorrect_continue
+  | annot tag text => exact panValueCrepProgramStateCorrect_annot tag text
+  | returnConst value => exact panValueCrepProgramStateCorrect_return_const value
+  | @seq first second hfirst hsecond ihfirst ihsecond =>
+      exact panValueCrepProgramStateCorrect_seq first second ihfirst ihsecond
 
 end Flapjack

@@ -1,0 +1,2 @@
+struct Pair { 1 left, 1 right }
+fun 1 main() { return 0; }

@@ -1,0 +1,17 @@
+pan_primop_basic=SOME [90; 0]
+
+<<HOL message: mk_functional: 
+  pattern completion has added 1 clause to the original specification.>>
+pan_primop_overflow=SOME [44; 1]
+
+<<HOL message: mk_functional: 
+  pattern completion has added 1 clause to the original specification.>>
+pan_primop_carry_is_bit=SOME [13; 0]
+
+<<HOL message: mk_functional: 
+  pattern completion has added 1 clause to the original specification.>>
+pan_primop_wrong_length=NONE
+
+<<HOL message: mk_functional: 
+  pattern completion has added 1 clause to the original specification.>>
+pan_primop_non_word=NONE

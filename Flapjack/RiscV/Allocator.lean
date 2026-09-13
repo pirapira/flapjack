@@ -995,11 +995,15 @@ def wordProgVariables (program : WordProg α) : List Nat :=
 /-! Physical Word names denote architectural registers directly.  They can
     occur in the body independently of the formal-parameter list, notably as
     the ABI operands of an FFI instruction, so the spill allocator must keep
-    every such name fixed rather than recolouring it. -/
+    every such name fixed rather than recolouring it.  Only names inside the
+    target register range are physical; larger even names are ordinary
+    variables that merely happen to be even, and fixing them would place an
+    out-of-range register on an instruction. -/
 
 def wordPhysicalFixedSources (parameters : List Nat) (program : WordProg α) :
     List Nat :=
-  parameters ++ (wordProgVariables program).filter (fun name => name % 2 == 0)
+  parameters ++ (wordProgVariables program).filter
+    (fun name => name % 2 == 0 && name < 32)
 
 /-! Preference edges corresponding to CakeML's `get_prefs`.  Both explicit
     CakeML moves and the compact copy forms retained by the initial Word IR
@@ -2292,7 +2296,8 @@ def wordPreferenceLocationRegisters (name : Nat)
 def wordColourCandidatesWithSpillPreferences (name : Nat)
     (preferences : List (Nat × Nat))
     (locations : NatInfoMap WordLocation) : List Nat :=
-  wordPreferenceLocationRegisters name preferences locations ++
+  (wordPreferenceLocationRegisters name preferences locations).filter
+    (fun register => register ∈ wordAllocatableRegisters) ++
     wordColourCandidates name
 
 def wordGreedyAllocateWithSpillsAndPreferences : List Nat →

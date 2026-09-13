@@ -1,0 +1,7 @@
+store_hit=SOME (Word 3w)
+
+store_miss=NONE
+
+stores_hit=SOME (Word 3w,Word 5w)
+
+stores_blocked=NONE

@@ -37,6 +37,17 @@ example :
 
 example :
     (evalPanValueDeclarations sourceDeclarationInitialState
+      [.name "Pair" [("left", .one)],
+       .name "Pair" [("right", .one)]]).isNone = true := by
+  decide +kernel
+
+example :
+    (evalPanValueDeclarations sourceDeclarationInitialState
+      [.name "Pair" [("nested", .named "Missing")]]).isNone = true := by
+  decide +kernel
+
+example :
+    (evalPanValueDeclarations sourceDeclarationInitialState
       [.decl .one "answer" (.const 41)]).map
       (fun state => (state.globals "answer").bind (fun value =>
         match value with

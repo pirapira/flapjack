@@ -32,6 +32,7 @@ import Flapjack.Test.LoopStateResultParity
 import Flapjack.Test.LoopLocalsTouchedParity
 import Flapjack.Test.LoopAssignedVarsParity
 import Flapjack.Test.LoopAccVarsParity
+import Flapjack.Test.LoopNestedSeqParity
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.ParsedFullSsaPipeline
@@ -652,6 +653,7 @@ def main : IO Unit := do
     Flapjack.Test.LoopLocalsTouchedParity.runChecks,
     Flapjack.Test.LoopAssignedVarsParity.runChecks,
     Flapjack.Test.LoopAccVarsParity.runChecks,
+    Flapjack.Test.LoopNestedSeqParity.runChecks,
     Flapjack.Test.EndToEndParity.runChecks,
     Flapjack.Test.CakeStackReseatParity.runChecks
     ].mapM id

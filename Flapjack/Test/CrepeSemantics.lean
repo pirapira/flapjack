@@ -64,6 +64,21 @@ example :
 example : crepeUpdLocals.map (fun locals => locals 3) = some none := by
   decide
 
+def crepeEmptyLocals : Nat → Option Nat := fun _ => none
+
+/- CakeML crepSem's empty_locals_def (crepSemScript.sml:71) clears the local
+   map before evaluating a zero-argument callee.  The matching original probe
+   and its complete generated-output hash are pinned in `emptyLocals`. -/
+#guard emptyLocals.source =
+  "fun 1 zero() { return 7; } fun 1 main() { return zero(); }"
+#guard emptyLocals.cakeByteCount == 1016
+
+example : crepeEmptyLocals 1 = none := by
+  rfl
+
+example : crepeEmptyLocals 2 = none := by
+  rfl
+
 example : crepeSetVarLocals 2 = some 11 := by
   decide
 

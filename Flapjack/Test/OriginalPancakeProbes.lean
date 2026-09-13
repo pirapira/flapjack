@@ -56,6 +56,16 @@ def updLocals : ProbeFact :=
     cakeAssemblySha256 :=
       "13977258b5aaec5b4939148e04251e81d8f6e7d17ce6fcec5877b5348ebb3287" }
 
+def emptyLocals : ProbeFact :=
+  { source := "fun 1 zero() { return 7; } fun 1 main() { return zero(); }"
+    sourceReference := "cakeml/pancake/semantics/crepSemScript.sml:71 (empty_locals_def)"
+    cakeByteLines := 64
+    cakeByteCount := 1016
+    cakeFinalBytes :=
+      [0x13, 0x65, 0x70, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+    cakeAssemblySha256 :=
+      "e661960e2ea04f6c804fa9487b600bb0289929ba6c76e0dd10f243263cfdd870" }
+
 def evaluateDecls : ProbeFact :=
   { source := "var 1 g = 41; fun 1 main() { return g; }"
     sourceReference :=
@@ -95,6 +105,8 @@ def sourceFactsPinned : Bool :=
   setGlobals.source == "var 1 g = 7; fun 1 main() { return g; }" &&
     updLocals.source ==
       "fun 1 id(1 x) { return x; } fun 1 main() { return id(7); }" &&
+    emptyLocals.source ==
+      "fun 1 zero() { return 7; } fun 1 main() { return zero(); }" &&
     evaluateDecls.source == "var 1 g = 41; fun 1 main() { return g; }" &&
     decsStcnames.source == "struct Pair { 1 left, 1 right } fun 1 main() { return 0; }" &&
     semanticsDecls.source ==
@@ -115,6 +127,11 @@ def outputFactsPinned : Bool :=
       [0x6F, 0x00, 0x40, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&
     updLocals.cakeAssemblySha256 ==
       "13977258b5aaec5b4939148e04251e81d8f6e7d17ce6fcec5877b5348ebb3287" &&
+    emptyLocals.cakeByteLines == 64 && emptyLocals.cakeByteCount == 1016 &&
+    emptyLocals.cakeFinalBytes ==
+      [0x13, 0x65, 0x70, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&
+    emptyLocals.cakeAssemblySha256 ==
+      "e661960e2ea04f6c804fa9487b600bb0289929ba6c76e0dd10f243263cfdd870" &&
     evaluateDecls.cakeByteLines == 66 && evaluateDecls.cakeByteCount == 1048 &&
     evaluateDecls.cakeFinalBytes ==
       [0x03, 0x35, 0x85, 0xFF, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&

@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
-"""Differential RISC-V byte comparison: original Pancake vs Flapjack.
+"""Direct RISC-V byte comparison: original Pancake vs Flapjack.
 
-The original CakeML ``cake --pancake --target=riscv`` compiler emits assembly
-with a ``makesym`` table naming each generated section (``cml_generated_main``,
-``cml_main``, ``cml_<function>``) plus the shared runtime (``cml__...``).  The
-Flapjack ``flapjack-compile --sections`` mode emits the same idea as one line
-per linked section: ``<label> <address> <bytes...>``.
+Both compilers now emit the *same* textual artifact format, so this script
+parses each with one shared parser and compares the results without any
+conversion layer:
 
-This script runs a set of Pancake programs through both compilers, normalizes
-only the CakeML section-name prefix/suffix (``cml_main_7`` -> ``main``,
-``cml_generated_main_6`` -> ``generated_main``; the trailing index is the
-deterministic section number), and reports whether each CakeML user-function
-section has a byte-identical Flapjack section.  The shared runtime sections
-(``cml__Init``, ``cml__GC``, ...) are compared only for presence.
+* the original ``cake --pancake --target=riscv`` compiler emits assembly with
+  a ``cake_main:`` marker, the linked code image as ``.byte`` lines, and a
+  ``makesym(name, base, len)`` symbol table;
+* the Flapjack ``flapjack-compile --assembly`` mode emits the same frame for
+  the code image the port actually produces.
 
-A *gap* is any user function whose emitted code has no byte-identical Flapjack
-section.  The script prints the first mismatching function per program and
-exits non-zero when any gap is present.
+The shared parser reconstructs every ``makesym`` section and normalizes only
+the deterministic symbol prefix/suffix (``cml_generated_main_7`` ->
+``generated_main``, ``cml_main_7`` -> ``main``).  Programs the original
+compiler rejects are skipped.  For every accepted program the script reports
+each user function whose bytes differ between the two compilers, plus the
+entry section and any symbol/layout difference.
+
+A *gap* is a byte mismatch in the generated entry or a user function.  The
+script prints the first mismatch per section and exits non-zero when any gap
+is present.
 
 Usage:
     scripts/parity-bytes.py PROGRAM.pan [PROGRAM.pan ...]
@@ -37,8 +41,66 @@ DEFAULT_CAKE = os.path.expanduser("~/pancake-lean/cakeml/developers/bin/cake")
 DEFAULT_FLAPJACK = os.path.join(REPO_ROOT, ".lake", "build", "bin", "flapjack-compile")
 
 
-def cake_sections(path, cake):
-    """Return (runtime, entry, {user_name: bytes}) parsed from cake assembly."""
+def parse_byte_line(content):
+    values = []
+    for token in content.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        values.append(int(token, 16))
+    return values
+
+
+def parse_assembly(text):
+    """Parse one artifact frame into ``{name: (base, bytes)}``.
+
+    Both Cake assembly and ``flapjack-compile --assembly`` share this frame, so
+    a single parser is used for both inputs.
+    """
+    marker = text.find("cake_main:")
+    if marker < 0:
+        marker = text.find("#### Generated machine code follows")
+    if marker < 0:
+        return None
+    flat = []
+    for line in text[marker:].splitlines():
+        match = re.search(r"\.byte(.*)", line)
+        if match:
+            flat.extend(parse_byte_line(match.group(1)))
+    sections = {}
+    for match in re.finditer(r"makesym\((\w+),\s*(\d+),\s*(\d+)\)", text):
+        name, base, length = match.group(1), int(match.group(2)), int(match.group(3))
+        sections[name] = (base, flat[base:base + length])
+    if not sections:
+        return None
+    return sections
+
+
+def is_runtime(name):
+    return name.startswith("cml__") or name.startswith("cml_flapjack_runtime")
+
+
+def is_entry(name):
+    return name.startswith("cml_generated_main")
+
+
+def normalize(name):
+    return re.sub(r"_\d+$", "", re.sub(r"^cml_", "", name))
+
+
+def classify(sections):
+    runtime, entry, user = {}, None, {}
+    for name, (base, data) in sections.items():
+        if is_runtime(name):
+            runtime[name] = (base, data)
+        elif is_entry(name):
+            entry = (name, base, data)
+        else:
+            user[normalize(name)] = (name, base, data)
+    return runtime, entry, user
+
+
+def cake_assembly(path, cake):
     proc = subprocess.run(
         [cake, "--pancake", "--target=riscv"],
         stdin=open(path, "rb"),
@@ -46,49 +108,17 @@ def cake_sections(path, cake):
     )
     if proc.returncode != 0:
         return None
-    text = proc.stdout.decode("utf-8", "replace")
-    marker = "#### Generated machine code follows"
-    start = text.find(marker)
-    if start < 0:
-        return None
-    flat = []
-    for line in text[start:].splitlines():
-        match = re.search(r"\.byte(.*)", line)
-        if match:
-            for value in re.findall(r"0x[0-9A-Fa-f]+", match.group(1)):
-                flat.append(int(value, 16))
-        if re.match(r"\s*makesym\(", line):
-            break
-    runtime, entry, user = {}, None, {}
-    for match in re.finditer(r"makesym\((\w+),\s*(\d+),\s*(\d+)\)", text):
-        name, offset, length = match.group(1), int(match.group(2)), int(match.group(3))
-        data = flat[offset:offset + length]
-        if name.startswith("cml__"):
-            runtime[name] = data
-        elif name.startswith("cml_generated_main"):
-            entry = data
-        else:
-            user[re.sub(r"^cml_", "", re.sub(r"_\d+$", "", name))] = data
-    return runtime, entry, user
+    return parse_assembly(proc.stdout.decode("utf-8", "replace"))
 
 
-def flapjack_sections(path, flapjack):
-    """Return a list of (label, address, bytes) from flapjack-compile --sections."""
+def flapjack_assembly(path, flapjack):
     proc = subprocess.run(
-        [flapjack, "--sections", path],
+        [flapjack, "--assembly", path],
         capture_output=True,
     )
     if proc.returncode != 0:
         return None
-    sections = []
-    for line in proc.stdout.decode("utf-8", "replace").splitlines():
-        parts = line.split()
-        if len(parts) < 3:
-            continue
-        label, address = int(parts[0]), int(parts[1])
-        data = [int(byte, 16) for byte in parts[2:]]
-        sections.append((label, address, data))
-    return sections
+    return parse_assembly(proc.stdout.decode("utf-8", "replace"))
 
 
 def hexstr(data):
@@ -96,37 +126,49 @@ def hexstr(data):
 
 
 def compare(path, cake, flapjack, quiet):
-    cake_parsed = cake_sections(path, cake)
-    flap_parsed = flapjack_sections(path, flapjack)
     name = os.path.basename(path)
-    if cake_parsed is None:
+    cake_sections = cake_assembly(path, cake)
+    if cake_sections is None:
         if not quiet:
             print(f"{name}: cake rejects (no comparison)")
         return 0
-    if flap_parsed is None:
+    flap_sections = flapjack_assembly(path, flapjack)
+    if flap_sections is None:
         print(f"{name}: flapjack rejects (GAP)")
         return 1
-    _runtime, entry, user = cake_parsed
-    flap_bytes = [data for (_label, _address, data) in flap_parsed]
+
+    _, cake_entry, cake_user = classify(cake_sections)
+    _, flap_entry, flap_user = classify(flap_sections)
     gaps = 0
-    if entry is not None and entry not in flap_bytes:
-        gaps += 1
-        if not quiet:
-            print(f"{name}: generated_main mismatch")
-            print(f"  cake     : {hexstr(entry)}")
-            print(f"  flapjack : {hexstr(flap_bytes[1]) if len(flap_bytes) > 1 else ''}")
-    for func in sorted(user):
-        if user[func] not in flap_bytes:
+
+    if cake_entry is not None:
+        if flap_entry is None:
+            gaps += 1
+            if not quiet:
+                print(f"{name}: generated_main missing in flapjack")
+        elif cake_entry[2] != flap_entry[2]:
+            gaps += 1
+            if not quiet:
+                print(f"{name}: generated_main mismatch")
+                print(f"  cake     : {hexstr(cake_entry[2])}")
+                print(f"  flapjack : {hexstr(flap_entry[2])}")
+
+    for func in sorted(cake_user):
+        if func not in flap_user:
+            gaps += 1
+            if not quiet:
+                print(f"{name}: {func} missing in flapjack")
+            continue
+        if cake_user[func][2] != flap_user[func][2]:
             gaps += 1
             if not quiet:
                 print(f"{name}: {func} mismatch")
-                print(f"  cake     : {hexstr(user[func])}")
+                print(f"  cake     : {hexstr(cake_user[func][2])}")
+                print(f"  flapjack : {hexstr(flap_user[func][2])}")
+
     if gaps == 0:
         if not quiet:
-            print(f"{name}: MATCH ({len(user)} user function(s))")
-    else:
-        if not quiet:
-            print(f"{name}: {gaps} GAP(s)")
+            print(f"{name}: MATCH ({len(cake_user)} user function(s))")
     return gaps
 
 

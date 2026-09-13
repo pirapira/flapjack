@@ -1,5 +1,6 @@
 import Flapjack.Semantics
 import Flapjack.Ffi
+import Flapjack.PanMemoryModel
 
 /-!
 Fuel-bounded executable semantics for the full scalar Crepe control fragment.
@@ -64,6 +65,72 @@ structure CrepState (α : Type u) where
       `crepSem` state.  The default preserves the compact-state API for
       localized programs. -/
   globals : α → Option α := fun _ => none
+
+/-! Canonical checked word-cell memory boundary.
+
+    This is the Lean counterpart of the memory portion of CakeML's
+    `crepSem.state`.  In particular, the domain is separate from the partial
+    Lean memory map, and byte/32-bit accesses are delegated to the target
+    model with explicit endianness.  The legacy evaluators below intentionally
+    remain unchanged until their callers are migrated to this boundary. -/
+structure CrepMemoryState (α : Type u) where
+  memory : PanWordMemory α
+  memaddrs : PanWordMemoryDomain α
+  bytesInWord : α
+  bigEndian : Bool
+  model : PanMemoryModel α
+
+def crepMemLoad (state : CrepMemoryState α) (address : α) : Option α :=
+  panModelReadWord state.memaddrs state.memory address
+
+def crepMemStore [BEq α] (state : CrepMemoryState α)
+    (address value : α) : Option (CrepMemoryState α) :=
+  (panModelStoreWord state.memaddrs state.memory address value).map
+    (fun memory => { state with memory := memory })
+
+def crepMemLoadByte [Add α] [OfNat α 1]
+    (state : CrepMemoryState α) (address : α) : Option α :=
+  panModelReadByte state.model state.memaddrs state.memory
+    state.bytesInWord address state.bigEndian
+
+def crepMemStoreByte [BEq α] [Add α] [OfNat α 1]
+    (state : CrepMemoryState α) (address value : α) :
+    Option (CrepMemoryState α) :=
+  (panModelStoreByte state.model state.memaddrs state.memory
+    state.bytesInWord address value state.bigEndian).map
+    (fun memory => { state with memory := memory })
+
+def crepMemLoad32 [Add α] [OfNat α 1] [OfNat α 2] [OfNat α 3]
+    (state : CrepMemoryState α) (address : α) : Option α :=
+  panModelRead32 state.model state.memaddrs state.memory
+    state.bytesInWord address state.bigEndian
+
+def crepMemStore32 [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
+    [OfNat α 2] [OfNat α 3]
+    (state : CrepMemoryState α) (address value : α) :
+    Option (CrepMemoryState α) :=
+  (panModelStore32 state.model state.memaddrs state.memory
+    state.bytesInWord address value state.bigEndian).map
+    (fun memory => { state with memory := memory })
+
+theorem crepMemLoad_none_of_not_memaddr
+    (state : CrepMemoryState α) (address : α)
+    (haddress : state.memaddrs address = false) :
+    crepMemLoad state address = none := by
+  simp [crepMemLoad, panModelReadWord, haddress]
+
+theorem crepMemStore_none_of_not_memaddr [BEq α]
+    (state : CrepMemoryState α) (address value : α)
+    (haddress : state.memaddrs address = false) :
+    crepMemStore state address value = none := by
+  simp [crepMemStore, panModelStoreWord, haddress]
+
+theorem crepMemStore_memory_of_memaddr [BEq α]
+    (state : CrepMemoryState α) (address value : α)
+    (haddress : state.memaddrs address = true) :
+    crepMemStore state address value =
+      some { state with memory := panModelUpdateMemory state.memory address value } := by
+  simp [crepMemStore, panModelStoreWord, haddress]
 
 inductive CrepControlResult (α : Type u) where
   | normal (state : CrepState α)

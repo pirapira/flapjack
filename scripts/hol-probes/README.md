@@ -14,7 +14,12 @@ The probes currently cover the small `loop_to_word` slice used by
 `Flapjack.Test.PanMemoryParity`, the fixed-width load boundary used by
 `Flapjack.Test.PanFixedLoadParity`, and the `panSem$shape_of` boundary used by
 `Flapjack.Test.PanShapeParity`, plus the `panSem` word/value helpers used by
-`Flapjack.Test.PanWordParity`. Their source references are respectively
+`Flapjack.Test.PanWordParity`. The fixed-width store boundary is covered by
+`Flapjack.Test.PanFixedStoreParity`, and the word-store boundary by
+`Flapjack.Test.PanFlatStoreParity`. Value flattening is covered by
+`Flapjack.Test.PanFlattenParity`; scoped local restoration (`res_var_def`) is
+covered by `Flapjack.Test.PanResVarParity`. Their source references are
+respectively
 `cakeml/pancake/loop_to_wordScript.sml` and
 `cakeml/pancake/semantics/panSemScript.sml`.
 

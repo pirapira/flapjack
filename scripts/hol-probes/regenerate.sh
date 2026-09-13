@@ -68,6 +68,14 @@ run_probe pan_word_helpers_probeScript.sml pan_word_helpers_probe.out \
   is_word the_val_word "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
   byte_hit load32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \
+  byte_store_hit store32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
+  store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \
+  word named "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \
+  delete_hit update_hit "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
   get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The set_globals probe observes FLOOKUP after the original map update.
@@ -76,6 +84,7 @@ run_probe loop_sem_set_globals_probeScript.sml loop_sem_set_globals_probe.out \
 # The set_vars probe observes sptree lookups after the original alist_insert.
 run_probe loop_sem_set_vars_probeScript.sml loop_sem_set_vars_probe.out \
   set_vars_basic set_vars_clock "$cake_dir/pancake/semantics/loopSemScript.sml"
+
 # The find_code probe observes the returned parameter map via sptree lookups.
 run_probe loop_sem_find_code_probeScript.sml loop_sem_find_code_probe.out \
   find_code_label_first find_code_dup_first "$cake_dir/pancake/semantics/loopSemScript.sml"

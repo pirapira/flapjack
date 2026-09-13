@@ -24,7 +24,9 @@ implemented by `Flapjack.CompileMain`.
   Word, Stack, and RISC-V fragments.
 - The source-facing compiler reports parse, static-check, entry-point, and
   lowering failures instead of silently treating every unsupported construct as
-  compiled code.
+  compiled code. The default CLI artifact is Pancake-compatible RISC-V
+  assembly; `--hex` is an explicitly named compatibility mode for the historical
+  raw byte line.
 
 These checks establish useful local properties of the covered fragments. They
 do not establish whole-compiler equivalence.

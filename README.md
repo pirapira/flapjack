@@ -42,10 +42,10 @@ byte goldens:
 lake test
 ```
 
-Compile a Pancake source file through the current source-facing RV64I path:
+Compile a Pancake source file through the source-facing RV64I path:
 
 ```sh
-lake exe flapjack-compile program.pnk > program.riscv.hex
+lake exe flapjack-compile program.pnk > program.riscv.S
 ```
 
 The compiler also reads source from standard input:
@@ -54,11 +54,16 @@ The compiler also reads source from standard input:
 printf 'fun 1 main() { return 7; }\n' | lake exe flapjack-compile
 ```
 
-The output is one space-separated line of lowercase hexadecimal bytes in
-little-endian RISC-V encoding. A nonzero exit status reports a parse, static,
-entry-point, or lowering error. This is currently a raw byte artifact, not
-CakeML's complete `.S` assembly/runtime output or an ELF file. The original
-reference compiler can be run locally with:
+The default output follows the original Pancake/CakeML RISC-V assembly
+artifact boundary: runtime data framing, `cake_main`, linked code-section
+labels, and `.byte` payloads with deterministic `cml_section_<label>` names.
+It is not an ELF file. For the historical raw byte artifact, use:
+
+```sh
+lake exe flapjack-compile --hex program.pnk > program.riscv.hex
+```
+
+The original reference compiler can be run locally with:
 
 ```sh
 cakeml/developers/bin/cake --pancake --target=riscv < program.pnk > program.cake.S

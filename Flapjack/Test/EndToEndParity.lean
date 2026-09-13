@@ -50,12 +50,48 @@ def originalProbeResult : Option (List (RiscV.Word 64)) :=
 
 #guard machineResult == originalProbeResult
 
+/-! The second fixture exercises expression lowering and machine execution;
+    its expected value is `return_mul_42` in the same original HOL probe. -/
+def multiplicationSource : String :=
+  "fun 1 main() { return 6 * 7; }"
+
+def multiplicationDeclarations : Option (List (Decl (RiscV.Word 64))) :=
+  (Parser.parseTopDecs (BitVec.ofInt 64) multiplicationSource).toOption
+
+def multiplicationLinked :
+    Option (List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
+  multiplicationDeclarations.bind (fun declarations =>
+    compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      parsedCallPipelineRemoveConfig "main" declarations)
+
+def multiplicationMachineResult : Option (List (RiscV.Word 64)) := do
+  let sections ← multiplicationLinked
+  let entry ← parsedCallLookupEntry 2 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
+
+def multiplicationOriginalProbeResult : Option (List (RiscV.Word 64)) :=
+  some [BitVec.ofNat 64 42]
+
+#guard multiplicationDeclarations.isSome
+#guard multiplicationMachineResult == multiplicationOriginalProbeResult
+
 def runChecks : IO Bool := do
-  if machineResult == originalProbeResult then
+  let directPassed := machineResult == originalProbeResult
+  let _ ← if directPassed then
     IO.println "PASS source-to-RISC-V execution matches original Pancake HOL probe"
-    pure true
+    pure ()
   else
     IO.println s!"FAIL source-to-RISC-V execution: {machineResult}"
-    pure false
+    pure ()
+  let multiplicationPassed :=
+    multiplicationMachineResult == multiplicationOriginalProbeResult
+  let _ ← if multiplicationPassed then
+    IO.println "PASS Pancake multiplication source executes to original HOL result"
+  else
+    IO.println s!"FAIL Pancake multiplication execution: {multiplicationMachineResult}"
+  pure (directPassed && multiplicationPassed)
 
 end Flapjack.Test.EndToEndParity

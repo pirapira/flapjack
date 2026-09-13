@@ -125,3 +125,6 @@ run_probe loop_sem_exit_loop_probeScript.sml loop_sem_exit_loop_probe.out \
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.
 run_probe loop_sem_loop_arith_probeScript.sml loop_sem_loop_arith_probe.out \
   loop_arith_div loop_arith_longdiv_overflow "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe longdiv_code_probeScript.sml longdiv_code_probe.out \
+  longdiv_code_software riscv_longdiv_encoding \
+  "$cake_dir/compiler/backend/data_to_wordScript.sml"

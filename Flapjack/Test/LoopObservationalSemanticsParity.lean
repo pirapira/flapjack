@@ -96,9 +96,6 @@ def successEvaluate (clock : Nat) : LoopMachineStep :=
   else
     (some (.result []), { state with clock := clock - 1 })
 
-def finalFfiEvaluate (_clock : Nat) : LoopMachineStep :=
-  (some (.finalFfi (.word 9)), emptyState 0)
-
 def forbiddenEvaluate (_clock : Nat) : LoopMachineStep :=
   (some .error, emptyState 0)
 

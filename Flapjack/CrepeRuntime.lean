@@ -10,10 +10,10 @@ has a richer machine state and the same observable `FinalFFI` result.  This
 file ports that richer runtime boundary: it is the state/result vocabulary on
 which the full compiler simulation can be built.
 
-The FFI request carries the already decoded word arguments.  Byte-array
-decoding and the concrete foreign-state type are deliberately left to the
-handler, just as CakeML leaves `call_FFI` abstract.  The runtime still keeps
-the memory domains, clock, endianness, and FFI state explicit.
+The FFI request carries the byte arrays produced by CakeML's
+`read_bytearray`.  The concrete foreign-state type is deliberately left to
+the handler, just as CakeML leaves `call_FFI` abstract.  The runtime still
+keeps the memory domains, clock, endianness, and FFI state explicit.
 -/
 
 namespace Flapjack
@@ -213,7 +213,7 @@ def crepRuntimeWriteBytes [BEq α] [Add α] [OfNat α 1]
       match crepRuntimeStoreByte tailState address
           (state.ffiContext.byteToWord byte) with
       | some updatedState => some updatedState
-      | none => some tailState
+      | none => some state
 termination_by bytes => sizeOf bytes
 
 def crepRuntimeExtCallValues [BEq α] [Add α] [OfNat α 1]

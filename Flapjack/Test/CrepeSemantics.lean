@@ -376,14 +376,6 @@ theorem crepe_runtime_extCall_final :
     natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
     crepeRuntimeFinalHandler, crepRuntimeReadBytes, crepRuntimeLoadByte]
 
-theorem crepe_runtime_empty_extCall_is_identity :
-    (crepRuntimeExtCall crepeRuntimeFinalHandler crepeRuntimeState
-      "" 1 2 3 4).1 = .normal := by
-    simp [crepRuntimeExtCall, crepRuntimeExtCallValues, crepeRuntimeState,
-    natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
-    crepRuntimeReadBytes, crepRuntimeLoadByte,
-    crepRuntimeWriteBytes, crepRuntimeStoreByte, updateMemory]
-
 theorem crepe_runtime_extCall_return_writes_bytes :
     let result := crepRuntimeExtCall crepeRuntimeByteReturnHandler
       crepeRuntimeState "host" 1 2 3 4

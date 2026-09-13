@@ -143,6 +143,16 @@ theorem semanticsSuccess :
     · simp [loopSemantics, forbidden, successful]
     · exact (successful successBranch).elim
 
+theorem semanticsFinalFfi :
+    loopSemantics (hooksFor finalFfiEvaluate) emptyLprefixLub =
+      loopChooseTermination (hooksFor finalFfiEvaluate) finalFfiBranch := by
+  classical
+  by_cases forbidden : loopHasForbiddenRun (hooksFor finalFfiEvaluate)
+  · exact (finalFfiNoForbidden forbidden).elim
+  · by_cases successful : loopHasSuccessfulRun (hooksFor finalFfiEvaluate)
+    · simp [loopSemantics, forbidden, successful]
+    · exact (successful finalFfiBranch).elim
+
 theorem semanticsDivergence :
     loopSemantics (hooksFor divergingEvaluate) emptyLprefixLub =
       .diverge (fun _ => []) emptyLprefixLub := by
@@ -153,16 +163,6 @@ theorem semanticsDivergence :
     · exact (divergenceBranch.2 successful).elim
     · simp only [loopSemantics, dif_neg forbidden, dif_neg successful]
       congr 2
-
-theorem semanticsFinalFfi :
-    loopSemantics (hooksFor finalFfiEvaluate) emptyLprefixLub =
-      loopChooseTermination (hooksFor finalFfiEvaluate) finalFfiBranch := by
-  classical
-  by_cases forbidden : loopHasForbiddenRun (hooksFor finalFfiEvaluate)
-  · exact (finalFfiNoForbidden forbidden).elim
-  · by_cases successful : loopHasSuccessfulRun (hooksFor finalFfiEvaluate)
-    · simp [loopSemantics, forbidden, successful]
-    · exact (successful finalFfiBranch).elim
 
 #guard sourceClockParity
 

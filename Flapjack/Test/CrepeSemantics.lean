@@ -407,6 +407,44 @@ theorem crepe_runtime_tick_timeout :
       some (.timeout : CrepRuntimeResult Nat String) := by
   decide +kernel
 
+def crepeRuntimeWhileTimeoutProgram : CrepProg Nat :=
+  .while (.const 1) .skip
+
+theorem crepe_runtime_while_zero_timeout_clears_locals :
+    let result := evalCrepRuntimeResult crepeRuntimeSharedHandler
+      crepeSemanticsPrimitive 20 { crepeRuntimeState with clock := 0 }
+      crepeRuntimeWhileTimeoutProgram
+    result.map Prod.fst = some (.timeout : CrepRuntimeResult Nat String) ∧
+      result.map (fun step => step.2.locals 5) = some none := by
+  decide +kernel
+
+def crepeRuntimeEndianHandler : CrepRuntimeFfiHandler Nat Unit String :=
+  fun request state =>
+    match request with
+    | .sharedMem .load _ _ _ => .returned state [11, 22]
+    | .sharedMem _ _ _ _ => .returned state []
+    | .extCall _ _ _ => .returned state []
+
+def crepeRuntimeEndianState : CrepRuntimeState Nat Unit :=
+  { crepeRuntimeState with
+    ffiContext :=
+      { natCrepRuntimeFfiContext with
+        bigEndian := true
+        wordOfBytes := fun bigEndian bytes =>
+          if bigEndian then
+            match bytes with
+            | _ :: value :: _ => value.toNat
+            | _ => 0
+          else
+            match bytes with
+            | value :: _ => value.toNat
+            | [] => 0 } }
+
+theorem crepe_runtime_shared_load_uses_source_little_endian :
+    (crepRuntimeSharedMem crepeRuntimeEndianHandler
+      crepeRuntimeEndianState .load 5 10).2.locals 5 = some 11 := by
+  decide
+
 /- CakeML `crepSemScript.sml:333` returns `TimeOut` with `empty_locals s`.
    Keep the post-state clause observable instead of checking only the result. -/
 theorem crepe_runtime_tick_timeout_clears_locals :

@@ -22,7 +22,8 @@ probe_dir="$repo_dir/scripts/hol-probes"
 tmp=$(mktemp)
 mem_tmp=$(mktemp)
 shape_tmp=$(mktemp)
-trap 'rm -f "$tmp" "$mem_tmp" "$shape_tmp"' EXIT
+word_tmp=$(mktemp)
+trap 'rm -f "$tmp" "$mem_tmp" "$shape_tmp" "$word_tmp"' EXIT
 
 # Run from Pancake's source directory so HOL's ordinary theory loader finds
 # the checked-in loop_to_wordTheory objects without modifying the CakeML
@@ -41,6 +42,11 @@ sed -n '/^one_hit=/,/^named_suffix_blocked=/p' "$mem_tmp" > \
   "$hol_dir/bin/hol" run "$probe_dir/pan_shape_of_probeScript.sml") >"$shape_tmp"
 sed -n '/^word=/,/^nstruct=/p' "$shape_tmp" > \
   "$probe_dir/pan_shape_of_probe.out"
+
+(cd "$cake_dir/pancake" && \
+  "$hol_dir/bin/hol" run "$probe_dir/pan_word_helpers_probeScript.sml") >"$word_tmp"
+sed -n '/^is_word=/,/^the_val_word=/p' "$word_tmp" > \
+  "$probe_dir/pan_word_helpers_probe.out"
 
 # The loopSem probe loads the semantics theory through a relative path from
 # the same Pancake directory.

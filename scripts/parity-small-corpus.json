@@ -34,6 +34,12 @@
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:55-57 (set_var_def)",
       "cake_sha256": "14ee212eefbbc8ba96af33c6372dcde8bc6b2c4babe72779e3124f2df1cd21b1",
       "tracked_beads": ["flapjack-pxn.8.5.10.1"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/bitmap_calls.pnk",
+      "source_reference": "synthetic regression extracted from the original Pancake call/bitmap corpus",
+      "cake_sha256": "eaffdb7dd3840571e776be1d3661fd2fc8de56d6cafe34ce5c4fb588e74b79f8",
+      "tracked_beads": ["flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"]
     }
   ]
 }

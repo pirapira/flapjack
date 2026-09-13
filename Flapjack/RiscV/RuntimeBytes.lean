@@ -60,9 +60,9 @@ def cakeRuntimeBytes : List (BitVec 8) :=
   cakeRuntimeWords.flatMap encodeWordBytes
 
 theorem cakeRuntimeWords_length : cakeRuntimeWords.length = 250 := by
-  native_decide
+  decide +kernel
 
 theorem cakeRuntimeBytes_length : cakeRuntimeBytes.length = 1000 := by
-  native_decide
+  decide +kernel
 
 end Flapjack.RiscV

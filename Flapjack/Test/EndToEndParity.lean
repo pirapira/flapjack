@@ -188,6 +188,40 @@ def globalOriginalProbeResult : Option (List (RiscV.Word 64)) :=
 #guard globalDeclarations.isSome
 #guard globalMachineResult == globalOriginalProbeResult
 
+/-! The memory fixture exercises an ordinary Pancake load from an explicitly
+    initialized RISC-V byte image; its expected value comes from the
+    independent `memory_load_37` panSem probe. -/
+def memorySource : String :=
+  "fun 1 main() { return lds 1 1000; }"
+
+def memoryDeclarations : Option (List (Decl (RiscV.Word 64))) :=
+  (Parser.parseTopDecs (BitVec.ofInt 64) memorySource).toOption
+
+def memoryLinked :
+    Option (List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
+  memoryDeclarations.bind (fun declarations =>
+    compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      parsedCallPipelineRemoveConfig "main" declarations)
+
+def memoryMachineState : RiscV.State 64 :=
+  { RiscV.zeroState 64 with
+    memory := fun address =>
+      if address == BitVec.ofNat 64 1000 then BitVec.ofNat 8 37 else 0 }
+
+def memoryMachineResult : Option (List (RiscV.Word 64)) := do
+  let sections ← memoryLinked
+  let entry ← parsedCallLookupEntry 2 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
+    (RiscV.writeRegister memoryMachineState 1 6)
+
+def memoryOriginalProbeResult : Option (List (RiscV.Word 64)) :=
+  some [BitVec.ofNat 64 37]
+
+#guard memoryDeclarations.isSome
+#guard memoryMachineResult == memoryOriginalProbeResult
+
 def runChecks : IO Bool := do
   let returnPass := machineResult == originalProbeResult
   let addPass := addMachineResult == originalAddProbeResult
@@ -196,6 +230,7 @@ def runChecks : IO Bool := do
   let controlPass := controlMachineResult == controlOriginalProbeResult
   let callPass := callMachineResult == callOriginalProbeResult
   let globalPass := globalMachineResult == globalOriginalProbeResult
+  let memoryPass := memoryMachineResult == memoryOriginalProbeResult
   if returnPass then
     IO.println "PASS return source-to-RISC-V execution matches original Pancake HOL probe"
   else
@@ -220,7 +255,11 @@ def runChecks : IO Bool := do
     IO.println "PASS Pancake global source executes to original HOL result"
   else
     IO.println s!"FAIL Pancake global execution: {globalMachineResult}"
+  if memoryPass then
+    IO.println "PASS Pancake memory-load source executes to original HOL result"
+  else
+    IO.println s!"FAIL Pancake memory-load execution: {memoryMachineResult}"
   pure (returnPass && addPass && multiplicationPass && controlPass && callPass &&
-    globalPass)
+    globalPass && memoryPass)
 
 end Flapjack.Test.EndToEndParity

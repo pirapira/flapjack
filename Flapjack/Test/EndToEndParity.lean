@@ -130,12 +130,42 @@ def controlOriginalProbeResult : Option (List (RiscV.Word 64)) :=
 #guard controlDeclarations.isSome
 #guard controlMachineResult == controlOriginalProbeResult
 
+/-! The call fixture exercises parsed function lookup, argument transfer, and
+    return-address handling; its expected value comes from the independent
+    `call_id_7` panSem probe. -/
+def callSource : String :=
+  "fun 1 id(1 x) { return x; } fun 1 main() { var 1 answer = id(7); return answer; }"
+
+def callDeclarations : Option (List (Decl (RiscV.Word 64))) :=
+  (Parser.parseTopDecs (BitVec.ofInt 64) callSource).toOption
+
+def callLinked :
+    Option (List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
+  callDeclarations.bind (fun declarations =>
+    compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      parsedCallPipelineRemoveConfig "main" declarations)
+
+def callMachineResult : Option (List (RiscV.Word 64)) := do
+  let sections ← callLinked
+  let entry ← parsedCallLookupEntry 3 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 172 [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
+
+def callOriginalProbeResult : Option (List (RiscV.Word 64)) :=
+  some [BitVec.ofNat 64 7]
+
+#guard callDeclarations.isSome
+#guard callMachineResult == callOriginalProbeResult
+
 def runChecks : IO Bool := do
   let returnPass := machineResult == originalProbeResult
   let addPass := addMachineResult == originalAddProbeResult
   let multiplicationPass :=
     multiplicationMachineResult == multiplicationOriginalProbeResult
   let controlPass := controlMachineResult == controlOriginalProbeResult
+  let callPass := callMachineResult == callOriginalProbeResult
   if returnPass then
     IO.println "PASS return source-to-RISC-V execution matches original Pancake HOL probe"
   else
@@ -152,6 +182,10 @@ def runChecks : IO Bool := do
     IO.println "PASS Pancake conditional source executes to original HOL result"
   else
     IO.println s!"FAIL Pancake conditional execution: {controlMachineResult}"
-  pure (returnPass && addPass && multiplicationPass && controlPass)
+  if callPass then
+    IO.println "PASS Pancake function-call source executes to original HOL result"
+  else
+    IO.println s!"FAIL Pancake function-call execution: {callMachineResult}"
+  pure (returnPass && addPass && multiplicationPass && controlPass && callPass)
 
 end Flapjack.Test.EndToEndParity

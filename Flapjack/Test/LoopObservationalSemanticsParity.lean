@@ -8,7 +8,10 @@ records the clock-zero timeout and clock-one successful entry-call outcomes
 for the same `Call NONE (SOME 1) [] NONE` shape.  The Lean checks then exercise
 all three observational branches: forbidden result -> `Fail`, a successful
 `Result` witness -> `Terminate Success`, and timeout-only runs -> `Diverge`
-with the complete clock-indexed I/O-prefix family.
+with the complete clock-indexed I/O-prefix family.  HOL-EVAL leaves the
+top-level `semantics` equation symbolic because it contains Hilbert choice
+over all clocks; the finite clock observations are therefore the direct HOL
+comparison, while the branch/LUB equations are proved in Lean.
 -/
 
 namespace Flapjack.Test.LoopObservationalSemanticsParity
@@ -57,6 +60,9 @@ def forbiddenEvaluate (_clock : Nat) : LoopMachineStep :=
 def divergingEvaluate (_clock : Nat) : LoopMachineStep :=
   (some .timeOut, emptyState 0)
 
+def finalFfiEvaluate (_clock : Nat) : LoopMachineStep :=
+  (some (.finalFfi (.word 9)), emptyState 0)
+
 def observeStep (step : LoopMachineStep) :
     Option (LoopMachineResult LoopWordLoc) × Nat :=
   (step.1, step.2.clock)
@@ -89,6 +95,23 @@ theorem successNoForbidden :
   | succ clock =>
       change loopForbiddenResult (successEvaluate (clock + 1)).1 at hclock
       simp [successEvaluate, loopForbiddenResult] at hclock
+
+theorem finalFfiBranch :
+    loopHasSuccessfulRun (hooksFor finalFfiEvaluate) := by
+  refine ⟨0, some (.finalFfi (.word 9)), emptyState 0, .ffi .failed, ?_, ?_⟩
+  · rfl
+  · rfl
+
+theorem finalFfiOutcome :
+    loopResultOutcome (hooksFor finalFfiEvaluate)
+        (some (.finalFfi (.word 9))) = some (.ffi .failed) := by
+  rfl
+
+theorem finalFfiNoForbidden :
+    ¬ loopHasForbiddenRun (hooksFor finalFfiEvaluate) := by
+  rintro ⟨clock, hclock⟩
+  change loopForbiddenResult (finalFfiEvaluate clock).1 at hclock
+  simp [finalFfiEvaluate, loopForbiddenResult] at hclock
 
 theorem forbiddenBranch :
     loopHasForbiddenRun (hooksFor forbiddenEvaluate) := by
@@ -130,6 +153,16 @@ theorem semanticsDivergence :
     · exact (divergenceBranch.2 successful).elim
     · simp only [loopSemantics, dif_neg forbidden, dif_neg successful]
       congr 2
+
+theorem semanticsFinalFfi :
+    loopSemantics (hooksFor finalFfiEvaluate) emptyLprefixLub =
+      loopChooseTermination (hooksFor finalFfiEvaluate) finalFfiBranch := by
+  classical
+  by_cases forbidden : loopHasForbiddenRun (hooksFor finalFfiEvaluate)
+  · exact (finalFfiNoForbidden forbidden).elim
+  · by_cases successful : loopHasSuccessfulRun (hooksFor finalFfiEvaluate)
+    · simp [loopSemantics, forbidden, successful]
+    · exact (successful finalFfiBranch).elim
 
 #guard sourceClockParity
 

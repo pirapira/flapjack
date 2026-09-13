@@ -618,11 +618,11 @@ def evalPanValueExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
           | [left, right] => some (.word (evalPanBinOp operator left right))
           | _ => none
       | some access => (access.wordOp operator values).map .word
-  | .panOp .mul arguments, memoryAccess => do
+  | .panOp operator arguments, memoryAccess => do
       let values ← evalPanValueExps structs locals globals memory
         baseAddress topAddress bytesInWord arguments (memoryAccess := memoryAccess)
       match values with
-      | [.word left, .word right] => some (.word (left * right))
+      | [.word left, .word right] => (evalPanOp operator [left, right]).map .word
       | _ => none
   | .cmp operator left right, memoryAccess => do
       let left ← evalPanValueExp structs locals globals memory

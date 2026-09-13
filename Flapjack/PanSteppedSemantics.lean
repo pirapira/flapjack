@@ -85,11 +85,13 @@ private def evalPanValueExpSteps [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mu
       | [.word left, .word right] =>
           pure (.word (evalPanBinOp operator left right), steps + 1)
       | _ => none
-  | .panOp .mul arguments => do
+  | .panOp operator arguments => do
       let (values, steps) ← evalPanValueExpSteps.evalExps structs locals globals
         memory baseAddress topAddress bytesInWord arguments
       match values with
-      | [.word left, .word right] => pure (.word (left * right), steps + 1)
+      | [.word left, .word right] => do
+          let value ← evalPanOp operator [left, right]
+          pure (.word value, steps + 1)
       | _ => none
   | .cmp operator left right => do
       let (left, leftSteps) ← evalPanValueExpSteps structs locals globals memory

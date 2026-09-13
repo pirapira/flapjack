@@ -4,6 +4,7 @@ import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.SourceGlobalParity
 import Flapjack.Test.RegisterTransfer
 import Flapjack.Test.InstructionTransfer
+import Flapjack.Test.ArtifactFormat
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -598,6 +599,8 @@ def main : IO Unit := do
       globalSharedLoadArtifactMatchesGolden,
     checkBool "Lean source entry produces an artifact" minimalSourceArtifact,
     checkBool "Pancake computed local-store address compiles" nestedLocalStoreBytesAccepted,
+    checkBool "Pancake RISC-V artifact envelope markers" ArtifactFormat.pancakeEnvelopeMatches,
+    checkBool "Pancake RISC-V artifact prologue" ArtifactFormat.pancakePrologueMatches,
     Flapjack.Test.SourceGlobalParity.runChecks
     ].mapM id
   unless results.all id do

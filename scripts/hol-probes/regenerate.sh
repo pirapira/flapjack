@@ -78,3 +78,10 @@ run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
 # The set_globals probe observes FLOOKUP after the original map update.
 run_probe loop_sem_set_globals_probeScript.sml loop_sem_set_globals_probe.out \
   set_globals_new set_globals_sibling "$cake_dir/pancake/semantics/loopSemScript.sml"
+# The set_vars probe observes sptree lookups after the original alist_insert.
+run_probe loop_sem_set_vars_probeScript.sml loop_sem_set_vars_probe.out \
+  set_vars_basic set_vars_clock "$cake_dir/pancake/semantics/loopSemScript.sml"
+
+# The find_code probe observes the returned parameter map via sptree lookups.
+run_probe loop_sem_find_code_probeScript.sml loop_sem_find_code_probe.out \
+  find_code_label_first find_code_dup_first "$cake_dir/pancake/semantics/loopSemScript.sml"

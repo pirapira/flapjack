@@ -13,6 +13,8 @@ import Flapjack.Test.PanFlatStoreParity
 import Flapjack.Test.PanFlattenParity
 import Flapjack.Test.LoopGetVarsParity
 import Flapjack.Test.LoopSetGlobalsParity
+import Flapjack.Test.LoopSetVarsParity
+import Flapjack.Test.LoopFindCodeParity
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.ParsedFullSsaPipeline
@@ -615,7 +617,9 @@ def main : IO Unit := do
     Flapjack.Test.SourceGlobalParity.runChecks,
     Flapjack.Test.LoopToWord.runChecks,
     Flapjack.Test.LoopGetVarsParity.runChecks,
-    Flapjack.Test.LoopSetGlobalsParity.runChecks
+    Flapjack.Test.LoopSetGlobalsParity.runChecks,
+    Flapjack.Test.LoopSetVarsParity.runChecks,
+    Flapjack.Test.LoopFindCodeParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

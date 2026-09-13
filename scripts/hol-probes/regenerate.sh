@@ -114,6 +114,9 @@ run_probe loop_lang_nested_seq_probeScript.sml \
 run_probe loop_call_is_load_probeScript.sml \
   loop_call_is_load_probe.out \
   load store32 "$cake_dir/pancake/loop_callScript.sml"
+run_probe loop_call_comp_probeScript.sml \
+  loop_call_comp_probe.out \
+  skip fallback_keeps "$cake_dir/pancake/loop_callScript.sml"
 # The set_globals probe observes FLOOKUP after the original map update.
 run_probe loop_sem_set_globals_probeScript.sml loop_sem_set_globals_probe.out \
   set_globals_new set_globals_sibling "$cake_dir/pancake/semantics/loopSemScript.sml"

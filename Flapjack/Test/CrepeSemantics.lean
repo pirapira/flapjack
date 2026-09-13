@@ -13,6 +13,18 @@ def crepeSemanticsState : CrepState Nat :=
   { locals := fun _ => none
     memory := fun _ => none }
 
+/-! CakeML crepSem's set_var_def (crepSemScript.sml:55-57) updates exactly
+    one local in the finite-map state and leaves every other local unchanged.
+    updateCrepLocal is exercised at both the updated and untouched keys here. -/
+def crepeSetVarLocals : Nat → Option Nat :=
+  updateCrepLocal (fun name => if name == 2 then some 7 else none) 2 11
+
+example : crepeSetVarLocals 2 = some 11 := by
+  decide
+
+example : crepeSetVarLocals 3 = none := by
+  decide
+
 def crepeSemanticsPrimitive : CrepPrimitiveHandler Nat
   | .addCarry, [left, right, carry] => some [left + right + carry, 0]
   | _, _ => none

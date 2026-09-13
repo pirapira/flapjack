@@ -316,4 +316,24 @@ theorem wordRegisterToRiscv_lt_32 {name : Nat} (h : name < 32) :
     wordRegisterToRiscv name < 32 :=
   riscvRegisterName_lt_32 (stackRegisterOfWord_lt_32 h)
 
+/-- On the used word-register range `0..27` the stack-register convention
+composed with `riscv_names` is injective, so it can act as a bijection on the
+internally allocated registers.  Word register `28` is the only collision
+(it shares stack register `27`, the hardware zero register, with word register
+`0`) and is therefore reserved. -/
+theorem wordRegisterToRiscv_injective_of_lt_28 {left right : Nat}
+    (hleft : left < 28) (hright : right < 28)
+    (hsame : wordRegisterToRiscv left = wordRegisterToRiscv right) :
+    left = right := by
+  have hcheck : (List.range 28).all (fun candidate =>
+      (List.range 28).all (fun other =>
+        (wordRegisterToRiscv candidate != wordRegisterToRiscv other) ||
+          (candidate == other))) = true := by decide
+  have ha := List.all_eq_true.mp hcheck left (List.mem_range.mpr hleft)
+  have hb := List.all_eq_true.mp ha right (List.mem_range.mpr hright)
+  simp only [Bool.or_eq_true, bne_iff_ne, beq_iff_eq] at hb
+  rcases hb with hne | heq
+  · exact absurd hsame hne
+  · exact heq
+
 end Flapjack.RiscV

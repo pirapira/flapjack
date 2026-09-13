@@ -79,3 +79,6 @@ run_probe loop_sem_set_vars_probeScript.sml loop_sem_set_vars_probe.out \
 # The find_code probe observes the returned parameter map via sptree lookups.
 run_probe loop_sem_find_code_probeScript.sml loop_sem_find_code_probe.out \
   find_code_label_first find_code_dup_first "$cake_dir/pancake/semantics/loopSemScript.sml"
+# The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.
+run_probe loop_sem_loop_arith_probeScript.sml loop_sem_loop_arith_probe.out \
+  loop_arith_div loop_arith_longdiv_overflow "$cake_dir/pancake/semantics/loopSemScript.sml"

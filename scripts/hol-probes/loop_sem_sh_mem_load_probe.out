@@ -1,0 +1,5 @@
+return_zero_width=(NONE,set_byte 0w 3w 0w F = 3w,1)
+
+missing_local_inserts=(NONE,set_byte 0w 3w 0w F = 3w)
+
+domain_error=(SOME Error,F)

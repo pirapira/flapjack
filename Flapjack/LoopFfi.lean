@@ -181,6 +181,28 @@ def loopFfiSharedLoad [BEq α] [OfNat α 1] [Add α]
             let state := loopFfiUpdateLocal { state with ffi := ffi } name value
             (.normal state, state)
 
+/-! Direct source-shaped counterpart of `loopSem$sh_mem_load_def`
+    (`loopSemScript.sml:198-215`).  Unlike the Crepe operator adapter above,
+    this takes the source byte count directly and preserves the source's
+    zero-byte address rule. -/
+def loopFfiShMemLoad [BEq α] [OfNat α 1] [Add α]
+    (state : LoopFfiState α σ) (name : Nat) (address : α) (width : Nat) :
+    LoopFfiStep α σ :=
+  let alignedAddress := if width = 0 then address else state.byteAlign address
+  if !state.shMemaddrs alignedAddress then
+    (.error state, state)
+  else
+    match callFfi state.ffi (.sharedMem .mappedRead)
+        (loopFfiByteCount state width)
+        (state.wordToBytes alignedAddress false) with
+    | .final event =>
+        let state := loopFfiClearLocals state
+        (.finalFfi state event, state)
+    | .returned ffi bytes =>
+        let value := state.wordOfBytes state.bigEndian bytes
+        let state := loopFfiUpdateLocal { state with ffi := ffi } name value
+        (.normal state, state)
+
 def loopFfiSharedStore [BEq α] [OfNat α 1] [Add α]
     (state : LoopFfiState α σ) (operator : CrepMemOp)
     (name : Nat) (address : α) : LoopFfiStep α σ :=

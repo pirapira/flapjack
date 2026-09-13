@@ -50,7 +50,8 @@ run_probe() {
   if probe_needs_refresh "$output" "$probe" "$source"; then
     (cd "$cake_dir/pancake" && \
       "$hol_dir/bin/hol" run "$probe") >"$tmp"
-    sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" > "$output"
+    sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" \
+      | sed '/^<<HOL message:/,/^  pattern completion.*>>$/d' > "$output"
   fi
 }
 
@@ -152,6 +153,8 @@ run_probe loop_sem_cut_state_probeScript.sml loop_sem_cut_state_probe.out \
 run_probe loop_sem_cut_res_probeScript.sml loop_sem_cut_res_probe.out \
   result_short_circuit clock_decrement_and_cut \
   "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_sh_mem_load_probeScript.sml loop_sem_sh_mem_load_probe.out \
+  return_zero_width domain_error "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_exit_loop_probeScript.sml loop_sem_exit_loop_probe.out \
   exit_loop_break exit_loop_error "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.

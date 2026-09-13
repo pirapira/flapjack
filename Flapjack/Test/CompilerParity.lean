@@ -18,6 +18,7 @@ import Flapjack.Test.LoopSetGlobalsParity
 import Flapjack.Test.LoopSetVarsParity
 import Flapjack.Test.LoopFindCodeParity
 import Flapjack.Test.LoopPrimopParity
+import Flapjack.Test.LoopArithParity
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.ParsedFullSsaPipeline
@@ -624,6 +625,7 @@ def main : IO Unit := do
     Flapjack.Test.LoopSetVarsParity.runChecks,
     Flapjack.Test.LoopFindCodeParity.runChecks,
     Flapjack.Test.LoopPrimopParity.runChecks
+    Flapjack.Test.LoopArithParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

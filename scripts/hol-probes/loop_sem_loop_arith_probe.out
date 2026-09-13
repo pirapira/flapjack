@@ -1,0 +1,15 @@
+loop_arith_div=SOME [3]
+
+loop_arith_div_by_zero=NONE
+
+loop_arith_div_non_word=NONE
+
+loop_arith_longmul=SOME [1; 144]
+
+loop_arith_longmul_non_word=NONE
+
+loop_arith_longdiv=SOME [129; 1]
+
+loop_arith_longdiv_by_zero=NONE
+
+loop_arith_longdiv_overflow=NONE

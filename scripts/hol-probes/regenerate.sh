@@ -55,6 +55,7 @@ run_probe() {
 }
 
 # Run from Pancake's source directory so HOL's ordinary theory loader finds
+# Run from Pancake's source directory so HOL's ordinary theory loader finds
 # the checked-in theory objects without modifying the CakeML submodule or
 # requiring its CAKEMLDIR project mapping in this repository.
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
@@ -91,3 +92,6 @@ run_probe loop_sem_find_code_probeScript.sml loop_sem_find_code_probe.out \
   find_code_label_first find_code_dup_first "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_primop_probeScript.sml loop_sem_primop_probe.out \
   valid_no_carry invalid_nonword "$cake_dir/pancake/semantics/loopSemScript.sml"
+# The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.
+run_probe loop_sem_loop_arith_probeScript.sml loop_sem_loop_arith_probe.out \
+  loop_arith_div loop_arith_longdiv_overflow "$cake_dir/pancake/semantics/loopSemScript.sml"

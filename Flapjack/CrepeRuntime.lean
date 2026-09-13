@@ -255,7 +255,7 @@ def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
         let payload := state.ffiContext.wordToBytes address false
         match handler (.sharedMem operator name address payload) state with
         | .returned state bytes =>
-            let value := state.ffiContext.wordOfBytes state.ffiContext.bigEndian bytes
+            let value := state.ffiContext.wordOfBytes false bytes
             (.normal, { state with locals := updateCrepLocal state.locals name value })
         | .final event => (.finalFfi event, clearCrepRuntimeLocals state)
     | .store | .store8 | .store16 | .store32 =>
@@ -537,6 +537,8 @@ mutual
         | some conditionValue =>
             if conditionValue == 0 then
               some (.normal, state)
+            else if state.clock = 0 then
+              some (.timeout, clearCrepRuntimeLocals state)
             else
               let decremented := decCrepClock state
               match evalCrepRuntimeProg handler primitive fuel decremented body with

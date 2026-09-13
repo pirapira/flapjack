@@ -1,0 +1,9 @@
+get_vars_hit=SOME [Word 5w; Word 7w]
+
+get_vars_miss=NONE
+
+get_vars_empty=SOME []
+
+get_vars_order=SOME [Word 7w; Word 5w]
+
+get_vars_loc=SOME [Loc 9 0]

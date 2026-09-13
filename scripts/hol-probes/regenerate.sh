@@ -25,3 +25,10 @@ trap 'rm -f "$tmp"' EXIT
   "$hol_dir/bin/hol" run "$probe_dir/loop_to_word_probeScript.sml") >"$tmp"
 sed -n '/^find_var_empty=/,/^find_reg_imm_ctxt=/p' "$tmp" > \
   "$probe_dir/loop_to_word_probe.out"
+
+# The loopSem probe loads the semantics theory through a relative path from
+# the same Pancake directory.
+(cd "$cake_dir/pancake" && \
+  "$hol_dir/bin/hol" run "$probe_dir/loop_sem_get_vars_probeScript.sml") >"$tmp"
+sed -n '/^get_vars_hit=/,/^get_vars_loc=/p' "$tmp" > \
+  "$probe_dir/loop_sem_get_vars_probe.out"

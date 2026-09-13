@@ -101,11 +101,41 @@ def multiplicationOriginalProbeResult : Option (List (RiscV.Word 64)) :=
 #guard multiplicationDeclarations.isSome
 #guard multiplicationMachineResult == multiplicationOriginalProbeResult
 
+/-! The conditional fixture exercises source branch selection and linked
+    machine execution; its expected value is `return_if_13` in the original
+    panSem probe. -/
+def controlSource : String :=
+  "fun 1 main() { if (1) { return 13; } else { return 99; } }"
+
+def controlDeclarations : Option (List (Decl (RiscV.Word 64))) :=
+  (Parser.parseTopDecs (BitVec.ofInt 64) controlSource).toOption
+
+def controlLinked :
+    Option (List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
+  controlDeclarations.bind (fun declarations =>
+    compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      parsedCallPipelineRemoveConfig "main" declarations)
+
+def controlMachineResult : Option (List (RiscV.Word 64)) := do
+  let sections ← controlLinked
+  let entry ← parsedCallLookupEntry 2 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
+
+def controlOriginalProbeResult : Option (List (RiscV.Word 64)) :=
+  some [BitVec.ofNat 64 13]
+
+#guard controlDeclarations.isSome
+#guard controlMachineResult == controlOriginalProbeResult
+
 def runChecks : IO Bool := do
   let returnPass := machineResult == originalProbeResult
   let addPass := addMachineResult == originalAddProbeResult
   let multiplicationPass :=
     multiplicationMachineResult == multiplicationOriginalProbeResult
+  let controlPass := controlMachineResult == controlOriginalProbeResult
   if returnPass then
     IO.println "PASS return source-to-RISC-V execution matches original Pancake HOL probe"
   else
@@ -118,6 +148,10 @@ def runChecks : IO Bool := do
     IO.println "PASS Pancake multiplication source executes to original HOL result"
   else
     IO.println s!"FAIL Pancake multiplication execution: {multiplicationMachineResult}"
-  pure (returnPass && addPass && multiplicationPass)
+  if controlPass then
+    IO.println "PASS Pancake conditional source executes to original HOL result"
+  else
+    IO.println s!"FAIL Pancake conditional execution: {controlMachineResult}"
+  pure (returnPass && addPass && multiplicationPass && controlPass)
 
 end Flapjack.Test.EndToEndParity

@@ -34,3 +34,10 @@ val _ = print_eval "return_mul_42"
         (panLang$Panop panLang$Mul
           [panLang$Const (6w:8 word); panLang$Const (7w:8 word)]),
        (ARB:((8),unit) panSem$state)))``
+
+val _ = print_eval "return_if_13"
+  ``FST (panSem$evaluate
+      (panLang$If (panLang$Const (1w:8 word))
+        (panLang$Return (panLang$Const (13w:8 word)))
+        (panLang$Return (panLang$Const (99w:8 word))),
+       (ARB:((8),unit) panSem$state)))``

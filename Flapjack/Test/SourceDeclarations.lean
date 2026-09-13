@@ -65,6 +65,32 @@ example :
       [.exnDecl "E" .one, .exnDecl "E" .one]).isNone = true := by
   decide +kernel
 
+/-! CakeML's panSemScript.sml:861-871 semantics_decls_def runs
+    decs_stcnames before evaluate_decls and therefore rejects a duplicate
+    structure before the entry function is evaluated. -/
+example :
+    (evalPanValueProgram sourceDeclarationInitialState
+      sourceDeclarationNoPrimitive sourceDeclarationNoFfi 20
+      [.name "Pair" [("left", .one)],
+       .name "Pair" [("right", .one)],
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .return (.const 0), returnShape := .one }]
+      "main" []).isNone = true := by
+  decide +kernel
+
+example :
+    (panValueProgramResult sourceDeclarationInitialState
+      sourceDeclarationNoPrimitive sourceDeclarationNoFfi 20
+      [.name "Pair" [("left", .one), ("right", .one)],
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .return (.nField "right"
+             (.nStruct "Pair" [("left", .const 3), ("right", .const 5)])),
+           returnShape := .one }]
+      "main" []).bind sourceDeclarationSingleWord = some 5 := by
+  decide +kernel
+
 example :
     (evalPanValueDeclarations sourceDeclarationInitialState
       [.decl .one "answer" (.const 41),

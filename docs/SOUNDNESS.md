@@ -39,6 +39,10 @@ The following are open review or verification obligations:
    reviewed for adequacy against the corresponding Pancake/HOL statements.
    In particular, a true theorem about a weakened predicate can still be too
    weak to serve as the intended compiler-correctness theorem.
+   The top-level Pancake compiler-correctness theorem itself has not yet been
+   ported to Flapjack. Therefore the current collection of lower-level
+   theorems does not imply soundness or semantic preservation for the whole
+   source-to-RISC-V compiler.
 2. The RISC-V semantics in Flapjack have not yet been compared systematically
    with the Sail RISC-V model. The HOL reference model is available at
    `/home/zksecurity/HOL/examples/l3-machine-code/riscv/model/riscv.sml` in the

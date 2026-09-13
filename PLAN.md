@@ -2824,6 +2824,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
 - [x] Expose the exact `pan_to_target` entry wrapper through the primary
   non-linked, stack, spill, and graph full-SSA RISC-V entrypoints without
   changing the historical compatibility APIs.
+- [ ] Emit the source-facing RISC-V artifact in the original Pancake
+  `pan_to_target` format, including instruction/data sections, labels, symbol
+  naming, and runtime/image framing, so direct parity comparisons need no
+  conversion from Flapjack raw hex (flapjack-pxn.8.5.11).
 - [x] Export the generalized Loop-to-Word call-entry correctness contracts
   from the public Flapjack library aggregate for downstream RISC-V proofs.
 - [x] Expose target-wrapper siblings for heuristic, linear-scan, and numeric

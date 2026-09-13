@@ -1,0 +1,52 @@
+longdiv_code_software=Seq (Assign 10 (Const 0w))
+  (Seq (Assign 11 (Const (n2w (dimindex (:α)))))
+     (Call NONE (SOME 22) [0; 11; 6; 10; 10; 4; 2] NONE))
+
+longdiv1_code_software=If Test 2 (Reg 2) (Seq (Set (Temp 28w) (Var 10)) (Return 0 [8]))
+  (Seq
+     (Assign 6
+        (Op Or
+           [if dimindex (:α) ≤ 1 then Const 0w else ShiftN Lsr (Var 6) 1;
+            if dimindex (:α) − 1 = 0 then Var 4
+            else if dimindex (:α) ≤ dimindex (:α) − 1 then Const 0w
+            else ShiftN Lsl (Var 4) (dimindex (:α) − 1)]))
+     (Seq
+        (Assign 4
+           (if dimindex (:α) ≤ 1 then Const 0w else ShiftN Lsr (Var 4) 1))
+        (Seq
+           (Assign 8
+              (if dimindex (:α) ≤ 1 then Const 0w else ShiftN Lsl (Var 8) 1))
+           (Seq (Assign 2 (Op Sub [Var 2; Const 1w]))
+              (Seq
+                 (If Lower 12 (Reg 4)
+                    (Call NONE (SOME 22) [0; 2; 4; 6; 8; 10; 12] NONE) Skip)
+                 (Seq
+                    (If Equal 12 (Reg 4)
+                       (If Lower 10 (Reg 6)
+                          (Call NONE (SOME 22) [0; 2; 4; 6; 8; 10; 12] NONE)
+                          Skip) Skip)
+                    (Seq (Assign 8 (Op Add [Var 8; Const 1w]))
+                       (Seq
+                          (Assign 16
+                             (Op Xor
+                                [Var 6;
+                                 Const
+                                   (if 1 MOD dimword (:α) = 0 then 0w
+                                    else
+                                      n2w (dimword (:α) − 1 MOD dimword (:α)))]))
+                          (Seq
+                             (Assign 14
+                                (Op Xor
+                                   [Var 4;
+                                    Const
+                                      (if 1 MOD dimword (:α) = 0 then 0w
+                                       else
+                                         n2w
+                                           (dimword (:α) − 1 MOD dimword (:α)))]))
+                             (Seq (Assign 1 (Const 1w))
+                                (Seq (Inst (Arith (AddCarry 10 10 16 1)))
+                                   (Seq (Inst (Arith (AddCarry 12 12 14 1)))
+                                      (Call NONE (SOME 22)
+                                         [0; 2; 4; 6; 8; 10; 12] NONE)))))))))))))
+
+riscv_longdiv_encoding=[ArithI (ADDI (0w,0w,0w))]

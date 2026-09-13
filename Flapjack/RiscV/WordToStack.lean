@@ -376,6 +376,47 @@ def wordStackAddCarryInst (config : WordStackConfig)
         none
   | _ => none
 
+/-! Lower CakeML WordLang's four-register AddCarry without re-encoding it as
+    Pancake's five-register two-result operation.  The fourth register is
+    deliberately both the carry input and carry output. -/
+def wordStackCakeAddCarryInst (config : WordStackConfig)
+    (operation : WordArith) : Option (StackProg α) :=
+  match operation with
+  | .cakeAddCarry destination sourceLeft sourceRight carry =>
+      let safe name := match wordStackLocation config name with
+        | some location => wordStackAddCarryLocationSafe config location
+        | none => false
+      if safe destination && safe sourceLeft && safe sourceRight && safe carry then
+        match wordStackLocation config destination,
+          wordStackLocation config sourceLeft,
+          wordStackLocation config sourceRight,
+          wordStackLocation config carry with
+        | some (.register destination), some (.register sourceLeft),
+            some (.register sourceRight), some (.register carry) =>
+            some (.inst (.arith (.cakeAddCarry destination sourceLeft
+              sourceRight carry)))
+        | _, _, _, _ => do
+            let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+              config.addressScratch
+            let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+              config.specialScratch
+            let loadCarry ← wordStackLongMulMoveToPhysical config carry
+              config.carryScratch
+            let writeDestination ← wordStackLongMulMoveFromPhysical config destination
+              config.scratch
+            let writeCarry ← wordStackLongMulMoveFromPhysical config carry
+              config.carryScratch
+            pure (wordStackJoin loadLeft
+              (wordStackJoin loadRight
+                (wordStackJoin loadCarry
+                  (wordStackJoin
+                    (.inst (.arith (.cakeAddCarry config.scratch
+                      config.addressScratch config.specialScratch config.carryScratch)))
+                    (wordStackJoin writeDestination writeCarry)))))
+      else
+        none
+  | _ => none
+
 /-! CakeML's `LongDiv` uses a fixed four-register convention: the two-word
     dividend is in x3:x0, the quotient is written to x0, and the remainder to
     x3.  The source operation's first four register fields are metadata for
@@ -426,6 +467,8 @@ def wordStackArithInst (config : WordStackConfig) (operation : WordArith) :
       wordStackLongMulInst config operation
     | .addCarry _ _ _ _ _ =>
       wordStackAddCarryInst config operation
+    | .cakeAddCarry _ _ _ _ =>
+      wordStackCakeAddCarryInst config operation
     | .div destination dividend divisor =>
       wordStackDivInst config destination dividend divisor
     | .longDiv _ _ _ _ _ => wordStackLongDivInst config operation
@@ -1465,6 +1508,15 @@ def evalWordStackMachine [NeZero width]
       let state := wordStackMachineWriteRegister state destination
         (BitVec.ofNat width total)
       some (wordStackMachineWriteRegister state resultCarry
+        (BitVec.ofNat width (total / 2 ^ width)))
+  | .inst (.arith (.cakeAddCarry destination sourceLeft sourceRight carry)) =>
+      let left := state.registers sourceLeft
+      let right := state.registers sourceRight
+      let carryIn := if state.registers carry == 0 then 0 else 1
+      let total := left.toNat + right.toNat + carryIn
+      let state := wordStackMachineWriteRegister state destination
+        (BitVec.ofNat width total)
+      some (wordStackMachineWriteRegister state carry
         (BitVec.ofNat width (total / 2 ^ width)))
   | .inst (.arith (.div destination dividend divisor)) =>
       let divisorValue := state.registers divisor

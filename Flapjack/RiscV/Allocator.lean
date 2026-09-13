@@ -228,6 +228,8 @@ def wordInstReadVars : WordInst → List Nat
           [sourceLeft, sourceRight, quotient]
       | .addCarry _ _ sourceLeft sourceRight carryIn =>
           [sourceLeft, sourceRight, carryIn]
+      | .cakeAddCarry _ sourceLeft sourceRight carry =>
+          [sourceLeft, sourceRight, carry]
       | .div _ dividend divisor => [dividend, divisor]
   | .mem operator destination address =>
       match operator with
@@ -243,6 +245,8 @@ def wordInstWriteVars : WordInst → List Nat
           [destinationLeft, destinationRight]
       | .addCarry destination resultCarry _ _ _ =>
           [destination, resultCarry]
+      | .cakeAddCarry destination _ _ carry =>
+          [destination, carry]
       | .div destination _ _ => [destination]
   | .mem operator destination _ =>
       match operator with
@@ -266,6 +270,9 @@ def wordInstForcedClashes : WordInst → List (Nat × Nat)
   | .arith (.addCarry destination resultCarry sourceLeft sourceRight _) =>
       [(destination, resultCarry),
         (destination, sourceLeft), (destination, sourceRight)]
+  | .arith (.cakeAddCarry destination _sourceLeft sourceRight carry) =>
+      [(destination, carry),
+        (destination, sourceRight)]
   | _ => []
 
 def wordClashPairs (writes live : List Nat) : List (Nat × Nat) :=
@@ -419,6 +426,14 @@ def wordSsaRenameInst (state : WordSsaState) : WordInst → WordSsaState × Word
           let (state, freshCarry) := wordSsaFresh state resultCarry
           (state, .arith (.addCarry freshDestination freshCarry
             sourceLeft sourceRight carryIn))
+      | .cakeAddCarry destination sourceLeft sourceRight carry =>
+          let sourceLeft := wordSsaRead state sourceLeft
+          let sourceRight := wordSsaRead state sourceRight
+          let carry := wordSsaRead state carry
+          let (state, freshDestination) := wordSsaFresh state destination
+          let (state, freshCarry) := wordSsaFresh state carry
+          (state, .arith (.cakeAddCarry freshDestination sourceLeft
+            sourceRight freshCarry))
       | .div destination dividend divisor =>
           let dividend := wordSsaRead state dividend
           let divisor := wordSsaRead state divisor
@@ -1187,6 +1202,8 @@ def wordClashTreeDeltaInst : WordInst → WordClashTree
       .delta [destinationLeft, destinationRight] [quotient, sourceRight, sourceLeft]
   | .arith (.addCarry destination resultCarry sourceLeft sourceRight carryIn) =>
       .delta [destination, resultCarry] [carryIn, sourceRight, sourceLeft]
+  | .arith (.cakeAddCarry destination sourceLeft sourceRight carry) =>
+      .delta [destination, carry] [carry, sourceRight, sourceLeft]
   | .arith (.div destination dividend divisor) =>
       .delta [destination] [divisor, dividend]
   | .mem .load destination address
@@ -1722,6 +1739,9 @@ def wordApplyColourArith (colour : Nat → Nat) : WordArith → WordArith
   | .addCarry destination resultCarry sourceLeft sourceRight carryIn =>
       .addCarry (colour destination) (colour resultCarry)
         (colour sourceLeft) (colour sourceRight) (colour carryIn)
+  | .cakeAddCarry destination sourceLeft sourceRight carry =>
+      .cakeAddCarry (colour destination) (colour sourceLeft)
+        (colour sourceRight) (colour carry)
   | .div destination dividend divisor =>
       .div (colour destination) (colour dividend) (colour divisor)
 
@@ -2190,6 +2210,20 @@ def wordSpecialArithLocationsSafe (operation : WordArith)
                   sourceLeft != 31 && sourceRight != 31 && carryIn != 31
             | _, _, _, _, _ => true
       | _, _, _, _, _ => false
+  | .cakeAddCarry destination sourceLeft sourceRight carry =>
+      match lookupNatInfo destination locations,
+        lookupNatInfo sourceLeft locations,
+        lookupNatInfo sourceRight locations,
+        lookupNatInfo carry locations with
+      | some destination, some sourceLeft, some sourceRight, some carry =>
+          destination != carry &&
+            match destination, sourceLeft, sourceRight, carry with
+            | .register destination, .register sourceLeft,
+                .register sourceRight, .register carry =>
+                destination != sourceRight && destination != 31 &&
+                  sourceLeft != 31 && sourceRight != 31 && carry != 31
+            | _, _, _, _ => true
+      | _, _, _, _ => false
   | .longDiv _ _ _ _ _ | .div _ _ _ => true
 
 def wordProgSpecialLocationsSafe (locations : NatInfoMap WordLocation) :

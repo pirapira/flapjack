@@ -28,6 +28,14 @@ additionally probes `pan_op_def` at lines 191--193.
 `Flapjack.Test.LoopDecClockParity` probes `dec_clock_def` at lines 42--43 of
 the same source.
 `Flapjack.Test.LoopFixClockParity` probes `fix_clock_def` at lines 46--49.
+The `longdiv_code_probe.out` fixture probes the original software LongDiv
+helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
+RISC-V target's deliberate LongDiv encoding rejection.
+The original Pancake source-level support boundary is also explicit in
+`cakeml/pancake/proofs/loop_to_wordProofScript.sml:2285-2291`: `LLongDiv` is
+accepted by `loop_inst_ok` only for `x86_64`. Consequently, RISC-V parity must
+port the `data_to_word` helper path rather than add a direct RISC-V lowering
+for source `LLongDiv`.
 
 From the repository root, with HOL4 and the CakeML checkout available,
 regenerate both checked-in outputs with:

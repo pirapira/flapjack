@@ -25,6 +25,8 @@ respectively
 additionally probes `pan_op_def` at lines 191--193.
 `Flapjack.Test.LoopSetVarParity` probes `set_var_def` at
 `cakeml/pancake/semantics/loopSemScript.sml:108-110`.
+`Flapjack.Test.LoopDecClockParity` probes `dec_clock_def` at lines 42--43 of
+the same source.
 
 From the repository root, with HOL4 and the CakeML checkout available,
 regenerate both checked-in outputs with:

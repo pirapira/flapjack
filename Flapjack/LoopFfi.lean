@@ -33,6 +33,12 @@ structure LoopFfiState (α : Type u) (σ : Type v) where
   wordOfBytes : Bool → List UInt8 → α
   valueToNat : α → Nat
 
+/-! Exact executable counterpart of CakeML Loop's `dec_clock_def`
+    (`loopSemScript.sml:42-43`).  Saturating natural subtraction updates only
+    the clock field and leaves every other state component unchanged. -/
+def decLoopClock (state : LoopFfiState α σ) : LoopFfiState α σ :=
+  { state with clock := state.clock - 1 }
+
 inductive LoopFfiResult (α : Type u) (σ : Type v) where
   | normal (state : LoopFfiState α σ)
   | error (state : LoopFfiState α σ)

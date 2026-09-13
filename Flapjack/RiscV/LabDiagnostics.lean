@@ -146,10 +146,22 @@ def compileStackProgramNatListToRiscVChecked [NeZero width]
     (entryLabel initialLabel : Nat)
     (programs : List (Nat × StackProg Nat)) :
     Except LabLoweringError (List (Instruction width)) :=
-  compileLabProgramChecked context
-    ((programs.map (fun (sectionId, program) =>
-      labProgramToEntrySection sectionId entryLabel initialLabel
-        (stackRemoveComplete config program))).map labSectionNatToWord)
+  match stackProgramsWithLongDivRuntime config programs with
+  | none =>
+      compileLabProgramChecked context
+        ((programs.map (fun (sectionId, program) =>
+          labProgramToEntrySection sectionId entryLabel initialLabel
+            (stackRemoveComplete config program))).map labSectionNatToWord)
+  | some programs =>
+      compileLabProgramChecked context
+        ((programs.map (fun (sectionId, program) =>
+          if sectionId = cakeLongDiv1Location ||
+              sectionId = cakeLongDivLocation then
+            labProgramToEntrySection sectionId 0 initialLabel
+              (stackRemoveComplete config program)
+          else
+            labProgramToEntrySection sectionId entryLabel initialLabel
+              (stackRemoveComplete config program))).map labSectionNatToWord)
 
 def compileStackProgramNatListWithRaiseStubToRiscVChecked [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)
@@ -163,8 +175,20 @@ def compileStackProgramNatToRiscVChecked [NeZero width]
   (context : WordFfiContext) (config : StackRemoveConfig)
     (sectionId initialLabel : Nat) (program : StackProg Nat) :
     Except LabLoweringError (List (Instruction width)) :=
-  compileLabSectionChecked context
-    (labSectionNatToWord
-      (labProgramToSectionAfterStackRemove config sectionId initialLabel program))
+  match stackProgramsWithLongDivRuntime config [(sectionId, program)] with
+  | none =>
+      compileLabSectionChecked context
+        (labSectionNatToWord
+          (labProgramToSectionAfterStackRemove config sectionId initialLabel program))
+  | some programs =>
+      compileLabProgramChecked context
+        ((programs.map (fun (runtimeSection, runtimeProgram) =>
+          if runtimeSection = cakeLongDiv1Location ||
+              runtimeSection = cakeLongDivLocation then
+            labProgramToEntrySection runtimeSection 0 initialLabel
+              (stackRemoveComplete config runtimeProgram)
+          else
+            labProgramToSectionAfterStackRemove config runtimeSection
+              initialLabel runtimeProgram)).map labSectionNatToWord)
 
 end Flapjack.RiscV

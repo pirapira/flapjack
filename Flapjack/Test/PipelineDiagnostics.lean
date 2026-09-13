@@ -50,6 +50,34 @@ example :
       (.longDiv 0 3 3 0 6) = none := by
   rfl
 
+/-! Source-shaped normalized LongDiv is replaced before StackRemove, while the
+    low-level Lab selector above still rejects a direct LongDiv instruction. -/
+def longDivSourceEntryRemoveConfig : StackRemoveConfig :=
+  { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
+    stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
+
+#guard (RiscV.compileStackProgramNatToRiscVChecked (width := 64) { services := [] }
+  longDivSourceEntryRemoveConfig 29 0
+  (.inst (.arith (.longDiv 0 3 3 0 6)) : StackProg Nat)).isOk
+
+#guard
+  !(stackProgContainsDirectLongDiv
+    (stackProgReplaceDirectLongDiv
+      (.inst (.arith (.longDiv 0 3 3 0 6)) : StackProg Nat)))
+
+/-! The replacement adapter links both code-table sections and contains no
+    direct LongDiv instruction. -/
+#guard
+  (RiscV.compileStackProgramNatToRiscVChecked (width := 64) { services := [] }
+    longDivSourceEntryRemoveConfig 29 0 cakeLongDivStackAdapter).isOk
+
+#guard
+  match stackProgramsWithLongDivRuntime longDivSourceEntryRemoveConfig
+      [(29, cakeLongDivStackAdapter)] with
+  | some programs =>
+      programs.map Prod.fst = [22, 23, 29]
+  | none => false
+
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
       [⟨19, [.asm (.const 1 7) [] 0]⟩] =

@@ -1,4 +1,5 @@
 import Flapjack.RiscV.WordToStack
+import Flapjack.StackRemove
 
 /-!
 # CakeML software LongDiv code-table shape
@@ -85,6 +86,159 @@ def cakeLongDiv1StackCode (config : WordStackConfig) (width : Nat) :
 def cakeLongDivStackCode (config : WordStackConfig) (width : Nat) :
     Option (StackProg Nat) :=
   wordToStackProgNat config (cakeLongDivCode width)
+
+/-! The code-table entries are functions, so their formal variables are
+    reseated from the even StackLang ABI registers on entry.  This is the
+    corresponding `word_to_stack` function-entry step; compiling the raw body
+    alone would accidentally read the caller's physical registers directly. -/
+def cakeWordStackHelperRegister : Nat → Nat
+  | 0 => 16
+  | 1 => 17
+  | 2 => 18
+  | 4 => 19
+  | 6 => 20
+  | 8 => 21
+  | 10 => 22
+  | 11 => 23
+  | 12 => 24
+  | 14 => 25
+  | 16 => 26
+  | _ => 27
+
+def cakeWordStackHelperConfig (program : WordProg Nat) : WordStackConfig :=
+  { locations := (wordProgVariables program).eraseDups.map
+      (fun name => (name, .register (cakeWordStackHelperRegister name)))
+    scratch := 31
+    stackBase := 0
+    addressScratch := 29 }
+
+def cakeLongDiv1StackEntryCode (config : WordStackConfig) (width : Nat) :
+    Option (StackProg Nat) := do
+  let body ← cakeLongDiv1StackCode config width
+  let moves ← wordStackMovesFromPhysical config
+    [0, 2, 4, 6, 8, 10, 12] 2
+  pure (wordStackJoin moves body)
+
+def cakeLongDivStackEntryCode (config : WordStackConfig) (width : Nat) :
+    Option (StackProg Nat) := do
+  let body ← cakeLongDivStackCode config width
+  let moves ← wordStackMovesFromPhysical config [0, 2, 4, 6] 2
+  pure (wordStackJoin moves body)
+
+/-! Adapt the source helper's `Loc`/temporary result convention to the
+    normalized StackLang LongDiv convention used by this port.  The caller's
+    high and low words are x3 and x0; the helper receives them as the source
+    words for its four-argument `LongDiv` entry, returns the quotient in x2,
+    and leaves the remainder in CakeML's Temp 28. -/
+def cakeLongDivStackAdapter : StackProg Nat :=
+  stackSeq [
+    .arith .or 8 6 6,
+    .arith .or 4 8 8,
+    .arith .or 6 3 3,
+    .arith .or 8 0 0,
+    .call (some
+      (stackSeq [
+        .arith .or 0 2 2,
+        .get 3 (.temp 28)], 0, 0, 0))
+      (.label cakeLongDivLocation) none]
+
+def stackProgContainsDirectLongDiv : StackProg Nat → Bool
+  | .inst (.arith (.longDiv _ _ _ _ _)) => true
+  | .seq first second =>
+      stackProgContainsDirectLongDiv first ||
+        stackProgContainsDirectLongDiv second
+  | .ite _ _ _ thenBranch elseBranch =>
+      stackProgContainsDirectLongDiv thenBranch ||
+        stackProgContainsDirectLongDiv elseBranch
+  | .loop body => stackProgContainsDirectLongDiv body
+  | .call returnHandler _ handler =>
+      (match returnHandler with
+      | none => false
+      | some (program, _, _, _) => stackProgContainsDirectLongDiv program) ||
+      (match handler with
+      | none => false
+      | some (program, _, _) => stackProgContainsDirectLongDiv program)
+  | _ => false
+
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+def stackProgReplaceDirectLongDiv : StackProg Nat → StackProg Nat
+  | .inst (.arith (.longDiv _ _ _ _ _)) => cakeLongDivStackAdapter
+  | .seq first second =>
+      .seq (stackProgReplaceDirectLongDiv first)
+        (stackProgReplaceDirectLongDiv second)
+  | .ite operator condition right thenBranch elseBranch =>
+      .ite operator condition right
+        (stackProgReplaceDirectLongDiv thenBranch)
+        (stackProgReplaceDirectLongDiv elseBranch)
+  | .loop body => .loop (stackProgReplaceDirectLongDiv body)
+  | .call returnHandler target handler =>
+      .call
+        (match returnHandler with
+        | none => none
+        | some (program, link, returnLabel, entryLabel) =>
+            some (stackProgReplaceDirectLongDiv program, link,
+              returnLabel, entryLabel))
+        target
+        (match handler with
+        | none => none
+        | some (program, exceptionLabel, handlerLabel) =>
+            some (stackProgReplaceDirectLongDiv program, exceptionLabel,
+              handlerLabel))
+  | program => program
+
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+def stackProgContainsLongDivRuntimeCall : StackProg Nat → Bool
+  | .call returnHandler target handler =>
+      (match target with
+      | .label location => location = cakeLongDivLocation
+      | .register _ => false) ||
+      (match returnHandler with
+      | none => false
+      | some (program, _, _, _) => stackProgContainsLongDivRuntimeCall program) ||
+      (match handler with
+      | none => false
+      | some (program, _, _) => stackProgContainsLongDivRuntimeCall program)
+  | .seq first second =>
+      stackProgContainsLongDivRuntimeCall first ||
+        stackProgContainsLongDivRuntimeCall second
+  | .ite _ _ _ thenBranch elseBranch =>
+      stackProgContainsLongDivRuntimeCall thenBranch ||
+        stackProgContainsLongDivRuntimeCall elseBranch
+  | .loop body => stackProgContainsLongDivRuntimeCall body
+  | _ => false
+
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+def cakeLongDivRuntimeSections (config : StackRemoveConfig) :
+    Option (List (Nat × StackProg Nat)) := do
+  let width := config.bytesInWord * 8
+  let helperProgram : WordProg Nat :=
+    cakeWordSeq [cakeLongDivCode width, cakeLongDiv1Code width]
+  let wordConfig := cakeWordStackHelperConfig helperProgram
+  let longDiv1 ← cakeLongDiv1StackEntryCode wordConfig width
+  let longDiv ← cakeLongDivStackEntryCode wordConfig width
+  pure [(cakeLongDiv1Location, longDiv1), (cakeLongDivLocation, longDiv)]
+
+/-! Link the software helpers only when a lowered program contains the
+    CakeML LongDiv runtime call.  This keeps ordinary programs byte-for-byte
+    unchanged and makes the direct selector boundary observable. -/
+def stackProgramsWithLongDivRuntime (config : StackRemoveConfig)
+    (programs : List (Nat × StackProg Nat)) :
+    Option (List (Nat × StackProg Nat)) :=
+  if programs.any (fun program =>
+      stackProgContainsDirectLongDiv program.2 ||
+        stackProgContainsLongDivRuntimeCall program.2) then do
+    let helpers ← cakeLongDivRuntimeSections config
+    let expanded := programs.map (fun (sectionId, program) =>
+      (sectionId, stackProgReplaceDirectLongDiv program))
+    pure (helpers ++ expanded)
+  else
+    some programs
 
 example : cakeLongDiv1ShiftRight 1 6 = .const 0 := by
   rfl

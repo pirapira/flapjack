@@ -59,7 +59,6 @@
 # The handler execution theorem pair and their named machine values are used
 # by the source-to-machine simulation regressions.
 2 Flapjack/Test/HandlerExecution.lean
-1 Flapjack/Test/FullSsaTarget.lean
 1 Flapjack/Test/CorrectnessFfi.lean
 1 Flapjack/Test/SourceToLoop.lean
 

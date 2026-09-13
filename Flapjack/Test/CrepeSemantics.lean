@@ -79,6 +79,39 @@ example : crepeEmptyLocals 1 = none := by
 example : crepeEmptyLocals 2 = none := by
   rfl
 
+def crepeLookupFunctions : List (CompiledFunction Nat) :=
+  [{ name := "id", params := [1],
+     body := .return [.var 1], returnShape := .one }]
+
+def crepeLookupValid : Option (CrepProg Nat × (Nat → Option Nat)) :=
+  lookupCrepCode "id" [7] crepeLookupFunctions
+
+def crepeLookupDuplicateFunctions : List (CompiledFunction Nat) :=
+  [{ name := "duplicate", params := [1, 1],
+     body := .return [.var 1], returnShape := .one }]
+
+/- CakeML crepSem's lookup_code_def (crepSemScript.sml:76-84) rejects missing
+   names, arity mismatches, and duplicate formal names, and otherwise returns
+   the body with a fresh local map made from the parameter/value zip.  The
+   original call probe is `lookup_code.pnk`; its complete Cake output is
+   pinned in `OriginalPancakeProbes.lookupCode`. -/
+#guard lookupCode.source =
+  "fun 1 id(1 x) { return x; } fun 1 main() { return id(7); }"
+#guard lookupCode.cakeByteCount == 1016
+
+example : crepeLookupValid.map (fun result => result.2 1) = some (some 7) := by
+  decide
+
+example : lookupCrepCode "id" [] crepeLookupFunctions = none := by
+  decide
+
+example : lookupCrepCode "duplicate" [7, 8]
+    crepeLookupDuplicateFunctions = none := by
+  decide
+
+example : lookupCrepCode "missing" [7] crepeLookupFunctions = none := by
+  decide
+
 example : crepeSetVarLocals 2 = some 11 := by
   decide
 

@@ -1,0 +1,11 @@
+hit_first=SOME (Word 5w)
+
+hit_second=SOME (Word 7w)
+
+hit_sibling_removed=NONE
+
+missing_live=NONE
+
+empty_live=NONE
+
+loc_preserved=SOME (Loc 9 0)

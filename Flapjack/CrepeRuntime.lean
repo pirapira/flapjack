@@ -1,4 +1,5 @@
 import Flapjack.CrepeSemantics
+import Flapjack.PanValueFfiSemantics
 
 /-!
 Observable runtime boundary for the Crepe evaluator.
@@ -34,6 +35,19 @@ def natCrepRuntimeMemoryModel : PanMemoryModel Nat :=
     compare := fun _ _ _ => 0
     shift := fun _ _ _ => none }
 
+def natCrepRuntimeFfiContext : PanValueFfiContext Nat :=
+  { sharedDomain := fun _ => true
+    byteAlign := fun address => address
+    bigEndian := false
+    wordToBytes := fun value _ => [UInt8.ofNat value]
+    wordOfBytes := fun _ bytes =>
+      match bytes with
+      | value :: _ => value.toNat
+      | [] => 0
+    wordToByte := fun value => UInt8.ofNat value
+    byteToWord := fun value => value.toNat
+    valueToNat := id }
+
 structure CrepRuntimeState (α σ : Type u) where
   locals : Nat → Option α
   globals : α → Option α
@@ -45,6 +59,7 @@ structure CrepRuntimeState (α σ : Type u) where
       `mem_load_32` (panSemScript.sml:86-137). -/
   memoryModel : PanMemoryModel α
   bytesInWord : α
+  ffiContext : PanValueFfiContext α
   clock : Nat
   bigEndian : Bool
   ffi : σ
@@ -64,12 +79,13 @@ def clearCrepRuntimeLocals (state : CrepRuntimeState α σ) : CrepRuntimeState �
 
 inductive CrepRuntimeRequest (α : Type u) where
   | extCall (function : FunName)
-      (configuration configurationLength array arrayLength : α)
+      (configuration array : List UInt8)
   | sharedMem (operator : CrepMemOp) (name : Nat) (address : α)
+      (payload : List UInt8)
   deriving DecidableEq, Repr
 
 inductive CrepRuntimeFfiResponse (α σ ε : Type u) where
-  | returned (state : CrepRuntimeState α σ)
+  | returned (state : CrepRuntimeState α σ) (bytes : List UInt8)
   | final (event : ε)
 
 abbrev CrepRuntimeFfiHandler (α σ ε : Type u) :=
@@ -179,30 +195,83 @@ def crepRuntimeAssignExisting
     some ((names.zip values).foldl
       (fun locals (name, value) => updateCrepLocal locals name value) locals)
 
-def crepRuntimeExtCall (handler : CrepRuntimeFfiHandler α σ ε)
+def crepRuntimeReadBytes [Add α] [OfNat α 1]
+    (state : CrepRuntimeState α σ) (address : α) : Nat → Option (List UInt8)
+  | 0 => some []
+  | length + 1 => do
+      let value ← crepRuntimeLoadByte state address
+      let rest ← crepRuntimeReadBytes state (address + 1) length
+      pure (state.ffiContext.wordToByte value :: rest)
+termination_by length => length
+
+def crepRuntimeWriteBytes [BEq α] [Add α] [OfNat α 1]
+    (state : CrepRuntimeState α σ) (address : α) :
+    List UInt8 → Option (CrepRuntimeState α σ)
+  | [] => some state
+  | byte :: bytes => do
+      let tailState ← crepRuntimeWriteBytes state (address + 1) bytes
+      match crepRuntimeStoreByte tailState address
+          (state.ffiContext.byteToWord byte) with
+      | some updatedState => some updatedState
+      | none => some tailState
+termination_by bytes => sizeOf bytes
+
+def crepRuntimeExtCallValues [BEq α] [Add α] [OfNat α 1]
+    (handler : CrepRuntimeFfiHandler α σ ε)
+    (state : CrepRuntimeState α σ) (function : FunName)
+    (configuration configurationLength array arrayLength : α) :
+    CrepRuntimeStep α σ ε :=
+  match crepRuntimeReadBytes state configuration
+      (state.ffiContext.valueToNat configurationLength),
+      crepRuntimeReadBytes state array
+        (state.ffiContext.valueToNat arrayLength) with
+  | some configurationBytes, some arrayBytes =>
+      match handler (.extCall function configurationBytes arrayBytes) state with
+      | .returned state bytes =>
+          match crepRuntimeWriteBytes state array bytes with
+          | some state => (.normal, state)
+          | none => (.error, state)
+      | .final event => (.finalFfi event, state)
+  | _, _ => (.error, state)
+
+def crepRuntimeExtCall [BEq α] [Add α] [OfNat α 1]
+    (handler : CrepRuntimeFfiHandler α σ ε)
     (state : CrepRuntimeState α σ) (function : FunName)
     (configuration configurationLength array arrayLength : Nat) :
     CrepRuntimeStep α σ ε :=
   match state.locals configuration, state.locals configurationLength,
       state.locals array, state.locals arrayLength with
   | some configuration, some configurationLength, some array, some arrayLength =>
-      match handler (.extCall function configuration configurationLength array arrayLength) state with
-      | .returned state => (.normal, state)
-      | .final event => (.finalFfi event, state)
+      crepRuntimeExtCallValues handler state function configuration configurationLength
+        array arrayLength
   | _, _, _, _ => (.error, state)
 
 def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
     (state : CrepRuntimeState α σ) (operator : CrepMemOp)
     (name : Nat) (address : α) : CrepRuntimeStep α σ ε :=
-    if crepRuntimeSharedAddressValid state operator address then
-    match handler (.sharedMem operator name address) state with
-    | .returned state => (.normal, state)
-    | .final event =>
-        match operator with
-        | .load | .load8 | .load16 | .load32 =>
-            (.finalFfi event, clearCrepRuntimeLocals state)
-        | .store | .store8 | .store16 | .store32 =>
-            (.finalFfi event, state)
+  if crepRuntimeSharedAddressValid state operator address then
+    let alignedAddress := crepRuntimeSharedAddress state operator address
+    match operator with
+    | .load | .load8 | .load16 | .load32 =>
+        let payload := state.ffiContext.wordToBytes alignedAddress false
+        match handler (.sharedMem operator name alignedAddress payload) state with
+        | .returned state bytes =>
+            let value := state.ffiContext.wordOfBytes state.ffiContext.bigEndian bytes
+            (.normal, { state with locals := updateCrepLocal state.locals name value })
+        | .final event => (.finalFfi event, clearCrepRuntimeLocals state)
+    | .store | .store8 | .store16 | .store32 =>
+        match state.locals name with
+        | none => (.error, state)
+        | some value =>
+            let width := crepRuntimeMemWidth operator
+            let valueBytes := state.ffiContext.wordToBytes value false
+            let addressBytes := state.ffiContext.wordToBytes alignedAddress false
+            let payload :=
+              if width = 0 then valueBytes ++ addressBytes
+              else valueBytes.take width ++ addressBytes
+            match handler (.sharedMem operator name alignedAddress payload) state with
+            | .returned state _ => (.normal, state)
+            | .final event => (.finalFfi event, state)
   else
     (.error, state)
 
@@ -237,9 +306,8 @@ def crepRuntimeExtCallExp
       evalCrepFullExp state.locals state.memory state.baseAddress
         state.topAddress arrayLength with
   | some configuration, some configurationLength, some array, some arrayLength =>
-      match handler (.extCall function configuration configurationLength array arrayLength) state with
-      | .returned state => (.normal, state)
-      | .final event => (.finalFfi event, state)
+      crepRuntimeExtCallValues handler state function configuration configurationLength
+        array arrayLength
   | _, _, _, _ => (.error, state)
 
 def evalCrepRuntimeExp
@@ -308,6 +376,7 @@ def crepRuntimeCallerState (caller callee : CrepRuntimeState α σ) :
     memaddrs := callee.memaddrs
     shMemaddrs := callee.shMemaddrs
     clock := callee.clock
+    ffiContext := callee.ffiContext
     bigEndian := callee.bigEndian
     ffi := callee.ffi
     baseAddress := callee.baseAddress
@@ -553,29 +622,5 @@ theorem evalCrepRuntimeResult_skip
     evalCrepRuntimeResult handler primitive (fuel + 1) state .skip =
       some (.normal, state) := by
   simp [evalCrepRuntimeResult, evalCrepRuntimeProg]
-
-theorem evalCrepRuntimeResult_extCall_final
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (handler : CrepRuntimeFfiHandler α σ ε)
-    (primitive : CrepPrimitiveHandler α)
-    (fuel : Nat) (state : CrepRuntimeState α σ)
-    (function : FunName) (configuration configurationLength array arrayLength : Nat)
-    (configurationValue configurationLengthValue arrayValue arrayLengthValue : α)
-    (event : ε)
-    (hconfiguration : state.locals configuration = some configurationValue)
-    (hconfigurationLength : state.locals configurationLength = some configurationLengthValue)
-    (harray : state.locals array = some arrayValue)
-    (harrayLength : state.locals arrayLength = some arrayLengthValue)
-    (hhandler : handler
-      (.extCall function configurationValue configurationLengthValue arrayValue arrayLengthValue)
-      state = .final event) :
-    evalCrepRuntimeResult handler primitive (fuel + 1) state
-      (.extCall function configuration configurationLength array arrayLength) =
-      some (.finalFfi event, state) := by
-  simp [evalCrepRuntimeResult, evalCrepRuntimeProg, crepRuntimeExtCall,
-    hconfiguration, hconfigurationLength, harray, harrayLength, hhandler]
 
 end Flapjack

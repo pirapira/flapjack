@@ -527,6 +527,7 @@ def crepLoopRuntimeGlobalState : CrepRuntimeState Nat Unit :=
     shMemaddrs := fun _ => true
     memoryModel := natCrepRuntimeMemoryModel
     bytesInWord := 1
+    ffiContext := natCrepRuntimeFfiContext
     clock := 10
     bigEndian := false
     ffi := ()
@@ -534,7 +535,7 @@ def crepLoopRuntimeGlobalState : CrepRuntimeState Nat Unit :=
     topAddress := 100 }
 
 def crepLoopRuntimeHandler : CrepRuntimeFfiHandler Nat Unit Unit :=
-  fun _ state => .returned state
+  fun _ state => .returned state []
 
 def crepLoopRuntimeGlobalLoadState : CrepRuntimeState Nat Unit :=
   { crepLoopRuntimeGlobalState with

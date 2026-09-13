@@ -2,8 +2,11 @@ import Flapjack.CrepeSemantics
 import Flapjack.CrepeCorrectness
 import Flapjack.CrepeRuntime
 import Flapjack.Test.CrepCalls
+import Flapjack.Test.OriginalPancakeProbes
 
 namespace Flapjack
+
+open Flapjack.Test.OriginalPancakeProbes
 
 /-! Small executable witnesses for every control-result constructor in the
     full Crepe evaluator. These are deliberately word-polymorphic in the
@@ -18,6 +21,13 @@ def crepeSemanticsState : CrepState Nat :=
     updateCrepLocal is exercised at both the updated and untouched keys here. -/
 def crepeSetVarLocals : Nat → Option Nat :=
   updateCrepLocal (fun name => if name == 2 then some 7 else none) 2 11
+
+/- The source probe is the original Pancake redeclaration program.  Its
+   Cake-derived RISC-V output is pinned in `setVar`; the two equations below
+   check the corresponding `set_var_def` state transition in the Lean port. -/
+#guard setVar.source =
+  "fun 1 main() { var 1 x = 7; var 1 x = 11; return x; }"
+#guard setVar.cakeByteCount == 1012
 
 example : crepeSetVarLocals 2 = some 11 := by
   decide

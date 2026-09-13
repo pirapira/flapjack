@@ -48,9 +48,7 @@ def originalProbeResult : Option (List (RiscV.Word 64)) :=
 
 #guard declarations.isSome
 
-theorem compiled_source_executes_to_original_probe :
-    machineResult = originalProbeResult := by
-  native_decide
+#guard machineResult == originalProbeResult
 
 def runChecks : IO Bool := do
   if machineResult == originalProbeResult then

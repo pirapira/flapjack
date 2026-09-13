@@ -11,8 +11,10 @@ command used to regenerate its output.
 
 The probes currently cover the small `loop_to_word` slice used by
 `Flapjack.Test.LoopToWord`, the `panSem$mem_load` boundary used by
-`Flapjack.Test.PanMemoryParity`, and the `panSem$shape_of` boundary used by
-`Flapjack.Test.PanShapeParity`. Their source references are respectively
+`Flapjack.Test.PanMemoryParity`, the fixed-width load boundary used by
+`Flapjack.Test.PanFixedLoadParity`, and the `panSem$shape_of` boundary used by
+`Flapjack.Test.PanShapeParity`, plus the `panSem` word/value helpers used by
+`Flapjack.Test.PanWordParity`. Their source references are respectively
 `cakeml/pancake/loop_to_wordScript.sml` and
 `cakeml/pancake/semantics/panSemScript.sml`.
 
@@ -25,4 +27,7 @@ scripts/hol-probes/regenerate.sh
 
 Normal Lean CI consumes the checked-in output and does not require HOL4. A
 reviewer with HOL4 can rerun the command and inspect the diff. Each probe's
-declaration and source path make its reference boundary explicit.
+declaration and source path make its reference boundary explicit. The script
+is incremental: a fixture is rerun only when its probe, the Pancake theory it
+observes, or the script itself is newer than that fixture. Delete a fixture
+when a forced regeneration is desired.

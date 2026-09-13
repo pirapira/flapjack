@@ -1,0 +1,7 @@
+byte_hit=SOME 2w
+
+byte_miss=NONE
+
+load32_hit=SOME 0x4030201w
+
+load32_unaligned=NONE

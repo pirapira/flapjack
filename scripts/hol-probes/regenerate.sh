@@ -17,52 +17,65 @@ if [[ ! -f "$cake_dir/pancake/semantics/panSemScript.sml" ]]; then
   echo "CakeML Pancake source not found: $cake_dir/pancake/semantics/panSemScript.sml" >&2
   exit 2
 fi
+if [[ ! -f "$cake_dir/pancake/semantics/loopSemScript.sml" ]]; then
+  echo "CakeML Pancake source not found: $cake_dir/pancake/semantics/loopSemScript.sml" >&2
+  exit 2
+fi
 
 probe_dir="$repo_dir/scripts/hol-probes"
 tmp=$(mktemp)
-mem_tmp=$(mktemp)
-shape_tmp=$(mktemp)
-trap 'rm -f "$tmp" "$mem_tmp" "$shape_tmp"' EXIT
+trap 'rm -f "$tmp"' EXIT
+
+# HOL's `hol run` consumes the already-built CakeML theories; it does not need
+# to rebuild an unchanged theory.  Keep the checked-in fixtures incremental as
+# well: rerun a probe only when its script, its referenced Pancake source, or
+# this driver is newer than the fixture.  This also keeps regeneration quick
+# after an ordinary no-op invocation.
+probe_needs_refresh() {
+  local output="$1"
+  local probe="$2"
+  local source="$3"
+  [[ ! -f "$output" || "$probe" -nt "$output" || \
+     "$source" -nt "$output" || "$probe_dir/regenerate.sh" -nt "$output" ]]
+}
+
+run_probe() {
+  local probe_name="$1"
+  local output_name="$2"
+  local first_label="$3"
+  local last_label="$4"
+  local source="$5"
+  local probe="$probe_dir/$probe_name"
+  local output="$probe_dir/$output_name"
+  if probe_needs_refresh "$output" "$probe" "$source"; then
+    (cd "$cake_dir/pancake" && \
+      "$hol_dir/bin/hol" run "$probe") >"$tmp"
+    sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" > "$output"
+  fi
+}
 
 # Run from Pancake's source directory so HOL's ordinary theory loader finds
-# the checked-in loop_to_wordTheory objects without modifying the CakeML
-# submodule or requiring its CAKEMLDIR project mapping in this repository.
-(cd "$cake_dir/pancake" && \
-  "$hol_dir/bin/hol" run "$probe_dir/loop_to_word_probeScript.sml") >"$tmp"
-sed -n '/^find_var_empty=/,/^find_reg_imm_ctxt=/p' "$tmp" > \
-  "$probe_dir/loop_to_word_probe.out"
-
-(cd "$cake_dir/pancake" && \
-  "$hol_dir/bin/hol" run "$probe_dir/pan_mem_load_probeScript.sml") >"$mem_tmp"
-sed -n '/^one_hit=/,/^named_suffix_blocked=/p' "$mem_tmp" > \
-  "$probe_dir/pan_mem_load_probe.out"
-
-(cd "$cake_dir/pancake" && \
-  "$hol_dir/bin/hol" run "$probe_dir/pan_shape_of_probeScript.sml") >"$shape_tmp"
-sed -n '/^word=/,/^nstruct=/p' "$shape_tmp" > \
-  "$probe_dir/pan_shape_of_probe.out"
-
-# The loopSem probe loads the semantics theory through a relative path from
-# the same Pancake directory.
-(cd "$cake_dir/pancake" && \
-  "$hol_dir/bin/hol" run "$probe_dir/loop_sem_get_vars_probeScript.sml") >"$tmp"
-sed -n '/^get_vars_hit=/,/^get_vars_loc=/p' "$tmp" > \
-  "$probe_dir/loop_sem_get_vars_probe.out"
-
+# Run from Pancake's source directory so HOL's ordinary theory loader finds
+# the checked-in theory objects without modifying the CakeML submodule or
+# requiring its CAKEMLDIR project mapping in this repository.
+run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
+  find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
+run_probe pan_mem_load_probeScript.sml pan_mem_load_probe.out \
+  one_hit named_suffix_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \
+  word nstruct "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_word_helpers_probeScript.sml pan_word_helpers_probe.out \
+  is_word the_val_word "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
+  byte_hit load32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
+  get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The set_globals probe observes FLOOKUP after the original map update.
-(cd "$cake_dir/pancake" && \
-  "$hol_dir/bin/hol" run "$probe_dir/loop_sem_set_globals_probeScript.sml") >"$tmp"
-sed -n '/^set_globals_new=/,/^set_globals_sibling=/p' "$tmp" > \
-  "$probe_dir/loop_sem_set_globals_probe.out"
-
+run_probe loop_sem_set_globals_probeScript.sml loop_sem_set_globals_probe.out \
+  set_globals_new set_globals_sibling "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The set_vars probe observes sptree lookups after the original alist_insert.
-(cd "$cake_dir/pancake" && \
-  "$hol_dir/bin/hol" run "$probe_dir/loop_sem_set_vars_probeScript.sml") >"$tmp"
-sed -n '/^set_vars_basic=/,/^set_vars_clock=/p' "$tmp" > \
-  "$probe_dir/loop_sem_set_vars_probe.out"
-
+run_probe loop_sem_set_vars_probeScript.sml loop_sem_set_vars_probe.out \
+  set_vars_basic set_vars_clock "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The find_code probe observes the returned parameter map via sptree lookups.
-(cd "$cake_dir/pancake" && \
-  "$hol_dir/bin/hol" run "$probe_dir/loop_sem_find_code_probeScript.sml") >"$tmp"
-sed -n '/^find_code_label_first=/,/^find_code_dup_first=/p' "$tmp" > \
-  "$probe_dir/loop_sem_find_code_probe.out"
+run_probe loop_sem_find_code_probeScript.sml loop_sem_find_code_probe.out \
+  find_code_label_first find_code_dup_first "$cake_dir/pancake/semantics/loopSemScript.sml"

@@ -1,5 +1,6 @@
 import Flapjack.RiscV.CorrectnessStack
 import Flapjack.RiscV.Lab
+import Flapjack.RiscV.InstructionDataCommutation
 
 /-!
 # StackLang register simulation at the RISC-V boundary
@@ -1116,7 +1117,89 @@ theorem labCompilePlain_shift_ror_register_simulation
   rw [hshape] at hcode
   cases hcode
   exact wordStackRegisterRelation_executeRor source target destination left right
-    hrel hdestination hleft hright hdestinationNonzero hzero hwidth
-    hdestinationScratch hleftScratch hrightScratch
+      hrel hdestination hleft hright hdestinationNonzero hzero hwidth
+      hdestinationScratch hleftScratch hrightScratch
+
+/-!
+## Agreement relative to the one-time `riscv_names` relabeling
+
+The production LabLang code is relabeled exactly once, at the encoding
+boundary, through `relabelInstructions`.  Instead of restating every
+simulation lemma with `registerOfNat` rewritten, we can keep the abstract
+`WordStackMachineState` numbering (where register `0` is still the machine
+zero) and describe the model side of the boundary with
+`WordStackRelabeledRegisterRelation`: hardware slot `riscvForward register`
+holds abstract register `register`.  The committed commutation lemma
+`executeInstructions_transfer_relabel` then lifts a simulation of the
+internal numbering across the relabeling.
+-/
+
+/-- Register agreement across the one-time `riscv_names` relabeling: the
+hardware slot `riscvForward register` of the model holds the abstract machine's
+register `register`. -/
+def WordStackRelabeledRegisterRelation [NeZero width]
+    (source : WordStackMachineState width) (target : State width) : Prop :=
+  ∀ register (hregister : register < 32),
+    target.registers (riscvForward ⟨register, hregister⟩) = source.registers register
+
+/-- Transferring a state that already agrees with the abstract machine yields
+the relabeled agreement. -/
+theorem wordStackRelabeledRegisterRelation_of_transfer
+    [NeZero width] (source : WordStackMachineState width) (state : State width)
+    (hrel : WordStackRegisterRelation source state) :
+    WordStackRelabeledRegisterRelation source (transferState state) := by
+  intro register hregister
+  have hread := readRegister_transfer_forward state ⟨register, hregister⟩
+  exact hread.trans (hrel register hregister)
+
+/-- A register simulation of the internal numbering lifts across the one-time
+relabeling, given that no written register is hardware zero or the internal Cake
+zero register. -/
+theorem executeInstructions_transfer_relabel_registerRelation [NeZero width]
+    (source : WordStackMachineState width) (target : State width)
+    (instructions : List (Instruction width))
+    (hzero : ∀ instruction ∈ instructions,
+      ∀ register ∈ instructionWrites instruction, riscvForward register ≠ 0)
+    (hname : ∀ instruction ∈ instructions,
+      ∀ register ∈ instructionWrites instruction, register ≠ 0)
+    (hrel : WordStackRegisterRelation source
+      (executeInstructions target instructions)) :
+    WordStackRelabeledRegisterRelation source
+      (executeInstructions (transferState target)
+        (relabelInstructions instructions)) := by
+  rw [executeInstructions_transfer_relabel target instructions hzero hname]
+  exact wordStackRelabeledRegisterRelation_of_transfer source
+    (executeInstructions target instructions) hrel
+
+/-- The Cake-convention tick writes the internal zero register `27` with zero.
+When the abstract machine keeps `27` zero, the write is a no-op, so the register
+agreement is preserved. -/
+theorem wordStackRegisterRelation_executeTick_internal [NeZero width]
+    (source : WordStackMachineState width) (target : State width)
+    (hrel : WordStackRegisterRelation source target)
+    (hzero : source.registers 27 = 0) :
+    WordStackRegisterRelation source
+      (execute target (.addi 27 27 (0 : Word width))) := by
+  have hz : target.registers (27 : Fin 32) = 0 :=
+    (hrel 27 (by decide)).trans hzero
+  have hne : (27 : Fin 32) ≠ 0 := by decide
+  intro register hregister
+  by_cases hsame : register = 27
+  · subst register
+    change (writeRegister { target with pc := nextPc target } (27 : Fin 32)
+      (target.registers (27 : Fin 32) + 0)).registers
+        ⟨27, hregister⟩ = source.registers 27
+    have hfin : (⟨27, hregister⟩ : Fin 32) = (27 : Fin 32) := by
+      apply Fin.ext
+      rfl
+    rw [hfin]
+    simp [writeRegister, hne, hz, hzero]
+  · have hfin : (⟨register, hregister⟩ : Fin 32) ≠ (27 : Fin 32) := by
+      intro heq
+      exact hsame (congrArg Fin.val heq)
+    change (writeRegister { target with pc := nextPc target } (27 : Fin 32)
+      (target.registers (27 : Fin 32) + 0)).registers
+        ⟨register, hregister⟩ = source.registers register
+    simp [writeRegister, hne, hfin, hz, hrel register hregister]
 
 end Flapjack.RiscV

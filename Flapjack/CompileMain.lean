@@ -34,9 +34,10 @@ def hexBytes (values : List (BitVec 8)) : String :=
   String.intercalate " " (values.map hexByte)
 
 def usage : String :=
-  "Usage: lake exe flapjack-compile [SOURCE.pnk]\n" ++
+  "Usage: lake exe flapjack-compile [--sections] [SOURCE.pnk]\n" ++
   "Read Pancake source from SOURCE.pnk or stdin and emit RV64I bytes as " ++
-  "space-separated lowercase hexadecimal."
+  "space-separated lowercase hexadecimal.  With --sections, emit one line " ++
+  "per linked section as `<label> <address> <bytes>`."
 
 def readSource (arguments : List String) : IO (Option String) := do
   match arguments with
@@ -54,18 +55,36 @@ def readSource (arguments : List String) : IO (Option String) := do
       IO.Process.exit 2
 
 def compileMain (arguments : List String) : IO UInt32 := do
-  let some source ← readSource arguments | return 0
-  match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
-      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
-      "main" source with
-  | .ok artifact =>
-      for warning in artifact.warnings do
-        IO.eprintln s!"warning: {repr warning}"
-      IO.println (hexBytes artifact.bytes)
-      return 0
-  | .error error =>
-      IO.eprintln s!"flapjack-compile: {repr error}"
-      return 1
+  let (sectionsMode, rest) :=
+    match arguments with
+    | "--sections" :: rest => (true, rest)
+    | _ => (false, arguments)
+  let some source ← readSource rest | return 0
+  if sectionsMode then
+    match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
+        (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
+        "main" source with
+    | .ok image =>
+        for warning in image.warnings do
+          IO.eprintln s!"warning: {repr warning}"
+        for encoded in image.sections do
+          IO.println s!"{encoded.label} {encoded.address.toNat} {hexBytes encoded.bytes}"
+        return 0
+    | .error error =>
+        IO.eprintln s!"flapjack-compile: {repr error}"
+        return 1
+  else
+    match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+        (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
+        "main" source with
+    | .ok artifact =>
+        for warning in artifact.warnings do
+          IO.eprintln s!"warning: {repr warning}"
+        IO.println (hexBytes artifact.bytes)
+        return 0
+    | .error error =>
+        IO.eprintln s!"flapjack-compile: {repr error}"
+        return 1
 
 end Flapjack
 

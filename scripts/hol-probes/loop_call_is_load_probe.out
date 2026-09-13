@@ -1,0 +1,8 @@
+load=T
+load8=T
+load16=T
+load32=T
+store=F
+store8=F
+store16=F
+store32=F

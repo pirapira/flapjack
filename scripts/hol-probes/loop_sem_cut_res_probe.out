@@ -1,0 +1,7 @@
+result_short_circuit=(SOME (Break 3),7)
+
+cut_missing_error=(SOME Error,SOME (Word 5w),7)
+
+clock_zero_timeout=(SOME TimeOut,NONE,0)
+
+clock_decrement_and_cut=(NONE,SOME (Word 5w),NONE,4)

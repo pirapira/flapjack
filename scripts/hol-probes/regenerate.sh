@@ -149,6 +149,9 @@ run_probe loop_sem_eval_probeScript.sml loop_sem_eval_probe.out \
   const top_addr "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_cut_state_probeScript.sml loop_sem_cut_state_probe.out \
   hit_first loc_preserved "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_cut_res_probeScript.sml loop_sem_cut_res_probe.out \
+  result_short_circuit clock_decrement_and_cut \
+  "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_exit_loop_probeScript.sml loop_sem_exit_loop_probe.out \
   exit_loop_break exit_loop_error "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.

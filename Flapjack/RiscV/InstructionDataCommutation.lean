@@ -200,4 +200,37 @@ theorem execute_transferState_storeHalf_commutes (state : State width)
       transferState (execute state (.storeHalf source address)) :=
   execute_transfer_relabel_noWrites state _ (by simp [instructionWrites])
 
+/-- Relabel every register field of an instruction sequence through the CakeML
+`riscv_names` map. -/
+def relabelInstructions (instructions : List (Instruction width)) :
+    List (Instruction width) :=
+  instructions.map relabelInstruction
+
+/-- Running a relabeled instruction sequence on the transferred state is the same
+as transferring the state after running the original sequence, provided every
+written register avoids both hardware zero and the internal Cake zero register. -/
+theorem executeInstructions_transfer_relabel [NeZero width] (state : State width)
+    (instructions : List (Instruction width))
+    (hzero : ∀ instruction ∈ instructions,
+      ∀ register ∈ instructionWrites instruction, riscvForward register ≠ 0)
+    (hname : ∀ instruction ∈ instructions,
+      ∀ register ∈ instructionWrites instruction, register ≠ 0) :
+    executeInstructions (transferState state) (relabelInstructions instructions) =
+      transferState (executeInstructions state instructions) := by
+  induction instructions generalizing state with
+  | nil => rfl
+  | cons instruction rest induction =>
+      simp only [relabelInstructions, List.map, executeInstructions]
+      rw [execute_transfer_relabel state instruction
+        (fun register member => hzero instruction (by simp) register member)
+        (fun register member => hname instruction (by simp) register member)]
+      change executeInstructions (transferState (execute state instruction))
+          (relabelInstructions rest) =
+        transferState (executeInstructions (execute state instruction) rest)
+      exact induction (execute state instruction)
+        (fun instruction member register written =>
+          hzero instruction (by simp [member]) register written)
+        (fun instruction member register written =>
+          hname instruction (by simp [member]) register written)
+
 end Flapjack.RiscV

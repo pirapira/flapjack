@@ -1,0 +1,5 @@
+word=One
+
+rstruct=Comb [One; One]
+
+nstruct=Named «Pair»

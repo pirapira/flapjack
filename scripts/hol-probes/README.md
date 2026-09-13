@@ -10,8 +10,9 @@ when it records the original source definition, the probe source, and the
 command used to regenerate its output.
 
 The probes currently cover the small `loop_to_word` slice used by
-`Flapjack.Test.LoopToWord` and the `panSem$mem_load` boundary used by
-`Flapjack.Test.PanMemoryParity`. Their source references are respectively
+`Flapjack.Test.LoopToWord`, the `panSem$mem_load` boundary used by
+`Flapjack.Test.PanMemoryParity`, and the `panSem$shape_of` boundary used by
+`Flapjack.Test.PanShapeParity`. Their source references are respectively
 `cakeml/pancake/loop_to_wordScript.sml` and
 `cakeml/pancake/semantics/panSemScript.sml`.
 

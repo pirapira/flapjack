@@ -250,11 +250,10 @@ def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
     (state : CrepRuntimeState α σ) (operator : CrepMemOp)
     (name : Nat) (address : α) : CrepRuntimeStep α σ ε :=
   if crepRuntimeSharedAddressValid state operator address then
-    let alignedAddress := crepRuntimeSharedAddress state operator address
     match operator with
     | .load | .load8 | .load16 | .load32 =>
-        let payload := state.ffiContext.wordToBytes alignedAddress false
-        match handler (.sharedMem operator name alignedAddress payload) state with
+        let payload := state.ffiContext.wordToBytes address false
+        match handler (.sharedMem operator name address payload) state with
         | .returned state bytes =>
             let value := state.ffiContext.wordOfBytes state.ffiContext.bigEndian bytes
             (.normal, { state with locals := updateCrepLocal state.locals name value })
@@ -265,11 +264,11 @@ def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
         | some value =>
             let width := crepRuntimeMemWidth operator
             let valueBytes := state.ffiContext.wordToBytes value false
-            let addressBytes := state.ffiContext.wordToBytes alignedAddress false
+            let addressBytes := state.ffiContext.wordToBytes address false
             let payload :=
               if width = 0 then valueBytes ++ addressBytes
               else valueBytes.take width ++ addressBytes
-            match handler (.sharedMem operator name alignedAddress payload) state with
+            match handler (.sharedMem operator name address payload) state with
             | .returned state _ => (.normal, state)
             | .final event => (.finalFfi event, state)
   else

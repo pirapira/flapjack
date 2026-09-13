@@ -128,6 +128,12 @@ example : evalCrepOp .mul [6] = none := by
 example : evalCrepOp .mul [6, 7, 8] = none := by
   decide
 
+/- CakeML crepSem's dec_clock_def (crepSemScript.sml:145-148) decrements the
+   clock with saturating natural subtraction and preserves every other state
+   field.  The original `tick` probe is pinned in `OriginalPancakeProbes.decClock`. -/
+#guard decClock.source = "fun 1 main() { tick; return 7; }"
+#guard decClock.cakeByteCount == 1012
+
 example : crepeSetVarLocals 2 = some 11 := by
   decide
 
@@ -245,6 +251,12 @@ def crepeRuntimeState : CrepRuntimeState Nat Unit :=
     ffi := ()
     baseAddress := 0
     topAddress := 100 }
+
+example : (decCrepClock { crepeRuntimeState with clock := 10 }).clock = 9 := by
+  rfl
+
+example : (decCrepClock { crepeRuntimeState with clock := 0 }).clock = 0 := by
+  rfl
 
 def crepeRuntimeFinalHandler : CrepRuntimeFfiHandler Nat Unit String :=
   fun request state =>

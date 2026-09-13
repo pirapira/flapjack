@@ -1,0 +1,1 @@
+fun 1 main() { tick; return 7; }

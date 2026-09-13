@@ -15,6 +15,7 @@ namespace Flapjack.RiscV
 inductive LabUnsupportedFeature where
   | heapAlloc
   | halt
+  | longDiv
   | loweringFailure
   deriving DecidableEq, Repr
 
@@ -30,6 +31,7 @@ def labLoweringError (sectionId position : Nat)
 
 def labPlainUnsupportedFeature [NeZero width] :
     LabPlain (Word width) → Option LabUnsupportedFeature
+  | .word (.arith (.longDiv _ _ _ _ _)) => some .longDiv
   | _ => none
 
 def labPlainLoweringError [NeZero width] (sectionId position : Nat)

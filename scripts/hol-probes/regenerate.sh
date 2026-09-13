@@ -78,6 +78,9 @@ run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \
   word named "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \
   delete_hit update_hit "$cake_dir/pancake/semantics/panSemScript.sml"
+# The pan_primop probe prints numeric w2n values of the returned RStruct.
+run_probe pan_sem_pan_primop_probeScript.sml pan_sem_pan_primop_probe.out \
+  pan_primop_basic pan_primop_non_word "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
   get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The set_globals probe observes FLOOKUP after the original map update.

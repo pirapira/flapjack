@@ -21,8 +21,9 @@ byte comparison are:
 
 1. A preprocessor macro block defining `cdecl`/`wcdecl`/`wcml`/`makesym`.
 2. A `.data` section with the runtime `cml_heap`, `cml_stack`,
-   `cml_stackend`, `cake_bitmaps` (`.quad 4`) and `cake_bitmaps_buffer_begin`
-   / `cake_bitmaps_buffer_end` globals.
+   `cml_stackend`, `cake_bitmaps` (the initial `.quad 4` word followed by
+   source call-continuation bitmap words when present) and
+   `cake_bitmaps_buffer_begin` / `cake_bitmaps_buffer_end` globals.
 3. `.text` / `.p2align 3` and the C entry `cdecl(cml_main)` which loads
    `cake_main` and jumps to it.
 4. The shared runtime stubs, named
@@ -70,6 +71,9 @@ cake_main:
 * The supported RV64 runtime prefix is byte-equivalent to CakeML and occupies
   1000 bytes: Init 756, Halt0 8, Halt2 8, GC 40, Raise 36, and StoreConsts
   152. The generated entry wrapper therefore starts at offset 1000.
+* The bitmap table preserves CakeML's initial word and its terminating `2`
+  words for source call continuations; the checked-in `bitmap_calls.pnk`
+  fixture exercises the `.quad 4,2,2` case.
 * Symbol naming follows Cake runtime numbering: cml__Init_0 through
   cml__StoreConsts_5, cml_generated_main_6, and cml_<name>_<N> for source
   functions.

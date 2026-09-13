@@ -30,6 +30,12 @@ def sampleBytes : List (BitVec 8) :=
 #guard runtimeSectionSymbolName [] 2 == "cml__GC_3"
 #guard runtimeSectionSymbolName [] 3 == "cml_generated_main_6"
 
+def bitmapCall : CrepProg Nat :=
+  .call (some ([], none)) "f" []
+
+#guard crepBitmapCallEntries bitmapCall = 1
+#guard crepBitmapCallEntries (.seq bitmapCall bitmapCall) = 2
+
 def hasAll (needles lines : List String) : Bool :=
   needles.all (fun needle => lines.contains needle)
 

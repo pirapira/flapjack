@@ -29,8 +29,16 @@ fun print_div label q =
   end;
 
 val fs =
-  ``(((λ(name:ffi$ffiname). λst. λconf. λbytes. ffi$Oracle_return st bytes), ()):
+  ``(((λ(name:ffi$ffiname). λst. λconf. λbytes. ffi$Oracle_return st bytes), ()): 
       unit pan_itreeSem$fst)``;
+
+val fs_short =
+  ``(((λ(name:ffi$ffiname). λst. λconf. λbytes.
+       ffi$Oracle_return st [1w:8 word]), ()): unit pan_itreeSem$fst)``;
+
+val fs_final =
+  ``(((λ(name:ffi$ffiname). λst. λconf. λbytes.
+       ffi$Oracle_final ffi$FFI_failed), ()): unit pan_itreeSem$fst)``;
 
 val _ = print_eval "ret" ``(comp_ffi ^fs
   (Ret (INL (INL ffi$FFI_failed)):
@@ -41,6 +49,16 @@ val _ = print_eval "tau" ``(comp_ffi ^fs
     (unit) pan_itreeSem$ptree))``;
 
 val _ = print_eval "return" ``(comp_ffi ^fs
+  (Vis (ffi$ExtCall «foo», [], [1w:8 word])
+    (λr. Ret (INL (INL ffi$FFI_failed))):
+    (unit) pan_itreeSem$ptree))``;
+
+val _ = print_eval "length_failure" ``(comp_ffi ^fs_short
+  (Vis (ffi$ExtCall «foo», [], [1w:8 word; 2w:8 word])
+    (λr. Ret (INL (INL ffi$FFI_failed))):
+    (unit) pan_itreeSem$ptree))``;
+
+val _ = print_eval "final" ``(comp_ffi ^fs_final
   (Vis (ffi$ExtCall «foo», [], [1w:8 word])
     (λr. Ret (INL (INL ffi$FFI_failed))):
     (unit) pan_itreeSem$ptree))``;

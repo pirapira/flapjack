@@ -102,6 +102,9 @@ def forbiddenEvaluate (_clock : Nat) : LoopMachineStep :=
 def divergingEvaluate (_clock : Nat) : LoopMachineStep :=
   (some .timeOut, emptyState 0)
 
+def finalFfiEvaluate (_clock : Nat) : LoopMachineStep :=
+  (some (.finalFfi (.word 9)), emptyState 0)
+
 def observeStep (step : LoopMachineStep) :
     Option (LoopMachineResult LoopWordLoc) × Nat :=
   (step.1, step.2.clock)

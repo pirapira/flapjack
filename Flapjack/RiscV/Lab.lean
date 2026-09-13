@@ -642,10 +642,18 @@ def compileStackProgramNatListWithHaltToRiscV [NeZero width]
     (entryLabel initialLabel : Nat)
     (programs : List (Nat × StackProg Nat)) :
     Option (List (Instruction width)) :=
-  compileLabProgramWithHalt context
-    ((programs.map (fun (sectionId, program) =>
-      labProgramToEntrySection sectionId entryLabel initialLabel
-        (stackRemoveComplete config program))).map labSectionNatToWord)
+  match stackProgramsWithLongDivRuntime config programs with
+  | none => none
+  | some programs =>
+      compileLabProgramWithHalt context
+        ((programs.map (fun (sectionId, program) =>
+          if sectionId = cakeLongDiv1Location ||
+              sectionId = cakeLongDivLocation then
+            labProgramToEntrySection sectionId 0 initialLabel
+              (stackRemoveComplete config program)
+          else
+            labProgramToEntrySection sectionId entryLabel initialLabel
+              (stackRemoveComplete config program))).map labSectionNatToWord)
 
 /-! StackAlloc-aware composition.  CakeML's allocator pass installs a runtime
     collector stub as a separate section and rewrites heap allocation into a
@@ -687,10 +695,18 @@ def compileStackProgramNatListLinkedToRiscV [NeZero width]
     (entryLabel initialLabel : Nat)
     (programs : List (Nat × StackProg Nat)) :
     Option (List (Nat × Word width × List (Instruction width))) :=
-  compileLabProgramLinked context
-    ((programs.map (fun (sectionId, program) =>
-      labProgramToEntrySection sectionId entryLabel initialLabel
-        (stackRemoveComplete config program))).map labSectionNatToWord)
+  match stackProgramsWithLongDivRuntime config programs with
+  | none => none
+  | some programs =>
+      compileLabProgramLinked context
+        ((programs.map (fun (sectionId, program) =>
+          if sectionId = cakeLongDiv1Location ||
+              sectionId = cakeLongDivLocation then
+            labProgramToEntrySection sectionId 0 initialLabel
+              (stackRemoveComplete config program)
+          else
+            labProgramToEntrySection sectionId entryLabel initialLabel
+              (stackRemoveComplete config program))).map labSectionNatToWord)
 
 /-! Linked counterpart of the bitmap/simple-GC entry point.  Keeping the
 runtime sections in the same Lab linker as ordinary functions preserves their
@@ -703,12 +719,22 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscV
     (entryLabel initialLabel : Nat)
     (programs : List (Nat × StackProg Nat)) :
     Option (List (Nat × Word width × List (Instruction width))) :=
-  compileLabProgramLinkedWithHalt context
-    (((((stackRaiseStubLocation, stackRaiseStub false removeConfig.addressScratch) ::
+  let programs :=
+    (stackRaiseStubLocation, stackRaiseStub false removeConfig.addressScratch) ::
       stackAllocCompileWithSimpleGcAndStoreConsts allocConfig gcConfig
-        storeConstsLocation registerCount programs).map (fun (sectionId, program) =>
-          labProgramToEntrySection sectionId entryLabel initialLabel
-            (stackRemoveComplete removeConfig program))).map labSectionNatToWord))
+        storeConstsLocation registerCount programs
+  match stackProgramsWithLongDivRuntime removeConfig programs with
+  | none => none
+  | some programs =>
+      compileLabProgramLinkedWithHalt context
+        (((programs.map (fun (sectionId, program) =>
+          if sectionId = cakeLongDiv1Location ||
+              sectionId = cakeLongDivLocation then
+            labProgramToEntrySection sectionId 0 initialLabel
+              (stackRemoveComplete removeConfig program)
+          else
+            labProgramToEntrySection sectionId entryLabel initialLabel
+              (stackRemoveComplete removeConfig program))).map labSectionNatToWord))
 
 def compileStackProgramNatListLinkedWithRaiseStubToRiscV [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)

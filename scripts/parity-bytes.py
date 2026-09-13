@@ -15,8 +15,8 @@ The shared parser reconstructs every ``makesym`` section and normalizes only
 the deterministic symbol prefix/suffix (``cml_generated_main_7`` ->
 ``generated_main``, ``cml_main_7`` -> ``main``).  Programs the original
 compiler rejects are skipped.  For every accepted program the script reports
-each user function whose bytes differ between the two compilers, plus the
-entry section and any symbol/layout difference.
+each runtime/user section whose bytes or base differs between the two
+compilers, plus the generated entry and any symbol/layout difference.
 
 A *gap* is a byte mismatch in the generated entry or a user function.  The
 script prints the first mismatch per section and exits non-zero when any gap
@@ -125,6 +125,44 @@ def hexstr(data):
     return " ".join(f"{byte:02x}" for byte in data)
 
 
+def compare_section(name, cake_section, flap_section, owner, quiet):
+    """Compare one named section, including its offset and byte payload."""
+    cake_base, cake_data = cake_section
+    flap_base, flap_data = flap_section
+    if cake_base == flap_base and cake_data == flap_data:
+        return 0
+
+    if not quiet:
+        if cake_base != flap_base:
+            print(f"{owner} {name} layout mismatch")
+            print(f"  cake base: {cake_base}")
+            print(f"  flapjack base: {flap_base}")
+        if cake_data != flap_data:
+            print(f"{owner} {name} mismatch")
+            print(f"  cake     : {hexstr(cake_data)}")
+            print(f"  flapjack : {hexstr(flap_data)}")
+    return 1
+
+
+def compare_section_maps(name, cake_sections, flap_sections, owner, quiet):
+    """Compare exact-name sections and report missing/extra symbols."""
+    gaps = 0
+    for section in sorted(cake_sections):
+        if section not in flap_sections:
+            gaps += 1
+            if not quiet:
+                print(f"{owner} {section} missing in flapjack")
+            continue
+        gaps += compare_section(
+            name, cake_sections[section], flap_sections[section], owner, quiet
+        )
+    for section in sorted(set(flap_sections) - set(cake_sections)):
+        gaps += 1
+        if not quiet:
+            print(f"{owner} {section} unexpected in flapjack")
+    return gaps
+
+
 def compare(path, cake, flapjack, quiet):
     name = os.path.basename(path)
     cake_sections = cake_assembly(path, cake)
@@ -137,21 +175,31 @@ def compare(path, cake, flapjack, quiet):
         print(f"{name}: flapjack rejects (GAP)")
         return 1
 
-    _, cake_entry, cake_user = classify(cake_sections)
-    _, flap_entry, flap_user = classify(flap_sections)
+    cake_runtime, cake_entry, cake_user = classify(cake_sections)
+    flap_runtime, flap_entry, flap_user = classify(flap_sections)
     gaps = 0
+
+    gaps += compare_section_maps(
+        name, cake_runtime, flap_runtime, "runtime", quiet
+    )
 
     if cake_entry is not None:
         if flap_entry is None:
             gaps += 1
             if not quiet:
                 print(f"{name}: generated_main missing in flapjack")
-        elif cake_entry[2] != flap_entry[2]:
-            gaps += 1
-            if not quiet:
-                print(f"{name}: generated_main mismatch")
-                print(f"  cake     : {hexstr(cake_entry[2])}")
-                print(f"  flapjack : {hexstr(flap_entry[2])}")
+        else:
+            gaps += compare_section(
+                name,
+                (cake_entry[1], cake_entry[2]),
+                (flap_entry[1], flap_entry[2]),
+                "generated_main",
+                quiet,
+            )
+    elif flap_entry is not None:
+        gaps += 1
+        if not quiet:
+            print(f"{name}: generated_main unexpected in flapjack")
 
     for func in sorted(cake_user):
         if func not in flap_user:
@@ -159,12 +207,18 @@ def compare(path, cake, flapjack, quiet):
             if not quiet:
                 print(f"{name}: {func} missing in flapjack")
             continue
-        if cake_user[func][2] != flap_user[func][2]:
-            gaps += 1
-            if not quiet:
-                print(f"{name}: {func} mismatch")
-                print(f"  cake     : {hexstr(cake_user[func][2])}")
-                print(f"  flapjack : {hexstr(flap_user[func][2])}")
+        gaps += compare_section(
+            name,
+            (cake_user[func][1], cake_user[func][2]),
+            (flap_user[func][1], flap_user[func][2]),
+            "user",
+            quiet,
+        )
+
+    for func in sorted(set(flap_user) - set(cake_user)):
+        gaps += 1
+        if not quiet:
+            print(f"{name}: {func} unexpected in flapjack")
 
     if gaps == 0:
         if not quiet:

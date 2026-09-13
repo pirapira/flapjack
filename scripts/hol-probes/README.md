@@ -42,3 +42,13 @@ declaration and source path make its reference boundary explicit. The script
 is incremental: a fixture is rerun only when its probe, the Pancake theory it
 observes, or the script itself is newer than that fixture. Delete a fixture
 when a forced regeneration is desired.
+
+The checked-in source-facing compiler corpus at
+`scripts/parity-small-corpus.json` complements these semantic probes. Run
+`scripts/parity-small-corpus.py` after building `flapjack-compile` to invoke
+the original `cake --pancake --target=riscv` compiler and Flapjack on the same
+five supported programs. The manifest records each original Cake stdout hash,
+the CakeML semantic definition exercised by the fixture, and the P1 beads that
+own any current generated/user-code differences. The runner compares the
+complete runtime, generated-entry, and user-function sections; it does not
+normalize instruction bytes.

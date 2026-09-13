@@ -54,10 +54,11 @@ The compiler also reads source from standard input:
 printf 'fun 1 main() { return 7; }\n' | lake exe flapjack-compile
 ```
 
-The default output follows the original Pancake/CakeML RISC-V assembly
-artifact boundary: runtime data framing, `cake_main`, linked code-section
-labels, and `.byte` payloads with deterministic `cml_section_<label>` names.
-It is not an ELF file. For the historical raw byte artifact, use:
+The default output (also selected by `--assembly` or `--pancake`) follows the
+original Pancake/CakeML RISC-V assembly artifact boundary: runtime data and
+bitmap framing, `cml_main` startup, `cake_main`, linked code-section labels,
+`.byte` payloads, and `cake_codebuffer_*` markers. It is not an ELF file. For
+the historical raw byte artifact, use:
 
 ```sh
 lake exe flapjack-compile --hex program.pnk > program.riscv.hex

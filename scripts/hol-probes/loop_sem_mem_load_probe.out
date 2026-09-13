@@ -1,0 +1,3 @@
+mem_load_hit=SOME (Word 7w)
+
+mem_load_miss=NONE

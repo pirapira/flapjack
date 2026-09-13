@@ -1,5 +1,8 @@
 # Original Pancake HOL probes
 
+The repository-wide parity workflow is documented in
+[`docs/PARITY-TESTING.md`](../../docs/PARITY-TESTING.md).
+
 The files in this directory execute definitions from the CakeML Pancake HOL
 development. They are test-data generators, not independent Lean reference
 implementations. A parity fixture may be used to close a porting bead only

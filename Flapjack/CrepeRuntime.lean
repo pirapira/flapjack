@@ -55,14 +55,6 @@ def natCrepRuntimeFfiContext : PanValueFfiContext Nat :=
     byteToWord := fun value => value.toNat
     valueToNat := id }
 
-def natCrepRuntimeFfiOracle : FfiOracle Unit :=
-  fun _ state _ bytes => .returned state bytes
-
-def natCrepRuntimeFfiState : FfiState Unit :=
-  { oracle := natCrepRuntimeFfiOracle
-    state := ()
-    ioEvents := [] }
-
 structure CrepRuntimeState (α σ : Type u) where
   locals : Nat → Option α
   globals : α → Option α
@@ -77,7 +69,7 @@ structure CrepRuntimeState (α σ : Type u) where
   ffiContext : PanValueFfiContext α
   clock : Nat
   bigEndian : Bool
-  ffi : FfiState σ
+  ffi : σ
   baseAddress : α
   topAddress : α
 

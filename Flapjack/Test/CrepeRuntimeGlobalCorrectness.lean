@@ -14,7 +14,7 @@ def globalLoadRuntimeState : CrepRuntimeState Nat Unit :=
     ffiContext := natCrepRuntimeFfiContext
     clock := 10
     bigEndian := false
-    ffi := natCrepRuntimeFfiState
+    ffi := ()
     baseAddress := 0
     topAddress := 100 }
 

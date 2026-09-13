@@ -23,6 +23,8 @@ respectively
 `cakeml/pancake/loop_to_wordScript.sml` and
 `cakeml/pancake/semantics/panSemScript.sml`; `Flapjack.Test.PanOpParity`
 additionally probes `pan_op_def` at lines 191--193.
+`Flapjack.Test.LoopSetVarParity` probes `set_var_def` at
+`cakeml/pancake/semantics/loopSemScript.sml:108-110`.
 
 From the repository root, with HOL4 and the CakeML checkout available,
 regenerate both checked-in outputs with:

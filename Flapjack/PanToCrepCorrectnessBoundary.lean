@@ -112,8 +112,10 @@ def panValuePcResultRel
       panValueCrepStateRel structs context sourceLocals sourceGlobals
         sourceMemory targetState ∧
       panValueCrepValuesRel sourceValues targetValues
-  | .raised _sourceLocals sourceGlobals sourceMemory sourceException sourceValue,
+  | .raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue,
       .raised targetState targetException =>
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
       panValuePcExceptionResultRel structs context exceptionRel exceptionCode
         globalsLookup sourceGlobals sourceMemory sourceException sourceValue
         targetState targetException

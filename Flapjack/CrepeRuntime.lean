@@ -31,9 +31,16 @@ def natCrepRuntimeMemoryModel : PanMemoryModel Nat :=
       match bytes with
       | value :: _ => value
       | [] => 0
-    wordOp := fun _ _ => none
-    compare := fun _ _ _ => 0
-    shift := fun _ _ _ => none }
+    wordOp := fun operator values =>
+      match operator with
+      | .add => some (values.foldr (fun left right => left + right) 0)
+      | .sub =>
+          match values with
+          | [left, right] => some (left - right)
+          | _ => none
+      | .and | .or | .xor => none
+    compare := fun operator left right => evalPanCmp operator left right
+    shift := fun operator left right => evalPanShift operator left right }
 
 def natCrepRuntimeFfiContext : PanValueFfiContext Nat :=
   { sharedDomain := fun _ => true
@@ -327,10 +334,9 @@ def evalCrepRuntimeExp
       let address ← evalCrepRuntimeExp state address
       crepRuntimeLoadByte state address
   | .loadGlob address => state.globals address
-  | .op operator [left, right] => do
-      let left ← evalCrepRuntimeExp state left
-      let right ← evalCrepRuntimeExp state right
-      pure (evalPanBinOp operator left right)
+  | .op operator expressions => do
+      let values ← expressions.mapM (evalCrepRuntimeExp state)
+      state.memoryModel.wordOp operator values
   | .crepOp .mul [left, right] => do
       let left ← evalCrepRuntimeExp state left
       let right ← evalCrepRuntimeExp state right
@@ -338,11 +344,11 @@ def evalCrepRuntimeExp
   | .cmp operator left right => do
       let left ← evalCrepRuntimeExp state left
       let right ← evalCrepRuntimeExp state right
-      pure (evalPanCmp operator left right)
+      pure (state.memoryModel.compare operator left right)
   | .shift operator left right => do
       let left ← evalCrepRuntimeExp state left
       let right ← evalCrepRuntimeExp state right
-      evalPanShift operator left right
+      state.memoryModel.shift operator left right
   | .baseAddr => some state.baseAddress
   | .topAddr => some state.topAddress
   | _ => none

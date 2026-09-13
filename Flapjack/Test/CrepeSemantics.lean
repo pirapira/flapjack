@@ -479,6 +479,11 @@ theorem crepe_runtime_call_result :
       some (.normal, some 42) := by
   decide +kernel
 
+theorem crepe_runtime_nary_add :
+    evalCrepRuntimeExp crepeRuntimeState
+      (.op .add [.const 1, .const 2, .const 3]) = some 6 := by
+  simp [evalCrepRuntimeExp, crepeRuntimeState, natCrepRuntimeMemoryModel]
+
 def crepeRuntimeDuplicateParameterState : CrepRuntimeState Nat Unit :=
   { crepeRuntimeState with
     functions :=

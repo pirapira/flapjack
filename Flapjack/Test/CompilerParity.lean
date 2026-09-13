@@ -624,7 +624,7 @@ def main : IO Unit := do
     Flapjack.Test.LoopSetGlobalsParity.runChecks,
     Flapjack.Test.LoopSetVarsParity.runChecks,
     Flapjack.Test.LoopFindCodeParity.runChecks,
-    Flapjack.Test.LoopPrimopParity.runChecks
+    Flapjack.Test.LoopPrimopParity.runChecks,
     Flapjack.Test.LoopArithParity.runChecks
     ].mapM id
   unless results.all id do

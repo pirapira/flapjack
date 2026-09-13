@@ -12,7 +12,7 @@ open HolKernel Parse;
 open preamble;
 open loopSemTheory;
 
-val s = ``(s:('a,'ffi) loopSem$state)``;
+val s = ``(s:(32,'ffi) loopSem$state)``;
 
 fun print_eval label q =
   let

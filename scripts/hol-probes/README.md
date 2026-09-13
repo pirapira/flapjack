@@ -19,7 +19,8 @@ The probes currently cover the small `loop_to_word` slice used by
 `Flapjack.Test.PanFlatStoreParity`. Value flattening is covered by
 `Flapjack.Test.PanFlattenParity`. Their source references are respectively
 `cakeml/pancake/loop_to_wordScript.sml` and
-`cakeml/pancake/semantics/panSemScript.sml`.
+`cakeml/pancake/semantics/panSemScript.sml`; `Flapjack.Test.PanOpParity`
+additionally probes `pan_op_def` at lines 191--193.
 
 From the repository root, with HOL4 and the CakeML checkout available,
 regenerate both checked-in outputs with:

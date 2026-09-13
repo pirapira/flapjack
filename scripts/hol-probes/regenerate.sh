@@ -65,6 +65,8 @@ run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \
   word nstruct "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_word_helpers_probeScript.sml pan_word_helpers_probe.out \
   is_word the_val_word "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_op_probeScript.sml pan_op_probe.out \
+  mul_two mul_three "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
   byte_hit load32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \

@@ -11,6 +11,7 @@ import Flapjack.Test.PanFixedLoadParity
 import Flapjack.Test.PanFixedStoreParity
 import Flapjack.Test.PanFlatStoreParity
 import Flapjack.Test.PanFlattenParity
+import Flapjack.Test.PanResVarParity
 import Flapjack.Test.LoopGetVarsParity
 import Flapjack.Test.LoopSetGlobalsParity
 import Flapjack.Test.LoopSetVarsParity

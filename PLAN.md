@@ -310,9 +310,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   a user `main` exists, and update the linked-image correctness regression.
 - [x] Compose the ported front-end, global, Crepe, Loop, and Word passes in an
   executable pipeline that exposes every intermediate artifact.
-- [x] Match CakeML `pan_to_target` entry preparation by moving a user `main`
-  to the front or synthesizing a zero-returning `main`, with explicit RISC-V
-  target wrappers and executable regressions.
+- [x] Match CakeML `pan_to_target` entry preparation by locating the requested
+  source entry, renaming it, and emitting a public `main` wrapper that runs the
+  global initializers before calling it (a missing entry is an error), with
+  explicit RISC-V target wrappers and executable regressions.
 - [x] Add a target-entry declaration-call correctness regression that checks
   the reordered linked image, the call-aware Word result, and execution at
   the generated `main` entry against the source call semantics.

@@ -91,10 +91,11 @@ The global heap-rewriting core is in
 The composed pass pipeline is in
 [`Flapjack/Pipeline.lean`](Flapjack/Pipeline.lean).
 It exposes both the lower-level pass pipeline and an explicit
-`compileFlapjackTarget` boundary matching CakeML's target convention: a user
-`main` is placed first, or a zero-returning `main` is generated when absent;
-the corresponding RISC-V entry points are `compileFlapjackRiscVTarget` and
-`compileFlapjackRiscVTargetWithFfi`.
+`compileFlapjackTarget` boundary matching CakeML's target convention: the
+requested source entry function is located, renamed, and wrapped in a generated
+public `main` that runs the global initializers before calling it; a missing
+entry is an error. The corresponding RISC-V entry points are
+`compileFlapjackRiscVTarget` and `compileFlapjackRiscVTargetWithFfi`.
 
 The target-entry call regression in `Flapjack.Test.CorrectnessTarget` checks a
 reordered `main` plus callee through source evaluation, the call-aware Word

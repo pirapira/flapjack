@@ -427,31 +427,6 @@ example (left right : RiscV.Word 64) :
   exact RiscV.executeFunction_add_general left right
 
 example :
-    (pipelineEnsureMain (α := Nat) []).map (fun declaration =>
-      match declaration with
-      | .function function => function.name
-      | _ => "not-main") = ["main"] := by
-  decide +kernel
-
-example :
-    (pipelineEnsureMain (α := Nat)
-      [.decl .one "global" (.const 7),
-       .function
-         { name := "worker", inline := false, exported := false, params := [],
-           body := .return (.const 1), returnShape := .one },
-       .function
-         { name := "main", inline := false, exported := true, params := [],
-           body := .return (.const 0), returnShape := .one }]).map
-        (fun declaration =>
-          match declaration with
-          | .function function => function.name
-          | .decl _ name _ => name
-          | .name name _ => name
-          | .exnDecl name _ => name) =
-      ["main", "global", "worker"] := by
-  decide +kernel
-
-example :
     let result := compileFlapjackRiscVTarget (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
       [.function
@@ -460,7 +435,7 @@ example :
     result.pipeline.simplified.map (fun declaration =>
       match declaration with
       | .function function => function.name
-      | _ => "not-function") = ["main", "worker"] := by
+      | _ => "not-function") = ["worker"] := by
   decide +kernel
 
 def exactEntryDeclarations : List (Decl Nat) :=

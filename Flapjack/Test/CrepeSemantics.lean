@@ -383,6 +383,16 @@ theorem crepe_runtime_tick_timeout :
       some (.timeout : CrepRuntimeResult Nat String) := by
   decide +kernel
 
+/- CakeML `crepSemScript.sml:333` returns `TimeOut` with `empty_locals s`.
+   Keep the post-state clause observable instead of checking only the result. -/
+theorem crepe_runtime_tick_timeout_clears_locals :
+    ((evalCrepRuntimeResult crepeRuntimeSharedHandler
+      crepeSemanticsPrimitive 2
+      { crepeRuntimeState with clock := 0 }
+      .tick).map Prod.snd).map (fun state => state.locals 1) =
+      some none := by
+  decide +kernel
+
 theorem crepe_runtime_memory_domain_error :
     (evalCrepRuntimeResult crepeRuntimeSharedHandler
       crepeSemanticsPrimitive 2

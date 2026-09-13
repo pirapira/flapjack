@@ -255,4 +255,69 @@ theorem writeWordValue_transfer_pc (state : State width) (pcval address value : 
     _ = transferState { writeWordValue state address value with pc := pcval } :=
           transferState_pc_update _ _
 
+/-- Executing a re-labelled instruction on a transferred state agrees with
+transferring the execution of the original instruction, for instructions whose
+written registers avoid both `0` and `27`. -/
+@[simp] theorem readByte_transfer (state : State width) (address : Word width) :
+    readByte (transferState state) address = readByte state address := by
+  cases state
+  rfl
+
+theorem readWord16_transfer (state : State width) (address : Word width) :
+    readWord16 (transferState state) address = readWord16 state address := by
+  cases state
+  rfl
+
+theorem readWord32_transfer (state : State width) (address : Word width) :
+    readWord32 (transferState state) address = readWord32 state address := by
+  cases state
+  rfl
+
+@[simp] theorem readByteSigned_transfer (state : State width) (address : Word width) :
+    readByteSigned (transferState state) address = readByteSigned state address := by
+  cases state
+  rfl
+
+@[simp] theorem readHalfSigned_transfer (state : State width) (address : Word width) :
+    readHalfSigned (transferState state) address = readHalfSigned state address := by
+  cases state
+  rfl
+
+theorem readWordValue_transfer (state : State width) (address : Word width) :
+    readWordValue (transferState state) address = readWordValue state address := by
+  cases state
+  rfl
+
+
+theorem execute_transfer_relabel (state : State width) (instruction : Instruction width)
+    (hzero : ∀ register, register ∈ instructionWrites instruction → riscvForward register ≠ 0)
+    (hname : ∀ register, register ∈ instructionWrites instruction → register ≠ 0) :
+    execute (transferState state) (relabelInstruction instruction) =
+      transferState (execute state instruction) := by
+  cases instruction <;>
+    simp only [relabelInstruction, execute, readRegister_transfer_forward,
+      readByte_transfer, readByteSigned_transfer, readHalfSigned_transfer,
+      readWord16_transfer, readWord32_transfer, readWordValue_transfer]
+  all_goals
+    simp only [nextPc_transfer, transferState_pc]
+  all_goals
+    first
+    | (rw [writeRegister_transfer_forward_pc (state := state) (pcval := _)
+            (name := _) (value := _)
+            (hzero _ (by simp [instructionWrites])) (hname _ (by simp [instructionWrites]))]
+       simp only [writeRegister_pc])
+    | (rw [writeWordValue_transfer_pc (state := state) (pcval := _)
+            (address := _) (value := _)]
+       simp only [writeWordValue_pc_update])
+    | (rw [writeWord32_transfer_pc (state := state) (pcval := _)
+            (address := _) (value := _)]
+       simp only [writeWord32_pc])
+    | (rw [writeWord16_transfer_pc (state := state) (pcval := _)
+            (address := _) (value := _)]
+       simp only [writeWord16_pc])
+    | (rw [writeByte_transfer_pc (state := state) (pcval := _)
+            (address := _) (value := _)]
+       simp only [writeByte_pc])
+    | rfl
+
 end Flapjack.RiscV

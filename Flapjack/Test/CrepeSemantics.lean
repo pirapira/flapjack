@@ -395,11 +395,11 @@ theorem crepe_runtime_ffi_state_transition :
     crepRuntimeStoreByte, updateMemory, callFfi]
 
 theorem crepe_runtime_extCall_preserves_non_ffi_state :
-    let result := crepRuntimeExtCall crepRuntimeFfiStatefulHandler
+    let result := crepRuntimeExtCall crepeRuntimeFfiStatefulHandler
       crepeRuntimeState "host" 1 2 3 4
     result.2.locals 1 = some 10 ∧
       result.2.globals 7 = none ∧
-      result.2.functions = crepRuntimeState.functions ∧
+      result.2.functions = crepeRuntimeState.functions ∧
       result.2.memory 10 = some 7 ∧
       result.2.clock = crepeRuntimeState.clock ∧
       result.2.ffi.ioEvents.length = 1 := by

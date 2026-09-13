@@ -273,8 +273,8 @@ def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
         match handler (.sharedMem operator name address payload) state.ffi with
         | .returned ffi bytes =>
             let value := state.ffiContext.wordOfBytes false bytes
-            (.normal, { state with ffi := ffi
-              locals := updateCrepLocal state.locals name value })
+            let state := { state with ffi := ffi }
+            (.normal, { state with locals := updateCrepLocal state.locals name value })
         | .final event => (.finalFfi event, clearCrepRuntimeLocals state)
     | .store | .store8 | .store16 | .store32 =>
         match state.locals name with

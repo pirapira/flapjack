@@ -239,13 +239,20 @@ def crepeRuntimeState : CrepRuntimeState Nat Unit :=
       | 2 => some 1
       | 3 => some 20
       | 4 => some 2
+      | 5 => some 0
       | _ => none
     globals := fun _ => none
     functions := []
-    memory := fun address => if address == 10 then some 7 else none
+    memory := fun address =>
+      if address == 10 then some 7
+      else if address == 20 then some 20
+      else if address == 21 then some 21
+      else none
     memaddrs := fun _ => true
     shMemaddrs := fun _ => true
-    byteAlign := id
+    memoryModel := natCrepRuntimeMemoryModel
+    bytesInWord := 1
+    ffiContext := natCrepRuntimeFfiContext
     clock := 10
     bigEndian := false
     ffi := ()
@@ -261,20 +268,25 @@ example : (decCrepClock { crepeRuntimeState with clock := 0 }).clock = 0 := by
 def crepeRuntimeFinalHandler : CrepRuntimeFfiHandler Nat Unit String :=
   fun request state =>
     match request with
-    | .extCall _ _ _ _ _ => .final "halt"
-    | .sharedMem _ _ _ => .returned state
+    | .extCall _ _ _ => .final "halt"
+    | .sharedMem _ _ _ _ => .returned state []
 
 def crepeRuntimeSharedHandler : CrepRuntimeFfiHandler Nat Unit String :=
   fun request state =>
     match request with
-    | .sharedMem .load name address =>
+    | .sharedMem .load _ address _ =>
         match state.memory address with
         | some value =>
-            .returned { state with
-              locals := updateCrepLocal state.locals name value }
-        | none => .returned state
-    | .sharedMem _ _ _ => .returned state
-    | .extCall _ _ _ _ _ => .returned state
+            .returned state [state.ffiContext.wordToByte value]
+        | none => .returned state []
+    | .sharedMem _ _ _ _ => .returned state []
+    | .extCall _ _ _ => .returned state []
+
+def crepeRuntimeByteReturnHandler : CrepRuntimeFfiHandler Nat Unit String :=
+  fun request state =>
+    match request with
+    | .extCall _ _ _ => .returned state [99, 100]
+    | .sharedMem _ _ _ _ => .returned state []
 
 theorem crepe_full_call_semantics :
     evalCrepFullResult crepeSemanticsFunctions
@@ -344,7 +356,19 @@ theorem crepe_full_ffi_lowering_noop :
 theorem crepe_runtime_extCall_final :
     (crepRuntimeExtCall crepeRuntimeFinalHandler crepeRuntimeState
       "host" 1 2 3 4).1 = .finalFfi "halt" := by
-  decide
+  simp [crepRuntimeExtCall, crepRuntimeExtCallValues, crepeRuntimeState,
+    natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
+    crepeRuntimeFinalHandler, crepRuntimeReadBytes, crepRuntimeLoadByte]
+
+theorem crepe_runtime_extCall_return_writes_bytes :
+    let result := crepRuntimeExtCall crepeRuntimeByteReturnHandler
+      crepeRuntimeState "host" 1 2 3 4
+    result.1 = .normal ∧ result.2.memory 20 = some 99 ∧
+      result.2.memory 21 = some 100 := by
+  simp [crepRuntimeExtCall, crepRuntimeExtCallValues, crepeRuntimeState,
+    natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
+    crepeRuntimeByteReturnHandler, crepRuntimeReadBytes, crepRuntimeLoadByte,
+    crepRuntimeWriteBytes, crepRuntimeStoreByte, updateMemory]
 
 theorem crepe_runtime_shared_load :
     (crepRuntimeSharedMem crepeRuntimeSharedHandler crepeRuntimeState

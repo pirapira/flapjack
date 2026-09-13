@@ -35,3 +35,10 @@ sed -n '/^find_var_empty=/,/^find_reg_imm_ctxt=/p' "$tmp" > \
   "$hol_dir/bin/hol" run "$probe_dir/pan_mem_load_probeScript.sml") >"$mem_tmp"
 sed -n '/^one_hit=/,/^named_suffix_blocked=/p' "$mem_tmp" > \
   "$probe_dir/pan_mem_load_probe.out"
+
+# The loopSem probe loads the semantics theory through a relative path from
+# the same Pancake directory.
+(cd "$cake_dir/pancake" && \
+  "$hol_dir/bin/hol" run "$probe_dir/loop_sem_get_vars_probeScript.sml") >"$tmp"
+sed -n '/^get_vars_hit=/,/^get_vars_loc=/p' "$tmp" > \
+  "$probe_dir/loop_sem_get_vars_probe.out"

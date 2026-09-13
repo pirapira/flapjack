@@ -5,6 +5,7 @@ import Flapjack.Test.SourceGlobalParity
 import Flapjack.Test.RegisterTransfer
 import Flapjack.Test.LoopToWord
 import Flapjack.Test.PanMemoryParity
+import Flapjack.Test.LoopGetVarsParity
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.ParsedFullSsaPipeline
@@ -605,7 +606,8 @@ def main : IO Unit := do
     checkBool "Pancake RISC-V artifact envelope markers" ArtifactFormat.pancakeEnvelopeMatches,
     checkBool "Pancake RISC-V artifact prologue" ArtifactFormat.pancakePrologueMatches,
     Flapjack.Test.SourceGlobalParity.runChecks,
-    Flapjack.Test.LoopToWord.runChecks
+    Flapjack.Test.LoopToWord.runChecks,
+    Flapjack.Test.LoopGetVarsParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

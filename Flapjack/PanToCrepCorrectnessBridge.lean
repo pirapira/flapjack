@@ -30,6 +30,126 @@ def crepPcResultOfControl :
   | .continued state label => some (.continued state label)
   | .finalFfi _ _ => none
 
+def panValuePcCompactSourceEvaluator
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (sourceHandler : PanValueFfiHandler α)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (sourceFuel : Nat) :
+    PanValuePcEvaluator α :=
+  fun _ input program =>
+    (evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler input.structs sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel
+      input.locals input.globals input.memory program).map
+      (fun result =>
+        { code := input.code
+          , eshapes := input.eshapes
+          , result := panValuePcResultOfControl result })
+
+def crepPcCompactTargetEvaluator
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (crepPrimitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (targetFuel : Nat) :
+    CrepPcEvaluator α :=
+  fun _ input program =>
+    (evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel input.state program).bind
+      (fun result =>
+        (crepPcResultOfControl result).map
+          (fun targetResult =>
+            { code := input.code
+              , eshapes := input.eshapes
+              , result := targetResult }))
+
+theorem panValuePcCompactSourceEvaluator_adapter
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (primitive : PanPrimitiveHandler α) (sourceHandler : PanValueFfiHandler α)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (sourceFuel : Nat)
+    (program : Prog α)
+    (context : CompileContext α) (structs : StructContext)
+    (sourceInput : PanValuePcInput α) (_targetInput : CrepPcInput α)
+    (sourceExecution : PanValuePcExecution α)
+    (hstructs : sourceInput.structs = structs)
+    (heval : panValuePcCompactSourceEvaluator primitive sourceHandler
+        sourceFunctions baseAddress topAddress bytesInWord sourceFuel
+        context sourceInput program = some sourceExecution) :
+    ∃ sourceResult,
+      evalPanValueProgWithPrimitiveCallsAndFfi
+        primitive sourceHandler structs sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel
+        sourceInput.locals sourceInput.globals sourceInput.memory program =
+          some sourceResult ∧
+      sourceExecution.result = panValuePcResultOfControl sourceResult := by
+  cases hsource : evalPanValueProgWithPrimitiveCallsAndFfi
+      primitive sourceHandler sourceInput.structs sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel
+      sourceInput.locals sourceInput.globals sourceInput.memory program with
+  | none => simp [panValuePcCompactSourceEvaluator, hsource] at heval
+  | some sourceResult =>
+      refine ⟨sourceResult, ?_, ?_⟩
+      · simpa [hstructs] using hsource
+      · have heval' :
+            ({ code := sourceInput.code
+                , eshapes := sourceInput.eshapes
+                , result := panValuePcResultOfControl sourceResult } :
+              PanValuePcExecution α) = sourceExecution := by
+          simpa [panValuePcCompactSourceEvaluator, hsource] using heval
+        exact (congrArg (fun execution : PanValuePcExecution α => execution.result)
+          heval').symm
+
+theorem crepPcCompactTargetEvaluator_adapter
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (crepPrimitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (targetFuel : Nat)
+    (program : Prog α)
+    (context : CompileContext α) (structs : StructContext)
+    (_sourceInput : PanValuePcInput α) (targetInput : CrepPcInput α)
+    (targetExecution : CrepPcExecution α)
+    (_hstructs : targetInput.structs = structs)
+    (heval : crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel context targetInput
+        (compileProg context program) = some targetExecution) :
+    ∃ crepResult,
+      evalCrepFullProgState functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel targetInput.state
+        (compileProg context program) = some crepResult ∧
+      crepPcResultOfControl crepResult = some targetExecution.result := by
+  cases htarget : evalCrepFullProgState functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel targetInput.state
+      (compileProg context program) with
+  | none => simp [crepPcCompactTargetEvaluator, htarget] at heval
+  | some crepResult =>
+      cases hmap : crepPcResultOfControl crepResult with
+      | none => simp [crepPcCompactTargetEvaluator, htarget, hmap] at heval
+      | some targetResult =>
+          refine ⟨crepResult, ?_, ?_⟩
+          · rfl
+          have heval' :
+              ({ code := targetInput.code
+                , eshapes := targetInput.eshapes
+                , result := targetResult } : CrepPcExecution α) = targetExecution := by
+            simpa [crepPcCompactTargetEvaluator, htarget, hmap] using heval
+          simpa [hmap] using
+            congrArg (fun execution : CrepPcExecution α => some execution.result)
+              heval'
+
 /-! The ordinary compact control cases are proved directly from the existing
 `panValueCrepControlRel`.  Only the raised payload needs an additional
 obligation because the exact Pc relation retains both the HOL post-state
@@ -137,6 +257,7 @@ theorem panValuePcCompileCorrect_of_stateful_program
       (structs : StructContext) (sourceInput : PanValuePcInput α)
       (_targetInput : CrepPcInput α)
       (sourceExecution : PanValuePcExecution α),
+      sourceInput.structs = structs →
       sourceEvaluate context sourceInput program = some sourceExecution →
       ∃ sourceResult,
         evalPanValueProgWithPrimitiveCallsAndFfi
@@ -146,8 +267,9 @@ theorem panValuePcCompileCorrect_of_stateful_program
             some sourceResult ∧
         sourceExecution.result = panValuePcResultOfControl sourceResult)
     (htargetAdapter : ∀ (context : CompileContext α)
-      (_structs : StructContext) (_sourceInput : PanValuePcInput α)
+      (structs : StructContext) (_sourceInput : PanValuePcInput α)
       (targetInput : CrepPcInput α) (targetExecution : CrepPcExecution α),
+      targetInput.structs = structs →
       targetEvaluate context targetInput (compileProg context program) =
         some targetExecution →
       ∃ crepResult,
@@ -172,12 +294,14 @@ theorem panValuePcCompileCorrect_of_stateful_program
     PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
       exceptionCode globalsLookup program := by
   intro context structs sourceInput targetInput exceptionRel sourceExecution
-    targetExecution hdistinct hlocalisedCode hlocalised hcode hexcp hstate
-    hnonerror hsource htarget hpostCode hpostExcp
+    targetExecution hsourceStructs htargetStructs hdistinct hlocalisedCode
+    hlocalised hcode hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
   obtain ⟨sourceResult, hsourceResult, hsourceShape⟩ :=
-    hsourceAdapter context structs sourceInput targetInput sourceExecution hsource
+    hsourceAdapter context structs sourceInput targetInput sourceExecution
+      hsourceStructs hsource
   obtain ⟨crepResult, hcrepResult, hcrepShape⟩ :=
-    htargetAdapter context structs sourceInput targetInput targetExecution htarget
+    htargetAdapter context structs sourceInput targetInput targetExecution
+      htargetStructs htarget
   have hcontrol := hprogram context structs sourceFunctions functions
     sourceInput.locals sourceInput.globals sourceInput.memory targetInput.state
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
@@ -187,5 +311,67 @@ theorem panValuePcCompileCorrect_of_stateful_program
     exceptionCode globalsLookup (hraise context structs exceptionRel)
     sourceResult crepResult targetExecution.result hcontrol hcrepShape
   simpa [hsourceShape] using hresult
+
+/-! Concrete instantiation for the currently supported compact evaluator
+fragment.  This packages both evaluator adapters into the stateful bridge;
+raised payload/global compatibility and the clocked `TimeOut`/`FinalFFI`
+cases remain explicit hypotheses rather than being erased by the adapter. -/
+theorem panValuePcCompileCorrect_compact
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (program : Prog α)
+    (codeRel : PanValuePcCodeRel α)
+    (excpRel : PanValuePcExceptionShapeRel α)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (hprogram : PanValueCrepProgramStateCorrect program)
+    (hraise : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+        globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException) :
+    PanValuePcCompileCorrect
+      (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+        baseAddress topAddress bytesInWord sourceFuel)
+      (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+        baseAddress topAddress targetFuel)
+      codeRel excpRel exceptionCode globalsLookup program := by
+  refine panValuePcCompileCorrect_of_stateful_program
+    program
+    (panValuePcCompactSourceEvaluator primitive sourceHandler sourceFunctions
+      baseAddress topAddress bytesInWord sourceFuel)
+    (crepPcCompactTargetEvaluator functions crepPrimitive ffi sharedMem
+      baseAddress topAddress targetFuel)
+    codeRel excpRel exceptionCode globalsLookup sourceFunctions functions
+    primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
+    bytesInWord sourceFuel targetFuel hprogram ?_ ?_ hraise
+  · intro context structs sourceInput targetInput sourceExecution hstructs heval
+    exact panValuePcCompactSourceEvaluator_adapter primitive sourceHandler
+      sourceFunctions baseAddress topAddress bytesInWord sourceFuel program
+      context structs sourceInput targetInput sourceExecution hstructs heval
+  · intro context structs sourceInput targetInput targetExecution hstructs heval
+    exact crepPcCompactTargetEvaluator_adapter functions crepPrimitive ffi
+      sharedMem baseAddress topAddress targetFuel program context structs
+      sourceInput targetInput targetExecution hstructs heval
 
 end Flapjack

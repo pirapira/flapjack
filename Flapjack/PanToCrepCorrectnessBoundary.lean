@@ -135,6 +135,7 @@ def panValuePcResultRel
   | _, _ => False
 
 structure PanValuePcInput (α : Type u) where
+  structs : StructContext
   code : PanValuePcSourceCode α
   eshapes : InfoMap Shape
   locals : VarName → Option (PanValue α)
@@ -142,6 +143,7 @@ structure PanValuePcInput (α : Type u) where
   memory : α → Option (PanValue α)
 
 structure CrepPcInput (α : Type u) where
+  structs : StructContext
   code : PanValuePcTargetCode α
   eshapes : InfoMap Shape
   state : CrepState α
@@ -180,7 +182,9 @@ def PanValuePcCompileCorrect
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (sourceExecution : PanValuePcExecution α)
     (targetExecution : CrepPcExecution α),
-    sourceInput.code.map Prod.fst |>.Nodup →
+    sourceInput.structs = structs →
+    targetInput.structs = structs →
+    (sourceInput.code.map Prod.fst).Nodup →
     panValuePcLocalisedCode sourceInput.code →
     localisedProg program →
     codeRel context sourceInput.code targetInput.code →
@@ -213,7 +217,9 @@ theorem panValuePcCompileCorrect_of_obligations
       (exceptionRel : ExceptionId → PanValue α → α → Prop)
       (sourceExecution : PanValuePcExecution α)
       (targetExecution : CrepPcExecution α),
-      sourceInput.code.map Prod.fst |>.Nodup →
+      sourceInput.structs = structs →
+      targetInput.structs = structs →
+      (sourceInput.code.map Prod.fst).Nodup →
       panValuePcLocalisedCode sourceInput.code →
       localisedProg program →
       codeRel context sourceInput.code targetInput.code →

@@ -54,3 +54,9 @@ sed -n '/^get_vars_hit=/,/^get_vars_loc=/p' "$tmp" > \
   "$hol_dir/bin/hol" run "$probe_dir/loop_sem_set_globals_probeScript.sml") >"$tmp"
 sed -n '/^set_globals_new=/,/^set_globals_sibling=/p' "$tmp" > \
   "$probe_dir/loop_sem_set_globals_probe.out"
+
+# The set_vars probe observes sptree lookups after the original alist_insert.
+(cd "$cake_dir/pancake" && \
+  "$hol_dir/bin/hol" run "$probe_dir/loop_sem_set_vars_probeScript.sml") >"$tmp"
+sed -n '/^set_vars_basic=/,/^set_vars_clock=/p' "$tmp" > \
+  "$probe_dir/loop_sem_set_vars_probe.out"

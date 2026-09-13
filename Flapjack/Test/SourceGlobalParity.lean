@@ -624,6 +624,26 @@ def runtimeImageAccepted (source : String) : Bool :=
   | .ok image => image.sections.length > 0 && image.bitmaps.data.length > 0
   | .error _ => false
 
+/-- Run a source program through the checked linked-image entry point. Every
+encoded section must be non-empty and a whole number of RISC-V words. -/
+def imageAccepted (source : String) : Bool :=
+  match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" source with
+  | .ok image =>
+      image.sections.length > 0 &&
+        image.sections.all (fun encoded =>
+          encoded.bytes.length > 0 && encoded.bytes.length % 4 == 0)
+  | .error _ => false
+
+/-- Runtime-image entry point must expose at least one encoded section. -/
+def runtimeImageSectionsAccepted (source : String) : Bool :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" source with
+  | .ok image => image.sections.length > 0
+  | .error _ => false
+
 /-- The global fixture must be accepted by the byte entry point. -/
 def globalBytesAccepted : Bool :=
   match compileSourceBytes globalSource with
@@ -831,6 +851,12 @@ def auditedAccepted : Bool :=
       | some bytes => bytes.length > 0
       | none => false)
 
+/-- Every audited source reaches all three checked source entry points: encoded
+bytes, the linked image, and the bitmap SimpleGC runtime image. -/
+def auditedEntrypointsAccepted : Bool :=
+  auditedSources.all (fun entry =>
+    imageAccepted entry.source && runtimeImageSectionsAccepted entry.source)
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
@@ -878,6 +904,7 @@ def cakeGoldenShape : Bool :=
 #guard ffiRegisterBytesAccepted
 #guard initializerChangesArtifact
 #guard auditedAccepted
+#guard auditedEntrypointsAccepted
 #guard cakeGoldenShape
 
 def checkBool (name : String) (condition : Bool) : IO Bool := do
@@ -932,6 +959,8 @@ def runChecks : IO Bool := do
       initializerChangesArtifact,
     checkBool "Pancake audited source constructs compile (bytes)"
       auditedAccepted,
+    checkBool "Pancake audited source constructs reach image and runtime image"
+      auditedEntrypointsAccepted,
     checkBool "CakeML global golden sections pinned" cakeGoldenShape
     ].mapM id
   pure (results.all id)

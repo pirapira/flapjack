@@ -124,8 +124,6 @@ theorem lt_32_of_riscvRegisterName_lt_32 {name : Nat}
 /-- CakeML's stack-register convention for the RISC-V target: stack register
 `27` is the hardware zero register, `0` is the link register, and `1`-`4` are
 the first argument/return registers `a0`-`a3`. -/
-abbrev zeroStackRegister : Nat := 27
-
 abbrev linkStackRegister : Nat := 0
 
 /-- Convert a CakeML stack register number to a hardware RISC-V register by
@@ -158,52 +156,6 @@ def labRegisterOfNat (name : Nat) : Option (Fin 32) :=
 theorem labRegisterOfNat_eq {name : Nat} (h : riscvRegisterName name < 32) :
     labRegisterOfNat name = some ⟨riscvRegisterName name, h⟩ := by
   simp [labRegisterOfNat, registerOfNat, h]
-
-/-- The port's word/stack register numbering puts its zero register at `0` and
-its first argument/return word at `2`, one past CakeML's stack register `1`.
-This is the translation from the port's convention to a CakeML stack register:
-`0` stays the port's zero register and every other port register `name` is the
-CakeML stack register `name - 1`. -/
-def portRegisterToRiscv (name : Nat) : Nat :=
-  if name == 0 then 0 else riscvRegisterName (name - 1)
-
-@[simp] theorem portRegisterToRiscv_zero : portRegisterToRiscv 0 = 0 := by
-  simp [portRegisterToRiscv]
-
-/-- Port register `2` (the first argument/return word) maps to hardware `a0`. -/
-@[simp] theorem portRegisterToRiscv_two : portRegisterToRiscv 2 = 10 := by
-  decide
-
-@[simp] theorem portRegisterToRiscv_three : portRegisterToRiscv 3 = 11 := by
-  decide
-
-@[simp] theorem portRegisterToRiscv_four : portRegisterToRiscv 4 = 12 := by
-  decide
-
-@[simp] theorem portRegisterToRiscv_five : portRegisterToRiscv 5 = 13 := by
-  decide
-
-@[simp] theorem portRegisterToRiscv_one : portRegisterToRiscv 1 = 1 := by
-  decide
-
-/-- The port convention is NOT injective on `0..31`: the shifted map sends both
-port register `0` (the port's zero register) and port register `28` to hardware
-`x0`.  Wiring the port convention in therefore requires reseating the reserved
-config registers (notably `addressScratch = 29 -> x3`, `specialScratch = 28 ->
-x0`, `scratch = 31 -> x4`, `carryScratch = 27`, `currHeap = 12 -> x29`) before
-the map can be applied as a pure renaming. -/
-theorem portRegisterToRiscv_not_injective :
-    portRegisterToRiscv 0 = portRegisterToRiscv 28 := by decide
-
-/-- The port-convention map stays inside the hardware register range wherever
-`riscv_names` does. -/
-theorem portRegisterToRiscv_lt_32 {name : Nat} (h : name < 32) :
-    portRegisterToRiscv name < 32 := by
-  unfold portRegisterToRiscv
-  split
-  · decide
-  · have hname : name - 1 < 32 := Nat.lt_of_le_of_lt (Nat.sub_le _ _) h
-    exact riscvRegisterName_lt_32 hname
 
 /-! ## CakeML stack-convention register assignments for the backend config
 
@@ -283,79 +235,6 @@ abbrev cakeCurrHeap : Nat := 3
 @[simp] theorem riscvRegisterName_cakeCurrHeap :
     riscvRegisterName cakeCurrHeap = 12 := rfl
 
-/-- CakeML's stack-register convention for word-level registers.
-
-Word register `0` is the zero register, which CakeML numbers as stack register
-`27` (and `riscv_names` maps back to hardware `x0`).  Every other word register
-`n >= 1` is stack register `n - 1`, so word registers `2, 3, 4, 5` become the
-argument/return registers `1, 2, 3, 4`, which `riscv_names` maps to `a0..a3`. -/
-def stackRegisterOfWord (name : Nat) : Nat :=
-  if name == 0 then cakeZeroRegister else name - 1
-
-@[simp] theorem stackRegisterOfWord_zero : stackRegisterOfWord 0 = 27 := rfl
-
-@[simp] theorem stackRegisterOfWord_one : stackRegisterOfWord 1 = 0 := rfl
-
-@[simp] theorem stackRegisterOfWord_two : stackRegisterOfWord 2 = 1 := rfl
-
-@[simp] theorem stackRegisterOfWord_three : stackRegisterOfWord 3 = 2 := rfl
-
-@[simp] theorem stackRegisterOfWord_four : stackRegisterOfWord 4 = 3 := rfl
-
-@[simp] theorem stackRegisterOfWord_five : stackRegisterOfWord 5 = 4 := rfl
-
-theorem stackRegisterOfWord_lt_32 {name : Nat} (h : name < 32) :
-    stackRegisterOfWord name < 32 := by
-  unfold stackRegisterOfWord
-  split
-  · decide
-  · omega
-
-/-- Translate a word-level register number to its hardware register through
-CakeML's stack-register convention and `riscv_names`. -/
-def wordRegisterToRiscv (name : Nat) : Nat :=
-  riscvRegisterName (stackRegisterOfWord name)
-
-@[simp] theorem wordRegisterToRiscv_zero : wordRegisterToRiscv 0 = 0 := rfl
-
-@[simp] theorem wordRegisterToRiscv_one : wordRegisterToRiscv 1 = 1 := rfl
-
-@[simp] theorem wordRegisterToRiscv_two : wordRegisterToRiscv 2 = 10 := rfl
-
-@[simp] theorem wordRegisterToRiscv_three : wordRegisterToRiscv 3 = 11 := rfl
-
-@[simp] theorem wordRegisterToRiscv_four : wordRegisterToRiscv 4 = 12 := rfl
-
-@[simp] theorem wordRegisterToRiscv_five : wordRegisterToRiscv 5 = 13 := rfl
-
-theorem wordRegisterToRiscv_lt_32 {name : Nat} (h : name < 32) :
-    wordRegisterToRiscv name < 32 :=
-  riscvRegisterName_lt_32 (stackRegisterOfWord_lt_32 h)
-
-/-- On the used word-register range `0..27` the stack-register convention
-composed with `riscv_names` is injective, so it can act as a bijection on the
-internally allocated registers.  Word register `28` is the only collision
-(it shares stack register `27`, the hardware zero register, with word register
-`0`) and is therefore reserved. -/
-theorem wordRegisterToRiscv_injective_of_lt_28 {left right : Nat}
-    (hleft : left < 28) (hright : right < 28)
-    (hsame : wordRegisterToRiscv left = wordRegisterToRiscv right) :
-    left = right := by
-  have hcheck : (List.range 28).all (fun candidate =>
-      (List.range 28).all (fun other =>
-        (wordRegisterToRiscv candidate != wordRegisterToRiscv other) ||
-          (candidate == other))) = true := by decide
-  have ha := List.all_eq_true.mp hcheck left (List.mem_range.mpr hleft)
-  have hb := List.all_eq_true.mp ha right (List.mem_range.mpr hright)
-  simp only [Bool.or_eq_true, bne_iff_ne, beq_iff_eq] at hb
-  rcases hb with hne | heq
-  · exact absurd hsame hne
-  · exact heq
-
-/-- Under CakeML's `riscv_names` the only stack register that maps to the
-hardware zero register `x0` is stack register `27`.  This identifies the
-internal zero register of the Cake stack convention and is the precondition
-needed to relabel a register file whose zero slot is not hardware index `0`. -/
 theorem riscvRegisterName_eq_zero_iff {name : Nat} (h : name < 32) :
     riscvRegisterName name = 0 ↔ name = 27 := by
   constructor

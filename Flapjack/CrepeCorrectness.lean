@@ -1973,6 +1973,32 @@ theorem compile_full_pan_value_identity_declaration_call_correct
       lookupCompiledFunction, assignCrepValues, lookupInfo, List.map,
       List.zip, List.foldl]
 
+/-! Stateful form of the closed declaration-call regression.  The explicit
+    global field is retained in the returned caller state even though this
+    program does not access globals. -/
+theorem compile_full_pan_value_identity_declaration_call_state_correct
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (value : α) :
+    (evalCrepFullCallState
+      (compileToCrepe (correctnessIdentityContext (α := α))
+        (correctnessIdentityDeclarations value))
+      (fun _ _ => none) (fun _ _ _ _ _ _ => none) (fun _ _ _ _ => none)
+      0 0 100
+      { locals := fun _ => none, memory := fun _ => none }
+      none "main" [] =
+      some (.returned
+        { locals := fun _ => none, memory := fun _ => none } [value])) := by
+  simp [correctnessIdentityContext, correctnessIdentityDeclarations,
+      compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
+      functionInfos, compileProg, compileExp, compileArgs, allocatedNames,
+      nestedDecs, evalCrepFullCallState, evalCrepFullProgState,
+      evalCrepFullExpsState, evalCrepFullExpState, updateCrepLocal,
+      restoreCrepResult, lookupCompiledFunction, assignCrepValues,
+      lookupInfo, List.map, List.zip, List.foldl]
+
 /-! A generic call constructor for the full correctness induction.  The
     source and Crep callee simulations are supplied as witnesses; this rule
     accounts for the surrounding evaluator step and the compiler's argument

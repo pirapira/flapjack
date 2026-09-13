@@ -40,6 +40,7 @@ import Flapjack.Test.LoopCutStateParity
 import Flapjack.Test.LoopCutResParity
 import Flapjack.Test.LoopShMemLoadParity
 import Flapjack.Test.LoopShMemStoreParity
+import Flapjack.Test.LoopShMemOpParity
 import Flapjack.Test.LoopGetVarImmParity
 import Flapjack.Test.LoopCallEnvParity
 import Flapjack.Test.InstructionTransfer
@@ -670,6 +671,7 @@ def main : IO Unit := do
     Flapjack.Test.LoopCutResParity.runChecks,
     Flapjack.Test.LoopShMemLoadParity.runChecks,
     Flapjack.Test.LoopShMemStoreParity.runChecks,
+    Flapjack.Test.LoopShMemOpParity.runChecks,
     Flapjack.Test.LoopGetVarImmParity.runChecks,
     Flapjack.Test.LoopCallEnvParity.runChecks,
     Flapjack.Test.EndToEndParity.runChecks,

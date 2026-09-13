@@ -230,6 +230,21 @@ def loopFfiShMemStore [BEq α] [OfNat α 1] [Add α]
             let state := { state with ffi := ffi }
             (.normal state, state)
 
+/-! Exact dispatch counterpart of `loopSem$sh_mem_op_def`
+    (`loopSemScript.sml:255-262`). -/
+def loopFfiShMemOp [BEq α] [OfNat α 1] [Add α]
+    (state : LoopFfiState α σ) (operator : CrepMemOp)
+    (name : Nat) (address : α) : LoopFfiStep α σ :=
+  match operator with
+  | .load => loopFfiShMemLoad state name address 0
+  | .store => loopFfiShMemStore state name address 0
+  | .load8 => loopFfiShMemLoad state name address 1
+  | .store8 => loopFfiShMemStore state name address 1
+  | .load16 => loopFfiShMemLoad state name address 2
+  | .store16 => loopFfiShMemStore state name address 2
+  | .load32 => loopFfiShMemLoad state name address 4
+  | .store32 => loopFfiShMemStore state name address 4
+
 def loopFfiSharedStore [BEq α] [OfNat α 1] [Add α]
     (state : LoopFfiState α σ) (operator : CrepMemOp)
     (name : Nat) (address : α) : LoopFfiStep α σ :=

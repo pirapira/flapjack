@@ -2405,6 +2405,57 @@ theorem evalCrepFullProg_call_seq_normal_compose
       (.seq (.call info function arguments) body) = some result := by
   simp [evalCrepFullProg, hcall, hbody]
 
+/-! Stateful counterpart of normal call/continuation composition.  Unlike the
+    compatibility helper, this rule transports the full caller state so both
+    memory and globals produced by the call reach the continuation. -/
+theorem evalCrepFullProgState_call_seq_normal_compose
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state callState : CrepState α)
+    (info : Option (List Nat × Option (α × CrepProg α)))
+    (function : FunName) (arguments : List (CrepExp α))
+    (body : CrepProg α) (result : CrepControlResult α)
+    (hcall : evalCrepFullCallState functions primitive ffi sharedMem
+      baseAddress topAddress fuel state info function arguments =
+      some (.normal callState))
+    (hbody : evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1) callState body = some result) :
+    evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state
+      (.seq (.call info function arguments) body) = some result := by
+  simp [evalCrepFullProgState, hcall, hbody]
+
+/-! A raised call short-circuits its sequence continuation.  This stateful
+    rule keeps the call's complete state and exception code visible to the
+    enclosing correctness induction. -/
+theorem evalCrepFullProgState_call_seq_raised_compose
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (functions : List (CompiledFunction α))
+    (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
+    (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress : α) (fuel : Nat)
+    (state callState : CrepState α)
+    (info : Option (List Nat × Option (α × CrepProg α)))
+    (function : FunName) (arguments : List (CrepExp α))
+    (body : CrepProg α) (exceptionCode : α)
+    (hcall : evalCrepFullCallState functions primitive ffi sharedMem
+      baseAddress topAddress fuel state info function arguments =
+      some (.raised callState exceptionCode)) :
+    evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 2) state
+      (.seq (.call info function arguments) body) =
+      some (.raised callState exceptionCode) := by
+  simp [evalCrepFullProgState, hcall]
+
 /-! The one-word declaration-call lowering combines fresh-slot setup, the
     destination-aware call, and the compiled continuation.  Its fuel offsets
     are explicit so later source-to-Crep induction can instantiate this rule

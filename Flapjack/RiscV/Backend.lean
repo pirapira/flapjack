@@ -219,6 +219,43 @@ def wordArithToInstruction [NeZero width] :
       let divisor ← registerOfNat divisor
       pure (.divU destination dividend divisor)
 
+/-! CakeML's LongDiv_code_def selects LongDiv1_code_def when the target
+    has no native long-division instruction (data_to_wordScript.sml:829-867).
+    The recursive LongDiv1 body is a restoring division loop over the word
+    width.  At this boundary the normalized StackLang convention is already
+    fixed to LongDiv 0 3 3 0 divisor; unroll the loop so the flat RISC-V
+    instruction selector remains independent of labels/calls.  The temporary
+    stack registers are the same reserved roles used by CakeML's code, and
+    labRegisterOfNat applies riscv_names once at the hardware boundary. -/
+def wordLongDivSoftwareCode [NeZero width] (divisor : Nat) :
+    Option (List (Instruction width)) := do
+  let quotient ← labRegisterOfNat 0
+  let remainder ← labRegisterOfNat 3
+  let divisorTemp ← labRegisterOfNat 10
+  let carry ← labRegisterOfNat 12
+  let dividendLow ← labRegisterOfNat 14
+  let quotientBit ← labRegisterOfNat 16
+  let compare ← labRegisterOfNat 31
+  let zero ← labRegisterOfNat 27
+  let divisor ← labRegisterOfNat divisor
+  let amount := BitVec.ofNat width (width - 1)
+  let step : List (Instruction width) := [
+    .srli carry dividendLow amount,
+    .slli dividendLow dividendLow (BitVec.ofNat width 1),
+    .slli compare remainder (BitVec.ofNat width 1),
+    .or remainder compare carry,
+    .sltu compare remainder divisorTemp,
+    .addi quotientBit zero 0,
+    .branchNe compare zero (BitVec.ofNat width 12),
+    .sub remainder remainder divisorTemp,
+    .addi quotientBit zero 1,
+    .slli quotient quotient (BitVec.ofNat width 1),
+    .add quotient quotient quotientBit]
+  pure ([.addi divisorTemp divisor 0,
+    .addi dividendLow quotient 0,
+    .addi quotient zero 0] ++
+    (List.replicate width step).flatten)
+
 def wordArithToInstructions [NeZero width] :
     WordArith → Option (List (Instruction width))
   | .longMul destinationLeft destinationRight sourceLeft sourceRight => do
@@ -247,6 +284,7 @@ def wordArithToInstructions [NeZero width] :
           .add destination destination 31,
           .sltu 31 destination 31,
           .or resultCarry resultCarry 31]
+  | .longDiv 0 3 3 0 divisor => wordLongDivSoftwareCode divisor
   | operation => (wordArithToInstruction operation).map (fun instruction => [instruction])
 
 def wordInstToInstruction [NeZero width] :

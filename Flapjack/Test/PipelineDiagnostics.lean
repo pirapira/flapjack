@@ -37,9 +37,8 @@ example :
 
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
-      [⟨29, [.asm (.word (.arith (.longDiv 0 3 3 0 6))) [] 0]⟩] =
-        .error { sectionId := 29, position := 0, feature := .longDiv } := by
-  rfl
+      [⟨29, [.asm (.word (.arith (.longDiv 0 3 3 0 6))) [] 0]⟩] |>.isOk := by
+  decide
 
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }

@@ -1,4 +1,4 @@
-import Flapjack.RiscV.InstructionTransfer
+import Flapjack.RiscV.InstructionRelabel
 
 /-! Executable checks for the CakeML register-field mapping. -/
 

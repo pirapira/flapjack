@@ -87,6 +87,22 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
       let destination ← registerOfNat destination
       let source ← registerOfNat source
       pure (.xori destination source value)
+  | .op .add [.const value, .var source] => do
+      let destination ← registerOfNat destination
+      let source ← registerOfNat source
+      pure (.addi destination source value)
+  | .op .and [.const value, .var source] => do
+      let destination ← registerOfNat destination
+      let source ← registerOfNat source
+      pure (.andi destination source value)
+  | .op .or [.const value, .var source] => do
+      let destination ← registerOfNat destination
+      let source ← registerOfNat source
+      pure (.ori destination source value)
+  | .op .xor [.const value, .var source] => do
+      let destination ← registerOfNat destination
+      let source ← registerOfNat source
+      pure (.xori destination source value)
   | .op operator [.var left, .var right] => do
       let destination ← registerOfNat destination
       let left ← registerOfNat left
@@ -124,6 +140,12 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
         let addressInstructions ← wordExpToInstructions 31 address
         let destination ← registerOfNat destination
         pure (addressInstructions ++ [.loadWord destination 31])
+  | .op .sub [.const value, .var source] => do
+      if destination == 31 || source == 31 then none
+      else
+        let destination ← registerOfNat destination
+        let source ← registerOfNat source
+        pure [.addi 31 0 value, .sub destination 31 source]
   | .shift .ror (.var left) (.var right) => do
       if destination == 31 || left == 31 || right == 31 then none
       else
@@ -574,6 +596,29 @@ def evalWordExp [NeZero width] (state : State width) :
   | .load address => do
       let address ← evalWordExp state address
       pure (readWordValue state address)
+  | .op operator [.const left, .const right] =>
+      pure (match operator with
+        | .add => left + right
+        | .sub => left - right
+        | .and => left &&& right
+        | .or => left ||| right
+        | .xor => left ^^^ right)
+  | .op operator [.var left, .const right] => do
+      let left ← registerOfNat left
+      pure (match operator with
+        | .add => readRegister state left + right
+        | .sub => readRegister state left - right
+        | .and => readRegister state left &&& right
+        | .or => readRegister state left ||| right
+        | .xor => readRegister state left ^^^ right)
+  | .op operator [.const left, .var right] => do
+      let right ← registerOfNat right
+      pure (match operator with
+        | .add => left + readRegister state right
+        | .sub => left - readRegister state right
+        | .and => left &&& readRegister state right
+        | .or => left ||| readRegister state right
+        | .xor => left ^^^ readRegister state right)
   | .op operator [.var left, .var right] => do
       let left ← registerOfNat left
       let right ← registerOfNat right
@@ -1210,4 +1255,29 @@ example [NeZero width] :
       none := by
   simp [wordInstToInstruction, wordArithToInstruction]
 
+example [NeZero width] :
+    wordExpToInstruction (width := width) 1
+        (.op .add [.const (7 : Word width), .var 2]) =
+      some (.addi 1 2 7) := by
+  simp [wordExpToInstruction, registerOfNat]
+
+example [NeZero width] :
+    wordExpToInstructions (width := width) 1
+        (.op .sub [.const (7 : Word width), .var 2]) =
+      some [.addi 31 0 7, .sub 1 31 2] := by
+  simp [wordExpToInstructions, registerOfNat]
+
+example [NeZero width] (state : State width) :
+    evalWordProg state
+        (.assign 1 (.op .add [.const (7 : Word width), .var 2])) =
+      some (execute state (.addi 1 2 7)) := by
+  simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+    registerOfNat, executeInstructions_single]
+
+example [NeZero width] (state : State width) :
+    evalWordProg state
+        (.assign 1 (.op .sub [.const (7 : Word width), .var 2])) =
+      some (executeInstructions state [.addi 31 0 7, .sub 1 31 2]) := by
+  simp [evalWordProg, wordExpToInstructions, registerOfNat,
+    executeInstructions, execute, writeRegister, readRegister, nextPc]
 end Flapjack.RiscV

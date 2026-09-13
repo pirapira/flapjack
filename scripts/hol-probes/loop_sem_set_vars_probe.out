@@ -1,0 +1,13 @@
+set_vars_basic=SOME [Word 5w; Word 7w]
+
+set_vars_missing=NONE
+
+set_vars_duplicate=SOME [Word 5w]
+
+set_vars_short_values=NONE
+
+set_vars_overwrite=SOME [Word 9w]
+
+set_vars_empty=NONE
+
+set_vars_clock=s.clock

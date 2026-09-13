@@ -41,6 +41,15 @@ example :
         .error { sectionId := 29, position := 0, feature := .longDiv } := by
   rfl
 
+/-! CakeML's RISC-V target rejects a direct `LongDiv` instruction
+    (`riscv_targetScript.sml:143`).  Software lowering must therefore happen
+    through the `LongDiv_code`/`LongDiv1_code` helper path rather than by
+    teaching the direct instruction selector a new encoding. -/
+example :
+    RiscV.wordArithToInstructions (width := 64)
+      (.longDiv 0 3 3 0 6) = none := by
+  rfl
+
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
       [⟨19, [.asm (.const 1 7) [] 0]⟩] =

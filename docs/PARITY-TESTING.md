@@ -72,10 +72,11 @@ For a supported source fragment, add both sides of an execution observation:
 [`Flapjack/Test/EndToEndParity.lean`](../Flapjack/Test/EndToEndParity.lean)
 contains independent original-semantics probes and linked-RISC-V execution
 fixtures for return, addition, multiplication, conditionals, function calls,
-and global initialization. They deliberately do not rely only on a Flapjack
-correctness theorem: distinct compilers can satisfy the same source theorem
-while emitting different code. Memory and FFI execution fixtures, plus exact
-artifact parity for the source corpus, remain open follow-up work. These
+global initialization, ordinary memory loads, and a deterministic FFI service
+boundary. They deliberately do not rely only on a Flapjack correctness
+theorem: distinct compilers can satisfy the same source theorem while emitting
+different code. Exact artifact parity for the source corpus remains open
+follow-up work. These
 fixtures are stable seeds for differential fuzzing against `cake`; a source
 accepted by CakeML but not executable by Flapjack is a P1 compiler-parity bug.
 

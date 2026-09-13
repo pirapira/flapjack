@@ -75,6 +75,8 @@ run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \
   word named "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \
+  delete_hit update_hit "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
   get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The set_globals probe observes FLOOKUP after the original map update.

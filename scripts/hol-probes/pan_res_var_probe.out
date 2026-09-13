@@ -1,0 +1,5 @@
+delete_hit=NONE
+
+delete_other=SOME (ValWord 3w)
+
+update_hit=SOME (ValWord 7w)

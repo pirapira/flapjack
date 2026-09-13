@@ -746,6 +746,14 @@ abbrev PanValueAcceleratorFfiHandler (α : Type u) :=
     Option ((VarName → Option (PanValue α)) ×
       (α → Option (PanValue α)))
 
+/-! Exact executable counterpart of Pancake's `res_var_def`: restore a
+    local binding after a scoped declaration, deleting it when the saved value
+    is `NONE` and updating it otherwise. -/
+def panValueResVar [BEq String]
+    (locals : VarName → Option (PanValue α)) (name : VarName)
+    (oldValue : Option (PanValue α)) : VarName → Option (PanValue α) :=
+  fun current => if current == name then oldValue else locals current
+
 def restorePanValueLocal [BEq String]
     (locals : VarName → Option (PanValue α)) (name : VarName)
     (oldValue : Option (PanValue α)) : VarName → Option (PanValue α) :=

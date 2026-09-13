@@ -756,6 +756,81 @@ def ffiRegisterBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- A source program audited against original Pancake RISC-V coverage at the
+combined head: `cakeMainLength` is the byte length of the `cml_main_7` section
+produced by `cake --pancake --target=riscv`, and `source` must be accepted by
+the Flapjack source bytes entrypoint. -/
+structure AuditedSource where
+  label : String
+  cakeMainLength : Nat
+  source : String
+
+/-- Construct-level coverage audited beyond the earlier fixtures: exported
+functions, `tick`, shaped loads (`lds`), byte/word32 memory operations, the
+shared-memory instruction set (byte/16/32/word loads and stores), the
+`__add_with_carry__` primitive (declaration and assignment forms), exceptions
+with `throw`/`try`/`catch`, nested calls, conditionals, loops with
+`break`/`continue`, struct and pair arguments, tuple-shaped named struct
+fields, struct and pair returns, multi-word returns, and a computed global
+initializer.  Every entry is accepted by the original compiler. -/
+def auditedSources : List AuditedSource :=
+  [ { label := "export fun", cakeMainLength := 4,
+      source := "export fun f() { return 1; }\nfun 1 main() { return f(); }\n" },
+    { label := "tick", cakeMainLength := 8,
+      source := "fun 1 main() { var 1 x = 1; tick; return x; }\n" },
+    { label := "lds word", cakeMainLength := 12,
+      source := "fun 1 main() { var v = 0; v = lds 1 1000 + 8; return v; }\n" },
+    { label := "lds multi shape", cakeMainLength := 12,
+      source := "fun 1 main() { var {1,1,2} x = lds {1,1,2} 1000; return x.0; }\n" },
+    { label := "ld8", cakeMainLength := 12,
+      source := "fun 1 main() { var v = 0; v = ld8 1000 + 4 * 3; return v; }\n" },
+    { label := "ld32", cakeMainLength := 12,
+      source := "fun 1 main() { var v = 0; v = ld32 1000 + 4 * 3; return v; }\n" },
+    { label := "st computed", cakeMainLength := 20,
+      source := "fun 1 main() { var v = 7; st 1000 + 4, v + 1; return v; }\n" },
+    { label := "st8", cakeMainLength := 20,
+      source := "fun 1 main() { var v = 7; st8 1000 + 4, v; return v; }\n" },
+    { label := "shared memory set", cakeMainLength := 84,
+      source := "fun 1 main() { var v = 12; !st8 1000, v; !st16 1000, v; !st32 1000, v; !stw 1004, 1+1; !ld8 v, 1000 + 12; !ld16 v, 1000 + 12; !ld32 v, 1000 + 12; !ldw v, 1000 + 24; return v; }\n" },
+    { label := "add_with_carry declaration", cakeMainLength := 44,
+      source := "fun 1 main() { var a = 1; var b = 2; var c = 0; var {1,1} r = __add_with_carry__(a, b, c); return r.0; }\n" },
+    { label := "add_with_carry assignment", cakeMainLength := 48,
+      source := "fun 1 main() { var a = 1; var b = 2; var c = 0; var {1,1} r = <0,0>; r = __add_with_carry__(a, b, c); return r.1; }\n" },
+    { label := "exception throw catch", cakeMainLength := 156,
+      source := "exception E : 1;\nfun 1 f() { throw E 1; }\nfun 1 main() { var 1 x = 0; var 1 y = 0; try\n  y = f()\ncatch E => x {\n  y = x + 1;\n}\nreturn y; }\n" },
+    { label := "nested calls", cakeMainLength := 4,
+      source := "fun 1 a() { return 1; }\nfun 1 b() { var 1 t = a(); return t + 1; }\nfun 1 c() { var 1 t = b(); return t + 1; }\nfun 1 main() { return c(); }\n" },
+    { label := "conditional chain", cakeMainLength := 8,
+      source := "fun 1 main() { var x = 1; if (x == 0) { x = 2; } else { if (x == 1) { x = 3; } else { x = 4; } } return x; }\n" },
+    { label := "while break", cakeMainLength := 44,
+      source := "fun 1 main() { var x = 0; while (x < 10) { x = x + 1; if (x == 3) { break; } } return x; }\n" },
+    { label := "while continue", cakeMainLength := 52,
+      source := "fun 1 main() { var x = 0; var s = 0; while (x < 10) { x = x + 1; if (x == 3) { continue; } s = s + x; } return s; }\n" },
+    { label := "struct argument", cakeMainLength := 12,
+      source := "struct S { 1 a, 1 b }\nfun 1 f(S s) { return s.a + s.b; }\nfun 1 main() { var S x = S <a = 1, b = 2>; return f(x); }\n" },
+    { label := "pair argument", cakeMainLength := 12,
+      source := "fun 1 f({1,1} p) { return p.0 + p.1; }\nfun 1 main() { return f(<1,2>); }\n" },
+    { label := "tuple-shaped named struct", cakeMainLength := 152,
+      source := "struct my_struct {\n  2 tuple,\n  1 value\n}\nfun my_struct f(my_struct a) {\n  return my_struct <tuple = a.tuple, value = a.value>;\n}\nfun 1 main() {\n  var my_struct x = my_struct <tuple = <0,1>, value = 2>;\n  var my_struct y = f(x);\n  return y.value;\n}\n" },
+    { label := "struct return", cakeMainLength := 152,
+      source := "struct S { 1 a, 1 b }\nfun S mk(1 x, 1 y) { return S <a = x, b = y>; }\nfun 1 main() { var S s = mk(1,2); return s.a; }\n" },
+    { label := "pair return", cakeMainLength := 152,
+      source := "fun {1,1} mk(1 x, 1 y) { return <x, y>; }\nfun 1 main() { var {1,1} r = mk(1,2); return r.0; }\n" },
+    { label := "multi-word return", cakeMainLength := 144,
+      source := "fun 2 f() { return <1,2>; }\nfun 1 main() { var {1,1} r = f(); return r.0 + r.1; }\n" },
+    { label := "computed global initializer", cakeMainLength := 36,
+      source := "var 1 x = 1+1;\nfun 1 main() { x = x + 1; return x; }\n" }
+  ]
+
+/-- Every audited source is accepted by the Flapjack source bytes entrypoint and
+has a recorded original-compiler `cml_main_7` length. -/
+def auditedAccepted : Bool :=
+  auditedSources.all (fun entry =>
+    entry.cakeMainLength > 0 &&
+      match compileSourceBytes entry.source with
+      | some bytes => bytes.length > 0
+      | none => false)
+
 /-- The pinned CakeML reference sections keep their original byte lengths. -/
 def cakeGoldenShape : Bool :=
   cakeGlobalGeneratedMain.length == 28 && cakeGlobalMain.length == 20 &&
@@ -802,6 +877,7 @@ def cakeGoldenShape : Bool :=
 #guard ffiCallBytesAccepted
 #guard ffiRegisterBytesAccepted
 #guard initializerChangesArtifact
+#guard auditedAccepted
 #guard cakeGoldenShape
 
 def checkBool (name : String) (condition : Bool) : IO Bool := do
@@ -854,6 +930,8 @@ def runChecks : IO Bool := do
       (runtimeImageAccepted globalSource),
     checkBool "Pancake global initializer changes artifact"
       initializerChangesArtifact,
+    checkBool "Pancake audited source constructs compile (bytes)"
+      auditedAccepted,
     checkBool "CakeML global golden sections pinned" cakeGoldenShape
     ].mapM id
   pure (results.all id)

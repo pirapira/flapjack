@@ -45,6 +45,14 @@ def missingLocalInserts : Bool :=
   | (.normal state, _) => state.locals 1 == some 3
   | _ => false
 
+def alignedPayloadOriginal : Bool :=
+  let state := { returningState true with
+    byteAlign := fun _ => 0
+    shMemaddrs := fun address => address == 0 }
+  match loopFfiShMemLoad state 1 3 1 with
+  | (.normal state, _) => state.locals 1 == some 3
+  | _ => false
+
 def domainError : Bool :=
   match loopFfiShMemLoad (returningState false) 1 3 0 with
   | (.error _, _) => true
@@ -64,6 +72,7 @@ def finalClearsLocals : Bool :=
 
 #guard returnLoad
 #guard missingLocalInserts
+#guard alignedPayloadOriginal
 #guard domainError
 #guard finalClearsLocals
 
@@ -71,6 +80,7 @@ def runChecks : IO Bool := do
   let checks : List (String × Bool) := [
     ("sh_mem_load returns a word and records the FFI event", returnLoad),
     ("sh_mem_load inserts a missing destination local", missingLocalInserts),
+    ("sh_mem_load checks aligned domain but sends original address", alignedPayloadOriginal),
     ("sh_mem_load rejects an unmapped shared address", domainError),
     ("sh_mem_load clears locals on final FFI", finalClearsLocals)]
   let results ← checks.mapM fun (name, passed) => do

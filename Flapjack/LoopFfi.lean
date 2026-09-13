@@ -194,7 +194,7 @@ def loopFfiShMemLoad [BEq α] [OfNat α 1] [Add α]
   else
     match callFfi state.ffi (.sharedMem .mappedRead)
         (loopFfiByteCount state width)
-        (state.wordToBytes alignedAddress false) with
+        (state.wordToBytes (if width = 0 then alignedAddress else address) false) with
     | .final event =>
         let state := loopFfiClearLocals state
         (.finalFfi state event, state)

@@ -14,6 +14,7 @@ open preamble;
 open loopSemTheory;
 
 val s = ``(s:(8,unit) loopSem$state)``;
+val s32 = ``(s:(32,unit) loopSem$state)``;
 val returning_ffi =
   ``<| oracle := (λname. λst. λconf. λbytes.
         case name of
@@ -48,3 +49,10 @@ val _ = print_eval "domain_error"
                   sh_mdomain := {3w}; ffi := ^returning_ffi |>) of
       (res,s') => (res, (case lookup 1 s'.locals of
         SOME (Word w) => w = 3w | _ => F))``
+val _ = print_eval "aligned_domain_original_payload"
+  ``case loopSem$sh_mem_load 1 (3w : 32 word) 1
+      (^s32 with <| locals := LN; sh_mdomain := {0w}; ffi := ^returning_ffi |>) of
+      (res,s') => (res,
+        case lookup 1 s'.locals of SOME (Word w) => w2n w | _ => 0)``
+val _ = print_eval "byte_align_three"
+  ``byte_align (3w : 32 word)``

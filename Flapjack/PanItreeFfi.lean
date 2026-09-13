@@ -89,4 +89,48 @@ theorem compFfi_vis_final (fuel : Nat) (name : FfiName)
       compFfi fuel (k (.final outcome)) world := by
   cases fuel <;> simp [compFfi, compFfiFuel, horacle]
 
+/-! The source `div_def` is nontermination of the FFI-compacted tree.  On the
+finite observation boundary this is exactly failure to reach a `Ret` at every
+fuel bound. -/
+def panFfiDiv (world : PanFfiWorld σ) (tree : PanFfiTree α) : Prop :=
+  ∀ fuel, compFfi fuel tree world = none
+
+theorem panFfiDiv_ret (world : PanFfiWorld σ) (value : α) :
+    ¬ panFfiDiv world (.ret value) := by
+  intro h
+  have := h 0
+  simp [compFfi, compFfiFuel] at this
+
+theorem panFfiDiv_tau (world : PanFfiWorld σ) (tree : PanFfiTree α) :
+    panFfiDiv world (.tau tree) ↔ panFfiDiv world tree := by
+  constructor
+  · intro h fuel
+    have hnext := h fuel.succ
+    simpa [panFfiDiv, compFfi, compFfiFuel] using hnext
+  · intro h fuel
+    cases fuel with
+    | zero => simp [compFfi, compFfiFuel]
+    | succ fuel =>
+        simpa [panFfiDiv, compFfi, compFfiFuel] using h fuel
+
+def panFfiTerminates (world : PanFfiWorld σ) (tree : PanFfiTree α) : Prop :=
+  ∃ fuel, (compFfi fuel tree world).isSome
+
+theorem panFfiDiv_not_iff (world : PanFfiWorld σ) (tree : PanFfiTree α) :
+    (¬ panFfiDiv world tree) ↔ panFfiTerminates world tree := by
+  constructor
+  · intro h
+    have h' : ¬ (∀ fuel, compFfi fuel tree world = none) := by
+      simpa [panFfiDiv] using h
+    obtain ⟨fuel, hnot⟩ := Classical.not_forall.mp h'
+    cases hvalue : compFfi fuel tree world with
+    | none => exact (hnot hvalue).elim
+    | some value => exact ⟨fuel, by simp [hvalue]⟩
+  · rintro ⟨fuel, hsome⟩ hdiv
+    cases hvalue : compFfi fuel tree world with
+    | none => simp [hvalue] at hsome
+    | some value =>
+        have hnone := hdiv fuel
+        simp [hvalue] at hnone
+
 end Flapjack

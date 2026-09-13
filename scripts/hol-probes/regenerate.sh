@@ -98,7 +98,8 @@ run_probe pan_sem_memory_e2e_probeScript.sml pan_sem_memory_e2e_probe.out \
 run_probe pan_sem_ffi_e2e_probeScript.sml pan_sem_ffi_e2e_probe.out \
   ffi_foo_event ffi_foo_event "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_itree_comp_ffi_probeScript.sml pan_itree_comp_ffi_probe.out \
-  ret tau return "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+  ret tau return div_ret div_tau \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
   get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_get_var_imm_probeScript.sml \

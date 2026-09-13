@@ -281,41 +281,6 @@ def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
   else
     (.error, state)
 
-def crepRuntimeSharedMemExp
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (handler : CrepRuntimeFfiHandler α σ ε)
-    (state : CrepRuntimeState α σ) (operator : CrepMemOp)
-    (name : Nat) (address : CrepExp α) : CrepRuntimeStep α σ ε :=
-  match evalCrepFullExp state.locals state.memory state.baseAddress
-      state.topAddress address with
-  | some address => crepRuntimeSharedMem handler state operator name address
-  | none => (.error, state)
-
-def crepRuntimeExtCallExp
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (handler : CrepRuntimeFfiHandler α σ ε)
-    (state : CrepRuntimeState α σ) (function : FunName)
-    (configuration configurationLength array arrayLength : CrepExp α) :
-    CrepRuntimeStep α σ ε :=
-  match evalCrepFullExp state.locals state.memory state.baseAddress
-      state.topAddress configuration,
-      evalCrepFullExp state.locals state.memory state.baseAddress
-        state.topAddress configurationLength,
-      evalCrepFullExp state.locals state.memory state.baseAddress
-        state.topAddress array,
-      evalCrepFullExp state.locals state.memory state.baseAddress
-        state.topAddress arrayLength with
-  | some configuration, some configurationLength, some array, some arrayLength =>
-      crepRuntimeExtCallValues handler state function configuration configurationLength
-        array arrayLength
-  | _, _, _, _ => (.error, state)
-
 def evalCrepRuntimeExp
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -353,6 +318,36 @@ def evalCrepRuntimeExp
   | .topAddr => some state.topAddress
   | _ => none
 termination_by expression => sizeOf expression
+
+def crepRuntimeSharedMemExp
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (handler : CrepRuntimeFfiHandler α σ ε)
+    (state : CrepRuntimeState α σ) (operator : CrepMemOp)
+    (name : Nat) (address : CrepExp α) : CrepRuntimeStep α σ ε :=
+  match evalCrepRuntimeExp state address with
+  | some address => crepRuntimeSharedMem handler state operator name address
+  | none => (.error, state)
+
+def crepRuntimeExtCallExp
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (handler : CrepRuntimeFfiHandler α σ ε)
+    (state : CrepRuntimeState α σ) (function : FunName)
+    (configuration configurationLength array arrayLength : CrepExp α) :
+    CrepRuntimeStep α σ ε :=
+  match evalCrepRuntimeExp state configuration,
+      evalCrepRuntimeExp state configurationLength,
+      evalCrepRuntimeExp state array,
+      evalCrepRuntimeExp state arrayLength with
+  | some configuration, some configurationLength, some array, some arrayLength =>
+      crepRuntimeExtCallValues handler state function configuration configurationLength
+        array arrayLength
+  | _, _, _, _ => (.error, state)
 
 def evalCrepRuntimeExps
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]

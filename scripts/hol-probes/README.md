@@ -28,6 +28,9 @@ additionally probes `pan_op_def` at lines 191--193.
 `Flapjack.Test.LoopDecClockParity` probes `dec_clock_def` at lines 42--43 of
 the same source.
 `Flapjack.Test.LoopFixClockParity` probes `fix_clock_def` at lines 46--49.
+The `longdiv_code_probe.out` fixture probes the original software LongDiv
+helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
+RISC-V target's deliberate LongDiv encoding rejection.
 
 From the repository root, with HOL4 and the CakeML checkout available,
 regenerate both checked-in outputs with:

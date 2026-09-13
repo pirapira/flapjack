@@ -60,3 +60,9 @@ sed -n '/^set_globals_new=/,/^set_globals_sibling=/p' "$tmp" > \
   "$hol_dir/bin/hol" run "$probe_dir/loop_sem_set_vars_probeScript.sml") >"$tmp"
 sed -n '/^set_vars_basic=/,/^set_vars_clock=/p' "$tmp" > \
   "$probe_dir/loop_sem_set_vars_probe.out"
+
+# The find_code probe observes the returned parameter map via sptree lookups.
+(cd "$cake_dir/pancake" && \
+  "$hol_dir/bin/hol" run "$probe_dir/loop_sem_find_code_probeScript.sml") >"$tmp"
+sed -n '/^find_code_label_first=/,/^find_code_dup_first=/p' "$tmp" > \
+  "$probe_dir/loop_sem_find_code_probe.out"

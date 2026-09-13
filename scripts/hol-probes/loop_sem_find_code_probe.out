@@ -1,0 +1,17 @@
+find_code_label_first=SOME (Word 3w)
+
+find_code_label_second=SOME (Word 4w)
+
+find_code_label_len_mismatch=NONE
+
+find_code_label_missing=NONE
+
+find_code_link_first=SOME (Word 3w)
+
+find_code_link_wrong_len=NONE
+
+find_code_empty_args=NONE
+
+find_code_bad_last=NONE
+
+find_code_dup_first=SOME (Word 5w)

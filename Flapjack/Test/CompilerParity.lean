@@ -22,6 +22,7 @@ import Flapjack.Test.LoopFindCodeParity
 import Flapjack.Test.LoopPrimopParity
 import Flapjack.Test.LoopArithParity
 import Flapjack.Test.LoopMemStoreParity
+import Flapjack.Test.LoopMemLoadParity
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.ParsedFullSsaPipeline
@@ -631,7 +632,8 @@ def main : IO Unit := do
     Flapjack.Test.LoopPrimopParity.runChecks,
     Flapjack.Test.LoopArithParity.runChecks,
     Flapjack.Test.PanPrimopParity.runChecks,
-    Flapjack.Test.LoopMemStoreParity.runChecks
+    Flapjack.Test.LoopMemStoreParity.runChecks,
+    Flapjack.Test.LoopMemLoadParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

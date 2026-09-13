@@ -99,6 +99,8 @@ run_probe loop_sem_primop_probeScript.sml loop_sem_primop_probe.out \
   valid_no_carry invalid_nonword "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_mem_store_probeScript.sml loop_sem_mem_store_probe.out \
   mem_store_hit mem_store_other "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_mem_load_probeScript.sml loop_sem_mem_load_probe.out \
+  mem_load_hit mem_load_miss "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.
 run_probe loop_sem_loop_arith_probeScript.sml loop_sem_loop_arith_probe.out \
   loop_arith_div loop_arith_longdiv_overflow "$cake_dir/pancake/semantics/loopSemScript.sml"

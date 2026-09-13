@@ -87,4 +87,19 @@ theorem tracePrefixFuel_vis_final (fuel : Nat) (name : FfiName)
       tracePrefixFuel fuel (k (.final outcome)) world := by
   simp [tracePrefixFuel, horacle]
 
+/-! `trace_prefix0_def` uses the same observable transition machine but the
+result is the unwrapped `itree_evaluate` sum: `Oracle_return` continues with
+the returned bytes directly, while `Oracle_final` and length failure continue
+with their direct terminal outcomes. `PanFfiResponse` is already this
+normalized result representation, so its finite observation is this wrapper
+over the shared transition equations. -/
+def tracePrefix0Fuel {α σ : Type} (fuel : Nat) (tree : PanFfiTree α)
+    (world : PanFfiWorld σ) : Option (List FfiEvent) :=
+  tracePrefixFuel fuel tree world
+
+@[simp] theorem tracePrefix0Fuel_eq_tracePrefixFuel (fuel : Nat)
+    (tree : PanFfiTree α) (world : PanFfiWorld σ) :
+    tracePrefix0Fuel fuel tree world = tracePrefixFuel fuel tree world := by
+  rfl
+
 end Flapjack

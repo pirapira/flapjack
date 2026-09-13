@@ -1,0 +1,8 @@
+ret=[||]
+
+tau_vis=[|IO_event (ExtCall «foo») [] [(1w,1w)]|]
+
+length_failure=[||]
+
+final=[||]
+

@@ -29,7 +29,7 @@ fun print_div label q =
   end;
 
 val fs =
-  ``(((λ(name:ffi$ffiname). λst. λconf. λbytes. ffi$Oracle_return st bytes), ()):
+  ``(((λ(name:ffi$ffiname). λst. λconf. λbytes. ffi$Oracle_return st bytes), ()): 
       unit pan_itreeSem$fst)``;
 
 val fs_short =
@@ -58,7 +58,7 @@ val _ = print_eval "length_failure" ``(comp_ffi ^fs_short
     (λr. Ret (INL (INL ffi$FFI_failed))):
     (unit) pan_itreeSem$ptree))``;
 
-val _ = print_eval "oracle_final" ``(comp_ffi ^fs_final
+val _ = print_eval "final" ``(comp_ffi ^fs_final
   (Vis (ffi$ExtCall «foo», [], [1w:8 word])
     (λr. Ret (INL (INL ffi$FFI_failed))):
     (unit) pan_itreeSem$ptree))``;

@@ -42,8 +42,6 @@ structure LoopLprefixLub (family : Nat → List α) where
   trace : LoopLList α
   isLub : LoopLprefixLubPredicate family trace
 
-/-- The clock-indexed finite prefixes form the `lprefix_chain` required by
-CakeML's `build_lprefix_lub` (`lprefix_lubScript.sml:250-285, 430-455`). -/
 def LoopPrefixChain (family : Nat → List α) : Prop :=
   ∀ clock later, clock ≤ later → family clock <+: family later
 
@@ -164,5 +162,10 @@ noncomputable def loopSemantics (hooks : LoopSemanticsHooks)
     (divergenceChain : LoopPrefixChain
       (fun clock => hooks.ioEvents (hooks.evaluate clock).2)) : LoopBehaviour :=
   loopSemanticsWithLub hooks (buildLoopLprefixLub _ divergenceChain)
+
+noncomputable def loopSemanticsOfPrefixChain (hooks : LoopSemanticsHooks)
+    (hchain : LoopPrefixChain
+      (fun clock => hooks.ioEvents (hooks.evaluate clock).2)) : LoopBehaviour :=
+  loopSemantics hooks hchain
 
 end Flapjack

@@ -1,6 +1,29 @@
 import Flapjack.PanProgramSemantics
+import Flapjack.Test.OriginalPancakeProbes
 
 namespace Flapjack
+
+open Flapjack.Test.OriginalPancakeProbes
+
+/- These are the exact source texts used for the original Pancake probes.  The
+   corresponding generated-output facts are checked in by
+   `OriginalPancakeProbes`; regenerate the full assembly with
+   `scripts/probe-original-pancake.sh INPUT.pnk OUTPUT.cake.S`. -/
+def evaluateDeclsProbeSource : String :=
+  "var 1 g = 41; fun 1 main() { return g; }"
+
+def decsStcnamesProbeSource : String :=
+  "struct Pair { 1 left, 1 right } fun 1 main() { return 0; }"
+
+def semanticsDeclsProbeSource : String :=
+  "var 1 g = 41; struct Pair { 1 left, 1 right } fun 1 main() { return g; }"
+
+#guard evaluateDeclsProbeSource = evaluateDecls.source
+#guard decsStcnamesProbeSource = decsStcnames.source
+#guard semanticsDeclsProbeSource = semanticsDecls.source
+#guard evaluateDecls.cakeByteCount == 1048
+#guard decsStcnames.cakeByteCount == 1012
+#guard semanticsDecls.cakeByteCount == 1048
 
 def sourceDeclarationInitialState : PanValueProgramState Nat :=
   { structs := []

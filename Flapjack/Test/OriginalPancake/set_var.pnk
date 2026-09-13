@@ -1,0 +1,1 @@
+fun 1 main() { var 1 x = 7; var 1 x = 11; return x; }

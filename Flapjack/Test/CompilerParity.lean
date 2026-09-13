@@ -29,6 +29,7 @@ import Flapjack.Test.LoopMemoryStateParity
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.ParsedFullSsaPipeline
+import Flapjack.Test.EndToEndParity
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -639,7 +640,8 @@ def main : IO Unit := do
     Flapjack.Test.PanPrimopParity.runChecks,
     Flapjack.Test.LoopMemStoreParity.runChecks,
     Flapjack.Test.LoopMemLoadParity.runChecks,
-    Flapjack.Test.LoopMemoryStateParity.runChecks
+    Flapjack.Test.LoopMemoryStateParity.runChecks,
+    Flapjack.Test.EndToEndParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

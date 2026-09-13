@@ -21,7 +21,8 @@ The port has a working, checked RV64I source-entry path for a growing subset
 of Pancake and a large collection of pass-level and machine-level correctness
 lemmas. It is not yet a complete replacement for CakeML's Pancake compiler:
 full runtime-image generation, broad source coverage, exact artifact parity,
-and the complete Pancake correctness theorem still require work. The current
+general executable source corpus and differential execution coverage, and the
+complete Pancake correctness theorem still require work. The current
 claims and limitations are recorded explicitly in
 [`docs/SOUNDNESS.md`](docs/SOUNDNESS.md).
 The required workflow for tying internal and end-to-end tests to the original

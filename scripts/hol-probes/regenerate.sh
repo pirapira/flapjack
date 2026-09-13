@@ -66,6 +66,8 @@ run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \
   word nstruct "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_word_helpers_probeScript.sml pan_word_helpers_probe.out \
   is_word the_val_word "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_op_probeScript.sml pan_op_probe.out \
+  mul_two mul_three "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
   byte_hit load32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \
@@ -91,10 +93,22 @@ run_probe loop_sem_set_globals_probeScript.sml loop_sem_set_globals_probe.out \
 # The set_vars probe observes sptree lookups after the original alist_insert.
 run_probe loop_sem_set_vars_probeScript.sml loop_sem_set_vars_probe.out \
   set_vars_basic set_vars_clock "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_set_var_probeScript.sml loop_sem_set_var_probe.out \
+  set_var_new set_var_missing "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_dec_clock_probeScript.sml loop_sem_dec_clock_probe.out \
+  dec_clock_five dec_clock_local "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_fix_clock_probeScript.sml loop_sem_fix_clock_probe.out \
+  fix_clock_lower_new fix_clock_zero "$cake_dir/pancake/semantics/loopSemScript.sml"
 
 # The find_code probe observes the returned parameter map via sptree lookups.
 run_probe loop_sem_find_code_probeScript.sml loop_sem_find_code_probe.out \
   find_code_label_first find_code_dup_first "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_primop_probeScript.sml loop_sem_primop_probe.out \
+  valid_no_carry invalid_nonword "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_mem_store_probeScript.sml loop_sem_mem_store_probe.out \
+  mem_store_hit mem_store_other "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_mem_load_probeScript.sml loop_sem_mem_load_probe.out \
+  mem_load_hit mem_load_miss "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.
 run_probe loop_sem_loop_arith_probeScript.sml loop_sem_loop_arith_probe.out \
   loop_arith_div loop_arith_longdiv_overflow "$cake_dir/pancake/semantics/loopSemScript.sml"

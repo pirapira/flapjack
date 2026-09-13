@@ -1,0 +1,7 @@
+valid_no_carry=SOME [Word 7w; Word 0w]
+
+valid_carry=SOME [Word 0x10000000000000000w; Word 1w]
+
+invalid_arity=NONE
+
+invalid_nonword=NONE

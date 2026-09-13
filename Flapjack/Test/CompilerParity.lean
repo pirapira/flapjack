@@ -7,6 +7,7 @@ import Flapjack.Test.LoopToWord
 import Flapjack.Test.PanMemoryParity
 import Flapjack.Test.PanShapeParity
 import Flapjack.Test.PanWordParity
+import Flapjack.Test.PanOpParity
 import Flapjack.Test.PanFixedLoadParity
 import Flapjack.Test.PanFixedStoreParity
 import Flapjack.Test.PanFlatStoreParity
@@ -17,8 +18,15 @@ import Flapjack.Test.PanSetVarParity
 import Flapjack.Test.LoopGetVarsParity
 import Flapjack.Test.LoopSetGlobalsParity
 import Flapjack.Test.LoopSetVarsParity
+import Flapjack.Test.LoopSetVarParity
+import Flapjack.Test.LoopDecClockParity
+import Flapjack.Test.LoopFixClockParity
 import Flapjack.Test.LoopFindCodeParity
+import Flapjack.Test.LoopPrimopParity
 import Flapjack.Test.LoopArithParity
+import Flapjack.Test.LoopMemStoreParity
+import Flapjack.Test.LoopMemLoadParity
+import Flapjack.Test.LoopMemoryStateParity
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.ParsedFullSsaPipeline
@@ -623,10 +631,17 @@ def main : IO Unit := do
     Flapjack.Test.LoopGetVarsParity.runChecks,
     Flapjack.Test.LoopSetGlobalsParity.runChecks,
     Flapjack.Test.LoopSetVarsParity.runChecks,
+    Flapjack.Test.LoopSetVarParity.runChecks,
+    Flapjack.Test.LoopDecClockParity.runChecks,
+    Flapjack.Test.LoopFixClockParity.runChecks,
     Flapjack.Test.LoopFindCodeParity.runChecks,
+    Flapjack.Test.LoopPrimopParity.runChecks,
     Flapjack.Test.LoopArithParity.runChecks,
     Flapjack.Test.PanPrimopParity.runChecks,
-    Flapjack.Test.PanSetVarParity.runChecks
+    Flapjack.Test.PanSetVarParity.runChecks,
+    Flapjack.Test.LoopMemStoreParity.runChecks,
+    Flapjack.Test.LoopMemLoadParity.runChecks,
+    Flapjack.Test.LoopMemoryStateParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

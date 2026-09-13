@@ -60,6 +60,10 @@ def sequenceReturn : Bool :=
     (.seq (.assign 1 (.const (.word 7))) (.return [1])) (emptyState 5)) ==
     (some (.result [.word 7]), none, 5)
 
+def skip : Bool :=
+  observe (evaluateLoop 4 hooks .skip (emptyState 5)) ==
+    (none, none, 5)
+
 def assignment : Bool :=
   observe (evaluateLoop 4 hooks (.assign 1 (.const (.word 7))) (emptyState 5)) ==
     (none, some (.word 7), 5)
@@ -68,15 +72,25 @@ def timeout : Bool :=
   observe (evaluateLoop 4 hooks .tick (emptyState 0)) ==
     (some .timeOut, none, 0)
 
+def tailCallNoResult : Bool :=
+  observe (evaluateLoop 8 hooks
+    (.call none (some 1) [] none)
+    { (emptyState 5) with code := [(1, [], .skip)] }) ==
+    (some .error, none, 4)
+
 #guard sequenceReturn
+#guard skip
 #guard assignment
 #guard timeout
+#guard tailCallNoResult
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) := [
     ("evaluate sequence observes intermediate assignment and call_env", sequenceReturn),
+    ("evaluate Skip returns normally", skip),
     ("evaluate assignment updates the local state", assignment),
-    ("evaluate Tick clears locals at clock zero", timeout)]
+    ("evaluate Tick clears locals at clock zero", timeout),
+    ("evaluate tail call maps callee NONE to Error", tailCallNoResult)]
   let results ← checks.mapM fun (name, passed) => do
     if passed then IO.println s!"PASS {name}"
     else IO.println s!"FAIL {name}"

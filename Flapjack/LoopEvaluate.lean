@@ -243,7 +243,8 @@ mutual
                       { state with locals := environment, clock := state.clock - 1 } with
                   | (some (.continue _), state') | (some (.break _), state') =>
                       (some .error, state')
-                  | result => result
+                  | (none, state') => (some .error, state')
+                  | (some result, state') => (some result, state')
             | some (names, live) =>
                 if names.eraseDups.length ≠ names.length then (some .error, state)
                 else

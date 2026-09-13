@@ -12,23 +12,26 @@ namespace Flapjack.Test.LoopGetVarImmParity
 
 open Flapjack
 
-inductive ProbeWordLoc where
-  | word (value : Nat)
-  | loc (identifier offset : Nat)
-deriving DecidableEq, Repr
-
-def probeState : LoopState ProbeWordLoc :=
+def probeState : LoopMachineState Nat :=
   { locals := fun name =>
       if name == 1 then some (.word 5)
       else if name == 3 then some (.loc 9 0)
       else none
     globals := fun _ => none
-    memory := fun _ => none }
+    memory := fun _ => none
+    mdomain := fun _ => true
+    shMdomain := fun _ => true
+    clock := 10
+    code := []
+    be := false
+    ffi := 0
+    baseAddr := 100
+    topAddr := 200 }
 
-def originalRegHit : Option ProbeWordLoc := some (.word 5)
-def originalRegMiss : Option ProbeWordLoc := none
-def originalImmWord : Option ProbeWordLoc := some (.word 7)
-def originalRegLoc : Option ProbeWordLoc := some (.loc 9 0)
+def originalRegHit : Option LoopWordLoc := some (.word 5)
+def originalRegMiss : Option LoopWordLoc := none
+def originalImmWord : Option LoopWordLoc := some (.word 7)
+def originalRegLoc : Option LoopWordLoc := some (.loc 9 0)
 
 #guard getVarImm probeState (.reg 1) == originalRegHit
 #guard getVarImm probeState (.reg 2) == originalRegMiss

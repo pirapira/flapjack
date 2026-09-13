@@ -24,7 +24,7 @@ inductive LoopExp (α : Type u) where
 inductive RegImm (α : Type u) where
   | imm (value : α)
   | reg (name : Nat)
-  deriving Repr
+  deriving DecidableEq, Repr
 
 inductive LoopArith where
   | longMul (destinationLeft destinationRight sourceLeft sourceRight : Nat)

@@ -139,7 +139,7 @@ def sourceFactsPinned : Bool :=
       "fun 1 zero() { return 7; } fun 1 main() { return zero(); }" &&
   lookupCode.source ==
       "fun 1 id(1 x) { return x; } fun 1 main() { return id(7); }" &&
-  crepOp.source == "fun 1 main() { return 6 * 7; }" &&
+    crepOp.source == "fun 1 main() { return 6 * 7; }" &&
     decClock.source == "fun 1 main() { tick; return 7; }" &&
     evaluateDecls.source == "var 1 g = 41; fun 1 main() { return g; }" &&
     decsStcnames.source == "struct Pair { 1 left, 1 right } fun 1 main() { return 0; }" &&

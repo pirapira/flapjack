@@ -1,0 +1,17 @@
+find_var_empty=0
+
+find_var_hit=7
+
+find_var_miss=0
+
+find_var_ctxt_10=2
+
+find_var_ctxt_11=4
+
+find_var_ctxt_12=6
+
+find_reg_imm_imm=Imm 5w
+
+find_reg_imm_reg=Reg 0
+
+find_reg_imm_ctxt=Reg 4

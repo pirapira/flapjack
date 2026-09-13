@@ -30,6 +30,15 @@ def emptyState (clock : Nat) : LoopMachineState LoopWordLoc :=
 
 def noEvents : LoopMachineState LoopWordLoc → List FfiEvent := fun _ => []
 
+def emptyLprefixLub : LoopLprefixLub (fun _ : Nat => ([] : List FfiEvent)) :=
+  { trace := fun _ => none
+    isLub := by
+      constructor
+      · intro _clock index value hvalue
+        simp at hvalue
+      · intro _candidate _hbound index value htrace
+        simp at htrace }
+
 def hooksFor (evaluate : Nat → LoopMachineStep) : LoopSemanticsHooks :=
   { evaluate := evaluate
     ioEvents := noEvents
@@ -56,11 +65,30 @@ def sourceClockParity : Bool :=
   observeStep (successEvaluate 0) == (some .timeOut, 0) &&
     observeStep (successEvaluate 1) == (some (.result []), 0)
 
+theorem emptyPrefixLubProof :
+    LoopLprefixLubPredicate (fun _ : Nat => ([] : List FfiEvent)) (fun _ => none) := by
+  constructor
+  · intro _clock index value hvalue
+    simp at hvalue
+  · intro _candidate _hbound index value htrace
+    simp at htrace
+
 theorem successBranch :
     loopHasSuccessfulRun (hooksFor successEvaluate) := by
   refine ⟨1, some (.result []), emptyState 0, .success, ?_, ?_⟩
   · rfl
   · simp [loopResultOutcome]
+
+theorem successNoForbidden :
+    ¬ loopHasForbiddenRun (hooksFor successEvaluate) := by
+  rintro ⟨clock, hclock⟩
+  cases clock with
+  | zero =>
+      change loopForbiddenResult (successEvaluate 0).1 at hclock
+      simp [successEvaluate, loopForbiddenResult] at hclock
+  | succ clock =>
+      change loopForbiddenResult (successEvaluate (clock + 1)).1 at hclock
+      simp [successEvaluate, loopForbiddenResult] at hclock
 
 theorem forbiddenBranch :
     loopHasForbiddenRun (hooksFor forbiddenEvaluate) := by
@@ -76,6 +104,32 @@ theorem divergenceBranch :
     change (some .timeOut, emptyState 0) = (result, state) at heval
     cases heval
     simp [loopResultOutcome] at houtcome
+
+theorem semanticsForbidden :
+    loopSemantics (hooksFor forbiddenEvaluate) emptyLprefixLub = .fail := by
+  classical
+  simp [loopSemantics, forbiddenBranch]
+
+theorem semanticsSuccess :
+    loopSemantics (hooksFor successEvaluate) emptyLprefixLub =
+      loopChooseTermination (hooksFor successEvaluate) successBranch := by
+  classical
+  by_cases forbidden : loopHasForbiddenRun (hooksFor successEvaluate)
+  · exact (successNoForbidden forbidden).elim
+  · by_cases successful : loopHasSuccessfulRun (hooksFor successEvaluate)
+    · simp [loopSemantics, forbidden, successful]
+    · exact (successful successBranch).elim
+
+theorem semanticsDivergence :
+    loopSemantics (hooksFor divergingEvaluate) emptyLprefixLub =
+      .diverge (fun _ => []) emptyLprefixLub := by
+  classical
+  by_cases forbidden : loopHasForbiddenRun (hooksFor divergingEvaluate)
+  · exact (divergenceBranch.1 forbidden).elim
+  · by_cases successful : loopHasSuccessfulRun (hooksFor divergingEvaluate)
+    · exact (divergenceBranch.2 successful).elim
+    · simp only [loopSemantics, dif_neg forbidden, dif_neg successful]
+      congr 2
 
 #guard sourceClockParity
 

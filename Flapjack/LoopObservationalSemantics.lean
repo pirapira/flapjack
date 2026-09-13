@@ -14,9 +14,9 @@ it returns the lazy I/O-prefix least upper bound.
 `LoopSemanticsHooks.evaluate` is the source entry-call evaluator indexed by
 the clock; keeping it explicit prevents this observational definition from
 silently replacing the source's clock-indexed quantification with one fixed
-fuel value.  Since core Lean has no CakeML `llist`/`build_lprefix_lub`, the
-divergence result retains the exact clock-indexed image as
-`LoopLprefixLub.fromClock`.
+fuel value.  `LoopLList` is the finite/infinite lazy-list representation and
+`LoopLprefixLubPredicate` is the explicit least-upper-bound relation for the
+clock-indexed finite I/O prefixes.
 -/
 
 namespace Flapjack
@@ -26,11 +26,25 @@ inductive LoopSemanticOutcome where
   | ffi (outcome : FfiOutcome)
   deriving DecidableEq, Repr
 
-structure LoopLprefixLub (α : Type u) where
-  fromClock : Nat → List α
+abbrev LoopLList (α : Type u) := Nat → Option α
+
+def loopLListUpperBound (family : Nat → List α) (trace : LoopLList α) : Prop :=
+  ∀ clock index value, (family clock)[index]? = some value → trace index = some value
+
+def loopLListLe (left right : LoopLList α) : Prop :=
+  ∀ index value, left index = some value → right index = some value
+
+def LoopLprefixLubPredicate (family : Nat → List α) (trace : LoopLList α) : Prop :=
+  loopLListUpperBound family trace ∧
+    ∀ candidate, loopLListUpperBound family candidate → loopLListLe trace candidate
+
+structure LoopLprefixLub (family : Nat → List α) where
+  trace : LoopLList α
+  isLub : LoopLprefixLubPredicate family trace
 
 inductive LoopBehaviour where
-  | diverge (trace : LoopLprefixLub FfiEvent)
+  | diverge (family : Nat → List FfiEvent)
+      (trace : LoopLprefixLub family)
   | terminate (outcome : LoopSemanticOutcome) (events : List FfiEvent)
   | fail
 
@@ -59,9 +73,6 @@ def loopHasSuccessfulRun (hooks : LoopSemanticsHooks) : Prop :=
     hooks.evaluate clock = (result, state) ∧
     loopResultOutcome hooks result = some outcome
 
-def loopBuildLprefixLub (hooks : LoopSemanticsHooks) : LoopLprefixLub FfiEvent :=
-  { fromClock := fun clock => hooks.ioEvents (hooks.evaluate clock).2 }
-
 noncomputable def loopChooseTermination (hooks : LoopSemanticsHooks)
     (witness : loopHasSuccessfulRun hooks) : LoopBehaviour :=
   let _clock := Classical.choose witness
@@ -74,7 +85,9 @@ noncomputable def loopChooseTermination (hooks : LoopSemanticsHooks)
   .terminate outcome (hooks.ioEvents state)
 
 /-! Exact observational counterpart of `semantics_def`. -/
-noncomputable def loopSemantics (hooks : LoopSemanticsHooks) : LoopBehaviour :=
+noncomputable def loopSemantics (hooks : LoopSemanticsHooks)
+    (divergenceLub : LoopLprefixLub
+      (fun clock => hooks.ioEvents (hooks.evaluate clock).2)) : LoopBehaviour :=
   by
     classical
     exact if forbidden : loopHasForbiddenRun hooks then
@@ -82,6 +95,6 @@ noncomputable def loopSemantics (hooks : LoopSemanticsHooks) : LoopBehaviour :=
     else if successful : loopHasSuccessfulRun hooks then
       loopChooseTermination hooks successful
     else
-      .diverge (loopBuildLprefixLub hooks)
+      .diverge _ divergenceLub
 
 end Flapjack

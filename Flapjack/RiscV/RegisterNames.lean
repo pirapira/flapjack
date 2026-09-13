@@ -267,4 +267,53 @@ abbrev cakeCurrHeap : Nat := 3
 @[simp] theorem riscvRegisterName_cakeCurrHeap :
     riscvRegisterName cakeCurrHeap = 12 := rfl
 
+/-- CakeML's stack-register convention for word-level registers.
+
+Word register `0` is the zero register, which CakeML numbers as stack register
+`27` (and `riscv_names` maps back to hardware `x0`).  Every other word register
+`n >= 1` is stack register `n - 1`, so word registers `2, 3, 4, 5` become the
+argument/return registers `1, 2, 3, 4`, which `riscv_names` maps to `a0..a3`. -/
+def stackRegisterOfWord (name : Nat) : Nat :=
+  if name == 0 then cakeZeroRegister else name - 1
+
+@[simp] theorem stackRegisterOfWord_zero : stackRegisterOfWord 0 = 27 := rfl
+
+@[simp] theorem stackRegisterOfWord_one : stackRegisterOfWord 1 = 0 := rfl
+
+@[simp] theorem stackRegisterOfWord_two : stackRegisterOfWord 2 = 1 := rfl
+
+@[simp] theorem stackRegisterOfWord_three : stackRegisterOfWord 3 = 2 := rfl
+
+@[simp] theorem stackRegisterOfWord_four : stackRegisterOfWord 4 = 3 := rfl
+
+@[simp] theorem stackRegisterOfWord_five : stackRegisterOfWord 5 = 4 := rfl
+
+theorem stackRegisterOfWord_lt_32 {name : Nat} (h : name < 32) :
+    stackRegisterOfWord name < 32 := by
+  unfold stackRegisterOfWord
+  split
+  · decide
+  · omega
+
+/-- Translate a word-level register number to its hardware register through
+CakeML's stack-register convention and `riscv_names`. -/
+def wordRegisterToRiscv (name : Nat) : Nat :=
+  riscvRegisterName (stackRegisterOfWord name)
+
+@[simp] theorem wordRegisterToRiscv_zero : wordRegisterToRiscv 0 = 0 := rfl
+
+@[simp] theorem wordRegisterToRiscv_one : wordRegisterToRiscv 1 = 1 := rfl
+
+@[simp] theorem wordRegisterToRiscv_two : wordRegisterToRiscv 2 = 10 := rfl
+
+@[simp] theorem wordRegisterToRiscv_three : wordRegisterToRiscv 3 = 11 := rfl
+
+@[simp] theorem wordRegisterToRiscv_four : wordRegisterToRiscv 4 = 12 := rfl
+
+@[simp] theorem wordRegisterToRiscv_five : wordRegisterToRiscv 5 = 13 := rfl
+
+theorem wordRegisterToRiscv_lt_32 {name : Nat} (h : name < 32) :
+    wordRegisterToRiscv name < 32 :=
+  riscvRegisterName_lt_32 (stackRegisterOfWord_lt_32 h)
+
 end Flapjack.RiscV

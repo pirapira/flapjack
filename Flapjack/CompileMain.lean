@@ -4,9 +4,11 @@ import Flapjack.RiscV.ArtifactFormat
 /-!
 # Flapjack compiler command
 
-This is the command-line wrapper for the currently supported source-facing
-RV64I pipeline.  Its default output is the Pancake-compatible assembly image;
-`--hex` retains the historical raw byte output for low-level consumers.
+This command-line wrapper exposes the checked source-facing RV64I pipeline as
+raw bytes, linked sections, or a Cake-style assembly frame.  The assembly
+mode uses the same `.text`/`cake_main`/`.byte`/`makesym` boundary as
+`cake --pancake --target=riscv`; code and layout differences remain tracked by
+the parity beads.
 -/
 
 namespace Flapjack
@@ -34,98 +36,88 @@ def hexByte (value : BitVec 8) : String :=
 def hexBytes (values : List (BitVec 8)) : String :=
   String.intercalate " " (values.map hexByte)
 
-inductive OutputFormat where
-  | pancake
-  | hex
-  | sections
-  deriving DecidableEq
-
 def usage : String :=
-  "Usage: lake exe flapjack-compile [--hex|--sections|--pancake] [SOURCE.pnk]\n" ++
-  "Read Pancake source from SOURCE.pnk or stdin and emit a Pancake-compatible " ++
-  "RV64I assembly artifact."
+  "Usage: lake exe flapjack-compile [--sections|--assembly] [SOURCE.pnk]\n" ++
+  "Read Pancake source from SOURCE.pnk or stdin and emit RV64I bytes as " ++
+  "space-separated lowercase hexadecimal.  With --sections, emit one line " ++
+  "per linked section as `<label> <address> <bytes>`.  With --assembly, emit " ++
+  "the Pancake-compatible data/runtime/startup and code assembly frame."
 
-def parseArguments (arguments : List String) : IO (Option (OutputFormat × Option String)) := do
+def readSource (arguments : List String) : IO (Option String) := do
   match arguments with
   | [] =>
-      pure (some (.pancake, none))
+      let stdin ← IO.getStdin
+      pure (some (← stdin.readToEnd))
   | [argument] =>
       if argument == "--help" || argument == "-h" then
         IO.println usage
         pure none
-      else if argument == "--hex" then
-        pure (some (.hex, none))
-      else if argument == "--sections" then
-        pure (some (.sections, none))
-      else if argument == "--pancake" then
-        pure (some (.pancake, none))
       else
-        pure (some (.pancake, some argument))
-  | [format, argument] =>
-      let outputFormat ←
-        if format == "--hex" then pure .hex
-        else if format == "--sections" then pure .sections
-        else if format == "--pancake" then pure .pancake
-        else do
-          IO.eprintln s!"flapjack-compile: unknown option {format}\n{usage}"
-          IO.Process.exit 2
-      pure (some (outputFormat, some argument))
+        pure (some (← IO.FS.readFile argument))
   | _ =>
-      IO.eprintln s!"flapjack-compile: expected at most one input path\n{usage}"
+      IO.eprintln s!"flapjack-compile: expected zero or one input path\n{usage}"
       IO.Process.exit 2
-
-def readSource (path : Option String) : IO String := do
-  match path with
-  | none =>
-      let stdin ← IO.getStdin
-      pure (← stdin.readToEnd)
-  | some argument => IO.FS.readFile argument
 
 def printSections (sections : List (RiscV.EncodedRiscVSection width)) : IO Unit := do
   for entry in sections do
-    IO.println (s!"{RiscV.pancakeSectionName entry.label} {entry.address.toNat} " ++
-      hexBytes entry.bytes)
+    IO.println (s!"{entry.label} {entry.address.toNat} " ++ hexBytes entry.bytes)
 
 def compileMain (arguments : List String) : IO UInt32 := do
-  let some (outputFormat, path) ← parseArguments arguments | return 0
-  let source ← readSource path
-  match outputFormat with
-  | .hex =>
-      match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
-          (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
-          "main" source with
-      | .ok artifact =>
-          for warning in artifact.warnings do
-            IO.eprintln s!"warning: {repr warning}"
-          IO.println (hexBytes artifact.bytes)
-          return 0
-      | .error error =>
-          IO.eprintln s!"flapjack-compile: {repr error}"
-          return 1
-  | .sections =>
-      match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
-          (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
-          "main" source with
-      | .ok image =>
-          for warning in image.warnings do
-            IO.eprintln s!"warning: {repr warning}"
-          printSections image.sections
-          return 0
-      | .error error =>
-          IO.eprintln s!"flapjack-compile: {repr error}"
-          return 1
-  | .pancake =>
-      match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
-          (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
-          "main" source with
-      | .ok image =>
-          for warning in image.warnings do
-            IO.eprintln s!"warning: {repr warning}"
-          IO.print (RiscV.pancakeImage image)
-          return 0
-      | .error error =>
-          IO.eprintln s!"flapjack-compile: {repr error}"
-          return 1
+  let (sectionsMode, assemblyMode, rest) :=
+    match arguments with
+    | "--sections" :: rest => (true, false, rest)
+    | "--assembly" :: rest => (false, true, rest)
+    | _ => (false, false, arguments)
+  let some source ← readSource rest | return 0
+  if assemblyMode then
+    match Flapjack.Parser.parseTopDecs (α := RiscV.Word 64)
+        (fun value => BitVec.ofInt 64 value) source with
+    | .error errors =>
+        IO.eprintln s!"flapjack-compile: {repr errors}"
+        return 1
+    | .ok declarations =>
+        match compileFlapjackEntry (α := RiscV.Word 64) .rv64i
+            (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+            "main" declarations with
+        | none =>
+            IO.eprintln "flapjack-compile: entry not found"
+            return 1
+        | some pipeline =>
+            match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
+                (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
+                "main" source with
+            | .ok image =>
+                for warning in image.warnings do
+                  IO.eprintln s!"warning: {repr warning}"
+                IO.print (RiscV.pancakeAssembly pipeline.crepe image.sections)
+                return 0
+            | .error error =>
+                IO.eprintln s!"flapjack-compile: {repr error}"
+                return 1
+  else if sectionsMode then
+    match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
+        (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
+        "main" source with
+    | .ok image =>
+        for warning in image.warnings do
+          IO.eprintln s!"warning: {repr warning}"
+        printSections image.sections
+        return 0
+    | .error error =>
+        IO.eprintln s!"flapjack-compile: {repr error}"
+        return 1
+  else
+    match compileFlapjackRiscVSourceBytesChecked (width := 64) .rv64i
+        (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
+        "main" source with
+    | .ok artifact =>
+        for warning in artifact.warnings do
+          IO.eprintln s!"warning: {repr warning}"
+        IO.println (hexBytes artifact.bytes)
+        return 0
+    | .error error =>
+        IO.eprintln s!"flapjack-compile: {repr error}"
+        return 1
 
 end Flapjack
 

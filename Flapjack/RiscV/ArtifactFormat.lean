@@ -3,84 +3,75 @@ import Flapjack.RiscV.PipelineDiagnostics
 /-!
 # Pancake-compatible RISC-V artifact formatting
 
-The CakeML Pancake RISC-V target writes an assembly source artifact.  In
-particular, the machine-code bytes are framed by the runtime data symbols and
-the `cake_main` text symbol; each linked code section is also named and given
-its offset and size.  Keep this formatter next to the checked image boundary
-so the command-line tool does not have to reconstruct section metadata from a
-flattened byte list.
+The Pancake RISC-V target emits an assembly source artifact rather than a
+flattened hexadecimal line.  This formatter keeps the target's data/runtime
+frame, startup entry, code buffer markers, generated machine-code marker, and
+`makesym` section table together.  The byte payload is taken directly from the
+checked linked image; no post-processing or hex-to-binary conversion is
+needed by parity consumers.
 -/
 
 namespace Flapjack.RiscV
 
-def pancakeSectionName (label : Nat) : String :=
-  if label == 0 then "cml__Raise_0" else s!"cml_section_{label}"
+def hexDigitUpper (value : Nat) : Char :=
+  if value < 10 then
+    Char.ofNat ('0'.toNat + value)
+  else
+    Char.ofNat ('A'.toNat + value - 10)
 
-def pancakeByte (value : BitVec 8) : String :=
+def hexByteUpper (value : BitVec 8) : String :=
   let n := value.toNat
-  let digit := fun (v : Nat) =>
-    if v < 10 then Char.ofNat ('0'.toNat + v)
-    else Char.ofNat ('a'.toNat + v - 10)
-  s!"0x{digit (n / 16)}{digit (n % 16)}"
+  String.ofList ['0', 'x', hexDigitUpper (n / 16), hexDigitUpper (n % 16)]
 
-def pancakeBytes (values : List (BitVec 8)) : String :=
-  String.intercalate ", " (values.map pancakeByte)
+def sanitizeSymbolName (name : String) : String :=
+  String.ofList (name.toList.filterMap (fun c => if c == '\'' then none else some c))
 
-def pancakeWords (values : List Nat) : String :=
-  String.intercalate ", " (values.map (fun value => s!"{value}"))
+def sectionSymbolName (crepe : List (CompiledFunction (RiscV.Word 64)))
+    (label : Nat) : String :=
+  if label == 0 then
+    "cml_flapjack_runtime_0"
+  else if label == 1 then
+    "cml_generated_main_1"
+  else
+    match crepe[label - 1]? with
+    | some function => s!"cml_{sanitizeSymbolName function.name}_{label}"
+    | none => s!"cml_section_{label}"
 
-def pancakeSection (entry : EncodedRiscVSection width) (offset : Nat) : String :=
-  let name := pancakeSectionName entry.label
-  let bytes := pancakeBytes entry.bytes
-  let payload :=
-    if entry.bytes.isEmpty then
-      ""
-    else
-      s!"        .byte {bytes}\n"
-  name ++ ":\n" ++ payload ++
-    s!"        # address {entry.address.toNat}\n" ++
-    s!"        .local {name}\n" ++
-    s!"        .set {name}, cake_main+{offset}\n" ++
-    s!"        .size {name}, {entry.bytes.length}\n" ++
-    s!"        .type {name}, function\n"
+def assemblyByteLines (values : List (BitVec 8)) : List String :=
+  (List.range ((values.length + 15) / 16)).map (fun line =>
+    let chunk := (values.drop (line * 16)).take 16
+    "\t.byte " ++ String.intercalate "," (chunk.map hexByteUpper))
 
-def pancakeSections : List (EncodedRiscVSection width) → Nat → String
-  | [], _ => ""
-  | entry :: sections, offset =>
-      pancakeSection entry offset ++
-        pancakeSections sections (offset + entry.bytes.length)
+def assemblySymbolLines (crepe : List (CompiledFunction (RiscV.Word 64))) :
+    Nat → List (RiscV.EncodedRiscVSection 64) → List String
+  | _, [] => []
+  | offset, encoded :: rest =>
+      s!"    makesym({sectionSymbolName crepe encoded.label}, {offset}, {encoded.bytes.length})" ::
+        assemblySymbolLines crepe (offset + encoded.bytes.length) rest
 
-def pancakeArtifact (bitmaps : List Nat)
-    (sections : List (EncodedRiscVSection width)) : String :=
-  "/* Flapjack Pancake-compatible RISC-V artifact */\n" ++
-  "     .file        \"flapjack.S\"\n\n" ++
-  "     .data\n" ++
-  "     .p2align 3\n" ++
-  "cml_heap: .quad 0\n" ++
-  "cml_stack: .quad 0\n" ++
-  "cml_stackend: .quad 0\n" ++
-  "     .p2align 3\n" ++
-  "cake_bitmaps:\n" ++
-  s!"        .quad {pancakeWords bitmaps}\n" ++
-  "        .globl cake_bitmaps_buffer_begin\n" ++
-  "cake_bitmaps_buffer_begin:\n" ++
-  "cake_bitmaps_buffer_end:\n\n" ++
-  "#### Start up code\n\n" ++
-  "     .text\n" ++
-  "     .p2align 3\n" ++
-  "     .globl cml_main\n" ++
-  "     .type cml_main, function\n" ++
-  "cml_main:\n" ++
-  "        la a0,cake_main\n" ++
-  "        j cake_main\n\n" ++
-  "cake_main:\n" ++
-  "#### Generated machine code follows\n" ++
-  pancakeSections sections 0
-
-def pancakeImage (image : Flapjack.SourceRiscVImage width) : String :=
-  pancakeArtifact [4] image.sections
-
-def pancakeRuntimeImage (image : Flapjack.SourceRiscVRuntimeImage width) : String :=
-  pancakeArtifact image.bitmaps.data image.sections
+def pancakeAssembly (crepe : List (CompiledFunction (RiscV.Word 64)))
+    (sections : List (RiscV.EncodedRiscVSection 64)) : String :=
+  let bytes := sections.flatMap (fun encoded => encoded.bytes)
+  String.intercalate "\n"
+    (["/* Flapjack Pancake-compatible RISC-V artifact */",
+      "     .file        \"flapjack.S\"", "", "     .data",
+      "     .p2align 3", "cml_heap: .quad 0", "cml_stack: .quad 0",
+      "cml_stackend: .quad 0", "     .p2align 3", "cake_bitmaps:",
+      "\t.quad 4", "     .globl cake_bitmaps_buffer_begin",
+      "cake_bitmaps_buffer_begin:", "cake_bitmaps_buffer_end:", "",
+      "#### Start up code", "", "     .text", "     .p2align 3",
+      "     .globl cml_main", "     .globl cml_heap",
+      "     .globl cml_stack", "     .globl cml_stackend",
+      "     .type cml_main, function", "cml_main:",
+      "     la a0,cake_main", "     ld a1,cml_heap",
+      "     ld a2,cml_stack", "     ld a3,cml_stackend", "     j cake_main", "",
+      "#### CakeML FFI interface (each block is 16 bytes long)", "",
+      "     .p2align 4", "cake_main:", "", "#### Generated machine code follows"]
+      ++ assemblyByteLines bytes
+      ++ ["", "     .globl cake_codebuffer_begin", "cake_codebuffer_begin:",
+          "     .p2align 12", "     .globl cake_codebuffer_end",
+          "cake_codebuffer_end:", "     .space 4096"]
+      ++ assemblySymbolLines crepe 0 sections
+      ++ [""])
 
 end Flapjack.RiscV

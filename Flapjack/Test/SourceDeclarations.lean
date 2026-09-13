@@ -23,6 +23,37 @@ def sourceDeclarationSingleWord : List (PanValue Nat) → Option Nat
   | [.word value] => some value
   | _ => none
 
+/-! These declaration fixtures mirror CakeML's
+    panSemScript.sml:814-837 evaluate_decls_def: names are skipped,
+    globals are evaluated with empty locals and shape-checked, functions add
+    both code and parameter/return shape metadata, and exception declarations
+    reject duplicate names or invalid shapes.  The projections below compare
+    each observable state transition of the Lean port with that equation. -/
+example :
+    (evalPanValueDeclarations sourceDeclarationInitialState
+      [.name "Pair" [("left", .one), ("right", .one)]]).map
+      (fun state => state.structs.length) = some 1 := by
+  decide +kernel
+
+example :
+    (evalPanValueDeclarations sourceDeclarationInitialState
+      [.decl .one "answer" (.const 41)]).map
+      (fun state => (state.globals "answer").bind (fun value =>
+        match value with
+        | .word value => some value
+        | _ => none)) = some (some 41) := by
+  decide +kernel
+
+example :
+    (evalPanValueDeclarations sourceDeclarationInitialState
+      [.decl (.comb [.one, .one]) "answer" (.const 41)]).isNone = true := by
+  decide +kernel
+
+example :
+    (evalPanValueDeclarations sourceDeclarationInitialState
+      [.exnDecl "E" .one, .exnDecl "E" .one]).isNone = true := by
+  decide +kernel
+
 example :
     (evalPanValueDeclarations sourceDeclarationInitialState
       [.decl .one "answer" (.const 41),

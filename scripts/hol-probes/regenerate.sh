@@ -13,10 +13,15 @@ if [[ ! -f "$cake_dir/pancake/loop_to_wordScript.sml" ]]; then
   echo "CakeML Pancake source not found: $cake_dir/pancake/loop_to_wordScript.sml" >&2
   exit 2
 fi
+if [[ ! -f "$cake_dir/pancake/semantics/panSemScript.sml" ]]; then
+  echo "CakeML Pancake source not found: $cake_dir/pancake/semantics/panSemScript.sml" >&2
+  exit 2
+fi
 
 probe_dir="$repo_dir/scripts/hol-probes"
 tmp=$(mktemp)
-trap 'rm -f "$tmp"' EXIT
+mem_tmp=$(mktemp)
+trap 'rm -f "$tmp" "$mem_tmp"' EXIT
 
 # Run from Pancake's source directory so HOL's ordinary theory loader finds
 # the checked-in loop_to_wordTheory objects without modifying the CakeML
@@ -25,3 +30,8 @@ trap 'rm -f "$tmp"' EXIT
   "$hol_dir/bin/hol" run "$probe_dir/loop_to_word_probeScript.sml") >"$tmp"
 sed -n '/^find_var_empty=/,/^find_reg_imm_ctxt=/p' "$tmp" > \
   "$probe_dir/loop_to_word_probe.out"
+
+(cd "$cake_dir/pancake" && \
+  "$hol_dir/bin/hol" run "$probe_dir/pan_mem_load_probeScript.sml") >"$mem_tmp"
+sed -n '/^one_hit=/,/^named_suffix_blocked=/p' "$mem_tmp" > \
+  "$probe_dir/pan_mem_load_probe.out"

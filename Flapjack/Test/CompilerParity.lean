@@ -4,6 +4,7 @@ import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.SourceGlobalParity
 import Flapjack.Test.RegisterTransfer
 import Flapjack.Test.LoopToWord
+import Flapjack.Test.PanMemoryParity
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.ParsedFullSsaPipeline

@@ -85,8 +85,8 @@ def panFlatLoadFuel [BEq α] [OfNat α 0] [Add α]
       (panFlatLoadListFuel context domain memory bytesInWord fuel shapes address).map
         PanValue.rStruct
   | fuel + 1, .named name, address => do
-      let info ← lookupInfo name context
-      let fields ← panFlatLoadFieldsFuel context domain memory bytesInWord fuel
+      let (info, context') ← lookupInfoWithRest name context
+      let fields ← panFlatLoadFieldsFuel context' domain memory bytesInWord fuel
         info.fields address
       pure (.nStruct name fields)
 termination_by fuel _shape _address => fuel

@@ -44,7 +44,7 @@ example :
     panFlatLoadFuel.panFlatLoadFieldsFuel, flatPairDomain, flatPairMemory,
     panFlatReadWord, panOffset, panStructContextFuel, panShapeFieldsFuel,
     panShapeFuel, shapeSizeWithContext,
-    isWfShape, lookupInfo, structuredValueTestContext]
+    isWfShape, lookupInfo, lookupInfoWithRest, structuredValueTestContext]
 
 example :
     panFlatLoad structuredValueTestContext

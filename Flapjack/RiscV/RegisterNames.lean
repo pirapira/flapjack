@@ -143,4 +143,50 @@ theorem labRegisterOfNat_eq {name : Nat} (h : riscvRegisterName name < 32) :
     labRegisterOfNat name = some ⟨riscvRegisterName name, h⟩ := by
   simp [labRegisterOfNat, registerOfNat, h]
 
+/-- The port's word/stack register numbering puts its zero register at `0` and
+its first argument/return word at `2`, one past CakeML's stack register `1`.
+This is the translation from the port's convention to a CakeML stack register:
+`0` stays the port's zero register and every other port register `name` is the
+CakeML stack register `name - 1`. -/
+def portRegisterToRiscv (name : Nat) : Nat :=
+  if name == 0 then 0 else riscvRegisterName (name - 1)
+
+@[simp] theorem portRegisterToRiscv_zero : portRegisterToRiscv 0 = 0 := by
+  simp [portRegisterToRiscv]
+
+/-- Port register `2` (the first argument/return word) maps to hardware `a0`. -/
+@[simp] theorem portRegisterToRiscv_two : portRegisterToRiscv 2 = 10 := by
+  decide
+
+@[simp] theorem portRegisterToRiscv_three : portRegisterToRiscv 3 = 11 := by
+  decide
+
+@[simp] theorem portRegisterToRiscv_four : portRegisterToRiscv 4 = 12 := by
+  decide
+
+@[simp] theorem portRegisterToRiscv_five : portRegisterToRiscv 5 = 13 := by
+  decide
+
+@[simp] theorem portRegisterToRiscv_one : portRegisterToRiscv 1 = 1 := by
+  decide
+
+/-- The port convention is NOT injective on `0..31`: the shifted map sends both
+port register `0` (the port's zero register) and port register `28` to hardware
+`x0`.  Wiring the port convention in therefore requires reseating the reserved
+config registers (notably `addressScratch = 29 -> x3`, `specialScratch = 28 ->
+x0`, `scratch = 31 -> x4`, `carryScratch = 27`, `currHeap = 12 -> x29`) before
+the map can be applied as a pure renaming. -/
+theorem portRegisterToRiscv_not_injective :
+    portRegisterToRiscv 0 = portRegisterToRiscv 28 := by decide
+
+/-- The port-convention map stays inside the hardware register range wherever
+`riscv_names` does. -/
+theorem portRegisterToRiscv_lt_32 {name : Nat} (h : name < 32) :
+    portRegisterToRiscv name < 32 := by
+  unfold portRegisterToRiscv
+  split
+  · decide
+  · have hname : name - 1 < 32 := Nat.lt_of_le_of_lt (Nat.sub_le _ _) h
+    exact riscvRegisterName_lt_32 hname
+
 end Flapjack.RiscV

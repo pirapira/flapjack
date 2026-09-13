@@ -3,6 +3,7 @@ import Flapjack.Test.CorrectnessTarget
 import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.SourceGlobalParity
 import Flapjack.Test.RegisterTransfer
+import Flapjack.Test.InstructionTransfer
 
 /-!
 # Pancake/RISC-V compiler parity tests

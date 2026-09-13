@@ -9,6 +9,7 @@ import Flapjack.RiscV.PipelineDiagnostics
 import Flapjack.RiscV.CorrectnessTraps
 import Flapjack.RiscV.RegisterRelabel
 import Flapjack.RiscV.RegisterTransfer
+import Flapjack.RiscV.InstructionTransfer
 import Flapjack.Correctness
 import Flapjack.CorrectnessCalls
 import Flapjack.FlatCorrectness

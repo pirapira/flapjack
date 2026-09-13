@@ -11,9 +11,10 @@ file ports that richer runtime boundary: it is the state/result vocabulary on
 which the full compiler simulation can be built.
 
 The FFI request carries the byte arrays produced by CakeML's
-`read_bytearray`.  The concrete foreign-state type is deliberately left to
-the handler, just as CakeML leaves `call_FFI` abstract.  The runtime still
-keeps the memory domains, clock, endianness, and FFI state explicit.
+`read_bytearray`.  A handler receives only the concrete `FfiState` and may
+return only its successor plus bytes, matching CakeML's `call_FFI` boundary;
+the runtime itself applies the prescribed memory/local updates.  The runtime
+still keeps the memory domains, clock, endianness, and FFI state explicit.
 -/
 
 namespace Flapjack
@@ -99,12 +100,12 @@ inductive CrepRuntimeRequest (α : Type u) where
       (payload : List UInt8)
   deriving DecidableEq, Repr
 
-inductive CrepRuntimeFfiResponse (α σ ε : Type u) where
-  | returned (state : CrepRuntimeState α σ) (bytes : List UInt8)
+inductive CrepRuntimeFfiResponse (σ ε : Type u) where
+  | returned (ffi : FfiState σ) (bytes : List UInt8)
   | final (event : ε)
 
 abbrev CrepRuntimeFfiHandler (α σ ε : Type u) :=
-  CrepRuntimeRequest α → CrepRuntimeState α σ → CrepRuntimeFfiResponse α σ ε
+  CrepRuntimeRequest α → FfiState σ → CrepRuntimeFfiResponse σ ε
 
 inductive CrepRuntimeResult (α ε : Type u) where
   | normal
@@ -241,8 +242,9 @@ def crepRuntimeExtCallValues [BEq α] [Add α] [OfNat α 1]
       crepRuntimeReadBytes state array
         (state.ffiContext.valueToNat arrayLength) with
   | some configurationBytes, some arrayBytes =>
-      match handler (.extCall function configurationBytes arrayBytes) state with
-      | .returned state bytes =>
+      match handler (.extCall function configurationBytes arrayBytes) state.ffi with
+      | .returned ffi bytes =>
+          let state := { state with ffi := ffi }
           match crepRuntimeWriteBytes state array bytes with
           | some state => (.normal, state)
           | none => (.error, state)
@@ -268,10 +270,11 @@ def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
     match operator with
     | .load | .load8 | .load16 | .load32 =>
         let payload := state.ffiContext.wordToBytes address false
-        match handler (.sharedMem operator name address payload) state with
-        | .returned state bytes =>
+        match handler (.sharedMem operator name address payload) state.ffi with
+        | .returned ffi bytes =>
             let value := state.ffiContext.wordOfBytes false bytes
-            (.normal, { state with locals := updateCrepLocal state.locals name value })
+            (.normal, { state with ffi := ffi
+              locals := updateCrepLocal state.locals name value })
         | .final event => (.finalFfi event, clearCrepRuntimeLocals state)
     | .store | .store8 | .store16 | .store32 =>
         match state.locals name with
@@ -283,8 +286,8 @@ def crepRuntimeSharedMem (handler : CrepRuntimeFfiHandler α σ ε)
             let payload :=
               if width = 0 then valueBytes ++ addressBytes
               else valueBytes.take width ++ addressBytes
-            match handler (.sharedMem operator name address payload) state with
-            | .returned state _ => (.normal, state)
+            match handler (.sharedMem operator name address payload) state.ffi with
+            | .returned ffi _ => (.normal, { state with ffi := ffi })
             | .final event => (.finalFfi event, state)
   else
     (.error, state)

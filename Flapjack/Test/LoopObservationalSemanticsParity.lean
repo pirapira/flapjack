@@ -42,6 +42,48 @@ def emptyLprefixLub : LoopLprefixLub (fun _ : Nat => ([] : List FfiEvent)) :=
       · intro _candidate _hbound index value htrace
         simp at htrace }
 
+theorem emptyPrefixChain :
+    loopLprefixChain (fun _ : Nat => ([] : List FfiEvent)) := by
+  intro left right
+  exact Or.inl ⟨[], by simp⟩
+
+noncomputable def emptyBuiltLprefixLub :
+    LoopLprefixLub (fun _ : Nat => ([] : List FfiEvent)) :=
+  buildLoopLprefixLub _ emptyPrefixChain
+
+def probeEvent : FfiEvent :=
+  { name := .extCall "lub", configuration := [], bytes := [] }
+
+def growingFamily : Nat → List FfiEvent :=
+  fun length => List.replicate length probeEvent
+
+theorem replicateAppend (left right : Nat) :
+    List.replicate left probeEvent ++ List.replicate right probeEvent =
+      List.replicate (left + right) probeEvent := by
+  induction left with
+  | zero => simp
+  | succ left ih =>
+      simp [List.replicate_succ, ih, Nat.succ_add]
+
+theorem growingPrefixChain : loopLprefixChain growingFamily := by
+  intro left right
+  rcases Nat.le_total left right with hle | hle
+  · obtain ⟨extra, hextra⟩ := Nat.exists_eq_add_of_le hle
+    exact Or.inl ⟨List.replicate extra probeEvent, by
+      simp [growingFamily, hextra]⟩
+  · obtain ⟨extra, hextra⟩ := Nat.exists_eq_add_of_le hle
+    exact Or.inr ⟨List.replicate extra probeEvent, by
+      simp [growingFamily, hextra]⟩
+
+noncomputable def growingLprefixLub : LoopLprefixLub growingFamily :=
+  buildLoopLprefixLub growingFamily growingPrefixChain
+
+theorem growingLprefixLub_trace (index : Nat) :
+    growingLprefixLub.trace index = some probeEvent := by
+  unfold growingLprefixLub
+  apply loopFamilyNth_eq (clock := index + 1) growingPrefixChain
+  simp [growingFamily]
+
 def hooksFor (evaluate : Nat → LoopMachineStep) : LoopSemanticsHooks :=
   { evaluate := evaluate
     ioEvents := noEvents
@@ -163,6 +205,28 @@ theorem semanticsDivergence :
     · exact (divergenceBranch.2 successful).elim
     · simp only [loopSemantics, dif_neg forbidden, dif_neg successful]
       congr 2
+
+theorem semanticsDivergenceFromChain :
+    loopSemanticsOfPrefixChain (hooksFor divergingEvaluate) emptyPrefixChain =
+      .diverge (fun _ => []) emptyBuiltLprefixLub := by
+  classical
+  unfold loopSemanticsOfPrefixChain
+  have hforbidden : ¬ loopHasForbiddenRun
+      ({ evaluate := divergingEvaluate, ioEvents := noEvents,
+         ffiOutcome := fun _ => .failed } : LoopSemanticsHooks) := by
+    simpa [hooksFor] using divergenceBranch.1
+  have hsuccessful : ¬ loopHasSuccessfulRun
+      ({ evaluate := divergingEvaluate, ioEvents := noEvents,
+         ffiOutcome := fun _ => .failed } : LoopSemanticsHooks) := by
+    simpa [hooksFor] using divergenceBranch.2
+  change loopSemantics
+      ({ evaluate := divergingEvaluate, ioEvents := noEvents,
+         ffiOutcome := fun _ => .failed } : LoopSemanticsHooks)
+      (buildLoopLprefixLub
+        (fun clock => noEvents (divergingEvaluate clock).2) emptyPrefixChain) =
+    .diverge (fun _ => []) emptyBuiltLprefixLub
+  simp only [loopSemantics, dif_neg hforbidden, dif_neg hsuccessful]
+  rfl
 
 #guard sourceClockParity
 

@@ -42,6 +42,80 @@ structure LoopLprefixLub (family : Nat → List α) where
   trace : LoopLList α
   isLub : LoopLprefixLubPredicate family trace
 
+def loopLprefixChain (family : Nat → List α) : Prop :=
+  ∀ left right, family left <+: family right ∨ family right <+: family left
+
+def loopFamilyHasValue (family : Nat → List α) (index : Nat) : Prop :=
+  ∃ clock value, (family clock)[index]? = some value
+
+noncomputable def loopFamilyNth (family : Nat → List α) (index : Nat) : Option α := by
+  classical
+  exact if h : loopFamilyHasValue family index then
+    let clock := Classical.choose h
+    let values := Classical.choose_spec h
+    some (Classical.choose values)
+  else none
+
+theorem listPrefix_getElem?_eq {xs ys : List α} (hprefix : xs <+: ys)
+    {index : Nat} {x y : α} (hxs : xs[index]? = some x)
+    (hys : ys[index]? = some y) : x = y := by
+  obtain ⟨hxi, hxeq⟩ := List.getElem?_eq_some_iff.mp hxs
+  obtain ⟨hyi, hyeq⟩ := List.getElem?_eq_some_iff.mp hys
+  calc
+    x = xs[index] := hxeq.symm
+    _ = ys[index] := hprefix.getElem hxi
+    _ = y := hyeq
+
+theorem loopFamilyNth_eq {family : Nat → List α}
+    (hchain : loopLprefixChain family) {clock index : Nat} {value : α}
+    (hvalue : (family clock)[index]? = some value) :
+    loopFamilyNth family index = some value := by
+  have hhas : loopFamilyHasValue family index := ⟨clock, value, hvalue⟩
+  unfold loopFamilyNth
+  rw [dif_pos hhas]
+  let chosenClock := Classical.choose hhas
+  let chosenValues := Classical.choose_spec hhas
+  let chosenValue := Classical.choose chosenValues
+  have hchosen : (family chosenClock)[index]? = some chosenValue :=
+    Classical.choose_spec chosenValues
+  have hprefix := hchain clock chosenClock
+  have heq : chosenValue = value := by
+    cases hprefix with
+    | inl hprefix =>
+        exact (listPrefix_getElem?_eq hprefix (index := index) hvalue hchosen).symm
+    | inr hprefix =>
+        exact listPrefix_getElem?_eq hprefix (index := index) hchosen hvalue
+  simp [chosenValue, heq]
+
+theorem loopFamilyNth_none {family : Nat → List α} {index : Nat}
+    (hno : ¬ loopFamilyHasValue family index) :
+    loopFamilyNth family index = none := by
+  simp [loopFamilyNth, hno]
+
+noncomputable def buildLoopLprefixLub (family : Nat → List α)
+    (hchain : loopLprefixChain family) : LoopLprefixLub family :=
+  { trace := loopFamilyNth family
+    isLub := by
+      constructor
+      · intro clock index value hvalue
+        exact loopFamilyNth_eq hchain hvalue
+      · intro candidate hbound index value htrace
+        have hhas : loopFamilyHasValue family index := by
+          by_cases hhas : loopFamilyHasValue family index
+          · exact hhas
+          · rw [loopFamilyNth_none hhas] at htrace
+            cases htrace
+        obtain ⟨clock, value', hvalue'⟩ := hhas
+        have hfamily := loopFamilyNth_eq hchain hvalue'
+        have heq : value = value' := Option.some.inj (htrace.symm.trans hfamily)
+        simpa [heq] using hbound clock index value' hvalue'
+    }
+
+theorem buildLoopLprefixLub_isLub {family : Nat → List α}
+    (hchain : loopLprefixChain family) :
+    LoopLprefixLubPredicate family (buildLoopLprefixLub family hchain).trace :=
+  (buildLoopLprefixLub family hchain).isLub
+
 inductive LoopBehaviour where
   | diverge (family : Nat → List FfiEvent)
       (trace : LoopLprefixLub family)
@@ -96,5 +170,17 @@ noncomputable def loopSemantics (hooks : LoopSemanticsHooks)
       loopChooseTermination hooks successful
     else
       .diverge _ divergenceLub
+
+/-!
+  Source-facing entry point.  CakeML proves that the evaluator's clock-indexed
+  I/O prefixes form a chain, then applies `build_lprefix_lub`; this wrapper
+  exposes that same construction rather than requiring callers to manufacture
+  a LUB witness themselves.
+-/
+noncomputable def loopSemanticsOfPrefixChain (hooks : LoopSemanticsHooks)
+    (hchain : loopLprefixChain
+      (fun clock => hooks.ioEvents (hooks.evaluate clock).2)) : LoopBehaviour :=
+  loopSemantics hooks (buildLoopLprefixLub
+    (fun clock => hooks.ioEvents (hooks.evaluate clock).2) hchain)
 
 end Flapjack

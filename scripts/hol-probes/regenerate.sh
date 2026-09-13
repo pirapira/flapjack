@@ -101,6 +101,9 @@ run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
 run_probe loop_sem_get_var_imm_probeScript.sml \
   loop_sem_get_var_imm_probe.out \
   reg_hit reg_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_call_env_probeScript.sml \
+  loop_sem_call_env_probe.out \
+  arg_zero arg_missing "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The locals_touched probe observes the structural Loop expression analysis.
 run_probe loop_lang_locals_touched_probeScript.sml \
   loop_lang_locals_touched_probe.out \

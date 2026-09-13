@@ -310,9 +310,10 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   a user `main` exists, and update the linked-image correctness regression.
 - [x] Compose the ported front-end, global, Crepe, Loop, and Word passes in an
   executable pipeline that exposes every intermediate artifact.
-- [x] Match CakeML `pan_to_target` entry preparation by moving a user `main`
-  to the front or synthesizing a zero-returning `main`, with explicit RISC-V
-  target wrappers and executable regressions.
+- [x] Match CakeML `pan_to_target` entry preparation by locating the requested
+  source entry, renaming it, and emitting a public `main` wrapper that runs
+  global initializers before calling it (a missing entry is an error), with
+  explicit RISC-V target wrappers and executable regressions.
 - [x] Add a target-entry declaration-call correctness regression that checks
   the reordered linked image, the call-aware Word result, and execution at
   the generated `main` entry against the source call semantics.
@@ -2817,8 +2818,9 @@ cannot be performed; the RISC-V regression keeps the successful prefix visible.
   RISC-V image.
 - [x] Add a diagnostics-preserving checked entrypoint for the full-SSA linked
   RISC-V compiler, with valid and malformed AST regressions.
-- [x] Preserve `pan_to_target` main synthesis for the checked and linked
-  full-SSA RISC-V entrypoints.
+- [x] Preserve `pan_to_target` entry-wrapper behavior for the checked and
+  linked full-SSA RISC-V entrypoints; do not synthesize a zero-returning entry
+  when the requested source entry is absent.
 - [x] Preserve the exact `pan_to_target` entry wrapper through the allocated
   full-SSA linked RISC-V entrypoint.
 - [x] Expose the exact `pan_to_target` entry wrapper through the primary

@@ -57,6 +57,35 @@ normalization. Store a stable, reviewable fixture when the test is intended to
 run in `lake test`; do not make normal CI depend on a locally installed CakeML
 binary.
 
+## Adding an executable source probe
+
+For a supported source fragment, add both sides of an execution observation:
+
+1. add a small HOL probe under [`scripts/hol-probes`](../scripts/hol-probes)
+   that evaluates the original `panSem` equation, and regenerate its checked-in
+   `.out` file with `scripts/hol-probes/regenerate.sh`; and
+2. add a Lean test under [`Flapjack/Test`](../Flapjack/Test) that parses the
+   same source, lowers and links it, executes the linked RISC-V image with the
+   bounded machine model, and compares its observable result with the probe
+   result.
+
+[`Flapjack/Test/EndToEndParity.lean`](../Flapjack/Test/EndToEndParity.lean)
+contains return, addition, and multiplication fixtures. They deliberately use
+independent original-semantics probes rather than relying only on a Flapjack
+correctness theorem: distinct compilers can satisfy the same source theorem
+while emitting different code. Expand this corpus with calls, globals, control
+flow, memory, and FFI cases as the execution boundary supports them. These
+fixtures are also stable seeds for differential fuzzing against `cake`; a
+source accepted by CakeML but not executable by Flapjack is a P1
+compiler-parity bug.
+
+For the external five-program artifact corpus, run
+`scripts/parity-small-corpus.py`. It invokes both `cake` and
+`flapjack-compile --assembly`, checks the pinned Cake output hashes, compares
+runtime/entry/user sections without hiding byte differences, and succeeds only
+when every residual difference has an owning bead. This artifact audit
+complements the machine-execution fixture above; it does not replace it.
+
 ## Review and Beads
 
 Keep the porting Bead open until the original evidence and the Lean test are

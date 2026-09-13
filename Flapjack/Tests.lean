@@ -97,6 +97,7 @@ import Flapjack.Test.CrepePrimitive
 import Flapjack.Test.CrepeGlobalSemantics
 import Flapjack.Test.CrepeExpressionRelation
 import Flapjack.Test.CrepeProgramRelation
+import Flapjack.Test.CrepeProgramInduction
 import Flapjack.Test.CrepeSourceWordReturnCorrectness
 import Flapjack.Test.CrepeSourceWordAssignmentCorrectness
 import Flapjack.Test.CrepeSourceWordStoreCorrectness

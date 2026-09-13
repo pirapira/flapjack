@@ -1,0 +1,4 @@
+return_41=SOME (Return (ValWord 41w))
+
+return_mul_42=SOME (Return (ValWord 42w))
+return_if_13=SOME (Return (ValWord 13w))

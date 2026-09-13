@@ -1,0 +1,39 @@
+{
+  "reference": {
+    "compiler": "cake --pancake --target=riscv",
+    "normalization": "Only cml_ symbol prefixes and numeric suffixes are removed when matching section names.",
+    "output": "CakeML Pancake RISC-V assembly frame; the recorded hash covers stdout byte-for-byte."
+  },
+  "fixtures": [
+    {
+      "path": "Flapjack/Test/OriginalPancake/empty_locals.pnk",
+      "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:71 (empty_locals_def)",
+      "cake_sha256": "e661960e2ea04f6c804fa9487b600bb0289929ba6c76e0dd10f243263cfdd870",
+      "tracked_beads": ["flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/dec_clock.pnk",
+      "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:145-148 (dec_clock_def)",
+      "cake_sha256": "68281f19fe25699e613b31faebbd8bf54d7e18ad918c04af5ea43f1bc52aa8fa",
+      "tracked_beads": ["flapjack-pxn.8.5.10.1"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/crep_op.pnk",
+      "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:85-88 (crep_op_def)",
+      "cake_sha256": "5e1162c5f80779f9ac072963aac2d3fbbae54d565f05c46a91e4028405dbb57f",
+      "tracked_beads": ["flapjack-pxn.8.5.10.1"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/set_globals.pnk",
+      "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:61-63 (set_globals_def)",
+      "cake_sha256": "1281f0d8cd5e1a22486f15baa4a4526e000645f2abec8fb6893e64603b606ac9",
+      "tracked_beads": ["flapjack-pxn.8.5.10.2"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/set_var.pnk",
+      "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:55-57 (set_var_def)",
+      "cake_sha256": "14ee212eefbbc8ba96af33c6372dcde8bc6b2c4babe72779e3124f2df1cd21b1",
+      "tracked_beads": ["flapjack-pxn.8.5.10.1"]
+    }
+  ]
+}

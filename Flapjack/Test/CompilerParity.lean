@@ -18,6 +18,7 @@ import Flapjack.Test.LoopGetVarsParity
 import Flapjack.Test.LoopSetGlobalsParity
 import Flapjack.Test.LoopSetVarsParity
 import Flapjack.Test.LoopSetVarParity
+import Flapjack.Test.LoopDecClockParity
 import Flapjack.Test.LoopFindCodeParity
 import Flapjack.Test.LoopPrimopParity
 import Flapjack.Test.LoopArithParity
@@ -629,6 +630,7 @@ def main : IO Unit := do
     Flapjack.Test.LoopSetGlobalsParity.runChecks,
     Flapjack.Test.LoopSetVarsParity.runChecks,
     Flapjack.Test.LoopSetVarParity.runChecks,
+    Flapjack.Test.LoopDecClockParity.runChecks,
     Flapjack.Test.LoopFindCodeParity.runChecks,
     Flapjack.Test.LoopPrimopParity.runChecks,
     Flapjack.Test.LoopArithParity.runChecks,

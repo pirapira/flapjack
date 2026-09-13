@@ -494,6 +494,22 @@ theorem crepe_runtime_call_rejects_duplicate_parameters :
       some (.error : CrepRuntimeResult Nat String) := by
   decide +kernel
 
+def crepeRuntimeFallthroughState : CrepRuntimeState Nat Unit :=
+  { crepeRuntimeState with
+    functions :=
+      [{ name := "fallthrough"
+         params := [0]
+         body := .skip
+         returnShape := .one }] }
+
+theorem crepe_runtime_call_fallthrough_is_error :
+    (evalCrepRuntimeResult crepeRuntimeSharedHandler
+      crepeSemanticsPrimitive 20 crepeRuntimeFallthroughState
+      (.call none "fallthrough" [.const 41])).map
+        (fun result => (result.1, result.2.locals 0)) =
+      some (.error, some 41) := by
+  decide +kernel
+
 def crepeCallFullState : CrepState (RiscV.Word 64) :=
   { locals := fun _ => none
     memory := fun _ => none }

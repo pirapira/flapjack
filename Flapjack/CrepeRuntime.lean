@@ -389,6 +389,12 @@ def fixCrepRuntimeClock (oldState : CrepRuntimeState α σ) :
   | (result, newState) =>
       (result, { newState with clock := min oldState.clock newState.clock })
 
+def crepRuntimeCallInfoValid :
+    Option (List Nat × Option (α × CrepProg α)) → Bool
+  | none => true
+  | some (destinations, _) =>
+      destinations.eraseDups.length = destinations.length
+
 mutual
   def evalCrepRuntimeCall
       [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -408,7 +414,9 @@ mutual
             match lookupCrepCode function values caller.functions with
             | none => some (.error, caller)
             | some (body, calleeLocals) =>
-                if caller.clock = 0 then
+                if !crepRuntimeCallInfoValid info then
+                  some (.error, caller)
+                else if caller.clock = 0 then
                   some (.timeout, clearCrepRuntimeLocals caller)
                 else
                   let callee := decCrepClock
@@ -416,9 +424,10 @@ mutual
                   match evalCrepRuntimeProg handler primitive fuel callee body with
                   | none => some (.error, callee)
                   | some (result, callee) =>
+                      let (result, callee) := fixCrepRuntimeClock callee (result, callee)
                       let callerState := crepRuntimeCallerState caller callee
                       match result with
-                      | .normal => some (.normal, callerState)
+                      | .normal => some (.error, callee)
                       | .returned values =>
                           match info with
                           | none =>
@@ -428,7 +437,7 @@ mutual
                                   caller.locals destinations values with
                               | some locals =>
                                   some (.normal, { callerState with locals := locals })
-                              | none => some (.error, callerState)
+                              | none => some (.error, callee)
                       | .raised exception =>
                           match info with
                           | some (_, some (caught, continuation)) =>
@@ -438,8 +447,8 @@ mutual
                               else
                                 some (.raised exception, clearCrepRuntimeLocals callerState)
                           | _ => some (.raised exception, clearCrepRuntimeLocals callerState)
-                      | .broke _label => some (.error, clearCrepRuntimeLocals callerState)
-                      | .continued _label => some (.error, clearCrepRuntimeLocals callerState)
+                      | .broke _label => some (.error, callee)
+                      | .continued _label => some (.error, callee)
                       | .error => some (.error, clearCrepRuntimeLocals callerState)
                       | .timeout => some (.timeout, clearCrepRuntimeLocals callerState)
                       | .finalFfi event =>

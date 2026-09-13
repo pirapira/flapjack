@@ -530,7 +530,7 @@ def crepLoopRuntimeGlobalState : CrepRuntimeState Nat Unit :=
     ffiContext := natCrepRuntimeFfiContext
     clock := 10
     bigEndian := false
-    ffi := ()
+    ffi := natCrepRuntimeFfiState
     baseAddress := 0
     topAddress := 100 }
 

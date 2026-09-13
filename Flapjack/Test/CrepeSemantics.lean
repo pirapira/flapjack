@@ -255,7 +255,7 @@ def crepeRuntimeState : CrepRuntimeState Nat Unit :=
     ffiContext := natCrepRuntimeFfiContext
     clock := 10
     bigEndian := false
-    ffi := ()
+    ffi := natCrepRuntimeFfiState
     baseAddress := 0
     topAddress := 100 }
 
@@ -286,6 +286,15 @@ def crepeRuntimeByteReturnHandler : CrepRuntimeFfiHandler Nat Unit String :=
   fun request state =>
     match request with
     | .extCall _ _ _ => .returned state [99, 100]
+    | .sharedMem _ _ _ _ => .returned state []
+
+def crepeRuntimeFfiStatefulHandler : CrepRuntimeFfiHandler Nat Unit String :=
+  fun request state =>
+    match request with
+    | .extCall function configuration array =>
+        match callFfi state.ffi (.extCall function) configuration array with
+        | .returned ffi bytes => .returned { state with ffi := ffi } bytes
+        | .final _ => .final "halt"
     | .sharedMem _ _ _ _ => .returned state []
 
 theorem crepe_full_call_semantics :
@@ -377,6 +386,17 @@ theorem crepe_runtime_extCall_return_writes_bytes :
     natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
     crepeRuntimeByteReturnHandler, crepRuntimeReadBytes, crepRuntimeLoadByte,
     crepRuntimeWriteBytes, crepRuntimeStoreByte, updateMemory]
+
+theorem crepe_runtime_ffi_state_transition :
+    let result := crepRuntimeExtCall crepeRuntimeFfiStatefulHandler
+      crepeRuntimeState "host" 1 2 3 4
+    result.1 = .normal ∧ result.2.ffi.ioEvents.length = 1 := by
+  simp [crepRuntimeExtCall, crepRuntimeExtCallValues,
+    crepeRuntimeFfiStatefulHandler, crepeRuntimeState,
+    natCrepRuntimeFfiState, natCrepRuntimeFfiOracle,
+    natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
+    crepRuntimeReadBytes, crepRuntimeLoadByte, crepRuntimeWriteBytes,
+    crepRuntimeStoreByte, updateMemory, callFfi]
 
 theorem crepe_runtime_shared_load :
     (crepRuntimeSharedMem crepeRuntimeSharedHandler crepeRuntimeState

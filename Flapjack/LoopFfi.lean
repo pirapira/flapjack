@@ -39,6 +39,15 @@ structure LoopFfiState (α : Type u) (σ : Type v) where
 def decLoopClock (state : LoopFfiState α σ) : LoopFfiState α σ :=
   { state with clock := state.clock - 1 }
 
+/-! Exact executable counterpart of CakeML Loop's `fix_clock_def`
+    (`loopSemScript.sml:46-49`).  The result is preserved while the returned
+    state's clock is clamped to the smaller of the old and new clocks. -/
+def fixLoopClock (oldState : LoopFfiState α σ)
+    (step : β × LoopFfiState α σ) : β × LoopFfiState α σ :=
+  let (result, newState) := step
+  (result, { newState with
+    clock := if oldState.clock < newState.clock then oldState.clock else newState.clock })
+
 inductive LoopFfiResult (α : Type u) (σ : Type v) where
   | normal (state : LoopFfiState α σ)
   | error (state : LoopFfiState α σ)

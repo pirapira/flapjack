@@ -111,6 +111,41 @@ theorem evalPanValueFfiClockLeaf_clock
         (fun _ => clockValue) := by
   simp [evalPanValueFfiClockLeaf, Function.comp_def]
 
+/-! The leaf adapter also preserves the terminal FFI branch exactly.  This is
+    the source-side counterpart of the \`panSem\` ExtCall/shared-memory
+    \`FinalFFI\` equations (cakeml/pancake/semantics/panSemScript.sml:716-730):
+    the stepped evaluator supplies the complete post-state and event, while
+    the clocked leaf only attaches the unchanged remaining clock. -/
+theorem evalPanValueFfiClockLeaf_finalFfi
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (structs : StructContext)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (clock : Nat) (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (program : Prog α) (finalLocals finalGlobals : VarName → Option (PanValue α))
+    (finalMemory : α → Option (PanValue α)) (finalFfi : FfiState σ)
+    (event : FfiFinalEvent) (steps : Nat)
+    (memoryAccess : Option (PanValueMemoryAccess α) := none)
+    (contracts : Option PanValueCallContracts := none)
+    (memoryHandler : Option (PanValueMemoryFfiHandler α σ) := none)
+    (hsteps : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord 1 locals globals memory ffi program
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.finalFfi finalLocals finalGlobals finalMemory finalFfi event, steps)) :
+    evalPanValueFfiClockLeaf context primitive handler structs functions
+      baseAddress topAddress bytesInWord clock locals globals memory ffi program
+      (memoryAccess := memoryAccess) (contracts := contracts)
+      (memoryHandler := memoryHandler) =
+      some (.control (.finalFfi finalLocals finalGlobals finalMemory finalFfi event), clock) := by
+  simp [evalPanValueFfiClockLeaf, hsteps]
+
 /-! A normal first component passes its complete state and remaining clock to
 the second component.  This is the clocked counterpart of the sequencing rule
 used by the source-to-Loop and Loop-to-Word simulation proofs. -/

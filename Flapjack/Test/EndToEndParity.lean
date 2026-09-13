@@ -12,8 +12,8 @@ Pancake `panSem` `Return` equation. This is stronger evidence than a
 compiler-correctness theorem alone: a different compiler can satisfy the same
 source theorem while still disagreeing with the original Pancake compiler.
 
-The three small fixtures are deliberately stable and suitable as seeds for a
-larger differential/fuzzing corpus. Their original probe sources reference
+The small fixtures are deliberately stable and suitable as seeds for a larger
+differential/fuzzing corpus. Their original probe sources reference
 `cakeml/pancake/semantics/panSemScript.sml:638-643`.
 -/
 
@@ -159,6 +159,35 @@ def callOriginalProbeResult : Option (List (RiscV.Word 64)) :=
 #guard callDeclarations.isSome
 #guard callMachineResult == callOriginalProbeResult
 
+/-! The global fixture exercises declaration initialization followed by a
+    global load in the entry function; its expected value comes from the
+    independent `global_g_7` panSem probe. -/
+def globalSource : String :=
+  "var 1 g = 7; fun 1 main() { return g; }"
+
+def globalDeclarations : Option (List (Decl (RiscV.Word 64))) :=
+  (Parser.parseTopDecs (BitVec.ofInt 64) globalSource).toOption
+
+def globalLinked :
+    Option (List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
+  globalDeclarations.bind (fun declarations =>
+    compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked .rv64i
+      (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+      parsedCallPipelineRemoveConfig "main" declarations)
+
+def globalMachineResult : Option (List (RiscV.Word 64)) := do
+  let sections ← globalLinked
+  let entry ← parsedCallLookupEntry 1 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
+
+def globalOriginalProbeResult : Option (List (RiscV.Word 64)) :=
+  some [BitVec.ofNat 64 7]
+
+#guard globalDeclarations.isSome
+#guard globalMachineResult == globalOriginalProbeResult
+
 def runChecks : IO Bool := do
   let returnPass := machineResult == originalProbeResult
   let addPass := addMachineResult == originalAddProbeResult
@@ -166,6 +195,7 @@ def runChecks : IO Bool := do
     multiplicationMachineResult == multiplicationOriginalProbeResult
   let controlPass := controlMachineResult == controlOriginalProbeResult
   let callPass := callMachineResult == callOriginalProbeResult
+  let globalPass := globalMachineResult == globalOriginalProbeResult
   if returnPass then
     IO.println "PASS return source-to-RISC-V execution matches original Pancake HOL probe"
   else
@@ -186,6 +216,11 @@ def runChecks : IO Bool := do
     IO.println "PASS Pancake function-call source executes to original HOL result"
   else
     IO.println s!"FAIL Pancake function-call execution: {callMachineResult}"
-  pure (returnPass && addPass && multiplicationPass && controlPass && callPass)
+  if globalPass then
+    IO.println "PASS Pancake global source executes to original HOL result"
+  else
+    IO.println s!"FAIL Pancake global execution: {globalMachineResult}"
+  pure (returnPass && addPass && multiplicationPass && controlPass && callPass &&
+    globalPass)
 
 end Flapjack.Test.EndToEndParity

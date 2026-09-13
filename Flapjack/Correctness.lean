@@ -35,6 +35,24 @@ theorem wordProgToRiscV_straightLine_execution_contract [NeZero width]
   rw [RiscV.executeInstructionsCounted_spec] at hcount
   exact hcount.symm
 
+/-! Function-level sibling of the program contract.  The empty return carrier
+    is the straight-line boundary before calls or loops add control effects;
+    StepCorrectness still supplies the exact machine execution witness. -/
+
+theorem wordFunctionToRiscV_straightLine_execution_contract [NeZero width]
+    (context : RiscV.WordCallContext width) (state : RiscV.State width)
+    (program : WordProg (RiscV.Word width))
+    (hstraight : RiscV.WordRiscVStraightLine program)
+    (code : List (RiscV.Instruction width))
+    (hcompile : RiscV.wordFunctionToRiscVWithCalls context program =
+      some (code, [])) :
+    RiscV.evalWordFunction state program =
+      some (RiscV.executeInstructions state code, []) := by
+  have hcount := RiscV.wordFunctionToRiscV_counted_sound_of_straightLine
+    context state program hstraight code hcompile
+  rw [RiscV.executeInstructionsCounted_spec] at hcount
+  exact hcount
+
 def pipelineAddDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function
     { name := "add", inline := false, exported := false,

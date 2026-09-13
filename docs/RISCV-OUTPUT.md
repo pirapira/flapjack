@@ -29,9 +29,10 @@ byte comparison are:
    `cml_<source-function>_<N>`, where `<N>` is the deterministic section
    number walking the code image.
 
-## Flapjack (`flapjack-compile --assembly`)
+## Flapjack (`flapjack-compile`, `--assembly`, or `--pancake`)
 
-The port emits the same code-image frame for the code it actually produces:
+The port emits the same native assembly envelope for the code image it
+actually produces:
 
 ```
 .text
@@ -45,7 +46,11 @@ cake_main:
     makesym(cml_main_2, 80, 12)
 ```
 
-* `.byte` lines use the same 16-per-line, uppercase, comma-separated layout.
+* `.data`, startup, `cake_main`, and `cake_codebuffer_*` markers follow the
+  native Pancake/CakeML framing. The port emits the supported runtime/image
+  metadata directly; it does not synthesize an ELF file.
+* `.byte` lines use the same 16-per-line, `0x`-prefixed uppercase,
+  comma-separated layout.
 * `makesym(name, base, len)` uses the same four-space indentation and the
   same `base`-relative-to-`cake_main` convention.
 * Symbol naming policy:
@@ -79,9 +84,10 @@ The remaining differences are tracked by:
 
 ## Known format/layout differences
 
-* Symbol numbers start after the port's single runtime section (`0`/`1`/`2`)
-  rather than after CakeML's six runtime stubs.
-* Flapjack does not emit CakeML's `.data` runtime framing, `cdecl(cml_main)`
-  startup, `cake_codebuffer_*` sections, or the `cml__*` runtime stubs; only
-  the code image the port produces is emitted.
+* Symbol numbers start after the port's runtime/raise section rather than
+  after CakeML's six runtime stubs; this deterministic numbering is preserved
+  in the `makesym` names.
+* The current port's runtime instruction set is not byte-identical to CakeML's
+  shared `cml__Init_0` through `cml__StoreConsts_5` stubs; those code mismatches
+  remain tracked separately from the now-matching artifact envelope.
 * The generated instruction bytes differ (see the beads above).

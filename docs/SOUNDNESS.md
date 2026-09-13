@@ -48,8 +48,9 @@ The following are open review or verification obligations:
    set of CakeML-derived byte vectors and Lean pipeline goldens; it is not a
    differential test of the full Pancake corpus.
 4. The compiler does not yet cover every Pancake construct or emit the same
-   complete runtime/assembly/ELF artifacts as CakeML. The current command
-   emits a checked raw RV64I byte list for its supported source subset.
+   complete runtime/ELF artifacts as CakeML. The current command emits a
+   Pancake-shaped checked RV64I assembly image for its supported source subset;
+   `--hex` is the raw-byte compatibility view.
 5. Proof work remains for the full source-to-target simulation, runtime image,
    collector/frame-machine behavior, calls and FFI in all configurations, and
    the complete Pancake correctness theorem.

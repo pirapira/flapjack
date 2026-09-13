@@ -5,10 +5,9 @@ import Flapjack.RiscV.ArtifactFormat
 # Flapjack compiler command
 
 This command-line wrapper exposes the checked source-facing RV64I pipeline as
-raw bytes, linked sections, or a Cake-style assembly frame.  The assembly
-mode uses the same `.text`/`cake_main`/`.byte`/`makesym` boundary as
-`cake --pancake --target=riscv`; code and layout differences remain tracked by
-the parity beads.
+a Pancake-compatible assembly frame, raw bytes, or linked sections.  Assembly
+is the default and `--assembly` is retained as a compatibility alias for
+`--pancake`; code and layout differences remain tracked by the parity beads.
 -/
 
 namespace Flapjack
@@ -36,40 +35,63 @@ def hexByte (value : BitVec 8) : String :=
 def hexBytes (values : List (BitVec 8)) : String :=
   String.intercalate " " (values.map hexByte)
 
-def usage : String :=
-  "Usage: lake exe flapjack-compile [--sections|--assembly] [SOURCE.pnk]\n" ++
-  "Read Pancake source from SOURCE.pnk or stdin and emit RV64I bytes as " ++
-  "space-separated lowercase hexadecimal.  With --sections, emit one line " ++
-  "per linked section as `<label> <address> <bytes>`.  With --assembly, emit " ++
-  "the Pancake-compatible data/runtime/startup and code assembly frame."
+inductive OutputFormat where
+  | pancake
+  | hex
+  | sections
+  deriving DecidableEq
 
-def readSource (arguments : List String) : IO (Option String) := do
+def usage : String :=
+  "Usage: lake exe flapjack-compile [--assembly|--pancake|--hex|--sections] " ++
+  "[SOURCE.pnk]\nRead Pancake source from SOURCE.pnk or stdin. The default, " ++
+  "--assembly, and --pancake modes emit the Pancake-compatible assembly " ++
+  "frame; --hex emits the legacy lowercase byte line; --sections emits " ++
+  "<label> <address> <bytes> lines."
+
+def parseArguments (arguments : List String) : IO (Option (OutputFormat × Option String)) := do
   match arguments with
   | [] =>
-      let stdin ← IO.getStdin
-      pure (some (← stdin.readToEnd))
+      pure (some (.pancake, none))
   | [argument] =>
       if argument == "--help" || argument == "-h" then
         IO.println usage
         pure none
+      else if argument == "--assembly" || argument == "--pancake" then
+        pure (some (.pancake, none))
+      else if argument == "--hex" then
+        pure (some (.hex, none))
+      else if argument == "--sections" then
+        pure (some (.sections, none))
       else
-        pure (some (← IO.FS.readFile argument))
+        pure (some (.pancake, some argument))
+  | [format, argument] =>
+      let outputFormat ←
+        if format == "--assembly" || format == "--pancake" then pure .pancake
+        else if format == "--hex" then pure .hex
+        else if format == "--sections" then pure .sections
+        else do
+          IO.eprintln s!"flapjack-compile: unknown option {format}\n{usage}"
+          IO.Process.exit 2
+      pure (some (outputFormat, some argument))
   | _ =>
-      IO.eprintln s!"flapjack-compile: expected zero or one input path\n{usage}"
+      IO.eprintln s!"flapjack-compile: expected at most one input path\n{usage}"
       IO.Process.exit 2
+
+def readSource (path : Option String) : IO String := do
+  match path with
+  | none =>
+      let stdin ← IO.getStdin
+      pure (← stdin.readToEnd)
+  | some argument => IO.FS.readFile argument
 
 def printSections (sections : List (RiscV.EncodedRiscVSection width)) : IO Unit := do
   for entry in sections do
     IO.println (s!"{entry.label} {entry.address.toNat} " ++ hexBytes entry.bytes)
 
 def compileMain (arguments : List String) : IO UInt32 := do
-  let (sectionsMode, assemblyMode, rest) :=
-    match arguments with
-    | "--sections" :: rest => (true, false, rest)
-    | "--assembly" :: rest => (false, true, rest)
-    | _ => (false, false, arguments)
-  let some source ← readSource rest | return 0
-  if assemblyMode then
+  let some (outputFormat, path) ← parseArguments arguments | return 0
+  let source ← readSource path
+  if outputFormat == .pancake then
     match Flapjack.Parser.parseTopDecs (α := RiscV.Word 64)
         (fun value => BitVec.ofInt 64 value) source with
     | .error errors =>
@@ -94,7 +116,7 @@ def compileMain (arguments : List String) : IO UInt32 := do
             | .error error =>
                 IO.eprintln s!"flapjack-compile: {repr error}"
                 return 1
-  else if sectionsMode then
+  else if outputFormat == .sections then
     match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
         (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
         "main" source with

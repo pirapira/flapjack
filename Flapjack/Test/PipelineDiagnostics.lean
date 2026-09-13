@@ -1,4 +1,5 @@
 import Flapjack.RiscV.PipelineDiagnostics
+import Flapjack.StackAlloc.Machine
 
 namespace Flapjack
 
@@ -49,6 +50,46 @@ example :
     RiscV.wordArithToInstructions (width := 64)
       (.longDiv 0 3 3 0 6) = none := by
   rfl
+
+/-! The direct selector rejection is distinct from the source compiler path:
+    the normalized source LongDiv is replaced by the linked CakeML software
+    helper sections before Lab lowering. -/
+def longDivSourceEntryRemoveConfig : StackRemoveConfig :=
+  { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
+    stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
+
+#guard
+  (RiscV.compileStackProgramNatToRiscVChecked (width := 64) { services := [] }
+    longDivSourceEntryRemoveConfig 29 0
+    (.inst (.arith (.longDiv 0 3 3 0 6)) : StackProg Nat)).isOk
+
+def longDivRuntimeSemanticConfig : StackRemoveConfig :=
+  { longDivSourceEntryRemoveConfig with bytesInWord := 1 }
+
+def longDivRuntimeSemanticState : WordStackMachineState 8 :=
+  { registers := fun register =>
+      if register = 3 then BitVec.ofNat 8 1
+      else if register = 0 then BitVec.ofNat 8 3
+      else if register = 6 then BitVec.ofNat 8 2
+      else 0
+    stack := fun _ => 0
+    stores := fun _ => 0
+    memory := fun _ => 0
+    sharedMemory := fun _ => 0 }
+
+def longDivRuntimeSemanticResult :
+    Option (StackMachineControl 8) := do
+  let helpers ← RiscV.cakeLongDivRuntimeSections longDivRuntimeSemanticConfig
+  RiscV.evalStackSectionsFuel 10000
+    (helpers ++ [(29, RiscV.cakeLongDivStackAdapter)]) 29
+    longDivRuntimeSemanticState
+
+#guard
+  match longDivRuntimeSemanticResult with
+  | some (.normal state) =>
+      state.registers 0 = BitVec.ofNat 8 129 &&
+        state.registers 3 = BitVec.ofNat 8 1
+  | _ => false
 
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }

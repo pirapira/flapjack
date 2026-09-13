@@ -1,4 +1,5 @@
 import Flapjack.RiscV.WordToStack
+import Flapjack.StackRemove
 
 /-!
 # CakeML software LongDiv code-table shape
@@ -49,7 +50,7 @@ def cakeLongDiv1Mask (width : Nat) : Nat :=
   if 1 % dimword = 0 then 0 else (dimword - 1) % dimword
 
 def cakeLongDiv1Code (width : Nat) : WordProg Nat :=
-  .ite .test 2 (.imm 1)
+  .ite .test 2 (.reg 2)
     (.seq (.set (.temp 28) (.var 10)) (.return 0 [8]))
     (cakeWordSeq [
       .assign 6 (.op .or [
@@ -85,6 +86,116 @@ def cakeLongDiv1StackCode (config : WordStackConfig) (width : Nat) :
 def cakeLongDivStackCode (config : WordStackConfig) (width : Nat) :
     Option (StackProg Nat) :=
   wordToStackProgNat config (cakeLongDivCode width)
+
+/-! The code-table entries are functions.  CakeML's word-to-stack pass first
+    reseats their even-numbered ABI arguments in the locations assigned to
+    the helper's formal variables. -/
+def cakeWordStackHelperRegister : Nat → Nat
+  | 0 => 1
+  | 1 => 3
+  | 2 => 5
+  | 4 => 7
+  | 6 => 9
+  | 8 => 11
+  | 10 => 13
+  | 11 => 15
+  | 12 => 17
+  | 14 => 19
+  | 16 => 21
+  | _ => 23
+
+def cakeWordStackHelperConfig (program : WordProg Nat) : WordStackConfig :=
+  { locations := (wordProgVariables program).eraseDups.map
+      (fun name => (name, .register (cakeWordStackHelperRegister name)))
+    scratch := 31
+    stackBase := 0
+    addressScratch := 29 }
+
+def cakeLongDiv1StackEntryCode (config : WordStackConfig) (width : Nat) :
+    Option (StackProg Nat) := do
+  let body ← cakeLongDiv1StackCode config width
+  let moves ← wordStackMovesFromPhysical config
+    [0, 2, 4, 6, 8, 10, 12] 2
+  pure (wordStackJoin moves body)
+
+def cakeLongDivStackEntryCode (config : WordStackConfig) (width : Nat) :
+    Option (StackProg Nat) := do
+  let body ← cakeLongDivStackCode config width
+  let moves ← wordStackMovesFromPhysical config [0, 2, 4, 6] 2
+  pure (wordStackJoin moves body)
+
+/-! Adapt the source helper's Loc convention to the normalized StackLang
+    LongDiv convention: the caller supplies high and low in x3 and x0, the
+    divisor in x6, and observes quotient x0 and remainder x3. -/
+def cakeLongDivStackAdapter : StackProg Nat :=
+  stackSeq [
+    .arith .or 8 6 6,
+    .arith .or 4 3 3,
+    .arith .or 6 0 0,
+    .call (some
+      (stackSeq [
+        .arith .or 0 2 2,
+        .get 3 (.temp 28)], 0, 0, 0))
+      (.label cakeLongDivLocation) none]
+
+def stackProgContainsLongDiv : StackProg Nat → Bool
+  | .inst (.arith (.longDiv _ _ _ _ _)) => true
+  | .seq first second => stackProgContainsLongDiv first || stackProgContainsLongDiv second
+  | .ite _ _ _ thenBranch elseBranch =>
+      stackProgContainsLongDiv thenBranch || stackProgContainsLongDiv elseBranch
+  | .loop body => stackProgContainsLongDiv body
+  | .call returnHandler _ handler =>
+      (match returnHandler with
+      | none => false
+      | some (program, _, _, _) => stackProgContainsLongDiv program) ||
+      (match handler with
+      | none => false
+      | some (program, _, _) => stackProgContainsLongDiv program)
+  | _ => false
+
+def stackProgExpandLongDiv : StackProg Nat → StackProg Nat
+  | .inst (.arith (.longDiv _ _ _ _ _)) => cakeLongDivStackAdapter
+  | .seq first second =>
+      .seq (stackProgExpandLongDiv first) (stackProgExpandLongDiv second)
+  | .ite operator condition right thenBranch elseBranch =>
+      .ite operator condition right (stackProgExpandLongDiv thenBranch)
+        (stackProgExpandLongDiv elseBranch)
+  | .loop body => .loop (stackProgExpandLongDiv body)
+  | .call returnHandler target handler =>
+      .call
+        (match returnHandler with
+        | none => none
+        | some (program, link, returnLabel, entryLabel) =>
+            some (stackProgExpandLongDiv program, link, returnLabel, entryLabel))
+        target
+        (match handler with
+        | none => none
+        | some (program, exceptionLabel, handlerLabel) =>
+            some (stackProgExpandLongDiv program, exceptionLabel, handlerLabel))
+  | program => program
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+def cakeLongDivRuntimeSections (config : StackRemoveConfig) :
+    Option (List (Nat × StackProg Nat)) := do
+  let width := config.bytesInWord * 8
+  let helperProgram : WordProg Nat :=
+    cakeWordSeq [cakeLongDivCode width, cakeLongDiv1Code width]
+  let wordConfig := cakeWordStackHelperConfig helperProgram
+  let longDiv1 ← cakeLongDiv1StackEntryCode wordConfig width
+  let longDiv ← cakeLongDivStackEntryCode wordConfig width
+  pure [(cakeLongDiv1Location, longDiv1), (cakeLongDivLocation, longDiv)]
+
+def stackProgramsWithLongDivRuntime (config : StackRemoveConfig)
+    (programs : List (Nat × StackProg Nat)) :
+    Option (List (Nat × StackProg Nat)) :=
+  if programs.any (fun program => stackProgContainsLongDiv program.2) then do
+    let helpers ← cakeLongDivRuntimeSections config
+    let expanded := programs.map (fun (sectionId, program) =>
+      (sectionId, stackProgExpandLongDiv program))
+    pure (helpers ++ expanded)
+  else
+    some programs
 
 example : cakeLongDiv1ShiftRight 1 6 = .const 0 := by
   rfl

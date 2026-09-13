@@ -3,6 +3,7 @@ import Flapjack.StackAlloc
 import Flapjack.StackAlloc.Runtime
 import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.WordToStack
+import Flapjack.RiscV.LongDivRuntime
 
 /-!
 # LabLang to RISC-V
@@ -244,29 +245,6 @@ def compileLabSectionNat [NeZero width] (context : WordFfiContext)
     (sectionData : LabSection Nat) : Option (List (Instruction width)) :=
   compileLabSection context (labSectionNatToWord sectionData)
 
-def compileStackProgramNatToRiscV [NeZero width]
-    (context : WordFfiContext) (config : StackRemoveConfig)
-    (sectionId initialLabel : Nat) (program : StackProg Nat) :
-    Option (List (Instruction width)) :=
-  compileLabSectionNat context
-    (labProgramToSectionAfterStackRemove config sectionId initialLabel program)
-
-def compileWordProgramNatToRiscV [NeZero width] [BEq Nat]
-    (context : WordFfiContext) (wordConfig : WordStackConfig)
-    (removeConfig : StackRemoveConfig) (sectionId initialLabel : Nat)
-    (program : WordProg Nat) : Option (List (Instruction width)) := do
-  let stackProgram ← wordToStackProgNat wordConfig program
-  compileStackProgramNatToRiscV context removeConfig sectionId initialLabel
-    stackProgram
-
-def compileWordProgramToRiscV [NeZero width]
-    (context : WordFfiContext) (wordConfig : WordStackConfig)
-    (removeConfig : StackRemoveConfig) (sectionId initialLabel : Nat)
-    (program : WordProg (Word width)) : Option (List (Instruction width)) := do
-  let stackProgram ← wordToStackProgWord wordConfig program
-  compileStackProgramNatToRiscV context removeConfig sectionId initialLabel
-    stackProgram
-
 def labSectionInstructionCount (sectionData : LabSection (Word width)) : Nat :=
   sectionData.lines.foldl
     (fun count line => count + labLineInstructionCount line) 0
@@ -354,6 +332,39 @@ def compileLabProgram [NeZero width] (context : WordFfiContext)
     (program : LabProgram (Word width)) : Option (List (Instruction width)) :=
   let labels := labCollectProgramLabels 0 program
   labCompileProgramSections context labels 0 program
+
+def compileStackProgramNatToRiscV [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (sectionId initialLabel : Nat) (program : StackProg Nat) :
+    Option (List (Instruction width)) :=
+  match stackProgramsWithLongDivRuntime config [(sectionId, program)] with
+  | none => none
+  | some programs =>
+      compileLabProgram context
+        ((programs.map (fun (runtimeSection, runtimeProgram) =>
+          if runtimeSection = cakeLongDiv1Location ||
+              runtimeSection = cakeLongDivLocation then
+            labProgramToEntrySection runtimeSection 0 initialLabel
+              (stackRemoveComplete config runtimeProgram)
+          else
+            labProgramToSectionAfterStackRemove config runtimeSection initialLabel
+              runtimeProgram)).map labSectionNatToWord)
+
+def compileWordProgramNatToRiscV [NeZero width] [BEq Nat]
+    (context : WordFfiContext) (wordConfig : WordStackConfig)
+    (removeConfig : StackRemoveConfig) (sectionId initialLabel : Nat)
+    (program : WordProg Nat) : Option (List (Instruction width)) := do
+  let stackProgram ← wordToStackProgNat wordConfig program
+  compileStackProgramNatToRiscV context removeConfig sectionId initialLabel
+    stackProgram
+
+def compileWordProgramToRiscV [NeZero width]
+    (context : WordFfiContext) (wordConfig : WordStackConfig)
+    (removeConfig : StackRemoveConfig) (sectionId initialLabel : Nat)
+    (program : WordProg (Word width)) : Option (List (Instruction width)) := do
+  let stackProgram ← wordToStackProgWord wordConfig program
+  compileStackProgramNatToRiscV context removeConfig sectionId initialLabel
+    stackProgram
 
 /-! CakeML's target assembler turns `Halt` into a jump to the target's halt
     PC.  The existing ordinary compiler intentionally rejects that pseudo-op;
@@ -602,10 +613,18 @@ def compileStackProgramNatListToRiscV [NeZero width]
     (entryLabel initialLabel : Nat)
     (programs : List (Nat × StackProg Nat)) :
     Option (List (Instruction width)) :=
-  compileLabProgram context
-    ((programs.map (fun (sectionId, program) =>
-      labProgramToEntrySection sectionId entryLabel initialLabel
-        (stackRemoveComplete config program))).map labSectionNatToWord)
+  match stackProgramsWithLongDivRuntime config programs with
+  | none => none
+  | some programs =>
+      compileLabProgram context
+        ((programs.map (fun (sectionId, program) =>
+          if sectionId = cakeLongDiv1Location ||
+              sectionId = cakeLongDivLocation then
+            labProgramToEntrySection sectionId 0 initialLabel
+              (stackRemoveComplete config program)
+          else
+            labProgramToEntrySection sectionId entryLabel initialLabel
+              (stackRemoveComplete config program))).map labSectionNatToWord)
 
 /-! Exception expressions lower to a call to the reserved raise stub at
     section `stackRaiseStubLocation`.  Include that stub in every linked

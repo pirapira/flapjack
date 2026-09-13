@@ -70,14 +70,15 @@ For a supported source fragment, add both sides of an execution observation:
    result.
 
 [`Flapjack/Test/EndToEndParity.lean`](../Flapjack/Test/EndToEndParity.lean)
-contains return, addition, and multiplication fixtures. They deliberately use
-independent original-semantics probes rather than relying only on a Flapjack
-correctness theorem: distinct compilers can satisfy the same source theorem
-while emitting different code. Expand this corpus with calls, globals, control
-flow, memory, and FFI cases as the execution boundary supports them. These
-fixtures are also stable seeds for differential fuzzing against `cake`; a
-source accepted by CakeML but not executable by Flapjack is a P1
-compiler-parity bug.
+contains independent original-semantics probes and linked-RISC-V execution
+fixtures for return, addition, multiplication, conditionals, function calls,
+global initialization, ordinary memory loads, and a deterministic FFI service
+boundary. They deliberately do not rely only on a Flapjack correctness
+theorem: distinct compilers can satisfy the same source theorem while emitting
+different code. Exact artifact parity for the source corpus remains open
+follow-up work. These
+fixtures are stable seeds for differential fuzzing against `cake`; a source
+accepted by CakeML but not executable by Flapjack is a P1 compiler-parity bug.
 
 For the external five-program artifact corpus, run
 `scripts/parity-small-corpus.py`. It invokes both `cake` and

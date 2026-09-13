@@ -90,6 +90,12 @@ run_probe pan_sem_e2e_add_probeScript.sml pan_sem_e2e_add_probe.out \
   return_add_6_7 return_add_6_7 "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_call_e2e_probeScript.sml pan_sem_call_e2e_probe.out \
   call_id_7 call_id_7 "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_global_e2e_probeScript.sml pan_sem_global_e2e_probe.out \
+  global_g_7 global_g_7 "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_memory_e2e_probeScript.sml pan_sem_memory_e2e_probe.out \
+  memory_load_37 memory_load_37 "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_ffi_e2e_probeScript.sml pan_sem_ffi_e2e_probe.out \
+  ffi_foo_event ffi_foo_event "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
   get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The set_globals probe observes FLOOKUP after the original map update.

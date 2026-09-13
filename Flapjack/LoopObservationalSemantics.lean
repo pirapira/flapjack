@@ -42,6 +42,66 @@ structure LoopLprefixLub (family : Nat → List α) where
   trace : LoopLList α
   isLub : LoopLprefixLubPredicate family trace
 
+/-- The clock-indexed finite prefixes form the `lprefix_chain` required by
+CakeML's `build_lprefix_lub` (`lprefix_lubScript.sml:250-285, 430-455`). -/
+def LoopPrefixChain (family : Nat → List α) : Prop :=
+  ∀ clock later, clock ≤ later → family clock <+: family later
+
+theorem loopPrefixValue_unique {family : Nat → List α}
+    (hchain : LoopPrefixChain family) {clock later index : Nat} {value laterValue : α}
+    (hclock : (family clock)[index]? = some value)
+    (hlater : (family later)[index]? = some laterValue) :
+    value = laterValue := by
+  rcases Nat.le_total clock later with hle | hle
+  · have hindex := (List.getElem?_eq_some_iff.mp hclock).choose
+    have hsmall := (List.getElem?_eq_some_iff.mp hclock).choose_spec
+    have hprefix := hchain clock later hle
+    have heq := hprefix.getElem hindex
+    have hlater' := (List.getElem?_eq_some_iff.mp hlater).choose_spec
+    simpa [hsmall, hlater'] using heq
+  · have hindex := (List.getElem?_eq_some_iff.mp hlater).choose
+    have hlater' := (List.getElem?_eq_some_iff.mp hlater).choose_spec
+    have hprefix := hchain later clock hle
+    have heq := hprefix.getElem hindex
+    have hsmall := (List.getElem?_eq_some_iff.mp hclock).choose_spec
+    simpa [hlater', hsmall] using heq.symm
+
+/-- The `lprefix_chain_nth`/`LUNFOLD` construction from the HOL reference,
+represented as a lazy list of optional indexed values. -/
+noncomputable def loopPrefixNth (family : Nat → List α) (index : Nat) : Option α :=
+  by
+    classical
+    exact if h : ∃ value clock, (family clock)[index]? = some value then
+      some (Classical.choose h)
+    else none
+
+noncomputable def buildLoopLprefixLub (family : Nat → List α)
+    (hchain : LoopPrefixChain family) : LoopLprefixLub family :=
+  by
+    classical
+    refine { trace := loopPrefixNth family, isLub := ?_ }
+    constructor
+    · intro clock index value hvalue
+      by_cases h : ∃ value' clock', (family clock')[index]? = some value'
+      · simp only [loopPrefixNth, dif_pos h]
+        exact congrArg some (loopPrefixValue_unique hchain
+          (Classical.choose_spec (Classical.choose_spec h)) hvalue)
+      · exact (h ⟨value, clock, hvalue⟩).elim
+    · intro candidate hbound index value htrace
+      by_cases h : ∃ value' clock', (family clock')[index]? = some value'
+      · simp only [loopPrefixNth, dif_pos h] at htrace
+        have hchosen := Classical.choose_spec (Classical.choose_spec h)
+        have hc := hbound _ index (Classical.choose h) hchosen
+        have hv : Classical.choose h = value := Option.some.inj htrace
+        simpa [hv] using hc
+      · simp only [loopPrefixNth, dif_neg h] at htrace
+        cases htrace
+
+theorem buildLoopLprefixLub_isLub (family : Nat → List α)
+    (hchain : LoopPrefixChain family) :
+    LoopLprefixLubPredicate family (buildLoopLprefixLub family hchain).trace :=
+  (buildLoopLprefixLub family hchain).isLub
+
 inductive LoopBehaviour where
   | diverge (family : Nat → List FfiEvent)
       (trace : LoopLprefixLub family)
@@ -84,8 +144,9 @@ noncomputable def loopChooseTermination (hooks : LoopSemanticsHooks)
   let outcome := Classical.choose outcomeWitness
   .terminate outcome (hooks.ioEvents state)
 
-/-! Exact observational counterpart of `semantics_def`. -/
-noncomputable def loopSemantics (hooks : LoopSemanticsHooks)
+/-! Exact observational counterpart of `semantics_def` with the source LUB
+boundary made explicit for low-level branch proofs. -/
+noncomputable def loopSemanticsWithLub (hooks : LoopSemanticsHooks)
     (divergenceLub : LoopLprefixLub
       (fun clock => hooks.ioEvents (hooks.evaluate clock).2)) : LoopBehaviour :=
   by
@@ -96,5 +157,12 @@ noncomputable def loopSemantics (hooks : LoopSemanticsHooks)
       loopChooseTermination hooks successful
     else
       .diverge _ divergenceLub
+
+/-! Source-facing wrapper: `semantics_def` constructs the divergence result
+with `build_lprefix_lub`; callers provide only the prefix-chain proof. -/
+noncomputable def loopSemantics (hooks : LoopSemanticsHooks)
+    (divergenceChain : LoopPrefixChain
+      (fun clock => hooks.ioEvents (hooks.evaluate clock).2)) : LoopBehaviour :=
+  loopSemanticsWithLub hooks (buildLoopLprefixLub _ divergenceChain)
 
 end Flapjack

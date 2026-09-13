@@ -684,6 +684,23 @@ def lookupCompiledFunction [BEq String] (name : FunName)
       if name == function.name then some (function.params, function.body)
       else lookupCompiledFunction name functions
 
+/-! Exact executable counterpart of CakeML Pancake's
+    `crepSemScript.sml:76-84` `lookup_code_def`.  Code lookup and fresh local
+    map construction are one boundary: arity and distinct parameter names are
+    checked before a callee can run. -/
+def lookupCrepCode [BEq String] (name : FunName) (values : List α)
+    (functions : List (CompiledFunction α)) :
+    Option (CrepProg α × (Nat → Option α)) :=
+  match lookupCompiledFunction name functions with
+  | none => none
+  | some (parameters, body) =>
+      if parameters.length == values.length &&
+          parameters.eraseDups.length == parameters.length then
+        match assignCrepValues (fun _ => none) parameters values with
+        | some locals => some (body, locals)
+        | none => none
+      else none
+
 mutual
   def evalCrepCallWithFunctions [BEq String] [Add α] [Mul α]
       (functions : List (CompiledFunction α)) :

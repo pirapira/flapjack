@@ -53,14 +53,11 @@ cake_main:
   comma-separated layout.
 * `makesym(name, base, len)` uses the same four-space indentation and the
   same `base`-relative-to-`cake_main` convention.
-* Symbol naming policy:
-  * section `0` is the port runtime/raise stub, named
-    `cml_flapjack_runtime_0`;
-  * section `1` is the injected entry wrapper that runs global initializers
-    and tail-calls the renamed entry, named `cml_generated_main_1`;
-  * section `L >= 2` is `cml_<name>_<L>`, where `<name>` is the source
-    function name (a trailing prime from the entry rename is removed) in
-    `List (CompiledFunction ...)` order.
+* Symbol naming policy follows Cake runtime numbering: the port raise section
+  is cml__Raise_4, the injected entry wrapper is cml_generated_main_6, and a
+  source function in section L >= 2 is named cml_<name>_<L+5>. Missing port
+  runtime sections are represented as zero-length makesym entries until their
+  code is ported.
 
 `flapjack-compile --sections` prints the same sections in the raw form
 `<label> <address> <bytes...>` for callers that do not need the frame.
@@ -90,4 +87,5 @@ The remaining differences are tracked by:
 * The current port's runtime instruction set is not byte-identical to CakeML's
   shared `cml__Init_0` through `cml__StoreConsts_5` stubs; those code mismatches
   remain tracked separately from the now-matching artifact envelope.
-* The generated instruction bytes differ (see the beads above).
+* The generated instruction bytes and zero-length runtime entries differ (see
+  the P1 parity beads above).

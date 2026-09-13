@@ -158,4 +158,101 @@ theorem writeWordValue_transfer (state : State width) (address value : Word widt
       rw [writeByte_transfer]
       rw [induction]
 
+/-- A register write commutes with a program-counter update. -/
+theorem writeRegister_pc (state : State width) (pcval : Word width)
+    (name : Fin 32) (value : Word width) :
+    writeRegister { state with pc := pcval } name value =
+      { writeRegister state name value with pc := pcval } := by
+  cases state
+  by_cases hname : name = 0 <;> simp [writeRegister, hname]
+
+theorem writeByte_pc (state : State width) (pcval : Word width)
+    (address : Word width) (value : BitVec 8) :
+    writeByte { state with pc := pcval } address value =
+      { writeByte state address value with pc := pcval } := by
+  cases state
+  rfl
+
+theorem writeWord16_pc (state : State width) (pcval address value : Word width) :
+    writeWord16 { state with pc := pcval } address value =
+      { writeWord16 state address value with pc := pcval } := by
+  simp [writeWord16, writeByte_pc]
+
+theorem writeWord32_pc (state : State width) (pcval address value : Word width) :
+    writeWord32 { state with pc := pcval } address value =
+      { writeWord32 state address value with pc := pcval } := by
+  simp [writeWord32, writeByte_pc]
+
+theorem writeWordValue_pc_update (state : State width) (pcval address value : Word width) :
+    writeWordValue { state with pc := pcval } address value =
+      { writeWordValue state address value with pc := pcval } := by
+  unfold writeWordValue
+  generalize List.range (width / 8) = offsets
+  induction offsets generalizing state with
+  | nil => rfl
+  | cons offset offsets induction =>
+      simp only [List.foldl]
+      rw [writeByte_pc]
+      rw [induction]
+
+theorem writeRegister_transfer_forward_pc (state : State width) (pcval : Word width)
+    (name : Fin 32) (value : Word width)
+    (himage : riscvForward name ≠ 0) (hname : name ≠ 0) :
+    writeRegister { transferState state with pc := pcval } (riscvForward name) value =
+      transferState { writeRegister state name value with pc := pcval } := by
+  calc writeRegister { transferState state with pc := pcval } (riscvForward name) value
+      = { writeRegister (transferState state) (riscvForward name) value with pc := pcval } :=
+          writeRegister_pc _ _ _ _
+    _ = { transferState (writeRegisterInternal riscvForward state name value) with pc := pcval } := by
+          rw [writeRegister_transfer_forward]
+    _ = transferState { writeRegisterInternal riscvForward state name value with pc := pcval } :=
+          transferState_pc_update _ _
+    _ = transferState { writeRegister state name value with pc := pcval } := by
+          rw [writeRegisterInternal_eq_writeRegister _ _ _ himage hname]
+
+theorem writeByte_transfer_pc (state : State width) (pcval : Word width)
+    (address : Word width) (value : BitVec 8) :
+    writeByte { transferState state with pc := pcval } address value =
+      transferState { writeByte state address value with pc := pcval } := by
+  calc writeByte { transferState state with pc := pcval } address value
+      = { writeByte (transferState state) address value with pc := pcval } :=
+          writeByte_pc _ _ _ _
+    _ = { transferState (writeByte state address value) with pc := pcval } := by
+          rw [writeByte_transfer]
+    _ = transferState { writeByte state address value with pc := pcval } :=
+          transferState_pc_update _ _
+
+theorem writeWord16_transfer_pc (state : State width) (pcval address value : Word width) :
+    writeWord16 { transferState state with pc := pcval } address value =
+      transferState { writeWord16 state address value with pc := pcval } := by
+  calc writeWord16 { transferState state with pc := pcval } address value
+      = { writeWord16 (transferState state) address value with pc := pcval } :=
+          writeWord16_pc _ _ _ _
+    _ = { transferState (writeWord16 state address value) with pc := pcval } := by
+          rw [writeWord16_transfer]
+    _ = transferState { writeWord16 state address value with pc := pcval } :=
+          transferState_pc_update _ _
+
+theorem writeWord32_transfer_pc (state : State width) (pcval address value : Word width) :
+    writeWord32 { transferState state with pc := pcval } address value =
+      transferState { writeWord32 state address value with pc := pcval } := by
+  calc writeWord32 { transferState state with pc := pcval } address value
+      = { writeWord32 (transferState state) address value with pc := pcval } :=
+          writeWord32_pc _ _ _ _
+    _ = { transferState (writeWord32 state address value) with pc := pcval } := by
+          rw [writeWord32_transfer]
+    _ = transferState { writeWord32 state address value with pc := pcval } :=
+          transferState_pc_update _ _
+
+theorem writeWordValue_transfer_pc (state : State width) (pcval address value : Word width) :
+    writeWordValue { transferState state with pc := pcval } address value =
+      transferState { writeWordValue state address value with pc := pcval } := by
+  calc writeWordValue { transferState state with pc := pcval } address value
+      = { writeWordValue (transferState state) address value with pc := pcval } :=
+          writeWordValue_pc_update _ _ _ _
+    _ = { transferState (writeWordValue state address value) with pc := pcval } := by
+          rw [writeWordValue_transfer]
+    _ = transferState { writeWordValue state address value with pc := pcval } :=
+          transferState_pc_update _ _
+
 end Flapjack.RiscV

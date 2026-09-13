@@ -105,13 +105,13 @@ def compileMain (arguments : List String) : IO UInt32 := do
             IO.eprintln "flapjack-compile: entry not found"
             return 1
         | some pipeline =>
-            match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
+            match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
                 (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
                 "main" source with
             | .ok image =>
                 for warning in image.warnings do
                   IO.eprintln s!"warning: {repr warning}"
-                IO.print (RiscV.pancakeAssembly pipeline.crepe image.sections)
+                IO.print (RiscV.pancakeRuntimeAssembly pipeline.crepe image)
                 return 0
             | .error error =>
                 IO.eprintln s!"flapjack-compile: {repr error}"

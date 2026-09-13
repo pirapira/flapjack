@@ -9,6 +9,7 @@ import Flapjack.Test.PanShapeParity
 import Flapjack.Test.PanWordParity
 import Flapjack.Test.PanFixedLoadParity
 import Flapjack.Test.PanFixedStoreParity
+import Flapjack.Test.PanFlatStoreParity
 import Flapjack.Test.LoopGetVarsParity
 import Flapjack.Test.LoopSetGlobalsParity
 import Flapjack.Test.InstructionTransfer

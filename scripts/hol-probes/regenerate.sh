@@ -69,6 +69,8 @@ run_probe pan_fixed_load_probeScript.sml pan_fixed_load_probe.out \
   byte_hit load32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fixed_store_probeScript.sml pan_fixed_store_probe.out \
   byte_store_hit store32_unaligned "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
+  store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
   get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The set_globals probe observes FLOOKUP after the original map update.

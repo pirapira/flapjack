@@ -150,6 +150,8 @@ run_probe loop_sem_eval_probeScript.sml loop_sem_eval_probe.out \
   const top_addr "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_evaluate_probeScript.sml loop_sem_evaluate_probe.out \
   skip tick_timeout "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_semantics_probeScript.sml loop_semantics_probe.out \
+  return_clock_zero return_clock_one "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_cut_state_probeScript.sml loop_sem_cut_state_probe.out \
   hit_first loc_preserved "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_cut_res_probeScript.sml loop_sem_cut_res_probe.out \

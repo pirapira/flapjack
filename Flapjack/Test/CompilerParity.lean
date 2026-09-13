@@ -37,6 +37,7 @@ import Flapjack.Test.LoopIsLoadParity
 import Flapjack.Test.LoopCallParity
 import Flapjack.Test.LoopEvalParity
 import Flapjack.Test.LoopEvaluateParity
+import Flapjack.Test.LoopObservationalSemanticsParity
 import Flapjack.Test.LoopCutStateParity
 import Flapjack.Test.LoopCutResParity
 import Flapjack.Test.LoopShMemLoadParity
@@ -669,6 +670,7 @@ def main : IO Unit := do
     Flapjack.Test.LoopCallParity.runChecks,
     Flapjack.Test.LoopEvalParity.runChecks,
     Flapjack.Test.LoopEvaluateParity.runChecks,
+    Flapjack.Test.LoopObservationalSemanticsParity.runChecks,
     Flapjack.Test.LoopCutStateParity.runChecks,
     Flapjack.Test.LoopCutResParity.runChecks,
     Flapjack.Test.LoopShMemLoadParity.runChecks,

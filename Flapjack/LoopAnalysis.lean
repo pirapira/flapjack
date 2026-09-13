@@ -20,6 +20,51 @@ def loopVarsOfExp : LoopExp α → List Nat
   | .baseAddr => []
   | .topAddr => []
 
+/-! Faithful port of CakeML Pancake's `locals_touched_def` from
+    `cakeml/pancake/loopLangScript.sml:77`.  The source definition is used on
+    the original Loop expressions, before the later Flapjack-only `crepOp` and
+    comparison expression forms are introduced; those forms are nevertheless
+    handled structurally here so the analysis remains total on `LoopExp`. -/
+def loopLocalsTouched : LoopExp α → List Nat
+  | .const _ => []
+  | .var name => [name]
+  | .lookup _ => []
+  | .load address => loopLocalsTouched address
+  | .op _ arguments => arguments.flatMap loopLocalsTouched
+  | .crepOp _ arguments => arguments.flatMap loopLocalsTouched
+  | .cmp _ left right => loopLocalsTouched left ++ loopLocalsTouched right
+  | .shift _ left right => loopLocalsTouched left ++ loopLocalsTouched right
+  | .baseAddr => []
+  | .topAddr => []
+
+@[simp] theorem loopLocalsTouched_const (value : α) :
+    loopLocalsTouched (.const value) = [] := by
+  simp [loopLocalsTouched]
+
+@[simp] theorem loopLocalsTouched_var (α : Type u) (name : Nat) :
+    loopLocalsTouched (α := α) (.var name) = [name] := by
+  simp [loopLocalsTouched]
+
+@[simp] theorem loopLocalsTouched_lookup (address : α) :
+    loopLocalsTouched (.lookup address) = [] := by
+  simp [loopLocalsTouched]
+
+@[simp] theorem loopLocalsTouched_load (address : LoopExp α) :
+    loopLocalsTouched (.load address) = loopLocalsTouched address := by
+  simp [loopLocalsTouched]
+
+@[simp] theorem loopLocalsTouched_op (operator : BinOp)
+    (arguments : List (LoopExp α)) :
+    loopLocalsTouched (.op operator arguments) =
+      arguments.flatMap loopLocalsTouched := by
+  simp [loopLocalsTouched]
+
+@[simp] theorem loopLocalsTouched_shift (operator : Shift)
+    (left right : LoopExp α) :
+    loopLocalsTouched (.shift operator left right) =
+      loopLocalsTouched left ++ loopLocalsTouched right := by
+  simp [loopLocalsTouched]
+
 def loopAssignedVars : LoopProg α → List Nat
   | .skip => []
   | .assign name _ => [name]

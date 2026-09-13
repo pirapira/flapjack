@@ -98,6 +98,10 @@ run_probe pan_sem_ffi_e2e_probeScript.sml pan_sem_ffi_e2e_probe.out \
   ffi_foo_event ffi_foo_event "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
   get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
+# The locals_touched probe observes the structural Loop expression analysis.
+run_probe loop_lang_locals_touched_probeScript.sml \
+  loop_lang_locals_touched_probe.out \
+  const base_addr "$cake_dir/pancake/loopLangScript.sml"
 # The set_globals probe observes FLOOKUP after the original map update.
 run_probe loop_sem_set_globals_probeScript.sml loop_sem_set_globals_probe.out \
   set_globals_new set_globals_sibling "$cake_dir/pancake/semantics/loopSemScript.sml"

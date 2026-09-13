@@ -213,6 +213,7 @@ def wordArithToInstruction [NeZero width] :
       none
   | .longDiv _ _ _ _ _ => none
   | .addCarry _ _ _ _ _ => none
+  | .cakeAddCarry _ _ _ _ => none
   | .div destination dividend divisor => do
       let destination ← registerOfNat destination
       let dividend ← registerOfNat dividend
@@ -247,6 +248,21 @@ def wordArithToInstructions [NeZero width] :
           .add destination destination 31,
           .sltu 31 destination 31,
           .or resultCarry resultCarry 31]
+  | .cakeAddCarry destination sourceLeft sourceRight carry => do
+      if [destination, sourceLeft, sourceRight, carry].any (· == 31) then
+        none
+      else
+        let destination ← registerOfNat destination
+        let sourceLeft ← registerOfNat sourceLeft
+        let sourceRight ← registerOfNat sourceRight
+        let carry ← registerOfNat carry
+        pure [
+          .sltu 31 0 carry,
+          .add destination sourceLeft sourceRight,
+          .sltu carry destination sourceRight,
+          .add destination destination 31,
+          .sltu 31 destination 31,
+          .or carry carry 31]
   | operation => (wordArithToInstruction operation).map (fun instruction => [instruction])
 
 def wordInstToInstruction [NeZero width] :
@@ -1244,6 +1260,20 @@ theorem wordArithToInstructions_addCarry [NeZero width] :
       some [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
         .sltu 31 5 31, .or 6 6 31] := by
   simp [wordArithToInstructions, registerOfNat]
+
+theorem wordArithToInstructions_cakeAddCarry [NeZero width] :
+    wordArithToInstructions (width := width) (.cakeAddCarry 5 2 3 4) =
+      some [.sltu 31 0 4, .add 5 2 3, .sltu 4 5 3, .add 5 5 31,
+        .sltu 31 5 31, .or 4 4 31] := by
+  simp [wordArithToInstructions, registerOfNat]
+
+theorem compileWordCakeAddCarry_sound [NeZero width] (state : State width) :
+    evalWordProg state (.inst (.arith (.cakeAddCarry 5 2 3 4))) =
+      some (executeInstructions state
+        [.sltu 31 0 4, .add 5 2 3, .sltu 4 5 3, .add 5 5 31,
+          .sltu 31 5 31, .or 4 4 31]) := by
+  simp [evalWordProg, wordArithToInstructions, executeInstructions,
+    registerOfNat]
 
 theorem compileWordAddCarry_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.arith (.addCarry 5 6 2 3 4))) =

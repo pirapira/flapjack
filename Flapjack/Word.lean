@@ -48,6 +48,12 @@ inductive WordArith where
   | longMul (destinationLeft destinationRight sourceLeft sourceRight : Nat)
   | longDiv (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)
   | addCarry (destination resultCarry sourceLeft sourceRight carryIn : Nat)
+  /- CakeML WordLang's AddCarry has four registers: r1 is the sum
+     destination, r2/r3 are the addends, and r4 is both carry input and
+     carry output.  Keep this distinct from Pancake's five-register
+     two-result primitive so the compiler boundary cannot silently encode a
+     different operation. -/
+  | cakeAddCarry (destination sourceLeft sourceRight carry : Nat)
   | div (destination dividend divisor : Nat)
   deriving DecidableEq, Repr
 

@@ -90,6 +90,12 @@ def wordHeuristicInst : WordInst → NatInfoMap WordHeuristicCounts →
               (wordHeuristicAddRhsReg carryIn
                 (wordHeuristicAddRhsReg sourceRight
                   (wordHeuristicAddRhsReg sourceLeft counts))))
+      | .cakeAddCarry destination sourceLeft sourceRight carry =>
+          wordHeuristicAddLhsReg carry
+            (wordHeuristicAddLhsReg destination
+              (wordHeuristicAddRhsReg sourceRight
+                (wordHeuristicAddRhsReg sourceLeft
+                  (wordHeuristicAddRhsReg carry counts))))
       | .div destination dividend divisor =>
           wordHeuristicAddLhsReg destination
             (wordHeuristicAddRhsReg divisor

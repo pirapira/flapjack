@@ -27,12 +27,6 @@
 # whether the result needs to be a theorem. An uncited execution check does
 # not, and `#guard` discharges it with no axiom (see #343).
 
-# --- Fixed CakeML runtime table lengths ---------------------------------------
-# These two theorems reduce a 250-word, 1000-byte literal runtime table; kernel
-# decide exceeds the default recursion depth, while native_decide is deterministic
-# and keeps the artifact-size invariant stated as a named theorem.
-2 Flapjack/RiscV/RuntimeBytes.lean
-
 # --- Cited pipeline shape theorems -------------------------------------------
 # Each runs the compiler over a program and compares the result to a literal,
 # and each is cited by a neighbouring proof via `rw [...]`, so the equation has

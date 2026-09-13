@@ -1,0 +1,42 @@
+(*
+  Direct HOL-EVAL fixture for Pancake loopSem evaluate_def.
+  Reference: cakeml/pancake/semantics/loopSemScript.sml:278-360.
+  The observations cover normal completion, an intermediate assignment,
+  sequence return, conditional selection, and timeout local clearing.
+*)
+load "bossLib";
+load "preamble";
+load "../semantics/loopSemTheory";
+open bossLib;
+open HolKernel Parse;
+open preamble;
+open loopSemTheory;
+
+val s = ``(s:(8,'ffi) loopSem$state)``;
+
+fun print_eval label q =
+  let
+    val th0 = SIMP_CONV (srw_ss())
+      [evaluate_def, eval_def, set_var_def, get_vars_def,
+       call_env_def, dec_clock_def, fix_clock_def] q
+    val th = EVAL (rconc th0)
+  in
+    print (label ^ "=");
+    print_term (rconc th);
+    print "\n"
+  end
+
+val _ = print_eval "skip"
+  ``loopSem$evaluate (Skip, ^s)``
+val _ = print_eval "assign"
+  ``case loopSem$evaluate (Assign 1 (Const (7w : 8 word)), ^s with clock := 5) of
+      (res,s') => (res, lookup 1 s'.locals, s'.clock)``
+val _ = print_eval "seq_return"
+  ``case loopSem$evaluate
+      (Seq (Assign 1 (Const (7w : 8 word))) (Return [1]),
+       ^s with <|locals := LN; clock := 5|>) of
+      (res,s') => (res, lookup 1 s'.locals, s'.clock)``
+val _ = print_eval "tick_timeout"
+  ``case loopSem$evaluate
+      (Tick, ^s with <|locals := insert 1 (Word 7w) LN; clock := 0|>) of
+      (res,s') => (res, lookup 1 s'.locals, s'.clock)``

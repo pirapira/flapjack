@@ -15,6 +15,7 @@ import Flapjack.Test.PanFlattenParity
 import Flapjack.Test.PanResVarParity
 import Flapjack.Test.PanPrimopParity
 import Flapjack.Test.PanSetVarParity
+import Flapjack.Test.CakeStackReseatParity
 import Flapjack.Test.LoopGetVarsParity
 import Flapjack.Test.LoopSetGlobalsParity
 import Flapjack.Test.LoopSetVarsParity
@@ -645,7 +646,8 @@ def main : IO Unit := do
     Flapjack.Test.LoopMemLoadParity.runChecks,
     Flapjack.Test.LoopMemoryStateParity.runChecks,
     Flapjack.Test.LoopStateResultParity.runChecks,
-    Flapjack.Test.EndToEndParity.runChecks
+    Flapjack.Test.EndToEndParity.runChecks,
+    Flapjack.Test.CakeStackReseatParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

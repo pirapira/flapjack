@@ -12,6 +12,7 @@ import Flapjack.Test.PanFixedStoreParity
 import Flapjack.Test.PanFlatStoreParity
 import Flapjack.Test.PanFlattenParity
 import Flapjack.Test.PanResVarParity
+import Flapjack.Test.PanPrimopParity
 import Flapjack.Test.LoopGetVarsParity
 import Flapjack.Test.LoopSetGlobalsParity
 import Flapjack.Test.LoopSetVarsParity
@@ -622,7 +623,8 @@ def main : IO Unit := do
     Flapjack.Test.LoopSetGlobalsParity.runChecks,
     Flapjack.Test.LoopSetVarsParity.runChecks,
     Flapjack.Test.LoopFindCodeParity.runChecks,
-    Flapjack.Test.LoopArithParity.runChecks
+    Flapjack.Test.LoopArithParity.runChecks,
+    Flapjack.Test.PanPrimopParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

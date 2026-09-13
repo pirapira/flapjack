@@ -263,8 +263,8 @@ mutual
         (panValueFlatLoadListFuel structs readWord bytesInWord fuel shapes address).map
           .rStruct
     | fuel + 1, .named name, address => do
-        let info ← lookupInfo name structs
-        let fields ← panValueFlatLoadFieldsFuel structs readWord bytesInWord fuel
+        let (info, structs') ← lookupInfoWithRest name structs
+        let fields ← panValueFlatLoadFieldsFuel structs' readWord bytesInWord fuel
           info.fields address
         pure (.nStruct name fields)
   termination_by fuel _shape _address => fuel

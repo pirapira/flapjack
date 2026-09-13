@@ -4,6 +4,8 @@ import Flapjack.Test.PipelineDiagnostics
 import Flapjack.Test.SourceGlobalParity
 import Flapjack.Test.RegisterTransfer
 import Flapjack.Test.LoopToWord
+import Flapjack.Test.PanMemoryParity
+import Flapjack.Test.PanShapeParity
 import Flapjack.Test.LoopGetVarsParity
 import Flapjack.Test.LoopSetGlobalsParity
 import Flapjack.Test.InstructionTransfer

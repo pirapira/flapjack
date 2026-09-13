@@ -79,6 +79,61 @@ example : crepeEmptyLocals 1 = none := by
 example : crepeEmptyLocals 2 = none := by
   rfl
 
+def crepeLookupFunctions : List (CompiledFunction Nat) :=
+  [{ name := "id", params := [1],
+     body := .return [.var 1], returnShape := .one }]
+
+def crepeLookupValid : Option (CrepProg Nat × (Nat → Option Nat)) :=
+  lookupCrepCode "id" [7] crepeLookupFunctions
+
+def crepeLookupDuplicateFunctions : List (CompiledFunction Nat) :=
+  [{ name := "duplicate", params := [1, 1],
+     body := .return [.var 1], returnShape := .one }]
+
+/- CakeML crepSem's lookup_code_def (crepSemScript.sml:76-84) rejects missing
+   names, arity mismatches, and duplicate formal names, and otherwise returns
+   the body with a fresh local map made from the parameter/value zip.  The
+   original call probe is `lookup_code.pnk`; its complete Cake output is
+   pinned in `OriginalPancakeProbes.lookupCode`. -/
+#guard lookupCode.source =
+  "fun 1 id(1 x) { return x; } fun 1 main() { return id(7); }"
+#guard lookupCode.cakeByteCount == 1016
+
+example : crepeLookupValid.map (fun result => result.2 1) = some (some 7) := by
+  decide
+
+example : lookupCrepCode "id" [] crepeLookupFunctions = none := by
+  decide
+
+example : lookupCrepCode "duplicate" [7, 8]
+    crepeLookupDuplicateFunctions = none := by
+  decide
+
+example : lookupCrepCode "missing" [7] crepeLookupFunctions = none := by
+  decide
+
+/- CakeML crepSem's crep_op_def (crepSemScript.sml:85-88) handles exactly a
+   two-word multiplication and rejects every other operand shape.  The
+   original source probe is `crep_op.pnk`; its complete Cake output is pinned
+   in `OriginalPancakeProbes.crepOp`. -/
+#guard crepOp.source = "fun 1 main() { return 6 * 7; }"
+#guard crepOp.cakeByteCount == 1012
+
+example : evalCrepOp .mul [6, 7] = some 42 := by
+  decide
+
+example : evalCrepOp .mul [6] = none := by
+  decide
+
+example : evalCrepOp .mul [6, 7, 8] = none := by
+  decide
+
+/- CakeML crepSem's dec_clock_def (crepSemScript.sml:145-148) decrements the
+   clock with saturating natural subtraction and preserves every other state
+   field.  The original `tick` probe is pinned in `OriginalPancakeProbes.decClock`. -/
+#guard decClock.source = "fun 1 main() { tick; return 7; }"
+#guard decClock.cakeByteCount == 1012
+
 example : crepeSetVarLocals 2 = some 11 := by
   decide
 
@@ -196,6 +251,12 @@ def crepeRuntimeState : CrepRuntimeState Nat Unit :=
     ffi := ()
     baseAddress := 0
     topAddress := 100 }
+
+example : (decCrepClock { crepeRuntimeState with clock := 10 }).clock = 9 := by
+  rfl
+
+example : (decCrepClock { crepeRuntimeState with clock := 0 }).clock = 0 := by
+  rfl
 
 def crepeRuntimeFinalHandler : CrepRuntimeFfiHandler Nat Unit String :=
   fun request state =>

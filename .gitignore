@@ -10,3 +10,7 @@
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Local agent workspace state
+.cursor/
+.opencode/

@@ -24,6 +24,8 @@ full runtime-image generation, broad source coverage, exact artifact parity,
 and the complete Pancake correctness theorem still require work. The current
 claims and limitations are recorded explicitly in
 [`docs/SOUNDNESS.md`](docs/SOUNDNESS.md).
+The required workflow for tying internal and end-to-end tests to the original
+Pancake implementation is in [`docs/PARITY-TESTING.md`](docs/PARITY-TESTING.md).
 
 Backends other than RISC-V are out of scope for this port.
 
@@ -70,8 +72,9 @@ The original reference compiler can be run locally with:
 cakeml/developers/bin/cake --pancake --target=riscv < program.pnk > program.cake.S
 ```
 
-Use the parity tests and `docs/SOUNDNESS.md` when interpreting comparisons
-between the two outputs.
+Use the parity tests, [`docs/PARITY-TESTING.md`](docs/PARITY-TESTING.md), and
+[`docs/SOUNDNESS.md`](docs/SOUNDNESS.md) when interpreting comparisons between
+the two outputs.
 
 ## Project map
 

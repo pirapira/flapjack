@@ -391,4 +391,18 @@ theorem riscvForward_injective : Function.Injective riscvForward := by
   exact riscvRegisterName_injective_lt_32 left.isLt right.isLt
     (by simpa [riscvForward] using congrArg Fin.val hsame)
 
+/-- The lifted `riscv_names` map sends a register to hardware `x0` exactly when
+that register is the Cake stack zero register `27`.  This is the precondition
+for the zero-image-aware internal write. -/
+theorem riscvForward_eq_zero_iff {register : Fin 32} :
+    riscvForward register = 0 ↔ register.val = 27 := by
+  constructor
+  · intro hzero
+    have hvalue : riscvRegisterName register.val = 0 := by
+      simpa [riscvForward] using congrArg Fin.val hzero
+    exact (riscvRegisterName_eq_zero_iff register.isLt).mp hvalue
+  · intro htwentySeven
+    apply Fin.ext
+    simp [riscvForward, htwentySeven]
+
 end Flapjack.RiscV

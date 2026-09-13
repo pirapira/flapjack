@@ -2,7 +2,8 @@
 
 This note documents the RISC-V artifact format produced by the original
 Pancake compiler and the format the Flapjack port emits, so the two can be
-compared directly without a conversion layer (bead `flapjack-pxn.8.5.11`).
+compared directly without a conversion layer (beads `flapjack-pxn.8.5.11` and
+`flapjack-pxn.8.5.11.2`).
 
 ## Original Pancake (`cake --pancake --target=riscv`)
 
@@ -39,11 +40,15 @@ actually produces:
 .p2align 3
 cake_main:
 
-	.byte 93,0E,80,03,...
+	.byte 0x13,0x65,0x70,0x00,...
 	...
-    makesym(cml_flapjack_runtime_0, 0, 76)
-    makesym(cml_generated_main_1, 76, 4)
-    makesym(cml_main_2, 80, 12)
+    makesym(cml__Init_0, 0, 756)
+    makesym(cml__Halt0_1, 756, 8)
+    makesym(cml__Halt2_2, 764, 8)
+    makesym(cml__GC_3, 772, 40)
+    makesym(cml__Raise_4, 812, 36)
+    makesym(cml__StoreConsts_5, 848, 152)
+    makesym(cml_generated_main_6, 1000, 4)
 ```
 
 * `.data`, startup, `cake_main`, and `cake_codebuffer_*` markers follow the
@@ -53,12 +58,12 @@ cake_main:
   comma-separated layout.
 * `makesym(name, base, len)` uses the same four-space indentation and the
   same `base`-relative-to-`cake_main` convention.
-* Symbol naming policy follows Cake runtime numbering: the port raise,
-  StoreConsts, and collector sections are cml__Raise_4, cml__StoreConsts_5,
-  and cml__GC_3; the injected entry wrapper is cml_generated_main_6, and a
-  source function is named cml_<name>_<N> with deterministic section number N.
-  The three runtime stubs not yet represented by the supported Flapjack image
-  remain explicit zero-length makesym entries.
+* The supported RV64 runtime prefix is byte-equivalent to CakeML and occupies
+  1000 bytes: Init 756, Halt0 8, Halt2 8, GC 40, Raise 36, and StoreConsts
+  152. The generated entry wrapper therefore starts at offset 1000.
+* Symbol naming follows Cake runtime numbering: cml__Init_0 through
+  cml__StoreConsts_5, cml_generated_main_6, and cml_<name>_<N> for source
+  functions.
 
 `flapjack-compile --sections` prints the same sections in the raw form
 `<label> <address> <bytes...>` for callers that do not need the frame.
@@ -78,16 +83,12 @@ The remaining differences are tracked by:
 * `flapjack-pxn.8.5.10.1` constant-return lowering;
 * `flapjack-pxn.8.5.10.2` global-initializer generated entry;
 * `flapjack-pxn.8.5.10.3` direct-call entry;
-* `flapjack-pxn.8.5.11.1` symbol numbering and runtime/data framing.
+* `flapjack-pxn.8.5.11.2` exact runtime section bytes, now covered by the
+  fixed RV64 runtime prefix and its regression fixture; generated/user code
+  mismatches remain tracked by the `.8.5.10.x` beads.
 
 ## Known format/layout differences
 
-* Symbol numbers start after the port's runtime/raise section rather than
-  after CakeML's six runtime stubs; this deterministic numbering is preserved
-  in the `makesym` names.
-* The current port's runtime instruction set is not byte-identical to CakeML's
-  shared `cml__Init_0` through `cml__StoreConsts_5` stubs; those code mismatches
-  remain tracked separately from the now-matching artifact envelope.
-* The supported Flapjack runtime image has different section lengths and
-  ordering from Cake's runtime; these concrete runtime/code gaps remain
-  explicit in the direct parity report and P1 beads.
+* The runtime prefix is fixed for the supported RV64 target and matches CakeML
+  byte-for-byte. Remaining direct parity differences are in generated/user
+  compiler code and are tracked separately.

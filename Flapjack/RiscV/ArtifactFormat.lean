@@ -1,4 +1,5 @@
 import Flapjack.RiscV.PipelineDiagnostics
+import Flapjack.RiscV.RuntimeBytes
 
 /-!
 # Pancake-compatible RISC-V artifact formatting
@@ -78,15 +79,26 @@ def runtimeAssemblySectionLines (crepe : List (CompiledFunction (RiscV.Word 64))
     Nat → List (RiscV.EncodedRiscVSection 64) → List String
   | _, [] => []
   | offset, encoded :: rest =>
-      s!"    makesym({runtimeSectionSymbolName crepe encoded.label}, {offset}, {encoded.bytes.length})" ::
-        runtimeAssemblySectionLines crepe (offset + encoded.bytes.length) rest
+      if encoded.label < 3 then
+        runtimeAssemblySectionLines crepe offset rest
+      else
+        s!"    makesym({runtimeSectionSymbolName crepe encoded.label}, {offset}, {encoded.bytes.length})" ::
+          runtimeAssemblySectionLines crepe (offset + encoded.bytes.length) rest
 
 def runtimeAssemblySymbolLines (crepe : List (CompiledFunction (RiscV.Word 64)))
     (sections : List (RiscV.EncodedRiscVSection 64)) : List String :=
-  ["    makesym(cml__Init_0, 0, 0)",
-   "    makesym(cml__Halt0_1, 0, 0)",
-   "    makesym(cml__Halt2_2, 0, 0)"] ++
-    runtimeAssemblySectionLines crepe 0 sections
+  ["    makesym(cml__Init_0, 0, 756)",
+   "    makesym(cml__Halt0_1, 756, 8)",
+   "    makesym(cml__Halt2_2, 764, 8)",
+   "    makesym(cml__GC_3, 772, 40)",
+   "    makesym(cml__Raise_4, 812, 36)",
+   "    makesym(cml__StoreConsts_5, 848, 152)"] ++
+    runtimeAssemblySectionLines crepe 1000 sections
+
+def runtimeFunctionBytes
+    (sections : List (RiscV.EncodedRiscVSection 64)) : List (BitVec 8) :=
+  (sections.filter (fun entry => entry.label >= 3)).flatMap
+    (fun entry => entry.bytes)
 def pancakePrologue : List String :=
   ["/* Preprocessor to get around Mac OS, Windows, and Linux differences in naming and calling conventions */",
    "", "#if defined(__APPLE__)", "# define cdecl(s) _##s", "#else",
@@ -145,7 +157,7 @@ def pancakeAssembly (crepe : List (CompiledFunction (RiscV.Word 64)))
 def pancakeRuntimeAssembly
     (crepe : List (CompiledFunction (RiscV.Word 64)))
     (image : Flapjack.SourceRiscVRuntimeImage 64) : String :=
-  let bytes := image.sections.flatMap (fun encoded => encoded.bytes)
+  let bytes := cakeRuntimeBytes ++ runtimeFunctionBytes image.sections
   let bitmapWords := String.intercalate "," (image.bitmaps.data.map (fun value => s!"{value}"))
   String.intercalate "\n"
     (pancakePrologue ++

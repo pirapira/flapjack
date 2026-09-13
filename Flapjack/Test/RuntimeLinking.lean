@@ -1,9 +1,28 @@
 import Flapjack.Pipeline
 import Flapjack.RiscV.CorrectnessBackend
+import Flapjack.RiscV.ArtifactFormat
 
 namespace Flapjack
 
 open RiscV
+
+#guard RiscV.cakeRuntimeWords.length == 250
+
+#guard RiscV.cakeRuntimeBytes.length == 1000
+
+#guard RiscV.cakeRuntimeBytes.take 4 ==
+      [BitVec.ofNat 8 0xB3, BitVec.ofNat 8 0xE0,
+       BitVec.ofNat 8 0xD6, BitVec.ofNat 8 0x00]
+
+example :
+    RiscV.runtimeAssemblySymbolLines [] [] =
+      ["    makesym(cml__Init_0, 0, 756)",
+       "    makesym(cml__Halt0_1, 756, 8)",
+       "    makesym(cml__Halt2_2, 764, 8)",
+       "    makesym(cml__GC_3, 772, 40)",
+       "    makesym(cml__Raise_4, 812, 36)",
+       "    makesym(cml__StoreConsts_5, 848, 152)"] := by
+  rfl
 
 def runtimeLinkRemoveConfig : StackRemoveConfig :=
   { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,

@@ -366,6 +366,70 @@ theorem compile_full_pan_value_seq_normal_compose
   rw [hfirstSource']
   simp
 
+/-! Stateful counterpart of the compact sequence boundary.  The source side
+    remains the localized evaluator used by this small regression, while the
+    target side now preserves the complete Crep state through the sequence. -/
+theorem compile_full_pan_value_seq_normal_compose_state
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α))
+    (firstSourceLocals firstSourceGlobals : VarName → Option (PanValue α))
+    (firstSourceMemory : α → Option (PanValue α))
+    (state firstState : CrepState α)
+    (primitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (first second : Prog α)
+    (hfirstSource : evalPanValueProg structs baseAddress topAddress bytesInWord
+      sourceLocals sourceGlobals sourceMemory first =
+        some (firstSourceLocals, firstSourceGlobals, firstSourceMemory, []))
+    (hfirstCrep : evalCrepFullProgState [] primitive ffi sharedMem
+      baseAddress topAddress fuel state (compileProg context first) =
+        some (.normal firstState))
+    (hsecond : evalCrepFullResultState [] primitive ffi sharedMem
+      baseAddress topAddress fuel firstState (compileProg context second) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        firstSourceLocals firstSourceGlobals firstSourceMemory second).map
+        (fun result => result.2.2.2.flatMap panValueFlatWords)) :
+    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress
+        (fuel + 1) state (compileProg context (.seq first second)) =
+      (evalPanValueProg structs baseAddress topAddress bytesInWord
+        sourceLocals sourceGlobals sourceMemory (.seq first second)).map
+    (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+  simp only [compileProg, evalCrepFullResultState, evalCrepFullProgState]
+  rw [hfirstCrep]
+  change (evalCrepFullProgState [] primitive ffi sharedMem baseAddress topAddress fuel
+      firstState (compileProg context second)).bind (fun result =>
+        match result with
+        | .returned _ values => some values
+        | .normal _ => some []
+        | .raised _ _ | .broke _ _ | .continued _ _ | .finalFfi _ _ => none) = _
+  have hsecond' :
+      (evalCrepFullProgState [] primitive ffi sharedMem baseAddress topAddress fuel
+        firstState (compileProg context second)).bind (fun result =>
+          match result with
+          | .returned _ values => some values
+          | .normal _ => some []
+          | .raised _ _ | .broke _ _ | .continued _ _ | .finalFfi _ _ => none) =
+        (evalPanValueProg structs baseAddress topAddress bytesInWord
+          firstSourceLocals firstSourceGlobals firstSourceMemory second).map
+          (fun result => result.2.2.2.flatMap panValueFlatWords) := by
+    exact hsecond
+  rw [hsecond']
+  have hfirstSource' :
+      evalPanValueProgWithPrimitive structs baseAddress topAddress bytesInWord
+        sourceLocals sourceGlobals sourceMemory (fun _ _ => none) first =
+        some (firstSourceLocals, firstSourceGlobals, firstSourceMemory, []) := by
+    simpa [evalPanValueProg] using hfirstSource
+  simp only [evalPanValueProg]
+  simp only [evalPanValueProgWithPrimitive]
+  rw [hfirstSource']
+  simp
+
 /-! The source return boundary is not intrinsically word-shaped.  This
     structured form is the one needed for record-valued Pancake expressions:
     the compiler emits the flattened Crep words, while the source evaluator

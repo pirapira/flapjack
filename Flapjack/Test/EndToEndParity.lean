@@ -12,7 +12,7 @@ Pancake `panSem` `Return` equation. This is stronger evidence than a
 compiler-correctness theorem alone: a different compiler can satisfy the same
 source theorem while still disagreeing with the original Pancake compiler.
 
-The two small fixtures are deliberately stable and suitable as seeds for a
+The three small fixtures are deliberately stable and suitable as seeds for a
 larger differential/fuzzing corpus. Their original probe sources reference
 `cakeml/pancake/semantics/panSemScript.sml:638-643`.
 -/

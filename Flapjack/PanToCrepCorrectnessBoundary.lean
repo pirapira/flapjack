@@ -54,11 +54,20 @@ inductive CrepPcResult (α : Type u) where
   | timeout (state : CrepState α)
   | finalFfi (state : CrepState α) (event : FfiFinalEvent)
 
+abbrev PanValuePcSourceCode α :=
+  List (FunName × List VarName × Prog α)
+
+abbrev PanValuePcTargetCode α :=
+  List (CompiledFunction α)
+
 abbrev PanValuePcCodeRel α :=
-  CompileContext α → Prog α → CrepProg α → Prop
+  CompileContext α → PanValuePcSourceCode α → PanValuePcTargetCode α → Prop
 
 abbrev PanValuePcExceptionShapeRel α :=
-  StructContext → CompileContext α → Prop
+  CompileContext α → InfoMap Shape → InfoMap Shape → Prop
+
+def panValuePcLocalisedCode (code : PanValuePcSourceCode α) : Prop :=
+  ∀ entry ∈ code, localisedProg entry.2.2
 
 /-! The exception clause of HOL `pc_compile_correct`: the target exception is
 the code looked up for the source exception, and a non-empty payload is
@@ -124,15 +133,32 @@ def panValuePcResultRel
   | _, _ => False
 
 structure PanValuePcInput (α : Type u) where
+  code : PanValuePcSourceCode α
+  eshapes : InfoMap Shape
   locals : VarName → Option (PanValue α)
   globals : VarName → Option (PanValue α)
   memory : α → Option (PanValue α)
 
+structure CrepPcInput (α : Type u) where
+  code : PanValuePcTargetCode α
+  eshapes : InfoMap Shape
+  state : CrepState α
+
+structure PanValuePcExecution (α : Type u) where
+  code : PanValuePcSourceCode α
+  eshapes : InfoMap Shape
+  result : PanValuePcResult α
+
+structure CrepPcExecution (α : Type u) where
+  code : PanValuePcTargetCode α
+  eshapes : InfoMap Shape
+  result : CrepPcResult α
+
 abbrev PanValuePcEvaluator (α : Type u) :=
-  CompileContext α → PanValuePcInput α → Prog α → Option (PanValuePcResult α)
+  CompileContext α → PanValuePcInput α → Prog α → Option (PanValuePcExecution α)
 
 abbrev CrepPcEvaluator (α : Type u) :=
-  CompileContext α → CrepState α → CrepProg α → Option (CrepPcResult α)
+  CompileContext α → CrepPcInput α → CrepProg α → Option (CrepPcExecution α)
 
 /-! The direct Lean analogue of the quantifier/implication shape of HOL
 `pc_compile_correct`: code/exceptions/localisation assumptions, related
@@ -148,20 +174,25 @@ def PanValuePcCompileCorrect
     (globalsLookup : CrepState α → PanValue α → Option (List α))
     (program : Prog α) : Prop :=
   ∀ (context : CompileContext α) (structs : StructContext)
-    (sourceInput : PanValuePcInput α) (targetState : CrepState α)
+    (sourceInput : PanValuePcInput α) (targetInput : CrepPcInput α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
-    (sourceResult : PanValuePcResult α) (targetResult : CrepPcResult α),
-    codeRel context program (compileProg context program) →
-    excpRel structs context →
+    (sourceExecution : PanValuePcExecution α)
+    (targetExecution : CrepPcExecution α),
+    sourceInput.code.map Prod.fst |>.Nodup →
+    panValuePcLocalisedCode sourceInput.code →
     localisedProg program →
+    codeRel context sourceInput.code targetInput.code →
+    excpRel context sourceInput.eshapes targetInput.eshapes →
     panValueCrepStateRel structs context sourceInput.locals sourceInput.globals
-      sourceInput.memory targetState →
-    sourceResult ≠ .error →
-    sourceEvaluate context sourceInput program = some sourceResult →
-    targetEvaluate context targetState (compileProg context program) =
-      some targetResult →
+      sourceInput.memory targetInput.state →
+    sourceExecution.result ≠ .error →
+    sourceEvaluate context sourceInput program = some sourceExecution →
+    targetEvaluate context targetInput (compileProg context program) =
+      some targetExecution →
+    codeRel context sourceExecution.code targetExecution.code →
+    excpRel context sourceExecution.eshapes targetExecution.eshapes →
     panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
-      sourceResult targetResult
+      sourceExecution.result targetExecution.result
 
 /-! Packaging theorem for a supported compiler subset.  Every HOL result case
 is an explicit obligation; in particular no proof can discharge this
@@ -176,25 +207,32 @@ theorem panValuePcCompileCorrect_of_obligations
     (globalsLookup : CrepState α → PanValue α → Option (List α))
     (program : Prog α)
     (hobligation : ∀ (context : CompileContext α) (structs : StructContext)
-      (sourceInput : PanValuePcInput α) (targetState : CrepState α)
+      (sourceInput : PanValuePcInput α) (targetInput : CrepPcInput α)
       (exceptionRel : ExceptionId → PanValue α → α → Prop)
-      (sourceResult : PanValuePcResult α) (targetResult : CrepPcResult α),
-      codeRel context program (compileProg context program) →
-      excpRel structs context →
+      (sourceExecution : PanValuePcExecution α)
+      (targetExecution : CrepPcExecution α),
+      sourceInput.code.map Prod.fst |>.Nodup →
+      panValuePcLocalisedCode sourceInput.code →
       localisedProg program →
+      codeRel context sourceInput.code targetInput.code →
+      excpRel context sourceInput.eshapes targetInput.eshapes →
       panValueCrepStateRel structs context sourceInput.locals sourceInput.globals
-        sourceInput.memory targetState →
-      sourceResult ≠ .error →
-      sourceEvaluate context sourceInput program = some sourceResult →
-      targetEvaluate context targetState (compileProg context program) =
-        some targetResult →
+        sourceInput.memory targetInput.state →
+      sourceExecution.result ≠ .error →
+      sourceEvaluate context sourceInput program = some sourceExecution →
+      targetEvaluate context targetInput (compileProg context program) =
+        some targetExecution →
+      codeRel context sourceExecution.code targetExecution.code →
+      excpRel context sourceExecution.eshapes targetExecution.eshapes →
       panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
-        sourceResult targetResult) :
+        sourceExecution.result targetExecution.result) :
     PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
       exceptionCode globalsLookup program := by
-  intro context structs sourceInput targetState exceptionRel sourceResult targetResult
-    hcode hexcp hlocalised hstate hnonerror hsource htarget
-  exact hobligation context structs sourceInput targetState exceptionRel
-    sourceResult targetResult hcode hexcp hlocalised hstate hnonerror hsource htarget
+  intro context structs sourceInput targetInput exceptionRel sourceExecution
+    targetExecution hdistinct hlocalisedCode hlocalised hcode hexcp hstate
+    hnonerror hsource htarget hpostCode hpostExcp
+  exact hobligation context structs sourceInput targetInput exceptionRel
+    sourceExecution targetExecution hdistinct hlocalisedCode hlocalised hcode
+    hexcp hstate hnonerror hsource htarget hpostCode hpostExcp
 
 end Flapjack

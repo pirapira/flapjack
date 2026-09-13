@@ -76,6 +76,16 @@ def lookupCode : ProbeFact :=
     cakeAssemblySha256 :=
       "13977258b5aaec5b4939148e04251e81d8f6e7d17ce6fcec5877b5348ebb3287" }
 
+def crepOp : ProbeFact :=
+  { source := "fun 1 main() { return 6 * 7; }"
+    sourceReference := "cakeml/pancake/semantics/crepSemScript.sml:85-88 (crep_op_def)"
+    cakeByteLines := 64
+    cakeByteCount := 1012
+    cakeFinalBytes :=
+      [0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+    cakeAssemblySha256 :=
+      "5e1162c5f80779f9ac072963aac2d3fbbae54d565f05c46a91e4028405dbb57f" }
+
 def evaluateDecls : ProbeFact :=
   { source := "var 1 g = 41; fun 1 main() { return g; }"
     sourceReference :=
@@ -117,8 +127,9 @@ def sourceFactsPinned : Bool :=
       "fun 1 id(1 x) { return x; } fun 1 main() { return id(7); }" &&
   emptyLocals.source ==
       "fun 1 zero() { return 7; } fun 1 main() { return zero(); }" &&
-    lookupCode.source ==
+  lookupCode.source ==
       "fun 1 id(1 x) { return x; } fun 1 main() { return id(7); }" &&
+    crepOp.source == "fun 1 main() { return 6 * 7; }" &&
     evaluateDecls.source == "var 1 g = 41; fun 1 main() { return g; }" &&
     decsStcnames.source == "struct Pair { 1 left, 1 right } fun 1 main() { return 0; }" &&
     semanticsDecls.source ==
@@ -149,6 +160,10 @@ def outputFactsPinned : Bool :=
       [0x6F, 0x00, 0x40, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&
     lookupCode.cakeAssemblySha256 ==
       "13977258b5aaec5b4939148e04251e81d8f6e7d17ce6fcec5877b5348ebb3287" &&
+    crepOp.cakeByteLines == 64 && crepOp.cakeByteCount == 1012 &&
+    crepOp.cakeFinalBytes == [0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&
+    crepOp.cakeAssemblySha256 ==
+      "5e1162c5f80779f9ac072963aac2d3fbbae54d565f05c46a91e4028405dbb57f" &&
     evaluateDecls.cakeByteLines == 66 && evaluateDecls.cakeByteCount == 1048 &&
     evaluateDecls.cakeFinalBytes ==
       [0x03, 0x35, 0x85, 0xFF, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&

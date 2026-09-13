@@ -185,6 +185,13 @@ def evalCrepExp [Add α] [Mul α]
   | _ => none
 termination_by structural expression
 
+/- Exact executable counterpart of CakeML Pancake's `crep_op_def`
+   (`crepSemScript.sml:85-88`).  The operator is intentionally total over
+   malformed operand lists, just like the original definition. -/
+def evalCrepOp [Mul α] : CrepOp → List α → Option α
+  | .mul, [left, right] => some (left * right)
+  | _, _ => none
+
 def evalCrepExps [Add α] [Mul α] (locals : Nat → Option α) :
     List (CrepExp α) → Option (List α)
   | [] => some []

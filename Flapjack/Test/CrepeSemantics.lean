@@ -112,6 +112,22 @@ example : lookupCrepCode "duplicate" [7, 8]
 example : lookupCrepCode "missing" [7] crepeLookupFunctions = none := by
   decide
 
+/- CakeML crepSem's crep_op_def (crepSemScript.sml:85-88) handles exactly a
+   two-word multiplication and rejects every other operand shape.  The
+   original source probe is `crep_op.pnk`; its complete Cake output is pinned
+   in `OriginalPancakeProbes.crepOp`. -/
+#guard crepOp.source = "fun 1 main() { return 6 * 7; }"
+#guard crepOp.cakeByteCount == 1012
+
+example : evalCrepOp .mul [6, 7] = some 42 := by
+  decide
+
+example : evalCrepOp .mul [6] = none := by
+  decide
+
+example : evalCrepOp .mul [6, 7, 8] = none := by
+  decide
+
 example : crepeSetVarLocals 2 = some 11 := by
   decide
 

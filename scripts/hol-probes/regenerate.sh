@@ -156,6 +156,9 @@ run_probe loop_sem_cut_res_probeScript.sml loop_sem_cut_res_probe.out \
 run_probe loop_sem_sh_mem_load_probeScript.sml loop_sem_sh_mem_load_probe.out \
   return_zero_width aligned_domain_original_payload \
   "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_sh_mem_store_probeScript.sml loop_sem_sh_mem_store_probe.out \
+  store_zero_width aligned_domain_original_payload \
+  "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_exit_loop_probeScript.sml loop_sem_exit_loop_probe.out \
   exit_loop_break exit_loop_error "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.

@@ -203,6 +203,33 @@ def loopFfiShMemLoad [BEq α] [OfNat α 1] [Add α]
         let state := loopFfiUpdateLocal { state with ffi := ffi } name value
         (.normal state, state)
 
+/-! Direct source-shaped counterpart of `loopSem$sh_mem_store_def`
+    (`loopSemScript.sml:217-243`).  For nonzero widths the aligned address is
+    used only for the domain check; the FFI payload retains the original
+    address, as in CakeML's definition. -/
+def loopFfiShMemStore [BEq α] [OfNat α 1] [Add α]
+    (state : LoopFfiState α σ) (name : Nat) (address : α) (width : Nat) :
+    LoopFfiStep α σ :=
+  let alignedAddress := if width = 0 then address else state.byteAlign address
+  match state.locals name with
+  | none => (.error state, state)
+  | some value =>
+      if !state.shMemaddrs alignedAddress then
+        (.error state, state)
+      else
+        let valueBytes := state.wordToBytes value false
+        let addressBytes := state.wordToBytes address false
+        let payload := if width = 0 then valueBytes ++ addressBytes
+          else valueBytes.take width ++ addressBytes
+        match callFfi state.ffi (.sharedMem .mappedWrite)
+            (loopFfiByteCount state width) payload with
+        | .final event =>
+            let state := loopFfiClearLocals state
+            (.finalFfi state event, state)
+        | .returned ffi _ =>
+            let state := { state with ffi := ffi }
+            (.normal state, state)
+
 def loopFfiSharedStore [BEq α] [OfNat α 1] [Add α]
     (state : LoopFfiState α σ) (operator : CrepMemOp)
     (name : Nat) (address : α) : LoopFfiStep α σ :=

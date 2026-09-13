@@ -89,3 +89,5 @@ run_probe loop_sem_set_vars_probeScript.sml loop_sem_set_vars_probe.out \
 # The find_code probe observes the returned parameter map via sptree lookups.
 run_probe loop_sem_find_code_probeScript.sml loop_sem_find_code_probe.out \
   find_code_label_first find_code_dup_first "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_primop_probeScript.sml loop_sem_primop_probe.out \
+  valid_no_carry invalid_nonword "$cake_dir/pancake/semantics/loopSemScript.sml"

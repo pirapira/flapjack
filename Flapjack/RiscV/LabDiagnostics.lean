@@ -147,11 +147,7 @@ def compileStackProgramNatListToRiscVChecked [NeZero width]
     (programs : List (Nat × StackProg Nat)) :
     Except LabLoweringError (List (Instruction width)) :=
   match stackProgramsWithLongDivRuntime config programs with
-  | none =>
-      compileLabProgramChecked context
-        ((programs.map (fun (sectionId, program) =>
-          labProgramToEntrySection sectionId entryLabel initialLabel
-            (stackRemoveComplete config program))).map labSectionNatToWord)
+  | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
   | some programs =>
       compileLabProgramChecked context
         ((programs.map (fun (sectionId, program) =>
@@ -176,10 +172,7 @@ def compileStackProgramNatToRiscVChecked [NeZero width]
     (sectionId initialLabel : Nat) (program : StackProg Nat) :
     Except LabLoweringError (List (Instruction width)) :=
   match stackProgramsWithLongDivRuntime config [(sectionId, program)] with
-  | none =>
-      compileLabSectionChecked context
-        (labSectionNatToWord
-          (labProgramToSectionAfterStackRemove config sectionId initialLabel program))
+  | none => .error { sectionId := sectionId, position := 0, feature := .loweringFailure }
   | some programs =>
       compileLabProgramChecked context
         ((programs.map (fun (runtimeSection, runtimeProgram) =>
@@ -188,7 +181,7 @@ def compileStackProgramNatToRiscVChecked [NeZero width]
             labProgramToEntrySection runtimeSection 0 initialLabel
               (stackRemoveComplete config runtimeProgram)
           else
-            labProgramToSectionAfterStackRemove config runtimeSection
-              initialLabel runtimeProgram)).map labSectionNatToWord)
+            labProgramToSectionAfterStackRemove config runtimeSection initialLabel
+              runtimeProgram)).map labSectionNatToWord)
 
 end Flapjack.RiscV

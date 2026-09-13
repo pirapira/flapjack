@@ -341,16 +341,14 @@ def compileStackProgramNatToRiscV [NeZero width]
   | none => none
   | some programs =>
       compileLabProgram context
-        (programs.map (fun (runtimeSection, runtimeProgram) =>
+        ((programs.map (fun (runtimeSection, runtimeProgram) =>
           if runtimeSection = cakeLongDiv1Location ||
               runtimeSection = cakeLongDivLocation then
-            labSectionNatToWord
-              (labProgramToEntrySection runtimeSection 0 initialLabel
-                (stackRemoveComplete config runtimeProgram))
+            labProgramToEntrySection runtimeSection 0 initialLabel
+              (stackRemoveComplete config runtimeProgram)
           else
-            labSectionNatToWord
-              (labProgramToSectionAfterStackRemove config runtimeSection
-                initialLabel runtimeProgram)))
+            labProgramToSectionAfterStackRemove config runtimeSection initialLabel
+              runtimeProgram)).map labSectionNatToWord)
 
 def compileWordProgramNatToRiscV [NeZero width] [BEq Nat]
     (context : WordFfiContext) (wordConfig : WordStackConfig)

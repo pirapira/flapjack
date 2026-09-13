@@ -297,6 +297,13 @@ def crepeRuntimeFfiStatefulHandler : CrepRuntimeFfiHandler Nat Unit String :=
         | .final _ => .final "halt"
     | .sharedMem _ _ _ _ => .returned state []
 
+def crepeRuntimeShortOracle : FfiOracle Unit :=
+  fun _ state _ _ => .returned state []
+
+def crepeRuntimeShortState : CrepRuntimeState Nat Unit :=
+  { crepeRuntimeState with
+    ffi := { crepeRuntimeState.ffi with oracle := crepeRuntimeShortOracle } }
+
 theorem crepe_full_call_semantics :
     evalCrepFullResult crepeSemanticsFunctions
       crepeSemanticsPrimitive crepeSemanticsFfi crepeSemanticsSharedMem
@@ -397,6 +404,17 @@ theorem crepe_runtime_ffi_state_transition :
     natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
     crepRuntimeReadBytes, crepRuntimeLoadByte, crepRuntimeWriteBytes,
     crepRuntimeStoreByte, updateMemory, callFfi]
+
+theorem crepe_runtime_ffi_length_mismatch_is_final :
+    let result := crepRuntimeExtCall crepeRuntimeFfiStatefulHandler
+      crepeRuntimeShortState "host" 1 2 3 4
+    result.1 = .finalFfi "halt" ∧ result.2.ffi.ioEvents.length = 0 := by
+  simp [crepRuntimeExtCall, crepRuntimeExtCallValues,
+    crepeRuntimeFfiStatefulHandler, crepeRuntimeShortState,
+    crepeRuntimeShortOracle, crepeRuntimeState,
+    natCrepRuntimeFfiState,
+    natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
+    crepRuntimeReadBytes, crepRuntimeLoadByte, callFfi]
 
 theorem crepe_runtime_shared_load :
     (crepRuntimeSharedMem crepeRuntimeSharedHandler crepeRuntimeState

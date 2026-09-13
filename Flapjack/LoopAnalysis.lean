@@ -128,33 +128,25 @@ def loopAccVars : LoopProg α → List Nat → List Nat
   | .skip, names => names
   | .fail, names => names
   | .raise _, names => names
-  | .return values, names => loopInsertAll values names
-  | .call none _ arguments _, names => loopInsertAll arguments names
-  | .call (some (returns, live)) _ arguments none, names =>
-      loopInsertAll arguments (loopInsertAll returns (loopInsertAll live names))
-  | .call (some (returns, live)) _ arguments
-      (some (exception, handler, normal, handlerLive)), names =>
+  | .return _, names => names
+  | .call none _ _ _, names => names
+  | .call (some (returns, _)) _ _ none, names =>
+      loopInsertAll returns names
+  | .call (some (returns, _)) _ _
+      (some (exception, handler, normal, _)), names =>
       let names := loopAccVars handler (loopAccVars normal names)
-      loopInsertAll arguments
-        (loopInsertAll returns (loopInsertAll live
-          (loopInsert exception (loopInsertAll handlerLive names))))
+      loopInsert exception (loopInsertAll returns names)
   | .locValue destination _label, names => loopInsert destination names
-  | .assign destination expression, names =>
-      loopInsertAll (loopVarsOfExp expression) (loopInsert destination names)
-  | .primitive destinations _ arguments, names =>
-      loopInsertAll arguments (loopInsertAll destinations names)
-  | .shMem _ destination address, names =>
-      loopInsertAll (loopVarsOfExp address) (loopInsert destination names)
-  | .store address value, names =>
-      loopInsertAll (loopVarsOfExp address) (loopInsert value names)
-  | .setGlobal _ value, names => loopInsertAll (loopVarsOfExp value) names
-  | .load32 address destination, names => loopInsert address (loopInsert destination names)
-  | .loadByte address destination, names => loopInsert address (loopInsert destination names)
-  | .store32 address value, names => loopInsertAll [address, value] names
-  | .storeByte address value, names => loopInsertAll [address, value] names
-  | .ffi _ configuration configurationLength array arrayLength live, names =>
-      loopInsertAll [configuration, configurationLength, array, arrayLength]
-        (loopInsertAll live names)
+  | .assign destination _, names => loopInsert destination names
+  | .primitive destinations _ _, names => loopInsertAll destinations names
+  | .shMem _ destination _, names => loopInsert destination names
+  | .store _ _, names => names
+  | .setGlobal _ _, names => names
+  | .load32 _ destination, names => loopInsert destination names
+  | .loadByte _ destination, names => loopInsert destination names
+  | .store32 _ _, names => names
+  | .storeByte _ _, names => names
+  | .ffi _ _ _ _ _ _, names => names
 
 theorem loopVarsOfExp_load (address : LoopExp α) :
     loopVarsOfExp (.load address) = loopVarsOfExp address := by

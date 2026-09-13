@@ -78,6 +78,13 @@ the execution boundary supports them. These fixtures are also stable seeds for
 differential fuzzing against `cake`; a source accepted by CakeML but not
 executable by Flapjack is a P1 compiler-parity bug.
 
+For the external five-program artifact corpus, run
+`scripts/parity-small-corpus.py`. It invokes both `cake` and
+`flapjack-compile --assembly`, checks the pinned Cake output hashes, compares
+runtime/entry/user sections without hiding byte differences, and succeeds only
+when every residual difference has an owning bead. This artifact audit
+complements the machine-execution fixture above; it does not replace it.
+
 ## Review and Beads
 
 Keep the porting Bead open until the original evidence and the Lean test are

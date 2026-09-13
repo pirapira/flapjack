@@ -36,6 +36,16 @@ def setVar : ProbeFact :=
     cakeAssemblySha256 :=
       "14ee212eefbbc8ba96af33c6372dcde8bc6b2c4babe72779e3124f2df1cd21b1" }
 
+def setGlobals : ProbeFact :=
+  { source := "var 1 g = 7; fun 1 main() { return g; }"
+    sourceReference := "cakeml/pancake/semantics/crepSemScript.sml:61-63 (set_globals_def)"
+    cakeByteLines := 66
+    cakeByteCount := 1048
+    cakeFinalBytes :=
+      [0x03, 0x35, 0x85, 0xFF, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+    cakeAssemblySha256 :=
+      "1281f0d8cd5e1a22486f15baa4a4526e000645f2abec8fb6893e64603b606ac9" }
+
 def evaluateDecls : ProbeFact :=
   { source := "var 1 g = 41; fun 1 main() { return g; }"
     sourceReference :=
@@ -72,6 +82,7 @@ def semanticsDecls : ProbeFact :=
 
 def sourceFactsPinned : Bool :=
   setVar.source == "fun 1 main() { var 1 x = 7; var 1 x = 11; return x; }" &&
+    setGlobals.source == "var 1 g = 7; fun 1 main() { return g; }" &&
     evaluateDecls.source == "var 1 g = 41; fun 1 main() { return g; }" &&
     decsStcnames.source == "struct Pair { 1 left, 1 right } fun 1 main() { return 0; }" &&
     semanticsDecls.source ==
@@ -82,6 +93,11 @@ def outputFactsPinned : Bool :=
     setVar.cakeFinalBytes == [0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&
     setVar.cakeAssemblySha256 ==
       "14ee212eefbbc8ba96af33c6372dcde8bc6b2c4babe72779e3124f2df1cd21b1" &&
+    setGlobals.cakeByteLines == 66 && setGlobals.cakeByteCount == 1048 &&
+    setGlobals.cakeFinalBytes ==
+      [0x03, 0x35, 0x85, 0xFF, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&
+    setGlobals.cakeAssemblySha256 ==
+      "1281f0d8cd5e1a22486f15baa4a4526e000645f2abec8fb6893e64603b606ac9" &&
     evaluateDecls.cakeByteLines == 66 && evaluateDecls.cakeByteCount == 1048 &&
     evaluateDecls.cakeFinalBytes ==
       [0x03, 0x35, 0x85, 0xFF, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&

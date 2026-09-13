@@ -29,6 +29,22 @@ def crepeSetVarLocals : Nat → Option Nat :=
   "fun 1 main() { var 1 x = 7; var 1 x = 11; return x; }"
 #guard setVar.cakeByteCount == 1012
 
+def crepeSetGlobals : Nat → Option Nat :=
+  updateMemory (fun name => if name == 7 then some 3 else none) 7 11
+
+/- CakeML crepSem's set_globals_def (crepSemScript.sml:61-63) updates one
+   global binding.  The matching original Pancake global-initializer probe is
+   checked in as `set_globals.pnk` and its generated output is pinned in
+   `OriginalPancakeProbes.setGlobals`. -/
+#guard setGlobals.source = "var 1 g = 7; fun 1 main() { return g; }"
+#guard setGlobals.cakeByteCount == 1048
+
+example : crepeSetGlobals 7 = some 11 := by
+  decide
+
+example : crepeSetGlobals 8 = none := by
+  decide
+
 example : crepeSetVarLocals 2 = some 11 := by
   decide
 

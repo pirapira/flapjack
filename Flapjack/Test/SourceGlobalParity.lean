@@ -239,6 +239,45 @@ def longMulPressureSource : String :=
         "  var 1 y" ++ toString index ++ " = " ++ toString index ++ ";")) ++
     "\n  y0 = y1 * y2;\n  return y0 + y3;\n}"
 
+/-- Register-pressure fixture exercising condition lowering with a spilled
+    operand.  The condition value is loaded into scratch register 31, but the
+    RISC-V conditional-immediate encoder also needs 31 to materialize a
+    nonzero immediate, so lowering used to fail.  The stack compiler now loads
+    a spilled condition into the address scratch register when the right
+    operand is an immediate. -/
+def conditionPressureSource : String :=
+  "fun 1 add1(1 a, 1 b) { return a + b; }" ++ "\n" ++
+  "fun 1 sub1(1 a) { return a - 1; }" ++ "\n" ++
+  "fun {1,1} pair(1 a, 1 b) { return <a, b>; }" ++ "\n" ++
+  "struct S { 1 f1, 1 f2 }" ++ "\n" ++
+  "fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }" ++ "\n" ++
+  "exception E : 1;" ++ "\n" ++
+  "fun 1 main() {" ++ "\n" ++
+  "  var 1 y647 = (ld8 (1000 + 1000));" ++ "\n" ++
+  "  var 1 y496 = (lds 1 (1000));" ++ "\n" ++
+  "  var 1 y393 = (ld8 1000 + 24);" ++ "\n" ++
+  "  var 1 y889 = ((lds 1 (1008)) #>> 7);" ++ "\n" ++
+  "  var 1 y371 = add1(1000, (lds 1 (1000 + 24)));" ++ "\n" ++
+  "  var 1 y585 = sub1((lds 1 (1024)));" ++ "\n" ++
+  "  var 1 y997 = ((1000 ^ 1000) - 2);" ++ "\n" ++
+  "  var 1 y222 = 0;" ++ "\n" ++
+  "  var 1 y995 = ((ld8 1024) ^ (lds 1 (1008)));" ++ "\n" ++
+  "  var 1 y774 = add1((lds 1 (1000)), (lds 1 ((1000 + 12 + 12))));" ++ "\n" ++
+  "  var 1 y26 = sub1((lds 1 (1008)));" ++ "\n" ++
+  "  var 1 y305 = ((1 >>> y496) * 0);" ++ "\n" ++
+  "  var 1 y171 = ((y889 << 7) #>> 2);" ++ "\n" ++
+  "  var 1 y244 = sub1((0 >>> (y997 >>> y222)));" ++ "\n" ++
+  "  var 1 y24 = 3;" ++ "\n" ++
+  "  var S s566 = mks(1, (lds 1 (1016)));" ++ "\n" ++
+  "  var {1,1} p866 = pair(255, 3);" ++ "\n" ++
+  "  try" ++ "\n" ++
+  "    y222 = sub1((lds 1 ((1008 + 1000))))" ++ "\n" ++
+  "  catch E => y585 {" ++ "\n" ++
+  "      y496 = add1(((lds 1 (1024)) & (y24 #>> 1)), y371);" ++ "\n" ++
+  "  }" ++ "\n" ++
+  "  return add1((s566.f2 & (ld8 0)), (lds 1 ((1008 + 1000))));" ++ "\n" ++
+  "}"
+
 /-- Structured local store: the original `st` flattens its value, so a named
 struct is stored word by word.  The static checker used to require a word
 value and rejected this original-Pancake-accepted program. -/
@@ -521,6 +560,14 @@ def cakeLongMulPressureGeneratedMain : List (BitVec 8) :=
 /-- CakeML `cml_main` for `longMulPressureSource` (28 bytes). -/
 def cakeLongMulPressureMainLength : Nat := 28
 
+/-- CakeML `cml_generated_main` for `conditionPressureSource` (4 bytes). -/
+def cakeConditionPressureGeneratedMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
+    BitVec.ofNat 8 0x00 ]
+
+/-- CakeML `cml_main` for `conditionPressureSource` (1152 bytes). -/
+def cakeConditionPressureMainLength : Nat := 1152
+
 /-- CakeML `cml_generated_main` for `structStoreSource` (4 bytes). -/
 def cakeStructStoreGeneratedMain : List (BitVec 8) :=
   [ BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40,
@@ -680,6 +727,14 @@ def longMulPressureBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-- The condition register-pressure fixture must be accepted: a spilled
+    condition compared against a nonzero immediate no longer forces scratch
+    register 31 to hold both the condition and the immediate. -/
+def conditionPressureBytesAccepted : Bool :=
+  match compileSourceBytes conditionPressureSource with
+  | some bytes => bytes.length > 0
+  | none => false
+
 /-- The structured-store fixture must be accepted: the original `st` flattens
 its value, so a struct-valued local is a legal store source. -/
 def structStoreBytesAccepted : Bool :=
@@ -721,6 +776,8 @@ def cakeGoldenShape : Bool :=
     cakePressureGeneratedMain.length == 4 && cakePressureMainLength == 924 &&
     cakeLongMulPressureGeneratedMain.length == 4 &&
     cakeLongMulPressureMainLength == 28 &&
+    cakeConditionPressureGeneratedMain.length == 4 &&
+    cakeConditionPressureMainLength == 1152 &&
     cakeStructStoreGeneratedMain.length == 4 && cakeStructStoreMain.length == 32 &&
     cakeFfiCallGeneratedMain.length == 4 && cakeFfiCallMainLength == 64 &&
     cakeFfiRegisterGeneratedMain.length == 4 && cakeFfiRegisterC.length == 4 &&
@@ -740,6 +797,7 @@ def cakeGoldenShape : Bool :=
 #guard largeShapeBytesAccepted
 #guard pressureBytesAccepted
 #guard longMulPressureBytesAccepted
+#guard conditionPressureBytesAccepted
 #guard structStoreBytesAccepted
 #guard ffiCallBytesAccepted
 #guard ffiRegisterBytesAccepted
@@ -784,6 +842,8 @@ def runChecks : IO Bool := do
       pressureBytesAccepted,
     checkBool "Pancake LongMul register-pressure source compiles (bytes)"
       longMulPressureBytesAccepted,
+    checkBool "Pancake condition register-pressure source compiles (bytes)"
+      conditionPressureBytesAccepted,
     checkBool "Pancake struct-valued local store source compiles (bytes)"
       structStoreBytesAccepted,
     checkBool "Pancake four-argument FFI call source compiles (bytes)"

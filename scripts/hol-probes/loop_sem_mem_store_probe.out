@@ -1,0 +1,5 @@
+mem_store_hit=SOME (Word 7w)
+
+mem_store_miss=NONE
+
+mem_store_other=SOME (Word 1w)

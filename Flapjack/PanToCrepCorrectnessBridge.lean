@@ -30,12 +30,87 @@ def crepPcResultOfControl :
   | .continued state label => some (.continued state label)
   | .finalFfi _ _ => none
 
+/-! The ordinary compact control cases are proved directly from the existing
+`panValueCrepControlRel`.  Only the raised payload needs an additional
+obligation because the exact Pc relation retains both the HOL post-state
+relation and the exception-code/global-payload clause. -/
+theorem panValuePcResultRel_of_control
+    (structs : StructContext) (context : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hraise : ∀ (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+        globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException)
+    (sourceResult : PanValueControlResult α)
+    (crepResult : CrepControlResult α)
+    (targetResult : CrepPcResult α)
+    (hcontrol : panValueCrepControlRel structs context exceptionRel
+      sourceResult crepResult)
+    (hresult : crepPcResultOfControl crepResult = some targetResult) :
+    panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
+      (panValuePcResultOfControl sourceResult) targetResult := by
+  cases sourceResult with
+  | normal sourceLocals sourceGlobals sourceMemory =>
+      cases crepResult with
+      | normal targetState =>
+          cases hresult
+          simpa [panValuePcResultOfControl, panValuePcResultRel,
+            panValueCrepControlRel] using hcontrol
+      | returned _ _ | raised _ _ | broke _ _ | continued _ _ | finalFfi _ _ =>
+          simp [panValueCrepControlRel] at hcontrol
+  | returned sourceLocals sourceGlobals sourceMemory sourceValues =>
+      cases crepResult with
+      | returned targetState targetValues =>
+          cases hresult
+          simpa [panValuePcResultOfControl, panValuePcResultRel,
+            panValueCrepControlRel] using hcontrol
+      | normal _ | raised _ _ | broke _ _ | continued _ _ | finalFfi _ _ =>
+          simp [panValueCrepControlRel] at hcontrol
+  | raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue =>
+      cases crepResult with
+      | raised targetState targetException =>
+          cases hresult
+          simpa [panValuePcResultOfControl, panValuePcResultRel,
+            panValueCrepControlRel] using
+            (hraise sourceLocals sourceGlobals sourceMemory sourceException
+              sourceValue targetState targetException hcontrol)
+      | normal _ | returned _ _ | broke _ _ | continued _ _ | finalFfi _ _ =>
+          simp [panValueCrepControlRel] at hcontrol
+  | broke sourceLocals sourceGlobals sourceMemory =>
+      cases crepResult with
+      | broke targetState targetLabel =>
+          cases hresult
+          simpa [panValuePcResultOfControl, panValuePcResultRel,
+            panValueCrepControlRel] using hcontrol
+      | normal _ | returned _ _ | raised _ _ | continued _ _ | finalFfi _ _ =>
+          simp [panValueCrepControlRel] at hcontrol
+  | continued sourceLocals sourceGlobals sourceMemory =>
+      cases crepResult with
+      | continued targetState targetLabel =>
+          cases hresult
+          simpa [panValuePcResultOfControl, panValuePcResultRel,
+            panValueCrepControlRel] using hcontrol
+      | normal _ | returned _ _ | raised _ _ | broke _ _ | finalFfi _ _ =>
+          simp [panValueCrepControlRel] at hcontrol
+
 /-! A kernel-checked composition theorem for the stateful source-to-Crep
 proof.  `hsourceAdapter` and `htargetAdapter` identify the rich evaluator's
-successful result with the existing stateful evaluators.  `hresultLift` is the
-explicit remaining obligation for post-state/exception payload and result
-representation; because the target compact evaluator has no timeout case,
-the theorem does not silently claim the missing clocked/FinalFFI proof. -/
+successful result with the existing stateful evaluators.  Ordinary
+normal/return/break/continue results are then proved by
+`panValuePcResultRel_of_control`; only the raised payload/state clause is an
+explicit obligation.  Because the target compact evaluator has no timeout
+case, the theorem does not silently claim the missing clocked/FinalFFI proof.
+-/
 theorem panValuePcCompileCorrect_of_stateful_program
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -80,18 +155,20 @@ theorem panValuePcCompileCorrect_of_stateful_program
           baseAddress topAddress targetFuel targetInput.state
           (compileProg context program) = some crepResult ∧
         crepPcResultOfControl crepResult = some targetExecution.result)
-    (hresultLift : ∀ (context : CompileContext α) (structs : StructContext)
-      (sourceInput : PanValuePcInput α) (targetInput : CrepPcInput α)
+    (hraise : ∀ (context : CompileContext α) (structs : StructContext)
       (exceptionRel : ExceptionId → PanValue α → α → Prop)
-      (sourceResult : PanValueControlResult α)
-      (crepResult : CrepControlResult α)
-      (targetResult : CrepPcResult α),
-      panValueCrepStateRel structs context sourceInput.locals sourceInput.globals
-        sourceInput.memory targetInput.state →
-      panValueCrepControlRel structs context exceptionRel sourceResult crepResult →
-      crepPcResultOfControl crepResult = some targetResult →
-      panValuePcResultRel structs context exceptionRel exceptionCode globalsLookup
-        (panValuePcResultOfControl sourceResult) targetResult) :
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+        globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException) :
     PanValuePcCompileCorrect sourceEvaluate targetEvaluate codeRel excpRel
       exceptionCode globalsLookup program := by
   intro context structs sourceInput targetInput exceptionRel sourceExecution
@@ -106,9 +183,9 @@ theorem panValuePcCompileCorrect_of_stateful_program
     primitive sourceHandler crepPrimitive ffi sharedMem baseAddress topAddress
     bytesInWord sourceFuel targetFuel exceptionRel sourceResult crepResult
     hstate hsourceResult hcrepResult
-  have hresult := hresultLift context structs sourceInput targetInput
-    exceptionRel sourceResult crepResult targetExecution.result hstate hcontrol
-    hcrepShape
+  have hresult := panValuePcResultRel_of_control structs context exceptionRel
+    exceptionCode globalsLookup (hraise context structs exceptionRel)
+    sourceResult crepResult targetExecution.result hcontrol hcrepShape
   simpa [hsourceShape] using hresult
 
 end Flapjack

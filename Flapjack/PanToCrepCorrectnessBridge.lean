@@ -1,6 +1,6 @@
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.CrepeProgramRaiseSourceWordRelation
-import Flapjack.CrepeCorrectness
+import Flapjack.CrepeSourceWordRecordRaiseCorrectness
 
 /-!
 Bridge from the existing stateful source-to-Crep program correctness contract
@@ -398,28 +398,42 @@ theorem panValuePcRaisedTwoWordSemanticLift
     (crepPrimitive : CrepPrimitiveHandler α)
     (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress bytesInWord : α)
-    (exception : ExceptionId) (exceptionCode left right : α)
+    (fieldLeft fieldRight : SourceWordExp α) (left right : α)
+    (exception : ExceptionId) (exceptionCode : α)
     (exceptionRel : ExceptionId → PanValue α → α → Prop)
     (resultExceptionCode : ExceptionId → Option α)
+    (compiledLeft compiledRight : CrepExp α)
     (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
     (hcode : resultExceptionCode exception = some exceptionCode)
     (hbytesInWord : context.bytesInWord = bytesInWord)
     (hdistinct : (0 : α) ≠ 0 + bytesInWord)
     (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
       sourceMemory state)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.rStruct [fieldLeft.toExp, fieldRight.toExp]) =
+      some (.rStruct [.word left, .word right]))
+    (hcompile : compileExp context
+      (.rStruct [fieldLeft.toExp, fieldRight.toExp]) =
+      ([compiledLeft, compiledRight], .comb [.one, .one]))
+    (hcompiledLeft : evalCrepFullExpState state baseAddress topAddress compiledLeft =
+      some left)
+    (hcompiledRight : ∀ value : α, evalCrepFullExpState
+      { state with locals := updateCrepLocal state.locals (context.maxVar + 1) value }
+      baseAddress topAddress compiledRight = some right)
     (hexception : exceptionRel exception
       (.rStruct [.word left, .word right]) exceptionCode) :
     evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord 5
       sourceLocals sourceGlobals sourceMemory
-      (.raise exception (.rStruct [.const left, .const right])) =
+      (.raise exception (.rStruct [fieldLeft.toExp, fieldRight.toExp])) =
       some (.raised (fun _ => none) sourceGlobals sourceMemory
         exception (.rStruct [.word left, .word right])) ∧
     evalCrepFullProgState functions crepPrimitive ffi sharedMem
       baseAddress topAddress 15 state
       (compileProg context
-        (.raise exception (.rStruct [.const left, .const right]))) =
+        (.raise exception (.rStruct [fieldLeft.toExp, fieldRight.toExp]))) =
       some (.raised
         { state with globals :=
             (updateMemory (updateMemory state.globals 0 left)
@@ -434,12 +448,13 @@ theorem panValuePcRaisedTwoWordSemanticLift
             (updateMemory (updateMemory state.globals 0 left)
               (0 + bytesInWord) right) }
         exceptionCode) := by
-  obtain ⟨hsourceEval, htargetEval⟩ :=
-    compile_full_pan_value_raise_two_word_state_correct
+  obtain ⟨hsourceEval, htargetEval, _hraiseData⟩ :=
+    compile_full_pan_value_raise_source_word_two_fields_state_relation
       context structs sourceFunctions functions sourceLocals sourceGlobals
       sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
-      baseAddress topAddress bytesInWord left right exception exceptionCode
-      hlookup hbytesInWord
+      baseAddress topAddress bytesInWord fieldLeft fieldRight left right
+      exception exceptionCode exceptionRel compiledLeft compiledRight hlookup
+      hbytesInWord hrel hsource hcompile hcompiledLeft hcompiledRight hexception
   have hstateEmpty : panValueCrepStateRel structs context
       (fun _ => none) sourceGlobals sourceMemory state := by
     refine ⟨hrel.1, panValueCrepLocalsRel_empty structs context state.locals, ?_⟩

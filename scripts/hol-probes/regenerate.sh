@@ -116,6 +116,8 @@ run_probe pan_lang_free_var_ids_probeScript.sml pan_lang_free_var_ids_probe.out 
   empty dec_call "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_inlinable_probeScript.sml pan_lang_inlinable_probe.out \
   inline_true non_function "$cake_dir/pancake/panLangScript.sml"
+run_probe get_forced_probeScript.sml get_forced_probe.out \
+  add_carry nested "$cake_dir/compiler/backend/word_allocScript.sml"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

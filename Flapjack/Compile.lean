@@ -72,6 +72,12 @@ def functionInfos : List (Decl α) → InfoMap (List (VarName × Shape) × Shape
         functionInfos declarations
   | _ :: declarations => functionInfos declarations
 
+/-! Faithful port of `pan_to_crep$compile` (`compile_def`) from
+    `cakeml/pancake/pan_to_crepScript.sml:139-305`.
+
+    The recursive compiler below keeps CakeML's fallback behavior for
+    malformed compiled expressions and preserves the source control-flow
+    constructors. -/
 def compileProg [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (program : Prog α) : CrepProg α :=
   match program with

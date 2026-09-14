@@ -144,6 +144,38 @@ theorem writeRegister_transfer_forward (state : State width) (name : Fin 32)
             _ = riscvForward name := by rw [hcontra]
         simp [hidx, hback]
 
+/-- Reading an arbitrary hardware slot of a transferred state returns the
+internal register named by the inverse map. -/
+theorem readRegister_transfer (state : State width) (index : Fin 32) :
+    readRegister (transferState state) index = readRegister state (riscvInverse index) := rfl
+
+/-- A hardware write to an arbitrary nonzero slot of a transferred state matches
+the internal write to its inverse register.  This generalizes
+`writeRegister_transfer_forward` from slots of the form `riscvForward name` to an
+arbitrary nonzero hardware slot. -/
+theorem writeRegister_transfer (state : State width) (index : Fin 32) (value : Word width)
+    (hindex : index ≠ 0) :
+    writeRegister (transferState state) index value =
+      transferState (writeRegisterInternal riscvForward state (riscvInverse index) value) := by
+  have hinner : riscvForward (riscvInverse index) ≠ 0 := by
+    rw [riscvForward_riscvInverse index]; exact hindex
+  cases state with
+  | mk pc registers memory privilege mode =>
+    simp only [transferState, writeRegister, writeRegisterInternal]
+    rw [if_neg hindex, if_neg hinner]
+    congr 1
+    funext slot
+    by_cases hslot : slot = index
+    · subst hslot
+      simp
+    · have hback : riscvInverse slot ≠ riscvInverse index := by
+        intro hcontra
+        apply hslot
+        calc slot = riscvForward (riscvInverse slot) := (riscvForward_riscvInverse slot).symm
+          _ = riscvForward (riscvInverse index) := by rw [hcontra]
+          _ = index := riscvForward_riscvInverse index
+      simp [hslot, hback]
+
 /-- `transferState` is exactly the state relabeling by the explicit inverse map. -/
 theorem transferState_eq_relabelRegisters_riscvInverse (state : State width) :
     transferState state = relabelRegisters riscvInverse state := rfl

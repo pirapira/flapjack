@@ -59,7 +59,7 @@ is the semantic result the generated artifact must implement.
 
 The generated `cml_generated_main` section is byte-identical.  The generated
 `cml_main` sections are not: the original emits the 8-byte constant return
-`addi a0,x0,7; ret`, while the port emits 20 bytes because it lowers `tick`
+`addi a0,x0,7; ret`, while the port emits 16 bytes because it lowers `tick`
 and the return move through its typed pipeline.  That residual mismatch is the
 reproducible, tracked gap owned by `flapjack-pxn.8.5.10.1`; it is recorded
 exactly here instead of being weakened to an acceptance check.
@@ -114,7 +114,6 @@ tracked by `flapjack-pxn.8.5.10.1`. -/
 def flapjackMainBytes : List (BitVec 8) :=
   [0x13, 0x00, 0x00, 0x00,
    0x13, 0x61, 0x70, 0x00,
-   0x33, 0x61, 0x21, 0x00,
    0xB3, 0x60, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
@@ -174,11 +173,11 @@ def bitmapsMatch : Bool :=
   | none => false
 
 /-- The residual `cml_main` mismatch, recorded with its exact bytes and owner
-rather than accepted: the original emits 8 bytes, the port 20, both terminate
+rather than accepted: the original emits 8 bytes, the port 16, both terminate
 in the same `ret` word, and the original source-backed probe pins that word. -/
 def trackedMainMismatch : Bool :=
   cakeMainBytes != flapjackMainBytes &&
-    cakeMainBytes.length == 8 && flapjackMainBytes.length == 20 &&
+    cakeMainBytes.length == 8 && flapjackMainBytes.length == 16 &&
     cakeMainBytes.drop (cakeMainBytes.length - 4) == decClock.cakeFinalBytes &&
     flapjackMainBytes.drop (flapjackMainBytes.length - 4) ==
       decClock.cakeFinalBytes
@@ -187,13 +186,12 @@ def trackedMainMismatch : Bool :=
 `dec_clock`, taken from the original-side probe fact. -/
 def constReturnSource : String := constReturn.source
 
-/-- Flapjack `cml_main` bytes for the no-tick `return 7` fixture: the 16-byte
-`addi x2,x0,7; or x2,x2,x2; add x2,x2,x2; ret` shape.  Its difference from `dec_clock` is
+/-- Flapjack `cml_main` bytes for the no-tick `return 7` fixture: the 12-byte
+`addi x2,x0,7; add x2,x2,x2; ret` shape.  Its difference from `dec_clock` is
 exactly the single leading `tick` nop, which is the residual gap isolated
 below. -/
 def flapjackConstReturnMainBytes : List (BitVec 8) :=
   [0x13, 0x61, 0x70, 0x00,
-   0x33, 0x61, 0x21, 0x00,
    0xB3, 0x60, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
@@ -227,7 +225,7 @@ original bytes are byte-identical to the `dec_clock` original, evidencing that
 the original drops the standalone `Tick`. -/
 def trackedConstReturnMismatch : Bool :=
   cakeMainBytes != flapjackConstReturnMainBytes &&
-    cakeMainBytes.length == 8 && flapjackConstReturnMainBytes.length == 16 &&
+    cakeMainBytes.length == 8 && flapjackConstReturnMainBytes.length == 12 &&
     cakeMainBytes.drop (cakeMainBytes.length - 4) ==
       constReturn.cakeFinalBytes &&
     flapjackConstReturnMainBytes.drop (flapjackConstReturnMainBytes.length - 4) ==
@@ -256,14 +254,14 @@ def cakeEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
 
 /-- Flapjack layout for the same fixture: `cml_generated_main` at 1000 (4B,
 `jal` to the entry at 1004), helper `a` at 1008 (12B), and helper `b` at
-1024 (16B).  The entry declaration is now moved to the front, matching
+1020 (12B).  The entry declaration is now moved to the front, matching
 CakeML's `pan_to_target_all` ordering. -/
 def flapjackEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
   [ (3, 1000, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
     (4, 1004, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
-    (5, 1008, [0x13, 0x61, 0x10, 0x00, 0x33, 0x61, 0x21, 0x00,
+    (5, 1008, [0x13, 0x61, 0x10, 0x00,
                0xB3, 0x60, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
-    (6, 1024, [0x13, 0x61, 0x20, 0x00, 0x33, 0x61, 0x21, 0x00,
+    (6, 1020, [0x13, 0x61, 0x20, 0x00,
                0xB3, 0x60, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
     ]
 
@@ -280,15 +278,15 @@ def entryOrderLayoutMatches : Bool :=
 
 /-- The residual helper-body mismatch, recorded exactly rather than accepted:
 the original places the entry `cml_main` second (label 4, 4 bytes) and the
-helpers after it, while the port places helper `a` second (label 4, 16 bytes)
+helpers after it, while the port places helper `a` second (label 4, 12 bytes)
 and the entry `main` last (label 6).  Both entry sections are 4-byte jumps and
 section order and both entry jumps now agree, while the two helper bodies
-retain the tracked 16-byte lowering. -/
+retain the tracked 12-byte lowering. -/
 def entryOrderOrderingMismatch : Bool :=
   cakeEntryOrderSections != flapjackEntryOrderSections &&
     cakeEntryOrderSections.length == 4 && flapjackEntryOrderSections.length == 4 &&
     cakeEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 8, 8] &&
-    flapjackEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 16, 16] &&
+    flapjackEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 12, 12] &&
     entryOrder.cakeFinalBytes ==
       ([0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00,
         0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8))
@@ -525,7 +523,7 @@ def bytesContain (needle haystack : List (BitVec 8)) : Bool :=
       (haystack.take needle.length == needle) || bytesContain needle rest
 
 def ffiMinCallStubBytes : Bool :=
-  let stubJump := [0x6f, 0xf0, 0xdf, 0x97].map (BitVec.ofNat 8)
+  let stubJump := [0x6f, 0xf0, 0x9f, 0x98].map (BitVec.ofNat 8)
   let ecall := [0x73, 0x00, 0x00, 0x00].map (BitVec.ofNat 8)
   match compileRuntimeImage ffiMinSource with
   | some image =>

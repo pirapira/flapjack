@@ -161,6 +161,9 @@ run_probe pan_lookup_kvar_probeScript.sml pan_lookup_kvar_probe.out \
 run_probe pan_is_valid_value_probeScript.sml pan_is_valid_value_probe.out \
   is_valid_value_local is_valid_value_mismatch \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_nb_op_probeScript.sml pan_nb_op_probe.out \
+  op8 op32 \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_eval_probeScript.sml pan_eval_probe.out \
   eval_const eval_missing \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"

@@ -18,6 +18,12 @@
       "tracked_beads": ["flapjack-pxn.8.5.10.1"]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/const_return.pnk",
+      "source_reference": "no-tick counterpart to dec_clock.pnk; its original CakeML stdout is byte-identical (same sha256) to dec_clock.pnk, showing the original drops the standalone Tick while Flapjack lowers Tick to a Skip nop (Flapjack/RiscV/Backend.lean:365, .tick => some [.addi 0 0 0])",
+      "cake_sha256": "68281f19fe25699e613b31faebbd8bf54d7e18ad918c04af5ea43f1bc52aa8fa",
+      "tracked_beads": ["flapjack-pxn.8.5.10.1"]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/crep_op.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:85-88 (crep_op_def)",
       "cake_sha256": "5e1162c5f80779f9ac072963aac2d3fbbae54d565f05c46a91e4028405dbb57f",

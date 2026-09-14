@@ -216,6 +216,19 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-! Split a flat value list according to the source shape sizes.  This is the
+    direct Lean counterpart of `panLang$with_shape`; values left over after
+    the requested shapes are intentionally ignored, and short inputs are
+    handled by `List.take`/`List.drop` just like CakeML's `TAKE`/`DROP`. -/
+def withShape : List Shape → List α → List (List α)
+  | [], _ => []
+  | shape :: shapes, values =>
+      values.take (Shape.shapeSize shape) ::
+        withShape shapes (values.drop (Shape.shapeSize shape))
+termination_by shapes => sizeOf shapes
+decreasing_by
+  all_goals decreasing_trivial
+
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]

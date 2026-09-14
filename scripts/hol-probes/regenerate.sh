@@ -109,6 +109,8 @@ run_probe pan_sem_ffi_e2e_probeScript.sml pan_sem_ffi_e2e_probe.out \
 run_probe pan_itree_comp_ffi_probeScript.sml pan_itree_comp_ffi_probe.out \
   ret tau return length_failure final div_ret div_tau \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe ffi_call_probeScript.sml ffi_call_probe.out \
+  oracle_return empty_extcall "$cake_dir/semantics/ffi/ffiScript.sml"
 run_probe pan_itree_trace_prefix_probeScript.sml pan_itree_trace_prefix_probe.out \
   ret final "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_trace_prefix0_probeScript.sml pan_itree_trace_prefix0_probe.out \

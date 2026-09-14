@@ -106,6 +106,7 @@ import Flapjack.Test.LoopGetVarImmParity
 import Flapjack.Test.LoopCallEnvParity
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
+import Flapjack.Test.CrepeGlobalAddressParity
 import Flapjack.Test.ParsedFullSsaPipeline
 import Flapjack.Test.EndToEndParity
 
@@ -796,7 +797,8 @@ def main : IO Unit := do
     Flapjack.Test.LoopGetVarImmParity.runChecks,
     Flapjack.Test.LoopCallEnvParity.runChecks,
     Flapjack.Test.EndToEndParity.runChecks,
-    Flapjack.Test.CakeStackReseatParity.runChecks
+    Flapjack.Test.CakeStackReseatParity.runChecks,
+    Flapjack.Test.CrepeGlobalAddressParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

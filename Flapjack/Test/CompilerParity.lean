@@ -14,6 +14,8 @@ import Flapjack.Test.PanFlatStoreParity
 import Flapjack.Test.PanFlattenParity
 import Flapjack.Test.PanNestedSeqParity
 import Flapjack.Test.PanExpIdsParity
+import Flapjack.Test.PanLangFunIdsParity
+import Flapjack.Test.PanLangFreeVarIdsParity
 import Flapjack.Test.PanWithShapeParity
 import Flapjack.Test.PanShapeValParity
 import Flapjack.Test.PanGlobalsCompileExpParity

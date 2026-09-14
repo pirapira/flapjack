@@ -51,3 +51,11 @@ val _ = print_eval "to_num_set_ordered"
   ``toAList (toNumSet [1; 2; 3])``
 val _ = print_eval "to_num_set_duplicate"
   ``toAList (toNumSet [3; 1; 3; 2])``
+
+(* fromNumSet_def, loop_to_wordScript.sml:47-48 *)
+val _ = print_eval "from_num_set_empty"
+  ``fromNumSet (toNumSet [])``
+val _ = print_eval "from_num_set_ordered"
+  ``fromNumSet (toNumSet [1; 2; 3])``
+val _ = print_eval "from_num_set_duplicate"
+  ``fromNumSet (toNumSet [3; 1; 3; 2])``

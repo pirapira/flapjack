@@ -9,6 +9,7 @@ import Flapjack.PanHProg
 import Flapjack.PanHProgLoad
 import Flapjack.PanHProgReturn
 import Flapjack.PanHProgDec
+import Flapjack.PanHProgSeq
 import Flapjack.PanSimp
 import Flapjack.PanStructs
 import Flapjack.PanGlobals

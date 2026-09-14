@@ -59,3 +59,11 @@ val _ = print_eval "from_num_set_ordered"
   ``fromNumSet (toNumSet [1; 2; 3])``
 val _ = print_eval "from_num_set_duplicate"
   ``fromNumSet (toNumSet [3; 1; 3; 2])``
+
+(* mk_new_cutset_def, loop_to_wordScript.sml:51-53 *)
+val _ = print_eval "mk_new_cutset_empty"
+  ``toAList (mk_new_cutset (insert 3 6 LN) (toNumSet []))``
+val _ = print_eval "mk_new_cutset_mapped"
+  ``toAList (mk_new_cutset (insert 3 6 LN) (toNumSet [1; 2; 3]))``
+val _ = print_eval "mk_new_cutset_duplicate"
+  ``toAList (mk_new_cutset (insert 3 6 LN) (toNumSet [3; 1; 3; 2]))``

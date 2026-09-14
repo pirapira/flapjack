@@ -74,4 +74,15 @@ theorem fromNumSet_toNumSet (names : List Nat) :
     fromNumSet (toNumSet names) = toNumSet names := by
   rfl
 
+/-! List-backed port of `mk_new_cutset_def` from
+    `loop_to_wordScript.sml:51-53`.  The source always retains register zero
+    and maps each live source variable through `find_var` before rebuilding the
+    finite set. -/
+def mkNewCutset (context : List (Nat × Nat)) (live : List Nat) : List Nat :=
+  loopInsert 0 (toNumSet ((fromNumSet live).map (findVar context)))
+
+theorem mkNewCutset_nodup (context : List (Nat × Nat)) (live : List Nat) :
+    (mkNewCutset context live).Nodup := by
+  exact loopInsert_nodup 0 _ (toNumSet_nodup _)
+
 end Flapjack.LoopToWord

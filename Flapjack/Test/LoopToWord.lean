@@ -45,6 +45,9 @@ def originalToNumSetOrdered : List Nat := [3, 1, 2]
 def originalToNumSetDuplicate : List Nat := [3, 1, 2]
 def originalFromNumSetOrdered : List Nat := [3, 1, 2]
 def originalFromNumSetDuplicate : List Nat := [3, 1, 2]
+def originalMkNewCutsetEmpty : List Nat := [0]
+def originalMkNewCutsetMapped : List Nat := [0, 6]
+def originalMkNewCutsetDuplicate : List Nat := [0, 6]
 
 def sameRegImm : RegImm Nat → RegImm Nat → Bool
   | .imm left, .imm right => left == right
@@ -133,6 +136,12 @@ example : sameNatSet (fromNumSet (toNumSet [1, 2, 3]))
     originalFromNumSetOrdered := by decide
 example : sameNatSet (fromNumSet (toNumSet [3, 1, 3, 2]))
     originalFromNumSetDuplicate := by decide
+example : sameNatSet (mkNewCutset [(3, 6)] [])
+    originalMkNewCutsetEmpty := by decide
+example : sameNatSet (mkNewCutset [(3, 6)] [1, 2, 3])
+    originalMkNewCutsetMapped := by decide
+example : sameNatSet (mkNewCutset [(3, 6)] [3, 1, 3, 2])
+    originalMkNewCutsetDuplicate := by decide
 
 def runChecks : IO Bool := do
   let mut ok := true
@@ -184,8 +193,16 @@ def runChecks : IO Bool := do
   if !sameNatSet (fromNumSet (toNumSet [3, 1, 3, 2]))
       originalFromNumSetDuplicate then
     IO.println "FAIL LoopToWord.from_num_set duplicate"; ok := false
+  if !sameNatSet (mkNewCutset [(3, 6)] []) originalMkNewCutsetEmpty then
+    IO.println "FAIL LoopToWord.mk_new_cutset empty"; ok := false
+  if !sameNatSet (mkNewCutset [(3, 6)] [1, 2, 3])
+      originalMkNewCutsetMapped then
+    IO.println "FAIL LoopToWord.mk_new_cutset mapped"; ok := false
+  if !sameNatSet (mkNewCutset [(3, 6)] [3, 1, 3, 2])
+      originalMkNewCutsetDuplicate then
+    IO.println "FAIL LoopToWord.mk_new_cutset duplicate"; ok := false
   if ok then
-    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set/from_num_set parity"
+    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set/from_num_set/mk_new_cutset parity"
   pure ok
 
 end Flapjack.Test.LoopToWord

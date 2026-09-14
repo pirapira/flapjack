@@ -19,6 +19,11 @@ structure StructPassContext where
   globals : InfoMap Shape
   deriving Repr
 
+@[simp] theorem lookupInfoWithRest_self (name : String) (info : StructInfo)
+    (context : StructContext) :
+    lookupInfoWithRest name ((name, info) :: context) = some (info, context) := by
+  simp [lookupInfoWithRest]
+
 def structFindFieldIndex [BEq String] (field : FieldName) :
     List (FieldName × Shape) → Option Nat
   | [] => none
@@ -32,9 +37,9 @@ def structCompileShapeFuel : Nat → StructContext → Shape → Shape
   | fuel + 1, context, .comb shapes =>
       .comb (shapes.map (structCompileShapeFuel fuel context))
   | fuel + 1, context, .named name =>
-      match lookupInfo name context with
-      | some info =>
-          .comb ((info.fields.map Prod.snd).map (structCompileShapeFuel fuel context))
+      match lookupInfoWithRest name context with
+      | some (info, suffix) =>
+          .comb ((info.fields.map Prod.snd).map (structCompileShapeFuel fuel suffix))
       | none => .one
 
 def structCompileShape (context : StructContext) (shape : Shape) : Shape :=

@@ -1,0 +1,19 @@
+local=Comb [One; One]
+
+global=Named «Pair»
+
+rstruct=Comb [One; One]
+
+rfield_hit=One
+
+rfield_miss=One
+
+nstruct=Named «Pair»
+
+nfield_hit=Comb [One; One]
+
+nfield_miss=One
+
+load=Comb [One; One]
+
+fallback=One

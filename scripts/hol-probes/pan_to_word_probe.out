@@ -1,0 +1,26 @@
+compile_empty=[]
+
+compile_skip_main=[(64,1,Seq Skip (Seq (Call NONE (SOME 65) [0] NONE) Skip)); (65,1,Skip)]
+
+stage_pan_simp=[Function
+   <|name := «main»; inline := F; export := F; params := []; body := Skip;
+     return := One|>]
+
+stage_pan_structs=[Function
+   <|name := «main»; inline := F; export := F; params := []; body := Skip;
+     return := One|>]
+
+stage_pan_globals=[Function
+   <|name := «main»; inline := F; export := F; params := [];
+     body := Seq Skip (TailCall «main'» []); return := One|>;
+ Function
+   <|name := «main'»; inline := F; export := F; params := []; body := Skip;
+     return := One|>]
+
+stage_pan_to_crep=[(«main»,[],Seq Skip (Call NONE «main'» [])); («main'»,[],Skip)]
+
+stage_crep_to_loop=[(64,[],
+  Mark
+    (Seq (Mark Skip)
+       (Mark (Seq (Mark (Call NONE (SOME 65) [] NONE)) (Mark Skip)))));
+ (65,[],Mark Skip)]

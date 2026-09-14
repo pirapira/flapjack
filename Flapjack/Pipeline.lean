@@ -3,6 +3,7 @@ import Flapjack.Compile
 import Flapjack.CrepeInlinePass
 import Flapjack.CrepeArith
 import Flapjack.CrepToLoop
+import Flapjack.LoopToWord
 import Flapjack.Word
 import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.RegAlloc
@@ -93,6 +94,34 @@ def pipelineWordFunctions [OfNat α 1]
     let context : WordContext :=
       { vars := slots.map (fun name => (name, name + 2)) }
     (label, parameters.map (fun name => name + 2), loopToWordProg context body))
+
+/-! Source-shaped `loop_to_word$compile_prog` output.  The ordinary pipeline
+    keeps parameter names for later register allocation; `pan_to_word` instead
+    exposes each function's source label, arity (including the entry slot), and
+    compiled body. -/
+def pipelineWordCompileProg [OfNat α 1]
+    (functions : List (Nat × List Nat × LoopProg α)) :
+    List (Nat × Nat × WordProg α) :=
+  LoopToWord.loopToWordCompileProg functions
+
+/-! The source `crep_to_loop` compiler folds a tail call into the generated
+    sequence and `loop_to_word$comp` prepends the entry slot.  The general
+    allocator-facing Loop bridge predates that source-shaped contract, so this
+    small adapter restores it only at the `pan_to_word` boundary. -/
+def panToWordTailCall : WordProg α → WordProg α
+  | .seq .skip (.seq .skip (.call none target arguments none)) =>
+      .seq .skip (.seq (.call none target (0 :: arguments) none) .skip)
+  | .seq first second =>
+      .seq (panToWordTailCall first) (panToWordTailCall second)
+  | .call none target arguments none =>
+      .call none target (0 :: arguments) none
+  | program => program
+
+def panToWordCompileProg [OfNat α 1]
+    (functions : List (Nat × List Nat × LoopProg α)) :
+    List (Nat × Nat × WordProg α) :=
+  (pipelineWordCompileProg functions).map
+    (fun (label, arity, body) => (label, arity, panToWordTailCall body))
 
 /-! StackLang view of the register-coloured Word pipeline.  This is the
     executable bridge used by the RISC-V-only backend path below; functions
@@ -603,6 +632,15 @@ def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   match compileFlapjackEntry architecture bytesInWord fromNat "main" declarations with
   | some result => result
   | none => compileFlapjack architecture bytesInWord fromNat declarations
+
+/-! Executable port of `pan_to_word$compile_prog`: compose the existing
+    Pancake passes, then expose the source-shaped `loop_to_word` result. -/
+def compilePanToWord [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    (architecture : RiscV.Architecture) (bytesInWord : α)
+    (fromNat : Nat → α) (declarations : List (Decl α)) :
+    List (Nat × Nat × WordProg α) :=
+  panToWordCompileProg
+    (compileFlapjackTarget architecture bytesInWord fromNat declarations).loop
 
 /-! Target-facing variants of the RISC-V stack pipelines.  These variants make
     the exact `pan_to_target` wrapper available without changing their

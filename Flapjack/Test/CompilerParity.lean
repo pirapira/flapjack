@@ -59,7 +59,6 @@ import Flapjack.Test.PanLookupKvarParity
 import Flapjack.Test.PanIsValidValueParity
 import Flapjack.Test.PanEvalParity
 import Flapjack.Test.PanHHandleCallRetParity
-import Flapjack.Test.PanHHandleCallRetParity
 import Flapjack.Test.PanHProgDecParity
 import Flapjack.Test.PanHProgSeqParity
 import Flapjack.Test.PanHProgCondParity

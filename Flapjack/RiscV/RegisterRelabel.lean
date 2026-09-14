@@ -41,6 +41,49 @@ def relabelRegisters (forward : Fin 32 → Fin 32) (state : State width) : State
     (name : Fin 32) :
     readRegister (relabelRegisters forward state) name = readRegister state (forward name) := rfl
 
+@[simp] theorem relabelRegisters_id (state : State width) :
+    relabelRegisters id state = state := by
+  cases state
+  simp [relabelRegisters]
+
+/-- Relabeling twice by `g` then `f` is one relabeling by their composition
+`fun name => g (f name)`.  This lets the Cake map be applied at a single
+boundary instead of being threaded twice through the relation. -/
+theorem relabelRegisters_comp (f g : Fin 32 → Fin 32) (state : State width) :
+    relabelRegisters f (relabelRegisters g state) =
+      relabelRegisters (fun name => g (f name)) state := by
+  cases state
+  simp [relabelRegisters]
+
+/-- Relabeling by a surjective map is injective on states: the register file is
+the only relabeled component, and surjectivity makes the image cover every
+hardware register, so equal images force equal register files. -/
+theorem relabelRegisters_injective (forward : Fin 32 → Fin 32)
+    (hsurj : Function.Surjective forward) :
+    Function.Injective (relabelRegisters (width := width) forward) := by
+  intro s1 s2 h
+  have h' := h
+  cases s1 with
+  | mk pc1 regs1 mem1 privilege1 mode1 =>
+    cases s2 with
+    | mk pc2 regs2 mem2 privilege2 mode2 =>
+      simp only [relabelRegisters, State.mk.injEq] at h'
+      obtain ⟨hpc, hregs, hmem, hprivilege, hmode⟩ := h'
+      subst hpc
+      subst hmem
+      subst hprivilege
+      subst hmode
+      congr 1
+      funext hardware
+      obtain ⟨name, rfl⟩ := hsurj hardware
+      exact congrFun hregs name
+
+/-- The concrete Cake register map relabels the register file injectively,
+because it is surjective on the 32 hardware registers. -/
+theorem relabelRegisters_riscvForward_injective :
+    Function.Injective (relabelRegisters (width := width) riscvForward) :=
+  relabelRegisters_injective riscvForward riscvForward_surjective
+
 /-- Writing an internal register in the relabeled state is the same as writing
 its hardware index in the original state, as long as the relabeling is
 injective and maps the hardwired zero register onto the hardwired zero

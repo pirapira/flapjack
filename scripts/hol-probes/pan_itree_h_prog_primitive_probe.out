@@ -1,0 +1,8 @@
+primitive_success=T
+
+primitive_wrong_args=T
+
+primitive_missing_operand=T
+
+primitive_shape_error=T
+

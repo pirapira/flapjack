@@ -42,3 +42,33 @@ val _ = print_eval "store_domain_error"
       (^s with sh_memaddrs := {}) of
       | itreeTau$Ret r => SOME r
       | _ => NONE``;
+
+val _ = print_eval "store_return_state"
+  ``case h_prog_sh_mem_store panLang$OpW
+      (panLang$Const (3w:8 word)) (panLang$Const (7w:8 word))
+      (^s with sh_memaddrs := {3w}) of
+      | itreeTau$Vis e k =>
+          (case k (INL (INR [7w; 3w])) of
+             | itreeTau$Ret (INR (r,s')) => s'.sh_memaddrs
+             | _ => {})
+      | _ => {}``;
+
+val _ = print_eval "store_mismatch_state"
+  ``case h_prog_sh_mem_store panLang$OpW
+      (panLang$Const (3w:8 word)) (panLang$Const (7w:8 word))
+      (^s with sh_memaddrs := {3w}) of
+      | itreeTau$Vis e k =>
+          (case k (INL (INR [])) of
+             | itreeTau$Ret (INR (r,s')) => s'.sh_memaddrs
+             | _ => {})
+      | _ => {}``;
+
+val _ = print_eval "store_final_state"
+  ``case h_prog_sh_mem_store panLang$OpW
+      (panLang$Const (3w:8 word)) (panLang$Const (7w:8 word))
+      (^s with sh_memaddrs := {3w}) of
+      | itreeTau$Vis e k =>
+          (case k (INL (INL FFI_failed)) of
+             | itreeTau$Ret (INR (r,s')) => s'.sh_memaddrs
+             | _ => {})
+      | _ => {}``;

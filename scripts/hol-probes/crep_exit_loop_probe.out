@@ -1,0 +1,11 @@
+exit_loop_break=SOME (Break 2)
+
+exit_loop_break_zero=SOME (Break 0)
+
+exit_loop_continue=SOME (Continue 1)
+
+exit_loop_other=SOME TimeOut
+
+exit_loop_none=NONE
+
+exit_loop_error=SOME Error

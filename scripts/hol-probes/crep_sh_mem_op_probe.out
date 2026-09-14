@@ -1,0 +1,16 @@
+sh_mem_op_load=T
+
+sh_mem_op_store=T
+
+sh_mem_op_load8=T
+
+sh_mem_op_store8=T
+
+sh_mem_op_load16=T
+
+sh_mem_op_store16=T
+
+sh_mem_op_load32=T
+
+sh_mem_op_store32=T
+

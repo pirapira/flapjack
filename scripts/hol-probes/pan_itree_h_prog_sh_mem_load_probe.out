@@ -1,0 +1,14 @@
+load_zero_width=SOME (INR (SharedMem MappedRead,[0w],[3w]))
+
+load_aligned_original=SOME (INR (SharedMem MappedRead,[1w],[3w; 0w; 0w; 0w]))
+
+load_domain_error=SOME
+  (INR
+     (SOME Error,
+      s with <|locals := FEMPTY⟨«x» ↦ ValWord 0w⟩; sh_memaddrs := ∅ |>))
+
+load_return_value=set_byte 0w 9w 0w F = 9w
+
+load_mismatch_locals=NONE
+
+load_final_locals=NONE

@@ -1,0 +1,3 @@
+raise_valid_locals=T
+
+raise_invalid=T

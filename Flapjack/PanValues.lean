@@ -924,6 +924,10 @@ def restorePanValueControlLocal [BEq String]
   | .continued locals globals memory =>
       .continued (restorePanValueLocal locals name oldValue) globals memory
 
+/-! Exact executable counterpart of Pancake's `upd_locals_def`
+    (`cakeml/pancake/semantics/panSemScript.sml:431-434`).  The source
+    installs the zipped argument bindings into an empty local map; folding
+    updates gives the same last-wins behavior for duplicate names. -/
 def bindPanValueParameters (parameters : List VarName)
     (values : List (PanValue α)) :
     Option (VarName → Option (PanValue α)) :=

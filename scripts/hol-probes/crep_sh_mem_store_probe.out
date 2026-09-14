@@ -1,0 +1,5 @@
+sh_mem_store_missing_local=T
+
+sh_mem_store_zero_width_domain_error=T
+
+sh_mem_store_nonzero_domain_error=T

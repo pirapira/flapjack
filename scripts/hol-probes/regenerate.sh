@@ -91,6 +91,9 @@ run_probe pan_dec_clock_probeScript.sml pan_dec_clock_probe.out \
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_upd_locals_probeScript.sml pan_upd_locals_probe.out \
+  pan_upd_locals_hit pan_upd_locals_empty \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
   return_41 return_if_13 "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_add_probeScript.sml pan_sem_e2e_add_probe.out \
@@ -194,6 +197,9 @@ run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_res_var_probeScript.sml crep_res_var_probe.out \
   res_var_delete_hit res_var_update_hit \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_lookup_code_probeScript.sml crep_lookup_code_probe.out \
+  lookup_code_valid lookup_code_missing \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_empty_locals_probeScript.sml pan_empty_locals_probe.out \
   empty_locals empty_locals_clock \

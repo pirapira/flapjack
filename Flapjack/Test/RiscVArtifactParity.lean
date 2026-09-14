@@ -304,6 +304,24 @@ def nestedExpressionAccepted : Bool :=
   | some image => image.sections.length == 5 && image.warnings.isEmpty
   | none => false
 
+/-- The differential-fuzzing `dup-global` fixture (GitHub issue #962 smoke,
+    bead `flapjack-pxn.8.5.14.4`).  The original CakeML accepts a duplicate
+    top-level global with the warning `variable g is redeclared in top-level
+    declaration` and keeps the later declaration; the port used to reject it in
+    `staticCheckDecls`. -/
+def dupGlobalSource : String :=
+  "var 1 g = 7;\nvar 1 g = 7;\nfun 1 main() { return g; }"
+
+/-- The production runtime-image entry point now accepts the duplicate-global
+program and reports at least one warning instead of failing the static check. -/
+def dupGlobalAcceptedWithWarning : Bool :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] artifactCompileConfig "main"
+      dupGlobalSource with
+  | .ok image => !image.warnings.isEmpty
+  | .error _ => false
+
+#guard dupGlobalAcceptedWithWarning
 #guard nestedExpressionAccepted
 #guard artifactAccepted
 #guard generatedMainBytesMatch
@@ -339,7 +357,9 @@ def runChecks : IO Bool := do
       ("entry_order original entry-first order mismatch is tracked, not accepted",
         entryOrderOrderingMismatch),
       ("nested_expression fixture accepted by the runtime-image entry point",
-        nestedExpressionAccepted) ]
+        nestedExpressionAccepted),
+      ("dup_global fixture accepted with a redeclaration warning",
+        dupGlobalAcceptedWithWarning) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

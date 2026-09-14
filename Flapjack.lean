@@ -7,6 +7,7 @@ import Flapjack.PanItreeLtree
 import Flapjack.PanHProgStore
 import Flapjack.PanHProg
 import Flapjack.PanHProgLoad
+import Flapjack.PanHProgReturn
 import Flapjack.PanSimp
 import Flapjack.PanStructs
 import Flapjack.PanGlobals

@@ -197,6 +197,7 @@ import Flapjack.Test.ShapeToStringParity
 import Flapjack.Test.CakeApplyColourParity
 import Flapjack.Test.CakeSsaTempParity
 import Flapjack.Test.CakeApplyColourParity
+import Flapjack.Test.CakeSpillCostParity
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -924,7 +925,8 @@ def main : IO Unit := do
     Flapjack.Test.CakeMkBijParity.runChecks,
     Flapjack.Test.CakeSsaSetupParity.runChecks,
     Flapjack.Test.CakeSsaTempParity.runChecks,
-    Flapjack.Test.CakeApplyColourParity.runChecks
+    Flapjack.Test.CakeApplyColourParity.runChecks,
+    Flapjack.Test.CakeSpillCostParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

@@ -23,6 +23,7 @@ import Flapjack.PanHProgCall
 import Flapjack.CrepPrimop
 import Flapjack.CrepExitLoop
 import Flapjack.CrepEvaluate
+import Flapjack.CrepFixClock
 import Flapjack.CrepObservationalSemantics
 import Flapjack.PanBst
 import Flapjack.PanBStateUpdates

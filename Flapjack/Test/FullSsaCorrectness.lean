@@ -33,15 +33,12 @@ theorem fullSsaCall_source_machine_agreement :
     independently inspectable. -/
 
 theorem fullSsaFfi_source_machine_simulation :
-    (evalPanProgWithCallsAndFfi [] fullSsaFfiSourceHandler 20
+      (evalPanProgWithCallsAndFfi [] fullSsaFfiSourceHandler 20
       (fun _ => none) fullSsaFfiMainBody).map (fun result =>
         match result with
         | .returned _ values => values
         | _ => []) =
-      (do
-        let image ← fullSsaFfiImage
-        RiscV.executeFunctionAtWithFfi fullSsaFfiHost 100 0 76 42 [] image [2] []
-          (RiscV.writeRegister (RiscV.zeroState 64) 1 (BitVec.ofNat 64 42))) := by
+      fullSsaFfiMachineResult := by
   calc
     _ = some [BitVec.ofNat 64 42] := fullSsaFfi_source_execution
     _ = _ := fullSsaFfi_compiled_execution.symm

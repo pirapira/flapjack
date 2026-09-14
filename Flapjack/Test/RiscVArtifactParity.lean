@@ -338,15 +338,60 @@ def nestedExpressionWordLoweringAccepted : Bool :=
     a larger temporary-register pool: the inner add is assigned first, then
     the outer add, and finally the original destination receives the result. -/
 def flattenExpressionProbe : WordProg Nat :=
-  .assign 0 (.op .add [.var 1, .op .add [.var 2, .var 3]])
+  .assign 0 nestedExpressionWord
 
 def flattenExpressionProbeMatches : Bool :=
   match RiscV.wordFlattenProgramFrom flattenExpressionProbe with
-  | .seq
-      (.seq
-        (.assign 5 (.op .add [.var 2, .var 3]))
-        (.assign 9 (.op .add [.var 1, .var 5])))
+  | .seq (.assign 9 (.shift .lsr
+        (.op .add [.var 0,
+          .op .add [.var 1,
+            .op .add [.var 2,
+              .op .add [.var 3, .var 4]]]])
+        (.const 1)))
       (.assign 0 (.var 9)) => true
+  | _ => false
+
+/-! Materialization is bounded by the Word-to-Stack pool consumption, not by
+    plain depth: a rotate node draws two pool entries (a destination register
+    distinct from the scratch target plus the right subtree), so a rotate
+    around a rotated operand needs four entries even though its depth is
+    three.  Register-pressure-heavy sections such as `ripemd160_block` keep
+    every allocator register live, leaving only the three reserved entries
+    and rejecting the depth-bounded tree. -/
+def rorChainBudgetProbe : WordExp Nat :=
+  .shift .ror
+    (.shift .ror (.op .add [.var 1, .var 2]) (.const 3))
+    (.const 5)
+
+def rorChainBudgetMatches : Bool :=
+  RiscV.wordExpLoweringBudget rorChainBudgetProbe == 4
+
+def flattenRorChainProbe : WordProg Nat :=
+  .assign 0 rorChainBudgetProbe
+
+def flattenRorChainProbeMatches : Bool :=
+  match RiscV.wordFlattenProgramFrom flattenRorChainProbe with
+  | .seq (.assign 5 rorChainBudgetProbe) (.assign 0 (.var 5)) => true
+  | _ => false
+
+/-! An operator application wider than two arguments draws one pool entry and
+    recurses with the remainder for every argument; with atom arguments the
+    whole application stays within the reserved pool. -/
+def wideOpBudgetMatches : Bool :=
+  RiscV.wordExpLoweringBudget (α := Nat)
+      (.op .add [.var 1, .var 2, .var 3, .var 4]) == 1
+
+/-! The Word-to-Stack `set` compiler accepts only atom values, so a compound
+    value is materialized into a fresh temporary before the store.  Without
+    this, a depth-bounded flattener keeps a two-operand sum compound and the
+    store lowering fails. -/
+def flattenSetProbe : WordProg Nat :=
+  .set .currHeap (.op .add [.var 1, .var 2])
+
+def flattenSetProbeMatches : Bool :=
+  match RiscV.wordFlattenProgramFrom flattenSetProbe with
+  | .seq (.assign 5 (.op .add [.var 1, .var 2]))
+      (.set .currHeap (.var 5)) => true
   | _ => false
 
 /-- The differential-fuzzing `dup-global` fixture (GitHub issue #962 smoke,
@@ -594,6 +639,10 @@ def frameOccupancyP9GapTracked : Bool :=
 #guard trackedConstReturnMismatch
 #guard entryOrderLayoutMatches
 #guard entryOrderOrderingMismatch
+#guard rorChainBudgetMatches
+#guard flattenRorChainProbeMatches
+#guard wideOpBudgetMatches
+#guard flattenSetProbeMatches
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=

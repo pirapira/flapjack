@@ -112,11 +112,19 @@ delta-debugged with `--minimize` and filed as a P1 bead.
 Typical bounded runs (each a few minutes, safe for a laptop):
 
 ```sh
-python3 scripts/parity-difffuzz.py --smoke                  # fixed 9-case corpus; must pass after P1 gaps are fixed
+nice -n 10 python3 scripts/parity-difffuzz.py --smoke --exact # every accepted artifact must match
+nice -n 10 python3 scripts/parity-difffuzz.py --mode mixed --exact --seed 3 --count 80 \
+    --out difffuzz-findings --minimize                      # bounded exact campaign
 python3 scripts/parity-difffuzz.py --mode mixed --seed 3 --count 80 \
     --out difffuzz-findings --minimize                      # bounded campaign
 python3 scripts/parity-difffuzz.py --replay difffuzz-findings/<case>
 ```
+
+`--exact` is the required mode for source-to-RISC-V parity: any difference in
+acceptance, section layout, metadata, or bytes is a failure, including a
+signature listed in the historical bead-owned gap registry. The mode without
+`--exact` is retained only for auditing older campaigns and must not be used
+as evidence that the two compilers emit identical output.
 
 Minimized, replayable reproducers for the found mismatches are preserved under
 [`scripts/parity-difffuzz-findings/`](../scripts/parity-difffuzz-findings)

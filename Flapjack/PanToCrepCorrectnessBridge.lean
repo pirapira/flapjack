@@ -1,6 +1,7 @@
 import Flapjack.PanToCrepCorrectnessBoundary
 import Flapjack.CrepeProgramRaiseSourceWordRelation
 import Flapjack.CrepeSourceWordRecordRaiseCorrectness
+import Flapjack.PanValueFfiClockProjection
 
 /-!
 Bridge from the existing stateful source-to-Crep program correctness contract
@@ -178,6 +179,58 @@ theorem panValuePcExceptionResultRel_of_raised_control
   refine ⟨spillAddress, targetException, hcode, rfl, hcontrol, ?_⟩
   intro hnonempty
   exact ⟨hlookup hnonempty, hsize⟩
+
+/-! The clocked terminal FFI branch has a direct Pc result lift.  The
+    clocked leaf theorem supplies the complete source post-state and event;
+    the projection theorem preserves that event while attaching the
+    remaining clock, and the existing Pc relation checks the target event
+    against the same source-side state relation. -/
+theorem panValuePcFinalFfiResultRel_of_clocked_leaf
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α)
+    (clock : Nat) (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (program : Prog α) (targetState : CrepState α)
+    (event targetEvent : FfiFinalEvent) (steps : Nat)
+    (finalFfi : FfiState σ)
+    (hsteps : evalPanValueFfiProgSteps context primitive handler structs functions
+      baseAddress topAddress bytesInWord 1 sourceLocals sourceGlobals sourceMemory
+      ffi program =
+      some (.finalFfi sourceLocals sourceGlobals sourceMemory finalFfi event, steps))
+    (hstate : panValueCrepStateRel structs pcContext sourceLocals sourceGlobals
+      sourceMemory targetState)
+    (hevent : event = targetEvent) :
+    evalPanValueFfiClockLeaf context primitive handler structs functions
+      baseAddress topAddress bytesInWord clock sourceLocals sourceGlobals
+      sourceMemory ffi program =
+      some (.control (.finalFfi sourceLocals sourceGlobals sourceMemory finalFfi event),
+        clock) ∧
+    (evalPanValueFfiClockLeaf context primitive handler structs functions
+      baseAddress topAddress bytesInWord clock sourceLocals sourceGlobals
+      sourceMemory ffi program).map panValueFfiClockResultProjection =
+      some (.finalFfi sourceLocals sourceGlobals sourceMemory finalFfi event clock) ∧
+    panValuePcResultRel structs pcContext exceptionRel exceptionCode globalsLookup
+      (.finalFfi sourceLocals sourceGlobals sourceMemory event)
+      (.finalFfi targetState targetEvent) := by
+  have hclock := evalPanValueFfiClockLeaf_finalFfi context primitive handler
+    structs functions baseAddress topAddress bytesInWord clock sourceLocals
+    sourceGlobals sourceMemory ffi program sourceLocals sourceGlobals sourceMemory
+    finalFfi event steps (hsteps := hsteps)
+  refine ⟨hclock, ?_, ?_⟩
+  · rw [hclock]
+    rfl
+  · simp [panValuePcResultRel, hstate, hevent]
 
 /-! Concrete one-word instance of the HOL `globals_lookup` observation.  The
     global-aware raise relation already proves that address zero contains the

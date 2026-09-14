@@ -337,6 +337,30 @@ def globalDeclIsFunction : Decl α → Bool
   | .function _ => true
   | _ => false
 
+/-! Direct source-shaped counterparts of the declaration predicates from
+    `panLangScript.sml:234-249`.  The global-pass predicates above are kept
+    as its existing pass-facing names; these names retain the source API. -/
+def isDecl : Decl α → Bool
+  | .decl _ _ _ => true
+  | _ => false
+
+def isExnDecl : Decl α → Bool
+  | .exnDecl _ _ => true
+  | _ => false
+
+def isName : Decl α → Bool
+  | .name _ _ => true
+  | _ => false
+
+def sizeOfEids : List (Decl α) → Nat
+  | [] => 0
+  | declaration :: declarations =>
+      if isExnDecl declaration then
+        1 + sizeOfEids declarations
+      else
+        sizeOfEids declarations
+termination_by declarations => sizeOf declarations
+
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
   globalDeclsFilter globalDeclIsName declarations ++
     globalDeclsFilter globalDeclIsException declarations ++

@@ -190,8 +190,8 @@ def parityGuard : Bool :=
     isTick (panSimpProg (.seq (.skip : Prog Nat) .tick)) &&
     isTailCall (panSimpProg
       (.seq
-        (.call (some (some (.local, "r"), none)) "f" [])
-        (.return (.var .local "r")) : Prog Nat))
+            (.call (some (some (.local, "r"), none)) "f" [])
+            (.return (.var .local "r")) : Prog Nat))
 
 #eval parityGuard
 #guard parityGuard

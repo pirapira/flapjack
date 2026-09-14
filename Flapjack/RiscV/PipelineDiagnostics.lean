@@ -128,6 +128,7 @@ inductive SourceRiscVCompileError where
   | static (error : StatErr)
   | entryNotFound
   | lowering (error : PipelineRiscVLoweringError)
+  | loweringInFunction (functionName : FunName) (error : PipelineRiscVLoweringError)
   deriving Repr
 
 structure SourceRiscVArtifact (width : Nat) where
@@ -139,8 +140,45 @@ inductive SourceRiscVImageError where
   | static (error : StatErr)
   | entryNotFound
   | lowering (error : PipelineRiscVLoweringError)
+  | loweringInFunction (functionName : FunName) (error : PipelineRiscVLoweringError)
   | artifactFailure
   deriving Repr
+
+def pipelineLoweringSectionId : PipelineRiscVLoweringError → Option Nat
+  | .wordToStack error => some error.sectionId
+  | .allocationFailure sectionId => some sectionId
+  | .labToRiscV error => some error.sectionId
+  | .stackToRiscV => none
+
+def compiledFunctionNameAt : List (CompiledFunction α) → Nat → Option FunName
+  | [], _ => none
+  | function :: _, 0 => some function.name
+  | _ :: functions, index + 1 => compiledFunctionNameAt functions index
+
+def pipelineFunctionNameAtLabel (firstLabel : Nat)
+    (functions : List (CompiledFunction α)) (label : Nat) : Option FunName :=
+  if label < firstLabel then none
+  else compiledFunctionNameAt functions (label - firstLabel)
+
+def sourceRiscVCompileErrorOfLowering (firstLabel : Nat)
+    (functions : List (CompiledFunction α))
+    (error : PipelineRiscVLoweringError) : SourceRiscVCompileError :=
+  match pipelineLoweringSectionId error with
+  | some label =>
+      match pipelineFunctionNameAtLabel firstLabel functions label with
+      | some functionName => .loweringInFunction functionName error
+      | none => .lowering error
+  | none => .lowering error
+
+def sourceRiscVImageErrorOfLowering (firstLabel : Nat)
+    (functions : List (CompiledFunction α))
+    (error : PipelineRiscVLoweringError) : SourceRiscVImageError :=
+  match pipelineLoweringSectionId error with
+  | some label =>
+      match pipelineFunctionNameAtLabel firstLabel functions label with
+      | some functionName => .loweringInFunction functionName error
+      | none => .lowering error
+  | none => .lowering error
 
 structure SourceRiscVImage (width : Nat) where
   sections : List (RiscV.EncodedRiscVSection width)
@@ -233,14 +271,17 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
               | .ok bytes => .ok { bytes := bytes, warnings }
               | .error _identityError =>
                   match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked pipeline.loop with
-                  | .error error => .error (.lowering error)
+                  | .error error =>
+                      .error (sourceRiscVCompileErrorOfLowering 1 pipeline.crepe error)
                   | .ok functions =>
                       let initialLabel := fullSsaInitialLabLabel functions
                       match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
                           (width := width)
                           { services := services } removeConfig 0 initialLabel
                           (functions.map (fun (label, _, body) => (label, body))) with
-                      | .error error => .error (.lowering (.labToRiscV error))
+                      | .error error =>
+                          .error (sourceRiscVCompileErrorOfLowering 1 pipeline.crepe
+                            (.labToRiscV error))
                       | .ok instructions =>
                           .ok { bytes := RiscV.encodeInstructions instructions, warnings }
 
@@ -274,13 +315,16 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked pipeline.loop with
-              | .error error => .error (.lowering error)
+              | .error error =>
+                  .error (sourceRiscVImageErrorOfLowering 1 pipeline.crepe error)
               | .ok functions =>
                   let initialLabel := fullSsaInitialLabLabel functions
                   match RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscVChecked
                       (width := width) { services := services } removeConfig 0 initialLabel
                       (functions.map (fun (label, _, body) => (label, body))) with
-                  | .error error => .error (.lowering (.labToRiscV error))
+                  | .error error =>
+                      .error (sourceRiscVImageErrorOfLowering 1 pipeline.crepe
+                        (.labToRiscV error))
                   | .ok sections =>
                       .ok { sections := RiscV.encodeLinkedSections sections, warnings }
 
@@ -316,7 +360,9 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
               let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
                   (RiscV.wordStackInitialBitmaps false) loop with
-              | .error error => .error (.lowering error)
+              | .error error =>
+                  .error (sourceRiscVImageErrorOfLowering stackFunctionFirstLabel
+                    pipeline.crepe error)
               | .ok (functions, bitmaps) =>
                   let initialLabel := fullSsaInitialLabLabel functions
                   match RiscV.compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
@@ -326,7 +372,9 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
                       { } stackStoreConstsStubLocation wordAllocatableRegisters.length
                       0 initialLabel
                       (functions.map (fun (label, _, body) => (label, body))) with
-                  | .error error => .error (.lowering (.labToRiscV error))
+                  | .error error =>
+                      .error (sourceRiscVImageErrorOfLowering stackFunctionFirstLabel
+                        pipeline.crepe (.labToRiscV error))
                   | .ok sections =>
                       .ok { bitmaps, sections := RiscV.encodeLinkedSections sections, warnings }
 

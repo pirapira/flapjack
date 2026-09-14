@@ -72,6 +72,11 @@ run_probe get_stack_only_probeScript.sml get_stack_only_probe.out \
 run_probe get_forced_probeScript.sml get_forced_probe.out \
   gf_longmul gf_loop "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
+# The mk_bij probe observes the clash-tree-to-node bijection used to number
+# allocator nodes (reads before writes, seq right-first, branch live sets).
+run_probe mk_bij_probeScript.sml mk_bij_probe.out \
+  delta_basic composite "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_mem_load_probeScript.sml pan_mem_load_probe.out \
   one_hit named_suffix_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \

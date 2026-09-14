@@ -39,6 +39,24 @@ def preservesRole (name : Nat) : Bool :=
 def rolesPreserved : Bool :=
   productionRoleRegisters.all preservesRole
 
+/-- The Cake map sends a hardware register number to `0` exactly at the internal
+zero role `27`.  This computable shadow of `riscvForward_ne_zero_iff` is the
+condition that discharges the transfer/relabel write-set side conditions. -/
+def zeroImageExact : Bool :=
+  (List.range 32).all (fun n => (riscvRegisterName n == 0) == (n == 27))
+
+#guard zeroImageExact
+
+/-- Every architectural register is the image of some register under the Cake
+map, so the map permutes the register file.  This computable shadow of
+`riscvForward_surjective` complements `zeroImageExact` and shows the one-time
+relabeling loses no register. -/
+def mapSurjective : Bool :=
+  (List.range 32).all (fun target =>
+    (List.range 32).any (fun source => riscvRegisterName source == target))
+
+#guard mapSurjective
+
 example : riscvRegisterName (portToStack 0) = 0 := by decide
 example : riscvRegisterName (portToStack 1) = 1 := by decide
 example : riscvRegisterName (portToStack 10) = 10 := by decide
@@ -73,7 +91,11 @@ example (destination : Nat) (value : Nat) :
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("production role registers are preserved by the one-time Cake map",
-        rolesPreserved) ]
+        rolesPreserved),
+      ("the Cake map image is zero exactly at the internal zero role",
+        zeroImageExact),
+      ("the Cake map permutes the architectural register file",
+        mapSurjective) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

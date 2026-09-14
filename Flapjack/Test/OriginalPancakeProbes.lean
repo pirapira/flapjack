@@ -140,6 +140,18 @@ def semanticsDecls : ProbeFact :=
     cakeAssemblySha256 :=
       "9b71ab937453e4ded03220a808b551c60bb5ef189387ae0865ba12befccd40fb" }
 
+def entryOrder : ProbeFact :=
+  { source := "fun 1 a() { return 1; } fun 1 b() { return 2; } fun 1 main() { return a(); }"
+    sourceReference :=
+      "cakeml/pancake/pan_passesScript.sml:20-37 (pan_to_target_all_def; SPLITP moves the `main` declaration to the front) so the original emits the entry function first and then source order"
+    cakeByteLines := 64
+    cakeByteCount := 1024
+    cakeFinalBytes :=
+      [0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00,
+       0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+    cakeAssemblySha256 :=
+      "76fe76be79451cd5595661e8ad912dc5f266ddeb58efa4b3e510bd70082b94fc" }
+
 def sourceFactsPinned : Bool :=
   setVar.source == "fun 1 main() { var 1 x = 7; var 1 x = 11; return x; }" &&
   setGlobals.source == "var 1 g = 7; fun 1 main() { return g; }" &&
@@ -155,7 +167,9 @@ def sourceFactsPinned : Bool :=
     evaluateDecls.source == "var 1 g = 41; fun 1 main() { return g; }" &&
     decsStcnames.source == "struct Pair { 1 left, 1 right } fun 1 main() { return 0; }" &&
     semanticsDecls.source ==
-      "var 1 g = 41; struct Pair { 1 left, 1 right } fun 1 main() { return g; }"
+      "var 1 g = 41; struct Pair { 1 left, 1 right } fun 1 main() { return g; }" &&
+    entryOrder.source ==
+      "fun 1 a() { return 1; } fun 1 b() { return 2; } fun 1 main() { return a(); }"
 
 def outputFactsPinned : Bool :=
   setVar.cakeByteLines == 64 && setVar.cakeByteCount == 1012 &&
@@ -208,7 +222,13 @@ def outputFactsPinned : Bool :=
     semanticsDecls.cakeFinalBytes ==
       [0x03, 0x35, 0x85, 0xFF, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&
     semanticsDecls.cakeAssemblySha256 ==
-      "9b71ab937453e4ded03220a808b551c60bb5ef189387ae0865ba12befccd40fb"
+      "9b71ab937453e4ded03220a808b551c60bb5ef189387ae0865ba12befccd40fb" &&
+    entryOrder.cakeByteLines == 64 && entryOrder.cakeByteCount == 1024 &&
+    entryOrder.cakeFinalBytes ==
+      [0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00,
+       0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&
+    entryOrder.cakeAssemblySha256 ==
+      "76fe76be79451cd5595661e8ad912dc5f266ddeb58efa4b3e510bd70082b94fc"
 
 #guard sourceFactsPinned
 #guard outputFactsPinned

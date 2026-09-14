@@ -101,7 +101,7 @@ def decClockSource : String := decClock.source
 def cakeGeneratedMainBytes : List (BitVec 8) :=
   [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)
 
-/-- Original CakeML `cml_main` bytes: `addi a0,x0,7; ret`. -/
+/-- Original CakeML `cml_main` bytes: `ori a0,x0,7; ret`. -/
 def cakeMainBytes : List (BitVec 8) :=
   [0x13, 0x65, 0x70, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
@@ -113,7 +113,7 @@ def flapjackGeneratedMainBytes : List (BitVec 8) :=
 tracked by `flapjack-pxn.8.5.10.1`. -/
 def flapjackMainBytes : List (BitVec 8) :=
   [0x13, 0x00, 0x00, 0x00,
-   0x13, 0x01, 0x70, 0x00,
+   0x13, 0x61, 0x70, 0x00,
    0x33, 0x61, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
@@ -187,11 +187,11 @@ def trackedMainMismatch : Bool :=
 def constReturnSource : String := constReturn.source
 
 /-- Flapjack `cml_main` bytes for the no-tick `return 7` fixture: the 12-byte
-`addi x2,x0,7; or x2,x2,x2; ret` shape.  Its difference from `dec_clock` is
+`ori x2,x0,7; or x2,x2,x2; ret` shape.  Its difference from `dec_clock` is
 exactly the single leading `tick` nop, which is the residual gap isolated
 below. -/
 def flapjackConstReturnMainBytes : List (BitVec 8) :=
-  [0x13, 0x01, 0x70, 0x00,
+  [0x13, 0x61, 0x70, 0x00,
    0x33, 0x61, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
@@ -259,9 +259,9 @@ helper `b` at 1016 (12B), and the entry `main` last at 1028 (4B, `jal` to
 original entry-first order. -/
 def flapjackEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
   [ (3, 1000, [0x6F, 0x00, 0xC0, 0x01].map (BitVec.ofNat 8)),
-    (4, 1004, [0x13, 0x01, 0x10, 0x00, 0x33, 0x61, 0x21, 0x00,
+    (4, 1004, [0x13, 0x61, 0x10, 0x00, 0x33, 0x61, 0x21, 0x00,
                0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
-    (5, 1016, [0x13, 0x01, 0x20, 0x00, 0x33, 0x61, 0x21, 0x00,
+    (5, 1016, [0x13, 0x61, 0x20, 0x00, 0x33, 0x61, 0x21, 0x00,
                0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
     (6, 1028, [0x6F, 0xF0, 0x9F, 0xFE].map (BitVec.ofNat 8)) ]
 

@@ -62,7 +62,7 @@ example :
       [⟨1, [.labAsm (.jump ⟨2, 0⟩) [] 0]⟩,
        ⟨2, [.label 2 0 0, .asm (.const 1 7) [] 0]⟩] =
       some [.jal 0 (BitVec.ofNat 64 4),
-        .addi 1 0 (BitVec.ofNat 64 7)] := by
+        .ori 1 0 (BitVec.ofNat 64 7)] := by
   decide
 
 example :
@@ -71,14 +71,14 @@ example :
       [(1, (.call none (.label 2) none : StackProg Nat)),
        (2, .const 1 7)] =
       some [.jal 0 (BitVec.ofNat 64 4),
-        .addi 1 0 (BitVec.ofNat 64 7)] := by
+        .ori 1 0 (BitVec.ofNat 64 7)] := by
   decide +kernel
 
 example :
     compileStackProgramNatListLinkedToRiscV (width := 64) { services := [] }
       stackRemoveRiscVConfig 0 0
       [(1, (.const 1 7 : StackProg Nat))] =
-      some [(1, BitVec.ofNat 64 0, [.addi 1 0 (BitVec.ofNat 64 7)])] := by
+      some [(1, BitVec.ofNat 64 0, [.ori 1 0 (BitVec.ofNat 64 7)])] := by
   decide +kernel
 
 example :
@@ -98,6 +98,33 @@ example :
       ⟨3, [.asm (.dataBufferWrite 7 6) [] 0]⟩ =
       some [.storeWord 6 7] := by
   decide
+
+/-! CakeML's constant encoder uses LUI plus a signed low-immediate operation
+    once a constant no longer fits the 12-bit ORI case. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.const 1 0x40000008) [] 0]⟩ =
+      some [.lui 1 (BitVec.ofNat 64 0x40000),
+        .addi 1 1 (BitVec.ofNat 64 8)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.const 1 0x100000000) [] 0]⟩ =
+      some [.lui 31 0, .addi 31 31 0,
+        .lui 1 0, .addi 1 1 1,
+        .slli 1 1 (BitVec.ofNat 64 32), .or 1 1 31] := by
+  decide
+
+example :
+    labLineInstructionCount
+        (.asm (.const 1 0x40000008) [] 0 : LabLine (Word 64)) = 2 := by
+  rfl
+
+example :
+    labLineInstructionCount
+        (.asm (.const 1 0x100000000) [] 0 : LabLine (Word 64)) = 6 := by
+  rfl
 
 def haltLabProgram : LabProgram (Word 64) :=
   [⟨1, [.labAsm (.halt : LabAsm (Word 64)) [] 0]⟩]
@@ -132,10 +159,10 @@ example :
       stackRemoveRiscVConfig 2 3
       (.get 4 .heapLength : StackProg (Word 64)) =
       some [
-        .addi 29 0 (BitVec.ofNat 64 24),
+        .ori 29 0 (BitVec.ofNat 64 24),
         .sub 29 10 29,
         .loadWord 4 29] := by
-  decide +kernel
+  native_decide
 
 example :
     compileStackProgramToRiscV (width := 64) { services := [] }
@@ -161,14 +188,14 @@ example :
     compileWordProgramNatToRiscV (width := 64) { services := [] }
       wordStackRiscVConfig stackRemoveRiscVConfig 2 3
       (.assign 0 (.const 42) : WordProg Nat) =
-      some [.addi 4 0 (BitVec.ofNat 64 42)] := by
+      some [.ori 4 0 (BitVec.ofNat 64 42)] := by
   decide +kernel
 
 example :
     compileWordProgramToRiscV (width := 64) { services := [] }
       wordStackRiscVConfig stackRemoveRiscVConfig 2 3
       (.assign 0 (.const (BitVec.ofNat 64 42)) : WordProg (Word 64)) =
-      some [.addi 4 0 (BitVec.ofNat 64 42)] := by
+      some [.ori 4 0 (BitVec.ofNat 64 42)] := by
   decide +kernel
 
 example :

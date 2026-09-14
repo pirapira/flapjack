@@ -1,0 +1,6 @@
+skip=Mark Skip
+dead_assign=Mark (Seq (Mark Skip) (Mark Skip))
+return_const=Mark
+  (Seq (Mark (Assign 1 (Const 17w)))
+     (Mark (Seq (Mark (Return [1])) (Mark Skip))))
+post_return_skip=Mark Skip

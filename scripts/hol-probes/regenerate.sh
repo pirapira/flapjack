@@ -124,6 +124,14 @@ run_probe get_forced_probeScript.sml get_forced_probe.out \
 run_probe mk_bij_probeScript.sml mk_bij_probe.out \
   delta_basic composite "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend"
+# The reg_alloc probe observes the full IRC colouring (do_reg_alloc via
+# reg_alloc_aux/run_ira_state) on tiny clash trees: alloc vars get colours
+# 0..k-1, stack-only vars land at >= k, physical vars keep their register
+# index.
+run_probe reg_alloc_probeScript.sml reg_alloc_probe.out \
+  ra_delta_pair ra_stack_only \
+  "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

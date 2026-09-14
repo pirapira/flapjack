@@ -114,7 +114,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
               handlerLabel := label }
           match RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
               renamedParameters wordAllocatableRegisters.length config.scratch
-              allocation.nextSpill (some 1) bitmaps renamedProgram with
+              (allocation.nextSpill + 1) (some 1) bitmaps renamedProgram with
           | none => .error (.allocationFailure label)
           | some (stackBody, bitmaps) =>
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
@@ -188,6 +188,9 @@ structure SourceRiscVRuntimeImage (width : Nat) where
   bitmaps : RiscV.WordStackBitmapState
   sections : List (RiscV.EncodedRiscVSection width)
   warnings : List StatErr
+  /-- User FFI names in first-appearance order, mirroring the stubs the
+      original CakeML backend emits in its startup frame. -/
+  ffiNames : List String
 
 /-! Checked sibling of `compileFlapjackRiscVViaStack`.  The historical
     `Option` entrypoint remains available for compatibility; this form makes
@@ -376,6 +379,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
                       .error (sourceRiscVImageErrorOfLowering stackFunctionFirstLabel
                         pipeline.crepe (.labToRiscV error))
                   | .ok sections =>
-                      .ok { bitmaps, sections := RiscV.encodeLinkedSections sections, warnings }
+                      .ok { bitmaps, sections := RiscV.encodeLinkedSections sections,
+                            warnings, ffiNames := discoveredNames }
 
 end Flapjack

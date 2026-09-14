@@ -103,7 +103,8 @@ Every mismatch is classified into a signature (`sections/order`,
 Signatures owned by a bead are listed in
 [`scripts/parity-difffuzz-gaps.json`](../scripts/parity-difffuzz-gaps.json);
 acceptance disagreements and tool failures are never owned, so they always
-surface. Unknown signatures exit nonzero, and each such finding is written
+surface. Unknown signatures and CakeML-accepted/Flapjack-rejected cases exit
+nonzero, and each such finding is written
 under `--out` with the source, both outputs, tool versions (binary sha256 +
 git commit), exact command lines, and a standalone `replay.sh`, then
 delta-debugged with `--minimize` and filed as a P1 bead.
@@ -111,7 +112,7 @@ delta-debugged with `--minimize` and filed as a P1 bead.
 Typical bounded runs (each a few minutes, safe for a laptop):
 
 ```sh
-python3 scripts/parity-difffuzz.py --smoke                  # fixed 9-case corpus, must pass
+python3 scripts/parity-difffuzz.py --smoke                  # fixed 9-case corpus; must pass after P1 gaps are fixed
 python3 scripts/parity-difffuzz.py --mode mixed --seed 3 --count 80 \
     --out difffuzz-findings --minimize                      # bounded campaign
 python3 scripts/parity-difffuzz.py --replay difffuzz-findings/<case>

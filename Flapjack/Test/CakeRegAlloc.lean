@@ -250,6 +250,31 @@ def sortColouring (colours : Flapjack.NatInfoMap Nat) :
     List (Nat × Nat) :=
   colours.mergeSort (fun a b => a.1 < b.1)
 
+/-- `sorting$PARTITION` reverses both buckets (`PART P l [] []` prepends). -/
+def partOrderGuard : Bool :=
+  partitionReversed (fun x => x % 2 == 0) [0, 1, 2] == ([2, 0], [1])
+
+/-- `revive_moves` partitions the unavailable-move worklist with the
+    bucket-reversing `sorting$PARTITION`. -/
+def reviveOrderGuard : Bool :=
+  let base : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
+    { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 4 with
+      adjLists := [(9, [5])],
+      unavailMovesWl := [(1, (5, 9)), (1, (13, 5)), (1, (13, 17))],
+      availMovesWl := [(2, (1, 1))] }
+  let out := Flapjack.RiscV.CakeRegAlloc.cakeReviveMoves [9] base
+  out.availMovesWl == [(2, (1, 1)), (1, (5, 9)), (1, (13, 5))] &&
+    out.unavailMovesWl == [(1, (13, 17))]
+
+/-- `bg_ok` partitions `adjY` by `adjX` membership with the bucket-reversing
+    `sorting$PARTITION`, then `st_ex_FILTER`s each case list. -/
+def bgOkOrderGuard : Bool :=
+  let base : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
+    { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 4 with
+      adjLists := [(0, [1]), (1, [3, 0]), (2, [3]), (3, [2, 1, 0])],
+      nodeTag := (List.range 4).map (fun i => (i, .aTemp)) }
+  Flapjack.RiscV.CakeRegAlloc.cakeBgOk 3 0 3 base == some ([1], [2, 0])
+
 /-- `reg_alloc` on a single write/read pair colours the write with the
     first free register and the unconnected stack temp with `k`. -/
 def raDeltaPairGuard : Bool :=
@@ -307,7 +332,8 @@ def parityGuard : Bool :=
     graphTagsGuard && graphInitGuard && heuDeltaGuard && heuMovesGuard &&
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
-    raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard
+    raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
+    partOrderGuard && reviveOrderGuard && bgOkOrderGuard
 
 #guard parityGuard
 
@@ -322,7 +348,8 @@ def runChecks : IO Bool := do
     graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
     raDeltaTriangleGuard, raStackOnlyGuard, raMovesCoalesceGuard,
-    raMovesSelfFilteredGuard, raForcedEdgeGuard]
+    raMovesSelfFilteredGuard, raForcedEdgeGuard, partOrderGuard,
+    reviveOrderGuard, bgOkOrderGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -337,7 +364,8 @@ def runChecks : IO Bool := do
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",
     "reg_alloc delta free", "reg_alloc delta triangle",
     "reg_alloc stack only", "reg_alloc moves coalesce",
-    "reg_alloc moves self filtered", "reg_alloc forced edge"]
+    "reg_alloc moves self filtered", "reg_alloc forced edge",
+    "sorting partition order", "revive moves order", "bg_ok order"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

@@ -1,0 +1,7 @@
+set_kvar_local=T
+
+set_kvar_global=T
+
+set_kvar_local_globals=T
+
+set_kvar_global_locals=T

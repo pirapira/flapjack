@@ -114,7 +114,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
               handlerLabel := label }
           match RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
               renamedParameters wordAllocatableRegisters.length config.scratch
-              (allocation.nextSpill + 1) (some 1) bitmaps renamedProgram with
+              (max allocation.nextSpill 1) (some 1) bitmaps renamedProgram with
           | none => .error (.allocationFailure label)
           | some (stackBody, bitmaps) =>
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked

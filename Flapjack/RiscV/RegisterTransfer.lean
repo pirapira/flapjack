@@ -104,6 +104,20 @@ register `27`. -/
     readRegister (transferState state) (0 : Fin 32) = readRegister state (27 : Fin 32) := by
   simp [readRegister, transferState, riscvInverse_zero]
 
+/-- The hardware zero slot of a transferred state is exactly the internal Cake
+zero register `27`.  This is the sense in which the abstract relation does not
+assume a hardwired zero: the concrete zero-register fact is equivalent to an
+ordinary fact about internal register `27` of the abstract state. -/
+theorem zeroRegister_transferState_iff (state : State width) :
+    ZeroRegister (transferState state) ↔ readRegister state (27 : Fin 32) = 0 := by
+  simp [ZeroRegister]
+
+/-- Writing the hardware zero slot of a transferred state is discarded, exactly
+as `writeRegister` drops writes to the architectural zero register. -/
+@[simp] theorem writeRegister_transferState_zero (state : State width) (value : Word width) :
+    writeRegister (transferState state) (0 : Fin 32) value = transferState state := by
+  simp [writeRegister]
+
 /-- A hardware write to slot `riscvForward name` on a transferred state matches
 the internal write to register `name` (discarded when `name` is the Cake zero
 register `27`). -/
@@ -129,5 +143,42 @@ theorem writeRegister_transfer_forward (state : State width) (name : Fin 32)
           calc index = riscvForward (riscvInverse index) := (riscvForward_riscvInverse index).symm
             _ = riscvForward name := by rw [hcontra]
         simp [hidx, hback]
+
+/-- `transferState` is exactly the state relabeling by the explicit inverse map. -/
+theorem transferState_eq_relabelRegisters_riscvInverse (state : State width) :
+    transferState state = relabelRegisters riscvInverse state := rfl
+
+/-- Relabeling a transferred state by `riscvForward` returns the original state. -/
+theorem relabelRegisters_riscvForward_transferState (state : State width) :
+    relabelRegisters riscvForward (transferState state) = state := by
+  cases state with
+  | mk pc registers memory privilege mode =>
+    simp only [relabelRegisters, transferState]
+    congr 1
+    funext name
+    simp [riscvInverse_riscvForward]
+
+/-- Transferring a state relabeled by `riscvForward` returns the original state. -/
+theorem transferState_relabelRegisters_riscvForward (state : State width) :
+    transferState (relabelRegisters riscvForward state) = state := by
+  cases state with
+  | mk pc registers memory privilege mode =>
+    simp only [relabelRegisters, transferState]
+    congr 1
+    funext index
+    simp [riscvForward_riscvInverse]
+
+/-- The transfer across the `riscv_names` map is injective on machine states. -/
+theorem transferState_injective : Function.Injective (transferState (width := width)) := by
+  intro left right h
+  have hrelabel := congrArg (relabelRegisters riscvForward) h
+  rwa [relabelRegisters_riscvForward_transferState,
+    relabelRegisters_riscvForward_transferState] at hrelabel
+
+/-- The transfer across the `riscv_names` map is surjective on machine states. -/
+theorem transferState_surjective : Function.Surjective (transferState (width := width)) := by
+  intro state
+  exact ⟨relabelRegisters riscvForward state,
+    transferState_relabelRegisters_riscvForward state⟩
 
 end Flapjack.RiscV

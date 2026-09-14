@@ -243,12 +243,20 @@ run_probe loop_sem_sh_mem_op_probeScript.sml loop_sem_sh_mem_op_probe.out \
 run_probe loop_sem_exit_loop_probeScript.sml loop_sem_exit_loop_probe.out \
   exit_loop_break exit_loop_error "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.
-run_probe pan_itree_h_handle_call_ret_probeScript.sml \\
-  pan_itree_h_handle_call_ret_probe.out \\
-  failed_caller uncaught_exception \\
+run_probe pan_itree_h_handle_call_ret_probeScript.sml \
+  pan_itree_h_handle_call_ret_probe.out \
+  failed_caller uncaught_exception \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_itree_h_handle_deccall_ret_probeScript.sml \
+  pan_itree_h_handle_deccall_ret_probe.out \
+  failed_caller raised_clears_locals \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe loop_sem_loop_arith_probeScript.sml loop_sem_loop_arith_probe.out \
   loop_arith_div loop_arith_longdiv_overflow "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe longdiv_code_probeScript.sml longdiv_code_probe.out \
   longdiv_code_software riscv_longdiv_encoding \
   "$cake_dir/compiler/backend/data_to_wordScript.sml"
+run_probe pan_itree_h_prog_deccall_probeScript.sml \
+  pan_itree_h_prog_deccall_probe.out \
+  argument_failure lookup_failure \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"

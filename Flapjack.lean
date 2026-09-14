@@ -16,6 +16,9 @@ import Flapjack.PanHProgPrimitive
 import Flapjack.PanSetGlobal
 import Flapjack.PanItreeEvaluate
 import Flapjack.PanExt
+import Flapjack.PanHHandleCallRet
+import Flapjack.PanHHandleDecCallRet
+import Flapjack.PanHProgDecCall
 import Flapjack.PanSetKvar
 import Flapjack.PanLookupKvar
 import Flapjack.PanIsValidValue

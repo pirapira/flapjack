@@ -165,6 +165,9 @@ run_probe pan_itree_h_prog_call_probeScript.sml \
 run_probe pan_bst_probeScript.sml pan_bst_probe.out \
   bst_locals bst_clock_ffi_irrelevant \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_empty_locals_probeScript.sml pan_empty_locals_probe.out \
+  empty_locals empty_locals_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_itree_h_prog_dec_probeScript.sml pan_itree_h_prog_dec_probe.out \
   dec_valid_event dec_failed_response "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_seq_probeScript.sml pan_itree_h_prog_seq_probe.out \

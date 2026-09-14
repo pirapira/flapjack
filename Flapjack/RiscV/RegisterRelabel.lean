@@ -96,6 +96,19 @@ theorem relabelRegisters_riscvForward_comp_inverse (state : State width) :
     exact iterForward_eleven_forward register
   rw [hid, relabelRegisters_id]
 
+/-- The same explicit inverse also undoes the relabeling when it is applied
+second: undoing after relabeling returns the original state.  Together with
+`relabelRegisters_riscvForward_comp_inverse` this makes the pair a two-sided
+inverse on states. -/
+theorem relabelRegisters_riscvForward_comp_inverse_left (state : State width) :
+    relabelRegisters (iterForward 11) (relabelRegisters riscvForward state) =
+      state := by
+  rw [relabelRegisters_comp]
+  have hid : (fun register => riscvForward (iterForward 11 register)) = id := by
+    funext register
+    exact iterForward_forward_eleven register
+  rw [hid, relabelRegisters_id]
+
 /-- The one-time Cake relabeling is surjective on states, because its explicit
 inverse `relabelRegisters (iterForward 11)` recovers any original state. -/
 theorem relabelRegisters_riscvForward_surjective :
@@ -206,5 +219,30 @@ matching the hardware hardwired zero. -/
   have hzero : riscvForward (27 : Fin 32) = 0 :=
     (riscvForward_eq_zero_iff (register := 27)).mpr (by decide)
   simp [writeRegisterInternal, hzero]
+
+/-- Reading back an internal register just written under the `riscvForward`
+relabeling returns the written value, as long as the write was not dropped at the
+hardwired zero register. -/
+theorem readRegister_writeRegisterInternal_riscvForward_self (state : State width)
+    (name : Fin 32) (value : Word width) (himage : riscvForward name ≠ 0) :
+    readRegister (writeRegisterInternal riscvForward state name value) name = value := by
+  unfold writeRegisterInternal readRegister
+  rw [if_neg himage]
+  simp
+
+/-- Reading any other internal register after an internal write under the
+`riscvForward` relabeling is unchanged.  Together with
+`readRegister_writeRegisterInternal_riscvForward_self` this shows the internal
+accessor behaves as an ordinary register write for every role except the
+hardwired zero image. -/
+theorem readRegister_writeRegisterInternal_riscvForward_other (state : State width)
+    (name other : Fin 32) (value : Word width) (hne : other ≠ name) :
+    readRegister (writeRegisterInternal riscvForward state name value) other =
+      readRegister state other := by
+  unfold writeRegisterInternal readRegister
+  by_cases himage : riscvForward name = 0
+  · rw [if_pos himage]
+  · rw [if_neg himage]
+    simp [hne]
 
 end Flapjack.RiscV

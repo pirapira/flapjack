@@ -56,8 +56,11 @@ theorem evalStackRemoveGetCurrHeap [NeZero width]
       (stackRemoveGet config destination .currHeap)).map
         (fun final => final.registers destination) =
       some (state.registers config.currHeap) := by
-  simp [stackRemoveGet, evalWordStackMachine, wordStackMachineBinOp,
-    wordStackMachineWriteRegister]
+  by_cases hsame : destination = config.currHeap
+  · subst destination
+    simp [stackRemoveGet, stackRemoveMove, evalWordStackMachine]
+  · simp [stackRemoveGet, stackRemoveMove, evalWordStackMachine,
+      wordStackMachineBinOp, wordStackMachineWriteRegister, hsame]
 
 theorem evalStackRemoveSetCurrHeap [NeZero width]
     (config : StackRemoveConfig) (state : WordStackMachineState width)
@@ -66,8 +69,11 @@ theorem evalStackRemoveSetCurrHeap [NeZero width]
       (stackRemoveSet config .currHeap source)).map
         (fun final => final.registers config.currHeap) =
       some (state.registers source) := by
-  simp [stackRemoveSet, evalWordStackMachine, wordStackMachineBinOp,
-    wordStackMachineWriteRegister]
+  by_cases hsame : config.currHeap = source
+  · subst source
+    simp [stackRemoveSet, stackRemoveMove, evalWordStackMachine]
+  · simp [stackRemoveSet, stackRemoveMove, evalWordStackMachine,
+      wordStackMachineBinOp, wordStackMachineWriteRegister, hsame]
 
 theorem evalStackRemoveStackAlloc_small [NeZero width]
     (config : StackRemoveConfig) (state : WordStackMachineState width)

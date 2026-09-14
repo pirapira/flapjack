@@ -67,3 +67,46 @@ val _ = print_eval "mk_new_cutset_mapped"
   ``toAList (mk_new_cutset (insert 3 6 LN) (toNumSet [1; 2; 3]))``
 val _ = print_eval "mk_new_cutset_duplicate"
   ``toAList (mk_new_cutset (insert 3 6 LN) (toNumSet [3; 1; 3; 2]))``
+
+(* comp_def, loop_to_wordScript.sml:56-150 *)
+val _ = print_eval "comp_skip"
+  ``comp (LN : num num_map) loopLang$Skip (0,0)``
+val _ = print_eval "comp_assign_const"
+  ``comp (insert 3 6 LN) (loopLang$Assign 3 (Const (7w : 8 word))) (0,0)``
+val _ = print_eval "comp_seq_tick"
+  ``comp (LN : num num_map) (loopLang$Seq loopLang$Skip loopLang$Tick) (0,0)``
+val _ = print_eval "comp_loop"
+  ``comp (insert 3 6 LN)
+      (loopLang$Loop (toNumSet [3]) loopLang$Skip (toNumSet [])) (0,0)``
+val _ = print_eval "comp_break"
+  ``comp (LN : num num_map) (loopLang$Break 2) (0,0)``
+val _ = print_eval "comp_fail"
+  ``comp (LN : num num_map) loopLang$Fail (0,0)``
+val _ = print_eval "comp_set_global"
+  ``comp (LN : num num_map)
+      (loopLang$SetGlobal (9w : 5 word) (Const (7w : 8 word))) (0,0)``
+
+(* comp_func_def, loop_to_wordScript.sml:164-169 *)
+val _ = print_eval "comp_func_skip"
+  ``comp_func 7 [10] loopLang$Skip``
+val _ = print_eval "comp_func_assign"
+  ``comp_func 7 [10] (loopLang$Assign 11 (Const (3w : 8 word)))``
+val _ = print_eval "comp_func_seq_assign"
+  ``comp_func 7 [10]
+      (loopLang$Seq (loopLang$Assign 11 (Const (3w : 8 word)))
+        (loopLang$Assign 12 (Var 11)))``
+
+(* compile_prog_def, loop_to_wordScript.sml:171-174 *)
+val _ = print_eval "compile_prog_empty"
+  ``compile_prog ([] : (num # num list # 8 word loopLang$prog) list)``
+val _ = print_eval "compile_prog_singleton"
+  ``compile_prog [(7,[10],loopLang$Skip)]``
+val _ = print_eval "compile_prog_two"
+  ``compile_prog [(7,[10],loopLang$Skip);
+      (8,[],loopLang$Assign 11 (Const (3w : 8 word)))]``
+
+(* compile_def, loop_to_wordScript.sml:176-177 *)
+val _ = print_eval "compile_empty"
+  ``compile ([] : (num # num list # 8 word loopLang$prog) list)``
+val _ = print_eval "compile_singleton"
+  ``compile [(7,[10],loopLang$Skip)]``

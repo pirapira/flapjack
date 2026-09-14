@@ -45,3 +45,33 @@ mk_new_cutset_empty=[(0,())]
 mk_new_cutset_mapped=[(0,()); (6,())]
 
 mk_new_cutset_duplicate=[(0,()); (6,())]
+
+comp_skip=(Skip,0,0)
+
+comp_assign_const=(Assign 6 (Const 7w),0,0)
+
+comp_seq_tick=(Seq Skip Tick,0,0)
+
+comp_loop=(Seq Tick (Seq (Loop ⦕ 0; 6 ⦖ Skip ⦕ 0 ⦖) Tick),0,0)
+
+comp_break=(Break 2,0,0)
+
+comp_fail=(Skip,0,0)
+
+comp_set_global=(Set (Temp 9w) (Const 7w),0,0)
+
+comp_func_skip=Skip
+
+comp_func_assign=Assign 4 (Const 3w)
+
+comp_func_seq_assign=Seq (Assign 4 (Const 3w)) (Assign 6 (Var 4))
+
+compile_prog_empty=[]
+
+compile_prog_singleton=[(7,2,Skip)]
+
+compile_prog_two=[(7,2,Skip); (8,1,Assign 2 (Const 3w))]
+
+compile_empty=[]
+
+compile_singleton=[(7,2,Skip)]

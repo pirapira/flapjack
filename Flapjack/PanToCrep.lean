@@ -63,6 +63,20 @@ def retVar (shape : Shape) (names : List Nat) : Option Nat :=
       if Shape.shapeSize (.comb fields) = 1 then names.head? else none
   | .named _ => none
 
+/-! Faithful port of `pan_to_crep$ret_hdl` from
+    `cakeml/pancake/pan_to_crepScript.sml:122-127`.
+
+    Only a multi-word `Comb` needs a handler that copies the returned global
+    words into its flattened local destinations. -/
+def retHdl [OfNat α 0] [OfNat α 1] [Add α]
+    (shape : Shape) (names : List Nat) : CrepProg α :=
+  match shape with
+  | .one => .skip
+  | .comb fields =>
+      if 1 < Shape.shapeSize (.comb fields) then assignRet (1 : α) names
+      else .skip
+  | .named _ => .skip
+
 def compileExp [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) : Exp α → List (CrepExp α) × Shape
   | .const value => ([.const value], .one)

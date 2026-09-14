@@ -1,4 +1,5 @@
 import Flapjack.CrepeRuntime
+import Flapjack.CrepeGlobalEvaluator
 import Flapjack.LoopSemantics
 
 namespace Flapjack
@@ -27,6 +28,38 @@ theorem crepRuntimeLoopStateRel_adapter (state : CrepRuntimeState α σ) :
     crepRuntimeLoopStateRel state
       (loopStateOfCrepRuntimeStateForGlobals state) := by
   simp [crepRuntimeLoopStateRel, loopStateOfCrepRuntimeStateForGlobals]
+
+/-! Typed global-state adapter.
+
+`CrepRuntimeState` keeps the historical compact global map in its generic
+runtime shape.  This adapter overlays that field with the source-shaped
+`CrepGlobalState.toCompact` projection, so the existing runtime evaluator can
+execute `LoadGlob`/`StoreGlob` while the typed key/value boundary remains in
+`CrepeGlobalEvaluator`. -/
+
+def CrepRuntimeState.withTypedGlobalState
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) : CrepRuntimeState α σ :=
+  { state with globals := (typedState.toCompact key).globals }
+
+def storeCrepRuntimeTypedGlobalState [BEq α]
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address value : α) : CrepRuntimeState α σ :=
+  state.withTypedGlobalState key
+    (storeCrepTypedGlobal key typedState address value)
+
+theorem evalCrepRuntimeExp_loadGlob_typedState
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (state : CrepRuntimeState α σ) (key : α → CrepGlobalAddress)
+    (typedState : CrepGlobalState α) (address : α) :
+    evalCrepRuntimeExp (state.withTypedGlobalState key typedState)
+        (.loadGlob address) =
+      evalCrepTypedLoad key typedState address := by
+  simp [CrepRuntimeState.withTypedGlobalState, evalCrepRuntimeExp,
+    evalCrepTypedLoad, CrepGlobalState.toCompact]
 
 theorem crepRuntimeToLoop_loadGlob_assign_agreement
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

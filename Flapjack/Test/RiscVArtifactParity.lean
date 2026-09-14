@@ -18,6 +18,20 @@ generated artifact sections of both compilers in the same
 comparison is on instruction and data bytes plus layout metadata rather than
 on mere compiler acceptance.
 
+A second fixture, `Flapjack/Test/OriginalPancake/const_return.pnk`, is
+
+```
+fun 1 main() { return 7; }
+```
+
+The original compiler produces byte-identical output for this no-tick program
+and for the `dec_clock` program (same SHA-256 and same 8-byte terminal
+`addi a0,x0,7; ret`), so the original drops the standalone `Tick`.  The port
+instead emits one `tick` nop, so the `dec_clock` `cml_main` is exactly the
+no-tick `cml_main` prefixed by that single nop.  This isolation is checked
+below; the no-tick residual mismatch is likewise tracked by
+`flapjack-pxn.8.5.10.1`.
+
 The original-side facts are the `OriginalPancakeProbes.decClock` source-backed
 probe, whose dependency is the direct HOL probe
 `scripts/hol-probes/pan_sem_dec_clock_e2e_probeScript.sml`.  That probe
@@ -36,7 +50,7 @@ exactly here instead of being weakened to an acceptance check.
 namespace Flapjack.Test.RiscVArtifactParity
 
 open Flapjack Flapjack.RiscV
-open Flapjack.Test.OriginalPancakeProbes (decClock)
+open Flapjack.Test.OriginalPancakeProbes (decClock constReturn)
 
 /-- The checked source-facing pipeline configuration used by the compiler
 entry point, kept local so this parity test does not import the executable
@@ -141,11 +155,63 @@ def trackedMainMismatch : Bool :=
     flapjackMainBytes.drop (flapjackMainBytes.length - 4) ==
       decClock.cakeFinalBytes
 
+/-- The `const_return` fixture source: the no-tick counterpart to
+`dec_clock`, taken from the original-side probe fact. -/
+def constReturnSource : String := constReturn.source
+
+/-- Flapjack `cml_main` bytes for the no-tick `return 7` fixture: the 12-byte
+`addi x2,x0,7; or x2,x2,x2; ret` shape.  Its difference from `dec_clock` is
+exactly the single leading `tick` nop, which is the residual gap isolated
+below. -/
+def flapjackConstReturnMainBytes : List (BitVec 8) :=
+  [0x13, 0x01, 0x70, 0x00,
+   0x33, 0x61, 0x21, 0x00,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+/-- The single 4-byte `tick` lowering emitted by the port: `addi x0,x0,0`. -/
+def standaloneTickNop : List (BitVec 8) :=
+  [0x13, 0x00, 0x00, 0x00].map (BitVec.ofNat 8)
+
+/-- Exact emitted `(label, base, bytes)` artifact for the `const_return`
+fixture. -/
+def constReturnEmittedSections : List (Nat × Nat × List (BitVec 8)) :=
+  match compileRuntimeImage constReturnSource with
+  | some image => emittedSections image
+  | none => []
+
+/-- The port lays out the two emitted sections exactly as it does for
+`dec_clock`: `cml_generated_main` at base 1000 and `cml_main` at base 1004. -/
+def constReturnLayoutMatches : Bool :=
+  constReturnEmittedSections ==
+    [ (3, 1000, flapjackGeneratedMainBytes),
+      (4, 1004, flapjackConstReturnMainBytes) ]
+
+/-- The `dec_clock` `cml_main` differs from the no-tick `const_return` shape
+by exactly one leading `tick` nop, isolating the standalone-`Tick` gap. -/
+def standaloneTickIsolated : Bool :=
+  flapjackMainBytes == standaloneTickNop ++ flapjackConstReturnMainBytes
+
+/-- The residual no-tick `cml_main` mismatch, recorded with its exact bytes
+and owner: the original emits 8 bytes, the port 12, both terminate in the same
+`ret` word, and the source-backed `const_return` probe pins that word.  The
+original bytes are byte-identical to the `dec_clock` original, evidencing that
+the original drops the standalone `Tick`. -/
+def trackedConstReturnMismatch : Bool :=
+  cakeMainBytes != flapjackConstReturnMainBytes &&
+    cakeMainBytes.length == 8 && flapjackConstReturnMainBytes.length == 12 &&
+    cakeMainBytes.drop (cakeMainBytes.length - 4) ==
+      constReturn.cakeFinalBytes &&
+    flapjackConstReturnMainBytes.drop (flapjackConstReturnMainBytes.length - 4) ==
+      constReturn.cakeFinalBytes
+
 #guard artifactAccepted
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches
 #guard bitmapsMatch
 #guard trackedMainMismatch
+#guard constReturnLayoutMatches
+#guard standaloneTickIsolated
+#guard trackedConstReturnMismatch
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -158,7 +224,13 @@ def runChecks : IO Bool := do
       ("dec_clock bitmap table is the initial [4]",
         bitmapsMatch),
       ("dec_clock residual cml_main mismatch is tracked, not accepted",
-        trackedMainMismatch) ]
+        trackedMainMismatch),
+      ("const_return emitted section layout matches the original bases",
+        constReturnLayoutMatches),
+      ("dec_clock cml_main isolates a single standalone tick nop",
+        standaloneTickIsolated),
+      ("const_return residual cml_main mismatch is tracked, not accepted",
+        trackedConstReturnMismatch) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

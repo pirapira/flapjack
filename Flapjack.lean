@@ -35,6 +35,7 @@ import Flapjack.PanBst
 import Flapjack.PanBStateUpdates
 import Flapjack.PanBStateEmptyLocals
 import Flapjack.PanEmptyLocals
+import Flapjack.PanNbOp
 import Flapjack.PanSetKvar
 import Flapjack.PanLookupKvar
 import Flapjack.PanIsValidValue

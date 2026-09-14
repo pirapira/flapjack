@@ -1,4 +1,4 @@
-import Flapjack.Loop
+import Flapjack.LoopAnalysis
 
 /-!
 # Loop-to-word context lookup
@@ -49,5 +49,19 @@ def makeCtxt : Nat → List Nat → List (Nat × Nat) → List (Nat × Nat)
   | _, [], context => context
   | next, name :: rest, context =>
       makeCtxt (next + 2) rest (insertVar name next context)
+
+/-! A list-backed representation of CakeML's `num_set` for the executable
+    Loop-to-Word boundary.  The source `toNumSet_def` builds an sptree set by
+    recursively inserting each input name; `loopInsert` is the existing
+    first-occurrence list-set adapter used by the RISC-V path. -/
+def toNumSet : List Nat → List Nat
+  | [] => []
+  | name :: names => loopInsert name (toNumSet names)
+
+theorem toNumSet_nodup (names : List Nat) : (toNumSet names).Nodup := by
+  induction names with
+  | nil => simp [toNumSet]
+  | cons name names ih =>
+      exact loopInsert_nodup name (toNumSet names) ih
 
 end Flapjack.LoopToWord

@@ -43,3 +43,11 @@ val _ = print_eval "comp_exp_top_addr"
 val _ = print_eval "comp_exp_nested_op"
   ``comp_exp (insert 3 6 (LN : num num_map))
       (loopLang$Op Add [Const (1w : 8 word); Var 3])``
+
+(* toNumSet_def, loop_to_wordScript.sml:42-44 *)
+val _ = print_eval "to_num_set_empty"
+  ``toAList (toNumSet [])``
+val _ = print_eval "to_num_set_ordered"
+  ``toAList (toNumSet [1; 2; 3])``
+val _ = print_eval "to_num_set_duplicate"
+  ``toAList (toNumSet [3; 1; 3; 2])``

@@ -11,6 +11,7 @@ import Flapjack.PanHProgReturn
 import Flapjack.PanHProgRaise
 import Flapjack.PanHProgExtCall
 import Flapjack.PanHProgStoreByte
+import Flapjack.PanHProgStore32
 import Flapjack.PanHProgDec
 import Flapjack.PanSimp
 import Flapjack.PanStructs

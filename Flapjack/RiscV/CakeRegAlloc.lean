@@ -113,9 +113,10 @@ variables of a clash tree onto dense allocator node numbers `0, 1, ...` in
 first-appearance order.  Inside a `Delta` node the reads list is remapped
 before the writes list, a `Seq` node remaps its right subtree first, a
 `Branch` node remaps the left subtree, then the right subtree, then the
-optional live set, and a `Set` node remaps its fixed list.  The original
-`Set` case walks a `num_set` in ascending key order; Flapjack's clash tree
-carries the names as a list, so the caller's list order is used verbatim. -/
+optional live set, and a `Set` node remaps its fixed list in ascending
+order (the original enumerates a `num_set` via `toAList`, which is always
+ascending; Flapjack's clash tree stores a plain list, so the port sorts
+it at this boundary to keep the numbering faithful). -/
 
 /-- The bijection computed by `mk_bij`: variable-to-node and node-to-variable
     maps plus the next fresh node number. -/
@@ -138,11 +139,17 @@ def cakeListRemap : List Nat → CakeNodeBijection → CakeNodeBijection
               fromAllocator := (bijection.nextNode, name) :: bijection.fromAllocator
               nextNode := bijection.nextNode + 1 }
 
-/-- `mk_bij_aux` (`reg_allocScript.sml:1105-1117`). -/
+/-- `mk_bij_aux` (`reg_allocScript.sml:1105-1117`).  The `Set` case sorts
+    its names first: the original walks `MAP FST (toAList t)` over a
+    `num_set`, which enumerates keys in ascending order, while Flapjack's
+    clash tree carries the names as an arbitrary-order list (call sites use
+    `eraseDups` first-appearance order); sorting here keeps the node
+    numbering faithful regardless of caller order. -/
 def cakeMkBijAux : WordClashTree → CakeNodeBijection → CakeNodeBijection
   | .delta writes reads, bijection =>
       cakeListRemap writes (cakeListRemap reads bijection)
-  | .set names, bijection => cakeListRemap names bijection
+  | .set names, bijection =>
+      cakeListRemap (names.mergeSort (fun a b => a < b)) bijection
   | .branch live thenBranch elseBranch, bijection =>
       let mapped := cakeMkBijAux elseBranch (cakeMkBijAux thenBranch bijection)
       match live with

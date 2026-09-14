@@ -1,0 +1,7 @@
+try_ProgNT=choice
+  (seq
+     (seq (tok ($= RCurT) (λt. []))
+        (seq (empty [Lf (TOK (KeywordT SkipK),Locs UNKNOWNpt UNKNOWNpt)])
+           (empty []) $++) $++) (empty [])
+     (λl1 l2. [Nd (INL ProgNT,merge_list_locs (MAP ptree_loc l1)) l1]))
+  (choice (nt (INL ProgNT) I) (not (empty []) []) extract_sum) extract_sum

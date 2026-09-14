@@ -78,6 +78,91 @@ theorem riscvRegisterName_portToStack {name : Nat} (h : name < 32) :
   simp only [riscvForward_val, riscvInverse] at hval
   simpa [portToStack] using hval
 
+/-- Composing the CakeML register map with the port's hardware-to-stack reseat
+returns the port's original hardware register.  This is the byte-preservation
+fact for applying `labRegisterOfNat` once at the reseated Lab boundary: the
+one-time map selects exactly the register the raw `registerOfNat` selection
+would have chosen, so reseating plus mapping leaves emitted code unchanged. -/
+theorem labRegisterOfNat_portToStack {name : Nat} (h : name < 32) :
+    labRegisterOfNat (portToStack name) = registerOfNat name := by
+  unfold labRegisterOfNat
+  rw [riscvRegisterName_portToStack h]
+
+/-- The reseated port zero register is the CakeML zero stack register `27`,
+whose `riscv_names` image is hardware `x0`; the one-time map therefore agrees
+with the raw selection of the port zero register. -/
+theorem labRegisterOfNat_portToStack_zero :
+    labRegisterOfNat (portToStack portZeroRegister) =
+      registerOfNat portZeroRegister :=
+  labRegisterOfNat_portToStack (by decide)
+
+/-- The reseated port link register maps to hardware `x1`; the one-time map
+therefore agrees with the raw selection of the port link register. -/
+theorem labRegisterOfNat_portToStack_link :
+    labRegisterOfNat (portToStack portLinkRegister) =
+      registerOfNat portLinkRegister :=
+  labRegisterOfNat_portToStack (by decide)
+
+/-- The one-time map selects hardware `x0` for the reseated zero register, so
+literal zero operands can be written in Cake stack-number space. -/
+@[simp] theorem labRegisterOfNat_portToStack_zero_some :
+    labRegisterOfNat (portToStack portZeroRegister) = some 0 := by
+  rw [labRegisterOfNat_portToStack_zero, portZeroRegister]
+  rfl
+
+/-- The one-time map selects hardware `x1` for the reseated link register, so
+literal link operands can be written in Cake stack-number space. -/
+@[simp] theorem labRegisterOfNat_portToStack_link_some :
+    labRegisterOfNat (portToStack portLinkRegister) = some 1 := by
+  rw [labRegisterOfNat_portToStack_link, portLinkRegister]
+  rfl
+
+/-- Above the architectural range the reseat map is the identity, so the
+one-time Cake map still agrees with the raw register selection. -/
+theorem portToStack_id_of_ge_32 {name : Nat} (h : 32 ≤ name) :
+    portToStack name = name := by
+  unfold portToStack riscvInverseName
+  split <;> omega
+
+/-- Unconditional form of `labRegisterOfNat_portToStack`: reseating any port
+register number and then applying the one-time Cake map is exactly the raw
+register selection.  This is what makes `labRegisterOfNat` usable at the Lab
+boundary without moving a single emitted byte. -/
+theorem labRegisterOfNat_portToStack_all (name : Nat) :
+    labRegisterOfNat (portToStack name) = registerOfNat name := by
+  by_cases h : name < 32
+  · exact labRegisterOfNat_portToStack h
+  · have hge : 32 ≤ name := Nat.le_of_not_lt h
+    unfold labRegisterOfNat
+    rw [portToStack_id_of_ge_32 hge, riscvRegisterName_id_of_ge_32 hge]
+
+/-- Reseating the port's address scratch and then applying the one-time map
+selects the same register as the raw selection of the hardware address
+scratch. -/
+theorem labRegisterOfNat_reseat_addressScratch (config : WordStackConfig)
+    (h : config.addressScratch < 32) :
+    labRegisterOfNat (reseatWordStackConfig config).addressScratch =
+      registerOfNat config.addressScratch := by
+  simpa [reseatWordStackConfig] using labRegisterOfNat_portToStack h
+
+/-- Reseating the port's special scratch and then applying the one-time map
+selects the same register as the raw selection of the hardware special
+scratch. -/
+theorem labRegisterOfNat_reseat_specialScratch (config : WordStackConfig)
+    (h : config.specialScratch < 32) :
+    labRegisterOfNat (reseatWordStackConfig config).specialScratch =
+      registerOfNat config.specialScratch := by
+  simpa [reseatWordStackConfig] using labRegisterOfNat_portToStack h
+
+/-- Reseating the port's carry scratch and then applying the one-time map
+selects the same register as the raw selection of the hardware carry
+scratch. -/
+theorem labRegisterOfNat_reseat_carryScratch (config : WordStackConfig)
+    (h : config.carryScratch < 32) :
+    labRegisterOfNat (reseatWordStackConfig config).carryScratch =
+      registerOfNat config.carryScratch := by
+  simpa [reseatWordStackConfig] using labRegisterOfNat_portToStack h
+
 /-- Reseating the port's address scratch yields the CakeML stack register whose
 `riscv_names` image is the port's hardware address scratch. -/
 theorem riscvRegisterName_reseat_addressScratch (config : WordStackConfig)
@@ -111,32 +196,6 @@ link register `0`.  This is the faithfulness correction: the port called the
 zero register `0` and the link register `1`, whereas CakeML numbers the link
 register `0` and the zero register `27`. -/
 theorem portToStack_link : portToStack portLinkRegister = 0 := rfl
-
-/-! The Lab encoder applies `riscv_names` once.  These bridge lemmas show
-that reseating a port register before that encoder is byte-preserving. -/
-
-theorem labRegisterOfNat_portToStack {name : Nat} (h : name < 32) :
-    labRegisterOfNat (portToStack name) = registerOfNat name := by
-  unfold labRegisterOfNat
-  rw [riscvRegisterName_portToStack h]
-
-/-- Above the architectural range the reseat map is the identity, so the
-one-time Cake map still agrees with the raw register selection. -/
-theorem portToStack_id_of_ge_32 {name : Nat} (h : 32 ≤ name) :
-    portToStack name = name := by
-  unfold portToStack riscvInverseName
-  split <;> omega
-
-/-- Unconditional form of `labRegisterOfNat_portToStack`: reseating any port
-register number and then applying the one-time Cake map is exactly the raw
-register selection. -/
-theorem labRegisterOfNat_portToStack_all (name : Nat) :
-    labRegisterOfNat (portToStack name) = registerOfNat name := by
-  by_cases h : name < 32
-  · exact labRegisterOfNat_portToStack h
-  · have hge : 32 ≤ name := Nat.le_of_not_lt h
-    unfold labRegisterOfNat
-    rw [portToStack_id_of_ge_32 hge, riscvRegisterName_id_of_ge_32 hge]
 
 /-- The reseated scratch roles are pairwise distinct, so the `riscv_names`
 rebase introduces no register collision among them. -/
@@ -186,5 +245,32 @@ theorem riscvRegisterName_reseat_stackRemoveAddressScratch
     riscvRegisterName (reseatStackRemoveConfig config).addressScratch =
       config.addressScratch := by
   simpa [reseatStackRemoveConfig] using riscvRegisterName_portToStack h
+
+/-- Reseating a `StackRemoveConfig`'s store base and then applying the one-time
+map selects the same register as the raw selection of the hardware store
+base. -/
+theorem labRegisterOfNat_reseat_storeBase (config : StackRemoveConfig)
+    (h : config.storeBase < 32) :
+    labRegisterOfNat (reseatStackRemoveConfig config).storeBase =
+      registerOfNat config.storeBase := by
+  simpa [reseatStackRemoveConfig] using labRegisterOfNat_portToStack h
+
+/-- Reseating a `StackRemoveConfig`'s current heap and then applying the
+one-time map selects the same register as the raw selection of the hardware
+current heap. -/
+theorem labRegisterOfNat_reseat_currHeap (config : StackRemoveConfig)
+    (h : config.currHeap < 32) :
+    labRegisterOfNat (reseatStackRemoveConfig config).currHeap =
+      registerOfNat config.currHeap := by
+  simpa [reseatStackRemoveConfig] using labRegisterOfNat_portToStack h
+
+/-- Reseating a `StackRemoveConfig`'s address scratch and then applying the
+one-time map selects the same register as the raw selection of the hardware
+address scratch. -/
+theorem labRegisterOfNat_reseat_stackRemoveAddressScratch
+    (config : StackRemoveConfig) (h : config.addressScratch < 32) :
+    labRegisterOfNat (reseatStackRemoveConfig config).addressScratch =
+      registerOfNat config.addressScratch := by
+  simpa [reseatStackRemoveConfig] using labRegisterOfNat_portToStack h
 
 end Flapjack.RiscV

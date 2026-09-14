@@ -1,4 +1,5 @@
 import Flapjack.RiscV.CakeAllocatorCore
+import Flapjack.RiscV.WordToStack
 
 /-!
 # CakeML Word-to-Stack frame policy checks
@@ -10,6 +11,7 @@ numbering, call-stack occupancy, and bitmap word encoding.
 
 namespace Flapjack.Test.CakeFramePolicy
 
+open Flapjack.RiscV
 open Flapjack.RiscV.CakeAlloc
 
 def registerFrameExact : Bool :=
@@ -47,6 +49,22 @@ def bitmapEncodingExact : Bool :=
 
 #guard bitmapEncodingExact
 
+/- The checked `word_stack_frame_probe.out` values `bitmap_empty=8w`,
+   `bitmap_slot2=12w`, and `bitmap_slots1_2=14w` exercise the
+   location-derived `write_bitmap` mirror directly. -/
+def frameLocationConfig : WordStackConfig :=
+  { locations := [(1, .stack 1), (2, .stack 2)]
+    scratch := 31
+    stackBase := 10
+    specialScratch := 28 }
+
+def locationBitmapExact : Bool :=
+  wordStackLiveBitmapFromLocations frameLocationConfig 3 64 [] == [8] &&
+    wordStackLiveBitmapFromLocations frameLocationConfig 3 64 [2] == [12] &&
+    wordStackLiveBitmapFromLocations frameLocationConfig 3 64 [1, 2] == [14]
+
+#guard locationBitmapExact
+
 def temporaryNumberingExact : Bool :=
   limitVar 0 == 5 && limitVar 26 == 29
 
@@ -59,6 +77,8 @@ def runChecks : IO Bool := do
       ("stack_arg_count and stack_free preserve call occupancy", callFrameExact),
       ("bits_to_word and write_bitmap preserve Cake bitmap words",
         bitmapEncodingExact),
+      ("location-derived frame bitmaps match Cake write_bitmap outputs",
+        locationBitmapExact),
       ("limit_var preserves the SSA temporary numbering base",
         temporaryNumberingExact) ]
   let mut ok := true

@@ -1,0 +1,4 @@
+skip_skip=Skip
+skip_tick=Tick
+tick_skip=Seq Tick Skip
+tick_tick=Seq Tick Tick

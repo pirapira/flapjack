@@ -133,6 +133,7 @@ import Flapjack.Test.ParserKeepKwParity
 import Flapjack.Test.ParserKeepIdentParity
 import Flapjack.Test.ParserKeepAnnotParity
 import Flapjack.Test.ParserTryProgParity
+import Flapjack.Test.ParserPancakePegParity
 import Flapjack.Test.PanHHandleCallRetParity
 import Flapjack.Test.PanMrecParity
 import Flapjack.Test.PanHProgDecParity

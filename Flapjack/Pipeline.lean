@@ -41,6 +41,17 @@ def pipelineInlineNames : List (Decl α) → List FunName
   | _ :: declarations => pipelineInlineNames declarations
 termination_by declarations => sizeOf declarations
 
+/-! Faithful port of `pan_to_crep$compile_prog` from
+    `cakeml/pancake/pan_to_crepScript.sml:393-398`.
+
+    The source first builds the Crep table and then applies the inline pass to
+    exactly the names of declarations marked `inlinable`. -/
+def compileProgToCrep [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α)) :
+    List (CompiledFunction α) :=
+  crepInlineTop (pipelineInlineNames declarations)
+    (compileToCrep context declarations)
+
 def pipelineFindFunction (name : FunName) :
     List (Decl α) → Option (FunDecl α)
   | [] => none

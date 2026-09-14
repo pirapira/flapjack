@@ -45,10 +45,11 @@ run_probe() {
   local first_label="$3"
   local last_label="$4"
   local source="$5"
+  local workdir="${6:-$cake_dir/pancake}"
   local probe="$probe_dir/$probe_name"
   local output="$probe_dir/$output_name"
   if probe_needs_refresh "$output" "$probe" "$source"; then
-    (cd "$cake_dir/pancake" && \
+    (cd "$workdir" && \
       "$hol_dir/bin/hol" run "$probe") >"$tmp"
     sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" \
       | sed '/^<<HOL message:/,/^  pattern completion.*>>$/d' > "$output"
@@ -63,7 +64,8 @@ run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
 # The get_stack_only probe observes the allocator driver's stack-only
 # analysis over wordLang programs (backend word_alloc).
 run_probe get_stack_only_probeScript.sml get_stack_only_probe.out \
-  skip assign_leaf "$cake_dir/compiler/backend/word_allocScript.sml"
+  skip assign_leaf "$cake_dir/compiler/backend/word_allocScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_mem_load_probeScript.sml pan_mem_load_probe.out \
   one_hit named_suffix_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \
@@ -114,7 +116,13 @@ run_probe word_stack_frame_probeScript.sml word_stack_frame_probe.out \
 run_probe pan_lang_free_var_ids_probeScript.sml pan_lang_free_var_ids_probe.out \
   empty dec_call "$cake_dir/pancake/panLangScript.sml"
 run_probe get_forced_probeScript.sml get_forced_probe.out \
-  add_carry nested "$cake_dir/compiler/backend/word_allocScript.sml"
+  add_carry nested "$cake_dir/compiler/backend/word_allocScript.sml" \
+  "$cake_dir/compiler/backend"
+# The mk_bij probe observes the clash-tree-to-node bijection used to number
+# allocator nodes (reads before writes, seq right-first, branch live sets).
+run_probe mk_bij_probeScript.sml mk_bij_probe.out \
+  delta_basic composite "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

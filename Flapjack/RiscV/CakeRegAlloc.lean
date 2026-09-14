@@ -105,4 +105,54 @@ def cakeGetForcedAux {α : Type u} :
 def cakeGetForced {α : Type u} (program : WordProg α) : List (Nat × Nat) :=
   cakeGetForcedAux program []
 
+/-! ## Clash-tree to allocator-node bijection
+
+`mk_bij` / `list_remap` / `mk_bij_aux`
+(`cakeml/compiler/backend/reg_alloc/reg_allocScript.sml:1096-1130`) map the
+variables of a clash tree onto dense allocator node numbers `0, 1, ...` in
+first-appearance order.  Inside a `Delta` node the reads list is remapped
+before the writes list, a `Seq` node remaps its right subtree first, a
+`Branch` node remaps the left subtree, then the right subtree, then the
+optional live set, and a `Set` node remaps its fixed list.  The original
+`Set` case walks a `num_set` in ascending key order; Flapjack's clash tree
+carries the names as a list, so the caller's list order is used verbatim. -/
+
+/-- The bijection computed by `mk_bij`: variable-to-node and node-to-variable
+    maps plus the next fresh node number. -/
+structure CakeNodeBijection where
+  toAllocator : NatInfoMap Nat
+  fromAllocator : NatInfoMap Nat
+  nextNode : Nat
+  deriving Repr
+
+/-- `list_remap` (`reg_allocScript.sml:1096-1103`): assign fresh allocator
+    node numbers to the not-yet-mapped names of a list, left to right. -/
+def cakeListRemap : List Nat → CakeNodeBijection → CakeNodeBijection
+  | [], bijection => bijection
+  | name :: names, bijection =>
+      match lookupNatInfo name bijection.toAllocator with
+      | some _ => cakeListRemap names bijection
+      | none =>
+          cakeListRemap names
+            { toAllocator := (name, bijection.nextNode) :: bijection.toAllocator
+              fromAllocator := (bijection.nextNode, name) :: bijection.fromAllocator
+              nextNode := bijection.nextNode + 1 }
+
+/-- `mk_bij_aux` (`reg_allocScript.sml:1105-1117`). -/
+def cakeMkBijAux : WordClashTree → CakeNodeBijection → CakeNodeBijection
+  | .delta writes reads, bijection =>
+      cakeListRemap writes (cakeListRemap reads bijection)
+  | .set names, bijection => cakeListRemap names bijection
+  | .branch live thenBranch elseBranch, bijection =>
+      let mapped := cakeMkBijAux elseBranch (cakeMkBijAux thenBranch bijection)
+      match live with
+      | none => mapped
+      | some names => cakeListRemap names mapped
+  | .seq first second, bijection => cakeMkBijAux first (cakeMkBijAux second bijection)
+
+/-- `mk_bij` (`reg_allocScript.sml:1119-1127`): the node bijection for a
+    whole clash tree, starting from the empty bijection at node zero. -/
+def cakeMkBij (tree : WordClashTree) : CakeNodeBijection :=
+  cakeMkBijAux tree { toAllocator := [], fromAllocator := [], nextNode := 0 }
+
 end Flapjack.RiscV.CakeRegAlloc

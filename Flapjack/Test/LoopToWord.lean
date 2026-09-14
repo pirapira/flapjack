@@ -56,6 +56,10 @@ def originalCompLoop : WordProg Nat :=
 def originalCompBreak : WordProg Nat := .break 2
 def originalCompFail : WordProg Nat := .skip
 def originalCompSetGlobal : WordProg Nat := .set (.temp 9) (.const 7)
+def originalCompFuncSkip : WordProg Nat := .skip
+def originalCompFuncAssign : WordProg Nat := .assign 4 (.const 3)
+def originalCompFuncSeqAssign : WordProg Nat :=
+  .seq (.assign 4 (.const 3)) (.assign 6 (.var 4))
 
 def sameRegImm : RegImm Nat → RegImm Nat → Bool
   | .imm left, .imm right => left == right
@@ -180,6 +184,13 @@ example : sameNatSet (mkNewCutset [(3, 6)] [3, 1, 3, 2])
     (.fail : LoopProg Nat)) originalCompFail == true
 #guard sameWordProg (loopToWordProg ({ vars := [] } : WordContext)
     (.setGlobal 9 (.const 7) : LoopProg Nat)) originalCompSetGlobal == true
+#guard sameWordProg (loopToWordCompFunc 7 [10] (.skip : LoopProg Nat))
+    originalCompFuncSkip == true
+#guard sameWordProg (loopToWordCompFunc 7 [10]
+    (.assign 11 (.const 3) : LoopProg Nat)) originalCompFuncAssign == true
+#guard sameWordProg (loopToWordCompFunc 7 [10]
+    (.seq (.assign 11 (.const 3)) (.assign 12 (.var 11)) : LoopProg Nat))
+    originalCompFuncSeqAssign == true
 
 def runChecks : IO Bool := do
   let mut ok := true
@@ -260,8 +271,18 @@ def runChecks : IO Bool := do
   if !sameWordProg (loopToWordProg ({ vars := [] } : WordContext)
       (.setGlobal 9 (.const 7) : LoopProg Nat)) originalCompSetGlobal then
     IO.println "FAIL LoopToWord.comp set_global"; ok := false
+  if !sameWordProg (loopToWordCompFunc 7 [10] (.skip : LoopProg Nat))
+      originalCompFuncSkip then
+    IO.println "FAIL LoopToWord.comp_func skip"; ok := false
+  if !sameWordProg (loopToWordCompFunc 7 [10]
+      (.assign 11 (.const 3) : LoopProg Nat)) originalCompFuncAssign then
+    IO.println "FAIL LoopToWord.comp_func assign"; ok := false
+  if !sameWordProg (loopToWordCompFunc 7 [10]
+      (.seq (.assign 11 (.const 3)) (.assign 12 (.var 11)) : LoopProg Nat))
+      originalCompFuncSeqAssign then
+    IO.println "FAIL LoopToWord.comp_func sequence"; ok := false
   if ok then
-    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set/from_num_set/mk_new_cutset/comp parity"
+    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set/from_num_set/mk_new_cutset/comp/comp_func parity"
   pure ok
 
 end Flapjack.Test.LoopToWord

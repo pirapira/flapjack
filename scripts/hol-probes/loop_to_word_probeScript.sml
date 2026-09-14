@@ -85,3 +85,13 @@ val _ = print_eval "comp_fail"
 val _ = print_eval "comp_set_global"
   ``comp (LN : num num_map)
       (loopLang$SetGlobal (9w : 5 word) (Const (7w : 8 word))) (0,0)``
+
+(* comp_func_def, loop_to_wordScript.sml:164-169 *)
+val _ = print_eval "comp_func_skip"
+  ``comp_func 7 [10] loopLang$Skip``
+val _ = print_eval "comp_func_assign"
+  ``comp_func 7 [10] (loopLang$Assign 11 (Const (3w : 8 word)))``
+val _ = print_eval "comp_func_seq_assign"
+  ``comp_func 7 [10]
+      (loopLang$Seq (loopLang$Assign 11 (Const (3w : 8 word)))
+        (loopLang$Assign 12 (Var 11)))``

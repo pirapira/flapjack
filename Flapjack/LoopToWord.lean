@@ -1,4 +1,4 @@
-import Flapjack.LoopAnalysis
+import Flapjack.Word
 
 /-!
 # Loop-to-word context lookup
@@ -84,5 +84,22 @@ def mkNewCutset (context : List (Nat × Nat)) (live : List Nat) : List Nat :=
 theorem mkNewCutset_nodup (context : List (Nat × Nat)) (live : List Nat) :
     (mkNewCutset context live).Nodup := by
   exact loopInsert_nodup 0 _ (toNumSet_nodup _)
+
+/-! List-backed `difference` for the source's finite sets.  The left-hand
+    order is retained because it is the order exposed by `fromNumSet` at the
+    comp_func boundary. -/
+def differenceNumSet (names excluded : List Nat) : List Nat :=
+  names.filter (fun name => name ∉ excluded)
+
+/-! Port of `comp_func_def` from `loop_to_wordScript.sml:164-169`.
+    `loopAccVars` supplies the source `acc_vars` set, parameters are removed,
+    `makeCtxt` assigns the consecutive even registers, and the existing
+    `loopToWordProg` supplies the first component of `comp`. -/
+def loopToWordCompFunc [OfNat α 1] (_name : Nat) (params : List Nat)
+    (body : LoopProg α) : WordProg α :=
+  let assigned := loopAccVars body []
+  let variables := fromNumSet (differenceNumSet assigned (toNumSet params))
+  let context := makeCtxt 2 (params ++ variables) []
+  loopToWordProg { vars := context } body
 
 end Flapjack.LoopToWord

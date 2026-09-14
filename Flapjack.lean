@@ -24,14 +24,12 @@ import Flapjack.CrepPrimop
 import Flapjack.CrepExitLoop
 import Flapjack.PanBst
 import Flapjack.PanEmptyLocals
-import Flapjack.CrepPrimop
 import Flapjack.PanSetKvar
 import Flapjack.PanLookupKvar
 import Flapjack.PanIsValidValue
 import Flapjack.PanEval
 import Flapjack.PanHHandleCallRet
 import Flapjack.PanMrec
-import Flapjack.PanBst
 import Flapjack.PanHProgDec
 import Flapjack.PanHProgSeq
 import Flapjack.PanHProgCond

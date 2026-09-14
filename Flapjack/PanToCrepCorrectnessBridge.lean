@@ -232,6 +232,48 @@ theorem panValuePcFinalFfiResultRel_of_clocked_leaf
     rfl
   · simp [panValuePcResultRel, hstate, hevent]
 
+/-! The zero-clock Tick branch supplies the corresponding Timeout lift.  The
+    source correctness equation is used directly, so local clearing and the
+    remaining clock are not abstracted away before entering the Pc boundary;
+    other clocked evaluator branches remain explicit obligations. -/
+theorem panValuePcTimeoutResultRel_of_clocked_tick_zero
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (structs : StructContext) (pcContext : CompileContext α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (functions : List (FunName × List VarName × Prog α))
+    (baseAddress topAddress bytesInWord : α) (fuel : Nat)
+    (locals globals : VarName → Option (PanValue α))
+    (memory : α → Option (PanValue α)) (ffi : FfiState σ)
+    (targetState : CrepState α)
+    (hstate : panValueCrepStateRel structs pcContext (fun _ => none) globals
+      memory targetState) :
+    evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi 0
+      .tick =
+      some (.timeout (fun _ => none) globals memory ffi, 0) ∧
+    (evalPanValueFfiClockProg context primitive handler structs functions
+      baseAddress topAddress bytesInWord (fuel + 1) locals globals memory ffi 0
+      .tick).map panValueFfiClockResultProjection =
+      some (.timeout (fun _ => none) globals memory ffi 0) ∧
+    panValuePcResultRel structs pcContext exceptionRel exceptionCode globalsLookup
+      (.timeout (fun _ => none) globals memory)
+      (.timeout targetState) := by
+  have hclock := evalPanValueFfiClockProg_tick_zero context primitive handler
+    structs functions baseAddress topAddress bytesInWord fuel locals globals memory
+    ffi
+  refine ⟨hclock, ?_, ?_⟩
+  · rw [hclock]
+    rfl
+  · simp [panValuePcResultRel, hstate]
+
 /-! Concrete one-word instance of the HOL `globals_lookup` observation.  The
     global-aware raise relation already proves that address zero contains the
     flattened payload; this theorem supplies the exact Pc exception clause,

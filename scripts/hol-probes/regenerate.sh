@@ -93,6 +93,8 @@ run_probe pan_lang_decl_predicates_probeScript.sml pan_lang_decl_predicates_prob
   is_decl_decl is_decl_exception is_exn_decl_exception is_exn_decl_decl \
   is_name_name is_name_decl size_of_eids_empty size_of_eids_mixed \
   "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_var_exp_probeScript.sml pan_lang_var_exp_probe.out \
+  local_var global_var nested nested_global "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

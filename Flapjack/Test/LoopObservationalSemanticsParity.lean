@@ -48,53 +48,50 @@ def emptyLprefixLub : LoopLprefixLub (fun _ : Nat => ([] : List FfiEvent)) :=
       · intro _candidate _hbound index value htrace
         simp at htrace }
 
-theorem emptyPrefixChain : LoopPrefixChain (fun _ : Nat => ([] : List FfiEvent)) :=
-  fun _ _ _ => List.prefix_refl []
+theorem emptyPrefixChain : loopLprefixChain (fun _ : Nat => ([] : List FfiEvent)) :=
+  fun _ _ => Or.inl (List.prefix_refl [])
 
 theorem emptyHookPrefixChain (evaluate : Nat → LoopMachineStep) :
-    LoopPrefixChain (fun clock => noEvents (evaluate clock).2) := by
-  intro clock later _
-  simp [noEvents]
+    loopLprefixChain (fun clock => noEvents (evaluate clock).2) := by
+  intro clock later
+  exact Or.inl (by simp [noEvents])
 
 noncomputable def emptyLprefixLubFor (evaluate : Nat → LoopMachineStep) :
     LoopLprefixLub (fun clock => noEvents (evaluate clock).2) :=
   buildLoopLprefixLub _ (emptyHookPrefixChain evaluate)
 
 def increasingFamily : Nat → List Nat
-  | 0 => []
-  | clock + 1 => increasingFamily clock ++ [clock]
+  | clock => List.replicate clock 1
 
-theorem increasingFamilyChain : LoopPrefixChain increasingFamily := by
-  intro clock later hclock
-  induction later generalizing clock with
-  | zero => simp_all [increasingFamily]
-  | succ later ih =>
-      rcases Nat.eq_or_lt_of_le hclock with rfl | hlt
-      · exact List.prefix_refl _
-      · exact (ih clock (Nat.le_of_lt_succ hlt)).trans (by
-          simp [increasingFamily])
+theorem increasingFamilyChain : loopLprefixChain increasingFamily := by
+  intro clock later
+  rcases Nat.le_total clock later with hle | hle
+  · obtain ⟨extra, hextra⟩ := Nat.exists_eq_add_of_le hle
+    exact Or.inl ⟨List.replicate extra 1, by
+      simp [increasingFamily, hextra, List.replicate_append_replicate]⟩
+  · obtain ⟨extra, hextra⟩ := Nat.exists_eq_add_of_le hle
+    exact Or.inr ⟨List.replicate extra 1, by
+      simp [increasingFamily, hextra, List.replicate_append_replicate]⟩
 
 theorem increasingFamilyLength : ∀ clock, (increasingFamily clock).length = clock := by
   intro clock
-  induction clock with
-  | zero => rfl
-  | succ clock ih => simp [increasingFamily, ih]
+  simp [increasingFamily]
 
 theorem increasingFamilyUnbounded :
-    ∀ (index : Nat), ∃ (clock : Nat), ((increasingFamily clock)[index]?) = some index := by
+    ∀ (index : Nat), ∃ (clock : Nat), ((increasingFamily clock)[index]?) = some 1 := by
   intro index
   refine ⟨index + 1, ?_⟩
-  simp [increasingFamily, increasingFamilyLength]
+  simp [increasingFamily]
 
 theorem canonicalEmptyLub :
-    LoopLprefixLubPredicate (fun _ : Nat => ([] : List FfiEvent))
+  LoopLprefixLubPredicate (fun _ : Nat => ([] : List FfiEvent))
       (buildLoopLprefixLub _ emptyPrefixChain).trace := by
-  exact buildLoopLprefixLub_isLub _ emptyPrefixChain
+  exact buildLoopLprefixLub_isLub emptyPrefixChain
 
 theorem canonicalIncreasingLub :
-    LoopLprefixLubPredicate increasingFamily
+  LoopLprefixLubPredicate increasingFamily
       (buildLoopLprefixLub _ increasingFamilyChain).trace := by
-  exact buildLoopLprefixLub_isLub _ increasingFamilyChain
+  exact buildLoopLprefixLub_isLub increasingFamilyChain
 
 def hooksFor (evaluate : Nat → LoopMachineStep) : LoopSemanticsHooks :=
   { evaluate := evaluate

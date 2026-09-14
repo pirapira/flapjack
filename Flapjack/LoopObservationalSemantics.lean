@@ -42,61 +42,76 @@ structure LoopLprefixLub (family : Nat → List α) where
   trace : LoopLList α
   isLub : LoopLprefixLubPredicate family trace
 
-def LoopPrefixChain (family : Nat → List α) : Prop :=
-  ∀ clock later, clock ≤ later → family clock <+: family later
+def loopLprefixChain (family : Nat → List α) : Prop :=
+  ∀ left right, family left <+: family right ∨ family right <+: family left
 
-theorem loopPrefixValue_unique {family : Nat → List α}
-    (hchain : LoopPrefixChain family) {clock later index : Nat} {value laterValue : α}
-    (hclock : (family clock)[index]? = some value)
-    (hlater : (family later)[index]? = some laterValue) :
-    value = laterValue := by
-  rcases Nat.le_total clock later with hle | hle
-  · have hindex := (List.getElem?_eq_some_iff.mp hclock).choose
-    have hsmall := (List.getElem?_eq_some_iff.mp hclock).choose_spec
-    have hprefix := hchain clock later hle
-    have heq := hprefix.getElem hindex
-    have hlater' := (List.getElem?_eq_some_iff.mp hlater).choose_spec
-    simpa [hsmall, hlater'] using heq
-  · have hindex := (List.getElem?_eq_some_iff.mp hlater).choose
-    have hlater' := (List.getElem?_eq_some_iff.mp hlater).choose_spec
-    have hprefix := hchain later clock hle
-    have heq := hprefix.getElem hindex
-    have hsmall := (List.getElem?_eq_some_iff.mp hclock).choose_spec
-    simpa [hlater', hsmall] using heq.symm
+def loopFamilyHasValue (family : Nat → List α) (index : Nat) : Prop :=
+  ∃ clock value, (family clock)[index]? = some value
 
-/-- The `lprefix_chain_nth`/`LUNFOLD` construction from the HOL reference,
-represented as a lazy list of optional indexed values. -/
-noncomputable def loopPrefixNth (family : Nat → List α) (index : Nat) : Option α :=
-  by
-    classical
-    exact if h : ∃ value clock, (family clock)[index]? = some value then
-      some (Classical.choose h)
-    else none
+noncomputable def loopFamilyNth (family : Nat → List α) (index : Nat) : Option α := by
+  classical
+  exact if h : loopFamilyHasValue family index then
+    let clock := Classical.choose h
+    let values := Classical.choose_spec h
+    some (Classical.choose values)
+  else none
+
+theorem listPrefix_getElem?_eq {xs ys : List α} (hprefix : xs <+: ys)
+    {index : Nat} {x y : α} (hxs : xs[index]? = some x)
+    (hys : ys[index]? = some y) : x = y := by
+  obtain ⟨hxi, hxeq⟩ := List.getElem?_eq_some_iff.mp hxs
+  obtain ⟨hyi, hyeq⟩ := List.getElem?_eq_some_iff.mp hys
+  calc
+    x = xs[index] := hxeq.symm
+    _ = ys[index] := hprefix.getElem hxi
+    _ = y := hyeq
+
+theorem loopFamilyNth_eq {family : Nat → List α}
+    (hchain : loopLprefixChain family) {clock index : Nat} {value : α}
+    (hvalue : (family clock)[index]? = some value) :
+    loopFamilyNth family index = some value := by
+  have hhas : loopFamilyHasValue family index := ⟨clock, value, hvalue⟩
+  unfold loopFamilyNth
+  rw [dif_pos hhas]
+  let chosenClock := Classical.choose hhas
+  let chosenValues := Classical.choose_spec hhas
+  let chosenValue := Classical.choose chosenValues
+  have hchosen : (family chosenClock)[index]? = some chosenValue :=
+    Classical.choose_spec chosenValues
+  have hprefix := hchain clock chosenClock
+  have heq : chosenValue = value := by
+    cases hprefix with
+    | inl hprefix =>
+        exact (listPrefix_getElem?_eq hprefix (index := index) hvalue hchosen).symm
+    | inr hprefix =>
+        exact listPrefix_getElem?_eq hprefix (index := index) hchosen hvalue
+  simp [chosenValue, heq]
+
+theorem loopFamilyNth_none {family : Nat → List α} {index : Nat}
+    (hno : ¬ loopFamilyHasValue family index) :
+    loopFamilyNth family index = none := by
+  simp [loopFamilyNth, hno]
 
 noncomputable def buildLoopLprefixLub (family : Nat → List α)
-    (hchain : LoopPrefixChain family) : LoopLprefixLub family :=
-  by
-    classical
-    refine { trace := loopPrefixNth family, isLub := ?_ }
-    constructor
-    · intro clock index value hvalue
-      by_cases h : ∃ value' clock', (family clock')[index]? = some value'
-      · simp only [loopPrefixNth, dif_pos h]
-        exact congrArg some (loopPrefixValue_unique hchain
-          (Classical.choose_spec (Classical.choose_spec h)) hvalue)
-      · exact (h ⟨value, clock, hvalue⟩).elim
-    · intro candidate hbound index value htrace
-      by_cases h : ∃ value' clock', (family clock')[index]? = some value'
-      · simp only [loopPrefixNth, dif_pos h] at htrace
-        have hchosen := Classical.choose_spec (Classical.choose_spec h)
-        have hc := hbound _ index (Classical.choose h) hchosen
-        have hv : Classical.choose h = value := Option.some.inj htrace
-        simpa [hv] using hc
-      · simp only [loopPrefixNth, dif_neg h] at htrace
-        cases htrace
+    (hchain : loopLprefixChain family) : LoopLprefixLub family :=
+  { trace := loopFamilyNth family
+    isLub := by
+      constructor
+      · intro clock index value hvalue
+        exact loopFamilyNth_eq hchain hvalue
+      · intro candidate hbound index value htrace
+        have hhas : loopFamilyHasValue family index := by
+          by_cases hhas : loopFamilyHasValue family index
+          · exact hhas
+          · rw [loopFamilyNth_none hhas] at htrace
+            cases htrace
+        obtain ⟨clock, value', hvalue'⟩ := hhas
+        have hfamily := loopFamilyNth_eq hchain hvalue'
+        have heq : value = value' := Option.some.inj (htrace.symm.trans hfamily)
+        simpa [heq] using hbound clock index value' hvalue' }
 
-theorem buildLoopLprefixLub_isLub (family : Nat → List α)
-    (hchain : LoopPrefixChain family) :
+theorem buildLoopLprefixLub_isLub {family : Nat → List α}
+    (hchain : loopLprefixChain family) :
     LoopLprefixLubPredicate family (buildLoopLprefixLub family hchain).trace :=
   (buildLoopLprefixLub family hchain).isLub
 
@@ -159,12 +174,12 @@ noncomputable def loopSemanticsWithLub (hooks : LoopSemanticsHooks)
 /-! Source-facing wrapper: `semantics_def` constructs the divergence result
 with `build_lprefix_lub`; callers provide only the prefix-chain proof. -/
 noncomputable def loopSemantics (hooks : LoopSemanticsHooks)
-    (divergenceChain : LoopPrefixChain
+    (divergenceChain : loopLprefixChain
       (fun clock => hooks.ioEvents (hooks.evaluate clock).2)) : LoopBehaviour :=
   loopSemanticsWithLub hooks (buildLoopLprefixLub _ divergenceChain)
 
 noncomputable def loopSemanticsOfPrefixChain (hooks : LoopSemanticsHooks)
-    (hchain : LoopPrefixChain
+    (hchain : loopLprefixChain
       (fun clock => hooks.ioEvents (hooks.evaluate clock).2)) : LoopBehaviour :=
   loopSemantics hooks hchain
 

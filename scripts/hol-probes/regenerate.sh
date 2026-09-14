@@ -243,6 +243,8 @@ run_probe crep_load_globals_probeScript.sml crep_load_globals_probe.out \
   empty three "$cake_dir/pancake/crepLangScript.sml"
 run_probe crep_assign_ret_probeScript.sml crep_assign_ret_probe.out \
   empty two "$cake_dir/pancake/crepLangScript.sml"
+run_probe crep_var_cexp_probeScript.sml crep_var_cexp_probe.out \
+  const base_top "$cake_dir/pancake/crepLangScript.sml"
 run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \
   exit_loop_break exit_loop_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

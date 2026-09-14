@@ -85,6 +85,9 @@ run_probe pan_sem_pan_primop_probeScript.sml pan_sem_pan_primop_probe.out \
 # The set_var probe checks local override, unrelated locals, globals, and clock.
 run_probe pan_sem_set_var_probeScript.sml pan_sem_set_var_probe.out \
   set_var_new set_var_clock "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_dec_clock_probeScript.sml pan_dec_clock_probe.out \
+  pan_dec_clock_five pan_dec_clock_zero \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
   return_41 return_if_13 "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_add_probeScript.sml pan_sem_e2e_add_probe.out \

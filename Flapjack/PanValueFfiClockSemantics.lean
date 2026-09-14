@@ -16,6 +16,13 @@ changing the established control-result API used by the compiler proofs.
 
 namespace Flapjack
 
+/-! Exact clock projection of Pancake's `dec_clock_def`
+    (`cakeml/pancake/semantics/panSemScript.sml:441-443`).  The structured
+    clock evaluator carries the state components separately, so this helper
+    is the state-update equation's clock component. -/
+abbrev decPanClock (clock : Nat) : Nat :=
+  clock - 1
+
 inductive PanValueFfiClockOutcome (α : Type u) (σ : Type v) where
   | control (result : PanValueFfiControlResult α σ)
   | timeout (locals globals : VarName → Option (PanValue α))
@@ -99,7 +106,7 @@ mutual
         else
           let (outcome, calleeClock) ← evalPanValueFfiClockProg context primitive handler
             structs functions baseAddress topAddress bytesInWord fuel calleeLocals
-            globals memory ffi (clock - 1) body
+            globals memory ffi (decPanClock clock) body
             (memoryAccess := memoryAccess) (contracts := contracts)
             (memoryHandler := memoryHandler)
           match outcome with
@@ -240,7 +247,8 @@ mutual
         else
           let (bodyOutcome, bodyClock) ← evalPanValueFfiClockProg context primitive handler
             structs functions baseAddress topAddress bytesInWord fuel locals globals memory ffi
-            (clock - 1) body (memoryAccess := memoryAccess) (contracts := contracts)
+            (decPanClock clock) body (memoryAccess := memoryAccess)
+            (contracts := contracts)
             (memoryHandler := memoryHandler)
           match bodyOutcome with
           | .control (.normal nextLocals nextGlobals nextMemory nextFfi) |
@@ -257,7 +265,7 @@ mutual
         if clock = 0 then
           pure (panValueFfiClockTimeout globals memory ffi clock)
         else
-          pure (.control (.normal locals globals memory ffi), clock - 1)
+          pure (.control (.normal locals globals memory ffi), decPanClock clock)
     | _fuel + 1, locals, globals, memory, ffi, clock, program, memoryAccess, contracts,
         memoryHandler =>
         evalPanValueFfiClockLeaf context primitive handler structs functions

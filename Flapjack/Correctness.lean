@@ -800,9 +800,9 @@ theorem compilePanToLoop_dec_return_const_correct
         .seq .skip
           (.seq (.assign (compileContext.maxVar + 1) (.const value))
             (.seq
-              (.seq (.assign (loopContext.maxVar + 1 + 1)
-                (.var (compileContext.maxVar + 1))) .skip)
-              (.return [loopContext.maxVar + 1 + 1]))) := by
+              (.assign (loopContext.maxVar + 1 + 1)
+                (.var (compileContext.maxVar + 1)))
+              (.seq (.return [loopContext.maxVar + 1 + 1]) .skip))) := by
     simp [loopCompileProg, loopCompileExp, loopCompileExps,
       loopCompileExp.loopCompileExps, loopNestedSeq, loopTempNames,
       loopAssignTemps, maxVar_agrees]
@@ -842,9 +842,9 @@ theorem compilePanToLoop_dec_return_add_const_correct
             (.assign (compileContext.maxVar + 1)
               (.op .add [.const left, .const right]))
             (.seq
-              (.seq (.assign (loopContext.maxVar + 1 + 1)
-                (.var (compileContext.maxVar + 1))) .skip)
-              (.return [loopContext.maxVar + 1 + 1]))) := by
+              (.assign (loopContext.maxVar + 1 + 1)
+                (.var (compileContext.maxVar + 1)))
+              (.seq (.return [loopContext.maxVar + 1 + 1]) .skip))) := by
     simp [loopCompileProg, loopCompileExp, loopCompileExps,
       loopCompileExp.loopCompileExps, loopNestedSeq, loopTempNames,
       loopAssignTemps, maxVar_agrees]

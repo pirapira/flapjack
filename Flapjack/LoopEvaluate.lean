@@ -3,6 +3,7 @@ import Flapjack.LoopCallEnv
 import Flapjack.LoopFindCode
 import Flapjack.LoopGetVarImm
 import Flapjack.LoopSetVars
+import Flapjack.LoopArith
 
 /-!
 # Pancake `loopSem.evaluate`
@@ -76,6 +77,24 @@ def loopSetGlobalMachine (state : LoopMachineState LoopWordLoc)
       { state with globals := fun current =>
           if current == address then some value else state.globals current }
   | .loc _ _ => state
+
+/-! Bridge the source-shaped `loop_arith` port into the exact machine-state
+    evaluator.  Non-word locals remain untouched, while every word local
+    returned by `loopArith` is written back as a `Word`; a missing operand
+    therefore still produces the source `NONE` result. -/
+def loopArithMachine (width : Nat) (state : LoopMachineState LoopWordLoc)
+    (operation : LoopArith) : Option (LoopMachineState LoopWordLoc) :=
+  let locals : Nat → Option Nat := fun name =>
+    match state.locals name with
+    | some (.word value) => some value
+    | some (.loc _ _) | none => none
+  match loopArith width operation locals with
+  | none => none
+  | some updated =>
+      some { state with locals := (fun name =>
+        match updated name with
+        | some value => some (.word value)
+        | none => state.locals name) }
 
 mutual
   def evaluateLoop : Nat → LoopEvaluateHooks → LoopProg LoopWordLoc →

@@ -1,0 +1,7 @@
+assign_valid=T
+
+assign_invalid_destination=T
+
+assign_invalid_global=T
+
+assign_failed_eval=T

@@ -305,6 +305,33 @@ def nestedExpressionAccepted : Bool :=
   | some image => image.sections.length == 5 && image.warnings.isEmpty
   | none => false
 
+/-! The runtime-image guard above exercises the public source path.  Keep a
+    smaller Word-to-Stack guard beside it as well: this is a spilled
+    destination, and the expression needs the dead allocator registers that
+    Cake's flattened Loop temporaries make available after the four reserved
+    scratch registers.  This prevents a future refactor from accidentally
+    restoring the old fixed-pool boundary while the end-to-end fixture still
+    happens to compile through a different path. -/
+def nestedExpressionWordConfig : WordStackConfig :=
+  { locations := [(0, .register 2), (1, .register 3), (2, .register 4),
+      (3, .register 5), (4, .register 6), (5, .stack 0)]
+    scratch := 31
+    stackBase := 1 }
+
+def nestedExpressionWord : WordExp Nat :=
+  .shift .lsr
+    (.op .add [.var 0,
+      .op .add [.var 1,
+        .op .add [.var 2,
+          .op .add [.var 3, .var 4]]]])
+    (.const 1)
+
+def nestedExpressionWordLoweringAccepted : Bool :=
+  match wordStackCompileExpToPhysicalNat nestedExpressionWordConfig 5
+      nestedExpressionWord with
+  | some _ => true
+  | none => false
+
 /-- The differential-fuzzing `dup-global` fixture (GitHub issue #962 smoke,
     bead `flapjack-pxn.8.5.14.4`).  The original CakeML accepts a duplicate
     top-level global with the warning `variable g is redeclared in top-level
@@ -529,6 +556,7 @@ def frameOccupancyP9GapTracked : Bool :=
 
 #guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
+#guard nestedExpressionWordLoweringAccepted
 #guard ffiNamesMatch
 #guard ffiMinStubEmitted
 #guard ffiOrderStubsEmitted
@@ -573,6 +601,8 @@ def runChecks : IO Bool := do
         entryOrderOrderingMismatch),
       ("nested_expression fixture accepted by the runtime-image entry point",
         nestedExpressionAccepted),
+      ("nested_expression Word-to-Stack lowering uses the extended temp pool",
+        nestedExpressionWordLoweringAccepted),
       ("dup_global fixture accepted with a redeclaration warning",
         dupGlobalAcceptedWithWarning),
       ("nomain_global fixture accepted with a synthesized default main",

@@ -30,6 +30,9 @@ import Flapjack.Test.PanGlobalsCompileTopForStartParity
 import Flapjack.Test.CrepeDestConstParity
 import Flapjack.Test.CrepeDest2ExpParity
 import Flapjack.Test.CrepeMulConstParity
+import Flapjack.Test.CrepeSimpExpParity
+import Flapjack.Test.CrepeSimpProgParity
+import Flapjack.Test.PanStructsAfindiParity
 import Flapjack.Test.PanResVarParity
 import Flapjack.Test.PanPrimopParity
 import Flapjack.Test.PanSetVarParity

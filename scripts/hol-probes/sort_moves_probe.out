@@ -1,0 +1,5 @@
+sm_ties_two=[(1,5,9); (1,13,5)]
+sm_ties_three=[(3,7,8); (3,1,2); (1,9,9)]
+sm_desc=[(3,5,9); (2,7,8); (1,13,5)]
+ra_moves_stemp=M_success ⦕ 3 ↦ 4; 9 ↦ 0; 13 ↦ 0 ⦖
+ra_moves_stemp_hi=M_success ⦕ 3 ↦ 4; 9 ↦ 0; 13 ↦ 0 ⦖

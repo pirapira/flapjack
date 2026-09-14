@@ -352,16 +352,6 @@ def cakeSplitDegree (state : CakeRaState) (d k v : Nat) : Bool :=
     ((cakeMapLookup state.degrees v).getD 0 < k) && cakeIsNotCoalesced state v
   else true
 
-/-- `sort_moves` (`reg_allocScript.sml:343-346`): moves ordered by descending
-    priority; `smerge` (`:348-358`) keeps the earlier list on ties. -/
-def cakeSortMoves (moves : List (Nat × (Nat × Nat))) :
-    List (Nat × (Nat × Nat)) :=
-  moves.mergeSort (fun a b => a.1 > b.1)
-
-/-- `move_related_sub`: a node flagged by `reset_move_related`. -/
-def cakeMoveRelatedSub (state : CakeRaState) (v : Nat) : Bool :=
-  (cakeMapLookup state.moveRelated v).getD false
-
 /-- `st_ex_filter`/`st_ex_partition` accumulate by prepending, so the
     results are reversed (`reg_allocScript.sml:158-180`). -/
 def filterReversed {α : Type u} (p : α → Bool) (l : List α) : List α :=
@@ -370,6 +360,35 @@ def filterReversed {α : Type u} (p : α → Bool) (l : List α) : List α :=
 def partitionReversed {α : Type u} (p : α → Bool) (l : List α) : List α × List α :=
   let (tt, ff) := l.partition p
   (tt.reverse, ff.reverse)
+
+/-- `QSORT` (`sortingScript.sml:747-752`) as observed on the original's
+    `sort_moves` outputs: an element goes to the left bucket when it does
+    not sort strictly after the pivot, and the partition buckets are
+    prepended and therefore reversed.  The fuel is the input length, which
+    bounds the recursion depth because each partition is strictly shorter
+    than its input. -/
+def cakeQSortAux {α : Type u} (ord : α → α → Bool) : Nat → List α → List α
+  | _, [] => []
+  | fuel + 1, h :: t =>
+      let (l1, l2) := partitionReversed (fun y => ord y h) t
+      cakeQSortAux ord fuel l1 ++ [h] ++ cakeQSortAux ord fuel l2
+  | 0, _ :: _ => []
+
+def cakeQSort {α : Type u} (ord : α → α → Bool) (moves : List α) : List α :=
+  cakeQSortAux ord (moves.length + 1) moves
+
+/-- `sort_moves` (`reg_allocScript.sml:343-346`): the original sorts with
+    `QSORT`; probed on the original, an equal-priority move lands before the
+    pivot and the partition buckets reverse, so equal priorities flip
+    relative to the input order (probes `sort_moves_probe.out`
+    `sm_ties_two`/`sm_ties_three`). -/
+def cakeSortMoves (moves : List (Nat × (Nat × Nat))) :
+    List (Nat × (Nat × Nat)) :=
+  cakeQSort (fun a b => a.1 >= b.1) moves
+
+/-- `move_related_sub`: a node flagged by `reset_move_related`. -/
+def cakeMoveRelatedSub (state : CakeRaState) (v : Nat) : Bool :=
+  (cakeMapLookup state.moveRelated v).getD false
 
 /-- `init_alloc1_heu` (`reg_allocScript.sml:1262-1286`): degrees count only
     considered neighbours, every node becomes its own coalescing parent, the
@@ -779,11 +798,16 @@ def cakeUnboundColour (col : Nat) : List Nat → Nat
       else cakeUnboundColour col xs
 
 /-- `neg_first_match_col` (`reg_allocScript.sml:1420-1436`). -/
-def cakeNegFirstMatchCol (k : Nat) (bads : List Nat) : List Nat → Option Nat
+def cakeNegFirstMatchCol (state : CakeRaState) (k : Nat) (bads : List Nat) :
+    List Nat → Option Nat
   | [] => none
   | m :: ms =>
-      if bads.contains m || m < k then cakeNegFirstMatchCol k bads ms
-      else some m
+      match cakeMapLookup state.nodeTag m with
+      | some (.fixed c) =>
+          if bads.contains c || c < k then cakeNegFirstMatchCol state k bads ms
+          else some c
+      | some _ => cakeNegFirstMatchCol state k bads ms
+      | none => none
 
 /-- `neg_biased_pref` (`reg_allocScript.sml:1438-1450`). -/
 def cakeNegBiasedPref (state : CakeRaState) (k : Nat)
@@ -791,7 +815,7 @@ def cakeNegBiasedPref (state : CakeRaState) (k : Nat)
   if n < state.dim then
     match cakeMapLookup mtable n with
     | none => none
-    | some vs => cakeNegFirstMatchCol k bads vs
+    | some vs => cakeNegFirstMatchCol state k bads vs
   else none
 
 /-- `tag_col` (`reg_allocScript.sml:941-944`). -/

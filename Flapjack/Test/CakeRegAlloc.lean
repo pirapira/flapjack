@@ -322,6 +322,53 @@ def raForcedEdgeGuard : Bool :=
       (.delta [1] [5, 3]) [(1, 5)] []).map sortColouring ==
     some (sortColouring [(1, 1), (3, 4), (5, 0)])
 
+/-- `sort_moves` flips equal-priority moves relative to the input order
+    (probe `sort_moves_probe.out` `sm_ties_two`). -/
+def qsortTiesTwoGuard : Bool :=
+  Flapjack.RiscV.CakeRegAlloc.cakeSortMoves [(1, (13, 5)), (1, (5, 9))] ==
+    [(1, (5, 9)), (1, (13, 5))]
+
+/-- A second equal-priority flip case (probe `sm_ties_three`): the two
+    priority-3 moves come out reversed. -/
+def qsortTiesThreeGuard : Bool :=
+  Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
+      [(3, (1, 2)), (1, (9, 9)), (3, (7, 8))] ==
+    [(3, (7, 8)), (3, (1, 2)), (1, (9, 9))]
+
+/-- Strictly descending priorities sort descending (probe `sm_desc`). -/
+def qsortDescGuard : Bool :=
+  Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
+      [(1, (13, 5)), (3, (5, 9)), (2, (7, 8))] ==
+    [(3, (5, 9)), (2, (7, 8)), (1, (13, 5))]
+
+/-- A move onto a stack temp keeps the stack temp above the register
+    count while the two alloc vars coalesce (probe `ra_moves_stemp`). -/
+def raMovesStempGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 [(1, (3, 9))]
+      (.delta [9] [13, 3]) [] []).map sortColouring ==
+    some (sortColouring [(3, 4), (9, 0), (13, 0)])
+
+/-- The same shape with a higher move priority (probe
+    `ra_moves_stemp_hi`). -/
+def raMovesStempHiGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 [(5, (3, 9))]
+      (.delta [9] [13, 3]) [] []).map sortColouring ==
+    some (sortColouring [(3, 4), (9, 0), (13, 0)])
+
+/-- `neg_first_match_col` projects each candidate through the node tag
+    table: non-`Fixed` tags are skipped and a missing entry stops the
+    search. -/
+def negFirstMatchProjectionGuard : Bool :=
+  let state : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
+    { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 7 with
+      nodeTag := [(4, .fixed 6), (5, .aTemp), (6, .fixed 2)] }
+  Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [2] [4, 5, 6] ==
+      some 6 &&
+    Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [6] [6] ==
+      none &&
+    Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [] [5, 7] ==
+      none
+
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
     ifMergeAllocGuard && callMergeGuard && callTailGuard && assignLeafGuard &&
@@ -333,7 +380,9 @@ def parityGuard : Bool :=
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
-    partOrderGuard && reviveOrderGuard && bgOkOrderGuard
+    partOrderGuard && reviveOrderGuard && bgOkOrderGuard &&
+    qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
+    raMovesStempGuard && raMovesStempHiGuard && negFirstMatchProjectionGuard
 
 #guard parityGuard
 def runChecks : IO Bool := do
@@ -348,7 +397,9 @@ def runChecks : IO Bool := do
     heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
     raDeltaTriangleGuard, raStackOnlyGuard, raMovesCoalesceGuard,
     raMovesSelfFilteredGuard, raForcedEdgeGuard, partOrderGuard,
-    reviveOrderGuard, bgOkOrderGuard]
+    reviveOrderGuard, bgOkOrderGuard, qsortTiesTwoGuard,
+    qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
+    raMovesStempHiGuard, negFirstMatchProjectionGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -364,7 +415,10 @@ def runChecks : IO Bool := do
     "reg_alloc delta free", "reg_alloc delta triangle",
     "reg_alloc stack only", "reg_alloc moves coalesce",
     "reg_alloc moves self filtered", "reg_alloc forced edge",
-    "sorting partition order", "revive moves order", "bg_ok order"]
+    "sorting partition order", "revive moves order", "bg_ok order",
+    "sort_moves tie two", "sort_moves tie three", "sort_moves descending",
+    "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
+    "neg_first_match_col projection"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

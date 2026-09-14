@@ -20,11 +20,15 @@ import Flapjack.PanHHandleCallRet
 import Flapjack.PanHHandleDecCallRet
 import Flapjack.PanHProgDecCall
 import Flapjack.PanHProgCall
+import Flapjack.CrepPrimop
 import Flapjack.CrepExitLoop
+import Flapjack.CrepEvaluate
+import Flapjack.CrepFixClock
+import Flapjack.CrepObservationalSemantics
 import Flapjack.PanBst
 import Flapjack.PanBStateUpdates
+import Flapjack.PanBStateEmptyLocals
 import Flapjack.PanEmptyLocals
-import Flapjack.CrepPrimop
 import Flapjack.PanSetKvar
 import Flapjack.PanLookupKvar
 import Flapjack.PanIsValidValue

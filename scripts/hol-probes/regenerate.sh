@@ -177,11 +177,23 @@ run_probe pan_bst_probeScript.sml pan_bst_probe.out \
 run_probe pan_itree_set_var_probeScript.sml pan_itree_set_var_probe.out \
   set_var_new set_var_globals \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_itree_empty_locals_probeScript.sml pan_itree_empty_locals_probe.out \
+  empty_locals_local empty_locals_base_addr \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe crep_primop_probeScript.sml crep_primop_probe.out \
+  crep_basic crep_wrong_length \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \
   exit_loop_break exit_loop_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_evaluate_probeScript.sml crep_evaluate_probe.out \
   evaluate_skip evaluate_tick_timeout \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_fix_clock_probeScript.sml crep_fix_clock_probe.out \
+  fix_clock_clamps fix_clock_keeps_lower \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
+  semantics_timeout_is_nonterminal semantics_break_is_nonterminal \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_res_var_probeScript.sml crep_res_var_probe.out \
   res_var_delete_hit res_var_update_hit \
@@ -192,9 +204,6 @@ run_probe crep_lookup_code_probeScript.sml crep_lookup_code_probe.out \
 run_probe pan_empty_locals_probeScript.sml pan_empty_locals_probe.out \
   empty_locals empty_locals_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
-run_probe crep_primop_probeScript.sml crep_primop_probe.out \
-  crep_basic crep_wrong_length \
-  "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_itree_h_prog_dec_probeScript.sml pan_itree_h_prog_dec_probe.out \
   dec_valid_event dec_failed_response "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_seq_probeScript.sml pan_itree_h_prog_seq_probe.out \

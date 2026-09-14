@@ -58,15 +58,18 @@ import Flapjack.Test.PanHHandleCallRetParity
 import Flapjack.Test.PanHHandleDecCallRetParity
 import Flapjack.Test.PanHProgDecCallParity
 import Flapjack.Test.PanHProgCallParity
+import Flapjack.Test.CrepPrimopParity
 import Flapjack.Test.CrepExitLoopParity
 import Flapjack.Test.CrepEvaluateParity
+import Flapjack.Test.CrepFixClockParity
+import Flapjack.Test.CrepObservationalSemanticsParity
 import Flapjack.Test.CrepLookupCodeParity
 import Flapjack.Test.PanDecClockParity
 import Flapjack.Test.PanUpdLocalsParity
 import Flapjack.Test.PanBstParity
 import Flapjack.Test.PanBStateUpdatesParity
+import Flapjack.Test.PanBStateEmptyLocalsParity
 import Flapjack.Test.PanEmptyLocalsParity
-import Flapjack.Test.CrepPrimopParity
 import Flapjack.Test.PanSetKvarParity
 import Flapjack.Test.PanLookupKvarParity
 import Flapjack.Test.PanIsValidValueParity
@@ -732,15 +735,18 @@ def main : IO Unit := do
     Flapjack.Test.PanHHandleDecCallRetParity.runChecks,
     Flapjack.Test.PanHProgDecCallParity.runChecks,
     Flapjack.Test.PanHProgCallParity.runChecks,
+    Flapjack.Test.CrepPrimopParity.runChecks,
     Flapjack.Test.CrepExitLoopParity.runChecks,
     Flapjack.Test.CrepEvaluateParity.runChecks,
+    Flapjack.Test.CrepFixClockParity.runChecks,
+    Flapjack.Test.CrepObservationalSemanticsParity.runChecks,
     Flapjack.Test.CrepLookupCodeParity.runChecks,
     Flapjack.Test.PanDecClockParity.runChecks,
     Flapjack.Test.PanUpdLocalsParity.runChecks,
     Flapjack.Test.PanBstParity.runChecks,
     Flapjack.Test.PanBStateUpdatesParity.runChecks,
+    Flapjack.Test.PanBStateEmptyLocalsParity.runChecks,
     Flapjack.Test.PanEmptyLocalsParity.runChecks,
-    Flapjack.Test.CrepPrimopParity.runChecks,
     Flapjack.Test.PanSetKvarParity.runChecks,
     Flapjack.Test.PanLookupKvarParity.runChecks,
     Flapjack.Test.PanIsValidValueParity.runChecks,

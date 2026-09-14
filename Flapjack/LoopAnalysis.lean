@@ -74,6 +74,11 @@ def loopShrinkCallNoHandler (returns : Option (List Nat × List Nat))
       (.call (some (names, callLive)) target arguments none,
         loopListInsert arguments callLive)
 
+def loopContextAt : Nat → List (List Nat × List Nat) → Option (List Nat × List Nat)
+  | _, [] => none
+  | 0, context :: _ => some context
+  | fuel + 1, _ :: contexts => loopContextAt fuel contexts
+
 /-! Source-shaped leaf and structured equations from `loop_live$shrink`
     (`cakeml/pancake/loop_liveScript.sml:62`).  Ordinary loops use the
     source's bounded fixed-point equation below; the loop context used by
@@ -184,6 +189,81 @@ def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
             loopIntersectSorted live handlerLiveOut)),
         loopListInsert arguments returnLive)
 
+/-! Context-aware port of the structured part of `loop_live$shrink`.  The
+    context is stored outermost-first, so label `0` denotes the innermost
+    loop, matching HOL's `oEL` lookup.  Leaf equations are shared with
+    `loopShrinkLeaf`; structured nodes recurse here so calls in handlers and
+    loop bodies see the same break/continue context as the source. -/
+mutual
+def loopShrink (contexts : List (List Nat × List Nat)) :
+    LoopProg α → List Nat → LoopProg α × List Nat
+  | .seq first second, live =>
+      let (second', live') := loopShrink contexts second live
+      let (first', live'') := loopShrink contexts first live'
+      (.seq first' second', live'')
+  | .ite operator condition right thenBranch elseBranch branchLive, live =>
+      let restricted := loopIntersectSorted branchLive live
+      let (then', thenLive) := loopShrink contexts thenBranch restricted
+      let (else', elseLive) := loopShrink contexts elseBranch restricted
+      let rightLive := match right with
+        | .reg name => [name]
+        | .imm _ => []
+      (.ite operator condition right then' else' branchLive,
+        insertNatSorted condition (loopListInsert rightLive (thenLive ++ elseLive)))
+  | .mark body, live => loopShrink contexts body live
+  | .break label, _ =>
+      (.break label, (loopContextAt label contexts).map Prod.snd |>.getD [])
+  | .continue label, _ =>
+      (.continue label, (loopContextAt label contexts).map Prod.fst |>.getD [])
+  | .loop liveIn body liveOut, live =>
+      let loopLiveOut := loopIntersectSorted liveOut live
+      let bodyEntryLive := loopListInsert liveIn loopLiveOut
+      match loopShrinkFixed contexts liveIn body loopLiveOut 64 [] with
+      | some result => result
+      | none =>
+          let (body', _) := loopShrink ((liveIn, loopLiveOut) :: contexts)
+            body bodyEntryLive
+          (.loop liveIn body' loopLiveOut, liveIn)
+  | .call none target arguments none, live =>
+      loopShrinkCallNoHandler none target arguments live
+  | .call (some (names, liveOut)) target arguments none, live =>
+      loopShrinkCallNoHandler (some (names, liveOut)) target arguments live
+  | .call returns target arguments
+      (some (exception, handler, normal, handlerLiveOut)), live =>
+      match returns with
+      | none => loopShrinkCallNoHandler none target arguments live
+      | some (names, liveOut) =>
+          let (normal', normalLive) := loopShrink contexts normal live
+          let (handler', handlerLive) := loopShrink contexts handler live
+          let returnLive := loopIntersectSorted liveOut
+            (loopListInsert (loopListDeleteSorted names normalLive)
+              (deleteNatSorted exception handlerLive))
+          (.call (some (names, returnLive)) target arguments
+              (some (exception, handler', normal',
+                loopIntersectSorted live handlerLiveOut)),
+            loopListInsert arguments returnLive)
+  | program, live => loopShrinkLeaf program live
+
+termination_by program => (sizeOf program, 0)
+
+def loopShrinkFixed (contexts : List (List Nat × List Nat))
+    (liveIn : List Nat) (body : LoopProg α) (loopLiveOut : List Nat) :
+    Nat → List Nat → Option (LoopProg α × List Nat)
+  | 0, _ => none
+  | fuel + 1, previous =>
+      let (body', bodyLive) := loopShrink
+        ((loopIntersectSorted liveIn previous, loopLiveOut) :: contexts)
+        body loopLiveOut
+      let current := loopIntersectSorted liveIn bodyLive
+      if current = previous then
+        some (.loop current body' loopLiveOut, current)
+      else if current.length ≤ previous.length then
+        none
+      else
+        loopShrinkFixed contexts liveIn body loopLiveOut fuel current
+  termination_by fuel _ => (sizeOf body, fuel)
+end
+
 /-! Faithful executable port of `loop_live$mark_all` from
     `cakeml/pancake/loop_liveScript.sml:189`.  The Boolean records whether
     the source marked the whole node; the recursive calls preserve the
@@ -222,7 +302,7 @@ def loopMarkAll : LoopProg α → LoopProg α × Bool
     shrink pass is seeded with the empty live set, then the marked program is
     projected exactly as the HOL `FST (mark_all (FST (shrink ...)))` equation. -/
 def loopLiveComp (program : LoopProg α) : LoopProg α :=
-  (loopMarkAll (loopShrinkLeaf program []).1).1
+  (loopMarkAll (loopShrink [] program []).1).1
 
 /-! Source-shaped composition for `loop_live$optimise` from
     `cakeml/pancake/loop_liveScript.sml:221`.  `loop_call$comp` runs first

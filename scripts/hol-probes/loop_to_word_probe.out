@@ -59,3 +59,9 @@ comp_break=(Break 2,0,0)
 comp_fail=(Skip,0,0)
 
 comp_set_global=(Set (Temp 9w) (Const 7w),0,0)
+
+comp_func_skip=Skip
+
+comp_func_assign=Assign 4 (Const 3w)
+
+comp_func_seq_assign=Seq (Assign 4 (Const 3w)) (Assign 6 (Var 4))

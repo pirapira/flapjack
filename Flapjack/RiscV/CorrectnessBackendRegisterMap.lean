@@ -87,4 +87,43 @@ theorem wordProgToRiscV_transfer_relabel_sound_of_straightLine [NeZero width]
   ⟨wordProgToRiscV_sound_of_straightLine state program hstraight code hcompile,
    executeInstructions_transfer_relabel state code hzero hname⟩
 
+/-- The Cake map sends a hardware register to the architectural zero register
+exactly when that register is the internal zero role `27`.  This is the
+`Fin`-level form of `riscvForward_eq_zero_iff` used to discharge the write-set
+side conditions of the transfer/relabel soundness theorem. -/
+theorem riscvForward_ne_zero_iff {register : Fin 32} :
+    riscvForward register ≠ 0 ↔ register.val ≠ 27 :=
+  not_congr riscvForward_eq_zero_iff
+
+/-- The transfer/relabel soundness theorem with its side conditions discharged
+from a single write-set invariant: no instruction writes the architectural zero
+register or the internal zero role.  The Cake map's only preimage of `0` is
+`27`, so excluding both names from every write set yields the `hzero` and
+`hname` premises without any extra semantic assumption on the abstract state. -/
+theorem wordProgToRiscV_transfer_relabel_sound_of_writes [NeZero width]
+    (state : State width) (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordProgToRiscV program = some code)
+    (hwrites : ∀ instruction ∈ code,
+      ∀ register ∈ instructionWrites instruction,
+        register.val ≠ 0 ∧ register.val ≠ 27) :
+    evalWordProg state program = some (executeInstructions state code) ∧
+      executeInstructions (transferState state) (relabelInstructions code) =
+        transferState (executeInstructions state code) :=
+  wordProgToRiscV_transfer_relabel_sound_of_straightLine state program hstraight
+    code hcompile
+    (fun instruction hinst register hreg =>
+      riscvForward_ne_zero_iff.mpr (hwrites instruction hinst register hreg).2)
+    (fun instruction hinst register hreg hz =>
+      (hwrites instruction hinst register hreg).1 (by simp [hz]))
+
+example {register : Fin 32} :
+    (riscvForward register ≠ 0) ↔ register.val ≠ 27 :=
+  riscvForward_ne_zero_iff
+
+example : riscvForward (27 : Fin 32) = 0 := by decide
+
+example : riscvForward (0 : Fin 32) ≠ 0 := by decide
+
 end Flapjack.RiscV

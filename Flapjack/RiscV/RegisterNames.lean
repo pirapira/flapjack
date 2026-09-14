@@ -132,6 +132,21 @@ theorem riscvForward_injective : Function.Injective riscvForward := by
   exact riscvRegisterName_injective_lt_32 left.isLt right.isLt
     (by simpa [riscvForward] using congrArg Fin.val hsame)
 
+/-- The lifted Cake register map is surjective: every hardware register index is
+the image of some internal register.  With `riscvForward_injective` this makes
+the one-time map a permutation of the register file, so the relabeled relation
+covers every register rather than only its image. -/
+theorem riscvForward_surjective : Function.Surjective riscvForward := by
+  intro target
+  obtain ⟨name, hnameLt, hmap⟩ := riscvRegisterName_surjective_lt_32 target.isLt
+  exact ⟨⟨name, hnameLt⟩, by apply Fin.ext; simpa [riscvForward] using hmap⟩
+
+/-- The lifted Cake register map is both injective and surjective, i.e. a
+bijection on the 32 hardware registers. -/
+theorem riscvForward_bijective :
+    Function.Injective riscvForward ∧ Function.Surjective riscvForward :=
+  ⟨riscvForward_injective, riscvForward_surjective⟩
+
 /-- Selecting a register through the one-time Cake map is the same as selecting
 the raw internal register and then relabeling its hardware index through
 `riscvForward`. This is the bridge that lets raw Backend register selection be

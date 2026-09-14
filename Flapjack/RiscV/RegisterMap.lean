@@ -113,6 +113,21 @@ theorem riscvRegisterName_id_of_ge_32 {name : Nat} (h : 32 ≤ name) :
   unfold riscvRegisterName
   split <;> first | omega | rfl
 
+/-- The Cake `riscv_names` map is surjective on the architectural register
+file: every register number in `0..31` is the image of some register number in
+`0..31`.  Together with injectivity this makes the map a permutation of the
+register file, so relabeling loses no register. -/
+theorem riscvRegisterName_surjective_lt_32 {target : Nat} (htarget : target < 32) :
+    ∃ name : Nat, name < 32 ∧ riscvRegisterName name = target := by
+  have hcheck : ((List.range 32).all (fun candidate =>
+      (List.range 32).any (fun source =>
+        riscvRegisterName source == candidate))) = true := by
+    decide
+  have hmem : target ∈ List.range 32 := List.mem_range.mpr htarget
+  have hall := List.all_eq_true.mp hcheck target hmem
+  rcases List.any_eq_true.mp hall with ⟨name, hnameMem, hname⟩
+  exact ⟨name, List.mem_range.mp hnameMem, by simpa [beq_iff_eq] using hname⟩
+
 /-- A mapped register number can only be an architectural register when the
 source number already is. -/
 theorem lt_32_of_riscvRegisterName_lt_32 {name : Nat}

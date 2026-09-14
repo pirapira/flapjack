@@ -141,6 +141,33 @@ def compileLabProgramChecked [NeZero width] (context : WordFfiContext)
   let labels := labCollectProgramLabels 0 program
   labCompileProgramSectionsChecked context labels 0 program
 
+/-! Checked linked lowering.  The section-entry metadata is identical to the
+historical linker; only the per-section compiler is replaced by the checked
+version so a failing section and byte position survive the API boundary. -/
+def labCompileProgramLinkedAuxChecked [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (base : Nat) : LabProgram (Word width) →
+      Except LabLoweringError
+        (List (Nat × Word width × List (Instruction width)))
+  | [] => .ok []
+  | sectionData :: sections =>
+      match labCompileProgramLinesChecked context labels sectionData.name base
+          sectionData.lines with
+      | .error error => .error error
+      | .ok code =>
+          match labCompileProgramLinkedAuxChecked context labels
+              (base + 4 * labSectionInstructionCount sectionData) sections with
+          | .error error => .error error
+          | .ok rest =>
+              .ok ((sectionData.name, BitVec.ofNat width base, code) :: rest)
+
+def compileLabProgramLinkedChecked [NeZero width]
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    Except LabLoweringError
+      (List (Nat × Word width × List (Instruction width))) :=
+  let labels := labCollectProgramLabels 0 program
+  labCompileProgramLinkedAuxChecked context labels 0 program
+
 def compileStackProgramNatListToRiscVChecked [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)
     (entryLabel initialLabel : Nat)
@@ -166,6 +193,26 @@ def compileStackProgramNatListWithRaiseStubToRiscVChecked [NeZero width]
     Except LabLoweringError (List (Instruction width)) :=
   compileStackProgramNatListToRiscVChecked context config entryLabel initialLabel
     ((stackRaiseStubLocation, stackRaiseStub false config.addressScratch) :: programs)
+
+def compileStackProgramNatListLinkedWithRaiseStubToRiscVChecked [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (entryLabel initialLabel : Nat)
+    (programs : List (Nat × StackProg Nat)) :
+    Except LabLoweringError
+      (List (Nat × Word width × List (Instruction width))) :=
+  match stackProgramsWithLongDivRuntime config
+      ((stackRaiseStubLocation, stackRaiseStub false config.addressScratch) :: programs) with
+  | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
+  | some programs =>
+      compileLabProgramLinkedChecked context
+        (((programs.map (fun (sectionId, program) =>
+          if sectionId = cakeLongDiv1Location ||
+              sectionId = cakeLongDivLocation then
+            labProgramToEntrySection sectionId 0 initialLabel
+              (stackRemoveComplete config program)
+          else
+            labProgramToEntrySection sectionId entryLabel initialLabel
+              (stackRemoveComplete config program))).map labSectionNatToWord))
 
 def compileStackProgramNatToRiscVChecked [NeZero width]
   (context : WordFfiContext) (config : StackRemoveConfig)

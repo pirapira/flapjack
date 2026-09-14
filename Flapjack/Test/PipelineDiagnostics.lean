@@ -36,6 +36,14 @@ example :
         .error { sectionId := 17, position := 0, feature := .heapAlloc } := by
   rfl
 
+/-! The linked checked boundary retains the same section/position diagnostic;
+the historical linked API would collapse this failure to `none`. -/
+example :
+    RiscV.compileLabProgramLinkedChecked (width := 64) { services := [] }
+      [⟨17, [.labAsm (.heapAlloc 3) [] 0]⟩] =
+        .error { sectionId := 17, position := 0, feature := .heapAlloc } := by
+  rfl
+
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
       [⟨29, [.asm (.word (.arith (.longDiv 0 3 3 0 6))) [] 0]⟩] =

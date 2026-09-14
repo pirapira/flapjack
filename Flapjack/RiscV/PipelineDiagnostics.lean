@@ -44,9 +44,47 @@ namespace Flapjack
 
 inductive PipelineRiscVLoweringError where
   | wordToStack (error : RiscV.PipelineWordLoweringError)
+  | allocationFailure (sectionId : Nat)
   | labToRiscV (error : RiscV.LabLoweringError)
   | stackToRiscV
   deriving DecidableEq, Repr
+
+/-! Checked counterpart of the full-SSA spill pipeline.  The historical
+`Option` function intentionally keeps the old API, but it loses which Word
+section failed when allocation or location-aware Word-to-Stack lowering
+returns `none`.  Keep the same pass ordering and identify the first failing
+section for source-facing diagnostics. -/
+def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
+    List (Nat × List Nat × LoopProg (RiscV.Word width)) →
+      Except PipelineRiscVLoweringError
+        (List (Nat × List Nat × StackProg Nat))
+  | [] => .ok []
+  | (label, parameters, body) :: functions =>
+      let slots := loopAccVars body parameters
+      let context : WordContext :=
+        { vars := slots.map (fun name => (name, name + 2)) }
+      let wordParameters := parameters.map (fun name => name + 2)
+      let unallocatedBody := loopToWordProg context body
+      match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+          wordParameters unallocatedBody with
+      | none => .error (.allocationFailure label)
+      | some (_, renamedParameters, renamedProgram, allocation) =>
+          let config : RiscV.WordStackConfig :=
+            { locations := allocation.locations
+              scratch := 31
+              stackBase := 0
+              addressScratch := 29
+              sectionId := label
+              handlerLabel := label }
+          match RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+              renamedParameters wordAllocatableRegisters.length config.scratch
+              allocation.nextSpill (some 1)
+              (RiscV.wordStackInitialBitmaps false) renamedProgram with
+          | none => .error (.allocationFailure label)
+          | some (stackBody, _) =>
+              match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked functions with
+              | .error error => .error error
+              | .ok rest => .ok ((label, wordParameters, stackBody) :: rest)
 
 inductive SourceRiscVCompileError where
   | parse (errors : List Parser.ParseError)
@@ -63,6 +101,7 @@ inductive SourceRiscVImageError where
   | parse (errors : List Parser.ParseError)
   | static (error : StatErr)
   | entryNotFound
+  | lowering (error : PipelineRiscVLoweringError)
   | artifactFailure
   deriving Repr
 
@@ -155,10 +194,10 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
                     | .ok instructions => .ok (RiscV.encodeInstructions instructions)
               match identityResult with
               | .ok bytes => .ok { bytes := bytes, warnings }
-              | .error identityError =>
-                  match pipelineWordFunctionsAllocatedWithSpillsAndFullSsa pipeline.loop with
-                  | none => .error (.lowering identityError)
-                  | some functions =>
+              | .error _identityError =>
+                  match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked pipeline.loop with
+                  | .error error => .error (.lowering error)
+                  | .ok functions =>
                       let initialLabel := fullSsaInitialLabLabel functions
                       match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
                           (width := width)
@@ -197,12 +236,16 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
                     RiscV.wordProgFfiNames entry.2.2)).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
-              match compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked
-                  architecture bytesInWord (fun value => fromNat value) services
-                  removeConfig start declarations with
-              | none => .error .artifactFailure
-              | some sections =>
-                  .ok { sections := RiscV.encodeLinkedSections sections, warnings }
+              match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked pipeline.loop with
+              | .error error => .error (.lowering error)
+              | .ok functions =>
+                  let initialLabel := fullSsaInitialLabLabel functions
+                  match RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscVChecked
+                      (width := width) { services := services } removeConfig 0 initialLabel
+                      (functions.map (fun (label, _, body) => (label, body))) with
+                  | .error error => .error (.lowering (.labToRiscV error))
+                  | .ok sections =>
+                      .ok { sections := RiscV.encodeLinkedSections sections, warnings }
 
 /-! Runtime image variant carrying the bitmap table emitted by the
     full-SSA SimpleGC pipeline. This is the metadata consumed by the collector

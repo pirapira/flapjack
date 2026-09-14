@@ -1,4 +1,5 @@
 import Flapjack.Compile
+import Flapjack.RiscV.Model
 
 /-!
 Executable arithmetic simplification for Crepe.
@@ -14,6 +15,22 @@ namespace Flapjack
 def crepDestConst : CrepExp α → Option α
   | .const value => some value
   | _ => none
+
+/-! Fixed-width executable port of CakeML's `crep_arith$dest_2exp`
+    (`cakeml/pancake/crep_arithScript.sml:15`).  The HOL definition recurses
+    while stripping low zero bits from a nonzero word.  A width-plus-one fuel
+    bound is sufficient for a `BitVec`: every unsuccessful recursive step
+    shifts away one bit, and the next value is either zero, one, or odd. -/
+def crepDest2ExpAux [NeZero width] : Nat → Nat → RiscV.Word width → Option Nat
+  | 0, _, _ => none
+  | fuel + 1, exponent, word =>
+      if word == 0 then none
+      else if word == 1 then some exponent
+      else if (word &&& BitVec.ofNat width 1) != 0 then none
+      else crepDest2ExpAux fuel (exponent + 1) (word >>> 1)
+
+def crepDest2Exp [NeZero width] (word : RiscV.Word width) : Option Nat :=
+  crepDest2ExpAux (width + 1) 0 word
 
 def crepArithExp [Mul α] : CrepExp α → CrepExp α
   | .load address => .load (crepArithExp address)

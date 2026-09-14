@@ -506,15 +506,15 @@ def cakeDegOrInf (state : CakeRaState) (k x : Nat) : Nat :=
 def cakeBgOk (k x y : Nat) (state : CakeRaState) : Option (List Nat × List Nat) :=
   let adjX := cakeAdjSub state.adjLists x
   let adjY := cakeAdjSub state.adjLists y
-  let (case1, case2) := adjY.partition (fun v => adjX.contains v)
-  let case1 := case1.filter (fun v => cakeConsideredVar state k v)
-  let case2 := case2.filter (fun v => cakeConsideredVar state k v)
+  let (case1, case2) := partitionReversed (fun v => adjX.contains v) adjY
+  let case1 := filterReversed (fun v => cakeConsideredVar state k v) case1
+  let case2 := filterReversed (fun v => cakeConsideredVar state k v) case2
   let case2degs := case2.map (fun v => cakeDegOrInf state k v)
   if !case2degs.any (fun d => d >= k) then
     some (case1, case2)
   else
-    let case3 := (adjX.filter (fun v => !adjY.contains v)).filter
-      (fun v => cakeConsideredVar state k v)
+    let case3 := filterReversed (fun v => cakeConsideredVar state k v)
+      (adjX.filter (fun v => !adjY.contains v))
     let c1 := (case1.map (fun v => cakeDegOrInf state (k + 1) v)).countP
       (fun d => d - 1 >= k)
     let c2 := case2degs.countP (fun d => d >= k)

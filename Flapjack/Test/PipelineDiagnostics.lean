@@ -11,6 +11,19 @@ def pipelineDiagnosticsConfig : WordStackConfig :=
     scratch := 31
     stackBase := 10 }
 
+def diagnosticCompiledMain : CompiledFunction Nat :=
+  { name := "main", params := [], body := .skip, returnShape := .one }
+
+example :
+    pipelineFunctionNameAtLabel 1 [diagnosticCompiledMain] 1 = some "main" := by
+  rfl
+
+example :
+    sourceRiscVImageErrorOfLowering 1 [diagnosticCompiledMain]
+        (.allocationFailure 1) =
+      .loweringInFunction "main" (.allocationFailure 1) := by
+  rfl
+
 example :
     RiscV.pipelineWordFunctionsToStackChecked (width := 64)
       [(17, [], (.alloc 0 ([], []) : WordProg (RiscV.Word 64)))] =

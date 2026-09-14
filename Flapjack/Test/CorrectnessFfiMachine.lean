@@ -263,7 +263,7 @@ example :
         .jal 0 (0 - BitVec.ofNat 64 68)] := by
   exact compileWordProgramNatToRiscV_pipeline_ffi
 
-example (state : State 64) (hzero : readRegister state 0 = 0) :
+example (state : State 64) (_hzero : readRegister state 0 = 0) :
     compileWordProgramNatToRiscV (width := 64)
       { services := [("echo", 7)] } pipelineFfiWordConfigSource
       pipelineFfiStackRemoveConfig 2 3

@@ -1,0 +1,5 @@
+source_collision=«bar»
+target_collision=«foo»
+unchanged=«worker»
+same_names=«foo»
+quoted_source=«bar'»

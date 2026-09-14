@@ -13,4 +13,3 @@ eval_global_hit=SOME (Word 11w)
 eval_global_miss=NONE
 
 eval_base_top=(SOME (Word 12w),SOME (Word 13w))
-

@@ -1,0 +1,23 @@
+try_default_success=INL
+  (Nd (INL TopDecListNT,Locs (POSN 1 1) UNKNOWNpt)
+     [Nd (INL FunNT,Locs (POSN 1 1) (POSN 1 19))
+        [Lf (TOK (KeywordT InlineK),Locs (POSN 1 1) (POSN 1 7));
+         Lf (TOK StaticT,Locs UNKNOWNpt UNKNOWNpt);
+         Lf (TOK DefaultShT,Locs UNKNOWNpt UNKNOWNpt);
+         Lf (TOK (IdentT "f"),Locs (POSN 1 12) (POSN 1 13));
+         Nd (INL ParamListNT,Locs UNKNOWNpt UNKNOWNpt) [];
+         Nd (INL ProgNT,Locs (POSN 1 15) (POSN 1 19))
+           [Lf (TOK (KeywordT SkipK),Locs (POSN 1 15) (POSN 1 19))]];
+      Nd (INL TopDecListNT,Locs UNKNOWNpt UNKNOWNpt) []])
+
+try_default_default=INL
+  (Nd (INL TopDecListNT,Locs UNKNOWNpt UNKNOWNpt)
+     [Nd (INL FunNT,Locs UNKNOWNpt (POSN 1 12))
+        [Lf (TOK NoinlineT,Locs UNKNOWNpt UNKNOWNpt);
+         Lf (TOK StaticT,Locs UNKNOWNpt UNKNOWNpt);
+         Lf (TOK DefaultShT,Locs UNKNOWNpt UNKNOWNpt);
+         Lf (TOK (IdentT "f"),Locs (POSN 1 5) (POSN 1 6));
+         Nd (INL ParamListNT,Locs UNKNOWNpt UNKNOWNpt) [];
+         Nd (INL ProgNT,Locs (POSN 1 8) (POSN 1 12))
+           [Lf (TOK (KeywordT SkipK),Locs (POSN 1 8) (POSN 1 12))]];
+      Nd (INL TopDecListNT,Locs UNKNOWNpt UNKNOWNpt) []])

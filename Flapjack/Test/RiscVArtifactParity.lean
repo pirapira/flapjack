@@ -59,7 +59,7 @@ is the semantic result the generated artifact must implement.
 
 The generated `cml_generated_main` section is byte-identical.  The generated
 `cml_main` sections are not: the original emits the 8-byte constant return
-`addi a0,x0,7; ret`, while the port emits 20 bytes because it lowers `tick`
+`addi a0,x0,7; ret`, while the port emits 16 bytes because it lowers `tick`
 and the return move through its typed pipeline.  That residual mismatch is the
 reproducible, tracked gap owned by `flapjack-pxn.8.5.10.1`; it is recorded
 exactly here instead of being weakened to an acceptance check.

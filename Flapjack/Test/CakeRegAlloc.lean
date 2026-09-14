@@ -244,6 +244,59 @@ def heuFixedDegreeGuard : Bool :=
     Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 1 == some 1 &&
     after.simpWl == [1] && after.spillWl == []
 
+/-- Normalise a colouring to the ascending original-variable order that the
+    original sptree iteration produces. -/
+def sortColouring (colours : Flapjack.NatInfoMap Nat) :
+    List (Nat × Nat) :=
+  colours.mergeSort (fun a b => a.1 < b.1)
+
+/-- `reg_alloc` on a single write/read pair colours the write with the
+    first free register and the unconnected stack temp with `k`. -/
+def raDeltaPairGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []
+      (.delta [1] [3]) [] []).map sortColouring ==
+    some (sortColouring [(1, 0), (3, 4)])
+
+/-- A physical-register read keeps its own register colour (`2 ↦ 1`). -/
+def raDeltaFreeGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []
+      (.delta [1] [2]) [] []).map sortColouring ==
+    some (sortColouring [(1, 0), (2, 1)])
+
+/-- A triangle `1-3-5` needs the spill channel for one participant. -/
+def raDeltaTriangleGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []
+      (.seq (.delta [1] [3])
+         (.seq (.delta [3] [5]) (.delta [5] [1]))) [] []).map sortColouring ==
+    some (sortColouring [(1, 0), (3, 4), (5, 1)])
+
+/-- A stack-only variable is forced to the spill channel (`k` or above). -/
+def raStackOnlyGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []
+      (.delta [7] [1, 3]) [] [7]).map sortColouring ==
+    some (sortColouring [(1, 0), (3, 4), (7, 4)])
+
+/-- A move between `1` and `5` coalesces both to the register colour of
+    `1` (`{1 ↦ 0; 5 ↦ 0}`). -/
+def raMovesCoalesceGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 [(1, (1, 5))]
+      (.delta [1] [5, 3]) [] []).map sortColouring ==
+    some (sortColouring [(1, 0), (3, 4), (5, 0)])
+
+/-- A self move is filtered out by the consistency check; the colouring
+    then matches the coalesced case. -/
+def raMovesSelfFilteredGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 [(1, (1, 1))]
+      (.delta [1] [5, 3]) [] []).map sortColouring ==
+    some (sortColouring [(1, 0), (3, 4), (5, 0)])
+
+/-- A forced edge `1-5` separates the two nodes onto different registers
+    (`{1 ↦ 1; 5 ↦ 0}`). -/
+def raForcedEdgeGuard : Bool :=
+  (Flapjack.RiscV.CakeRegAlloc.cakeDoRegAlloc .irc none 4 []
+      (.delta [1] [5, 3]) [(1, 5)] []).map sortColouring ==
+    some (sortColouring [(1, 1), (3, 4), (5, 0)])
+
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
     ifMergeAllocGuard && callMergeGuard && callTailGuard && assignLeafGuard &&
@@ -252,9 +305,10 @@ def parityGuard : Bool :=
     bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
     graphDeltaCliqueGuard && graphSetCliqueGuard && graphForcedEdgeGuard &&
     graphTagsGuard && graphInitGuard && heuDeltaGuard && heuMovesGuard &&
-    heuSpillGuard && heuFixedDegreeGuard
+    heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
+    raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
+    raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard
 
-#eval parityGuard
 #guard parityGuard
 
 def runChecks : IO Bool := do
@@ -266,7 +320,9 @@ def runChecks : IO Bool := do
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
     graphDeltaCliqueGuard, graphSetCliqueGuard, graphForcedEdgeGuard,
     graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
-    heuSpillGuard, heuFixedDegreeGuard]
+    heuSpillGuard, heuFixedDegreeGuard, raDeltaPairGuard, raDeltaFreeGuard,
+    raDeltaTriangleGuard, raStackOnlyGuard, raMovesCoalesceGuard,
+    raMovesSelfFilteredGuard, raForcedEdgeGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -278,7 +334,10 @@ def runChecks : IO Bool := do
     "mk_graph delta clique", "mk_graph set clique", "extend_graph forced",
     "mk_tags roles", "init_ra_state", "init_alloc1_heu delta",
     "init_alloc1_heu moves", "init_alloc1_heu spill",
-    "init_alloc1_heu fixed degree"]
+    "init_alloc1_heu fixed degree", "reg_alloc delta pair",
+    "reg_alloc delta free", "reg_alloc delta triangle",
+    "reg_alloc stack only", "reg_alloc moves coalesce",
+    "reg_alloc moves self filtered", "reg_alloc forced edge"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

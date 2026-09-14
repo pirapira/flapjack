@@ -427,6 +427,41 @@ def ffiOrderFlipStubsEmitted : Bool :=
   | none => false
 
 /-!
+## Unreachable-code parity (dead FFI references)
+
+The original discards statements that follow an unconditional control
+transfer inside a statement sequence, so a Pancake `@foo` call after a
+`throw` or a `return` never reaches the word program and never gains an
+FFI stub (bead `flapjack-pxn.8.5.14.2` residual).  The port mirrors this
+with `wordProgDCE` at the word-lowering boundary.
+-/
+
+/-- An `@foo` call after an unconditional `throw` is unreachable. -/
+def deadFfiAfterThrowSource : String :=
+  "exception E : 1;\nfun 1 main() { throw E 1; @foo(1,2,3,4); return 0; }"
+
+/-- An `@foo` call after an unconditional `return` is unreachable, while
+the earlier `@bar` call stays reachable. -/
+def deadFfiAfterReturnSource : String :=
+  "fun 1 main() { @bar(1,2,3,4); return 1; @foo(1,2,3,4); return 0; }"
+
+/-- Unreachable FFI calls disappear from the discovered name list, and a
+reachable call before the transfer survives it. -/
+def deadFfiNamesDropped : Bool :=
+  (compileRuntimeImage deadFfiAfterThrowSource).map (·.ffiNames) == some [] &&
+    (compileRuntimeImage deadFfiAfterReturnSource).map (·.ffiNames) ==
+      some ["bar"]
+
+/-- No FFI stub block is emitted for a name whose only reference is
+unreachable. -/
+def deadFfiStubDropped : Bool :=
+  match compileAssembly deadFfiAfterThrowSource with
+  | some assembly =>
+      !assembly.contains "cake_ffi" &&
+        (assembly.splitOn "cake_clear:").length == 2
+  | none => false
+
+/-!
 ## Bitmap table word parity (bead `flapjack-pxn.8.5.14.1`)
 
 The original's pancake bitmap table carries one word per non-tail call
@@ -457,6 +492,8 @@ def bitmapCallsWordsMatch : Bool :=
 #guard ffiMinStubEmitted
 #guard ffiOrderStubsEmitted
 #guard ffiOrderFlipStubsEmitted
+#guard deadFfiNamesDropped
+#guard deadFfiStubDropped
 #guard bitmapCallsWordsMatch
 #guard artifactAccepted
 #guard generatedMainBytesMatch
@@ -505,6 +542,10 @@ def runChecks : IO Bool := do
          ffiOrderStubsEmitted),
       ("flipped ffi source order flips the emitted stub order",
          ffiOrderFlipStubsEmitted),
+      ("unreachable ffi calls are dropped from the name list",
+         deadFfiNamesDropped),
+      ("unreachable ffi calls gain no stub block",
+         deadFfiStubDropped),
       ("bitmap_calls table matches the original [4, 2, 2]",
          bitmapCallsWordsMatch) ]
   let mut ok := true

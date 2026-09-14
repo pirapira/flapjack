@@ -64,7 +64,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
       let context : WordContext :=
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := loopToWordProg context body
+      let unallocatedBody := wordProgDCE (loopToWordProg context body)
       match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -100,7 +100,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
       let context : WordContext :=
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := loopToWordProg context body
+      let unallocatedBody := wordProgDCE (loopToWordProg context body)
       match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)

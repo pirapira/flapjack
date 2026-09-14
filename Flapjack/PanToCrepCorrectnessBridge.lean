@@ -634,6 +634,131 @@ theorem panValuePcRaisedTwoWordHraise
     exact (hpayload hnonempty).1
   · exact hshape
 
+/-! Dispatch the supported raised payload cases into the universal `hraise`
+    slot consumed by `panValuePcCompileCorrect_compact`.  The word and exact
+    two-word callbacks are the semantic adapters above; the fallback is
+    deliberately restricted to payloads outside those cases, so this bridge
+    does not hide an unsupported raise or a clocked `Timeout`/`FinalFFI`. -/
+theorem panValuePcRaisedHraiseCases
+    (exceptionCode : ExceptionId → Option α)
+    (globalsLookup : CrepState α → PanValue α → Option (List α))
+    (hword : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (value : α) (targetState : CrepState α) (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException
+          (.word value))
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+        globalsLookup sourceGlobals sourceMemory sourceException (.word value)
+        targetState targetException)
+    (htwo : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (left right : α) (targetState : CrepState α) (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException
+          (.rStruct [.word left, .word right]))
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+        globalsLookup sourceGlobals sourceMemory sourceException
+        (.rStruct [.word left, .word right]) targetState targetException)
+    (hother : ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      (∀ value : α, sourceValue ≠ .word value) →
+      (∀ left right : α,
+        sourceValue ≠ .rStruct [.word left, .word right]) →
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+        globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException) :
+    ∀ (context : CompileContext α) (structs : StructContext)
+      (exceptionRel : ExceptionId → PanValue α → α → Prop)
+      (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+      (sourceMemory : α → Option (PanValue α)) (sourceException : ExceptionId)
+      (sourceValue : PanValue α) (targetState : CrepState α)
+      (targetException : α),
+      panValueCrepControlRel structs context exceptionRel
+        (.raised sourceLocals sourceGlobals sourceMemory sourceException sourceValue)
+        (.raised targetState targetException) →
+      panValueCrepStateRel structs context sourceLocals sourceGlobals
+        sourceMemory targetState ∧
+      panValuePcExceptionResultRel structs context exceptionRel exceptionCode
+        globalsLookup sourceGlobals sourceMemory sourceException sourceValue
+        targetState targetException := by
+  intro context structs exceptionRel sourceLocals sourceGlobals sourceMemory
+    sourceException sourceValue targetState targetException hcontrol
+  cases sourceValue with
+  | word value =>
+      exact hword context structs exceptionRel sourceLocals sourceGlobals
+        sourceMemory sourceException value targetState targetException hcontrol
+  | rStruct fields =>
+      cases fields with
+      | nil =>
+          exact hother context structs exceptionRel sourceLocals sourceGlobals
+            sourceMemory sourceException (.rStruct []) targetState targetException
+            (by simp) (by simp) hcontrol
+      | cons first rest =>
+          cases first with
+          | word left =>
+              cases rest with
+              | nil =>
+                  exact hother context structs exceptionRel sourceLocals sourceGlobals
+                    sourceMemory sourceException (.rStruct [.word left]) targetState
+                    targetException (by simp) (by simp) hcontrol
+              | cons second tail =>
+                  cases second with
+                  | word right =>
+                      cases tail with
+                      | nil =>
+                          exact htwo context structs exceptionRel sourceLocals
+                            sourceGlobals sourceMemory sourceException left right
+                            targetState targetException hcontrol
+                      | cons third tail' =>
+                          exact hother context structs exceptionRel sourceLocals
+                            sourceGlobals sourceMemory sourceException
+                            (.rStruct (.word left :: .word right :: third :: tail'))
+                            targetState targetException (by simp) (by simp) hcontrol
+                  | rStruct fields =>
+                      exact hother context structs exceptionRel sourceLocals
+                        sourceGlobals sourceMemory sourceException
+                        (.rStruct (.word left :: .rStruct fields :: tail))
+                        targetState targetException (by simp) (by simp) hcontrol
+                  | nStruct name fields =>
+                      exact hother context structs exceptionRel sourceLocals
+                        sourceGlobals sourceMemory sourceException
+                        (.rStruct (.word left :: .nStruct name fields :: tail))
+                        targetState targetException (by simp) (by simp) hcontrol
+          | rStruct fields =>
+              exact hother context structs exceptionRel sourceLocals sourceGlobals
+                sourceMemory sourceException
+                (.rStruct (.rStruct fields :: rest)) targetState targetException
+                (by simp) (by simp) hcontrol
+          | nStruct name fields =>
+              exact hother context structs exceptionRel sourceLocals sourceGlobals
+                sourceMemory sourceException
+                (.rStruct (.nStruct name fields :: rest)) targetState targetException
+                (by simp) (by simp) hcontrol
+  | nStruct name fields =>
+      exact hother context structs exceptionRel sourceLocals sourceGlobals
+        sourceMemory sourceException (.nStruct name fields) targetState targetException
+        (by simp) (by simp) hcontrol
+
 /-! The ordinary compact control cases are proved directly from the existing
 `panValueCrepControlRel`.  Only the raised payload needs an additional
 obligation because the exact Pc relation retains both the HOL post-state

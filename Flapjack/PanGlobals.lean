@@ -379,6 +379,27 @@ def globalCompileInitializers [BEq String] [Add α] [Mul α]
       initializer :: globalCompileInitializers context declarations
   | _ :: declarations => globalCompileInitializers context declarations
 
+/-! The four-result shape of Pancake's `pan_globals$compile_decs_def`
+    (`pan_globalsScript.sml:160`).  Global declarations become initializer
+    stores, while functions and exception declarations remain in their own
+    source-order lists; the collected context carries the updated addresses. -/
+structure GlobalCompileDecsResult (α : Type u) where
+  initializers : List (Prog α)
+  functions : List (Decl α)
+  exceptions : List (Decl α)
+  context : GlobalPassContext α
+
+def globalCompileDecs [BEq String] [Add α] [Mul α]
+    (context : GlobalPassContext α) (declarations : List (Decl α)) :
+    GlobalCompileDecsResult α :=
+  let collected := globalCollect context declarations
+  { initializers := globalCompileInitializers collected declarations
+    functions := globalDeclsFilter globalDeclIsFunction
+      (globalCompileDecls collected declarations)
+    exceptions := globalDeclsFilter globalDeclIsException
+      (globalCompileDecls collected declarations)
+    context := collected }
+
 def globalCompileTop [BEq String] [Add α] [Mul α]
     (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α)) :
     GlobalCompiledProgram α :=

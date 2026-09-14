@@ -1,0 +1,26 @@
+empty=([],[],[],<|globals := FEMPTY; globals_size := 1w; max_globals_size := 16w|>)
+
+decl=([Store
+    (Op Sub
+       [TopAddr;
+        Const
+          (n2w
+             ((1 + dimindex (:word8) DIV 8 * 1 MOD dimword (:word8)) MOD
+              dimword (:word8)))]) (Const 7w)],[],[],
+ <|globals :=
+     FEMPTY⟨
+       «g» ↦
+         (One,
+          n2w
+            ((1 + dimindex (:word8) DIV 8 * 1 MOD dimword (:word8)) MOD
+             dimword (:word8)))
+     ⟩;
+   globals_size :=
+     n2w
+       ((1 + dimindex (:word8) DIV 8 * 1 MOD dimword (:word8)) MOD
+        dimword (:word8)); max_globals_size := 16w|>)
+
+exception=([],[],[ExnDecl «E» One],
+ <|globals := FEMPTY; globals_size := 1w; max_globals_size := 16w|>)
+
+name=([],[],[],<|globals := FEMPTY; globals_size := 1w; max_globals_size := 16w|>)

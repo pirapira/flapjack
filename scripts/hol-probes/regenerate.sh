@@ -109,6 +109,8 @@ run_probe pan_sem_ffi_e2e_probeScript.sml pan_sem_ffi_e2e_probe.out \
 run_probe pan_itree_comp_ffi_probeScript.sml pan_itree_comp_ffi_probe.out \
   ret tau return length_failure final div_ret div_tau \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe ffi_call_probeScript.sml ffi_call_probe.out \
+  oracle_return empty_extcall "$cake_dir/semantics/ffi/ffiScript.sml"
 run_probe pan_itree_trace_prefix_probeScript.sml pan_itree_trace_prefix_probe.out \
   ret final "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_trace_prefix0_probeScript.sml pan_itree_trace_prefix0_probe.out \
@@ -250,7 +252,7 @@ run_probe crep_lookup_code_probeScript.sml crep_lookup_code_probe.out \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 # The store_global probe observes StoreGlob insert/update/error on globals.
 run_probe crep_store_global_probeScript.sml crep_store_global_probe.out \
-  store_global_insert store_global_eval_failure \
+  store_global_insert store_global_then_load \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_empty_locals_probeScript.sml pan_empty_locals_probe.out \
   empty_locals empty_locals_clock \

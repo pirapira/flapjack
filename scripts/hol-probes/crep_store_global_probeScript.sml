@@ -51,3 +51,9 @@ val _ = print_eval "store_global_eval_failure"
       (crepLang$StoreGlob (4w:5 word)
         (crepLang$Load (crepLang$Const (8w:8 word))), ^store_state) of
       | (res,s') => (res, FLOOKUP s'.globals (4w:5 word))``;
+
+val _ = print_eval "store_global_then_load"
+  ``case crepSem$evaluate
+      (crepLang$StoreGlob (4w:5 word) (crepLang$Const (11w:8 word)),
+       ^store_state with globals := FEMPTY) of
+      | (res,s') => (res, crepSem$eval s' (crepLang$LoadGlob (4w:5 word)))``;

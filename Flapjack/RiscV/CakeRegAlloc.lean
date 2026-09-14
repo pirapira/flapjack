@@ -69,4 +69,37 @@ def cakeGetStackOnlyAux {α : Type u} :
 def cakeGetStackOnly {α : Type u} (program : WordProg α) : List Nat :=
   (cakeGetStackOnlyAux ([], []) program).2
 
+open Flapjack.RiscV.CakeAlloc (getForcedAddCarry getForcedLongMul)
+
+/-- `get_forced` (`word_allocScript.sml:1694-1725`) for the RISC-V target:
+    the coalescing constraints forced by multi-result instructions.
+    The original's `AddOverflow`/`SubOverflow`/floating-point clauses have
+    no counterparts in `WordArith`, so they collapse to the catch-all;
+    the ISA test is constant-true because this backend is RISC-V only.
+    Traversal is right-to-left like `get_stack_only_aux`: sequences visit
+    the second half first, and a call's return continuation is folded
+    before its exception handler. -/
+def cakeGetForced {α : Type u} :
+    WordProg α → List (Nat × Nat) → List (Nat × Nat)
+  | .inst (.arith (.longMul r1 _ r3 r4)), acc => getForcedLongMul r1 r3 r4 ++ acc
+  | .inst (.arith (.cakeAddCarry r1 _ r3 r4)), acc =>
+      getForcedAddCarry r1 r3 r4 ++ acc
+  | .inst _, acc => acc
+  | .mustTerminate body, acc => cakeGetForced body acc
+  | .seq first second, acc => cakeGetForced first (cakeGetForced second acc)
+  | .ite _ _ _ thenBranch elseBranch, acc =>
+      cakeGetForced thenBranch (cakeGetForced elseBranch acc)
+  | .call (some (_, _, returnHandler, _, _)) _ _ handler, acc =>
+      match handler with
+      | none => cakeGetForced returnHandler acc
+      | some (_, handlerBody, _, _) =>
+          cakeGetForced handlerBody (cakeGetForced returnHandler acc)
+  | .loop _ body _, acc => cakeGetForced body acc
+  | _, acc => acc
+  termination_by program _acc => sizeOf program
+  decreasing_by
+    all_goals first
+      | sizeOf_list_dec | decreasing_tactic | decreasing_trivial
+        <;> simp_arith
+
 end Flapjack.RiscV.CakeRegAlloc

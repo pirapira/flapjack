@@ -45,10 +45,11 @@ run_probe() {
   local first_label="$3"
   local last_label="$4"
   local source="$5"
+  local workdir="${6:-$cake_dir/pancake}"
   local probe="$probe_dir/$probe_name"
   local output="$probe_dir/$output_name"
   if probe_needs_refresh "$output" "$probe" "$source"; then
-    (cd "$cake_dir/pancake" && \
+    (cd "$workdir" && \
       "$hol_dir/bin/hol" run "$probe") >"$tmp"
     sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" \
       | sed '/^<<HOL message:/,/^  pattern completion.*>>$/d' > "$output"
@@ -62,9 +63,16 @@ run_probe() {
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only
-# analysis over wordLang programs (backend word_alloc).
+# analysis over wordLang programs (backend word_alloc).  Backend probes run
+# from the backend directory so its built theories load directly.
 run_probe get_stack_only_probeScript.sml get_stack_only_probe.out \
-  skip assign_leaf "$cake_dir/compiler/backend/word_allocScript.sml"
+  skip assign_leaf "$cake_dir/compiler/backend/word_allocScript.sml" \
+  "$cake_dir/compiler/backend"
+# The get_forced probe observes the allocator driver's forced-pair analysis
+# (longMul/addCarry forcing and traversal order) on the RISC-V config.
+run_probe get_forced_probeScript.sml get_forced_probe.out \
+  gf_longmul gf_loop "$cake_dir/compiler/backend/word_allocScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_mem_load_probeScript.sml pan_mem_load_probe.out \
   one_hit named_suffix_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \

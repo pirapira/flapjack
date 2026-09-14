@@ -64,7 +64,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
   | (label, parameters, body) :: functions =>
       let wordParameters := wordSsaAbiParameters parameters.length
       let unallocatedBody := wordProgDCE
-          (LoopToWord.loopToWordCompFunc label parameters body)
+          (RiscV.wordFlattenProgramFrom
+            (LoopToWord.loopToWordCompFunc label parameters body))
       match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -101,7 +102,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
   | (label, parameters, body) :: functions =>
       let wordParameters := wordSsaAbiParameters parameters.length
       let unallocatedBody := wordProgDCE
-          (LoopToWord.loopToWordCompFunc label parameters body)
+          (RiscV.wordFlattenProgramFrom
+            (LoopToWord.loopToWordCompFunc label parameters body))
       match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)

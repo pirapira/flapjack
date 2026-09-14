@@ -6,6 +6,7 @@ import Flapjack.CrepToLoop
 import Flapjack.LoopToWord
 import Flapjack.Word
 import Flapjack.RiscV.Allocator
+import Flapjack.RiscV.WordExpressionFlatten
 import Flapjack.RiscV.RegAlloc
 import Flapjack.RiscV.WordToStack
 import Flapjack.RiscV.Backend
@@ -175,7 +176,7 @@ def pipelineWordFunctionsAllocatedWithSpills [NeZero width] :
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
       let unallocatedBody :=
-        loopToWordProg context body
+        RiscV.wordFlattenProgramFrom (loopToWordProg context body)
       let (_, renamedParameters, renamedBody, allocation) ←
         wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences
           wordParameters unallocatedBody
@@ -212,7 +213,7 @@ def pipelineWordFunctionAllocatedWithSpillsAndBitmaps [NeZero width]
     let context : WordContext :=
       { vars := slots.map (fun name => (name, name + 2)) }
     let wordParameters := parameters.map (fun name => name + 2)
-    let unallocatedBody := loopToWordProg context body
+    let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
     let (_, renamedParameters, renamedBody, allocation) ←
       wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences
         wordParameters unallocatedBody
@@ -289,7 +290,7 @@ def pipelineWordFunctionAllocatedWithSpillsAndFullSsaAndBitmaps [NeZero width]
     let context : WordContext :=
       { vars := slots.map (fun name => (name, name + 2)) }
     let wordParameters := parameters.map (fun name => name + 2)
-    let unallocatedBody := loopToWordProg context body
+    let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
     let (_, renamedParameters, renamedProgram, allocation) ←
       wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
         wordParameters unallocatedBody
@@ -380,7 +381,7 @@ def pipelineWordFunctionsAllocatedWithGraph [NeZero width] :
       let context : WordContext :=
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := loopToWordProg context body
+      let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
       let (_, renamedParameters, allocation, renamedBody) ←
         wordAllocateGraphFunctionWithStackOnlyPrefreezeRenamed wordParameters unallocatedBody
           [] 13 14
@@ -408,7 +409,7 @@ def pipelineWordFunctionsAllocatedWithGraphAndFullSsa [NeZero width] :
       let context : WordContext :=
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := loopToWordProg context body
+      let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
       let (_, renamedParameters, allocation, renamedProgram) ←
         wordAllocateGraphFunctionWithEntryPrefreezeRenamed wordParameters unallocatedBody
           wordParameters 13 14
@@ -439,7 +440,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
       let context : WordContext :=
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := loopToWordProg context body
+      let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
       let (_, renamedParameters, renamedProgram, allocation) ←
         wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
           wordParameters unallocatedBody

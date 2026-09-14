@@ -250,7 +250,7 @@ run_probe crep_lookup_code_probeScript.sml crep_lookup_code_probe.out \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 # The store_global probe observes StoreGlob insert/update/error on globals.
 run_probe crep_store_global_probeScript.sml crep_store_global_probe.out \
-  store_global_insert store_global_eval_failure \
+  store_global_insert store_global_then_load \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_empty_locals_probeScript.sml pan_empty_locals_probe.out \
   empty_locals empty_locals_clock \

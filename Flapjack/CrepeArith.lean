@@ -32,6 +32,19 @@ def crepDest2ExpAux [NeZero width] : Nat → Nat → RiscV.Word width → Option
 def crepDest2Exp [NeZero width] (word : RiscV.Word width) : Option Nat :=
   crepDest2ExpAux (width + 1) 0 word
 
+/-! Fixed-width executable port of CakeML's `crep_arith$mul_const`.
+    Constants zero and one are handled directly; powers of two become a left
+    shift, while all other constants retain the original multiplication node. -/
+def crepMulConst [NeZero width]
+    (expression : CrepExp (RiscV.Word width))
+    (constant : RiscV.Word width) : CrepExp (RiscV.Word width) :=
+  if constant == 0 then .const 0
+  else if constant == 1 then expression
+  else match crepDest2Exp constant with
+    | none => .crepOp .mul [expression, .const constant]
+    | some exponent => .shift .lsl expression
+        (.const (BitVec.ofNat width exponent))
+
 def crepArithExp [Mul α] : CrepExp α → CrepExp α
   | .load address => .load (crepArithExp address)
   | .load32 address => .load32 (crepArithExp address)

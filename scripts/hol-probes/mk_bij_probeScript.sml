@@ -42,6 +42,11 @@ val _ = print_eval "branch_live"
 val _ = print_eval "set_case"
   ``reg_alloc$mk_bij (reg_alloc$Set (insert 4 () (insert 3 () LN)))``;
 
+(* Insertion order cannot make the sptree iterate descending: the
+   enumeration is ascending regardless. *)
+val _ = print_eval "set_reversed_insert"
+  ``reg_alloc$mk_bij (reg_alloc$Set (insert 3 () (insert 4 () LN)))``;
+
 (* A small composite tree: seq of delta and branch-with-live. *)
 val _ = print_eval "composite"
   ``reg_alloc$mk_bij (reg_alloc$Seq (reg_alloc$Delta [1] [2])

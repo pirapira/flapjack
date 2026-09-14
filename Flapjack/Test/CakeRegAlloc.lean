@@ -114,9 +114,16 @@ def bijBranchLiveGuard : Bool :=
     (.branch (some [13]) (.delta [] [9] : WordClashTree)
       (.delta [] [11] : WordClashTree))).nextNode = 3
 
-/-- `Set` remaps its fixed name list. -/
+/-- `Set` remaps its fixed name list; the sptree original always walks
+    ascending keys, so an unsorted list is normalized at the boundary. -/
 def bijSetGuard : Bool :=
   sortBijectionMaps (cakeMkBij (.set [3, 4] : WordClashTree)) =
+    ([(3, 0), (4, 1)], [(0, 3), (1, 4)])
+
+/-- Unsorted `Set` input still numbers ascending, matching the sptree
+    iteration of the original (cake `Set` has no order to violate). -/
+def bijSetUnsortedGuard : Bool :=
+  sortBijectionMaps (cakeMkBij (.set [4, 3] : WordClashTree)) =
     ([(3, 0), (4, 1)], [(0, 3), (1, 4)])
 
 /-- Composite tree: the branch (with live set) runs first, then the delta. -/
@@ -137,7 +144,7 @@ def parityGuard : Bool :=
     ifMergeAllocGuard && callMergeGuard && callTailGuard && assignLeafGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
-    bijCompositeGuard
+    bijSetUnsortedGuard && bijCompositeGuard
 
 #eval parityGuard
 #guard parityGuard
@@ -147,7 +154,8 @@ def runChecks : IO Bool := do
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,
     ifMergeAllocGuard, callMergeGuard, callTailGuard, assignLeafGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
-    bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard, bijCompositeGuard]
+    bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
+    bijSetUnsortedGuard, bijCompositeGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -155,7 +163,7 @@ def runChecks : IO Bool := do
     "get_stack_only call tail", "get_stack_only assign leaf",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
-    "mk_bij composite"]
+    "mk_bij set unsorted", "mk_bij composite"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

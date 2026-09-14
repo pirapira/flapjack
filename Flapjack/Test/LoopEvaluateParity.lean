@@ -6,7 +6,8 @@ import Flapjack.LoopEvaluate
 The source fixture is `scripts/hol-probes/loop_sem_evaluate_probe.out`,
 generated from `loop_sem_evaluate_probeScript.sml`.  The representative
 sequence case checks the intermediate assignment through the final return and
-also checks that `call_env` clears the locals, matching `evaluate_def`.
+the break/continue result cases preserve state, and the tail-call case checks
+that `call_env` clears the locals, matching `evaluate_def`.
 -/
 
 namespace Flapjack.Test.LoopEvaluateParity
@@ -68,6 +69,18 @@ def assignment : Bool :=
   observe (evaluateLoop 4 hooks (.assign 1 (.const (.word 7))) (emptyState 5)) ==
     (none, some (.word 7), 5)
 
+def breakResult : Bool :=
+  observe (evaluateLoop 4 hooks (.break 3)
+    { (emptyState 5) with locals := fun name =>
+        if name = 1 then some (.word 7) else none }) ==
+    (some (.break 3), some (.word 7), 5)
+
+def continueResult : Bool :=
+  observe (evaluateLoop 4 hooks (.continue 2)
+    { (emptyState 5) with locals := fun name =>
+        if name = 1 then some (.word 7) else none }) ==
+    (some (.continue 2), some (.word 7), 5)
+
 def timeout : Bool :=
   observe (evaluateLoop 4 hooks .tick (emptyState 0)) ==
     (some .timeOut, none, 0)
@@ -81,6 +94,8 @@ def tailCallNoResult : Bool :=
 #guard sequenceReturn
 #guard skip
 #guard assignment
+#guard breakResult
+#guard continueResult
 #guard timeout
 #guard tailCallNoResult
 
@@ -89,6 +104,8 @@ def runChecks : IO Bool := do
     ("evaluate sequence observes intermediate assignment and call_env", sequenceReturn),
     ("evaluate Skip returns normally", skip),
     ("evaluate assignment updates the local state", assignment),
+    ("evaluate Break preserves state and result", breakResult),
+    ("evaluate Continue preserves state and result", continueResult),
     ("evaluate Tick clears locals at clock zero", timeout),
     ("evaluate tail call maps callee NONE to Error", tailCallNoResult)]
   let results ← checks.mapM fun (name, passed) => do

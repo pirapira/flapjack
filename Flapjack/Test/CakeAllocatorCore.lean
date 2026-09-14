@@ -96,6 +96,54 @@ def colourDefaultExact : Bool :=
 
 #guard colourDefaultExact
 
+/-- `limit_var` always lands on an allocatable variable above its input. -/
+def limitVarStructureExact : Bool :=
+  (List.range 33).all (fun n =>
+    n < limitVar n && limitVar n % 4 == 1 && isAllocVar (limitVar n))
+
+#guard limitVarStructureExact
+
+/-- More `sp_default` / `total_colour` values, including colourings that name
+physical variables. -/
+def colourDefaultExtendedExact : Bool :=
+  spDefault [] 6 == 3 &&
+    spDefault [] 8 == 4 &&
+    spDefault [] 7 == 0 &&
+    spDefault [] 1 == 0 &&
+    spDefault [(2, 9)] 2 == 9 &&
+    totalColour [] 6 == 6 &&
+    totalColour [] 8 == 8 &&
+    totalColour [] 5 == 0 &&
+    totalColour [(4, 5)] 4 == 10 &&
+    totalColour [(3, 1)] 3 == 2
+
+#guard colourDefaultExtendedExact
+
+/-- More `merge_stack_only` cases, including allocatable-move propagation. -/
+def mergeStackOnlyExtendedExact : Bool :=
+  mergeStackOnly 3 5 [] [7] == ([5], [7]) &&
+    mergeStackOnly 2 6 [6, 8] [9] == ([8], [9]) &&
+    mergeStackOnly 1 3 [1] [7] == ([1], [1, 7]) &&
+    mergeStackOnly 1 2 [1] [7] == ([1], [7])
+
+#guard mergeStackOnlyExtendedExact
+
+/-- More branch-merge and temporary-removal cases. -/
+def mergeStackSetsExtendedExact : Bool :=
+  mergeStackSets [1, 2] [9] [1, 2, 3] [8] [1, 2, 4] [7] == ([1, 2, 3, 4], [8, 7]) &&
+    mergeStackSets [1] [] [1, 2] [3] [1, 2] [4] == ([1, 2], [3, 4])
+
+#guard mergeStackSetsExtendedExact
+
+/-- `remove_temp_stack` deletes every named temporary and leaves the forced
+stack set untouched. -/
+def removeTempStackExtendedExact : Bool :=
+  removeTempStack [1, 3] [1, 2, 3, 4] [7] == ([2, 4], [7]) &&
+    removeTempStack [] [1, 2] [7] == ([1, 2], [7]) &&
+    removeTempStack [5] [1, 5] [7] == ([1], [7])
+
+#guard removeTempStackExtendedExact
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("the three WordLang variable conventions partition the variable space",
@@ -108,7 +156,17 @@ def runChecks : IO Bool := do
       ("stack-only propagation matches merge_stack_only", mergeStackOnlyExact),
       ("branch merging matches merge_stack_sets", mergeStackSetsExact),
       ("temporary names are removed before slot assignment", removeTempStackExact),
-      ("colouring defaults match sp_default and total_colour", colourDefaultExact) ]
+      ("colouring defaults match sp_default and total_colour", colourDefaultExact),
+      ("limit_var always yields an allocatable variable above its input",
+        limitVarStructureExact),
+      ("sp_default and total_colour agree on further oracle values",
+        colourDefaultExtendedExact),
+      ("merge_stack_only propagates allocatable moves correctly",
+        mergeStackOnlyExtendedExact),
+      ("merge_stack_sets and remove_temp_stack agree on further oracle cases",
+        mergeStackSetsExtendedExact),
+      ("remove_temp_stack deletes only the named temporaries",
+        removeTempStackExtendedExact) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

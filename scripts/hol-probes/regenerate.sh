@@ -123,6 +123,10 @@ run_probe get_forced_probeScript.sml get_forced_probe.out \
 run_probe mk_bij_probeScript.sml mk_bij_probe.out \
   delta_basic composite "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend"
+# The legacy allocator-map probe checks the existing WordBijection path too.
+run_probe reg_alloc_mk_bij_probeScript.sml reg_alloc_mk_bij_probe.out \
+  empty_to seq_next "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

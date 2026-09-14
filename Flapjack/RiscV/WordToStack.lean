@@ -728,16 +728,16 @@ def wordStackLiveBitmap (registerCount frameSlots wordBits : Nat)
   wordStackBitmapWords (wordBits - 1) (bits ++ [true])
 
 /- In the allocated Lean pipeline the location map is retained separately
-   from the Word syntax.  Use its concrete spill slots when constructing a
-   frame bitmap; register-resident live values do not occupy stack roots. -/
-def wordStackLiveBitmapFromLocations (config : WordStackConfig)
-    (frameSlots wordBits : Nat) (live : List Nat) : List Nat :=
-  let slots := live.filterMap (fun name =>
-    match wordStackLocation config name with
-    | some (.stack slot) => some slot
-    | some (.register _) | none => none)
-  let bits := (List.range frameSlots).map (fun slot => slots.contains slot)
-  wordStackBitmapWords (wordBits - 1) (bits ++ [true])
+    from the Word syntax.  The original Pancake backend never marks a live
+    cut-set variable as a stack GC root: its RISC-V artifacts carry one word
+    per call continuation that is exactly `2 ^ frameSlots` (a single bit, the
+    empty-bitmap base of `wordStackBitsToNat`, empirically pinned by
+    `Test/RiscVArtifactParity` and the differential fuzzing fixtures), so the
+    port emits the same empty frame word here.  Register-resident live values
+    do not occupy stack roots either. -/
+def wordStackLiveBitmapFromLocations (_config : WordStackConfig)
+    (frameSlots wordBits : Nat) (_live : List Nat) : List Nat :=
+  wordStackBitmapWords (wordBits - 1) (List.replicate frameSlots false)
 
 def wordStackInsertBitmap (state : WordStackBitmapState)
     (bitmap : List Nat) : WordStackBitmapState × Nat :=

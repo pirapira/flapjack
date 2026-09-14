@@ -1,4 +1,5 @@
 import Flapjack.RiscV.PipelineDiagnostics
+import Flapjack.RiscV.ArtifactFormat
 import Flapjack.Test.OriginalPancakeProbes
 
 /-!
@@ -338,8 +339,125 @@ def nomainGlobalAccepted : Bool :=
   | .ok image => !image.sections.isEmpty
   | .error _ => false
 
+/-!
+## FFI stub parity (bead `flapjack-pxn.8.5.14.2`)
+
+The original CakeML `export_riscv` emits, between the `j cake_main`
+startup stub and the fixed `cake_clear`/`cake_exit` pair, one 16-byte
+block per user FFI name in first-appearance order:
+
+```
+cake_ffi<name>:
+     tail cdecl(ffi<name>)
+     .p2align 4
+```
+
+The port used to omit these blocks entirely.  The runtime image now
+carries the discovered `ffiNames` and `RiscV.pancakeRuntimeAssembly`
+emits the same blocks in the same position and order.  Residual: names
+referenced only from unreachable code are still emitted because the
+port discovers FFI names before dead-code removal (same family as the
+`flapjack-pxn.8.5.10.1` lowering residuals).
+-/
+
+/-- The minimal FFI fixture: one reachable `@foo` call.  Pancake FFI
+    calls take exactly four arguments. -/
+def ffiMinSource : String := "fun 1 main() { @foo(1,2,3,4); return 0; }"
+
+/-- Two FFI names, `@foo` first. -/
+def ffiOrderSource : String :=
+  "fun 1 main() { @foo(1,2,3,4); @bar(4,3,2,1); return 0; }"
+
+/-- The same two FFI names in the opposite first-appearance order. -/
+def ffiOrderFlipSource : String :=
+  "fun 1 main() { @bar(4,3,2,1); @foo(1,2,3,4); return 0; }"
+
+/-- Mirror of the `flapjack-compile --pancake` path: parse, lower to
+`CompiledFunction`s, build the runtime image, render the assembly text. -/
+def compileAssembly (source : String) : Option String :=
+  match Flapjack.Parser.parseTopDecs (α := RiscV.Word 64)
+      (fun value => BitVec.ofInt 64 value) source with
+  | .error _ => none
+  | .ok declarations =>
+      match compileFlapjackEntry (α := RiscV.Word 64) .rv64i
+          (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+          "main" (panTargetDeclarationsWithDefaultMain declarations) with
+      | none => none
+      | some pipeline =>
+          match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64)
+              .rv64i (BitVec.ofNat 64 8) (BitVec.ofInt 64) []
+              artifactCompileConfig "main" source with
+          | .ok image =>
+              some (RiscV.pancakeRuntimeAssembly pipeline.crepe image)
+          | .error _ => none
+
+/-- The runtime image records the reachable user FFI names in
+first-appearance order. -/
+def ffiNamesMatch : Bool :=
+  (compileRuntimeImage ffiMinSource).map (·.ffiNames) == some ["foo"] &&
+    (compileRuntimeImage ffiOrderSource).map (·.ffiNames) == some ["foo", "bar"] &&
+    (compileRuntimeImage ffiOrderFlipSource).map (·.ffiNames) ==
+      some ["bar", "foo"]
+
+/-- The single-FFI assembly carries the exact original stub block in the
+exact original position, immediately before `cake_clear`. -/
+def ffiMinStubEmitted : Bool :=
+  match compileAssembly ffiMinSource with
+  | some assembly =>
+      (assembly.splitOn
+        "cake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_clear:").length == 2
+  | none => false
+
+/-- The two-FFI assembly carries both stub blocks in first-appearance
+order (`foo` then `bar`) between the startup stub and `cake_clear`. -/
+def ffiOrderStubsEmitted : Bool :=
+  match compileAssembly ffiOrderSource with
+  | some assembly =>
+      (assembly.splitOn
+        "cake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_ffibar:\n     tail cdecl(ffibar)\n     .p2align 4\n\ncake_clear:").length == 2
+  | none => false
+
+/-- Flipping the source order flips the emitted stub order (`bar` then
+`foo`), matching the original's first-appearance convention. -/
+def ffiOrderFlipStubsEmitted : Bool :=
+  match compileAssembly ffiOrderFlipSource with
+  | some assembly =>
+      (assembly.splitOn
+        "cake_ffibar:\n     tail cdecl(ffibar)\n     .p2align 4\n\ncake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_clear:").length == 2
+  | none => false
+
+/-!
+## Bitmap table word parity (bead `flapjack-pxn.8.5.14.1`)
+
+The original's pancake bitmap table carries one word per non-tail call
+continuation, each word a pure power of two `2 ^ f'` encoding the
+caller's frame size (`f'` = frame words minus the bitmap slot), never
+live-pointer bits.  The port now derives real entries from the lowered
+program (`2 ^ (nextSpill + 1)`) instead of constant `2`s.  On the
+`bitmap_calls` fixture, where neither compiler spills, both emit
+`[4, 2, 2]`; the residual value mismatch when the original spills more
+than the port (`8`/`16` vs `2`) is tracked by the bead.
+-/
+
+/-- The `bitmap_calls` fixture source (inline copy of
+`Flapjack/Test/OriginalPancake/bitmap_calls.pnk`). -/
+def bitmapCallsSource : String :=
+  "fun 1 f () {\n    var 1 x = f();\n    var 1 x = f();\n    return 1;\n  }\n\nfun 1 main() { return 0; }"
+
+/-- Both call continuations in `f` produce one `2 ^ 1` entry each after
+the initial `[4]`, exactly matching the original's `[4, 2, 2]`. -/
+def bitmapCallsWordsMatch : Bool :=
+  match compileRuntimeImage bitmapCallsSource with
+  | some image => image.bitmaps.data == [4, 2, 2]
+  | none => false
+
 #guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
+#guard ffiNamesMatch
+#guard ffiMinStubEmitted
+#guard ffiOrderStubsEmitted
+#guard ffiOrderFlipStubsEmitted
+#guard bitmapCallsWordsMatch
 #guard artifactAccepted
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches
@@ -378,7 +496,17 @@ def runChecks : IO Bool := do
       ("dup_global fixture accepted with a redeclaration warning",
         dupGlobalAcceptedWithWarning),
       ("nomain_global fixture accepted with a synthesized default main",
-        nomainGlobalAccepted) ]
+         nomainGlobalAccepted),
+      ("ffi names recorded in first-appearance order",
+         ffiNamesMatch),
+      ("single ffi stub block emitted in the original position",
+         ffiMinStubEmitted),
+      ("two ffi stub blocks emitted in first-appearance order",
+         ffiOrderStubsEmitted),
+      ("flipped ffi source order flips the emitted stub order",
+         ffiOrderFlipStubsEmitted),
+      ("bitmap_calls table matches the original [4, 2, 2]",
+         bitmapCallsWordsMatch) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

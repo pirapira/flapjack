@@ -1,7 +1,12 @@
 zero=NONE
+
+one_start3=SOME 3
+
 one=SOME 0
 
 two=SOME 1
+
+four_start4=SOME 6
 
 four=SOME 2
 

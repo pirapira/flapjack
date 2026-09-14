@@ -177,4 +177,15 @@ theorem riscvForward_eq_zero_iff {register : Fin 32} :
     apply Fin.ext
     simp [riscvForward, htwentySeven]
 
+/-- Selecting an internal register through the one-time Cake map yields the
+architectural zero register exactly when that register is the Cake stack zero
+register `27`.  For every other in-range register the image is a distinct
+hardware register, so the zero convention lives only at the `27` role and is
+not an assumption on the abstract register file. -/
+theorem labRegisterOfNat_eq_zero_iff {name : Nat} (h : name < 32) :
+    labRegisterOfNat name = some 0 ↔ name = 27 := by
+  rw [labRegisterOfNat_of_lt_32 h, Option.some.injEq, Fin.ext_iff]
+  simp only [Fin.val_zero]
+  exact riscvRegisterName_eq_zero_iff h
+
 end Flapjack.RiscV

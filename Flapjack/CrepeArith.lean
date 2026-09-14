@@ -16,21 +16,23 @@ def crepDestConst : CrepExp α → Option α
   | .const value => some value
   | _ => none
 
-/-! Fixed-width executable port of CakeML's `crep_arith$dest_2exp`
-    (`cakeml/pancake/crep_arithScript.sml:15`).  The HOL definition recurses
-    while stripping low zero bits from a nonzero word.  A width-plus-one fuel
-    bound is sufficient for a `BitVec`: every unsuccessful recursive step
-    shifts away one bit, and the next value is either zero, one, or odd. -/
-def crepDest2ExpAux [NeZero width] : Nat → Nat → RiscV.Word width → Option Nat
+def crepDest2ExpFuel [BEq α] [OfNat α 0] [OfNat α 1]
+    [AndOp α] [ShiftRight α] : Nat → Nat → α → Option Nat
   | 0, _, _ => none
   | fuel + 1, exponent, word =>
       if word == 0 then none
       else if word == 1 then some exponent
-      else if (word &&& BitVec.ofNat width 1) != 0 then none
-      else crepDest2ExpAux fuel (exponent + 1) (word >>> 1)
+      else if AndOp.and word 1 != 0 then none
+      else crepDest2ExpFuel fuel (exponent + 1) (ShiftRight.shiftRight word 1)
+termination_by fuel => fuel
 
-def crepDest2Exp [NeZero width] (word : RiscV.Word width) : Option Nat :=
-  crepDest2ExpAux (width + 1) 0 word
+/-! Fixed-width executable form of CakeML's `crep_arith$dest_2exp_def`
+    (`crep_arithScript.sml:15`).  The word width supplies the finite bound
+    needed by Lean's termination checker; each recursive step is the HOL
+    logical right shift by one. -/
+def crepDest2Exp [PanShiftWidth α] [BEq α] [OfNat α 0] [OfNat α 1]
+    [AndOp α] [ShiftRight α] (n : Nat) (word : α) : Option Nat :=
+  crepDest2ExpFuel (PanShiftWidth.width (α := α) + 1) n word
 
 /-! Fixed-width executable port of CakeML's `crep_arith$mul_const`.
     Constants zero and one are handled directly; powers of two become a left
@@ -40,7 +42,7 @@ def crepMulConst [NeZero width]
     (constant : RiscV.Word width) : CrepExp (RiscV.Word width) :=
   if constant == 0 then .const 0
   else if constant == 1 then expression
-  else match crepDest2Exp constant with
+  else match crepDest2Exp 0 constant with
     | none => .crepOp .mul [expression, .const constant]
     | some exponent => .shift .lsl expression
         (.const (BitVec.ofNat width exponent))
@@ -72,7 +74,6 @@ def crepSimpExp [NeZero width] : CrepExp (RiscV.Word width) →
 termination_by expression => sizeOf expression
 decreasing_by
   all_goals first | sizeOf_list_dec | decreasing_trivial | simp_wf
-
 def crepArithExp [Mul α] : CrepExp α → CrepExp α
   | .load address => .load (crepArithExp address)
   | .load32 address => .load32 (crepArithExp address)

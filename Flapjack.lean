@@ -319,6 +319,7 @@ import Flapjack.RiscV.CorrectnessColour
 import Flapjack.RiscV.CorrectnessSsaColour
 import Flapjack.RiscV.CorrectnessFullSsaCounted
 import Flapjack.RiscV.AllocatorDriver
+import Flapjack.RiscV.CakeRegAlloc
 import Flapjack.RiscV.WordToStack
 import Flapjack.RiscV.LongDivRuntime
 import Flapjack.RiscV.CorrectnessColourConditional

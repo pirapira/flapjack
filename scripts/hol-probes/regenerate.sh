@@ -61,6 +61,10 @@ run_probe() {
 # requiring its CAKEMLDIR project mapping in this repository.
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
+# The get_stack_only probe observes the allocator driver's stack-only
+# analysis over wordLang programs (backend word_alloc).
+run_probe get_stack_only_probeScript.sml get_stack_only_probe.out \
+  skip assign_leaf "$cake_dir/compiler/backend/word_allocScript.sml"
 run_probe pan_mem_load_probeScript.sml pan_mem_load_probe.out \
   one_hit named_suffix_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_shape_of_probeScript.sml pan_shape_of_probe.out \

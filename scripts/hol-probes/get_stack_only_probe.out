@@ -1,0 +1,9 @@
+skip=LN
+move_chain=⦕ 9 ⦖
+move_from_reg=LN
+seq_moves=⦕ 9 ⦖
+if_merge=⦕ 9 ⦖
+if_merge_alloc=⦕ 9; 21 ⦖
+call_merge=⦕ 9 ⦖
+call_tail=LN
+assign_leaf=LN

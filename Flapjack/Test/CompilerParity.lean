@@ -129,6 +129,7 @@ import Flapjack.Test.ParserMknodeParity
 import Flapjack.Test.ParserMksubtreeParity
 import Flapjack.Test.ParserConsumeTokParity
 import Flapjack.Test.ParserKeepTokParity
+import Flapjack.Test.ParserKeepKwParity
 import Flapjack.Test.PanHHandleCallRetParity
 import Flapjack.Test.PanMrecParity
 import Flapjack.Test.PanHProgDecParity

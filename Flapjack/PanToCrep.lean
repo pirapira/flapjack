@@ -37,6 +37,20 @@ def compileField [OfNat α 0] (index : Nat) :
 def compilePanOp : PanOp → CrepOp
   | .mul => .mul
 
+/-! Faithful port of `pan_to_crep$exp_hdl` from
+    `cakeml/pancake/pan_to_crepScript.sml:106-112`.
+
+    A known variable is initialized from the global return area, one word per
+    flattened local, and the assignments are nested in source order. -/
+def expHdl [OfNat α 0] [OfNat α 1] [Add α]
+    (vars : InfoMap (Shape × List Nat)) (name : VarName) : CrepProg α :=
+  match lookupInfo name vars with
+  | none => .skip
+  | some (_, names) =>
+      crepNestedSeq
+        (List.zipWith (fun destination source => .assign destination source)
+          names (loadGlobals 0 1 names.length))
+
 def compileExp [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) : Exp α → List (CrepExp α) × Shape
   | .const value => ([.const value], .one)

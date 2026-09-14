@@ -310,7 +310,6 @@ def parityGuard : Bool :=
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard
 
 #guard parityGuard
-
 def runChecks : IO Bool := do
   let results := [
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,

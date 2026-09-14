@@ -89,6 +89,21 @@ run_probe pan_lang_size_of_sh_with_ctxt_probeScript.sml pan_lang_size_of_sh_with
   one known_named missing_named nested_comb "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_size_of_shape_probeScript.sml pan_lang_size_of_shape_probe.out \
   one empty_comb named nested_comb "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_decl_predicates_probeScript.sml pan_lang_decl_predicates_probe.out \
+  is_decl_decl is_decl_exception is_exn_decl_exception is_exn_decl_decl \
+  is_name_name is_name_decl size_of_eids_empty size_of_eids_mixed \
+  "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_var_exp_probeScript.sml pan_lang_var_exp_probe.out \
+  local_var global_var nested nested_global "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_load_store_op_probeScript.sml pan_lang_load_store_op_probe.out \
+  load_op8 load_op16 load_opw load_op32 store_op8 store_op16 store_opw store_op32 \
+  "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_is_function_probeScript.sml pan_lang_is_function_probe.out \
+  function global "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_functions_probeScript.sml pan_lang_functions_probe.out \
+  empty function global "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_exceptions_probeScript.sml pan_lang_exceptions_probe.out \
+  empty exception "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

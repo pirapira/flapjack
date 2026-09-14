@@ -313,6 +313,26 @@ def globalFunctionNames : List (Decl α) → List FunName
   | _ :: declarations => globalFunctionNames declarations
 termination_by declarations => sizeOf declarations
 
+/-! Direct source-shaped counterpart of `panLang$functions`: retain every
+    function's metadata while skipping value, exception, and struct
+    declarations. -/
+def functionEntries : List (Decl α) →
+    List (FunName × List (VarName × Shape) × Prog α × Shape)
+  | [] => []
+  | .function declaration :: declarations =>
+      (declaration.name, declaration.params, declaration.body,
+        declaration.returnShape) :: functionEntries declarations
+  | _ :: declarations => functionEntries declarations
+termination_by declarations => sizeOf declarations
+
+/-! Direct source-shaped counterpart of `panLang$exceptions`. -/
+def exceptionEntries : List (Decl α) → List (ExceptionId × Shape)
+  | [] => []
+  | .exnDecl exception shape :: declarations =>
+      (exception, shape) :: exceptionEntries declarations
+  | _ :: declarations => exceptionEntries declarations
+termination_by declarations => sizeOf declarations
+
 def globalDeclsFilter (predicate : Decl α → Bool) : List (Decl α) → List (Decl α)
   | [] => []
   | declaration :: declarations =>
@@ -336,6 +356,30 @@ def globalDeclIsGlobal : Decl α → Bool
 def globalDeclIsFunction : Decl α → Bool
   | .function _ => true
   | _ => false
+
+/-! Direct source-shaped counterparts of the declaration predicates from
+    `panLangScript.sml:234-249`.  The global-pass predicates above are kept
+    as its existing pass-facing names; these names retain the source API. -/
+def isDecl : Decl α → Bool
+  | .decl _ _ _ => true
+  | _ => false
+
+def isExnDecl : Decl α → Bool
+  | .exnDecl _ _ => true
+  | _ => false
+
+def isName : Decl α → Bool
+  | .name _ _ => true
+  | _ => false
+
+def sizeOfEids : List (Decl α) → Nat
+  | [] => 0
+  | declaration :: declarations =>
+      if isExnDecl declaration then
+        1 + sizeOfEids declarations
+      else
+        sizeOfEids declarations
+termination_by declarations => sizeOf declarations
 
 def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
   globalDeclsFilter globalDeclIsName declarations ++

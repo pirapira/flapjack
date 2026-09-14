@@ -108,7 +108,8 @@ run_probe pan_itree_ltree_probeScript.sml pan_itree_ltree_probe.out \
   ret final "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_sh_mem_store_probeScript.sml \
   pan_itree_h_prog_sh_mem_store_probe.out \
-  store_zero_width store_domain_error "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+  store_zero_width store_aligned_original store_domain_error \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
   get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_get_var_imm_probeScript.sml \

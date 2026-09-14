@@ -17,6 +17,7 @@ import Flapjack.PanSetGlobal
 import Flapjack.PanSemSetGlobal
 import Flapjack.PanSemSetKvar
 import Flapjack.PanSemLookupKvar
+import Flapjack.PanSemIsValidValue
 import Flapjack.PanItreeEvaluate
 import Flapjack.PanWriteBytearray
 import Flapjack.PanExt

@@ -1,0 +1,7 @@
+is_valid_value_local_shape=T
+
+is_valid_value_global_shape=T
+
+is_valid_value_mismatch=F
+
+is_valid_value_missing=F

@@ -55,6 +55,7 @@ import Flapjack.Test.PanSetGlobalParity
 import Flapjack.Test.PanSemSetGlobalParity
 import Flapjack.Test.PanSemSetKvarParity
 import Flapjack.Test.PanSemLookupKvarParity
+import Flapjack.Test.PanSemIsValidValueParity
 import Flapjack.Test.PanItreeEvaluateParity
 import Flapjack.Test.PanWriteBytearrayParity
 import Flapjack.Test.PanExtParity
@@ -744,6 +745,7 @@ def main : IO Unit := do
     Flapjack.Test.PanSemSetGlobalParity.runChecks,
     Flapjack.Test.PanSemSetKvarParity.runChecks,
     Flapjack.Test.PanSemLookupKvarParity.runChecks,
+    Flapjack.Test.PanSemIsValidValueParity.runChecks,
     Flapjack.Test.PanItreeEvaluateParity.runChecks,
     Flapjack.Test.PanWriteBytearrayParity.runChecks,
     Flapjack.Test.PanExtParity.runChecks,

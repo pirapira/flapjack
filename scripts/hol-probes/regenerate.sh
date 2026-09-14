@@ -83,6 +83,8 @@ run_probe pan_lang_exp_ids_probeScript.sml pan_lang_exp_ids_probe.out \
   empty fallback "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_with_shape_probeScript.sml pan_lang_with_shape_probe.out \
   empty_shapes short_input "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_wf_fields_context_probeScript.sml pan_lang_wf_fields_context_probe.out \
+  empty_fields self_reference_context "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \
@@ -257,6 +259,16 @@ run_probe compile_panop_probeScript.sml compile_panop_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_exp_probeScript.sml compile_exp_probe.out \
   leaves struct_field loads_ops cmp_shift "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe exp_hdl_probeScript.sml exp_hdl_probe.out \
+  missing known "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe ret_var_probeScript.sml ret_var_probe.out \
+  one_empty named "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe ret_hdl_probeScript.sml ret_hdl_probe.out \
+  one named "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe wrap_rt_probeScript.sml wrap_rt_probe.out \
+  none named "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe compile_def_probeScript.sml compile_def_probe.out \
+  return return "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \
   exit_loop_break exit_loop_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

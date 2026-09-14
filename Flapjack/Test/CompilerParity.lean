@@ -111,6 +111,11 @@ import Flapjack.Test.CrepExpsParity
 import Flapjack.Test.CompFieldParity
 import Flapjack.Test.CompilePanOpParity
 import Flapjack.Test.CompileExpParity
+import Flapjack.Test.ExpHdlParity
+import Flapjack.Test.RetVarParity
+import Flapjack.Test.RetHdlParity
+import Flapjack.Test.WrapRtParity
+import Flapjack.Test.CompileDefParity
 import Flapjack.Test.CrepProgIfParity
 import Flapjack.Test.CompileCrepOpParity
 import Flapjack.Test.CrepCompileExpParity
@@ -152,6 +157,7 @@ import Flapjack.Test.ParserTryProgParity
 import Flapjack.Test.ParserPancakePegParity
 import Flapjack.Test.ParserParseStatementParity
 import Flapjack.Test.PanLangWfShapeParity
+import Flapjack.Test.PanLangWfFieldsContextParity
 import Flapjack.Test.PanHHandleCallRetParity
 import Flapjack.Test.PanMrecParity
 import Flapjack.Test.PanHProgDecParity
@@ -840,6 +846,11 @@ def main : IO Unit := do
     Flapjack.Test.CompFieldParity.runChecks,
     Flapjack.Test.CompilePanOpParity.runChecks,
     Flapjack.Test.CompileExpParity.runChecks,
+    Flapjack.Test.ExpHdlParity.runChecks,
+    Flapjack.Test.RetVarParity.runChecks,
+    Flapjack.Test.RetHdlParity.runChecks,
+    Flapjack.Test.WrapRtParity.runChecks,
+    Flapjack.Test.CompileDefParity.runChecks,
     Flapjack.Test.CrepExitLoopParity.runChecks,
     Flapjack.Test.CrepEvaluateParity.runChecks,
     Flapjack.Test.CrepFixClockParity.runChecks,

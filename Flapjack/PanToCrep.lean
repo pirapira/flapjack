@@ -37,6 +37,56 @@ def compileField [OfNat α 0] (index : Nat) :
 def compilePanOp : PanOp → CrepOp
   | .mul => .mul
 
+/-! Faithful port of `pan_to_crep$exp_hdl` from
+    `cakeml/pancake/pan_to_crepScript.sml:106-112`.
+
+    A known variable is initialized from the global return area, one word per
+    flattened local, and the assignments are nested in source order. -/
+def expHdl [OfNat α 0] [OfNat α 1] [Add α]
+    (vars : InfoMap (Shape × List Nat)) (name : VarName) : CrepProg α :=
+  match lookupInfo name vars with
+  | none => .skip
+  | some (_, names) =>
+      crepNestedSeq
+        (List.zipWith (fun destination source => .assign destination source)
+          names (loadGlobals 0 1 names.length))
+
+/-! Faithful port of `pan_to_crep$ret_var` from
+    `cakeml/pancake/pan_to_crepScript.sml:114-119`.
+
+    A return variable exists only for a one-word shape.  Pancake's `oHD`
+    operation supplies the first flattened destination when one is present. -/
+def retVar (shape : Shape) (names : List Nat) : Option Nat :=
+  match shape with
+  | .one => names.head?
+  | .comb fields =>
+      if Shape.shapeSize (.comb fields) = 1 then names.head? else none
+  | .named _ => none
+
+/-! Faithful port of `pan_to_crep$ret_hdl` from
+    `cakeml/pancake/pan_to_crepScript.sml:122-127`.
+
+    Only a multi-word `Comb` needs a handler that copies the returned global
+    words into its flattened local destinations. -/
+def retHdl [OfNat α 0] [OfNat α 1] [Add α]
+    (shape : Shape) (names : List Nat) : CrepProg α :=
+  match shape with
+  | .one => .skip
+  | .comb fields =>
+      if 1 < Shape.shapeSize (.comb fields) then assignRet (1 : α) names
+      else .skip
+  | .named _ => .skip
+
+/-! Faithful port of `pan_to_crep$wrap_rt` from
+    `cakeml/pancake/pan_to_crepScript.sml:131-136`.
+
+    The empty one-word return slot is normalized to no return slot; every
+    other option is preserved unchanged. -/
+def wrapRt : Option (Shape × List Nat) → Option (Shape × List Nat)
+  | none => none
+  | some (.one, []) => none
+  | value => value
+
 def compileExp [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) : Exp α → List (CrepExp α) × Shape
   | .const value => ([.const value], .one)

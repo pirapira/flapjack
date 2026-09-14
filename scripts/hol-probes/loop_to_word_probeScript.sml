@@ -95,3 +95,12 @@ val _ = print_eval "comp_func_seq_assign"
   ``comp_func 7 [10]
       (loopLang$Seq (loopLang$Assign 11 (Const (3w : 8 word)))
         (loopLang$Assign 12 (Var 11)))``
+
+(* compile_prog_def, loop_to_wordScript.sml:171-174 *)
+val _ = print_eval "compile_prog_empty"
+  ``compile_prog ([] : (num # num list # 8 word loopLang$prog) list)``
+val _ = print_eval "compile_prog_singleton"
+  ``compile_prog [(7,[10],loopLang$Skip)]``
+val _ = print_eval "compile_prog_two"
+  ``compile_prog [(7,[10],loopLang$Skip);
+      (8,[],loopLang$Assign 11 (Const (3w : 8 word)))]``

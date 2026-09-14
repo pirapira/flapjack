@@ -30,6 +30,11 @@ def findLoopVar (context : LoopContext α) (name : Nat) : Nat :=
   | some value => value
   | none => 0
 
+/-! Source-named port of `crep_to_loop$find_var` (`find_var_def`,
+    `crep_to_loopScript.sml:20`). -/
+def crepFindVar (context : LoopContext α) (name : Nat) : Nat :=
+  findLoopVar context name
+
 def lowerLoopExp : CrepExp α → LoopExp α
   | .const value => .const value
   | .var name => .var name

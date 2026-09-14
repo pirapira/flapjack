@@ -57,6 +57,23 @@ def loopListDeleteSorted (names : List Nat) (live : List Nat) : List Nat :=
 def loopIntersectSorted (left right : List Nat) : List Nat :=
   left.filter (fun name => name ∈ right)
 
+/-! The `Call` equations of CakeML's `loop_live$shrink` use the arguments as
+    reads and restrict a call's returned live set to the variables live after
+    the call.  Keeping this as a separate helper makes the source equation
+    visible at the executable boundary.  Handler calls are handled by the
+    full shrink pass below; this helper is the exact no-handler equation from
+    `cakeml/pancake/loop_liveScript.sml:116-123`. -/
+def loopShrinkCallNoHandler (returns : Option (List Nat × List Nat))
+    (target : Option Nat) (arguments : List Nat) (live : List Nat) :
+    LoopProg α × List Nat :=
+  match returns with
+  | none =>
+      (.call none target arguments none, loopListInsert arguments live)
+  | some (names, liveOut) =>
+      let callLive := loopListDeleteSorted names (loopIntersectSorted live liveOut)
+      (.call (some (names, callLive)) target arguments none,
+        loopListInsert arguments callLive)
+
 /-! Source-shaped leaf and structured equations from `loop_live$shrink`
     (`cakeml/pancake/loop_liveScript.sml:62`).  The recursive fixed-point
     loop case is intentionally kept as the next refinement boundary; all
@@ -124,9 +141,47 @@ def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
       (.ffi function configuration configurationLength array arrayLength restricted,
         loopListInsert [configuration, configurationLength, array, arrayLength] restricted)
   | .loop liveIn body liveOut, live =>
-      (.loop liveIn body liveOut, live)
-  | .call returns target arguments handler, live =>
-      (.call returns target arguments handler, live)
+      let loopLiveOut := loopIntersectSorted liveOut live
+      let bodyEntryLive := loopListInsert liveIn loopLiveOut
+      /- Cake's `fixedpoint` repeats the body shrink with the loop's output
+         live set until the live-in set stabilizes.  The bound is an
+         executable representation of the finite-set decrease argument used
+         by the HOL definition; Pancake live sets are bounded by the source
+         program, so this comfortably covers generated bodies. -/
+      let rec fixedpoint (fuel : Nat) (previous : List Nat) :
+          LoopProg α × List Nat :=
+        match fuel with
+        | 0 =>
+            let (fallback, _) := loopShrinkLeaf body bodyEntryLive
+            (.loop liveIn fallback loopLiveOut, liveIn)
+        | fuel + 1 =>
+            let (body', bodyLive) := loopShrinkLeaf body loopLiveOut
+            let current := loopIntersectSorted liveIn bodyLive
+            if current = previous then
+              (.loop current body' loopLiveOut, current)
+            else if current.length ≤ previous.length then
+              let (fallback, _) := loopShrinkLeaf body bodyEntryLive
+              (.loop liveIn fallback loopLiveOut, liveIn)
+            else
+              fixedpoint fuel current
+      fixedpoint 32 []
+  | .call returns target arguments none, live =>
+      loopShrinkCallNoHandler returns target arguments live
+  | .call returns target arguments
+      (some (exception, handler, normal, handlerLiveOut)), live =>
+      let (normal', normalLive) := loopShrinkLeaf normal live
+      let (handler', handlerLive) := loopShrinkLeaf handler live
+      let returnLive := match returns with
+        | none => []
+        | some (names, liveOut) =>
+            loopIntersectSorted liveOut
+              (loopListInsert (loopListDeleteSorted names normalLive)
+                (deleteNatSorted exception handlerLive))
+      (.call (returns.map (fun (names, _) => (names, returnLive))) target
+          arguments
+          (some (exception, handler', normal',
+            loopIntersectSorted live handlerLiveOut)),
+        loopListInsert arguments returnLive)
 
 /-! Faithful executable port of `loop_live$mark_all` from
     `cakeml/pancake/loop_liveScript.sml:189`.  The Boolean records whether

@@ -25,6 +25,26 @@ def parityGuard : Bool :=
   | _ => false) &&
   (match loopShrinkLeaf (.load32 1 2 : LoopProg Nat) [] with
   | (.load32 1 2, [1]) => true
+  | _ => false) &&
+  (match loopShrinkLeaf
+      (.call none (some 7) [1, 2] none : LoopProg Nat) [2, 3] with
+  | (.call none (some 7) [1, 2] none, [1, 2, 3]) => true
+  | _ => false) &&
+  (match loopShrinkLeaf
+      (.call (some ([2], [1, 2, 3])) (some 7) [1] none : LoopProg Nat)
+      [2, 3, 4] with
+  | (.call (some ([2], [3])) (some 7) [1] none, [1, 3]) => true
+  | _ => false) &&
+  (match loopShrinkLeaf
+      (.call (some ([2], [1, 2, 3])) (some 7) [1]
+        (some (9, (.return [4] : LoopProg Nat), .skip, [2, 3])) :
+          LoopProg Nat) [2, 3, 4] with
+  | (.call (some ([2], [3])) (some 7) [1]
+        (some (9, .return [4], .skip, [2, 3])), [1, 3]) => true
+  | _ => false) &&
+  (match loopShrinkLeaf
+      (.loop [1] (.assign 2 (.const 7)) [] : LoopProg Nat) [] with
+  | (.loop [] .skip [], []) => true
   | _ => false)
 
 #eval parityGuard

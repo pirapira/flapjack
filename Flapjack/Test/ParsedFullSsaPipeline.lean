@@ -60,7 +60,7 @@ def parsedCallLookupEntry (label : Nat) :
 
 def parsedCallMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← parsedCallLinked
-  let entry ← parsedCallLookupEntry 3 sections
+  let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
   RiscV.executeFunctionAtAfterEntry 4000 0 entry 172 [] image [2] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
@@ -75,7 +75,7 @@ def parsedCallLoopResult : Option (List (RiscV.Word 64)) := do
   let declarations ← parsedCallDeclarations
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
     (fun value => BitVec.ofNat 64 value) "main" declarations
-  let (_, body) ← lookupLoopFunction 3 pipeline.loop
+  let (_, body) ← lookupLoopFunction 2 pipeline.loop
   let result ← evalLoopProgWithFunctions pipeline.loop 100
     parsedCallLoopState body
   pure (loopResultValues result)
@@ -84,7 +84,7 @@ def parsedCallWordResult : Option (List (RiscV.Word 64)) := do
   let declarations ← parsedCallDeclarations
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
     (fun value => BitVec.ofNat 64 value) "main" declarations
-  let (_, body) ← RiscV.lookupWordFunction 3 pipeline.word
+  let (_, body) ← RiscV.lookupWordFunction 2 pipeline.word
   let result ← RiscV.evalWordFunctionWithCalls pipeline.word 100
     (RiscV.zeroState 64) body
   pure result.2
@@ -150,22 +150,27 @@ def parsedConditionalLinked :
 
 def parsedConditionalMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← parsedConditionalLinked
-  let entry ← parsedCallLookupEntry 3 sections
+  let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 172 [] image [2] []
+  /- This fixture has no nested call, so its direct entry returns to the
+     sentinel link used by the small source-facing machine harness. -/
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
 
 def parsedConditionalSourceResult : Option (List (RiscV.Word 64)) := do
   let functions ← parsedConditionalSourceFunctions
   let body ← parsedConditionalSourceMain
-  let result ← evalPanProgWithCalls functions 30 (fun _ => none) body
-  pure result.2
+  let result ← evalPanProgWithCallsAndFfi functions (fun _ _ _ _ _ _ => none) 30
+    (fun _ => none) body
+  match result with
+  | .returned _ values => some values
+  | _ => none
 
 def parsedConditionalLoopResult : Option (List (RiscV.Word 64)) := do
   let declarations ← parsedConditionalDeclarations
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
     (fun value => BitVec.ofNat 64 value) "main" declarations
-  let (_, body) ← lookupLoopFunction 3 pipeline.loop
+  let (_, body) ← lookupLoopFunction 2 pipeline.loop
   let result ← evalLoopProgWithFunctions pipeline.loop 100
     parsedCallLoopState body
   pure (loopResultValues result)
@@ -174,7 +179,7 @@ def parsedConditionalWordResult : Option (List (RiscV.Word 64)) := do
   let declarations ← parsedConditionalDeclarations
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
     (fun value => BitVec.ofNat 64 value) "main" declarations
-  let (_, body) ← RiscV.lookupWordFunction 3 pipeline.word
+  let (_, body) ← RiscV.lookupWordFunction 2 pipeline.word
   let result ← RiscV.evalWordFunctionWithCalls pipeline.word 100
     (RiscV.zeroState 64) body
   pure result.2

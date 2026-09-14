@@ -241,11 +241,44 @@ def compileFunctions [BEq α] [OfNat α 0] [Add α]
   | _ :: declarations => compileFunctions context declarations
 termination_by declarations => sizeOf declarations
 
+/-! Existing context-normalized function-table compiler used by the
+    correctness layer.  `compileToCrep` below preserves the source function's
+    last-parameter-slot `vmax` convention for direct parity with HOL. -/
 def compileToCrepe [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     List (CompiledFunction α) :=
   let context := { context with functions := functionInfos declarations }
   compileFunctions context declarations
+
+/-! Faithful port of `pan_to_crep$compile_to_crep` from
+    `cakeml/pancake/pan_to_crepScript.sml:383-391`.
+
+    HOL's `comp_func` sets `vmax` to the greatest parameter slot, whereas the
+    existing context-normalized API stores the next free slot in its function
+    context.  The subtraction below is therefore intentional and preserves
+    the source temporary numbering. -/
+def compileFunDeclSource [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (declaration : FunDecl α) : CompiledFunction α :=
+  let (vars, params, maxVar) := compileParamVars declaration.params 0
+  let functionContext := { context with vars := vars, maxVar := maxVar - 1 }
+  { name := declaration.name, params := params,
+    body := compileProg functionContext declaration.body,
+    returnShape := declaration.returnShape }
+
+def compileFunctionsSource [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) : List (Decl α) → List (CompiledFunction α)
+  | [] => []
+  | .function declaration :: declarations =>
+      compileFunDeclSource context declaration ::
+        compileFunctionsSource context declarations
+  | _ :: declarations => compileFunctionsSource context declarations
+termination_by declarations => sizeOf declarations
+
+def compileToCrep [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α)) :
+    List (CompiledFunction α) :=
+  let context := { context with functions := functionInfos declarations }
+  compileFunctionsSource context declarations
 
 theorem compileProg_skip [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) : compileProg context .skip = .skip := by

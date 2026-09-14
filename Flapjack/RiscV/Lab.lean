@@ -623,8 +623,23 @@ def labFfiStubPrefix [NeZero width] (context : WordFfiContext) :
     List (Instruction width) :=
   if context.services.isEmpty then []
   else
-    context.services.flatMap (fun (_, service) => labFfiServiceStub service) ++
-      List.replicate 8 (.jal 0 0)
+      context.services.flatMap (fun (_, service) => labFfiServiceStub service) ++
+        List.replicate 8 (.jal 0 0)
+
+/-! A linked FFI call is nested inside an ordinary Cake function call.  Its
+    continuation must not overwrite the caller's `x1` link: the service stub
+    returns through the reserved scratch `x31`, while the ordinary function
+    return still uses `x1`.  Rebase only the linked FFI carrier here; the
+    generic Lab flattening contract retains the source `returnAddress` field. -/
+def labRebaseLinkedFfiReturnLines [NeZero width] :
+    List (LabLine (Word width)) → List (LabLine (Word width))
+  | .labAsm (.locValue _ target) bytes length ::
+      .labAsm (.callFfi function) callBytes callLength :: lines =>
+      .labAsm (.locValue 31 target) bytes length ::
+        .labAsm (.callFfi function) callBytes callLength ::
+          labRebaseLinkedFfiReturnLines lines
+  | line :: lines => line :: labRebaseLinkedFfiReturnLines lines
+  | [] => []
 
 /-! A linked FFI call is nested inside an ordinary Cake function call.  Its
     continuation must not overwrite the caller's `x1` link: the service stub

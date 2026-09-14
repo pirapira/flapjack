@@ -169,7 +169,9 @@ def loopLiveComp (program : LoopProg α) : LoopProg α :=
   (loopMarkAll (loopShrinkLeaf program []).1).1
 
 /-! Source-shaped composition for `loop_live$optimise` from
-    `cakeml/pancake/loop_liveScript.sml:221`. -/
+    `cakeml/pancake/loop_liveScript.sml:221`.  `loop_call$comp` runs first
+    with the empty location environment; its compiled program is then passed
+    through the liveness composition above. -/
 def loopLiveOptimise (program : LoopProg α) : LoopProg α :=
   loopLiveComp (LoopCall.comp [] program).1
 

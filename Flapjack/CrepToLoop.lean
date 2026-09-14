@@ -358,7 +358,8 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
   | .return values =>
       let result := loopCompileExps context (context.maxVar + 1) live values
       let names := loopTempNames result.nextTemp result.expressions.length
-      .seq (loopNestedSeq (result.code ++ loopAssignTemps names result.expressions)) (.return names)
+      loopNestedSeq
+        (result.code ++ loopAssignTemps names result.expressions ++ [.return names])
   | .shMem operator name address =>
       let result := loopCompileExp context (context.maxVar + 1) live address
       .seq (loopNestedSeq result.code) (.shMem operator name result.expression)

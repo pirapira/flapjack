@@ -211,7 +211,7 @@ example :
 example :
     loopCompileProg loopContext []
       (.return [(.const (α := Nat) 7)]) =
-      .seq (.seq (.assign 3 (.const 7)) .skip) (.return [3]) := by
+      .seq (.assign 3 (.const 7)) (.seq (.return [3]) .skip) := by
   simp [loopCompileProg, loopCompileExp, loopCompileExp.loopCompileExps,
     loopCompileExps, loopNestedSeq,
     loopTempNames, loopAssignTemps, loopContext]

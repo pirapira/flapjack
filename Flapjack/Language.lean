@@ -184,6 +184,51 @@ def nestedSeq : List (Prog α) → Prog α
   | [] => .skip
   | statement :: statements => .seq statement (nestedSeq statements)
 
+/-! The exception identifiers syntactically reachable from a Pancake program.
+    This follows `panLang$exp_ids_def`; in particular, a call contributes its
+    handler identifier and the identifiers reachable in that handler, while
+    ordinary calls and all non-handler forms contribute no identifiers. -/
+def expIds : Prog α → List ExceptionId
+  | .skip => []
+  | .dec _ _ _ body => expIds body
+  | .assign _ _ _ => []
+  | .primitive _ _ _ => []
+  | .store _ _ => []
+  | .store32 _ _ => []
+  | .storeByte _ _ => []
+  | .seq first second => expIds first ++ expIds second
+  | .ite _ thenBranch elseBranch => expIds thenBranch ++ expIds elseBranch
+  | .while _ body => expIds body
+  | .break => []
+  | .continue => []
+  | .call (some (_, some (exception, _, handler))) _ _ =>
+      exception :: expIds handler
+  | .call _ _ _ => []
+  | .decCall _ _ _ _ body => expIds body
+  | .extCall _ _ _ _ _ => []
+  | .raise exception _ => [exception]
+  | .return _ => []
+  | .shMemLoad _ _ _ _ => []
+  | .shMemStore _ _ _ => []
+  | .tick => []
+  | .annot _ _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/-! Split a flat value list according to the source shape sizes.  This is the
+    direct Lean counterpart of `panLang$with_shape`; values left over after
+    the requested shapes are intentionally ignored, and short inputs are
+    handled by `List.take`/`List.drop` just like CakeML's `TAKE`/`DROP`. -/
+def withShape : List Shape → List α → List (List α)
+  | [], _ => []
+  | shape :: shapes, values =>
+      values.take (Shape.shapeSize shape) ::
+        withShape shapes (values.drop (Shape.shapeSize shape))
+termination_by shapes => sizeOf shapes
+decreasing_by
+  all_goals decreasing_trivial
+
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]

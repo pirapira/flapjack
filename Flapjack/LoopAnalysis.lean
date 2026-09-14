@@ -20,6 +20,153 @@ def loopVarsOfExp : LoopExp α → List Nat
   | .baseAddr => []
   | .topAddr => []
 
+/-! Source-shaped port of `loop_live$vars_of_exp`
+    (`cakeml/pancake/loop_liveScript.sml:11`).  HOL carries the live names as
+    a canonical `num_set`; the Lean syntax layer keeps lists, so fold the
+    expression reads into the existing sorted insertion helper. -/
+def varsOfExp (expression : LoopExp α) (live : List Nat) : List Nat :=
+  (loopVarsOfExp expression).foldr insertNatSorted live
+
+def deleteNatSorted (name : Nat) : List Nat → List Nat
+  | [] => []
+  | head :: tail =>
+      if name == head then tail else head :: deleteNatSorted name tail
+
+/-! Source-shaped port of `loop_live$arith_vars`
+    (`cakeml/pancake/loop_liveScript.sml:50`). -/
+def arithVars : LoopArith → List Nat → List Nat
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight, live =>
+      insertNatSorted sourceLeft
+        (insertNatSorted sourceRight
+          (deleteNatSorted destinationLeft
+            (deleteNatSorted destinationRight live)))
+  | .longDiv destinationLeft destinationRight sourceLeft sourceRight quotient, live =>
+      insertNatSorted sourceLeft
+        (insertNatSorted sourceRight
+          (insertNatSorted quotient
+            (deleteNatSorted destinationLeft
+              (deleteNatSorted destinationRight live))))
+  | .div destination dividend divisor, live =>
+      insertNatSorted dividend
+        (insertNatSorted divisor (deleteNatSorted destination live))
+
+def loopListDeleteSorted (names : List Nat) (live : List Nat) : List Nat :=
+  names.foldl (fun current name => deleteNatSorted name current) live
+
+def loopIntersectSorted (left right : List Nat) : List Nat :=
+  left.filter (fun name => name ∈ right)
+
+/-! Source-shaped leaf and structured equations from `loop_live$shrink`
+    (`cakeml/pancake/loop_liveScript.sml:62`).  The recursive fixed-point
+    loop case is intentionally kept as the next refinement boundary; all
+    non-fixed-point equations are executable here with list-backed num_sets. -/
+def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
+  | .skip, live => (.skip, live)
+  | .assign name value, live =>
+      if name ∈ live then
+        (.assign name value, varsOfExp value (deleteNatSorted name live))
+      else
+        (.skip, live)
+  | .primitive destinations operator arguments, live =>
+      (.primitive destinations operator arguments,
+        loopListInsert arguments (loopListDeleteSorted destinations live))
+  | .arith operation, live => (.arith operation, arithVars operation live)
+  | .store address value, live =>
+      (.store address value, varsOfExp address (insertNatSorted value live))
+  | .setGlobal address value, live =>
+      (.setGlobal address value, varsOfExp value live)
+  | .load32 address destination, live =>
+      (.load32 address destination,
+        insertNatSorted address (deleteNatSorted destination live))
+  | .loadByte address destination, live =>
+      (.loadByte address destination,
+        insertNatSorted address (deleteNatSorted destination live))
+  | .store32 address value, live =>
+      (.store32 address value,
+        insertNatSorted address (insertNatSorted value live))
+  | .storeByte address value, live =>
+      (.storeByte address value,
+        insertNatSorted address (insertNatSorted value live))
+  | .seq first second, live =>
+      let (second', live') := loopShrinkLeaf second live
+      let (first', live'') := loopShrinkLeaf first live'
+      (.seq first' second', live'')
+  | .ite operator condition right thenBranch elseBranch branchLive, live =>
+      let restricted := loopIntersectSorted branchLive live
+      let (then', thenLive) := loopShrinkLeaf thenBranch restricted
+      let (else', elseLive) := loopShrinkLeaf elseBranch restricted
+      let rightLive := match right with
+        | .reg name => [name]
+        | .imm _ => []
+      (.ite operator condition right then' else' branchLive,
+        insertNatSorted condition
+          (loopListInsert rightLive (thenLive ++ elseLive)))
+  | .break label, _ => (.break label, [])
+  | .continue label, _ => (.continue label, [])
+  | .fail, _ => (.fail, [])
+  | .return values, _ => (.return values, loopListInsert values [])
+  | .raise exception, _ => (.raise exception, [exception])
+  | .shMem operator name address, live =>
+      (.shMem operator name address,
+        varsOfExp address (insertNatSorted name live))
+  | .tick, live => (.tick, live)
+  | .mark body, live =>
+      let (body', live') := loopShrinkLeaf body live
+      (.mark body', live')
+  | .locValue destination source, live =>
+      if destination ∈ live then
+        (.locValue destination source, deleteNatSorted destination live)
+      else
+        (.skip, live)
+  | .ffi function configuration configurationLength array arrayLength liveOut, live =>
+      let restricted := loopIntersectSorted liveOut live
+      (.ffi function configuration configurationLength array arrayLength restricted,
+        loopListInsert [configuration, configurationLength, array, arrayLength] restricted)
+  | .loop liveIn body liveOut, live =>
+      (.loop liveIn body liveOut, live)
+  | .call returns target arguments handler, live =>
+      (.call returns target arguments handler, live)
+
+/-! Faithful executable port of `loop_live$mark_all` from
+    `cakeml/pancake/loop_liveScript.sml:189`.  The Boolean records whether
+    the source marked the whole node; the recursive calls preserve the
+    intermediate marked children before rebuilding each parent. -/
+def loopMarkAll : LoopProg α → LoopProg α × Bool
+  | .seq first second =>
+      let (first', firstMarked) := loopMarkAll first
+      let (second', secondMarked) := loopMarkAll second
+      let marked := firstMarked && secondMarked
+      (if marked then .mark (.seq first' second') else .seq first' second', marked)
+  | .loop liveIn body liveOut =>
+      let (body', _) := loopMarkAll body
+      (.loop liveIn body' liveOut, false)
+  | .ite operator condition right thenBranch elseBranch live =>
+      let (then', thenMarked) := loopMarkAll thenBranch
+      let (else', elseMarked) := loopMarkAll elseBranch
+      let marked := thenMarked && elseMarked
+      let program := .ite operator condition right then' else' live
+      (if marked then .mark program else program, marked)
+  | .mark body => loopMarkAll body
+  | .call returns target arguments .none =>
+      (.mark (.call returns target arguments .none), true)
+  | .call returns target arguments
+      (.some (exception, handler, normal, liveOut)) =>
+      let (handler', handlerMarked) := loopMarkAll handler
+      let (normal', normalMarked) := loopMarkAll normal
+      let marked := handlerMarked && normalMarked
+      let program :=
+        .call returns target arguments
+          (.some (exception, handler', normal', liveOut))
+      (if marked then .mark program else program, marked)
+  | program => (.mark program, true)
+
+/-! Source-shaped composition for `loop_live$comp` from
+    `cakeml/pancake/loop_liveScript.sml:217`.  The list-backed executable
+    shrink pass is seeded with the empty live set, then the marked program is
+    projected exactly as the HOL `FST (mark_all (FST (shrink ...)))` equation. -/
+def loopLiveComp (program : LoopProg α) : LoopProg α :=
+  (loopMarkAll (loopShrinkLeaf program []).1).1
+
 /-! Faithful port of CakeML Pancake's `locals_touched_def` from
     `cakeml/pancake/loopLangScript.sml:77`.  The source definition is used on
     the original Loop expressions, before the later Flapjack-only `crepOp` and

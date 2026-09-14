@@ -31,6 +31,11 @@ the same source.
 The `longdiv_code_probe.out` fixture probes the original software LongDiv
 helper at `cakeml/compiler/backend/data_to_wordScript.sml:829-867` and the
 RISC-V target's deliberate LongDiv encoding rejection.
+The `prog_if_probe.out` fixture probes the comparison-materialization helper
+`prog_if_def` at `cakeml/pancake/crep_to_loopScript.sml:34`, including its
+canonical live-set insertion order.
+The `compile_crepop_probe.out` fixture probes the RISC-V `Mul` case of
+`compile_crepop_def` at line 42 of the same source.
 The original Pancake source-level support boundary is also explicit in
 `cakeml/pancake/proofs/loop_to_wordProofScript.sml:2285-2291`: `LLongDiv` is
 accepted by `loop_inst_ok` only for `x86_64`. Consequently, RISC-V parity must

@@ -77,6 +77,14 @@ run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \
   word named "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_lang_nested_seq_probeScript.sml pan_lang_nested_seq_probe.out \
+  empty assign_seq "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_exp_ids_probeScript.sml pan_lang_exp_ids_probe.out \
+  empty fallback "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_with_shape_probeScript.sml pan_lang_with_shape_probe.out \
+  empty_shapes short_input "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
+  one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \
   delete_hit update_hit "$cake_dir/pancake/semantics/panSemScript.sml"
 # The pan_primop probe prints numeric w2n values of the returned RStruct.
@@ -258,6 +266,12 @@ run_probe crep_lookup_code_probeScript.sml crep_lookup_code_probe.out \
 run_probe crep_store_global_probeScript.sml crep_store_global_probe.out \
   store_global_insert store_global_then_load \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe prog_if_probeScript.sml prog_if_probe.out \
+  prog_if_basic prog_if_basic \
+  "$cake_dir/pancake/crep_to_loopScript.sml"
+run_probe compile_crepop_probeScript.sml compile_crepop_probe.out \
+  compile_crepop_mul_riscv compile_crepop_mul_riscv \
+  "$cake_dir/pancake/crep_to_loopScript.sml"
 run_probe pan_empty_locals_probeScript.sml pan_empty_locals_probe.out \
   empty_locals empty_locals_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -285,6 +299,16 @@ run_probe loop_sem_call_env_probeScript.sml \
 run_probe loop_lang_locals_touched_probeScript.sml \
   loop_lang_locals_touched_probe.out \
   const base_addr "$cake_dir/pancake/loopLangScript.sml"
+run_probe vars_of_exp_probeScript.sml vars_of_exp_probe.out \
+  var shift_nested "$cake_dir/pancake/loop_liveScript.sml"
+run_probe arith_vars_probeScript.sml arith_vars_probe.out \
+  long_mul long_div "$cake_dir/pancake/loop_liveScript.sml"
+run_probe shrink_leaf_probeScript.sml shrink_leaf_probe.out \
+  skip load32 "$cake_dir/pancake/loop_liveScript.sml"
+run_probe mark_all_probeScript.sml mark_all_probe.out \
+  seq_mark call_handler "$cake_dir/pancake/loop_liveScript.sml"
+run_probe loop_live_comp_probeScript.sml loop_live_comp_probe.out \
+  skip return "$cake_dir/pancake/loop_liveScript.sml"
 run_probe loop_lang_assigned_vars_probeScript.sml \
   loop_lang_assigned_vars_probe.out \
   skip load_byte "$cake_dir/pancake/loopLangScript.sml"

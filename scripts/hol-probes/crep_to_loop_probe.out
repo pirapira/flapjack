@@ -1,0 +1,3 @@
+compile_skip=Skip
+
+compile_raise=Seq (Assign 1 (Const 17w)) (Raise 1)

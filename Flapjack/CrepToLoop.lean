@@ -30,6 +30,57 @@ def findLoopVar (context : LoopContext α) (name : Nat) : Nat :=
   | some value => value
   | none => 0
 
+/-! Source-named port of `crep_to_loop$find_var` (`find_var_def`,
+    `crep_to_loopScript.sml:20`). -/
+def crepFindVar (context : LoopContext α) (name : Nat) : Nat :=
+  findLoopVar context name
+
+/-! Source-named port of `crep_to_loop$find_lab` (`find_lab_def`,
+    `crep_to_loopScript.sml:27`). -/
+def crepFindLab [BEq FunName] (context : LoopContext α) (name : FunName) : Nat :=
+  match lookupInfo name context.functions with
+  | some (label, _) => label
+  | none => 0
+
+/-! CakeML's `num_set` prints in ascending order.  Keep the list-backed live
+    sets used by the executable port in that same canonical order when
+    translating `prog_if`'s `list_insert` result. -/
+def insertNatSorted (name : Nat) : List Nat → List Nat
+  | [] => [name]
+  | head :: tail =>
+      if name < head then name :: head :: tail
+      else if name = head then head :: tail
+      else head :: insertNatSorted name tail
+
+def loopListInsert (names live : List Nat) : List Nat :=
+  names.foldl (fun current name => insertNatSorted name current) live
+
+/-! Source-named port of `crep_to_loop$prog_if` (`prog_if_def`,
+    `crep_to_loopScript.sml:34`).  The result is a statement list; the caller
+    applies `nested_seq` exactly as the original compiler does. -/
+def progIf [OfNat α 0] [OfNat α 1]
+    (operator : Cmp) (first second : List (LoopProg α))
+    (left right : LoopExp α) (condition rightRegister : Nat) (live : List Nat) :
+    List (LoopProg α) :=
+  first ++ second ++
+    [.assign condition left,
+     .assign rightRegister right,
+     .ite operator condition (.reg rightRegister)
+       (.assign condition (.const (1 : α)))
+       (.assign condition (.const (0 : α)))
+       (loopListInsert [condition, rightRegister] live)]
+
+/-! Source-named RISC-V port of `crep_to_loop$compile_crepop`
+    (`compile_crepop_def`, `crep_to_loopScript.sml:42`).  CakeML has an ARMv7
+    branch with two distinct long-multiply destinations; ARMv7 is outside the
+    supported Flapjack backend, so every supported architecture follows the
+    RISC-V same-destination case. -/
+def compileCrepOp [OfNat α 0] [OfNat α 1]
+    (operator : CrepOp) (_target : RiscV.Architecture)
+    (left right tmp : Nat) (_live : List Nat) : List (LoopProg α) × Nat :=
+  match operator with
+  | .mul => ([.arith (.longMul tmp tmp left right)], tmp)
+
 def lowerLoopExp : CrepExp α → LoopExp α
   | .const value => .const value
   | .var name => .var name
@@ -134,9 +185,18 @@ def loopCompileExp [OfNat α 0] [OfNat α 1]
             expression := .var destination
             nextTemp := destination + 1
             live := destination :: leftTemp :: rightTemp :: result.live }
-      | _, _ =>
-          { code := result.code, expression := .crepOp operator result.expressions,
-            nextTemp := result.nextTemp, live := result.live }
+      | .mul, expressions =>
+          let firstTemp := result.nextTemp
+          let argumentTemps := List.range expressions.length |>.map
+            (fun offset => firstTemp + offset)
+          let argumentCode := argumentTemps.zipWith
+            (fun name expression => .assign name expression) expressions
+          let destination := firstTemp + expressions.length
+          { code := result.code ++ argumentCode ++
+              [.arith (.longMul destination destination firstTemp (firstTemp + 1))]
+            expression := .var destination
+            nextTemp := destination + 1
+            live := destination :: argumentTemps ++ result.live }
   | .cmp operator left right =>
       let leftResult := loopCompileExp context tmp live left
       let rightResult := loopCompileExp context leftResult.nextTemp leftResult.live right
@@ -183,6 +243,26 @@ def loopCompileExps [OfNat α 0] [OfNat α 1]
 
 def loopTempNames (start count : Nat) : List Nat :=
   (List.range count).map (fun offset => start + offset)
+
+/-! Source-named ports of the small temporary/return-variable helpers from
+    `crep_to_loopScript.sml:101-118`. -/
+def crepGenTemps (start count : Nat) : List Nat :=
+  loopTempNames start count
+
+def crepRtVar (context : NatInfoMap Nat) (value : Option Nat) (nextTemp maxVar : Nat) : Nat :=
+  match value with
+  | none => nextTemp
+  | some name => (lookupNatInfo name context).getD (maxVar + 1)
+
+def crepRtVarsAux (context : NatInfoMap Nat) : List Nat → Option (List Nat)
+  | [] => some []
+  | name :: names =>
+      match lookupNatInfo name context, crepRtVarsAux context names with
+      | some value, some values => some (value :: values)
+      | _, _ => none
+
+def crepRtVars (context : NatInfoMap Nat) (names : List Nat) (maxVar : Nat) : List Nat :=
+  (crepRtVarsAux context names).getD [maxVar + 1]
 
 def loopAssignTemps (names : List Nat) (expressions : List (LoopExp α)) :
     List (LoopProg α) :=
@@ -284,6 +364,14 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
       .seq (loopNestedSeq result.code) (.shMem operator name result.expression)
   | .tick => .tick
 termination_by program => sizeOf program
+
+/-! Source-named entrypoint for `crep_to_loop$compile` (`compile_def`,
+    `crep_to_loopScript.sml:120`).  The lowering state is already represented
+    explicitly by `LoopContext` and the live set argument. -/
+def compileCrepToLoop [OfNat α 0] [OfNat α 1]
+    (context : LoopContext α) (live : List Nat) (program : CrepProg α) :
+    LoopProg α :=
+  loopCompileProg context live program
 
 theorem loopCompileProg_skip [OfNat α 0] [OfNat α 1]
     (context : LoopContext α) (live : List Nat) :

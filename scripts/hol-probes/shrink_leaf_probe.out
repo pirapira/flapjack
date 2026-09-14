@@ -1,0 +1,13 @@
+skip=(Skip,⦕ 1; 2 ⦖)
+
+assign_kept=(Assign 1 (Const 7w),⦕ 2 ⦖)
+
+dead_assign=(Skip,⦕ 2 ⦖)
+
+live_assign=(Assign 1 (Var 3),⦕ 2; 3 ⦖)
+
+arith_div=(Arith (LDiv 1 2 3),⦕ 2; 3 ⦖)
+
+store=(Store (Var 4) 5,⦕ 4; 5 ⦖)
+
+load32=(Load32 1 2,⦕ 1 ⦖)

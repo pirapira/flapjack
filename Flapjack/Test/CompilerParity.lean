@@ -12,6 +12,10 @@ import Flapjack.Test.PanFixedLoadParity
 import Flapjack.Test.PanFixedStoreParity
 import Flapjack.Test.PanFlatStoreParity
 import Flapjack.Test.PanFlattenParity
+import Flapjack.Test.PanNestedSeqParity
+import Flapjack.Test.PanExpIdsParity
+import Flapjack.Test.PanWithShapeParity
+import Flapjack.Test.PanShapeValParity
 import Flapjack.Test.PanResVarParity
 import Flapjack.Test.PanPrimopParity
 import Flapjack.Test.PanSetVarParity
@@ -31,6 +35,11 @@ import Flapjack.Test.LoopMemoryStateParity
 import Flapjack.Test.LoopStateResultParity
 import Flapjack.Test.LoopLocalsTouchedParity
 import Flapjack.Test.LoopAssignedVarsParity
+import Flapjack.Test.LoopVarsOfExpParity
+import Flapjack.Test.LoopArithVarsParity
+import Flapjack.Test.LoopShrinkParity
+import Flapjack.Test.LoopMarkAllParity
+import Flapjack.Test.LoopLiveCompParity
 import Flapjack.Test.LoopAccVarsParity
 import Flapjack.Test.LoopNestedSeqParity
 import Flapjack.Test.LoopIsLoadParity
@@ -64,6 +73,9 @@ import Flapjack.Test.PanHHandleDecCallRetParity
 import Flapjack.Test.PanHProgDecCallParity
 import Flapjack.Test.PanHProgCallParity
 import Flapjack.Test.CrepPrimopParity
+import Flapjack.Test.CrepProgIfParity
+import Flapjack.Test.CompileCrepOpParity
+import Flapjack.Test.CrepCompileExpParity
 import Flapjack.Test.CrepExitLoopParity
 import Flapjack.Test.CrepEvaluateParity
 import Flapjack.Test.CrepFixClockParity
@@ -726,6 +738,10 @@ def main : IO Unit := do
     Flapjack.Test.LoopAssignedVarsParity.runChecks,
     Flapjack.Test.LoopAccVarsParity.runChecks,
     Flapjack.Test.LoopNestedSeqParity.runChecks,
+    Flapjack.Test.PanNestedSeqParity.runChecks,
+    Flapjack.Test.PanExpIdsParity.runChecks,
+    Flapjack.Test.PanWithShapeParity.runChecks,
+    Flapjack.Test.PanShapeValParity.runChecks,
     Flapjack.Test.LoopIsLoadParity.runChecks,
     Flapjack.Test.LoopCallParity.runChecks,
     Flapjack.Test.LoopEvalParity.runChecks,

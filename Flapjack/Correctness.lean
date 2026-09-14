@@ -552,8 +552,32 @@ theorem compilePanToLoop_return_add_const_correct
         (compileProg compileContext
           (.return (.op .add [.const left, .const right]))))).map
         loopResultValues =
-      evalPanProg (fun _ => none)
+    evalPanProg (fun _ => none)
         (.return (.op .add [.const left, .const right])) := by
+  simp [compileProg, compileExp,
+    loopCompileProg, loopCompileExp,
+    compileExp.compileExpList, cexpHeads, loopCompileExp.loopCompileExps,
+    loopCompileExps, loopNestedSeq,
+    loopTempNames, loopAssignTemps, evalLoopProg, evalLoopExp,
+    evalLoopBinOp, loopReadLocals, updateLoopLocal, loopResultValues,
+    evalPanProg, evalPanExp, evalPanBinOp]
+
+/-! Subtraction follows the same source-to-Crep-to-Loop path as addition.  Keep
+    this bridge separate so the signed/word operation remains covered by a
+    theorem at the pass boundary rather than only by an evaluator test. -/
+theorem compilePanToLoop_return_sub_const_correct
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (compileContext : CompileContext α) (loopContext : LoopContext α)
+    (live : List Nat) (state : LoopState α) (left right : α) :
+    (evalLoopProg 12 state
+      (loopCompileProg loopContext live
+        (compileProg compileContext
+          (.return (.op .sub [.const left, .const right]))))).map
+        loopResultValues =
+      evalPanProg (fun _ => none)
+        (.return (.op .sub [.const left, .const right])) := by
   simp [compileProg, compileExp,
     loopCompileProg, loopCompileExp,
     compileExp.compileExpList, cexpHeads, loopCompileExp.loopCompileExps,

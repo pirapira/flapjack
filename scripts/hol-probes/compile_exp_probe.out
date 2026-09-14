@@ -1,0 +1,2 @@
+compile_exp_mul_three=([Assign 10 (Const 2w); Assign 11 (Const 3w); Assign 12 (Const 4w);
+  Arith (LLongMul 13 13 10 11)],Var 13,14,⦕ 10; 11; 12; 13 ⦖)

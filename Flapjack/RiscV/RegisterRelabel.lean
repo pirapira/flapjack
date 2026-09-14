@@ -46,6 +46,10 @@ def relabelRegisters (forward : Fin 32 → Fin 32) (state : State width) : State
   cases state
   simp [relabelRegisters]
 
+/-- The Cake register map fixes the canonical all-zero initial state. -/
+@[simp] theorem relabelRegisters_riscvForward_zeroState [NeZero width] :
+    relabelRegisters riscvForward (zeroState width) = zeroState width := rfl
+
 /-- Relabeling twice by `g` then `f` is one relabeling by their composition
 `fun name => g (f name)`.  This lets the Cake map be applied at a single
 boundary instead of being threaded twice through the relation. -/

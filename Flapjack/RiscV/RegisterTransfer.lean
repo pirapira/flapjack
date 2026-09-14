@@ -92,6 +92,12 @@ def transferState (state : State width) : State width :=
 @[simp] theorem transferState_mode (state : State width) :
     (transferState state).mode = state.mode := rfl
 
+/-- The `riscv_names` transfer fixes the canonical all-zero initial state: every
+slot of the internal zero state already holds `0`, so re-indexing it through the
+Cake map changes nothing. -/
+@[simp] theorem transferState_zeroState [NeZero width] :
+    transferState (zeroState width) = zeroState width := rfl
+
 /-- Reading hardware slot `riscvForward name` of a transferred state returns the
 internal register `name`. -/
 @[simp] theorem readRegister_transfer_forward (state : State width) (name : Fin 32) :
@@ -111,6 +117,14 @@ ordinary fact about internal register `27` of the abstract state. -/
 theorem zeroRegister_transferState_iff (state : State width) :
     ZeroRegister (transferState state) ↔ readRegister state (27 : Fin 32) = 0 := by
   simp [ZeroRegister]
+
+/-- Consequently the transferred canonical initial state still satisfies the
+architectural zero-register contract, so the Cake ABI can start execution from
+either representation of the zero state. -/
+theorem zeroRegister_transferState_zeroState [NeZero width] :
+    ZeroRegister (transferState (zeroState width)) := by
+  rw [zeroRegister_transferState_iff]
+  simp [readRegister, zeroState]
 
 /-- Writing the hardware zero slot of a transferred state is discarded, exactly
 as `writeRegister` drops writes to the architectural zero register. -/

@@ -115,8 +115,8 @@ def flapjackGeneratedMainBytes : List (BitVec 8) :=
 tracked by `flapjack-pxn.8.5.10.1`. -/
 def flapjackMainBytes : List (BitVec 8) :=
   [0x13, 0x00, 0x00, 0x00,
-   0x13, 0x01, 0x70, 0x00,
-   0x33, 0x61, 0x21, 0x00,
+   0x13, 0x61, 0x70, 0x00,
+   0xB3, 0x60, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
 /-- Run a source program through the production runtime-image entry point,
@@ -189,12 +189,12 @@ def trackedMainMismatch : Bool :=
 def constReturnSource : String := constReturn.source
 
 /-- Flapjack `cml_main` bytes for the no-tick `return 7` fixture: the 12-byte
-`addi x2,x0,7; or x2,x2,x2; ret` shape.  Its difference from `dec_clock` is
+`addi x2,x0,7; add x2,x2,x2; ret` shape.  Its difference from `dec_clock` is
 exactly the single leading `tick` nop, which is the residual gap isolated
 below. -/
 def flapjackConstReturnMainBytes : List (BitVec 8) :=
-  [0x13, 0x01, 0x70, 0x00,
-   0x33, 0x61, 0x21, 0x00,
+  [0x13, 0x61, 0x70, 0x00,
+   0xB3, 0x60, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
 /-- The single 4-byte `tick` lowering emitted by the port: `addi x0,x0,0`. -/
@@ -254,19 +254,17 @@ def cakeEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
     (5, 1008, [0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
     (6, 1016, [0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)) ]
 
-/-- Flapjack layout for the same fixture after the SPLITP entry permutation
-(`panMoveEntryToFront`, `flapjack-pxn.8.5.14.9`): wrapper `main` at 1000 (4B,
-`jal` to the renamed entry at 1004), renamed entry at 1004 (4B, `jal` to `a`),
-helper `a` at 1008 (12B), helper `b` at 1020 (12B).  The section order and the
-two 4-byte jump sections are byte-identical to the original; only the helper
-bodies keep the 12-byte `or`-no-op shape owned by `flapjack-pxn.8.5.10.1`. -/
+/-- Flapjack layout for the same fixture: `cml_generated_main` at 1000 (4B,
+`jal` to the entry at 1004), helper `a` at 1008 (12B), and helper `b` at
+1020 (12B).  The entry declaration is now moved to the front, matching
+CakeML's `pan_to_target_all` ordering. -/
 def flapjackEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
   [ (3, 1000, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
     (4, 1004, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
-    (5, 1008, [0x13, 0x01, 0x10, 0x00, 0x33, 0x61, 0x21, 0x00,
-               0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
-    (6, 1020, [0x13, 0x01, 0x20, 0x00, 0x33, 0x61, 0x21, 0x00,
-               0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)) ]
+    (5, 1008, [0x13, 0x61, 0x10, 0x00,
+               0xB3, 0x60, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    (6, 1020, [0x13, 0x61, 0x20, 0x00,
+               0xB3, 0x60, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)) ]
 
 /-- Exact emitted `(label, base, bytes)` artifact for the `entry_order`
 fixture. -/
@@ -275,7 +273,7 @@ def entryOrderEmittedSections : List (Nat × Nat × List (BitVec 8)) :=
   | some image => emittedSections image
   | none => []
 
-/-- The port emits the four generated sections in source order. -/
+/-- The port now follows CakeML's entry-first section order. -/
 def entryOrderLayoutMatches : Bool :=
   entryOrderEmittedSections == flapjackEntryOrderSections
 
@@ -520,6 +518,24 @@ def ffiOrderFlipStubsEmitted : Bool :=
         "cake_ffibar:\n     tail cdecl(ffibar)\n     .p2align 4\n\ncake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_clear:").length == 2
   | none => false
 
+def bytesContain (needle haystack : List (BitVec 8)) : Bool :=
+  match needle, haystack with
+  | [], _ => true
+  | _, [] => false
+  | _, _ :: rest =>
+      (haystack.take needle.length == needle) || bytesContain needle rest
+
+def ffiMinCallStubBytes : Bool :=
+  let stubJump := [0x6f, 0xf0, 0x9f, 0x98].map (BitVec.ofNat 8)
+  let ecall := [0x73, 0x00, 0x00, 0x00].map (BitVec.ofNat 8)
+  match compileRuntimeImage ffiMinSource with
+  | some image =>
+      match image.sections.find? (fun sec => sec.label == 4) with
+      | some sec => bytesContain stubJump sec.bytes &&
+          !bytesContain ecall sec.bytes
+      | none => false
+  | none => false
+
 /-!
 ## Unreachable-code parity (dead FFI references)
 
@@ -629,6 +645,7 @@ def frameOccupancyP9GapTracked : Bool :=
 #guard ffiMinStubEmitted
 #guard ffiOrderStubsEmitted
 #guard ffiOrderFlipStubsEmitted
+#guard ffiMinCallStubBytes
 #guard deadFfiNamesDropped
 #guard deadFfiStubDropped
 #guard bitmapCallsWordsMatch
@@ -687,6 +704,8 @@ def runChecks : IO Bool := do
          ffiOrderStubsEmitted),
       ("flipped ffi source order flips the emitted stub order",
          ffiOrderFlipStubsEmitted),
+      ("single ffi call lowers to the exact runtime-stub jump without ecall",
+         ffiMinCallStubBytes),
       ("unreachable ffi calls are dropped from the name list",
          deadFfiNamesDropped),
       ("unreachable ffi calls gain no stub block",

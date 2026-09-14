@@ -67,7 +67,7 @@ example :
         { locations := [(0, .stack 0)], scratch := 31, stackBase := 10 }
         [0]
         ((.skip : WordProg (RiscV.Word 64))) =
-      some (.seq (.arith .or 31 2 2) (.stackStore 31 10) : StackProg Nat) := by
+      some (.seq (.arith .or 31 1 1) (.stackStore 31 10) : StackProg Nat) := by
   simp [RiscV.wordToStackFunctionWithParameters, RiscV.wordToStackProgWord,
     RiscV.wordToStackProgNat, RiscV.wordStackMovesFromPhysical,
     RiscV.wordStackPhysicalMovesFrom, RiscV.wordStackParallelLocationMove,

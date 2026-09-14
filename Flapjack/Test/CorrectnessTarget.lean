@@ -27,8 +27,8 @@ def pipelineCallTargetImage : List (RiscV.Instruction 64) :=
    .storeWord 1 30, .addi 31 0 (BitVec.ofNat 64 60), .jalr 1 31 0,
    .addi 3 4 0, .loadWord 1 30,
    .addi 30 30 (BitVec.ofNat 64 8), .addi 4 3 0,
-   .jalr 0 1 0,
-   .addi 4 2 0, .jalr 0 1 0]
+   .jalr 0 1 0, .addi 4 2 0, .jalr 0 1 0]
+
 
 theorem pipelineCallTargetLinkedImage_shape :
     pipelineCallTargetLinkedImage = some pipelineCallTargetImage := by

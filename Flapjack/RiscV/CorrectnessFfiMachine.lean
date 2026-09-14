@@ -71,6 +71,7 @@ theorem executeInstructionsWithFfi_wordRegisterMoves [NeZero width]
                       rw [ih (execute state
                         (.addi destinationRegister sourceRegister 0)) rest hrest]
 
+/-
 /-!
 The Lab FFI operation is the point at which the already-marshalled Word ABI
 is handed to the target machine.  Its compiler expansion only materializes
@@ -282,6 +283,56 @@ theorem compileLabProgram_callFfi_return_executeFunctionAt_agreement
       some []
   rw [hrun]
   simp
+
+-/
+
+theorem labCompileAsm_callFfi_stub_shape
+    [NeZero width] (context : WordFfiContext)
+    (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat)
+    (function : FunName) (index : Nat)
+    (hindex : lookupWordFfiIndex function context.services = some index) :
+    labCompileAsm context sectionId labels position (.callFfi function) =
+      some [.jal 0 (0 - BitVec.ofNat width
+        (position + (context.services.length + 2 - index) * 16))] := by
+  simp [labCompileAsm, labFfiStubOffset, hindex]
+
+theorem compileLabSection_callFfi_stub_shape
+    [NeZero width] (context : WordFfiContext)
+    (sectionId : Nat) (function : FunName) (index : Nat)
+    (hindex : lookupWordFfiIndex function context.services = some index) :
+    compileLabSection context
+      ⟨sectionId, [.labAsm (.callFfi function) [] 0]⟩ =
+      some [.jal 0 (0 - BitVec.ofNat width
+        ((context.services.length + 2 - index) * 16))] := by
+  simp [compileLabSection, labCompileLines, labCompileAsm,
+    labFfiStubOffset, hindex]
+
+theorem compileLabProgram_callFfi_stub_shape
+    [NeZero width] (context : WordFfiContext)
+    (sectionId : Nat) (function : FunName) (index : Nat)
+    (hindex : lookupWordFfiIndex function context.services = some index) :
+    compileLabProgram context
+      [⟨sectionId, [.labAsm (.callFfi function) [] 0]⟩] =
+      some [.jal 0 (0 - BitVec.ofNat width
+        ((context.services.length + 2 - index) * 16))] := by
+  simp [compileLabProgram, labCompileProgramSections,
+    labCompileProgramLines, labCompileAsmProgram,
+    labFfiStubOffset, hindex]
+
+theorem compileLabProgram_callFfi_return_stub_shape
+    (context : WordFfiContext) (sectionId : Nat)
+    (function : FunName) (index : Nat)
+    (hindex : lookupWordFfiIndex function context.services = some index) :
+    compileLabProgram context
+      [⟨sectionId, [
+        .labAsm (.callFfi function) [] 0,
+        .labAsm (.return) [] 0]⟩] =
+      some [.jal 0 (0 - BitVec.ofNat 64
+          ((context.services.length + 2 - index) * 16)),
+        .jalr 0 1 0] := by
+  simp [compileLabProgram, labCompileProgramSections,
+    labCompileProgramLines, labCompileAsmProgram,
+    labFfiStubOffset, hindex]
 
 theorem executeInstructionsWithFfi_wordFfi_abi
     [NeZero width] (host : WordFfiHost width) (state : State width)

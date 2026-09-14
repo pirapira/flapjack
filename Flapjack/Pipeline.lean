@@ -62,6 +62,21 @@ def pipelineFindFunction (name : FunName) :
   | _ :: declarations => pipelineFindFunction name declarations
 termination_by declarations => sizeOf declarations
 
+/-! `pan_to_target_all` first moves the requested entry declaration to the
+    front of the Pancake list (`pan_passesScript.sml:20-37`).  Keeping this
+    source-order operation explicit is important because the linked section
+    order is observable in the RISC-V artifact. -/
+def panTargetMoveStartToFront [BEq String]
+    (start : FunName) (declarations : List (Decl α)) : List (Decl α) :=
+  globalDeclsFilter (fun declaration =>
+      match declaration with
+      | .function function => function.name == start
+      | _ => false) declarations ++
+    globalDeclsFilter (fun declaration =>
+      match declaration with
+      | .function function => function.name != start
+      | _ => true) declarations
+
 def pipelineCrepeContext [BEq α] [Add α]
     (bytesInWord : α) (fromNat : Nat → α)
     (program : GlobalCompiledProgram α) : CompileContext α :=
@@ -599,25 +614,6 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     loop := loop
     word := word }
 
-/-! Executable port of the SPLITP entry permutation of `pan_to_target_all`
-    (`cakeml/pancake/pan_passesScript.sml:20-37`): the first declaration of the
-    requested entry function moves to the front of the program while the
-    remaining declarations keep their source order.  A program whose entry is
-    already first, or that lacks the entry entirely, is returned unchanged;
-    the missing-entry case is handled by `panTargetDeclarationsWithDefaultMain`
-    exactly as the original synthesizes `main = «return 0»`. -/
-def panMoveEntryToFront (start : FunName) {α : Type u} :
-    List (Decl α) → List (Decl α)
-  | [] => []
-  | declarations =>
-      let (before, rest) := declarations.span (fun declaration =>
-        match declaration with
-        | .function function => !(function.name == start)
-        | _ => true)
-      match rest with
-      | .function entry :: after => .function entry :: before ++ after
-      | _ => declarations
-
 /-! Exact `pan_to_target` entry preparation.  The ordinary pipeline above is
     retained for pass-local fixtures.  This entry-point form follows CakeML: it
     moves the requested source function to the front of the program (the
@@ -628,7 +624,8 @@ def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (start : FunName) (declarations : List (Decl α)) :
     Option (FlapjackPipelineResult α) :=
-  let simplified := panSimpDecls (panMoveEntryToFront start declarations)
+  let declarations := panTargetMoveStartToFront start declarations
+  let simplified := panSimpDecls declarations
   let structured := structCompileTop simplified
   match pipelineFindFunction start structured with
   | none => none

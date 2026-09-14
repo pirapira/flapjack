@@ -117,12 +117,12 @@ example : labRegisterOfNat (portToStack 31) = some 31 := by decide
 
 /-- The Lab boundary lowers a constant return to the original hardware zero
 operand and the original destination register, byte-for-byte. -/
-example (destination : Nat) (value : Nat) :
+example (destination value : Nat) (hvalue : value < 2 ^ 11) :
     (labCompilePlain (width := 64) (.const destination value)) =
       (labRegisterOfNat (portToStack destination)).map
-        (fun register => [.addi register 0 (BitVec.ofNat 64 value)]) := by
+        (fun register => [.ori register 0 (BitVec.ofNat 64 value)]) := by
   cases h : registerOfNat destination <;>
-    simp [labCompilePlain, labRegisterOfNat_portToStack_all, h]
+    simp [labCompilePlain, labRegisterOfNat_portToStack_all, h, hvalue]
 
 /-- The one-time Cake relabeling is a bijection on the 64-bit state space,
 packaging the injective and surjective boundary facts. -/

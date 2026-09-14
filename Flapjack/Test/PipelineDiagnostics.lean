@@ -149,7 +149,7 @@ def cakeAddCarryOps : WordProg Nat → List (Nat × Nat × Nat × Nat)
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
       [⟨19, [.asm (.const 1 7) [] 0]⟩] =
-        .ok [.addi 1 0 (BitVec.ofNat 64 7)] := by
+        .ok [.ori 1 0 (BitVec.ofNat 64 7)] := by
   rfl
 
 example :
@@ -157,7 +157,7 @@ example :
       [⟨1, [.labAsm (.jump ⟨2, 0⟩) [] 0]⟩,
        ⟨2, [.label 2 0 0, .asm (.const 1 7) [] 0]⟩] =
         .ok [.jal 0 (BitVec.ofNat 64 4),
-          .addi 1 0 (BitVec.ofNat 64 7)] := by
+          .ori 1 0 (BitVec.ofNat 64 7)] := by
   rfl
 
 def checkedPipelineDeclarations : List (Decl (RiscV.Word 64)) :=

@@ -20,6 +20,7 @@ import Flapjack.PanSemLookupKvar
 import Flapjack.PanSemIsValidValue
 import Flapjack.PanSemWriteBytearray
 import Flapjack.PanItreeEvaluate
+import Flapjack.PanWriteBytearray
 import Flapjack.PanExt
 import Flapjack.PanHHandleCallRet
 import Flapjack.PanHHandleDecCallRet

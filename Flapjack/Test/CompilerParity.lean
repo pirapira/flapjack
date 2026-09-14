@@ -33,6 +33,7 @@ import Flapjack.Test.LoopMemoryStateParity
 import Flapjack.Test.LoopStateResultParity
 import Flapjack.Test.LoopLocalsTouchedParity
 import Flapjack.Test.LoopAssignedVarsParity
+import Flapjack.Test.LoopVarsOfExpParity
 import Flapjack.Test.LoopAccVarsParity
 import Flapjack.Test.LoopNestedSeqParity
 import Flapjack.Test.LoopIsLoadParity

@@ -20,6 +20,13 @@ def loopVarsOfExp : LoopExp α → List Nat
   | .baseAddr => []
   | .topAddr => []
 
+/-! Source-shaped port of `loop_live$vars_of_exp`
+    (`cakeml/pancake/loop_liveScript.sml:11`).  HOL carries the live names as
+    a canonical `num_set`; the Lean syntax layer keeps lists, so fold the
+    expression reads into the existing sorted insertion helper. -/
+def varsOfExp (expression : LoopExp α) (live : List Nat) : List Nat :=
+  (loopVarsOfExp expression).foldr insertNatSorted live
+
 /-! Faithful port of CakeML Pancake's `locals_touched_def` from
     `cakeml/pancake/loopLangScript.sml:77`.  The source definition is used on
     the original Loop expressions, before the later Flapjack-only `crepOp` and

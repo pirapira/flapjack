@@ -1,0 +1,9 @@
+var=⦕ 3 ⦖
+
+const_existing=⦕ 9 ⦖
+
+load_var=⦕ 4; 9 ⦖
+
+op_add_vars=⦕ 2; 3 ⦖
+
+shift_nested=⦕ 1; 6; 8 ⦖

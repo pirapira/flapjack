@@ -1,4 +1,4 @@
-import Flapjack.CrepeGlobalAddress
+import Flapjack.CrepeGlobalEvaluator
 
 /-!
 Parity test for the source-faithful Crep global-address boundary.
@@ -114,6 +114,76 @@ example :
     intro address
     simp [compactGlobals, sourceGlobals]).sourceStore (BitVec.ofNat 64 4) 22
 
+/-! Executable evaluator-entrypoint parity for the typed global-key model.
+
+The typed evaluator reads `LoadGlob` through the fixed 5-bit key and its
+`StoreGlob` entrypoint writes under that key, so target-width addresses that
+share a re-keyed key observe the same value, exactly as the source
+`5 word |-> 'a word_lab` map.  The `Nat` fixture word model is the same one
+used by `evalCrepFullExpState`, so these checks run the executable
+entrypoints directly. -/
+
+/-- The `Nat` fixture re-keying into the source's fixed 5-bit index space. -/
+def typedKey : Nat → CrepGlobalAddress := crepGlobalKeyOfNat
+
+def typedBaseState : CrepGlobalState Nat :=
+  { locals := fun _ => none
+    memory := fun _ => none
+    globals := fun _ => none }
+
+def typedStored : CrepGlobalState Nat :=
+  storeCrepTypedGlobal typedKey typedBaseState 4 11
+
+def typedSiblingState : CrepGlobalState Nat :=
+  { typedBaseState with globals := fun address => if address = 8 then some 9 else none }
+
+def typedSiblingStored : CrepGlobalState Nat :=
+  storeCrepTypedGlobal typedKey typedSiblingState 4 11
+
+def typedInsertValue : Option Nat := evalCrepTypedLoad typedKey typedStored 4
+def typedAliasValue : Option Nat := evalCrepTypedLoad typedKey typedStored 36
+def typedSiblingValue : Option Nat := evalCrepTypedLoad typedKey typedSiblingStored 8
+def typedExpValue : Option Nat :=
+  evalCrepTypedExp typedKey typedStored 0 100 (.loadGlob 4)
+
+example : typedInsertValue = some 11 := by decide
+example : typedAliasValue = some 11 := by decide
+example : typedSiblingValue = some 9 := by decide
+example : typedExpValue = some 11 := by
+  simp [typedExpValue, evalCrepTypedExp, typedStored,
+    storeCrepTypedGlobal, storeCrepGlobal, typedKey, crepGlobalKeyOfNat]
+
+/-- The typed store/load round trip through the executable entrypoint. -/
+example : evalCrepTypedLoad typedKey typedStored 4 = some 11 :=
+  evalCrepTypedLoad_storeCrepTypedGlobal typedKey typedBaseState 4 11
+
+/-- The evaluator `loadGlob` case is the typed load entrypoint. -/
+example : evalCrepTypedExp typedKey typedStored 0 100 (.loadGlob 4) =
+    evalCrepTypedLoad typedKey typedStored 4 :=
+  evalCrepTypedExp_loadGlob typedKey typedStored 0 100 4
+
+/-- Projecting the typed state onto the compact state relates the two maps. -/
+example : CrepGlobalKeyRelation typedKey (typedStored.toCompact typedKey).globals
+    typedStored.globals :=
+  CrepGlobalState.relation_toCompact typedKey typedStored
+
+/-- On a fixed 5-bit address space `id` never aliases, so the fiber-wide typed
+update is exactly the compact evaluator's `updateMemory`, the connection used
+by `evalCrepFullProgState`'s `StoreGlob` clause. -/
+example (compact : BitVec 5 → Option (BitVec 5)) (address value : BitVec 5) :
+    updateCrepGlobalKeyedBy id compact address value =
+      updateMemory compact address value :=
+  updateCrepGlobalKeyedBy_eq_updateMemory_of_noalias id compact address value
+    (fun _ h => h)
+
+/-- Projecting the typed store entrypoint onto the compact state is exactly the
+compact `StoreGlob` state update under no aliasing. -/
+example (state : CrepGlobalState (BitVec 5)) (address value : BitVec 5) :
+    (storeCrepTypedGlobal id state address value).toCompact id =
+      { (state.toCompact id) with
+        globals := updateMemory (state.toCompact id).globals address value } :=
+  CrepGlobalState.toCompact_store_of_noalias id state address value (fun _ h => h)
+
 def runChecks : IO Bool := do
   let checks :=
     [ ("Crep global LoadGlob hits the source 5-bit key", hitValue == some 11),
@@ -130,7 +200,15 @@ def runChecks : IO Bool := do
       ("Crep typed StoreGlob leaves a sibling 5-bit key untouched",
         siblingValue == some 9),
       ("Crep typed StoreGlob without a value leaves globals unchanged",
-        failureValue == some 11) ]
+        failureValue == some 11),
+      ("Crep typed evaluator StoreGlob entrypoint inserts at the 5-bit key",
+        typedInsertValue == some 11),
+      ("Crep typed evaluator aliases 36 and 4 to the same 5-bit key",
+        typedAliasValue == some 11),
+      ("Crep typed evaluator leaves a sibling 5-bit key untouched",
+        typedSiblingValue == some 9),
+      ("Crep typed evaluator LoadGlob entrypoint reads the typed key",
+        typedExpValue == some 11) ]
   let results ← checks.mapM fun (name, ok) => do
     if ok then
       IO.println s!"PASS {name}"

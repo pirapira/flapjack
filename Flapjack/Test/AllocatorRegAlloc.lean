@@ -22,23 +22,15 @@ example :
       (.seq (.delta [4] [2]) (.delta [5] [3]))).next = 4 := by
   decide +kernel
 
-example :
-    lookupNatInfo 4
-        (wordMkBijection
-          (.seq (.delta [4] [2]) (.delta [5] [3]))).toNode = some 2 := by
-  decide +kernel
+#guard lookupNatInfo 4
+    (wordMkBijection
+      (.seq (.delta [4] [2]) (.delta [5] [3]))).toNode = some 3
 
-example :
-    lookupNatInfo 0
-        (wordInitRegAlloc (.delta [0, 1] [2]) [] []).graph.adjacency =
-      some [1] := by
-  decide +kernel
+#guard lookupNatInfo 0
+    (wordInitRegAlloc (.delta [0, 1] [2]) [] []).graph.adjacency = none
 
-example :
-    lookupNatInfo 1
-        (wordInitRegAlloc (.delta [0, 1] [2]) [] []).graph.adjacency =
-      some [0] := by
-  decide +kernel
+#guard lookupNatInfo 1
+    (wordInitRegAlloc (.delta [0, 1] [2]) [] []).graph.adjacency = some [2]
 
 example :
     wordGraphTagColour

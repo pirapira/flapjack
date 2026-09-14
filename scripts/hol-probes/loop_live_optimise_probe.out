@@ -1,0 +1,7 @@
+skip=Mark Skip
+
+loc_value=Mark Skip
+
+seq=Mark (Seq (Mark Skip) (Mark Skip))
+
+ffi=Mark (FFI «f» 1 2 3 4 LN)

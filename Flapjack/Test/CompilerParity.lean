@@ -40,6 +40,7 @@ import Flapjack.Test.LoopArithVarsParity
 import Flapjack.Test.LoopShrinkParity
 import Flapjack.Test.LoopMarkAllParity
 import Flapjack.Test.LoopLiveCompParity
+import Flapjack.Test.LoopLiveOptimiseParity
 import Flapjack.Test.LoopAccVarsParity
 import Flapjack.Test.LoopNestedSeqParity
 import Flapjack.Test.LoopIsLoadParity

@@ -378,6 +378,71 @@ theorem panValuePcRaisedWordSemanticLift
     simpa [hrel.1] using hexceptionResult
   exact ⟨hsourceEval, htargetEval, ⟨hpost, hexceptionResult'⟩⟩
 
+/-! Adapter for the generic `pc_compile_correct` raised obligation.  The
+    existing word semantic lift supplies the concrete evaluator equations;
+    this theorem exposes its result component in the exact explicit shape
+    consumed by `panValuePcCompileCorrect_compact`, including the source
+    exception lookup, post-state relation, global payload observation, and
+    32-word bound. -/
+theorem panValuePcRaisedWordHraise
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (sourceFuel targetFuel : Nat)
+    (exception : ExceptionId) (exceptionCode value : α)
+    (expression : SourceWordExp α) (compiled : CrepExp α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (resultExceptionCode : ExceptionId → Option α)
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hcode : resultExceptionCode exception = some exceptionCode)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord expression.toExp = some (.word value))
+    (hcompile : compileExp context expression.toExp = ([compiled], .one))
+    (hcompiled : evalCrepFullExpState state baseAddress topAddress compiled =
+      some value)
+    (hexception : exceptionRel exception (.word value) exceptionCode)
+    (hfresh : state.locals (context.maxVar + 1) = none) :
+    panValueCrepStateRel structs context (fun _ => none) sourceGlobals
+      sourceMemory { state with globals := updateMemory state.globals 0 value } ∧
+    (∃ spillAddress,
+      panValueCrepRaisedControlRel structs context exceptionRel sourceGlobals
+        sourceMemory exception (.word value)
+        { state with globals := updateMemory state.globals 0 value }
+        exceptionCode spillAddress ∧
+      resultExceptionCode exception = some exceptionCode ∧
+      (1 ≤ Shape.shapeSize (panValueShape structs (.word value)) →
+        crepPcWordGlobalsLookup
+          { state with globals := updateMemory state.globals 0 value }
+          (.word value) = some (panValueFlatWords (.word value))) ∧
+      Shape.shapeSize (panValueShape structs (.word value)) ≤ 32) := by
+  have hresult := panValuePcRaisedWordSemanticLift
+    context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord sourceFuel targetFuel exception
+    exceptionCode value expression compiled exceptionRel resultExceptionCode
+    hlookup hcode hbytesInWord hrel hsource hcompile hcompiled hexception hfresh
+  rcases hresult.2.2 with
+    ⟨hpost, spillAddress, code, hresultCode, htargetCode, hcontrol, hpayload⟩
+  refine ⟨hpost, spillAddress, hcontrol, ?_, ?_, ?_⟩
+  · simpa [htargetCode] using hresultCode
+  · intro hnonempty
+    exact (hpayload hnonempty).1
+  · simp [panValueShape]
+
 /-! Semantic two-word raise lift for the next supported payload fragment.  The
     source and global-aware Crep equations are the checked two-word
     `CrepeCorrectness` boundary; the result clause retains both global words

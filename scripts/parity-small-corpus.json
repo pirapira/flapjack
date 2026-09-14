@@ -64,6 +64,12 @@
       "source_reference": "Deepened GitHub issue #1015 variant (one extra addition level, six live nested temporaries); the original accepts, and after the pool-expansion fix flapjack-pxn.2.5 the port accepts too. Recorded to show the fix generalizes past the four-register reserved pool.",
       "cake_sha256": "5822698630fdc38fcc3061902f3fdaee3b36b3d8b1cdcfc5fdc7b948261e9f36",
       "tracked_beads": ["flapjack-pxn.2.5"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_expression_sub.pnk",
+      "source_reference": "GitHub issue #1015 previously-failing left-associative subtraction chain (five nested binary nodes); the original accepts and the port accepts after the flapjack-pxn.2.5 pool-expansion fix, extending coverage of the temporary-pool floor beyond the addition variants.",
+      "cake_sha256": "30de68e8017f5e36baefc5f0aee2d4797eed4434e41f3f5abd12562a288c99f3",
+      "tracked_beads": ["flapjack-pxn.2.5"]
     }
   ]
 }

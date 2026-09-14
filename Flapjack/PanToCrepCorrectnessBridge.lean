@@ -547,6 +547,93 @@ theorem panValuePcRaisedTwoWordSemanticLift
     simpa [hrel.1] using hexceptionResult
   exact ⟨hsourceEval, htargetEval, ⟨hpost, hexceptionResult'⟩⟩
 
+/-! The two-word counterpart exposes the existing structured-payload semantic
+    lift in the explicit generic `hraise` shape.  The distinct spill slots and
+    the two-word global observer remain part of the obligation. -/
+theorem panValuePcRaisedTwoWordHraise
+    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
+    [ShiftLeft α] [ShiftRight α] [LT α]
+    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : CompileContext α) (structs : StructContext)
+    (sourceFunctions : List (FunName × List VarName × Prog α))
+    (functions : List (CompiledFunction α))
+    (sourceLocals sourceGlobals : VarName → Option (PanValue α))
+    (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
+    (primitive : PanPrimitiveHandler α)
+    (sourceHandler : PanValueFfiHandler α)
+    (crepPrimitive : CrepPrimitiveHandler α)
+    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
+    (baseAddress topAddress bytesInWord : α)
+    (fieldLeft fieldRight : SourceWordExp α) (left right : α)
+    (exception : ExceptionId) (exceptionCode : α)
+    (exceptionRel : ExceptionId → PanValue α → α → Prop)
+    (resultExceptionCode : ExceptionId → Option α)
+    (compiledLeft compiledRight : CrepExp α)
+    (hlookup : lookupInfo exception context.exceptions = some exceptionCode)
+    (hcode : resultExceptionCode exception = some exceptionCode)
+    (hbytesInWord : context.bytesInWord = bytesInWord)
+    (hdistinct : (0 : α) ≠ 0 + bytesInWord)
+    (hrel : panValueCrepStateRel structs context sourceLocals sourceGlobals
+      sourceMemory state)
+    (hsource : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
+      baseAddress topAddress bytesInWord
+      (.rStruct [fieldLeft.toExp, fieldRight.toExp]) =
+      some (.rStruct [.word left, .word right]))
+    (hcompile : compileExp context
+      (.rStruct [fieldLeft.toExp, fieldRight.toExp]) =
+      ([compiledLeft, compiledRight], .comb [.one, .one]))
+    (hcompiledLeft : evalCrepFullExpState state baseAddress topAddress compiledLeft =
+      some left)
+    (hcompiledRight : ∀ value : α, evalCrepFullExpState
+      { state with locals := updateCrepLocal state.locals (context.maxVar + 1) value }
+      baseAddress topAddress compiledRight = some right)
+    (hexception : exceptionRel exception
+      (.rStruct [.word left, .word right]) exceptionCode) :
+    panValueCrepStateRel structs context (fun _ => none) sourceGlobals
+      sourceMemory
+      { state with globals :=
+          (updateMemory (updateMemory state.globals 0 left)
+            (0 + bytesInWord) right) } ∧
+    (∃ spillAddress,
+      panValueCrepRaisedControlRel structs context exceptionRel sourceGlobals
+        sourceMemory exception (.rStruct [.word left, .word right])
+        { state with globals :=
+            (updateMemory (updateMemory state.globals 0 left)
+              (0 + bytesInWord) right) }
+        exceptionCode spillAddress ∧
+      resultExceptionCode exception = some exceptionCode ∧
+      (1 ≤ Shape.shapeSize
+          (panValueShape structs (.rStruct [.word left, .word right])) →
+        crepPcTwoWordGlobalsLookup bytesInWord
+            { state with globals :=
+                (updateMemory (updateMemory state.globals 0 left)
+                  (0 + bytesInWord) right) }
+            (.rStruct [.word left, .word right]) =
+          some (panValueFlatWords (.rStruct [.word left, .word right]))) ∧
+      Shape.shapeSize (panValueShape structs
+        (.rStruct [.word left, .word right])) ≤ 32) := by
+  have hresult := panValuePcRaisedTwoWordSemanticLift
+    context structs sourceFunctions functions sourceLocals sourceGlobals
+    sourceMemory state primitive sourceHandler crepPrimitive ffi sharedMem
+    baseAddress topAddress bytesInWord fieldLeft fieldRight
+    left right exception exceptionCode exceptionRel resultExceptionCode
+    compiledLeft compiledRight hlookup hcode hbytesInWord hdistinct hrel hsource
+    hcompile hcompiledLeft hcompiledRight hexception
+  rcases hresult.2.2 with
+    ⟨hpost, spillAddress, code, hresultCode, htargetCode, hcontrol, hpayload⟩
+  have hnonempty : 1 ≤ Shape.shapeSize
+      (panValueShape structs (.rStruct [.word left, .word right])) := by
+    simp [panValueShape, Shape.shapeSize]
+  have hshape : Shape.shapeSize
+      (panValueShape structs (.rStruct [.word left, .word right])) ≤ 32 := by
+    simp [panValueShape, Shape.shapeSize]
+  refine ⟨hpost, spillAddress, hcontrol, ?_, ?_, ?_⟩
+  · simpa [htargetCode] using hresultCode
+  · intro _
+    exact (hpayload hnonempty).1
+  · exact hshape
+
 /-! The ordinary compact control cases are proved directly from the existing
 `panValueCrepControlRel`.  Only the raised payload needs an additional
 obligation because the exact Pc relation retains both the HOL post-state

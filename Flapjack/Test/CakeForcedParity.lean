@@ -25,4 +25,11 @@ def parityGuard : Bool :=
 #guard parityGuard
 #eval parityGuard
 
+def runChecks : IO Bool := do
+  if parityGuard then
+    IO.println "PASS Cake get_forced HOL parity"
+  else
+    IO.println "FAIL Cake get_forced HOL parity"
+  pure parityGuard
+
 end Flapjack.Test.CakeForcedParity

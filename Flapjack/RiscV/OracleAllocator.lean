@@ -1,4 +1,5 @@
 import Flapjack.RiscV.RegAlloc
+import Flapjack.RiscV.CakeAllocatorCore
 
 /-!
 An oracle-backed entry point for the CakeML-shaped Word allocator.
@@ -11,6 +12,8 @@ colouring can be consumed by the existing Word pipeline.
 -/
 
 namespace Flapjack
+
+open Flapjack.RiscV.CakeAlloc
 
 def wordClashTreeNames : WordClashTree → List Nat
   | .delta writes reads => writes ++ reads
@@ -25,9 +28,14 @@ termination_by tree => sizeOf tree
 decreasing_by all_goals decreasing_trivial
 
 def wordOracleColour (oracle : NatInfoMap Nat) (source : Nat) : Nat :=
-  match lookupNatInfo source oracle with
-  | some colour => 2 * colour
-  | none => if source % 2 == 0 then source else 0
+  totalColour oracle source
+
+/-! Cake's allocator applies `total_colour` to the complete Word program after
+    IRC colouring.  Keep this boundary named so callers cannot accidentally
+    apply the compressed colour map directly or omit nested handlers/live sets. -/
+def wordApplyTotalColour (oracle : NatInfoMap Nat) (program : WordProg α) :
+    WordProg α :=
+  wordApplyColour (totalColour oracle) program
 
 def wordOracleEdgesSafe (colour : Nat → Nat) : List (Nat × Nat) → Bool
   | [] => true
@@ -59,9 +67,8 @@ def wordAllocateFunctionWithOracle (parameters : List Nat)
   let tree := WordClashTree.seq (.set renamedParameters)
     (wordClashTree renamedProgram [])
   let forced := wordProgForcedClashes renamedProgram
-  let colour := wordOracleColour oracle
   if wordOracleColouringOk colours stackStart tree forced oracle then
-    some (state, renamedParameters, wordApplyColour colour renamedProgram)
+    some (state, renamedParameters, wordApplyTotalColour oracle renamedProgram)
   else
     none
 

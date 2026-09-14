@@ -77,6 +77,16 @@ def retHdl [OfNat α 0] [OfNat α 1] [Add α]
       else .skip
   | .named _ => .skip
 
+/-! Faithful port of `pan_to_crep$wrap_rt` from
+    `cakeml/pancake/pan_to_crepScript.sml:131-136`.
+
+    The empty one-word return slot is normalized to no return slot; every
+    other option is preserved unchanged. -/
+def wrapRt : Option (Shape × List Nat) → Option (Shape × List Nat)
+  | none => none
+  | some (.one, []) => none
+  | value => value
+
 def compileExp [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) : Exp α → List (CrepExp α) × Shape
   | .const value => ([.const value], .one)

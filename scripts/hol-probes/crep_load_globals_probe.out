@@ -1,0 +1,3 @@
+empty=[]
+one=[LoadGlob 3w]
+three=[LoadGlob 3w; LoadGlob 4w; LoadGlob 5w]

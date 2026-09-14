@@ -1,0 +1,4 @@
+skip_skip=Skip
+tick_skip=Tick
+tick_seq_skip_tick=Seq Tick Tick
+tick_return=Seq Tick (Return (Const 7w))

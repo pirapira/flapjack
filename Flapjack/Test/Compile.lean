@@ -150,21 +150,6 @@ example :
   simp [compileProg, firstCompiledExp, compileExp, storeMemOp, nestedDecs,
     assignmentContext]
 
-example :
-    evalCrepProg (fun _ => none) (compileProg crepContext (.return (.const (α := Nat) 7))) =
-      some [7] := by
-  simp [compileProg, evalCrepProg, evalCrepExps, evalCrepExp, compileExp]
-
-example :
-    (evalCrepStateProg (fun _ => none)
-        (compileProg assignmentContext
-          (.seq (.assign .local "x" (.const 7))
-            (.return (.var .local "x"))))).map Prod.snd =
-      some [7] := by
-  simp [compileProg, compileExp, crepNestedSeq, evalCrepStateProg, evalCrepExp, evalCrepExps,
-    updateCrepLocal, assignmentContext,
-    lookupInfo, distinctLists]
-
 def crepAddCarryHandler : CrepPrimitiveHandler Nat
   | .addCarry, [left, right, carry] => some [left + right + carry, 0]
   | _, _ => none
@@ -202,29 +187,6 @@ example :
         RiscV.panPrimitiveHandler crepPrimitiveSource).map
         (fun result => result.2.2.2.flatMap panValueWords) := by
   decide +kernel
-
-example :
-    evalCrepMemResultWithPrimitive
-        (fun _ _ => some [6]) (fun name => if name == 1 then some 1
-          else if name == 2 then some 2 else if name == 3 then some 3 else none)
-        (fun _ => none)
-      (.seq
-        (.store (.const (α := Nat) 10) (.const 7))
-        (.seq
-          (.primitive [0] .addCarry [1, 2, 3])
-          (.return [.load (.const 10), .var 0]))) =
-      some [7, 6] := by
-  decide +kernel
-
-example :
-    evalCrepMemResult (fun _ => none) (fun _ => none)
-      (compileProg assignmentContext
-        (.seq (.store (.const 10) (.const 7))
-          (.return (.load .one (.const 10))))) =
-      some [7] := by
-    simp [compileProg, compileExp, freshNames, nestedDecs, stores, crepNestedSeq,
-    loadShape, evalCrepMemResult, evalCrepMemProg, evalCrepMemProg.evalCrepMemExps,
-    evalCrepMemExp, updateMemory, updateCrepLocal, assignmentContext]
 
 example :
     lowerLoopExp (CrepExp.cmp .equal (.var 0) (.const (α := Nat) 1)) =

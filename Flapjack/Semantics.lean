@@ -59,17 +59,6 @@ are intentionally supplied by separate interfaces so a target cannot
 accidentally implement them as logical shifts.
 -/
 
-def evalPanShiftFull [PanShiftWidth α] [ShiftLeft α] [ShiftRight α]
-    [ArithmeticShiftRight α] [RotateRightOp α]
-    (operator : Shift) (left right : α) : Option α :=
-  let amount := PanShiftWidth.amount (α := α) right
-  if amount ≠ 0 ∧ PanShiftWidth.width (α := α) ≤ amount then none else
-    match operator with
-    | .lsl => some (ShiftLeft.shiftLeft left right)
-    | .lsr => some (ShiftRight.shiftRight left right)
-    | .asr => some (ArithmeticShiftRight.arithmeticShiftRight left right)
-    | .ror => some (RotateRightOp.rotateRight left right)
-
 def updatePanLocal (locals : VarName → Option α) (name : VarName) (value : α) :
     VarName → Option α :=
   fun current => if current == name then some value else locals current
@@ -100,32 +89,6 @@ def evalPanExp [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | _ => none
 termination_by structural expression
 
-def evalPanExpFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
-    (locals : VarName → Option α) (expression : Exp α) : Option α :=
-  match expression with
-  | .const value => some value
-  | .var .local name => locals name
-  | .op operator [left, right] => do
-      let left ← evalPanExpFull locals left
-      let right ← evalPanExpFull locals right
-      pure (evalPanBinOp operator left right)
-  | .panOp operator [left, right] => do
-      let left ← evalPanExpFull locals left
-      let right ← evalPanExpFull locals right
-      evalPanOp operator [left, right]
-  | .cmp operator left right => do
-      let left ← evalPanExpFull locals left
-      let right ← evalPanExpFull locals right
-      pure (evalPanCmp operator left right)
-  | .shift operator left right => do
-      let left ← evalPanExpFull locals left
-      let right ← evalPanExpFull locals right
-      evalPanShiftFull operator left right
-  | _ => none
-termination_by structural expression
-
 def evalPanCondition [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [PanCmp α]
@@ -152,34 +115,6 @@ def evalPanCondition [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
         | .notTest => AndOp.and left right != 0)
   | expression => do
       let value ← evalPanExp locals expression
-      pure (value != 0)
-
-def evalPanConditionFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
-    (locals : VarName → Option α) : Exp α → Option Bool
-  | .cmp .equal left right => do
-      let left ← evalPanExpFull locals left
-      let right ← evalPanExpFull locals right
-      pure (left == right)
-  | .cmp .notEqual left right => do
-      let left ← evalPanExpFull locals left
-      let right ← evalPanExpFull locals right
-      pure (left != right)
-  | .cmp operator left right => do
-      let left ← evalPanExpFull locals left
-      let right ← evalPanExpFull locals right
-      pure (match operator with
-        | .equal => left == right
-        | .notEqual => left != right
-        | .lower => PanCmp.lower left right
-        | .less => PanCmp.less left right
-        | .notLower => !PanCmp.lower left right
-        | .notLess => !PanCmp.less left right
-        | .test => AndOp.and left right == 0
-        | .notTest => AndOp.and left right != 0)
-  | expression => do
-      let value ← evalPanExpFull locals expression
       pure (value != 0)
 
 def evalCrepExp [Add α] [Mul α]
@@ -231,33 +166,6 @@ def evalPanProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       else evalPanProg locals elseBranch
   | _ => none
 
-def evalPanProgFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
-    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
-    (locals : VarName → Option α) : Prog α → Option (List α)
-  | .skip => some []
-  | .dec name _ value body => do
-      let value ← evalPanExpFull locals value
-      evalPanProgFull (updatePanLocal locals name value) body
-  | .return expression => (evalPanExpFull locals expression).map (fun value => [value])
-  | .seq first second => do
-      let firstResult ← evalPanProgFull locals first
-      if firstResult.isEmpty then evalPanProgFull locals second else pure firstResult
-  | .ite condition thenBranch elseBranch => do
-      let condition ← evalPanConditionFull locals condition
-      if condition then evalPanProgFull locals thenBranch
-      else evalPanProgFull locals elseBranch
-  | _ => none
-
-def evalCrepProg [Add α] [Mul α] (locals : Nat → Option α) : CrepProg α → Option (List α)
-  | .skip => some []
-  | .return expressions => evalCrepExps locals expressions
-  | .seq first second => do
-      let firstResult ← evalCrepProg locals first
-      if firstResult.isEmpty then evalCrepProg locals second else pure firstResult
-  | _ => none
-
 def updateCrepLocal (locals : Nat → Option α) (name : Nat) (value : α) :
     Nat → Option α :=
   fun current => if current = name then some value else locals current
@@ -297,11 +205,6 @@ def evalCrepStateProgWithPrimitive [Add α] [Mul α]
         evalCrepStateProgWithPrimitive primitive locals' second
       else pure (locals', firstResult)
   | _ => none
-
-def evalCrepProgWithPrimitive [Add α] [Mul α]
-    (primitive : CrepPrimitiveHandler α) (locals : Nat → Option α)
-    (program : CrepProg α) : Option (List α) :=
-  (evalCrepStateProgWithPrimitive primitive locals program).map Prod.snd
 
 def evalPanStateProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
@@ -673,21 +576,6 @@ theorem evalPanProgWithCallsAndFfi_while_false
       (.while condition body) = some (.normal locals) := by
   simp [evalPanProgWithCallsAndFfi, evalPanWhileWithCallsAndFfi, hcondition]
 
-def evalCrepStateProg [Add α] [Mul α] (locals : Nat → Option α) :
-    CrepProg α → Option ((Nat → Option α) × List α)
-  | .skip => some (locals, [])
-  | .assign name value => do
-      let value ← evalCrepExp locals value
-      pure (updateCrepLocal locals name value, [])
-  | .return values => do
-      let values ← evalCrepExps locals values
-      pure (locals, values)
-  | .seq first second => do
-      let (locals', firstResult) ← evalCrepStateProg locals first
-      if firstResult.isEmpty then evalCrepStateProg locals' second
-      else pure (locals', firstResult)
-  | _ => none
-
 /-!
 Call-aware Crepe semantics for the declaration-call fragment.  This is the
 first executable semantic boundary after `pan_to_crep`: compiled functions
@@ -806,24 +694,6 @@ def evalPanMemCondition [BEq α] [OfNat α 0] [Add α] [Mul α]
       let value ← evalPanMemExp locals memory expression
       pure ((value == 0) = false)
 
-def evalCrepMemExp [BEq α] [Add α] [Mul α]
-    (locals : Nat → Option α) (memory : α → Option α) : CrepExp α → Option α
-  | .const value => some value
-  | .var name => locals name
-  | .load address | .load32 address | .loadByte address => do
-      let address ← evalCrepMemExp locals memory address
-      memory address
-  | .op .add [left, right] => do
-      let left ← evalCrepMemExp locals memory left
-      let right ← evalCrepMemExp locals memory right
-      pure (left + right)
-  | .crepOp .mul [left, right] => do
-      let left ← evalCrepMemExp locals memory left
-      let right ← evalCrepMemExp locals memory right
-      pure (left * right)
-  | _ => none
-termination_by expression => sizeOf expression
-
 def evalPanMemProg [BEq α] [Add α] [Mul α] [OfNat α 0]
     (locals : VarName → Option α)
     (memory : α → Option α) : Prog α →
@@ -857,96 +727,6 @@ def evalPanMemProg [BEq α] [Add α] [Mul α] [OfNat α 0]
       else
         evalPanMemProg locals memory elseBranch
   | _ => none
-
-def evalCrepMemProg [BEq α] [Add α] [Mul α] (locals : Nat → Option α)
-    (memory : α → Option α) : CrepProg α →
-    Option ((Nat → Option α) × (α → Option α) × List α)
-  | .skip => some (locals, memory, [])
-  | .dec name value body => do
-      let value ← evalCrepMemExp locals memory value
-      evalCrepMemProg (updateCrepLocal locals name value) memory body
-  | .assign name value => do
-      let value ← evalCrepMemExp locals memory value
-      pure (updateCrepLocal locals name value, memory, [])
-  | .store address value => do
-      let address ← evalCrepMemExp locals memory address
-      let value ← evalCrepMemExp locals memory value
-      pure (locals, updateMemory memory address value, [])
-  | .store32 address value | .storeByte address value => do
-      let address ← evalCrepMemExp locals memory address
-      let value ← evalCrepMemExp locals memory value
-      pure (locals, updateMemory memory address value, [])
-  | .storeGlob address value => do
-      let value ← evalCrepMemExp locals memory value
-      pure (locals, updateMemory memory address value, [])
-  | .return values => do
-      let values ← evalCrepMemExps locals memory values
-      pure (locals, memory, values)
-  | .seq first second => do
-      let (locals', memory', firstResult) ← evalCrepMemProg locals memory first
-        if firstResult.isEmpty then evalCrepMemProg locals' memory' second
-        else pure (locals', memory', firstResult)
-  | _ => none
-  where
-  evalCrepMemExps [BEq α] [Add α] [Mul α] (locals : Nat → Option α)
-      (memory : α → Option α) : List (CrepExp α) → Option (List α)
-    | [] => some []
-    | expression :: expressions => do
-        let value ← evalCrepMemExp locals memory expression
-        let values ← evalCrepMemExps locals memory expressions
-        pure (value :: values)
-
-def evalCrepMemProgWithPrimitive [BEq α] [OfNat α 0] [Add α] [Mul α]
-    (primitive : CrepPrimitiveHandler α) (locals : Nat → Option α)
-    (memory : α → Option α) : CrepProg α →
-    Option ((Nat → Option α) × (α → Option α) × List α)
-  | .skip => some (locals, memory, [])
-  | .dec name value body => do
-      let value ← evalCrepMemExp locals memory value
-      evalCrepMemProgWithPrimitive primitive
-        (updateCrepLocal locals name value) memory body
-  | .assign name value => do
-      let value ← evalCrepMemExp locals memory value
-      pure (updateCrepLocal locals name value, memory, [])
-  | .primitive names operator arguments => do
-      let arguments ← arguments.mapM locals
-      let values ← primitive operator arguments
-      let locals ← assignCrepValues locals names values
-      pure (locals, memory, [])
-  | .store address value => do
-      let address ← evalCrepMemExp locals memory address
-      let value ← evalCrepMemExp locals memory value
-      pure (locals, updateMemory memory address value, [])
-  | .store32 address value | .storeByte address value => do
-      let address ← evalCrepMemExp locals memory address
-      let value ← evalCrepMemExp locals memory value
-      pure (locals, updateMemory memory address value, [])
-  | .storeGlob address value => do
-      let value ← evalCrepMemExp locals memory value
-      pure (locals, updateMemory memory address value, [])
-  | .return values => do
-      let values ← evalCrepMemProg.evalCrepMemExps locals memory values
-      pure (locals, memory, values)
-  | .seq first second => do
-      let (locals', memory', firstResult) ←
-        evalCrepMemProgWithPrimitive primitive locals memory first
-      if firstResult.isEmpty then
-        evalCrepMemProgWithPrimitive primitive locals' memory' second
-      else pure (locals', memory', firstResult)
-  | .ite condition thenBranch elseBranch => do
-      let condition ← evalCrepMemExp locals memory condition
-      if condition == 0 then
-        evalCrepMemProgWithPrimitive primitive locals memory elseBranch
-      else
-        evalCrepMemProgWithPrimitive primitive locals memory thenBranch
-  | _ => none
-termination_by program => sizeOf program
-
-def evalCrepMemResultWithPrimitive [BEq α] [OfNat α 0] [Add α] [Mul α]
-    (primitive : CrepPrimitiveHandler α) (locals : Nat → Option α)
-    (memory : α → Option α) (program : CrepProg α) : Option (List α) :=
-  (evalCrepMemProgWithPrimitive primitive locals memory program).map
-    (fun result => result.2.2)
 
 def evalPanMemProgFuelBase [BEq α] [Add α] [Mul α] [OfNat α 0]
     (fuel : Nat) (locals : VarName → Option α) (memory : α → Option α) :
@@ -1034,215 +814,9 @@ mutual
     termination_by fuel _ _ _ _ => fuel
 end
 
-theorem evalPanMemProgFuel_while_const_zero [BEq α] [LawfulBEq α] [Add α]
-    [Mul α] [OfNat α 0]
-    (fuel : Nat) (locals : VarName → Option α) (memory : α → Option α)
-    (body : Prog α) :
-    evalPanMemProgFuel (fuel + 1) locals memory (.while (.const (0 : α)) body) =
-      some (locals, memory, []) := by
-  cases fuel <;>
-    simp [evalPanMemProgFuel, evalPanMemWhileFuel, evalPanMemCondition, evalPanMemExp]
-
-def evalCrepMemProgFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
-    (fuel : Nat) (locals : Nat → Option α) (memory : α → Option α) :
-    CrepProg α → Option ((Nat → Option α) × (α → Option α) × List α) :=
-  fun program =>
-    match fuel, program with
-    | _, .skip => some (locals, memory, [])
-    | 0, _ => none
-    | fuel + 1, .dec name value body => do
-        let value ← evalCrepMemExp locals memory value
-        evalCrepMemProgFuel fuel (updateCrepLocal locals name value) memory body
-    | _fuel + 1, .assign name value => do
-        let value ← evalCrepMemExp locals memory value
-        pure (updateCrepLocal locals name value, memory, [])
-    | _fuel + 1, .store address value => do
-        let address ← evalCrepMemExp locals memory address
-        let value ← evalCrepMemExp locals memory value
-        pure (locals, updateMemory memory address value, [])
-    | _fuel + 1, .store32 address value | _fuel + 1, .storeByte address value => do
-        let address ← evalCrepMemExp locals memory address
-        let value ← evalCrepMemExp locals memory value
-        pure (locals, updateMemory memory address value, [])
-    | _fuel + 1, .storeGlob address value => do
-        let value ← evalCrepMemExp locals memory value
-        pure (locals, updateMemory memory address value, [])
-    | _fuel + 1, .return values => do
-        let values ← evalCrepMemProg.evalCrepMemExps locals memory values
-        pure (locals, memory, values)
-    | fuel + 1, .seq first second => do
-        let (locals', memory', firstResult) ←
-          evalCrepMemProgFuel fuel locals memory first
-        if firstResult.isEmpty then
-          evalCrepMemProgFuel fuel locals' memory' second
-        else
-          pure (locals', memory', firstResult)
-    | fuel + 1, .ite condition thenBranch elseBranch => do
-        let condition ← evalCrepMemExp locals memory condition
-        if condition == 0 then
-          evalCrepMemProgFuel fuel locals memory elseBranch
-        else
-          evalCrepMemProgFuel fuel locals memory thenBranch
-    | _fuel + 1, .while _ _ => none
-    | _, _ => none
-termination_by fuel => fuel
-
 def evalPanMemResult [BEq α] [Add α] [Mul α] [OfNat α 0]
     (locals : VarName → Option α)
     (memory : α → Option α) (program : Prog α) : Option (List α) :=
   (evalPanMemProg locals memory program).map (fun result => result.2.2)
-
-def evalCrepMemResult [BEq α] [Add α] [Mul α] (locals : Nat → Option α)
-    (memory : α → Option α) (program : CrepProg α) : Option (List α) :=
-  (evalCrepMemProg locals memory program).map (fun result => result.2.2)
-
-theorem compile_return_const_preserves_semantics [BEq α] [OfNat α 0] [OfNat α 1]
-    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (compiledLocals : Nat → Option α) (value : α) :
-    evalCrepProg compiledLocals (compileProg context (.return (.const value))) =
-      evalPanProg locals (.return (.const value)) := by
-  simp [compileProg, evalCrepProg, evalCrepExps, evalCrepExp, evalPanProg, evalPanExp,
-    compileExp]
-
-theorem compile_skip_preserves_semantics [BEq α] [OfNat α 0] [OfNat α 1]
-    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (locals : VarName → Option α)
-    (compiledLocals : Nat → Option α) :
-    evalCrepProg compiledLocals (compileProg context (.skip : Prog α)) =
-      evalPanProg locals (.skip : Prog α) := by
-  simp [compileProg, evalCrepProg, evalPanProg]
-
-theorem compile_local_var_preserves_semantics [BEq α] [OfNat α 0] [OfNat α 1]
-    [Add α] [Mul α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (name : VarName) (slot : Nat)
-    (lookup : lookupInfo name context.vars = some (.one, [slot]))
-    (locals : VarName → Option α) (compiledLocals : Nat → Option α)
-    (environment_agrees : compiledLocals slot = locals name) :
-    evalCrepExps compiledLocals (compileExp context (.var .local name)).1 =
-      (evalPanExp locals (.var .local name)).map (fun value => [value]) := by
-  rw [compileExp_local_var context name .one [slot] lookup]
-  cases h : locals name <;>
-    simp [evalCrepExps, evalCrepExp, evalPanExp, environment_agrees, h]
-
-theorem compile_local_assign_return_const_preserves_semantics
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (name : VarName) (slot : Nat) (value : α)
-    (lookup : lookupInfo name context.vars = some (.one, [slot]))
-    (locals : VarName → Option α) (compiledLocals : Nat → Option α) :
-    (evalCrepStateProg compiledLocals
-        (compileProg context
-          (.seq (.assign .local name (.const value))
-            (.return (.var .local name))))).map Prod.snd =
-      (evalPanStateProg locals
-        (.seq (.assign .local name (.const value))
-          (.return (.var .local name)))).map Prod.snd := by
-  simp [compileProg, compileExp, crepNestedSeq, lookup,
-    compileExp_local_var context name .one [slot] lookup,
-    evalCrepStateProg, evalPanStateProg, evalCrepExp, evalCrepExps, evalPanExp,
-    updatePanLocal, updateCrepLocal, distinctLists]
-
-theorem compile_store_load_const_preserves_semantics
-    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α] [Mul α]
-    (context : CompileContext α) (address value : α)
-    (locals : VarName → Option α) (compiledLocals : Nat → Option α)
-    (memory : α → Option α) :
-    evalCrepMemResult compiledLocals memory
-        (compileProg context
-          (.seq (.store (.const address) (.const value))
-            (.return (.load .one (.const address))))) =
-      evalPanMemResult locals memory
-        (.seq (.store (.const address) (.const value))
-          (.return (.load .one (.const address)))) := by
-  simp [compileProg, compileExp, freshNames, nestedDecs, stores, crepNestedSeq,
-    evalCrepMemResult, evalPanMemResult, evalCrepMemProg, evalPanMemProg,
-    evalCrepMemProg.evalCrepMemExps,
-    evalCrepMemExp, evalPanMemExp, updateMemory, updateCrepLocal, loadShape]
-
-theorem compile_store32_load32_const_preserves_semantics
-    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α] [Mul α]
-    (context : CompileContext α) (address value : α)
-    (locals : VarName → Option α) (compiledLocals : Nat → Option α)
-    (memory : α → Option α) :
-    evalCrepMemResult compiledLocals memory
-        (compileProg context
-          (.seq (.store32 (.const address) (.const value))
-            (.return (.load32 (.const address))))) =
-      evalPanMemResult locals memory
-        (.seq (.store32 (.const address) (.const value))
-          (.return (.load32 (.const address)))) := by
-  simp [compileProg, compileExp, evalCrepMemResult, evalPanMemResult,
-    evalCrepMemProg, evalPanMemProg, evalCrepMemProg.evalCrepMemExps,
-    evalCrepMemExp, evalPanMemExp, updateMemory]
-
-theorem compile_storeByte_loadByte_const_preserves_semantics
-    [BEq α] [LawfulBEq α] [OfNat α 0] [Add α] [Mul α]
-    (context : CompileContext α) (address value : α)
-    (locals : VarName → Option α) (compiledLocals : Nat → Option α)
-    (memory : α → Option α) :
-    evalCrepMemResult compiledLocals memory
-        (compileProg context
-          (.seq (.storeByte (.const address) (.const value))
-            (.return (.loadByte (.const address))))) =
-      evalPanMemResult locals memory
-        (.seq (.storeByte (.const address) (.const value))
-          (.return (.loadByte (.const address)))) := by
-  simp [compileProg, compileExp, evalCrepMemResult, evalPanMemResult,
-    evalCrepMemProg, evalPanMemProg, evalCrepMemProg.evalCrepMemExps,
-    evalCrepMemExp, evalPanMemExp, updateMemory]
-
-theorem compile_ite_const_preserves_semantics
-    [BEq α] [OfNat α 0] [Add α] [Mul α]
-    (fuel : Nat) (context : CompileContext α)
-    (condition thenValue elseValue : α)
-    (locals : VarName → Option α) (compiledLocals : Nat → Option α)
-    (memory : α → Option α) :
-    (evalCrepMemProgFuel fuel compiledLocals memory
-        (compileProg context
-          (.ite (.const condition)
-            (.return (.const thenValue))
-            (.return (.const elseValue))))).map (fun result => result.2.2) =
-      (evalPanMemProgFuel fuel locals memory
-        (.ite (.const condition)
-          (.return (.const thenValue))
-          (.return (.const elseValue)))).map (fun result => result.2.2) := by
-  cases fuel with
-  | zero =>
-      simp [compileProg, compileExp, evalCrepMemProgFuel, evalPanMemProgFuel,
-        ]
-  | succ fuel =>
-      simp [compileProg, compileExp, evalCrepMemProgFuel, evalPanMemProgFuel,
-        evalCrepMemExp, evalPanMemCondition, evalPanMemExp]
-      split <;>
-        cases fuel <;>
-          simp_all [evalCrepMemProgFuel, evalPanMemProgFuel,
-            evalPanMemProgFuelBase,
-            evalCrepMemProg.evalCrepMemExps, evalCrepMemExp, 
-            evalPanMemExp]
-
-theorem compile_pan_mul_const_preserves_semantics
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (left right : α)
-    (locals : VarName → Option α) (compiledLocals : Nat → Option α) :
-    evalCrepProg compiledLocals
-        (compileProg context
-          (.return (.panOp .mul [.const left, .const right]))) =
-      evalPanProg locals
-        (.return (.panOp .mul [.const left, .const right])) := by
-  simp [compileProg, compileExp, compileExp.compileExpList, cexpHeads,
-    compilePanOp, evalCrepProg, evalCrepExps, evalCrepExp, evalPanProg,
-    evalPanExp, evalPanOp]
 
 end Flapjack

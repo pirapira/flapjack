@@ -1,0 +1,9 @@
+skip=Mark Skip
+
+dead_assign=Mark Skip
+
+seq=Mark (Seq (Mark Skip) (Mark Skip))
+
+arith=Mark (Arith (LDiv 1 2 3))
+
+return=Mark (Return [7])

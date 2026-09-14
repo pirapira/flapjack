@@ -15,3 +15,15 @@ find_reg_imm_imm=Imm 5w
 find_reg_imm_reg=Reg 0
 
 find_reg_imm_ctxt=Reg 4
+
+comp_exp_const=Const 7w
+
+comp_exp_var=Var 6
+
+comp_exp_lookup=Lookup (Temp 9w)
+
+comp_exp_base_addr=Lookup CurrHeap
+
+comp_exp_top_addr=Op Add [Lookup CurrHeap; ShiftN Lsl (Lookup HeapLength) 1]
+
+comp_exp_nested_op=Op Add [Const 1w; Var 6]

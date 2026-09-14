@@ -93,7 +93,8 @@ def pipelineWordFunctions [OfNat α 1]
     let slots := loopAccVars body parameters
     let context : WordContext :=
       { vars := slots.map (fun name => (name, name + 2)) }
-    (label, parameters.map (fun name => name + 2), loopToWordProg context body))
+    (label, parameters.map (fun name => name + 2),
+      wordProgDCE (loopToWordProg context body)))
 
 /-! Source-shaped `loop_to_word$compile_prog` output.  The ordinary pipeline
     keeps parameter names for later register allocation; `pan_to_word` instead

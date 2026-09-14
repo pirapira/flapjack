@@ -542,4 +542,18 @@ example :
       · rfl
       · contradiction) (by decide))
 
+example :
+    evalWordProg (executeInstructions stepCountState [.addi 3 2 1])
+        (.assign 2 (.var 1) : WordProg (Word 8)) =
+      some (executeInstructions stepCountState [.addi 3 2 1, .addi 2 1 0]) := by
+  have hcompile :
+      wordProgToRiscV (.assign 2 (.var 1) : WordProg (Word 8)) =
+        some [.addi 2 1 0] := by
+    simp [wordProgToRiscV, wordExpToInstructions, wordExpToInstruction,
+      registerOfNat]
+  simpa using (wordProgToRiscV_sound_of_straightLine_after_prefix
+    (width := 8) stepCountState [.addi 3 2 1]
+    (.assign 2 (.var 1)) (WordRiscVStraightLine.assign 2 (.var 1))
+    [.addi 2 1 0] hcompile)
+
 end Flapjack.RiscV

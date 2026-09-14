@@ -192,6 +192,9 @@ run_probe crep_evaluate_probeScript.sml crep_evaluate_probe.out \
 run_probe crep_fix_clock_probeScript.sml crep_fix_clock_probe.out \
   fix_clock_clamps fix_clock_keeps_lower \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_sh_mem_load_probeScript.sml crep_sh_mem_load_probe.out \
+  sh_mem_load_zero_width_domain_error sh_mem_load_nonzero_domain_error \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
   semantics_timeout_is_nonterminal semantics_break_is_nonterminal \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

@@ -340,9 +340,11 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
       let call := match returnInfo with
         | none => .call none target argumentNames none
         | some (returns, none) =>
-            .call (some (returns, live)) target argumentNames none
+            let exceptionName := context.maxVar + 1
+            .call (some (returns, live)) target argumentNames
+              (some (exceptionName, .raise exceptionName, .skip, live))
         | some (returns, some (exception, handler)) =>
-            let exceptionName := result.nextTemp + result.expressions.length
+            let exceptionName := context.maxVar + 1
             let handlerCode := loopCompileProg context live handler
             .call (some (returns, live)) target argumentNames
               (some (exceptionName,

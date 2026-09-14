@@ -96,24 +96,24 @@ def handlerProgram : CrepProg Nat :=
 
 def constArgsGuard : Bool :=
   loopCallLivePairs (loopCompileProg probeContext probeLive constArgsProgram)
-    = [([5], [])]
+    = [([5], [5])]
 
 def load32ArgGuard : Bool :=
   loopCallLivePairs (loopCompileProg probeContext probeLive load32ArgProgram)
-    = [([5], [])]
+    = [([5], [5])]
 
 def decContinuationGuard : Bool :=
   loopCallLivePairs (loopCompileProg probeContext probeLive decContinuationProgram)
-    = [([5, 11], [])]
+    = [([5, 11], [5, 11])]
 
 def ifBranchesGuard : Bool :=
   let compiled := loopCompileProg probeContext probeLive ifBranchesProgram
-  loopCallLivePairs compiled = [([5], []), ([5], [])] &&
+  loopCallLivePairs compiled = [([5], [5]), ([5], [5])] &&
     loopIteLives compiled = [[5]]
 
 def whileBodyGuard : Bool :=
   let compiled := loopCompileProg probeContext probeLive whileBodyProgram
-  loopCallLivePairs compiled = [([5], [])] &&
+  loopCallLivePairs compiled = [([5], [5])] &&
     loopIteLives compiled = [[5]] &&
     loopLoopLives compiled = [([5], [5])]
 

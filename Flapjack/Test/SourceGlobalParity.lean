@@ -775,6 +775,11 @@ source-to-runtime-image path must discover `foo` before linking the FFI call. -/
 def ffiCallRuntimeImageAccepted : Bool :=
   runtimeImageAccepted ffiCallSource
 
+/-- The linked `--sections` source entry point must discover the same FFI
+service before constructing the full-SSA image. -/
+def ffiCallLinkedImageAccepted : Bool :=
+  imageAccepted ffiCallSource
+
 /-- The FFI fixture whose arguments sit in the ABI registers must be accepted:
 the word-to-stack pass copies them with a parallel move. -/
 def ffiRegisterBytesAccepted : Bool :=
@@ -908,6 +913,7 @@ def cakeGoldenShape : Bool :=
 #guard structStoreBytesAccepted
 #guard ffiCallBytesAccepted
 #guard ffiCallRuntimeImageAccepted
+#guard ffiCallLinkedImageAccepted
 #guard ffiRegisterBytesAccepted
 #guard initializerChangesArtifact
 #guard auditedAccepted
@@ -960,6 +966,8 @@ def runChecks : IO Bool := do
       ffiCallBytesAccepted,
     checkBool "Pancake four-argument FFI call reaches the runtime image"
       ffiCallRuntimeImageAccepted,
+    checkBool "Pancake four-argument FFI call reaches the linked image"
+      ffiCallLinkedImageAccepted,
     checkBool "Pancake FFI call with ABI-register sources compiles (bytes)"
       ffiRegisterBytesAccepted,
     checkBool "Pancake global source compiles (runtime image)"

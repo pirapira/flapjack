@@ -65,6 +65,9 @@ def originalCompileProgSingleton : List (Nat × Nat × WordProg Nat) :=
   [(7, 2, .skip)]
 def originalCompileProgTwo : List (Nat × Nat × WordProg Nat) :=
   [(7, 2, .skip), (8, 1, .assign 2 (.const 3))]
+def originalCompileEmpty : List (Nat × Nat × WordProg Nat) := []
+def originalCompileSingleton : List (Nat × Nat × WordProg Nat) :=
+  [(7, 2, .skip)]
 
 def sameRegImm : RegImm Nat → RegImm Nat → Bool
   | .imm left, .imm right => left == right
@@ -213,6 +216,11 @@ example : sameNatSet (mkNewCutset [(3, 6)] [3, 1, 3, 2])
 #guard sameWordCode (loopToWordCompileProg
     ([(7, [10], .skip), (8, [], .assign 11 (.const 3))] :
       List (Nat × List Nat × LoopProg Nat))) originalCompileProgTwo == true
+#guard sameWordCode (loopToWordCompile
+    ([] : List (Nat × List Nat × LoopProg Nat))) originalCompileEmpty == true
+#guard sameWordCode (loopToWordCompile
+    ([(7, [10], .skip)] : List (Nat × List Nat × LoopProg Nat)))
+    originalCompileSingleton == true
 
 def runChecks : IO Bool := do
   let mut ok := true
@@ -314,8 +322,15 @@ def runChecks : IO Bool := do
       ([(7, [10], .skip), (8, [], .assign 11 (.const 3))] :
         List (Nat × List Nat × LoopProg Nat))) originalCompileProgTwo then
     IO.println "FAIL LoopToWord.compile_prog two"; ok := false
+  if !sameWordCode (loopToWordCompile
+      ([] : List (Nat × List Nat × LoopProg Nat))) originalCompileEmpty then
+    IO.println "FAIL LoopToWord.compile empty"; ok := false
+  if !sameWordCode (loopToWordCompile
+      ([(7, [10], .skip)] : List (Nat × List Nat × LoopProg Nat)))
+      originalCompileSingleton then
+    IO.println "FAIL LoopToWord.compile singleton"; ok := false
   if ok then
-    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set/from_num_set/mk_new_cutset/comp/comp_func/compile_prog parity"
+    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set/from_num_set/mk_new_cutset/comp/comp_func/compile_prog/compile parity"
   pure ok
 
 end Flapjack.Test.LoopToWord

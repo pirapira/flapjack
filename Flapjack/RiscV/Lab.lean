@@ -3,6 +3,7 @@ import Flapjack.StackAlloc
 import Flapjack.StackAlloc.Runtime
 import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.WordToStack
+import Flapjack.RiscV.CakeStackReseat
 import Flapjack.RiscV.LongDivRuntime
 
 /-!
@@ -81,9 +82,9 @@ def labBranch [NeZero width] (operator : Cmp) (left right : Fin 32)
 
 def labBinOpInstruction [NeZero width] (operator : BinOp)
     (destination left right : Nat) : Option (Instruction width) := do
-  let destination ← registerOfNat destination
-  let left ← registerOfNat left
-  let right ← registerOfNat right
+  let destination ← labRegisterOfNat (portToStack destination)
+  let left ← labRegisterOfNat (portToStack left)
+  let right ← labRegisterOfNat (portToStack right)
   pure (match operator with
     | .add => .add destination left right
     | .sub => .sub destination left right
@@ -97,35 +98,41 @@ def labShiftInstructions [NeZero width] (operator : Shift)
       [destination, left, right].any (· == 31) then
     none
   else
-    let destination ← registerOfNat destination
-    let left ← registerOfNat left
-    let right ← registerOfNat right
+    let destination ← labRegisterOfNat (portToStack destination)
+    let left ← labRegisterOfNat (portToStack left)
+    let right ← labRegisterOfNat (portToStack right)
     match operator with
     | .lsl => pure [.sll destination left right]
     | .lsr => pure [.srl destination left right]
     | .asr => pure [.sra destination left right]
-    | .ror => pure [
-        .ori 31 0 (BitVec.ofNat width width),
-        .sub 31 31 right,
-        .sll 31 left 31,
-        .srl destination left right,
-        .or destination destination 31]
+    | .ror => do
+        let zero ← labRegisterOfNat (portToStack portZeroRegister)
+        pure [
+          .ori 31 zero (BitVec.ofNat width width),
+          .sub 31 31 right,
+          .sll 31 left 31,
+          .srl destination left right,
+          .or destination destination 31]
 
 def labCompilePlain [NeZero width] :
     LabPlain (Word width) → Option (List (Instruction width))
   | .word (.arith operation) => wordArithToInstructions operation
   | .word instruction => (wordInstToInstruction instruction).map List.singleton
   | .const destination value => do
-      let destination ← registerOfNat destination
-      pure [.addi destination 0 (BitVec.ofNat width value)]
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let destination ← labRegisterOfNat (portToStack destination)
+      pure [.addi destination zero (BitVec.ofNat width value)]
   | .arith operator destination left right =>
       (labBinOpInstruction operator destination left right).map List.singleton
   | .shift operator destination left right =>
       labShiftInstructions operator destination left right
-  | .tick => pure [.addi 0 0 0]
+  | .tick => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      pure [.addi zero zero zero]
   | .jumpReg register => do
-      let register ← registerOfNat register
-      pure [.jalr 0 register 0]
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let register ← labRegisterOfNat (portToStack register)
+      pure [.jalr zero register zero]
   | .shareMem operator register address =>
       wordShareInstToInstructions operator register (.var address)
   | .codeBufferWrite address value =>
@@ -137,20 +144,27 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .jump target => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let target ← labResolveRef sectionId labels target
-      pure [.jal 0 (labOffset target position)]
+      pure [.jal zero (labOffset target position)]
   | .call target => do
+      let link ← labRegisterOfNat (portToStack portLinkRegister)
       let target ← labResolveRef sectionId labels target
-      pure [.jal 1 (labOffset target position)]
+      pure [.jal link (labOffset target position)]
   | .locValue register target => do
-      let register ← registerOfNat register
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let register ← labRegisterOfNat (portToStack register)
       let target ← labResolveRef sectionId labels target
-      pure [.addi register 0 (BitVec.ofNat width target)]
+      pure [.addi register zero (BitVec.ofNat width target)]
   | .linkValue target => do
+      let link ← labRegisterOfNat (portToStack portLinkRegister)
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let target ← labResolveRef sectionId labels target
-      pure [.addi 1 0 (BitVec.ofNat width target)]
-  | .return =>
-      pure [.jalr 0 1 0]
+      pure [.addi link zero (BitVec.ofNat width target)]
+  | .return => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let link ← labRegisterOfNat (portToStack portLinkRegister)
+      pure [.jalr zero link 0]
   | .jumpCmp operator condition right target => do
       let (left, right, prelude) ← wordConditionOperands operator condition right
       let target ← labResolveRef sectionId labels target
@@ -274,20 +288,27 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
     (labels : List (Nat × Nat × Nat)) (position : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .jump target => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let target ← labResolveProgramRef labels target
-      pure [.jal 0 (labOffset target position)]
+      pure [.jal zero (labOffset target position)]
   | .call target => do
+      let link ← labRegisterOfNat (portToStack portLinkRegister)
       let target ← labResolveProgramRef labels target
-      pure [.jal 1 (labOffset target position)]
+      pure [.jal link (labOffset target position)]
   | .locValue register target => do
-      let register ← registerOfNat register
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let register ← labRegisterOfNat (portToStack register)
       let target ← labResolveProgramRef labels target
-      pure [.addi register 0 (BitVec.ofNat width target)]
+      pure [.addi register zero (BitVec.ofNat width target)]
   | .linkValue target => do
+      let link ← labRegisterOfNat (portToStack portLinkRegister)
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let target ← labResolveProgramRef labels target
-      pure [.addi 1 0 (BitVec.ofNat width target)]
-  | .return =>
-      pure [.jalr 0 1 0]
+      pure [.addi link zero (BitVec.ofNat width target)]
+  | .return => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let link ← labRegisterOfNat (portToStack portLinkRegister)
+      pure [.jalr zero link 0]
   | .jumpCmp operator condition right target => do
       let (left, right, prelude) ← wordConditionOperands operator condition right
       let target ← labResolveProgramRef labels target
@@ -295,10 +316,12 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
       pure (prelude ++ [labBranch operator left right
         (labOffset target branchPosition)])
   | .callFfi function => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let service ← lookupWordFfiService function context.services
-      pure [.addi 14 0 (BitVec.ofNat width service), .ecall]
-  | .install =>
-      pure [.jal 0 (0 - BitVec.ofNat width (position + 2 * 16))]
+      pure [.addi 14 zero (BitVec.ofNat width service), .ecall]
+  | .install => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      pure [.jal zero (0 - BitVec.ofNat width (position + 2 * 16))]
   | .heapAlloc _ | .halt => none
 
 def labCompileProgramLines [NeZero width] (context : WordFfiContext)
@@ -374,20 +397,27 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
     (labels : List (Nat × Nat × Nat)) (position haltPc : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .jump target => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let target ← labResolveProgramRef labels target
-      pure [.jal 0 (labOffset target position)]
+      pure [.jal zero (labOffset target position)]
   | .call target => do
+      let link ← labRegisterOfNat (portToStack portLinkRegister)
       let target ← labResolveProgramRef labels target
-      pure [.jal 1 (labOffset target position)]
+      pure [.jal link (labOffset target position)]
   | .locValue register target => do
-      let register ← registerOfNat register
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let register ← labRegisterOfNat (portToStack register)
       let target ← labResolveProgramRef labels target
-      pure [.addi register 0 (BitVec.ofNat width target)]
+      pure [.addi register zero (BitVec.ofNat width target)]
   | .linkValue target => do
+      let link ← labRegisterOfNat (portToStack portLinkRegister)
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let target ← labResolveProgramRef labels target
-      pure [.addi 1 0 (BitVec.ofNat width target)]
-  | .return =>
-      pure [.jalr 0 1 0]
+      pure [.addi link zero (BitVec.ofNat width target)]
+  | .return => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let link ← labRegisterOfNat (portToStack portLinkRegister)
+      pure [.jalr zero link 0]
   | .jumpCmp operator condition right target => do
       let (left, right, prelude) ← wordConditionOperands operator condition right
       let target ← labResolveProgramRef labels target
@@ -395,11 +425,15 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       pure (prelude ++ [labBranch operator left right
         (labOffset target branchPosition)])
   | .callFfi function => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let service ← lookupWordFfiService function context.services
-      pure [.addi 14 0 (BitVec.ofNat width service), .ecall]
-  | .halt => pure [.jal 0 (labOffset haltPc position)]
-  | .install =>
-      pure [.jal 0 (0 - BitVec.ofNat width (position + 2 * 16))]
+      pure [.addi 14 zero (BitVec.ofNat width service), .ecall]
+  | .halt => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      pure [.jal zero (labOffset haltPc position)]
+  | .install => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      pure [.jal zero (0 - BitVec.ofNat width (position + 2 * 16))]
   | .heapAlloc _ => none
 
 def labCompileProgramLinesWithHalt [NeZero width]
@@ -771,6 +805,6 @@ theorem compileLabProgram_cross_section_jump [NeZero width] :
     labCollectLabels, labSectionInstructionCount, labCompileProgramSections,
     labCompileProgramLines, labCompileAsmProgram,
     labCompilePlain, labLookupProgramPosition, labResolveProgramRef,
-    labOffset, registerOfNat, hcount]
+    labOffset, hcount]
 
 end Flapjack.RiscV

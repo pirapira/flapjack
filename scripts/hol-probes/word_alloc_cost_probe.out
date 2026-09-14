@@ -1,0 +1,13 @@
+spill_zero=0
+spill_c1=1
+spill_lr1=2
+spill_lm1=4
+spill_rr1=2
+spill_rm1=4
+spill_all1=13
+spill_all1_tail=65
+coal_empty=(30,1,2)
+coal_x_in=(33,1,2)
+coal_y_in=(33,1,2)
+coal_both_in=(36,1,2)
+coal_pri2_both_in=(96,1,2)

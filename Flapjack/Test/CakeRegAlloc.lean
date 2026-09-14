@@ -336,7 +336,6 @@ def parityGuard : Bool :=
     partOrderGuard && reviveOrderGuard && bgOkOrderGuard
 
 #guard parityGuard
-
 def runChecks : IO Bool := do
   let results := [
     moveChainGuard, moveFromRegGuard, seqMovesGuard, ifMergeGuard,

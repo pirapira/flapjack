@@ -45,6 +45,34 @@ def crepMulConst [NeZero width]
     | some exponent => .shift .lsl expression
         (.const (BitVec.ofNat width exponent))
 
+/-! Fixed-width executable port of CakeML's `crep_arith$simp_exp`.
+    The expression tree is simplified bottom-up.  Only binary multiplication
+    receives arithmetic-specific treatment; all other constructors preserve
+    their original shape after recursively simplifying their children. -/
+def crepSimpExp [NeZero width] : CrepExp (RiscV.Word width) →
+    CrepExp (RiscV.Word width)
+  | .load address => .load (crepSimpExp address)
+  | .load32 address => .load32 (crepSimpExp address)
+  | .loadByte address => .loadByte (crepSimpExp address)
+  | .op operator expressions => .op operator (expressions.map crepSimpExp)
+  | .crepOp operator expressions =>
+      let expressions := expressions.map crepSimpExp
+      match operator, expressions with
+      | .mul, [.const left, .const right] => .const (left * right)
+      | .mul, [.const constant, expression] =>
+          crepMulConst expression constant
+      | .mul, [expression, .const constant] =>
+          crepMulConst expression constant
+      | _, _ => .crepOp operator expressions
+  | .cmp operator left right =>
+      .cmp operator (crepSimpExp left) (crepSimpExp right)
+  | .shift operator left right =>
+      .shift operator (crepSimpExp left) (crepSimpExp right)
+  | expression => expression
+termination_by expression => sizeOf expression
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial | simp_wf
+
 def crepArithExp [Mul α] : CrepExp α → CrepExp α
   | .load address => .load (crepArithExp address)
   | .load32 address => .load32 (crepArithExp address)

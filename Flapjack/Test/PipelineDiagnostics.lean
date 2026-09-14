@@ -91,6 +91,32 @@ def longDivRuntimeSemanticResult :
         state.registers 3 = BitVec.ofNat 8 1
   | _ => false
 
+/-! The HOL fixture `scripts/hol-probes/longdiv_code_probe.out` contains the
+    two source-level CakeML AddCarry operations
+    `AddCarry 10 10 16 1` and `AddCarry 12 12 14 1`.  Check the exact
+    four-register operations in the source-shaped helper, including order,
+    rather than only checking its end-to-end result. -/
+def cakeAddCarryOps : WordProg Nat → List (Nat × Nat × Nat × Nat)
+  | .inst (.arith (.cakeAddCarry destination sourceLeft sourceRight carry)) =>
+      [(destination, sourceLeft, sourceRight, carry)]
+  | .seq first second => cakeAddCarryOps first ++ cakeAddCarryOps second
+  | .ite _ _ _ thenBranch elseBranch =>
+      cakeAddCarryOps thenBranch ++ cakeAddCarryOps elseBranch
+  | .loop _ body _ => cakeAddCarryOps body
+  | .mustTerminate body => cakeAddCarryOps body
+  | .call returns _ _ handler =>
+      (match returns with
+      | some (_, _, body, _, _) => cakeAddCarryOps body
+      | none => []) ++
+      (match handler with
+      | some (_, body, _, _) => cakeAddCarryOps body
+      | none => [])
+  | _ => []
+
+#guard
+  cakeAddCarryOps (RiscV.cakeLongDiv1Code 8) =
+    [(10, 10, 16, 1), (12, 12, 14, 1)]
+
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
       [⟨19, [.asm (.const 1 7) [] 0]⟩] =

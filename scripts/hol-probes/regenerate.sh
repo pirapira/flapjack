@@ -57,7 +57,6 @@ run_probe() {
 }
 
 # Run from Pancake's source directory so HOL's ordinary theory loader finds
-# Run from Pancake's source directory so HOL's ordinary theory loader finds
 # the checked-in theory objects without modifying the CakeML submodule or
 # requiring its CAKEMLDIR project mapping in this repository.
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
@@ -122,6 +121,8 @@ run_probe word_stack_frame_probeScript.sml word_stack_frame_probe.out \
   maxvar_skip limit_seq "$cake_dir/compiler/backend/word_to_stackScript.sml"
 run_probe pan_lang_free_var_ids_probeScript.sml pan_lang_free_var_ids_probe.out \
   empty dec_call "$cake_dir/pancake/panLangScript.sml"
+run_probe get_forced_probeScript.sml get_forced_probe.out \
+  add_carry nested "$cake_dir/compiler/backend/word_allocScript.sml"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

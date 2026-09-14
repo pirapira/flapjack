@@ -60,6 +60,11 @@ def originalCompFuncSkip : WordProg Nat := .skip
 def originalCompFuncAssign : WordProg Nat := .assign 4 (.const 3)
 def originalCompFuncSeqAssign : WordProg Nat :=
   .seq (.assign 4 (.const 3)) (.assign 6 (.var 4))
+def originalCompileProgEmpty : List (Nat × Nat × WordProg Nat) := []
+def originalCompileProgSingleton : List (Nat × Nat × WordProg Nat) :=
+  [(7, 2, .skip)]
+def originalCompileProgTwo : List (Nat × Nat × WordProg Nat) :=
+  [(7, 2, .skip), (8, 1, .assign 2 (.const 3))]
 
 def sameRegImm : RegImm Nat → RegImm Nat → Bool
   | .imm left, .imm right => left == right
@@ -114,6 +119,15 @@ def sameWordProg : WordProg Nat → WordProg Nat → Bool
       leftIn == rightIn && sameWordProg leftBody rightBody && leftOut == rightOut
   | .break left, .break right => left == right
   | .tick, .tick => true
+  | _, _ => false
+
+def sameWordCode : List (Nat × Nat × WordProg Nat) →
+    List (Nat × Nat × WordProg Nat) → Bool
+  | [], [] => true
+  | (leftName, leftArity, leftBody) :: leftRest,
+      (rightName, rightArity, rightBody) :: rightRest =>
+      leftName == rightName && leftArity == rightArity &&
+        sameWordProg leftBody rightBody && sameWordCode leftRest rightRest
   | _, _ => false
 
 /-! `toAList` exposes the source sptree's implementation-dependent traversal
@@ -191,6 +205,14 @@ example : sameNatSet (mkNewCutset [(3, 6)] [3, 1, 3, 2])
 #guard sameWordProg (loopToWordCompFunc 7 [10]
     (.seq (.assign 11 (.const 3)) (.assign 12 (.var 11)) : LoopProg Nat))
     originalCompFuncSeqAssign == true
+#guard sameWordCode (loopToWordCompileProg
+    ([] : List (Nat × List Nat × LoopProg Nat))) originalCompileProgEmpty == true
+#guard sameWordCode (loopToWordCompileProg
+    ([(7, [10], .skip)] : List (Nat × List Nat × LoopProg Nat)))
+    originalCompileProgSingleton == true
+#guard sameWordCode (loopToWordCompileProg
+    ([(7, [10], .skip), (8, [], .assign 11 (.const 3))] :
+      List (Nat × List Nat × LoopProg Nat))) originalCompileProgTwo == true
 
 def runChecks : IO Bool := do
   let mut ok := true
@@ -281,8 +303,19 @@ def runChecks : IO Bool := do
       (.seq (.assign 11 (.const 3)) (.assign 12 (.var 11)) : LoopProg Nat))
       originalCompFuncSeqAssign then
     IO.println "FAIL LoopToWord.comp_func sequence"; ok := false
+  if !sameWordCode (loopToWordCompileProg
+      ([] : List (Nat × List Nat × LoopProg Nat))) originalCompileProgEmpty then
+    IO.println "FAIL LoopToWord.compile_prog empty"; ok := false
+  if !sameWordCode (loopToWordCompileProg
+      ([(7, [10], .skip)] : List (Nat × List Nat × LoopProg Nat)))
+      originalCompileProgSingleton then
+    IO.println "FAIL LoopToWord.compile_prog singleton"; ok := false
+  if !sameWordCode (loopToWordCompileProg
+      ([(7, [10], .skip), (8, [], .assign 11 (.const 3))] :
+        List (Nat × List Nat × LoopProg Nat))) originalCompileProgTwo then
+    IO.println "FAIL LoopToWord.compile_prog two"; ok := false
   if ok then
-    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set/from_num_set/mk_new_cutset/comp/comp_func parity"
+    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set/from_num_set/mk_new_cutset/comp/comp_func/compile_prog parity"
   pure ok
 
 end Flapjack.Test.LoopToWord

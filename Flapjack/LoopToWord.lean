@@ -102,4 +102,15 @@ def loopToWordCompFunc [OfNat α 1] (_name : Nat) (params : List Nat)
   let context := makeCtxt 2 (params ++ variables) []
   loopToWordProg { vars := context } body
 
+/-! Port of `compile_prog_def` from `loop_to_wordScript.sml:171-174`.
+    The source adds one entry slot to each function's parameter count while
+    preserving source order. -/
+def loopToWordCompileProg [OfNat α 1] :
+    List (Nat × List Nat × LoopProg α) →
+      List (Nat × Nat × WordProg α)
+  | [] => []
+  | (name, params, body) :: functions =>
+      (name, params.length + 1, loopToWordCompFunc name params body) ::
+        loopToWordCompileProg functions
+
 end Flapjack.LoopToWord

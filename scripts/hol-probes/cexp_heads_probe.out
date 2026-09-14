@@ -1,0 +1,4 @@
+empty=SOME []
+heads=SOME [Const 1w; Var 3]
+empty_head=NONE
+empty_tail=NONE

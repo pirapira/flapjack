@@ -1652,6 +1652,8 @@ mutual
         else evalLoopProgWithFunctions functions fuel state elseBranch
     | fuel + 1, state, .loop _ body _ =>
         evalLoopRepeatWithFunctions functions fuel state body
+    | fuel + 1, state, .mark body =>
+        evalLoopProgWithFunctions functions fuel state body
     | fuel + 1, state, program => evalLoopProg (fuel + 1) state program
     termination_by fuel _ _ => fuel
 
@@ -1808,6 +1810,8 @@ mutual
         else evalLoopProgWithCallsAndFfi functions ffiHandler fuel state elseBranch
     | fuel + 1, state, .loop _ body _ =>
         evalLoopRepeatWithCallsAndFfi functions ffiHandler fuel state body
+    | fuel + 1, state, .mark body =>
+        evalLoopProgWithCallsAndFfi functions ffiHandler fuel state body
     | fuel + 1, state, program => evalLoopProg (fuel + 1) state program
     termination_by fuel _ _ => fuel
 

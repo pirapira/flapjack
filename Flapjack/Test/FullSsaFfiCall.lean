@@ -78,8 +78,16 @@ def fullSsaFfiCallMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← fullSsaFfiCallLinked
   let entry ← fullSsaFfiCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtWithFfi (fullSsaFfiCallHost 19) 4000 0 entry 276 [] image [2] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 276)
+  -- The call continuation sits two instructions before the end of main
+  -- (the `jalr` return and the instruction that follows the call site),
+  -- so the machine return address is entry + 4 * (length - 2).
+  let mainLength ←
+    match sections.find? (fun (label, _, _) => label == 2) with
+    | some (_, _, code) => some code.length
+    | none => none
+  let returnAddress := entry + BitVec.ofNat 64 (4 * (mainLength - 2))
+  RiscV.executeFunctionAtWithFfi (fullSsaFfiCallHost 19) 4000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 def fullSsaFfiCallSourceFunctions :
     List (FunName × List VarName × Prog (RiscV.Word 64)) :=
@@ -134,5 +142,7 @@ theorem fullSsaFfiCall_source_machine_simulation :
   calc
     _ = some [BitVec.ofNat 64 42] := fullSsaFfiCall_source_execution
     _ = _ := fullSsaFfiCall_machine_execution.symm
+
+
 
 end Flapjack

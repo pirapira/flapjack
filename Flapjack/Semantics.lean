@@ -694,40 +694,6 @@ def evalPanMemCondition [BEq α] [OfNat α 0] [Add α] [Mul α]
       let value ← evalPanMemExp locals memory expression
       pure ((value == 0) = false)
 
-def evalPanMemProg [BEq α] [Add α] [Mul α] [OfNat α 0]
-    (locals : VarName → Option α)
-    (memory : α → Option α) : Prog α →
-    Option ((VarName → Option α) × (α → Option α) × List α)
-  | .skip => some (locals, memory, [])
-  | .dec name _ value body => do
-      let value ← evalPanMemExp locals memory value
-      evalPanMemProg (updatePanLocal locals name value) memory body
-  | .assign .local name value => do
-      let value ← evalPanMemExp locals memory value
-      pure (updatePanLocal locals name value, memory, [])
-  | .store address value => do
-      let address ← evalPanMemExp locals memory address
-      let value ← evalPanMemExp locals memory value
-      pure (locals, updateMemory memory address value, [])
-  | .store32 address value | .storeByte address value => do
-      let address ← evalPanMemExp locals memory address
-      let value ← evalPanMemExp locals memory value
-      pure (locals, updateMemory memory address value, [])
-  | .return value => do
-      let value ← evalPanMemExp locals memory value
-      pure (locals, memory, [value])
-  | .seq first second => do
-      let (locals', memory', firstResult) ← evalPanMemProg locals memory first
-      if firstResult.isEmpty then evalPanMemProg locals' memory' second
-      else pure (locals', memory', firstResult)
-  | .ite condition thenBranch elseBranch => do
-      let condition ← evalPanMemCondition locals memory condition
-      if condition then
-        evalPanMemProg locals memory thenBranch
-      else
-        evalPanMemProg locals memory elseBranch
-  | _ => none
-
 def evalPanMemProgFuelBase [BEq α] [Add α] [Mul α] [OfNat α 0]
     (fuel : Nat) (locals : VarName → Option α) (memory : α → Option α) :
     Prog α → Option ((VarName → Option α) × (α → Option α) × List α) :=
@@ -813,10 +779,5 @@ mutual
         else some (locals, memory, [])
     termination_by fuel _ _ _ _ => fuel
 end
-
-def evalPanMemResult [BEq α] [Add α] [Mul α] [OfNat α 0]
-    (locals : VarName → Option α)
-    (memory : α → Option α) (program : Prog α) : Option (List α) :=
-  (evalPanMemProg locals memory program).map (fun result => result.2.2)
 
 end Flapjack

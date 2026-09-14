@@ -1,0 +1,4 @@
+struct S { 1 f, 1 g }
+fun S mks (1 a, 1 b) { return S <f = a, g = b>; }
+fun 1 id (1 a) { return a; }
+fun 1 main() { var S s = mks(1,2); var 1 t = id(5); return s.f; }

@@ -168,6 +168,70 @@ def compileLabProgramLinkedChecked [NeZero width]
   let labels := labCollectProgramLabels 0 program
   labCompileProgramLinkedAuxChecked context labels 0 program
 
+/-! Checked halt-aware linked lowering.  SimpleGC and StoreConsts use the
+    CakeML-shaped halt linker, so keep that path checked as well instead of
+    falling back to the ordinary Option boundary. -/
+def labCompileAsmWithHaltChecked [NeZero width] (context : WordFfiContext)
+    (labels : List (Nat × Nat × Nat)) (position haltPc : Nat)
+    (operation : LabAsm (Word width)) :
+    Except LabLoweringError (List (Instruction width)) :=
+  match operation with
+  | .heapAlloc _ => .error (labLoweringError 0 position .heapAlloc)
+  | operation =>
+      match labCompileAsmWithHalt context labels position haltPc operation with
+      | some code => .ok code
+      | none => .error (labLoweringError 0 position .loweringFailure)
+
+def labCompileProgramLinesWithHaltChecked [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (sectionId : Nat) (position haltPc : Nat) :
+    List (LabLine (Word width)) →
+      Except LabLoweringError (List (Instruction width))
+  | [] => .ok []
+  | .label _ _ _ :: lines =>
+      labCompileProgramLinesWithHaltChecked context labels sectionId position haltPc lines
+  | .asm operation _ _ :: lines =>
+      match labCompilePlain operation with
+      | none => .error (labPlainLoweringError sectionId position operation)
+      | some code =>
+          match labCompileProgramLinesWithHaltChecked context labels sectionId
+              (position + 4 * labLineInstructionCount (.asm operation [] 0)) haltPc lines with
+          | .error error => .error error
+          | .ok rest => .ok (code ++ rest)
+  | .labAsm operation _ _ :: lines =>
+      match labCompileAsmWithHaltChecked context labels position haltPc operation with
+      | .error error => .error { error with sectionId := sectionId }
+      | .ok code =>
+          match labCompileProgramLinesWithHaltChecked context labels sectionId
+              (position + 4 * labLineInstructionCount (.labAsm operation [] 0)) haltPc lines with
+          | .error error => .error error
+          | .ok rest => .ok (code ++ rest)
+
+def labCompileProgramLinkedWithHaltAuxChecked [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (base haltPc : Nat) : LabProgram (Word width) →
+      Except LabLoweringError
+        (List (Nat × Word width × List (Instruction width)))
+  | [] => .ok []
+  | sectionData :: sections =>
+      match labCompileProgramLinesWithHaltChecked context labels sectionData.name base haltPc
+          sectionData.lines with
+      | .error error => .error error
+      | .ok code =>
+          match labCompileProgramLinkedWithHaltAuxChecked context labels
+              (base + 4 * labSectionInstructionCount sectionData) haltPc sections with
+          | .error error => .error error
+          | .ok rest =>
+              .ok ((sectionData.name, BitVec.ofNat width base, code) :: rest)
+
+def compileLabProgramLinkedWithHaltChecked [NeZero width]
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    Except LabLoweringError
+      (List (Nat × Word width × List (Instruction width))) :=
+  let labels := labCollectProgramLabels 0 program
+  let haltPc := 4 * labProgramInstructionCount program
+  labCompileProgramLinkedWithHaltAuxChecked context labels 0 haltPc program
+
 def compileStackProgramNatListToRiscVChecked [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)
     (entryLabel initialLabel : Nat)
@@ -213,6 +277,31 @@ def compileStackProgramNatListLinkedWithRaiseStubToRiscVChecked [NeZero width]
           else
             labProgramToEntrySection sectionId entryLabel initialLabel
               (stackRemoveComplete config program))).map labSectionNatToWord))
+
+def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
+    [NeZero width] (context : WordFfiContext) (removeConfig : StackRemoveConfig)
+    (allocConfig : StackAllocConfig) (gcConfig : StackGcConfig)
+    (storeConstsLocation registerCount : Nat)
+    (entryLabel initialLabel : Nat)
+    (programs : List (Nat × StackProg Nat)) :
+    Except LabLoweringError
+      (List (Nat × Word width × List (Instruction width))) :=
+  let programs :=
+    (stackRaiseStubLocation, stackRaiseStub false removeConfig.addressScratch) ::
+      stackAllocCompileWithSimpleGcAndStoreConsts allocConfig gcConfig
+        storeConstsLocation registerCount programs
+  match stackProgramsWithLongDivRuntime removeConfig programs with
+  | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
+  | some programs =>
+      compileLabProgramLinkedWithHaltChecked context
+        (((programs.map (fun (sectionId, program) =>
+          if sectionId = cakeLongDiv1Location ||
+              sectionId = cakeLongDivLocation then
+            labProgramToEntrySection sectionId 0 initialLabel
+              (stackRemoveComplete removeConfig program)
+          else
+            labProgramToEntrySection sectionId entryLabel initialLabel
+              (stackRemoveComplete removeConfig program))).map labSectionNatToWord))
 
 def compileStackProgramNatToRiscVChecked [NeZero width]
   (context : WordFfiContext) (config : StackRemoveConfig)

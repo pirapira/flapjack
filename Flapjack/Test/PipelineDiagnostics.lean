@@ -44,6 +44,14 @@ example :
         .error { sectionId := 17, position := 0, feature := .heapAlloc } := by
   rfl
 
+/-! The halt-aware linker used by the SimpleGC runtime preserves the same
+    section/position diagnostic instead of collapsing to `artifactFailure`. -/
+example :
+    RiscV.compileLabProgramLinkedWithHaltChecked (width := 64) { services := [] }
+      [⟨17, [.labAsm (.heapAlloc 3) [] 0]⟩] =
+        .error { sectionId := 17, position := 0, feature := .heapAlloc } := by
+  rfl
+
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
       [⟨29, [.asm (.word (.arith (.longDiv 0 3 3 0 6))) [] 0]⟩] =

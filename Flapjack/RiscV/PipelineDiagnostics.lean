@@ -86,6 +86,43 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               | .error error => .error error
               | .ok rest => .ok ((label, wordParameters, stackBody) :: rest)
 
+/-! Checked bitmap-threaded sibling of the full-SSA spill pipeline.  The
+    bitmap state is part of the runtime artifact, so keep it synchronized with
+    the same first-failing section diagnostics used by the byte pipeline. -/
+def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
+    [NeZero width] (bitmaps : RiscV.WordStackBitmapState) :
+    List (Nat × List Nat × LoopProg (RiscV.Word width)) →
+      Except PipelineRiscVLoweringError
+        (List (Nat × List Nat × StackProg Nat) × RiscV.WordStackBitmapState)
+  | [] => .ok ([], bitmaps)
+  | (label, parameters, body) :: functions =>
+      let slots := loopAccVars body parameters
+      let context : WordContext :=
+        { vars := slots.map (fun name => (name, name + 2)) }
+      let wordParameters := parameters.map (fun name => name + 2)
+      let unallocatedBody := loopToWordProg context body
+      match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+          wordParameters unallocatedBody with
+      | none => .error (.allocationFailure label)
+      | some (_, renamedParameters, renamedProgram, allocation) =>
+          let config : RiscV.WordStackConfig :=
+            { locations := allocation.locations
+              scratch := 31
+              stackBase := 0
+              addressScratch := 29
+              sectionId := label
+              handlerLabel := label }
+          match RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+              renamedParameters wordAllocatableRegisters.length config.scratch
+              allocation.nextSpill (some 1) bitmaps renamedProgram with
+          | none => .error (.allocationFailure label)
+          | some (stackBody, bitmaps) =>
+              match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
+                  bitmaps functions with
+              | .error error => .error error
+              | .ok (rest, bitmaps) =>
+                  .ok ((label, wordParameters, stackBody) :: rest, bitmaps)
+
 inductive SourceRiscVCompileError where
   | parse (errors : List Parser.ParseError)
   | static (error : StatErr)
@@ -276,11 +313,21 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
                     RiscV.wordProgFfiNames entry.2.2)).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
-              match compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcEntryLinked
-                  architecture bytesInWord (fun value => fromNat value) services
-                  removeConfig start declarations with
-              | none => .error .artifactFailure
-              | some (bitmaps, sections) =>
-                  .ok { bitmaps, sections := RiscV.encodeLinkedSections sections, warnings }
+              let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
+              match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
+                  (RiscV.wordStackInitialBitmaps false) loop with
+              | .error error => .error (.lowering error)
+              | .ok (functions, bitmaps) =>
+                  let initialLabel := fullSsaInitialLabLabel functions
+                  match RiscV.compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
+                      { services := services } removeConfig
+                      { gcStubLocation := stackGcStubLocation, returnLabel := 0,
+                        firstFreshLabel := stackFunctionFirstLabel }
+                      { } stackStoreConstsStubLocation wordAllocatableRegisters.length
+                      0 initialLabel
+                      (functions.map (fun (label, _, body) => (label, body))) with
+                  | .error error => .error (.lowering (.labToRiscV error))
+                  | .ok sections =>
+                      .ok { bitmaps, sections := RiscV.encodeLinkedSections sections, warnings }
 
 end Flapjack

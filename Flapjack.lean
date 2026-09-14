@@ -173,6 +173,7 @@ import Flapjack.CrepeProgramStoreByteCorrectness
 import Flapjack.CrepeProgramGenericStoreCorrectness
 import Flapjack.CrepeProgramGenericStoreStateCorrectness
 import Flapjack.CrepeGlobalStoreCorrectness
+import Flapjack.CrepeProgramGenericRaiseCorrectness
 import Flapjack.CrepeWordEffectProgramCases
 import Flapjack.CrepeProgramPrimitiveCorrectness
 import Flapjack.CrepeProgramPrimitiveStateRelation

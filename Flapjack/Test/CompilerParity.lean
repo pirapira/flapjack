@@ -60,6 +60,7 @@ import Flapjack.Test.PanHProgDecCallParity
 import Flapjack.Test.PanHProgCallParity
 import Flapjack.Test.CrepExitLoopParity
 import Flapjack.Test.CrepEvaluateParity
+import Flapjack.Test.CrepLookupCodeParity
 import Flapjack.Test.PanDecClockParity
 import Flapjack.Test.PanBstParity
 import Flapjack.Test.PanBStateUpdatesParity
@@ -732,6 +733,7 @@ def main : IO Unit := do
     Flapjack.Test.PanHProgCallParity.runChecks,
     Flapjack.Test.CrepExitLoopParity.runChecks,
     Flapjack.Test.CrepEvaluateParity.runChecks,
+    Flapjack.Test.CrepLookupCodeParity.runChecks,
     Flapjack.Test.PanDecClockParity.runChecks,
     Flapjack.Test.PanBstParity.runChecks,
     Flapjack.Test.PanBStateUpdatesParity.runChecks,

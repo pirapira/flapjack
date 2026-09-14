@@ -248,6 +248,10 @@ run_probe crep_res_var_probeScript.sml crep_res_var_probe.out \
 run_probe crep_lookup_code_probeScript.sml crep_lookup_code_probe.out \
   lookup_code_valid lookup_code_missing \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+# The store_global probe observes StoreGlob insert/update/error on globals.
+run_probe crep_store_global_probeScript.sml crep_store_global_probe.out \
+  store_global_insert store_global_eval_failure \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_empty_locals_probeScript.sml pan_empty_locals_probe.out \
   empty_locals empty_locals_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"

@@ -57,6 +57,63 @@ example : CrepGlobalAddressRelation compactGlobals sourceGlobals := by
   intro address
   simp [compactGlobals, sourceGlobals]
 
+/-! Typed store parity, transcribed from the direct HOL-EVAL probe of
+`crepSemScript.sml:288-291` (`StoreGlob`), checked in as
+`scripts/hol-probes/crep_store_global_probe.out`:
+    store_global_insert=(NONE,SOME (Word 11w))
+    store_global_update_sibling=(NONE,SOME (Word 22w),SOME (Word 9w))
+    store_global_eval_failure=(SOME Error,SOME (Word 11w))
+The probe stores at `crepLang$StoreGlob (4w:5 word)` with 8-bit values; the
+functions below re-key target-width addresses to the same `5`-bit key.  The
+eval-failure case is a source-expression evaluation error, so it correctly
+leaves the typed boundary unchanged (checked via `failureValue`). -/
+
+/-- Active globals for the store probe: key `4` maps to `11`, sibling key `8`
+maps to `9`. -/
+def storeSourceGlobals : CrepGlobalAddress → Option (BitVec 8) :=
+  fun address =>
+    if address == BitVec.ofNat 5 4 then some (BitVec.ofNat 8 11)
+    else if address == BitVec.ofNat 5 8 then some (BitVec.ofNat 8 9)
+    else none
+
+def insertGlobals : CrepGlobalAddress → Option (BitVec 8) :=
+  storeCrepGlobalAt (fun _ => none) (BitVec.ofNat 64 4) (BitVec.ofNat 8 11)
+
+def updatedGlobals : CrepGlobalAddress → Option (BitVec 8) :=
+  storeCrepGlobalAt storeSourceGlobals (BitVec.ofNat 64 4) (BitVec.ofNat 8 22)
+
+def insertValue : Option Nat :=
+  readNat (evalCrepGlobalLoad insertGlobals (BitVec.ofNat 64 4))
+
+def updatedValue : Option Nat :=
+  readNat (evalCrepGlobalLoad updatedGlobals (BitVec.ofNat 64 4))
+
+def siblingValue : Option Nat :=
+  readNat (evalCrepGlobalLoad updatedGlobals (BitVec.ofNat 64 8))
+
+def failureValue : Option Nat :=
+  readNat (evalCrepGlobalLoad storeSourceGlobals (BitVec.ofNat 64 4))
+
+example : insertValue = some 11 := by decide
+example : updatedValue = some 22 := by decide
+example : siblingValue = some 9 := by decide
+example : failureValue = some 11 := by decide
+
+/-- The boundary store/load round trip, matching `store_global_insert`. -/
+example :
+    evalCrepGlobalLoad insertGlobals (BitVec.ofNat 64 4) = some (BitVec.ofNat 8 11) :=
+  evalCrepGlobalLoad_storeCrepGlobalAt (fun _ => none) (BitVec.ofNat 64 4) (BitVec.ofNat 8 11)
+
+/-- The typed store preserves the compact-state relation, as required to thread
+the boundary through `CrepState`. -/
+example :
+    CrepGlobalAddressRelation
+      (updateCrepGlobalKeyed compactGlobals (BitVec.ofNat 64 4) 22)
+      (storeCrepGlobalAt sourceGlobals (BitVec.ofNat 64 4) 22) :=
+  (show CrepGlobalAddressRelation compactGlobals sourceGlobals from by
+    intro address
+    simp [compactGlobals, sourceGlobals]).sourceStore (BitVec.ofNat 64 4) 22
+
 def runChecks : IO Bool := do
   let checks :=
     [ ("Crep global LoadGlob hits the source 5-bit key", hitValue == some 11),
@@ -67,7 +124,13 @@ def runChecks : IO Bool := do
         crepGlobalKey (BitVec.ofNat 64 36) == BitVec.ofNat 5 4),
       ("Crep global state relation restricts the compact map to 5-bit keys",
         sourceGlobals (crepGlobalKey (BitVec.ofNat 64 4)) ==
-          compactGlobals (BitVec.ofNat 64 4)) ]
+          compactGlobals (BitVec.ofNat 64 4)),
+      ("Crep typed StoreGlob inserts at the 5-bit key", insertValue == some 11),
+      ("Crep typed StoreGlob updates the 5-bit key", updatedValue == some 22),
+      ("Crep typed StoreGlob leaves a sibling 5-bit key untouched",
+        siblingValue == some 9),
+      ("Crep typed StoreGlob without a value leaves globals unchanged",
+        failureValue == some 11) ]
   let results ← checks.mapM fun (name, ok) => do
     if ok then
       IO.println s!"PASS {name}"

@@ -1,0 +1,13 @@
+zero=NONE
+
+one=SOME 3
+
+two=SOME 1
+
+four=SOME 6
+
+eight=SOME 3
+
+odd=NONE
+
+even_odd=NONE

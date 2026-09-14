@@ -15,6 +15,24 @@ def crepDestConst : CrepExp α → Option α
   | .const value => some value
   | _ => none
 
+def crepDest2ExpFuel [BEq α] [OfNat α 0] [OfNat α 1]
+    [AndOp α] [ShiftRight α] : Nat → Nat → α → Option Nat
+  | 0, _, _ => none
+  | fuel + 1, n, word =>
+      if word == 0 then none
+      else if word == 1 then some n
+      else if AndOp.and word 1 != 0 then none
+      else crepDest2ExpFuel fuel (n + 1) (ShiftRight.shiftRight word 1)
+termination_by fuel => fuel
+
+/-! Fixed-width executable form of CakeML's `crep_arith$dest_2exp_def`
+    (`crep_arithScript.sml:15`).  The word width supplies the finite bound
+    needed by Lean's termination checker; each recursive step is the HOL
+    logical right shift by one. -/
+def crepDest2Exp [PanShiftWidth α] [BEq α] [OfNat α 0] [OfNat α 1]
+    [AndOp α] [ShiftRight α] (n : Nat) (word : α) : Option Nat :=
+  crepDest2ExpFuel (PanShiftWidth.width (α := α) + 1) n word
+
 def crepArithExp [Mul α] : CrepExp α → CrepExp α
   | .load address => .load (crepArithExp address)
   | .load32 address => .load32 (crepArithExp address)

@@ -149,6 +149,9 @@ run_probe pan_set_global_probeScript.sml pan_set_global_probe.out \
 run_probe pan_sem_set_global_probeScript.sml pan_sem_set_global_probe.out \
   set_global_insert set_global_locals \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_set_kvar_probeScript.sml pan_sem_set_kvar_probe.out \
+  set_kvar_local set_kvar_global_locals \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_itree_evaluate_probeScript.sml pan_itree_evaluate_probe.out \
   itree_evaluate_skip itree_evaluate_tick \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"

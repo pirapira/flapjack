@@ -47,6 +47,8 @@ val _ = print_eval "argcount_inl" ``stack_arg_count (INL 3:num+num) 15 12``
 val _ = print_eval "argcount_inr" ``stack_arg_count (INR 3:num+num) 15 12``
 val _ = print_eval "stackfree_inl"
   ``stack_free (INL 3:num+num) 8 (12,20,19:num)``
+val _ = print_eval "stackfree_inr"
+  ``stack_free (INR 3:num+num) 15 (12,20,19:num)``
 
 val _ = print_eval "bits_tft" ``(bits_to_word [T;F;T]:64 word)``
 val _ = print_eval "bits_fff" ``(bits_to_word [F;F;F]:64 word)``

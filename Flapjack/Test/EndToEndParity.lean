@@ -148,7 +148,7 @@ def callLinked :
 
 def callMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← callLinked
-  let entry ← parsedCallLookupEntry 3 sections
+  let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
   RiscV.executeFunctionAtAfterEntry 4000 0 entry 172 [] image [2] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 6)

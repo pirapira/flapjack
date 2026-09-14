@@ -599,16 +599,36 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     loop := loop
     word := word }
 
+/-! Executable port of the SPLITP entry permutation of `pan_to_target_all`
+    (`cakeml/pancake/pan_passesScript.sml:20-37`): the first declaration of the
+    requested entry function moves to the front of the program while the
+    remaining declarations keep their source order.  A program whose entry is
+    already first, or that lacks the entry entirely, is returned unchanged;
+    the missing-entry case is handled by `panTargetDeclarationsWithDefaultMain`
+    exactly as the original synthesizes `main = «return 0»`. -/
+def panMoveEntryToFront (start : FunName) {α : Type u} :
+    List (Decl α) → List (Decl α)
+  | [] => []
+  | declarations =>
+      let (before, rest) := declarations.span (fun declaration =>
+        match declaration with
+        | .function function => !(function.name == start)
+        | _ => true)
+      match rest with
+      | .function entry :: after => .function entry :: before ++ after
+      | _ => declarations
+
 /-! Exact `pan_to_target` entry preparation.  The ordinary pipeline above is
     retained for pass-local fixtures.  This entry-point form follows CakeML: it
-    finds the requested source function, gives it a fresh name, permutes all
+    moves the requested source function to the front of the program (the
+    SPLITP permutation above), finds it, gives it a fresh name, permutes all
     function references, and emits a new public `main` whose body runs global
     initializers before a tail call to the renamed source entry. -/
 def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (start : FunName) (declarations : List (Decl α)) :
     Option (FlapjackPipelineResult α) :=
-  let simplified := panSimpDecls declarations
+  let simplified := panSimpDecls (panMoveEntryToFront start declarations)
   let structured := structCompileTop simplified
   match pipelineFindFunction start structured with
   | none => none

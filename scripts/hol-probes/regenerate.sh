@@ -56,7 +56,6 @@ run_probe() {
 }
 
 # Run from Pancake's source directory so HOL's ordinary theory loader finds
-# Run from Pancake's source directory so HOL's ordinary theory loader finds
 # the checked-in theory objects without modifying the CakeML submodule or
 # requiring its CAKEMLDIR project mapping in this repository.
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \

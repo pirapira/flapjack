@@ -190,6 +190,7 @@ import Flapjack.Test.RiscVArtifactParity
 import Flapjack.Test.RiscVRegisterMapParity
 import Flapjack.Test.CakeAllocatorCore
 import Flapjack.Test.CakeFramePolicy
+import Flapjack.Test.CakeForcedParity
 
 /-!
 # Pancake/RISC-V compiler parity tests

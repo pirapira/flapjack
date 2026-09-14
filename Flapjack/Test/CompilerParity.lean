@@ -112,6 +112,8 @@ import Flapjack.Test.CompFieldParity
 import Flapjack.Test.CompilePanOpParity
 import Flapjack.Test.CompileExpParity
 import Flapjack.Test.ExpHdlParity
+import Flapjack.Test.RetVarParity
+import Flapjack.Test.RetHdlParity
 import Flapjack.Test.CrepProgIfParity
 import Flapjack.Test.CompileCrepOpParity
 import Flapjack.Test.CrepCompileExpParity
@@ -843,6 +845,8 @@ def main : IO Unit := do
     Flapjack.Test.CompilePanOpParity.runChecks,
     Flapjack.Test.CompileExpParity.runChecks,
     Flapjack.Test.ExpHdlParity.runChecks,
+    Flapjack.Test.RetVarParity.runChecks,
+    Flapjack.Test.RetHdlParity.runChecks,
     Flapjack.Test.CrepExitLoopParity.runChecks,
     Flapjack.Test.CrepEvaluateParity.runChecks,
     Flapjack.Test.CrepFixClockParity.runChecks,

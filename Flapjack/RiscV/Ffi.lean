@@ -30,6 +30,13 @@ def lookupWordFfiService (function : FunName) :
       if function == candidate then some service
       else lookupWordFfiService function services
 
+def lookupWordFfiIndex (function : FunName) :
+    List (FunName × Nat) → Option Nat
+  | [] => none
+  | (candidate, _) :: services =>
+      if function == candidate then some 0
+      else (lookupWordFfiIndex function services).map (· + 1)
+
 def wordFfiToRiscV [NeZero width] (context : WordFfiContext)
     (function : FunName)
     (configuration configurationLength array arrayLength : Nat) :

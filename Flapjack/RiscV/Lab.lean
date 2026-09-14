@@ -117,8 +117,14 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       match operation with
       | .jump _ | .call _ | .locValue _ _ | .linkValue _ | .return | .install | .halt => 1
       | .jumpCmp operator _ right _ => 1 + labConditionPreludeCount operator right
-      | .callFfi _ => 2
+      | .callFfi _ => 1
       | .heapAlloc _ => 1
+
+def labFfiStubOffset [NeZero width] (context : WordFfiContext)
+    (function : FunName) (position : Nat) : Option (Word width) := do
+  let index ← lookupWordFfiIndex function context.services
+  let stubDistance := context.services.length + 2 - index
+  pure (0 - BitVec.ofNat width (position + stubDistance * 16))
 
 def labCollectLabels (_sectionId : Nat) (position : Nat) :
     List (LabLine (Word width)) → List (Nat × Nat)
@@ -254,8 +260,9 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
       pure (prelude ++ [labBranch operator left right
         (labOffset target branchPosition)])
   | .callFfi function => do
-      let service ← lookupWordFfiService function context.services
-      pure [.addi 14 0 (BitVec.ofNat width service), .ecall]
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let offset ← labFfiStubOffset context function position
+      pure [.jal zero offset]
   | .install =>
       pure [.jal 0 (0 - BitVec.ofNat width (position + 2 * 16))]
   | .heapAlloc _ | .halt => none
@@ -399,8 +406,8 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
         (labOffset target branchPosition)])
   | .callFfi function => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let service ← lookupWordFfiService function context.services
-      pure [.addi 14 zero (BitVec.ofNat width service), .ecall]
+      let offset ← labFfiStubOffset context function position
+      pure [.jal zero offset]
   | .install => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       pure [.jal zero (0 - BitVec.ofNat width (position + 2 * 16))]
@@ -508,8 +515,8 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
         (labOffset target branchPosition)])
   | .callFfi function => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let service ← lookupWordFfiService function context.services
-      pure [.addi 14 zero (BitVec.ofNat width service), .ecall]
+      let offset ← labFfiStubOffset context function position
+      pure [.jal zero offset]
   | .halt => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       pure [.jal zero (labOffset haltPc position)]
@@ -862,16 +869,16 @@ def compileStackProgramNatListLinkedWithRaiseStubToRiscV [NeZero width]
 
 theorem labLineInstructionCount_ffi :
     labLineInstructionCount
-        (.labAsm (.callFfi "sum") [] 0 : LabLine (Word width)) = 2 := by
+        (.labAsm (.callFfi "sum") [] 0 : LabLine (Word width)) = 1 := by
   rfl
 
 theorem compileLabSection_ffi [NeZero width] :
     compileLabSection { services := [("sum", 7)] }
       ⟨2, [
         .labAsm (.callFfi "sum") [] 0]⟩ =
-      some [.addi 14 0 (BitVec.ofNat width 7), .ecall] := by
+      some [.jal 0 (0 - BitVec.ofNat width 48)] := by
   simp [compileLabSection, labCompileLines,
-    labCompileAsm, lookupWordFfiService]
+    labCompileAsm, labFfiStubOffset, lookupWordFfiIndex]
 
 theorem compileLabProgram_cross_section_jump [NeZero width] :
     compileLabProgram (width := width) { services := [] }

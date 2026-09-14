@@ -517,6 +517,24 @@ def ffiOrderFlipStubsEmitted : Bool :=
         "cake_ffibar:\n     tail cdecl(ffibar)\n     .p2align 4\n\ncake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_clear:").length == 2
   | none => false
 
+def bytesContain (needle haystack : List (BitVec 8)) : Bool :=
+  match needle, haystack with
+  | [], _ => true
+  | _, [] => false
+  | _, _ :: rest =>
+      (haystack.take needle.length == needle) || bytesContain needle rest
+
+def ffiMinCallStubBytes : Bool :=
+  let stubJump := [0x6f, 0xf0, 0xdf, 0x97].map (BitVec.ofNat 8)
+  let ecall := [0x73, 0x00, 0x00, 0x00].map (BitVec.ofNat 8)
+  match compileRuntimeImage ffiMinSource with
+  | some image =>
+      match image.sections.find? (fun sec => sec.label == 4) with
+      | some sec => bytesContain stubJump sec.bytes &&
+          !bytesContain ecall sec.bytes
+      | none => false
+  | none => false
+
 /-!
 ## Unreachable-code parity (dead FFI references)
 
@@ -626,6 +644,7 @@ def frameOccupancyP9GapTracked : Bool :=
 #guard ffiMinStubEmitted
 #guard ffiOrderStubsEmitted
 #guard ffiOrderFlipStubsEmitted
+#guard ffiMinCallStubBytes
 #guard deadFfiNamesDropped
 #guard deadFfiStubDropped
 #guard bitmapCallsWordsMatch
@@ -684,6 +703,8 @@ def runChecks : IO Bool := do
          ffiOrderStubsEmitted),
       ("flipped ffi source order flips the emitted stub order",
          ffiOrderFlipStubsEmitted),
+      ("single ffi call lowers to the exact runtime-stub jump without ecall",
+         ffiMinCallStubBytes),
       ("unreachable ffi calls are dropped from the name list",
          deadFfiNamesDropped),
       ("unreachable ffi calls gain no stub block",

@@ -149,6 +149,9 @@ run_probe pan_set_kvar_probeScript.sml pan_set_kvar_probe.out \
 run_probe pan_lookup_kvar_probeScript.sml pan_lookup_kvar_probe.out \
   lookup_kvar_local lookup_kvar_missing \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_is_valid_value_probeScript.sml pan_is_valid_value_probe.out \
+  is_valid_value_local is_valid_value_mismatch \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_dec_probeScript.sml pan_itree_h_prog_dec_probe.out \
   dec_valid_event dec_failed_response "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_seq_probeScript.sml pan_itree_h_prog_seq_probe.out \

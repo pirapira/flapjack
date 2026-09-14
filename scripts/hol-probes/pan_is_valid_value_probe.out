@@ -1,0 +1,8 @@
+is_valid_value_local=T
+
+is_valid_value_global=T
+
+is_valid_value_missing=F
+
+is_valid_value_mismatch=F
+

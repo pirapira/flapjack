@@ -18,6 +18,7 @@ import Flapjack.PanItreeEvaluate
 import Flapjack.PanExt
 import Flapjack.PanSetKvar
 import Flapjack.PanLookupKvar
+import Flapjack.PanIsValidValue
 import Flapjack.PanHProgDec
 import Flapjack.PanHProgSeq
 import Flapjack.PanHProgCond

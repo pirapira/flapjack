@@ -232,6 +232,42 @@ def wordCompileExpWithContext [OfNat α 1] (context : WordContext)
     (expression : LoopExp α) : Option (WordExp α) :=
   wordCompileExp context expression
 
+/-! The original Pancake compiler discards statements that follow an
+    unconditional control transfer inside a statement sequence, so its lowered
+    word program never carries unreachable continuations.  A `.seq` whose first
+    component ends in a transfer is terminal itself, hence the recursion in
+    `wordProgIsTerminal`.  `wordProgDCE` mirrors that discarding as a pass over
+    an already lowered program; keeping it separate from `loopToWordProg`
+    preserves the raw translation used by the correctness proofs. -/
+def wordProgIsTerminal : WordProg α → Bool
+  | .raise _ | .return _ _ | .break _ | .continue _ => true
+  | .call none _ _ _ => true
+  | .seq _ second => wordProgIsTerminal second
+  | _ => false
+
+def wordProgDCE : WordProg α → WordProg α
+  | .seq first second =>
+      let first := wordProgDCE first
+      if wordProgIsTerminal first then first
+      else .seq first (wordProgDCE second)
+  | .ite operator condition right thenBranch elseBranch =>
+      .ite operator condition right
+        (wordProgDCE thenBranch) (wordProgDCE elseBranch)
+  | .loop liveIn body liveOut =>
+      .loop liveIn (wordProgDCE body) liveOut
+  | .mustTerminate body => .mustTerminate (wordProgDCE body)
+  /- The call continuation program is `.skip` at this pipeline stage; only the
+     exception-handler body can carry a reachable sub-program. -/
+  | .call returns target arguments (some (exception, handlerProg, l1, l2)) =>
+      .call returns target arguments
+        (some (exception, wordProgDCE handlerProg, l1, l2))
+  | .call returns target arguments none =>
+      .call returns target arguments none
+  | program => program
+  termination_by program => sizeOf program
+  decreasing_by
+    all_goals decreasing_trivial
+
 def loopToWordProg [OfNat α 1] (context : WordContext) :
     LoopProg α → WordProg α
   | .skip => .skip

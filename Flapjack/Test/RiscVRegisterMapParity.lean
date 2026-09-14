@@ -84,6 +84,14 @@ def mapInverseStep : Bool :=
 
 #guard mapInverseStep
 
+/-- The reverse ordering also holds: one map application after eleven further
+applications returns the original name.  This computable shadow of
+`iterRegisterName_forward_eleven` completes the two-sided inverse step. -/
+def mapForwardInverseStep : Bool :=
+  (List.range 32).all (fun n => riscvRegisterName (iterRegisterName 11 n) == n)
+
+#guard mapForwardInverseStep
+
 example : riscvRegisterName (portToStack 0) = 0 := by decide
 example : riscvRegisterName (portToStack 1) = 1 := by decide
 example : riscvRegisterName (portToStack 10) = 10 := by decide
@@ -121,6 +129,20 @@ example : Function.Injective (relabelRegisters (width := 64) riscvForward) ∧
     Function.Surjective (relabelRegisters (width := 64) riscvForward) :=
   relabelRegisters_riscvForward_bijective
 
+/-- The internal write accessor reads back the written value at its own role
+whenever that role is not the hardwired zero image. -/
+example (state : State 64) (value : Word 64) :
+    readRegister (writeRegisterInternal riscvForward state (1 : Fin 32) value) (1 : Fin 32) =
+      value :=
+  readRegister_writeRegisterInternal_riscvForward_self state _ value (by decide)
+
+/-- Every other internal read is unchanged by the internal write; only the
+architectural zero role is dropped. -/
+example (state : State 64) (value : Word 64) (other : Fin 32) (hne : other ≠ (1 : Fin 32)) :
+    readRegister (writeRegisterInternal riscvForward state (1 : Fin 32) value) other =
+      readRegister state other :=
+  readRegister_writeRegisterInternal_riscvForward_other state _ other value hne
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("production role registers are preserved by the one-time Cake map",
@@ -134,7 +156,9 @@ def runChecks : IO Bool := do
       ("the Cake map has order twelve on the architectural register file",
         mapOrderTwelve),
       ("the Cake map is inverted by eleven further applications",
-        mapInverseStep) ]
+        mapInverseStep),
+      ("the eleven-fold iterate also inverts the Cake map",
+        mapForwardInverseStep) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

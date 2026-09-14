@@ -467,7 +467,7 @@ decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 /-- `revive_moves` (`reg_allocScript.sml:363-375`). -/
 def cakeReviveMoves (vs : List Nat) (state : CakeRaState) : CakeRaState :=
   let nbs := vs.map (fun v => cakeAdjSub state.adjLists v)
-  let (revived, unavail) := List.partition (fun m =>
+  let (revived, unavail) := partitionReversed (fun m =>
       nbs.any (fun nb => nb.contains m.2.1 || nb.contains m.2.2))
     state.unavailMovesWl
   { state with

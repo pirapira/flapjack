@@ -131,6 +131,7 @@ import Flapjack.Test.ParserConsumeTokParity
 import Flapjack.Test.ParserKeepTokParity
 import Flapjack.Test.ParserKeepKwParity
 import Flapjack.Test.ParserKeepIdentParity
+import Flapjack.Test.ParserKeepAnnotParity
 import Flapjack.Test.PanHHandleCallRetParity
 import Flapjack.Test.PanMrecParity
 import Flapjack.Test.PanHProgDecParity

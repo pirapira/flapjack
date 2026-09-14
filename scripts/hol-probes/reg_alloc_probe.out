@@ -1,0 +1,4 @@
+ra_delta_pair=M_success ⦕ 1 ↦ 0; 3 ↦ 4 ⦖
+ra_delta_free=M_success ⦕ 1 ↦ 0; 2 ↦ 1 ⦖
+ra_delta_triangle=M_success ⦕ 1 ↦ 0; 3 ↦ 4; 5 ↦ 1 ⦖
+ra_stack_only=M_success ⦕ 1 ↦ 0; 3 ↦ 4; 7 ↦ 4 ⦖

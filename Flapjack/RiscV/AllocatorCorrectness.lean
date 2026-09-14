@@ -151,8 +151,9 @@ theorem wordMkBijection_wellFormed (tree : WordClashTree) :
     induction tree with
     | delta writes reads =>
         intro bijection hform
+        have hreads := wordListRemap_wellFormed reads bijection hform
         simpa [wordClashTreeBijection] using
-          wordListRemap_wellFormed (writes ++ reads) bijection hform
+          wordListRemap_wellFormed writes (wordListRemap reads bijection) hreads
     | set names =>
         intro bijection hform
         simpa [wordClashTreeBijection] using

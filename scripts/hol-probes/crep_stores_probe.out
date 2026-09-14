@@ -1,0 +1,4 @@
+empty=[]
+zero_two=[Store (Var 3) (Const 7w); Store (Op Add [Var 3; Const 4w]) (Const 9w)]
+nonzero_two=[Store (Op Add [Var 3; Const 4w]) (Const 7w);
+ Store (Op Add [Var 3; Const 8w]) (Const 9w)]

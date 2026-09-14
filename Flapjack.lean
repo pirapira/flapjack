@@ -39,6 +39,7 @@ import Flapjack.PanSetKvar
 import Flapjack.PanLookupKvar
 import Flapjack.PanIsValidValue
 import Flapjack.PanShMemLoad
+import Flapjack.PanShMemStore
 import Flapjack.PanEval
 import Flapjack.PanHHandleCallRet
 import Flapjack.PanMrec

@@ -167,6 +167,9 @@ run_probe pan_nb_op_probeScript.sml pan_nb_op_probe.out \
 run_probe pan_sh_mem_load_probeScript.sml pan_sh_mem_load_probe.out \
   zero_width_domain_error nonzero_width_domain_error \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sh_mem_store_probeScript.sml pan_sh_mem_store_probe.out \
+  zero_width_domain_error nonzero_width_domain_error \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_eval_probeScript.sml pan_eval_probe.out \
   eval_const eval_missing \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"

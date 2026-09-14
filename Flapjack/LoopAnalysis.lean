@@ -60,9 +60,9 @@ def loopIntersectSorted (left right : List Nat) : List Nat :=
 /-! The `Call` equations of CakeML's `loop_live$shrink` use the arguments as
     reads and restrict a call's returned live set to the variables live after
     the call.  Keeping this as a separate helper makes the source equation
-    visible at the executable boundary.  Handler calls are handled by the
-    full shrink pass below; this helper is the exact no-handler equation from
-    `cakeml/pancake/loop_liveScript.sml:116-123`. -/
+    visible at the executable boundary.  This helper is the exact no-handler
+    equation from `cakeml/pancake/loop_liveScript.sml:116-123`; the handler
+    branch below applies the same equation to its two child programs. -/
 def loopShrinkCallNoHandler (returns : Option (List Nat × List Nat))
     (target : Option Nat) (arguments : List Nat) (live : List Nat) :
     LoopProg α × List Nat :=
@@ -75,9 +75,10 @@ def loopShrinkCallNoHandler (returns : Option (List Nat × List Nat))
         loopListInsert arguments callLive)
 
 /-! Source-shaped leaf and structured equations from `loop_live$shrink`
-    (`cakeml/pancake/loop_liveScript.sml:62`).  The recursive fixed-point
-    loop case is intentionally kept as the next refinement boundary; all
-    non-fixed-point equations are executable here with list-backed num_sets. -/
+    (`cakeml/pancake/loop_liveScript.sml:62`).  Ordinary loops use the
+    source's bounded fixed-point equation below; the loop context used by
+    `break`/`continue` remains a refinement boundary.  All other equations
+    are executable here with list-backed num_sets. -/
 def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
   | .skip, live => (.skip, live)
   | .assign name value, live =>

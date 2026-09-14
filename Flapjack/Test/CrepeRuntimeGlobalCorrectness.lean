@@ -21,6 +21,35 @@ def globalLoadRuntimeState : CrepRuntimeState Nat Unit :=
 def globalLoadRuntimeHandler : CrepRuntimeFfiHandler Nat Unit Unit :=
   fun _ state => .returned state []
 
+/-! The runtime adapter keeps the target-width runtime state intact while
+    routing its global field through the source-shaped 5-bit evaluator. -/
+
+def runtimeTypedKey : Nat → CrepGlobalAddress := crepGlobalKeyOfNat
+
+def runtimeTypedBaseState : CrepGlobalState Nat :=
+  { locals := fun _ => none
+    memory := fun _ => none
+    globals := fun _ => none }
+
+def runtimeTypedRuntimeState : CrepRuntimeState Nat Unit :=
+  globalLoadRuntimeState.withTypedGlobalState runtimeTypedKey runtimeTypedBaseState
+
+def runtimeTypedStoredRuntimeState : CrepRuntimeState Nat Unit :=
+  storeCrepRuntimeTypedGlobalState runtimeTypedRuntimeState runtimeTypedKey
+    runtimeTypedBaseState 4 11
+
+def runtimeTypedStoreLoadValue : Option Nat :=
+  evalCrepRuntimeExp runtimeTypedStoredRuntimeState (.loadGlob 4)
+
+/- The guard routes runtime LoadGlob through the typed StoreGlob entrypoint,
+   whose expected value is the source `crepSem` store/load result. -/
+example : runtimeTypedStoreLoadValue = some 11 := by
+  simp only [runtimeTypedStoreLoadValue, runtimeTypedStoredRuntimeState,
+    storeCrepRuntimeTypedGlobalState]
+  rw [evalCrepRuntimeExp_loadGlob_typedState]
+  exact evalCrepTypedLoad_storeCrepTypedGlobal runtimeTypedKey
+    runtimeTypedBaseState 4 11
+
 theorem peerCrepRuntimeToLoop_loadGlob_regression :
     (evalCrepRuntimeResult globalLoadRuntimeHandler (fun _ _ => none) 2
       globalLoadRuntimeState (.assign 5 (.loadGlob 200))).map

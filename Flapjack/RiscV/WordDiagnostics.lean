@@ -95,6 +95,77 @@ def wordToStackProgNatChecked [BEq Nat]
       | some (path, feature) => .error { path, feature }
       | none => .error { path := [], feature := .loweringFailure }
 
+/-! A state-independent locator for the common expression failure in the
+    bitmap-aware lowering path.  That API predates checked errors and returns
+    only `none`; this walk retains the sequence path for a failed nested
+    expression without changing executable lowering.  Stateful failures that
+    are not expression-related intentionally fall back to an empty path. -/
+def wordProgFirstExpressionLoweringFailure (config : WordStackConfig) :
+    WordProg Nat → Option (List Nat)
+  | .seq first second =>
+      match wordProgFirstExpressionLoweringFailure config first with
+      | some path => some (0 :: path)
+      | none =>
+          (wordProgFirstExpressionLoweringFailure config second).map
+            (fun path => 1 :: path)
+  | .ite _operator condition right thenBranch elseBranch =>
+      match wordStackConditionOperands config condition right with
+      | none => some []
+      | some _ =>
+          match wordProgFirstExpressionLoweringFailure config thenBranch with
+          | some path => some (0 :: path)
+          | none =>
+              (wordProgFirstExpressionLoweringFailure config elseBranch).map
+                (fun path => 1 :: path)
+  | .loop _ body _ | .mustTerminate body =>
+      (wordProgFirstExpressionLoweringFailure config body).map
+        (fun path => 0 :: path)
+  | .assign destination value =>
+      match wordStackCompileExpToPhysicalNat config destination value with
+      | some _ => none
+      | none => some []
+  | .store address value =>
+      let result := match address with
+        | .const _ | .var _ | .lookup _ =>
+            wordStackCompileStoreNat config address (.var value)
+        | _ => wordStackCompileStoreNatNested config address (.var value)
+      match result with
+      | some _ => none
+      | none => some []
+  | .set store value =>
+      match wordStackSetNat config store value with
+      | some _ => none
+      | none => some []
+  | .shareInst operator name address =>
+      match address with
+      | .var address =>
+          match (wordStackSharedMemoryInst config operator name address :
+              Option (StackProg Nat)) with
+          | some _ => none
+          | none => some []
+      | _ => some []
+  | .call returns _ _ handler =>
+      match returns with
+      | some (_, _, returnCode, _, _) =>
+          match wordProgFirstExpressionLoweringFailure config returnCode with
+          | some path => some (0 :: path)
+          | none =>
+              match handler with
+              | some (_, body, _, _) =>
+                  (wordProgFirstExpressionLoweringFailure config body).map
+                    (fun path => 1 :: path)
+              | none => none
+      | none =>
+          match handler with
+          | some (_, body, _, _) =>
+              (wordProgFirstExpressionLoweringFailure config body).map
+                (fun path => 1 :: path)
+          | none => none
+  | _ => none
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def wordToStackProgWordChecked [NeZero width]
     (config : WordStackConfig) (program : WordProg (Word width)) :
     Except WordLoweringError (StackProg Nat) :=

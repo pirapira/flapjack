@@ -45,6 +45,7 @@ import Flapjack.Test.PanItreeLtreeParity
 import Flapjack.Test.PanHProgStoreParity
 import Flapjack.Test.PanHProgParity
 import Flapjack.Test.PanHProgLoadParity
+import Flapjack.Test.PanHProgReturnParity
 import Flapjack.Test.LoopCutStateParity
 import Flapjack.Test.LoopCutResParity
 import Flapjack.Test.LoopShMemLoadParity
@@ -685,6 +686,7 @@ def main : IO Unit := do
     Flapjack.Test.PanHProgStoreParity.runChecks,
     Flapjack.Test.PanHProgParity.runChecks,
     Flapjack.Test.PanHProgLoadParity.runChecks,
+    Flapjack.Test.PanHProgReturnParity.runChecks,
     Flapjack.Test.LoopCutStateParity.runChecks,
     Flapjack.Test.LoopCutResParity.runChecks,
     Flapjack.Test.LoopShMemLoadParity.runChecks,

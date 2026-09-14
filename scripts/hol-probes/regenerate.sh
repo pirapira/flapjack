@@ -85,6 +85,10 @@ run_probe pan_lang_with_shape_probeScript.sml pan_lang_with_shape_probe.out \
   empty_shapes short_input "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_wf_fields_context_probeScript.sml pan_lang_wf_fields_context_probe.out \
   empty_fields self_reference_context "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_size_of_sh_with_ctxt_probeScript.sml pan_lang_size_of_sh_with_ctxt_probe.out \
+  one known_named missing_named nested_comb "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_size_of_shape_probeScript.sml pan_lang_size_of_shape_probe.out \
+  one empty_comb named nested_comb "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \
@@ -277,6 +281,15 @@ run_probe compile_prog_probeScript.sml compile_prog_probe.out \
   empty inline_call "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe smart_seq_probeScript.sml smart_seq_probe.out \
   skip_skip skip_tick tick_skip tick_tick "$cake_dir/pancake/pan_simpScript.sml"
+run_probe seq_assoc_probeScript.sml seq_assoc_probe.out \
+  skip_skip tick_skip tick_seq_skip_tick tick_return \
+  "$cake_dir/pancake/pan_simpScript.sml"
+run_probe seq_call_ret_probeScript.sml seq_call_ret_probe.out \
+  matching_return mismatching_return fallback \
+  "$cake_dir/pancake/pan_simpScript.sml"
+run_probe ret_to_tail_probeScript.sml ret_to_tail_probe.out \
+  skip tail_call mismatching_return handler_seq \
+  "$cake_dir/pancake/pan_simpScript.sml"
 run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \
   exit_loop_break exit_loop_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

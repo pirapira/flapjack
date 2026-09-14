@@ -40,3 +40,18 @@ val _ = print_eval "ra_delta_triangle"
 val _ = print_eval "ra_stack_only"
   ``reg_alloc$reg_alloc reg_alloc$IRC (NONE :num sptree$num_map option) 4 []
       (reg_alloc$Delta [7] [1;3]) [] (insert 7 () LN)``;
+val _ = print_eval "ra_moves_coalesce"
+  ``reg_alloc$reg_alloc reg_alloc$IRC (NONE:num sptree$num_map option) 4
+      [(1,(1:num,5:num))] (reg_alloc$Delta [1] [5;3]) [] LN``;
+val _ = print_eval "ra_moves_self_filtered"
+  ``reg_alloc$reg_alloc reg_alloc$IRC (NONE:num sptree$num_map option) 4
+      [(1,(1:num,1:num))] (reg_alloc$Delta [1] [5;3]) [] LN``;
+val _ = print_eval "ra_forced_edge"
+  ``reg_alloc$reg_alloc reg_alloc$IRC (NONE:num sptree$num_map option) 4
+      [] (reg_alloc$Delta [1] [5;3]) [(1,5)] LN``;
+val _ = print_eval "ra_order_seq"
+  ``reg_alloc$reg_alloc reg_alloc$IRC (NONE:num sptree$num_map option) 4 []
+      (reg_alloc$Seq (reg_alloc$Delta [9] []) (reg_alloc$Delta [13] [])) [] LN``;
+val _ = print_eval "ra_order_clique"
+  ``reg_alloc$reg_alloc reg_alloc$IRC (NONE:num sptree$num_map option) 4 []
+      (reg_alloc$Delta [9;13] []) [] LN``;

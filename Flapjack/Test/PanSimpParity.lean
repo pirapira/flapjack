@@ -41,6 +41,30 @@ theorem seq_assoc_tick_return :
       .seq .tick (.return (.const 7)) := by
   simp [seqAssoc, smartSeq]
 
+/-! The expected values are the direct HOL evaluation of
+    `pan_simp$seq_call_ret` from `pan_simpScript.sml:42-49`. -/
+theorem seq_call_ret_matching_return :
+    seqCallRet
+        (.seq
+          (.call (some (some (.local, "r"), none)) "f" [])
+          (.return (.var .local "r")) : Prog Nat) =
+      .call none "f" [] := by
+  simp [seqCallRet]
+
+theorem seq_call_ret_mismatching_return :
+    seqCallRet
+        (.seq
+          (.call (some (some (.local, "r"), none)) "f" [])
+          (.return (.var .local "s")) : Prog Nat) =
+      .seq
+        (.call (some (some (.local, "r"), none)) "f" [])
+        (.return (.var .local "s")) := by
+  simp [seqCallRet]
+
+theorem seq_call_ret_fallback :
+    seqCallRet (.tick : Prog Nat) = .tick := by
+  rfl
+
 def isSkip : Prog Nat → Bool
   | .skip => true
   | _ => false
@@ -61,6 +85,16 @@ def isTickReturn : Prog Nat → Bool
   | .seq .tick (.return (.const 7)) => true
   | _ => false
 
+def isTailCall : Prog Nat → Bool
+  | .call none "f" [] => true
+  | _ => false
+
+def isMismatchingCall : Prog Nat → Bool
+  | .seq
+      (.call (some (some (.local, "r"), none)) "f" [])
+      (.return (.var .local "s")) => true
+  | _ => false
+
 def parityGuard : Bool :=
   isSkip (smartSeq (.skip : Prog Nat) .skip) &&
     isTick (smartSeq (.skip : Prog Nat) .tick) &&
@@ -69,16 +103,27 @@ def parityGuard : Bool :=
     isSkip (seqAssoc (.skip : Prog Nat) .skip) &&
     isTick (seqAssoc (.tick : Prog Nat) .skip) &&
     isTickTick (seqAssoc (.tick : Prog Nat) (.seq .skip .tick)) &&
-    isTickReturn (seqAssoc (.tick : Prog Nat) (.return (.const 7)))
+    isTickReturn (seqAssoc (.tick : Prog Nat) (.return (.const 7))) &&
+    isTailCall (seqCallRet
+      (.seq
+        (.call (some (some (.local, "r"), none)) "f" [])
+        (.return (.var .local "r")) : Prog Nat)) &&
+    isMismatchingCall (seqCallRet
+      (.seq
+        (.call (some (some (.local, "r"), none)) "f" [])
+        (.return (.var .local "s")) : Prog Nat)) &&
+    match seqCallRet (.tick : Prog Nat) with
+    | .tick => true
+    | _ => false
 
 #eval parityGuard
 #guard parityGuard
 
 def runChecks : IO Bool := do
   if parityGuard then
-    IO.println "PASS pan_simp SmartSeq/seq_assoc source parity"
+    IO.println "PASS pan_simp SmartSeq/seq_assoc/seq_call_ret source parity"
   else
-    IO.println "FAIL pan_simp SmartSeq/seq_assoc source parity"
+    IO.println "FAIL pan_simp SmartSeq/seq_assoc/seq_call_ret source parity"
   pure parityGuard
 
 end Flapjack.Test.PanSimpParity

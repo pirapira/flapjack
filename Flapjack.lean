@@ -22,6 +22,7 @@ import Flapjack.PanHProgDecCall
 import Flapjack.PanHProgCall
 import Flapjack.CrepPrimop
 import Flapjack.CrepExitLoop
+import Flapjack.CrepEvaluate
 import Flapjack.PanBst
 import Flapjack.PanEmptyLocals
 import Flapjack.PanSetKvar

@@ -193,6 +193,7 @@ import Flapjack.Test.CakeForcedParity
 import Flapjack.Test.CakeMkBijParity
 import Flapjack.Test.CakeSsaSetupParity
 import Flapjack.Test.CakeSsaTempParity
+import Flapjack.Test.CakeApplyColourParity
 
 /-!
 # Pancake/RISC-V compiler parity tests

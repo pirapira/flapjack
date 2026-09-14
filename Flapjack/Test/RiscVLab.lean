@@ -45,7 +45,7 @@ example :
     compileLabSection { services := [("sum", 7)] }
       ⟨2, [
         .labAsm (.callFfi "sum") [] 0]⟩ =
-      some [.addi 14 0 (BitVec.ofNat 64 7), .ecall] := by
+      some [.jal 0 (0 - BitVec.ofNat 64 48)] := by
   decide
 
 example :
@@ -177,9 +177,9 @@ example :
       stackRemoveRiscVConfig 2 3
       (.ffi "echo" 0 1 2 3 ([], []) : WordProg Nat) =
       some [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
-        .addi 0 0 (BitVec.ofNat 64 28),
-        .addi 14 0 (BitVec.ofNat 64 7), .ecall] := by
-  decide +kernel
+        .addi 0 0 (BitVec.ofNat 64 24),
+        .jal 0 (0 - BitVec.ofNat 64 68)] := by
+  native_decide
 
 example :
     labLineInstructionCount

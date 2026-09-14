@@ -65,6 +65,42 @@ theorem seq_call_ret_fallback :
     seqCallRet (.tick : Prog Nat) = .tick := by
   rfl
 
+/-! The expected values are the direct HOL evaluation of
+    `pan_simp$ret_to_tail` from `pan_simpScript.sml:50-66`. -/
+theorem ret_to_tail_skip :
+    retToTail (.skip : Prog Nat) = .skip := by
+  simp [retToTail]
+
+theorem ret_to_tail_matching_return :
+    retToTail
+        (.seq
+          (.call (some (some (.local, "r"), none)) "f" [])
+          (.return (.var .local "r")) : Prog Nat) =
+      .call none "f" [] := by
+  simp [retToTail, seqCallRet]
+
+theorem ret_to_tail_mismatching_return :
+    retToTail
+        (.seq
+          (.call (some (some (.local, "r"), none)) "f" [])
+          (.return (.var .local "s")) : Prog Nat) =
+      .seq
+        (.call (some (some (.local, "r"), none)) "f" [])
+        (.return (.var .local "s")) := by
+  simp [retToTail, seqCallRet]
+
+/- The HOL handler fixture uses exception id `0`; Lean's `ExceptionId` is a
+   string, so the parity witness normalizes that identifier to `"E"`. -/
+theorem ret_to_tail_handler_seq :
+    retToTail
+        (.call
+          (some (some (.local, "r"), some ("E", "h", .seq .tick .tick)))
+          "f" [] : Prog Nat) =
+      .call
+        (some (some (.local, "r"), some ("E", "h", .seq .tick .tick)))
+        "f" [] := by
+  simp [retToTail, seqCallRet]
+
 def isSkip : Prog Nat → Bool
   | .skip => true
   | _ => false
@@ -95,6 +131,12 @@ def isMismatchingCall : Prog Nat → Bool
       (.return (.var .local "s")) => true
   | _ => false
 
+def isHandlerSeq : Prog Nat → Bool
+  | .call
+      (some (some (.local, "r"), some ("E", "h", .seq .tick .tick)))
+      "f" [] => true
+  | _ => false
+
 def parityGuard : Bool :=
   isSkip (smartSeq (.skip : Prog Nat) .skip) &&
     isTick (smartSeq (.skip : Prog Nat) .tick) &&
@@ -112,18 +154,29 @@ def parityGuard : Bool :=
       (.seq
         (.call (some (some (.local, "r"), none)) "f" [])
         (.return (.var .local "s")) : Prog Nat)) &&
-    match seqCallRet (.tick : Prog Nat) with
-    | .tick => true
-    | _ => false
+    isTick (seqCallRet (.tick : Prog Nat)) &&
+    isSkip (retToTail (.skip : Prog Nat)) &&
+    isTailCall (retToTail
+      (.seq
+        (.call (some (some (.local, "r"), none)) "f" [])
+        (.return (.var .local "r")) : Prog Nat)) &&
+    isMismatchingCall (retToTail
+      (.seq
+        (.call (some (some (.local, "r"), none)) "f" [])
+        (.return (.var .local "s")) : Prog Nat)) &&
+    isHandlerSeq (retToTail
+      (.call
+        (some (some (.local, "r"), some ("E", "h", .seq .tick .tick)))
+        "f" [] : Prog Nat))
 
 #eval parityGuard
 #guard parityGuard
 
 def runChecks : IO Bool := do
   if parityGuard then
-    IO.println "PASS pan_simp SmartSeq/seq_assoc/seq_call_ret source parity"
+    IO.println "PASS pan_simp SmartSeq/seq_assoc/seq_call_ret/ret_to_tail source parity"
   else
-    IO.println "FAIL pan_simp SmartSeq/seq_assoc/seq_call_ret source parity"
+    IO.println "FAIL pan_simp SmartSeq/seq_assoc/seq_call_ret/ret_to_tail source parity"
   pure parityGuard
 
 end Flapjack.Test.PanSimpParity

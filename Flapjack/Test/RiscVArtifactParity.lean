@@ -62,12 +62,21 @@ The generated `cml_generated_main` section is byte-identical.  The generated
 and the return move through its typed pipeline.  That residual mismatch is the
 reproducible, tracked gap owned by `flapjack-pxn.8.5.10.1`; it is recorded
 exactly here instead of being weakened to an acceptance check.
+
+A fourth fixture, `Flapjack/Test/OriginalPancake/nested_expression.pnk`, is the
+GitHub issue #1015 reproducer whose right-nested sum
+`((t1 + (a + (b + (c + d)))) << 1) >>> 1` needs more than the port's fixed
+four-register Word-to-Stack temporary pool.  The original flattens the
+expression through `crep_to_loop` and accepts it.  With the pool-expansion fix
+tracked by `flapjack-pxn.2.5` the port also accepts it; this module pins that
+acceptance through the production runtime-image entry point, and the corpus
+fixture records the residual byte/layout difference as a tracked gap.
 -/
 
 namespace Flapjack.Test.RiscVArtifactParity
 
 open Flapjack Flapjack.RiscV
-open Flapjack.Test.OriginalPancakeProbes (decClock constReturn entryOrder)
+open Flapjack.Test.OriginalPancakeProbes (decClock constReturn entryOrder nestedExpression)
 
 /-- The checked source-facing pipeline configuration used by the compiler
 entry point, kept local so this parity test does not import the executable
@@ -281,6 +290,21 @@ def entryOrderOrderingMismatch : Bool :=
       ([0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00,
         0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8))
 
+/-- The `nested_expression` fixture source, taken from the original-side probe
+fact.  It is the GitHub issue #1015 reproducer whose right-nested sum needs
+more than the four reserved Word-to-Stack temporaries. -/
+def nestedExpressionSource : String := nestedExpression.source
+
+/-- The production runtime-image entry point accepts the nested-expression
+fixture.  Before the pool-expansion fix tracked by `flapjack-pxn.2.5` the
+Word-to-Stack lowering failed with `artifactFailure`; the original compiler
+flattens the expression through `crep_to_loop` and always accepted it. -/
+def nestedExpressionAccepted : Bool :=
+  match compileRuntimeImage nestedExpressionSource with
+  | some image => image.sections.length == 5 && image.warnings.isEmpty
+  | none => false
+
+#guard nestedExpressionAccepted
 #guard artifactAccepted
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches
@@ -313,7 +337,9 @@ def runChecks : IO Bool := do
       ("entry_order emitted section layout matches the port's source order",
         entryOrderLayoutMatches),
       ("entry_order original entry-first order mismatch is tracked, not accepted",
-        entryOrderOrderingMismatch) ]
+        entryOrderOrderingMismatch),
+      ("nested_expression fixture accepted by the runtime-image entry point",
+        nestedExpressionAccepted) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

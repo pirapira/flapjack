@@ -2,6 +2,7 @@ import Flapjack.RiscV.CakeStackReseat
 import Flapjack.RiscV.Lab
 import Flapjack.RiscV.RegisterNames
 import Flapjack.RiscV.RegisterRelabel
+import Flapjack.RiscV.RegisterTransfer
 
 /-!
 # Byte preservation of the Cake register map at the Lab boundary
@@ -142,6 +143,23 @@ example (state : State 64) (value : Word 64) (other : Fin 32) (hne : other ≠ (
     readRegister (writeRegisterInternal riscvForward state (1 : Fin 32) value) other =
       readRegister state other :=
   readRegister_writeRegisterInternal_riscvForward_other state _ other value hne
+
+/-- The explicit transfer across the `riscv_names` map is the state relabeling
+by its explicit inverse map. -/
+example (state : State 64) :
+    transferState state = relabelRegisters (width := 64) riscvInverse state :=
+  transferState_eq_relabelRegisters_riscvInverse state
+
+/-- Relabeling a transferred state returns the original state, so the transfer
+is a two-sided inverse of the one-time Cake relabeling. -/
+example (state : State 64) :
+    relabelRegisters (width := 64) riscvForward (transferState state) = state :=
+  relabelRegisters_riscvForward_transferState state
+
+/-- Transferring a relabeled state returns the original state as well. -/
+example (state : State 64) :
+    transferState (relabelRegisters (width := 64) riscvForward state) = state :=
+  transferState_relabelRegisters_riscvForward state
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=

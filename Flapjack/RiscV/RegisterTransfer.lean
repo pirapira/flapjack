@@ -130,4 +130,41 @@ theorem writeRegister_transfer_forward (state : State width) (name : Fin 32)
             _ = riscvForward name := by rw [hcontra]
         simp [hidx, hback]
 
+/-- `transferState` is exactly the state relabeling by the explicit inverse map. -/
+theorem transferState_eq_relabelRegisters_riscvInverse (state : State width) :
+    transferState state = relabelRegisters riscvInverse state := rfl
+
+/-- Relabeling a transferred state by `riscvForward` returns the original state. -/
+theorem relabelRegisters_riscvForward_transferState (state : State width) :
+    relabelRegisters riscvForward (transferState state) = state := by
+  cases state with
+  | mk pc registers memory privilege mode =>
+    simp only [relabelRegisters, transferState]
+    congr 1
+    funext name
+    simp [riscvInverse_riscvForward]
+
+/-- Transferring a state relabeled by `riscvForward` returns the original state. -/
+theorem transferState_relabelRegisters_riscvForward (state : State width) :
+    transferState (relabelRegisters riscvForward state) = state := by
+  cases state with
+  | mk pc registers memory privilege mode =>
+    simp only [relabelRegisters, transferState]
+    congr 1
+    funext index
+    simp [riscvForward_riscvInverse]
+
+/-- The transfer across the `riscv_names` map is injective on machine states. -/
+theorem transferState_injective : Function.Injective (transferState (width := width)) := by
+  intro left right h
+  have hrelabel := congrArg (relabelRegisters riscvForward) h
+  rwa [relabelRegisters_riscvForward_transferState,
+    relabelRegisters_riscvForward_transferState] at hrelabel
+
+/-- The transfer across the `riscv_names` map is surjective on machine states. -/
+theorem transferState_surjective : Function.Surjective (transferState (width := width)) := by
+  intro state
+  exact ⟨relabelRegisters riscvForward state,
+    transferState_relabelRegisters_riscvForward state⟩
+
 end Flapjack.RiscV

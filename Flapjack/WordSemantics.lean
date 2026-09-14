@@ -63,22 +63,28 @@ mutual
         Option (State width × List (Word width))
     | 0, _, _, _, _, _ => none
     | fuel + 1, state, returns, target, arguments, handler => do
-        if handler.isSome then none
-        else
-          let target ← target
-          let (parameters, body) ← lookupWordFunction target functions
-          let values ← readWordRegisters state arguments
-          let calleeState ← bindWordRegisters state parameters values
-          let result ← evalWordFunctionWithCalls functions fuel calleeState body
-          let returnedState := { state with
-            memory := result.1.memory
-            privilege := result.1.privilege
-            mode := result.1.mode }
-          match returns with
-          | none => some (returnedState, result.2)
-          | some (names, _, _, _, _) => do
-              let state ← assignWordRegisters returnedState names result.2
-              some (state, [])
+        let target ← target
+        let (parameters, body) ← lookupWordFunction target functions
+        let values ← readWordRegisters state arguments
+        let calleeState ← bindWordRegisters state parameters values
+        match evalWordFunctionWithCalls functions fuel calleeState body with
+        | none =>
+            match handler with
+            | none => none
+            | some (name, handlerBody, _, _) => do
+                let register ← registerOfNat name
+                evalWordFunctionWithCalls functions fuel
+                  (writeRegister state register 0) handlerBody
+        | some (resultState, resultValues) =>
+            let returnedState := { state with
+              memory := resultState.memory
+              privilege := resultState.privilege
+              mode := resultState.mode }
+            match returns with
+            | none => some (returnedState, resultValues)
+            | some (names, _, _, _, _) => do
+                let state ← assignWordRegisters returnedState names resultValues
+                some (state, [])
     termination_by fuel _ _ _ _ _ => fuel
 
   def evalWordFunctionWithCalls [NeZero width]

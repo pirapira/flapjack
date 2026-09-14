@@ -102,11 +102,26 @@ def wordFunctionToRiscVWithCalls [NeZero width]
       let code ← wordTailCallToRiscV entry parameters arguments
       let returns ← returns.mapM registerOfNat
       pure (code, returns)
+  | .call (some ([], _, _, _, _)) (some label) arguments (some (_, .raise _, _, _)) => do
+      let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
+      let code ← wordTailCallToRiscV entry parameters arguments
+      let returns ← returns.mapM registerOfNat
+      pure (code, returns)
   | .call (some (destinations, _, _, _, _)) (some label) arguments none => do
       let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
       let code ← wordCallToRiscVWithStack entry parameters returns arguments destinations
       pure (code, [])
+  | .call (some (destinations, _, _, _, _)) (some label) arguments
+        (some (_, .raise _, _, _)) => do
+      let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
+      let code ← wordCallToRiscVWithStack entry parameters returns arguments destinations
+      pure (code, [])
   | .call none (some label) arguments none => do
+      let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
+      let code ← wordTailCallToRiscV entry parameters arguments
+      let returns ← returns.mapM registerOfNat
+      pure (code, returns)
+  | .call none (some label) arguments (some (_, .raise _, _, _)) => do
       let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
       let code ← wordTailCallToRiscV entry parameters arguments
       let returns ← returns.mapM registerOfNat

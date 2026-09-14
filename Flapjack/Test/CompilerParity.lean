@@ -916,7 +916,11 @@ def main : IO Unit := do
     Flapjack.Test.RiscVRegisterMapParity.runChecks,
     Flapjack.Test.CakeAllocatorCore.runChecks,
     Flapjack.Test.CakeFramePolicy.runChecks,
-    Flapjack.Test.CakeSsaTempParity.runChecks
+    Flapjack.Test.CakeForcedParity.runChecks,
+    Flapjack.Test.CakeMkBijParity.runChecks,
+    Flapjack.Test.CakeSsaSetupParity.runChecks,
+    Flapjack.Test.CakeSsaTempParity.runChecks,
+    Flapjack.Test.CakeApplyColourParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

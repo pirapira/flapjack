@@ -67,4 +67,11 @@ def parityGuard : Bool :=
 #guard parityGuard
 #eval parityGuard
 
+def runChecks : IO Bool := do
+  if parityGuard then
+    IO.println "PASS Cake apply_colour/total_colour HOL parity"
+  else
+    IO.println "FAIL Cake apply_colour/total_colour HOL parity"
+  pure parityGuard
+
 end Flapjack.Test.CakeApplyColourParity

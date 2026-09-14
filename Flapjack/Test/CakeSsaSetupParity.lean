@@ -50,4 +50,11 @@ def parityGuard : Bool := totalColourGuard && setupSsaGuard && setupSsaEmptyGuar
 #guard parityGuard
 #eval parityGuard
 
+def runChecks : IO Bool := do
+  if parityGuard then
+    IO.println "PASS Cake setup_ssa/total_colour HOL parity"
+  else
+    IO.println "FAIL Cake setup_ssa/total_colour HOL parity"
+  pure parityGuard
+
 end Flapjack.Test.CakeSsaSetupParity

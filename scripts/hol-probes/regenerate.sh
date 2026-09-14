@@ -201,6 +201,9 @@ run_probe crep_sh_mem_op_probeScript.sml crep_sh_mem_op_probe.out \
 run_probe crep_sh_mem_store_probeScript.sml crep_sh_mem_store_probe.out \
   sh_mem_store_missing_local sh_mem_store_nonzero_domain_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_mem_load_probeScript.sml crep_mem_load_probe.out \
+  mem_load_hit mem_load_miss \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
   semantics_timeout_is_nonterminal semantics_break_is_nonterminal \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

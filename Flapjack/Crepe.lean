@@ -27,7 +27,7 @@ inductive CrepExp (α : Type u) where
   | shift (operator : Shift) (left right : CrepExp α)
   | baseAddr
   | topAddr
-  deriving Repr
+  deriving BEq, Repr
 
 inductive CrepMemOp where
   | load
@@ -63,6 +63,27 @@ inductive CrepProg (α : Type u) where
   | tick
   deriving Repr
 
+/-! Faithful port of `crepLang$assigned_free_vars` from
+    `cakeml/pancake/crepLangScript.sml:149-162`. -/
+def crepAssignedFreeVars : CrepProg α → List Nat
+  | .skip => []
+  | .dec name _ body =>
+      (crepAssignedFreeVars body).filter (fun candidate => candidate != name)
+  | .assign name _ => [name]
+  | .primitive names _ _ => names
+  | .seq first second => crepAssignedFreeVars first ++ crepAssignedFreeVars second
+  | .ite _ thenBranch elseBranch =>
+      crepAssignedFreeVars thenBranch ++ crepAssignedFreeVars elseBranch
+  | .while _ body => crepAssignedFreeVars body
+  | .call (some (returns, some (_, handler))) _ _ =>
+      returns ++ crepAssignedFreeVars handler
+  | .call (some (returns, none)) _ _ => returns
+  | .shMem _ name _ => [name]
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def crepExpVars : CrepExp α → List Nat
   | .const _ => []
   | .var name => [name]
@@ -76,6 +97,28 @@ where
   crepExpVarsList : List (CrepExp α) → List Nat
     | [] => []
     | expression :: expressions => crepExpVars expression ++ crepExpVarsList expressions
+  termination_by expressions => sizeOf expressions
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-! Faithful port of `crepLang$exps` from
+    `cakeml/pancake/crepLangScript.sml:193-207`.
+
+    The result preserves expression nodes while recursively flattening the
+    expression lists of `Op` and `Crepop`, matching HOL's `FLAT (MAP exps)`. -/
+def crepExps : CrepExp α → List (CrepExp α)
+  | expression@(.const _) => [expression]
+  | expression@(.var _) => [expression]
+  | .load address | .load32 address | .loadByte address => crepExps address
+  | expression@(.loadGlob _) => [expression]
+  | .op _ expressions | .crepOp _ expressions => crepExpsList expressions
+  | .cmp _ left right | .shift _ left right => crepExps left ++ crepExps right
+  | expression@(.baseAddr) | expression@(.topAddr) => [expression]
+termination_by expression => sizeOf expression
+where
+  crepExpsList : List (CrepExp α) → List (CrepExp α)
+    | [] => []
+    | expression :: expressions => crepExps expression ++ crepExpsList expressions
   termination_by expressions => sizeOf expressions
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial

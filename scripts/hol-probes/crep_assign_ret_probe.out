@@ -1,0 +1,3 @@
+empty=Skip
+one=Seq (Assign 1 (LoadGlob 0w)) Skip
+two=Seq (Assign 1 (LoadGlob 0w)) (Seq (Assign 2 (LoadGlob 1w)) Skip)

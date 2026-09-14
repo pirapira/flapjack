@@ -1,0 +1,3 @@
+leaves=([Const 3w],[Var 7],[LoadGlob 2w],[BaseAddr],[TopAddr])
+loads=([Var 1],[Var 2])
+ops=([Const 1w; Var 4],[Var 2; Const 5w],[Var 6; Const 0w],[Var 8; Const 1w])

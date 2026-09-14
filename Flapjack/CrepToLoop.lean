@@ -185,9 +185,18 @@ def loopCompileExp [OfNat α 0] [OfNat α 1]
             expression := .var destination
             nextTemp := destination + 1
             live := destination :: leftTemp :: rightTemp :: result.live }
-      | _, _ =>
-          { code := result.code, expression := .crepOp operator result.expressions,
-            nextTemp := result.nextTemp, live := result.live }
+      | .mul, expressions =>
+          let firstTemp := result.nextTemp
+          let argumentTemps := List.range expressions.length |>.map
+            (fun offset => firstTemp + offset)
+          let argumentCode := argumentTemps.zipWith
+            (fun name expression => .assign name expression) expressions
+          let destination := firstTemp + expressions.length
+          { code := result.code ++ argumentCode ++
+              [.arith (.longMul destination destination firstTemp (firstTemp + 1))]
+            expression := .var destination
+            nextTemp := destination + 1
+            live := destination :: argumentTemps ++ result.live }
   | .cmp operator left right =>
       let leftResult := loopCompileExp context tmp live left
       let rightResult := loopCompileExp context leftResult.nextTemp leftResult.live right

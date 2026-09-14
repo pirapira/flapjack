@@ -57,6 +57,14 @@ def mapSurjective : Bool :=
 
 #guard mapSurjective
 
+/-- The one-time Cake map selects the architectural zero register exactly at
+the internal zero role `27`; this computable shadow of
+`labRegisterOfNat_eq_zero_iff` pins the zero convention to that single role. -/
+def zeroPreimageExact : Bool :=
+  (List.range 32).all (fun n => (labRegisterOfNat n == some 0) == (n == 27))
+
+#guard zeroPreimageExact
+
 example : riscvRegisterName (portToStack 0) = 0 := by decide
 example : riscvRegisterName (portToStack 1) = 1 := by decide
 example : riscvRegisterName (portToStack 10) = 10 := by decide
@@ -95,7 +103,9 @@ def runChecks : IO Bool := do
       ("the Cake map image is zero exactly at the internal zero role",
         zeroImageExact),
       ("the Cake map permutes the architectural register file",
-        mapSurjective) ]
+        mapSurjective),
+      ("the Cake map selects architectural zero exactly at role 27",
+        zeroPreimageExact) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

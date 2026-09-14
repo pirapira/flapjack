@@ -188,4 +188,53 @@ theorem labRegisterOfNat_eq_zero_iff {name : Nat} (h : name < 32) :
   simp only [Fin.val_zero]
   exact riscvRegisterName_eq_zero_iff h
 
+/-- Iterate the internal Cake register-name map `k` times. -/
+def iterRegisterName : Nat → Nat → Nat
+  | 0, name => name
+  | k + 1, name => iterRegisterName k (riscvRegisterName name)
+
+/-- Iterate the lifted Cake register map `k` times on hardware registers. -/
+def iterForward : Nat → Fin 32 → Fin 32
+  | 0, register => register
+  | k + 1, register => iterForward k (riscvForward register)
+
+theorem iterRegisterName_of_ge_32 {name : Nat} (h : 32 ≤ name) (k : Nat) :
+    iterRegisterName k name = name := by
+  induction k with
+  | zero => rfl
+  | succ k ih =>
+      show iterRegisterName k (riscvRegisterName name) = name
+      rw [riscvRegisterName_id_of_ge_32 h]
+      exact ih
+
+/-- The lifted Cake register map has order twelve: iterating the relabeling
+twelve times returns every hardware register to itself.  The map is one 4-cycle
+(`0 → 1 → 10 → 27 → 0`), three 3-cycles, and fixed points, so its order is
+`lcm 4 3 = 12`.  This makes the one-time relabeling invertible and closes the
+finite bound needed to undo it on the register file. -/
+theorem iterRegisterName_twelve (name : Nat) :
+    iterRegisterName 12 name = name := by
+  by_cases h : name < 32
+  · have hcheck :
+        (List.range 32).all (fun n => iterRegisterName 12 n == n) = true := by
+      decide
+    have hmem := List.all_eq_true.mp hcheck name (List.mem_range.mpr h)
+    simpa [beq_iff_eq] using hmem
+  · exact iterRegisterName_of_ge_32 (Nat.le_of_not_lt h) 12
+
+theorem iterForward_val (k : Nat) (register : Fin 32) :
+    (iterForward k register).val = iterRegisterName k register.val := by
+  induction k generalizing register with
+  | zero => rfl
+  | succ k ih =>
+      show (iterForward k (riscvForward register)).val =
+        iterRegisterName (k + 1) register.val
+      rw [ih (riscvForward register), riscvForward_val]
+      rfl
+
+theorem iterForward_twelve (register : Fin 32) :
+    iterForward 12 register = register := by
+  apply Fin.ext
+  rw [iterForward_val, iterRegisterName_twelve]
+
 end Flapjack.RiscV

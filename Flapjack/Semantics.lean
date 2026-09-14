@@ -214,11 +214,6 @@ def evalCrepStateProgWithPrimitive [Add α] [Mul α]
       else pure (locals', firstResult)
   | _ => none
 
-def evalCrepProgWithPrimitive [Add α] [Mul α]
-    (primitive : CrepPrimitiveHandler α) (locals : Nat → Option α)
-    (program : CrepProg α) : Option (List α) :=
-  (evalCrepStateProgWithPrimitive primitive locals program).map Prod.snd
-
 def evalPanStateProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]

@@ -187,9 +187,16 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
       | .error error => .error (.static error)
       | .ok _ =>
           let warnings := checked.2
-          match pipelineFindFunction start (structCompileTop (panSimpDecls declarations)) with
+          match compileFlapjackEntry architecture bytesInWord (fun value => fromNat value)
+              start declarations with
           | none => .error .entryNotFound
-          | some _ =>
+          | some pipeline =>
+              let discoveredNames :=
+                (pipeline.word.flatMap
+                  (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
+                    RiscV.wordProgFfiNames entry.2.2)).eraseDups
+              let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
+              let services := services ++ discoveredServices
               match compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked
                   architecture bytesInWord (fun value => fromNat value) services
                   removeConfig start declarations with
@@ -216,9 +223,16 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
       | .error error => .error (.static error)
       | .ok _ =>
           let warnings := checked.2
-          match pipelineFindFunction start (structCompileTop (panSimpDecls declarations)) with
+          match compileFlapjackEntry architecture bytesInWord (fun value => fromNat value)
+              start declarations with
           | none => .error .entryNotFound
-          | some _ =>
+          | some pipeline =>
+              let discoveredNames :=
+                (pipeline.word.flatMap
+                  (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
+                    RiscV.wordProgFfiNames entry.2.2)).eraseDups
+              let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
+              let services := services ++ discoveredServices
               match compileFlapjackRiscVViaAllocatedStackWithFullSsaAndBitmapsAndSimpleGcEntryLinked
                   architecture bytesInWord (fun value => fromNat value) services
                   removeConfig start declarations with

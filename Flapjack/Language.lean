@@ -216,6 +216,22 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-! Direct source-shaped counterpart of `panLang$fun_ids`: collect the
+    statically referenced function names, including call-handler bodies and
+    declaration-call bodies. -/
+def funIds : Prog α → List FunName
+  | .dec _ _ _ body => funIds body
+  | .seq first second => funIds first ++ funIds second
+  | .ite _ thenBranch elseBranch => funIds thenBranch ++ funIds elseBranch
+  | .while _ body => funIds body
+  | .call (some (_, some (_, _, handler))) name _ => name :: funIds handler
+  | .call _ name _ => [name]
+  | .decCall _ _ function _ body => function :: funIds body
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 /-! Split a flat value list according to the source shape sizes.  This is the
     direct Lean counterpart of `panLang$with_shape`; values left over after
     the requested shapes are intentionally ignored, and short inputs are

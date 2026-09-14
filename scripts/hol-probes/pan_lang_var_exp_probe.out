@@ -1,0 +1,4 @@
+local_var=[«x»]
+global_var=[«g»]
+nested=[«x»; «y»]
+nested_global=[«g»; «addr»]

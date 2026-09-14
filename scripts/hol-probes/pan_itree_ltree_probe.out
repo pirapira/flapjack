@@ -1,0 +1,10 @@
+ret=Ret (INL (INL FFI_failed))
+
+tau=Tau (Ret (INL (INL FFI_failed)))
+
+return=Tau (Ret (INL (INL FFI_failed)))
+
+length_failure=Tau (Ret (INL (INL FFI_failed)))
+
+final=Tau (Ret (INL (INL FFI_failed)))
+

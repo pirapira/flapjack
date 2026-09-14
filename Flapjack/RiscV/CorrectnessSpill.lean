@@ -178,9 +178,9 @@ theorem evalWordStackMachine_move_preserves_other_value [NeZero width]
       some destinationLocation)
     (hsource : wordStackLocation config source = some sourceLocation)
     (hother : wordStackLocation config other = some otherLocation)
-    (hdestination_scratch :
+    (_hdestination_scratch :
       destinationLocation ≠ .register config.scratch)
-    (hsource_scratch : sourceLocation ≠ .register config.scratch)
+    (_hsource_scratch : sourceLocation ≠ .register config.scratch)
     (hother_destination : otherLocation ≠ destinationLocation)
     (hother_scratch : otherLocation ≠ .register config.scratch)
     (heval : (wordStackMove (α := Nat) config destination source).bind
@@ -191,15 +191,21 @@ theorem evalWordStackMachine_move_preserves_other_value [NeZero width]
     at hdestination
   change lookupNatInfo source config.locations = some sourceLocation at hsource
   change lookupNatInfo other config.locations = some otherLocation at hother
-  simp [wordStackMove] at heval
-  cases destinationLocation <;> cases sourceLocation <;>
-    cases otherLocation <;>
-    simp [evalWordStackMachine, wordStackMachineValue, wordStackLocation,
-      wordStackOffset, wordStackMachineWriteRegister,
-      wordStackMachineWriteSlot, hdestination, hsource, hother] at heval ⊢
-  all_goals
-    cases heval
-    simp_all
+  have heval' :
+      (wordStackLocationMove config destinationLocation sourceLocation).bind
+        (evalWordStackMachine state) = some final := by
+    simpa [wordStackMove, wordStackLocation, wordStackLocationMove,
+      hdestination, hsource] using heval
+  have hpreserved := evalWordStackMachine_locationMove_preserves_other_value
+    config state final destinationLocation sourceLocation otherLocation
+    hother_destination hother_scratch heval'
+  cases otherLocation with
+  | register otherRegister =>
+      simpa [wordStackMachineValue, wordStackLocation, wordStackOffset,
+        hother, wordStackLocationValue] using hpreserved
+  | stack otherSlot =>
+      simpa [wordStackMachineValue, wordStackLocation, wordStackOffset,
+        hother, wordStackLocationValue] using hpreserved
 
 theorem evalWordStackMachine_move_preserves_unrelated_values [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)

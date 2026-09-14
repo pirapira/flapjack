@@ -129,6 +129,20 @@ example : Function.Injective (relabelRegisters (width := 64) riscvForward) ∧
     Function.Surjective (relabelRegisters (width := 64) riscvForward) :=
   relabelRegisters_riscvForward_bijective
 
+/-- The internal write accessor reads back the written value at its own role
+whenever that role is not the hardwired zero image. -/
+example (state : State 64) (value : Word 64) :
+    readRegister (writeRegisterInternal riscvForward state (1 : Fin 32) value) (1 : Fin 32) =
+      value :=
+  readRegister_writeRegisterInternal_riscvForward_self state _ value (by decide)
+
+/-- Every other internal read is unchanged by the internal write; only the
+architectural zero role is dropped. -/
+example (state : State 64) (value : Word 64) (other : Fin 32) (hne : other ≠ (1 : Fin 32)) :
+    readRegister (writeRegisterInternal riscvForward state (1 : Fin 32) value) other =
+      readRegister state other :=
+  readRegister_writeRegisterInternal_riscvForward_other state _ other value hne
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("production role registers are preserved by the one-time Cake map",

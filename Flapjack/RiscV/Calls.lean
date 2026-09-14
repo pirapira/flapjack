@@ -20,8 +20,8 @@ def wordRegisterMoves [NeZero width] : List (Nat × Nat) →
     Option (List (Instruction width))
   | [] => some []
   | (destination, source) :: moves => do
-      let destination ← registerOfNat destination
-      let source ← registerOfNat source
+      let destination ← labRegisterOfNat destination
+      let source ← labRegisterOfNat source
       let moves ← wordRegisterMoves moves
       pure (.addi destination source 0 :: moves)
 
@@ -100,7 +100,7 @@ def wordFunctionToRiscVWithCalls [NeZero width]
   | .call (some ([], _, _, _, _)) (some label) arguments none => do
       let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
       let code ← wordTailCallToRiscV entry parameters arguments
-      let returns ← returns.mapM registerOfNat
+      let returns ← returns.mapM labRegisterOfNat
       pure (code, returns)
   | .call (some (destinations, _, _, _, _)) (some label) arguments none => do
       let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
@@ -109,7 +109,7 @@ def wordFunctionToRiscVWithCalls [NeZero width]
   | .call none (some label) arguments none => do
       let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
       let code ← wordTailCallToRiscV entry parameters arguments
-      let returns ← returns.mapM registerOfNat
+      let returns ← returns.mapM labRegisterOfNat
       pure (code, returns)
   | .ite operator condition rightValue thenBranch elseBranch => do
       let (branchLeft, right, prelude) ←
@@ -140,7 +140,7 @@ def wordFunctionToRiscVWithCalls [NeZero width]
         let (secondCode, secondReturns) ← wordFunctionToRiscVWithCalls context second
         pure (firstCode ++ secondCode, secondReturns)
   | .return _ values => do
-      let values ← values.mapM registerOfNat
+      let values ← values.mapM labRegisterOfNat
       pure ([], values)
   | _ => none
 termination_by program => sizeOf program
@@ -225,14 +225,14 @@ theorem wordFunctionToRiscVWithCallsAndLoops_break [NeZero width]
 theorem wordCallToRiscV_shape [NeZero width]
     (entry : Word width) :
     wordCallToRiscV entry [2] [10] [6] [4] =
-      some [.addi 2 6 0, .addi 31 0 entry, .jalr 1 31 0, .addi 4 10 0] := by
-  simp [wordCallToRiscV, wordRegisterMoves, registerOfNat]
+      some [.addi 11 6 0, .addi 31 0 entry, .jalr 1 31 0, .addi 13 27 0] := by
+  simp [wordCallToRiscV, wordRegisterMoves]
 
 theorem wordTailCallToRiscV_shape [NeZero width]
     (entry : Word width) :
     wordTailCallToRiscV entry [2] [6] =
-      some [.addi 2 6 0, .addi 31 0 entry, .jalr 0 31 0] := by
-  simp [wordTailCallToRiscV, wordRegisterMoves, registerOfNat]
+      some [.addi 11 6 0, .addi 31 0 entry, .jalr 0 31 0] := by
+  simp [wordTailCallToRiscV, wordRegisterMoves]
 
 theorem wordFunctionToRiscVWithCalls_shape [NeZero width] :
     wordFunctionToRiscVWithCalls
@@ -240,38 +240,38 @@ theorem wordFunctionToRiscVWithCalls_shape [NeZero width] :
       (.seq
         (.call (some ([4], ([], []), .skip, 0, 0)) (some 7) [6] none)
         (.return 0 [4])) =
-      some ([.addi 2 6 0, .addi 30 30 (0 - BitVec.ofNat width (width / 8)),
+      some ([.addi 11 6 0, .addi 30 30 (0 - BitVec.ofNat width (width / 8)),
         .storeWord 1 30, .addi 31 0 (BitVec.ofNat width 32),
-        .jalr 1 31 0, .addi 4 10 0, .loadWord 1 30,
-        .addi 30 30 (BitVec.ofNat width (width / 8))], [4]) := by
+        .jalr 1 31 0, .addi 13 27 0, .loadWord 1 30,
+        .addi 30 30 (BitVec.ofNat width (width / 8))], [13]) := by
   simp [wordFunctionToRiscVWithCalls, wordCallToRiscVWithStack,
-    wordRegisterMoves, lookupWordCallTarget, registerOfNat]
+    wordRegisterMoves, lookupWordCallTarget]
 
 theorem wordFunctionToRiscVWithCalls_tailCall [NeZero width] :
     wordFunctionToRiscVWithCalls
       { targets := [(7, BitVec.ofNat width 32, [2], [10])] }
       (.call none (some 7) [6] none) =
-      some ([.addi 2 6 0, .addi 31 0 (BitVec.ofNat width 32),
-        .jalr 0 31 0], [10]) := by
+      some ([.addi 11 6 0, .addi 31 0 (BitVec.ofNat width 32),
+        .jalr 0 31 0], [27]) := by
   simp [wordFunctionToRiscVWithCalls, wordTailCallToRiscV,
-    wordRegisterMoves, lookupWordCallTarget, registerOfNat]
+    wordRegisterMoves, lookupWordCallTarget]
 
 theorem wordFunctionToRiscVWithCalls_emptyReturnDestinations [NeZero width] :
     wordFunctionToRiscVWithCalls
       { targets := [(7, BitVec.ofNat width 32, [2], [10])] }
       (.call (some ([], ([], []), .skip, 0, 0)) (some 7) [6] none) =
-      some ([.addi 2 6 0, .addi 31 0 (BitVec.ofNat width 32),
-        .jalr 0 31 0], [10]) := by
+      some ([.addi 11 6 0, .addi 31 0 (BitVec.ofNat width 32),
+        .jalr 0 31 0], [27]) := by
   simp [wordFunctionToRiscVWithCalls, wordTailCallToRiscV,
-    wordRegisterMoves, lookupWordCallTarget, registerOfNat]
+    wordRegisterMoves, lookupWordCallTarget]
 
 theorem wordFunctionToRiscVWithCalls_addCarry [NeZero width] :
     wordFunctionToRiscVWithCalls
       ({ targets := [] } : WordCallContext width)
       ((.inst (.arith (.addCarry 5 6 2 3 4))) : WordProg (Word width)) =
-      some ([.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+      some ([.sltu 31 0 13, .add 5 11 12, .sltu 6 5 12, .add 5 5 31,
         .sltu 31 5 31, .or 6 6 31], []) := by
-  simp [wordFunctionToRiscVWithCalls, wordArithToInstructions, registerOfNat]
+  simp [wordFunctionToRiscVWithCalls, wordArithToInstructions]
 
 theorem wordFunctionToRiscVWithCalls_shareInst [NeZero width] :
     wordFunctionToRiscVWithCalls
@@ -279,7 +279,7 @@ theorem wordFunctionToRiscVWithCalls_shareInst [NeZero width] :
       ((.shareInst .load32 5 (.var 6)) : WordProg (Word width)) =
       some ([.load32 5 6], []) := by
   simp [wordFunctionToRiscVWithCalls, wordShareInstToInstructions,
-    wordInstToInstruction, registerOfNat]
+    wordInstToInstruction]
 
 /-! Word-level semantic contract for the stack-based call convention.  The
     theorem is parameterized by the argument word, so it can be reused by
@@ -289,24 +289,24 @@ theorem evalWordCall_return_general [NeZero width]
     (value : Word width) :
     (evalWordFunctionWithCalls
       [(7, [2], (.return 0 [2] : WordProg (Word width)))] 10
-      (writeRegister (zeroState width) 2 value)
+      (writeRegister (zeroState width) 11 value)
       (.call (some ([3], ([], []), .skip, 0, 0)) (some 7) [2] none)).map
-        (fun result => readRegister result.1 3) = some value := by
+        (fun result => readRegister result.1 12) = some value := by
   simp [evalWordFunctionWithCalls, evalWordCall,
     lookupWordFunction, readWordRegisters, bindWordRegisters,
     assignWordRegisters, clearWordRegisters, evalWordFunction,
-    registerOfNat, writeRegister, readRegister]
+    registerOfNat, Option.bind_some, writeRegister, readRegister]
 
 theorem evalWordTailCall_return_general [NeZero width]
     (value : Word width) :
     (evalWordFunctionWithCalls
       [(7, [2], (.return 0 [2] : WordProg (Word width)))] 10
-      (writeRegister (zeroState width) 2 value)
+      (writeRegister (zeroState width) 11 value)
       (.call none (some 7) [2] none)).map
         (fun result => result.2) = some [value] := by
   simp [evalWordFunctionWithCalls, evalWordCall,
     lookupWordFunction, readWordRegisters, bindWordRegisters,
-    clearWordRegisters, evalWordFunction, registerOfNat,
+    clearWordRegisters, evalWordFunction, registerOfNat, Option.bind_some,
     writeRegister, readRegister]
 
 end Flapjack.RiscV

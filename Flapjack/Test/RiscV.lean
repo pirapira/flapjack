@@ -132,7 +132,7 @@ example :
 
 example [NeZero width] :
     Flapjack.RiscV.compileWordAdd (width := width) 1 2 3 =
-      some [.add 1 2 3] := by
+      some [.add 10 11 12] := by
   simp [Flapjack.RiscV.compileWordAdd, Flapjack.RiscV.wordProgToRiscV,
     Flapjack.RiscV.wordExpToInstruction, Flapjack.RiscV.registerOfNat]
 
@@ -140,7 +140,7 @@ example [NeZero width] (state : Flapjack.RiscV.State width)
     (zero : Flapjack.RiscV.readRegister state 0 = 0) :
     Flapjack.RiscV.evalWordProg state
         (.assign 1 (.const (7 : Flapjack.RiscV.Word width))) =
-      some (Flapjack.RiscV.execute state (.addi 1 0 7)) := by
+      some (Flapjack.RiscV.execute state (.addi 10 0 7)) := by
   simp [Flapjack.RiscV.evalWordProg, Flapjack.RiscV.wordExpToInstructions,
     Flapjack.RiscV.wordExpToInstruction, 
     Flapjack.RiscV.registerOfNat, Flapjack.RiscV.executeInstructions,
@@ -156,18 +156,18 @@ example [NeZero width] (state : Flapjack.RiscV.State width)
     Flapjack.RiscV.evalWordProg state
         (.assign 1 (.op operator [.var 2, .var 3])) =
       some (Flapjack.RiscV.execute state (match operator with
-        | .add => .add 1 2 3
-        | .sub => .sub 1 2 3
-        | .and => .and 1 2 3
-        | .or => .or 1 2 3
-        | .xor => .xor 1 2 3)) := by
+        | .add => .add 10 11 12
+        | .sub => .sub 10 11 12
+        | .and => .and 10 11 12
+        | .or => .or 10 11 12
+        | .xor => .xor 10 11 12)) := by
   exact Flapjack.RiscV.compileWordBinOp_sound state operator
 
 example [NeZero width] :
     Flapjack.RiscV.wordFunctionToRiscV
         ((.seq (.assign 1 (.op .add [.var 2, .var 3])) (.return 0 [1])) :
           WordProg (Flapjack.RiscV.Word width)) =
-      some ([.add 1 2 3], [1]) := by
+      some ([.add 10 11 12], [10]) := by
   exact Flapjack.RiscV.wordFunctionToRiscV_return_add
 
 example [NeZero width] :
@@ -175,8 +175,8 @@ example [NeZero width] :
         ((.ite .equal 1 (.reg 2)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word width)) =
-      some [.branchNe 1 2 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+      some [.branchNe 10 11 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] := by
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
@@ -185,8 +185,8 @@ example [NeZero width] :
         ((.ite .notEqual 1 (.reg 2)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word width)) =
-      some [.branchEq 1 2 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+      some [.branchEq 10 11 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] := by
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
@@ -195,8 +195,8 @@ example [NeZero width] :
         ((.ite .notEqual 1 (.imm 0)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word width)) =
-      some [.branchEq 1 0 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+      some [.branchEq 10 0 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] := by
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
@@ -205,8 +205,8 @@ example :
         ((.ite .equal 1 (.imm 7)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word 8)) =
-      some [.ori 31 0 7, .branchNe 1 31 12,
-        .addi 3 0 1, .branchEq 0 0 8, .addi 3 0 2] := by
+      some [.ori 31 0 7, .branchNe 10 31 12,
+        .addi 12 0 1, .branchEq 0 0 8, .addi 12 0 2] := by
   decide +kernel
 
 example :
@@ -214,8 +214,8 @@ example :
         ((.ite .test 1 (.imm 3)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word 8)) =
-      some [.andi 31 1 3, .branchNe 31 0 12,
-        .addi 3 0 1, .branchEq 0 0 8, .addi 3 0 2] := by
+      some [.andi 31 10 3, .branchNe 31 0 12,
+        .addi 12 0 1, .branchEq 0 0 8, .addi 12 0 2] := by
   decide +kernel
 
 example :
@@ -231,8 +231,8 @@ example :
           (.ite .equal 1 (.imm 7)
             (.assign 3 (.const 1)) (.assign 3 (.const 2)))
           (.return 0 [3])) : WordProg (RiscV.Word 8)) =
-      some ([.ori 31 0 7, .branchNe 1 31 12,
-        .addi 3 0 1, .branchEq 0 0 8, .addi 3 0 2], [3]) := by
+      some ([.ori 31 0 7, .branchNe 10 31 12,
+        .addi 12 0 1, .branchEq 0 0 8, .addi 12 0 2], [12]) := by
   decide
 
 example :
@@ -248,8 +248,8 @@ example [NeZero width] :
         ((.ite .lower 1 (.reg 2)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word width)) =
-      some [.branchGeU 1 2 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+      some [.branchGeU 10 11 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] := by
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
@@ -258,8 +258,8 @@ example [NeZero width] :
         ((.ite .notLower 1 (.imm 0)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word width)) =
-      some [.branchLtU 1 0 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+      some [.branchLtU 10 0 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] := by
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
@@ -268,8 +268,8 @@ example [NeZero width] :
         ((.ite .test 1 (.reg 2)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word width)) =
-      some [.and 1 1 2, .branchNe 1 0 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+      some [.and 10 10 11, .branchNe 10 0 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] := by
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
@@ -278,8 +278,8 @@ example [NeZero width] :
         ((.ite .notTest 1 (.imm 0)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word width)) =
-      some [.and 1 1 0, .branchEq 1 0 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+      some [.and 10 10 0, .branchEq 10 0 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] := by
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
@@ -288,8 +288,8 @@ example [NeZero width] :
         ((.ite .less 1 (.reg 2)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word width)) =
-      some [.branchGe 1 2 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+      some [.branchGe 10 11 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] := by
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
@@ -298,8 +298,8 @@ example [NeZero width] :
         ((.ite .notLess 1 (.reg 2)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word width)) =
-      some [.branchLt 1 2 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+      some [.branchLt 10 11 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] := by
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
@@ -308,8 +308,8 @@ example [NeZero width] :
         ((.ite .less 1 (.reg 2)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word width)) =
-      some [.branchGe 1 2 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+      some [.branchGe 10 11 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] := by
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
@@ -318,8 +318,8 @@ example [NeZero width] :
         ((.ite .notLess 1 (.reg 2)
           (.assign 3 (.const 1)) (.assign 3 (.const 2))) :
           WordProg (RiscV.Word width)) =
-      some [.branchLt 1 2 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] := by
+      some [.branchLt 10 11 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] := by
   simp [RiscV.wordProgToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
@@ -329,8 +329,8 @@ example [NeZero width] :
           (.ite .equal 1 (.reg 2)
             (.assign 3 (.const 1)) (.assign 3 (.const 2)))
           (.return 0 [3])) : WordProg (RiscV.Word width)) =
-      some ([.branchNe 1 2 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2], [3]) := by
+      some ([.branchNe 10 11 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2], [12]) := by
   simp [RiscV.wordFunctionToRiscV, 
     RiscV.wordExpToInstruction, RiscV.registerOfNat]
 
@@ -338,7 +338,7 @@ example [NeZero width] :
     RiscV.wordFunctionToRiscV
         ((.seq (.return 0 [1]) (.assign 2 (.const 9))) :
           WordProg (RiscV.Word width)) =
-      some ([], [1]) := by
+      some ([], [10]) := by
   simp [RiscV.wordFunctionToRiscV, RiscV.wordExpToInstruction,
     RiscV.registerOfNat]
 
@@ -346,7 +346,7 @@ example [NeZero width] (state : RiscV.State width) :
     RiscV.evalWordFunction state
         ((.seq (.return 0 [1]) (.assign 2 (.const 9))) :
           WordProg (RiscV.Word width)) =
-      some (state, [RiscV.readRegister state 1]) := by
+      some (state, [RiscV.readRegister state 10]) := by
   simp [RiscV.evalWordFunction, RiscV.registerOfNat]
 
 example [NeZero width] :
@@ -355,9 +355,9 @@ example [NeZero width] :
           (.seq (.assign 3 (.const 1)) (.return 0 [3]))
           (.seq (.assign 3 (.const 2)) (.return 0 [3]))) :
           WordProg (RiscV.Word width)) =
-      some ([.branchNe 1 2 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8),
-        .addi 3 0 2], [3]) := by
+      some ([.branchNe 10 11 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8),
+        .addi 12 0 2], [12]) := by
   simp [RiscV.wordFunctionToRiscV, 
     RiscV.wordExpToInstruction, RiscV.registerOfNat]
 
@@ -367,9 +367,9 @@ example [NeZero width] :
           (.ite .equal 1 (.reg 2)
             (.assign 3 (.const 1)) (.assign 3 (.const 2)))
           (.seq .tick (.return 0 [3]))) : WordProg (RiscV.Word width)) =
-      some ([.branchNe 1 2 (BitVec.ofNat width 12),
-        .addi 3 0 1, .branchEq 0 0 (BitVec.ofNat width 8),
-        .addi 3 0 2, .addi 0 0 0], [3]) := by
+      some ([.branchNe 10 11 (BitVec.ofNat width 12),
+        .addi 12 0 1, .branchEq 0 0 (BitVec.ofNat width 8),
+        .addi 12 0 2, .addi 0 0 0], [12]) := by
   simp [RiscV.wordFunctionToRiscV, 
     RiscV.wordExpToInstruction, RiscV.registerOfNat]
 

@@ -686,38 +686,6 @@ theorem wordTailCallToRiscV_execute_pc [NeZero width]
     no-clobber conditions visible to callers composing this with callee
     execution. -/
 
-theorem wordTailCallToRiscV_execute_single_parameter [NeZero width]
-    (state : State width) (entry : Word width)
-    (parameter argument : Nat) (code : List (Instruction width))
-    (hzero : ZeroRegister state)
-    (hparameter : parameter < 32) (hargument : argument < 32)
-    (hparameterNonzero : parameter ≠ 0)
-    (hparameterNoScratch : parameter ≠ 31)
-    (hcompile : wordTailCallToRiscV entry [parameter] [argument] = some code) :
-    readRegister (executeInstructions state code) ⟨parameter, hparameter⟩ =
-        readRegister state ⟨argument, hargument⟩ ∧
-      (executeInstructions state code).pc = jalrTarget entry 0 := by
-  have hshape : wordTailCallToRiscV entry [parameter] [argument] = some
-      ([.addi ⟨parameter, hparameter⟩ ⟨argument, hargument⟩ 0,
-        .addi 31 0 entry, .jalr 0 31 0] : List (Instruction width)) := by
-    simp [wordTailCallToRiscV, wordRegisterMoves, registerOfNat,
-      hparameter, hargument]
-  have hcode :
-      ([.addi ⟨parameter, hparameter⟩ ⟨argument, hargument⟩ 0,
-        .addi 31 0 entry, .jalr 0 31 0] : List (Instruction width)) = code := by
-    exact Option.some.inj (hshape.symm.trans hcompile)
-  have hparameterNoScratch' :
-      (⟨parameter, hparameter⟩ : Fin 32) ≠ 31 := by
-    intro heq
-    apply hparameterNoScratch
-    exact congrArg Fin.val heq
-  subst code
-  constructor
-  · simp [executeInstructions, execute, writeRegister, readRegister,
-      nextPc, hparameterNonzero, hparameterNoScratch']
-  · exact executeInstructions_tailCall_pc state entry
-      [.addi ⟨parameter, hparameter⟩ ⟨argument, hargument⟩ 0] hzero
-
 theorem executeInstructions_tailCall_read_register [NeZero width]
     (state : State width) (entry : Word width)
     (moves : List (Instruction width)) (register : Fin 32)
@@ -728,6 +696,48 @@ theorem executeInstructions_tailCall_read_register [NeZero width]
   rw [executeInstructions_append]
   simp [executeInstructions, execute, writeRegister, readRegister,
     nextPc, hregisterNoScratch]
+
+theorem wordTailCallToRiscV_execute_single_parameter [NeZero width]
+    (state : State width) (entry : Word width)
+    (parameter argument : Nat) (code : List (Instruction width))
+    (hzero : ZeroRegister state)
+    (hparameter : parameter < 32) (hargument : argument < 32)
+    (hparameterNonzero : riscvRegisterName parameter ≠ 0)
+    (hparameterNoScratch : riscvRegisterName parameter ≠ 31)
+    (hcompile : wordTailCallToRiscV entry [parameter] [argument] = some code) :
+    readRegisterInternal (executeInstructions state code) parameter =
+        readRegisterInternal state argument ∧
+      (executeInstructions state code).pc = jalrTarget entry 0 := by
+  have hshape : wordTailCallToRiscV entry [parameter] [argument] = some
+      ([.addi ⟨riscvRegisterName parameter, riscvRegisterName_lt_32 hparameter⟩
+              ⟨riscvRegisterName argument, riscvRegisterName_lt_32 hargument⟩ 0] ++
+        [.addi 31 0 entry, .jalr 0 31 0] : List (Instruction width)) := by
+    simp [wordTailCallToRiscV, wordRegisterMoves,
+      labRegisterOfNat_of_lt_32 hparameter, labRegisterOfNat_of_lt_32 hargument]
+  have hcode :
+      ([.addi ⟨riscvRegisterName parameter, riscvRegisterName_lt_32 hparameter⟩
+              ⟨riscvRegisterName argument, riscvRegisterName_lt_32 hargument⟩ 0] ++
+        [.addi 31 0 entry, .jalr 0 31 0] : List (Instruction width)) = code := by
+    exact Option.some.inj (hshape.symm.trans hcompile)
+  subst code
+  constructor
+  · have hread :
+        readRegister (executeInstructions state
+            ([.addi ⟨riscvRegisterName parameter, riscvRegisterName_lt_32 hparameter⟩
+                    ⟨riscvRegisterName argument, riscvRegisterName_lt_32 hargument⟩ 0] ++
+              [.addi 31 0 entry, .jalr 0 31 0] : List (Instruction width)))
+            ⟨riscvRegisterName parameter, riscvRegisterName_lt_32 hparameter⟩ =
+          readRegister state
+            ⟨riscvRegisterName argument, riscvRegisterName_lt_32 hargument⟩ := by
+      rw [executeInstructions_tailCall_read_register (state := state) _ _ _
+        (fun h => hparameterNoScratch (congrArg Fin.val h))]
+      simp [executeInstructions_single, execute, writeRegister, readRegister, nextPc,
+        hparameterNonzero]
+    simpa [readRegisterInternal, labRegisterOfNat_of_lt_32 hparameter,
+      labRegisterOfNat_of_lt_32 hargument] using hread
+  · exact executeInstructions_tailCall_pc state entry
+      [.addi ⟨riscvRegisterName parameter, riscvRegisterName_lt_32 hparameter⟩
+              ⟨riscvRegisterName argument, riscvRegisterName_lt_32 hargument⟩ 0] hzero
 
 theorem wordRegisterMoves_shape [NeZero width]
     (moves : List (Nat × Nat)) (code : List (Instruction width))
@@ -750,21 +760,17 @@ theorem wordRegisterMoves_shape [NeZero width]
           simp [wordRegisterMoves, htailCode] at hcompile
       | some tailCode =>
           have htailShape := ih (code := tailCode) htail htailCode
-          have hheadDestination : registerOfNat head.1 =
-              some ⟨head.1, hhead.1⟩ := by
-            simp [registerOfNat, hhead.1]
-          have hheadSource : registerOfNat head.2 =
-              some ⟨head.2, hhead.2.1⟩ := by
-            simp [registerOfNat, hhead.2.1]
           have hcode :
-              (.addi ⟨head.1, hhead.1⟩ ⟨head.2, hhead.2.1⟩ 0
+              (.addi ⟨riscvRegisterName head.1, riscvRegisterName_lt_32 hhead.1⟩
+                  ⟨riscvRegisterName head.2, riscvRegisterName_lt_32 hhead.2.1⟩ 0
                 :: tailCode : List (Instruction width)) = code := by
-            simpa [wordRegisterMoves, htailCode, hheadDestination,
-              hheadSource] using hcompile
+            simpa [wordRegisterMoves, htailCode, labRegisterOfNat_of_lt_32 hhead.1,
+              labRegisterOfNat_of_lt_32 hhead.2.1] using hcompile
           subst code
           simp [wordMoveInstructionList, wordExpToInstructions,
-            wordExpToInstruction, registerOfNat, hhead.1, hhead.2.1,
-            htailShape]
+            wordExpToInstruction, htailShape,
+            labRegisterOfNat_of_lt_32 hhead.1,
+            labRegisterOfNat_of_lt_32 hhead.2.1]
 
 theorem wordTailCallToRiscV_execute_moves_transfer [NeZero width]
     (state : State width) (entry : Word width)
@@ -772,15 +778,15 @@ theorem wordTailCallToRiscV_execute_moves_transfer [NeZero width]
     (hzero : ZeroRegister state)
     (hvalid : ∀ move, move ∈ parameters.zip arguments →
       move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
-    (hdestNonzero : ∀ move, move ∈ parameters.zip arguments → move.1 ≠ 0)
+    (hdestNonzero : ∀ move, move ∈ parameters.zip arguments →
+      riscvRegisterName move.1 ≠ 0)
     (hdestinations : ((parameters.zip arguments).map Prod.fst).Nodup)
     (hnoSource : ∀ move, move ∈ parameters.zip arguments →
       move.2 ∉ (parameters.zip arguments).map Prod.fst)
     (hcompile : wordTailCallToRiscV entry parameters arguments = some code) :
     (∀ move (hmove : move ∈ parameters.zip arguments),
-      readRegister (executeInstructions state code)
-          ⟨move.1, (hvalid move hmove).1⟩ =
-        readRegister state ⟨move.2, (hvalid move hmove).2.1⟩) ∧
+      readRegisterInternal (executeInstructions state code) move.1 =
+        readRegisterInternal state move.2) ∧
       (executeInstructions state code).pc = jalrTarget entry 0 := by
   cases hmove : wordRegisterMoves (width := width)
       (parameters.zip arguments) with
@@ -801,15 +807,18 @@ theorem wordTailCallToRiscV_execute_moves_transfer [NeZero width]
       constructor
       · intro move hmove'
         have hdestination := hvalid move hmove'
-        have hregisterNoScratch :
-            (⟨move.1, hdestination.1⟩ : Fin 32) ≠ 31 := by
-          intro heq
-          apply hdestination.2.2.1
-          exact congrArg Fin.val heq
         rw [hmoveShape]
-        rw [executeInstructions_tailCall_read_register
-          (hregisterNoScratch := hregisterNoScratch)]
-        exact hsourcePreserved move hmove'
+        have htailRead := executeInstructions_tailCall_read_register (state := state)
+          (entry := entry)
+          (moves := (parameters.zip arguments).flatMap wordMoveInstructionList)
+          (register := ⟨riscvRegisterName move.1, riscvRegisterName_lt_32 hdestination.1⟩)
+          (riscvRegisterName_fin_ne_thirtyOne hdestination.1 hdestination.2.2.1)
+        simp only [readRegisterInternal, labRegisterOfNat_of_lt_32 hdestination.1,
+          Option.bind_some]
+        rw [htailRead]
+        simpa [readRegisterInternal, labRegisterOfNat_of_lt_32 hdestination.1,
+          labRegisterOfNat_of_lt_32 hdestination.2.1, Option.bind_some]
+          using hsourcePreserved move hmove'
       · simpa [hmoveShape] using
           executeInstructions_tailCall_pc state entry moves hzero
 
@@ -904,14 +913,15 @@ theorem wordCallToRiscVWithStack_prefix_execute_parameter_transfer [NeZero width
     (code : List (Instruction width)) (hzero : ZeroRegister state)
     (hvalid : ∀ move, move ∈ parameters.zip arguments →
       move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
-    (hdestNonzero : ∀ move, move ∈ parameters.zip arguments → move.1 ≠ 0)
+    (hdestNonzero : ∀ move, move ∈ parameters.zip arguments →
+      riscvRegisterName move.1 ≠ 0)
     (hdestinations : ((parameters.zip arguments).map Prod.fst).Nodup)
     (hnoSource : ∀ move, move ∈ parameters.zip arguments →
       move.2 ∉ (parameters.zip arguments).map Prod.fst)
     (hparameterNoStack : ∀ move, move ∈ parameters.zip arguments →
-      move.1 ≠ 30)
+      riscvRegisterName move.1 ≠ 30)
     (hparameterNoLink : ∀ move, move ∈ parameters.zip arguments →
-      move.1 ≠ 1)
+      riscvRegisterName move.1 ≠ 1)
     (hcompile :
       wordCallToRiscVWithStack entry parameters returns arguments destinations =
         some code) :
@@ -919,12 +929,11 @@ theorem wordCallToRiscVWithStack_prefix_execute_parameter_transfer [NeZero width
       wordRegisterMoves (width := width) (parameters.zip arguments) =
         some parameterMoves ∧
       (∀ move (hmove : move ∈ parameters.zip arguments),
-        readRegister (executeInstructions state
+        readRegisterInternal (executeInstructions state
           (parameterMoves ++
             [.addi 30 30 (0 - BitVec.ofNat width (width / 8)),
-             .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0]))
-            ⟨move.1, (hvalid move hmove).1⟩ =
-          readRegister state ⟨move.2, (hvalid move hmove).2.1⟩) ∧
+             .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])) move.1 =
+          readRegisterInternal state move.2) ∧
       (executeInstructions state
         (parameterMoves ++
           [.addi 30 30 (0 - BitVec.ofNat width (width / 8)),
@@ -954,26 +963,29 @@ theorem wordCallToRiscVWithStack_prefix_execute_parameter_transfer [NeZero width
           · intro move hmove'
             have hdestination := hvalid move hmove'
             have hregisterNoStack :
-                (⟨move.1, hdestination.1⟩ : Fin 32) ≠ 30 := by
-              intro heq
-              apply hparameterNoStack move hmove'
-              exact congrArg Fin.val heq
+                (⟨riscvRegisterName move.1, riscvRegisterName_lt_32 hdestination.1⟩
+                  : Fin 32) ≠ 30 :=
+              fun h => hparameterNoStack move hmove' (congrArg Fin.val h)
             have hregisterNoScratch :
-                (⟨move.1, hdestination.1⟩ : Fin 32) ≠ 31 := by
-              intro heq
-              apply hdestination.2.2.1
-              exact congrArg Fin.val heq
+                (⟨riscvRegisterName move.1, riscvRegisterName_lt_32 hdestination.1⟩
+                  : Fin 32) ≠ 31 :=
+              riscvRegisterName_fin_ne_thirtyOne hdestination.1 hdestination.2.2.1
             have hregisterNoLink :
-                (⟨move.1, hdestination.1⟩ : Fin 32) ≠ 1 := by
-              intro heq
-              apply hparameterNoLink move hmove'
-              exact congrArg Fin.val heq
+                (⟨riscvRegisterName move.1, riscvRegisterName_lt_32 hdestination.1⟩
+                  : Fin 32) ≠ 1 :=
+              fun h => hparameterNoLink move hmove' (congrArg Fin.val h)
             rw [hmoveShape]
-            rw [executeInstructions_stackCall_read_register
-              (hregisterNoStack := hregisterNoStack)
-              (hregisterNoScratch := hregisterNoScratch)
-              (hregisterNoLink := hregisterNoLink)]
-            exact hsourcePreserved move hmove'
+            have htailRead := executeInstructions_stackCall_read_register (state := state)
+              (entry := entry)
+              (moves := (parameters.zip arguments).flatMap wordMoveInstructionList)
+              (register := ⟨riscvRegisterName move.1, riscvRegisterName_lt_32 hdestination.1⟩)
+              hregisterNoStack hregisterNoScratch hregisterNoLink
+            simp only [readRegisterInternal, labRegisterOfNat_of_lt_32 hdestination.1,
+              Option.bind_some]
+            rw [htailRead]
+            simpa [readRegisterInternal, labRegisterOfNat_of_lt_32 hdestination.1,
+              labRegisterOfNat_of_lt_32 hdestination.2.1, Option.bind_some]
+              using hsourcePreserved move hmove'
           · exact executeInstructions_stackCall_pc state entry parameterMoves hzero
           · simpa [List.cons_append] using hcompile.2.symm
 
@@ -1074,9 +1086,9 @@ theorem executeWordMoves_stackCall_restore_link_sp [NeZero width]
     (moves : List (Nat × Nat))
     (hvalid : ∀ move, move ∈ moves →
       move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
-    (hdestNonzero : ∀ move, move ∈ moves → move.1 ≠ 0)
-    (hnotLink : ∀ move, move ∈ moves → move.1 ≠ 1)
-    (hnotStack : ∀ move, move ∈ moves → move.1 ≠ 30)
+    (hdestNonzero : ∀ move, move ∈ moves → riscvRegisterName move.1 ≠ 0)
+    (hnotLink : ∀ move, move ∈ moves → riscvRegisterName move.1 ≠ 1)
+    (hnotStack : ∀ move, move ∈ moves → riscvRegisterName move.1 ≠ 30)
     (hstack : readRegister state 30 = stackAddress)
     (hsaved : readWordValue state stackAddress = savedLink) :
     let moved := executeInstructions state
@@ -1088,10 +1100,26 @@ theorem executeWordMoves_stackCall_restore_link_sp [NeZero width]
       readRegister final 30 =
         stackAddress + BitVec.ofNat width (width / 8) ∧
       final.pc = moved.pc + BitVec.ofNat width 8 := by
-  have hlink := executeWordMoves_preserve_read state moves 1
-    hvalid hdestNonzero (fun move hmove => hnotLink move hmove) (by decide)
-  have hstackMove := executeWordMoves_preserve_read state moves 30
-    hvalid hdestNonzero (fun move hmove => hnotStack move hmove) (by decide)
+  have hlinkInternal := executeWordMoves_preserve_read state moves 0 hvalid
+    (fun move hmove => by
+      intro hzero
+      exact hnotLink move hmove (by simpa [hzero]))
+    (by decide)
+  have hlink : readRegister
+      (executeInstructions state
+        (moves.flatMap (wordMoveInstructionList (width := width)))) 1 =
+      readRegister state 1 := by
+    simpa [readRegisterInternal] using hlinkInternal
+  have hstackInternal := executeWordMoves_preserve_read state moves 13 hvalid
+    (fun move hmove => by
+      intro h13
+      exact hnotStack move hmove (by simpa [h13]))
+    (by decide)
+  have hstackMove : readRegister
+      (executeInstructions state
+        (moves.flatMap (wordMoveInstructionList (width := width)))) 30 =
+      readRegister state 30 := by
+    simpa [readRegisterInternal] using hstackInternal
   have hstack' :
       readRegister
         (executeInstructions state
@@ -1101,7 +1129,7 @@ theorem executeWordMoves_stackCall_restore_link_sp [NeZero width]
       readRegister
           (executeInstructions state
             (moves.flatMap (wordMoveInstructionList (width := width)))) 30 =
-          readRegister state 30 := by simpa using hstackMove
+          readRegister state 30 := hstackMove
       _ = stackAddress := hstack
   have hmemory := executeWordMoves_preserve_memory state moves hvalid
   have hsaved' :
@@ -1123,9 +1151,9 @@ theorem wordRegisterMoves_execute_stackCall_restore_link_sp [NeZero width]
     (moves : List (Nat × Nat)) (code : List (Instruction width))
     (hvalid : ∀ move, move ∈ moves →
       move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
-    (hdestNonzero : ∀ move, move ∈ moves → move.1 ≠ 0)
-    (hnotLink : ∀ move, move ∈ moves → move.1 ≠ 1)
-    (hnotStack : ∀ move, move ∈ moves → move.1 ≠ 30)
+    (hdestNonzero : ∀ move, move ∈ moves → riscvRegisterName move.1 ≠ 0)
+    (hnotLink : ∀ move, move ∈ moves → riscvRegisterName move.1 ≠ 1)
+    (hnotStack : ∀ move, move ∈ moves → riscvRegisterName move.1 ≠ 30)
     (hstack : readRegister state 30 = stackAddress)
     (hsaved : readWordValue state stackAddress = savedLink)
     (hcompile : wordRegisterMoves (width := width) moves = some code) :
@@ -1148,9 +1176,12 @@ theorem wordCallToRiscVWithStack_full_return_contract [NeZero width]
     (code : List (Instruction width))
     (hvalid : ∀ move, move ∈ destinations.zip returns →
       move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
-    (hdestNonzero : ∀ move, move ∈ destinations.zip returns → move.1 ≠ 0)
-    (hnotLink : ∀ move, move ∈ destinations.zip returns → move.1 ≠ 1)
-    (hnotStack : ∀ move, move ∈ destinations.zip returns → move.1 ≠ 30)
+    (hdestNonzero : ∀ move, move ∈ destinations.zip returns →
+      riscvRegisterName move.1 ≠ 0)
+    (hnotLink : ∀ move, move ∈ destinations.zip returns →
+      riscvRegisterName move.1 ≠ 1)
+    (hnotStack : ∀ move, move ∈ destinations.zip returns →
+      riscvRegisterName move.1 ≠ 30)
     (hstack : readRegister returnState 30 = stackAddress)
     (hsaved : readWordValue returnState stackAddress = savedLink)
     (hcompile : wordCallToRiscVWithStack entry parameters returns arguments destinations =
@@ -1202,19 +1233,18 @@ theorem wordRegisterMoves_execute_stackCall_result_transfer [NeZero width]
     (code : List (Instruction width))
     (hvalid : ∀ move, move ∈ moves →
       move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
-    (hdestNonzero : ∀ move, move ∈ moves → move.1 ≠ 0)
+    (hdestNonzero : ∀ move, move ∈ moves → riscvRegisterName move.1 ≠ 0)
     (hdestinations : (moves.map Prod.fst).Nodup)
     (hnoSource : ∀ move, move ∈ moves →
       move.2 ∉ moves.map Prod.fst)
-    (hnotLink : ∀ move, move ∈ moves → move.1 ≠ 1)
-    (hnotStack : ∀ move, move ∈ moves → move.1 ≠ 30)
+    (hnotLink : ∀ move, move ∈ moves → riscvRegisterName move.1 ≠ 1)
+    (hnotStack : ∀ move, move ∈ moves → riscvRegisterName move.1 ≠ 30)
     (hcompile : wordRegisterMoves (width := width) moves = some code) :
     ∀ move (hmove : move ∈ moves),
-      readRegister (executeInstructions state
+      readRegisterInternal (executeInstructions state
         (code ++
-          [.loadWord 1 30, .addi 30 30 (BitVec.ofNat width (width / 8))]))
-        ⟨move.1, (hvalid move hmove).1⟩ =
-      readRegister state ⟨move.2, (hvalid move hmove).2.1⟩ := by
+          [.loadWord 1 30, .addi 30 30 (BitVec.ofNat width (width / 8))])) move.1 =
+      readRegisterInternal state move.2 := by
   have hshape := wordRegisterMoves_shape moves code hvalid hcompile
   have hsourcePreserved := executeWordMoves_preserves_sources state moves
     hdestinations hnoSource hvalid hdestNonzero
@@ -1222,20 +1252,25 @@ theorem wordRegisterMoves_execute_stackCall_result_transfer [NeZero width]
   intro move hmove
   have hdestination := hvalid move hmove
   have hregisterNoLink :
-      (⟨move.1, hdestination.1⟩ : Fin 32) ≠ 1 := by
-    intro heq
-    apply hnotLink move hmove
-    exact congrArg Fin.val heq
+      (⟨riscvRegisterName move.1, riscvRegisterName_lt_32 hdestination.1⟩
+        : Fin 32) ≠ 1 :=
+    fun h => hnotLink move hmove (congrArg Fin.val h)
   have hregisterNoStack :
-      (⟨move.1, hdestination.1⟩ : Fin 32) ≠ 30 := by
-    intro heq
-    apply hnotStack move hmove
-    exact congrArg Fin.val heq
+      (⟨riscvRegisterName move.1, riscvRegisterName_lt_32 hdestination.1⟩
+        : Fin 32) ≠ 30 :=
+    fun h => hnotStack move hmove (congrArg Fin.val h)
   rw [executeInstructions_append]
-  rw [executeInstructions_stackCall_restore_read_register
-    (hregisterNoLink := hregisterNoLink)
-    (hregisterNoStack := hregisterNoStack)]
-  exact hsourcePreserved move hmove
+  have htailRead := executeInstructions_stackCall_restore_read_register
+    (state := executeInstructions state
+      ((moves).flatMap (wordMoveInstructionList (width := width))))
+    (register := ⟨riscvRegisterName move.1, riscvRegisterName_lt_32 hdestination.1⟩)
+    hregisterNoLink hregisterNoStack
+  simp only [readRegisterInternal, labRegisterOfNat_of_lt_32 hdestination.1,
+    Option.bind_some]
+  rw [htailRead]
+  simpa [readRegisterInternal, labRegisterOfNat_of_lt_32 hdestination.1,
+    labRegisterOfNat_of_lt_32 hdestination.2.1, Option.bind_some]
+    using hsourcePreserved move hmove
 
 theorem wordCallToRiscVWithStack_full_result_contract [NeZero width]
     (state : State width) (entry : Word width)
@@ -1243,12 +1278,15 @@ theorem wordCallToRiscVWithStack_full_result_contract [NeZero width]
     (code : List (Instruction width))
     (hvalid : ∀ move, move ∈ destinations.zip returns →
       move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
-    (hdestNonzero : ∀ move, move ∈ destinations.zip returns → move.1 ≠ 0)
+    (hdestNonzero : ∀ move, move ∈ destinations.zip returns →
+      riscvRegisterName move.1 ≠ 0)
     (hdestinations : ((destinations.zip returns).map Prod.fst).Nodup)
     (hnoSource : ∀ move, move ∈ destinations.zip returns →
       move.2 ∉ (destinations.zip returns).map Prod.fst)
-    (hnotLink : ∀ move, move ∈ destinations.zip returns → move.1 ≠ 1)
-    (hnotStack : ∀ move, move ∈ destinations.zip returns → move.1 ≠ 30)
+    (hnotLink : ∀ move, move ∈ destinations.zip returns →
+      riscvRegisterName move.1 ≠ 1)
+    (hnotStack : ∀ move, move ∈ destinations.zip returns →
+      riscvRegisterName move.1 ≠ 30)
     (hcompile :
       wordCallToRiscVWithStack entry parameters returns arguments destinations =
         some code) :
@@ -1259,11 +1297,10 @@ theorem wordCallToRiscVWithStack_full_result_contract [NeZero width]
           resultMoves ++
           [.loadWord 1 30, .addi 30 30 (BitVec.ofNat width (width / 8))] ∧
       ∀ move (hmove : move ∈ destinations.zip returns),
-        readRegister (executeInstructions state
+        readRegisterInternal (executeInstructions state
           (resultMoves ++
-            [.loadWord 1 30, .addi 30 30 (BitVec.ofNat width (width / 8))]))
-          ⟨move.1, (hvalid move hmove).1⟩ =
-        readRegister state ⟨move.2, (hvalid move hmove).2.1⟩ := by
+            [.loadWord 1 30, .addi 30 30 (BitVec.ofNat width (width / 8))])) move.1 =
+        readRegisterInternal state move.2 := by
   cases hmove : wordRegisterMoves (width := width)
       (parameters.zip arguments) with
   | none =>

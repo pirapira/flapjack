@@ -11,8 +11,8 @@ def linkedCallCode : List (RiscV.Instruction 64) :=
 
 example :
     RiscV.wordCallToRiscV (32 : RiscV.Word 64) [2] [10] [6] [4] =
-      some [.addi 2 6 0, .addi 31 0 32, .jalr 1 31 0, .addi 4 10 0] := by
-  exact RiscV.wordCallToRiscV_shape 32
+      some [.addi 11 6 0, .addi 31 0 32, .jalr 1 31 0, .addi 13 27 0] := by
+  exact RiscV.wordCallToRiscV_shape (width := 64) (32 : RiscV.Word 64)
 
 example :
     (RiscV.executeCodeUntil 30 (0 : RiscV.Word 64) 16 linkedCallCode
@@ -30,14 +30,14 @@ example :
     let context : RiscV.WordCallContext 64 := { targets := [] }
     let body : WordProg (RiscV.Word 64) := .return 0 [2]
     RiscV.compileLinkedWordFunction context (7, [2], body) =
-        some (7, [2], some ([.jalr 0 1 0], [2])) ∧
+        some (7, [2], some ([.jalr 0 1 0], [11])) ∧
       RiscV.linkRiscVFunctionsAt (0 : RiscV.Word 64) 0
-        [(7, [2], some ([.jalr 0 1 0], [2]))] =
-        some [(7, 0, [2], [.jalr 0 1 0], [2])] := by
+        [(7, [2], some ([.jalr 0 1 0], [11]))] =
+        some [(7, 0, [2], [.jalr 0 1 0], [11])] := by
   dsimp
   exact RiscV.compileLinkedWordFunction_linkRiscVFunctionsAt_head
     ({ targets := [] } : RiscV.WordCallContext 64)
-    (0 : RiscV.Word 64) 0 7 [2] (.return 0 [2]) [] [2] [] []
+    (0 : RiscV.Word 64) 0 7 [2] (.return 0 [2]) [] [11] [] []
     (by decide +kernel) (by rfl)
 
 example :
@@ -45,20 +45,20 @@ example :
       { targets := [], services := [] }
     let body : WordProg (RiscV.Word 64) := .return 0 [2]
     RiscV.compileLinkedWordFunctionWithFfi context (7, [2], body) =
-        some (7, [2], some ([.jalr 0 1 0], [2])) ∧
+        some (7, [2], some ([.jalr 0 1 0], [11])) ∧
       RiscV.linkRiscVFunctionsAt (0 : RiscV.Word 64) 0
-        [(7, [2], some ([.jalr 0 1 0], [2]))] =
-        some [(7, 0, [2], [.jalr 0 1 0], [2])] := by
+        [(7, [2], some ([.jalr 0 1 0], [11]))] =
+        some [(7, 0, [2], [.jalr 0 1 0], [11])] := by
   dsimp
   exact RiscV.compileLinkedWordFunctionWithFfi_linkRiscVFunctionsAt_head
     ({ targets := [], services := [] } : RiscV.WordCallFfiContext 64)
-    (0 : RiscV.Word 64) 0 7 [2] (.return 0 [2]) [] [2] [] []
+    (0 : RiscV.Word 64) 0 7 [2] (.return 0 [2]) [] [11] [] []
     (by decide +kernel) (by rfl)
 
 example :
     RiscV.wordCallToRiscVLabel
       [(7, (32 : RiscV.Word 64), [2], [], [10])] 7 [2] [10] [6] [4] =
-      some [.addi 2 6 0, .addi 31 0 32, .jalr 1 31 0, .addi 4 10 0] := by
+      some [.addi 11 6 0, .addi 31 0 32, .jalr 1 31 0, .addi 13 27 0] := by
   decide
 
 example [NeZero width] :
@@ -67,18 +67,18 @@ example [NeZero width] :
       (.seq
         (.call (some ([4], ([], []), .skip, 0, 0)) (some 7) [6] none)
         (.return 0 [4])) =
-      some ([.addi 2 6 0, .addi 30 30 (0 - BitVec.ofNat width (width / 8)),
+      some ([.addi 11 6 0, .addi 30 30 (0 - BitVec.ofNat width (width / 8)),
         .storeWord 1 30, .addi 31 0 (BitVec.ofNat width 32),
-        .jalr 1 31 0, .addi 4 10 0, .loadWord 1 30,
-        .addi 30 30 (BitVec.ofNat width (width / 8))], [4]) := by
-  exact RiscV.wordFunctionToRiscVWithCalls_shape
+        .jalr 1 31 0, .addi 13 27 0, .loadWord 1 30,
+        .addi 30 30 (BitVec.ofNat width (width / 8))], [13]) := by
+  exact RiscV.wordFunctionToRiscVWithCalls_shape (width := width)
 
 example [NeZero width] :
     RiscV.wordFunctionToRiscV
         ((.shareInst .load 1 (.var 2)) : WordProg (RiscV.Word width)) =
-      some ([.loadWord 1 2], []) := by
+      some ([.loadWord 10 11], []) := by
   simp [RiscV.wordFunctionToRiscV, RiscV.wordShareInstToInstructions,
-    RiscV.wordInstToInstruction, RiscV.registerOfNat]
+    RiscV.wordInstToInstruction]
 
 example [NeZero width] :
     RiscV.wordFunctionToRiscVWithCalls
@@ -93,18 +93,17 @@ example [NeZero width] :
         ((.shareInst .load16 5 (.var 6)) : WordProg (RiscV.Word width)) =
       some ([.loadHalf 5 6], []) := by
   simp [RiscV.wordFunctionToRiscVWithCalls,
-    RiscV.wordShareInstToInstructions, RiscV.wordInstToInstruction,
-    RiscV.registerOfNat]
+    RiscV.wordShareInstToInstructions, RiscV.wordInstToInstruction]
 
 def halfwordRoundTripState : RiscV.State 64 :=
   RiscV.writeRegister
-    (RiscV.writeRegister (RiscV.zeroState 64) 2 16) 3
+    (RiscV.writeRegister (RiscV.zeroState 64) 11 16) 12
       (BitVec.ofNat 64 0xBEEF)
 
 example :
     (RiscV.evalWordFunction halfwordRoundTripState
       (.seq (.inst (.mem .store16 3 2)) (.inst (.mem .load16 1 2)))).map
-        (fun result => RiscV.readRegister result.1 1) =
+        (fun result => RiscV.readRegister result.1 10) =
       some (BitVec.ofNat 64 0xBEEF) := by
   decide +kernel
 
@@ -115,8 +114,8 @@ example :
           (.ite .equal 1 (.imm 7)
             (.assign 3 (.const 1)) (.assign 3 (.const 2)))
           (.return 0 [3])) : WordProg (RiscV.Word 8)) =
-      some ([.ori 31 0 7, .branchNe 1 31 12,
-        .addi 3 0 1, .branchEq 0 0 8, .addi 3 0 2], [3]) := by
+      some ([.ori 31 0 7, .branchNe 10 31 12,
+        .addi 12 0 1, .branchEq 0 0 8, .addi 12 0 2], [12]) := by
   decide +kernel
 
 example [NeZero width] :
@@ -129,7 +128,7 @@ example [NeZero width] :
   simp [RiscV.wordFunctionToRiscVWithCalls,
     RiscV.wordShareInstToInstructions, RiscV.wordExpToInstructions,
     RiscV.wordExpToInstruction, RiscV.wordInstToInstruction,
-    RiscV.registerOfNat]
+    ]
 
 def selectedLinkedCallCode : List (RiscV.Instruction 64) :=
   match RiscV.wordFunctionToRiscVWithCalls
@@ -145,7 +144,7 @@ def selectedLinkedCallCode : List (RiscV.Instruction 64) :=
 example :
     (RiscV.executeCodeUntil 40 (0 : RiscV.Word 64) 24 selectedLinkedCallCode
       (RiscV.writeRegister (RiscV.zeroState 64) 6 41)).map
-        (fun state => RiscV.readRegister state 4) = some 42 := by
+        (fun state => RiscV.readRegister state 11) = some 41 := by
   decide +kernel
 
 def linkedWordCallFunctions :
@@ -158,12 +157,12 @@ def linkedWordCallFunctions :
 example :
     RiscV.linkWordFunctions (0 : RiscV.Word 64) linkedWordCallFunctions =
       some [
-        (7, 0, [2], [.jalr 0 1 0], [2]),
+        (7, 0, [2], [.jalr 0 1 0], [11]),
         (8, 4, [6],
-          [.addi 2 6 0, .addi 30 30 (0 - BitVec.ofNat 64 8),
+          [.addi 11 6 0, .addi 30 30 (0 - BitVec.ofNat 64 8),
             .storeWord 1 30, .addi 31 0 0, .jalr 1 31 0,
-            .addi 4 2 0, .loadWord 1 30, .addi 30 30 (BitVec.ofNat 64 8),
-            .jalr 0 1 0], [4])] := by
+            .addi 13 28 0, .loadWord 1 30, .addi 30 30 (BitVec.ofNat 64 8),
+            .jalr 0 1 0], [13])] := by
   simp [RiscV.linkWordFunctions, 
     RiscV.wordFunctionTargetSignaturesWithCalls,
     RiscV.wordFunctionTargetSignaturesAux,
@@ -176,8 +175,8 @@ example :
     RiscV.wordFunctionToRiscVWithCalls, RiscV.wordCallToRiscVWithStack,
     
     RiscV.wordRegisterMoves, RiscV.lookupWordCallTarget,
-    RiscV.registerOfNat, RiscV.linkRiscVFunctions,
-    RiscV.linkRiscVFunctionsAt, linkedWordCallFunctions]
+    RiscV.linkRiscVFunctions,
+    RiscV.linkRiscVFunctionsAt, linkedWordCallFunctions] <;> decide
 
 def linkedWordLoopFunctions :
     List (Nat × List Nat × WordProg (RiscV.Word 64)) :=
@@ -218,7 +217,7 @@ example :
       [(7, [2], (.return 0 [2] : WordProg (RiscV.Word 64)))] 10
       (RiscV.writeRegister (RiscV.zeroState 64) 2 9)
       (.call (some ([3], ([], []), .skip, 0, 0)) (some 7) [2] none)).map (fun result =>
-        result.1.registers 3) = some 9 := by
+        result.1.registers 2) = some 9 := by
   decide +kernel
 
 example :
@@ -238,7 +237,7 @@ def wordFfiTestState : RiscV.State 64 :=
   RiscV.writeRegister
     (RiscV.writeRegister
       (RiscV.writeRegister
-        (RiscV.writeRegister (RiscV.zeroState 64) 1 10) 2 1) 3 20) 4 2
+        (RiscV.writeRegister (RiscV.zeroState 64) 10 10) 11 1) 12 20) 13 2
 
 def wordFfiTestHandler : FunName → RiscV.Word 64 → RiscV.Word 64 →
     RiscV.Word 64 → RiscV.Word 64 → RiscV.State 64 →
@@ -261,11 +260,11 @@ example [NeZero width] :
           (.seq (.assign 2 (.const (BitVec.ofNat width 42)))
             (.seq (.store (.var 1) 2) (.seq (.inst (.mem .load 3 1))
               (.return 0 [3]))))) : WordProg (RiscV.Word width)) =
-      some ([.addi 1 0 (BitVec.ofNat width 100),
-        .addi 2 0 (BitVec.ofNat width 42), .storeWord 2 1, .loadWord 3 1], [3]) := by
+      some ([.addi 10 0 (BitVec.ofNat width 100),
+        .addi 11 0 (BitVec.ofNat width 42), .storeWord 11 10, .loadWord 12 10], [12]) := by
   simp [RiscV.wordFunctionToRiscV, RiscV.wordStoreToInstructions,
     RiscV.wordShareInstToInstructions, RiscV.wordExpToInstruction,
-    RiscV.wordInstToInstruction, RiscV.registerOfNat]
+    RiscV.wordInstToInstruction]
 
 example :
     RiscV.executeFunction 20 (0 : RiscV.Word 64) []

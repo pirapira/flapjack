@@ -132,7 +132,7 @@ example :
        (8, [2], some ([.addi 10 2 0], [10]))]).bind
         (fun linked =>
           RiscV.wordCallToRiscVLabel linked 7 [2] [10] [6] [4]) =
-      some [.addi 2 6 0, .addi 31 0 12, .jalr 1 31 0, .addi 4 10 0] := by
+      some [.addi 11 6 0, .addi 31 0 12, .jalr 1 31 0, .addi 13 27 0] := by
   have h := RiscV.wordCallToRiscVLabel_linkRiscVFunctionsAt_head
     (start := (0 : RiscV.Word 64)) (offset := 12)
     (label := 7) (functionParameters := [])
@@ -142,45 +142,42 @@ example :
     (callParameters := [2]) (callReturns := [10])
     (arguments := [6]) (destinations := [4]) (by rfl)
   rw [h]
-  exact RiscV.wordCallToRiscV_shape 12
+  exact RiscV.wordCallToRiscV_shape (width := 64) 12
 
 example :
     RiscV.wordFunctionToRiscVWithCalls
       ({ targets := [] } : RiscV.WordCallContext 64)
       ((.move 0 [(2, 1)]) : WordProg (RiscV.Word 64)) =
-      some ([.addi 2 1 0], []) := by
+      some ([.addi 11 10 0], []) := by
   simp [RiscV.wordFunctionToRiscVWithCalls,
     RiscV.wordMoveToInstructions, RiscV.wordMoveToInstructionsAux,
     RiscV.wordMoveRegisterDestinations, RiscV.wordMoveRegisterReady,
     RiscV.wordMoveRegisterRemoveDestination,
-    RiscV.wordExpToInstructions, RiscV.wordExpToInstruction,
-    RiscV.registerOfNat]
+    RiscV.wordExpToInstructions, RiscV.wordExpToInstruction]
 
 example :
     RiscV.wordFunctionToRiscVWithCallsAndFfi
       ({ targets := [], services := [] } : RiscV.WordCallFfiContext 64)
       ((.move 0 [(2, 1)]) : WordProg (RiscV.Word 64)) =
-      some ([.addi 2 1 0], []) := by
+      some ([.addi 11 10 0], []) := by
   simp [RiscV.wordFunctionToRiscVWithCallsAndFfi,
     RiscV.wordFunctionToRiscVWithCalls,
     RiscV.wordMoveToInstructions, RiscV.wordMoveToInstructionsAux,
     RiscV.wordMoveRegisterDestinations, RiscV.wordMoveRegisterReady,
     RiscV.wordMoveRegisterRemoveDestination,
-    RiscV.wordExpToInstructions, RiscV.wordExpToInstruction,
-    RiscV.registerOfNat]
+    RiscV.wordExpToInstructions, RiscV.wordExpToInstruction]
 
 example [NeZero width] (context : RiscV.WordCallContext width)
     (state : RiscV.State width) :
     RiscV.evalWordFunction state
         ((.move 0 [(2, 1)]) : WordProg (RiscV.Word width)) =
-      some (RiscV.executeInstructions state [.addi 2 1 0], []) := by
+      some (RiscV.executeInstructions state [.addi 11 10 0], []) := by
   apply RiscV.wordFunctionToRiscVWithCalls_move_sound context state 0 [(2, 1)]
-    [.addi 2 1 0]
+    [.addi 11 10 0]
   simp [RiscV.wordFunctionToRiscVWithCalls,
     RiscV.wordMoveToInstructions, RiscV.wordMoveToInstructionsAux,
     RiscV.wordMoveRegisterDestinations, RiscV.wordMoveRegisterReady,
     RiscV.wordMoveRegisterRemoveDestination,
-    RiscV.wordExpToInstructions, RiscV.wordExpToInstruction,
-    RiscV.registerOfNat]
+    RiscV.wordExpToInstructions, RiscV.wordExpToInstruction]
 
 end Flapjack

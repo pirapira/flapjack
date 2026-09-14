@@ -20,7 +20,7 @@ theorem loopReadLocals_wordMapVars_agreement [NeZero width]
     (hlocals : loopLocalsMappedToRiscV context loopState.locals wordState)
     (hread : loopReadLocals loopState.locals names = some values) :
     (wordMapVars context names).mapM (fun name => do
-      let register ← RiscV.registerOfNat name
+      let register ← RiscV.labRegisterOfNat name
       pure (RiscV.readRegister wordState register)) = some values := by
   induction names generalizing values with
   | nil =>
@@ -45,7 +45,7 @@ theorem loopReadLocals_wordMapVars_agreement [NeZero width]
               have htail := ih rest hrest
               have htail' :
                   (wordMapVars context names).mapM (fun name =>
-                    (RiscV.registerOfNat name).bind (fun register =>
+                    (RiscV.labRegisterOfNat name).bind (fun register =>
                       some (RiscV.readRegister wordState register))) = some rest := by
                 simpa using htail
               simp [wordMapVars, hregister, hvalue]
@@ -119,7 +119,7 @@ theorem loopToWord_call_tail_simulation_general [NeZero width]
     have hreader : ∀ names : List Nat,
         RiscV.readWordRegisters wordState names =
           names.mapM (fun name => do
-            let register ← RiscV.registerOfNat name
+            let register ← RiscV.labRegisterOfNat name
             pure (RiscV.readRegister wordState register)) := by
       intro names
       induction names with
@@ -235,13 +235,13 @@ theorem loopToWord_call_handler_simulation_general [NeZero width]
         argumentValues = some calleeWord)
     (hcalleeZero : RiscV.readRegister calleeWord 0 = 0)
     (hexception :
-      RiscV.registerOfNat (wordFindVar context exception) =
+      RiscV.labRegisterOfNat (wordFindVar context exception) =
         some exceptionRegister)
     (hexception_nonzero : exceptionRegister ≠ 0)
     (hnoalias :
       ∀ name, name ≠ exception →
         ∀ register,
-          RiscV.registerOfNat (wordFindVar context name) = some register →
+          RiscV.labRegisterOfNat (wordFindVar context name) = some register →
             register ≠ exceptionRegister)
     (hbody : ∀ calleeLoop calleeWord' loopResult wordResult,
       RiscV.readRegister calleeWord' 0 = 0 →
@@ -284,7 +284,7 @@ theorem loopToWord_call_handler_simulation_general [NeZero width]
     have hreader : ∀ names : List Nat,
         RiscV.readWordRegisters wordState names =
           names.mapM (fun name => do
-            let register ← RiscV.registerOfNat name
+            let register ← RiscV.labRegisterOfNat name
             pure (RiscV.readRegister wordState register)) := by
       intro names
       induction names with

@@ -98,10 +98,9 @@ theorem lookupWordFfiService_shape :
 theorem wordFfiToRiscV_shape [NeZero width] :
     wordFfiToRiscV
       { services := [("sum", 7)] } "sum" 2 3 4 5 =
-      some [.addi 10 2 0, .addi 11 3 0, .addi 12 4 0, .addi 13 5 0,
+      some [.addi 27 11 0, .addi 28 12 0, .addi 29 13 0, .addi 30 5 0,
         .addi 14 0 (BitVec.ofNat width 7), .ecall] := by
-  simp [wordFfiToRiscV, lookupWordFfiService, wordRegisterMoves,
-    registerOfNat]
+  simp [wordFfiToRiscV, lookupWordFfiService, wordRegisterMoves]
 
 theorem executeWithFfi_ecall [NeZero width] (host : WordFfiHost width)
     (state : State width) :
@@ -291,10 +290,10 @@ theorem wordFunctionToRiscVWithCallsAndFfi_ffi [NeZero width] :
     wordFunctionToRiscVWithCallsAndFfi
       ({ targets := [], services := [("sum", 7)] } : WordCallFfiContext width)
       (.ffi "sum" 2 3 4 5 ([], [])) =
-      some ([.addi 10 2 0, .addi 11 3 0, .addi 12 4 0, .addi 13 5 0,
+      some ([.addi 27 11 0, .addi 28 12 0, .addi 29 13 0, .addi 30 5 0,
         .addi 14 0 (BitVec.ofNat width 7), .ecall], []) := by
   simp [wordFunctionToRiscVWithCallsAndFfi, wordFfiToRiscV,
-    lookupWordFfiService, wordRegisterMoves, registerOfNat]
+    lookupWordFfiService, wordRegisterMoves]
 
 /-!
 The loop-aware companion uses the same control-marker layout as

@@ -540,10 +540,10 @@ theorem evalWordExp_ssaRename [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register)))
     (hmemory : source.memory = target.memory)
     (expression : WordExp (Word width)) :
@@ -579,10 +579,10 @@ theorem evalWordExp_ssaRename [NeZero width]
                       | var right =>
                           simp only [wordSsaRenameExp]
                           simp only [evalWordExp]
-                          cases hleft : registerOfNat left <;>
-                            cases hleft' : registerOfNat (wordSsaRead ssa left) <;>
-                            cases hright : registerOfNat right <;>
-                            cases hright' : registerOfNat (wordSsaRead ssa right) <;>
+                          cases hleft : labRegisterOfNat left <;>
+                            cases hleft' : labRegisterOfNat (wordSsaRead ssa left) <;>
+                            cases hright : labRegisterOfNat right <;>
+                            cases hright' : labRegisterOfNat (wordSsaRead ssa right) <;>
                             all_goals
                               have hleftValue := hregister left
                               have hrightValue := hregister right
@@ -590,8 +590,8 @@ theorem evalWordExp_ssaRename [NeZero width]
                       | const right =>
                           simp only [wordSsaRenameExp]
                           simp only [evalWordExp]
-                          cases hleft : registerOfNat left <;>
-                            cases hleft' : registerOfNat (wordSsaRead ssa left) <;>
+                          cases hleft : labRegisterOfNat left <;>
+                            cases hleft' : labRegisterOfNat (wordSsaRead ssa left) <;>
                             all_goals
                               have hleftValue := hregister left
                               simp_all [wordSsaRenameExp, evalWordExp]
@@ -601,8 +601,8 @@ theorem evalWordExp_ssaRename [NeZero width]
                       | var right =>
                           simp only [wordSsaRenameExp]
                           simp only [evalWordExp]
-                          cases hright : registerOfNat right <;>
-                            cases hright' : registerOfNat (wordSsaRead ssa right) <;>
+                          cases hright : labRegisterOfNat right <;>
+                            cases hright' : labRegisterOfNat (wordSsaRead ssa right) <;>
                             all_goals
                               have hrightValue := hregister right
                               simp_all [wordSsaRenameExp, evalWordExp]
@@ -616,10 +616,10 @@ theorem evalWordExp_ssaRename [NeZero width]
           | var rightName =>
               simp only [wordSsaRenameExp]
               simp only [evalWordExp]
-              cases hleft : registerOfNat leftName <;>
-                cases hleft' : registerOfNat (wordSsaRead ssa leftName) <;>
-                cases hright : registerOfNat rightName <;>
-                cases hright' : registerOfNat (wordSsaRead ssa rightName) <;>
+              cases hleft : labRegisterOfNat leftName <;>
+                cases hleft' : labRegisterOfNat (wordSsaRead ssa leftName) <;>
+                cases hright : labRegisterOfNat rightName <;>
+                cases hright' : labRegisterOfNat (wordSsaRead ssa rightName) <;>
                 all_goals
                   have hleftValue := hregister leftName
                   have hrightValue := hregister rightName
@@ -628,8 +628,8 @@ theorem evalWordExp_ssaRename [NeZero width]
           | const amount =>
               simp only [wordSsaRenameExp]
               simp only [evalWordExp]
-              cases hleft : registerOfNat leftName <;>
-                cases hleft' : registerOfNat (wordSsaRead ssa leftName) <;>
+              cases hleft : labRegisterOfNat leftName <;>
+                cases hleft' : labRegisterOfNat (wordSsaRead ssa leftName) <;>
                 all_goals
                   have hleftValue := hregister leftName
                   simp_all [
@@ -641,10 +641,10 @@ theorem evalWordExp_applyColour [NeZero width]
     (colour : Nat → Nat) (source target : State width)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (colour name)
+        let register ← labRegisterOfNat (colour name)
         pure (readRegister target register)))
     (hmemory : source.memory = target.memory)
     (expression : WordExp (Word width)) :
@@ -680,10 +680,10 @@ theorem evalWordExp_applyColour [NeZero width]
                       | var right =>
                           simp only [wordApplyColourExp]
                           simp only [evalWordExp]
-                          cases hleft : registerOfNat left <;>
-                            cases hleft' : registerOfNat (colour left) <;>
-                            cases hright : registerOfNat right <;>
-                            cases hright' : registerOfNat (colour right) <;>
+                          cases hleft : labRegisterOfNat left <;>
+                            cases hleft' : labRegisterOfNat (colour left) <;>
+                            cases hright : labRegisterOfNat right <;>
+                            cases hright' : labRegisterOfNat (colour right) <;>
                             all_goals
                               have hleftValue := hregister left
                               have hrightValue := hregister right
@@ -691,8 +691,8 @@ theorem evalWordExp_applyColour [NeZero width]
                       | const right =>
                           simp only [wordApplyColourExp]
                           simp only [evalWordExp]
-                          cases hleft : registerOfNat left <;>
-                            cases hleft' : registerOfNat (colour left) <;>
+                          cases hleft : labRegisterOfNat left <;>
+                            cases hleft' : labRegisterOfNat (colour left) <;>
                             all_goals
                               have hleftValue := hregister left
                               simp_all [wordApplyColourExp, evalWordExp]
@@ -702,8 +702,8 @@ theorem evalWordExp_applyColour [NeZero width]
                       | var right =>
                           simp only [wordApplyColourExp]
                           simp only [evalWordExp]
-                          cases hright : registerOfNat right <;>
-                            cases hright' : registerOfNat (colour right) <;>
+                          cases hright : labRegisterOfNat right <;>
+                            cases hright' : labRegisterOfNat (colour right) <;>
                             all_goals
                               have hrightValue := hregister right
                               simp_all [wordApplyColourExp, evalWordExp]
@@ -717,10 +717,10 @@ theorem evalWordExp_applyColour [NeZero width]
           | var rightName =>
               simp only [wordApplyColourExp]
               simp only [evalWordExp]
-              cases hleft : registerOfNat leftName <;>
-                cases hleft' : registerOfNat (colour leftName) <;>
-                cases hright : registerOfNat rightName <;>
-                cases hright' : registerOfNat (colour rightName) <;>
+              cases hleft : labRegisterOfNat leftName <;>
+                cases hleft' : labRegisterOfNat (colour leftName) <;>
+                cases hright : labRegisterOfNat rightName <;>
+                cases hright' : labRegisterOfNat (colour rightName) <;>
                 all_goals
                   have hleftValue := hregister leftName
                   have hrightValue := hregister rightName
@@ -730,8 +730,8 @@ theorem evalWordExp_applyColour [NeZero width]
           | const amount =>
               simp only [wordApplyColourExp]
               simp only [evalWordExp]
-              cases hleft : registerOfNat leftName <;>
-                cases hleft' : registerOfNat (colour leftName) <;>
+              cases hleft : labRegisterOfNat leftName <;>
+                cases hleft' : labRegisterOfNat (colour leftName) <;>
                 all_goals
                   have hleftValue := hregister leftName
                   simp_all [
@@ -747,18 +747,21 @@ theorem compileWordAssignVar_sound [NeZero width] (state : State width)
     (name sourceName : Nat) (hname : name < 32)
     (hsource : sourceName < 32) :
     evalWordProg state (.assign name (.var sourceName)) =
-      some (execute state (.addi ⟨name, hname⟩ ⟨sourceName, hsource⟩ 0)) := by
+      some (execute state (.addi
+        ⟨riscvRegisterName name, riscvRegisterName_lt_32 hname⟩
+        ⟨riscvRegisterName sourceName, riscvRegisterName_lt_32 hsource⟩ 0)) := by
   simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
-    registerOfNat, hname, hsource, executeInstructions]
+    labRegisterOfNat_of_lt_32 hname, labRegisterOfNat_of_lt_32 hsource,
+    executeInstructions]
 
 theorem evalWordCondition_applyColour [NeZero width]
     (colour : Nat → Nat) (source target : State width)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (colour name)
+        let register ← labRegisterOfNat (colour name)
         pure (readRegister target register)))
     (operator : Cmp) (condition : Nat)
     (rightValue : WordRegImm (Word width)) :
@@ -768,18 +771,18 @@ theorem evalWordCondition_applyColour [NeZero width]
   cases rightValue with
   | imm value =>
       simp only [evalWordCondition, wordApplyColourRegImm]
-      cases hcondition : registerOfNat condition <;>
-        cases hcondition' : registerOfNat (colour condition) <;>
+      cases hcondition : labRegisterOfNat condition <;>
+        cases hcondition' : labRegisterOfNat (colour condition) <;>
         all_goals
           have hconditionValue := hregister condition
           simp_all [
             ]
   | reg right =>
       simp only [evalWordCondition, wordApplyColourRegImm]
-      cases hcondition : registerOfNat condition <;>
-        cases hcondition' : registerOfNat (colour condition) <;>
-        cases hright : registerOfNat right <;>
-        cases hright' : registerOfNat (colour right) <;>
+      cases hcondition : labRegisterOfNat condition <;>
+        cases hcondition' : labRegisterOfNat (colour condition) <;>
+        cases hright : labRegisterOfNat right <;>
+        cases hright' : labRegisterOfNat (colour right) <;>
         all_goals
           have hconditionValue := hregister condition
           have hrightValue := hregister right
@@ -791,10 +794,10 @@ theorem evalWordCondition_ssaRename [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register)))
     (operator : Cmp) (condition : Nat)
     (rightValue : WordRegImm (Word width)) :
@@ -804,18 +807,18 @@ theorem evalWordCondition_ssaRename [NeZero width]
   cases rightValue with
   | imm value =>
       simp only [evalWordCondition, wordSsaRenameRegImm]
-      cases hcondition : registerOfNat condition <;>
-        cases hcondition' : registerOfNat (wordSsaRead ssa condition) <;>
+      cases hcondition : labRegisterOfNat condition <;>
+        cases hcondition' : labRegisterOfNat (wordSsaRead ssa condition) <;>
         all_goals
           have hconditionValue := hregister condition
           simp_all [
             ]
   | reg right =>
       simp only [evalWordCondition, wordSsaRenameRegImm]
-      cases hcondition : registerOfNat condition <;>
-        cases hcondition' : registerOfNat (wordSsaRead ssa condition) <;>
-        cases hright : registerOfNat right <;>
-        cases hright' : registerOfNat (wordSsaRead ssa right) <;>
+      cases hcondition : labRegisterOfNat condition <;>
+        cases hcondition' : labRegisterOfNat (wordSsaRead ssa condition) <;>
+        cases hright : labRegisterOfNat right <;>
+        cases hright' : labRegisterOfNat (wordSsaRead ssa right) <;>
         all_goals
           have hconditionValue := hregister condition
           have hrightValue := hregister right
@@ -827,10 +830,10 @@ theorem evalWordReturn_applyColour [NeZero width]
     (colour : Nat → Nat) (source target : State width)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (colour name)
+        let register ← labRegisterOfNat (colour name)
         pure (readRegister target register)))
     (fuel label : Nat) (values : List Nat) :
     (evalWordFunctionWithHandlersAndFfi []
@@ -842,10 +845,10 @@ theorem evalWordReturn_applyColour [NeZero width]
         wordControlResultValues := by
   have hvalues :
       values.mapM (fun name => do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (values.map colour).mapM (fun name => do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister target register)) := by
     induction values with
     | nil => rfl
@@ -855,7 +858,7 @@ theorem evalWordReturn_applyColour [NeZero width]
   simp only [evalWordFunctionWithHandlersAndFfi, Option.map]
   rw [hvalues]
   cases hresult : List.mapM (fun name => do
-      let register ← registerOfNat name
+      let register ← labRegisterOfNat name
       pure (readRegister target register)) (List.map colour values) with
   | none => simp []
   | some returnedValues => simp [wordControlResultValues]
@@ -864,10 +867,10 @@ theorem evalWordRaise_applyColour [NeZero width]
     (colour : Nat → Nat) (source target : State width)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (colour name)
+        let register ← labRegisterOfNat (colour name)
         pure (readRegister target register)))
     (fuel exception : Nat) :
     (evalWordFunctionWithHandlersAndFfi []
@@ -877,8 +880,8 @@ theorem evalWordRaise_applyColour [NeZero width]
         (fun _ _ _ _ _ state => some state) (fuel + 1) target
         (.raise (colour exception))).map wordControlResultException := by
   simp only [evalWordFunctionWithHandlersAndFfi, Option.map]
-  cases hsource : registerOfNat exception <;>
-    cases htarget : registerOfNat (colour exception) <;>
+  cases hsource : labRegisterOfNat exception <;>
+    cases htarget : labRegisterOfNat (colour exception) <;>
     all_goals
       have hexceptionValue := hregister exception
       simp_all [
@@ -888,10 +891,10 @@ theorem evalWordReturn_ssaRename [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register)))
     (fuel label : Nat) (values : List Nat) :
     (evalWordFunctionWithHandlersAndFfi []
@@ -903,10 +906,10 @@ theorem evalWordReturn_ssaRename [NeZero width]
         wordControlResultValues := by
   have hvalues :
       values.mapM (fun name => do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (values.map (wordSsaRead ssa)).mapM (fun name => do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister target register)) := by
     induction values with
     | nil => rfl
@@ -916,7 +919,7 @@ theorem evalWordReturn_ssaRename [NeZero width]
   simp only [evalWordFunctionWithHandlersAndFfi, Option.map]
   rw [hvalues]
   cases hresult : List.mapM (fun name => do
-      let register ← registerOfNat name
+      let register ← labRegisterOfNat name
       pure (readRegister target register)) (List.map (wordSsaRead ssa) values) with
   | none => simp []
   | some returnedValues => simp [wordControlResultValues]
@@ -925,10 +928,10 @@ theorem evalWordRaise_ssaRename [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register)))
     (fuel exception : Nat) :
     (evalWordFunctionWithHandlersAndFfi []
@@ -939,8 +942,8 @@ theorem evalWordRaise_ssaRename [NeZero width]
         (.raise (wordSsaRead ssa exception))).map
         wordControlResultException := by
   simp only [evalWordFunctionWithHandlersAndFfi, Option.map]
-  cases hsource : registerOfNat exception <;>
-    cases htarget : registerOfNat (wordSsaRead ssa exception) <;>
+  cases hsource : labRegisterOfNat exception <;>
+    cases htarget : labRegisterOfNat (wordSsaRead ssa exception) <;>
     all_goals
       have hexceptionValue := hregister exception
       simp_all [
@@ -955,30 +958,33 @@ theorem wordMoveToInstructions_abi_singleton [NeZero width]
     (source : Nat) (hsource : source < 32) (hsourceScratch : source ≠ 31) :
     wordMoveToInstructions (width := width) [(2, source)] =
       if source = 2 then
-        some ([.addi 31 2 (0 : Word width), .addi 2 31 0] :
+        some ([.addi 31 11 (0 : Word width), .addi 11 31 0] :
           List (Instruction width))
       else
-        some ([.addi 2 ⟨source, hsource⟩ (0 : Word width)] :
+        some ([.addi 11
+            ⟨riscvRegisterName source, riscvRegisterName_lt_32 hsource⟩
+            (0 : Word width)] :
           List (Instruction width)) := by
   by_cases htwo : source = 2
   · subst source
     simp [wordMoveToInstructions, wordMoveToInstructionsAux,
       wordMoveRegisterDestinations, wordMoveRegisterReady,
       wordMoveRegisterRemoveDestination, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat]
+      wordExpToInstruction]
   · simp [wordMoveToInstructions, wordMoveToInstructionsAux,
       wordMoveRegisterDestinations, wordMoveRegisterReady,
       wordMoveRegisterRemoveDestination, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat, hsource, hsourceScratch, htwo]
+      wordExpToInstruction, hsource,
+      hsourceScratch, htwo]
 
 theorem evalWordSsaRenameProgram_raise [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register)))
     (fuel exception : Nat)
     (hsource : exception < 32) (htarget : wordSsaRead ssa exception < 32)
@@ -991,10 +997,14 @@ theorem evalWordSsaRenameProgram_raise [NeZero width]
         (wordSsaRenameProgram ssa (.raise exception)).2).map
         wordControlResultException := by
   have hexceptionValue :
-      readRegister source ⟨exception, hsource⟩ =
-        readRegister target ⟨wordSsaRead ssa exception, htarget⟩ := by
+      readRegister source
+          ⟨riscvRegisterName exception, riscvRegisterName_lt_32 hsource⟩ =
+        readRegister target
+          ⟨riscvRegisterName (wordSsaRead ssa exception),
+            riscvRegisterName_lt_32 htarget⟩ := by
     have h := hregister exception
-    simpa [registerOfNat, hsource, htarget] using h
+    simpa [labRegisterOfNat_of_lt_32 hsource,
+      labRegisterOfNat_of_lt_32 htarget, Option.some.injEq] using h
   have hprogram :
       (wordSsaRenameProgram ssa
         (.raise exception : WordProg (Word width))).2 =
@@ -1008,22 +1018,26 @@ theorem evalWordSsaRenameProgram_raise [NeZero width]
   by_cases htwo : wordSsaRead ssa exception = 2
   · have hmove' : wordMoveToInstructions (width := width)
         [(2, wordSsaRead ssa exception)] =
-        some ([.addi 31 2 (0 : Word width), .addi 2 31 0] :
+        some ([.addi 31 11 (0 : Word width), .addi 11 31 0] :
           List (Instruction width)) := by
       simpa [htwo] using hmove
     simp only [evalWordFunctionWithHandlersAndFfi, evalWordFunction]
     rw [hmove']
-    simp [registerOfNat, hsource, executeInstructions, execute, nextPc,
+    simp [labRegisterOfNat_of_lt_32 hsource,
+      executeInstructions, execute, nextPc,
       writeRegister, readRegister, wordControlResultException]
     simpa [readRegister, htwo] using hexceptionValue
   · have hmove' : wordMoveToInstructions (width := width)
         [(2, wordSsaRead ssa exception)] =
-        some ([.addi 2 ⟨wordSsaRead ssa exception, htarget⟩ (0 : Word width)] :
+        some ([.addi 11
+            ⟨riscvRegisterName (wordSsaRead ssa exception),
+              riscvRegisterName_lt_32 htarget⟩ (0 : Word width)] :
           List (Instruction width)) := by
       simpa [htwo] using hmove
     simp only [evalWordFunctionWithHandlersAndFfi, evalWordFunction]
     rw [hmove']
-    simp [registerOfNat, hsource, executeInstructions, execute, nextPc,
+    simp [labRegisterOfNat_of_lt_32 hsource,
+      executeInstructions, execute, nextPc,
       writeRegister, readRegister, wordControlResultException]
     simpa [readRegister] using hexceptionValue
 
@@ -1034,10 +1048,10 @@ theorem evalWordSsaRenameProgram_return_singleton [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register)))
     (fuel label value : Nat)
     (hsource : value < 32) (htarget : wordSsaRead ssa value < 32)
@@ -1050,10 +1064,14 @@ theorem evalWordSsaRenameProgram_return_singleton [NeZero width]
         (wordSsaRenameProgram ssa (.return label [value])).2).map
         wordControlResultValues := by
   have hvalue :
-      readRegister source ⟨value, hsource⟩ =
-        readRegister target ⟨wordSsaRead ssa value, htarget⟩ := by
+      readRegister source
+          ⟨riscvRegisterName value, riscvRegisterName_lt_32 hsource⟩ =
+        readRegister target
+          ⟨riscvRegisterName (wordSsaRead ssa value),
+            riscvRegisterName_lt_32 htarget⟩ := by
     have h := hregister value
-    simpa [registerOfNat, hsource, htarget] using h
+    simpa [labRegisterOfNat_of_lt_32 hsource,
+      labRegisterOfNat_of_lt_32 htarget, Option.some.injEq] using h
   have hprogram :
       (wordSsaRenameProgram ssa
         (.return label [value] : WordProg (Word width))).2 =
@@ -1067,23 +1085,25 @@ theorem evalWordSsaRenameProgram_return_singleton [NeZero width]
   by_cases htwo : wordSsaRead ssa value = 2
   · have hmove' : wordMoveToInstructions (width := width)
         [(2, wordSsaRead ssa value)] =
-        some ([.addi 31 2 (0 : Word width), .addi 2 31 0] :
+        some ([.addi 31 11 (0 : Word width), .addi 11 31 0] :
           List (Instruction width)) := by
       simpa [htwo] using hmove
     simp only [evalWordFunctionWithHandlersAndFfi, evalWordFunction]
     rw [hmove']
-    simp [registerOfNat, hsource, executeInstructions, execute, nextPc,
-      writeRegister, readRegister, wordControlResultValues]
+    simp [labRegisterOfNat_of_lt_32 hsource,
+      executeInstructions, execute, nextPc, writeRegister, readRegister,
+      wordControlResultValues]
     simpa [readRegister, htwo] using hvalue
   · have hmove' : wordMoveToInstructions (width := width)
         [(2, wordSsaRead ssa value)] =
-        some ([.addi 2 ⟨wordSsaRead ssa value, htarget⟩ (0 : Word width)] :
+        some ([.addi 11 ⟨riscvRegisterName (wordSsaRead ssa value), riscvRegisterName_lt_32 htarget⟩ (0 : Word width)] :
           List (Instruction width)) := by
       simpa [htwo] using hmove
     simp only [evalWordFunctionWithHandlersAndFfi, evalWordFunction]
     rw [hmove']
-    simp [registerOfNat, hsource, executeInstructions, execute, nextPc,
-      writeRegister, readRegister, wordControlResultValues]
+    simp [labRegisterOfNat_of_lt_32 hsource,
+      executeInstructions, execute, nextPc, writeRegister, readRegister,
+      wordControlResultValues]
     simpa [readRegister] using hvalue
 
 /-! The list form of `Return` is the ABI counterpart of the source theorem:
@@ -1094,10 +1114,10 @@ theorem evalWordSsaRenameProgram_return [NeZero width]
     (ssa : WordSsaState) (source target : State width)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register)))
     (fuel label : Nat) (values : List Nat)
     (hvalid : ∀ move, move ∈
@@ -1106,7 +1126,7 @@ theorem evalWordSsaRenameProgram_return [NeZero width]
       move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
     (hdestNonzero : ∀ move, move ∈
         (wordSsaCallAbiRegisters 1 values.length).zip
-          (values.map (wordSsaRead ssa)) → move.1 ≠ 0)
+          (values.map (wordSsaRead ssa)) → riscvRegisterName move.1 ≠ 0)
     (hdestinations :
       (((wordSsaCallAbiRegisters 1 values.length).zip
         (values.map (wordSsaRead ssa))).map Prod.fst).Nodup)
@@ -1146,8 +1166,8 @@ theorem evalWordSsaRenameProgram_return [NeZero width]
       (by simpa [moves, destinations, sources] using hdestNonzero)
       move hmove
     have hmoveValid := hvalid move (by simpa [moves, destinations, sources] using hmove)
-    simpa [wordReadRegisterNat, registerOfNat, hmoveValid.1,
-      hmoveValid.2.1] using hread
+    simpa [wordReadRegisterNat, labRegisterOfNat, readRegisterInternal,
+      hmoveValid.1, hmoveValid.2.1] using hread
   have hreturnValues :
       List.mapM (wordReadRegisterNat
           (executeInstructions target
@@ -1172,26 +1192,24 @@ theorem evalWordSsaRenameProgram_return [NeZero width]
           have hvalue := hregister value
           have hvalue' : wordReadRegisterNat source value =
               wordReadRegisterNat target (wordSsaRead ssa value) := by
-            simpa [wordReadRegisterNat, Option.map] using hvalue
+            simpa [wordReadRegisterNat, Option.map_eq_bind] using hvalue
           rw [hvalue', ih]
     simpa [sources] using hforall values
-  have hreturnValues' := hreturnValues
-  change List.mapM (fun name =>
-    (registerOfNat name).bind (fun register =>
+  have hreturnValues : List.mapM (fun name =>
+    (labRegisterOfNat name).bind (fun register =>
       some (readRegister
         (executeInstructions target
           (moves.flatMap (wordMoveInstructionList (width := width)))) register)))
       destinations =
     List.mapM (fun name =>
-      (registerOfNat name).bind (fun register =>
-        some (readRegister target register))) sources at hreturnValues'
-  have hsourceValues' := hsourceValues
-  change List.mapM (fun name =>
-    (registerOfNat name).bind (fun register =>
+      (labRegisterOfNat name).bind (fun register =>
+        some (readRegister target register))) sources := hreturnValues
+  have hsourceValues : List.mapM (fun name =>
+    (labRegisterOfNat name).bind (fun register =>
       some (readRegister source register))) values =
       List.mapM (fun name =>
-        (registerOfNat name).bind (fun register =>
-          some (readRegister target register))) sources at hsourceValues'
+        (labRegisterOfNat name).bind (fun register =>
+          some (readRegister target register))) sources := hsourceValues
   have hprogram :
       (wordSsaRenameProgram ssa
         (.return label values : WordProg (Word width))).2 =
@@ -1205,9 +1223,9 @@ theorem evalWordSsaRenameProgram_return [NeZero width]
   simp only [evalWordFunctionWithHandlersAndFfi, evalWordFunction]
   rw [hmoveCode]
   simp
-  rw [hsourceValues', hreturnValues']
+  rw [hsourceValues, hreturnValues]
   cases hresult : List.mapM (fun name =>
-      (registerOfNat name).bind (fun register =>
+      (labRegisterOfNat name).bind (fun register =>
         some (readRegister target register))) sources with
   | none => simp
   | some returnedValues => simp [wordControlResultValues]
@@ -1223,28 +1241,28 @@ theorem evalWordFfi_applyColour [NeZero width]
       Word width → Word width → State width → Option (State width))
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (colour name)
+        let register ← labRegisterOfNat (colour name)
         pure (readRegister target register)))
     (function : FunName)
     (configuration configurationLength array arrayLength : Nat)
     (live : List Nat × List Nat)
     (hhandler :
       (do
-        let configuration ← registerOfNat configuration
-        let configurationLength ← registerOfNat configurationLength
-        let array ← registerOfNat array
-        let arrayLength ← registerOfNat arrayLength
+        let configuration ← labRegisterOfNat configuration
+        let configurationLength ← labRegisterOfNat configurationLength
+        let array ← labRegisterOfNat array
+        let arrayLength ← labRegisterOfNat arrayLength
         sourceHandler function (readRegister source configuration)
           (readRegister source configurationLength) (readRegister source array)
           (readRegister source arrayLength) source) =
       (do
-        let configuration ← registerOfNat (colour configuration)
-        let configurationLength ← registerOfNat (colour configurationLength)
-        let array ← registerOfNat (colour array)
-        let arrayLength ← registerOfNat (colour arrayLength)
+        let configuration ← labRegisterOfNat (colour configuration)
+        let configurationLength ← labRegisterOfNat (colour configurationLength)
+        let array ← labRegisterOfNat (colour array)
+        let arrayLength ← labRegisterOfNat (colour arrayLength)
         targetHandler function (readRegister target configuration)
           (readRegister target configurationLength) (readRegister target array)
           (readRegister target arrayLength) target)) :
@@ -1255,14 +1273,14 @@ theorem evalWordFfi_applyColour [NeZero width]
         (colour array) (colour arrayLength)
         (live.1.map colour, live.2.map colour))).map Prod.fst := by
   simp only [evalWordFfi, Option.map]
-  cases hconfiguration : registerOfNat configuration <;>
-    cases hconfigurationLength : registerOfNat configurationLength <;>
-    cases harray : registerOfNat array <;>
-    cases harrayLength : registerOfNat arrayLength <;>
-    cases hconfiguration' : registerOfNat (colour configuration) <;>
-    cases hconfigurationLength' : registerOfNat (colour configurationLength) <;>
-    cases harray' : registerOfNat (colour array) <;>
-    cases harrayLength' : registerOfNat (colour arrayLength) <;>
+  cases hconfiguration : labRegisterOfNat configuration <;>
+    cases hconfigurationLength : labRegisterOfNat configurationLength <;>
+    cases harray : labRegisterOfNat array <;>
+    cases harrayLength : labRegisterOfNat arrayLength <;>
+    cases hconfiguration' : labRegisterOfNat (colour configuration) <;>
+    cases hconfigurationLength' : labRegisterOfNat (colour configurationLength) <;>
+    cases harray' : labRegisterOfNat (colour array) <;>
+    cases harrayLength' : labRegisterOfNat (colour arrayLength) <;>
     all_goals
       have hconfigurationValue := hregister configuration
       have hconfigurationLengthValue := hregister configurationLength
@@ -1282,28 +1300,28 @@ theorem evalWordFunctionWithHandlersAndFfi_ffi_applyColour [NeZero width]
       Word width → Word width → State width → Option (State width))
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (colour name)
+        let register ← labRegisterOfNat (colour name)
         pure (readRegister target register)))
     (function : FunName)
     (configuration configurationLength array arrayLength : Nat)
     (live : List Nat × List Nat)
     (hhandler :
       (do
-        let configuration ← registerOfNat configuration
-        let configurationLength ← registerOfNat configurationLength
-        let array ← registerOfNat array
-        let arrayLength ← registerOfNat arrayLength
+        let configuration ← labRegisterOfNat configuration
+        let configurationLength ← labRegisterOfNat configurationLength
+        let array ← labRegisterOfNat array
+        let arrayLength ← labRegisterOfNat arrayLength
         sourceHandler function (readRegister source configuration)
           (readRegister source configurationLength) (readRegister source array)
           (readRegister source arrayLength) source) =
       (do
-        let configuration ← registerOfNat (colour configuration)
-        let configurationLength ← registerOfNat (colour configurationLength)
-        let array ← registerOfNat (colour array)
-        let arrayLength ← registerOfNat (colour arrayLength)
+        let configuration ← labRegisterOfNat (colour configuration)
+        let configurationLength ← labRegisterOfNat (colour configurationLength)
+        let array ← labRegisterOfNat (colour array)
+        let arrayLength ← labRegisterOfNat (colour arrayLength)
         targetHandler function (readRegister target configuration)
           (readRegister target configurationLength) (readRegister target array)
           (readRegister target arrayLength) target)) :
@@ -1314,14 +1332,14 @@ theorem evalWordFunctionWithHandlersAndFfi_ffi_applyColour [NeZero width]
         (colour array) (colour arrayLength)
         (live.1.map colour, live.2.map colour)) := by
   simp only [evalWordFunctionWithHandlersAndFfi]
-  cases hconfiguration : registerOfNat configuration <;>
-    cases hconfigurationLength : registerOfNat configurationLength <;>
-    cases harray : registerOfNat array <;>
-    cases harrayLength : registerOfNat arrayLength <;>
-    cases hconfiguration' : registerOfNat (colour configuration) <;>
-    cases hconfigurationLength' : registerOfNat (colour configurationLength) <;>
-    cases harray' : registerOfNat (colour array) <;>
-    cases harrayLength' : registerOfNat (colour arrayLength) <;>
+  cases hconfiguration : labRegisterOfNat configuration <;>
+    cases hconfigurationLength : labRegisterOfNat configurationLength <;>
+    cases harray : labRegisterOfNat array <;>
+    cases harrayLength : labRegisterOfNat arrayLength <;>
+    cases hconfiguration' : labRegisterOfNat (colour configuration) <;>
+    cases hconfigurationLength' : labRegisterOfNat (colour configurationLength) <;>
+    cases harray' : labRegisterOfNat (colour array) <;>
+    cases harrayLength' : labRegisterOfNat (colour arrayLength) <;>
     all_goals
       have hconfigurationValue := hregister configuration
       have hconfigurationLengthValue := hregister configurationLength

@@ -32,7 +32,7 @@ theorem wordAllocateGraphFunctionWithEntry_riscv_straightLine_counted_simulation
     (valid : wordColourValid (wordGraphColouringAt allocation.colouring))
     (injective : Function.Injective
       (wordGraphColouringAt allocation.colouring))
-    (colourZero : wordGraphColouringAt allocation.colouring 0 = 0)
+    (colourZero : wordGraphColouringAt allocation.colouring 27 = 27)
     (colourNoScratch : ∀ name, name < 31 →
       wordGraphColouringAt allocation.colouring name ≠ 31)
     (source target : State width)
@@ -73,7 +73,7 @@ theorem wordAllocateGraphFunctionWithEntry_riscv_straightLine_source_function_co
     (valid : wordColourValid (wordGraphColouringAt allocation.colouring))
     (injective : Function.Injective
       (wordGraphColouringAt allocation.colouring))
-    (colourZero : wordGraphColouringAt allocation.colouring 0 = 0)
+    (colourZero : wordGraphColouringAt allocation.colouring 27 = 27)
     (colourNoScratch : ∀ name, name < 31 →
       wordGraphColouringAt allocation.colouring name ≠ 31)
     (source target : State width)
@@ -113,7 +113,7 @@ theorem wordAllocateGraphFunctionWithEntry_riscv_return_counted_simulation
     (valid : wordColourValid (wordGraphColouringAt allocation.colouring))
     (injective : Function.Injective
       (wordGraphColouringAt allocation.colouring))
-    (colourZero : wordGraphColouringAt allocation.colouring 0 = 0)
+    (colourZero : wordGraphColouringAt allocation.colouring 27 = 27)
     (colourNoScratch : ∀ name, name < 31 →
       wordGraphColouringAt allocation.colouring name ≠ 31)
     (source target : State width)
@@ -166,7 +166,7 @@ theorem wordAllocateGraphFunctionWithEntry_riscv_ffi_return_counted_simulation
     (valid : wordColourValid (wordGraphColouringAt allocation.colouring))
     (injective : Function.Injective
       (wordGraphColouringAt allocation.colouring))
-    (colourZero : wordGraphColouringAt allocation.colouring 0 = 0)
+    (colourZero : wordGraphColouringAt allocation.colouring 27 = 27)
     (colourNoScratch : ∀ name, name < 31 →
       wordGraphColouringAt allocation.colouring name ≠ 31)
     (source target : State width)

@@ -14,13 +14,10 @@ expensive end-to-end reduction easy to identify in build logs.
 -/
 
 def pipelineHandlerLinkedSections :
-    Option (List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) := do
-  let pipeline := compileFlapjack .rv64i (BitVec.ofNat 64 8)
-    (fun value => BitVec.ofNat 64 value) pipelineHandlerDeclarations
-  let functions ← pipelineWordFunctionsToStack pipeline.word
-  RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscV { services := [] }
-    pipelineStackRemoveConfig 0 0
-    (functions.map (fun (label, _, body) => (label, body)))
+    Option (List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
+  compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
+    pipelineStackRemoveConfig pipelineHandlerDeclarations
 
 def pipelineHandlerSectionEntry (label : Nat)
     : List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64)) →
@@ -34,15 +31,17 @@ def pipelineHandlerMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← pipelineHandlerLinkedSections
   let entry ← pipelineHandlerSectionEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 100 [] image [] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 100)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 244 [] image [] []
+    (RiscV.writeRegister (RiscV.writeRegister (RiscV.writeRegister
+      (RiscV.writeRegister (RiscV.zeroState 64) 1 244) 10 56) 21 288) 8 0)
 
 def pipelineHandlerMachineValues : Option (List (RiscV.Word 64)) := do
   let sections ← pipelineHandlerLinkedSections
   let entry ← pipelineHandlerSectionEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 100 [] image [4] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 100)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 244 [] image [7] []
+    (RiscV.writeRegister (RiscV.writeRegister (RiscV.writeRegister
+      (RiscV.writeRegister (RiscV.zeroState 64) 1 244) 10 56) 21 288) 8 0)
 
 #guard pipelineHandlerMachineResult.isSome
 #guard pipelineHandlerMachineResult = some []
@@ -51,8 +50,9 @@ def pipelineHandlerMachineValues : Option (List (RiscV.Word 64)) := do
     let sections ← pipelineHandlerLinkedSections
     let entry ← pipelineHandlerSectionEntry 2 sections
     let image := sections.flatMap (fun (_, _, code) => code)
-    RiscV.executeFunctionAtAfterEntry 4000 0 entry 100 [] image [4] []
-      (RiscV.writeRegister (RiscV.zeroState 64) 1 100)
+    RiscV.executeFunctionAtAfterEntry 4000 0 entry 244 [] image [7] []
+      (RiscV.writeRegister (RiscV.writeRegister (RiscV.writeRegister
+        (RiscV.writeRegister (RiscV.zeroState 64) 1 244) 10 56) 21 288) 8 0)
   result = some [BitVec.ofNat 64 7]
 
 theorem pipelineHandler_machine_execution :

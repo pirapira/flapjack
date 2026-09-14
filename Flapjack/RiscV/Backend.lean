@@ -77,22 +77,73 @@ def labRegisterOfNat (name : Nat) : Option (Fin 32) :=
 @[simp] theorem labRegisterOfNat_argument3 : labRegisterOfNat 4 = some 13 := by
   decide
 
+@[simp] theorem labRegisterOfNat_five : labRegisterOfNat 5 = some 5 := by decide
+
+@[simp] theorem labRegisterOfNat_six : labRegisterOfNat 6 = some 6 := by decide
+
+@[simp] theorem labRegisterOfNat_thirtyOne : labRegisterOfNat 31 = some 31 := by decide
+
+@[simp] theorem labRegisterOfNat_ten : labRegisterOfNat 10 = some 27 := by decide
+
+@[simp] theorem labRegisterOfNat_eleven : labRegisterOfNat 11 = some 28 := by decide
+
+@[simp] theorem labRegisterOfNat_twelve : labRegisterOfNat 12 = some 29 := by decide
+
+@[simp] theorem labRegisterOfNat_thirteen : labRegisterOfNat 13 = some 30 := by decide
+
 /-- The mapped register is in range whenever the stack register is. -/
 theorem labRegisterOfNat_eq {name : Nat} (h : riscvRegisterName name < 32) :
     labRegisterOfNat name = some ⟨riscvRegisterName name, h⟩ := by
   simp [labRegisterOfNat, registerOfNat, h]
 
+theorem labRegisterOfNat_of_lt_32 {name : Nat} (h : name < 32) :
+    labRegisterOfNat name =
+      some ⟨riscvRegisterName name, riscvRegisterName_lt_32 h⟩ :=
+  labRegisterOfNat_eq (riscvRegisterName_lt_32 h)
+
+/-- The stack-register number underlying a successful mapped lookup is in range. -/
+theorem labRegisterOfNat_some_lt {name : Nat} {register : Fin 32}
+    (h : labRegisterOfNat name = some register) : name < 32 :=
+  lt_32_of_riscvRegisterName_lt_32
+    (@registerOfNat_some_lt (riscvRegisterName name) register
+      (by simpa [labRegisterOfNat] using h))
+
+/-- A successful mapped lookup identifies the image of the stack register. -/
+theorem labRegisterOfNat_some_fin {name : Nat} {register : Fin 32}
+    (h : labRegisterOfNat name = some register) (hname : name < 32) :
+    (⟨riscvRegisterName name, riscvRegisterName_lt_32 hname⟩ : Fin 32) =
+      register := by
+  have h' := h
+  rw [labRegisterOfNat_of_lt_32 hname] at h'
+  exact Option.some.inj h'
+
+/-- Mapped lookups are injective on the stack-register names they accept. -/
+theorem labRegisterOfNat_injective {left right : Nat}
+    {leftRegister rightRegister : Fin 32}
+    (hleft : labRegisterOfNat left = some leftRegister)
+    (hright : labRegisterOfNat right = some rightRegister)
+    (hsame : leftRegister = rightRegister) : left = right := by
+  have hleft_lt := labRegisterOfNat_some_lt hleft
+  have hright_lt := labRegisterOfNat_some_lt hright
+  have hfin :
+      (⟨riscvRegisterName left, riscvRegisterName_lt_32 hleft_lt⟩ : Fin 32) =
+        (⟨riscvRegisterName right, riscvRegisterName_lt_32 hright_lt⟩ : Fin 32) :=
+    (labRegisterOfNat_some_fin hleft hleft_lt).trans
+      (hsame.trans (labRegisterOfNat_some_fin hright hright_lt).symm)
+  exact riscvRegisterName_injective_lt_32 hleft_lt hright_lt
+    (congrArg Fin.val hfin)
+
 def wordExpToInstruction [NeZero width] (destination : Nat) :
     WordExp (Word width) → Option (Instruction width)
   | .const value => do
-      let destination ← registerOfNat destination
+      let destination ← labRegisterOfNat destination
       pure (.addi destination 0 value)
   | .var source => do
-      let destination ← registerOfNat destination
-      let source ← registerOfNat source
+      let destination ← labRegisterOfNat destination
+      let source ← labRegisterOfNat source
       pure (.addi destination source 0)
   | .op operator [.const left, .const right] => do
-      let destination ← registerOfNat destination
+      let destination ← labRegisterOfNat destination
       let value := match operator with
         | .add => left + right
         | .sub => left - right
@@ -101,45 +152,45 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
         | .xor => left ^^^ right
       pure (.addi destination 0 value)
   | .op .add [.var source, .const value] => do
-      let destination ← registerOfNat destination
-      let source ← registerOfNat source
+      let destination ← labRegisterOfNat destination
+      let source ← labRegisterOfNat source
       pure (.addi destination source value)
   | .op .sub [.var source, .const value] => do
-      let destination ← registerOfNat destination
-      let source ← registerOfNat source
+      let destination ← labRegisterOfNat destination
+      let source ← labRegisterOfNat source
       pure (.addi destination source (0 - value))
   | .op .and [.var source, .const value] => do
-      let destination ← registerOfNat destination
-      let source ← registerOfNat source
+      let destination ← labRegisterOfNat destination
+      let source ← labRegisterOfNat source
       pure (.andi destination source value)
   | .op .or [.var source, .const value] => do
-      let destination ← registerOfNat destination
-      let source ← registerOfNat source
+      let destination ← labRegisterOfNat destination
+      let source ← labRegisterOfNat source
       pure (.ori destination source value)
   | .op .xor [.var source, .const value] => do
-      let destination ← registerOfNat destination
-      let source ← registerOfNat source
+      let destination ← labRegisterOfNat destination
+      let source ← labRegisterOfNat source
       pure (.xori destination source value)
   | .op .add [.const value, .var source] => do
-      let destination ← registerOfNat destination
-      let source ← registerOfNat source
+      let destination ← labRegisterOfNat destination
+      let source ← labRegisterOfNat source
       pure (.addi destination source value)
   | .op .and [.const value, .var source] => do
-      let destination ← registerOfNat destination
-      let source ← registerOfNat source
+      let destination ← labRegisterOfNat destination
+      let source ← labRegisterOfNat source
       pure (.andi destination source value)
   | .op .or [.const value, .var source] => do
-      let destination ← registerOfNat destination
-      let source ← registerOfNat source
+      let destination ← labRegisterOfNat destination
+      let source ← labRegisterOfNat source
       pure (.ori destination source value)
   | .op .xor [.const value, .var source] => do
-      let destination ← registerOfNat destination
-      let source ← registerOfNat source
+      let destination ← labRegisterOfNat destination
+      let source ← labRegisterOfNat source
       pure (.xori destination source value)
   | .op operator [.var left, .var right] => do
-      let destination ← registerOfNat destination
-      let left ← registerOfNat left
-      let right ← registerOfNat right
+      let destination ← labRegisterOfNat destination
+      let left ← labRegisterOfNat left
+      let right ← labRegisterOfNat right
       pure (match operator with
         | .add => .add destination left right
         | .sub => .sub destination left right
@@ -147,17 +198,17 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
         | .or => .or destination left right
         | .xor => .xor destination left right)
   | .shift operator (.var left) (.var right) => do
-      let destination ← registerOfNat destination
-      let left ← registerOfNat left
-      let right ← registerOfNat right
+      let destination ← labRegisterOfNat destination
+      let left ← labRegisterOfNat left
+      let right ← labRegisterOfNat right
       match operator with
       | .lsl => pure (.sll destination left right)
       | .lsr => pure (.srl destination left right)
       | .asr => pure (.sra destination left right)
       | .ror => none
   | .shift operator (.var left) (.const amount) => do
-      let destination ← registerOfNat destination
-      let left ← registerOfNat left
+      let destination ← labRegisterOfNat destination
+      let left ← labRegisterOfNat left
       match operator with
       | .lsl => pure (.slli destination left amount)
       | .lsr => pure (.srli destination left amount)
@@ -171,28 +222,28 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
       if destination == 31 then none
       else
         let addressInstructions ← wordExpToInstructions 31 address
-        let destination ← registerOfNat destination
+        let destination ← labRegisterOfNat destination
         pure (addressInstructions ++ [.loadWord destination 31])
   | .op .sub [.const value, .var source] => do
       if destination == 31 || source == 31 then none
       else
-        let destination ← registerOfNat destination
-        let source ← registerOfNat source
+        let destination ← labRegisterOfNat destination
+        let source ← labRegisterOfNat source
         pure [.addi 31 0 value, .sub destination 31 source]
   | .shift .ror (.var left) (.var right) => do
       if destination == 31 || left == 31 || right == 31 then none
       else
-        let destination ← registerOfNat destination
-        let left ← registerOfNat left
-        let right ← registerOfNat right
+        let destination ← labRegisterOfNat destination
+        let left ← labRegisterOfNat left
+        let right ← labRegisterOfNat right
         pure [.ori 31 0 (BitVec.ofNat width width),
           .sub 31 31 right, .sll 31 left 31, .srl destination left right,
           .or destination destination 31]
   | .shift .ror (.var left) (.const amount) => do
       if destination == 31 || left == 31 then none
       else
-        let destination ← registerOfNat destination
-        let left ← registerOfNat left
+        let destination ← labRegisterOfNat destination
+        let left ← labRegisterOfNat left
         let amount := shiftAmount amount
         pure [.srli 31 left amount,
           .slli destination left (BitVec.ofNat width ((width - amount) % width)),
@@ -204,7 +255,7 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
     selector later replaces this with the absolute target position. -/
 def wordLocValueToInstructions [NeZero width] (destination label : Nat) :
     Option (List (Instruction width)) := do
-  let destination ← registerOfNat destination
+  let destination ← labRegisterOfNat destination
   pure [.addi destination 0 (BitVec.ofNat width label)]
 
 def wordArithToInstruction [NeZero width] :
@@ -215,9 +266,9 @@ def wordArithToInstruction [NeZero width] :
   | .addCarry _ _ _ _ _ => none
   | .cakeAddCarry _ _ _ _ => none
   | .div destination dividend divisor => do
-      let destination ← registerOfNat destination
-      let dividend ← registerOfNat dividend
-      let divisor ← registerOfNat divisor
+      let destination ← labRegisterOfNat destination
+      let dividend ← labRegisterOfNat dividend
+      let divisor ← labRegisterOfNat divisor
       pure (.divU destination dividend divisor)
 
 def wordArithToInstructions [NeZero width] :
@@ -226,21 +277,21 @@ def wordArithToInstructions [NeZero width] :
       if destinationLeft = sourceLeft || destinationLeft = sourceRight then
         none
       else
-        let destinationLeft ← registerOfNat destinationLeft
-        let destinationRight ← registerOfNat destinationRight
-        let sourceLeft ← registerOfNat sourceLeft
-        let sourceRight ← registerOfNat sourceRight
+        let destinationLeft ← labRegisterOfNat destinationLeft
+        let destinationRight ← labRegisterOfNat destinationRight
+        let sourceLeft ← labRegisterOfNat sourceLeft
+        let sourceRight ← labRegisterOfNat sourceRight
         pure [.mulHU destinationLeft sourceLeft sourceRight,
           .mul destinationRight sourceLeft sourceRight]
   | .addCarry destination resultCarry sourceLeft sourceRight carryIn => do
       if [destination, resultCarry, sourceLeft, sourceRight, carryIn].any (· == 31) then
         none
       else
-        let destination ← registerOfNat destination
-        let resultCarry ← registerOfNat resultCarry
-        let sourceLeft ← registerOfNat sourceLeft
-        let sourceRight ← registerOfNat sourceRight
-        let carryIn ← registerOfNat carryIn
+        let destination ← labRegisterOfNat destination
+        let resultCarry ← labRegisterOfNat resultCarry
+        let sourceLeft ← labRegisterOfNat sourceLeft
+        let sourceRight ← labRegisterOfNat sourceRight
+        let carryIn ← labRegisterOfNat carryIn
         pure [
           .sltu 31 0 carryIn,
           .add destination sourceLeft sourceRight,
@@ -269,36 +320,36 @@ def wordInstToInstruction [NeZero width] :
     WordInst → Option (Instruction width)
   | .arith operation => wordArithToInstruction operation
   | .mem .load8 destination address => do
-      let destination ← registerOfNat destination
-      let address ← registerOfNat address
+      let destination ← labRegisterOfNat destination
+      let address ← labRegisterOfNat address
       pure (.loadByte destination address)
   | .mem .store8 source address => do
-      let source ← registerOfNat source
-      let address ← registerOfNat address
+      let source ← labRegisterOfNat source
+      let address ← labRegisterOfNat address
       pure (.storeByte source address)
   | .mem .load16 destination address => do
-      let destination ← registerOfNat destination
-      let address ← registerOfNat address
+      let destination ← labRegisterOfNat destination
+      let address ← labRegisterOfNat address
       pure (.loadHalf destination address)
   | .mem .store16 source address => do
-      let source ← registerOfNat source
-      let address ← registerOfNat address
+      let source ← labRegisterOfNat source
+      let address ← labRegisterOfNat address
       pure (.storeHalf source address)
   | .mem .load32 destination address => do
-      let destination ← registerOfNat destination
-      let address ← registerOfNat address
+      let destination ← labRegisterOfNat destination
+      let address ← labRegisterOfNat address
       pure (.load32 destination address)
   | .mem .store32 source address => do
-      let source ← registerOfNat source
-      let address ← registerOfNat address
+      let source ← labRegisterOfNat source
+      let address ← labRegisterOfNat address
       pure (.store32 source address)
   | .mem .load destination address => do
-      let destination ← registerOfNat destination
-      let address ← registerOfNat address
+      let destination ← labRegisterOfNat destination
+      let address ← labRegisterOfNat address
       pure (.loadWord destination address)
   | .mem .store source address => do
-      let source ← registerOfNat source
-      let address ← registerOfNat address
+      let source ← labRegisterOfNat source
+      let address ← labRegisterOfNat address
       pure (.storeWord source address)
 
 def executeInstructions [NeZero width] (state : State width) :
@@ -387,10 +438,10 @@ def wordMoveToInstructions [NeZero width] (moves : List (Nat × Nat)) :
 @[simp] def wordConditionOperands [NeZero width] (operator : Cmp) (condition : Nat)
     (rightValue : WordRegImm (Word width)) :
     Option (Fin 32 × Fin 32 × List (Instruction width)) := do
-  let condition ← registerOfNat condition
+  let condition ← labRegisterOfNat condition
   match rightValue with
   | .reg right =>
-      let right ← registerOfNat right
+      let right ← labRegisterOfNat right
       match operator with
       | .test | .notTest => pure (condition, 0, [.and condition condition right])
       | _ => pure (condition, right, [])
@@ -640,7 +691,7 @@ def evalWordExp [NeZero width] (state : State width) :
     WordExp (Word width) → Option (Word width)
   | .const value => some value
   | .var name => do
-      let register ← registerOfNat name
+      let register ← labRegisterOfNat name
       pure (readRegister state register)
   | .load address => do
       let address ← evalWordExp state address
@@ -653,7 +704,7 @@ def evalWordExp [NeZero width] (state : State width) :
         | .or => left ||| right
         | .xor => left ^^^ right)
   | .op operator [.var left, .const right] => do
-      let left ← registerOfNat left
+      let left ← labRegisterOfNat left
       pure (match operator with
         | .add => readRegister state left + right
         | .sub => readRegister state left - right
@@ -661,7 +712,7 @@ def evalWordExp [NeZero width] (state : State width) :
         | .or => readRegister state left ||| right
         | .xor => readRegister state left ^^^ right)
   | .op operator [.const left, .var right] => do
-      let right ← registerOfNat right
+      let right ← labRegisterOfNat right
       pure (match operator with
         | .add => left + readRegister state right
         | .sub => left - readRegister state right
@@ -669,8 +720,8 @@ def evalWordExp [NeZero width] (state : State width) :
         | .or => left ||| readRegister state right
         | .xor => left ^^^ readRegister state right)
   | .op operator [.var left, .var right] => do
-      let left ← registerOfNat left
-      let right ← registerOfNat right
+      let left ← labRegisterOfNat left
+      let right ← labRegisterOfNat right
       pure (match operator with
         | .add => readRegister state left + readRegister state right
         | .sub => readRegister state left - readRegister state right
@@ -678,8 +729,8 @@ def evalWordExp [NeZero width] (state : State width) :
         | .or => readRegister state left ||| readRegister state right
         | .xor => readRegister state left ^^^ readRegister state right)
   | .shift operator (.var left) (.var right) => do
-      let left ← registerOfNat left
-      let right ← registerOfNat right
+      let left ← labRegisterOfNat left
+      let right ← labRegisterOfNat right
       match operator with
       | .lsl => pure (BitVec.shiftLeft (readRegister state left)
           (shiftAmount (readRegister state right)))
@@ -690,7 +741,7 @@ def evalWordExp [NeZero width] (state : State width) :
       | .ror => pure (rotateRight (readRegister state left)
           (shiftAmount (readRegister state right)))
   | .shift operator (.var left) (.const amount) => do
-      let left ← registerOfNat left
+      let left ← labRegisterOfNat left
       match operator with
       | .lsl => pure (BitVec.shiftLeft (readRegister state left) (shiftAmount amount))
       | .lsr => pure (BitVec.ushiftRight (readRegister state left) (shiftAmount amount))
@@ -751,18 +802,18 @@ def wordFunctionToRiscV [NeZero width] :
         let (secondCode, secondReturns) ← wordFunctionToRiscV second
         pure (firstCode ++ secondCode, secondReturns)
   | .return _ values => do
-      let values ← values.mapM registerOfNat
+      let values ← values.mapM labRegisterOfNat
       pure ([], values)
   | _ => none
 
 def evalWordCondition [NeZero width] (state : State width)
     (operator : Cmp) (condition : Nat) (rightValue : WordRegImm (Word width)) :
     Option Bool := do
-  let condition ← registerOfNat condition
+  let condition ← labRegisterOfNat condition
   let left := readRegister state condition
   let right ← match rightValue with
     | .reg right => do
-        let right ← registerOfNat right
+        let right ← labRegisterOfNat right
         pure (readRegister state right)
     | .imm value => pure value
   match operator with
@@ -789,39 +840,39 @@ def evalWordFunction [NeZero width] (state : State width) :
       let instructions ← wordArithToInstructions operation
       pure (executeInstructions state instructions, [])
   | .inst (.mem .load8 destination address) => do
-      let destination ← registerOfNat destination
-      let address ← registerOfNat address
+      let destination ← labRegisterOfNat destination
+      let address ← labRegisterOfNat address
       pure (execute state (.loadByte destination address), [])
   | .inst (.mem .store8 source address) => do
-      let source ← registerOfNat source
-      let address ← registerOfNat address
+      let source ← labRegisterOfNat source
+      let address ← labRegisterOfNat address
       pure (execute state (.storeByte source address), [])
   | .inst (.mem .load16 destination address) => do
-      let destination ← registerOfNat destination
-      let address ← registerOfNat address
+      let destination ← labRegisterOfNat destination
+      let address ← labRegisterOfNat address
       pure (execute state (.loadHalf destination address), [])
   | .inst (.mem .store16 source address) => do
-      let source ← registerOfNat source
-      let address ← registerOfNat address
+      let source ← labRegisterOfNat source
+      let address ← labRegisterOfNat address
       pure (execute state (.storeHalf source address), [])
   | .inst (.mem .load32 destination address) => do
-      let destination ← registerOfNat destination
-      let address ← registerOfNat address
+      let destination ← labRegisterOfNat destination
+      let address ← labRegisterOfNat address
       pure (execute state (.load32 destination address), [])
   | .inst (.mem .load destination address) => do
-      let destination ← registerOfNat destination
-      let address ← registerOfNat address
+      let destination ← labRegisterOfNat destination
+      let address ← labRegisterOfNat address
       pure (execute state (.loadWord destination address), [])
   | .store address value => do
       let state ← evalWordShareInst state .store value address
       pure (state, [])
   | .inst (.mem .store32 source address) => do
-      let source ← registerOfNat source
-      let address ← registerOfNat address
+      let source ← labRegisterOfNat source
+      let address ← labRegisterOfNat address
       pure (execute state (.store32 source address), [])
   | .inst (.mem .store source address) => do
-      let source ← registerOfNat source
-      let address ← registerOfNat address
+      let source ← labRegisterOfNat source
+      let address ← labRegisterOfNat address
       pure (execute state (.storeWord source address), [])
   | .shareInst operator name address => do
       let state ← evalWordShareInst state operator name address
@@ -843,7 +894,7 @@ def evalWordFunction [NeZero width] (state : State width) :
         pure (state, secondReturns)
   | .return _ values => do
       let values ← values.mapM (fun name => do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister state register))
       pure (state, values)
   | _ => none
@@ -864,38 +915,38 @@ def evalWordProg [NeZero width] (state : State width) :
       let instructions ← wordArithToInstructions operation
       pure (executeInstructions state instructions)
   | .inst (.mem .load8 destination address) => do
-      let destination ← registerOfNat destination
-      let address ← registerOfNat address
+      let destination ← labRegisterOfNat destination
+      let address ← labRegisterOfNat address
       pure (execute state (.loadByte destination address))
   | .inst (.mem .store8 source address) => do
-      let source ← registerOfNat source
-      let address ← registerOfNat address
+      let source ← labRegisterOfNat source
+      let address ← labRegisterOfNat address
       pure (execute state (.storeByte source address))
   | .inst (.mem .load16 destination address) => do
-      let destination ← registerOfNat destination
-      let address ← registerOfNat address
+      let destination ← labRegisterOfNat destination
+      let address ← labRegisterOfNat address
       pure (execute state (.loadHalf destination address))
   | .inst (.mem .store16 source address) => do
-      let source ← registerOfNat source
-      let address ← registerOfNat address
+      let source ← labRegisterOfNat source
+      let address ← labRegisterOfNat address
       pure (execute state (.storeHalf source address))
   | .inst (.mem .load32 destination address) => do
-      let destination ← registerOfNat destination
-      let address ← registerOfNat address
+      let destination ← labRegisterOfNat destination
+      let address ← labRegisterOfNat address
       pure (execute state (.load32 destination address))
   | .store address value =>
       evalWordShareInst state .store value address
   | .inst (.mem .store32 source address) => do
-      let source ← registerOfNat source
-      let address ← registerOfNat address
+      let source ← labRegisterOfNat source
+      let address ← labRegisterOfNat address
       pure (execute state (.store32 source address))
   | .inst (.mem .store source address) => do
-      let source ← registerOfNat source
-      let address ← registerOfNat address
+      let source ← labRegisterOfNat source
+      let address ← labRegisterOfNat address
       pure (execute state (.storeWord source address))
   | .inst (.mem .load destination address) => do
-      let destination ← registerOfNat destination
-      let address ← registerOfNat address
+      let destination ← labRegisterOfNat destination
+      let address ← labRegisterOfNat address
       pure (execute state (.loadWord destination address))
   | .shareInst operator name address =>
       evalWordShareInst state operator name address
@@ -917,81 +968,81 @@ decreasing_by all_goals decreasing_trivial
 theorem compileWordAdd_sound [NeZero width] (state : State width) :
     evalWordProg state
         (.assign 1 (.op .add [.var 2, .var 3])) =
-      some (executeInstructions state [.add 1 2 3]) := by
+      some (executeInstructions state [.add 10 11 12]) := by
   simp [evalWordProg, wordExpToInstructions, wordExpToInstruction, 
-    executeInstructions, registerOfNat,
+    executeInstructions,
     execute, writeRegister, nextPc]
 
 theorem wordFunctionToRiscV_locValue [NeZero width] :
     wordFunctionToRiscV
         ((.locValue 4 2) : WordProg (Word width)) =
-      some ([.addi 4 0 2], []) := by
-  simp [wordFunctionToRiscV, wordLocValueToInstructions, registerOfNat]
+      some ([.addi 13 0 2], []) := by
+  simp [wordFunctionToRiscV, wordLocValueToInstructions]
 
 theorem evalWordFunction_locValue [NeZero width] (state : State width) :
     evalWordFunction state
         ((.locValue 4 2) : WordProg (Word width)) =
-      some (execute state (.addi 4 0 2), []) := by
+      some (execute state (.addi 13 0 2), []) := by
   simp [evalWordFunction, wordLocValueToInstructions,
-    executeInstructions, registerOfNat]
+    executeInstructions]
 
 theorem compileWordLocValue_sound [NeZero width] (state : State width) :
     evalWordProg state
         ((.locValue 4 2) : WordProg (Word width)) =
-      some (executeInstructions state [.addi 4 0 2]) := by
+      some (executeInstructions state [.addi 13 0 2]) := by
   simp [evalWordProg, wordLocValueToInstructions,
-    executeInstructions, registerOfNat]
+    executeInstructions]
 
 theorem wordExpToInstruction_binOp [NeZero width] (operator : BinOp) :
     wordExpToInstruction (width := width) 1 (.op operator [.var 2, .var 3]) =
       some (match operator with
-        | .add => .add 1 2 3
-        | .sub => .sub 1 2 3
-        | .and => .and 1 2 3
-        | .or => .or 1 2 3
-        | .xor => .xor 1 2 3) := by
-  cases operator <;> simp [wordExpToInstruction, registerOfNat]
+        | .add => .add 10 11 12
+        | .sub => .sub 10 11 12
+        | .and => .and 10 11 12
+        | .or => .or 10 11 12
+        | .xor => .xor 10 11 12) := by
+  cases operator <;> simp [wordExpToInstruction]
 
 theorem compileWordBinOp_sound [NeZero width] (state : State width)
     (operator : BinOp) :
     evalWordProg state
         (.assign 1 (.op operator [.var 2, .var 3])) =
       some (execute state (match operator with
-        | .add => .add 1 2 3
-        | .sub => .sub 1 2 3
-        | .and => .and 1 2 3
-        | .or => .or 1 2 3
-        | .xor => .xor 1 2 3)) := by
+        | .add => .add 10 11 12
+        | .sub => .sub 10 11 12
+        | .and => .and 10 11 12
+        | .or => .or 10 11 12
+        | .xor => .xor 10 11 12)) := by
   cases operator <;>
     simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
-      registerOfNat, executeInstructions_single]
+      executeInstructions_single]
 
 theorem compileWordShiftLsl_sound [NeZero width] (state : State width) :
     evalWordProg state
         (.assign 1 (.shift .lsl (.var 2) (.var 3))) =
-      some (execute state (.sll 1 2 3)) := by
+      some (execute state (.sll 10 11 12)) := by
   simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
-    registerOfNat, executeInstructions_single]
+    executeInstructions_single]
 
 theorem compileWordShiftLsr_sound [NeZero width] (state : State width) :
     evalWordProg state
         (.assign 1 (.shift .lsr (.var 2) (.var 3))) =
-      some (execute state (.srl 1 2 3)) := by
+      some (execute state (.srl 10 11 12)) := by
   simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
-    registerOfNat, executeInstructions_single]
+    executeInstructions_single]
 
 theorem compileWordShiftAsr_sound [NeZero width] (state : State width) :
     evalWordProg state
         (.assign 1 (.shift .asr (.var 2) (.var 3))) =
-      some (execute state (.sra 1 2 3)) := by
+      some (execute state (.sra 10 11 12)) := by
   simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
-    registerOfNat, executeInstructions_single]
+    executeInstructions_single]
 
 theorem evalWordExp_rotateRight_immediate [NeZero width] (state : State width)
     (amount : Word width) :
     evalWordExp state (.shift .ror (.var 2) (.const amount)) =
-      some (rotateRight (readRegister state 2) (shiftAmount amount)) := by
-  simp [evalWordExp, rotateRight, registerOfNat]
+      some (rotateRight (readRegister state 11) (shiftAmount amount)) := by
+  simp [evalWordExp, rotateRight]
 
 theorem shiftAmount_ofNat_of_lt [NeZero width] {amount : Nat} (h : amount < width) :
     shiftAmount (BitVec.ofNat width amount) = amount := by
@@ -1017,14 +1068,14 @@ theorem compileWordRotateRight_immediate_sound [NeZero width] (state : State wid
     (amount : Word width) :
     (evalWordProg state
       (.assign 1 (.shift .ror (.var 2) (.const amount)))).map
-        (fun state => readRegister state 1) =
+        (fun state => readRegister state 10) =
       evalWordExp state (.shift .ror (.var 2) (.const amount)) := by
   have amount_lt : shiftAmount amount < width :=
     Nat.mod_lt _ (Nat.pos_of_ne_zero (NeZero.ne width))
   have complement_lt : (width - shiftAmount amount) % width < width :=
     Nat.mod_lt _ (Nat.pos_of_ne_zero (NeZero.ne width))
   simp [evalWordProg, wordExpToInstructions, 
-    evalWordExp, rotateRight, registerOfNat, executeInstructions,
+    evalWordExp, rotateRight, executeInstructions,
     execute, writeRegister, readRegister, nextPc,
     shiftAmount_ofNat_of_lt amount_lt,
     shiftAmount_ofNat_of_lt complement_lt,
@@ -1033,149 +1084,149 @@ theorem compileWordRotateRight_immediate_sound [NeZero width] (state : State wid
 theorem compileWordAdd_zeroState [NeZero width] :
     evalWordProg (zeroState width)
         (.assign 1 (.const (7 : Word width))) =
-      some (executeInstructions (zeroState width) [.addi 1 0 7]) := by
+      some (executeInstructions (zeroState width) [.addi 10 0 7]) := by
   simp [evalWordProg, wordExpToInstructions, wordExpToInstruction, 
-    executeInstructions, registerOfNat,
+    executeInstructions,
     execute, writeRegister, nextPc, zeroState, readRegister]
 
 theorem compileWordLoadByte_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.mem .load8 1 2)) =
-      some (execute state (.loadByte 1 2)) := by
-  simp [evalWordProg, registerOfNat, execute, writeRegister, 
+      some (execute state (.loadByte 10 11)) := by
+  simp [evalWordProg, execute, writeRegister, 
     readByte, nextPc]
 
 theorem compileWordStoreByte_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.mem .store8 1 2)) =
-      some (execute state (.storeByte 1 2)) := by
-  simp [evalWordProg, registerOfNat, execute, writeByte,
+      some (execute state (.storeByte 10 11)) := by
+  simp [evalWordProg, execute, writeByte,
     nextPc]
 
 theorem compileWordLoad16_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.mem .load16 1 2)) =
-      some (execute state (.loadHalf 1 2)) := by
-  simp [evalWordProg, registerOfNat, execute, writeRegister, readWord16,
+      some (execute state (.loadHalf 10 11)) := by
+  simp [evalWordProg, execute, writeRegister, readWord16,
     readByte, byteAddress, nextPc]
 
 theorem compileWordStore16_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.mem .store16 1 2)) =
-      some (execute state (.storeHalf 1 2)) := by
-  simp [evalWordProg, registerOfNat, execute, writeWord16, writeByte,
+      some (execute state (.storeHalf 10 11)) := by
+  simp [evalWordProg, execute, writeWord16, writeByte,
     byteAddress, nextPc]
 
 theorem compileWordLoad32_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.mem .load32 1 2)) =
-      some (execute state (.load32 1 2)) := by
-  simp [evalWordProg, registerOfNat, execute, writeRegister, readWord32,
+      some (execute state (.load32 10 11)) := by
+  simp [evalWordProg, execute, writeRegister, readWord32,
     readByte, byteAddress, nextPc]
 
 theorem compileWordStore32_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.mem .store32 1 2)) =
-      some (execute state (.store32 1 2)) := by
-  simp [evalWordProg, registerOfNat, execute, writeWord32, writeByte,
+      some (execute state (.store32 10 11)) := by
+  simp [evalWordProg, execute, writeWord32, writeByte,
     byteAddress, nextPc]
 
 theorem compileWordStoreWord_sound [NeZero width] (state : State width) :
     evalWordProg state (.store (.var 2) 1) =
-      some (execute state (.storeWord 1 2)) := by
+      some (execute state (.storeWord 10 11)) := by
   simp [evalWordProg, evalWordShareInst, 
     wordShareInstToInstructions,
-    wordInstToInstruction, registerOfNat, executeInstructions,
+    wordInstToInstruction, executeInstructions,
     execute,
     writeWordValue, writeByte, byteAddress, nextPc]
 
 theorem wordShareInstToRiscV_load [NeZero width] :
     wordProgToRiscV (width := width)
-        (.shareInst .load 1 (.var 2)) = some [.loadWord 1 2] := by
+        (.shareInst .load 1 (.var 2)) = some [.loadWord 10 11] := by
   simp [wordProgToRiscV, wordShareInstToInstructions, wordInstToInstruction,
-    registerOfNat]
+    ]
 
 theorem wordExpToRiscV_load [NeZero width] :
     wordExpToInstructions (width := width) 1
         (.load (.var 2)) =
-      some [.addi 31 2 0, .loadWord 1 31] := by
-  simp [wordExpToInstructions, wordExpToInstruction, registerOfNat]
+      some [.addi 31 11 0, .loadWord 10 31] := by
+  simp [wordExpToInstructions, wordExpToInstruction]
 
 theorem compileWordExpLoad_sound [NeZero width] (state : State width) :
     evalWordProg state
         (.assign 1 (.load (.var 2))) =
       some (executeInstructions state
-        [.addi 31 2 0, .loadWord 1 31]) := by
+        [.addi 31 11 0, .loadWord 10 31]) := by
   simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
-    registerOfNat, executeInstructions, execute, writeRegister, readWordValue,
+    executeInstructions, execute, writeRegister, readWordValue,
     readByte, byteAddress, nextPc]
 
 theorem wordShareInstToRiscV_store8 [NeZero width] :
     wordProgToRiscV (width := width)
-        (.shareInst .store8 1 (.var 2)) = some [.storeByte 1 2] := by
+        (.shareInst .store8 1 (.var 2)) = some [.storeByte 10 11] := by
   simp [wordProgToRiscV, wordShareInstToInstructions, wordInstToInstruction,
-    registerOfNat]
+    ]
 
 theorem wordShareInstToRiscV_load16 [NeZero width] :
     wordProgToRiscV (width := width)
-        (.shareInst .load16 1 (.var 2)) = some [.loadHalf 1 2] := by
+        (.shareInst .load16 1 (.var 2)) = some [.loadHalf 10 11] := by
   simp [wordProgToRiscV, wordShareInstToInstructions, wordInstToInstruction,
-    registerOfNat]
+    ]
 
 theorem wordShareInstToRiscV_store16 [NeZero width] :
     wordProgToRiscV (width := width)
-        (.shareInst .store16 1 (.var 2)) = some [.storeHalf 1 2] := by
+        (.shareInst .store16 1 (.var 2)) = some [.storeHalf 10 11] := by
   simp [wordProgToRiscV, wordShareInstToInstructions, wordInstToInstruction,
-    registerOfNat]
+    ]
 
 theorem wordShareInstToRiscV_add_offset [NeZero width] :
     wordProgToRiscV (width := width)
         (.shareInst .load32 1 (.op .add [.var 2, .const (4 : Word width)])) =
-      some [.addi 31 2 4, .load32 1 31] := by
+      some [.addi 31 11 4, .load32 10 31] := by
   simp [wordProgToRiscV, wordShareInstToInstructions, wordExpToInstructions,
     wordExpToInstruction,
-    wordInstToInstruction, registerOfNat]
+    wordInstToInstruction]
 
 theorem wordStoreToRiscV_add_offset [NeZero width] :
     wordProgToRiscV (width := width)
         (.store (.op .add [.var 2, .const (8 : Word width)]) 1) =
-      some [.addi 31 2 8, .storeWord 1 31] := by
+      some [.addi 31 11 8, .storeWord 10 31] := by
   simp [wordProgToRiscV, wordStoreToInstructions,
     wordShareInstToInstructions, wordExpToInstructions, wordExpToInstruction,
     wordInstToInstruction,
-    registerOfNat]
+    ]
 
 theorem compileWordShareInstLoad_sound [NeZero width] (state : State width) :
     evalWordProg state (.shareInst .load 1 (.var 2)) =
-      some (execute state (.loadWord 1 2)) := by
+      some (execute state (.loadWord 10 11)) := by
   simp [evalWordProg, evalWordShareInst, wordShareInstToInstructions,
-    wordInstToInstruction, registerOfNat, execute,
+    wordInstToInstruction, execute,
     executeInstructions, writeRegister, readWordValue, readByte, byteAddress,
     nextPc]
 
 theorem compileWordShareInstStore32_sound [NeZero width] (state : State width) :
     evalWordProg state (.shareInst .store32 1 (.var 2)) =
-      some (execute state (.store32 1 2)) := by
+      some (execute state (.store32 10 11)) := by
   simp [evalWordProg, evalWordShareInst, wordShareInstToInstructions,
-    wordInstToInstruction, registerOfNat, execute,
+    wordInstToInstruction, execute,
     executeInstructions, writeWord32, writeByte, byteAddress, nextPc]
 
 theorem compileWordShareInstLoad16_sound [NeZero width] (state : State width) :
     evalWordProg state (.shareInst .load16 1 (.var 2)) =
-      some (execute state (.loadHalf 1 2)) := by
+      some (execute state (.loadHalf 10 11)) := by
   simp [evalWordProg, evalWordShareInst, wordShareInstToInstructions,
-    wordInstToInstruction, registerOfNat, execute,
+    wordInstToInstruction, execute,
     executeInstructions, writeRegister, readWord16, readByte, byteAddress,
     nextPc]
 
 theorem compileWordShareInstStore16_sound [NeZero width] (state : State width) :
     evalWordProg state (.shareInst .store16 1 (.var 2)) =
-      some (execute state (.storeHalf 1 2)) := by
+      some (execute state (.storeHalf 10 11)) := by
   simp [evalWordProg, evalWordShareInst, wordShareInstToInstructions,
-    wordInstToInstruction, registerOfNat, execute,
+    wordInstToInstruction, execute,
     executeInstructions, writeWord16, writeByte, byteAddress, nextPc]
 
 theorem compileWordShareInstLoadOffset_sound [NeZero width] (state : State width) :
     evalWordProg state
         (.shareInst .load32 1
           (.op .add [.var 2, .const (4 : Word width)])) =
-      some (executeInstructions state [.addi 31 2 4, .load32 1 31]) := by
+      some (executeInstructions state [.addi 31 11 4, .load32 10 31]) := by
   simp [evalWordProg, evalWordShareInst, wordShareInstToInstructions,
-    wordExpToInstructions, wordExpToInstruction, wordInstToInstruction, registerOfNat,
+    wordExpToInstructions, wordExpToInstruction, wordInstToInstruction,
     executeInstructions, execute, writeRegister, readWord32, readByte,
     byteAddress, nextPc]
 
@@ -1183,33 +1234,33 @@ theorem wordFunctionToRiscV_return_add [NeZero width] :
     wordFunctionToRiscV
         ((.seq (.assign 1 (.op .add [.var 2, .var 3])) (.return 0 [1])) :
           WordProg (Word width)) =
-      some ([.add 1 2 3], [1]) := by
-  simp [wordFunctionToRiscV, wordExpToInstructions, wordExpToInstruction, registerOfNat]
+      some ([.add 10 11 12], [10]) := by
+  simp [wordFunctionToRiscV, wordExpToInstructions, wordExpToInstruction]
 
 theorem evalWordFunction_return_add [NeZero width] (state : State width) :
     evalWordFunction state
         (.seq (.assign 1 (.op .add [.var 2, .var 3])) (.return 0 [1])) =
-      some (execute state (.add 1 2 3),
-        [readRegister (execute state (.add 1 2 3)) 1]) := by
+      some (execute state (.add 10 11 12),
+        [readRegister (execute state (.add 10 11 12)) 10]) := by
   simp [evalWordFunction, wordExpToInstructions, wordExpToInstruction,
-    registerOfNat, executeInstructions_single]
+    executeInstructions_single]
 
 theorem wordFunctionToRiscV_return_const [NeZero width] (value : Word width) :
     wordFunctionToRiscV
         ((.seq (.assign 1 (.const value)) (.return 0 [1])) :
           WordProg (Word width)) =
-      some ([.addi 1 0 value], [1]) := by
-  simp [wordFunctionToRiscV, wordExpToInstructions, wordExpToInstruction, registerOfNat]
+      some ([.addi 10 0 value], [10]) := by
+  simp [wordFunctionToRiscV, wordExpToInstructions, wordExpToInstruction]
 
 theorem evalWordFunction_return_const [NeZero width] (state : State width)
     (value : Word width) (_zero : ZeroRegister state) :
     evalWordFunction state
         ((.seq (.assign 1 (.const value)) (.return 0 [1])) :
           WordProg (Word width)) =
-      some (execute state (.addi 1 0 value),
-        [readRegister (execute state (.addi 1 0 value)) 1]) := by
+      some (execute state (.addi 10 0 value),
+        [readRegister (execute state (.addi 10 0 value)) 10]) := by
   simp [evalWordFunction, wordExpToInstructions, wordExpToInstruction,
-    registerOfNat, executeInstructions_single]
+    executeInstructions_single]
 
 theorem wordArithToInstruction_longMul [NeZero width] :
     wordArithToInstruction (width := width) (.longMul 1 1 2 3) =
@@ -1218,8 +1269,8 @@ theorem wordArithToInstruction_longMul [NeZero width] :
 
 theorem wordArithToInstructions_longMul [NeZero width] :
     wordArithToInstructions (width := width) (.longMul 1 2 3 4) =
-      some [.mulHU 1 3 4, .mul 2 3 4] := by
-  simp [wordArithToInstructions, registerOfNat]
+      some [.mulHU 10 12 13, .mul 11 12 13] := by
+  simp [wordArithToInstructions]
 
 theorem wordArithToInstructions_longMul_alias [NeZero width] :
     wordArithToInstructions (width := width) (.longMul 3 2 3 4) = none := by
@@ -1227,39 +1278,39 @@ theorem wordArithToInstructions_longMul_alias [NeZero width] :
 
 theorem compileWordLongMul_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.arith (.longMul 1 1 2 3))) =
-      some (executeInstructions state [.mulHU 1 2 3, .mul 1 2 3]) := by
+      some (executeInstructions state [.mulHU 10 11 12, .mul 10 11 12]) := by
   simp [evalWordProg, wordArithToInstructions, 
-    executeInstructions, registerOfNat]
+    executeInstructions]
 
 theorem wordFunctionToRiscV_longMul [NeZero width] :
     wordFunctionToRiscV
       ((.inst (.arith (.longMul 5 6 2 3))) : WordProg (Word width)) =
-      some ([.mulHU 5 2 3, .mul 6 2 3], []) := by
-  simp [wordFunctionToRiscV, wordArithToInstructions, registerOfNat]
+      some ([.mulHU 5 11 12, .mul 6 11 12], []) := by
+  simp [wordFunctionToRiscV, wordArithToInstructions]
 
 theorem evalWordFunction_longMul [NeZero width] (state : State width) :
     evalWordFunction state
       ((.inst (.arith (.longMul 5 6 2 3))) : WordProg (Word width)) =
-      some (executeInstructions state [.mulHU 5 2 3, .mul 6 2 3], []) := by
+      some (executeInstructions state [.mulHU 5 11 12, .mul 6 11 12], []) := by
   simp [evalWordFunction, wordArithToInstructions, executeInstructions,
-    registerOfNat]
+    ]
 
 theorem wordArithToInstruction_div [NeZero width] :
     wordArithToInstruction (width := width) (.div 1 2 3) =
-      some (.divU 1 2 3) := by
-  simp [wordArithToInstruction, registerOfNat]
+      some (.divU 10 11 12) := by
+  simp [wordArithToInstruction]
 
 theorem compileWordDiv_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.arith (.div 1 2 3))) =
-      some (execute state (.divU 1 2 3)) := by
+      some (execute state (.divU 10 11 12)) := by
   simp [evalWordProg, wordArithToInstructions, wordArithToInstruction,
-    executeInstructions, registerOfNat]
+    executeInstructions]
 
 theorem wordArithToInstructions_addCarry [NeZero width] :
     wordArithToInstructions (width := width) (.addCarry 5 6 2 3 4) =
-      some [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+      some [.sltu 31 0 13, .add 5 11 12, .sltu 6 5 12, .add 5 5 31,
         .sltu 31 5 31, .or 6 6 31] := by
-  simp [wordArithToInstructions, registerOfNat]
+  simp [wordArithToInstructions]
 
 theorem wordArithToInstructions_cakeAddCarry [NeZero width] :
     wordArithToInstructions (width := width) (.cakeAddCarry 5 2 3 4) =
@@ -1278,40 +1329,40 @@ theorem compileWordCakeAddCarry_sound [NeZero width] (state : State width) :
 theorem compileWordAddCarry_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.arith (.addCarry 5 6 2 3 4))) =
       some (executeInstructions state
-        [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+        [.sltu 31 0 13, .add 5 11 12, .sltu 6 5 12, .add 5 5 31,
           .sltu 31 5 31, .or 6 6 31]) := by
   simp [evalWordProg, wordArithToInstructions, executeInstructions,
-    registerOfNat]
+    ]
 
 theorem wordFunctionToRiscV_addCarry [NeZero width] :
     wordFunctionToRiscV
       ((.inst (.arith (.addCarry 5 6 2 3 4))) : WordProg (Word width)) =
-      some ([.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+      some ([.sltu 31 0 13, .add 5 11 12, .sltu 6 5 12, .add 5 5 31,
         .sltu 31 5 31, .or 6 6 31], []) := by
-  simp [wordFunctionToRiscV, wordArithToInstructions, registerOfNat]
+  simp [wordFunctionToRiscV, wordArithToInstructions]
 
 theorem evalWordFunction_addCarry [NeZero width] (state : State width) :
     evalWordFunction state
       ((.inst (.arith (.addCarry 5 6 2 3 4))) : WordProg (Word width)) =
       some (executeInstructions state
-        [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+        [.sltu 31 0 13, .add 5 11 12, .sltu 6 5 12, .add 5 5 31,
           .sltu 31 5 31, .or 6 6 31], []) := by
   simp [evalWordFunction, wordArithToInstructions, executeInstructions,
-    registerOfNat]
+    ]
 
 def compileWordAdd [NeZero width] (destination left right : Nat) :
     Option (List (Instruction width)) :=
   wordProgToRiscV (.assign destination (.op .add [.var left, .var right]))
 
 example [NeZero width] :
-    compileWordAdd (width := width) 1 2 3 = some [.add 1 2 3] := by
+    compileWordAdd (width := width) 1 2 3 = some [.add 10 11 12] := by
   simp [compileWordAdd, wordProgToRiscV, wordExpToInstructions,
-    wordExpToInstruction, registerOfNat]
+    wordExpToInstruction]
 
 example [NeZero width] :
     wordExpToInstruction (width := width) 1 (.op .xor [.var 2, .var 3]) =
-      some (.xor 1 2 3) := by
-  simp [wordExpToInstruction, registerOfNat]
+      some (.xor 10 11 12) := by
+  simp [wordExpToInstruction]
 
 example [NeZero width] :
     wordInstToInstruction (width := width) (.arith (.longMul 1 1 2 3)) =
@@ -1321,26 +1372,26 @@ example [NeZero width] :
 example [NeZero width] :
     wordExpToInstruction (width := width) 1
         (.op .add [.const (7 : Word width), .var 2]) =
-      some (.addi 1 2 7) := by
-  simp [wordExpToInstruction, registerOfNat]
+      some (.addi 10 11 7) := by
+  simp [wordExpToInstruction]
 
 example [NeZero width] :
     wordExpToInstructions (width := width) 1
         (.op .sub [.const (7 : Word width), .var 2]) =
-      some [.addi 31 0 7, .sub 1 31 2] := by
-  simp [wordExpToInstructions, registerOfNat]
+      some [.addi 31 0 7, .sub 10 31 11] := by
+  simp [wordExpToInstructions]
 
 example [NeZero width] (state : State width) :
     evalWordProg state
         (.assign 1 (.op .add [.const (7 : Word width), .var 2])) =
-      some (execute state (.addi 1 2 7)) := by
+      some (execute state (.addi 10 11 7)) := by
   simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
-    registerOfNat, executeInstructions_single]
+    executeInstructions_single]
 
 example [NeZero width] (state : State width) :
     evalWordProg state
         (.assign 1 (.op .sub [.const (7 : Word width), .var 2])) =
-      some (executeInstructions state [.addi 31 0 7, .sub 1 31 2]) := by
-  simp [evalWordProg, wordExpToInstructions, registerOfNat,
+      some (executeInstructions state [.addi 31 0 7, .sub 10 31 11]) := by
+  simp [evalWordProg, wordExpToInstructions,
     executeInstructions, execute, writeRegister, readRegister, nextPc]
 end Flapjack.RiscV

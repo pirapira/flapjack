@@ -10,8 +10,8 @@ def callEntryContext : WordContext :=
 
 def callEntryState : RiscV.State 8 :=
   RiscV.writeRegister
-    (RiscV.writeRegister (RiscV.zeroState 8) 2 (BitVec.ofNat 8 17))
-    3 (BitVec.ofNat 8 29)
+    (RiscV.writeRegister (RiscV.zeroState 8) ⟨RiscV.riscvRegisterName 2, by decide⟩ (BitVec.ofNat 8 17))
+    ⟨RiscV.riscvRegisterName 3, by decide⟩ (BitVec.ofNat 8 29)
 
 def callEntryLocals : Nat → Option (RiscV.Word 8)
   | 10 => some (BitVec.ofNat 8 17)
@@ -25,15 +25,13 @@ example :
   · subst name
     simp [callEntryLocals] at hvalue
     subst value
-    exact ⟨2, by simp [callEntryContext, wordFindVar, lookupNatInfo,
-      RiscV.registerOfNat], by
+    exact ⟨⟨RiscV.riscvRegisterName 2, by decide⟩, by decide, by
       simp [callEntryState, RiscV.readRegister, RiscV.writeRegister]⟩
   · by_cases h11 : name = 11
     · subst name
       simp [callEntryLocals] at hvalue
       subst value
-      exact ⟨3, by simp [callEntryContext, wordFindVar, lookupNatInfo,
-        RiscV.registerOfNat], by
+      exact ⟨⟨RiscV.riscvRegisterName 3, by decide⟩, by decide, by
         simp [callEntryState, RiscV.readRegister, RiscV.writeRegister]⟩
     · have hnone : callEntryLocals name = none := by
         simp [callEntryLocals]
@@ -46,7 +44,7 @@ example :
 
 example :
     (wordMapVars callEntryContext [10, 11]).mapM (fun name => do
-      let register ← RiscV.registerOfNat name
+      let register ← RiscV.labRegisterOfNat name
       pure (RiscV.readRegister callEntryState register)) =
         some [BitVec.ofNat 8 17, BitVec.ofNat 8 29] := by
   apply loopReadLocals_wordMapVars_agreement callEntryContext
@@ -57,15 +55,13 @@ example :
     · subst name
       simp [callEntryLocals] at hvalue
       subst value
-      exact ⟨2, by simp [callEntryContext, wordFindVar, lookupNatInfo,
-        RiscV.registerOfNat], by
+      exact ⟨⟨RiscV.riscvRegisterName 2, by decide⟩, by decide, by
         simp [callEntryState, RiscV.readRegister, RiscV.writeRegister]⟩
     · by_cases h11 : name = 11
       · subst name
         simp [callEntryLocals] at hvalue
         subst value
-        exact ⟨3, by simp [callEntryContext, wordFindVar, lookupNatInfo,
-          RiscV.registerOfNat], by
+        exact ⟨⟨RiscV.riscvRegisterName 3, by decide⟩, by decide, by
           simp [callEntryState, RiscV.readRegister, RiscV.writeRegister]⟩
       · have hnone : callEntryLocals name = none := by
           simp [callEntryLocals]
@@ -95,7 +91,7 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
     (handlerBody := .skip)
     (calleeLocals := updateLoopLocal (fun _ => none) 10 9)
     (calleeWord := RiscV.writeRegister
-      (RiscV.clearWordRegisters handlerCallWordState) 10 9)
+      (RiscV.clearWordRegisters handlerCallWordState) ⟨RiscV.riscvRegisterName 10, by decide⟩ 9)
     (exceptionRegister := 5)
     (finalLoop := handlerCallFinalLoop)
     (finalWord := handlerCallFinalWord)
@@ -106,7 +102,7 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
     (hloopBind := by simp [loopBindParameters])
     (hwordBind := by simp [RiscV.bindWordRegisters, RiscV.clearWordRegisters,
       handlerCallWordState, wordMapVars, wordFindVar, lookupNatInfo,
-      RiscV.writeRegister, RiscV.registerOfNat])
+      RiscV.writeRegister, RiscV.registerOfNat, RiscV.riscvRegisterName])
     (hcalleeZero := by
       simp [RiscV.clearWordRegisters, RiscV.writeRegister,
         RiscV.readRegister])
@@ -114,11 +110,19 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
     (hexception_nonzero := by decide)
     (hnoalias := by
       intro name hname register hregister
-      have hfive : RiscV.registerOfNat 5 = some (5 : Fin 32) := by
-        decide
       intro heq
-      have hsame := RiscV.registerOfNat_injective hregister hfive heq
-      exact hname hsame)
+      have hname' : name = 5 := by
+        have hriscv : RiscV.riscvRegisterName name = 5 := by
+          have hsame : RiscV.labRegisterOfNat name = some register := by
+            simpa [wordFindVar, lookupNatInfo] using hregister
+          have hsame' : RiscV.registerOfNat (RiscV.riscvRegisterName name) = some register := by
+            simpa [RiscV.labRegisterOfNat, RiscV.riscvRegisterName] using hsame
+          have hfive : RiscV.registerOfNat 5 = some (5 : Fin 32) := by decide
+          exact RiscV.registerOfNat_injective hsame' hfive heq
+        exact RiscV.riscvRegisterName_injective_lt_32
+          (RiscV.lt_32_of_riscvRegisterName_lt_32 (by rw [hriscv]; decide))
+          (by decide) hriscv
+      exact hname hname')
     (hbody := by
       intro calleeLoop calleeWord loopResult wordResult hzero hloop hword
       change calleeWord.registers 0 = 0 at hzero
@@ -130,10 +134,11 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
         RiscV.wordExpToInstructions,
         RiscV.wordExpToInstruction,
         RiscV.executeInstructions, RiscV.execute, RiscV.nextPc,
-        RiscV.registerOfNat, RiscV.readRegister, RiscV.writeRegister, hzero] at hloop hword
+        RiscV.labRegisterOfNat, RiscV.readRegister, RiscV.writeRegister, hzero] at hloop hword
       cases hloop
       cases hword
-      simp [loopCallBodyResultCompatible])
+      simp [loopCallBodyResultCompatible, RiscV.writeRegister, RiscV.execute,
+        RiscV.readRegister, hzero])
     (hhandler := by
       intro exceptionValue handlerWord handlerLoop handlerFinalWord handlerState
         hstate hlocals hloop hword
@@ -166,6 +171,7 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
       RiscV.wordExpToInstructions,
       RiscV.wordExpToInstruction,
       RiscV.executeInstructions, RiscV.execute, RiscV.nextPc,
-      RiscV.registerOfNat, RiscV.readRegister, RiscV.writeRegister]
+      RiscV.registerOfNat, RiscV.riscvRegisterName, RiscV.readRegister,
+      RiscV.writeRegister]
 
 end Flapjack

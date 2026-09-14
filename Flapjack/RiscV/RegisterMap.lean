@@ -78,6 +78,12 @@ def riscvRegisterName (name : Nat) : Nat :=
 
 @[simp] theorem riscvRegisterName_thirty : riscvRegisterName 30 = 4 := rfl
 
+@[simp] theorem riscvRegisterName_five : riscvRegisterName 5 = 5 := rfl
+
+@[simp] theorem riscvRegisterName_six : riscvRegisterName 6 = 6 := rfl
+
+@[simp] theorem riscvRegisterName_thirtyOne : riscvRegisterName 31 = 31 := rfl
+
 /-- The map preserves the hardware register range. -/
 theorem riscvRegisterName_lt_32 {name : Nat} (h : name < 32) :
     riscvRegisterName name < 32 := by
@@ -121,5 +127,23 @@ theorem lt_32_of_riscvRegisterName_lt_32 {name : Nat}
   · rw [riscvRegisterName_id_of_ge_32 hge] at h
     omega
   · omega
+
+/-- A mapped register whose source is not `31` is not the encoder scratch register. -/
+theorem riscvRegisterName_fin_ne_thirtyOne {name : Nat} (hname : name < 32)
+    (h : name ≠ 31) :
+    (⟨riscvRegisterName name, riscvRegisterName_lt_32 hname⟩ : Fin 32) ≠ (31 : Fin 32) := by
+  intro heq
+  apply h
+  have hval : riscvRegisterName name = (31 : Fin 32).val := congrArg Fin.val heq
+  rw [show (31 : Fin 32).val = 31 from rfl] at hval
+  exact riscvRegisterName_injective_lt_32 hname (by decide)
+    (by simpa [riscvRegisterName_thirtyOne] using hval)
+
+/-- Distinct in-range registers stay distinct after mapping. -/
+theorem riscvRegisterName_fin_ne {a b : Nat} (ha : a < 32) (hb : b < 32) (h : a ≠ b) :
+    (⟨riscvRegisterName a, riscvRegisterName_lt_32 ha⟩ : Fin 32) ≠
+      (⟨riscvRegisterName b, riscvRegisterName_lt_32 hb⟩ : Fin 32) := by
+  intro heq
+  exact h (riscvRegisterName_injective_lt_32 ha hb (congrArg Fin.val heq))
 
 end Flapjack.RiscV

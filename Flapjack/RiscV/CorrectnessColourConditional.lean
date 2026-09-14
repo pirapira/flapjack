@@ -21,8 +21,8 @@ structure WordColourDataRelation (colour : Nat → Nat) [NeZero width]
   mode : source.mode = target.mode
   register : ∀ (name : Nat) (hname : name < 32)
       (hcolour : colour name < 32),
-    readRegister source ⟨name, hname⟩ =
-      readRegister target ⟨colour name, hcolour⟩
+    readRegister source ⟨riscvRegisterName name, riscvRegisterName_lt_32 hname⟩ =
+      readRegister target ⟨riscvRegisterName (colour name), riscvRegisterName_lt_32 hcolour⟩
 
 theorem WordColourStateRelation.toData
     (colour : Nat → Nat) [NeZero width]

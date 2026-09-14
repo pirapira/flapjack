@@ -25,7 +25,7 @@ theorem testColour_injective : Function.Injective testColour := by
       simp [testColour, hleftOne, hleftTwo, hrightOne, hrightTwo] at h ⊢ <;>
         omega
 
-theorem testColour_zero : testColour 0 = 0 := by
+theorem testColour_zero : testColour 27 = 27 := by
   simp [testColour]
 
 theorem testColour_noScratch : ∀ name, name < 31 → testColour name ≠ 31 := by
@@ -42,8 +42,8 @@ def testRelation [NeZero width] (source target : State width) : Prop :=
 
 def testTargetState [NeZero width] (state : State width) : State width :=
   { state with registers := fun register =>
-      if register = 1 then state.registers 2
-      else if register = 2 then state.registers 1
+      if register = 10 then state.registers 11
+      else if register = 11 then state.registers 10
       else state.registers register }
 
 theorem testRelation_target [NeZero width] (state : State width) :
@@ -58,20 +58,20 @@ theorem testRelation_target [NeZero width] (state : State width) :
   intro hcolour
   by_cases hone : name = 1
   · subst name
-    change state.registers 1 = state.registers 1
-    rfl
+    simp [readRegister, testTargetState, testColour]
   · by_cases htwo : name = 2
     · subst name
-      change state.registers 2 = state.registers 2
-      rfl
-    · have hone' : (⟨name, hname⟩ : Fin 32) ≠ 1 := by
+      simp [readRegister, testTargetState, testColour]
+    · have hone' : (⟨riscvRegisterName name, riscvRegisterName_lt_32 hname⟩ : Fin 32) ≠ 10 := by
         intro h
         apply hone
-        exact congrArg Fin.val h
-      have htwo' : (⟨name, hname⟩ : Fin 32) ≠ 2 := by
+        exact riscvRegisterName_injective_lt_32 hname (by decide)
+          (by rw [riscvRegisterName_one]; exact congrArg Fin.val h)
+      have htwo' : (⟨riscvRegisterName name, riscvRegisterName_lt_32 hname⟩ : Fin 32) ≠ 11 := by
         intro h
         apply htwo
-        exact congrArg Fin.val h
+        exact riscvRegisterName_injective_lt_32 hname (by decide)
+          (by rw [riscvRegisterName_two]; exact congrArg Fin.val h)
       simp [readRegister, testTargetState, testColour, hone, htwo, hone', htwo']
 
 example [NeZero width] (state : State width) :
@@ -282,7 +282,7 @@ example [NeZero 64] (state : State 64) :
   have hinjective : Function.Injective (wordFindVar context) := by
     intro left right hcolour
     simpa [context, wordFindVar, lookupNatInfo] using hcolour
-  have hzero : wordFindVar context 0 = 0 := by
+  have hzero : wordFindVar context 27 = 27 := by
     simp [context, wordFindVar, lookupNatInfo]
   have hscratch : ∀ name, name < 31 → wordFindVar context name ≠ 31 := by
     intro name hname
@@ -315,7 +315,7 @@ example [NeZero width] (state : State width) :
     testColour_injective testColour_zero testColour_noScratch
     state (testTargetState state) (testRelation_target state)
     .equal 1 (.reg 1) true (by omega) (by intro name h; cases h; omega)
-  · simp [evalWordCondition, registerOfNat]
+  · simp [evalWordCondition]
   · exact .assign 3 1 (by omega) (by omega)
   · exact .assign 4 1 (by omega) (by omega)
 
@@ -350,16 +350,16 @@ example [NeZero width] (state : State width) :
     callee effects are both preserved. -/
 
 def colouredCallSourceState : State 8 :=
-  writeRegister (zeroState 8) 1 9
+  writeRegister (zeroState 8) 10 9
 
 def colouredCallTargetState : State 8 :=
   testTargetState colouredCallSourceState
 
 def colouredCallSourceCallee : State 8 :=
-  writeRegister (clearWordRegisters colouredCallSourceState) 1 9
+  writeRegister (clearWordRegisters colouredCallSourceState) 10 9
 
 def colouredCallTargetCallee : State 8 :=
-  writeRegister (clearWordRegisters colouredCallTargetState) 2 9
+  writeRegister (clearWordRegisters colouredCallTargetState) 11 9
 
 def colouredCallSourceBody : WordProg (Word 8) :=
   .return 0 [1]
@@ -418,24 +418,21 @@ example :
     (sourceValues := [9]) (targetValues := [9])
   · simp [lookupWordFunction, colouredCallSourceBody]
   · simp [lookupWordFunction, colouredCallTargetBody, testColour]
-  · simp [colouredCallSourceState, readWordRegisters, registerOfNat,
-      readRegister, writeRegister, zeroState]
+  · simp [colouredCallSourceState, readWordRegisters, readRegister, writeRegister, zeroState]
   · simp [colouredCallTargetState, testTargetState, readWordRegisters,
-      colouredCallSourceState, registerOfNat, readRegister, writeRegister,
+      colouredCallSourceState, readRegister, writeRegister,
       zeroState]
   · simp [bindWordRegisters, clearWordRegisters, colouredCallSourceState,
-      colouredCallSourceCallee, registerOfNat, writeRegister]
+      colouredCallSourceCallee, writeRegister]
   · simp [bindWordRegisters, clearWordRegisters, colouredCallTargetState,
-      colouredCallTargetCallee, testTargetState, registerOfNat, writeRegister,
+      colouredCallTargetCallee, testTargetState, writeRegister,
       testColour]
   · simp [colouredCallSourceBody, colouredCallSourceCallee,
       colouredCallSourceState,
-      evalWordFunctionWithHandlersAndFfi, registerOfNat,
-      readRegister, writeRegister, clearWordRegisters, zeroState]
+      evalWordFunctionWithHandlersAndFfi, readRegister, writeRegister, clearWordRegisters, zeroState]
   · simp [colouredCallTargetBody, colouredCallTargetCallee,
       colouredCallTargetState,
-      evalWordFunctionWithHandlersAndFfi, registerOfNat,
-      readRegister, writeRegister, clearWordRegisters]
+      evalWordFunctionWithHandlersAndFfi, readRegister, writeRegister, clearWordRegisters]
   · exact testRelation_target colouredCallSourceState
   · have hcallee : colouredCallTargetCallee =
         testTargetState colouredCallSourceCallee := by
@@ -444,10 +441,10 @@ example :
         clearWordRegisters, testTargetState]
       congr
       funext register
-      by_cases hone : register = 1
+      by_cases hone : register = 10
       · subst register
         simp
-      · by_cases htwo : register = 2
+      · by_cases htwo : register = 11
         · subst register
           simp
         · simp [hone, htwo]
@@ -459,16 +456,15 @@ example (state : State 64) :
     ∃ source' target',
       evalWordProg state
           (.assign 3 (.op .add [.var 1, .var 2])) = some source' ∧
-      executeInstructions (testTargetState state) [.add 3 2 1] = target' ∧
+      executeInstructions (testTargetState state) [.add 12 11 10] = target' ∧
       testRelation source' target' := by
   exact evalWordProg_wordVarStraightLine_riscv_simulation testColour
     testColourValidFn testColour_injective testColour_zero testColour_noScratch
     state (testTargetState state) (testRelation_target state)
     (.assign 3 (.op .add [.var 1, .var 2]))
     (.assignBinary .add 3 1 2 (by omega) (by omega) (by omega))
-    [.add 3 2 1] (by
+    [.add 12 11 10] (by
       simp [wordProgToRiscV, wordApplyColour, wordApplyColourExp,
-        wordExpToInstructions, wordExpToInstruction, registerOfNat,
-        testColour])
+        wordExpToInstructions, wordExpToInstruction, testColour])
 
 end Flapjack.RiscV

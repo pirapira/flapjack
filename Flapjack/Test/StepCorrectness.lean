@@ -22,20 +22,18 @@ example :
 
 example :
     wordProgToRiscV (.assign 2 (.var 1) : WordProg (Word 8)) =
-      some [.addi 2 1 0] := by
-  simp [wordProgToRiscV, wordExpToInstructions, wordExpToInstruction,
-    registerOfNat]
+      some [.addi 11 10 0] := by
+  simp [wordProgToRiscV, wordExpToInstructions, wordExpToInstruction]
 
 example :
-    some (executeInstructionsCounted stepCountState [.addi 2 1 0]) =
+    some (executeInstructionsCounted stepCountState [.addi 11 10 0]) =
       (evalWordProg stepCountState
         (.assign 2 (.var 1) : WordProg (Word 8))).map
         (fun final => (final, 1)) := by
   apply wordProgToRiscV_counted_sound_of_straightLine
     stepCountState (.assign 2 (.var 1))
   · exact .assign 2 (.var 1)
-  · simp [wordProgToRiscV, wordExpToInstructions, wordExpToInstruction,
-      registerOfNat]
+  · simp [wordProgToRiscV, wordExpToInstructions, wordExpToInstruction]
 
 example (host : WordFfiHost 8) (state : State 8) :
     executeInstructionsWithFfiCounted host state [] = some (state, 0) := by
@@ -137,7 +135,8 @@ example (state : State 8) (entry : Word 8) (parameters arguments : List Nat)
 example (state : State 8) (entry : Word 8) (code : List (Instruction 8))
     (hzero : ZeroRegister state)
     (hcompile : wordTailCallToRiscV entry [2] [3] = some code) :
-    readRegister (executeInstructions state code) 2 = readRegister state 3 ∧
+    readRegisterInternal (executeInstructions state code) 2 =
+        readRegisterInternal state 3 ∧
       (executeInstructions state code).pc = jalrTarget entry 0 := by
   exact wordTailCallToRiscV_execute_single_parameter state entry 2 3 code hzero
     (by decide) (by decide) (by decide) (by decide) hcompile
@@ -145,8 +144,10 @@ example (state : State 8) (entry : Word 8) (code : List (Instruction 8))
 example (state : State 8) (entry : Word 8) (code : List (Instruction 8))
     (hzero : ZeroRegister state)
     (hcompile : wordTailCallToRiscV entry [2, 3] [4, 5] = some code) :
-    readRegister (executeInstructions state code) 2 = readRegister state 4 ∧
-      readRegister (executeInstructions state code) 3 = readRegister state 5 ∧
+    readRegisterInternal (executeInstructions state code) 2 =
+        readRegisterInternal state 4 ∧
+      readRegisterInternal (executeInstructions state code) 3 =
+        readRegisterInternal state 5 ∧
       (executeInstructions state code).pc = jalrTarget entry 0 := by
   have htransfer := wordTailCallToRiscV_execute_moves_transfer state entry
     [2, 3] [4, 5] code hzero
@@ -227,16 +228,16 @@ example (state : State 8) (entry : Word 8) (code : List (Instruction 8))
       wordRegisterMoves (width := 8)
         ([2, 3].zip [4, 5] : List (Nat × Nat)) =
         some parameterMoves ∧
-      readRegister (executeInstructions state
+      readRegisterInternal (executeInstructions state
         (parameterMoves ++
           [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
            .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])) 2 =
-        readRegister state 4 ∧
-      readRegister (executeInstructions state
+        readRegisterInternal state 4 ∧
+      readRegisterInternal (executeInstructions state
         (parameterMoves ++
           [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
            .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0])) 3 =
-        readRegister state 5 ∧
+        readRegisterInternal state 5 ∧
       (executeInstructions state
         (parameterMoves ++
           [.addi 30 30 (0 - BitVec.ofNat 8 (8 / 8)),
@@ -403,12 +404,12 @@ example (returnState : State 8) (stackAddress savedLink entry : Word 8)
 
 example (state : State 8) (code : List (Instruction 8))
     (hcompile : wordRegisterMoves (width := 8) [(2, 6), (3, 7)] = some code) :
-    readRegister (executeInstructions state
+    readRegisterInternal (executeInstructions state
       (code ++ [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))])) 2 =
-        readRegister state 6 ∧
-      readRegister (executeInstructions state
+        readRegisterInternal state 6 ∧
+      readRegisterInternal (executeInstructions state
         (code ++ [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))])) 3 =
-        readRegister state 7 := by
+        readRegisterInternal state 7 := by
   have htransfer := wordRegisterMoves_execute_stackCall_result_transfer state
     [(2, 6), (3, 7)] code
     (by
@@ -445,14 +446,14 @@ example (state : State 8) (entry : Word 8) (code : List (Instruction 8))
            .storeWord 1 30, .addi 31 0 entry, .jalr 1 31 0] ++
           resultMoves ++
           [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))] ∧
-      readRegister (executeInstructions state
+      readRegisterInternal (executeInstructions state
         (resultMoves ++
           [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))])) 2 =
-        readRegister state 6 ∧
-      readRegister (executeInstructions state
+        readRegisterInternal state 6 ∧
+      readRegisterInternal (executeInstructions state
         (resultMoves ++
           [.loadWord 1 30, .addi 30 30 (BitVec.ofNat 8 (8 / 8))])) 3 =
-        readRegister state 7 := by
+        readRegisterInternal state 7 := by
   have hresult := wordCallToRiscVWithStack_full_result_contract state entry
     [8, 9] [6, 7] [4, 5] [2, 3] code
     (by

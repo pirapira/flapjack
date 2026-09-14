@@ -28,10 +28,10 @@ theorem wordConditionOperands_register_sound [NeZero width] (state : State width
       evalWordCondition state operator condition (.reg source) =
         riscVCondition (executeInstructions state prelude) operator branchLeft right := by
   intro branchLeft right prelude hoperands
-  cases hcondition : registerOfNat condition with
+  cases hcondition : labRegisterOfNat condition with
   | none => simp [wordConditionOperands, hcondition] at hoperands
   | some conditionRegister =>
-      cases hsource : registerOfNat source with
+      cases hsource : labRegisterOfNat source with
       | none => simp [wordConditionOperands, hcondition, hsource] at hoperands
       | some sourceRegister =>
           cases operator with
@@ -121,17 +121,17 @@ theorem wordConditionOperands_immediate_zero_sound [NeZero width]
       evalWordCondition state operator condition (.imm 0) =
         riscVCondition (executeInstructions state prelude) operator branchLeft right := by
   intro branchLeft right prelude hoperands
-  have hregister : wordConditionOperands operator condition (.reg 0) =
+  have hregister : wordConditionOperands operator condition (.reg 27) =
       some (branchLeft, right, prelude) := by
     simpa [wordConditionOperands] using hoperands
   have heval : evalWordCondition state operator condition (.imm 0) =
-      evalWordCondition state operator condition (.reg 0) := by
+      evalWordCondition state operator condition (.reg 27) := by
     change state.registers 0 = 0 at hzero
-    cases hcondition : registerOfNat condition <;>
+    cases hcondition : labRegisterOfNat condition <;>
       cases operator <;>
       simp [evalWordCondition, readRegister, hzero, hcondition]
   rw [heval]
-  exact wordConditionOperands_register_sound state operator condition 0 hzero
+  exact wordConditionOperands_register_sound state operator condition 27 hzero
     branchLeft right prelude hregister
 
 theorem wordConditionOperands_immediate_sound [NeZero width]
@@ -152,7 +152,7 @@ theorem wordConditionOperands_immediate_sound [NeZero width]
       intro h
       subst value
       simp at hvalue
-    cases hcondition : registerOfNat condition with
+    cases hcondition : labRegisterOfNat condition with
     | none => simp [wordConditionOperands, hcondition] at hoperands
     | some conditionRegister =>
         have hzero' : state.registers 0 = 0 := hzero

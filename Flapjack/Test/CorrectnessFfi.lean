@@ -18,7 +18,7 @@ def ffiIdentityWordState : State 64 :=
   writeRegister
     (writeRegister
       (writeRegister
-        (writeRegister (zeroState 64) 1 10) 2 1) 3 20) 4 2
+        (writeRegister (zeroState 64) 10 10) 11 1) 12 20) 13 2
 
 def ffiIdentityLoopHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
     LoopState (Word 64) → Option (LoopState (Word 64)) :=
@@ -46,28 +46,28 @@ theorem ffiIdentity_mappedLocals : loopLocalsMappedToRiscV ({ vars := [] } : Wor
       intro name value hvalue
       by_cases h1 : name = 1
       · subst name
-        refine ⟨1, by simp [registerOfNat, wordFindVar, lookupNatInfo], ?_⟩
+        refine ⟨⟨riscvRegisterName 1, by decide⟩, by decide, ?_⟩
         simpa [ffiIdentityLoopState, ffiIdentityWordState,
           readRegister, writeRegister] using hvalue
       · by_cases h2 : name = 2
         · subst name
-          refine ⟨2, by simp [registerOfNat, wordFindVar, lookupNatInfo], ?_⟩
+          refine ⟨⟨riscvRegisterName 2, by decide⟩, by decide, ?_⟩
           simpa [ffiIdentityLoopState, ffiIdentityWordState,
             readRegister, writeRegister] using hvalue
         · by_cases h3 : name = 3
           · subst name
-            refine ⟨3, by simp [registerOfNat, wordFindVar, lookupNatInfo], ?_⟩
+            refine ⟨⟨riscvRegisterName 3, by decide⟩, by decide, ?_⟩
             simpa [ffiIdentityLoopState, ffiIdentityWordState,
               readRegister, writeRegister] using hvalue
           · by_cases h4 : name = 4
             · subst name
-              refine ⟨4, by simp [registerOfNat, wordFindVar, lookupNatInfo], ?_⟩
+              refine ⟨⟨riscvRegisterName 4, by decide⟩, by decide, ?_⟩
               simpa [ffiIdentityLoopState, ffiIdentityWordState,
                 readRegister, writeRegister] using hvalue
             · simp [ffiIdentityLoopState, h1, h2, h3, h4] at hvalue)
   · simp [evalLoopFfi, ffiIdentityLoopHandler, ffiIdentityLoopState]
   · simp [loopToWordProg, evalWordFfi, ffiIdentityWordHandler,
-      registerOfNat, wordFindVar, lookupNatInfo, 
+      wordFindVar, lookupNatInfo, 
       ]
 
 example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
@@ -98,7 +98,7 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
   · simp [evalLoopProgWithCallsAndFfi, ffiIdentityLoopHandler,
       ffiIdentityLoopState]
   · simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi,
-      ffiIdentityWordHandler, registerOfNat, wordFindVar, lookupNatInfo,
+      ffiIdentityWordHandler, wordFindVar, lookupNatInfo,
       ]
 
 example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
@@ -160,7 +160,7 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
   · simp [evalLoopProgWithCallsAndFfi, evalLoopProg, ffiIdentityLoopHandler,
       ffiIdentityLoopState]
   · simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi,
-      evalWordFunction, ffiIdentityWordHandler, registerOfNat, wordFindVar,
+      evalWordFunction, ffiIdentityWordHandler, wordFindVar,
       lookupNatInfo, RiscV.execute, RiscV.writeRegister, RiscV.nextPc]
 
 def sourceFfiIdBody : Prog (Word 64) :=
@@ -237,10 +237,14 @@ def sourceFfiImage : Option (Word 64 × List (Instruction 64)) := do
   let code := entries.flatMap (fun (_, _, _, code, _) => code)
   pure (entry, code)
 
+
+def sourceFfiInitialState : State 64 :=
+  writeRegister (writeRegister (writeRegister (writeRegister (zeroState 64) 1 100) 10 41) 30 8) 8 0
+
 theorem sourceFfi_machine_execution :
     sourceFfiImage.bind (fun (entry, code) =>
       executeFunctionAtWithFfi sourceFfiHost 100 0 entry 100 [] code [4] []
-        (writeRegister (zeroState 64) 1 100)) = some [42]
+        sourceFfiInitialState) = some [42]
   := by
   native_decide
 
@@ -261,7 +265,7 @@ theorem sourceFfi_source_machine_agreement :
         | _ => []) = some [42] ∧
       sourceFfiImage.bind (fun (entry, code) =>
         executeFunctionAtWithFfi sourceFfiHost 100 0 entry 100 [] code [4] []
-          (writeRegister (zeroState 64) 1 100)) = some [42] :=
+          sourceFfiInitialState) = some [42] :=
   ⟨sourceFfi_source_execution, sourceFfi_machine_execution⟩
 
 end Flapjack

@@ -46,15 +46,15 @@ example [NeZero width] (state : State width) (operator : Cmp)
 
 example (state : State 8) (hzero : ZeroRegister state) :
     evalWordCondition state .test 1 (.reg 2) =
-      riscVCondition (executeInstructions state [.and 1 1 2]) .test 1 0 := by
-  apply wordConditionOperands_sound state .test 1 (.reg 2) hzero 1 0
-    [.and 1 1 2]
+      riscVCondition (executeInstructions state [.and 10 10 11]) .test 10 0 := by
+  apply wordConditionOperands_sound state .test 1 (.reg 2) hzero 10 0
+    [.and 10 10 11]
   simp [wordConditionOperands, registerOfNat]
 
 example (state : State 8) (hzero : ZeroRegister state) :
     evalWordCondition state .equal 1 (.imm (7 : Word 8)) =
-      riscVCondition (executeInstructions state [.ori 31 0 7]) .equal 1 31 := by
-  apply wordConditionOperands_sound state .equal 1 (.imm (7 : Word 8)) hzero 1 31
+      riscVCondition (executeInstructions state [.ori 31 0 7]) .equal 10 31 := by
+  apply wordConditionOperands_sound state .equal 1 (.imm (7 : Word 8)) hzero 10 31
     [.ori 31 0 7]
   simp [wordConditionOperands, registerOfNat]
 

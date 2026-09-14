@@ -8,10 +8,10 @@ example [NeZero 64]
     (source target : State 64) (ssa : WordSsaState)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register)))
     (hmemory : source.memory = target.memory) :
     evalWordExp source
@@ -27,10 +27,10 @@ example [NeZero 64]
     (source target : State 64) (colour : Nat → Nat)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (colour name)
+        let register ← labRegisterOfNat (colour name)
         pure (readRegister target register)))
     (hmemory : source.memory = target.memory) :
     evalWordExp source
@@ -46,10 +46,10 @@ example [NeZero 64]
     (source target : State 64) (colour : Nat → Nat)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (colour name)
+        let register ← labRegisterOfNat (colour name)
         pure (readRegister target register))) :
     evalWordCondition source .equal 2 (.reg 3) =
       evalWordCondition target .equal (colour 2)
@@ -61,10 +61,10 @@ example [NeZero 64]
     (source target : State 64) (colour : Nat → Nat)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (colour name)
+        let register ← labRegisterOfNat (colour name)
         pure (readRegister target register))) :
     (evalWordFunctionWithHandlersAndFfi []
         (fun _ _ _ _ _ state => some state) 4 source
@@ -78,10 +78,10 @@ example [NeZero 64]
     (source target : State 64) (colour : Nat → Nat)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (colour name)
+        let register ← labRegisterOfNat (colour name)
         pure (readRegister target register))) :
     (evalWordFunctionWithHandlersAndFfi []
         (fun _ _ _ _ _ state => some state) 4 source
@@ -95,10 +95,10 @@ example [NeZero 64]
     (source target : State 64) (ssa : WordSsaState)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register))) :
     evalWordCondition source .equal 2 (.reg 3) =
       evalWordCondition target .equal (wordSsaRead ssa 2)
@@ -110,10 +110,10 @@ example [NeZero 64]
     (source target : State 64) (ssa : WordSsaState)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register))) :
     (evalWordFunctionWithHandlersAndFfi []
         (fun _ _ _ _ _ state => some state) 4 source
@@ -128,10 +128,10 @@ example [NeZero 64]
     (source target : State 64) (ssa : WordSsaState)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register))) :
     (evalWordFunctionWithHandlersAndFfi []
         (fun _ _ _ _ _ state => some state) 4 source
@@ -145,10 +145,10 @@ example [NeZero 64]
     (source target : State 64) (ssa : WordSsaState)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register)))
     (htarget : wordSsaRead ssa 2 < 32)
     (htargetScratch : wordSsaRead ssa 2 ≠ 31) :
@@ -166,10 +166,10 @@ example [NeZero 64]
     (source target : State 64) (ssa : WordSsaState)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register)))
     (htarget : wordSsaRead ssa 2 < 32)
     (htargetScratch : wordSsaRead ssa 2 ≠ 31) :
@@ -187,10 +187,10 @@ example [NeZero 64]
     (source target : State 64) (ssa : WordSsaState)
     (hregister : ∀ name,
       (do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister source register)) =
       (do
-        let register ← registerOfNat (wordSsaRead ssa name)
+        let register ← labRegisterOfNat (wordSsaRead ssa name)
         pure (readRegister target register)))
     (hvalid : ∀ move, move ∈
         (wordSsaCallAbiRegisters 1 [2, 3].length).zip
@@ -198,7 +198,7 @@ example [NeZero 64]
       move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
     (hdestNonzero : ∀ move, move ∈
         (wordSsaCallAbiRegisters 1 [2, 3].length).zip
-          ([2, 3].map (wordSsaRead ssa)) → move.1 ≠ 0)
+          ([2, 3].map (wordSsaRead ssa)) → riscvRegisterName move.1 ≠ 0)
     (hdestinations :
       (((wordSsaCallAbiRegisters 1 [2, 3].length).zip
         ([2, 3].map (wordSsaRead ssa))).map Prod.fst).Nodup)
@@ -220,7 +220,7 @@ example [NeZero 64]
 example [NeZero 64] (state : State 64) (name sourceName : Nat)
     (hname : name < 32) (hsource : sourceName < 32) :
     evalWordProg state (.assign name (.var sourceName)) =
-      some (execute state (.addi ⟨name, hname⟩ ⟨sourceName, hsource⟩ 0)) := by
+      some (execute state (.addi ⟨riscvRegisterName name, riscvRegisterName_lt_32 hname⟩ ⟨riscvRegisterName sourceName, riscvRegisterName_lt_32 hsource⟩ 0)) := by
   exact compileWordAssignVar_sound state name sourceName hname hsource
 
 example [NeZero 64] (state : State 64)

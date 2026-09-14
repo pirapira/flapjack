@@ -45,41 +45,39 @@ example [NeZero width] (state : State width)
 example [NeZero width] (state : State width)
     (zero : readRegister state 0 = 0) :
     (readRegister (executeInstructions state
-      [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3,
+      [.sltu 31 0 13, .add 5 11 12, .sltu 6 5 12,
         .add 5 5 31, .sltu 31 5 31, .or 6 6 31]) 5,
       readRegister (executeInstructions state
-        [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3,
+        [.sltu 31 0 13, .add 5 11 12, .sltu 6 5 12,
           .add 5 5 31, .sltu 31 5 31, .or 6 6 31]) 6) =
-      addCarryWords (readRegister state 2) (readRegister state 3)
-        (readRegister state 4) := by
+      addCarryWords (readRegister state 11) (readRegister state 12)
+        (readRegister state 13) := by
   exact wordFunctionToRiscVWithCalls_addCarry_result
     ({ targets := [] } : WordCallContext width) state _ zero (by
-      simp [wordFunctionToRiscVWithCalls, wordArithToInstructions,
-        registerOfNat])
+      simp [wordFunctionToRiscVWithCalls, wordArithToInstructions])
 
 example [NeZero width] (state : State width) :
     (readRegister (executeInstructions state
-      [.mulHU 5 2 3, .mul 6 2 3]) 5,
+      [.mulHU 5 11 12, .mul 6 11 12]) 5,
       readRegister (executeInstructions state
-        [.mulHU 5 2 3, .mul 6 2 3]) 6) =
+        [.mulHU 5 11 12, .mul 6 11 12]) 6) =
       (BitVec.ofNat width
-        ((readRegister state 2).toNat * (readRegister state 3).toNat / 2 ^ width),
-       readRegister state 2 * readRegister state 3) := by
+        ((readRegister state 11).toNat * (readRegister state 12).toNat / 2 ^ width),
+       readRegister state 11 * readRegister state 12) := by
   exact wordFunctionToRiscVWithCalls_longMul_result
     ({ targets := [] } : WordCallContext width) state _ (by
-      simp [wordFunctionToRiscVWithCalls, wordArithToInstructions,
-        registerOfNat])
+      simp [wordFunctionToRiscVWithCalls, wordArithToInstructions])
 
 
 example [NeZero width] (state : State width)
-    (hdivisor : readRegister state 3 ≠ 0) :
-    readRegister (executeInstructions state [.divU 5 2 3]) 5 =
+    (hdivisor : readRegister state 12 ≠ 0) :
+    readRegister (executeInstructions state [.divU 5 11 12]) 5 =
       (BitVec.ofNat width
-        ((readRegister state 2).toNat / (readRegister state 3).toNat)) := by
+        ((readRegister state 11).toNat / (readRegister state 12).toNat)) := by
   exact wordFunctionToRiscVWithCalls_div_result
     ({ targets := [] } : WordCallContext width) state _ hdivisor (by
       simp [wordFunctionToRiscVWithCalls, wordArithToInstructions,
-        wordArithToInstruction, registerOfNat])
+        wordArithToInstruction])
 
 
 example [NeZero width] (state : State width)
@@ -91,7 +89,7 @@ example [NeZero width] (state : State width)
     evalWordFunction state ((.return 0 [2, 3]) : WordProg (Word width)) =
       Option.map (fun returned => (executeInstructions state [], returned))
         (([2, 3] : List Nat).mapM (fun name => do
-          let register ← registerOfNat name
+          let register ← labRegisterOfNat name
           pure (readRegister state register))) := by
   exact wordFunctionToRiscVWithCalls_return_sound
     ({ targets := [] } : WordCallContext width) state 0 [2, 3] [] returns hcompile
@@ -99,20 +97,23 @@ example [NeZero width] (state : State width)
 example [NeZero width] (state : State width) :
     wordFunctionToRiscVWithCalls ({ targets := [] } : WordCallContext width)
         (.seq (.assign 2 (.const (BitVec.ofNat width 7))) (.return 0 [2])) =
-      some ([.addi 2 0 (BitVec.ofNat width 7)], [⟨2, by omega⟩]) ∧
+      some ([.addi 11 0 (BitVec.ofNat width 7)],
+        [⟨riscvRegisterName 2, by decide⟩]) ∧
     evalWordFunction state
         (.seq (.assign 2 (.const (BitVec.ofNat width 7))) (.return 0 [2])) =
-      some (executeInstructions state [.addi 2 0 (BitVec.ofNat width 7)],
+      some (executeInstructions state [.addi 11 0 (BitVec.ofNat width 7)],
         [readRegister (executeInstructions state
-          [.addi 2 0 (BitVec.ofNat width 7)]) ⟨2, by omega⟩]) := by
+          [.addi 11 0 (BitVec.ofNat width 7)])
+          ⟨riscvRegisterName 2, by decide⟩]) := by
   have h := wordFunctionToRiscVWithCalls_seq_return_sound
     ({ targets := [] } : WordCallContext width) state
     (.assign 2 (.const (BitVec.ofNat width 7)))
     (.assign 2 (.const (BitVec.ofNat width 7)) : WordRiscVStraightLine _)
-    0 [2] [.addi 2 0 (BitVec.ofNat width 7)] [⟨2, by omega⟩]
+    0 [2] [.addi 11 0 (BitVec.ofNat width 7)]
+    [⟨riscvRegisterName 2, by decide⟩]
     (by simp [wordFunctionToRiscVWithCalls, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat])
-    (by simp [wordFunctionToRiscVWithCalls, registerOfNat])
-  simpa [registerOfNat, Function.comp_def] using h
+      wordExpToInstruction])
+    (by simp [wordFunctionToRiscVWithCalls])
+  simpa [Function.comp_def] using h
 
 end Flapjack.RiscV

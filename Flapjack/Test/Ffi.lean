@@ -57,7 +57,8 @@ def ffiAbiState : State 64 :=
   writeRegister
     (writeRegister
       (writeRegister
-        (writeRegister (zeroState 64) 2 10) 3 1) 4 20) 5 2
+        (writeRegister
+          (writeRegister (zeroState 64) 10 2) 11 10) 12 1) 13 20) 5 2
 
 def ffiAbiHost : WordFfiHost 64 :=
   fun service configuration configurationLength array arrayLength state =>
@@ -84,11 +85,10 @@ example [NeZero width] :
     wordFunctionToRiscVWithCallsAndFfi
       ({ targets := [], services := [("sum", 7)] } : WordCallFfiContext width)
       (.seq (.ffi "sum" 2 3 4 5 ([], [])) (.return 0 [6])) =
-      some ([.addi 10 2 0, .addi 11 3 0, .addi 12 4 0, .addi 13 5 0,
+      some ([.addi 27 11 0, .addi 28 12 0, .addi 29 13 0, .addi 30 5 0,
         .addi 14 0 (BitVec.ofNat width 7), .ecall], [6]) := by
   simp [wordFunctionToRiscVWithCallsAndFfi, wordFfiToRiscV,
-    lookupWordFfiService, wordRegisterMoves, wordFunctionToRiscVWithCalls,
-    registerOfNat]
+    lookupWordFfiService, wordRegisterMoves, wordFunctionToRiscVWithCalls]
 
 example :
     ((wordFunctionToRiscVWithCallsAndFfi
@@ -112,9 +112,9 @@ example :
     (middle := writeRegister ffiAbiState 6 33)
     (final := writeRegister ffiAbiState 6 33)
   · simp [evalWordFunctionWithCallsAndFfi, evalWordFfi, ffiWordHandler,
-      ffiAbiState, writeRegister, readRegister, registerOfNat]
+      ffiAbiState, writeRegister, readRegister]
   · simp [evalWordFunctionWithCallsAndFfi, evalWordFunction,
-      ffiAbiState, writeRegister, readRegister, registerOfNat]
+      ffiAbiState, writeRegister, readRegister]
 
 example :
     evalWordFunctionWithCallsAndFfi [] ffiWordHandler 2 ffiAbiState
@@ -123,7 +123,7 @@ example :
   apply evalWordFunctionWithCallsAndFfi_seq_terminal
     (middle := ffiAbiState) (values := [10])
   · simp [evalWordFunctionWithCallsAndFfi, evalWordFunction,
-      ffiAbiState, writeRegister, readRegister, registerOfNat]
+      ffiAbiState, writeRegister, readRegister]
   · simp
 
 example :
@@ -134,7 +134,7 @@ example :
   apply evalWordFunctionWithCallsAndFfi_ite_true
   · decide
   · simp [evalWordFunctionWithCallsAndFfi, evalWordFfi, ffiWordHandler,
-      ffiAbiState, writeRegister, readRegister, registerOfNat]
+      ffiAbiState, writeRegister, readRegister]
 
 example :
     evalWordFunctionWithCallsAndFfi [] ffiWordHandler 2 ffiAbiState
@@ -144,13 +144,13 @@ example :
   apply evalWordFunctionWithCallsAndFfi_ite_false
   · decide
   · simp [evalWordFunctionWithCallsAndFfi, evalWordFunction,
-      ffiAbiState, writeRegister, readRegister, registerOfNat]
+      ffiAbiState, writeRegister, readRegister]
 
 example :
     wordFunctionToRiscVWithCallsAndFfiAndLoops
       ({ targets := [], services := [("sum", 7)] } : WordCallFfiContext 64)
       (.loop [] (.seq (.ffi "sum" 2 3 4 5 ([], [])) (.break 0)) []) =
-      some ([.addi 10 2 0, .addi 11 3 0, .addi 12 4 0, .addi 13 5 0,
+      some ([.addi 27 11 0, .addi 28 12 0, .addi 29 13 0, .addi 30 5 0,
         .addi 14 0 7, .ecall, .jal 0 8, .jal 0 (0 - BitVec.ofNat 64 28)], []) := by
   decide +kernel
 
@@ -158,7 +158,7 @@ example :
     linkWordFunctionsWithFfi (0 : Word 64) [("sum", 7)]
       [(7, [], (.seq (.ffi "sum" 2 3 4 5 ([], [])) (.return 0 [6])))] =
       some [(7, 0, [],
-        [.addi 10 2 0, .addi 11 3 0, .addi 12 4 0, .addi 13 5 0,
+        [.addi 27 11 0, .addi 28 12 0, .addi 29 13 0, .addi 30 5 0,
           .addi 14 0 7, .ecall, .jalr 0 1 0], [6])] := by
   simp [linkWordFunctionsWithFfi, wordFunctionTargetSignaturesWithCalls,
     wordFunctionTargetSignaturesAux, wordFunctionReturnNamesWithCalls,
@@ -168,14 +168,14 @@ example :
     wordControlInstructions, 
     wordFunctionToRiscVWithCallsAndFfi, wordFfiToRiscV,
     lookupWordFfiService, wordRegisterMoves, wordFunctionToRiscVWithCalls,
-    registerOfNat, linkRiscVFunctions,
+    linkRiscVFunctions,
     linkRiscVFunctionsAt]
 
 def combinedFfiHost : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
     State 64 → Option (State 64) :=
   fun function configuration _ _ _ state =>
     if function == "inc" then
-      some (writeRegister state 2 (configuration + 1))
+      some (writeRegister state 11 (configuration + 1))
     else none
 
 def combinedFfiFunctions : List (Nat × List Nat × WordProg (Word 64)) :=
@@ -185,7 +185,7 @@ def combinedFfiFunctions : List (Nat × List Nat × WordProg (Word 64)) :=
 
 example :
     (evalWordFunctionWithHandlersAndFfi combinedFfiFunctions combinedFfiHost 10
-      (writeRegister (zeroState 64) 1 41)
+      (writeRegister (zeroState 64) 10 41)
       (.call (some ([6], ([], []), .skip, 0, 0)) (some 7) [1] none)).map
         (fun result => match result with
         | .normal state => readRegister state 6
@@ -197,7 +197,7 @@ def combinedHandlerFunctions : List (Nat × List Nat × WordProg (Word 64)) :=
 
 example :
     (evalWordFunctionWithHandlersAndFfi combinedHandlerFunctions combinedFfiHost 10
-      (writeRegister (zeroState 64) 3 9)
+      (writeRegister (zeroState 64) 12 9)
       (.call (some ([], ([], []), .skip, 0, 0)) (some 8) [3]
         (some (8, .assign 7 (.var 8), 0, 0)))).map
         (fun result => match result with
@@ -246,14 +246,14 @@ def loopFfiLinkedCode : Option (List (Instruction 64)) := do
 def loopFfiIncrementHost : WordFfiHost 64 :=
   fun service configuration _ _ _ state =>
     if service = 7 then
-      some { (writeRegister state 2 (configuration + 1)) with
+      some { (writeRegister state 11 (configuration + 1)) with
         pc := state.pc + 4 }
     else none
 
 def loopFfiExecution : Option (List (Word 64)) := do
   let code ← loopFfiLinkedCode
-  executeFunctionAtWithFfi loopFfiIncrementHost 100 0 0 100 [] code [2] []
-    (writeRegister (writeRegister (zeroState 64) 1 100) 2 41)
+  executeFunctionAtWithFfi loopFfiIncrementHost 100 0 0 100 [] code [11] []
+    (writeRegister (writeRegister (zeroState 64) 1 100) 10 41)
 
 example : loopFfiLinkedCode.isSome := by
   decide +kernel

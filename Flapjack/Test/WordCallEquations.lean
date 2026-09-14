@@ -9,10 +9,10 @@ boundary instead of relying on a leaf constructor reduction.
 namespace Flapjack.RiscV
 
 def wordCallEquationState : State 8 :=
-  writeRegister (zeroState 8) 2 9
+  writeRegister (zeroState 8) 11 9
 
 def wordCallEquationCalleeState : State 8 :=
-  writeRegister (clearWordRegisters wordCallEquationState) 2 9
+  writeRegister (clearWordRegisters wordCallEquationState) 11 9
 
 def wordCallEquationHost : FunName → Word 8 → Word 8 → Word 8 → Word 8 →
     State 8 → Option (State 8) :=
@@ -42,14 +42,14 @@ example :
     (body := wordCallEquationReturnBody) (values := [9])
     (returnValues := [9])
   · rfl
-  · simp [wordCallEquationState, readWordRegisters, registerOfNat,
+  · simp [wordCallEquationState, readWordRegisters, labRegisterOfNat, registerOfNat,
       readRegister, writeRegister]
   · simp [wordCallEquationState, wordCallEquationCalleeState,
-      bindWordRegisters, clearWordRegisters, registerOfNat, writeRegister]
+      bindWordRegisters, clearWordRegisters, labRegisterOfNat, registerOfNat, writeRegister]
   · simp [wordCallEquationReturnBody,
       wordCallEquationState, wordCallEquationCalleeState,
       evalWordFunctionWithHandlersAndFfi, evalWordFunction,
-      registerOfNat, readRegister, writeRegister]
+      labRegisterOfNat, registerOfNat, readRegister, writeRegister]
 
 example :
     evalWordCallWithHandlersAndFfi
@@ -57,7 +57,7 @@ example :
         wordCallEquationState
         (some ([], ([], []), .skip, 0, 0)) (some 7) [2]
         (some (3, wordCallEquationHandlerBody, 11, 12)) =
-      some (.returned (writeRegister wordCallEquationState 3 9) [9]) := by
+      some (.returned (writeRegister wordCallEquationState 12 9) [9]) := by
   apply evalWordCallWithHandlersAndFfi_raise_handler_of_eval
     (functions := [(7, [2], wordCallEquationRaiseBody)])
     (ffiHandler := wordCallEquationHost) (fuel := 4)
@@ -68,21 +68,21 @@ example :
     (body := wordCallEquationRaiseBody) (values := [9])
     (exceptionValue := 9) (handlerName := 3) (handlerLabel := 11)
     (entryLabel := 12) (handlerBody := wordCallEquationHandlerBody)
-    (handlerRegister := 3)
-    (handlerResult := .returned (writeRegister wordCallEquationState 3 9) [9])
+    (handlerRegister := 12)
+    (handlerResult := .returned (writeRegister wordCallEquationState 12 9) [9])
   · rfl
-  · simp [wordCallEquationState, readWordRegisters, registerOfNat,
+  · simp [wordCallEquationState, readWordRegisters, labRegisterOfNat, registerOfNat,
       readRegister, writeRegister]
   · simp [wordCallEquationState, wordCallEquationCalleeState,
-      bindWordRegisters, clearWordRegisters, registerOfNat, writeRegister]
+      bindWordRegisters, clearWordRegisters, labRegisterOfNat, registerOfNat, writeRegister]
   · simp [wordCallEquationRaiseBody,
       wordCallEquationState, wordCallEquationCalleeState,
       evalWordFunctionWithHandlersAndFfi, evalWordFunction,
-      registerOfNat, readRegister, writeRegister]
+      labRegisterOfNat, registerOfNat, readRegister, writeRegister]
   · decide
   · simp [wordCallEquationHandlerBody,
       wordCallEquationState, wordCallEquationCalleeState,
       evalWordFunctionWithHandlersAndFfi, evalWordFunction,
-      registerOfNat, readRegister, writeRegister, clearWordRegisters]
+      labRegisterOfNat, registerOfNat, readRegister, writeRegister, clearWordRegisters]
 
 end Flapjack.RiscV

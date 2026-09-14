@@ -802,36 +802,36 @@ theorem wordFunctionToRiscV_ite_assign [NeZero width] :
         ((.ite .equal 1 (.reg 2)
           (.assign 3 (.const (1 : Word width)))
           (.assign 3 (.const (2 : Word width)))) : WordProg (Word width)) =
-      some ([.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
-        .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2], []) := by
+      some ([.branchNe 10 11 (BitVec.ofNat width 12), .addi 12 0 1,
+        .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2], []) := by
   simp [wordFunctionToRiscV, wordConditionOperands, wordExpToInstructions,
-    wordExpToInstruction, registerOfNat]
+    wordExpToInstruction]
 
 theorem executeCode_ite_assign [NeZero width] (state : State width) (hpc : state.pc = 0)
     (hzero : ZeroRegister state) (hwidth : 5 ≤ width) :
     (executeCode 5 0
-      [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
-        .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state).map
-      (fun state => readRegister state 3) =
-      if readRegister state 1 == readRegister state 2 then
+      [.branchNe 10 11 (BitVec.ofNat width 12), .addi 12 0 1,
+        .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] state).map
+      (fun state => readRegister state 12) =
+      if readRegister state 10 == readRegister state 11 then
         some (1 : Word width)
       else
         some (2 : Word width) := by
   have hzero' : state.registers 0 = 0 := by
     simpa [ZeroRegister, readRegister] using hzero
-  have hthen : advancesPc (.addi 3 0 (1 : Word width)) := by
+  have hthen : advancesPc (.addi 12 0 (1 : Word width)) := by
     intro state
     simp [execute, writeRegister, nextPc]
-  have helse : advancesPc (.addi 3 0 (2 : Word width)) := by
+  have helse : advancesPc (.addi 12 0 (2 : Word width)) := by
     intro state
     simp [execute, writeRegister, nextPc]
-  have hrun := executeCode_conditional_single state .equal 1 2
-    (.addi 3 0 (1 : Word width)) (.addi 3 0 (2 : Word width)) hpc
+  have hrun := executeCode_conditional_single state .equal 10 11
+    (.addi 12 0 (1 : Word width)) (.addi 12 0 (2 : Word width)) hpc
     hwidth hthen helse
-  by_cases hcondition : readRegister state 1 = readRegister state 2
-  · have hrisc : riscVCondition state .equal 1 2 = true := by
+  by_cases hcondition : readRegister state 10 = readRegister state 11
+  · have hrisc : riscVCondition state .equal 10 11 = true := by
       simp [riscVCondition, hcondition]
-    have hcondition' : state.registers 1 = state.registers 2 := by
+    have hcondition' : state.registers 10 = state.registers 11 := by
       simpa [readRegister] using hcondition
     rw [if_pos hrisc] at hrun
     simp only [riscVBranchFalseInstruction] at hrun
@@ -839,9 +839,9 @@ theorem executeCode_ite_assign [NeZero width] (state : State width) (hpc : state
     simp [execute, writeRegister, readRegister, nextPc, hzero']
     intro hne
     exact (hne hcondition').elim
-  · have hrisc : ¬riscVCondition state .equal 1 2 = true := by
+  · have hrisc : ¬riscVCondition state .equal 10 11 = true := by
       simp [riscVCondition, hcondition]
-    have hcondition' : ¬state.registers 1 = state.registers 2 := by
+    have hcondition' : ¬state.registers 10 = state.registers 11 := by
       intro heq
       apply hcondition
       simpa [readRegister] using heq
@@ -859,20 +859,20 @@ theorem evalWordFunction_ite_assign_riscV_register [NeZero width]
       ((.ite .equal 1 (.reg 2)
         (.assign 3 (.const (1 : Word width)))
         (.assign 3 (.const (2 : Word width)))) : WordProg (Word width))).map
-      (fun result => readRegister result.1 3) =
+      (fun result => readRegister result.1 12) =
       (executeCode 5 0
-        [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
-          .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state).map
-        (fun finalState => readRegister finalState 3) := by
+        [.branchNe 10 11 (BitVec.ofNat width 12), .addi 12 0 1,
+          .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] state).map
+        (fun finalState => readRegister finalState 12) := by
   have hzero' : state.registers 0 = 0 := by
     simpa [ZeroRegister, readRegister] using hzero
   rw [executeCode_ite_assign state hpc hzero hwidth]
-  by_cases hcondition : state.registers 1 = state.registers 2
+  by_cases hcondition : state.registers 10 = state.registers 11
   · simp [evalWordFunction, evalWordCondition, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat, executeInstructions, execute,
+      wordExpToInstruction, executeInstructions, execute,
       writeRegister, readRegister, nextPc, hzero', hcondition]
   · simp [evalWordFunction, evalWordCondition, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat, executeInstructions, execute,
+      wordExpToInstruction, executeInstructions, execute,
       writeRegister, readRegister, nextPc, hzero', hcondition]
 
 /-! The counted machine boundary for the concrete register-conditional
@@ -884,31 +884,31 @@ theorem executeCodeUntilWithFfiCounted_ite_assign [NeZero width]
     (hpc : state.pc = 0) (hzero : ZeroRegister state)
     (hwidth : 5 ≤ width) :
     (executeCodeUntilWithFfiCounted host
-      (if readRegister state 1 == readRegister state 2 then 5 else 3) 0
+      (if readRegister state 10 == readRegister state 11 then 5 else 3) 0
       (BitVec.ofNat width 16)
-      [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
-        .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state).map
-      (fun result => (readRegister result.1 3, result.2)) =
-      if readRegister state 1 == readRegister state 2 then
+      [.branchNe 10 11 (BitVec.ofNat width 12), .addi 12 0 1,
+        .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] state).map
+      (fun result => (readRegister result.1 12, result.2)) =
+      if readRegister state 10 == readRegister state 11 then
         some ((1 : Word width), 3)
       else some ((2 : Word width), 2) := by
   have hzero' : state.registers 0 = 0 := by
     simpa [ZeroRegister, readRegister] using hzero
   have hrun := executeCodeUntilWithFfiCounted_conditional_of_nonbranching
     (host := host) (state := state) (operator := .equal)
-    (left := 1) (right := 2) (thenCode := [.addi 3 0 1])
-    (elseCode := [.addi 3 0 2])
+    (left := 10) (right := 11) (thenCode := [.addi 12 0 1])
+    (elseCode := [.addi 12 0 2])
     (thenState := execute (execute state
-      (riscVBranchFalseInstruction .equal 1 2 (BitVec.ofNat width 12)))
-      (.addi 3 0 1))
+      (riscVBranchFalseInstruction .equal 10 11 (BitVec.ofNat width 12)))
+      (.addi 12 0 1))
     (elseState := execute (execute state
-      (riscVBranchFalseInstruction .equal 1 2 (BitVec.ofNat width 12)))
-      (.addi 3 0 2))
+      (riscVBranchFalseInstruction .equal 10 11 (BitVec.ofNat width 12)))
+      (.addi 12 0 2))
     (thenCount := 1) (elseCount := 1)
     (hpc := hpc)
     (hthenAdvance := by
       intro current instruction hinstruction next hstep
-      have hinstruction' : instruction = .addi 3 0 1 := by
+      have hinstruction' : instruction = .addi 12 0 1 := by
         simpa using hinstruction
       subst instruction
       simp [executeWithFfi, execute, writeRegister, nextPc] at hstep
@@ -916,7 +916,7 @@ theorem executeCodeUntilWithFfiCounted_ite_assign [NeZero width]
         (congrArg State.pc hstep).symm)
     (helseAdvance := by
       intro current instruction hinstruction next hstep
-      have hinstruction' : instruction = .addi 3 0 2 := by
+      have hinstruction' : instruction = .addi 12 0 2 := by
         simpa using hinstruction
       subst instruction
       simp [executeWithFfi, execute, writeRegister, nextPc] at hstep
@@ -928,38 +928,38 @@ theorem executeCodeUntilWithFfiCounted_ite_assign [NeZero width]
       have hp : 2 ^ 5 ≤ 2 ^ width := by
         exact Nat.pow_le_pow_right (by decide) hwidth
       omega)
-  by_cases hcondition : readRegister state 1 = readRegister state 2
-  · have hrisc : riscVCondition state .equal 1 2 = true := by
+  by_cases hcondition : readRegister state 10 = readRegister state 11
+  · have hrisc : riscVCondition state .equal 10 11 = true := by
       simp [riscVCondition, hcondition]
-    have hcondition' : state.registers 1 = state.registers 2 := by
+    have hcondition' : state.registers 10 = state.registers 11 := by
       simpa [readRegister] using hcondition
     have hrun' :
         executeCodeUntilWithFfiCounted host 5 0 (BitVec.ofNat width 16)
-            [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
-              .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state =
+            [.branchNe 10 11 (BitVec.ofNat width 12), .addi 12 0 1,
+              .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] state =
           some
             (execute (execute (execute state
-              (.branchNe 1 2 (BitVec.ofNat width 12))) (.addi 3 0 1))
+              (.branchNe 10 11 (BitVec.ofNat width 12))) (.addi 12 0 1))
               (.branchEq 0 0 (BitVec.ofNat width 8)), 3) := by
       simpa [riscVBranchFalseInstruction, riscVCondition, hcondition] using hrun
-    have hconditionBool : (readRegister state 1 == readRegister state 2) = true := by
+    have hconditionBool : (readRegister state 10 == readRegister state 11) = true := by
       simp [hcondition]
     rw [if_pos hconditionBool]
     rw [hrun']
     simp [execute, writeRegister, readRegister, nextPc, hzero', hcondition']
-  · have hrisc : ¬riscVCondition state .equal 1 2 = true := by
+  · have hrisc : ¬riscVCondition state .equal 10 11 = true := by
       simp [riscVCondition, hcondition]
-    have hcondition' : ¬state.registers 1 = state.registers 2 := by
+    have hcondition' : ¬state.registers 10 = state.registers 11 := by
       simpa [readRegister] using hcondition
     have hrun' :
         executeCodeUntilWithFfiCounted host 3 0 (BitVec.ofNat width 16)
-            [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
-              .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state =
+            [.branchNe 10 11 (BitVec.ofNat width 12), .addi 12 0 1,
+              .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] state =
           some
             (execute (execute state
-              (.branchNe 1 2 (BitVec.ofNat width 12))) (.addi 3 0 2), 2) := by
+              (.branchNe 10 11 (BitVec.ofNat width 12))) (.addi 12 0 2), 2) := by
       simpa [riscVBranchFalseInstruction, riscVCondition, hcondition] using hrun
-    have hconditionBool : ¬((readRegister state 1 == readRegister state 2) = true) := by
+    have hconditionBool : ¬((readRegister state 10 == readRegister state 11) = true) := by
       simp [hcondition]
     rw [if_neg hconditionBool]
     rw [hrun']
@@ -977,37 +977,37 @@ theorem evalWordFunction_ite_assign_counted_riscV_register [NeZero width]
       ((.ite .equal 1 (.reg 2)
         (.assign 3 (.const (1 : Word width)))
         (.assign 3 (.const (2 : Word width)))) : WordProg (Word width))).map
-      (fun result => readRegister result.1 3)).map
+      (fun result => readRegister result.1 12)).map
         (fun value =>
-          (value, if readRegister state 1 == readRegister state 2 then 3 else 2)) =
+          (value, if readRegister state 10 == readRegister state 11 then 3 else 2)) =
       (executeCodeUntilWithFfiCounted host
-        (if readRegister state 1 == readRegister state 2 then 5 else 3) 0
+        (if readRegister state 10 == readRegister state 11 then 5 else 3) 0
         (BitVec.ofNat width 16)
-        [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
-          .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state).map
-        (fun result => (readRegister result.1 3, result.2)) := by
+        [.branchNe 10 11 (BitVec.ofNat width 12), .addi 12 0 1,
+          .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] state).map
+        (fun result => (readRegister result.1 12, result.2)) := by
   have hsource := evalWordFunction_ite_assign_riscV_register
     (state := state) hpc hzero hwidth
   have hmachine := executeCodeUntilWithFfiCounted_ite_assign
     (host := host) (state := state) hpc hzero hwidth
-  by_cases hcondition : readRegister state 1 = readRegister state 2
+  by_cases hcondition : readRegister state 10 = readRegister state 11
   · have hsourceValue :
         (evalWordFunction state
           ((.ite .equal 1 (.reg 2)
             (.assign 3 (.const (1 : Word width)))
             (.assign 3 (.const (2 : Word width)))) : WordProg (Word width))).map
-          (fun result => readRegister result.1 3) =
+          (fun result => readRegister result.1 12) =
           some (1 : Word width) := by
       rw [hsource]
       rw [executeCode_ite_assign state hpc hzero hwidth]
       simp [hcondition]
     have hmachineValue :
         (executeCodeUntilWithFfiCounted host
-          (if readRegister state 1 == readRegister state 2 then 5 else 3) 0
+          (if readRegister state 10 == readRegister state 11 then 5 else 3) 0
           (BitVec.ofNat width 16)
-          [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
-            .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state).map
-          (fun result => (readRegister result.1 3, result.2)) =
+          [.branchNe 10 11 (BitVec.ofNat width 12), .addi 12 0 1,
+            .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] state).map
+          (fun result => (readRegister result.1 12, result.2)) =
           some ((1 : Word width), 3) := by
       rw [hmachine]
       simp [hcondition]
@@ -1018,18 +1018,18 @@ theorem evalWordFunction_ite_assign_counted_riscV_register [NeZero width]
           ((.ite .equal 1 (.reg 2)
             (.assign 3 (.const (1 : Word width)))
             (.assign 3 (.const (2 : Word width)))) : WordProg (Word width))).map
-          (fun result => readRegister result.1 3) =
+          (fun result => readRegister result.1 12) =
           some (2 : Word width) := by
       rw [hsource]
       rw [executeCode_ite_assign state hpc hzero hwidth]
       simp [hcondition]
     have hmachineValue :
         (executeCodeUntilWithFfiCounted host
-          (if readRegister state 1 == readRegister state 2 then 5 else 3) 0
+          (if readRegister state 10 == readRegister state 11 then 5 else 3) 0
           (BitVec.ofNat width 16)
-          [.branchNe 1 2 (BitVec.ofNat width 12), .addi 3 0 1,
-            .branchEq 0 0 (BitVec.ofNat width 8), .addi 3 0 2] state).map
-          (fun result => (readRegister result.1 3, result.2)) =
+          [.branchNe 10 11 (BitVec.ofNat width 12), .addi 12 0 1,
+            .branchEq 0 0 (BitVec.ofNat width 8), .addi 12 0 2] state).map
+          (fun result => (readRegister result.1 12, result.2)) =
           some ((2 : Word width), 2) := by
       rw [hmachine]
       simp [hcondition]

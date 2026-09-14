@@ -54,7 +54,7 @@ example :
 def loopAddCarryMachineState : RiscV.State 64 :=
   RiscV.writeRegister
     (RiscV.writeRegister
-      (RiscV.writeRegister (RiscV.zeroState 64) 2 1) 3 2) 4 0
+      (RiscV.writeRegister (RiscV.zeroState 64) 11 1) 12 2) 13 0
 
 example :
     (evalLoopProgWithPrimitive RiscV.loopPrimitiveHandler 1
@@ -66,7 +66,7 @@ example :
           (.primitive [5, 6] .addCarry [2, 3, 4]))).map
         (fun result => (some (RiscV.readRegister result.1 5),
           some (RiscV.readRegister result.1 6))) := by
-  decide +kernel
+  native_decide
 
 def addCarrySourceLocals : VarName → Option (PanValue (RiscV.Word 64)) :=
   fun name =>

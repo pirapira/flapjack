@@ -28,7 +28,7 @@ def primitiveMappedLocals : Nat → Option (RiscV.Word 64) :=
 def primitiveMappedState : RiscV.State 64 :=
   RiscV.writeRegister
     (RiscV.writeRegister
-      (RiscV.writeRegister (RiscV.zeroState 64) 2 1) 3 2) 4 0
+      (RiscV.writeRegister (RiscV.zeroState 64) 11 1) 12 2) 13 0
 
 def primitiveMappedLoopState : LoopState (RiscV.Word 64) :=
   { locals := primitiveMappedLocals
@@ -43,57 +43,57 @@ theorem primitiveMappedLocals_relation :
   · subst name
     simp [primitiveMappedLocals] at hvalue
     subst value
-    refine ⟨2, by decide, ?_⟩
+    refine ⟨11, by decide, ?_⟩
     simp [primitiveMappedState, RiscV.writeRegister, RiscV.readRegister]
   · by_cases hname_three : name = 3
     · subst name
       simp [primitiveMappedLocals] at hvalue
       subst value
-      refine ⟨3, by decide, ?_⟩
+      refine ⟨12, by decide, ?_⟩
       simp [primitiveMappedState, RiscV.writeRegister, RiscV.readRegister]
     · by_cases hname_four : name = 4
       · subst name
         simp [primitiveMappedLocals] at hvalue
         subst value
-        refine ⟨4, by decide, ?_⟩
+        refine ⟨13, by decide, ?_⟩
         simp [primitiveMappedState, RiscV.writeRegister, RiscV.readRegister]
       · simp [primitiveMappedLocals, hname, hname_three, hname_four] at hvalue
 
 theorem primitiveMapped_noalias :
     ∀ name, name ≠ 5 → name ≠ 6 →
       ∀ register,
-        RiscV.registerOfNat (wordFindVar primitiveMappedContext name) =
+        RiscV.labRegisterOfNat (wordFindVar primitiveMappedContext name) =
           some register →
         register ≠ 5 ∧ register ≠ 6 ∧ register ≠ 31 := by
   intro name hname_five hname_six register hregister
   by_cases hname_thirtyOne : name = 31
   · subst name
-    simp [primitiveMappedContext, wordFindVar, lookupNatInfo,
-      RiscV.registerOfNat] at hregister
+    have hreg : register = 1 := by
+      simpa [primitiveMappedContext, wordFindVar, lookupNatInfo] using hregister.symm
     subst register
     decide
-  · have hregister' : RiscV.registerOfNat name = some register := by
+  · have hregister' : RiscV.labRegisterOfNat name = some register := by
       simpa [primitiveMappedContext, wordFindVar, lookupNatInfo,
         hname_thirtyOne, Ne.symm hname_thirtyOne] using hregister
-    have hfive : RiscV.registerOfNat 5 = some (5 : Fin 32) := by
+    have hfive : RiscV.labRegisterOfNat 5 = some (5 : Fin 32) := by
       decide
-    have hsix : RiscV.registerOfNat 6 = some (6 : Fin 32) := by
+    have hsix : RiscV.labRegisterOfNat 6 = some (6 : Fin 32) := by
       decide
-    have hthirtyOne : RiscV.registerOfNat 31 = some (31 : Fin 32) := by
+    have hthirtyOne : RiscV.labRegisterOfNat 31 = some (31 : Fin 32) := by
       decide
     constructor
     · intro heq
       have hname : name = 5 :=
-        RiscV.registerOfNat_injective hregister' hfive heq
+        RiscV.labRegisterOfNat_injective hregister' hfive heq
       exact hname_five hname
     constructor
     · intro heq
       have hname : name = 6 :=
-        RiscV.registerOfNat_injective hregister' hsix heq
+        RiscV.labRegisterOfNat_injective hregister' hsix heq
       exact hname_six hname
     · intro heq
       have hname : name = 31 :=
-        RiscV.registerOfNat_injective hregister' hthirtyOne heq
+        RiscV.labRegisterOfNat_injective hregister' hthirtyOne heq
       exact hname_thirtyOne hname
 
 theorem primitiveMapped_addCarry_preserves_mapped_locals :
@@ -112,7 +112,7 @@ theorem primitiveMapped_addCarry_preserves_mapped_locals :
     (state := primitiveMappedState)
     (destination := 5) (resultCarry := 6) (left := 2) (right := 3) (carry := 4)
     (destinationRegister := 5) (resultCarryRegister := 6)
-    (leftRegister := 2) (rightRegister := 3) (carryRegister := 4)
+    (leftRegister := 11) (rightRegister := 12) (carryRegister := 13)
     (leftValue := BitVec.ofNat 64 1) (rightValue := BitVec.ofNat 64 2)
     (carryValue := BitVec.ofNat 64 0)
     (hlocals := primitiveMappedLocals_relation)
@@ -174,14 +174,14 @@ example :
 theorem primitiveMapped_longMul_noalias :
     ∀ name, name ≠ 5 →
       ∀ register,
-        RiscV.registerOfNat (wordFindVar primitiveMappedContext name) =
+        RiscV.labRegisterOfNat (wordFindVar primitiveMappedContext name) =
           some register → register ≠ 5 := by
   intro name hname register hregister heq
   have hfive :
-      RiscV.registerOfNat (wordFindVar primitiveMappedContext 5) =
+      RiscV.labRegisterOfNat (wordFindVar primitiveMappedContext 5) =
         some (5 : Fin 32) := by
     decide
-  have hname' := RiscV.registerOfNat_injective hregister hfive heq
+  have hname' := RiscV.labRegisterOfNat_injective hregister hfive heq
   by_cases hthirtyOne : name = 31
   · subst name
     simp [primitiveMappedContext, wordFindVar, lookupNatInfo] at hname'
@@ -301,7 +301,7 @@ example :
             some (RiscV.readRegister result 6))) := by
   apply loopToWord_primitive_addCarry_agreement
     ({ vars := [] } : WordContext) loopAddCarryState loopAddCarryMachineState
-    5 6 2 3 4 5 6 2 3 4
+    5 6 2 3 4 5 6 11 12 13
     (BitVec.ofNat 64 1) (BitVec.ofNat 64 2) (BitVec.ofNat 64 0)
   all_goals decide
 

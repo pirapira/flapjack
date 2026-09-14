@@ -14,7 +14,7 @@ def memoryCorrectnessLoopState : LoopState (RiscV.Word 64) :=
 def memoryCorrectnessWordState : RiscV.State 64 :=
   RiscV.writeRegister
     (RiscV.writeWord32 (RiscV.zeroState 64) (BitVec.ofNat 64 16)
-      (BitVec.ofNat 64 42)) 3 (BitVec.ofNat 64 16)
+      (BitVec.ofNat 64 42)) ⟨RiscV.riscvRegisterName 3, by decide⟩ (BitVec.ofNat 64 16)
 
 theorem memoryCorrectness_mappedLocals :
     loopLocalsMappedToRiscV memoryCorrectnessContext
@@ -24,7 +24,7 @@ theorem memoryCorrectness_mappedLocals :
   · subst name
     simp [memoryCorrectnessLoopState] at hvalue
     subst value
-    refine ⟨3, ?_, ?_⟩
+    refine ⟨⟨RiscV.riscvRegisterName 3, by decide⟩, ?_, ?_⟩
     · decide
     · simp [memoryCorrectnessWordState, RiscV.writeRegister,
         RiscV.readRegister]
@@ -33,12 +33,29 @@ theorem memoryCorrectness_mappedLocals :
 theorem memoryCorrectness_noalias :
     ∀ name, name ≠ 2 →
       ∀ register,
-        RiscV.registerOfNat (wordFindVar memoryCorrectnessContext name) =
-          some register → register ≠ 2 := by
+        RiscV.labRegisterOfNat (wordFindVar memoryCorrectnessContext name) =
+          some register →
+        register ≠ (⟨RiscV.riscvRegisterName 2, by decide⟩ : Fin 32) := by
   intro name hname register hregister heq
-  have htwo : RiscV.registerOfNat 2 = some (2 : Fin 32) := by
-    decide
-  have hfind := RiscV.registerOfNat_injective hregister htwo heq
+  have hleft :
+      RiscV.registerOfNat
+          (RiscV.riscvRegisterName (wordFindVar memoryCorrectnessContext name)) =
+        some register := by
+    simpa [RiscV.labRegisterOfNat] using hregister
+  have hright :
+      RiscV.registerOfNat (RiscV.riscvRegisterName 2) =
+        some (⟨RiscV.riscvRegisterName 2, by decide⟩ : Fin 32) :=
+    RiscV.labRegisterOfNat_of_lt_32 (by decide : 2 < 32)
+  have hriscv :
+      RiscV.riscvRegisterName (wordFindVar memoryCorrectnessContext name) =
+        RiscV.riscvRegisterName 2 :=
+    RiscV.registerOfNat_injective hleft hright heq
+  have hlt :
+      RiscV.riscvRegisterName (wordFindVar memoryCorrectnessContext name) < 32 :=
+    RiscV.registerOfNat_some_lt hleft
+  have hfind : wordFindVar memoryCorrectnessContext name = 2 :=
+    RiscV.riscvRegisterName_injective_lt_32
+      (RiscV.lt_32_of_riscvRegisterName_lt_32 hlt) (by decide) hriscv
   by_cases hname_one : name = 1
   · subst name
     simp [memoryCorrectnessContext, wordFindVar, lookupNatInfo] at hfind
@@ -59,7 +76,7 @@ example :
     (context := memoryCorrectnessContext)
     (loopState := memoryCorrectnessLoopState)
     (state := memoryCorrectnessWordState)
-    (address := 1) (destination := 2) (destinationRegister := 2)
+    (address := 1) (destination := 2) (destinationRegister := ⟨RiscV.riscvRegisterName 2, by decide⟩)
     (addressValue := BitVec.ofNat 64 16)
     (value := BitVec.ofNat 64 42)
     (zero := by
@@ -72,7 +89,7 @@ example :
       · subst name
         simp [memoryCorrectnessLoopState] at hvalue
         subst value
-        refine ⟨3, ?_, ?_⟩
+        refine ⟨⟨RiscV.riscvRegisterName 3, by decide⟩, ?_, ?_⟩
         · decide
         · simp [memoryCorrectnessWordState, RiscV.writeRegister,
             RiscV.readRegister]
@@ -82,20 +99,7 @@ example :
     (hmachine := by decide)
     (hdestination := by decide)
     (hdestination_nonzero := by decide)
-    (hnoalias := by
-      intro name hname register hregister
-      have htwo : RiscV.registerOfNat 2 = some (2 : Fin 32) := by
-        decide
-      intro heq
-      have hfind := RiscV.registerOfNat_injective hregister htwo heq
-      by_cases hname_one : name = 1
-      · subst name
-        simp [memoryCorrectnessContext, wordFindVar, lookupNatInfo] at hfind
-      · by_cases hname_two : name = 2
-        · exact (hname hname_two).elim
-        · simp [memoryCorrectnessContext, wordFindVar, lookupNatInfo,
-            hname_two, Ne.symm hname_one, Ne.symm hname_two] at hfind
-          )
+    (hnoalias := memoryCorrectness_noalias)
 
 example :
     ∀ resultState,
@@ -109,7 +113,7 @@ example :
     (context := memoryCorrectnessContext)
     (loopState := memoryCorrectnessLoopState)
     (state := memoryCorrectnessWordState)
-    (address := 1) (destination := 2) (destinationRegister := 2)
+    (address := 1) (destination := 2) (destinationRegister := ⟨RiscV.riscvRegisterName 2, by decide⟩)
     (addressValue := BitVec.ofNat 64 16)
     (byteValue := BitVec.ofNat 8 42)
     (hlocals := memoryCorrectness_mappedLocals)
@@ -131,7 +135,7 @@ example :
     (loopState := memoryCorrectnessLoopState)
     (state := memoryCorrectnessWordState)
     (address := 1) (value := 1)
-    (addressRegister := 3) (valueRegister := 3)
+    (addressRegister := ⟨RiscV.riscvRegisterName 3, by decide⟩) (valueRegister := ⟨RiscV.riscvRegisterName 3, by decide⟩)
     (haddress := by decide)
     (hvalue := by decide)
     (hlocals := memoryCorrectness_mappedLocals)
@@ -186,7 +190,7 @@ example :
     (context := memoryCorrectnessContext)
     (loopState := memoryCorrectnessLoopState)
     (state := memoryCorrectnessWordState)
-    (address := 1) (destination := 2) (destinationRegister := 2)
+    (address := 1) (destination := 2) (destinationRegister := ⟨RiscV.riscvRegisterName 2, by decide⟩)
     (addressValue := BitVec.ofNat 64 16)
     (byteValue := BitVec.ofNat 8 42)
     (zero := by
@@ -213,7 +217,7 @@ example :
     (loopState := memoryCorrectnessLoopState)
     (state := memoryCorrectnessWordState)
     (address := 1) (value := 1)
-    (addressRegister := 3) (valueRegister := 3)
+    (addressRegister := ⟨RiscV.riscvRegisterName 3, by decide⟩) (valueRegister := ⟨RiscV.riscvRegisterName 3, by decide⟩)
     (haddress := by decide)
     (hvalue := by decide)
     (hlocals := memoryCorrectness_mappedLocals)
@@ -230,7 +234,7 @@ example :
     (context := memoryCorrectnessContext)
     (loopState := memoryCorrectnessLoopState)
     (state := memoryCorrectnessWordState)
-    (address := 1) (destination := 2) (destinationRegister := 2)
+    (address := 1) (destination := 2) (destinationRegister := ⟨RiscV.riscvRegisterName 2, by decide⟩)
     (addressValue := BitVec.ofNat 64 16)
     (value := BitVec.ofNat 64 42)
     (zero := by
@@ -257,7 +261,7 @@ example :
     (loopState := memoryCorrectnessLoopState)
     (state := memoryCorrectnessWordState)
     (address := 1) (value := 1)
-    (addressRegister := 3) (valueRegister := 3)
+    (addressRegister := ⟨RiscV.riscvRegisterName 3, by decide⟩) (valueRegister := ⟨RiscV.riscvRegisterName 3, by decide⟩)
     (haddress := by decide)
     (hvalue := by decide)
     (hlocals := memoryCorrectness_mappedLocals)
@@ -274,7 +278,7 @@ example :
     (context := memoryCorrectnessContext)
     (loopState := memoryCorrectnessLoopState)
     (state := memoryCorrectnessWordState)
-    (address := 1) (destination := 2) (destinationRegister := 2)
+    (address := 1) (destination := 2) (destinationRegister := ⟨RiscV.riscvRegisterName 2, by decide⟩)
     (addressValue := BitVec.ofNat 64 16)
     (value := BitVec.ofNat 64 42)
     (hlocals := memoryCorrectness_mappedLocals)
@@ -296,7 +300,7 @@ example :
     (loopState := memoryCorrectnessLoopState)
     (state := memoryCorrectnessWordState)
     (address := 1) (value := 1)
-    (addressRegister := 3) (valueRegister := 3)
+    (addressRegister := ⟨RiscV.riscvRegisterName 3, by decide⟩) (valueRegister := ⟨RiscV.riscvRegisterName 3, by decide⟩)
     (haddress := by decide)
     (hvalue := by decide)
     (hlocals := memoryCorrectness_mappedLocals)
@@ -321,10 +325,8 @@ example :
       by_cases hname : name = 1
       · subst name
         simp [memoryCorrectnessContext, wordFindVar, lookupNatInfo] at hregister
-        have hthree : RiscV.registerOfNat 3 = some (3 : Fin 32) := by
-          decide
-        have hregister' : register = (3 : Fin 32) := by
-          exact Option.some.inj (hregister.symm.trans hthree)
+        have hregister' : register = (12 : Fin 32) := by
+          simpa using hregister.symm
         rw [hregister']
         decide
       · simp [memoryCorrectnessLoopState, hname] at hcurrent)
@@ -342,7 +344,7 @@ example :
     (loopState := memoryCorrectnessLoopState)
     (state := memoryCorrectnessWordState)
     (address := BitVec.ofNat 64 16) (destination := 2)
-    (destinationRegister := 2) (value := BitVec.ofNat 64 42)
+    (destinationRegister := ⟨RiscV.riscvRegisterName 2, by decide⟩) (value := BitVec.ofNat 64 42)
     (zero := by
       change memoryCorrectnessWordState.registers (0 : Fin 32) = 0
       simp [memoryCorrectnessWordState, RiscV.writeRegister,
@@ -358,10 +360,8 @@ example :
       by_cases hname : name = 1
       · subst name
         simp [memoryCorrectnessContext, wordFindVar, lookupNatInfo] at hregister
-        have hthree : RiscV.registerOfNat 3 = some (3 : Fin 32) := by
-          decide
-        have hregister' : register = (3 : Fin 32) := by
-          exact Option.some.inj (hregister.symm.trans hthree)
+        have hregister' : register = (12 : Fin 32) := by
+          simpa using hregister.symm
         rw [hregister']
         decide
       · simp [memoryCorrectnessLoopState, hname] at hcurrent)

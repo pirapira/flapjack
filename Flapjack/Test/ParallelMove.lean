@@ -17,23 +17,23 @@ example :
 
 example :
     wordMoveToInstructions (width := 8) [(1, 2), (2, 1)] =
-      some [.addi 31 2 0, .addi 2 1 0, .addi 1 31 0] := by
+      some [.addi 31 11 0, .addi 11 10 0, .addi 10 31 0] := by
   decide +kernel
 
 example :
     wordMoveToInstructions (width := 8) [(5, 2), (9, 3)] =
-      some [.addi 5 2 0, .addi 9 3 0] := by
+      some [.addi 5 11 0, .addi ⟨riscvRegisterName 9, by decide⟩ 12 0] := by
   have h := wordMoveToInstructions_of_no_source_destination
     (width := 8) [(5, 2), (9, 3)] (by decide) (by decide) (by decide)
   simpa [wordMoveInstructionList, wordExpToInstructions,
-    wordExpToInstruction, registerOfNat] using h
+    wordExpToInstruction] using h
 
 example [NeZero 8] (state : State 8) :
     let moves := [(5, 2), (9, 3)]
     let final := executeInstructions state
       (moves.flatMap (wordMoveInstructionList (width := 8)))
-    readRegister final 5 = readRegister state 2 ∧
-      readRegister final 9 = readRegister state 3 := by
+    readRegister final ⟨riscvRegisterName 5, by decide⟩ = readRegister state ⟨riscvRegisterName 2, by decide⟩ ∧
+      readRegister final ⟨riscvRegisterName 9, by decide⟩ = readRegister state ⟨riscvRegisterName 3, by decide⟩ := by
   dsimp
   have h := executeWordMoves_preserves_sources state [(5, 2), (9, 3)]
     (by decide) (by decide) (by decide) (by decide)

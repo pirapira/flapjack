@@ -13,7 +13,7 @@ def handlerCallLoopState : LoopState (Word 8) :=
     memory := fun _ => none }
 
 def handlerCallWordState : State 8 :=
-  writeRegister (zeroState 8) 2 9
+  writeRegister (zeroState 8) ⟨riscvRegisterName 2, by decide⟩ 9
 
 def handlerCallFinalLoop : LoopState (Word 8) :=
   { handlerCallLoopState with
@@ -36,7 +36,7 @@ theorem handlerCall_mappedLocals :
   intro name value hvalue
   by_cases hname : name = 2
   · subst name
-    refine ⟨2, by decide, ?_⟩
+    refine ⟨⟨riscvRegisterName 2, by decide⟩, by decide, ?_⟩
     simpa [handlerCallLoopState, handlerCallWordState, readRegister,
       writeRegister] using hvalue
   · simp [handlerCallLoopState, hname] at hvalue
@@ -101,7 +101,7 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
     (fuel := 2)
     (loopBody := handlerCallBody)
     (handlerBody := .skip)
-    (parameterRegister := 10)
+    (parameterRegister := ⟨riscvRegisterName 10, by decide⟩)
     (exceptionRegister := 5)
     (finalLoop := handlerCallFinalLoop)
     (finalWord := handlerCallFinalWord)
@@ -115,11 +115,17 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
     (hargument := by simp [handlerCallLoopState])
     (hnoalias := by
       intro name hname register hregister
-      have hfive : RiscV.registerOfNat 5 = some (5 : Fin 32) := by
-        decide
       intro heq
-      have hsame := RiscV.registerOfNat_injective hregister hfive heq
-      exact hname hsame)
+      have hname' : name = 5 := by
+        have hriscv : riscvRegisterName name = 5 := by
+          have hsame : RiscV.registerOfNat (riscvRegisterName name) = some register := by
+            simpa [RiscV.labRegisterOfNat, wordFindVar, lookupNatInfo] using hregister
+          have hfive : RiscV.registerOfNat 5 = some (5 : Fin 32) := by decide
+          exact RiscV.registerOfNat_injective hsame hfive heq
+        exact riscvRegisterName_injective_lt_32
+          (RiscV.lt_32_of_riscvRegisterName_lt_32 (by rw [hriscv]; decide))
+          (by decide) hriscv
+      exact hname hname')
     (hbody := by
       intro calleeLoop calleeWord loopResult wordResult hzero hloop hword
       change calleeWord.registers 0 = 0 at hzero

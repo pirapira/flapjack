@@ -28,11 +28,7 @@ example :
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store8_const
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   · rfl
   all_goals decide
@@ -48,11 +44,7 @@ example :
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store16_const
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   · rfl
   all_goals decide
@@ -68,11 +60,7 @@ example :
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store32_const
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   · rfl
   all_goals decide
@@ -84,8 +72,8 @@ example :
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
             (.mem .load 1 2)).2) = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_load_destination
   · intro name
@@ -114,8 +102,8 @@ example :
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
             (.arith (.div 1 2 3) : WordInst)).2) = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_div_destination
   · intro name
@@ -131,10 +119,10 @@ example :
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
             (.arith (.longMul 1 2 2 3) : WordInst)).2) = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
-      readRegister source' ⟨2, by decide⟩ =
-        readRegister target' ⟨8, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 2, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 8, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_longMul_destinations
     (ssa := ({ current := [], next := 4 } : WordSsaState))
@@ -159,10 +147,10 @@ example :
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
             (.arith (.addCarry 1 2 6 7 9) : WordInst)).2) = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
-      readRegister source' ⟨2, by decide⟩ =
-        readRegister target' ⟨8, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 2, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 8, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_addCarry_destinations
     (ssa := ({ current := [], next := 4 } : WordSsaState))
@@ -186,8 +174,8 @@ example :
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
             (.mem .load8 1 2 : WordInst)).2) = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_load8_destination
   · intro name
@@ -202,8 +190,8 @@ example :
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
             (.mem .load16 1 2 : WordInst)).2) = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_load16_destination
   · intro name
@@ -218,8 +206,8 @@ example :
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
             (.mem .load32 1 2 : WordInst)).2) = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_load32_destination
   · intro name
@@ -234,8 +222,8 @@ example :
           (wordSsaRenameProgram
             ({ current := [], next := 4 } : WordSsaState)
             (.locValue 1 17)).2 = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_locValue_destination
   · rfl
@@ -249,8 +237,8 @@ example :
           (wordSsaRenameProgram
             ({ current := [], next := 4 } : WordSsaState)
             (.assign 1 (.var 2))).2 = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_var_destination
   · intro name
@@ -266,8 +254,8 @@ example :
           (wordSsaRenameProgram
             ({ current := [], next := 4 } : WordSsaState)
             (.assign 1 (.const (BitVec.ofNat 32 17)))).2 = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_const_destination
   · rfl
@@ -282,16 +270,12 @@ example :
           (wordSsaRenameProgram
             ({ current := [], next := 4 } : WordSsaState)
             (.assign 1 (.op .add [.var 2, .var 3]))).2 = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_binary_var_var_destination
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -304,16 +288,12 @@ example :
             ({ current := [], next := 4 } : WordSsaState)
             (.assign 1 (.op .and [.var 2, .const (BitVec.ofNat 32 15)]))).2 =
         some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_binary_var_const_destination
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -328,8 +308,8 @@ example :
             (.assign 1 (.op .xor
               [.const (BitVec.ofNat 32 3), .const (BitVec.ofNat 32 12)]))).2 =
         some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_binary_const_const_destination
   · rfl
@@ -345,16 +325,12 @@ example :
             ({ current := [], next := 4 } : WordSsaState)
             (.assign 1 (.shift .lsl (.var 2) (.const (BitVec.ofNat 32 3))))).2 =
         some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_shift_var_const_destination
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -367,16 +343,12 @@ example :
             ({ current := [], next := 4 } : WordSsaState)
             (.assign 1 (.shift .lsr (.var 2) (.var 3)))).2 =
         some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_shift_var_var_destination
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -389,16 +361,12 @@ example :
             ({ current := [], next := 4 } : WordSsaState)
             (.assign 1 (.shift .ror (.var 2) (.const (BitVec.ofNat 32 3))))).2 =
         some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_rotate_var_const_destination
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -411,16 +379,12 @@ example :
             ({ current := [], next := 4 } : WordSsaState)
             (.assign 1 (.shift .ror (.var 2) (.var 3)))).2 =
         some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_assign_rotate_var_var_destination
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -434,11 +398,7 @@ example :
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_store_var
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -450,16 +410,12 @@ example :
           (wordSsaRenameProgram
             ({ current := [], next := 4 } : WordSsaState)
             (.shareInst .load 1 (.var 2))).2 = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_program_share_load
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -471,16 +427,12 @@ example :
           (wordSsaRenameProgram
             ({ current := [], next := 4 } : WordSsaState)
             (.shareInst .load8 1 (.var 2))).2 = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_program_share_load8
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -492,16 +444,12 @@ example :
           (wordSsaRenameProgram
             ({ current := [], next := 4 } : WordSsaState)
             (.shareInst .load16 1 (.var 2))).2 = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_program_share_load16
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -513,16 +461,12 @@ example :
           (wordSsaRenameProgram
             ({ current := [], next := 4 } : WordSsaState)
             (.shareInst .load32 1 (.var 2))).2 = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_program_share_load32
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -536,11 +480,7 @@ example :
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -554,11 +494,7 @@ example :
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store8
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -572,11 +508,7 @@ example :
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store16
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -590,11 +522,7 @@ example :
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store32
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   all_goals decide
 
@@ -606,8 +534,8 @@ example :
           (wordSsaRenameProgram
             ({ current := [], next := 4 } : WordSsaState)
             (.shareInst .load 1 (.const (BitVec.ofNat 32 16)))).2 = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_program_share_load_const
   · rfl
@@ -625,11 +553,7 @@ example :
         (fun state => state.memory) := by
   apply evalWordProg_ssaRename_program_share_store_const
   · intro name
-    simp [registerOfNat, wordSsaRead, lookupNatInfo]
-    split
-    · simp_all
-    · have hlt : ¬ name < 32 := by omega
-      simp [hlt]
+    simp [wordSsaRead, lookupNatInfo]
   · rfl
   · rfl
   all_goals decide
@@ -642,8 +566,8 @@ example :
           (wordSsaRenameProgram
             ({ current := [], next := 4 } : WordSsaState)
             (.shareInst .load8 1 (.const (BitVec.ofNat 32 16)))).2 = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_program_share_load8_const
   · rfl
@@ -658,8 +582,8 @@ example :
           (wordSsaRenameProgram
             ({ current := [], next := 4 } : WordSsaState)
             (.shareInst .load16 1 (.const (BitVec.ofNat 32 16)))).2 = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_program_share_load16_const
   · rfl
@@ -674,8 +598,8 @@ example :
           (wordSsaRenameProgram
             ({ current := [], next := 4 } : WordSsaState)
             (.shareInst .load32 1 (.const (BitVec.ofNat 32 16)))).2 = some target' ∧
-      readRegister source' ⟨1, by decide⟩ =
-        readRegister target' ⟨4, by decide⟩ ∧
+      readRegister source' ⟨riscvRegisterName 1, by decide⟩ =
+        readRegister target' ⟨riscvRegisterName 4, by decide⟩ ∧
       source'.memory = target'.memory := by
   apply evalWordProg_ssaRename_program_share_load32_const
   · rfl

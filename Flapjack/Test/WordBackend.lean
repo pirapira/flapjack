@@ -6,37 +6,37 @@ open RiscV
 example [NeZero width] :
     RiscV.wordExpToInstruction (width := width) 1
       (.shift .lsl (.var 2) (.var 3)) =
-      some (.sll 1 2 3) := by
-  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+      some (.sll 10 11 12) := by
+  simp [RiscV.wordExpToInstruction]
 
 example [NeZero width] :
     RiscV.wordExpToInstruction (width := width) 1
       (.shift .lsr (.var 2) (.var 3)) =
-      some (.srl 1 2 3) := by
-  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+      some (.srl 10 11 12) := by
+  simp [RiscV.wordExpToInstruction]
 
 example [NeZero width] :
     RiscV.wordExpToInstruction (width := width) 1
       (.shift .asr (.var 2) (.var 3)) =
-      some (.sra 1 2 3) := by
-  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+      some (.sra 10 11 12) := by
+  simp [RiscV.wordExpToInstruction]
 
 example [NeZero width] :
     RiscV.wordExpToInstruction (width := width) 1
       (.shift .ror (.var 2) (.var 3)) = none := by
-  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+  simp [RiscV.wordExpToInstruction]
 
 example :
     RiscV.wordExpToInstructions (width := 8) 1
       (.shift .ror (.var 2) (.const (3 : RiscV.Word 8))) =
-      some [.srli 31 2 3, .slli 1 2 5, .or 1 1 31] := by
+      some [.srli 31 11 3, .slli 10 11 5, .or 10 10 31] := by
   decide
 
 example :
     RiscV.wordExpToInstructions (width := 8) 1
       (.shift .ror (.var 2) (.var 3)) =
-      some [.ori 31 0 8, .sub 31 31 3, .sll 31 2 31,
-        .srl 1 2 3, .or 1 1 31] := by
+      some [.ori 31 0 8, .sub 31 31 12, .sll 31 11 31,
+        .srl 10 11 12, .or 10 10 31] := by
   decide
 
 example :
@@ -60,19 +60,19 @@ example :
 example [NeZero width] (state : RiscV.State width) :
     RiscV.evalWordProg state
         (.assign 1 (.shift .lsl (.var 2) (.var 3))) =
-      some (RiscV.execute state (.sll 1 2 3)) := by
+      some (RiscV.execute state (.sll 10 11 12)) := by
   exact RiscV.compileWordShiftLsl_sound state
 
 example [NeZero width] (state : RiscV.State width) :
     RiscV.evalWordProg state
         (.assign 1 (.shift .lsr (.var 2) (.var 3))) =
-      some (RiscV.execute state (.srl 1 2 3)) := by
+      some (RiscV.execute state (.srl 10 11 12)) := by
   exact RiscV.compileWordShiftLsr_sound state
 
 example [NeZero width] (state : RiscV.State width) :
     RiscV.evalWordProg state
         (.assign 1 (.shift .asr (.var 2) (.var 3))) =
-      some (RiscV.execute state (.sra 1 2 3)) := by
+      some (RiscV.execute state (.sra 10 11 12)) := by
   exact RiscV.compileWordShiftAsr_sound state
 
 example :

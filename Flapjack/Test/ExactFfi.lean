@@ -6,10 +6,10 @@ namespace Flapjack.RiscV
 
 def exactFfiMachine : State 64 :=
   let state := zeroState 64
-  let state := writeRegister state 1 10
-  let state := writeRegister state 2 1
-  let state := writeRegister state 3 20
-  writeRegister state 4 2
+  let state := writeRegister state 10 10
+  let state := writeRegister state 11 1
+  let state := writeRegister state 12 20
+  writeRegister state 13 2
 
 def exactFfiMachineWithBytes : State 64 :=
   { exactFfiMachine with
@@ -50,8 +50,8 @@ example :
     | none => False := by
   have hcode : wordFfiToRiscV
       { services := [("echo", 7)] } "echo" 1 2 3 4 =
-      some ([.addi 10 1 0, .addi 11 2 0, .addi 12 3 0,
-        .addi 13 4 0, .addi 14 0 (BitVec.ofNat 64 7), .ecall] :
+      some ([.addi 27 10 0, .addi 28 11 0, .addi 29 12 0,
+        .addi 30 13 0, .addi 14 0 (BitVec.ofNat 64 7), .ecall] :
         List (Instruction 64)) := by
     decide
   rw [hcode]

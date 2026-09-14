@@ -33,7 +33,7 @@ def readWordRegisters [NeZero width] (state : State width) :
     List Nat → Option (List (Word width))
   | [] => some []
   | name :: names => do
-      let register ← registerOfNat name
+      let register ← labRegisterOfNat name
       let values ← readWordRegisters state names
       pure (readRegister state register :: values)
 
@@ -43,7 +43,7 @@ def bindWordRegisters [NeZero width] (state : State width)
   else
     (names.zip values).foldl (fun result (name, value) => do
       let state ← result
-      let register ← registerOfNat name
+      let register ← labRegisterOfNat name
       pure (writeRegister state register value)) (some (clearWordRegisters state))
 
 def assignWordRegisters [NeZero width] (state : State width)
@@ -52,7 +52,7 @@ def assignWordRegisters [NeZero width] (state : State width)
   else
     (names.zip values).foldl (fun result (name, value) => do
       let state ← result
-      let register ← registerOfNat name
+      let register ← labRegisterOfNat name
       pure (writeRegister state register value)) (some state)
 
 mutual
@@ -209,7 +209,7 @@ mutual
             match handler with
             | none => some (.raised returnedState exception)
             | some (name, handlerBody, _, _) => do
-                let name ← registerOfNat name
+                let name ← labRegisterOfNat name
                 evalWordLoopProgWithHandlersAndFfi functions ffiHandler fuel
                   (writeRegister returnedState name exception) handlerBody
         | .broke _ label => some (.broke returnedState label)
@@ -228,10 +228,10 @@ mutual
           target arguments handler
     | _fuel + 1, state,
         .ffi function configuration configurationLength array arrayLength _ => do
-        let configuration ← registerOfNat configuration
-        let configurationLength ← registerOfNat configurationLength
-        let array ← registerOfNat array
-        let arrayLength ← registerOfNat arrayLength
+        let configuration ← labRegisterOfNat configuration
+        let configurationLength ← labRegisterOfNat configurationLength
+        let array ← labRegisterOfNat array
+        let arrayLength ← labRegisterOfNat arrayLength
         let state ← ffiHandler function (readRegister state configuration)
           (readRegister state configurationLength) (readRegister state array)
           (readRegister state arrayLength) state
@@ -256,11 +256,11 @@ mutual
     | _fuel + 1, state, .break label => some (.broke state label)
     | _fuel + 1, state, .continue label => some (.continued state label)
     | _fuel + 1, state, .raise exception => do
-        let exception ← registerOfNat exception
+        let exception ← labRegisterOfNat exception
         pure (.raised state (readRegister state exception))
     | _fuel + 1, state, .return _ values => do
         let values ← values.mapM (fun name => do
-          let register ← registerOfNat name
+          let register ← labRegisterOfNat name
           pure (readRegister state register))
         pure (.returned state values)
     | _fuel + 1, state, program => do
@@ -364,7 +364,7 @@ mutual
             match handler with
             | none => some (.raised returnedState exception)
             | some (name, handlerBody, _, _) => do
-                let name ← registerOfNat name
+                let name ← labRegisterOfNat name
                 evalWordFunctionWithHandlers functions fuel
                   (writeRegister returnedState name exception) handlerBody
     termination_by fuel _ _ _ _ _ => fuel
@@ -387,11 +387,11 @@ mutual
     | fuel + 1, state, .mustTerminate body =>
         evalWordFunctionWithHandlers functions fuel state body
     | _fuel + 1, state, .raise exception => do
-        let exception ← registerOfNat exception
+        let exception ← labRegisterOfNat exception
         pure (.raised state (readRegister state exception))
     | _fuel + 1, state, .return _ values => do
         let values ← values.mapM (fun name => do
-          let register ← registerOfNat name
+          let register ← labRegisterOfNat name
           pure (readRegister state register))
         pure (.returned state values)
     | _fuel + 1, state, program => do
@@ -418,10 +418,10 @@ mutual
     | 0, _, _ => none
     | _fuel + 1, state,
         .ffi function configuration configurationLength array arrayLength _ => do
-        let configuration ← registerOfNat configuration
-        let configurationLength ← registerOfNat configurationLength
-        let array ← registerOfNat array
-        let arrayLength ← registerOfNat arrayLength
+        let configuration ← labRegisterOfNat configuration
+        let configurationLength ← labRegisterOfNat configurationLength
+        let array ← labRegisterOfNat array
+        let arrayLength ← labRegisterOfNat arrayLength
         let state ← handler function (readRegister state configuration)
           (readRegister state configurationLength) (readRegister state array)
           (readRegister state arrayLength) state
@@ -448,10 +448,10 @@ theorem evalWordFfi_single [NeZero width]
     (live : List Nat × List Nat) :
     evalWordFfi handler 1 state
         (.ffi function configuration configurationLength array arrayLength live) = (do
-      let configuration ← registerOfNat configuration
-      let configurationLength ← registerOfNat configurationLength
-      let array ← registerOfNat array
-      let arrayLength ← registerOfNat arrayLength
+      let configuration ← labRegisterOfNat configuration
+      let configurationLength ← labRegisterOfNat configurationLength
+      let array ← labRegisterOfNat array
+      let arrayLength ← labRegisterOfNat arrayLength
       let state ← handler function (readRegister state configuration)
         (readRegister state configurationLength) (readRegister state array)
         (readRegister state arrayLength) state
@@ -505,7 +505,7 @@ mutual
             match handler with
             | none => some (.raised returnedState exception)
             | some (name, handlerBody, _, _) => do
-                let name ← registerOfNat name
+                let name ← labRegisterOfNat name
                 evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel
                   (writeRegister returnedState name exception) handlerBody
     termination_by fuel _ _ _ _ _ => fuel
@@ -521,10 +521,10 @@ mutual
           arguments handler
     | _fuel + 1, state,
         .ffi function configuration configurationLength array arrayLength _ => do
-        let configuration ← registerOfNat configuration
-        let configurationLength ← registerOfNat configurationLength
-        let array ← registerOfNat array
-        let arrayLength ← registerOfNat arrayLength
+        let configuration ← labRegisterOfNat configuration
+        let configurationLength ← labRegisterOfNat configurationLength
+        let array ← labRegisterOfNat array
+        let arrayLength ← labRegisterOfNat arrayLength
         let state ← ffiHandler function (readRegister state configuration)
           (readRegister state configurationLength) (readRegister state array)
           (readRegister state arrayLength) state
@@ -546,11 +546,11 @@ mutual
     | fuel + 1, state, .mustTerminate body =>
         evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel state body
     | _fuel + 1, state, .raise exception => do
-        let exception ← registerOfNat exception
+        let exception ← labRegisterOfNat exception
         pure (.raised state (readRegister state exception))
     | _fuel + 1, state, .return _ values => do
         let values ← values.mapM (fun name => do
-          let register ← registerOfNat name
+          let register ← labRegisterOfNat name
           pure (readRegister state register))
         pure (.returned state values)
     | _fuel + 1, state, program => do
@@ -600,7 +600,7 @@ theorem evalWordCallWithHandlersAndFfi_raise_handler_of_eval [NeZero width]
     (hbind : bindWordRegisters state parameters values = some calleeState)
     (hbody : evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel
       calleeState body = some (.raised bodyState exceptionValue))
-    (hhandlerRegister : registerOfNat handlerName = some handlerRegister)
+    (hhandlerRegister : labRegisterOfNat handlerName = some handlerRegister)
     (hhandler : evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel
       (writeRegister { state with
         memory := bodyState.memory
@@ -624,10 +624,10 @@ theorem evalWordFunctionWithHandlersAndFfi_ffi [NeZero width]
     (live : List Nat × List Nat) :
     evalWordFunctionWithHandlersAndFfi functions ffiHandler (fuel + 1) state
       (.ffi function configuration configurationLength array arrayLength live) = (do
-      let configuration ← registerOfNat configuration
-      let configurationLength ← registerOfNat configurationLength
-      let array ← registerOfNat array
-      let arrayLength ← registerOfNat arrayLength
+      let configuration ← labRegisterOfNat configuration
+      let configurationLength ← labRegisterOfNat configurationLength
+      let array ← labRegisterOfNat array
+      let arrayLength ← labRegisterOfNat arrayLength
       let state ← ffiHandler function (readRegister state configuration)
         (readRegister state configurationLength) (readRegister state array)
         (readRegister state arrayLength) state

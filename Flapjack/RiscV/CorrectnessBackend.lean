@@ -101,8 +101,8 @@ theorem wordProgToRiscV_sound_of_straightLine [NeZero width]
                 exact Option.some.inj hcompile''
               subst code
               cases operator <;>
-                cases hd : registerOfNat destination <;>
-                cases ha : registerOfNat address <;>
+                cases hd : labRegisterOfNat destination <;>
+                cases ha : labRegisterOfNat address <;>
                 simp [wordInstToInstruction,
                   hd, ha] at h
               all_goals
@@ -443,20 +443,21 @@ theorem wordFunctionToRiscVWithCalls_addCarry_result [NeZero width]
       some (code, [])) :
     (readRegister (executeInstructions state code) 5,
       readRegister (executeInstructions state code) 6) =
-      addCarryWords (readRegister state 2) (readRegister state 3)
-        (readRegister state 4) := by
+      addCarryWords (readRegister state 11) (readRegister state 12)
+        (readRegister state 13) := by
   have hshape : wordFunctionToRiscVWithCalls context
       ((.inst (.arith (.addCarry 5 6 2 3 4))) : WordProg (Word width)) =
-      some ([.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3,
+      some ([.sltu 31 0 13, .add 5 11 12, .sltu 6 5 12,
         .add 5 5 31, .sltu 31 5 31, .or 6 6 31], []) := by
-    simp [wordFunctionToRiscVWithCalls, wordArithToInstructions,
-      registerOfNat]
-  have hcode : ([.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3,
+    simp [wordFunctionToRiscVWithCalls, wordArithToInstructions]
+  have hcode : ([.sltu 31 0 13, .add 5 11 12, .sltu 6 5 12,
       .add 5 5 31, .sltu 31 5 31, .or 6 6 31] :
       List (Instruction width)) = code := by
     exact congrArg Prod.fst (Option.some.inj (hshape.symm.trans hcompile))
   subst code
-  exact executeInstructions_addCarry state zero
+  exact executeInstructions_addCarry_general state 5 6 11 12 13 zero
+    (by decide) (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide)
 
 theorem wordFunctionToRiscVWithCalls_longMul_result [NeZero width]
     (context : WordCallContext width) (state : State width)
@@ -467,36 +468,36 @@ theorem wordFunctionToRiscVWithCalls_longMul_result [NeZero width]
     (readRegister (executeInstructions state code) 5,
       readRegister (executeInstructions state code) 6) =
       (BitVec.ofNat width
-        ((readRegister state 2).toNat * (readRegister state 3).toNat / 2 ^ width),
-       readRegister state 2 * readRegister state 3) := by
+        ((readRegister state 11).toNat * (readRegister state 12).toNat / 2 ^ width),
+       readRegister state 11 * readRegister state 12) := by
   have hshape : wordFunctionToRiscVWithCalls context
       ((.inst (.arith (.longMul 5 6 2 3))) : WordProg (Word width)) =
-      some ([.mulHU 5 2 3, .mul 6 2 3], []) := by
-    simp [wordFunctionToRiscVWithCalls, wordArithToInstructions,
-      registerOfNat]
-  have hcode : ([.mulHU 5 2 3, .mul 6 2 3] :
+      some ([.mulHU 5 11 12, .mul 6 11 12], []) := by
+    simp [wordFunctionToRiscVWithCalls, wordArithToInstructions]
+  have hcode : ([.mulHU 5 11 12, .mul 6 11 12] :
       List (Instruction width)) = code := by
     exact congrArg Prod.fst (Option.some.inj (hshape.symm.trans hcompile))
   subst code
-  exact executeInstructions_longMul_result state
+  exact executeInstructions_longMul_general state 5 6 11 12
+    (by decide) (by decide) (by decide) (by decide) (by decide)
 
 
 theorem wordFunctionToRiscVWithCalls_div_result [NeZero width]
     (context : WordCallContext width) (state : State width)
     (code : List (Instruction width))
-    (hdivisor : readRegister state 3 ≠ 0)
+    (hdivisor : readRegister state 12 ≠ 0)
     (hcompile : wordFunctionToRiscVWithCalls context
       ((.inst (.arith (.div 5 2 3))) : WordProg (Word width)) =
       some (code, [])) :
     readRegister (executeInstructions state code) 5 =
       BitVec.ofNat width
-        ((readRegister state 2).toNat / (readRegister state 3).toNat) := by
+        ((readRegister state 11).toNat / (readRegister state 12).toNat) := by
   have hshape : wordFunctionToRiscVWithCalls context
       ((.inst (.arith (.div 5 2 3))) : WordProg (Word width)) =
-      some ([.divU 5 2 3], []) := by
+      some ([.divU 5 11 12], []) := by
     simp [wordFunctionToRiscVWithCalls, wordArithToInstructions,
-      wordArithToInstruction, registerOfNat]
-  have hcode : ([.divU 5 2 3] : List (Instruction width)) = code := by
+      wordArithToInstruction]
+  have hcode : ([.divU 5 11 12] : List (Instruction width)) = code := by
     exact congrArg Prod.fst (Option.some.inj (hshape.symm.trans hcompile))
   subst code
   rw [executeInstructions_single, execute_divU]
@@ -513,9 +514,9 @@ theorem wordFunctionToRiscVWithCalls_return_sound [NeZero width]
     evalWordFunction state ((.return store values) : WordProg (Word width)) =
       Option.map (fun returned => (executeInstructions state code, returned))
         (values.mapM (fun name => do
-          let register ← registerOfNat name
+          let register ← labRegisterOfNat name
           pure (readRegister state register))) := by
-  cases hvalues : values.mapM registerOfNat with
+  cases hvalues : values.mapM labRegisterOfNat with
   | none =>
       simp [wordFunctionToRiscVWithCalls, hvalues] at hcompile
   | some registers =>
@@ -531,15 +532,15 @@ theorem wordFunctionToRiscVWithCalls_return_sound [NeZero width]
       subst code
       simp only [evalWordFunction, executeInstructions]
       change (values.mapM (fun name => do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister state register)) : Option (List (Word width))).bind
           (fun returned => some (state, returned)) =
         Option.map (fun returned => (state, returned))
           (values.mapM (fun name => do
-            let register ← registerOfNat name
+            let register ← labRegisterOfNat name
             pure (readRegister state register)))
       cases hread : values.mapM (fun name => do
-        let register ← registerOfNat name
+        let register ← labRegisterOfNat name
         pure (readRegister state register)) with
       | none => rfl
       | some result => rfl
@@ -568,7 +569,7 @@ theorem wordFunctionToRiscVWithCalls_seq_return_sound [NeZero width]
       Option.map (fun returned =>
         (executeInstructions state firstCode, returned))
         (values.mapM (fun name => do
-          let register ← registerOfNat name
+          let register ← labRegisterOfNat name
           pure (readRegister (executeInstructions state firstCode) register))) := by
   constructor
   · simp [wordFunctionToRiscVWithCalls, hfirstCompile, hreturnCompile]
@@ -576,7 +577,7 @@ theorem wordFunctionToRiscVWithCalls_seq_return_sound [NeZero width]
       context state program hstraight firstCode hfirstCompile
     simp [evalWordFunction, hfirst]
     generalize hread : values.mapM (fun name => do
-      let register ← registerOfNat name
+      let register ← labRegisterOfNat name
       pure (readRegister (executeInstructions state firstCode) register)) = readValues
     cases readValues <;> rfl
 

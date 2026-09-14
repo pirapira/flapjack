@@ -14,7 +14,7 @@ def ffiLoopRiscVHost : WordFfiHost 64 :=
   fun _ _ _ _ _ state => some { state with pc := nextPc state }
 
 def ffiLoopRiscVCode : List (Instruction 64) :=
-  [.addi 10 1 0, .addi 11 2 0, .addi 12 3 0, .addi 13 4 0,
+  [.addi 27 10 0, .addi 28 11 0, .addi 29 12 0, .addi 30 13 0,
    .addi 14 0 (BitVec.ofNat 64 7), .ecall,
    .jal 0 (BitVec.ofNat 64 8),
    .jal 0 (0 - BitVec.ofNat 64 28)]
@@ -27,7 +27,7 @@ theorem ffiLoopRiscVCompiler_shape :
     wordFunctionToRiscVWithCallsAndFfiAndLoopsAux,
     ffiLoopRiscVProgram, ffiLoopRiscVContext,
     wordFunctionToRiscVWithCallsAndFfi, wordFfiToRiscV,
-    lookupWordFfiService, wordRegisterMoves, registerOfNat,
+    lookupWordFfiService, wordRegisterMoves, labRegisterOfNat_of_lt_32,
     resolveWordLoopBody, resolveWordLoopBodyAux, wordControlInstructions,
     ffiLoopRiscVCode]
 
@@ -49,7 +49,7 @@ def ffiContinueRiscVProgram : WordProg (Word 64) :=
     []
 
 def ffiContinueRiscVCode : List (Instruction 64) :=
-  [.addi 10 1 0, .addi 11 2 0, .addi 12 3 0, .addi 13 4 0,
+  [.addi 27 10 0, .addi 28 11 0, .addi 29 12 0, .addi 30 13 0,
    .addi 14 0 (BitVec.ofNat 64 7), .ecall,
    .jal 0 (0 - BitVec.ofNat 64 24),
    .jal 0 (0 - BitVec.ofNat 64 28)]
@@ -62,7 +62,7 @@ theorem ffiContinueRiscVCompiler_shape :
     wordFunctionToRiscVWithCallsAndFfiAndLoopsAux,
     ffiContinueRiscVProgram, ffiLoopRiscVContext,
     wordFunctionToRiscVWithCallsAndFfi, wordFfiToRiscV,
-    lookupWordFfiService, wordRegisterMoves, registerOfNat,
+    lookupWordFfiService, wordRegisterMoves, labRegisterOfNat_of_lt_32,
     resolveWordLoopBody, resolveWordLoopBodyAux, wordControlInstructions,
     ffiContinueRiscVCode]
 

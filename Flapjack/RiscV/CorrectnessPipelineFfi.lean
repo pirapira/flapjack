@@ -82,7 +82,7 @@ theorem executeCompiledPipelineFfi_source_agreement
           [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
            .addi 0 0 (BitVec.ofNat 64 28),
            .addi 14 0 (BitVec.ofNat 64 7)]) =
-      handler "echo" (readRegister state 4) (readRegister state 5)
+      handler "echo" (readRegister state 13) (readRegister state 5)
         (readRegister state 6) (readRegister state 7) state) :
     (compileWordProgramNatToRiscV (width := 64)
       { services := [("echo", 7)] } pipelineFfiWordConfigSource
@@ -101,9 +101,9 @@ theorem executeCompiledPipelineFfi_source_agreement
       result.map (fun final => (final, ([] : List (Word 64)))) =
         result.bind (fun final => some (final, [])) := by
     cases result <;> rfl
-  simpa [hmachine, evalWordFunctionWithCallsAndFfi, evalWordFfi, registerOfNat,
-    hhandler] using
-    hmap (handler "echo" (readRegister state 4) (readRegister state 5)
+  simpa [hmachine, evalWordFunctionWithCallsAndFfi, evalWordFfi, hhandler,
+    riscvRegisterName] using
+    hmap (handler "echo" (readRegister state 13) (readRegister state 5)
       (readRegister state 6) (readRegister state 7) state)
 
 theorem executeCompiledPipelineExactFfi

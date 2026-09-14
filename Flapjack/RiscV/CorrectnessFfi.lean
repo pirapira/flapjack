@@ -751,7 +751,7 @@ theorem loopToWord_call_loop_control_simulation_single_parameter [NeZero width]
       RiscV.lookupWordFunction target wordFunctions =
         some ([wordFindVar context parameter], loopToWordProg context loopBody))
     (hparameter :
-      RiscV.registerOfNat (wordFindVar context parameter) =
+      RiscV.labRegisterOfNat (wordFindVar context parameter) =
         some parameterRegister)
     (hparameter_nonzero : parameterRegister ≠ 0)
     (hargument : loopState.locals argument = some argumentValue)
@@ -984,18 +984,18 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
       RiscV.lookupWordFunction target wordFunctions =
         some ([wordFindVar context parameter], loopToWordProg context loopBody))
     (hparameter :
-      RiscV.registerOfNat (wordFindVar context parameter) =
+      RiscV.labRegisterOfNat (wordFindVar context parameter) =
         some parameterRegister)
     (hparameter_nonzero : parameterRegister ≠ 0)
     (hexception :
-      RiscV.registerOfNat (wordFindVar context exception) =
+      RiscV.labRegisterOfNat (wordFindVar context exception) =
         some exceptionRegister)
     (hexception_nonzero : exceptionRegister ≠ 0)
     (hargument : loopState.locals argument = some argumentValue)
     (hnoalias :
       ∀ name, name ≠ exception →
         ∀ register,
-          RiscV.registerOfNat (wordFindVar context name) = some register →
+          RiscV.labRegisterOfNat (wordFindVar context name) = some register →
             register ≠ exceptionRegister)
     (hbody : ∀ calleeLoop calleeWord bodyResult bodyWordResult,
       loopLocalsMappedToRiscV context calleeLoop.locals calleeWord →
@@ -1304,7 +1304,7 @@ theorem wordFunctionToRiscVWithCallsAndFfi_seq_return_sound [NeZero width]
       Option.map (fun returned =>
         (executeInstructions state firstCode, returned))
         (values.mapM (fun name => do
-          let register ← registerOfNat name
+          let register ← labRegisterOfNat name
           pure (readRegister (executeInstructions state firstCode) register))) := by
   have hfirstOrdinary : wordFunctionToRiscVWithCalls
       { targets := context.targets } program = some (firstCode, []) := by
@@ -1314,7 +1314,7 @@ theorem wordFunctionToRiscVWithCallsAndFfi_seq_return_sound [NeZero width]
   have hreturnOrdinary : wordFunctionToRiscVWithCalls
       { targets := context.targets }
       ((.return store values) : WordProg (Word width)) = some ([], returns) := by
-    cases hvalues : values.mapM registerOfNat with
+    cases hvalues : values.mapM labRegisterOfNat with
     | none =>
         simp [wordFunctionToRiscVWithCallsAndFfi,
           wordFunctionToRiscVWithCalls, hvalues] at hreturnCompile
@@ -1452,26 +1452,26 @@ theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_ffi_simulation
       arrayRegister arrayLengthRegister : Fin 32)
     (hservice : lookupWordFfiService function context.services = some service)
     (hservice_bounded : service < 2 ^ width)
-    (hconfiguration : registerOfNat configuration = some configurationRegister)
-    (hconfigurationLength : registerOfNat configurationLength =
+    (hconfiguration : labRegisterOfNat configuration = some configurationRegister)
+    (hconfigurationLength : labRegisterOfNat configurationLength =
       some configurationLengthRegister)
-    (harray : registerOfNat array = some arrayRegister)
-    (harrayLength : registerOfNat arrayLength = some arrayLengthRegister)
+    (harray : labRegisterOfNat array = some arrayRegister)
+    (harrayLength : labRegisterOfNat arrayLength = some arrayLengthRegister)
     (hzero : readRegister state 0 = 0)
     (hsource : ∀ source : Fin 32, source ∈
       [configurationRegister, configurationLengthRegister, arrayRegister,
         arrayLengthRegister] →
-      ∀ destination : Fin 32, destination ∈ [10, 11, 12, 13] →
+      ∀ destination : Fin 32, destination ∈ [27, 28, 29, 30] →
         source ≠ destination)
     (hhandler : host service
-      (readRegister state configurationRegister)
-      (readRegister state configurationLengthRegister)
-      (readRegister state arrayRegister)
-      (readRegister state arrayLengthRegister)
+      (readRegister state 10)
+      (readRegister state 11)
+      (readRegister state 12)
+      (readRegister state 13)
       (executeInstructions state
-        [.addi 10 configurationRegister (0#width),
-         .addi 11 configurationLengthRegister (0#width),
-         .addi 12 arrayRegister (0#width), .addi 13 arrayLengthRegister (0#width),
+        [.addi 27 configurationRegister (0#width),
+         .addi 28 configurationLengthRegister (0#width),
+         .addi 29 arrayRegister (0#width), .addi 30 arrayLengthRegister (0#width),
          .addi 14 0 (BitVec.ofNat width service)]) =
       wordHandler function
         (readRegister state configurationRegister)

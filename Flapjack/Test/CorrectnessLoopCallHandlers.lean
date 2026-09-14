@@ -17,7 +17,7 @@ def loopCallHandlerLoopState : LoopState (Word 64) :=
     memory := fun _ => none }
 
 def loopCallHandlerWordState : State 64 :=
-  writeRegister (zeroState 64) 2 9
+  writeRegister (zeroState 64) ⟨riscvRegisterName 2, by decide⟩ 9
 
 def loopCallHandlerBody : LoopProg (Word 64) :=
   .raise 10
@@ -31,7 +31,7 @@ theorem loopCallHandler_mapped_locals :
   intro name value hvalue
   by_cases hname : name = 2
   · subst name
-    refine ⟨2, by decide, ?_⟩
+    refine ⟨⟨riscvRegisterName 2, by decide⟩, by decide, ?_⟩
     simpa [loopCallHandlerLoopState, loopCallHandlerWordState,
       readRegister, writeRegister] using hvalue
   · simp [loopCallHandlerLoopState, hname] at hvalue
@@ -40,7 +40,7 @@ theorem loopCallHandler_simulation :
     loopResultMappedToWordLoop ({ vars := [] } : WordContext)
       (.normal { loopCallHandlerLoopState with
         locals := updateLoopLocal loopCallHandlerLoopState.locals 11 9 })
-      (.normal (writeRegister loopCallHandlerWordState 11 9)) := by
+      (.normal (writeRegister loopCallHandlerWordState ⟨riscvRegisterName 11, by decide⟩ 9)) := by
   apply loopToWord_call_loop_control_simulation_single_parameter_with_handler
     (context := ({ vars := [] } : WordContext))
     (primitive := fun _ _ => none)
@@ -59,11 +59,11 @@ theorem loopCallHandler_simulation :
     (fuel := 3)
     (loopBody := loopCallHandlerBody)
     (handlerBody := loopCallHandlerHandler)
-    (parameterRegister := 10)
-    (exceptionRegister := 11)
+    (parameterRegister := ⟨riscvRegisterName 10, by decide⟩)
+    (exceptionRegister := ⟨riscvRegisterName 11, by decide⟩)
     (loopResult := .normal { loopCallHandlerLoopState with
       locals := updateLoopLocal loopCallHandlerLoopState.locals 11 9 })
-    (wordResult := .normal (writeRegister loopCallHandlerWordState 11 9))
+    (wordResult := .normal (writeRegister loopCallHandlerWordState ⟨riscvRegisterName 11, by decide⟩ 9))
     (hlookupLoop := by simp [lookupLoopFunction, loopCallHandlerBody])
     (hlookupWord := by simp [lookupWordFunction, wordFindVar, lookupNatInfo,
       loopToWordProg, loopCallHandlerBody])
@@ -76,14 +76,17 @@ theorem loopCallHandler_simulation :
       intro name hname register hregister
       intro heq
       have hname' : name = 11 := by
-        have h11 : registerOfNat 11 = some (11 : Fin 32) := by
-          decide
-        have hsame :
-            registerOfNat (wordFindVar ({ vars := [] } : WordContext) name) =
-              some (11 : Fin 32) := by
-          simpa [heq] using hregister
-        have hnat := registerOfNat_injective hsame h11
-        simpa [wordFindVar, lookupNatInfo] using hnat
+        have hriscv : riscvRegisterName name = riscvRegisterName 11 := by
+          have hsame : RiscV.labRegisterOfNat name = some register := by
+            simpa [wordFindVar, lookupNatInfo] using hregister
+          have hsame' : RiscV.registerOfNat (riscvRegisterName name) = some register := by
+            simpa [RiscV.labRegisterOfNat] using hsame
+          have h11 : RiscV.registerOfNat (riscvRegisterName 11) =
+              some (⟨riscvRegisterName 11, by decide⟩ : Fin 32) := by decide
+          exact RiscV.registerOfNat_injective hsame' h11 heq
+        exact riscvRegisterName_injective_lt_32
+          (RiscV.lt_32_of_riscvRegisterName_lt_32 (by rw [hriscv]; decide))
+          (by decide) hriscv
       exact hname hname')
     (hbody := by
       intro calleeLoop calleeWord bodyResult bodyWordResult hcallee hloop hword
@@ -97,16 +100,21 @@ theorem loopCallHandler_simulation :
             simpa [evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
               loopCallHandlerBody, hconfig] using hloop
           have hword' :
-              some (.raised calleeWord (readRegister calleeWord 10)) =
+              some (.raised calleeWord
+                (readRegister calleeWord ⟨riscvRegisterName 10, by decide⟩)) =
                 some bodyWordResult := by
             simpa [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
-              loopCallHandlerBody, registerOfNat, wordFindVar, lookupNatInfo] using hword
+              loopCallHandlerBody, RiscV.labRegisterOfNat, RiscV.registerOfNat,
+              wordFindVar, lookupNatInfo] using hword
           cases hloop'
           cases hword'
           rcases hcallee 10 exceptionValue hconfig with
             ⟨register, hregister, hvalue⟩
-          have hregister' : register = 10 := by
-            simpa [registerOfNat, wordFindVar, lookupNatInfo] using hregister.symm
+          have hregister' : register = ⟨riscvRegisterName 10, by decide⟩ := by
+            have h10 : RiscV.labRegisterOfNat 10 =
+                some (⟨riscvRegisterName 10, by decide⟩ : Fin 32) := by
+              decide
+            exact Option.some.inj (hregister.symm.trans h10)
           subst register
           exact ⟨hcallee, hvalue⟩)
     (hhandler := by
@@ -135,7 +143,7 @@ theorem loopCallHandler_simulation :
         loopToWordProg, loopCallHandlerBody, loopCallHandlerHandler,
         loopCallHandlerWordState, writeRegister, readRegister,
         RiscV.readWordRegisters, RiscV.bindWordRegisters,
-        RiscV.clearWordRegisters, registerOfNat, wordFindVar, lookupNatInfo,
+        RiscV.clearWordRegisters, wordFindVar, lookupNatInfo,
         RiscV.evalWordFunction])
 
 end Flapjack

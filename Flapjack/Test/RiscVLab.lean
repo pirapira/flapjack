@@ -117,14 +117,14 @@ example :
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.word (.arith (.longMul 4 5 6 7))) [] 0]⟩ =
-      some [.mulHU 4 6 7, .mul 5 6 7] := by
+      some [.mulHU 13 6 7, .mul 5 6 7] := by
   decide
 
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.word (.arith (.addCarry 4 5 6 7 8))) [] 0]⟩ =
-      some [.sltu 31 0 8, .add 4 6 7, .sltu 5 4 7,
-        .add 4 4 31, .sltu 31 4 31, .or 5 5 31] := by
+      some [.sltu 31 0 8, .add 13 6 7, .sltu 5 13 7,
+        .add 13 13 31, .sltu 31 13 31, .or 5 5 31] := by
   decide
 
 example :
@@ -134,7 +134,7 @@ example :
       some [
         .addi 29 0 (BitVec.ofNat 64 24),
         .sub 29 10 29,
-        .loadWord 4 29] := by
+        .loadWord 13 3] := by
   decide +kernel
 
 example :

@@ -42,10 +42,10 @@ theorem executeInstructionsWithFfi_wordRegisterMoves [NeZero width]
   | cons move registerMoves ih =>
       cases move with
       | mk destination source =>
-          cases hdestination : registerOfNat destination with
+          cases hdestination : labRegisterOfNat destination with
           | none => simp [wordRegisterMoves, hdestination] at hcode
           | some destinationRegister =>
-              cases hsource : registerOfNat source with
+              cases hsource : labRegisterOfNat source with
               | none => simp [wordRegisterMoves, hdestination, hsource] at hcode
               | some sourceRegister =>
                   cases hmoves : wordRegisterMoves (width := width) registerMoves with
@@ -291,66 +291,28 @@ theorem executeInstructionsWithFfi_wordFfi_abi
     (hzero : readRegister state 0 = 0)
     (hsource : ∀ source : Fin 32, source ∈
       [configuration, configurationLength, array, arrayLength] →
-      ∀ destination : Fin 32, destination ∈ [10, 11, 12, 13] →
+      ∀ destination : Fin 32, destination ∈ [27, 28, 29, 30] →
         source ≠ destination)
     (hhost : host service
-      (readRegister state configuration)
-      (readRegister state configurationLength)
-      (readRegister state array)
-      (readRegister state arrayLength)
+      (readRegister state 10)
+      (readRegister state 11)
+      (readRegister state 12)
+      (readRegister state 13)
       (executeInstructions state
-        [.addi 10 configuration (0#width), .addi 11 configurationLength (0#width),
-         .addi 12 array (0#width), .addi 13 arrayLength (0#width),
+        [.addi 27 configuration (0#width), .addi 28 configurationLength (0#width),
+         .addi 29 array (0#width), .addi 30 arrayLength (0#width),
          .addi 14 0 (BitVec.ofNat width service)]) =
       resultState) :
       executeInstructionsWithFfi host state
-      [.addi 10 configuration (0#width), .addi 11 configurationLength (0#width),
-       .addi 12 array (0#width), .addi 13 arrayLength (0#width),
+      [.addi 27 configuration (0#width), .addi 28 configurationLength (0#width),
+       .addi 29 array (0#width), .addi 30 arrayLength (0#width),
        .addi 14 0 (BitVec.ofNat width service), .ecall] =
       resultState := by
   have hzero' : state.registers 0 = 0 := by
     simpa [readRegister] using hzero
-  have hconfiguration10 : configuration ≠ 10 :=
-    hsource configuration (by simp) 10 (by simp)
-  have hconfiguration11 : configuration ≠ 11 :=
-    hsource configuration (by simp) 11 (by simp)
-  have hconfiguration12 : configuration ≠ 12 :=
-    hsource configuration (by simp) 12 (by simp)
-  have hconfiguration13 : configuration ≠ 13 :=
-    hsource configuration (by simp) 13 (by simp)
-  have hconfigurationLength10 : configurationLength ≠ 10 :=
-    hsource configurationLength (by simp) 10 (by simp)
-  have hconfigurationLength11 : configurationLength ≠ 11 :=
-    hsource configurationLength (by simp) 11 (by simp)
-  have hconfigurationLength12 : configurationLength ≠ 12 :=
-    hsource configurationLength (by simp) 12 (by simp)
-  have hconfigurationLength13 : configurationLength ≠ 13 :=
-    hsource configurationLength (by simp) 13 (by simp)
-  have harray10 : array ≠ 10 :=
-    hsource array (by simp) 10 (by simp)
-  have harray11 : array ≠ 11 :=
-    hsource array (by simp) 11 (by simp)
-  have harray12 : array ≠ 12 :=
-    hsource array (by simp) 12 (by simp)
-  have harray13 : array ≠ 13 :=
-    hsource array (by simp) 13 (by simp)
-  have harrayLength10 : arrayLength ≠ 10 :=
-    hsource arrayLength (by simp) 10 (by simp)
-  have harrayLength11 : arrayLength ≠ 11 :=
-    hsource arrayLength (by simp) 11 (by simp)
-  have harrayLength12 : arrayLength ≠ 12 :=
-    hsource arrayLength (by simp) 12 (by simp)
-  have harrayLength13 : arrayLength ≠ 13 :=
-    hsource arrayLength (by simp) 13 (by simp)
   simpa [executeInstructionsWithFfi, executeWithFfi, executeInstructions,
     execute, writeRegister, readRegister, nextPc,
-    hconfiguration10, hconfiguration11, hconfiguration12, hconfiguration13,
-    hconfigurationLength10, hconfigurationLength11,
-    hconfigurationLength12, hconfigurationLength13,
-    harray10, harray11, harray12, harray13,
-    harrayLength10, harrayLength11, harrayLength12, harrayLength13, hzero,
-    hzero', Nat.mod_eq_of_lt hservice_bounded]
-    using hhost
+    hzero, hzero', Nat.mod_eq_of_lt hservice_bounded] using hhost
 
 theorem wordFfiToRiscV_execute_agreement
     [NeZero width] (context : WordFfiContext)
@@ -362,26 +324,26 @@ theorem wordFfiToRiscV_execute_agreement
       arrayRegister arrayLengthRegister : Fin 32)
     (hservice : lookupWordFfiService function context.services = some service)
     (hservice_bounded : service < 2 ^ width)
-    (hconfiguration : registerOfNat configuration = some configurationRegister)
-    (hconfigurationLength : registerOfNat configurationLength =
+    (hconfiguration : labRegisterOfNat configuration = some configurationRegister)
+    (hconfigurationLength : labRegisterOfNat configurationLength =
       some configurationLengthRegister)
-    (harray : registerOfNat array = some arrayRegister)
-    (harrayLength : registerOfNat arrayLength = some arrayLengthRegister)
+    (harray : labRegisterOfNat array = some arrayRegister)
+    (harrayLength : labRegisterOfNat arrayLength = some arrayLengthRegister)
     (hzero : readRegister state 0 = 0)
     (hsource : ∀ source : Fin 32, source ∈
       [configurationRegister, configurationLengthRegister, arrayRegister,
         arrayLengthRegister] →
-      ∀ destination : Fin 32, destination ∈ [10, 11, 12, 13] →
+      ∀ destination : Fin 32, destination ∈ [27, 28, 29, 30] →
         source ≠ destination)
     (hhandler : host service
-      (readRegister state configurationRegister)
-      (readRegister state configurationLengthRegister)
-      (readRegister state arrayRegister)
-      (readRegister state arrayLengthRegister)
+      (readRegister state 10)
+      (readRegister state 11)
+      (readRegister state 12)
+      (readRegister state 13)
       (executeInstructions state
-        [.addi 10 configurationRegister (0#width),
-         .addi 11 configurationLengthRegister (0#width),
-         .addi 12 arrayRegister (0#width), .addi 13 arrayLengthRegister (0#width),
+        [.addi 27 configurationRegister (0#width),
+         .addi 28 configurationLengthRegister (0#width),
+         .addi 29 arrayRegister (0#width), .addi 30 arrayLengthRegister (0#width),
          .addi 14 0 (BitVec.ofNat width service)]) =
       wordHandler function
         (readRegister state configurationRegister)
@@ -394,10 +356,10 @@ theorem wordFfiToRiscV_execute_agreement
           (result, ([] : List (Word width))))) =
       evalWordFfi wordHandler 1 state
         (.ffi function configuration configurationLength array arrayLength ([], [])) := by
-  have h10 : registerOfNat 10 = some 10 := by decide
-  have h11 : registerOfNat 11 = some 11 := by decide
-  have h12 : registerOfNat 12 = some 12 := by decide
-  have h13 : registerOfNat 13 = some 13 := by decide
+  have h10 : labRegisterOfNat 10 = some 27 := by decide
+  have h11 : labRegisterOfNat 11 = some 28 := by decide
+  have h12 : labRegisterOfNat 12 = some 29 := by decide
+  have h13 : labRegisterOfNat 13 = some 30 := by decide
   cases hwordHandler : wordHandler function
       (readRegister state configurationRegister)
       (readRegister state configurationLengthRegister)
@@ -405,20 +367,20 @@ theorem wordFfiToRiscV_execute_agreement
       (readRegister state arrayLengthRegister) state with
   | none =>
       have hhost_none : host service
-          (readRegister state configurationRegister)
-          (readRegister state configurationLengthRegister)
-          (readRegister state arrayRegister)
-          (readRegister state arrayLengthRegister)
+          (readRegister state 10)
+          (readRegister state 11)
+          (readRegister state 12)
+          (readRegister state 13)
           (executeInstructions state
-            [.addi 10 configurationRegister (0#width),
-             .addi 11 configurationLengthRegister (0#width),
-             .addi 12 arrayRegister (0#width), .addi 13 arrayLengthRegister (0#width),
+            [.addi 27 configurationRegister (0#width),
+             .addi 28 configurationLengthRegister (0#width),
+             .addi 29 arrayRegister (0#width), .addi 30 arrayLengthRegister (0#width),
              .addi 14 0 (BitVec.ofNat width service)]) = none := by
         simpa [hwordHandler] using hhandler
       have hexecuted : executeInstructionsWithFfi host state
-          [.addi 10 configurationRegister (0#width),
-           .addi 11 configurationLengthRegister (0#width),
-           .addi 12 arrayRegister (0#width), .addi 13 arrayLengthRegister (0#width),
+          [.addi 27 configurationRegister (0#width),
+           .addi 28 configurationLengthRegister (0#width),
+           .addi 29 arrayRegister (0#width), .addi 30 arrayLengthRegister (0#width),
            .addi 14 0 (BitVec.ofNat width service), .ecall] = none :=
         executeInstructionsWithFfi_wordFfi_abi host state service
           configurationRegister configurationLengthRegister arrayRegister
@@ -429,14 +391,14 @@ theorem wordFfiToRiscV_execute_agreement
         evalWordFfi, hwordHandler, hexecuted]
   | some resultState =>
       have hhost_some : host service
-          (readRegister state configurationRegister)
-          (readRegister state configurationLengthRegister)
-          (readRegister state arrayRegister)
-          (readRegister state arrayLengthRegister)
+          (readRegister state 10)
+          (readRegister state 11)
+          (readRegister state 12)
+          (readRegister state 13)
           (executeInstructions state
-            [.addi 10 configurationRegister (0#width),
-             .addi 11 configurationLengthRegister (0#width),
-             .addi 12 arrayRegister (0#width), .addi 13 arrayLengthRegister (0#width),
+            [.addi 27 configurationRegister (0#width),
+             .addi 28 configurationLengthRegister (0#width),
+             .addi 29 arrayRegister (0#width), .addi 30 arrayLengthRegister (0#width),
              .addi 14 0 (BitVec.ofNat width service)]) = some resultState := by
         simpa [hwordHandler] using hhandler
       have hexecuted := executeInstructionsWithFfi_wordFfi_abi host state service
@@ -464,26 +426,26 @@ theorem wordFunctionToRiscVWithCallsAndFfi_ffi_simulation
       arrayRegister arrayLengthRegister : Fin 32)
     (hservice : lookupWordFfiService function context.services = some service)
     (hservice_bounded : service < 2 ^ width)
-    (hconfiguration : registerOfNat configuration = some configurationRegister)
-    (hconfigurationLength : registerOfNat configurationLength =
+    (hconfiguration : labRegisterOfNat configuration = some configurationRegister)
+    (hconfigurationLength : labRegisterOfNat configurationLength =
       some configurationLengthRegister)
-    (harray : registerOfNat array = some arrayRegister)
-    (harrayLength : registerOfNat arrayLength = some arrayLengthRegister)
+    (harray : labRegisterOfNat array = some arrayRegister)
+    (harrayLength : labRegisterOfNat arrayLength = some arrayLengthRegister)
     (hzero : readRegister state 0 = 0)
     (hsource : ∀ source : Fin 32, source ∈
       [configurationRegister, configurationLengthRegister, arrayRegister,
         arrayLengthRegister] →
-      ∀ destination : Fin 32, destination ∈ [10, 11, 12, 13] →
+      ∀ destination : Fin 32, destination ∈ [27, 28, 29, 30] →
         source ≠ destination)
     (hhandler : host service
-      (readRegister state configurationRegister)
-      (readRegister state configurationLengthRegister)
-      (readRegister state arrayRegister)
-      (readRegister state arrayLengthRegister)
+      (readRegister state 10)
+      (readRegister state 11)
+      (readRegister state 12)
+      (readRegister state 13)
       (executeInstructions state
-        [.addi 10 configurationRegister (0#width),
-         .addi 11 configurationLengthRegister (0#width),
-         .addi 12 arrayRegister (0#width), .addi 13 arrayLengthRegister (0#width),
+        [.addi 27 configurationRegister (0#width),
+         .addi 28 configurationLengthRegister (0#width),
+         .addi 29 arrayRegister (0#width), .addi 30 arrayLengthRegister (0#width),
          .addi 14 0 (BitVec.ofNat width service)]) =
       wordHandler function
         (readRegister state configurationRegister)

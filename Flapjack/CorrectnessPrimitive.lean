@@ -9,6 +9,20 @@ the register and scratch contracts supplied by allocation.
 
 namespace Flapjack
 
+private theorem primitiveLabRegisterOfNat_some_lt {name : Nat} {register : Fin 32}
+    (h : RiscV.labRegisterOfNat name = some register) : name < 32 :=
+  RiscV.lt_32_of_riscvRegisterName_lt_32
+    (@RiscV.registerOfNat_some_lt (RiscV.riscvRegisterName name) register
+      (by simpa [RiscV.labRegisterOfNat] using h))
+
+private theorem primitiveLabRegisterOfNat_some_fin {name : Nat} {register : Fin 32}
+    (h : RiscV.labRegisterOfNat name = some register) (hname : name < 32) :
+    (⟨RiscV.riscvRegisterName name, RiscV.riscvRegisterName_lt_32 hname⟩ : Fin 32) =
+      register := by
+  have h' := h
+  rw [RiscV.labRegisterOfNat_of_lt_32 hname] at h'
+  exact Option.some.inj h'
+
 /-!
 For an arithmetic Word instruction, an empty return list is exactly the
 normal `evalWordProg` result.  Keeping this projection as a named lemma makes
@@ -41,17 +55,17 @@ theorem loopToWord_primitive_addCarry_agreement [NeZero width]
     (hright : loopState.locals right = some rightValue)
     (hcarry : loopState.locals carry = some carryValue)
     (hdestination :
-      RiscV.registerOfNat (wordFindVar context destination) =
+      RiscV.labRegisterOfNat (wordFindVar context destination) =
         some destinationRegister)
     (hresultCarry :
-      RiscV.registerOfNat (wordFindVar context resultCarry) =
+      RiscV.labRegisterOfNat (wordFindVar context resultCarry) =
         some resultCarryRegister)
     (hleft_register :
-      RiscV.registerOfNat (wordFindVar context left) = some leftRegister)
+      RiscV.labRegisterOfNat (wordFindVar context left) = some leftRegister)
     (hright_register :
-      RiscV.registerOfNat (wordFindVar context right) = some rightRegister)
+      RiscV.labRegisterOfNat (wordFindVar context right) = some rightRegister)
     (hcarry_register :
-      RiscV.registerOfNat (wordFindVar context carry) = some carryRegister)
+      RiscV.labRegisterOfNat (wordFindVar context carry) = some carryRegister)
     (hleft_state : RiscV.readRegister state leftRegister = leftValue)
     (hright_state : RiscV.readRegister state rightRegister = rightValue)
     (hcarry_state : RiscV.readRegister state carryRegister = carryValue)
@@ -84,48 +98,47 @@ theorem loopToWord_primitive_addCarry_agreement [NeZero width]
           (some (RiscV.readRegister result destinationRegister),
             some (RiscV.readRegister result resultCarryRegister))) := by
   have hleft_lt : wordFindVar context left < 32 :=
-    RiscV.registerOfNat_some_lt hleft_register
+    primitiveLabRegisterOfNat_some_lt hleft_register
   have hright_lt : wordFindVar context right < 32 :=
-    RiscV.registerOfNat_some_lt hright_register
+    primitiveLabRegisterOfNat_some_lt hright_register
   have hcarry_lt : wordFindVar context carry < 32 :=
-    RiscV.registerOfNat_some_lt hcarry_register
+    primitiveLabRegisterOfNat_some_lt hcarry_register
   have hdestination_lt : wordFindVar context destination < 32 :=
-    RiscV.registerOfNat_some_lt hdestination
+    primitiveLabRegisterOfNat_some_lt hdestination
   have hresultCarry_lt : wordFindVar context resultCarry < 32 :=
-    RiscV.registerOfNat_some_lt hresultCarry
+    primitiveLabRegisterOfNat_some_lt hresultCarry
   have hleft_fin :
-      (⟨wordFindVar context left, hleft_lt⟩ : Fin 32) = leftRegister := by
-    have h := hleft_register
-    simp [RiscV.registerOfNat, hleft_lt] at h
-    exact h
+      (⟨RiscV.riscvRegisterName (wordFindVar context left),
+          RiscV.riscvRegisterName_lt_32 hleft_lt⟩ : Fin 32) = leftRegister :=
+    primitiveLabRegisterOfNat_some_fin hleft_register hleft_lt
   have hright_fin :
-      (⟨wordFindVar context right, hright_lt⟩ : Fin 32) = rightRegister := by
-    have h := hright_register
-    simp [RiscV.registerOfNat, hright_lt] at h
-    exact h
+      (⟨RiscV.riscvRegisterName (wordFindVar context right),
+          RiscV.riscvRegisterName_lt_32 hright_lt⟩ : Fin 32) = rightRegister :=
+    primitiveLabRegisterOfNat_some_fin hright_register hright_lt
   have hcarry_fin :
-      (⟨wordFindVar context carry, hcarry_lt⟩ : Fin 32) = carryRegister := by
-    have h := hcarry_register
-    simp [RiscV.registerOfNat, hcarry_lt] at h
-    exact h
+      (⟨RiscV.riscvRegisterName (wordFindVar context carry),
+          RiscV.riscvRegisterName_lt_32 hcarry_lt⟩ : Fin 32) = carryRegister :=
+    primitiveLabRegisterOfNat_some_fin hcarry_register hcarry_lt
   have hdestination_fin :
-      (⟨wordFindVar context destination, hdestination_lt⟩ : Fin 32) =
-        destinationRegister := by
-    have h := hdestination
-    simp [RiscV.registerOfNat, hdestination_lt] at h
-    exact h
+      (⟨RiscV.riscvRegisterName (wordFindVar context destination),
+          RiscV.riscvRegisterName_lt_32 hdestination_lt⟩ : Fin 32) =
+        destinationRegister :=
+    primitiveLabRegisterOfNat_some_fin hdestination hdestination_lt
   have hresultCarry_fin :
-      (⟨wordFindVar context resultCarry, hresultCarry_lt⟩ : Fin 32) =
-        resultCarryRegister := by
-    have h := hresultCarry
-    simp [RiscV.registerOfNat, hresultCarry_lt] at h
-    exact h
+      (⟨RiscV.riscvRegisterName (wordFindVar context resultCarry),
+          RiscV.riscvRegisterName_lt_32 hresultCarry_lt⟩ : Fin 32) =
+        resultCarryRegister :=
+    primitiveLabRegisterOfNat_some_fin hresultCarry hresultCarry_lt
   simp [evalLoopProgWithPrimitive, RiscV.loopPrimitiveHandler,
     loopReadLocals, loopAssignValues, 
     hleft, hright, hcarry, loopToWordProg, RiscV.evalWordProg,
     RiscV.wordArithToInstructions,
-    RiscV.registerOfNat, hleft_lt, hright_lt, hcarry_lt,
-    hdestination_lt, hresultCarry_lt, hleft_fin, hright_fin,
+    RiscV.labRegisterOfNat_of_lt_32 hleft_lt,
+    RiscV.labRegisterOfNat_of_lt_32 hright_lt,
+    RiscV.labRegisterOfNat_of_lt_32 hcarry_lt,
+    RiscV.labRegisterOfNat_of_lt_32 hdestination_lt,
+    RiscV.labRegisterOfNat_of_lt_32 hresultCarry_lt,
+    hleft_fin, hright_fin,
     hcarry_fin, hdestination_fin, hresultCarry_fin,
     hleft_name_scratch, hright_name_scratch, hcarry_name_scratch,
     hdestination_name_scratch, hresultCarry_name_scratch]
@@ -222,17 +235,17 @@ theorem addCarry_preserves_mapped_locals [NeZero width]
     (_hright : locals right = some rightValue)
     (_hcarry : locals carry = some carryValue)
     (hdestination :
-      RiscV.registerOfNat (wordFindVar context destination) =
+      RiscV.labRegisterOfNat (wordFindVar context destination) =
         some destinationRegister)
     (hresultCarry :
-      RiscV.registerOfNat (wordFindVar context resultCarry) =
+      RiscV.labRegisterOfNat (wordFindVar context resultCarry) =
         some resultCarryRegister)
     (_hleft_register :
-      RiscV.registerOfNat (wordFindVar context left) = some leftRegister)
+      RiscV.labRegisterOfNat (wordFindVar context left) = some leftRegister)
     (_hright_register :
-      RiscV.registerOfNat (wordFindVar context right) = some rightRegister)
+      RiscV.labRegisterOfNat (wordFindVar context right) = some rightRegister)
     (_hcarry_register :
-      RiscV.registerOfNat (wordFindVar context carry) = some carryRegister)
+      RiscV.labRegisterOfNat (wordFindVar context carry) = some carryRegister)
     (hleft_state : RiscV.readRegister state leftRegister = leftValue)
     (hright_state : RiscV.readRegister state rightRegister = rightValue)
     (hcarry_state : RiscV.readRegister state carryRegister = carryValue)
@@ -255,7 +268,7 @@ theorem addCarry_preserves_mapped_locals [NeZero width]
     (hnoalias :
       ∀ name, name ≠ destination → name ≠ resultCarry →
         ∀ register,
-          RiscV.registerOfNat (wordFindVar context name) = some register →
+          RiscV.labRegisterOfNat (wordFindVar context name) = some register →
           register ≠ destinationRegister ∧
             register ≠ resultCarryRegister ∧ register ≠ 31) :
     loopLocalsMappedToRiscV context
@@ -363,17 +376,17 @@ theorem loopToWord_primitive_addCarry_preserves_mapped_locals [NeZero width]
     (hright : loopState.locals right = some rightValue)
     (hcarry : loopState.locals carry = some carryValue)
     (hdestination :
-      RiscV.registerOfNat (wordFindVar context destination) =
+      RiscV.labRegisterOfNat (wordFindVar context destination) =
         some destinationRegister)
     (hresultCarry :
-      RiscV.registerOfNat (wordFindVar context resultCarry) =
+      RiscV.labRegisterOfNat (wordFindVar context resultCarry) =
         some resultCarryRegister)
     (hleft_register :
-      RiscV.registerOfNat (wordFindVar context left) = some leftRegister)
+      RiscV.labRegisterOfNat (wordFindVar context left) = some leftRegister)
     (hright_register :
-      RiscV.registerOfNat (wordFindVar context right) = some rightRegister)
+      RiscV.labRegisterOfNat (wordFindVar context right) = some rightRegister)
     (hcarry_register :
-      RiscV.registerOfNat (wordFindVar context carry) = some carryRegister)
+      RiscV.labRegisterOfNat (wordFindVar context carry) = some carryRegister)
     (hleft_state : RiscV.readRegister state leftRegister = leftValue)
     (hright_state : RiscV.readRegister state rightRegister = rightValue)
     (hcarry_state : RiscV.readRegister state carryRegister = carryValue)
@@ -396,7 +409,7 @@ theorem loopToWord_primitive_addCarry_preserves_mapped_locals [NeZero width]
     (hnoalias :
       ∀ name, name ≠ destination → name ≠ resultCarry →
         ∀ register,
-          RiscV.registerOfNat (wordFindVar context name) = some register →
+          RiscV.labRegisterOfNat (wordFindVar context name) = some register →
           register ≠ destinationRegister ∧
             register ≠ resultCarryRegister ∧ register ≠ 31) :
     ∀ loopResult resultState,
@@ -432,42 +445,37 @@ theorem loopToWord_primitive_addCarry_preserves_mapped_locals [NeZero width]
     exact hloopResult.symm
   subst loopResult
   have hdestination_lt : wordFindVar context destination < 32 :=
-    RiscV.registerOfNat_some_lt hdestination
+    primitiveLabRegisterOfNat_some_lt hdestination
   have hresultCarry_lt : wordFindVar context resultCarry < 32 :=
-    RiscV.registerOfNat_some_lt hresultCarry
+    primitiveLabRegisterOfNat_some_lt hresultCarry
   have hleft_lt : wordFindVar context left < 32 :=
-    RiscV.registerOfNat_some_lt hleft_register
+    primitiveLabRegisterOfNat_some_lt hleft_register
   have hright_lt : wordFindVar context right < 32 :=
-    RiscV.registerOfNat_some_lt hright_register
+    primitiveLabRegisterOfNat_some_lt hright_register
   have hcarry_lt : wordFindVar context carry < 32 :=
-    RiscV.registerOfNat_some_lt hcarry_register
+    primitiveLabRegisterOfNat_some_lt hcarry_register
   have hdestination_fin :
-      (⟨wordFindVar context destination, hdestination_lt⟩ : Fin 32) =
-        destinationRegister := by
-    have h := hdestination
-    simp [RiscV.registerOfNat, hdestination_lt] at h
-    exact h
+      (⟨RiscV.riscvRegisterName (wordFindVar context destination),
+          RiscV.riscvRegisterName_lt_32 hdestination_lt⟩ : Fin 32) =
+        destinationRegister :=
+    primitiveLabRegisterOfNat_some_fin hdestination hdestination_lt
   have hresultCarry_fin :
-      (⟨wordFindVar context resultCarry, hresultCarry_lt⟩ : Fin 32) =
-        resultCarryRegister := by
-    have h := hresultCarry
-    simp [RiscV.registerOfNat, hresultCarry_lt] at h
-    exact h
+      (⟨RiscV.riscvRegisterName (wordFindVar context resultCarry),
+          RiscV.riscvRegisterName_lt_32 hresultCarry_lt⟩ : Fin 32) =
+        resultCarryRegister :=
+    primitiveLabRegisterOfNat_some_fin hresultCarry hresultCarry_lt
   have hleft_fin :
-      (⟨wordFindVar context left, hleft_lt⟩ : Fin 32) = leftRegister := by
-    have h := hleft_register
-    simp [RiscV.registerOfNat, hleft_lt] at h
-    exact h
+      (⟨RiscV.riscvRegisterName (wordFindVar context left),
+          RiscV.riscvRegisterName_lt_32 hleft_lt⟩ : Fin 32) = leftRegister :=
+    primitiveLabRegisterOfNat_some_fin hleft_register hleft_lt
   have hright_fin :
-      (⟨wordFindVar context right, hright_lt⟩ : Fin 32) = rightRegister := by
-    have h := hright_register
-    simp [RiscV.registerOfNat, hright_lt] at h
-    exact h
+      (⟨RiscV.riscvRegisterName (wordFindVar context right),
+          RiscV.riscvRegisterName_lt_32 hright_lt⟩ : Fin 32) = rightRegister :=
+    primitiveLabRegisterOfNat_some_fin hright_register hright_lt
   have hcarry_fin :
-      (⟨wordFindVar context carry, hcarry_lt⟩ : Fin 32) = carryRegister := by
-    have h := hcarry_register
-    simp [RiscV.registerOfNat, hcarry_lt] at h
-    exact h
+      (⟨RiscV.riscvRegisterName (wordFindVar context carry),
+          RiscV.riscvRegisterName_lt_32 hcarry_lt⟩ : Fin 32) = carryRegister :=
+    primitiveLabRegisterOfNat_some_fin hcarry_register hcarry_lt
   have hword' :
       RiscV.executeInstructions state
         [.sltu 31 0 carryRegister,
@@ -477,10 +485,13 @@ theorem loopToWord_primitive_addCarry_preserves_mapped_locals [NeZero width]
           .sltu 31 destinationRegister 31,
           .or resultCarryRegister resultCarryRegister 31] = resultState := by
     simpa [loopToWordProg, RiscV.evalWordProg,
-      RiscV.wordArithToInstructions, RiscV.registerOfNat,
-      RiscV.executeInstructions, hdestination, hresultCarry,
-      hleft_register, hright_register, hcarry_register,
-      hdestination_lt, hresultCarry_lt, hleft_lt, hright_lt, hcarry_lt,
+      RiscV.wordArithToInstructions,
+      RiscV.labRegisterOfNat_of_lt_32 hdestination_lt,
+      RiscV.labRegisterOfNat_of_lt_32 hresultCarry_lt,
+      RiscV.labRegisterOfNat_of_lt_32 hleft_lt,
+      RiscV.labRegisterOfNat_of_lt_32 hright_lt,
+      RiscV.labRegisterOfNat_of_lt_32 hcarry_lt,
+      RiscV.executeInstructions,
       hdestination_fin, hresultCarry_fin, hleft_fin, hright_fin, hcarry_fin,
       hdestination_name_scratch, hresultCarry_name_scratch,
       hleft_name_scratch, hright_name_scratch, hcarry_name_scratch] using hword

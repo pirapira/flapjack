@@ -26,24 +26,24 @@ theorem executeInstructionsWithExactFfi_abi [NeZero width]
     (hzero : readRegister state.machine 0 = 0)
     (hresult : exactRiscVFfiCall context
         { machine := executeInstructions state.machine
-            [.addi 10 configuration (0#width),
-             .addi 11 configurationLength (0#width),
-             .addi 12 array (0#width),
-             .addi 13 arrayLength (0#width),
+            [.addi 27 configuration (0#width),
+             .addi 28 configurationLength (0#width),
+             .addi 29 array (0#width),
+             .addi 30 arrayLength (0#width),
              .addi 14 0 (BitVec.ofNat width service)],
           ffi := state.ffi } service = result) :
     executeInstructionsWithExactFfi context state
-      [.addi 10 configuration (0#width),
-       .addi 11 configurationLength (0#width),
-       .addi 12 array (0#width),
-       .addi 13 arrayLength (0#width),
+      [.addi 27 configuration (0#width),
+       .addi 28 configurationLength (0#width),
+       .addi 29 array (0#width),
+       .addi 30 arrayLength (0#width),
        .addi 14 0 (BitVec.ofNat width service), .ecall] = result := by
   have hservice_read :
       (readRegister (executeInstructions state.machine
-        [.addi 10 configuration (0#width),
-         .addi 11 configurationLength (0#width),
-         .addi 12 array (0#width),
-         .addi 13 arrayLength (0#width),
+        [.addi 27 configuration (0#width),
+         .addi 28 configurationLength (0#width),
+         .addi 29 array (0#width),
+         .addi 30 arrayLength (0#width),
          .addi 14 0 (BitVec.ofNat width service)]) 14).toNat = service := by
     have hzero' : state.machine.registers 0 = 0 := by
       simpa [readRegister] using hzero
@@ -51,10 +51,10 @@ theorem executeInstructionsWithExactFfi_abi [NeZero width]
       nextPc, hzero', Nat.mod_eq_of_lt hservice_bounded]
   have hresult' : exactRiscVFfiCall context
       { machine := execute (execute (execute (execute
-          (execute state.machine (.addi 10 configuration (0#width)))
-            (.addi 11 configurationLength (0#width)))
-            (.addi 12 array (0#width)))
-            (.addi 13 arrayLength (0#width)))
+          (execute state.machine (.addi 27 configuration (0#width)))
+            (.addi 28 configurationLength (0#width)))
+            (.addi 29 array (0#width)))
+            (.addi 30 arrayLength (0#width)))
             (.addi 14 0 (BitVec.ofNat width service)),
         ffi := state.ffi } service = result := by
     simpa [executeInstructions] using hresult
@@ -62,10 +62,10 @@ theorem executeInstructionsWithExactFfi_abi [NeZero width]
   have hservice_read' :
       (readRegister
         (execute (execute (execute (execute
-          (execute state.machine (.addi 10 configuration (0#width)))
-            (.addi 11 configurationLength (0#width)))
-            (.addi 12 array (0#width)))
-            (.addi 13 arrayLength (0#width)))
+          (execute state.machine (.addi 27 configuration (0#width)))
+            (.addi 28 configurationLength (0#width)))
+            (.addi 29 array (0#width)))
+            (.addi 30 arrayLength (0#width)))
             (.addi 14 0 (BitVec.ofNat width service))) 14).toNat = service := by
     simpa [executeInstructions] using hservice_read
   rw [hservice_read', hresult']
@@ -80,34 +80,53 @@ theorem wordFfiToRiscV_exactFfi_simulation [NeZero width]
     (context : WordFfiContext)
     (state : ExactRiscVFfiState width σ)
     (function : FunName)
-    (configuration configurationLength array arrayLength : Fin 32)
+    (configuration configurationLength array arrayLength : Nat)
     (service : Nat) (code : List (Instruction width))
     (result : ExactRiscVFfiResult width σ)
     (hservice : lookupWordFfiService function context.services = some service)
-    (hcode : wordFfiToRiscV context function configuration.val
-        configurationLength.val array.val arrayLength.val = some code)
+    (hconfiguration : configuration < 32)
+    (hconfigurationLength : configurationLength < 32)
+    (harray : array < 32) (harrayLength : arrayLength < 32)
+    (hcode : wordFfiToRiscV context function configuration
+        configurationLength array arrayLength = some code)
     (hservice_bounded : service < 2 ^ width)
     (hzero : readRegister state.machine 0 = 0)
     (hresult : exactRiscVFfiCall context
         { machine := executeInstructions state.machine
-            [.addi 10 configuration (0#width),
-             .addi 11 configurationLength (0#width),
-             .addi 12 array (0#width),
-             .addi 13 arrayLength (0#width),
+            [.addi 27 ⟨riscvRegisterName configuration,
+                riscvRegisterName_lt_32 hconfiguration⟩ (0#width),
+             .addi 28 ⟨riscvRegisterName configurationLength,
+                riscvRegisterName_lt_32 hconfigurationLength⟩ (0#width),
+             .addi 29 ⟨riscvRegisterName array,
+                riscvRegisterName_lt_32 harray⟩ (0#width),
+             .addi 30 ⟨riscvRegisterName arrayLength,
+                riscvRegisterName_lt_32 harrayLength⟩ (0#width),
              .addi 14 0 (BitVec.ofNat width service)],
           ffi := state.ffi } service = result) :
     executeInstructionsWithExactFfi context state code = result := by
   have hcode' : code =
-      [.addi 10 configuration (0#width),
-       .addi 11 configurationLength (0#width),
-       .addi 12 array (0#width),
-       .addi 13 arrayLength (0#width),
+      [.addi 27 ⟨riscvRegisterName configuration,
+          riscvRegisterName_lt_32 hconfiguration⟩ (0#width),
+       .addi 28 ⟨riscvRegisterName configurationLength,
+          riscvRegisterName_lt_32 hconfigurationLength⟩ (0#width),
+       .addi 29 ⟨riscvRegisterName array,
+          riscvRegisterName_lt_32 harray⟩ (0#width),
+       .addi 30 ⟨riscvRegisterName arrayLength,
+          riscvRegisterName_lt_32 harrayLength⟩ (0#width),
        .addi 14 0 (BitVec.ofNat width service), .ecall] := by
-    simp [wordFfiToRiscV, hservice, wordRegisterMoves, registerOfNat] at hcode
+    simp [wordFfiToRiscV, hservice, wordRegisterMoves,
+      labRegisterOfNat_of_lt_32 hconfiguration,
+      labRegisterOfNat_of_lt_32 hconfigurationLength,
+      labRegisterOfNat_of_lt_32 harray,
+      labRegisterOfNat_of_lt_32 harrayLength] at hcode
     exact hcode.symm
   rw [hcode']
   apply executeInstructionsWithExactFfi_abi context state service
-    configuration configurationLength array arrayLength result hservice_bounded hzero
+    ⟨riscvRegisterName configuration, riscvRegisterName_lt_32 hconfiguration⟩
+    ⟨riscvRegisterName configurationLength, riscvRegisterName_lt_32 hconfigurationLength⟩
+    ⟨riscvRegisterName array, riscvRegisterName_lt_32 harray⟩
+    ⟨riscvRegisterName arrayLength, riscvRegisterName_lt_32 harrayLength⟩
+    result hservice_bounded hzero
   exact hresult
 
 /-! Exact FFI execution composes over instruction-list append.  This keeps
@@ -201,10 +220,14 @@ theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_exactFfi_simulation
     (hzero : readRegister state.machine 0 = 0)
     (hresult : exactRiscVFfiCall context
         { machine := executeInstructions state.machine
-            [.addi 10 configuration (0#width),
-             .addi 11 configurationLength (0#width),
-             .addi 12 array (0#width),
-             .addi 13 arrayLength (0#width),
+            [.addi 27 ⟨riscvRegisterName configuration,
+                riscvRegisterName_lt_32 configuration.isLt⟩ (0#width),
+             .addi 28 ⟨riscvRegisterName configurationLength,
+                riscvRegisterName_lt_32 configurationLength.isLt⟩ (0#width),
+             .addi 29 ⟨riscvRegisterName array,
+                riscvRegisterName_lt_32 array.isLt⟩ (0#width),
+             .addi 30 ⟨riscvRegisterName arrayLength,
+                riscvRegisterName_lt_32 arrayLength.isLt⟩ (0#width),
              .addi 14 0 (BitVec.ofNat width service)],
           ffi := state.ffi } service = result) :
     executeInstructionsWithExactFfi context state code = result := by
@@ -233,8 +256,9 @@ theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_exactFfi_simulation
         cases hpair
         rfl
   exact wordFfiToRiscV_exactFfi_simulation context state function
-    configuration configurationLength array arrayLength service code result
-    hservice hcode' hservice_bounded hzero hresult
+    configuration.val configurationLength.val array.val arrayLength.val service code result
+    hservice configuration.isLt configurationLength.isLt array.isLt arrayLength.isLt
+    hcode' hservice_bounded hzero hresult
 
 /-! The same FFI leaf theorem remains valid in the real call-aware context.
     The target table is carried by the complete compiler even when this leaf
@@ -258,10 +282,14 @@ theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_exactFfi_simulation_targets
     (hzero : readRegister state.machine 0 = 0)
     (hresult : exactRiscVFfiCall context
         { machine := executeInstructions state.machine
-            [.addi 10 configuration (0#width),
-             .addi 11 configurationLength (0#width),
-             .addi 12 array (0#width),
-             .addi 13 arrayLength (0#width),
+            [.addi 27 ⟨riscvRegisterName configuration,
+                riscvRegisterName_lt_32 configuration.isLt⟩ (0#width),
+             .addi 28 ⟨riscvRegisterName configurationLength,
+                riscvRegisterName_lt_32 configurationLength.isLt⟩ (0#width),
+             .addi 29 ⟨riscvRegisterName array,
+                riscvRegisterName_lt_32 array.isLt⟩ (0#width),
+             .addi 30 ⟨riscvRegisterName arrayLength,
+                riscvRegisterName_lt_32 arrayLength.isLt⟩ (0#width),
              .addi 14 0 (BitVec.ofNat width service)],
           ffi := state.ffi } service = result) :
     executeInstructionsWithExactFfi context state code = result := by
@@ -290,8 +318,9 @@ theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_exactFfi_simulation_targets
         cases hpair
         rfl
   exact wordFfiToRiscV_exactFfi_simulation context state function
-    configuration configurationLength array arrayLength service code result
-    hservice hcode' hservice_bounded hzero hresult
+    configuration.val configurationLength.val array.val arrayLength.val service code result
+    hservice configuration.isLt configurationLength.isLt array.isLt arrayLength.isLt
+    hcode' hservice_bounded hzero hresult
 
 theorem executeInstructionsWithExactFfiCounted_normal
     [NeZero width]
@@ -342,10 +371,14 @@ theorem wordFunctionToRiscVWithCallsAndFfiAndLoops_exactFfi_counted_simulation_t
     (hzero : readRegister state.machine 0 = 0)
     (hresult : exactRiscVFfiCall context
         { machine := executeInstructions state.machine
-            [.addi 10 configuration (0#width),
-             .addi 11 configurationLength (0#width),
-             .addi 12 array (0#width),
-             .addi 13 arrayLength (0#width),
+            [.addi 27 ⟨riscvRegisterName configuration,
+                riscvRegisterName_lt_32 configuration.isLt⟩ (0#width),
+             .addi 28 ⟨riscvRegisterName configurationLength,
+                riscvRegisterName_lt_32 configurationLength.isLt⟩ (0#width),
+             .addi 29 ⟨riscvRegisterName array,
+                riscvRegisterName_lt_32 array.isLt⟩ (0#width),
+             .addi 30 ⟨riscvRegisterName arrayLength,
+                riscvRegisterName_lt_32 arrayLength.isLt⟩ (0#width),
              .addi 14 0 (BitVec.ofNat width service)],
           ffi := state.ffi } service = .normal final) :
     executeInstructionsWithExactFfiCounted context state code =

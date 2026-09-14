@@ -10,6 +10,25 @@ take every move in source order without using the reserved scratch register.
 
 namespace Flapjack.RiscV
 
+/-- Read a register by its internal Cake stack number.  The compiled instruction
+stream writes hardware register `riscvRegisterName name`, so an internal
+observation goes through `labRegisterOfNat` exactly once. -/
+def readRegisterInternal [NeZero width] (state : State width) (name : Nat) :
+    Option (Word width) :=
+  (labRegisterOfNat name).bind (fun register => some (readRegister state register))
+
+attribute [simp] labRegisterOfNat_of_lt_32
+
+@[simp] theorem readRegisterInternal_eq_some [NeZero width] (state : State width)
+    {name : Nat} {register : Fin 32} (h : labRegisterOfNat name = some register) :
+    readRegisterInternal state name = some (readRegister state register) := by
+  simp [readRegisterInternal, h]
+
+@[simp] theorem readRegisterInternal_eq_none [NeZero width] (state : State width)
+    {name : Nat} (h : labRegisterOfNat name = none) :
+    readRegisterInternal state name = none := by
+  simp [readRegisterInternal, h]
+
 def wordMoveInstructionList [NeZero width] (move : Nat × Nat) :
     List (Instruction width) :=
   match wordExpToInstructions (width := width) move.1
@@ -20,30 +39,40 @@ def wordMoveInstructionList [NeZero width] (move : Nat × Nat) :
 theorem executeWordMove_read_destination [NeZero width]
     (state : State width) (destination source : Nat)
     (hdestination : destination < 32) (hsource : source < 32)
-    (hdestinationNonzero : destination ≠ 0) :
-    readRegister
+    (hdestinationNonzero : riscvRegisterName destination ≠ 0) :
+    readRegisterInternal
         (executeInstructions state
           (wordMoveInstructionList (width := width) (destination, source)))
-        ⟨destination, hdestination⟩ =
-      readRegister state ⟨source, hsource⟩ := by
-  simp [wordMoveInstructionList, wordExpToInstructions,
-    wordExpToInstruction, registerOfNat, hdestination, hsource,
-    execute, nextPc, writeRegister, readRegister, hdestinationNonzero]
+        destination =
+      readRegisterInternal state source := by
+  have hne : (⟨riscvRegisterName destination,
+      riscvRegisterName_lt_32 hdestination⟩ : Fin 32) ≠ 0 := by
+    intro h
+    exact hdestinationNonzero (congrArg Fin.val h)
+  simp [wordMoveInstructionList, wordExpToInstructions, wordExpToInstruction,
+    readRegisterInternal, execute, nextPc, writeRegister, readRegister,
+    hdestination, hsource, hne]
 
 theorem executeWordMove_read_other [NeZero width]
     (state : State width) (destination source other : Nat)
     (hdestination : destination < 32) (hsource : source < 32)
-    (hother : other < 32) (hdestinationNonzero : destination ≠ 0)
-    (hotherNe : other ≠ destination) :
-    readRegister
+    (hother : other < 32) (hotherNe : other ≠ destination) :
+    readRegisterInternal
         (executeInstructions state
           (wordMoveInstructionList (width := width) (destination, source)))
-        ⟨other, hother⟩ =
-      readRegister state ⟨other, hother⟩ := by
-  simp [wordMoveInstructionList, wordExpToInstructions,
-    wordExpToInstruction, registerOfNat, hdestination, hsource,
-    execute, nextPc, writeRegister, readRegister,
-    hdestinationNonzero, hotherNe]
+        other =
+      readRegisterInternal state other := by
+  have hne : riscvRegisterName other ≠ riscvRegisterName destination :=
+    fun h => hotherNe (riscvRegisterName_injective_lt_32 hother hdestination h)
+  have hfin : (⟨riscvRegisterName other, riscvRegisterName_lt_32 hother⟩ : Fin 32) ≠
+      ⟨riscvRegisterName destination, riscvRegisterName_lt_32 hdestination⟩ :=
+    fun h => hne (congrArg Fin.val h)
+  simp [wordMoveInstructionList, wordExpToInstructions, wordExpToInstruction,
+    readRegisterInternal, execute, nextPc, writeRegister, readRegister,
+    hdestination, hsource, hother]
+  split
+  · rfl
+  · simp only [hfin, if_neg, not_false_eq_true]
 
 theorem wordMoveToInstructions_of_no_source_destination [NeZero width]
     (moves : List (Nat × Nat))
@@ -141,7 +170,7 @@ theorem wordMoveToInstructions_of_no_source_destination [NeZero width]
           wordExpToInstructions (width := width) head.1 (.var head.2) =
             some (wordMoveInstructionList (width := width) head) := by
         simp [wordMoveInstructionList, wordExpToInstructions,
-          wordExpToInstruction, registerOfNat, hheadValid.1, hheadValid.2.1]
+          wordExpToInstruction, hheadValid.1, hheadValid.2.1]
       have htailResult := ih htailDestinations htailNoSource htailValid
       have htailAux :
           wordMoveToInstructionsAux (tail.length + 1) tail =
@@ -152,7 +181,7 @@ theorem wordMoveToInstructions_of_no_source_destination [NeZero width]
               (wordExpToInstruction (width := width) head.1 (.var head.2))) =
             some (wordMoveInstructionList (width := width) head) := by
         simp [wordMoveInstructionList, wordExpToInstructions,
-          wordExpToInstruction, registerOfNat, hheadValid.1, hheadValid.2.1]
+          wordExpToInstruction, hheadValid.1, hheadValid.2.1]
       rw [wordMoveToInstructions, wordMoveToInstructionsAux]
       simp [wordMoveRegisterDestinations, hdestinations', hready', hany, hremoved,
         hheadCodeAux, htailAux]
@@ -161,14 +190,13 @@ theorem executeWordMoves_preserve_read [NeZero width]
     (state : State width) (moves : List (Nat × Nat)) (other : Nat)
     (hvalid : ∀ move, move ∈ moves →
       move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
-    (hdestNonzero : ∀ move, move ∈ moves → move.1 ≠ 0)
     (hnotDestination : ∀ move, move ∈ moves → move.1 ≠ other)
     (hother : other < 32) :
-    readRegister
+    readRegisterInternal
         (executeInstructions state
           (moves.flatMap (wordMoveInstructionList (width := width))))
-        ⟨other, hother⟩ =
-      readRegister state ⟨other, hother⟩ := by
+        other =
+      readRegisterInternal state other := by
   induction moves generalizing state with
   | nil => rfl
   | cons head tail ih =>
@@ -177,10 +205,6 @@ theorem executeWordMoves_preserve_read [NeZero width]
           move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31 := by
         intro move hmove
         exact hvalid move (by simp [hmove])
-      have hheadNonzero := hdestNonzero head (by simp)
-      have htailNonzero : ∀ move, move ∈ tail → move.1 ≠ 0 := by
-        intro move hmove
-        exact hdestNonzero move (by simp [hmove])
       have hheadNot := hnotDestination head (by simp)
       have htailNot : ∀ move, move ∈ tail → move.1 ≠ other := by
         intro move hmove
@@ -188,10 +212,9 @@ theorem executeWordMoves_preserve_read [NeZero width]
       rw [List.flatMap_cons, executeInstructions_append]
       rw [ih (state := executeInstructions state
           (wordMoveInstructionList (width := width) head))
-        (hvalid := htailValid) (hdestNonzero := htailNonzero)
-        (hnotDestination := htailNot)]
+        (hvalid := htailValid) (hnotDestination := htailNot)]
       exact executeWordMove_read_other state head.1 head.2 other
-        hheadValid.1 hheadValid.2.1 hother hheadNonzero (Ne.symm hheadNot)
+        hheadValid.1 hheadValid.2.1 hother (Ne.symm hheadNot)
 
 theorem executeWordMoves_preserves_sources [NeZero width]
     (state : State width) (moves : List (Nat × Nat))
@@ -199,13 +222,13 @@ theorem executeWordMoves_preserves_sources [NeZero width]
     (hnoSource : ∀ move, move ∈ moves → move.2 ∉ moves.map Prod.fst)
     (hvalid : ∀ move, move ∈ moves →
       move.1 < 32 ∧ move.2 < 32 ∧ move.1 ≠ 31 ∧ move.2 ≠ 31)
-    (hdestNonzero : ∀ move, move ∈ moves → move.1 ≠ 0) :
-    ∀ move (hmove : move ∈ moves),
-      readRegister
+    (hdestNonzero : ∀ move, move ∈ moves → riscvRegisterName move.1 ≠ 0) :
+    ∀ move (_hmove : move ∈ moves),
+      readRegisterInternal
           (executeInstructions state
             (moves.flatMap (wordMoveInstructionList (width := width))))
-          ⟨move.1, (hvalid move hmove).1⟩ =
-        readRegister state ⟨move.2, (hvalid move hmove).2.1⟩ := by
+          move.1 =
+        readRegisterInternal state move.2 := by
   induction moves generalizing state with
   | nil =>
       intro move hmove
@@ -218,7 +241,8 @@ theorem executeWordMoves_preserves_sources [NeZero width]
         intro other hother
         exact hvalid other (by simp [hother])
       have hheadNonzero := hdestNonzero head (by simp)
-      have htailNonzero : ∀ other, other ∈ tail → other.1 ≠ 0 := by
+      have htailNonzero : ∀ other, other ∈ tail →
+          riscvRegisterName other.1 ≠ 0 := by
         intro other hother
         exact hdestNonzero other (by simp [hother])
       have hdestinations' : (head.1 :: tail.map Prod.fst).Nodup := by
@@ -252,7 +276,7 @@ theorem executeWordMoves_preserves_sources [NeZero width]
         have hpreserve := executeWordMoves_preserve_read
           (executeInstructions state
             (wordMoveInstructionList (width := width) head)) tail head.1
-          htailValid htailNonzero hheadNotTailDestination hheadValid.1
+          htailValid hheadNotTailDestination hheadValid.1
         rw [hpreserve]
         exact executeWordMove_read_destination state head.1 head.2
           hheadValid.1 hheadValid.2.1 hheadNonzero
@@ -263,13 +287,18 @@ theorem executeWordMoves_preserves_sources [NeZero width]
         rw [hresult]
         exact executeWordMove_read_other state head.1 head.2 move.2
           hheadValid.1 hheadValid.2.1 (hvalid move (by simp [hmove])).2.1
-          hheadNonzero (htailNoSourceHead move hmove)
+          (htailNoSourceHead move hmove)
 
 def wordReadRegisterNat [NeZero width] (state : State width) (name : Nat) :
     Option (Word width) :=
-  do
-    let register ← registerOfNat name
-    pure (readRegister state register)
+  (labRegisterOfNat name).bind
+    (fun register => some (readRegister state register))
+
+@[simp] theorem wordReadRegisterNat_eq [NeZero width]
+    (state : State width) (name : Nat) :
+    wordReadRegisterNat state name =
+      (labRegisterOfNat name).bind
+        (fun register => some (readRegister state register)) := rfl
 
 theorem wordReadRegisterNat_mapM_zip [NeZero width]
     (source target : State width) (destinations sources : List Nat)

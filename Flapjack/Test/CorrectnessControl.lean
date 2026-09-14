@@ -15,7 +15,8 @@ def controlTestLocals : Nat → Option (RiscV.Word 64) :=
   fun name => if name == 2 then some (BitVec.ofNat 64 7) else none
 
 def controlTestState : RiscV.State 64 :=
-  RiscV.writeRegister (RiscV.zeroState 64) 2 7
+  RiscV.writeRegister (RiscV.zeroState 64)
+    ⟨RiscV.riscvRegisterName 2, by decide⟩ 7
 
 def controlTestLoopState : LoopState (RiscV.Word 64) :=
   { locals := controlTestLocals
@@ -30,7 +31,7 @@ theorem controlTestLocals_relation :
   · subst name
     simp [controlTestLocals] at hvalue
     subst value
-    refine ⟨2, by decide, ?_⟩
+    refine ⟨⟨RiscV.riscvRegisterName 2, by decide⟩, by decide, ?_⟩
     simp [controlTestState, RiscV.writeRegister, RiscV.readRegister]
   · simp [controlTestLocals, hname] at hvalue
 

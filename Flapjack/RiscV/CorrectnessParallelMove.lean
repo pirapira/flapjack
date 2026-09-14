@@ -15,7 +15,7 @@ def wordColourMove (colour : Nat → Nat) (move : Nat × Nat) : Nat × Nat :=
 
 theorem wordColourStateRelation_executeAcyclicMoveList [NeZero width]
     (colour : Nat → Nat) (valid : wordColourValid colour)
-    (injective : Function.Injective colour) (colourZero : colour 0 = 0)
+    (injective : Function.Injective colour) (colourZero : colour 27 = 27)
     (source target : State width)
     (hrelation : WordColourStateRelation colour source target)
     (moves : List (Nat × Nat))
@@ -46,23 +46,23 @@ theorem wordColourStateRelation_executeAcyclicMoveList [NeZero width]
         exact hcolourNoScratch move (by simp [hmove])
       have hsourceCode :
           wordMoveInstructionList (width := width) head =
-            [.addi ⟨head.1, hheadValid.1⟩ ⟨head.2, hheadValid.2.1⟩ 0] := by
+            [.addi (hwRegister head.1 hheadValid.1) (hwRegister head.2 hheadValid.2.1) 0] := by
         simp [wordMoveInstructionList, wordExpToInstructions,
-          wordExpToInstruction, registerOfNat, hheadValid.1, hheadValid.2.1]
+          wordExpToInstruction, hheadValid.1, hheadValid.2.1]
       have htargetCode :
           wordMoveInstructionList (width := width) (wordColourMove colour head) =
-            [.addi ⟨colour head.1, valid head.1 hheadValid.1⟩
-              ⟨colour head.2, valid head.2 hheadValid.2.1⟩ 0] := by
+            [.addi (hwRegister (colour head.1) (valid head.1 hheadValid.1))
+              (hwRegister (colour head.2) (valid head.2 hheadValid.2.1)) 0] := by
         simp [wordMoveInstructionList, wordColourMove, wordExpToInstructions,
-          wordExpToInstruction, registerOfNat, valid head.1 hheadValid.1,
+          wordExpToInstruction, valid head.1 hheadValid.1,
           valid head.2 hheadValid.2.1]
       have hstep := wordColourStateRelation_executeAddi colour valid injective
         colourZero source target hrelation head.1 head.2 hheadValid.1 hheadValid.2.1
       rcases ih (source := execute source
-          (.addi ⟨head.1, hheadValid.1⟩ ⟨head.2, hheadValid.2.1⟩ 0))
+          (.addi (hwRegister head.1 hheadValid.1) (hwRegister head.2 hheadValid.2.1) 0))
         (target := execute target
-          (.addi ⟨colour head.1, valid head.1 hheadValid.1⟩
-            ⟨colour head.2, valid head.2 hheadValid.2.1⟩ 0))
+          (.addi (hwRegister (colour head.1) (valid head.1 hheadValid.1))
+            (hwRegister (colour head.2) (valid head.2 hheadValid.2.1)) 0))
         hstep htailValid htailColour with
         ⟨source', target', hsource', htarget', hrelation'⟩
       refine ⟨source', target', ?_, ?_, hrelation'⟩
@@ -73,7 +73,7 @@ theorem wordColourStateRelation_executeAcyclicMoveList [NeZero width]
 
 theorem evalWordProg_moveAcyclic_applyColour [NeZero width]
     (colour : Nat → Nat) (valid : wordColourValid colour)
-    (injective : Function.Injective colour) (colourZero : colour 0 = 0)
+    (injective : Function.Injective colour) (colourZero : colour 27 = 27)
     (source target : State width)
     (hrelation : WordColourStateRelation colour source target)
     (moves : List (Nat × Nat))
@@ -149,7 +149,7 @@ theorem evalWordProg_moveAcyclic_applyColour [NeZero width]
 
 theorem evalWordProg_acyclicEntry_seq_applyColour [NeZero width]
     (colour : Nat → Nat) (valid : wordColourValid colour)
-    (injective : Function.Injective colour) (colourZero : colour 0 = 0)
+    (injective : Function.Injective colour) (colourZero : colour 27 = 27)
     (colourNoScratch : ∀ name, name < 31 → colour name ≠ 31)
     (source target : State width)
     (hrelation : WordColourStateRelation colour source target)

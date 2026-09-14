@@ -25,7 +25,7 @@ def loopFfiSimulationWordState : State 64 :=
   writeRegister
     (writeRegister
       (writeRegister
-        (writeRegister (zeroState 64) 1 10) 2 1) 3 20) 4 2
+        (writeRegister (zeroState 64) 10 10) 11 1) 12 20) 13 2
 
 def loopFfiSimulationLoopHandler : FunName → Word 64 → Word 64 → Word 64 → Word 64 →
     LoopState (Word 64) → Option (LoopState (Word 64)) :=
@@ -65,29 +65,29 @@ theorem loopFfi_simulation_mapped_locals :
       intro name value hvalue
       by_cases h1 : name = 1
       · subst name
-        refine ⟨1, by simp [registerOfNat, wordFindVar, lookupNatInfo], ?_⟩
+        refine ⟨⟨riscvRegisterName 1, by decide⟩, by decide, ?_⟩
         simpa [loopFfiSimulationLoopState, loopFfiSimulationWordState,
           readRegister, writeRegister] using hvalue
       · by_cases h2 : name = 2
         · subst name
-          refine ⟨2, by simp [registerOfNat, wordFindVar, lookupNatInfo], ?_⟩
+          refine ⟨⟨riscvRegisterName 2, by decide⟩, by decide, ?_⟩
           simpa [loopFfiSimulationLoopState, loopFfiSimulationWordState,
             readRegister, writeRegister] using hvalue
         · by_cases h3 : name = 3
           · subst name
-            refine ⟨3, by simp [registerOfNat, wordFindVar, lookupNatInfo], ?_⟩
+            refine ⟨⟨riscvRegisterName 3, by decide⟩, by decide, ?_⟩
             simpa [loopFfiSimulationLoopState, loopFfiSimulationWordState,
               readRegister, writeRegister] using hvalue
           · by_cases h4 : name = 4
             · subst name
-              refine ⟨4, by simp [registerOfNat, wordFindVar, lookupNatInfo], ?_⟩
+              refine ⟨⟨riscvRegisterName 4, by decide⟩, by decide, ?_⟩
               simpa [loopFfiSimulationLoopState, loopFfiSimulationWordState,
                 readRegister, writeRegister] using hvalue
             · simp [loopFfiSimulationLoopState, h1, h2, h3, h4] at hvalue)
   · simp [evalLoopProgWithPrimitiveCallsAndFfi,
       loopFfiSimulationLoopHandler, loopFfiSimulationLoopState]
   · simp [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
-      loopFfiSimulationWordHandler, registerOfNat, wordFindVar,
+      loopFfiSimulationWordHandler, wordFindVar,
       lookupNatInfo]
 
 end Flapjack

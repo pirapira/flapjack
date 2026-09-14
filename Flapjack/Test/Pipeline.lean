@@ -233,7 +233,7 @@ example [NeZero width] :
         (width := width)
         [(0, [], ((.seq (.assign 1 (.op .add [.var 2, .var 3]))
           (.return 0 [1])) : WordProg (RiscV.Word width)))] =
-      [(0, [], some ([.add 1 2 3], [1]))] := by
+      [(0, [], some ([.add 10 11 12], [10]))] := by
     simp [pipelineRiscVFunctions, RiscV.wordFunctionToRiscVWithLoops,
     RiscV.wordFunctionToRiscVWithLoopsAux, RiscV.wordControlInstructions,
     RiscV.wordFunctionToRiscV, RiscV.wordExpToInstruction,
@@ -242,8 +242,8 @@ example [NeZero width] :
 example :
     pipelineRiscVFunctionsWithFfi (width := 64) [("sum", 7)]
       [(7, [], (.seq (.ffi "sum" 2 3 4 5 ([], [])) (.return 0 [6])))] =
-      [(7, [], some ([.addi 10 2 0, .addi 11 3 0, .addi 12 4 0,
-        .addi 13 5 0, .addi 14 0 7, .ecall], [6]))] := by
+      [(7, [], some ([.addi 27 11 0, .addi 28 12 0, .addi 29 13 0,
+        .addi 30 5 0, .addi 14 0 7, .ecall], [6]))] := by
   decide +kernel
 
 example :
@@ -258,8 +258,8 @@ example [NeZero width] (state : RiscV.State width) (value : RiscV.Word width)
     RiscV.evalWordFunction state
         ((.seq (.assign 1 (.const value)) (.return 0 [1])) :
           WordProg (RiscV.Word width)) =
-      some (RiscV.execute state (.addi 1 0 value),
-        [RiscV.readRegister (RiscV.execute state (.addi 1 0 value)) 1]) := by
+      some (RiscV.execute state (.addi 10 0 value),
+        [RiscV.readRegister (RiscV.execute state (.addi 10 0 value)) 10]) := by
   exact RiscV.evalWordFunction_return_const state value zero
 
 def loopProgLongMulFingerprint : LoopProg α → Option (Nat × Nat × Nat × Nat)
@@ -309,7 +309,7 @@ example :
         | some (code, returns) =>
             returns = [5] && match code with
             | [.add destination left right] =>
-                destination = 5 && left = 2 && right = 3
+                destination = 5 && left = 11 && right = 12
             | _ => false
         | none => false)
 
@@ -343,27 +343,27 @@ example :
 
 example [NeZero width] :
     RiscV.wordArithToInstructions (width := width) (.addCarry 5 6 2 3 4) =
-      some [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
+      some [.sltu 31 0 13, .add 5 11 12, .sltu 6 5 12, .add 5 5 31,
         .sltu 31 5 31, .or 6 6 31] := by
-  exact RiscV.wordArithToInstructions_addCarry
+  exact RiscV.wordArithToInstructions_addCarry (width := width)
 
 example [NeZero width] :
     RiscV.wordExpToInstruction (width := width) 1
         (.op .and [.var 2, .const (15 : RiscV.Word width)]) =
-      some (.andi 1 2 15) := by
-  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+      some (.andi 10 11 15) := by
+  simp [RiscV.wordExpToInstruction]
 
 example [NeZero width] :
     RiscV.wordExpToInstruction (width := width) 1
         (.op .sub [.var 2, .const (4 : RiscV.Word width)]) =
-      some (.addi 1 2 (0 - 4)) := by
-  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+      some (.addi 10 11 (0 - 4)) := by
+  simp [RiscV.wordExpToInstruction]
 
 example [NeZero width] :
     RiscV.wordExpToInstruction (width := width) 1
         (.shift .lsr (.var 2) (.const (3 : RiscV.Word width))) =
-      some (.srli 1 2 3) := by
-  simp [RiscV.wordExpToInstruction, RiscV.registerOfNat]
+      some (.srli 10 11 3) := by
+  simp [RiscV.wordExpToInstruction]
 
 example :
     RiscV.executeFunction 10 (0 : RiscV.Word 8) [2]
@@ -379,8 +379,8 @@ example :
 
 example [NeZero width] :
     RiscV.wordArithToInstructions (width := width) (.longMul 1 2 3 4) =
-      some [.mulHU 1 3 4, .mul 2 3 4] := by
-  exact RiscV.wordArithToInstructions_longMul
+      some [.mulHU 10 12 13, .mul 11 12 13] := by
+  exact RiscV.wordArithToInstructions_longMul (width := width)
 
 example [NeZero width] :
     RiscV.wordArithToInstructions (width := width) (.longMul 3 2 3 4) = none := by
@@ -418,8 +418,8 @@ example :
 
 example [NeZero width] :
     RiscV.wordArithToInstruction (width := width) (.div 1 2 3) =
-      some (.divU 1 2 3) := by
-  exact RiscV.wordArithToInstruction_div
+      some (.divU 10 11 12) := by
+  exact RiscV.wordArithToInstruction_div (width := width)
 
 example (left right : RiscV.Word 64) :
     RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]

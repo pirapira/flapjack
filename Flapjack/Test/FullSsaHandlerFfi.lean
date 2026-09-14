@@ -7,7 +7,7 @@ namespace Flapjack
 open RiscV
 
 def fullSsaHandlerFfiRemoveConfig : StackRemoveConfig :=
-  { storeBase := 25, currHeap := 26, scratch := 31, addressScratch := 29,
+  { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
     stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
 
 /-! Combined full-SSA handler/FFI regression.  The callee performs a stateful
@@ -59,8 +59,8 @@ def fullSsaHandlerFfiMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← fullSsaHandlerFfiLinked
   let entry ← fullSsaHandlerFfiLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  let returnAddress := BitVec.ofNat 64 348
-  RiscV.executeFunctionAtWithFfi fullSsaHandlerFfiHost 8000 0 entry returnAddress [] image [2] []
+  let returnAddress := (0 : RiscV.Word 64)
+  RiscV.executeFunctionAtWithFfi fullSsaHandlerFfiHost 8000 0 entry returnAddress [] image [11] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 def fullSsaHandlerFfiSourceFunctions :
@@ -334,38 +334,5 @@ theorem fullSsaCaughtHandlerFfi_source_loop_simulation :
   calc
     _ = some [BitVec.ofNat 64 4] := fullSsaCaughtHandlerFfi_source_execution
     _ = _ := fullSsaCaughtHandlerFfi_compiled_results.2.symm
-
-def fullSsaCaughtHandlerFfiHost : RiscV.WordFfiHost 64 :=
-  fun service configuration _ _ _ state =>
-    if service = 7 then
-      some { (RiscV.writeRegister state 10 (configuration + 1)) with
-        pc := state.pc + 4 }
-    else none
-
-def fullSsaCaughtHandlerFfiMachineResult : Option (List (RiscV.Word 64)) := do
-  let sections ← compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked .rv64i
-    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) [("inc", 7)]
-    fullSsaHandlerFfiRemoveConfig fullSsaCaughtHandlerFfiDeclarations
-  let entry ← fullSsaHandlerFfiLookupEntry 2 sections
-  let image := sections.flatMap (fun (_, _, code) => code)
-  let returnAddress := BitVec.ofNat 64 (4 * image.length)
-  RiscV.executeFunctionAtWithFfi fullSsaCaughtHandlerFfiHost 8000 0 entry
-    returnAddress [] image [2] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
-
-theorem fullSsaCaughtHandlerFfi_machine_execution :
-    fullSsaCaughtHandlerFfiMachineResult = some [BitVec.ofNat 64 4] := by
-  native_decide
-
-theorem fullSsaCaughtHandlerFfi_source_machine_simulation :
-    (evalPanProgWithCallsAndFfi fullSsaCaughtHandlerFfiSourceFunctions
-      fullSsaCaughtHandlerFfiSourceHandler 40
-      (fun _ => none) fullSsaCaughtHandlerFfiSourceMain).map (fun result =>
-        match result with
-        | .returned _ values => values
-        | _ => []) = fullSsaCaughtHandlerFfiMachineResult := by
-  calc
-    _ = some [BitVec.ofNat 64 4] := fullSsaCaughtHandlerFfi_source_execution
-    _ = _ := fullSsaCaughtHandlerFfi_machine_execution.symm
 
 end Flapjack

@@ -41,8 +41,8 @@ def ffiMachineWordHandler : FunName → Word 64 → Word 64 → Word 64 → Word
   fun function _ _ _ _ state =>
     if function == "echo" then
       some (executeInstructions state
-        [.addi 10 2 (0#64), .addi 11 3 (0#64),
-         .addi 12 4 (0#64), .addi 13 5 (0#64),
+        [.addi 27 11 (0#64), .addi 28 12 (0#64),
+         .addi 29 13 (0#64), .addi 30 5 (0#64),
          .addi 14 0 (BitVec.ofNat 64 7)])
     else none
 
@@ -62,17 +62,17 @@ def pipelineFfiIdentityHandler : FunName → Word 64 → Word 64 → Word 64 →
 
 example :
     executeInstructionsWithFfi ffiMachineHost ffiMachineState
-      [.addi 10 2 (0#64), .addi 11 3 (0#64),
-       .addi 12 4 (0#64), .addi 13 5 (0#64)] =
+      [.addi 27 11 (0#64), .addi 28 12 (0#64),
+       .addi 29 13 (0#64), .addi 30 5 (0#64)] =
       some (executeInstructions ffiMachineState
-        [.addi 10 2 (0#64), .addi 11 3 (0#64),
-         .addi 12 4 (0#64), .addi 13 5 (0#64)]) := by
+        [.addi 27 11 (0#64), .addi 28 12 (0#64),
+         .addi 29 13 (0#64), .addi 30 5 (0#64)]) := by
   apply executeInstructionsWithFfi_wordRegisterMoves
     ffiMachineHost ffiMachineState
     [(10, 2), (11, 3), (12, 4), (13, 5)]
-    [.addi 10 2 (0#64), .addi 11 3 (0#64),
-     .addi 12 4 (0#64), .addi 13 5 (0#64)]
-  simp [wordRegisterMoves, registerOfNat]
+    [.addi 27 11 (0#64), .addi 28 12 (0#64),
+     .addi 29 13 (0#64), .addi 30 5 (0#64)]
+  simp [wordRegisterMoves]
 
 example :
     (labCompileAsm ({ services := [("echo", 7)] } : WordFfiContext)
@@ -165,7 +165,7 @@ example :
   apply wordFfiToRiscV_execute_agreement
     ({ services := [("echo", 7)] } : WordFfiContext)
     ffiMachineHost ffiMachineWordHandler ffiMachineState "echo"
-    2 3 4 5 7 2 3 4 5
+    2 3 4 5 7 11 12 13 5
   all_goals try decide
   simp [ffiMachineHost, ffiMachineWordHandler]
 
@@ -180,7 +180,7 @@ example :
   apply wordFunctionToRiscVWithCallsAndFfi_ffi_simulation
     ({ services := [("echo", 7)] } : WordFfiContext)
     ffiMachineHost ffiMachineWordHandler ffiMachineState "echo"
-    2 3 4 5 7 2 3 4 5
+    2 3 4 5 7 11 12 13 5
   all_goals try decide
   simp [ffiMachineHost, ffiMachineWordHandler]
 
@@ -198,7 +198,7 @@ example :
   apply wordFunctionToRiscVWithCallsAndFfiAndLoops_ffi_simulation
     ({ services := [("echo", 7)] } : WordFfiContext)
     ffiMachineHost ffiMachineWordHandler ffiMachineState "echo"
-    2 3 4 5 7 2 3 4 5
+    2 3 4 5 7 11 12 13 5
   all_goals try decide
   simp [ffiMachineHost, ffiMachineWordHandler]
 
@@ -372,21 +372,20 @@ example [NeZero width] (state : State width) :
     wordFunctionToRiscVWithCallsAndFfi
         ({ targets := [], services := [] } : WordCallFfiContext width)
         (.seq (.assign 2 (.const (BitVec.ofNat width 7))) (.return 0 [2])) =
-      some ([.addi 2 0 (BitVec.ofNat width 7)], [⟨2, by omega⟩]) ∧
+      some ([.addi 11 0 (BitVec.ofNat width 7)], [⟨11, by omega⟩]) ∧
     evalWordFunction state
         (.seq (.assign 2 (.const (BitVec.ofNat width 7))) (.return 0 [2])) =
-      some (executeInstructions state [.addi 2 0 (BitVec.ofNat width 7)],
+      some (executeInstructions state [.addi 11 0 (BitVec.ofNat width 7)],
         [readRegister (executeInstructions state
-          [.addi 2 0 (BitVec.ofNat width 7)]) ⟨2, by omega⟩]) := by
+          [.addi 11 0 (BitVec.ofNat width 7)]) ⟨11, by omega⟩]) := by
   have h := wordFunctionToRiscVWithCallsAndFfi_seq_return_sound
     ({ targets := [], services := [] } : WordCallFfiContext width) state
     (.assign 2 (.const (BitVec.ofNat width 7)))
     (.assign 2 (.const (BitVec.ofNat width 7)) : WordRiscVStraightLine _)
-    0 [2] [.addi 2 0 (BitVec.ofNat width 7)] [⟨2, by omega⟩]
+    0 [2] [.addi 11 0 (BitVec.ofNat width 7)] [⟨11, by omega⟩]
     (by simp [wordFunctionToRiscVWithCallsAndFfi, wordFunctionToRiscVWithCalls,
-      wordExpToInstructions, wordExpToInstruction, registerOfNat])
-    (by simp [wordFunctionToRiscVWithCallsAndFfi, wordFunctionToRiscVWithCalls,
-      registerOfNat])
-  simpa [registerOfNat, Function.comp_def] using h
+      wordExpToInstructions, wordExpToInstruction])
+    (by simp [wordFunctionToRiscVWithCallsAndFfi, wordFunctionToRiscVWithCalls])
+  simpa [Function.comp_def] using h
 
 end Flapjack.RiscV

@@ -22,12 +22,12 @@ def pipelineCallTargetLinkedImage : Option (List (RiscV.Instruction 64)) :=
 def pipelineCallTargetImage : List (RiscV.Instruction 64) :=
   [.addi 31 0 (BitVec.ofNat 64 20), .jalr 0 31 0,
    .jalr 0 1 0,
-   .addi 4 2 0, .jalr 0 1 0,
-   .addi 3 0 0, .addi 4 0 (BitVec.ofNat 64 41),
-   .addi 2 4 0, .addi 30 30 (0 - BitVec.ofNat 64 8),
+   .addi 13 11 0, .jalr 0 1 0,
+   .addi 12 0 0, .addi 13 0 (BitVec.ofNat 64 41),
+   .addi 11 13 0, .addi 30 30 (0 - BitVec.ofNat 64 8),
    .storeWord 1 30, .addi 31 0 (BitVec.ofNat 64 12), .jalr 1 31 0,
-   .addi 3 4 0, .loadWord 1 30,
-   .addi 30 30 (BitVec.ofNat 64 8), .addi 4 3 0,
+   .addi 12 30 0, .loadWord 1 30,
+   .addi 30 30 (BitVec.ofNat 64 8), .addi 13 12 0,
    .jalr 0 1 0]
 
 theorem pipelineCallTargetLinkedImage_shape :
@@ -62,7 +62,7 @@ theorem pipelineCallTarget_loop_semantics :
 
 theorem pipelineCallTarget_compiled_execution :
     RiscV.executeFunctionAt 120 (0 : RiscV.Word 64) 0 100 []
-      pipelineCallTargetImage [4] []
+      pipelineCallTargetImage [11] []
       (RiscV.writeRegister (RiscV.zeroState 64) 1 100) =
       some [BitVec.ofNat 64 41] := by
   decide
@@ -90,7 +90,7 @@ theorem pipelineCallTarget_source_word_machine_agreement :
       (do
         let image ← pipelineCallTargetLinkedImage
         RiscV.executeFunctionAt 120 (0 : RiscV.Word 64) 0 100 []
-          image [4] []
+          image [11] []
           (RiscV.writeRegister (RiscV.zeroState 64) 1 100)) =
         some [BitVec.ofNat 64 41] := by
   exact ⟨pipelineCall_source_semantics, pipelineCallTarget_loop_semantics,

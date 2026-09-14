@@ -97,30 +97,30 @@ example :
         ((.ite .equal 1 (.reg 2)
           (.assign 3 (.const (1 : Word 64)))
           (.assign 3 (.const (2 : Word 64)))) : WordProg (Word 64)) =
-      some ([.branchNe 1 2 (BitVec.ofNat 64 12), .addi 3 0 1,
-        .branchEq 0 0 (BitVec.ofNat 64 8), .addi 3 0 2], []) := by
-  exact wordFunctionToRiscV_ite_assign
+      some ([.branchNe 10 11 (BitVec.ofNat 64 12), .addi 12 0 1,
+        .branchEq 0 0 (BitVec.ofNat 64 8), .addi 12 0 2], []) := by
+  exact wordFunctionToRiscV_ite_assign (width := 64)
 
 example :
     wordFunctionToRiscVWithCalls (⟨[]⟩ : WordCallContext 8)
         ((.ite .equal 1 (.reg 2)
           (.assign 3 (.const (1 : Word 8)))
           (.assign 3 (.const (2 : Word 8)))) : WordProg (Word 8)) =
-      some ([.branchNe 1 2 (BitVec.ofNat 8 12), .addi 3 0 1,
-        .branchEq 0 0 (BitVec.ofNat 8 8), .addi 3 0 2], []) := by
+      some ([.branchNe 10 11 (BitVec.ofNat 8 12), .addi 12 0 1,
+        .branchEq 0 0 (BitVec.ofNat 8 8), .addi 12 0 2], []) := by
   apply wordFunctionToRiscVWithCalls_ite_shape
     (context := (⟨[]⟩ : WordCallContext 8))
     (operator := .equal) (condition := 1) (rightValue := .reg 2)
     (thenBranch := (.assign 3 (.const (1 : Word 8))))
     (elseBranch := (.assign 3 (.const (2 : Word 8))))
-    (branchLeft := 1) (right := 2) (prelude := [])
-    (thenCode := [.addi 3 0 1]) (elseCode := [.addi 3 0 2])
+    (branchLeft := 10) (right := 11) (prelude := [])
+    (thenCode := [.addi 12 0 1]) (elseCode := [.addi 12 0 2])
     (thenReturns := []) (elseReturns := [])
-  · simp [wordConditionOperands, registerOfNat]
+  · simp [wordConditionOperands]
   · simp [wordFunctionToRiscVWithCalls, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat]
+      wordExpToInstruction]
   · simp [wordFunctionToRiscVWithCalls, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat]
+      wordExpToInstruction]
   · rfl
 
 example (state : State 8) (hpc : state.pc = 0)
@@ -130,16 +130,16 @@ example (state : State 8) (hpc : state.pc = 0)
           ((.ite .equal 1 (.reg 2) .skip .skip) : WordProg (Word 8)) =
         some (sourceState, []) ∧
       executeCodeUntil 3 0 (BitVec.ofNat 8 8)
-          [.branchNe 1 2 (BitVec.ofNat 8 8),
+          [.branchNe 10 11 (BitVec.ofNat 8 8),
             .branchEq 0 0 (BitVec.ofNat 8 4)] state = some machineState ∧
       StateDataRelation sourceState machineState := by
   apply evalWordFunction_ite_executeCodeUntil_of_nonbranching
     (state := state) (operator := .equal) (condition := 1) (source := 2)
     (thenBranch := (.skip : WordProg (Word 8)))
     (elseBranch := (.skip : WordProg (Word 8)))
-    (branchLeft := 1) (right := 2) (thenCode := []) (elseCode := [])
+    (branchLeft := 10) (right := 11) (thenCode := []) (elseCode := [])
     (returns := []) (hpc := hpc) (hzero := hzero)
-  · simp [wordConditionOperands, registerOfNat]
+  · simp [wordConditionOperands]
   · exact ⟨state, by simp [evalWordFunction], by constructor <;> rfl⟩
   · exact ⟨state, by simp [evalWordFunction], by constructor <;> rfl⟩
   · simp
@@ -154,10 +154,10 @@ example (state : State 8) (hpc : state.pc = 0)
         some (sourceState, []) ∧
       wordFunctionToRiscVWithCalls (⟨[]⟩ : WordCallContext 8)
           ((.ite .equal 1 (.reg 2) .skip .skip) : WordProg (Word 8)) =
-        some ([.branchNe 1 2 (BitVec.ofNat 8 8),
+        some ([.branchNe 10 11 (BitVec.ofNat 8 8),
           .branchEq 0 0 (BitVec.ofNat 8 4)], []) ∧
       executeCodeUntil 3 0 (BitVec.ofNat 8 8)
-          [.branchNe 1 2 (BitVec.ofNat 8 8),
+          [.branchNe 10 11 (BitVec.ofNat 8 8),
             .branchEq 0 0 (BitVec.ofNat 8 4)] state = some machineState ∧
       StateDataRelation sourceState machineState := by
   apply wordFunctionToRiscVWithCalls_ite_source_machine_of_nonbranching
@@ -165,9 +165,9 @@ example (state : State 8) (hpc : state.pc = 0)
     (operator := .equal) (condition := 1) (source := 2)
     (thenBranch := (.skip : WordProg (Word 8)))
     (elseBranch := (.skip : WordProg (Word 8)))
-    (branchLeft := 1) (right := 2) (thenCode := []) (elseCode := [])
+    (branchLeft := 10) (right := 11) (thenCode := []) (elseCode := [])
     (returnRegisters := []) (returnValues := []) (hpc := hpc) (hzero := hzero)
-  · simp [wordConditionOperands, registerOfNat]
+  · simp [wordConditionOperands]
   · simp [wordFunctionToRiscVWithCalls]
   · simp [wordFunctionToRiscVWithCalls]
   · exact ⟨state, by simp [evalWordFunction], by constructor <;> rfl⟩
@@ -188,11 +188,11 @@ example (state : State 8) (hpc : state.pc = 0)
           ((.ite .equal 1 (.reg 2)
             (.assign 3 (.const (1 : Word 8)))
             (.assign 3 (.const (2 : Word 8)))) : WordProg (Word 8)) =
-        some ([.branchNe 1 2 (BitVec.ofNat 8 12), .addi 3 0 1,
-          .branchEq 0 0 (BitVec.ofNat 8 8), .addi 3 0 2], []) ∧
+        some ([.branchNe 10 11 (BitVec.ofNat 8 12), .addi 12 0 1,
+          .branchEq 0 0 (BitVec.ofNat 8 8), .addi 12 0 2], []) ∧
       executeCodeUntil 5 0 (BitVec.ofNat 8 16)
-          [.branchNe 1 2 (BitVec.ofNat 8 12), .addi 3 0 1,
-            .branchEq 0 0 (BitVec.ofNat 8 8), .addi 3 0 2] state =
+          [.branchNe 10 11 (BitVec.ofNat 8 12), .addi 12 0 1,
+            .branchEq 0 0 (BitVec.ofNat 8 8), .addi 12 0 2] state =
         some machineState ∧
       StateDataRelation sourceState machineState := by
   apply wordFunctionToRiscVWithCalls_ite_source_machine_of_nonbranching
@@ -200,20 +200,20 @@ example (state : State 8) (hpc : state.pc = 0)
     (operator := .equal) (condition := 1) (source := 2)
     (thenBranch := (.assign 3 (.const (1 : Word 8))))
     (elseBranch := (.assign 3 (.const (2 : Word 8))))
-    (branchLeft := 1) (right := 2)
-    (thenCode := [.addi 3 0 1]) (elseCode := [.addi 3 0 2])
+    (branchLeft := 10) (right := 11)
+    (thenCode := [.addi 12 0 1]) (elseCode := [.addi 12 0 2])
     (returnRegisters := []) (returnValues := []) (hpc := hpc) (hzero := hzero)
-  · simp [wordConditionOperands, registerOfNat]
+  · simp [wordConditionOperands]
   · simp [wordFunctionToRiscVWithCalls, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat]
+      wordExpToInstruction]
   · simp [wordFunctionToRiscVWithCalls, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat]
-  · exact ⟨execute state (.addi 3 0 1),
+      wordExpToInstruction]
+  · exact ⟨execute state (.addi 12 0 1),
       by simp [evalWordFunction, wordExpToInstructions,
-        wordExpToInstruction, registerOfNat], by constructor <;> rfl⟩
-  · exact ⟨execute state (.addi 3 0 2),
+        wordExpToInstruction], by constructor <;> rfl⟩
+  · exact ⟨execute state (.addi 12 0 2),
       by simp [evalWordFunction, wordExpToInstructions,
-        wordExpToInstruction, registerOfNat], by constructor <;> rfl⟩
+        wordExpToInstruction], by constructor <;> rfl⟩
   · decide
   · decide
   · decide
@@ -221,10 +221,10 @@ example (state : State 8) (hpc : state.pc = 0)
 example (state : State 64) (hpc : state.pc = 0)
     (hzero : ZeroRegister state) :
     (executeCode 5 0
-      [.branchNe 1 2 (BitVec.ofNat 64 12), .addi 3 0 1,
-        .branchEq 0 0 (BitVec.ofNat 64 8), .addi 3 0 2] state).map
-      (fun state => readRegister state 3) =
-      if readRegister state 1 == readRegister state 2 then
+      [.branchNe 10 11 (BitVec.ofNat 64 12), .addi 12 0 1,
+        .branchEq 0 0 (BitVec.ofNat 64 8), .addi 12 0 2] state).map
+      (fun state => readRegister state 12) =
+      if readRegister state 10 == readRegister state 11 then
         some (1 : Word 64)
       else
         some (2 : Word 64) := by
@@ -233,10 +233,10 @@ example (state : State 64) (hpc : state.pc = 0)
 example (state : State 32) (hpc : state.pc = 0)
     (hzero : ZeroRegister state) :
     (executeCode 5 0
-      [.branchNe 1 2 (BitVec.ofNat 32 12), .addi 3 0 1,
-        .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2] state).map
-      (fun state => readRegister state 3) =
-      if readRegister state 1 == readRegister state 2 then
+      [.branchNe 10 11 (BitVec.ofNat 32 12), .addi 12 0 1,
+        .branchEq 0 0 (BitVec.ofNat 32 8), .addi 12 0 2] state).map
+      (fun state => readRegister state 12) =
+      if readRegister state 10 == readRegister state 11 then
         some (1 : Word 32)
       else
         some (2 : Word 32) := by
@@ -248,11 +248,11 @@ example (state : State 32) (hpc : state.pc = 0)
       ((.ite .equal 1 (.reg 2)
         (.assign 3 (.const (1 : Word 32)))
         (.assign 3 (.const (2 : Word 32)))) : WordProg (Word 32))).map
-      (fun result => readRegister result.1 3) =
+      (fun result => readRegister result.1 12) =
       (executeCode 5 0
-        [.branchNe 1 2 (BitVec.ofNat 32 12), .addi 3 0 1,
-          .branchEq 0 0 (BitVec.ofNat 32 8), .addi 3 0 2] state).map
-        (fun finalState => readRegister finalState 3) := by
+        [.branchNe 10 11 (BitVec.ofNat 32 12), .addi 12 0 1,
+          .branchEq 0 0 (BitVec.ofNat 32 8), .addi 12 0 2] state).map
+        (fun finalState => readRegister finalState 12) := by
   exact evalWordFunction_ite_assign_riscV_register state hpc hzero (by decide)
 
 example (state : State 8) (operator : Cmp) (left right : Fin 32)
@@ -327,15 +327,15 @@ example (state : State 8) (hpc : state.pc = 0)
       ((.ite .equal 1 (.reg 2)
         (.assign 3 (.const (1 : Word 8)))
         (.assign 3 (.const (2 : Word 8)))) : WordProg (Word 8))).map
-      (fun result => readRegister result.1 3)).map
+      (fun result => readRegister result.1 12)).map
         (fun value =>
-          (value, if readRegister state 1 == readRegister state 2 then 3 else 2)) =
+          (value, if readRegister state 10 == readRegister state 11 then 3 else 2)) =
       (executeCodeUntilWithFfiCounted testNoFfiHost
-        (if readRegister state 1 == readRegister state 2 then 5 else 3) 0
+        (if readRegister state 10 == readRegister state 11 then 5 else 3) 0
         (BitVec.ofNat 8 16)
-        [.branchNe 1 2 (BitVec.ofNat 8 12), .addi 3 0 1,
-          .branchEq 0 0 (BitVec.ofNat 8 8), .addi 3 0 2] state).map
-        (fun result => (readRegister result.1 3, result.2)) := by
+        [.branchNe 10 11 (BitVec.ofNat 8 12), .addi 12 0 1,
+          .branchEq 0 0 (BitVec.ofNat 8 8), .addi 12 0 2] state).map
+        (fun result => (readRegister result.1 12, result.2)) := by
   exact evalWordFunction_ite_assign_counted_riscV_register
     testNoFfiHost state hpc hzero (by decide)
 

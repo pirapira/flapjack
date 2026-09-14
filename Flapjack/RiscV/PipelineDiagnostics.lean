@@ -1,4 +1,5 @@
 import Flapjack.Pipeline
+import Flapjack.LoopToWord
 import Flapjack.Parser
 import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.LabDiagnostics
@@ -60,11 +61,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
         (List (Nat × List Nat × StackProg Nat))
   | [] => .ok []
   | (label, parameters, body) :: functions =>
-      let slots := loopAccVars body parameters
-      let context : WordContext :=
-        { vars := slots.map (fun name => (name, name + 2)) }
-      let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := wordProgDCE (loopToWordProg context body)
+      let wordParameters := wordSsaAbiParameters parameters.length
+      let unallocatedBody := wordProgDCE
+          (LoopToWord.loopToWordCompFunc label parameters body)
       match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -96,11 +95,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
         (List (Nat × List Nat × StackProg Nat) × RiscV.WordStackBitmapState)
   | [] => .ok ([], bitmaps)
   | (label, parameters, body) :: functions =>
-      let slots := loopAccVars body parameters
-      let context : WordContext :=
-        { vars := slots.map (fun name => (name, name + 2)) }
-      let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := wordProgDCE (loopToWordProg context body)
+      let wordParameters := wordSsaAbiParameters parameters.length
+      let unallocatedBody := wordProgDCE
+          (LoopToWord.loopToWordCompFunc label parameters body)
       match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)

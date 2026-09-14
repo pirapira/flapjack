@@ -769,6 +769,12 @@ def ffiCallBytesAccepted : Bool :=
   | some bytes => bytes.length > 0
   | none => false
 
+/-! `ffiCallSource` is also the minimized differential-fuzzer regression in
+`OriginalPancake/ffi_runtime_image.pnk`: CakeML accepts it, while the
+source-to-runtime-image path must discover `foo` before linking the FFI call. -/
+def ffiCallRuntimeImageAccepted : Bool :=
+  runtimeImageAccepted ffiCallSource
+
 /-- The FFI fixture whose arguments sit in the ABI registers must be accepted:
 the word-to-stack pass copies them with a parallel move. -/
 def ffiRegisterBytesAccepted : Bool :=
@@ -901,6 +907,7 @@ def cakeGoldenShape : Bool :=
 #guard conditionPressureBytesAccepted
 #guard structStoreBytesAccepted
 #guard ffiCallBytesAccepted
+#guard ffiCallRuntimeImageAccepted
 #guard ffiRegisterBytesAccepted
 #guard initializerChangesArtifact
 #guard auditedAccepted
@@ -951,6 +958,8 @@ def runChecks : IO Bool := do
       structStoreBytesAccepted,
     checkBool "Pancake four-argument FFI call source compiles (bytes)"
       ffiCallBytesAccepted,
+    checkBool "Pancake four-argument FFI call reaches the runtime image"
+      ffiCallRuntimeImageAccepted,
     checkBool "Pancake FFI call with ABI-register sources compiles (bytes)"
       ffiRegisterBytesAccepted,
     checkBool "Pancake global source compiles (runtime image)"

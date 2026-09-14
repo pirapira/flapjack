@@ -103,6 +103,20 @@ theorem labRegisterOfNat_portToStack_link :
       registerOfNat portLinkRegister :=
   labRegisterOfNat_portToStack (by decide)
 
+/-- The one-time map selects hardware `x0` for the reseated zero register, so
+literal zero operands can be written in Cake stack-number space. -/
+@[simp] theorem labRegisterOfNat_portToStack_zero_some :
+    labRegisterOfNat (portToStack portZeroRegister) = some 0 := by
+  rw [labRegisterOfNat_portToStack_zero, portZeroRegister]
+  rfl
+
+/-- The one-time map selects hardware `x1` for the reseated link register, so
+literal link operands can be written in Cake stack-number space. -/
+@[simp] theorem labRegisterOfNat_portToStack_link_some :
+    labRegisterOfNat (portToStack portLinkRegister) = some 1 := by
+  rw [labRegisterOfNat_portToStack_link, portLinkRegister]
+  rfl
+
 /-- Above the architectural range the reseat map is the identity, so the
 one-time Cake map still agrees with the raw register selection. -/
 theorem portToStack_id_of_ge_32 {name : Nat} (h : 32 ≤ name) :

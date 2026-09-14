@@ -100,60 +100,8 @@ def wordExpToInstruction [NeZero width] (destination : Nat) :
       | .ror => none
   | _ => none
 
-/-! CakeML's RISC-V target lowers `Const` through `riscv_const32` and, on
-RV64, combines two sign-aware 32-bit halves.  Keep the immediate values
-sign-extended in this model: `execute` models the architectural operation,
-while `encodeInstruction` later truncates them to the encoded immediate
-field.  This is the shape of `riscv_targetScript.sml:89-117`, rather than a
-single pseudo-`ADDI` that silently loses bits above bit 11. -/
-def wordConst32ToInstructions [NeZero width] (destination : Fin 32)
-    (value : Word width) : List (Instruction width) :=
-  let low := value.toNat % 2 ^ 12
-  let upper := value.toNat / 2 ^ 12 % 2 ^ 20
-  let lowImmediate := BitVec.signExtend width (BitVec.ofNat 12 low)
-  if low / 2 ^ 11 % 2 = 1 then
-    [.lui destination (BitVec.ofNat width ((2 ^ 20 - 1) - upper)),
-      .xori destination destination lowImmediate]
-  else
-    [.lui destination (BitVec.ofNat width upper),
-      .addi destination destination lowImmediate]
-
-def wordConstToInstructions [NeZero width] (destination : Nat)
-    (value : Word width) : Option (List (Instruction width)) := do
-  let destination ← registerOfNat destination
-  if width < 32 then
-    pure [.addi destination 0 value]
-  else if width == 64 then
-    let low32 := value.toNat % 2 ^ 32
-    let upper32 := value.toNat / 2 ^ 32 % 2 ^ 32
-    let lowImmediate := BitVec.signExtend width (BitVec.ofNat 12 (value.toNat % 2 ^ 12))
-    let lowWord := BitVec.ofNat width low32
-    let upperWord := BitVec.ofNat width upper32
-    let lowSign := low32 / 2 ^ 31 % 2
-    if value == lowImmediate then
-      pure [.ori destination 0 lowImmediate]
-    else if (upper32 == 0 && lowSign == 0) ||
-        (upper32 == 2 ^ 32 - 1 && lowSign == 1) then
-      pure (wordConst32ToInstructions destination lowWord)
-    else if destination == 31 then
-      none
-    else if lowSign == 1 then
-      pure (wordConst32ToInstructions 31 lowWord ++
-        wordConst32ToInstructions destination
-          (BitVec.ofNat width ((2 ^ 32 - 1) - upper32)) ++
-        [.slli destination destination (BitVec.ofNat width 32),
-          .xor destination destination 31])
-    else
-      pure (wordConst32ToInstructions 31 lowWord ++
-        wordConst32ToInstructions destination upperWord ++
-        [.slli destination destination (BitVec.ofNat width 32),
-          .or destination destination 31])
-  else
-    pure (wordConst32ToInstructions destination value)
-
 @[simp] def wordExpToInstructions [NeZero width] (destination : Nat) :
     WordExp (Word width) → Option (List (Instruction width))
-  | .const value => wordConstToInstructions destination value
   | .load address => do
       if destination == 31 then none
       else
@@ -1020,10 +968,10 @@ theorem compileWordRotateRight_immediate_sound [NeZero width] (state : State wid
 theorem compileWordAdd_zeroState [NeZero width] :
     evalWordProg (zeroState width)
         (.assign 1 (.const (7 : Word width))) =
-      (wordConstToInstructions 1 (7 : Word width)).map
-        (executeInstructions (zeroState width)) := by
-  simp [evalWordProg, wordExpToInstructions]
-  cases h : wordConstToInstructions 1 (7 : Word width) <;> simp [h]
+      some (executeInstructions (zeroState width) [.addi 1 0 7]) := by
+  simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+    executeInstructions, registerOfNat, execute, writeRegister, nextPc,
+    zeroState, readRegister]
 
 theorem compileWordLoadByte_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.mem .load8 1 2)) =
@@ -1185,20 +1133,19 @@ theorem wordFunctionToRiscV_return_const [NeZero width] (value : Word width) :
     wordFunctionToRiscV
         ((.seq (.assign 1 (.const value)) (.return 0 [1])) :
       WordProg (Word width)) =
-      (wordConstToInstructions 1 value).map (fun instructions => (instructions, [1])) := by
-  simp [wordFunctionToRiscV, wordExpToInstructions, registerOfNat]
-  cases h : wordConstToInstructions 1 value <;> simp [h]
+      some ([.addi 1 0 value], [1]) := by
+  simp [wordFunctionToRiscV, wordExpToInstructions, wordExpToInstruction,
+    registerOfNat]
 
 theorem evalWordFunction_return_const [NeZero width] (state : State width)
     (value : Word width) (_zero : ZeroRegister state) :
     evalWordFunction state
         ((.seq (.assign 1 (.const value)) (.return 0 [1])) :
           WordProg (Word width)) =
-      (wordConstToInstructions 1 value).map (fun instructions =>
-        (executeInstructions state instructions,
-          [readRegister (executeInstructions state instructions) 1])) := by
-  simp [evalWordFunction, wordExpToInstructions, registerOfNat]
-  cases h : wordConstToInstructions 1 value <;> simp [h]
+      some (execute state (.addi 1 0 value),
+        [readRegister (execute state (.addi 1 0 value)) 1]) := by
+  simp [evalWordFunction, wordExpToInstructions, wordExpToInstruction,
+    registerOfNat, executeInstructions_single]
 
 theorem wordArithToInstruction_longMul [NeZero width] :
     wordArithToInstruction (width := width) (.longMul 1 1 2 3) =

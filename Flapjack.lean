@@ -13,6 +13,7 @@ import Flapjack.PanHProgExtCall
 import Flapjack.PanHProgStoreByte
 import Flapjack.PanHProgStore32
 import Flapjack.PanHProgPrimitive
+import Flapjack.PanSetGlobal
 import Flapjack.PanHProgDec
 import Flapjack.PanHProgSeq
 import Flapjack.PanHProgCond

@@ -275,6 +275,9 @@ run_probe compile_prog_probeScript.sml compile_prog_probe.out \
   empty inline_call "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe smart_seq_probeScript.sml smart_seq_probe.out \
   skip_skip skip_tick tick_skip tick_tick "$cake_dir/pancake/pan_simpScript.sml"
+run_probe seq_assoc_probeScript.sml seq_assoc_probe.out \
+  skip_skip tick_skip tick_seq_skip_tick tick_return \
+  "$cake_dir/pancake/pan_simpScript.sml"
 run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \
   exit_loop_break exit_loop_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

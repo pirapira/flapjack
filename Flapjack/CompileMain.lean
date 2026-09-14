@@ -100,7 +100,7 @@ def compileMain (arguments : List String) : IO UInt32 := do
     | .ok declarations =>
         match compileFlapjackEntry (α := RiscV.Word 64) .rv64i
             (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
-            "main" declarations with
+            "main" (panTargetDeclarationsWithDefaultMain declarations) with
         | none =>
             IO.eprintln "flapjack-compile: entry not found"
             return 1

@@ -322,6 +322,23 @@ def dupGlobalAcceptedWithWarning : Bool :=
   | .error _ => false
 
 #guard dupGlobalAcceptedWithWarning
+
+/-- The differential-fuzzing `nomain-global` fixture (bead
+    `flapjack-pxn.8.5.14.3`).  The original CakeML `pan_to_target` synthesizes
+    a `main` returning `0` when the source has none; the port used to fail with
+    `entry not found`. -/
+def nomainGlobalSource : String := "var 1 g = 7;"
+
+/-- The production runtime-image entry point now accepts a main-less program by
+synthesizing the default `main`. -/
+def nomainGlobalAccepted : Bool :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] artifactCompileConfig "main"
+      nomainGlobalSource with
+  | .ok image => !image.sections.isEmpty
+  | .error _ => false
+
+#guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
 #guard artifactAccepted
 #guard generatedMainBytesMatch
@@ -359,7 +376,9 @@ def runChecks : IO Bool := do
       ("nested_expression fixture accepted by the runtime-image entry point",
         nestedExpressionAccepted),
       ("dup_global fixture accepted with a redeclaration warning",
-        dupGlobalAcceptedWithWarning) ]
+        dupGlobalAcceptedWithWarning),
+      ("nomain_global fixture accepted with a synthesized default main",
+        nomainGlobalAccepted) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

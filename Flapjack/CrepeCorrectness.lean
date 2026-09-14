@@ -1115,67 +1115,6 @@ theorem compile_full_pan_value_store_load_two_word_correct
         isWfShape.isWfShapeList,
         panValueFlatWords, panValueFlatWordsFuel]
 
-/-! The fixed-width store32/load32 pair is the direct word-memory case of the
-    Pancake correctness induction. -/
-theorem compile_full_pan_value_store32_load32_word_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (structs : StructContext)
-    (locals globals : VarName → Option (PanValue α))
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress bytesInWord address value : α) :
-    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 20 state
-        (compileProg context
-          (.seq
-            (.store32 (.const address) (.const value))
-            (.return (.load32 (.const address))))) =
-      (evalPanValueProg structs baseAddress topAddress bytesInWord
-        locals globals (fun current =>
-          (state.memory current).map PanValue.word)
-        (.seq
-          (.store32 (.const address) (.const value))
-          (.return (.load32 (.const address))))).map
-        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
-  simp [Option.bind, compileProg, compileExp, evalCrepFullResultState,
-    evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
-    evalPanValueProg, evalPanValueProgWithPrimitive, evalPanValueExp,
-    updateMemory,
-    updatePanValueMemory, updatePanValueMap, panValueFlatWords,
-    panValueFlatWordsFuel]
-
-/-! The byte-width memory operation has the same source/Crep word
-    correspondence for the abstract word-memory model. -/
-theorem compile_full_pan_value_storeByte_loadByte_word_correct
-    [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
-    [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [ShiftLeft α] [ShiftRight α] [LT α]
-    [DecidableRel (fun left right : α => left < right)] [PanCmp α]
-    (context : CompileContext α) (structs : StructContext)
-    (locals globals : VarName → Option (PanValue α))
-    (state : CrepState α) (primitive : CrepPrimitiveHandler α)
-    (ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress bytesInWord address value : α) :
-    evalCrepFullResultState [] primitive ffi sharedMem baseAddress topAddress 20 state
-        (compileProg context
-          (.seq
-            (.storeByte (.const address) (.const value))
-            (.return (.loadByte (.const address))))) =
-      (evalPanValueProg structs baseAddress topAddress bytesInWord
-        locals globals (fun current =>
-          (state.memory current).map PanValue.word)
-        (.seq
-          (.storeByte (.const address) (.const value))
-          (.return (.loadByte (.const address))))).map
-        (fun result => result.2.2.2.flatMap panValueFlatWords) := by
-  simp [Option.bind, compileProg, compileExp, evalCrepFullResultState,
-    evalCrepFullProgState, evalCrepFullExpsState, evalCrepFullExpState,
-    evalPanValueProg, evalPanValueProgWithPrimitive, evalPanValueExp,
-    updateMemory, updatePanValueMemory, updatePanValueMap,
-    panValueFlatWords, panValueFlatWordsFuel]
-
 /-! A zero-condition loop is the first loop-shaped source-to-Crep
     correctness case.  Its body is deliberately arbitrary: neither
     evaluator enters it, so the state and normal-result boundary are

@@ -195,6 +195,11 @@ def staticOk (value : α) : StaticResult α := (Except.ok value, [])
 
 def staticError (error : StatErr) : StaticResult α := (Except.error error, [])
 
+/-- Emit a warning without aborting the static check.  The original CakeML
+    `panStatic` logs a `WarningErr` for a redeclared top-level variable and
+    continues checking, so the port must accept the program too. -/
+def staticWarn (warning : StatErr) : StaticResult Unit := (Except.ok (), [warning])
+
 def staticBind (result : StaticResult α) (continuation : α → StaticResult β) :
     StaticResult β :=
   match result with
@@ -758,29 +763,33 @@ def staticCheckDecls [BEq String] (structs : StructContext) :
             { context with exceptions := (exception, shape) :: context.exceptions }
             declarations)
   | context, .decl shape name value :: declarations =>
-      if (lookupInfo name context.globals).isSome then
-        staticError (.scope ("global variable is redeclared: " ++ name))
-      else
-        staticBind (checkShape structs shape) (fun _ =>
-          let checkingContext : Context :=
-            { locals := []
-              globals := context.globals
-              functions := []
-              expectedReturn := none
-              exceptions := context.exceptions
-              structs := structs
-              scope := .declScope name
-              inLoop := false
-              reachable := .isReach
-              last := .invisLast
-              location := "" }
-          staticBind (checkExp checkingContext value) (fun result =>
-            if shapedBasedMatchesShape structs shape result.shapedBased then
-              staticCheckDecls structs
-                { context with globals := (name, { shape := shape }) :: context.globals }
-                declarations
-            else
-              staticError (.shape ("global initializer has the wrong shape: " ++ name))))
+      staticBind
+        (if (lookupInfo name context.globals).isSome then
+          staticWarn (.warning ("variable " ++ name ++
+            " is redeclared in top-level declaration\n"))
+         else
+          staticOk ())
+        (fun _ =>
+          staticBind (checkShape structs shape) (fun _ =>
+            let checkingContext : Context :=
+              { locals := []
+                globals := context.globals
+                functions := []
+                expectedReturn := none
+                exceptions := context.exceptions
+                structs := structs
+                scope := .declScope name
+                inLoop := false
+                reachable := .isReach
+                last := .invisLast
+                location := "" }
+            staticBind (checkExp checkingContext value) (fun result =>
+              if shapedBasedMatchesShape structs shape result.shapedBased then
+                staticCheckDecls structs
+                  { context with globals := (name, { shape := shape }) :: context.globals }
+                  declarations
+              else
+                staticError (.shape ("global initializer has the wrong shape: " ++ name)))))
   | context, .function declaration :: declarations =>
       if (lookupInfo declaration.name context.functions).isSome then
         staticError (.scope ("function is redeclared: " ++ declaration.name))

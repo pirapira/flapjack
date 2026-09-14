@@ -88,6 +88,7 @@ import Flapjack.Test.PanShMemStoreParity
 import Flapjack.Test.PanEvalParity
 import Flapjack.Test.PanEvaluateParity
 import Flapjack.Test.PanObservationalSemanticsParity
+import Flapjack.Test.ParserTryDefaultParity
 import Flapjack.Test.PanHHandleCallRetParity
 import Flapjack.Test.PanMrecParity
 import Flapjack.Test.PanHProgDecParity

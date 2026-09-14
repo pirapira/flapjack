@@ -161,6 +161,9 @@ run_probe pan_sem_is_valid_value_probeScript.sml pan_sem_is_valid_value_probe.ou
 run_probe pan_sem_write_bytearray_probeScript.sml pan_sem_write_bytearray_probe.out \
   write_empty write_miss \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_peg_try_default_probeScript.sml pan_peg_try_default_probe.out \
+  try_default_success try_default_default \
+  "$cake_dir/pancake/parser/panPEGScript.sml"
 run_probe pan_itree_evaluate_probeScript.sml pan_itree_evaluate_probe.out \
   itree_evaluate_skip itree_evaluate_tick \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"

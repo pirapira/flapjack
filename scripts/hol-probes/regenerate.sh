@@ -281,6 +281,9 @@ run_probe seq_assoc_probeScript.sml seq_assoc_probe.out \
 run_probe seq_call_ret_probeScript.sml seq_call_ret_probe.out \
   matching_return mismatching_return fallback \
   "$cake_dir/pancake/pan_simpScript.sml"
+run_probe ret_to_tail_probeScript.sml ret_to_tail_probe.out \
+  skip tail_call mismatching_return handler_seq \
+  "$cake_dir/pancake/pan_simpScript.sml"
 run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \
   exit_loop_break exit_loop_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

@@ -490,4 +490,25 @@ def exactEntryRiscVDeclarations : List (Decl (RiscV.Word 64)) :=
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
       "missing" exactEntryRiscVDeclarations).isNone
 
+example :
+    (panTargetDeclarationsWithDefaultMain (α := Nat)
+      [.decl .one "global" (.const 7)]).map
+      (fun declaration =>
+        match declaration with
+        | .function function => function.name
+        | _ => "not-function") =
+      ["main", "not-function"] := by
+  decide +kernel
+
+example :
+    (panTargetDeclarationsWithDefaultMain (α := Nat) exactEntryDeclarations).map
+      (fun declaration =>
+        match declaration with
+        | .function function => function.name
+        | .decl _ name _ => name
+        | .name name _ => name
+        | .exnDecl exception _ => exception) =
+      ["global", "main", "worker"] := by
+  decide +kernel
+
 end Flapjack

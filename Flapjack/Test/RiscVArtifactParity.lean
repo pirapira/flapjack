@@ -504,6 +504,29 @@ def frameOccupancyP1BitmapsMatch : Bool :=
   | some image => image.bitmaps.data == cakeFrameOccupancyP1Bitmaps
   | none => false
 
+/-! The `p9` frame-occupancy oracle (`p9.cake.S`) records the two-field
+struct case: Cake's allocator keeps one field live across the `mks` call and
+spills the other, so both call continuations carry frame words `2 ^ 3 = 8`.
+The port's frame/IRC wiring does not yet place spilled source values in the
+frame (production stays at `f' = 1` and emits `[4, 2, 2]`), so this exact
+production vector is pinned as a tracked gap rather than relaxed; the missing
+wiring is `flapjack-pxn.8.5.14.1.3` (IRC allocator driver and frame slots). -/
+def frameOccupancyP9Source : String :=
+  "struct S { 1 f, 1 g }\n" ++
+    "fun S mks (1 a, 1 b) { return S <f = a, g = b>; }\n" ++
+    "fun 1 id (1 a) { return a; }\n" ++
+    "fun 1 main() { var S s = mks(1,2); var 1 t = id(5); return s.f + s.g; }"
+
+/-- CakeML's exact bitmap vector recorded by the `p9` oracle assembly. -/
+def cakeFrameOccupancyP9Bitmaps : List Nat := [4, 8, 8]
+
+/-- The `p9` production vector does not yet reach the checked Cake vector;
+this records the gap instead of weakening the oracle. -/
+def frameOccupancyP9GapTracked : Bool :=
+  match compileRuntimeImage frameOccupancyP9Source with
+  | some image => image.bitmaps.data != cakeFrameOccupancyP9Bitmaps
+  | none => false
+
 #guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
 #guard ffiNamesMatch
@@ -514,6 +537,7 @@ def frameOccupancyP1BitmapsMatch : Bool :=
 #guard deadFfiStubDropped
 #guard bitmapCallsWordsMatch
 #guard frameOccupancyP1BitmapsMatch
+#guard frameOccupancyP9GapTracked
 #guard artifactAccepted
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches
@@ -568,7 +592,9 @@ def runChecks : IO Bool := do
       ("bitmap_calls table matches the original [4, 2, 2]",
          bitmapCallsWordsMatch),
       ("frame-occupancy p1 bitmap vector matches Cake [4, 2]",
-         frameOccupancyP1BitmapsMatch) ]
+         frameOccupancyP1BitmapsMatch),
+      ("frame-occupancy p9 exact vector gap is tracked, not accepted",
+         frameOccupancyP9GapTracked) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

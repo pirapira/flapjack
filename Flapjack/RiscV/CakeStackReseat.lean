@@ -112,6 +112,32 @@ zero register `0` and the link register `1`, whereas CakeML numbers the link
 register `0` and the zero register `27`. -/
 theorem portToStack_link : portToStack portLinkRegister = 0 := rfl
 
+/-! The Lab encoder applies `riscv_names` once.  These bridge lemmas show
+that reseating a port register before that encoder is byte-preserving. -/
+
+theorem labRegisterOfNat_portToStack {name : Nat} (h : name < 32) :
+    labRegisterOfNat (portToStack name) = registerOfNat name := by
+  unfold labRegisterOfNat
+  rw [riscvRegisterName_portToStack h]
+
+/-- Above the architectural range the reseat map is the identity, so the
+one-time Cake map still agrees with the raw register selection. -/
+theorem portToStack_id_of_ge_32 {name : Nat} (h : 32 ≤ name) :
+    portToStack name = name := by
+  unfold portToStack riscvInverseName
+  split <;> omega
+
+/-- Unconditional form of `labRegisterOfNat_portToStack`: reseating any port
+register number and then applying the one-time Cake map is exactly the raw
+register selection. -/
+theorem labRegisterOfNat_portToStack_all (name : Nat) :
+    labRegisterOfNat (portToStack name) = registerOfNat name := by
+  by_cases h : name < 32
+  · exact labRegisterOfNat_portToStack h
+  · have hge : 32 ≤ name := Nat.le_of_not_lt h
+    unfold labRegisterOfNat
+    rw [portToStack_id_of_ge_32 hge, riscvRegisterName_id_of_ge_32 hge]
+
 /-- The reseated scratch roles are pairwise distinct, so the `riscv_names`
 rebase introduces no register collision among them. -/
 theorem reseat_scratch_roles_distinct (config : WordStackConfig)

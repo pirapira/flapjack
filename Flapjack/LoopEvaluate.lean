@@ -257,19 +257,19 @@ mutual
                           else
                             match handler with
                             | none => (none, loopMachineSetVars
-                                { finished with locals := cutState.locals } names values)
+                                { finished with locals := state.locals } names values)
                             | some (_, _, handlerBody, liveOut) =>
                                 cutLoopResult liveOut
                                   (evaluateLoop fuel hooks handlerBody
                                     (loopMachineSetVars
-                                      { finished with locals := cutState.locals } names values))
+                                      { finished with locals := state.locals } names values))
                       | (some (.except exception), finished) =>
                           match handler with
                           | none => (some (.except exception), callEnv [] finished)
                           | some (name, handlerBody, _, liveOut) =>
                               cutLoopResult liveOut
                                 (evaluateLoop fuel hooks handlerBody
-                                  { (callEnv [] finished) with locals := loopSetVar cutState.locals name exception })
+                                  { (callEnv [] finished) with locals := loopSetVar state.locals name exception })
                       | (some (.continue _), finished) | (some (.break _), finished) =>
                           (some .error, finished)
                       | (none, finished) => (some .error, finished)

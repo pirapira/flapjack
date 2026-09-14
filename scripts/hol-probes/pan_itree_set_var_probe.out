@@ -1,0 +1,7 @@
+set_var_new=SOME 9
+
+set_var_overwrite=SOME 9
+
+set_var_sibling=SOME 7
+
+set_var_globals=SOME 1

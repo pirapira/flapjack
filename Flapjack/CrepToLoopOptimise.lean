@@ -14,6 +14,6 @@ theorem oCompile_skip [OfNat α 0] [OfNat α 1]
     (context : LoopContext α) (live : List Nat) :
     oCompile context live (.skip : CrepProg α) = .mark .skip := by
   simp [oCompile, compileCrepToLoop, loopCompileProg, loopLiveOptimise,
-    loopLiveComp, loopShrinkLeaf, loopMarkAll, LoopCall.comp]
+    loopLiveComp, loopShrink, loopShrinkLeaf, loopMarkAll, LoopCall.comp]
 
 end Flapjack

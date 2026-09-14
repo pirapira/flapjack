@@ -305,7 +305,7 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
       | .ok _ =>
           let warnings := checked.2
           match compileFlapjackEntry architecture bytesInWord (fun value => fromNat value)
-              start declarations with
+              start (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
           | some pipeline =>
               let discoveredNames :=
@@ -348,7 +348,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
       | .ok _ =>
           let warnings := checked.2
           match compileFlapjackEntry architecture bytesInWord (fun value => fromNat value)
-              start declarations with
+              start (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
           | some pipeline =>
               let discoveredNames :=

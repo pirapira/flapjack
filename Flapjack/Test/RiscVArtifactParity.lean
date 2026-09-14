@@ -304,6 +304,41 @@ def nestedExpressionAccepted : Bool :=
   | some image => image.sections.length == 5 && image.warnings.isEmpty
   | none => false
 
+/-- The differential-fuzzing `dup-global` fixture (GitHub issue #962 smoke,
+    bead `flapjack-pxn.8.5.14.4`).  The original CakeML accepts a duplicate
+    top-level global with the warning `variable g is redeclared in top-level
+    declaration` and keeps the later declaration; the port used to reject it in
+    `staticCheckDecls`. -/
+def dupGlobalSource : String :=
+  "var 1 g = 7;\nvar 1 g = 7;\nfun 1 main() { return g; }"
+
+/-- The production runtime-image entry point now accepts the duplicate-global
+program and reports at least one warning instead of failing the static check. -/
+def dupGlobalAcceptedWithWarning : Bool :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] artifactCompileConfig "main"
+      dupGlobalSource with
+  | .ok image => !image.warnings.isEmpty
+  | .error _ => false
+
+#guard dupGlobalAcceptedWithWarning
+
+/-- The differential-fuzzing `nomain-global` fixture (bead
+    `flapjack-pxn.8.5.14.3`).  The original CakeML `pan_to_target` synthesizes
+    a `main` returning `0` when the source has none; the port used to fail with
+    `entry not found`. -/
+def nomainGlobalSource : String := "var 1 g = 7;"
+
+/-- The production runtime-image entry point now accepts a main-less program by
+synthesizing the default `main`. -/
+def nomainGlobalAccepted : Bool :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] artifactCompileConfig "main"
+      nomainGlobalSource with
+  | .ok image => !image.sections.isEmpty
+  | .error _ => false
+
+#guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
 #guard artifactAccepted
 #guard generatedMainBytesMatch
@@ -339,7 +374,11 @@ def runChecks : IO Bool := do
       ("entry_order original entry-first order mismatch is tracked, not accepted",
         entryOrderOrderingMismatch),
       ("nested_expression fixture accepted by the runtime-image entry point",
-        nestedExpressionAccepted) ]
+        nestedExpressionAccepted),
+      ("dup_global fixture accepted with a redeclaration warning",
+        dupGlobalAcceptedWithWarning),
+      ("nomain_global fixture accepted with a synthesized default main",
+        nomainGlobalAccepted) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

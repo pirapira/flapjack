@@ -70,6 +70,18 @@
       "source_reference": "GitHub issue #1015 previously-failing left-associative subtraction chain (five nested binary nodes); the original accepts and the port accepts after the flapjack-pxn.2.5 pool-expansion fix, extending coverage of the temporary-pool floor beyond the addition variants.",
       "cake_sha256": "30de68e8017f5e36baefc5f0aee2d4797eed4434e41f3f5abd12562a288c99f3",
       "tracked_beads": ["flapjack-pxn.2.5"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/dup_global.pnk",
+      "source_reference": "Differential-fuzzing finding dup-global (GitHub issue #962 smoke): CakeML accepts a duplicate top-level global with the warning 'variable g is redeclared in top-level declaration' and keeps the later declaration; Flapjack previously rejected it in staticCheckDecls. Tracked by flapjack-pxn.8.5.14.4.",
+      "cake_sha256": "a79e87b5048cf7c9f2e5e8c830062424e3231cb92b69519995fe54ffac4d3680",
+      "tracked_beads": ["flapjack-pxn.8.5.14.4"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nomain_global.pnk",
+      "source_reference": "Differential-fuzzing finding nomain-global (GitHub issue #962 smoke): the original CakeML pan_to_target synthesizes a main returning zero when the source has none, so a main-less program is accepted; Flapjack previously failed with 'entry not found'. Fixed by panTargetDeclarationsWithDefaultMain. Tracked by flapjack-pxn.8.5.14.3.",
+      "cake_sha256": "991051465fe4220a390f5a4cb70ac821811c3381723e3306d41b97136d0be039",
+      "tracked_beads": ["flapjack-pxn.8.5.14.3", "flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"]
     }
   ]
 }

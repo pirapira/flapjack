@@ -622,6 +622,22 @@ def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
       let word := pipelineWordFunctions loop
       some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)
 
+/-! Executable mirror of the missing-`main` branch of `pan_to_target_all`
+    (`cakeml/pancake/pan_passesScript.sml:20-37`): when the program has no
+    `main` declaration the original synthesizes `main = «return 0»` and
+    prepends it before running the remaining passes. -/
+def panTargetDeclarationsWithDefaultMain [OfNat α 0] [OfNat α 1]
+    (declarations : List (Decl α)) : List (Decl α) :=
+  if declarations.any (fun declaration =>
+      match declaration with
+      | .function function => function.name == "main"
+      | _ => false) then
+    declarations
+  else
+    .function
+      { name := "main", inline := false, exported := false, params := [],
+        body := .return (.const 0), returnShape := .one } :: declarations
+
 /-! Target entry point.  A program with a `main` takes the exact CakeML
     `pan_to_target` wrapper path; a program without one is compiled as-is
     (no synthesized or zero-returning `main`). -/

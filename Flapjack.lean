@@ -26,6 +26,7 @@ import Flapjack.PanIsValidValue
 import Flapjack.PanEval
 import Flapjack.PanHHandleCallRet
 import Flapjack.PanMrec
+import Flapjack.PanBState
 import Flapjack.PanHProgDec
 import Flapjack.PanHProgSeq
 import Flapjack.PanHProgCond

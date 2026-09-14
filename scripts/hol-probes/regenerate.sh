@@ -158,6 +158,9 @@ run_probe pan_eval_probeScript.sml pan_eval_probe.out \
 run_probe pan_mrec_probeScript.sml pan_mrec_probe.out \
   mrec_ret mrec_external \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_bst_probeScript.sml pan_bst_probe.out \
+  locals top_addr \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_dec_probeScript.sml pan_itree_h_prog_dec_probe.out \
   dec_valid_event dec_failed_response "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_seq_probeScript.sml pan_itree_h_prog_seq_probe.out \

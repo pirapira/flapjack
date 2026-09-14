@@ -1,0 +1,4 @@
+skip=Skip
+tail_call=TailCall «f» []
+mismatching_return=Seq (AssignCall (Local,«r») NONE «f» []) (Return (Var Local «s»))
+handler_seq=Call (SOME (SOME (Local,«r»),SOME (0,«h»,Seq Tick Tick))) «f» []

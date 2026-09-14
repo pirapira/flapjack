@@ -16,6 +16,9 @@ import Flapjack.PanHProgPrimitive
 import Flapjack.PanSetGlobal
 import Flapjack.PanSemSetGlobal
 import Flapjack.PanSemSetKvar
+import Flapjack.PanSemLookupKvar
+import Flapjack.PanSemIsValidValue
+import Flapjack.PanSemWriteBytearray
 import Flapjack.PanItreeEvaluate
 import Flapjack.PanExt
 import Flapjack.PanHHandleCallRet
@@ -38,11 +41,11 @@ import Flapjack.PanBStateEmptyLocals
 import Flapjack.PanEmptyLocals
 import Flapjack.PanNbOp
 import Flapjack.PanSetKvar
-import Flapjack.PanLookupKvar
-import Flapjack.PanIsValidValue
 import Flapjack.PanShMemLoad
 import Flapjack.PanShMemStore
 import Flapjack.PanEval
+import Flapjack.PanEvaluate
+import Flapjack.PanObservationalSemantics
 import Flapjack.PanHHandleCallRet
 import Flapjack.PanMrec
 import Flapjack.PanHProgDec

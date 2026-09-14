@@ -54,6 +54,9 @@ import Flapjack.Test.PanHProgPrimitiveParity
 import Flapjack.Test.PanSetGlobalParity
 import Flapjack.Test.PanSemSetGlobalParity
 import Flapjack.Test.PanSemSetKvarParity
+import Flapjack.Test.PanSemLookupKvarParity
+import Flapjack.Test.PanSemIsValidValueParity
+import Flapjack.Test.PanSemWriteBytearrayParity
 import Flapjack.Test.PanItreeEvaluateParity
 import Flapjack.Test.PanExtParity
 import Flapjack.Test.PanHHandleCallRetParity
@@ -79,11 +82,11 @@ import Flapjack.Test.PanBStateUpdatesParity
 import Flapjack.Test.PanBStateEmptyLocalsParity
 import Flapjack.Test.PanEmptyLocalsParity
 import Flapjack.Test.PanSetKvarParity
-import Flapjack.Test.PanLookupKvarParity
-import Flapjack.Test.PanIsValidValueParity
 import Flapjack.Test.PanShMemLoadParity
 import Flapjack.Test.PanShMemStoreParity
 import Flapjack.Test.PanEvalParity
+import Flapjack.Test.PanEvaluateParity
+import Flapjack.Test.PanObservationalSemanticsParity
 import Flapjack.Test.PanHHandleCallRetParity
 import Flapjack.Test.PanMrecParity
 import Flapjack.Test.PanHProgDecParity
@@ -741,6 +744,9 @@ def main : IO Unit := do
     Flapjack.Test.PanSetGlobalParity.runChecks,
     Flapjack.Test.PanSemSetGlobalParity.runChecks,
     Flapjack.Test.PanSemSetKvarParity.runChecks,
+    Flapjack.Test.PanSemLookupKvarParity.runChecks,
+    Flapjack.Test.PanSemIsValidValueParity.runChecks,
+    Flapjack.Test.PanSemWriteBytearrayParity.runChecks,
     Flapjack.Test.PanItreeEvaluateParity.runChecks,
     Flapjack.Test.PanExtParity.runChecks,
     Flapjack.Test.PanHHandleCallRetParity.runChecks,
@@ -766,11 +772,11 @@ def main : IO Unit := do
     Flapjack.Test.PanBStateEmptyLocalsParity.runChecks,
     Flapjack.Test.PanEmptyLocalsParity.runChecks,
     Flapjack.Test.PanSetKvarParity.runChecks,
-    Flapjack.Test.PanLookupKvarParity.runChecks,
-    Flapjack.Test.PanIsValidValueParity.runChecks,
     Flapjack.Test.PanShMemLoadParity.runChecks,
     Flapjack.Test.PanShMemStoreParity.runChecks,
     Flapjack.Test.PanEvalParity.runChecks,
+    Flapjack.Test.PanEvaluateParity.runChecks,
+    Flapjack.Test.PanObservationalSemanticsParity.runChecks,
     Flapjack.Test.PanHHandleCallRetParity.runChecks,
     Flapjack.Test.PanMrecParity.runChecks,
     Flapjack.Test.PanHProgDecParity.runChecks,

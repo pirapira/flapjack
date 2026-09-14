@@ -36,6 +36,7 @@ import Flapjack.Test.LoopLocalsTouchedParity
 import Flapjack.Test.LoopAssignedVarsParity
 import Flapjack.Test.LoopVarsOfExpParity
 import Flapjack.Test.LoopArithVarsParity
+import Flapjack.Test.LoopShrinkParity
 import Flapjack.Test.LoopAccVarsParity
 import Flapjack.Test.LoopNestedSeqParity
 import Flapjack.Test.LoopIsLoadParity

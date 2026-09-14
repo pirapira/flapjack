@@ -1377,14 +1377,14 @@ def wordStackReturnCode (config : WordStackConfig) :
       Option (StackProg α)
   | none => some .skip
   | some (destinations, _, _, _, _) =>
-      wordStackMovesFromPhysical config destinations 2
+      wordStackMovesFromPhysical config destinations 1
 
 def wordStackReturn (config : WordStackConfig) (values : List Nat) :
     Option (StackProg α) := do
-  let moves ← wordStackMovesToPhysical config values 2
+  let moves ← wordStackMovesToPhysical config values 1
   match values with
   | [] => pure moves
-  | _ => pure (wordStackJoin moves (.return 2))
+  | _ => pure (wordStackJoin moves (.return 1))
 
 def wordToStackInst (config : WordStackConfig) : WordInst → Option (StackProg α)
   | .mem operator sourceOrDestination address =>
@@ -2365,12 +2365,12 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .raise exception => pure (wordToStackRaise exception)
   | .return _ values => wordStackReturn config values
   | .call none (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments 1
       pure (wordStackJoin argumentMoves
         (.call none (.label target) none))
   | .tick => pure .tick
   | .call returns (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments 1
       let returnCode ← wordStackReturnCode config returns
       let destinations := returns.map (fun result => result.1) |>.getD []
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
@@ -2379,7 +2379,7 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       pure (wordStackJoin argumentMoves callCode)
   | .call returns (some target) arguments
       (some (exception, body, handlerLabel, entryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments 1
       let returnCode ← wordStackReturnCode config returns
       let _destinations := returns.map (fun result => result.1) |>.getD []
       let handlerCode ← wordToStackProg config body
@@ -2444,13 +2444,13 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .raise exception => pure (wordToStackRaise exception)
   | .return _ values => wordStackReturn config values
   | .call none (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments 1
       pure (wordStackJoin argumentMoves
         (.call none (.label target) none))
   | .tick => pure .tick
   | .call (some (destinations, _cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments 1
       let returnCode ← wordToStackProgNat config returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
         config.frameOffset config.scratch destinations returnCode
@@ -2458,7 +2458,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       pure (wordStackJoin argumentMoves callCode)
   | .call none (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments 1
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch .skip handlerCode
@@ -2469,7 +2469,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .call (some (_destinations, _cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments 1
       let returnCode ← wordToStackProgNat config returnProgram
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
@@ -2575,7 +2575,7 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
         (fun program => (program, state))
   | .call returns (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments 1
       let (liveCode, state) := wordStackCallLiveBitmap config bitmapBuilder
         bitmapRegister frameSlots state returns
       let (returnCode, state) ←
@@ -2595,7 +2595,7 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments 1
       let (liveCode, state) := wordStackCallLiveBitmap config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
@@ -2802,7 +2802,7 @@ theorem wordToStackProgNatWithBitmapBuilder_preserves_length
                   rcases returnData with
                     ⟨destinations, cutsets, returnProgram, returnLabel, entryLabel⟩
                   simp only [wordToStackProgNatWithBitmapBuilder] at hresult
-                  cases hargs : wordStackMovesToPhysical config arguments 2 with
+                  cases hargs : wordStackMovesToPhysical config arguments 1 with
                   | none =>
                       rw [hargs] at hresult
                       simp at hresult
@@ -2843,7 +2843,7 @@ theorem wordToStackProgNatWithBitmapBuilder_preserves_length
           | some handlerData =>
               rcases handlerData with ⟨exception, body, handlerLabel, entryLabel⟩
               simp only [wordToStackProgNatWithBitmapBuilder] at hresult
-              cases hargs : wordStackMovesToPhysical config arguments 2 with
+              cases hargs : wordStackMovesToPhysical config arguments 1 with
               | none =>
                   rw [hargs] at hresult
                   simp at hresult
@@ -3076,8 +3076,8 @@ def wordToStackProgWordWithLocationBitmaps [NeZero width]
   wordToStackProgNatWithLocationBitmaps config registerCount bitmapRegister frameSlots width
     storeConstsStub state (wordProgToNat program)
 
-/-! Function-entry lowering for allocated Word programs.  Word calls place
-    arguments in the even ABI registers beginning at x2; the allocator may
+/-! Function-entry lowering for allocated Word programs.  Cake's stack ABI
+    places arguments in stack registers beginning at 1; the allocator may
     place a formal parameter in a different register or in a spill slot.  The
     entry moves make that calling convention explicit before the lowered body
     starts executing. -/
@@ -3085,7 +3085,7 @@ def wordToStackFunctionWithParameters [NeZero width]
     (config : WordStackConfig) (parameters : List Nat)
     (program : WordProg (Word width)) : Option (StackProg Nat) := do
   let body ← wordToStackProgWord config program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters 2
+  let parameterMoves ← wordStackMovesFromPhysical config parameters 1
   pure (wordStackJoin parameterMoves body)
 
 def wordToStackFunctionWithParametersAndBitmaps [NeZero width]
@@ -3095,7 +3095,7 @@ def wordToStackFunctionWithParametersAndBitmaps [NeZero width]
     Option (StackProg Nat × WordStackBitmapState) := do
   let (body, state) ← wordToStackProgWordWithBitmaps config registerCount
     bitmapRegister frameSlots storeConstsStub state program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters 2
+  let parameterMoves ← wordStackMovesFromPhysical config parameters 1
   pure (wordStackJoin parameterMoves body, state)
 
 def wordToStackFunctionWithParametersAndLocationBitmaps [NeZero width]
@@ -3105,7 +3105,7 @@ def wordToStackFunctionWithParametersAndLocationBitmaps [NeZero width]
     Option (StackProg Nat × WordStackBitmapState) := do
   let (body, state) ← wordToStackProgWordWithLocationBitmaps config registerCount
     bitmapRegister frameSlots storeConstsStub state program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters 2
+  let parameterMoves ← wordStackMovesFromPhysical config parameters 1
   pure (wordStackJoin parameterMoves body, state)
 
 /-! Public entry point for the spill-aware path.  The allocator's location

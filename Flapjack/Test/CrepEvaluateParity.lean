@@ -52,10 +52,18 @@ def evaluateTickTimeout : Bool :=
   | some (.timeout, state) => state.locals 1 == none && state.clock == 0
   | _ => false
 
+def scopedLocals : Nat → Option Nat :=
+  fun name => if name == 1 then some 3 else none
+
+def evaluateResVar : Bool :=
+  restoreCrepLocal scopedLocals 1 none 1 == none &&
+    restoreCrepLocal scopedLocals 1 (some 7) 1 == some 7
+
 #guard evaluateSkip
 #guard evaluateAssign
 #guard evaluateSequenceReturn
 #guard evaluateTickTimeout
+#guard evaluateResVar
 
 def runChecks : IO Bool := do
   if evaluateSkip then IO.println "PASS crep evaluate Skip" else
@@ -66,7 +74,9 @@ def runChecks : IO Bool := do
     IO.println "FAIL crep evaluate Seq/Return"
   if evaluateTickTimeout then IO.println "PASS crep evaluate Tick timeout" else
     IO.println "FAIL crep evaluate Tick timeout"
+  if evaluateResVar then IO.println "PASS crep res_var" else
+    IO.println "FAIL crep res_var"
   pure (evaluateSkip && evaluateAssign && evaluateSequenceReturn &&
-    evaluateTickTimeout)
+    evaluateTickTimeout && evaluateResVar)
 
 end Flapjack.Test.CrepEvaluateParity

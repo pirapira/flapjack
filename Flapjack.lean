@@ -14,6 +14,7 @@ import Flapjack.PanHProgStoreByte
 import Flapjack.PanHProgStore32
 import Flapjack.PanHProgPrimitive
 import Flapjack.PanSetGlobal
+import Flapjack.PanSemSetGlobal
 import Flapjack.PanItreeEvaluate
 import Flapjack.PanExt
 import Flapjack.PanHHandleCallRet

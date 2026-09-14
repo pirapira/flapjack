@@ -1,0 +1,7 @@
+set_global_insert=T
+
+set_global_overwrite=T
+
+set_global_sibling=T
+
+set_global_locals=T

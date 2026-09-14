@@ -155,6 +155,9 @@ run_probe pan_sem_set_kvar_probeScript.sml pan_sem_set_kvar_probe.out \
 run_probe pan_write_bytearray_probeScript.sml pan_write_bytearray_probe.out \
   write_bytearray_two_cells write_bytearray_failed_tail \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_lookup_kvar_probeScript.sml pan_sem_lookup_kvar_probe.out \
+  lookup_kvar_local lookup_kvar_missing \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_itree_evaluate_probeScript.sml pan_itree_evaluate_probe.out \
   itree_evaluate_skip itree_evaluate_tick \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"

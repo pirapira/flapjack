@@ -295,6 +295,8 @@ run_probe loop_sem_call_env_probeScript.sml \
 run_probe loop_lang_locals_touched_probeScript.sml \
   loop_lang_locals_touched_probe.out \
   const base_addr "$cake_dir/pancake/loopLangScript.sml"
+run_probe vars_of_exp_probeScript.sml vars_of_exp_probe.out \
+  var shift_nested "$cake_dir/pancake/loop_liveScript.sml"
 run_probe loop_lang_assigned_vars_probeScript.sml \
   loop_lang_assigned_vars_probe.out \
   skip load_byte "$cake_dir/pancake/loopLangScript.sml"

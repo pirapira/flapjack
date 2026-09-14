@@ -255,6 +255,8 @@ run_probe comp_field_probeScript.sml comp_field_probe.out \
   first second fallback "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe compile_panop_probeScript.sml compile_panop_probe.out \
   "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe compile_exp_probeScript.sml compile_exp_probe.out \
+  leaves struct_field loads_ops cmp_shift "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \
   exit_loop_break exit_loop_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

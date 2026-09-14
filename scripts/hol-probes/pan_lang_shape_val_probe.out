@@ -1,0 +1,5 @@
+one=Const 0w
+
+comb=RStruct [Const 0w; Const 0w; Const 0w]
+
+named=Const 0w

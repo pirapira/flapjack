@@ -171,6 +171,9 @@ run_probe pan_bst_probeScript.sml pan_bst_probe.out \
 run_probe pan_itree_set_var_probeScript.sml pan_itree_set_var_probe.out \
   set_var_new set_var_globals \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_itree_empty_locals_probeScript.sml pan_itree_empty_locals_probe.out \
+  empty_locals_local empty_locals_base_addr \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe crep_primop_probeScript.sml crep_primop_probe.out \
   crep_basic crep_wrong_length \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

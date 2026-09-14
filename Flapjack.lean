@@ -26,6 +26,7 @@ import Flapjack.CrepEvaluate
 import Flapjack.CrepObservationalSemantics
 import Flapjack.PanBst
 import Flapjack.PanBStateUpdates
+import Flapjack.PanBStateEmptyLocals
 import Flapjack.PanEmptyLocals
 import Flapjack.PanSetKvar
 import Flapjack.PanLookupKvar

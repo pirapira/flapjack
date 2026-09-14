@@ -62,6 +62,21 @@ def pipelineFindFunction (name : FunName) :
   | _ :: declarations => pipelineFindFunction name declarations
 termination_by declarations => sizeOf declarations
 
+/-! `pan_to_target_all` first moves the requested entry declaration to the
+    front of the Pancake list (`pan_passesScript.sml:20-37`).  Keeping this
+    source-order operation explicit is important because the linked section
+    order is observable in the RISC-V artifact. -/
+def panTargetMoveStartToFront [BEq String]
+    (start : FunName) (declarations : List (Decl α)) : List (Decl α) :=
+  globalDeclsFilter (fun declaration =>
+      match declaration with
+      | .function function => function.name == start
+      | _ => false) declarations ++
+    globalDeclsFilter (fun declaration =>
+      match declaration with
+      | .function function => function.name != start
+      | _ => true) declarations
+
 def pipelineCrepeContext [BEq α] [Add α]
     (bytesInWord : α) (fromNat : Nat → α)
     (program : GlobalCompiledProgram α) : CompileContext α :=
@@ -608,6 +623,7 @@ def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (start : FunName) (declarations : List (Decl α)) :
     Option (FlapjackPipelineResult α) :=
+  let declarations := panTargetMoveStartToFront start declarations
   let simplified := panSimpDecls declarations
   let structured := structCompileTop simplified
   match pipelineFindFunction start structured with

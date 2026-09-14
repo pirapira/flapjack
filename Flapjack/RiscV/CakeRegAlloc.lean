@@ -1,5 +1,6 @@
 import Flapjack.RiscV.CakeAllocatorCore
 import Flapjack.RiscV.Allocator
+import Flapjack.RiscV.SpillCosts
 import Flapjack.CrepToLoop
 
 /-!
@@ -941,22 +942,33 @@ def cakeGetPrefs {α : Type u} [OfNat α 0] [OfNat α 1] :
     `word_to_stack$compile_prog` stack-variable count
     (`word_to_stackScript.sml:586-600`): the colouring rewrites spilled
     variables to stack numbers `2*k + 2*slot`, so `max_var DIV 2 + 1 - k`
-    counts them, floored by the stack-argument area.  The result plays the
-    role of the frame-slot count `f'` in the bitmap writer. -/
-def cakeWordFrameSlots [OfNat α 0] [OfNat α 1]
-    (parameters : List Nat) (k : Nat) (program : WordProg α) : Nat :=
-  let tree := wordClashTree program []
-  let fs := cakeGetStackOnly program
-  let forced := cakeGetForced program
-  let moves := cakeGetPrefs program []
-  match cakeDoRegAlloc .irc none k moves tree forced fs with
-  | none => 1
+    counts them, floored by the stack-argument area.  Returns the exact
+    `stack_var_count` (the bitmap writer's `f'`); zero means the original
+    would skip the bitmap entirely.  The bitmap live set itself comes from
+    the exception cut set (`wLive` consumes `SND live`), which the pancake
+    pipeline always leaves empty, so the emitted words stay pure powers of
+    two independently of the production register-location map. -/
+def cakeWordStackVarCount [OfNat α 0] [OfNat α 1]
+    (currentFunction : Nat) (parameters : List Nat) (k : Nat)
+    (program : WordProg α) : Nat :=
+  let ssaProgram := (wordFullSsaCcTrans parameters.length program).2.2
+  let tree := wordClashTree ssaProgram []
+  let fs := cakeGetStackOnly ssaProgram
+  let forced := cakeGetForced ssaProgram
+  let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
+  let moves := wordMoves.map (fun m => (m.priority, (m.left, m.right)))
+  let bij := cakeMkBij tree
+  let scost := spillCosts.map (fun costs =>
+    costs.filterMap (fun entry =>
+      (lookupNatInfo entry.1 bij.toAllocator).map
+        (fun node => (node, entry.2))))
+  match cakeDoRegAlloc .irc scost k moves tree forced fs with
+  | none => 0
   | some colouring =>
       let colour := CakeAlloc.totalColour colouring
-      let coloured := wordApplyColour colour program
+      let coloured := wordApplyColour colour ssaProgram
       let maxVar := (wordProgVariables coloured).foldl max 0
       let stackArgs := parameters.length - k
-      let stackVars := max ((maxVar / 2 + 1) - k) stackArgs
-      max (stackVars + 1) 1
+      max ((maxVar / 2 + 1) - k) stackArgs
 
 end Flapjack.RiscV.CakeRegAlloc

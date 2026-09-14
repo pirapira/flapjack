@@ -11,6 +11,12 @@ from `panSemScript.sml:556-736`.  Its `return_41`, `return_mul_42`, and
 source boundary.  These checks exercise the source-shaped wrapper on a
 constant return, an intermediate clocked sequence, a zero-clock timeout, and
 a function call with argument transfer and return-shape contracts.
+
+The fixed-width memory oracle is `scripts/hol-probes/
+pan_sem_evaluate_fixed_load_probe.out`, generated from
+`panSemScript.sml:247-265` and the referenced `mem_load_byte_def` /
+`mem_load_32_def` equations. It pins aligned success, domain failure,
+little-endian reconstruction, and alignment failure.
 -/
 
 namespace Flapjack.Test.PanEvaluateParity
@@ -62,6 +68,41 @@ def evaluateCall :=
       : PanSemEvaluateState (Word 64) Unit)
     (.call none "id" [.const (BitVec.ofNat 64 7)] : Prog (Word 64))
 
+/-! The fixed-width branches must go through the explicit source memory model.
+    This is the stateful evaluator path corresponding to
+    `panSemScript.sml:247-265`, not the legacy whole-cell fallback. -/
+def fixedLoadDomain : PanMemoryDomain (Word 64) :=
+  fun address => address == BitVec.ofNat 64 8
+
+def fixedLoadMemory : Word 64 → Option (PanValue (Word 64)) :=
+  fun address =>
+    if address == BitVec.ofNat 64 8 then
+      some (.word (BitVec.ofNat 64 0x0807060504030201))
+    else none
+
+def fixedLoadAccess : PanValueMemoryAccess (Word 64) :=
+  panValueMemoryAccessOfModel RiscV.panRiscVMemoryModel fixedLoadDomain
+
+def fixedLoadState (clock : Nat) : PanSemEvaluateState (Word 64) Unit :=
+  { emptyPanState clock with
+      memory := fixedLoadMemory
+      memoryAccess := some fixedLoadAccess }
+
+def evaluateFixedByte :=
+  panSemEvaluateExact statefulTestContext statefulTestPrimitive statefulTestHandler
+    fixedLoadAccess (fixedLoadState 4)
+    (.return (.loadByte (.const (BitVec.ofNat 64 9))) : Prog (Word 64))
+
+def evaluateFixedWord32 :=
+  panSemEvaluateExact statefulTestContext statefulTestPrimitive statefulTestHandler
+    fixedLoadAccess (fixedLoadState 4)
+    (.return (.load32 (.const (BitVec.ofNat 64 8))) : Prog (Word 64))
+
+def evaluateFixedByteDomainFailure :=
+  panSemEvaluateExact statefulTestContext statefulTestPrimitive statefulTestHandler
+    fixedLoadAccess (fixedLoadState 4)
+    (.return (.loadByte (.const (BitVec.ofNat 64 16))) : Prog (Word 64))
+
 def isWord (expected : Nat) : PanValue (Word 64) → Bool
   | .word value => value == BitVec.ofNat 64 expected
   | _ => false
@@ -93,11 +134,23 @@ def observeCall : Bool :=
       locals "x" = none && isWord 7 value
   | _ => false
 
+def observeFixedLoads : Bool :=
+  match evaluateFixedByte, evaluateFixedWord32 with
+  | some (.control (.returned _ _ _ _ [(.word byte)]), 4),
+      some (.control (.returned _ _ _ _ [(.word word32)]), 4) =>
+      byte == BitVec.ofNat 64 2 && word32 == BitVec.ofNat 64 0x04030201
+  | _, _ => false
+
+def observeFixedLoadDomainFailure : Bool :=
+  evaluateFixedByteDomainFailure.isNone
+
 #guard observeSkip
 #guard observeReturn41
 #guard observeSequence
 #guard observeTickAtZero
 #guard observeCall
+#guard observeFixedLoads
+#guard observeFixedLoadDomainFailure
 
 def runChecks : IO Bool := do
   if observeSkip then IO.println "PASS evaluate skip" else IO.println "FAIL evaluate skip"
@@ -105,6 +158,11 @@ def runChecks : IO Bool := do
   if observeSequence then IO.println "PASS evaluate sequence" else IO.println "FAIL evaluate sequence"
   if observeTickAtZero then IO.println "PASS evaluate timeout" else IO.println "FAIL evaluate timeout"
   if observeCall then IO.println "PASS evaluate call_id_7" else IO.println "FAIL evaluate call_id_7"
-  pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall)
+  if observeFixedLoads then IO.println "PASS evaluate fixed-width loads" else
+    IO.println "FAIL evaluate fixed-width loads"
+  if observeFixedLoadDomainFailure then IO.println "PASS evaluate fixed-width domain failure" else
+    IO.println "FAIL evaluate fixed-width domain failure"
+  pure (observeSkip && observeReturn41 && observeSequence && observeTickAtZero && observeCall &&
+    observeFixedLoads && observeFixedLoadDomainFailure)
 
 end Flapjack.Test.PanEvaluateParity

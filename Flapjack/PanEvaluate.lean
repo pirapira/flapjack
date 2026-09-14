@@ -124,4 +124,26 @@ def panSemEvaluate
   panSemEvaluateWithFuel context primitive handler
     (panSemEvaluateFuel state program) state program
 
+/-!
+  Exact source-memory entry point.
+
+  CakeML's `panSem$evaluate` receives `memaddrs`, `be`, and the word-memory
+  operations through its state.  The structured compatibility API keeps an
+  optional access field for older callers, but this entry point requires the
+  access record explicitly so `Load32`/`LoadByte` cannot silently fall back to
+  whole-cell reads.
+-/
+def panSemEvaluateExact
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
+    (context : PanValueFfiContext α)
+    (primitive : PanPrimitiveHandler α)
+    (handler : PanValueStatefulFfiHandler α σ)
+    (memoryAccess : PanValueMemoryAccess α)
+    (state : PanSemEvaluateState α σ) (program : Prog α) :
+    Option (PanValueFfiClockResult α σ) :=
+  panSemEvaluate context primitive handler
+    { state with memoryAccess := some memoryAccess } program
+
 end Flapjack

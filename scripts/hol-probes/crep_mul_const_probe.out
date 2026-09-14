@@ -1,0 +1,11 @@
+zero=Const 0w
+
+one=Var 2
+
+two=Shift Lsl (Var 2) (Const 1w)
+
+three=Crepop Mul [Var 2; Const 3w]
+
+four=Shift Lsl (Var 2) (Const 2w)
+
+eight=Shift Lsl (Var 2) (Const 3w)

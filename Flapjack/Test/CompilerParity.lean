@@ -29,6 +29,7 @@ import Flapjack.Test.PanGlobalsDecShapesParity
 import Flapjack.Test.PanGlobalsCompileTopForStartParity
 import Flapjack.Test.CrepeDestConstParity
 import Flapjack.Test.CrepeDest2ExpParity
+import Flapjack.Test.CrepeMulConstParity
 import Flapjack.Test.PanResVarParity
 import Flapjack.Test.PanPrimopParity
 import Flapjack.Test.PanSetVarParity

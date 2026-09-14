@@ -1,4 +1,5 @@
 import Flapjack.Compile
+import Flapjack.RiscV.Model
 
 /-!
 Executable arithmetic simplification for Crepe.
@@ -32,6 +33,19 @@ termination_by fuel => fuel
 def crepDest2Exp [PanShiftWidth α] [BEq α] [OfNat α 0] [OfNat α 1]
     [AndOp α] [ShiftRight α] (n : Nat) (word : α) : Option Nat :=
   crepDest2ExpFuel (PanShiftWidth.width (α := α) + 1) n word
+
+/-! Fixed-width executable port of CakeML's `crep_arith$mul_const`.
+    Constants zero and one are handled directly; powers of two become a left
+    shift, while all other constants retain the original multiplication node. -/
+def crepMulConst [NeZero width]
+    (expression : CrepExp (RiscV.Word width))
+    (constant : RiscV.Word width) : CrepExp (RiscV.Word width) :=
+  if constant == 0 then .const 0
+  else if constant == 1 then expression
+  else match crepDest2Exp 0 constant with
+    | none => .crepOp .mul [expression, .const constant]
+    | some exponent => .shift .lsl expression
+        (.const (BitVec.ofNat width exponent))
 
 def crepArithExp [Mul α] : CrepExp α → CrepExp α
   | .load address => .load (crepArithExp address)

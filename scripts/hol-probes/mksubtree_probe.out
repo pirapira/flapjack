@@ -1,0 +1,4 @@
+empty=[Nd (INL (INL ProgNT),Locs UNKNOWNpt UNKNOWNpt) []]
+
+child=[Nd (INL (INL ProgNT),Locs (POSN 3 2) (POSN 3 6))
+   [Lf (TOK (KeywordT SkipK),Locs (POSN 3 2) (POSN 3 6))]]

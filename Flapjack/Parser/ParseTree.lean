@@ -162,6 +162,10 @@ def defaultLeaf (token : Token) : P Trees :=
 def mkNode (nonterminal : Nonterminal) (children : Trees) : ParseTree :=
   .nd nonterminal children (listLoc children)
 
+/-! Direct counterpart of `panPEG$mksubtree_def`. -/
+def mkSubtree (nonterminal : Nonterminal) (children : Trees) : Trees :=
+  [mkNode nonterminal children]
+
 /-- `try_default s t`. -/
 def tryDefault (p : P Trees) (token : Token) : P Trees :=
   p <|> defaultLeaf token

@@ -74,6 +74,54 @@ def crepSimpExp [NeZero width] : CrepExp (RiscV.Word width) →
 termination_by expression => sizeOf expression
 decreasing_by
   all_goals first | sizeOf_list_dec | decreasing_trivial | simp_wf
+
+/-! Fixed-width executable port of CakeML's `crep_arith$simp_prog`.
+    Program nodes preserve their original sequencing and control structure;
+    every embedded expression is simplified, including call handlers. -/
+def crepSimpProg [NeZero width] : CrepProg (RiscV.Word width) →
+    CrepProg (RiscV.Word width)
+  | .skip => .skip
+  | .dec name value body =>
+      .dec name (crepSimpExp value) (crepSimpProg body)
+  | .assign name value => .assign name (crepSimpExp value)
+  | .primitive names operator arguments =>
+      .primitive names operator arguments
+  | .store address value =>
+      .store (crepSimpExp address) (crepSimpExp value)
+  | .store32 address value =>
+      .store32 (crepSimpExp address) (crepSimpExp value)
+  | .storeByte address value =>
+      .storeByte (crepSimpExp address) (crepSimpExp value)
+  | .storeGlob address value =>
+      .storeGlob address (crepSimpExp value)
+  | .seq first second =>
+      .seq (crepSimpProg first) (crepSimpProg second)
+  | .ite condition thenBranch elseBranch =>
+      .ite (crepSimpExp condition) (crepSimpProg thenBranch)
+        (crepSimpProg elseBranch)
+  | .while condition body =>
+      .while (crepSimpExp condition) (crepSimpProg body)
+  | .break label => .break label
+  | .continue label => .continue label
+  | .call returnInfo name arguments =>
+      let returnInfo :=
+        match returnInfo with
+        | none => none
+        | some (names, none) => some (names, none)
+        | some (names, some (handler, body)) =>
+            some (names, some (handler, crepSimpProg body))
+      .call returnInfo name (arguments.map crepSimpExp)
+  | .extCall function configuration configurationLength array arrayLength =>
+      .extCall function configuration configurationLength array arrayLength
+  | .raise exception => .raise exception
+  | .return values => .return (values.map crepSimpExp)
+  | .shMem operator name address =>
+      .shMem operator name (crepSimpExp address)
+  | .tick => .tick
+termination_by program => sizeOf program
+decreasing_by
+  all_goals first | sizeOf_list_dec | decreasing_trivial | simp_wf
+
 def crepArithExp [Mul α] : CrepExp α → CrepExp α
   | .load address => .load (crepArithExp address)
   | .load32 address => .load32 (crepArithExp address)

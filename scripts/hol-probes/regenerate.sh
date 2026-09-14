@@ -165,9 +165,6 @@ run_probe pan_sem_evaluate_fixed_load_probeScript.sml \
   pan_sem_evaluate_fixed_load_probe.out \
   eval_byte_hit eval_load32_alignment_failure \
   "$cake_dir/pancake/semantics/panSemScript.sml"
-run_probe pan_peg_try_default_probeScript.sml pan_peg_try_default_probe.out \
-  try_default_success try_default_default \
-  "$cake_dir/pancake/parser/panPEGScript.sml"
 run_probe pan_itree_evaluate_probeScript.sml pan_itree_evaluate_probe.out \
   itree_evaluate_skip itree_evaluate_tick \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
@@ -222,9 +219,6 @@ run_probe crep_evaluate_probeScript.sml crep_evaluate_probe.out \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_fix_clock_probeScript.sml crep_fix_clock_probe.out \
   fix_clock_clamps fix_clock_keeps_lower \
-  "$cake_dir/pancake/semantics/crepSemScript.sml"
-run_probe crep_eval_probeScript.sml crep_eval_probe.out \
-  eval_const eval_top_addr \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_sh_mem_load_probeScript.sml crep_sh_mem_load_probe.out \
   sh_mem_load_zero_width_domain_error sh_mem_load_nonzero_domain_error \

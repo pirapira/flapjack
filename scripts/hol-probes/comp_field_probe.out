@@ -1,0 +1,3 @@
+first=([Const 1w],One)
+second=([Const 2w; Const 3w],Comb [One; One])
+fallback=([Const 0w],One)

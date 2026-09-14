@@ -233,6 +233,26 @@ run_probe crep_load_shape_probeScript.sml crep_load_shape_probe.out \
   empty nonzero_two "$cake_dir/pancake/crepLangScript.sml"
 run_probe crep_nested_seq_probeScript.sml crep_nested_seq_probe.out \
   empty assign_seq "$cake_dir/pancake/crepLangScript.sml"
+run_probe crep_assigned_free_vars_probeScript.sml crep_assigned_free_vars_probe.out \
+  skip shmem_fallback "$cake_dir/pancake/crepLangScript.sml"
+run_probe crep_stores_probeScript.sml crep_stores_probe.out \
+  empty nonzero_two "$cake_dir/pancake/crepLangScript.sml"
+run_probe crep_nested_decs_probeScript.sml crep_nested_decs_probe.out \
+  empty values_empty "$cake_dir/pancake/crepLangScript.sml"
+run_probe crep_store_globals_probeScript.sml crep_store_globals_probe.out \
+  empty two "$cake_dir/pancake/crepLangScript.sml"
+run_probe crep_load_globals_probeScript.sml crep_load_globals_probe.out \
+  empty three "$cake_dir/pancake/crepLangScript.sml"
+run_probe crep_assign_ret_probeScript.sml crep_assign_ret_probe.out \
+  empty two "$cake_dir/pancake/crepLangScript.sml"
+run_probe crep_var_cexp_probeScript.sml crep_var_cexp_probe.out \
+  const base_top "$cake_dir/pancake/crepLangScript.sml"
+run_probe crep_exps_probeScript.sml crep_exps_probe.out \
+  leaves loads ops "$cake_dir/pancake/crepLangScript.sml"
+run_probe cexp_heads_probeScript.sml cexp_heads_probe.out \
+  empty heads empty_head empty_tail "$cake_dir/pancake/pan_to_crepScript.sml"
+run_probe comp_field_probeScript.sml comp_field_probe.out \
+  first second fallback "$cake_dir/pancake/pan_to_crepScript.sml"
 run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \
   exit_loop_break exit_loop_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

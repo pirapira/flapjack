@@ -99,6 +99,16 @@ import Flapjack.Test.PanHProgCallParity
 import Flapjack.Test.CrepPrimopParity
 import Flapjack.Test.CrepeLoadShapeParity
 import Flapjack.Test.CrepeNestedSeqParity
+import Flapjack.Test.CrepAssignedFreeVarsParity
+import Flapjack.Test.CrepeStoresParity
+import Flapjack.Test.CrepeProgramGenericRaiseCorrectness
+import Flapjack.Test.CrepeNestedDecsParity
+import Flapjack.Test.CrepeStoreGlobalsParity
+import Flapjack.Test.CrepeLoadGlobalsParity
+import Flapjack.Test.CrepeAssignRetParity
+import Flapjack.Test.CrepeVarCexpParity
+import Flapjack.Test.CrepExpsParity
+import Flapjack.Test.CompFieldParity
 import Flapjack.Test.CrepProgIfParity
 import Flapjack.Test.CompileCrepOpParity
 import Flapjack.Test.CrepCompileExpParity
@@ -816,6 +826,16 @@ def main : IO Unit := do
     Flapjack.Test.CrepPrimopParity.runChecks,
     Flapjack.Test.CrepeLoadShapeParity.runChecks,
     Flapjack.Test.CrepeNestedSeqParity.runChecks,
+    Flapjack.Test.CrepAssignedFreeVarsParity.runChecks,
+    Flapjack.Test.CrepeStoresParity.runChecks,
+    Flapjack.Test.CrepeProgramGenericRaiseCorrectness.runChecks,
+    Flapjack.Test.CrepeNestedDecsParity.runChecks,
+    Flapjack.Test.CrepeStoreGlobalsParity.runChecks,
+    Flapjack.Test.CrepeLoadGlobalsParity.runChecks,
+    Flapjack.Test.CrepeAssignRetParity.runChecks,
+    Flapjack.Test.CrepeVarCexpParity.runChecks,
+    Flapjack.Test.CrepExpsParity.runChecks,
+    Flapjack.Test.CompFieldParity.runChecks,
     Flapjack.Test.CrepExitLoopParity.runChecks,
     Flapjack.Test.CrepEvaluateParity.runChecks,
     Flapjack.Test.CrepFixClockParity.runChecks,

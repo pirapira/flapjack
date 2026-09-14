@@ -115,13 +115,13 @@ def cakeLongDiv1StackEntryCode (config : WordStackConfig) (width : Nat) :
     Option (StackProg Nat) := do
   let body ← cakeLongDiv1StackCode config width
   let moves ← wordStackMovesFromPhysical config
-    [0, 2, 4, 6, 8, 10, 12] 2
+    [0, 2, 4, 6, 8, 10, 12] wordStackAbiBase
   pure (wordStackJoin moves body)
 
 def cakeLongDivStackEntryCode (config : WordStackConfig) (width : Nat) :
     Option (StackProg Nat) := do
   let body ← cakeLongDivStackCode config width
-  let moves ← wordStackMovesFromPhysical config [0, 2, 4, 6] 2
+  let moves ← wordStackMovesFromPhysical config [0, 2, 4, 6] wordStackAbiBase
   pure (wordStackJoin moves body)
 
 /-! Adapt the source helper's Loc convention to the normalized StackLang
@@ -129,12 +129,12 @@ def cakeLongDivStackEntryCode (config : WordStackConfig) (width : Nat) :
     divisor in x6, and observes quotient x0 and remainder x3. -/
 def cakeLongDivStackAdapter : StackProg Nat :=
   stackSeq [
-    .arith .or 8 6 6,
-    .arith .or 4 3 3,
-    .arith .or 6 0 0,
+    .arith .or (wordStackAbiBase + 6) 6 6,
+    .arith .or (wordStackAbiBase + 2) 3 3,
+    .arith .or (wordStackAbiBase + 4) 0 0,
     .call (some
       (stackSeq [
-        .arith .or 0 2 2,
+        .arith .or 0 wordStackAbiBase wordStackAbiBase,
         .get 3 (.temp 28)], 0, 0, 0))
       (.label cakeLongDivLocation) none]
 

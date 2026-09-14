@@ -33,6 +33,11 @@ structure WordStackConfig where
   handlerLabel : Nat := 0
   deriving Repr
 
+/-! The executable StackLang model carries hardware RISC-V register numbers
+    directly at the ABI boundary.  Cake's first argument/return register is
+    therefore hardware `a0` (`x10`). -/
+def wordStackAbiBase : Nat := 10
+
 def wordStackLocation (config : WordStackConfig) (name : Nat) :
     Option WordLocation :=
   lookupNatInfo name config.locations
@@ -1379,14 +1384,14 @@ def wordStackReturnCode (config : WordStackConfig) :
       Option (StackProg α)
   | none => some .skip
   | some (destinations, _, _, _, _) =>
-      wordStackMovesFromPhysical config destinations 1
+      wordStackMovesFromPhysical config destinations wordStackAbiBase
 
 def wordStackReturn (config : WordStackConfig) (values : List Nat) :
     Option (StackProg α) := do
-  let moves ← wordStackMovesToPhysical config values 1
+  let moves ← wordStackMovesToPhysical config values wordStackAbiBase
   match values with
   | [] => pure moves
-  | _ => pure (wordStackJoin moves (.return 1))
+  | _ => pure (wordStackJoin moves (.return wordStackAbiBase))
 
 def wordToStackInst (config : WordStackConfig) : WordInst → Option (StackProg α)
   | .mem operator sourceOrDestination address =>
@@ -2373,12 +2378,12 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .raise exception => pure (wordToStackRaise exception)
   | .return _ values => wordStackReturn config values
   | .call none (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 1
+      let argumentMoves ← wordStackMovesToPhysical config arguments wordStackAbiBase
       pure (wordStackJoin argumentMoves
         (.call none (.label target) none))
   | .tick => pure .tick
   | .call returns (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 1
+      let argumentMoves ← wordStackMovesToPhysical config arguments wordStackAbiBase
       let returnCode ← wordStackReturnCode config returns
       let destinations := returns.map (fun result => result.1) |>.getD []
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
@@ -2387,7 +2392,7 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       pure (wordStackJoin argumentMoves callCode)
   | .call returns (some target) arguments
       (some (exception, body, handlerLabel, entryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 1
+      let argumentMoves ← wordStackMovesToPhysical config arguments wordStackAbiBase
       let returnCode ← wordStackReturnCode config returns
       let _destinations := returns.map (fun result => result.1) |>.getD []
       let handlerCode ← wordToStackProg config body
@@ -2452,13 +2457,13 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .raise exception => pure (wordToStackRaise exception)
   | .return _ values => wordStackReturn config values
   | .call none (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 1
+      let argumentMoves ← wordStackMovesToPhysical config arguments wordStackAbiBase
       pure (wordStackJoin argumentMoves
         (.call none (.label target) none))
   | .tick => pure .tick
   | .call (some (destinations, _cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 1
+      let argumentMoves ← wordStackMovesToPhysical config arguments wordStackAbiBase
       let returnCode ← wordToStackProgNat config returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
         config.frameOffset config.scratch destinations returnCode
@@ -2466,7 +2471,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       pure (wordStackJoin argumentMoves callCode)
   | .call none (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 1
+      let argumentMoves ← wordStackMovesToPhysical config arguments wordStackAbiBase
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch .skip handlerCode
@@ -2477,7 +2482,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .call (some (_destinations, _cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 1
+      let argumentMoves ← wordStackMovesToPhysical config arguments wordStackAbiBase
       let returnCode ← wordToStackProgNat config returnProgram
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
@@ -2583,7 +2588,7 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
         (fun program => (program, state))
   | .call returns (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 1
+      let argumentMoves ← wordStackMovesToPhysical config arguments wordStackAbiBase
       let (liveCode, state) := wordStackCallLiveBitmap config bitmapBuilder
         bitmapRegister frameSlots state returns
       let (returnCode, state) ←
@@ -2603,7 +2608,7 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 1
+      let argumentMoves ← wordStackMovesToPhysical config arguments wordStackAbiBase
       let (liveCode, state) := wordStackCallLiveBitmap config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
@@ -2810,7 +2815,7 @@ theorem wordToStackProgNatWithBitmapBuilder_preserves_length
                   rcases returnData with
                     ⟨destinations, cutsets, returnProgram, returnLabel, entryLabel⟩
                   simp only [wordToStackProgNatWithBitmapBuilder] at hresult
-                  cases hargs : wordStackMovesToPhysical config arguments 1 with
+                  cases hargs : wordStackMovesToPhysical config arguments wordStackAbiBase with
                   | none =>
                       rw [hargs] at hresult
                       simp at hresult
@@ -2851,7 +2856,7 @@ theorem wordToStackProgNatWithBitmapBuilder_preserves_length
           | some handlerData =>
               rcases handlerData with ⟨exception, body, handlerLabel, entryLabel⟩
               simp only [wordToStackProgNatWithBitmapBuilder] at hresult
-              cases hargs : wordStackMovesToPhysical config arguments 1 with
+              cases hargs : wordStackMovesToPhysical config arguments wordStackAbiBase with
               | none =>
                   rw [hargs] at hresult
                   simp at hresult
@@ -3093,7 +3098,7 @@ def wordToStackFunctionWithParameters [NeZero width]
     (config : WordStackConfig) (parameters : List Nat)
     (program : WordProg (Word width)) : Option (StackProg Nat) := do
   let body ← wordToStackProgWord config program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters 1
+  let parameterMoves ← wordStackMovesFromPhysical config parameters wordStackAbiBase
   pure (wordStackJoin parameterMoves body)
 
 def wordToStackFunctionWithParametersAndBitmaps [NeZero width]
@@ -3103,7 +3108,7 @@ def wordToStackFunctionWithParametersAndBitmaps [NeZero width]
     Option (StackProg Nat × WordStackBitmapState) := do
   let (body, state) ← wordToStackProgWordWithBitmaps config registerCount
     bitmapRegister frameSlots storeConstsStub state program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters 1
+  let parameterMoves ← wordStackMovesFromPhysical config parameters wordStackAbiBase
   pure (wordStackJoin parameterMoves body, state)
 
 def wordToStackFunctionWithParametersAndLocationBitmaps [NeZero width]
@@ -3113,7 +3118,7 @@ def wordToStackFunctionWithParametersAndLocationBitmaps [NeZero width]
     Option (StackProg Nat × WordStackBitmapState) := do
   let (body, state) ← wordToStackProgWordWithLocationBitmaps config registerCount
     bitmapRegister frameSlots storeConstsStub state program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters 1
+  let parameterMoves ← wordStackMovesFromPhysical config parameters wordStackAbiBase
   pure (wordStackJoin parameterMoves body, state)
 
 /-! Public entry point for the spill-aware path.  The allocator's location

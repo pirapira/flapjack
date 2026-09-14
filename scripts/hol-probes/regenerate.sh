@@ -149,6 +149,10 @@ run_probe reg_alloc_probeScript.sml reg_alloc_probe.out \
   ra_delta_pair ra_stack_only \
   "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe sort_moves_probeScript.sml sort_moves_probe.out \
+  sm_ties_two sm_ties_three sm_desc ra_moves_stemp ra_moves_stemp_hi \
+  "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

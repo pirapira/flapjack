@@ -59,6 +59,71 @@ def hooks : LoopEvaluateHooks :=
 def arithHooks : LoopEvaluateHooks :=
   { hooks with arith := fun state operation => loopArithMachine 8 state operation }
 
+/-! The source probes `loop_sem_sh_mem_load_probe.out` and
+    `loop_sem_sh_mem_store_probe.out` cover `loopSemScript.sml:198-243`.
+    The exact evaluator delegates the byte/FFI details to `shMem`; these
+    hooks expose the same success, domain-error, operand-error, and terminal
+    result transitions at the `evaluate_def` boundary. -/
+def sharedMemHooks : LoopEvaluateHooks :=
+  { arithHooks with shMem := fun operator name address state =>
+      if !state.shMdomain address then
+        (some .error, state)
+      else if loopIsLoad operator then
+        if state.ffi == .word 9 then
+          (some (.finalFfi (.word 11)), { state with locals := fun _ => none })
+        else
+          (none, { state with locals := loopSetVar state.locals name (.word 3) })
+      else
+        (none, state) }
+
+def sharedState (domain : Bool) (ffi : LoopWordLoc)
+    (locals : Nat → Option LoopWordLoc) : LoopMachineState LoopWordLoc :=
+  { (emptyState 5) with shMdomain := fun _ => domain, ffi := ffi, locals := locals }
+
+def observeSharedMem (step : LoopMachineStep) :
+    Option (LoopMachineResult LoopWordLoc) × Option LoopWordLoc × LoopWordLoc :=
+  (step.1, step.2.locals 1, step.2.ffi)
+
+def sharedLoadSuccess : Bool :=
+  observeSharedMem (evaluateLoop 2 sharedMemHooks
+    (.shMem .load 1 (.const (.word 3)))
+    (sharedState true (.word 0) (fun name =>
+      if name = 1 then some (.word 0) else none))) ==
+    (none, some (.word 3), .word 0)
+
+def sharedStoreSuccess : Bool :=
+  observeSharedMem (evaluateLoop 2 sharedMemHooks
+    (.shMem .store 1 (.const (.word 3)))
+    (sharedState true (.word 0) (fun name =>
+      if name = 1 then some (.word 7) else none))) ==
+    (none, some (.word 7), .word 0)
+
+def sharedLoadDomainError : Bool :=
+  observeSharedMem (evaluateLoop 2 sharedMemHooks
+    (.shMem .load 1 (.const (.word 3)))
+    (sharedState false (.word 0) (fun name =>
+      if name = 1 then some (.word 0) else none))) ==
+    (some .error, some (.word 0), .word 0)
+
+def sharedLoadMissingDestination : Bool :=
+  observeSharedMem (evaluateLoop 2 sharedMemHooks
+    (.shMem .load 1 (.const (.word 3)))
+    (sharedState true (.word 0) (fun _ => none))) ==
+    (some .error, none, .word 0)
+
+def sharedStoreMissingSource : Bool :=
+  observeSharedMem (evaluateLoop 2 sharedMemHooks
+    (.shMem .store 1 (.const (.word 3)))
+    (sharedState true (.word 0) (fun _ => none))) ==
+    (some .error, none, .word 0)
+
+def sharedLoadFinalFfi : Bool :=
+  observeSharedMem (evaluateLoop 2 sharedMemHooks
+    (.shMem .load 1 (.const (.word 3)))
+    (sharedState true (.word 9) (fun name =>
+      if name = 1 then some (.word 0) else none))) ==
+    (some (.finalFfi (.word 11)), none, .word 9)
+
 def longDivState (high low divisor : Option LoopWordLoc) :
     LoopMachineState LoopWordLoc :=
   { (emptyState 5) with locals := fun name =>
@@ -170,6 +235,12 @@ def callResultFirstWinsAndRestoresCaller : Bool :=
 #guard longDivZero
 #guard longDivOverflow
 #guard longDivMalformed
+#guard sharedLoadSuccess
+#guard sharedStoreSuccess
+#guard sharedLoadDomainError
+#guard sharedLoadMissingDestination
+#guard sharedStoreMissingSource
+#guard sharedLoadFinalFfi
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) := [
@@ -185,7 +256,13 @@ def runChecks : IO Bool := do
     ("evaluate LongDiv returns the HOL quotient and remainder", longDivSuccess),
     ("evaluate LongDiv rejects a zero divisor", longDivZero),
     ("evaluate LongDiv rejects quotient overflow", longDivOverflow),
-    ("evaluate LongDiv rejects a non-word operand", longDivMalformed)]
+    ("evaluate LongDiv rejects a non-word operand", longDivMalformed),
+    ("evaluate shared load updates its destination", sharedLoadSuccess),
+    ("evaluate shared store preserves its source", sharedStoreSuccess),
+    ("evaluate shared load rejects an unmapped address", sharedLoadDomainError),
+    ("evaluate shared load rejects a missing destination", sharedLoadMissingDestination),
+    ("evaluate shared store rejects a missing source", sharedStoreMissingSource),
+    ("evaluate shared load propagates terminal FFI", sharedLoadFinalFfi)]
   let results ← checks.mapM fun (name, passed) => do
     if passed then IO.println s!"PASS {name}"
     else IO.println s!"FAIL {name}"

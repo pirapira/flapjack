@@ -96,6 +96,16 @@ def decClock : ProbeFact :=
     cakeAssemblySha256 :=
       "68281f19fe25699e613b31faebbd8bf54d7e18ad918c04af5ea43f1bc52aa8fa" }
 
+def constReturn : ProbeFact :=
+  { source := "fun 1 main() { return 7; }"
+    sourceReference := "no-tick counterpart to dec_clock; the original CakeML output is byte-identical (same sha256 and terminal bytes), evidencing that the original drops the standalone Tick"
+    cakeByteLines := 64
+    cakeByteCount := 1012
+    cakeFinalBytes :=
+      [0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+    cakeAssemblySha256 :=
+      "68281f19fe25699e613b31faebbd8bf54d7e18ad918c04af5ea43f1bc52aa8fa" }
+
 def evaluateDecls : ProbeFact :=
   { source := "var 1 g = 41; fun 1 main() { return g; }"
     sourceReference :=

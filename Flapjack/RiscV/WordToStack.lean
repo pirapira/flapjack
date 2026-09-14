@@ -2516,8 +2516,9 @@ def wordStackEntryLabel (config : WordStackConfig)
 
 /-! CakeML's `comp` emits the live bitmap for a returning call before it
     compiles the return continuation.  The live set is the GCed component of
-    the call cut-set; keeping this as a separate state transition makes the
-    order explicit for the stateful compiler below. -/
+    the call cut-set (`wLive_def` passes `SND live` to `write_bitmap`);
+    keeping this as a separate state transition makes the order explicit for
+    the stateful compiler below. -/
 def wordStackCallLiveBitmap [BEq Nat]
     (config : WordStackConfig) (bitmapBuilder : List Nat → List Nat)
     (bitmapRegister frameSlots : Nat)
@@ -2526,7 +2527,7 @@ def wordStackCallLiveBitmap [BEq Nat]
     StackProg Nat × WordStackBitmapState :=
   match returns with
   | none => (.skip, state)
-  | some (_, (live, _), _, _, _) =>
+  | some (_, (_, live), _, _, _) =>
       wordStackBitmapWriteWithBuilder config bitmapRegister frameSlots state live
         bitmapBuilder
 

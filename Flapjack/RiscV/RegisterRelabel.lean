@@ -84,6 +84,18 @@ theorem relabelRegisters_riscvForward_injective :
     Function.Injective (relabelRegisters (width := width) riscvForward) :=
   relabelRegisters_injective riscvForward riscvForward_surjective
 
+/-- The one-time Cake relabeling is invertible: applying the eleven-fold iterate
+after it returns the original state.  This supplies the explicit inverse needed
+to undo the relabeling on the register file. -/
+theorem relabelRegisters_riscvForward_comp_inverse (state : State width) :
+    relabelRegisters riscvForward (relabelRegisters (iterForward 11) state) =
+      state := by
+  rw [relabelRegisters_comp]
+  have hid : (fun register => iterForward 11 (riscvForward register)) = id := by
+    funext register
+    exact iterForward_eleven_forward register
+  rw [hid, relabelRegisters_id]
+
 /-- Writing an internal register in the relabeled state is the same as writing
 its hardware index in the original state, as long as the relabeling is
 injective and maps the hardwired zero register onto the hardwired zero

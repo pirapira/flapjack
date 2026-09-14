@@ -237,4 +237,16 @@ theorem iterForward_twelve (register : Fin 32) :
   apply Fin.ext
   rw [iterForward_val, iterRegisterName_twelve]
 
+/-- One step of the inverse of the internal Cake map: eleven further applications
+undo the single relabeling.  `iterRegisterName 12 name` is `iterRegisterName 11`
+applied after one step, so this is the order-twelve statement read backwards. -/
+theorem iterRegisterName_eleven_succ (name : Nat) :
+    iterRegisterName 11 (riscvRegisterName name) = name :=
+  iterRegisterName_twelve name
+
+/-- One step of the inverse of the lifted Cake map on hardware registers. -/
+theorem iterForward_eleven_forward (register : Fin 32) :
+    iterForward 11 (riscvForward register) = register :=
+  iterForward_twelve register
+
 end Flapjack.RiscV

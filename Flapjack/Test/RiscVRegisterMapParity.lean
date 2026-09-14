@@ -75,6 +75,14 @@ def mapOrderTwelve : Bool :=
 
 #guard mapOrderTwelve
 
+/-- The one-time Cake map is inverted by eleven further applications.  This
+computable shadow of `iterRegisterName_eleven_succ` supplies the explicit
+inverse step on the register file. -/
+def mapInverseStep : Bool :=
+  (List.range 32).all (fun n => iterRegisterName 11 (riscvRegisterName n) == n)
+
+#guard mapInverseStep
+
 example : riscvRegisterName (portToStack 0) = 0 := by decide
 example : riscvRegisterName (portToStack 1) = 1 := by decide
 example : riscvRegisterName (portToStack 10) = 10 := by decide
@@ -117,7 +125,9 @@ def runChecks : IO Bool := do
       ("the Cake map selects architectural zero exactly at role 27",
         zeroPreimageExact),
       ("the Cake map has order twelve on the architectural register file",
-        mapOrderTwelve) ]
+        mapOrderTwelve),
+      ("the Cake map is inverted by eleven further applications",
+        mapInverseStep) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

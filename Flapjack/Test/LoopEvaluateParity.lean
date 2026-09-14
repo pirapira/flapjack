@@ -52,6 +52,50 @@ def hooks : LoopEvaluateHooks :=
     shMem := fun _ _ _ state => (some .error, state)
     ffi := fun _ _ _ _ _ _ state => (some .error, state) }
 
+/-! The existing `loop_sem_loop_arith_probe.out` fixes 8-bit words and checks
+    `loopSemScript.sml:118-145`: a valid `LLongDiv`, zero divisor, quotient
+    overflow, and malformed/non-word operands.  Exercise those same cases
+    through the exact `evaluate_def` arithmetic boundary. -/
+def arithHooks : LoopEvaluateHooks :=
+  { hooks with arith := fun state operation => loopArithMachine 8 state operation }
+
+def longDivState (high low divisor : Option LoopWordLoc) :
+    LoopMachineState LoopWordLoc :=
+  { (emptyState 5) with locals := fun name =>
+      if name = 3 then high
+      else if name = 4 then low
+      else if name = 5 then divisor
+      else none }
+
+def observeLongDiv (step : LoopMachineStep) :
+    Option (LoopMachineResult LoopWordLoc) × Option LoopWordLoc ×
+      Option LoopWordLoc × Nat :=
+  (step.1, step.2.locals 1, step.2.locals 2, step.2.clock)
+
+def longDivSuccess : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.longDiv 1 2 3 4 5))
+    (longDivState (some (.word 1)) (some (.word 3)) (some (.word 2)))) ==
+    (none, some (.word 129), some (.word 1), 5)
+
+def longDivZero : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.longDiv 1 2 3 4 5))
+    (longDivState (some (.word 1)) (some (.word 3)) (some (.word 0)))) ==
+    (some .error, none, none, 5)
+
+def longDivOverflow : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.longDiv 1 2 3 4 5))
+    (longDivState (some (.word 1)) (some (.word 0)) (some (.word 1)))) ==
+    (some .error, none, none, 5)
+
+def longDivMalformed : Bool :=
+  observeLongDiv (evaluateLoop 2 arithHooks
+    (.arith (.longDiv 1 2 3 4 5))
+    (longDivState (some (.loc 9 0)) (some (.word 3)) (some (.word 2)))) ==
+    (some .error, none, none, 5)
+
 def observe (step : LoopMachineStep) :
     Option (LoopMachineResult LoopWordLoc) × Option LoopWordLoc × Nat :=
   (step.1, step.2.locals 1, step.2.clock)
@@ -122,6 +166,10 @@ def callResultFirstWinsAndRestoresCaller : Bool :=
 #guard timeout
 #guard tailCallNoResult
 #guard callResultFirstWinsAndRestoresCaller
+#guard longDivSuccess
+#guard longDivZero
+#guard longDivOverflow
+#guard longDivMalformed
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) := [
@@ -133,7 +181,11 @@ def runChecks : IO Bool := do
     ("evaluate Tick clears locals at clock zero", timeout),
     ("evaluate tail call maps callee NONE to Error", tailCallNoResult),
     ("evaluate Call uses first-wins bindings and restores caller locals",
-      callResultFirstWinsAndRestoresCaller)]
+      callResultFirstWinsAndRestoresCaller),
+    ("evaluate LongDiv returns the HOL quotient and remainder", longDivSuccess),
+    ("evaluate LongDiv rejects a zero divisor", longDivZero),
+    ("evaluate LongDiv rejects quotient overflow", longDivOverflow),
+    ("evaluate LongDiv rejects a non-word operand", longDivMalformed)]
   let results ← checks.mapM fun (name, passed) => do
     if passed then IO.println s!"PASS {name}"
     else IO.println s!"FAIL {name}"

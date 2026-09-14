@@ -129,6 +129,10 @@ run_probe reg_alloc_mk_bij_probeScript.sml reg_alloc_mk_bij_probe.out \
   "$cake_dir/compiler/backend"
 run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.out \
   total_colour_mapped_1 setup0_next "$cake_dir/compiler/backend/word_allocScript.sml" \
+  "$cake_dir/compiler/backend"
+run_probe cake_ssa_temp_probeScript.sml cake_ssa_temp_probe.out \
+  limit_skip full_skip "$cake_dir/compiler/backend/word_allocScript.sml" \
+  "$cake_dir/compiler/backend"
 # The reg_alloc probe observes the full IRC colouring (do_reg_alloc via
 # reg_alloc_aux/run_ira_state) on tiny clash trees: alloc vars get colours
 # 0..k-1, stack-only vars land at >= k, physical vars keep their register

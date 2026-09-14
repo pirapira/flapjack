@@ -60,10 +60,15 @@ def stackRemoveAddress (config : StackRemoveConfig) (store : StackStore) :
       (config.bytesInWord * stackStorePosition store))
     (.arith .sub config.addressScratch config.storeBase config.addressScratch)
 
+def stackRemoveMove (destination source : Nat) :
+    StackProg α :=
+  if destination = source then .skip
+  else .arith .or destination source source
+
 def stackRemoveGet (config : StackRemoveConfig) (destination : Nat)
     (store : StackStore) : StackProg α :=
   match store with
-  | .currHeap => .arith .or destination config.currHeap config.currHeap
+  | .currHeap => stackRemoveMove destination config.currHeap
   | _ =>
       stackRemoveJoin (stackRemoveAddress config store)
         (.inst (.mem .load destination config.addressScratch))
@@ -71,15 +76,10 @@ def stackRemoveGet (config : StackRemoveConfig) (destination : Nat)
 def stackRemoveSet (config : StackRemoveConfig) (store : StackStore)
     (source : Nat) : StackProg α :=
   match store with
-  | .currHeap => .arith .or config.currHeap source source
+  | .currHeap => stackRemoveMove config.currHeap source
   | _ =>
       stackRemoveJoin (stackRemoveAddress config store)
         (.inst (.mem .store source config.addressScratch))
-
-def stackRemoveMove (destination source : Nat) :
-    StackProg α :=
-  if destination = source then .skip
-  else .arith .or destination source source
 
 def stackRemoveStackAddress (config : StackRemoveConfig) (offset : Nat) :
     StackProg α :=
@@ -329,13 +329,13 @@ def stackRemoveComplete [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
 theorem stackRemove_get_currHeap [OfNat α 0] [OfNat α 1]
     (config : StackRemoveConfig) (destination : Nat) :
     stackRemove config (.get destination .currHeap : StackProg α) =
-      .arith .or destination config.currHeap config.currHeap := by
+      stackRemoveMove destination config.currHeap := by
   simp [stackRemove, stackRemoveFuel, stackRemoveGet]
 
 theorem stackRemove_set_currHeap [OfNat α 0] [OfNat α 1]
     (config : StackRemoveConfig) (source : Nat) :
     stackRemove config (.set .currHeap source : StackProg α) =
-      .arith .or config.currHeap source source := by
+      stackRemoveMove config.currHeap source := by
   simp [stackRemove, stackRemoveFuel, stackRemoveSet]
 
 end Flapjack

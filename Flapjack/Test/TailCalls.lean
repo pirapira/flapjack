@@ -5,26 +5,26 @@ namespace Flapjack
 open RiscV
 
 def tailCallTestConfig : WordStackConfig :=
-  { locations := [(6, .register 2)]
+  { locations := [(6, .register 1)]
     scratch := 31
     stackBase := 0 }
 
 theorem tailCallArgumentMoves :
-    wordStackMovesToPhysical tailCallTestConfig [6] 2 =
+    wordStackMovesToPhysical tailCallTestConfig [6] 1 =
       some (.skip : StackProg Nat) := by
   have hdest :
       wordStackLocationMoveDestinations
-          [(WordLocation.register 2, WordLocation.register 2)] =
-        [WordLocation.register 2] := by
+          [(WordLocation.register 1, WordLocation.register 1)] =
+        [WordLocation.register 1] := by
     rfl
-  have hnodup : ([WordLocation.register 2] : List WordLocation).Nodup := by
+  have hnodup : ([WordLocation.register 1] : List WordLocation).Nodup := by
     decide
   have hremove :
-      wordStackLocationMoveRemoveDestination (WordLocation.register 2)
-          [(WordLocation.register 2, WordLocation.register 2)] = [] := by
+      wordStackLocationMoveRemoveDestination (WordLocation.register 1)
+          [(WordLocation.register 1, WordLocation.register 1)] = [] := by
     decide
   have hreserved :
-      ([(WordLocation.register 2, WordLocation.register 2)]).any
+      ([(WordLocation.register 1, WordLocation.register 1)]).any
           (fun move =>
             move.1 = WordLocation.register 31 ||
               move.1 = WordLocation.register 29 ||

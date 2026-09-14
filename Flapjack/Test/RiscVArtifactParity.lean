@@ -113,8 +113,8 @@ def flapjackGeneratedMainBytes : List (BitVec 8) :=
 tracked by `flapjack-pxn.8.5.10.1`. -/
 def flapjackMainBytes : List (BitVec 8) :=
   [0x13, 0x00, 0x00, 0x00,
-   0x13, 0x01, 0x70, 0x00,
-   0x33, 0x61, 0x21, 0x00,
+   0x13, 0x61, 0x70, 0x00,
+   0xB3, 0x60, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
 /-- Run a source program through the production runtime-image entry point,
@@ -187,12 +187,12 @@ def trackedMainMismatch : Bool :=
 def constReturnSource : String := constReturn.source
 
 /-- Flapjack `cml_main` bytes for the no-tick `return 7` fixture: the 12-byte
-`addi x2,x0,7; or x2,x2,x2; ret` shape.  Its difference from `dec_clock` is
+`addi x2,x0,7; add x2,x2,x2; ret` shape.  Its difference from `dec_clock` is
 exactly the single leading `tick` nop, which is the residual gap isolated
 below. -/
 def flapjackConstReturnMainBytes : List (BitVec 8) :=
-  [0x13, 0x01, 0x70, 0x00,
-   0x33, 0x61, 0x21, 0x00,
+  [0x13, 0x61, 0x70, 0x00,
+   0xB3, 0x60, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
 /-- The single 4-byte `tick` lowering emitted by the port: `addi x0,x0,0`. -/
@@ -253,17 +253,17 @@ def cakeEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
     (6, 1016, [0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)) ]
 
 /-- Flapjack layout for the same fixture: `cml_generated_main` at 1000 (4B,
-`jal` straight to the renamed entry at 1028), helper `a` at 1004 (12B),
-helper `b` at 1016 (12B), and the entry `main` last at 1028 (4B, `jal` to
-`a`).  This is the source order produced by `globalResortDecls`, not the
-original entry-first order. -/
+`jal` to the entry at 1004), helper `a` at 1008 (12B), and helper `b` at
+1020 (12B).  The entry declaration is now moved to the front, matching
+CakeML's `pan_to_target_all` ordering. -/
 def flapjackEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
-  [ (3, 1000, [0x6F, 0x00, 0xC0, 0x01].map (BitVec.ofNat 8)),
-    (4, 1004, [0x13, 0x01, 0x10, 0x00, 0x33, 0x61, 0x21, 0x00,
-               0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
-    (5, 1016, [0x13, 0x01, 0x20, 0x00, 0x33, 0x61, 0x21, 0x00,
-               0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
-    (6, 1028, [0x6F, 0xF0, 0x9F, 0xFE].map (BitVec.ofNat 8)) ]
+  [ (3, 1000, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
+    (4, 1004, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
+    (5, 1008, [0x13, 0x61, 0x10, 0x00,
+               0xB3, 0x60, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    (6, 1020, [0x13, 0x61, 0x20, 0x00,
+               0xB3, 0x60, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    ]
 
 /-- Exact emitted `(label, base, bytes)` artifact for the `entry_order`
 fixture. -/
@@ -272,21 +272,21 @@ def entryOrderEmittedSections : List (Nat × Nat × List (BitVec 8)) :=
   | some image => emittedSections image
   | none => []
 
-/-- The port emits the four generated sections in source order. -/
+/-- The port now follows CakeML's entry-first section order. -/
 def entryOrderLayoutMatches : Bool :=
   entryOrderEmittedSections == flapjackEntryOrderSections
 
-/-- The residual ordering mismatch, recorded exactly rather than accepted:
+/-- The residual helper-body mismatch, recorded exactly rather than accepted:
 the original places the entry `cml_main` second (label 4, 4 bytes) and the
 helpers after it, while the port places helper `a` second (label 4, 12 bytes)
 and the entry `main` last (label 6).  Both entry sections are 4-byte jumps and
-both helper sets compute `1` and `2` via `addi`; the difference is the
-deterministic section order owned by `flapjack-pxn.8.5.10.3`. -/
+section order and both entry jumps now agree, while the two helper bodies
+retain the tracked 12-byte lowering. -/
 def entryOrderOrderingMismatch : Bool :=
   cakeEntryOrderSections != flapjackEntryOrderSections &&
     cakeEntryOrderSections.length == 4 && flapjackEntryOrderSections.length == 4 &&
     cakeEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 8, 8] &&
-    flapjackEntryOrderSections.map (fun s => s.2.2.length) == [4, 12, 12, 4] &&
+    flapjackEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 12, 12] &&
     entryOrder.cakeFinalBytes ==
       ([0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00,
         0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8))
@@ -349,6 +349,49 @@ def flattenExpressionProbeMatches : Bool :=
               .op .add [.var 3, .var 4]]]])
         (.const 1)))
       (.assign 0 (.var 9)) => true
+  | _ => false
+
+/-! Materialization is bounded by the Word-to-Stack pool consumption, not by
+    plain depth: a rotate node draws two pool entries (a destination register
+    distinct from the scratch target plus the right subtree), so a rotate
+    around a rotated operand needs four entries even though its depth is
+    three.  Register-pressure-heavy sections such as `ripemd160_block` keep
+    every allocator register live, leaving only the three reserved entries
+    and rejecting the depth-bounded tree. -/
+def rorChainBudgetProbe : WordExp Nat :=
+  .shift .ror
+    (.shift .ror (.op .add [.var 1, .var 2]) (.const 3))
+    (.const 5)
+
+def rorChainBudgetMatches : Bool :=
+  RiscV.wordExpLoweringBudget rorChainBudgetProbe == 4
+
+def flattenRorChainProbe : WordProg Nat :=
+  .assign 0 rorChainBudgetProbe
+
+def flattenRorChainProbeMatches : Bool :=
+  match RiscV.wordFlattenProgramFrom flattenRorChainProbe with
+  | .seq (.assign 5 rorChainBudgetProbe) (.assign 0 (.var 5)) => true
+  | _ => false
+
+/-! An operator application wider than two arguments draws one pool entry and
+    recurses with the remainder for every argument; with atom arguments the
+    whole application stays within the reserved pool. -/
+def wideOpBudgetMatches : Bool :=
+  RiscV.wordExpLoweringBudget (α := Nat)
+      (.op .add [.var 1, .var 2, .var 3, .var 4]) == 1
+
+/-! The Word-to-Stack `set` compiler accepts only atom values, so a compound
+    value is materialized into a fresh temporary before the store.  Without
+    this, a depth-bounded flattener keeps a two-operand sum compound and the
+    store lowering fails. -/
+def flattenSetProbe : WordProg Nat :=
+  .set .currHeap (.op .add [.var 1, .var 2])
+
+def flattenSetProbeMatches : Bool :=
+  match RiscV.wordFlattenProgramFrom flattenSetProbe with
+  | .seq (.assign 5 (.op .add [.var 1, .var 2]))
+      (.set .currHeap (.var 5)) => true
   | _ => false
 
 /-- The differential-fuzzing `dup-global` fixture (GitHub issue #962 smoke,
@@ -472,6 +515,24 @@ def ffiOrderFlipStubsEmitted : Bool :=
         "cake_ffibar:\n     tail cdecl(ffibar)\n     .p2align 4\n\ncake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_clear:").length == 2
   | none => false
 
+def bytesContain (needle haystack : List (BitVec 8)) : Bool :=
+  match needle, haystack with
+  | [], _ => true
+  | _, [] => false
+  | _, _ :: rest =>
+      (haystack.take needle.length == needle) || bytesContain needle rest
+
+def ffiMinCallStubBytes : Bool :=
+  let stubJump := [0x6f, 0xf0, 0x9f, 0x98].map (BitVec.ofNat 8)
+  let ecall := [0x73, 0x00, 0x00, 0x00].map (BitVec.ofNat 8)
+  match compileRuntimeImage ffiMinSource with
+  | some image =>
+      match image.sections.find? (fun sec => sec.label == 4) with
+      | some sec => bytesContain stubJump sec.bytes &&
+          !bytesContain ecall sec.bytes
+      | none => false
+  | none => false
+
 /-!
 ## Unreachable-code parity (dead FFI references)
 
@@ -581,6 +642,7 @@ def frameOccupancyP9GapTracked : Bool :=
 #guard ffiMinStubEmitted
 #guard ffiOrderStubsEmitted
 #guard ffiOrderFlipStubsEmitted
+#guard ffiMinCallStubBytes
 #guard deadFfiNamesDropped
 #guard deadFfiStubDropped
 #guard bitmapCallsWordsMatch
@@ -596,6 +658,10 @@ def frameOccupancyP9GapTracked : Bool :=
 #guard trackedConstReturnMismatch
 #guard entryOrderLayoutMatches
 #guard entryOrderOrderingMismatch
+#guard rorChainBudgetMatches
+#guard flattenRorChainProbeMatches
+#guard wideOpBudgetMatches
+#guard flattenSetProbeMatches
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -635,6 +701,8 @@ def runChecks : IO Bool := do
          ffiOrderStubsEmitted),
       ("flipped ffi source order flips the emitted stub order",
          ffiOrderFlipStubsEmitted),
+      ("single ffi call lowers to the exact runtime-stub jump without ecall",
+         ffiMinCallStubBytes),
       ("unreachable ffi calls are dropped from the name list",
          deadFfiNamesDropped),
       ("unreachable ffi calls gain no stub block",

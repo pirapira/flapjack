@@ -96,6 +96,22 @@ theorem relabelRegisters_riscvForward_comp_inverse (state : State width) :
     exact iterForward_eleven_forward register
   rw [hid, relabelRegisters_id]
 
+/-- The one-time Cake relabeling is surjective on states, because its explicit
+inverse `relabelRegisters (iterForward 11)` recovers any original state. -/
+theorem relabelRegisters_riscvForward_surjective :
+    Function.Surjective (relabelRegisters (width := width) riscvForward) := by
+  intro state
+  exact ⟨relabelRegisters (iterForward 11) state,
+    relabelRegisters_riscvForward_comp_inverse state⟩
+
+/-- The one-time Cake relabeling permutes the state space: it is injective and
+surjective.  This packages the inverse-step facts for use as a bijection
+boundary in the `riscv_names` rebase. -/
+theorem relabelRegisters_riscvForward_bijective :
+    Function.Injective (relabelRegisters (width := width) riscvForward) ∧
+      Function.Surjective (relabelRegisters (width := width) riscvForward) :=
+  ⟨relabelRegisters_riscvForward_injective, relabelRegisters_riscvForward_surjective⟩
+
 /-- Writing an internal register in the relabeled state is the same as writing
 its hardware index in the original state, as long as the relabeling is
 injective and maps the hardwired zero register onto the hardwired zero

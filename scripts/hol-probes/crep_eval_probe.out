@@ -1,0 +1,16 @@
+eval_const=SOME (Word 5w)
+
+eval_local_hit=SOME (Word 7w)
+
+eval_local_miss=NONE
+
+eval_memory_hit=SOME (Word 9w)
+
+eval_memory_miss=NONE
+
+eval_global_hit=SOME (Word 11w)
+
+eval_global_miss=NONE
+
+eval_base_top=(SOME (Word 12w),SOME (Word 13w))
+

@@ -173,6 +173,19 @@ example (state : State 64) (value : Word 64) :
     writeRegister (transferState state) (0 : Fin 32) value = transferState state :=
   writeRegister_transferState_zero state value
 
+/-- Reading an arbitrary hardware slot of a transferred state returns the
+internal register named by the explicit inverse map. -/
+example (state : State 64) (index : Fin 32) :
+    readRegister (transferState state) index = readRegister state (riscvInverse index) :=
+  readRegister_transfer state index
+
+/-- A hardware write to an arbitrary nonzero slot of a transferred state matches
+the internal write to its inverse register. -/
+example (state : State 64) (index : Fin 32) (value : Word 64) (hindex : index ≠ 0) :
+    writeRegister (transferState state) index value =
+      transferState (writeRegisterInternal riscvForward state (riscvInverse index) value) :=
+  writeRegister_transfer state index value hindex
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("production role registers are preserved by the one-time Cake map",

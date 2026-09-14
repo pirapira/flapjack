@@ -46,7 +46,8 @@ def wordStackMove (config : WordStackConfig) (destination source : Nat) :
   let source ← wordStackLocation config source
   match destination, source with
   | .register destination, .register source =>
-      pure (.arith .or destination source source)
+      if destination = source then pure .skip
+      else pure (.arith .or destination source source)
   | .register destination, .stack slot =>
       pure (.seq (.stackLoad config.scratch (wordStackOffset config slot))
         (.arith .or destination config.scratch config.scratch))
@@ -54,9 +55,10 @@ def wordStackMove (config : WordStackConfig) (destination source : Nat) :
       pure (.seq (.arith .or config.scratch source source)
         (.stackStore config.scratch (wordStackOffset config slot)))
   | .stack destinationSlot, .stack sourceSlot =>
-      pure (.seq (.stackLoad config.scratch
-          (wordStackOffset config sourceSlot))
-        (.stackStore config.scratch (wordStackOffset config destinationSlot)))
+      if destinationSlot = sourceSlot then pure .skip
+      else pure (.seq (.stackLoad config.scratch
+            (wordStackOffset config sourceSlot))
+          (.stackStore config.scratch (wordStackOffset config destinationSlot)))
 
 /-! A `LocValue` materializes a code label, rather than reading a source
     variable.  A register destination can receive the StackLang instruction
@@ -1625,13 +1627,16 @@ theorem evalWordStackMachine_move_preserves_value [NeZero width]
         wordStackMachineValue config state source := by
   change lookupNatInfo destination config.locations = some destinationLocation at hdestination
   change lookupNatInfo source config.locations = some sourceLocation at hsource
-  simp [wordStackMove] at heval
   cases destinationLocation <;> cases sourceLocation <;>
-    simp [evalWordStackMachine, wordStackMachineValue, wordStackLocation,
+    simp [wordStackMove, evalWordStackMachine, wordStackMachineValue, wordStackLocation,
       wordStackOffset, wordStackMachineWriteRegister,
       wordStackMachineWriteSlot, hdestination, hsource,
       ] at heval ⊢
   all_goals
+    try split at heval <;>
+    simp_all [evalWordStackMachine, wordStackMachineValue, wordStackLocation,
+      wordStackOffset, wordStackMachineWriteRegister,
+      wordStackMachineWriteSlot, hdestination, hsource]
     cases heval
     simp [
       
@@ -1864,12 +1869,15 @@ theorem evalWordStackBasic_move_preserves_value [NeZero width]
       wordStackValue config state source := by
   change lookupNatInfo destination config.locations = some destinationLocation at hdestination
   change lookupNatInfo source config.locations = some sourceLocation at hsource
-  simp [wordStackMove] at heval
   cases destinationLocation <;> cases sourceLocation <;>
-    simp [evalWordStackBasic, wordStackValue, wordStackLocation,
+    simp [wordStackMove, evalWordStackBasic, wordStackValue, wordStackLocation,
       wordStackOffset, wordStackWriteRegister, wordStackWriteSlot,
       hdestination, hsource] at heval ⊢
   all_goals
+    try split at heval <;>
+    simp_all [evalWordStackBasic, wordStackValue, wordStackLocation,
+      wordStackOffset, wordStackWriteRegister, wordStackWriteSlot,
+      hdestination, hsource]
     cases heval
     simp [
       

@@ -25,6 +25,18 @@ example :
     stackRemoveAddress, stackStorePosition, stackRemoveTestConfig]
 
 example :
+    stackRemove stackRemoveTestConfig (.get 12 .currHeap : StackProg Nat) =
+      .skip := by
+  simp [stackRemove, stackRemoveFuel, stackRemoveGet, stackRemoveMove,
+    stackRemoveTestConfig]
+
+example :
+    stackRemove stackRemoveTestConfig (.set .currHeap 12 : StackProg Nat) =
+      .skip := by
+  simp [stackRemove, stackRemoveFuel, stackRemoveSet, stackRemoveMove,
+    stackRemoveTestConfig]
+
+example :
     stackRemove stackRemoveTestConfig (.stackAlloc 2 : StackProg Nat) =
       .seq (.const 31 16) (.arith .sub 20 20 31) := by
   simp [stackRemove, stackRemoveFuel, stackRemoveStackAlloc,

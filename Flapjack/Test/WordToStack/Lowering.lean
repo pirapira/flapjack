@@ -13,6 +13,23 @@ example :
       some (.arith .or 4 5 5 : StackProg Nat) := by
   exact wordStackMove_registers
 
+/- Cake's move normalizer drops a move whose source and destination are the
+   same physical location.  Keep that no-op elimination explicit at the
+   virtual Word-to-Stack boundary as well. -/
+example :
+    wordStackMove
+        { locations := [(0, .register 4)], scratch := 31, stackBase := 10 }
+        0 0 =
+      some (.skip : StackProg Nat) := by
+  simp [wordStackMove, wordStackLocation, lookupNatInfo]
+
+example :
+    wordStackMove
+        { locations := [(0, .stack 2)], scratch := 31, stackBase := 10 }
+        0 0 =
+      some (.skip : StackProg Nat) := by
+  simp [wordStackMove, wordStackLocation, lookupNatInfo]
+
 example :
     wordStackMove
         { locations := [(0, .stack 2), (1, .register 5)],

@@ -1,0 +1,60 @@
+{
+  "id": "nomain-global",
+  "origin": {
+    "mode": "file",
+    "path": "/tmp/opencode/preserved/nomain-global.pnk"
+  },
+  "comparison": {
+    "cake_returncode": 0,
+    "flapjack_returncode": 1,
+    "mismatches": [
+      {
+        "signature": "acceptance/gap:entry",
+        "detail": {
+          "flapjack_stderr": "flapjack-compile: entry not found\n",
+          "cake_stderr": ""
+        }
+      }
+    ],
+    "class": "gap"
+  },
+  "tool_versions": {
+    "cake": {
+      "path": "/home/zksecurity/pancake-lean/cakeml/developers/bin/cake",
+      "size": 15320616,
+      "sha256": "4768e33f6b280bfb1096beefdef96b3e6c6a69af6331e46af0d219df5f9c9c98"
+    },
+    "flapjack": {
+      "path": "/home/zksecurity/flapjack4/.lake/build/bin/flapjack-compile",
+      "size": 7982608,
+      "sha256": "c87c4881e258916037c3c6329fb0c3d66c633df46d1f33e2ad91610b076619d3",
+      "git_commit": "668e3f6b9cb2092b38def904f8036e5b2b2b0975"
+    }
+  },
+  "commands": {
+    "cake": [
+      "nice",
+      "-n",
+      "10",
+      "timeout",
+      "20s",
+      "/home/zksecurity/pancake-lean/cakeml/developers/bin/cake",
+      "--pancake",
+      "--target=riscv"
+    ],
+    "flapjack": [
+      "nice",
+      "-n",
+      "10",
+      "timeout",
+      "20s",
+      "/home/zksecurity/flapjack4/.lake/build/bin/flapjack-compile",
+      "--assembly",
+      "/tmp/opencode/preserved/nomain-global.pnk"
+    ]
+  },
+  "returncodes": {
+    "cake": 0,
+    "flapjack": 1
+  }
+}

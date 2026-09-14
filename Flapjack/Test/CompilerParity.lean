@@ -78,6 +78,7 @@ import Flapjack.Test.PanHProgParity
 import Flapjack.Test.PanHProgLoadParity
 import Flapjack.Test.PanHProgReturnParity
 import Flapjack.Test.PanHProgRaiseParity
+import Flapjack.Test.PanValuePcRaisedPayloadCorrectness
 import Flapjack.Test.PanHProgExtCallParity
 import Flapjack.Test.PanHProgStoreByteParity
 import Flapjack.Test.PanHProgStore32Parity
@@ -131,6 +132,10 @@ import Flapjack.Test.ParserConsumeTokParity
 import Flapjack.Test.ParserKeepTokParity
 import Flapjack.Test.ParserKeepKwParity
 import Flapjack.Test.ParserKeepIdentParity
+import Flapjack.Test.ParserKeepAnnotParity
+import Flapjack.Test.ParserTryProgParity
+import Flapjack.Test.ParserPancakePegParity
+import Flapjack.Test.ParserParseStatementParity
 import Flapjack.Test.PanHHandleCallRetParity
 import Flapjack.Test.PanMrecParity
 import Flapjack.Test.PanHProgDecParity

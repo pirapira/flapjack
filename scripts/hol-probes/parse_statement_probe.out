@@ -1,0 +1,27 @@
+skip=SOME
+  (Nd (INL ProgNT,Locs (POSN 1 1) (POSN 1 5))
+     [Lf (TOK (KeywordT SkipK),Locs (POSN 1 1) (POSN 1 5))])
+
+return=SOME
+  (Nd (INL ProgNT,Locs (POSN 1 8) (POSN 1 9))
+     [Nd (INL ReturnNT,Locs (POSN 1 8) (POSN 1 9))
+        [Nd (INL ExpNT,Locs (POSN 1 8) (POSN 1 9))
+           [Nd (INL EBoolAndNT,Locs (POSN 1 8) (POSN 1 9))
+              [Nd (INL EEqNT,Locs (POSN 1 8) (POSN 1 9))
+                 [Nd (INL ECmpNT,Locs (POSN 1 8) (POSN 1 9))
+                    [Nd (INL EOrNT,Locs (POSN 1 8) (POSN 1 9))
+                       [Nd (INL EXorNT,Locs (POSN 1 8) (POSN 1 9))
+                          [Nd (INL EAndNT,Locs (POSN 1 8) (POSN 1 9))
+                             [Nd (INL EShiftNT,Locs (POSN 1 8) (POSN 1 9))
+                                [Nd (INL EAddNT,Locs (POSN 1 8) (POSN 1 9))
+                                   [Nd
+                                      (INL EMulNT,Locs (POSN 1 8) (POSN 1 9))
+                                      [Nd
+                                         (INL ENotNT,
+                                          Locs (POSN 1 8) (POSN 1 9))
+                                         [Nd
+                                            (INL EFieldNT,
+                                             Locs (POSN 1 8) (POSN 1 9))
+                                            [Lf
+                                               (TOK (IntT 1),
+                                                Locs (POSN 1 8) (POSN 1 9))]]]]]]]]]]]]]])

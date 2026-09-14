@@ -1,0 +1,6 @@
+exception=INL
+  (Nd (INL TopDecListNT,Locs (POSN 1 11) UNKNOWNpt)
+     [Nd (INL ExnDecNT,Locs (POSN 1 11) (POSN 1 15))
+        [Lf (TOK (IdentT "E"),Locs (POSN 1 11) (POSN 1 12));
+         Lf (TOK (IntT 1),Locs (POSN 1 14) (POSN 1 15))];
+      Nd (INL TopDecListNT,Locs UNKNOWNpt UNKNOWNpt) []])

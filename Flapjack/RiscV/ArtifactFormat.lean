@@ -100,13 +100,12 @@ def runtimeFunctionBytes
   (sections.filter (fun entry => entry.label >= 3)).flatMap
     (fun entry => entry.bytes)
 
-/-! CakeML's exporter serializes one terminating bitmap word for each
-    call-site that has a return continuation.  The spill-aware lowering keeps
-    the bitmap state used by the generated code, but the source-facing port
-    can legitimately have no spill slots at a call site while still needing
-    to expose the same target artifact metadata.  Count those source call
-    continuations independently so the native assembly envelope does not
-    silently collapse CakeML's bitmap table to its initial `[4]` word. -/
+/-! CakeML's exporter serializes one bitmap word for each call-site that has a
+    return continuation, with a terminator bit above the frame's slot count.
+    The spill-aware lowering threads that same bitmap state through
+    `wordToStack` call lowering, so the artifact table is exactly the state the
+    generated code populated.  `crepBitmapCallEntries` remains as the
+    Crepe-level continuation count used by tests. -/
 def crepBitmapCallEntries : CrepProg α → Nat
   | .skip => 0
   | .dec _ _ body => crepBitmapCallEntries body
@@ -132,9 +131,8 @@ def crepeBitmapCallEntries : List (CompiledFunction α) → Nat
   | function :: functions =>
       crepBitmapCallEntries function.body + crepeBitmapCallEntries functions
 
-def pancakeBitmapData (crepe : List (CompiledFunction α))
-    (state : RiscV.WordStackBitmapState) : List Nat :=
-  state.data ++ List.replicate (crepeBitmapCallEntries crepe) 2
+def pancakeBitmapData (state : RiscV.WordStackBitmapState) : List Nat :=
+  state.data
 def pancakePrologue : List String :=
   ["/* Preprocessor to get around Mac OS, Windows, and Linux differences in naming and calling conventions */",
    "", "#if defined(__APPLE__)", "# define cdecl(s) _##s", "#else",
@@ -196,28 +194,31 @@ def pancakeRuntimeAssembly
     (image : Flapjack.SourceRiscVRuntimeImage 64) : String :=
   let bytes := cakeRuntimeBytes ++ runtimeFunctionBytes image.sections
   let bitmapWords := String.intercalate ","
-    ((pancakeBitmapData crepe image.bitmaps).map (fun value => s!"{value}"))
+    ((pancakeBitmapData image.bitmaps).map (fun value => s!"{value}"))
+  let ffiStubLines := image.ffiNames.flatMap (fun name =>
+    [s!"cake_ffi{name}:", s!"     tail cdecl(ffi{name})", "     .p2align 4", ""])
   String.intercalate "\n"
     (pancakePrologue ++
       ["", "     .file        \"cake.S\"", "", "     .data",
        "     .p2align 3", "cdecl(cml_heap): .quad 0",
        "cdecl(cml_stack): .quad 0", "cdecl(cml_stackend): .quad 0",
-       "     .p2align 3", "cake_bitmaps:", s!"\t.quad {bitmapWords}",
-       "     .globl cdecl(cake_bitmaps_buffer_begin)",
-       "cdecl(cake_bitmaps_buffer_begin):", "#if defined(EVAL)",
-       "     .space DATA_BUFFER_SIZE", "#endif",
-       "     .globl cdecl(cake_bitmaps_buffer_end)",
-       "cdecl(cake_bitmaps_buffer_end):", "", "#### Start up code", "",
-       "     .text", "     .p2align 3", "     .globl  cdecl(cml_main)",
-       "     .globl  cdecl(cml_heap)", "     .globl  cdecl(cml_stack)",
-       "     .globl  cdecl(cml_stackend)", "     .type   cml_main, function",
-       "cdecl(cml_main):", "     la      a0,cake_main           # arg1: entry address",
-       "     ld      a1,cdecl(cml_heap)     # arg2: first address of heap",
-       "     ld      a2,cdecl(cml_stack)    # arg3: first address of stack",
-       "     ld      a3,cdecl(cml_stackend) # arg4: first address past the stack",
-       "     j       cake_main", "",
-       "#### CakeML FFI interface (each block is 16 bytes long)", "",
-       "     .p2align 4", "", "cake_clear:", "     tail cdecl(cml_exit)",
+        "     .p2align 3", "cake_bitmaps:", s!"\t.quad {bitmapWords}",
+        "     .globl cdecl(cake_bitmaps_buffer_begin)",
+        "cdecl(cake_bitmaps_buffer_begin):", "#if defined(EVAL)",
+        "     .space DATA_BUFFER_SIZE", "#endif",
+        "     .globl cdecl(cake_bitmaps_buffer_end)",
+        "cdecl(cake_bitmaps_buffer_end):", "", "#### Start up code", "",
+        "     .text", "     .p2align 3", "     .globl  cdecl(cml_main)",
+        "     .globl  cdecl(cml_heap)", "     .globl  cdecl(cml_stack)",
+        "     .globl  cdecl(cml_stackend)", "     .type   cml_main, function",
+        "cdecl(cml_main):", "     la      a0,cake_main           # arg1: entry address",
+        "     ld      a1,cdecl(cml_heap)     # arg2: first address of heap",
+        "     ld      a2,cdecl(cml_stack)    # arg3: first address of stack",
+        "     ld      a3,cdecl(cml_stackend) # arg4: first address past the stack",
+        "     j       cake_main", "",
+        "#### CakeML FFI interface (each block is 16 bytes long)", "",
+        "     .p2align 4", ""] ++ ffiStubLines ++
+      ["cake_clear:", "     tail cdecl(cml_exit)",
        "     .p2align 4", "", "cake_exit:", "     tail cdecl(cml_exit)",
        "     .p2align 4", "", "cake_main:", "", "#### Generated machine code follows", ""]
       ++ assemblyByteLines bytes

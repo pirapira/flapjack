@@ -4,3 +4,8 @@ store_aligned_original=SOME (INR (SharedMem MappedWrite,[1w],[171w; 3w; 0w; 0w; 
 
 store_domain_error=SOME (INR (SOME Error,s with sh_memaddrs := ∅))
 
+store_return_state={3w}
+
+store_mismatch_state={3w}
+
+store_final_state={3w}

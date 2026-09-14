@@ -85,6 +85,8 @@ run_probe pan_lang_with_shape_probeScript.sml pan_lang_with_shape_probe.out \
   empty_shapes short_input "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_wf_fields_context_probeScript.sml pan_lang_wf_fields_context_probe.out \
   empty_fields self_reference_context "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_size_of_sh_with_ctxt_probeScript.sml pan_lang_size_of_sh_with_ctxt_probe.out \
+  one known_named missing_named nested_comb "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

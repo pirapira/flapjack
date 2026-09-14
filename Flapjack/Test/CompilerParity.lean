@@ -183,6 +183,7 @@ import Flapjack.Test.ParsedFullSsaPipeline
 import Flapjack.Test.EndToEndParity
 import Flapjack.Test.RiscVArtifactParity
 import Flapjack.Test.RiscVRegisterMapParity
+import Flapjack.Test.CakeAllocatorCore
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -900,7 +901,8 @@ def main : IO Unit := do
     Flapjack.Test.CakeStackReseatParity.runChecks,
     Flapjack.Test.CrepeGlobalAddressParity.runChecks,
     Flapjack.Test.RiscVArtifactParity.runChecks,
-    Flapjack.Test.RiscVRegisterMapParity.runChecks
+    Flapjack.Test.RiscVRegisterMapParity.runChecks,
+    Flapjack.Test.CakeAllocatorCore.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

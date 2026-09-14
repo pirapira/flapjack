@@ -52,6 +52,12 @@
       "source_reference": "cakeml/pancake/pan_passesScript.sml:20-37 (pan_to_target_all_def; SPLITP moves the `main` declaration to the front, so the original emits the entry function first and then source order, while Flapjack renames main and emits source order with a wrapper)",
       "cake_sha256": "76fe76be79451cd5595661e8ad912dc5f266ddeb58efa4b3e510bd70082b94fc",
       "tracked_beads": ["flapjack-pxn.8.5.10.3"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_expression.pnk",
+      "source_reference": "GitHub issue #1015 nested-expression reproducer; the original accepts because crep_to_loop flattens nested Word expressions into Loop temporaries, while the port's Word-to-Stack lowering exhausted its fixed four-register temporary pool before the pool-expansion fix recorded by flapjack-pxn.2.5. The residual byte/layout difference is the remaining tracked gap.",
+      "cake_sha256": "11ad4d103897fbc551a4540c06a720b7e517f920d805034cee217e5044bb4b29",
+      "tracked_beads": ["flapjack-pxn.2.5"]
     }
   ]
 }

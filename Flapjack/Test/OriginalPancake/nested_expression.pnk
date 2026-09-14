@@ -1,0 +1,7 @@
+fun 1 main() {
+  var p = @base;
+  var a = ld8 p; var b = ld8 (p+1); var c = ld8 (p+2); var d = ld8 (p+3); var t1 = ld8 (p+4);
+  var h = 0;
+  h = ((t1 + (a + (b + (c + d)))) << 1) >>> 1;
+  return h;
+}

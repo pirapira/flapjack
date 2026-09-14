@@ -949,16 +949,39 @@ def wordStackExpressionIsAtom : WordExp Nat → Bool
   | .const _ | .var _ | .lookup _ => true
   | .load _ | .op _ _ | .shift _ _ _ => false
 
+/-! Registers that currently hold a variable of this function.  A register that
+    is not the image of any allocated variable is dead from the allocator's
+    point of view, so a nested expression may safely borrow it as an extra
+    temporary. -/
+def wordStackSavedRegisters (config : WordStackConfig) : List Nat :=
+  config.locations.filterMap (fun entry =>
+    match entry.2 with
+    | .register register => some register
+    | .stack _ => none)
+
+/-! Extra expression temporaries drawn from allocator registers that hold no
+    variable.  These are appended *after* the four reserved scratch registers,
+    so shallow expressions keep the historical register choice and only deep
+    nesting reaches into this list. -/
+def wordStackFreeRegisters (config : WordStackConfig) (target : Nat) : List Nat :=
+  let saved := wordStackSavedRegisters config
+  wordAllocatableRegisters.filter (fun register =>
+    register != target && saved.all (fun used => used != register))
+
 /-! Compile a possibly nested expression into a physical register.  The
     earlier atom compiler is sufficient for most Word expressions, but global
     initialization and global reads produce nested address arithmetic.  Use a
     small, explicit pool of reserved registers for the two children of each
     binary node; each recursive child receives the remaining pool, so a child
-    cannot clobber a sibling that has already been evaluated. -/
+    cannot clobber a sibling that has already been evaluated.  When a tree is
+    deeper than the four reserved registers, the pool continues with allocator
+    registers that hold no variable, so nesting depth is bounded by the live
+    values rather than by the reserved pool. -/
 def wordStackExpressionTemporaries (config : WordStackConfig)
     (target : Nat) : List Nat :=
-  [config.scratch, config.addressScratch, config.specialScratch, config.carryScratch]
-    |>.filter (fun register => register != target)
+  ([config.scratch, config.addressScratch, config.specialScratch, config.carryScratch]
+    |>.filter (fun register => register != target))
+  ++ wordStackFreeRegisters config target
 
 def wordStackCompileExpToRegisterNat (config : WordStackConfig)
     (target : Nat) (available : List Nat) : WordExp Nat → Option (StackProg Nat)
@@ -1074,8 +1097,10 @@ def wordStackCompileExpToPhysicalNat (config : WordStackConfig)
    expression pool so evaluating a nested expression cannot destroy it. -/
 def wordStackExpressionTemporariesExcluding (config : WordStackConfig)
     (target forbidden : Nat) : List Nat :=
-  [config.scratch, config.addressScratch, config.specialScratch, config.carryScratch]
-    |>.filter (fun register => register != target && register != forbidden)
+  ([config.scratch, config.addressScratch, config.specialScratch, config.carryScratch]
+    |>.filter (fun register => register != target && register != forbidden))
+  ++ (wordStackFreeRegisters config target).filter
+        (fun register => register != forbidden)
 
 def wordStackCompileStoreNatNested (config : WordStackConfig) (address : WordExp Nat)
     (value : WordExp Nat) : Option (StackProg Nat) := do

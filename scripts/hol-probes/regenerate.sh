@@ -110,6 +110,8 @@ run_probe pan_itree_h_prog_sh_mem_store_probeScript.sml \
   pan_itree_h_prog_sh_mem_store_probe.out \
   store_zero_width store_final_state \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_itree_h_prog_probeScript.sml pan_itree_h_prog_probe.out \
+  h_prog_skip h_prog_tick "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
   get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_get_var_imm_probeScript.sml \

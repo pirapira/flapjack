@@ -65,6 +65,7 @@ import Flapjack.RiscV.RegisterTransfer
 import Flapjack.RiscV.InstructionRelabel
 import Flapjack.RiscV.InstructionCommutation
 import Flapjack.RiscV.InstructionDataCommutation
+import Flapjack.RiscV.CorrectnessBackendRegisterMap
 import Flapjack.Correctness
 import Flapjack.CorrectnessCalls
 import Flapjack.FlatCorrectness

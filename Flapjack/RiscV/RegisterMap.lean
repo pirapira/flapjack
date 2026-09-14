@@ -195,4 +195,63 @@ theorem labRegisterOfNat_eq {name : Nat} (h : riscvRegisterName name < 32) :
     labRegisterOfNat name = some ⟨riscvRegisterName name, h⟩ := by
   simp [labRegisterOfNat, registerOfNat, h]
 
+/-- An in-range internal stack register is selected by the one-time Cake map. -/
+@[simp] theorem labRegisterOfNat_of_lt_32 {name : Nat} (h : name < 32) :
+    labRegisterOfNat name =
+      some ⟨riscvRegisterName name, riscvRegisterName_lt_32 h⟩ :=
+  labRegisterOfNat_eq (riscvRegisterName_lt_32 h)
+
+/-- Stack register `5` is non-architectural and maps to itself. -/
+@[simp] theorem labRegisterOfNat_five : labRegisterOfNat 5 = some 5 := by decide
+
+/-- Stack register `6` is non-architectural and maps to itself. -/
+@[simp] theorem labRegisterOfNat_six : labRegisterOfNat 6 = some 6 := by decide
+
+/-- Stack register `31` is non-architectural and maps to itself. -/
+@[simp] theorem labRegisterOfNat_thirtyOne : labRegisterOfNat 31 = some 31 := by decide
+
+/-- The internal scratch register `10` maps to hardware `27`. -/
+@[simp] theorem labRegisterOfNat_ten : labRegisterOfNat 10 = some 27 := by decide
+
+/-- The internal scratch register `11` maps to hardware `28`. -/
+@[simp] theorem labRegisterOfNat_eleven : labRegisterOfNat 11 = some 28 := by decide
+
+/-- The internal scratch register `12` maps to hardware `29`. -/
+@[simp] theorem labRegisterOfNat_twelve : labRegisterOfNat 12 = some 29 := by decide
+
+/-- The internal scratch register `13` maps to hardware `30`. -/
+@[simp] theorem labRegisterOfNat_thirteen : labRegisterOfNat 13 = some 30 := by decide
+
+/-- Read the value of an internal Cake stack register from a hardware-indexed
+state through the one-time `riscv_names` map.  This is the register lookup the
+rebased Backend correctness lemmas use: the internal name is resolved to its
+hardware index exactly once and then read from the concrete register file. -/
+def readRegisterInternal {width : Nat} (state : State width) (name : Nat) :
+    Option (Word width) :=
+  (labRegisterOfNat name).map (readRegister state)
+
+/-- Reading an internal register whose name is out of architectural range
+yields nothing. -/
+@[simp] theorem readRegisterInternal_of_none {width : Nat} (state : State width)
+    {name : Nat} (h : labRegisterOfNat name = none) :
+    readRegisterInternal state name = none := by
+  simp [readRegisterInternal, h]
+
+/-- Reading an internal register resolves the name through the Cake map and then
+reads the resulting hardware register. -/
+@[simp] theorem readRegisterInternal_of_some {width : Nat} (state : State width)
+    {name : Nat} {register : Fin 32} (h : labRegisterOfNat name = some register) :
+    readRegisterInternal state name = readRegister state register := by
+  simp [readRegisterInternal, h]
+
+/-- A successful internal read is exactly a `labRegisterOfNat` resolution
+followed by a hardware read. -/
+theorem readRegisterInternal_eq_some_iff {width : Nat} (state : State width)
+    (name : Nat) (value : Word width) :
+    readRegisterInternal state name = some value ↔
+      ∃ register, labRegisterOfNat name = some register ∧
+        readRegister state register = some value := by
+  unfold readRegisterInternal
+  cases h : labRegisterOfNat name <;> simp
+
 end Flapjack.RiscV

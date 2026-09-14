@@ -1,0 +1,2 @@
+empty=[]
+raise_const=[(«f»,[0],Seq (Dec 1 (Const 7w) (Seq (StoreGlob 0w (Var 1)) Skip)) (Raise 0w))]

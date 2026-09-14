@@ -597,6 +597,76 @@ def compileLabProgramLinked [NeZero width] (context : WordFfiContext)
   let labels := labCollectProgramLabels 0 program
   compileLabProgramLinkedAux context labels 0 program
 
+/-! Linked machine images retain CakeML's three-region FFI prefix.  The
+service blocks are emitted before `cake_clear` and `cake_exit`, each occupying
+one 16-byte block as required by `labFfiStubOffset`.  The executable model
+represents the external tail call by materializing the service number, taking
+the modeled ECALL, and returning through the continuation in x1; the two fixed
+runtime blocks are reserved as non-falling-through placeholders. -/
+def labFfiServiceStub [NeZero width] (service : Nat) :
+    List (Instruction width) :=
+  [.addi 14 0 (BitVec.ofNat width service), .ecall,
+   .jalr 0 1 0, .addi 0 0 0]
+
+def labFfiStubPrefix [NeZero width] (context : WordFfiContext) :
+    List (Instruction width) :=
+  if context.services.isEmpty then []
+  else
+    context.services.flatMap (fun (_, service) => labFfiServiceStub service) ++
+      List.replicate 8 (.jal 0 0)
+
+def labCompileAsmProgramWithFfiBase [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position ffiBase : Nat) :
+    LabAsm (Word width) → Option (List (Instruction width))
+  | .callFfi function => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let offset ← labFfiStubOffset context function (position - ffiBase)
+      pure [.jal zero offset]
+  | operation => labCompileAsmProgram context labels position operation
+
+def labCompileProgramLinesWithFfiBase [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position ffiBase : Nat) :
+    List (LabLine (Word width)) → Option (List (Instruction width))
+  | [] => some []
+  | .label _ _ _ :: lines =>
+      labCompileProgramLinesWithFfiBase context labels position ffiBase lines
+  | .asm operation _ _ :: lines => do
+      let code ← labCompilePlain operation
+      let rest ← labCompileProgramLinesWithFfiBase context labels
+        (position + 4 * labLineInstructionCount (.asm operation [] 0)) ffiBase lines
+      pure (code ++ rest)
+  | .labAsm operation _ _ :: lines => do
+      let code ← labCompileAsmProgramWithFfiBase context labels position ffiBase operation
+      let rest ← labCompileProgramLinesWithFfiBase context labels
+        (position + 4 * labLineInstructionCount (.labAsm operation [] 0)) ffiBase lines
+      pure (code ++ rest)
+
+def compileLabProgramLinkedWithFfiStubsAux [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (base ffiBase : Nat) : LabProgram (Word width) →
+      Option (List (Nat × Word width × List (Instruction width)))
+  | [] => some []
+  | sectionData :: sections => do
+      let code ← labCompileProgramLinesWithFfiBase context labels base ffiBase
+        sectionData.lines
+      let rest ← compileLabProgramLinkedWithFfiStubsAux context labels
+        (base + 4 * labSectionInstructionCount sectionData) ffiBase sections
+      pure ((sectionData.name, BitVec.ofNat width base, code) :: rest)
+
+def compileLabProgramLinkedWithFfiStubs [NeZero width]
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    Option (List (Nat × Word width × List (Instruction width))) :=
+  let stubCode := labFfiStubPrefix context
+  let prefixBytes := 4 * stubCode.length
+  let labels := labCollectProgramLabels prefixBytes program
+  match compileLabProgramLinkedWithFfiStubsAux context labels prefixBytes prefixBytes program with
+  | none => none
+  | some [] => some []
+  | some ((sectionId, _, code) :: sections) =>
+      some ((sectionId, 0, stubCode ++ code) :: sections)
+
 def flattenLabProgramLinked :
     List (Nat × Word width × List (Instruction width)) → List (Instruction width)
   | [] => []
@@ -821,7 +891,7 @@ def compileStackProgramNatListLinkedToRiscV [NeZero width]
   match stackProgramsWithLongDivRuntime config programs with
   | none => none
   | some programs =>
-      compileLabProgramLinked context
+      compileLabProgramLinkedWithFfiStubs context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
               sectionId = cakeLongDivLocation then

@@ -14,6 +14,8 @@ import Flapjack.Test.PanFlatStoreParity
 import Flapjack.Test.PanFlattenParity
 import Flapjack.Test.PanNestedSeqParity
 import Flapjack.Test.PanExpIdsParity
+import Flapjack.Test.PanLangFunIdsParity
+import Flapjack.Test.PanLangFreeVarIdsParity
 import Flapjack.Test.PanWithShapeParity
 import Flapjack.Test.PanShapeValParity
 import Flapjack.Test.PanGlobalsCompileExpParity
@@ -186,6 +188,7 @@ import Flapjack.Test.EndToEndParity
 import Flapjack.Test.RiscVArtifactParity
 import Flapjack.Test.RiscVRegisterMapParity
 import Flapjack.Test.CakeAllocatorCore
+import Flapjack.Test.CakeFramePolicy
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -906,7 +909,8 @@ def main : IO Unit := do
     Flapjack.Test.CrepeGlobalAddressParity.runChecks,
     Flapjack.Test.RiscVArtifactParity.runChecks,
     Flapjack.Test.RiscVRegisterMapParity.runChecks,
-    Flapjack.Test.CakeAllocatorCore.runChecks
+    Flapjack.Test.CakeAllocatorCore.runChecks,
+    Flapjack.Test.CakeFramePolicy.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

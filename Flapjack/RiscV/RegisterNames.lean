@@ -249,4 +249,28 @@ theorem iterForward_eleven_forward (register : Fin 32) :
     iterForward 11 (riscvForward register) = register :=
   iterForward_twelve register
 
+/-- The eleven-fold iterate is also a left inverse of the internal Cake map:
+one application after eleven further applications returns the original name.
+This is the ordering statement read in the opposite direction from
+`iterRegisterName_eleven_succ`. -/
+theorem iterRegisterName_forward_eleven (name : Nat) :
+    riscvRegisterName (iterRegisterName 11 name) = name := by
+  by_cases h : name < 32
+  · have hcheck :
+        (List.range 32).all
+          (fun n => riscvRegisterName (iterRegisterName 11 n) == n) = true := by
+      decide
+    have hmem := List.all_eq_true.mp hcheck name (List.mem_range.mpr h)
+    simpa using hmem
+  · have hge : riscvRegisterName name = name :=
+      riscvRegisterName_id_of_ge_32 (Nat.le_of_not_lt h)
+    rw [iterRegisterName_of_ge_32 (Nat.le_of_not_lt h) 11, hge]
+
+/-- The lifted Cake map has the eleven-fold iterate as a left inverse on
+hardware registers. -/
+theorem iterForward_forward_eleven (register : Fin 32) :
+    riscvForward (iterForward 11 register) = register := by
+  apply Fin.ext
+  rw [riscvForward_val, iterForward_val, iterRegisterName_forward_eleven]
+
 end Flapjack.RiscV

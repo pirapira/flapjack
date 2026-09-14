@@ -96,6 +96,19 @@ theorem relabelRegisters_riscvForward_comp_inverse (state : State width) :
     exact iterForward_eleven_forward register
   rw [hid, relabelRegisters_id]
 
+/-- The same explicit inverse also undoes the relabeling when it is applied
+second: undoing after relabeling returns the original state.  Together with
+`relabelRegisters_riscvForward_comp_inverse` this makes the pair a two-sided
+inverse on states. -/
+theorem relabelRegisters_riscvForward_comp_inverse_left (state : State width) :
+    relabelRegisters (iterForward 11) (relabelRegisters riscvForward state) =
+      state := by
+  rw [relabelRegisters_comp]
+  have hid : (fun register => riscvForward (iterForward 11 register)) = id := by
+    funext register
+    exact iterForward_forward_eleven register
+  rw [hid, relabelRegisters_id]
+
 /-- The one-time Cake relabeling is surjective on states, because its explicit
 inverse `relabelRegisters (iterForward 11)` recovers any original state. -/
 theorem relabelRegisters_riscvForward_surjective :

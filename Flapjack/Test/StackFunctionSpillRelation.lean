@@ -17,7 +17,8 @@ example [NeZero width]
       registerCount bitmapRegister frameSlots storeConstsStub bitmapState program =
       some (body, bitmapFinal))
     (hmoves : wordStackMovesFromPhysical
-      { config with locations := allocation.locations } parameters 2 = some moves)
+      { config with locations := allocation.locations } parameters config.abiBase =
+      some moves)
     (hentry : evalWordStackMachine state moves = some middle)
     (hbodyEval : evalWordStackMachine middle body = some final) :
     evalWordStackMachine state

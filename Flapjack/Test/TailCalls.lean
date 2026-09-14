@@ -7,10 +7,11 @@ open RiscV
 def tailCallTestConfig : WordStackConfig :=
   { locations := [(6, .register 1)]
     scratch := 31
-    stackBase := 0 }
+    stackBase := 0
+    abiBase := 1 }
 
 theorem tailCallArgumentMoves :
-    wordStackMovesToPhysical tailCallTestConfig [6] 1 =
+    wordStackMovesToPhysical tailCallTestConfig [6] tailCallTestConfig.abiBase =
       some (.skip : StackProg Nat) := by
   have hdest :
       wordStackLocationMoveDestinations

@@ -75,6 +75,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               scratch := 31
               stackBase := 0
               addressScratch := 29
+              abiBase := 10
               sectionId := label
               handlerLabel := label }
           match RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
@@ -113,6 +114,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
               scratch := 31
               stackBase := 0
               addressScratch := 29
+              abiBase := 10
               sectionId := label
               handlerLabel := label }
           match RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config

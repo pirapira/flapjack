@@ -88,6 +88,9 @@ run_probe pan_sem_set_var_probeScript.sml pan_sem_set_var_probe.out \
 run_probe pan_dec_clock_probeScript.sml pan_dec_clock_probe.out \
   pan_dec_clock_five pan_dec_clock_zero \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
+  pan_fix_clock_clamps pan_fix_clock_keeps_lower \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_probeScript.sml pan_sem_e2e_probe.out \
   return_41 return_if_13 "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_e2e_add_probeScript.sml pan_sem_e2e_add_probe.out \

@@ -31,6 +31,16 @@ inductive PanValueFfiClockOutcome (α : Type u) (σ : Type v) where
 abbrev PanValueFfiClockResult (α : Type u) (σ : Type v) :=
   PanValueFfiClockOutcome α σ × Nat
 
+/-! Exact clock projection of Pancake's `fix_clock_def`
+    (`cakeml/pancake/semantics/panSemScript.sml:446-448`).  The result is
+    unchanged and the returned clock is clamped to the smaller old/new
+    clock.  This is transparent so existing clock proofs can still rewrite
+    the underlying subtraction and minimum directly. -/
+abbrev fixPanClock {β : Type u} (oldClock : Nat) (step : β × Nat) :
+    β × Nat :=
+  let (outcome, newClock) := step
+  (outcome, min oldClock newClock)
+
 def panValueFfiClockTimeout
     (globals : VarName → Option (PanValue α))
     (memory : α → Option (PanValue α)) (ffi : FfiState σ)

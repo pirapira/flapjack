@@ -104,6 +104,8 @@ run_probe pan_lang_functions_probeScript.sml pan_lang_functions_probe.out \
   empty function global "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_exceptions_probeScript.sml pan_lang_exceptions_probe.out \
   empty exception "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_fun_ids_probeScript.sml pan_lang_fun_ids_probe.out \
+  empty call handler dec_call "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

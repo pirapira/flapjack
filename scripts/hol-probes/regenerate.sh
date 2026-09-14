@@ -118,6 +118,8 @@ run_probe pan_itree_h_prog_sh_mem_load_probeScript.sml \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_return_probeScript.sml pan_itree_h_prog_return_probe.out \
   return_valid_locals return_invalid "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_itree_h_prog_raise_probeScript.sml pan_itree_h_prog_raise_probe.out \
+  raise_valid_locals raise_invalid "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
   get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_get_var_imm_probeScript.sml \

@@ -209,6 +209,14 @@ def fullSsaFfiLinked :
 def fullSsaFfiImage : Option (List (RiscV.Instruction 64)) :=
   fullSsaFfiLinked.map (List.flatMap (fun (_, _, code) => code))
 
+def fullSsaFfiLookupEntry (label : Nat) :
+    List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64)) →
+      Option (RiscV.Word 64)
+  | [] => none
+  | (candidate, entry, _) :: sections =>
+      if candidate == label then some entry
+      else fullSsaFfiLookupEntry label sections
+
 def fullSsaFfiHost : RiscV.WordFfiHost 64 :=
   fun service configuration _ _ _ state =>
     if service = 7 then
@@ -216,11 +224,21 @@ def fullSsaFfiHost : RiscV.WordFfiHost 64 :=
         pc := state.pc + 4 }
     else none
 
+def fullSsaFfiMachineResult : Option (List (RiscV.Word 64)) := do
+  let sections ← fullSsaFfiLinked
+  let entry ← fullSsaFfiLookupEntry 1 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  let mainLength ←
+    match sections.find? (fun (label, _, _) => label == 1) with
+    | some (_, _, code) => some code.length
+    | none => none
+  let returnAddress := entry + BitVec.ofNat 64 (4 * (mainLength - 2))
+  RiscV.executeFunctionAtWithFfi fullSsaFfiHost 4000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
+
+
 theorem fullSsaFfi_compiled_execution :
-    (do
-      let image ← fullSsaFfiImage
-      RiscV.executeFunctionAtWithFfi fullSsaFfiHost 100 0 76 42 [] image [2] []
-        (RiscV.writeRegister (RiscV.zeroState 64) 1 (BitVec.ofNat 64 42))) =
+    fullSsaFfiMachineResult =
       some [BitVec.ofNat 64 42] := by
   native_decide
 
@@ -233,16 +251,12 @@ theorem fullSsaFfi_source_execution :
   decide +kernel
 
 theorem fullSsaFfi_source_machine_agreement :
-    (evalPanProgWithCallsAndFfi [] fullSsaFfiSourceHandler 20
+      (evalPanProgWithCallsAndFfi [] fullSsaFfiSourceHandler 20
       (fun _ => none) fullSsaFfiMainBody).map (fun result =>
         match result with
         | .returned _ values => values
         | _ => []) = some [BitVec.ofNat 64 42] ∧
-      (do
-        let image ← fullSsaFfiImage
-        RiscV.executeFunctionAtWithFfi fullSsaFfiHost 100 0 76 42 [] image [2] []
-          (RiscV.writeRegister (RiscV.zeroState 64) 1 (BitVec.ofNat 64 42))) =
-        some [BitVec.ofNat 64 42] :=
+      fullSsaFfiMachineResult = some [BitVec.ofNat 64 42] :=
   ⟨fullSsaFfi_source_execution, fullSsaFfi_compiled_execution⟩
 
 /-! The full-SSA call path exercises entry moves, the spill-aware allocator,

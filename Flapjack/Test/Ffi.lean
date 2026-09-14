@@ -9,6 +9,54 @@ def identityFfiOracle : FfiOracle Unit :=
 def identityFfiState : FfiState Unit :=
   { oracle := identityFfiOracle, state := (), ioEvents := [] }
 
+/-! The four observations below are transcribed from
+`scripts/hol-probes/ffi_call_probe.out`, generated from
+`ffi_call_probeScript.sml`. They cover the source `call_FFI_def` branches in
+`cakeml/semantics/ffi/ffiScript.sml:64-79`: a length-preserving return appends
+the zipped I/O event, a length mismatch becomes `FFI_failed`, an oracle-final
+result is preserved, and `ExtCall ""` is the identity call. -/
+
+def parityFfiState : FfiState Unit :=
+  { oracle := fun _ state _ _ => .returned state [5, 6]
+    state := ()
+    ioEvents := [] }
+
+def parityOracleReturn : Bool :=
+  match callFfi parityFfiState (.extCall "foo") [1, 2] [3, 4] with
+  | .returned state bytes =>
+      bytes == [5, 6] && state.state == () &&
+        state.ioEvents ==
+          [{ name := .extCall "foo", configuration := [1, 2],
+             bytes := [(3, 5), (4, 6)] }]
+  | .final _ => false
+
+def parityLengthFailure : Bool :=
+  match callFfi
+      { parityFfiState with
+          oracle := (fun _ state _ _ => .returned state [5]) }
+      (.extCall "foo") [1, 2] [3, 4] with
+  | .final event => event.outcome == .failed
+  | .returned _ _ => false
+
+def parityOracleFinal : Bool :=
+  match callFfi
+      { parityFfiState with oracle := (fun _ _ _ _ => .final .diverged) }
+      (.extCall "foo") [1] [3] with
+  | .final event => event.outcome == .diverged
+  | .returned _ _ => false
+
+def parityEmptyExtCall : Bool :=
+  match callFfi
+      { parityFfiState with oracle := (fun _ _ _ _ => .final .diverged) }
+      (.extCall "") [1] [3, 4] with
+  | .returned state bytes => bytes == [3, 4] && state.ioEvents == []
+  | .final _ => false
+
+#guard parityOracleReturn
+#guard parityLengthFailure
+#guard parityOracleFinal
+#guard parityEmptyExtCall
+
 example :
     match callFfi identityFfiState (.extCall "echo") [1, 2] [3, 4] with
     | .returned state bytes =>

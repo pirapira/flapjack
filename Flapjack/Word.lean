@@ -324,20 +324,20 @@ def loopToWordProg [OfNat α 1] (context : WordContext) :
       .locValue (wordFindVar context destination) source
   | .call returns target arguments none =>
       .call (returns.map (fun (values, live) =>
-        (wordMapVars context values, (wordMapVars context live, []),
+        (wordMapVars context values, (wordMkNewCutset context live, []),
           .skip, 0, 0))) target
         (wordMapVars context arguments)
         none
   | .call returns target arguments (some (exception, body, _, _)) =>
       .call (returns.map (fun (values, live) =>
-        (wordMapVars context values, (wordMapVars context live, []),
+        (wordMapVars context values, (wordMkNewCutset context live, []),
           .skip, 0, 0))) target
         (wordMapVars context arguments)
         (some (wordFindVar context exception, loopToWordProg context body, 0, 0))
   | .ffi function configuration configurationLength array arrayLength live =>
       .ffi function (wordFindVar context configuration)
         (wordFindVar context configurationLength) (wordFindVar context array)
-        (wordFindVar context arrayLength) (wordMapVars context live, [])
+        (wordFindVar context arrayLength) (wordMkNewCutset context live, [])
   | .shMem operator name address =>
       match wordMemOp operator, wordCompileExp context address with
       | some operator, some address =>

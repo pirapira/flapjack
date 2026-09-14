@@ -100,6 +100,8 @@ run_probe pan_lang_load_store_op_probeScript.sml pan_lang_load_store_op_probe.ou
   "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_is_function_probeScript.sml pan_lang_is_function_probe.out \
   function global "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_functions_probeScript.sml pan_lang_functions_probe.out \
+  empty function global "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

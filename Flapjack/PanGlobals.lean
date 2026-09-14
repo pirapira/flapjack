@@ -313,6 +313,18 @@ def globalFunctionNames : List (Decl α) → List FunName
   | _ :: declarations => globalFunctionNames declarations
 termination_by declarations => sizeOf declarations
 
+/-! Direct source-shaped counterpart of `panLang$functions`: retain every
+    function's metadata while skipping value, exception, and struct
+    declarations. -/
+def functionEntries : List (Decl α) →
+    List (FunName × List (VarName × Shape) × Prog α × Shape)
+  | [] => []
+  | .function declaration :: declarations =>
+      (declaration.name, declaration.params, declaration.body,
+        declaration.returnShape) :: functionEntries declarations
+  | _ :: declarations => functionEntries declarations
+termination_by declarations => sizeOf declarations
+
 def globalDeclsFilter (predicate : Decl α → Bool) : List (Decl α) → List (Decl α)
   | [] => []
   | declaration :: declarations =>

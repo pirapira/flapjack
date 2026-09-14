@@ -27,7 +27,7 @@ inductive CrepExp (α : Type u) where
   | shift (operator : Shift) (left right : CrepExp α)
   | baseAddr
   | topAddr
-  deriving Repr
+  deriving BEq, Repr
 
 inductive CrepMemOp where
   | load
@@ -97,6 +97,28 @@ where
   crepExpVarsList : List (CrepExp α) → List Nat
     | [] => []
     | expression :: expressions => crepExpVars expression ++ crepExpVarsList expressions
+  termination_by expressions => sizeOf expressions
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-! Faithful port of `crepLang$exps` from
+    `cakeml/pancake/crepLangScript.sml:193-207`.
+
+    The result preserves expression nodes while recursively flattening the
+    expression lists of `Op` and `Crepop`, matching HOL's `FLAT (MAP exps)`. -/
+def crepExps : CrepExp α → List (CrepExp α)
+  | expression@(.const _) => [expression]
+  | expression@(.var _) => [expression]
+  | .load address | .load32 address | .loadByte address => crepExps address
+  | expression@(.loadGlob _) => [expression]
+  | .op _ expressions | .crepOp _ expressions => crepExpsList expressions
+  | .cmp _ left right | .shift _ left right => crepExps left ++ crepExps right
+  | expression@(.baseAddr) | expression@(.topAddr) => [expression]
+termination_by expression => sizeOf expression
+where
+  crepExpsList : List (CrepExp α) → List (CrepExp α)
+    | [] => []
+    | expression :: expressions => crepExps expression ++ crepExpsList expressions
   termination_by expressions => sizeOf expressions
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial

@@ -245,6 +245,8 @@ run_probe crep_assign_ret_probeScript.sml crep_assign_ret_probe.out \
   empty two "$cake_dir/pancake/crepLangScript.sml"
 run_probe crep_var_cexp_probeScript.sml crep_var_cexp_probe.out \
   const base_top "$cake_dir/pancake/crepLangScript.sml"
+run_probe crep_exps_probeScript.sml crep_exps_probe.out \
+  leaves loads ops "$cake_dir/pancake/crepLangScript.sml"
 run_probe crep_assigned_free_vars_probeScript.sml crep_assigned_free_vars_probe.out \
   skip shmem_fallback "$cake_dir/pancake/crepLangScript.sml"
 run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \

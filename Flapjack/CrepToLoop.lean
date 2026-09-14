@@ -42,6 +42,34 @@ def crepFindLab [BEq FunName] (context : LoopContext α) (name : FunName) : Nat 
   | some (label, _) => label
   | none => 0
 
+/-! CakeML's `num_set` prints in ascending order.  Keep the list-backed live
+    sets used by the executable port in that same canonical order when
+    translating `prog_if`'s `list_insert` result. -/
+def insertNatSorted (name : Nat) : List Nat → List Nat
+  | [] => [name]
+  | head :: tail =>
+      if name < head then name :: head :: tail
+      else if name = head then head :: tail
+      else head :: insertNatSorted name tail
+
+def loopListInsert (names live : List Nat) : List Nat :=
+  names.foldl (fun current name => insertNatSorted name current) live
+
+/-! Source-named port of `crep_to_loop$prog_if` (`prog_if_def`,
+    `crep_to_loopScript.sml:34`).  The result is a statement list; the caller
+    applies `nested_seq` exactly as the original compiler does. -/
+def progIf [OfNat α 0] [OfNat α 1]
+    (operator : Cmp) (first second : List (LoopProg α))
+    (left right : LoopExp α) (condition rightRegister : Nat) (live : List Nat) :
+    List (LoopProg α) :=
+  first ++ second ++
+    [.assign condition left,
+     .assign rightRegister right,
+     .ite operator condition (.reg rightRegister)
+       (.assign condition (.const (1 : α)))
+       (.assign condition (.const (0 : α)))
+       (loopListInsert [condition, rightRegister] live)]
+
 def lowerLoopExp : CrepExp α → LoopExp α
   | .const value => .const value
   | .var name => .var name

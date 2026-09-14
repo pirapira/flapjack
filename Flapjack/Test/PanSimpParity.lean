@@ -101,6 +101,24 @@ theorem ret_to_tail_handler_seq :
         "f" [] := by
   simp [retToTail, seqCallRet]
 
+/-! The expected values are the direct HOL evaluation of
+    `pan_simp$compile` from `pan_simpScript.sml:68-72`. -/
+theorem pan_simp_compile_skip :
+    panSimpProg (.skip : Prog Nat) = .skip := by
+  simp [panSimpProg, seqAssoc, retToTail]
+
+theorem pan_simp_compile_seq_skip_tick :
+    panSimpProg (.seq (.skip : Prog Nat) .tick) = .tick := by
+  simp [panSimpProg, seqAssoc, retToTail, smartSeq]
+
+theorem pan_simp_compile_tail_call :
+    panSimpProg
+        (.seq
+          (.call (some (some (.local, "r"), none)) "f" [])
+          (.return (.var .local "r")) : Prog Nat) =
+      .call none "f" [] := by
+  simp [panSimpProg, seqAssoc, retToTail, seqCallRet, smartSeq]
+
 def isSkip : Prog Nat → Bool
   | .skip => true
   | _ => false
@@ -167,16 +185,22 @@ def parityGuard : Bool :=
     isHandlerSeq (retToTail
       (.call
         (some (some (.local, "r"), some ("E", "h", .seq .tick .tick)))
-        "f" [] : Prog Nat))
+        "f" [] : Prog Nat)) &&
+    isSkip (panSimpProg (.skip : Prog Nat)) &&
+    isTick (panSimpProg (.seq (.skip : Prog Nat) .tick)) &&
+    isTailCall (panSimpProg
+      (.seq
+        (.call (some (some (.local, "r"), none)) "f" [])
+        (.return (.var .local "r")) : Prog Nat))
 
 #eval parityGuard
 #guard parityGuard
 
 def runChecks : IO Bool := do
   if parityGuard then
-    IO.println "PASS pan_simp SmartSeq/seq_assoc/seq_call_ret/ret_to_tail source parity"
+    IO.println "PASS pan_simp SmartSeq/seq_assoc/seq_call_ret/ret_to_tail/compile source parity"
   else
-    IO.println "FAIL pan_simp SmartSeq/seq_assoc/seq_call_ret/ret_to_tail source parity"
+    IO.println "FAIL pan_simp SmartSeq/seq_assoc/seq_call_ret/ret_to_tail/compile source parity"
   pure parityGuard
 
 end Flapjack.Test.PanSimpParity

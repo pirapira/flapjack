@@ -34,7 +34,7 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_contract
       registerCount bitmapRegister frameSlots storeConstsStub bitmapState
       renamedProgram = some (body, bodyState))
     (hmoves : wordStackMovesFromPhysical
-      { config with locations := allocation.locations } renamedParameters 2 =
+      { config with locations := allocation.locations } renamedParameters config.abiBase =
       some moves)
     (hentry : evalWordStackMachine machineState moves = some middle)
     (hbodyEval : evalWordStackMachine middle body = some final) :
@@ -58,7 +58,7 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_contract
         registerCount bitmapRegister frameSlots storeConstsStub bitmapState
         renamedProgram = some (body, bodyState) ∧
       wordStackMovesFromPhysical
-        { config with locations := allocation.locations } renamedParameters 2 =
+        { config with locations := allocation.locations } renamedParameters config.abiBase =
         some moves ∧
       stackProgram = wordStackJoin moves body ∧
       bodyState = finalState ∧

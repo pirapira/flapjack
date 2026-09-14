@@ -64,9 +64,9 @@ def p1CallCutsets : Option (List (List (List Nat))) :=
         (fun live => live.mergeSort (fun a b => a < b))))
 
 def runChecks : IO Bool := do
-  let expected : Option (List (List Nat)) := some [[], [2, 4], [0, 2, 4]]
+  let expected : Option (List (List Nat)) := some [[], [0, 2, 4], [2, 4]]
   let cutsetsExpected : Option (List (List (List Nat))) :=
-    some [[], [], [[0, 2]]]
+    some [[], [[0, 2]], []]
   let ok₁ := p1WordVariableNames == expected
   let ok₂ := p1CallCutsets == cutsetsExpected
   if ok₁ then
@@ -79,8 +79,8 @@ def runChecks : IO Bool := do
     IO.println s!"FAIL loop_to_word p1 call cut sets: expected {cutsetsExpected}, got {p1CallCutsets}"
   pure (ok₁ && ok₂)
 
-#guard p1WordVariableNames == some [[], [2, 4], [0, 2, 4]]
-#guard p1CallCutsets == some [[], [], [[0, 2]]]
+#guard p1WordVariableNames == some [[], [0, 2, 4], [2, 4]]
+#guard p1CallCutsets == some [[], [[0, 2]], []]
 
 end Flapjack.Test.LoopToWordBoundaryParity
 

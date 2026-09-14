@@ -130,9 +130,9 @@ def cakeLongDivStackEntryCode (config : WordStackConfig) (width : Nat) :
     divisor in x6, and observes quotient x0 and remainder x3. -/
 def cakeLongDivStackAdapter : StackProg Nat :=
   stackSeq [
-    .arith .or 8 6 6,
-    .arith .or 4 3 3,
-    .arith .or 6 0 0,
+    .arith .or (2 + 6) 6 6,
+    .arith .or (2 + 2) 3 3,
+    .arith .or (2 + 4) 0 0,
     .call (some
       (stackSeq [
         .arith .or 0 2 2,

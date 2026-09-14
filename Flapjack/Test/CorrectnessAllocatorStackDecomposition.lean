@@ -22,7 +22,7 @@ example [NeZero width]
         registerCount bitmapRegister frameSlots storeConstsStub bitmapState
         renamedProgram = some (body, bitmapFinal) ∧
       wordStackMovesFromPhysical
-        { config with locations := allocation.locations } renamedParameters 2 =
+        { config with locations := allocation.locations } renamedParameters config.abiBase =
         some moves ∧
       stackProgram = wordStackJoin moves body ∧
       bitmapFinal = finalState := by

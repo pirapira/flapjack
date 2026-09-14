@@ -37,10 +37,10 @@ structure WordStackConfig where
   abiBase : Nat := 1
   deriving Repr
 
-/-! The surrounding allocator names physical registers in the port's
-    hardware-numbered space.  The CakeML ABI's first argument/result register
-    is stack register 1, which is hardware `x10`; the existing `+2` layout
-    supplies subsequent word locations. -/
+/-! The executable StackLang model carries hardware RISC-V register numbers
+    directly at the ABI boundary.  The CakeML ABI's first argument/result
+    register is stack register 1, which is hardware `x10`; the existing `+2`
+    layout supplies subsequent word locations. -/
 def wordStackAbiBase : Nat := 10
 
 def wordStackLocation (config : WordStackConfig) (name : Nat) :

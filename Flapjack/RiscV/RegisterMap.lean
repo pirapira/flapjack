@@ -254,4 +254,29 @@ theorem readRegisterInternal_eq_some_iff {width : Nat} (state : State width)
   unfold readRegisterInternal
   cases h : labRegisterOfNat name <;> simp
 
+/-- Write the value of an internal Cake stack register into a hardware-indexed
+state through the one-time `riscv_names` map.  This is the write counterpart of
+`readRegisterInternal`: the internal name is resolved to its hardware index
+exactly once and then written to the concrete register file.  Names outside the
+architectural range are ignored, and `writeRegister` already write-protects the
+hardware zero register. -/
+def writeRegisterInternalNat {width : Nat} (state : State width) (name : Nat)
+    (value : Word width) : State width :=
+  (labRegisterOfNat name).elim state (fun register => writeRegister state register value)
+
+/-- Writing an internal register whose name is out of architectural range is a
+no-op. -/
+@[simp] theorem writeRegisterInternalNat_of_none {width : Nat} (state : State width)
+    {name : Nat} (h : labRegisterOfNat name = none) (value : Word width) :
+    writeRegisterInternalNat state name value = state := by
+  simp [writeRegisterInternalNat, h]
+
+/-- Writing an internal register resolves the name through the Cake map and then
+writes the resulting hardware register. -/
+@[simp] theorem writeRegisterInternalNat_of_some {width : Nat} (state : State width)
+    {name : Nat} {register : Fin 32} (h : labRegisterOfNat name = some register)
+    (value : Word width) :
+    writeRegisterInternalNat state name value = writeRegister state register value := by
+  simp [writeRegisterInternalNat, h]
+
 end Flapjack.RiscV

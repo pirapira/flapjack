@@ -15,3 +15,33 @@ find_reg_imm_imm=Imm 5w
 find_reg_imm_reg=Reg 0
 
 find_reg_imm_ctxt=Reg 4
+
+comp_exp_const=Const 7w
+
+comp_exp_var=Var 6
+
+comp_exp_lookup=Lookup (Temp 9w)
+
+comp_exp_base_addr=Lookup CurrHeap
+
+comp_exp_top_addr=Op Add [Lookup CurrHeap; ShiftN Lsl (Lookup HeapLength) 1]
+
+comp_exp_nested_op=Op Add [Const 1w; Var 6]
+
+to_num_set_empty=[]
+
+to_num_set_ordered=[(3,()); (1,()); (2,())]
+
+to_num_set_duplicate=[(3,()); (1,()); (2,())]
+
+from_num_set_empty=[]
+
+from_num_set_ordered=[3; 1; 2]
+
+from_num_set_duplicate=[3; 1; 2]
+
+mk_new_cutset_empty=[(0,())]
+
+mk_new_cutset_mapped=[(0,()); (6,())]
+
+mk_new_cutset_duplicate=[(0,()); (6,())]

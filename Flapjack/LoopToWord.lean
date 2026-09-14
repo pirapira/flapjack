@@ -1,4 +1,4 @@
-import Flapjack.Loop
+import Flapjack.LoopAnalysis
 
 /-!
 # Loop-to-word context lookup
@@ -49,5 +49,40 @@ def makeCtxt : Nat → List Nat → List (Nat × Nat) → List (Nat × Nat)
   | _, [], context => context
   | next, name :: rest, context =>
       makeCtxt (next + 2) rest (insertVar name next context)
+
+/-! A list-backed representation of CakeML's `num_set` for the executable
+    Loop-to-Word boundary.  The source `toNumSet_def` builds an sptree set by
+    recursively inserting each input name; `loopInsert` is the existing
+    first-occurrence list-set adapter used by the RISC-V path. -/
+def toNumSet : List Nat → List Nat
+  | [] => []
+  | name :: names => loopInsert name (toNumSet names)
+
+theorem toNumSet_nodup (names : List Nat) : (toNumSet names).Nodup := by
+  induction names with
+  | nil => simp [toNumSet]
+  | cons name names ih =>
+      exact loopInsert_nodup name (toNumSet names) ih
+
+/-! The list-backed `num_set` already stores keys rather than `(key, unit)`
+    pairs.  Therefore CakeML's `fromNumSet_def` (`MAP FST (toAList t)`) is the
+    identity on this representation; its observable contract is the same key
+    list up to the source sptree traversal order. -/
+def fromNumSet (set : List Nat) : List Nat := set
+
+theorem fromNumSet_toNumSet (names : List Nat) :
+    fromNumSet (toNumSet names) = toNumSet names := by
+  rfl
+
+/-! List-backed port of `mk_new_cutset_def` from
+    `loop_to_wordScript.sml:51-53`.  The source always retains register zero
+    and maps each live source variable through `find_var` before rebuilding the
+    finite set. -/
+def mkNewCutset (context : List (Nat × Nat)) (live : List Nat) : List Nat :=
+  loopInsert 0 (toNumSet ((fromNumSet live).map (findVar context)))
+
+theorem mkNewCutset_nodup (context : List (Nat × Nat)) (live : List Nat) :
+    (mkNewCutset context live).Nodup := by
+  exact loopInsert_nodup 0 _ (toNumSet_nodup _)
 
 end Flapjack.LoopToWord

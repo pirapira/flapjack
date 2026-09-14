@@ -1,0 +1,41 @@
+{
+  "policy": "Differential-fuzz mismatch signatures that may pass without a new finding. Values list the owning P1 beads. Acceptance (acceptance/*) and tool failures (tool-*) are never known gaps and always surface as findings. Of the frame signatures, only frame/bitmap-table and frame/ffi-stub are known; any other frame/* signature surfaces as a finding. Signatures are shell-style patterns. The only artifact normalization is the documented cml_ prefix / _<digits> suffix strip on section names.",
+ "signatures": {
+  "sections/order": {
+   "beads": ["flapjack-pxn.8.5.10.3"],
+   "reason": "Flapjack appends the user entry function after the other user functions while CakeML places cml_main directly after cml_generated_main; tracked by the entry_order.pnk corpus fixture."
+  },
+  "bytes/user:*:len_eq": {
+   "beads": ["flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"],
+   "reason": "Known lowering differences in user function bodies (constant-return ABI, call lowering) with equal section length."
+  },
+  "bytes/user:*:len_ne": {
+   "beads": ["flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"],
+   "reason": "Known lowering differences in user function bodies (extra/missing instructions around returns and calls)."
+  },
+  "layout/user:*": {
+   "beads": ["flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"],
+   "reason": "User section base/length layout differences caused by the same tracked lowering differences."
+  },
+  "bytes/generated_main:len_eq": {
+   "beads": ["flapjack-pxn.8.5.10.2", "flapjack-pxn.8.5.10.3"],
+   "reason": "Generated entry initializer/call lowering differs from CakeML with equal length."
+  },
+  "bytes/generated_main:len_ne": {
+   "beads": ["flapjack-pxn.8.5.10.2", "flapjack-pxn.8.5.10.3"],
+   "reason": "Generated entry initializer/call lowering differs from CakeML with different length."
+  },
+   "layout/generated_main": {
+    "beads": ["flapjack-pxn.8.5.10.2", "flapjack-pxn.8.5.10.3"],
+    "reason": "Generated entry base/length layout differences caused by the same tracked entry lowering differences."
+   },
+   "frame/bitmap-table": {
+    "beads": ["flapjack-pxn.8.5.14.1"],
+    "reason": "cake_bitmaps .quad payload: CakeML emits live-pointer words (8/16/512 per collected live pointer set) while Flapjack emits a constant terminator word 2 per counted call continuation (crepBitmapCallEntries + replicate ... 2 in Flapjack/RiscV/ArtifactFormat.lean); call-site count can also drift after dead code elimination."
+   },
+   "frame/ffi-stub": {
+    "beads": ["flapjack-pxn.8.5.14.2"],
+    "reason": "CakeML emits a cake_<ffi>: jump stub (tail cdecl(...), .p2align) per distinct FFI name used via @name(...); Flapjack omits these stub sections entirely."
+   }
+  }
+}

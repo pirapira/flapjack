@@ -1,0 +1,1 @@
+flapjack-compile: Flapjack.SourceRiscVImageError.static (Flapjack.StatErr.scope "global variable is redeclared: g")

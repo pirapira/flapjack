@@ -87,6 +87,41 @@ runtime/entry/user sections without hiding byte differences, and succeeds only
 when every residual difference has an owning bead. This artifact audit
 complements the machine-execution fixture above; it does not replace it.
 
+## Differential fuzzing against `cake`
+
+`scripts/parity-difffuzz.py` is a deterministic differential fuzzer over the
+same boundary. It generates Pancake sources from a fixed grammar (or
+deterministically mutates the checked-in `Flapjack/Test/OriginalPancake`
+corpus), runs both compilers under `nice -n 10 timeout 20s`, and compares
+acceptance, diagnostics class, section names and order, entry addresses,
+section bytes, runtime-image metadata, and the static frame - not only
+acceptance. The only normalization is the documented `cml_` prefix and
+`_<digits>` suffix strip on section names.
+
+Every mismatch is classified into a signature (`sections/order`,
+`bytes/user:main:len_ne`, `frame/bitmap-table`, `acceptance/gap:entry`, ...).
+Signatures owned by a bead are listed in
+[`scripts/parity-difffuzz-gaps.json`](../scripts/parity-difffuzz-gaps.json);
+acceptance disagreements and tool failures are never owned, so they always
+surface. Unknown signatures exit nonzero, and each such finding is written
+under `--out` with the source, both outputs, tool versions (binary sha256 +
+git commit), exact command lines, and a standalone `replay.sh`, then
+delta-debugged with `--minimize` and filed as a P1 bead.
+
+Typical bounded runs (each a few minutes, safe for a laptop):
+
+```sh
+python3 scripts/parity-difffuzz.py --smoke                  # fixed 9-case corpus, must pass
+python3 scripts/parity-difffuzz.py --mode mixed --seed 3 --count 80 \
+    --out difffuzz-findings --minimize                      # bounded campaign
+python3 scripts/parity-difffuzz.py --replay difffuzz-findings/<case>
+```
+
+Minimized, replayable reproducers for the found mismatches are preserved under
+[`scripts/parity-difffuzz-findings/`](../scripts/parity-difffuzz-findings)
+(one directory per owning bead). Do not put unbounded fuzzing into CI; the
+smoke corpus is the small deterministic check.
+
 ## Review and Beads
 
 Keep the porting Bead open until the original evidence and the Lean test are

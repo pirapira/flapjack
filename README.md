@@ -75,7 +75,11 @@ cakeml/developers/bin/cake --pancake --target=riscv < program.pnk > program.cake
 
 Use the parity tests, [`docs/PARITY-TESTING.md`](docs/PARITY-TESTING.md), and
 [`docs/SOUNDNESS.md`](docs/SOUNDNESS.md) when interpreting comparisons between
-the two outputs.
+the two outputs. For randomized cross-checking, the deterministic
+differential fuzzer `scripts/parity-difffuzz.py` compares full artifacts
+(sections, bytes, frame, acceptance) against `cake` and files every unknown
+mismatch as a bead; see the differential-fuzzing section of
+[`docs/PARITY-TESTING.md`](docs/PARITY-TESTING.md).
 
 ## Project map
 

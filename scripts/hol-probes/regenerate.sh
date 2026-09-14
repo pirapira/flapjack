@@ -261,6 +261,9 @@ run_probe crep_store_global_probeScript.sml crep_store_global_probe.out \
 run_probe prog_if_probeScript.sml prog_if_probe.out \
   prog_if_basic prog_if_basic \
   "$cake_dir/pancake/crep_to_loopScript.sml"
+run_probe compile_crepop_probeScript.sml compile_crepop_probe.out \
+  compile_crepop_mul_riscv compile_crepop_mul_riscv \
+  "$cake_dir/pancake/crep_to_loopScript.sml"
 run_probe pan_empty_locals_probeScript.sml pan_empty_locals_probe.out \
   empty_locals empty_locals_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"

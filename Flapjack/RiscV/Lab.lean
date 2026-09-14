@@ -228,6 +228,17 @@ def labCompilePlain [NeZero width] :
   | .dataBufferWrite address value =>
       (wordInstToInstruction (.mem .store value address)).map List.singleton
 
+/-! StackLang's `LocValue` uses register 0 as the conventional link
+    register.  The port's ordinary register fields are hardware-numbered, so
+    this special carrier must be translated separately; sending port register
+    0 through `portToStack` would select the architectural zero register and
+    silently discard FFI/install return addresses. -/
+def labLocValueRegister (register : Nat) : Option (Fin 32) :=
+  if register = 0 then
+    labRegisterOfNat (portToStack portLinkRegister)
+  else
+    labRegisterOfNat (portToStack register)
+
 def labCompileAsm [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
@@ -241,7 +252,7 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
       pure [.jal link (labOffset target position)]
   | .locValue register target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
+      let register ← labLocValueRegister register
       let target ← labResolveRef sectionId labels target
       pure [.addi register zero (BitVec.ofNat width target)]
   | .linkValue target => do
@@ -386,7 +397,7 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
       pure [.jal link (labOffset target position)]
   | .locValue register target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
+      let register ← labLocValueRegister register
       let target ← labResolveProgramRef labels target
       pure [.addi register zero (BitVec.ofNat width target)]
   | .linkValue target => do
@@ -495,7 +506,7 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       pure [.jal link (labOffset target position)]
   | .locValue register target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
+      let register ← labLocValueRegister register
       let target ← labResolveProgramRef labels target
       pure [.addi register zero (BitVec.ofNat width target)]
   | .linkValue target => do

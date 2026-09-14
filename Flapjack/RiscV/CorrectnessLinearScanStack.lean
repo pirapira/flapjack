@@ -89,7 +89,7 @@ theorem wordAllocateLinearScanFunctionWithEntryToStack_contract
       renamedProgram = some body)
     (hmoves : wordStackMovesFromPhysical
       { config with locations := wordLinearScanLocations allocation }
-      renamedParameters 2 = some moves)
+      renamedParameters wordStackAbiBase = some moves)
     (hentry : evalWordStackMachine machineState moves = some middle)
     (hbodyEval : evalWordStackMachine middle body = some final) :
     wordLinearScanAllocationSafe
@@ -107,7 +107,7 @@ theorem wordAllocateLinearScanFunctionWithEntryToStack_contract
         renamedProgram = some body ∧
       wordStackMovesFromPhysical
         { config with locations := wordLinearScanLocations allocation }
-        renamedParameters 2 = some moves ∧
+        renamedParameters wordStackAbiBase = some moves ∧
       stackProgram = wordStackJoin moves body ∧
       evalWordStackMachine machineState stackProgram = some final := by
   have hsafe := wordAllocateLinearScanFunctionWithEntry_safe

@@ -30,7 +30,7 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_decompose
         registerCount bitmapRegister frameSlots storeConstsStub bitmapState
         renamedProgram = some (body, bitmapFinal) ∧
       wordStackMovesFromPhysical
-        { config with locations := allocation.locations } renamedParameters 2 =
+        { config with locations := allocation.locations } renamedParameters config.abiBase =
         some moves ∧
       stackProgram = wordStackJoin moves body ∧
       bitmapFinal = finalState := by
@@ -49,7 +49,7 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_decompose
       cases bodyResult with
       | mk body bitmapFinal =>
           cases hmoves : wordStackMovesFromPhysical
-              { config with locations := allocation.locations } renamedParameters 2 with
+              { config with locations := allocation.locations } renamedParameters config.abiBase with
           | none => simp [hbody, hmoves] at hstack
           | some moves =>
               have hresult :

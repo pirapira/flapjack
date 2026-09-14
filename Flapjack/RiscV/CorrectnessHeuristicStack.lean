@@ -205,7 +205,7 @@ theorem evalWordStackMachine_wordAllocateGraphFunctionWithHeuristicsEntryToStack
       renamedProgram = some (body, bodyState))
     (hmoves : wordStackMovesFromPhysical
       { config with locations := wordGraphLocations allocation colours stackStart }
-      renamedParameters wordStackAbiBase = some moves)
+      renamedParameters config.abiBase = some moves)
     (hentry : evalWordStackMachine machineState moves = some middle)
     (hbodyEval : evalWordStackMachine middle body = some final) :
     wordGraphTagsAreFixed allocation.graph = true ∧
@@ -223,7 +223,7 @@ theorem evalWordStackMachine_wordAllocateGraphFunctionWithHeuristicsEntryToStack
         renamedProgram = some (body, bodyState) ∧
       wordStackMovesFromPhysical
         { config with locations := wordGraphLocations allocation colours stackStart }
-        renamedParameters wordStackAbiBase = some moves ∧
+        renamedParameters config.abiBase = some moves ∧
       stackProgram = wordStackJoin moves body ∧
       evalWordStackMachine machineState stackProgram = some final := by
   have hcontract := wordAllocateGraphFunctionWithHeuristicsEntryToStack_contract

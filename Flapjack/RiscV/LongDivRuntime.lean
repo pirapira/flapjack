@@ -109,19 +109,20 @@ def cakeWordStackHelperConfig (program : WordProg Nat) : WordStackConfig :=
       (fun name => (name, .register (cakeWordStackHelperRegister name)))
     scratch := 31
     stackBase := 0
-    addressScratch := 29 }
+    addressScratch := 29
+    abiBase := 2 }
 
 def cakeLongDiv1StackEntryCode (config : WordStackConfig) (width : Nat) :
     Option (StackProg Nat) := do
   let body ← cakeLongDiv1StackCode config width
   let moves ← wordStackMovesFromPhysical config
-    [0, 2, 4, 6, 8, 10, 12] 2
+    [0, 2, 4, 6, 8, 10, 12] config.abiBase
   pure (wordStackJoin moves body)
 
 def cakeLongDivStackEntryCode (config : WordStackConfig) (width : Nat) :
     Option (StackProg Nat) := do
   let body ← cakeLongDivStackCode config width
-  let moves ← wordStackMovesFromPhysical config [0, 2, 4, 6] 2
+  let moves ← wordStackMovesFromPhysical config [0, 2, 4, 6] config.abiBase
   pure (wordStackJoin moves body)
 
 /-! Adapt the source helper's Loc convention to the normalized StackLang

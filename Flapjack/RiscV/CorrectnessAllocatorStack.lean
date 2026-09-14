@@ -82,7 +82,7 @@ theorem evalWordStackMachine_wordAllocateSsaFunctionWithEntryAndSpillToStack
       registerCount bitmapRegister frameSlots storeConstsStub bitmapState
       renamedProgram = some (body, bodyState))
     (hmoves : wordStackMovesFromPhysical
-      { config with locations := allocation.locations } renamedParameters 2 =
+      { config with locations := allocation.locations } renamedParameters config.abiBase =
       some moves)
     (hentry : evalWordStackMachine machineState moves = some middle)
     (hbodyEval : evalWordStackMachine middle body = some final) :

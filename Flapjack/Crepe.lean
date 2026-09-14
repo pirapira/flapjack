@@ -63,6 +63,27 @@ inductive CrepProg (α : Type u) where
   | tick
   deriving Repr
 
+/-! Faithful port of `crepLang$assigned_free_vars` from
+    `cakeml/pancake/crepLangScript.sml:149-162`. -/
+def crepAssignedFreeVars : CrepProg α → List Nat
+  | .skip => []
+  | .dec name _ body =>
+      (crepAssignedFreeVars body).filter (fun candidate => candidate != name)
+  | .assign name _ => [name]
+  | .primitive names _ _ => names
+  | .seq first second => crepAssignedFreeVars first ++ crepAssignedFreeVars second
+  | .ite _ thenBranch elseBranch =>
+      crepAssignedFreeVars thenBranch ++ crepAssignedFreeVars elseBranch
+  | .while _ body => crepAssignedFreeVars body
+  | .call (some (returns, some (_, handler))) _ _ =>
+      returns ++ crepAssignedFreeVars handler
+  | .call (some (returns, none)) _ _ => returns
+  | .shMem _ name _ => [name]
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def crepExpVars : CrepExp α → List Nat
   | .const _ => []
   | .var name => [name]

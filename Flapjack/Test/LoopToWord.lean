@@ -43,6 +43,8 @@ def originalCompExpTopAddr : WordExp Nat := .op .add
 def originalCompExpNestedOp : WordExp Nat := .op .add [.const 1, .var 6]
 def originalToNumSetOrdered : List Nat := [3, 1, 2]
 def originalToNumSetDuplicate : List Nat := [3, 1, 2]
+def originalFromNumSetOrdered : List Nat := [3, 1, 2]
+def originalFromNumSetDuplicate : List Nat := [3, 1, 2]
 
 def sameRegImm : RegImm Nat → RegImm Nat → Bool
   | .imm left, .imm right => left == right
@@ -126,6 +128,11 @@ example : wordCompileExp ({ vars := [(3, 6)] } : WordContext)
 example : toNumSet [] = [] := rfl
 example : sameNatSet (toNumSet [1, 2, 3]) originalToNumSetOrdered := by decide
 example : sameNatSet (toNumSet [3, 1, 3, 2]) originalToNumSetDuplicate := by decide
+example : fromNumSet [] = [] := rfl
+example : sameNatSet (fromNumSet (toNumSet [1, 2, 3]))
+    originalFromNumSetOrdered := by decide
+example : sameNatSet (fromNumSet (toNumSet [3, 1, 3, 2]))
+    originalFromNumSetDuplicate := by decide
 
 def runChecks : IO Bool := do
   let mut ok := true
@@ -171,8 +178,14 @@ def runChecks : IO Bool := do
     IO.println "FAIL LoopToWord.to_num_set ordered"; ok := false
   if !sameNatSet (toNumSet [3, 1, 3, 2]) originalToNumSetDuplicate then
     IO.println "FAIL LoopToWord.to_num_set duplicate"; ok := false
+  if !sameNatSet (fromNumSet (toNumSet [1, 2, 3]))
+      originalFromNumSetOrdered then
+    IO.println "FAIL LoopToWord.from_num_set ordered"; ok := false
+  if !sameNatSet (fromNumSet (toNumSet [3, 1, 3, 2]))
+      originalFromNumSetDuplicate then
+    IO.println "FAIL LoopToWord.from_num_set duplicate"; ok := false
   if ok then
-    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set parity"
+    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set/from_num_set parity"
   pure ok
 
 end Flapjack.Test.LoopToWord

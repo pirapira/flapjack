@@ -64,4 +64,14 @@ theorem toNumSet_nodup (names : List Nat) : (toNumSet names).Nodup := by
   | cons name names ih =>
       exact loopInsert_nodup name (toNumSet names) ih
 
+/-! The list-backed `num_set` already stores keys rather than `(key, unit)`
+    pairs.  Therefore CakeML's `fromNumSet_def` (`MAP FST (toAList t)`) is the
+    identity on this representation; its observable contract is the same key
+    list up to the source sptree traversal order. -/
+def fromNumSet (set : List Nat) : List Nat := set
+
+theorem fromNumSet_toNumSet (names : List Nat) :
+    fromNumSet (toNumSet names) = toNumSet names := by
+  rfl
+
 end Flapjack.LoopToWord

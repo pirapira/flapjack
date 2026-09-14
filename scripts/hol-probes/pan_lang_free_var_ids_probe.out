@@ -1,0 +1,8 @@
+empty=[]
+assign_local=[«v»; «x»]
+assign_global=[«x»]
+declaration=[«e»]
+conditional=[«g»; «p»; «q»]
+ordinary_call=[«a»]
+handled_call=[«h»; «z»; «q»; «a»]
+dec_call=[«x»; «r»; «a»]

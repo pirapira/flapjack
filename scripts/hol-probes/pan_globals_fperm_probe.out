@@ -1,0 +1,10 @@
+recursive_control=Seq
+  (If (Const 0w) (TailCall «bar» [])
+     (While (Const 1w) (Dec «x» One (Const 2w) (TailCall «bar» []))))
+  (Assign Local «x» (Const 3w))
+
+handler=StandAloneCall (SOME («E»,«exn»,TailCall «bar» [])) «worker» []
+
+deccall=DecCall «x» One «foo» [] Skip
+
+unchanged=Return (Const 9w)

@@ -1,0 +1,3 @@
+keyword=[Lf (TOK (KeywordT SkipK),Locs UNKNOWNpt UNKNOWNpt)]
+
+identifier=[Lf (TOK (IdentT "name"),Locs UNKNOWNpt UNKNOWNpt)]

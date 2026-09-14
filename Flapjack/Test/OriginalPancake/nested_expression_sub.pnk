@@ -1,0 +1,11 @@
+fun 1 main() {
+  var a = 10;
+  var b = 3;
+  var c = 4;
+  var d = 5;
+  var e = 6;
+  var f = 7;
+  var h = 0;
+  h = (((((a - b) - c) - d) - e) - f);
+  return h;
+}

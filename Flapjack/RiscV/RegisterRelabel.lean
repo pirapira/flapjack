@@ -41,6 +41,94 @@ def relabelRegisters (forward : Fin 32 → Fin 32) (state : State width) : State
     (name : Fin 32) :
     readRegister (relabelRegisters forward state) name = readRegister state (forward name) := rfl
 
+@[simp] theorem relabelRegisters_id (state : State width) :
+    relabelRegisters id state = state := by
+  cases state
+  simp [relabelRegisters]
+
+/-- The Cake register map fixes the canonical all-zero initial state. -/
+@[simp] theorem relabelRegisters_riscvForward_zeroState [NeZero width] :
+    relabelRegisters riscvForward (zeroState width) = zeroState width := rfl
+
+/-- Relabeling twice by `g` then `f` is one relabeling by their composition
+`fun name => g (f name)`.  This lets the Cake map be applied at a single
+boundary instead of being threaded twice through the relation. -/
+theorem relabelRegisters_comp (f g : Fin 32 → Fin 32) (state : State width) :
+    relabelRegisters f (relabelRegisters g state) =
+      relabelRegisters (fun name => g (f name)) state := by
+  cases state
+  simp [relabelRegisters]
+
+/-- Relabeling by a surjective map is injective on states: the register file is
+the only relabeled component, and surjectivity makes the image cover every
+hardware register, so equal images force equal register files. -/
+theorem relabelRegisters_injective (forward : Fin 32 → Fin 32)
+    (hsurj : Function.Surjective forward) :
+    Function.Injective (relabelRegisters (width := width) forward) := by
+  intro s1 s2 h
+  have h' := h
+  cases s1 with
+  | mk pc1 regs1 mem1 privilege1 mode1 =>
+    cases s2 with
+    | mk pc2 regs2 mem2 privilege2 mode2 =>
+      simp only [relabelRegisters, State.mk.injEq] at h'
+      obtain ⟨hpc, hregs, hmem, hprivilege, hmode⟩ := h'
+      subst hpc
+      subst hmem
+      subst hprivilege
+      subst hmode
+      congr 1
+      funext hardware
+      obtain ⟨name, rfl⟩ := hsurj hardware
+      exact congrFun hregs name
+
+/-- The concrete Cake register map relabels the register file injectively,
+because it is surjective on the 32 hardware registers. -/
+theorem relabelRegisters_riscvForward_injective :
+    Function.Injective (relabelRegisters (width := width) riscvForward) :=
+  relabelRegisters_injective riscvForward riscvForward_surjective
+
+/-- The one-time Cake relabeling is invertible: applying the eleven-fold iterate
+after it returns the original state.  This supplies the explicit inverse needed
+to undo the relabeling on the register file. -/
+theorem relabelRegisters_riscvForward_comp_inverse (state : State width) :
+    relabelRegisters riscvForward (relabelRegisters (iterForward 11) state) =
+      state := by
+  rw [relabelRegisters_comp]
+  have hid : (fun register => iterForward 11 (riscvForward register)) = id := by
+    funext register
+    exact iterForward_eleven_forward register
+  rw [hid, relabelRegisters_id]
+
+/-- The same explicit inverse also undoes the relabeling when it is applied
+second: undoing after relabeling returns the original state.  Together with
+`relabelRegisters_riscvForward_comp_inverse` this makes the pair a two-sided
+inverse on states. -/
+theorem relabelRegisters_riscvForward_comp_inverse_left (state : State width) :
+    relabelRegisters (iterForward 11) (relabelRegisters riscvForward state) =
+      state := by
+  rw [relabelRegisters_comp]
+  have hid : (fun register => riscvForward (iterForward 11 register)) = id := by
+    funext register
+    exact iterForward_forward_eleven register
+  rw [hid, relabelRegisters_id]
+
+/-- The one-time Cake relabeling is surjective on states, because its explicit
+inverse `relabelRegisters (iterForward 11)` recovers any original state. -/
+theorem relabelRegisters_riscvForward_surjective :
+    Function.Surjective (relabelRegisters (width := width) riscvForward) := by
+  intro state
+  exact ⟨relabelRegisters (iterForward 11) state,
+    relabelRegisters_riscvForward_comp_inverse state⟩
+
+/-- The one-time Cake relabeling permutes the state space: it is injective and
+surjective.  This packages the inverse-step facts for use as a bijection
+boundary in the `riscv_names` rebase. -/
+theorem relabelRegisters_riscvForward_bijective :
+    Function.Injective (relabelRegisters (width := width) riscvForward) ∧
+      Function.Surjective (relabelRegisters (width := width) riscvForward) :=
+  ⟨relabelRegisters_riscvForward_injective, relabelRegisters_riscvForward_surjective⟩
+
 /-- Writing an internal register in the relabeled state is the same as writing
 its hardware index in the original state, as long as the relabeling is
 injective and maps the hardwired zero register onto the hardwired zero
@@ -135,5 +223,44 @@ matching the hardware hardwired zero. -/
   have hzero : riscvForward (27 : Fin 32) = 0 :=
     (riscvForward_eq_zero_iff (register := 27)).mpr (by decide)
   simp [writeRegisterInternal, hzero]
+
+/-- Reading back an internal register just written under the `riscvForward`
+relabeling returns the written value, as long as the write was not dropped at the
+hardwired zero register. -/
+theorem readRegister_writeRegisterInternal_riscvForward_self (state : State width)
+    (name : Fin 32) (value : Word width) (himage : riscvForward name ≠ 0) :
+    readRegister (writeRegisterInternal riscvForward state name value) name = value := by
+  unfold writeRegisterInternal readRegister
+  rw [if_neg himage]
+  simp
+
+/-- Reading any other internal register after an internal write under the
+`riscvForward` relabeling is unchanged.  Together with
+`readRegister_writeRegisterInternal_riscvForward_self` this shows the internal
+accessor behaves as an ordinary register write for every role except the
+hardwired zero image. -/
+theorem readRegister_writeRegisterInternal_riscvForward_other (state : State width)
+    (name other : Fin 32) (value : Word width) (hne : other ≠ name) :
+    readRegister (writeRegisterInternal riscvForward state name value) other =
+      readRegister state other := by
+  unfold writeRegisterInternal readRegister
+  by_cases himage : riscvForward name = 0
+  · rw [if_pos himage]
+  · rw [if_neg himage]
+    simp [hne]
+
+/-- The CakeML internal zero/link role register `27` is never modified by the
+internal accessor under the `riscvForward` relabeling: writes aimed at it are
+dropped at the hardwired architectural zero, and writes to any other role leave
+it untouched. -/
+theorem readRegister_writeRegisterInternal_riscvForward_zero (state : State width)
+    (name : Fin 32) (value : Word width) :
+    readRegister (writeRegisterInternal riscvForward state name value) 27 =
+      readRegister state 27 := by
+  by_cases hname : name = (27 : Fin 32)
+  · subst hname
+    rw [writeRegisterInternal_riscvForward_zero]
+  · exact readRegister_writeRegisterInternal_riscvForward_other state name 27 value
+      (fun h => hname h.symm)
 
 end Flapjack.RiscV

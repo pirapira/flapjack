@@ -39,10 +39,9 @@ def wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry
   let tree := WordClashTree.seq (.set renamedParameters)
     (wordClashTree renamedProgram [])
   let forced := wordProgForcedClashes renamedProgram
-  let colour := wordOracleColour oracle
   if wordOracleColouringOk colours stackStart tree forced oracle then
     some (.oracle state renamedParameters
-      (wordApplyColour colour renamedProgram))
+      (wordApplyTotalColour oracle renamedProgram))
   else if 4 ≤ algorithm then
     match wordAllocateLinearScanFunctionWithEntry parameters program colours
         stackStart with
@@ -258,10 +257,9 @@ def wordAllocateFunctionWithOracleOrHeuristicOrSpill
   let tree := WordClashTree.seq (.set renamedParameters)
     (wordClashTree renamedProgram [])
   let forced := wordProgForcedClashes renamedProgram
-  let colour := wordOracleColour oracle
   if wordOracleColouringOk colours stackStart tree forced oracle then
     some (.oracle state renamedParameters
-      (wordApplyColour colour renamedProgram))
+      (wordApplyTotalColour oracle renamedProgram))
   else
     match wordAllocateGraphFunctionWithHeuristics parameters program fixedSources
         algorithm currentFunction colours stackStart with
@@ -342,10 +340,9 @@ def wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry
   let tree := WordClashTree.seq (.set renamedParameters)
     (wordClashTree renamedProgram [])
   let forced := wordProgForcedClashes renamedProgram
-  let colour := wordOracleColour oracle
   if wordOracleColouringOk colours stackStart tree forced oracle then
     some (.oracle state renamedParameters
-      (wordApplyColour colour renamedProgram))
+      (wordApplyTotalColour oracle renamedProgram))
   else
     match wordAllocateGraphFunctionWithHeuristicsEntryRenamed parameters program
         fixedSources algorithm currentFunction colours stackStart with

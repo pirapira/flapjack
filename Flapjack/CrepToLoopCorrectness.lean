@@ -1199,7 +1199,7 @@ theorem crepToLoop_ite_false_of_empty_prefix
     (hcode : (loopCompileExp context (context.maxVar + 1) live condition).code = [])
     (hnext : (loopCompileExp context (context.maxVar + 1) live condition).nextTemp =
       context.maxVar + 1)
-    (hlive : (loopCompileExp context (context.maxVar + 1) live condition).live = live)
+    (_hlive : (loopCompileExp context (context.maxVar + 1) live condition).live = live)
     (hvalue : evalCrepFullExp state.locals state.memory baseAddress topAddress
       condition = some 0)
     (hloopValue : evalLoopExp (loopStateOfCrepState state)
@@ -1232,7 +1232,7 @@ theorem crepToLoop_ite_false_of_empty_prefix
   · simp [loopCompileProg, loopNestedSeq,
       evalLoopProgWithCallsAndFfi, evalLoopProg,
       evalLoopCondition, loopStateOfCrepState, updateLoopLocal,
-      hcode, hnext, hlive,
+      hcode, hnext,
       hloopValue']
     exact hloopElse
 
@@ -1253,7 +1253,7 @@ theorem crepToLoop_ite_true_of_empty_prefix
     (hcode : (loopCompileExp context (context.maxVar + 1) live condition).code = [])
     (hnext : (loopCompileExp context (context.maxVar + 1) live condition).nextTemp =
       context.maxVar + 1)
-    (hlive : (loopCompileExp context (context.maxVar + 1) live condition).live = live)
+    (_hlive : (loopCompileExp context (context.maxVar + 1) live condition).live = live)
     (hvalue : evalCrepFullExp state.locals state.memory baseAddress topAddress
       condition = some 1)
     (hone : (1 : α) ≠ 0)
@@ -1287,7 +1287,7 @@ theorem crepToLoop_ite_true_of_empty_prefix
   · simp [loopCompileProg, loopNestedSeq,
       evalLoopProgWithCallsAndFfi, evalLoopProg,
       evalLoopCondition, loopStateOfCrepState, updateLoopLocal,
-      hcode, hnext, hlive, hone, hloopValue']
+      hcode, hnext, hone, hloopValue']
     exact hloopThen
 
 theorem crepToLoop_while_false_of_empty_prefix
@@ -1308,7 +1308,7 @@ theorem crepToLoop_while_false_of_empty_prefix
     (hcode : (loopCompileExp context (context.maxVar + 1) live condition).code = [])
     (hnext : (loopCompileExp context (context.maxVar + 1) live condition).nextTemp =
       context.maxVar + 1)
-    (hlive : (loopCompileExp context (context.maxVar + 1) live condition).live = live)
+    (_hlive : (loopCompileExp context (context.maxVar + 1) live condition).live = live)
     (hvalue : evalCrepFullExp state.locals state.memory baseAddress topAddress
       condition = some 0)
     (hloopValue : evalLoopExp (loopStateOfCrepState state)
@@ -1333,7 +1333,7 @@ theorem crepToLoop_while_false_of_empty_prefix
     loopControlLocal, loopCompileProg, loopNestedSeq,
     evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopCondition,
     evalLoopRepeatWithCallsAndFfi, loopStateOfCrepState,
-    updateLoopLocal, hname, hcode, hnext, hlive, hloopValue']
+    updateLoopLocal, hname, hcode, hnext, hloopValue']
 
 theorem crepToLoop_while_true_break_of_empty_prefix
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -1352,7 +1352,7 @@ theorem crepToLoop_while_true_break_of_empty_prefix
     (hcode : (loopCompileExp context (context.maxVar + 1) live condition).code = [])
     (hnext : (loopCompileExp context (context.maxVar + 1) live condition).nextTemp =
       context.maxVar + 1)
-    (hlive : (loopCompileExp context (context.maxVar + 1) live condition).live = live)
+    (_hlive : (loopCompileExp context (context.maxVar + 1) live condition).live = live)
     (hvalue : evalCrepFullExp state.locals state.memory baseAddress topAddress
       condition = some 1)
     (hloopValue : evalLoopExp (loopStateOfCrepState state)
@@ -1377,7 +1377,7 @@ theorem crepToLoop_while_true_break_of_empty_prefix
     loopControlLocal, loopCompileProg, loopNestedSeq,
     evalLoopProgWithCallsAndFfi, evalLoopProg,
     evalLoopCondition, evalLoopRepeatWithCallsAndFfi,
-    loopStateOfCrepState, updateLoopLocal, hname, hcode, hnext, hlive,
+    loopStateOfCrepState, updateLoopLocal, hname, hcode, hnext,
     hloopValue']
 
 theorem crepToLoop_return_const_agreement
@@ -1506,7 +1506,7 @@ theorem crepToLoop_dec_compose_of_empty_prefix
     (hcode : (loopCompileExp context (context.maxVar + 1) live expression).code = [])
     (hnext : (loopCompileExp context (context.maxVar + 1) live expression).nextTemp =
       context.maxVar + 1)
-    (hlive : (loopCompileExp context (context.maxVar + 1) live expression).live = live)
+    (_hlive : (loopCompileExp context (context.maxVar + 1) live expression).live = live)
     (hvalue : evalCrepFullExp state.locals state.memory baseAddress topAddress
       expression = some value)
     (hloopValue : evalLoopExp (loopStateOfCrepState state)
@@ -1556,7 +1556,7 @@ theorem crepToLoop_dec_compose_of_empty_prefix
   simp [evalCrepFullProg, hvalue, hcrepBody, crepControlValues,
     restoreCrepResult, loopCompileProg, loopNestedSeq,
     evalLoopProgWithCallsAndFfi, evalLoopProg, loopStateOfCrepState,
-    hcode, hnext, hlive, hloopValue', hloopBody']
+    hcode, hnext, hloopValue', hloopBody']
   exact hresult
 
 /-!
@@ -3150,7 +3150,7 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_const
       cases targetFuel with
       | zero =>
           simp [loopCompileProg, loopCompileExp.loopCompileExps,
-            loopCompileExps, loopTempNames,
+            loopCompileExp, loopCompileExps, loopNestedSeq, loopTempNames,
             loopAssignTemps, evalLoopProgWithPrimitiveCallsAndFfi] at hloop
       | succ targetFuel =>
           cases targetFuel with
@@ -3159,7 +3159,7 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_const
                 loopCompileExp, loopCompileExps, loopNestedSeq,
                 loopTempNames, loopAssignTemps,
                 evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
-                loopReadLocals, loopStateOfCrepState] at hloop
+                evalLoopExp, loopStateOfCrepState] at hloop
           | succ targetFuel =>
               cases targetFuel with
               | zero =>
@@ -5194,7 +5194,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_var
           cases targetFuel with
           | zero =>
               simp [loopCompileProg, loopCompileExp.loopCompileExps,
-                loopCompileExps, loopTempNames, loopAssignTemps,
+                loopCompileExp, loopCompileExps, loopNestedSeq,
+                loopTempNames, loopAssignTemps,
                 evalLoopProgWithPrimitiveCallsAndFfi] at hloop
           | succ targetFuel =>
               cases targetFuel with
@@ -5203,7 +5204,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_var
                     loopCompileExp, loopCompileExps, loopNestedSeq,
                     loopTempNames, loopAssignTemps,
                     evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
-                    loopReadLocals, loopStateOfCrepState] at hloop
+                    evalLoopExp, loopStateOfCrepState,
+                    hsource] at hloop
               | succ targetFuel =>
                   cases targetFuel with
                   | zero =>
@@ -5251,7 +5253,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_add_const
       cases targetFuel with
       | zero =>
           simp [loopCompileProg, loopCompileExp.loopCompileExps,
-            loopCompileExps, loopTempNames, loopAssignTemps,
+            loopCompileExp, loopCompileExps, loopNestedSeq,
+            loopTempNames, loopAssignTemps,
             evalLoopProgWithPrimitiveCallsAndFfi] at hloop
       | succ targetFuel =>
           cases targetFuel with
@@ -5259,7 +5262,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_add_const
               simp [loopCompileProg, loopCompileExp.loopCompileExps,
                 loopCompileExp, loopCompileExps, loopNestedSeq,
                 loopTempNames, loopAssignTemps,
-                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg] at hloop
+                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+                evalLoopExp] at hloop
           | succ targetFuel =>
               cases targetFuel with
               | zero =>
@@ -5307,7 +5311,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_binop_const_const
       cases targetFuel with
       | zero =>
           simp [loopCompileProg, loopCompileExp.loopCompileExps,
-            loopCompileExps, loopTempNames, loopAssignTemps,
+            loopCompileExp, loopCompileExps, loopNestedSeq,
+            loopTempNames, loopAssignTemps,
             evalLoopProgWithPrimitiveCallsAndFfi] at hloop
       | succ targetFuel =>
           cases targetFuel with
@@ -5315,7 +5320,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_binop_const_const
               simp [loopCompileProg, loopCompileExp.loopCompileExps,
                 loopCompileExp, loopCompileExps, loopNestedSeq,
                 loopTempNames, loopAssignTemps,
-                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg] at hloop
+                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+                evalLoopExp] at hloop
           | succ targetFuel =>
               cases targetFuel with
               | zero =>
@@ -5367,7 +5373,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_lsl_const_const
       cases targetFuel with
       | zero =>
           simp [loopCompileProg, loopCompileExp.loopCompileExps,
-            loopCompileExps, loopTempNames, loopAssignTemps,
+            loopCompileExp, loopCompileExps, loopNestedSeq,
+            loopTempNames, loopAssignTemps,
             evalLoopProgWithPrimitiveCallsAndFfi] at hloop
       | succ targetFuel =>
           cases targetFuel with
@@ -5375,7 +5382,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_lsl_const_const
               simp [loopCompileProg, loopCompileExp.loopCompileExps,
                 loopCompileExp, loopCompileExps, loopNestedSeq,
                 loopTempNames, loopAssignTemps,
-                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg] at hloop
+                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+                evalLoopExp, evalLoopShift] at hloop
           | succ targetFuel =>
               cases targetFuel with
               | zero =>
@@ -5423,7 +5431,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_lsr_const_const
       cases targetFuel with
       | zero =>
           simp [loopCompileProg, loopCompileExp.loopCompileExps,
-            loopCompileExps, loopTempNames, loopAssignTemps,
+            loopCompileExp, loopCompileExps, loopNestedSeq,
+            loopTempNames, loopAssignTemps,
             evalLoopProgWithPrimitiveCallsAndFfi] at hloop
       | succ targetFuel =>
           cases targetFuel with
@@ -5431,7 +5440,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_lsr_const_const
               simp [loopCompileProg, loopCompileExp.loopCompileExps,
                 loopCompileExp, loopCompileExps, loopNestedSeq,
                 loopTempNames, loopAssignTemps,
-                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg] at hloop
+                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+                evalLoopExp, evalLoopShift] at hloop
           | succ targetFuel =>
               cases targetFuel with
               | zero =>
@@ -5479,7 +5489,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_sub_const
       cases targetFuel with
       | zero =>
           simp [loopCompileProg, loopCompileExp.loopCompileExps,
-            loopCompileExps, loopTempNames, loopAssignTemps,
+            loopCompileExp, loopCompileExps, loopNestedSeq,
+            loopTempNames, loopAssignTemps,
             evalLoopProgWithPrimitiveCallsAndFfi] at hloop
       | succ targetFuel =>
           cases targetFuel with
@@ -5487,7 +5498,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_sub_const
               simp [loopCompileProg, loopCompileExp.loopCompileExps,
                 loopCompileExp, loopCompileExps, loopNestedSeq,
                 loopTempNames, loopAssignTemps,
-                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg] at hloop
+                evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
+                evalLoopExp] at hloop
           | succ targetFuel =>
               cases targetFuel with
               | zero =>
@@ -5566,7 +5578,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_mul_const
       cases targetFuel with
       | zero =>
           simp [hmulExp, loopCompileProg, loopCompileExp.loopCompileExps,
-            loopCompileExps, loopTempNames, loopAssignTemps,
+            loopCompileExps, loopNestedSeq,
+            loopTempNames, loopAssignTemps,
             evalLoopProgWithPrimitiveCallsAndFfi] at hloop
       | succ targetFuel =>
           cases targetFuel with
@@ -5574,7 +5587,7 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_mul_const
               simp [hmulExp, loopCompileProg, loopCompileExp.loopCompileExps,
                 loopCompileExps, loopNestedSeq, loopTempNames,
                 loopAssignTemps, evalLoopProgWithPrimitiveCallsAndFfi,
-                evalLoopProg] at hloop
+                evalLoopProg, evalLoopExp] at hloop
           | succ targetFuel =>
               cases targetFuel with
               | zero =>
@@ -5582,17 +5595,18 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_mul_const
                     loopCompileExp.loopCompileExps, loopCompileExps,
                     loopNestedSeq, loopTempNames, loopAssignTemps,
                     evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
-                    evalLoopExp, loopReadLocals,
+                    evalLoopExp,
                     loopStateOfCrepState] at hloop
               | succ targetFuel =>
                   cases targetFuel with
                   | zero =>
                       simp [hmulExp, loopCompileProg,
-                        loopCompileExp.loopCompileExps, loopCompileExps,
+                        loopCompileExp.loopCompileExps,
+                        loopCompileExps,
                         loopNestedSeq, loopTempNames, loopAssignTemps,
                         evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
-                        evalLoopExp, loopReadLocals,
-                        loopStateOfCrepState] at hloop
+                        evalLoopExp,
+                        loopStateOfCrepState, updateLoopLocal] at hloop
                   | succ targetFuel =>
                       cases targetFuel with
                       | zero =>
@@ -5601,7 +5615,7 @@ theorem crepToLoopProgramCorrectWithPrimitive_return_mul_const
                             loopCompileExps, loopNestedSeq, loopTempNames,
                             loopAssignTemps,
                             evalLoopProgWithPrimitiveCallsAndFfi,
-                            evalLoopProg, evalLoopExp, loopReadLocals,
+                            evalLoopProg, evalLoopExp,
                             loopStateOfCrepState, updateLoopLocal] at hloop
                       | succ targetFuel =>
                           simp [hmulExp, loopCompileProg,
@@ -6203,7 +6217,7 @@ theorem crepToLoopProgramCorrect_return_const
       cases targetFuel with
       | zero =>
           simp [loopCompileProg, loopCompileExp.loopCompileExps,
-            loopCompileExps, loopTempNames,
+            loopCompileExp, loopCompileExps, loopNestedSeq, loopTempNames,
             loopAssignTemps, evalLoopProgWithCallsAndFfi] at hloop
       | succ targetFuel =>
           cases targetFuel with
@@ -6211,8 +6225,8 @@ theorem crepToLoopProgramCorrect_return_const
               simp [loopCompileProg, loopCompileExp.loopCompileExps,
                 loopCompileExp, loopCompileExps, loopNestedSeq,
                 loopTempNames, loopAssignTemps,
-                evalLoopProgWithCallsAndFfi, evalLoopProg,
-                loopReadLocals, loopStateOfCrepState] at hloop
+                evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
+                loopStateOfCrepState] at hloop
           | succ targetFuel =>
               cases targetFuel with
               | zero =>
@@ -6258,7 +6272,8 @@ theorem crepToLoopProgramCorrect_return_add_const
       cases targetFuel with
       | zero =>
           simp [loopCompileProg, loopCompileExp.loopCompileExps,
-            loopCompileExps, loopTempNames, loopAssignTemps,
+            loopCompileExp, loopCompileExps, loopNestedSeq,
+            loopTempNames, loopAssignTemps,
             evalLoopProgWithCallsAndFfi] at hloop
       | succ targetFuel =>
           cases targetFuel with
@@ -6266,7 +6281,7 @@ theorem crepToLoopProgramCorrect_return_add_const
               simp [loopCompileProg, loopCompileExp.loopCompileExps,
                 loopCompileExp, loopCompileExps, loopNestedSeq,
                 loopTempNames, loopAssignTemps,
-                evalLoopProgWithCallsAndFfi, evalLoopProg] at hloop
+                evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp] at hloop
           | succ targetFuel =>
               cases targetFuel with
               | zero =>
@@ -6314,7 +6329,8 @@ theorem crepToLoopProgramCorrect_return_sub_const
       cases targetFuel with
       | zero =>
           simp [loopCompileProg, loopCompileExp.loopCompileExps,
-            loopCompileExps, loopTempNames, loopAssignTemps,
+            loopCompileExp, loopCompileExps, loopNestedSeq,
+            loopTempNames, loopAssignTemps,
             evalLoopProgWithCallsAndFfi] at hloop
       | succ targetFuel =>
           cases targetFuel with
@@ -6322,7 +6338,7 @@ theorem crepToLoopProgramCorrect_return_sub_const
               simp [loopCompileProg, loopCompileExp.loopCompileExps,
                 loopCompileExp, loopCompileExps, loopNestedSeq,
                 loopTempNames, loopAssignTemps,
-                evalLoopProgWithCallsAndFfi, evalLoopProg] at hloop
+                evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp] at hloop
           | succ targetFuel =>
               cases targetFuel with
               | zero =>
@@ -6401,7 +6417,8 @@ theorem crepToLoopProgramCorrect_return_mul_const
       cases targetFuel with
       | zero =>
           simp [hmulExp, loopCompileProg, loopCompileExp.loopCompileExps,
-            loopCompileExps, loopTempNames, loopAssignTemps,
+            loopCompileExps, loopNestedSeq,
+            loopTempNames, loopAssignTemps,
             evalLoopProgWithCallsAndFfi] at hloop
       | succ targetFuel =>
           cases targetFuel with
@@ -6409,7 +6426,8 @@ theorem crepToLoopProgramCorrect_return_mul_const
               simp [hmulExp, loopCompileProg, loopCompileExp.loopCompileExps,
                 loopCompileExps, loopNestedSeq,
                 loopTempNames, loopAssignTemps,
-                evalLoopProgWithCallsAndFfi, evalLoopProg] at hloop
+                evalLoopProgWithCallsAndFfi, evalLoopProg,
+                evalLoopExp] at hloop
           | succ targetFuel =>
               cases targetFuel with
               | zero =>
@@ -6417,7 +6435,7 @@ theorem crepToLoopProgramCorrect_return_mul_const
                     loopCompileExps, loopNestedSeq,
                     loopTempNames, loopAssignTemps,
                     evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
-                    loopReadLocals, loopStateOfCrepState] at hloop
+                    loopStateOfCrepState] at hloop
               | succ targetFuel =>
                   cases targetFuel with
                   | zero =>
@@ -6425,8 +6443,8 @@ theorem crepToLoopProgramCorrect_return_mul_const
                         loopCompileExp.loopCompileExps,
                         loopCompileExps, loopNestedSeq, loopTempNames,
                         loopAssignTemps, evalLoopProgWithCallsAndFfi,
-                        evalLoopProg, evalLoopExp, loopReadLocals,
-                        loopStateOfCrepState] at hloop
+                        evalLoopProg, evalLoopExp,
+                        loopStateOfCrepState, updateLoopLocal] at hloop
                   | succ targetFuel =>
                       cases targetFuel with
                       | zero =>
@@ -6434,7 +6452,7 @@ theorem crepToLoopProgramCorrect_return_mul_const
                             loopCompileExp.loopCompileExps,
                             loopCompileExps, loopNestedSeq, loopTempNames,
                             loopAssignTemps, evalLoopProgWithCallsAndFfi,
-                            evalLoopProg, evalLoopExp, loopReadLocals,
+                            evalLoopProg, evalLoopExp,
                             loopStateOfCrepState, updateLoopLocal] at hloop
                       | succ targetFuel =>
                           simp [hmulExp, loopCompileProg,
@@ -6475,7 +6493,8 @@ theorem crepToLoopProgramCorrect_return_var
           cases targetFuel with
           | zero =>
               simp [loopCompileProg, loopCompileExp.loopCompileExps,
-                loopCompileExps, loopTempNames, loopAssignTemps,
+                loopCompileExp, loopCompileExps, loopNestedSeq,
+                loopTempNames, loopAssignTemps,
                 evalLoopProgWithCallsAndFfi] at hloop
           | succ targetFuel =>
               cases targetFuel with
@@ -6484,7 +6503,8 @@ theorem crepToLoopProgramCorrect_return_var
                     loopCompileExp, loopCompileExps, loopNestedSeq,
                     loopTempNames, loopAssignTemps,
                     evalLoopProgWithCallsAndFfi, evalLoopProg,
-                    loopReadLocals, loopStateOfCrepState] at hloop
+                    evalLoopExp, loopStateOfCrepState,
+                    hsource] at hloop
               | succ targetFuel =>
                   cases targetFuel with
                   | zero =>

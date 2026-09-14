@@ -1,0 +1,4 @@
+mixed=[Name «S» []; ExnDecl «E» One; Decl One «g» (Const 7w)]
+
+stable_groups=[Name «S1» []; Name «S2» []; ExnDecl «E1» One; ExnDecl «E2» One;
+ Decl One «g1» (Const 1w); Decl One «g2» (Const 2w)]

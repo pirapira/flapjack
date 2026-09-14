@@ -1,0 +1,8 @@
+is_decl_decl=T
+is_decl_exception=F
+is_exn_decl_exception=T
+is_exn_decl_decl=F
+is_name_name=T
+is_name_decl=F
+size_of_eids_empty=0
+size_of_eids_mixed=1

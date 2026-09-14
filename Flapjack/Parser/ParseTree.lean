@@ -91,6 +91,18 @@ those counts, so the distinction is part of the grammar's contract.
 -/
 abbrev Trees := List ParseTree
 
+/-! Direct counterpart of `panPEG$mkleaf_def`: preserve both token and source
+    location while packaging one parse-tree leaf. -/
+def mkLeaf (entry : Token × Locs) : Trees :=
+  [.lf entry.1 entry.2]
+
+/-! `ptree_list_loc`: the empty list is unknown; otherwise the node spans
+    from the first child's start to the last child's stop. -/
+def listLoc : List ParseTree → Locs
+  | [] => unknownLoc
+  | [tree] => tree.locs
+  | tree :: rest => { start := tree.locs.start, stop := (listLoc rest).stop }
+
 /-- `consume_tok`: accept a token and contribute no child. -/
 def consume (expected : Token) (described : String) : P Trees := do
   P.expect expected described
@@ -106,7 +118,7 @@ def keepTok (accept : Token → Bool) (described : String) : P Trees := fun s =>
   | (token, locs) :: rest =>
       if accept token then
         let s' := s.pop rest
-        (some [.lf token locs], { s' with lastConsumed := some locs })
+        (some (mkLeaf (token, locs)), { s' with lastConsumed := some locs })
       else P.fail s!"Failed to see expected token: {described}" s
   | [] => P.fail s!"Failed to see expected token; saw EOF instead: {described}" s
 
@@ -144,7 +156,15 @@ def keepAnnot : P Trees :=
 
 /-- The `empty $ mkleaf (t, unknown_loc)` half of `try_default`. -/
 def defaultLeaf (token : Token) : P Trees :=
-  pure [.lf token unknownLoc]
+  pure (mkLeaf (token, unknownLoc))
+
+/-! Direct counterpart of `panPEG$mknode_def`. -/
+def mkNode (nonterminal : Nonterminal) (children : Trees) : ParseTree :=
+  .nd nonterminal children (listLoc children)
+
+/-! Direct counterpart of `panPEG$mksubtree_def`. -/
+def mkSubtree (nonterminal : Nonterminal) (children : Trees) : Trees :=
+  [mkNode nonterminal children]
 
 /-- `try_default s t`. -/
 def tryDefault (p : P Trees) (token : Token) : P Trees :=

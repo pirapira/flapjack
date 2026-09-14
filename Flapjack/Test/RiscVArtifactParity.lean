@@ -1,4 +1,5 @@
 import Flapjack.RiscV.PipelineDiagnostics
+import Flapjack.RiscV.ArtifactFormat
 import Flapjack.Test.OriginalPancakeProbes
 
 /-!
@@ -32,6 +33,23 @@ no-tick `cml_main` prefixed by that single nop.  This isolation is checked
 below; the no-tick residual mismatch is likewise tracked by
 `flapjack-pxn.8.5.10.1`.
 
+A third fixture, `Flapjack/Test/OriginalPancake/entry_order.pnk`, declares the
+entry function last:
+
+```
+fun 1 a() { return 1; }
+fun 1 b() { return 2; }
+fun 1 main() { return a(); }
+```
+
+The original CPU pipeline moves the `main` declaration to the front
+(`cakeml/pancake/pan_passesScript.sml:20-37`, `pan_to_target_all_def`), so it
+emits `cml_generated_main`, `cml_main`, `cml_a`, `cml_b` in that order.  The
+port renames the source entry, wraps it, and emits source order
+(`cml_generated_main`, `cml_a`, `cml_b`, `main`).  That deterministic section
+ordering divergence, plus the 8-byte-vs-12-byte helper bodies, is the tracked
+gap owned by `flapjack-pxn.8.5.10.3`.
+
 The original-side facts are the `OriginalPancakeProbes.decClock` source-backed
 probe, whose dependency is the direct HOL probe
 `scripts/hol-probes/pan_sem_dec_clock_e2e_probeScript.sml`.  That probe
@@ -45,12 +63,21 @@ The generated `cml_generated_main` section is byte-identical.  The generated
 and the return move through its typed pipeline.  That residual mismatch is the
 reproducible, tracked gap owned by `flapjack-pxn.8.5.10.1`; it is recorded
 exactly here instead of being weakened to an acceptance check.
+
+A fourth fixture, `Flapjack/Test/OriginalPancake/nested_expression.pnk`, is the
+GitHub issue #1015 reproducer whose right-nested sum
+`((t1 + (a + (b + (c + d)))) << 1) >>> 1` needs more than the port's fixed
+four-register Word-to-Stack temporary pool.  The original flattens the
+expression through `crep_to_loop` and accepts it.  With the pool-expansion fix
+tracked by `flapjack-pxn.2.5` the port also accepts it; this module pins that
+acceptance through the production runtime-image entry point, and the corpus
+fixture records the residual byte/layout difference as a tracked gap.
 -/
 
 namespace Flapjack.Test.RiscVArtifactParity
 
 open Flapjack Flapjack.RiscV
-open Flapjack.Test.OriginalPancakeProbes (decClock constReturn)
+open Flapjack.Test.OriginalPancakeProbes (decClock constReturn entryOrder nestedExpression)
 
 /-- The checked source-facing pipeline configuration used by the compiler
 entry point, kept local so this parity test does not import the executable
@@ -204,6 +231,313 @@ def trackedConstReturnMismatch : Bool :=
     flapjackConstReturnMainBytes.drop (flapjackConstReturnMainBytes.length - 4) ==
       constReturn.cakeFinalBytes
 
+/-- The `entry_order` fixture source, taken from the original-side probe fact.
+It declares the entry function `main` last:
+
+```
+fun 1 a() { return 1; }
+fun 1 b() { return 2; }
+fun 1 main() { return a(); }
+``` -/
+def entryOrderSource : String := entryOrder.source
+
+/-- Original CakeML layout: `cml_generated_main` at 1000 (4B, `jal` to
+`cml_main`), `cml_main` at 1004 (4B, `jal` to `cml_a`), `cml_a` at 1008 (8B),
+`cml_b` at 1016 (8B).  Evidence: `cakeml/pancake/pan_passesScript.sml:20-37`
+(`pan_to_target_all_def`) moves the `main` declaration to the front, and the
+original `makesym` lines report exactly these bases and sizes. -/
+def cakeEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
+  [ (3, 1000, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
+    (4, 1004, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
+    (5, 1008, [0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    (6, 1016, [0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)) ]
+
+/-- Flapjack layout for the same fixture: `cml_generated_main` at 1000 (4B,
+`jal` straight to the renamed entry at 1028), helper `a` at 1004 (12B),
+helper `b` at 1016 (12B), and the entry `main` last at 1028 (4B, `jal` to
+`a`).  This is the source order produced by `globalResortDecls`, not the
+original entry-first order. -/
+def flapjackEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
+  [ (3, 1000, [0x6F, 0x00, 0xC0, 0x01].map (BitVec.ofNat 8)),
+    (4, 1004, [0x13, 0x01, 0x10, 0x00, 0x33, 0x61, 0x21, 0x00,
+               0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    (5, 1016, [0x13, 0x01, 0x20, 0x00, 0x33, 0x61, 0x21, 0x00,
+               0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    (6, 1028, [0x6F, 0xF0, 0x9F, 0xFE].map (BitVec.ofNat 8)) ]
+
+/-- Exact emitted `(label, base, bytes)` artifact for the `entry_order`
+fixture. -/
+def entryOrderEmittedSections : List (Nat × Nat × List (BitVec 8)) :=
+  match compileRuntimeImage entryOrderSource with
+  | some image => emittedSections image
+  | none => []
+
+/-- The port emits the four generated sections in source order. -/
+def entryOrderLayoutMatches : Bool :=
+  entryOrderEmittedSections == flapjackEntryOrderSections
+
+/-- The residual ordering mismatch, recorded exactly rather than accepted:
+the original places the entry `cml_main` second (label 4, 4 bytes) and the
+helpers after it, while the port places helper `a` second (label 4, 12 bytes)
+and the entry `main` last (label 6).  Both entry sections are 4-byte jumps and
+both helper sets compute `1` and `2` via `addi`; the difference is the
+deterministic section order owned by `flapjack-pxn.8.5.10.3`. -/
+def entryOrderOrderingMismatch : Bool :=
+  cakeEntryOrderSections != flapjackEntryOrderSections &&
+    cakeEntryOrderSections.length == 4 && flapjackEntryOrderSections.length == 4 &&
+    cakeEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 8, 8] &&
+    flapjackEntryOrderSections.map (fun s => s.2.2.length) == [4, 12, 12, 4] &&
+    entryOrder.cakeFinalBytes ==
+      ([0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00,
+        0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8))
+
+/-- The `nested_expression` fixture source, taken from the original-side probe
+fact.  It is the GitHub issue #1015 reproducer whose right-nested sum needs
+more than the four reserved Word-to-Stack temporaries. -/
+def nestedExpressionSource : String := nestedExpression.source
+
+/-- The production runtime-image entry point accepts the nested-expression
+fixture.  Before the pool-expansion fix tracked by `flapjack-pxn.2.5` the
+Word-to-Stack lowering failed with `artifactFailure`; the original compiler
+flattens the expression through `crep_to_loop` and always accepted it. -/
+def nestedExpressionAccepted : Bool :=
+  match compileRuntimeImage nestedExpressionSource with
+  | some image => image.sections.length == 5 && image.warnings.isEmpty
+  | none => false
+
+/-- The differential-fuzzing `dup-global` fixture (GitHub issue #962 smoke,
+    bead `flapjack-pxn.8.5.14.4`).  The original CakeML accepts a duplicate
+    top-level global with the warning `variable g is redeclared in top-level
+    declaration` and keeps the later declaration; the port used to reject it in
+    `staticCheckDecls`. -/
+def dupGlobalSource : String :=
+  "var 1 g = 7;\nvar 1 g = 7;\nfun 1 main() { return g; }"
+
+/-- The production runtime-image entry point now accepts the duplicate-global
+program and reports at least one warning instead of failing the static check. -/
+def dupGlobalAcceptedWithWarning : Bool :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] artifactCompileConfig "main"
+      dupGlobalSource with
+  | .ok image => !image.warnings.isEmpty
+  | .error _ => false
+
+#guard dupGlobalAcceptedWithWarning
+
+/-- The differential-fuzzing `nomain-global` fixture (bead
+    `flapjack-pxn.8.5.14.3`).  The original CakeML `pan_to_target` synthesizes
+    a `main` returning `0` when the source has none; the port used to fail with
+    `entry not found`. -/
+def nomainGlobalSource : String := "var 1 g = 7;"
+
+/-- The production runtime-image entry point now accepts a main-less program by
+synthesizing the default `main`. -/
+def nomainGlobalAccepted : Bool :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] artifactCompileConfig "main"
+      nomainGlobalSource with
+  | .ok image => !image.sections.isEmpty
+  | .error _ => false
+
+/-!
+## FFI stub parity (bead `flapjack-pxn.8.5.14.2`)
+
+The original CakeML `export_riscv` emits, between the `j cake_main`
+startup stub and the fixed `cake_clear`/`cake_exit` pair, one 16-byte
+block per user FFI name in first-appearance order:
+
+```
+cake_ffi<name>:
+     tail cdecl(ffi<name>)
+     .p2align 4
+```
+
+The port used to omit these blocks entirely.  The runtime image now
+carries the discovered `ffiNames` and `RiscV.pancakeRuntimeAssembly`
+emits the same blocks in the same position and order.  Residual: names
+referenced only from unreachable code are still emitted because the
+port discovers FFI names before dead-code removal (same family as the
+`flapjack-pxn.8.5.10.1` lowering residuals).
+-/
+
+/-- The minimal FFI fixture: one reachable `@foo` call.  Pancake FFI
+    calls take exactly four arguments. -/
+def ffiMinSource : String := "fun 1 main() { @foo(1,2,3,4); return 0; }"
+
+/-- Two FFI names, `@foo` first. -/
+def ffiOrderSource : String :=
+  "fun 1 main() { @foo(1,2,3,4); @bar(4,3,2,1); return 0; }"
+
+/-- The same two FFI names in the opposite first-appearance order. -/
+def ffiOrderFlipSource : String :=
+  "fun 1 main() { @bar(4,3,2,1); @foo(1,2,3,4); return 0; }"
+
+/-- Mirror of the `flapjack-compile --pancake` path: parse, lower to
+`CompiledFunction`s, build the runtime image, render the assembly text. -/
+def compileAssembly (source : String) : Option String :=
+  match Flapjack.Parser.parseTopDecs (α := RiscV.Word 64)
+      (fun value => BitVec.ofInt 64 value) source with
+  | .error _ => none
+  | .ok declarations =>
+      match compileFlapjackEntry (α := RiscV.Word 64) .rv64i
+          (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+          "main" (panTargetDeclarationsWithDefaultMain declarations) with
+      | none => none
+      | some pipeline =>
+          match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64)
+              .rv64i (BitVec.ofNat 64 8) (BitVec.ofInt 64) []
+              artifactCompileConfig "main" source with
+          | .ok image =>
+              some (RiscV.pancakeRuntimeAssembly pipeline.crepe image)
+          | .error _ => none
+
+/-- The runtime image records the reachable user FFI names in
+first-appearance order. -/
+def ffiNamesMatch : Bool :=
+  (compileRuntimeImage ffiMinSource).map (·.ffiNames) == some ["foo"] &&
+    (compileRuntimeImage ffiOrderSource).map (·.ffiNames) == some ["foo", "bar"] &&
+    (compileRuntimeImage ffiOrderFlipSource).map (·.ffiNames) ==
+      some ["bar", "foo"]
+
+/-- The single-FFI assembly carries the exact original stub block in the
+exact original position, immediately before `cake_clear`. -/
+def ffiMinStubEmitted : Bool :=
+  match compileAssembly ffiMinSource with
+  | some assembly =>
+      (assembly.splitOn
+        "cake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_clear:").length == 2
+  | none => false
+
+/-- The two-FFI assembly carries both stub blocks in first-appearance
+order (`foo` then `bar`) between the startup stub and `cake_clear`. -/
+def ffiOrderStubsEmitted : Bool :=
+  match compileAssembly ffiOrderSource with
+  | some assembly =>
+      (assembly.splitOn
+        "cake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_ffibar:\n     tail cdecl(ffibar)\n     .p2align 4\n\ncake_clear:").length == 2
+  | none => false
+
+/-- Flipping the source order flips the emitted stub order (`bar` then
+`foo`), matching the original's first-appearance convention. -/
+def ffiOrderFlipStubsEmitted : Bool :=
+  match compileAssembly ffiOrderFlipSource with
+  | some assembly =>
+      (assembly.splitOn
+        "cake_ffibar:\n     tail cdecl(ffibar)\n     .p2align 4\n\ncake_ffifoo:\n     tail cdecl(ffifoo)\n     .p2align 4\n\ncake_clear:").length == 2
+  | none => false
+
+/-!
+## Unreachable-code parity (dead FFI references)
+
+The original discards statements that follow an unconditional control
+transfer inside a statement sequence, so a Pancake `@foo` call after a
+`throw` or a `return` never reaches the word program and never gains an
+FFI stub (bead `flapjack-pxn.8.5.14.2` residual).  The port mirrors this
+with `wordProgDCE` at the word-lowering boundary.
+-/
+
+/-- An `@foo` call after an unconditional `throw` is unreachable. -/
+def deadFfiAfterThrowSource : String :=
+  "exception E : 1;\nfun 1 main() { throw E 1; @foo(1,2,3,4); return 0; }"
+
+/-- An `@foo` call after an unconditional `return` is unreachable, while
+the earlier `@bar` call stays reachable. -/
+def deadFfiAfterReturnSource : String :=
+  "fun 1 main() { @bar(1,2,3,4); return 1; @foo(1,2,3,4); return 0; }"
+
+/-- Unreachable FFI calls disappear from the discovered name list, and a
+reachable call before the transfer survives it. -/
+def deadFfiNamesDropped : Bool :=
+  (compileRuntimeImage deadFfiAfterThrowSource).map (·.ffiNames) == some [] &&
+    (compileRuntimeImage deadFfiAfterReturnSource).map (·.ffiNames) ==
+      some ["bar"]
+
+/-- No FFI stub block is emitted for a name whose only reference is
+unreachable. -/
+def deadFfiStubDropped : Bool :=
+  match compileAssembly deadFfiAfterThrowSource with
+  | some assembly =>
+      !assembly.contains "cake_ffi" &&
+        (assembly.splitOn "cake_clear:").length == 2
+  | none => false
+
+/-!
+## Bitmap table word parity (bead `flapjack-pxn.8.5.14.1`)
+
+The original's pancake bitmap table carries one word per non-tail call
+continuation, each word a pure power of two `2 ^ f'` encoding the
+caller's frame size (`f'` = frame words minus the bitmap slot), never
+live-pointer bits.  The port now derives real entries from the lowered
+program (`2 ^ (nextSpill + 1)`) instead of constant `2`s.  On the
+`bitmap_calls` fixture, where neither compiler spills, both emit
+`[4, 2, 2]`; the residual value mismatch when the original spills more
+than the port (`8`/`16` vs `2`) is tracked by the bead.
+-/
+
+/-- The `bitmap_calls` fixture source (inline copy of
+`Flapjack/Test/OriginalPancake/bitmap_calls.pnk`). -/
+def bitmapCallsSource : String :=
+  "fun 1 f () {\n    var 1 x = f();\n    var 1 x = f();\n    return 1;\n  }\n\nfun 1 main() { return 0; }"
+
+/-- Both call continuations in `f` produce one `2 ^ 1` entry each after
+the initial `[4]`, exactly matching the original's `[4, 2, 2]`. -/
+def bitmapCallsWordsMatch : Bool :=
+  match compileRuntimeImage bitmapCallsSource with
+  | some image => image.bitmaps.data == [4, 2, 2]
+  | none => false
+
+/-! The smallest frame-occupancy oracle from
+`scripts/parity-difffuzz-findings/frame-occupancy/p1.cake.S`.  Its single
+non-tail call has no live value across the call, so Cake emits exactly the
+header word and one `2 ^ 1` frame word. -/
+def frameOccupancyP1Source : String :=
+  "fun 1 id (x) { return x; }\n" ++
+    "fun 1 main() { var 1 t = id(5); return 1; }"
+
+/-- CakeML's exact bitmap vector recorded by the `p1` oracle assembly. -/
+def cakeFrameOccupancyP1Bitmaps : List Nat := [4, 2]
+
+/-- The production runtime-image compiler preserves the complete Cake `p1`
+bitmap vector, including the initial header word. -/
+def frameOccupancyP1BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP1Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP1Bitmaps
+  | none => false
+
+/-! The `p9` frame-occupancy oracle (`p9.cake.S`) records the two-field
+struct case: Cake's allocator keeps one field live across the `mks` call and
+spills the other, so both call continuations carry frame words `2 ^ 3 = 8`.
+The port's frame/IRC wiring does not yet place spilled source values in the
+frame (production stays at `f' = 1` and emits `[4, 2, 2]`), so this exact
+production vector is pinned as a tracked gap rather than relaxed; the missing
+wiring is `flapjack-pxn.8.5.14.1.3` (IRC allocator driver and frame slots). -/
+def frameOccupancyP9Source : String :=
+  "struct S { 1 f, 1 g }\n" ++
+    "fun S mks (1 a, 1 b) { return S <f = a, g = b>; }\n" ++
+    "fun 1 id (1 a) { return a; }\n" ++
+    "fun 1 main() { var S s = mks(1,2); var 1 t = id(5); return s.f + s.g; }"
+
+/-- CakeML's exact bitmap vector recorded by the `p9` oracle assembly. -/
+def cakeFrameOccupancyP9Bitmaps : List Nat := [4, 8, 8]
+
+/-- The `p9` production vector does not yet reach the checked Cake vector;
+this records the gap instead of weakening the oracle. -/
+def frameOccupancyP9GapTracked : Bool :=
+  match compileRuntimeImage frameOccupancyP9Source with
+  | some image => image.bitmaps.data != cakeFrameOccupancyP9Bitmaps
+  | none => false
+
+#guard nomainGlobalAccepted
+#guard nestedExpressionAccepted
+#guard ffiNamesMatch
+#guard ffiMinStubEmitted
+#guard ffiOrderStubsEmitted
+#guard ffiOrderFlipStubsEmitted
+#guard deadFfiNamesDropped
+#guard deadFfiStubDropped
+#guard bitmapCallsWordsMatch
+#guard frameOccupancyP1BitmapsMatch
+#guard frameOccupancyP9GapTracked
 #guard artifactAccepted
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches
@@ -212,6 +546,8 @@ def trackedConstReturnMismatch : Bool :=
 #guard constReturnLayoutMatches
 #guard standaloneTickIsolated
 #guard trackedConstReturnMismatch
+#guard entryOrderLayoutMatches
+#guard entryOrderOrderingMismatch
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -230,7 +566,35 @@ def runChecks : IO Bool := do
       ("dec_clock cml_main isolates a single standalone tick nop",
         standaloneTickIsolated),
       ("const_return residual cml_main mismatch is tracked, not accepted",
-        trackedConstReturnMismatch) ]
+        trackedConstReturnMismatch),
+      ("entry_order emitted section layout matches the port's source order",
+        entryOrderLayoutMatches),
+      ("entry_order original entry-first order mismatch is tracked, not accepted",
+        entryOrderOrderingMismatch),
+      ("nested_expression fixture accepted by the runtime-image entry point",
+        nestedExpressionAccepted),
+      ("dup_global fixture accepted with a redeclaration warning",
+        dupGlobalAcceptedWithWarning),
+      ("nomain_global fixture accepted with a synthesized default main",
+         nomainGlobalAccepted),
+      ("ffi names recorded in first-appearance order",
+         ffiNamesMatch),
+      ("single ffi stub block emitted in the original position",
+         ffiMinStubEmitted),
+      ("two ffi stub blocks emitted in first-appearance order",
+         ffiOrderStubsEmitted),
+      ("flipped ffi source order flips the emitted stub order",
+         ffiOrderFlipStubsEmitted),
+      ("unreachable ffi calls are dropped from the name list",
+         deadFfiNamesDropped),
+      ("unreachable ffi calls gain no stub block",
+         deadFfiStubDropped),
+      ("bitmap_calls table matches the original [4, 2, 2]",
+         bitmapCallsWordsMatch),
+      ("frame-occupancy p1 bitmap vector matches Cake [4, 2]",
+         frameOccupancyP1BitmapsMatch),
+      ("frame-occupancy p9 exact vector gap is tracked, not accepted",
+         frameOccupancyP9GapTracked) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

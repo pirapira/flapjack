@@ -1,0 +1,5 @@
+one=Skip
+comb_empty=Skip
+comb_one=Skip
+comb_two=Seq (Assign 1 (LoadGlob 0w)) (Seq (Assign 2 (LoadGlob 1w)) Skip)
+named=Skip

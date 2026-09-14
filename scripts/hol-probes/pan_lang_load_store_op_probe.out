@@ -1,0 +1,8 @@
+load_op8=Load8
+load_op16=Load16
+load_opw=Load
+load_op32=Load32
+store_op8=Store8
+store_op16=Store16
+store_opw=Store
+store_op32=Store32

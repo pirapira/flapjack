@@ -184,6 +184,67 @@ def nestedSeq : List (Prog α) → Prog α
   | [] => .skip
   | statement :: statements => .seq statement (nestedSeq statements)
 
+/-! The exception identifiers syntactically reachable from a Pancake program.
+    This follows `panLang$exp_ids_def`; in particular, a call contributes its
+    handler identifier and the identifiers reachable in that handler, while
+    ordinary calls and all non-handler forms contribute no identifiers. -/
+def expIds : Prog α → List ExceptionId
+  | .skip => []
+  | .dec _ _ _ body => expIds body
+  | .assign _ _ _ => []
+  | .primitive _ _ _ => []
+  | .store _ _ => []
+  | .store32 _ _ => []
+  | .storeByte _ _ => []
+  | .seq first second => expIds first ++ expIds second
+  | .ite _ thenBranch elseBranch => expIds thenBranch ++ expIds elseBranch
+  | .while _ body => expIds body
+  | .break => []
+  | .continue => []
+  | .call (some (_, some (exception, _, handler))) _ _ =>
+      exception :: expIds handler
+  | .call _ _ _ => []
+  | .decCall _ _ _ _ body => expIds body
+  | .extCall _ _ _ _ _ => []
+  | .raise exception _ => [exception]
+  | .return _ => []
+  | .shMemLoad _ _ _ _ => []
+  | .shMemStore _ _ _ => []
+  | .tick => []
+  | .annot _ _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/-! Direct source-shaped counterpart of `panLang$fun_ids`: collect the
+    statically referenced function names, including call-handler bodies and
+    declaration-call bodies. -/
+def funIds : Prog α → List FunName
+  | .dec _ _ _ body => funIds body
+  | .seq first second => funIds first ++ funIds second
+  | .ite _ thenBranch elseBranch => funIds thenBranch ++ funIds elseBranch
+  | .while _ body => funIds body
+  | .call (some (_, some (_, _, handler))) name _ => name :: funIds handler
+  | .call _ name _ => [name]
+  | .decCall _ _ function _ body => function :: funIds body
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/-! Split a flat value list according to the source shape sizes.  This is the
+    direct Lean counterpart of `panLang$with_shape`; values left over after
+    the requested shapes are intentionally ignored, and short inputs are
+    handled by `List.take`/`List.drop` just like CakeML's `TAKE`/`DROP`. -/
+def withShape : List Shape → List α → List (List α)
+  | [], _ => []
+  | shape :: shapes, values =>
+      values.take (Shape.shapeSize shape) ::
+        withShape shapes (values.drop (Shape.shapeSize shape))
+termination_by shapes => sizeOf shapes
+decreasing_by
+  all_goals decreasing_trivial
+
 def expLocalVars : Exp α → List VarName
   | .const _ => []
   | .var .local name => [name]
@@ -222,6 +283,46 @@ where
   termination_by sizeOf fields
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-! Direct source-shaped counterpart of `panLang$free_var_ids`.  The
+    expression helper is the existing `expLocalVars`, which mirrors the
+    source `var_exp` distinction between local and global variables. -/
+def freeVarIds : Prog α → List VarName
+  | .dec name _ value body =>
+      expLocalVars value ++ (freeVarIds body).filter (fun vname => vname != name)
+  | .seq first second => freeVarIds first ++ freeVarIds second
+  | .ite condition thenBranch elseBranch =>
+      expLocalVars condition ++ freeVarIds thenBranch ++ freeVarIds elseBranch
+  | .while condition body => expLocalVars condition ++ freeVarIds body
+  | .assign kind name value =>
+      (if kind == .local then [name] else []) ++ expLocalVars value
+  | .primitive name _ arguments => name :: arguments.flatMap expLocalVars
+  | .store address value => expLocalVars address ++ expLocalVars value
+  | .store32 address value => expLocalVars address ++ expLocalVars value
+  | .storeByte address value => expLocalVars address ++ expLocalVars value
+  | .raise _ value => expLocalVars value
+  | .return value => expLocalVars value
+  | .extCall _ configuration configurationLength array arrayLength =>
+      expLocalVars configuration ++ expLocalVars configurationLength ++
+        expLocalVars array ++ expLocalVars arrayLength
+  | .shMemLoad _ kind name address =>
+      (if kind == .local then [name] else []) ++ expLocalVars address
+  | .shMemStore _ address value => expLocalVars address ++ expLocalVars value
+  | .call (some (none, some (_, exceptionName, handler))) _ arguments =>
+      exceptionName :: freeVarIds handler ++ arguments.flatMap expLocalVars
+  | .call (some (some (kind, name), some (_, exceptionName, handler))) _ arguments =>
+      (if kind == .local then [name] else []) ++
+        exceptionName :: freeVarIds handler ++ arguments.flatMap expLocalVars
+  | .call (some (some (kind, name), none)) _ arguments =>
+      (if kind == .local then [name] else []) ++ arguments.flatMap expLocalVars
+  | .call (some (none, none)) _ arguments => arguments.flatMap expLocalVars
+  | .call none _ arguments => arguments.flatMap expLocalVars
+  | .decCall name _ _ arguments body =>
+      name :: freeVarIds body ++ arguments.flatMap expLocalVars
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
 
 def expGlobalVars : Exp α → List VarName
   | .const _ => []

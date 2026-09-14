@@ -11,6 +11,19 @@ def pipelineDiagnosticsConfig : WordStackConfig :=
     scratch := 31
     stackBase := 10 }
 
+def diagnosticCompiledMain : CompiledFunction Nat :=
+  { name := "main", params := [], body := .skip, returnShape := .one }
+
+example :
+    pipelineFunctionNameAtLabel 1 [diagnosticCompiledMain] 1 = some "main" := by
+  rfl
+
+example :
+    sourceRiscVImageErrorOfLowering 1 [diagnosticCompiledMain]
+        (.allocationFailure 1) =
+      .loweringInFunction "main" (.allocationFailure 1) := by
+  rfl
+
 example :
     RiscV.pipelineWordFunctionsToStackChecked (width := 64)
       [(17, [], (.alloc 0 ([], []) : WordProg (RiscV.Word 64)))] =
@@ -32,6 +45,22 @@ example :
 
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
+      [⟨17, [.labAsm (.heapAlloc 3) [] 0]⟩] =
+        .error { sectionId := 17, position := 0, feature := .heapAlloc } := by
+  rfl
+
+/-! The linked checked boundary retains the same section/position diagnostic;
+the historical linked API would collapse this failure to `none`. -/
+example :
+    RiscV.compileLabProgramLinkedChecked (width := 64) { services := [] }
+      [⟨17, [.labAsm (.heapAlloc 3) [] 0]⟩] =
+        .error { sectionId := 17, position := 0, feature := .heapAlloc } := by
+  rfl
+
+/-! The halt-aware linker used by the SimpleGC runtime preserves the same
+    section/position diagnostic instead of collapsing to `artifactFailure`. -/
+example :
+    RiscV.compileLabProgramLinkedWithHaltChecked (width := 64) { services := [] }
       [⟨17, [.labAsm (.heapAlloc 3) [] 0]⟩] =
         .error { sectionId := 17, position := 0, feature := .heapAlloc } := by
   rfl

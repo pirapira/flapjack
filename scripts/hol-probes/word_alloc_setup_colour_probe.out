@@ -1,0 +1,10 @@
+total_colour_mapped_1=14
+total_colour_mapped_3=18
+total_colour_physical_2=2
+total_colour_unmapped_5=0
+setup3_move=Move1 [(5,0); (9,2); (13,4)]
+setup3_ssa=[(0,5); (4,13); (2,9)]
+setup3_next=17
+setup0_move=Move1 []
+setup0_ssa=[]
+setup0_next=9

@@ -29,6 +29,7 @@ import Flapjack.CrepPrimop
 import Flapjack.CrepExitLoop
 import Flapjack.CrepEvaluate
 import Flapjack.CrepFixClock
+import Flapjack.CrepEval
 import Flapjack.CrepShMemLoad
 import Flapjack.CrepShMemOp
 import Flapjack.CrepShMemStore
@@ -171,6 +172,8 @@ import Flapjack.CrepeProgramStoreCorrectness
 import Flapjack.CrepeProgramStoreByteCorrectness
 import Flapjack.CrepeProgramGenericStoreCorrectness
 import Flapjack.CrepeProgramGenericStoreStateCorrectness
+import Flapjack.CrepeGlobalStoreCorrectness
+import Flapjack.CrepeProgramGenericRaiseCorrectness
 import Flapjack.CrepeWordEffectProgramCases
 import Flapjack.CrepeProgramPrimitiveCorrectness
 import Flapjack.CrepeProgramPrimitiveStateRelation
@@ -316,6 +319,7 @@ import Flapjack.RiscV.CorrectnessColour
 import Flapjack.RiscV.CorrectnessSsaColour
 import Flapjack.RiscV.CorrectnessFullSsaCounted
 import Flapjack.RiscV.AllocatorDriver
+import Flapjack.RiscV.CakeRegAlloc
 import Flapjack.RiscV.WordToStack
 import Flapjack.RiscV.LongDivRuntime
 import Flapjack.RiscV.CorrectnessColourConditional
@@ -351,6 +355,7 @@ import Flapjack.RiscV.Link
 import Flapjack.WordSemantics
 import Flapjack.Loop
 import Flapjack.CrepToLoop
+import Flapjack.CrepToLoopOptimise
 import Flapjack.CrepToLoopCorrectness
 import Flapjack.LoopAnalysis
 import Flapjack.LoopSemantics

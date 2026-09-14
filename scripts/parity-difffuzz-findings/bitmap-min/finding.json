@@ -1,0 +1,154 @@
+{
+  "id": "bitmap-min",
+  "origin": {
+    "mode": "file",
+    "path": "/tmp/opencode/preserved/bitmap-min.pnk"
+  },
+  "comparison": {
+    "cake_returncode": 0,
+    "flapjack_returncode": 0,
+    "mismatches": [
+      {
+        "signature": "frame/bitmap-table",
+        "detail": {
+          "differing_lines": [
+            ".quad 4,8,8",
+            ".quad 4,2,2"
+          ]
+        }
+      },
+      {
+        "signature": "sections/order",
+        "detail": {
+          "cake_order": [
+            "_Init",
+            "_Halt0",
+            "_Halt2",
+            "_GC",
+            "_Raise",
+            "_StoreConsts",
+            "generated_main",
+            "main",
+            "mks",
+            "id"
+          ],
+          "flapjack_order": [
+            "_Init",
+            "_Halt0",
+            "_Halt2",
+            "_GC",
+            "_Raise",
+            "_StoreConsts",
+            "generated_main",
+            "mks",
+            "id",
+            "main"
+          ]
+        }
+      },
+      {
+        "signature": "layout/user:id",
+        "detail": {
+          "cake_base": 1296,
+          "flapjack_base": 1028,
+          "cake_length": 4,
+          "flapjack_length": 12
+        }
+      },
+      {
+        "signature": "bytes/user:id:len_ne",
+        "detail": {
+          "cake_sha256": "4e8fbb4715c05fadf82f24986b5df1fcb855235807f130c0981c52a5c49e0ab0",
+          "flapjack_sha256": "363895774ecb259186c8bfa53facfe5758b3b6ad1306b60df286ef91a60c60ec",
+          "cake_bytes": "67 80 00 00",
+          "flapjack_bytes": "33 61 21 00 33 61 21 00 67 80 00 00"
+        }
+      },
+      {
+        "signature": "layout/user:main",
+        "detail": {
+          "cake_base": 1004,
+          "flapjack_base": 1040,
+          "cake_length": 288,
+          "flapjack_length": 284
+        }
+      },
+      {
+        "signature": "bytes/user:main:len_ne",
+        "detail": {
+          "cake_sha256": "1f282507d0a9a81da24f1f8d1ec5fb816f33a7ac29f46456cade174242f36589",
+          "flapjack_sha256": "c314f7440a7088b4fecb1a2e623a1a5f164baea5c626da583f189cca072bfac6",
+          "cake_bytes": "13 0c 0c fe 63 76 9c 01 13 65 20 00 6f f0 9f bf 93 65 20 00 13 65 10 00 23 3c 1c 00 13 6b 20 00 23 30 6c 01 13 0c 8c fe 63 76 9c 01 13 65 20 00",
+          "flapjack_bytes": "93 05 00 00 93 07 00 00 13 01 10 00 13 02 20 00 b3 e7 f7 00 b3 e5 b5 00 33 61 21 00 33 62 42 00 93 0f 80 01 33 0a fa 41 93 0e 00 01 b3 0e da 01"
+        }
+      },
+      {
+        "signature": "layout/user:mks",
+        "detail": {
+          "cake_base": 1292,
+          "flapjack_base": 1004,
+          "cake_length": 4,
+          "flapjack_length": 24
+        }
+      },
+      {
+        "signature": "bytes/user:mks:len_ne",
+        "detail": {
+          "cake_sha256": "4e8fbb4715c05fadf82f24986b5df1fcb855235807f130c0981c52a5c49e0ab0",
+          "flapjack_sha256": "54b14b7ff3713bd9ef0fe484c2a204da875902e70705cd96be0c0bdd6495d203",
+          "cake_bytes": "67 80 00 00",
+          "flapjack_bytes": "b3 61 42 00 33 61 21 00 b3 e1 31 00 33 61 21 00 33 e2 31 00 67 80 00 00"
+        }
+      },
+      {
+        "signature": "bytes/generated_main:len_eq",
+        "detail": {
+          "cake_sha256": "df1dcb951147984699d0575b6d09462bde158d1142d11b770d0d941f5a474921",
+          "flapjack_sha256": "4bf3b7cee5bcf626c74447bca92f827e81facfe63ea11e5398a547460c065900",
+          "cake_bytes": "6f 00 40 00",
+          "flapjack_bytes": "6f 00 80 02"
+        }
+      }
+    ],
+    "class": "both-accepted"
+  },
+  "tool_versions": {
+    "cake": {
+      "path": "/home/zksecurity/pancake-lean/cakeml/developers/bin/cake",
+      "size": 15320616,
+      "sha256": "4768e33f6b280bfb1096beefdef96b3e6c6a69af6331e46af0d219df5f9c9c98"
+    },
+    "flapjack": {
+      "path": "/home/zksecurity/flapjack4/.lake/build/bin/flapjack-compile",
+      "size": 7982608,
+      "sha256": "c87c4881e258916037c3c6329fb0c3d66c633df46d1f33e2ad91610b076619d3",
+      "git_commit": "668e3f6b9cb2092b38def904f8036e5b2b2b0975"
+    }
+  },
+  "commands": {
+    "cake": [
+      "nice",
+      "-n",
+      "10",
+      "timeout",
+      "20s",
+      "/home/zksecurity/pancake-lean/cakeml/developers/bin/cake",
+      "--pancake",
+      "--target=riscv"
+    ],
+    "flapjack": [
+      "nice",
+      "-n",
+      "10",
+      "timeout",
+      "20s",
+      "/home/zksecurity/flapjack4/.lake/build/bin/flapjack-compile",
+      "--assembly",
+      "/tmp/opencode/preserved/bitmap-min.pnk"
+    ]
+  },
+  "returncodes": {
+    "cake": 0,
+    "flapjack": 0
+  }
+}

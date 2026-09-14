@@ -1,0 +1,26 @@
+assign=Assign 1 (Shift Lsl (Var 2) (Const 1w))
+
+dec_return=Dec 1 (Const 6w) (Return [Var 1])
+
+store=Store (Var 2) (Shift Lsl (Var 3) (Const 1w))
+
+store32=Store32 (Var 2) (Shift Lsl (Var 3) (Const 1w))
+
+store_byte=StoreByte (Var 2) (Shift Lsl (Var 3) (Const 1w))
+
+store_glob=StoreGlob 4w (Shift Lsl (Var 3) (Const 1w))
+
+seq_if_while=Seq
+  (If (Shift Lsl (Var 2) (Const 1w)) (Assign 1 (Const 4w))
+     (While (Shift Lsl (Var 3) (Const 1w)) Skip))
+  (Return [Shift Lsl (Var 4) (Const 1w)])
+
+call_tail=Call NONE «f» [Shift Lsl (Var 2) (Const 1w)]
+
+call_handler=Call (SOME ([1],SOME (7w,Assign 2 (Shift Lsl (Var 3) (Const 1w))))) «f»
+  [Var 4]
+
+return_shmem=Seq (ShMem Load 1 (Shift Lsl (Var 2) (Const 1w)))
+  (Return [Shift Lsl (Var 3) (Const 1w)])
+
+unchanged=Break 3

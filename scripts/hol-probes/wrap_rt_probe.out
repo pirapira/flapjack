@@ -1,0 +1,5 @@
+none=NONE
+empty_one=NONE
+one_word=SOME (One,[1])
+comb_empty=SOME (Comb [],[])
+named=SOME (Named «S»,[])

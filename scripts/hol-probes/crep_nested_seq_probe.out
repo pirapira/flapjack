@@ -1,0 +1,4 @@
+empty=Skip
+one=Seq Skip Skip
+two=Seq Tick (Seq Skip Skip)
+assign_seq=Seq (Assign 1 (Const 7w)) (Seq (Assign 2 (Const 9w)) Skip)

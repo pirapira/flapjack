@@ -1750,6 +1750,12 @@ def wordApplyColourInst (colour : Nat → Nat) : WordInst → WordInst
   | .mem operator destination address =>
       .mem operator (colour destination) (colour address)
 
+/-! Cake's `num_set` fields are represented by lists in Flapjack.  The source
+    `apply_nummap_key` rebuilds those sets through `fromAList`, so the result is
+    canonical (sorted and duplicate-free), rather than a plain mapped list. -/
+def wordApplyColourNumSet (colour : Nat → Nat) (names : List Nat) : List Nat :=
+  (names.map colour).eraseDups.mergeSort (fun left right => left < right)
+
 def wordApplyColour (colour : Nat → Nat) : WordProg α → WordProg α
   | .skip => .skip
   | .move priority moves =>
@@ -1767,32 +1773,45 @@ def wordApplyColour (colour : Nat → Nat) : WordProg α → WordProg α
       .ite operator (colour condition) (wordApplyColourRegImm colour right)
         (wordApplyColour colour thenBranch) (wordApplyColour colour elseBranch)
   | .loop liveIn body liveOut =>
-      .loop (liveIn.map colour) (wordApplyColour colour body) (liveOut.map colour)
+      .loop (wordApplyColourNumSet colour liveIn)
+        (wordApplyColour colour body) (wordApplyColourNumSet colour liveOut)
   | .mustTerminate body => .mustTerminate (wordApplyColour colour body)
   | .break label => .break label
   | .continue label => .continue label
   | .raise exception => .raise (colour exception)
-  | .return label values => .return label (values.map colour)
+  | .return name values => .return (colour name) (values.map colour)
   | .tick => .tick
   | .locValue destination label =>
       .locValue (colour destination) label
-  | .call returns target arguments none =>
-      .call (returns.map (fun (values, cutsets, returnCode, returnLabel, entryLabel) =>
-        (values.map colour,
-          (cutsets.1.map colour, cutsets.2.map colour),
-          returnCode, returnLabel, entryLabel)))
-        target (arguments.map colour)
-        none
-  | .call returns target arguments (some (exception, body, handlerLabel, entryLabel)) =>
-      .call (returns.map (fun (values, cutsets, returnCode, returnLabel, entryLabel) =>
-        (values.map colour,
-          (cutsets.1.map colour, cutsets.2.map colour),
-          returnCode, returnLabel, entryLabel)))
-        target (arguments.map colour)
+  | .call none target arguments none =>
+      .call none target (arguments.map colour) none
+  | .call (some (values, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments none =>
+      .call
+        (some (values.map colour,
+          (wordApplyColourNumSet colour cutsets.1,
+            wordApplyColourNumSet colour cutsets.2),
+          wordApplyColour colour returnCode, returnLabel, entryLabel))
+        target (arguments.map colour) none
+  | .call none target arguments
+      (some (exception, body, handlerLabel, entryLabel)) =>
+      .call none target (arguments.map colour)
         (some (colour exception, wordApplyColour colour body,
           handlerLabel, entryLabel))
+  | .call (some (values, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments
+      (some (exception, body, handlerLabel, handlerEntryLabel)) =>
+      .call
+        (some (values.map colour,
+          (wordApplyColourNumSet colour cutsets.1,
+            wordApplyColourNumSet colour cutsets.2),
+          wordApplyColour colour returnCode, returnLabel, entryLabel))
+        target (arguments.map colour)
+        (some (colour exception, wordApplyColour colour body,
+          handlerLabel, handlerEntryLabel))
   | .alloc destination (nonGc, gc) =>
-      .alloc (colour destination) (nonGc.map colour, gc.map colour)
+      .alloc (colour destination)
+        (wordApplyColourNumSet colour nonGc, wordApplyColourNumSet colour gc)
   | .storeConsts source bitmap codeLength dataLength constants =>
       .storeConsts (colour source) (colour bitmap) (colour codeLength)
         (colour dataLength) constants
@@ -1800,7 +1819,8 @@ def wordApplyColour (colour : Nat → Nat) : WordProg α → WordProg α
       .opCurrHeap operator (colour destination) (colour source)
   | .install codeBuffer codeLength dataBuffer dataLength (nonGc, gc) =>
       .install (colour codeBuffer) (colour codeLength) (colour dataBuffer)
-        (colour dataLength) (nonGc.map colour, gc.map colour)
+        (colour dataLength)
+        (wordApplyColourNumSet colour nonGc, wordApplyColourNumSet colour gc)
   | .codeBufferWrite address value =>
       .codeBufferWrite (colour address) (colour value)
   | .dataBufferWrite address value =>
@@ -1808,11 +1828,13 @@ def wordApplyColour (colour : Nat → Nat) : WordProg α → WordProg α
   | .ffi function configuration configurationLength array arrayLength live =>
       .ffi function (colour configuration) (colour configurationLength)
         (colour array) (colour arrayLength)
-        (live.1.map colour, live.2.map colour)
+        (wordApplyColourNumSet colour live.1,
+          wordApplyColourNumSet colour live.2)
   | .shareInst operator name address =>
       .shareInst operator (colour name) (wordApplyColourExp colour address)
 termination_by program => sizeOf program
-decreasing_by all_goals decreasing_trivial
+decreasing_by
+  all_goals simp_wf <;> omega
 
 def wordAllocateProgramWithSlotsAndColour (slots : List Nat)
     (program : WordProg α) : Option (WordContext × WordProg α) :=
@@ -1872,11 +1894,21 @@ theorem wordApplyColourPreservesBranchLabelsAux
   | .return _ _ => by simp [wordApplyColour, wordProgBranchLabels]
   | .tick => by simp [wordApplyColour, wordProgBranchLabels]
   | .locValue _ _ => by simp [wordApplyColour, wordProgBranchLabels]
-  | .call _ _ _ handler => by
-      cases handler with
-      | none => simp [wordApplyColour, wordProgBranchLabels]
-      | some value =>
-          rcases value with ⟨exception, body, handlerLabel, entryLabel⟩
+  | .call returns target arguments handler => by
+      cases returns
+      · cases handler
+        · simp [wordApplyColour, wordProgBranchLabels]
+        · rename_i handlerData
+          rcases handlerData with ⟨exception, body, handlerLabel, entryLabel⟩
+          simp [wordApplyColour, wordProgBranchLabels]
+      · rename_i returnData
+        rcases returnData with
+          ⟨values, cutsets, returnProgram, returnLabel, entryLabel⟩
+        cases handler
+        · simp [wordApplyColour, wordProgBranchLabels]
+        · rename_i handlerData
+          rcases handlerData with
+            ⟨exception, body, handlerLabel, handlerEntryLabel⟩
           simp [wordApplyColour, wordProgBranchLabels]
   | .alloc _ cutsets => by
       cases cutsets <;> simp [wordApplyColour, wordProgBranchLabels]
@@ -1969,13 +2001,13 @@ theorem wordApplyColourPreservesLabelsAux
           have hreturn :=
             wordApplyColourPreservesLabelsAux colour returnProgram
           cases handler with
-          | none => simp [wordApplyColour, wordProgLabels]
+          | none => simp [wordApplyColour, wordProgLabels, hreturn]
           | some handlerValue =>
               rcases handlerValue with ⟨exception, handlerProgram,
                 handlerLabel, handlerEntryLabel⟩
               have hhandler :=
                 wordApplyColourPreservesLabelsAux colour handlerProgram
-              simp [wordApplyColour, wordProgLabels, hhandler]
+              simp [wordApplyColour, wordProgLabels, hreturn, hhandler]
   | .alloc _ cutsets => by
       cases cutsets <;> simp [wordApplyColour, wordProgLabels]
   | .storeConsts _ _ _ _ _ => by simp [wordApplyColour, wordProgLabels]

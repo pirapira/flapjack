@@ -16,6 +16,7 @@ they can reflect permissive (and often intentional) Flapjack behaviour.
 Usage::
 
     scripts/parity-fuzz.py --seed 1 --count 400
+    scripts/parity-fuzz.py --seed 1 --count 400 --compare-artifacts
 
 The CakeML ``cake`` binary is taken from ``$CAKE`` and otherwise defaults to
 ``~/pancake-lean/cakeml/developers/bin/cake``.  ``flapjack-compile`` defaults to
@@ -164,6 +165,11 @@ def main(argv=None):
     parser.add_argument("--flapjack", default=os.environ.get("FLAPJACK", DEFAULT_FLAPJACK), help="path to flapjack-compile")
     parser.add_argument("--out", default=None, help="directory for generated programs (default: a temporary directory)")
     parser.add_argument("--quiet", action="store_true", help="do not print individual gaps/opposites")
+    parser.add_argument(
+        "--compare-artifacts",
+        action="store_true",
+        help="for programs accepted by both compilers, compare exact RISC-V sections and bytes",
+    )
     parser.add_argument("--extra-locals", type=int, default=6, help="upper bound on extra random locals per program (register pressure)")
     args = parser.parse_args(argv)
 
@@ -179,6 +185,8 @@ def main(argv=None):
     os.makedirs(out_dir, exist_ok=True)
 
     gaps = both_ok = both_bad = opposite = 0
+    artifact_matches = artifact_mismatches = 0
+    parity_bytes = os.path.join(REPO_ROOT, "scripts", "parity-bytes.py")
     for i in range(args.count):
         gen = Gen()
         source = gen.program()
@@ -208,14 +216,32 @@ def main(argv=None):
                 print(source)
         elif cake_code == 0 and flapjack_code == 0:
             both_ok += 1
+            if args.compare_artifacts:
+                artifact = subprocess.run(
+                    [sys.executable, parity_bytes, "--quiet", path],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                if artifact.returncode == 0:
+                    artifact_matches += 1
+                else:
+                    artifact_mismatches += 1
+                    if not args.quiet and artifact_mismatches <= 5:
+                        print("ARTIFACT-MISMATCH", path)
         else:
             both_bad += 1
 
-    print(
-        "seed=%d count=%d both_ok=%d both_bad=%d gaps=%d opposite=%d out=%s"
-        % (args.seed, args.count, both_ok, both_bad, gaps, opposite, out_dir)
+    summary = (
+        "seed=%d count=%d both_ok=%d both_bad=%d gaps=%d opposite=%d"
+        % (args.seed, args.count, both_ok, both_bad, gaps, opposite)
     )
-    return 1 if gaps else 0
+    if args.compare_artifacts:
+        summary += " artifact_matches=%d artifact_mismatches=%d" % (
+            artifact_matches,
+            artifact_mismatches,
+        )
+    print(summary + " out=" + out_dir)
+    return 1 if gaps or artifact_mismatches else 0
 
 
 if __name__ == "__main__":

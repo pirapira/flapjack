@@ -1,0 +1,4 @@
+empty=[]
+call=[«f»]
+handler=[«f»; «g»]
+dec_call=[«d»; «g»]

@@ -1,0 +1,15 @@
+rstruct=RStruct [Const 1w; Const 2w]
+
+rfield=RField 1 (RStruct [Const 1w; Const 2w])
+
+nstruct=RStruct [Const 1w; Const 2w]
+
+nfield=RField 1 (RStruct [])
+
+load=Load (Comb [One; Comb [One; One]]) (Const 0w)
+
+load32=Load32 (Const 0w)
+
+loadbyte=LoadByte (Const 0w)
+
+fallback=Const 0w

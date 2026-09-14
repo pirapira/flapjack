@@ -1,0 +1,3 @@
+prog_if_basic=[Skip; Tick; Assign 3 (Const 2w); Assign 4 (Const 3w);
+ If NotEqual 3 (Reg 4) (Assign 3 (Const 1w)) (Assign 3 (Const 0w))
+   ⦕ 1; 2; 3; 4 ⦖]

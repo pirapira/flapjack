@@ -120,7 +120,7 @@ def wordListRemap : List Nat → WordBijection → WordBijection
 def wordClashTreeBijection : WordClashTree → WordBijection →
     WordBijection
   | .delta writes reads, bijection =>
-      wordListRemap (writes ++ reads) bijection
+      wordListRemap writes (wordListRemap reads bijection)
   | .set names, bijection => wordListRemap names bijection
   | .branch branchLive thenBranch elseBranch, bijection =>
       let bijection := wordClashTreeBijection thenBranch bijection

@@ -1,0 +1,9 @@
+local=Var Local «x»
+
+global_hit=Load One (Op Sub [TopAddr; Const 8w])
+
+global_miss=Const 0w
+
+top_addr=Op Sub [TopAddr; Const 16w]
+
+nested=Op Add [Load One (Op Sub [TopAddr; Const 8w]); Op Sub [TopAddr; Const 16w]]

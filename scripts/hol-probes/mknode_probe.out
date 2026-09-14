@@ -1,0 +1,8 @@
+empty=Nd (INL (INL ProgNT),Locs UNKNOWNpt UNKNOWNpt) []
+
+single=Nd (INL (INL ProgNT),Locs (POSN 2 3) (POSN 2 7))
+  [Lf (TOK (KeywordT SkipK),Locs (POSN 2 3) (POSN 2 7))]
+
+multiple=Nd (INL (INL ProgNT),Locs (POSN 2 3) (POSN 2 12))
+  [Lf (TOK (KeywordT SkipK),Locs (POSN 2 3) (POSN 2 7));
+   Lf (TOK (KeywordT RetK),Locs (POSN 2 9) (POSN 2 12))]

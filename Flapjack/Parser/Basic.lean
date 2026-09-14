@@ -72,6 +72,12 @@ def P (α : Type) : Type := PState → Option α × PState
 
 namespace P
 
+/-! Direct counterpart of `extract_sum_def`: both alternatives carry the
+    same result type, so extraction is a total typed sum eliminator. -/
+def extractSum : Sum α α → α
+  | .inl value => value
+  | .inr value => value
+
 def pure' (a : α) : P α := fun s => (some a, s)
 
 def bind' (p : P α) (f : α → P β) : P β := fun s =>

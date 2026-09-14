@@ -1,0 +1,8 @@
+total_colour_alloc=14
+total_colour_physical=2
+total_colour_stack_default=0
+apply_colour_assign=Assign 14 (Var 18)
+apply_colour_return_raise=Seq (Return 14 [18; 0]) (Raise 0)
+apply_colour_call_handler=Call (SOME ([14],(⦕ 18 ⦖,⦕ 0 ⦖),Return 14 [18],10,11)) (SOME 12) [14; 18]
+  (SOME (0,Raise 18,13,14))
+apply_colour_loop_live=Loop ⦕ 0; 14 ⦖ (Assign 14 (Var 18)) ⦕ 18 ⦖

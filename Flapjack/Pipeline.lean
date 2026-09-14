@@ -41,6 +41,17 @@ def pipelineInlineNames : List (Decl α) → List FunName
   | _ :: declarations => pipelineInlineNames declarations
 termination_by declarations => sizeOf declarations
 
+/-! Faithful port of `pan_to_crep$compile_prog` from
+    `cakeml/pancake/pan_to_crepScript.sml:393-398`.
+
+    The source first builds the Crep table and then applies the inline pass to
+    exactly the names of declarations marked `inlinable`. -/
+def compileProgToCrep [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    (context : CompileContext α) (declarations : List (Decl α)) :
+    List (CompiledFunction α) :=
+  crepInlineTop (pipelineInlineNames declarations)
+    (compileToCrep context declarations)
+
 def pipelineFindFunction (name : FunName) :
     List (Decl α) → Option (FunDecl α)
   | [] => none
@@ -93,7 +104,8 @@ def pipelineWordFunctions [OfNat α 1]
     let slots := loopAccVars body parameters
     let context : WordContext :=
       { vars := slots.map (fun name => (name, name + 2)) }
-    (label, parameters.map (fun name => name + 2), loopToWordProg context body))
+    (label, parameters.map (fun name => name + 2),
+      wordProgDCE (loopToWordProg context body)))
 
 /-! Source-shaped `loop_to_word$compile_prog` output.  The ordinary pipeline
     keeps parameter names for later register allocation; `pan_to_word` instead
@@ -621,6 +633,22 @@ def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
       let loop := pipelineLoopFunctions architecture 1 crepe
       let word := pipelineWordFunctions loop
       some (FlapjackPipelineResult.mk simplified structured globals crepe loop word)
+
+/-! Executable mirror of the missing-`main` branch of `pan_to_target_all`
+    (`cakeml/pancake/pan_passesScript.sml:20-37`): when the program has no
+    `main` declaration the original synthesizes `main = «return 0»` and
+    prepends it before running the remaining passes. -/
+def panTargetDeclarationsWithDefaultMain [OfNat α 0] [OfNat α 1]
+    (declarations : List (Decl α)) : List (Decl α) :=
+  if declarations.any (fun declaration =>
+      match declaration with
+      | .function function => function.name == "main"
+      | _ => false) then
+    declarations
+  else
+    .function
+      { name := "main", inline := false, exported := false, params := [],
+        body := .return (.const 0), returnShape := .one } :: declarations
 
 /-! Target entry point.  A program with a `main` takes the exact CakeML
     `pan_to_target` wrapper path; a program without one is compiled as-is

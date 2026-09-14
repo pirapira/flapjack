@@ -1,0 +1,13 @@
+seq_mark=(Mark (Seq (Mark Skip) (Mark Skip)),T)
+
+seq_not_mark=(Mark (Seq (Mark Fail) (Mark Skip)),T)
+
+seq_loop_not_mark=(Seq (Loop LN (Mark Skip) LN) (Mark Skip),F)
+
+loop=(Loop LN (Mark Skip) LN,F)
+
+mark_unwrapped=(Mark Skip,T)
+
+call_no_handler=(Mark (Call NONE NONE [] NONE),T)
+
+call_handler=(Mark (Call (SOME ([1],LN)) NONE [2] (SOME (3,Mark Skip,Mark Fail,LN))),T)

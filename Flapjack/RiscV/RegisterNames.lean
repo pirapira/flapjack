@@ -132,6 +132,21 @@ theorem riscvForward_injective : Function.Injective riscvForward := by
   exact riscvRegisterName_injective_lt_32 left.isLt right.isLt
     (by simpa [riscvForward] using congrArg Fin.val hsame)
 
+/-- The lifted Cake register map is surjective: every hardware register index is
+the image of some internal register.  With `riscvForward_injective` this makes
+the one-time map a permutation of the register file, so the relabeled relation
+covers every register rather than only its image. -/
+theorem riscvForward_surjective : Function.Surjective riscvForward := by
+  intro target
+  obtain ⟨name, hnameLt, hmap⟩ := riscvRegisterName_surjective_lt_32 target.isLt
+  exact ⟨⟨name, hnameLt⟩, by apply Fin.ext; simpa [riscvForward] using hmap⟩
+
+/-- The lifted Cake register map is both injective and surjective, i.e. a
+bijection on the 32 hardware registers. -/
+theorem riscvForward_bijective :
+    Function.Injective riscvForward ∧ Function.Surjective riscvForward :=
+  ⟨riscvForward_injective, riscvForward_surjective⟩
+
 /-- Selecting a register through the one-time Cake map is the same as selecting
 the raw internal register and then relabeling its hardware index through
 `riscvForward`. This is the bridge that lets raw Backend register selection be
@@ -161,5 +176,101 @@ theorem riscvForward_eq_zero_iff {register : Fin 32} :
   · intro htwentySeven
     apply Fin.ext
     simp [riscvForward, htwentySeven]
+
+/-- Selecting an internal register through the one-time Cake map yields the
+architectural zero register exactly when that register is the Cake stack zero
+register `27`.  For every other in-range register the image is a distinct
+hardware register, so the zero convention lives only at the `27` role and is
+not an assumption on the abstract register file. -/
+theorem labRegisterOfNat_eq_zero_iff {name : Nat} (h : name < 32) :
+    labRegisterOfNat name = some 0 ↔ name = 27 := by
+  rw [labRegisterOfNat_of_lt_32 h, Option.some.injEq, Fin.ext_iff]
+  simp only [Fin.val_zero]
+  exact riscvRegisterName_eq_zero_iff h
+
+/-- Iterate the internal Cake register-name map `k` times. -/
+def iterRegisterName : Nat → Nat → Nat
+  | 0, name => name
+  | k + 1, name => iterRegisterName k (riscvRegisterName name)
+
+/-- Iterate the lifted Cake register map `k` times on hardware registers. -/
+def iterForward : Nat → Fin 32 → Fin 32
+  | 0, register => register
+  | k + 1, register => iterForward k (riscvForward register)
+
+theorem iterRegisterName_of_ge_32 {name : Nat} (h : 32 ≤ name) (k : Nat) :
+    iterRegisterName k name = name := by
+  induction k with
+  | zero => rfl
+  | succ k ih =>
+      show iterRegisterName k (riscvRegisterName name) = name
+      rw [riscvRegisterName_id_of_ge_32 h]
+      exact ih
+
+/-- The lifted Cake register map has order twelve: iterating the relabeling
+twelve times returns every hardware register to itself.  The map is one 4-cycle
+(`0 → 1 → 10 → 27 → 0`), three 3-cycles, and fixed points, so its order is
+`lcm 4 3 = 12`.  This makes the one-time relabeling invertible and closes the
+finite bound needed to undo it on the register file. -/
+theorem iterRegisterName_twelve (name : Nat) :
+    iterRegisterName 12 name = name := by
+  by_cases h : name < 32
+  · have hcheck :
+        (List.range 32).all (fun n => iterRegisterName 12 n == n) = true := by
+      decide
+    have hmem := List.all_eq_true.mp hcheck name (List.mem_range.mpr h)
+    simpa [beq_iff_eq] using hmem
+  · exact iterRegisterName_of_ge_32 (Nat.le_of_not_lt h) 12
+
+theorem iterForward_val (k : Nat) (register : Fin 32) :
+    (iterForward k register).val = iterRegisterName k register.val := by
+  induction k generalizing register with
+  | zero => rfl
+  | succ k ih =>
+      show (iterForward k (riscvForward register)).val =
+        iterRegisterName (k + 1) register.val
+      rw [ih (riscvForward register), riscvForward_val]
+      rfl
+
+theorem iterForward_twelve (register : Fin 32) :
+    iterForward 12 register = register := by
+  apply Fin.ext
+  rw [iterForward_val, iterRegisterName_twelve]
+
+/-- One step of the inverse of the internal Cake map: eleven further applications
+undo the single relabeling.  `iterRegisterName 12 name` is `iterRegisterName 11`
+applied after one step, so this is the order-twelve statement read backwards. -/
+theorem iterRegisterName_eleven_succ (name : Nat) :
+    iterRegisterName 11 (riscvRegisterName name) = name :=
+  iterRegisterName_twelve name
+
+/-- One step of the inverse of the lifted Cake map on hardware registers. -/
+theorem iterForward_eleven_forward (register : Fin 32) :
+    iterForward 11 (riscvForward register) = register :=
+  iterForward_twelve register
+
+/-- The eleven-fold iterate is also a left inverse of the internal Cake map:
+one application after eleven further applications returns the original name.
+This is the ordering statement read in the opposite direction from
+`iterRegisterName_eleven_succ`. -/
+theorem iterRegisterName_forward_eleven (name : Nat) :
+    riscvRegisterName (iterRegisterName 11 name) = name := by
+  by_cases h : name < 32
+  · have hcheck :
+        (List.range 32).all
+          (fun n => riscvRegisterName (iterRegisterName 11 n) == n) = true := by
+      decide
+    have hmem := List.all_eq_true.mp hcheck name (List.mem_range.mpr h)
+    simpa using hmem
+  · have hge : riscvRegisterName name = name :=
+      riscvRegisterName_id_of_ge_32 (Nat.le_of_not_lt h)
+    rw [iterRegisterName_of_ge_32 (Nat.le_of_not_lt h) 11, hge]
+
+/-- The lifted Cake map has the eleven-fold iterate as a left inverse on
+hardware registers. -/
+theorem iterForward_forward_eleven (register : Fin 32) :
+    riscvForward (iterForward 11 register) = register := by
+  apply Fin.ext
+  rw [riscvForward_val, iterForward_val, iterRegisterName_forward_eleven]
 
 end Flapjack.RiscV

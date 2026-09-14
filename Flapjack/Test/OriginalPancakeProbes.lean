@@ -140,6 +140,34 @@ def semanticsDecls : ProbeFact :=
     cakeAssemblySha256 :=
       "9b71ab937453e4ded03220a808b551c60bb5ef189387ae0865ba12befccd40fb" }
 
+def entryOrder : ProbeFact :=
+  { source := "fun 1 a() { return 1; } fun 1 b() { return 2; } fun 1 main() { return a(); }"
+    sourceReference :=
+      "cakeml/pancake/pan_passesScript.sml:20-37 (pan_to_target_all_def; SPLITP moves the `main` declaration to the front) so the original emits the entry function first and then source order"
+    cakeByteLines := 64
+    cakeByteCount := 1024
+    cakeFinalBytes :=
+      [0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00,
+       0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+    cakeAssemblySha256 :=
+      "76fe76be79451cd5595661e8ad912dc5f266ddeb58efa4b3e510bd70082b94fc" }
+
+/-- The `GitHub issue #1015` nested-expression reproducer.  The original
+`crep_to_loop` flattens nested Word expressions into fresh Loop temporaries, so
+the original accepts the program; the port's Word-to-Stack lowering instead
+exhausted its fixed four-register temporary pool before the pool-expansion fix
+tracked by `flapjack-pxn.2.5`. -/
+def nestedExpression : ProbeFact :=
+  { source := "fun 1 main() { var p = @base; var a = ld8 p; var b = ld8 (p+1); var c = ld8 (p+2); var d = ld8 (p+3); var t1 = ld8 (p+4); var h = 0; h = ((t1 + (a + (b + (c + d)))) << 1) >>> 1; return h; }"
+    sourceReference :=
+      "GitHub issue #1015 nested-expression reproducer; original crep_to_loop flattens nested Word expressions into Loop temporaries, so the original accepts, while the port's Word-to-Stack lowering exhausted its fixed four-register temporary pool before the fix"
+    cakeByteLines := 67
+    cakeByteCount := 1072
+    cakeFinalBytes :=
+      [0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+    cakeAssemblySha256 :=
+      "11ad4d103897fbc551a4540c06a720b7e517f920d805034cee217e5044bb4b29" }
+
 def sourceFactsPinned : Bool :=
   setVar.source == "fun 1 main() { var 1 x = 7; var 1 x = 11; return x; }" &&
   setGlobals.source == "var 1 g = 7; fun 1 main() { return g; }" &&
@@ -155,7 +183,11 @@ def sourceFactsPinned : Bool :=
     evaluateDecls.source == "var 1 g = 41; fun 1 main() { return g; }" &&
     decsStcnames.source == "struct Pair { 1 left, 1 right } fun 1 main() { return 0; }" &&
     semanticsDecls.source ==
-      "var 1 g = 41; struct Pair { 1 left, 1 right } fun 1 main() { return g; }"
+      "var 1 g = 41; struct Pair { 1 left, 1 right } fun 1 main() { return g; }" &&
+    entryOrder.source ==
+      "fun 1 a() { return 1; } fun 1 b() { return 2; } fun 1 main() { return a(); }" &&
+    nestedExpression.source ==
+      "fun 1 main() { var p = @base; var a = ld8 p; var b = ld8 (p+1); var c = ld8 (p+2); var d = ld8 (p+3); var t1 = ld8 (p+4); var h = 0; h = ((t1 + (a + (b + (c + d)))) << 1) >>> 1; return h; }"
 
 def outputFactsPinned : Bool :=
   setVar.cakeByteLines == 64 && setVar.cakeByteCount == 1012 &&
@@ -208,7 +240,19 @@ def outputFactsPinned : Bool :=
     semanticsDecls.cakeFinalBytes ==
       [0x03, 0x35, 0x85, 0xFF, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&
     semanticsDecls.cakeAssemblySha256 ==
-      "9b71ab937453e4ded03220a808b551c60bb5ef189387ae0865ba12befccd40fb"
+      "9b71ab937453e4ded03220a808b551c60bb5ef189387ae0865ba12befccd40fb" &&
+    entryOrder.cakeByteLines == 64 && entryOrder.cakeByteCount == 1024 &&
+    entryOrder.cakeFinalBytes ==
+      [0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00,
+       0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&
+    entryOrder.cakeAssemblySha256 ==
+      "76fe76be79451cd5595661e8ad912dc5f266ddeb58efa4b3e510bd70082b94fc" &&
+    nestedExpression.cakeByteLines == 67 &&
+    nestedExpression.cakeByteCount == 1072 &&
+    nestedExpression.cakeFinalBytes ==
+      [0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8) &&
+    nestedExpression.cakeAssemblySha256 ==
+      "11ad4d103897fbc551a4540c06a720b7e517f920d805034cee217e5044bb4b29"
 
 #guard sourceFactsPinned
 #guard outputFactsPinned

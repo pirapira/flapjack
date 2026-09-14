@@ -945,15 +945,6 @@ mutual
     termination_by fuel _ _ _ _ => fuel
 end
 
-theorem evalPanMemProgFuel_while_const_zero [BEq α] [LawfulBEq α] [Add α]
-    [Mul α] [OfNat α 0]
-    (fuel : Nat) (locals : VarName → Option α) (memory : α → Option α)
-    (body : Prog α) :
-    evalPanMemProgFuel (fuel + 1) locals memory (.while (.const (0 : α)) body) =
-      some (locals, memory, []) := by
-  cases fuel <;>
-    simp [evalPanMemProgFuel, evalPanMemWhileFuel, evalPanMemCondition, evalPanMemExp]
-
 def evalPanMemResult [BEq α] [Add α] [Mul α] [OfNat α 0]
     (locals : VarName → Option α)
     (memory : α → Option α) (program : Prog α) : Option (List α) :=

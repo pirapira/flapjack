@@ -86,6 +86,7 @@ import Flapjack.Test.PanShMemLoadParity
 import Flapjack.Test.PanShMemStoreParity
 import Flapjack.Test.PanEvalParity
 import Flapjack.Test.PanEvaluateParity
+import Flapjack.Test.PanObservationalSemanticsParity
 import Flapjack.Test.PanHHandleCallRetParity
 import Flapjack.Test.PanMrecParity
 import Flapjack.Test.PanHProgDecParity
@@ -775,6 +776,7 @@ def main : IO Unit := do
     Flapjack.Test.PanShMemStoreParity.runChecks,
     Flapjack.Test.PanEvalParity.runChecks,
     Flapjack.Test.PanEvaluateParity.runChecks,
+    Flapjack.Test.PanObservationalSemanticsParity.runChecks,
     Flapjack.Test.PanHHandleCallRetParity.runChecks,
     Flapjack.Test.PanMrecParity.runChecks,
     Flapjack.Test.PanHProgDecParity.runChecks,

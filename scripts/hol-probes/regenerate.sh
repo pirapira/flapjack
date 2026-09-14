@@ -88,6 +88,10 @@ run_probe pan_sem_set_var_probeScript.sml pan_sem_set_var_probe.out \
 run_probe pan_dec_clock_probeScript.sml pan_dec_clock_probe.out \
   pan_dec_clock_five pan_dec_clock_zero \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+# The dec_clock artifact fixture probe evaluates `tick; return 7` directly.
+run_probe pan_sem_dec_clock_e2e_probeScript.sml pan_sem_dec_clock_e2e_probe.out \
+  dec_clock_tick_return dec_clock_tick_return_clock \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_fix_clock_probeScript.sml pan_fix_clock_probe.out \
   pan_fix_clock_clamps pan_fix_clock_keeps_lower \
   "$cake_dir/pancake/semantics/panSemScript.sml"

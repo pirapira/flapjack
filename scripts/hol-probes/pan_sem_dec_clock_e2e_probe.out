@@ -1,0 +1,3 @@
+dec_clock_tick_return=SOME (Return (ValWord 7w))
+
+dec_clock_tick_return_clock=4

@@ -22,7 +22,8 @@ in `Flapjack.RiscV.CakeAlloc` (bead `.1.3.1`).
 
 namespace Flapjack.RiscV.CakeRegAlloc
 
-open Flapjack.RiscV.CakeAlloc (mergeStackOnly mergeStackSets removeTempStack)
+open Flapjack.RiscV.CakeAlloc (mergeStackOnly mergeStackSets removeTempStack
+  getForcedAddCarry getForcedLongMul)
 
 /-- `get_stack_only_aux` (`word_allocScript.sml:1741-1789`).
 
@@ -68,5 +69,40 @@ def cakeGetStackOnlyAux {α : Type u} :
     variable list for a whole program. -/
 def cakeGetStackOnly {α : Type u} (program : WordProg α) : List Nat :=
   (cakeGetStackOnlyAux ([], []) program).2
+
+/-! RISC-V `get_forced` traversal.  The source adds hardware interference
+    edges for the carry and long-multiply instructions, then walks sequence,
+    branch, call-handler, and loop bodies in reverse continuation order. -/
+def cakeForcedArith : WordArith → List (Nat × Nat)
+  | .addCarry destination _ sourceLeft sourceRight _ =>
+      getForcedAddCarry destination sourceLeft sourceRight
+  | .cakeAddCarry destination sourceLeft sourceRight _ =>
+      getForcedAddCarry destination sourceLeft sourceRight
+  | .longMul destinationLeft _ sourceLeft sourceRight =>
+      getForcedLongMul destinationLeft sourceLeft sourceRight
+  | _ => []
+
+def cakeGetForcedAux {α : Type u} :
+    WordProg α → List (Nat × Nat) → List (Nat × Nat)
+  | .inst (.arith operation), forced => cakeForcedArith operation ++ forced
+  | .mustTerminate body, forced => cakeGetForcedAux body forced
+  | .seq first second, forced =>
+      cakeGetForcedAux first (cakeGetForcedAux second forced)
+  | .ite _ _ _ thenBranch elseBranch, forced =>
+      cakeGetForcedAux thenBranch (cakeGetForcedAux elseBranch forced)
+  | .call (some (_, _, returnHandler, _, _)) _ _ handler, forced =>
+      let forced := cakeGetForcedAux returnHandler forced
+      match handler with
+      | none => forced
+      | some (_, handlerBody, _, _) => cakeGetForcedAux handlerBody forced
+  | .loop _ body _, forced => cakeGetForcedAux body forced
+  | _, forced => forced
+  termination_by _program => sizeOf _program
+  decreasing_by
+    all_goals first
+      | decreasing_tactic | decreasing_trivial
+
+def cakeGetForced {α : Type u} (program : WordProg α) : List (Nat × Nat) :=
+  cakeGetForcedAux program []
 
 end Flapjack.RiscV.CakeRegAlloc

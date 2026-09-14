@@ -1,0 +1,3 @@
+matching_return=TailCall «f» []
+mismatching_return=Seq (Call (SOME (SOME (Local,«r»),NONE)) «f» []) (Return (Var Local «s»))
+fallback=Tick

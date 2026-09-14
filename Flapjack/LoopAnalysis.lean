@@ -27,6 +27,29 @@ def loopVarsOfExp : LoopExp α → List Nat
 def varsOfExp (expression : LoopExp α) (live : List Nat) : List Nat :=
   (loopVarsOfExp expression).foldr insertNatSorted live
 
+def deleteNatSorted (name : Nat) : List Nat → List Nat
+  | [] => []
+  | head :: tail =>
+      if name == head then tail else head :: deleteNatSorted name tail
+
+/-! Source-shaped port of `loop_live$arith_vars`
+    (`cakeml/pancake/loop_liveScript.sml:50`). -/
+def arithVars : LoopArith → List Nat → List Nat
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight, live =>
+      insertNatSorted sourceLeft
+        (insertNatSorted sourceRight
+          (deleteNatSorted destinationLeft
+            (deleteNatSorted destinationRight live)))
+  | .longDiv destinationLeft destinationRight sourceLeft sourceRight quotient, live =>
+      insertNatSorted sourceLeft
+        (insertNatSorted sourceRight
+          (insertNatSorted quotient
+            (deleteNatSorted destinationLeft
+              (deleteNatSorted destinationRight live))))
+  | .div destination dividend divisor, live =>
+      insertNatSorted dividend
+        (insertNatSorted divisor (deleteNatSorted destination live))
+
 /-! Faithful port of CakeML Pancake's `locals_touched_def` from
     `cakeml/pancake/loopLangScript.sml:77`.  The source definition is used on
     the original Loop expressions, before the later Flapjack-only `crepOp` and

@@ -32,6 +32,23 @@ no-tick `cml_main` prefixed by that single nop.  This isolation is checked
 below; the no-tick residual mismatch is likewise tracked by
 `flapjack-pxn.8.5.10.1`.
 
+A third fixture, `Flapjack/Test/OriginalPancake/entry_order.pnk`, declares the
+entry function last:
+
+```
+fun 1 a() { return 1; }
+fun 1 b() { return 2; }
+fun 1 main() { return a(); }
+```
+
+The original CPU pipeline moves the `main` declaration to the front
+(`cakeml/pancake/pan_passesScript.sml:20-37`, `pan_to_target_all_def`), so it
+emits `cml_generated_main`, `cml_main`, `cml_a`, `cml_b` in that order.  The
+port renames the source entry, wraps it, and emits source order
+(`cml_generated_main`, `cml_a`, `cml_b`, `main`).  That deterministic section
+ordering divergence, plus the 8-byte-vs-12-byte helper bodies, is the tracked
+gap owned by `flapjack-pxn.8.5.10.3`.
+
 The original-side facts are the `OriginalPancakeProbes.decClock` source-backed
 probe, whose dependency is the direct HOL probe
 `scripts/hol-probes/pan_sem_dec_clock_e2e_probeScript.sml`.  That probe
@@ -50,7 +67,7 @@ exactly here instead of being weakened to an acceptance check.
 namespace Flapjack.Test.RiscVArtifactParity
 
 open Flapjack Flapjack.RiscV
-open Flapjack.Test.OriginalPancakeProbes (decClock constReturn)
+open Flapjack.Test.OriginalPancakeProbes (decClock constReturn entryOrder)
 
 /-- The checked source-facing pipeline configuration used by the compiler
 entry point, kept local so this parity test does not import the executable
@@ -204,6 +221,66 @@ def trackedConstReturnMismatch : Bool :=
     flapjackConstReturnMainBytes.drop (flapjackConstReturnMainBytes.length - 4) ==
       constReturn.cakeFinalBytes
 
+/-- The `entry_order` fixture source, taken from the original-side probe fact.
+It declares the entry function `main` last:
+
+```
+fun 1 a() { return 1; }
+fun 1 b() { return 2; }
+fun 1 main() { return a(); }
+``` -/
+def entryOrderSource : String := entryOrder.source
+
+/-- Original CakeML layout: `cml_generated_main` at 1000 (4B, `jal` to
+`cml_main`), `cml_main` at 1004 (4B, `jal` to `cml_a`), `cml_a` at 1008 (8B),
+`cml_b` at 1016 (8B).  Evidence: `cakeml/pancake/pan_passesScript.sml:20-37`
+(`pan_to_target_all_def`) moves the `main` declaration to the front, and the
+original `makesym` lines report exactly these bases and sizes. -/
+def cakeEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
+  [ (3, 1000, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
+    (4, 1004, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
+    (5, 1008, [0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    (6, 1016, [0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)) ]
+
+/-- Flapjack layout for the same fixture: `cml_generated_main` at 1000 (4B,
+`jal` straight to the renamed entry at 1028), helper `a` at 1004 (12B),
+helper `b` at 1016 (12B), and the entry `main` last at 1028 (4B, `jal` to
+`a`).  This is the source order produced by `globalResortDecls`, not the
+original entry-first order. -/
+def flapjackEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
+  [ (3, 1000, [0x6F, 0x00, 0xC0, 0x01].map (BitVec.ofNat 8)),
+    (4, 1004, [0x13, 0x01, 0x10, 0x00, 0x33, 0x61, 0x21, 0x00,
+               0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    (5, 1016, [0x13, 0x01, 0x20, 0x00, 0x33, 0x61, 0x21, 0x00,
+               0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    (6, 1028, [0x6F, 0xF0, 0x9F, 0xFE].map (BitVec.ofNat 8)) ]
+
+/-- Exact emitted `(label, base, bytes)` artifact for the `entry_order`
+fixture. -/
+def entryOrderEmittedSections : List (Nat × Nat × List (BitVec 8)) :=
+  match compileRuntimeImage entryOrderSource with
+  | some image => emittedSections image
+  | none => []
+
+/-- The port emits the four generated sections in source order. -/
+def entryOrderLayoutMatches : Bool :=
+  entryOrderEmittedSections == flapjackEntryOrderSections
+
+/-- The residual ordering mismatch, recorded exactly rather than accepted:
+the original places the entry `cml_main` second (label 4, 4 bytes) and the
+helpers after it, while the port places helper `a` second (label 4, 12 bytes)
+and the entry `main` last (label 6).  Both entry sections are 4-byte jumps and
+both helper sets compute `1` and `2` via `addi`; the difference is the
+deterministic section order owned by `flapjack-pxn.8.5.10.3`. -/
+def entryOrderOrderingMismatch : Bool :=
+  cakeEntryOrderSections != flapjackEntryOrderSections &&
+    cakeEntryOrderSections.length == 4 && flapjackEntryOrderSections.length == 4 &&
+    cakeEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 8, 8] &&
+    flapjackEntryOrderSections.map (fun s => s.2.2.length) == [4, 12, 12, 4] &&
+    entryOrder.cakeFinalBytes ==
+      ([0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00,
+        0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8))
+
 #guard artifactAccepted
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches
@@ -212,6 +289,8 @@ def trackedConstReturnMismatch : Bool :=
 #guard constReturnLayoutMatches
 #guard standaloneTickIsolated
 #guard trackedConstReturnMismatch
+#guard entryOrderLayoutMatches
+#guard entryOrderOrderingMismatch
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -230,7 +309,11 @@ def runChecks : IO Bool := do
       ("dec_clock cml_main isolates a single standalone tick nop",
         standaloneTickIsolated),
       ("const_return residual cml_main mismatch is tracked, not accepted",
-        trackedConstReturnMismatch) ]
+        trackedConstReturnMismatch),
+      ("entry_order emitted section layout matches the port's source order",
+        entryOrderLayoutMatches),
+      ("entry_order original entry-first order mismatch is tracked, not accepted",
+        entryOrderOrderingMismatch) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

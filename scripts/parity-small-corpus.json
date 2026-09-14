@@ -46,6 +46,12 @@
       "source_reference": "synthetic regression extracted from the original Pancake call/bitmap corpus",
       "cake_sha256": "eaffdb7dd3840571e776be1d3661fd2fc8de56d6cafe34ce5c4fb588e74b79f8",
       "tracked_beads": ["flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/entry_order.pnk",
+      "source_reference": "cakeml/pancake/pan_passesScript.sml:20-37 (pan_to_target_all_def; SPLITP moves the `main` declaration to the front, so the original emits the entry function first and then source order, while Flapjack renames main and emits source order with a wrapper)",
+      "cake_sha256": "76fe76be79451cd5595661e8ad912dc5f266ddeb58efa4b3e510bd70082b94fc",
+      "tracked_beads": ["flapjack-pxn.8.5.10.3"]
     }
   ]
 }

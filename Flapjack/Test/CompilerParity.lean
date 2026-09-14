@@ -112,6 +112,7 @@ import Flapjack.Test.CrepeLoadGlobalsParity
 import Flapjack.Test.CrepeAssignRetParity
 import Flapjack.Test.CrepeVarCexpParity
 import Flapjack.Test.CrepExpsParity
+import Flapjack.Test.CexpHeadsParity
 import Flapjack.Test.CompFieldParity
 import Flapjack.Test.CompilePanOpParity
 import Flapjack.Test.CompileExpParity
@@ -192,6 +193,8 @@ import Flapjack.Test.CakeFramePolicy
 import Flapjack.Test.CakeForcedParity
 import Flapjack.Test.CakeMkBijParity
 import Flapjack.Test.CakeSsaSetupParity
+import Flapjack.Test.ShapeToStringParity
+import Flapjack.Test.CakeApplyColourParity
 import Flapjack.Test.CakeSsaTempParity
 import Flapjack.Test.CakeApplyColourParity
 import Flapjack.Test.CakeSpillCostParity
@@ -862,6 +865,7 @@ def main : IO Unit := do
     Flapjack.Test.CrepeAssignRetParity.runChecks,
     Flapjack.Test.CrepeVarCexpParity.runChecks,
     Flapjack.Test.CrepExpsParity.runChecks,
+    Flapjack.Test.CexpHeadsParity.runChecks,
     Flapjack.Test.CompFieldParity.runChecks,
     Flapjack.Test.CompilePanOpParity.runChecks,
     Flapjack.Test.CompileExpParity.runChecks,

@@ -1,0 +1,3 @@
+skip=Skip
+seq_skip_tick=Tick
+tail_call=TailCall «f» []

@@ -128,6 +128,8 @@ run_probe word_alloc_cost_probeScript.sml word_alloc_cost_probe.out \
   "$cake_dir/compiler/backend/word_allocScript.sml" "$cake_dir/compiler/backend"
 run_probe pan_lang_free_var_ids_probeScript.sml pan_lang_free_var_ids_probe.out \
   empty dec_call "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_inlinable_probeScript.sml pan_lang_inlinable_probe.out \
+  inline_true non_function "$cake_dir/pancake/panLangScript.sml"
 run_probe get_forced_probeScript.sml get_forced_probe.out \
   add_carry nested "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
@@ -136,6 +138,9 @@ run_probe get_forced_probeScript.sml get_forced_probe.out \
 run_probe mk_bij_probeScript.sml mk_bij_probe.out \
   delta_basic composite "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.out \
+  total_colour_mapped_1 setup0_next "$cake_dir/compiler/backend/word_allocScript.sml" \
+  "$cake_dir/compiler/backend"
 run_probe apply_colour_probeScript.sml apply_colour_probe.out \
   total_colour_alloc apply_colour_loop_live \
   "$cake_dir/compiler/backend/word_allocScript.sml" \
@@ -143,9 +148,6 @@ run_probe apply_colour_probeScript.sml apply_colour_probe.out \
 # The legacy allocator-map probe checks the existing WordBijection path too.
 run_probe reg_alloc_mk_bij_probeScript.sml reg_alloc_mk_bij_probe.out \
   empty_to seq_next "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
-  "$cake_dir/compiler/backend"
-run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.out \
-  total_colour_mapped_1 setup0_next "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe cake_ssa_temp_probeScript.sml cake_ssa_temp_probe.out \
   limit_skip full_skip "$cake_dir/compiler/backend/word_allocScript.sml" \
@@ -163,6 +165,8 @@ run_probe sort_moves_probeScript.sml sort_moves_probe.out \
   "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
+  one named "$cake_dir/pancake/panLangScript.sml"
+run_probe shape_to_str_probeScript.sml shape_to_str_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \
   delete_hit update_hit "$cake_dir/pancake/semantics/panSemScript.sml"
@@ -363,6 +367,8 @@ run_probe seq_call_ret_probeScript.sml seq_call_ret_probe.out \
 run_probe ret_to_tail_probeScript.sml ret_to_tail_probe.out \
   skip tail_call mismatching_return handler_seq \
   "$cake_dir/pancake/pan_simpScript.sml"
+run_probe pan_simp_compile_probeScript.sml pan_simp_compile_probe.out \
+  skip seq_skip_tick tail_call "$cake_dir/pancake/pan_simpScript.sml"
 run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \
   exit_loop_break exit_loop_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

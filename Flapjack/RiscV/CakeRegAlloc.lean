@@ -1,5 +1,6 @@
 import Flapjack.RiscV.CakeAllocatorCore
 import Flapjack.RiscV.Allocator
+import Flapjack.RiscV.SpillCosts
 import Flapjack.CrepToLoop
 
 /-!
@@ -915,5 +916,59 @@ def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (NatInfoMap Nat))
   let state := cakeAssignAtemps k ls (fun s n ks => cakeBiasedPref s mvs n ks) s1
   let state := cakeAssignStemps k (fun s n bads => cakeNegBiasedPref s k mvs n bads) state
   some (cakeExtractColor state bij.toAllocator)
+
+/-! `get_prefs` from the original allocator driver: the move preferences fed
+    to IRC (`word_allocScript.sml:1203-1215` via `get_heuristics_def`). -/
+def cakeGetPrefs {α : Type u} [OfNat α 0] [OfNat α 1] :
+    WordProg α → List (Nat × (Nat × Nat)) → List (Nat × (Nat × Nat))
+  | .move priority moves, acc =>
+      moves.foldl (fun acc' move => (priority, (move.1, move.2)) :: acc') acc
+  | .mustTerminate body, acc => cakeGetPrefs body acc
+  | .seq first second, acc => cakeGetPrefs first (cakeGetPrefs second acc)
+  | .ite _ _ _ thenBranch elseBranch, acc =>
+      cakeGetPrefs thenBranch (cakeGetPrefs elseBranch acc)
+  | .call (some (_, _, returnHandler, _, _)) _ _ handler, acc =>
+      match handler with
+      | none => cakeGetPrefs returnHandler acc
+      | some (_, handlerBody, _, _) =>
+          cakeGetPrefs handlerBody (cakeGetPrefs returnHandler acc)
+  | .loop _ body _, acc => cakeGetPrefs body acc
+  | _, acc => acc
+  termination_by program _ => sizeOf program
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-! Frame occupancy from a full Cake IRC run, mirroring the original
+    `word_to_stack$compile_prog` stack-variable count
+    (`word_to_stackScript.sml:586-600`): the colouring rewrites spilled
+    variables to stack numbers `2*k + 2*slot`, so `max_var DIV 2 + 1 - k`
+    counts them, floored by the stack-argument area.  Returns the exact
+    `stack_var_count` (the bitmap writer's `f'`); zero means the original
+    would skip the bitmap entirely.  The bitmap live set itself comes from
+    the exception cut set (`wLive` consumes `SND live`), which the pancake
+    pipeline always leaves empty, so the emitted words stay pure powers of
+    two independently of the production register-location map. -/
+def cakeWordStackVarCount [OfNat α 0] [OfNat α 1]
+    (currentFunction : Nat) (parameters : List Nat) (k : Nat)
+    (program : WordProg α) : Nat :=
+  let ssaProgram := (wordFullSsaCcTrans parameters.length program).2.2
+  let tree := wordClashTree ssaProgram []
+  let fs := cakeGetStackOnly ssaProgram
+  let forced := cakeGetForced ssaProgram
+  let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
+  let moves := wordMoves.map (fun m => (m.priority, (m.left, m.right)))
+  let bij := cakeMkBij tree
+  let scost := spillCosts.map (fun costs =>
+    costs.filterMap (fun entry =>
+      (lookupNatInfo entry.1 bij.toAllocator).map
+        (fun node => (node, entry.2))))
+  match cakeDoRegAlloc .irc scost k moves tree forced fs with
+  | none => 0
+  | some colouring =>
+      let colour := CakeAlloc.totalColour colouring
+      let coloured := wordApplyColour colour ssaProgram
+      let maxVar := (wordProgVariables coloured).foldl max 0
+      let stackArgs := parameters.length - k
+      max ((maxVar / 2 + 1) - k) stackArgs
 
 end Flapjack.RiscV.CakeRegAlloc

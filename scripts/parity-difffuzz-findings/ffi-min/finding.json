@@ -1,0 +1,81 @@
+{
+  "id": "ffi-min",
+  "origin": {
+    "mode": "file",
+    "path": "/tmp/opencode/preserved/ffi-min.pnk"
+  },
+  "comparison": {
+    "cake_returncode": 0,
+    "flapjack_returncode": 0,
+    "mismatches": [
+      {
+        "signature": "frame/ffi-stub",
+        "detail": {
+          "differing_lines": [
+            "cake_ffifoo:",
+            "tail cdecl(ffifoo)",
+            ".p2align 4"
+          ]
+        }
+      },
+      {
+        "signature": "layout/user:main",
+        "detail": {
+          "cake_base": 1004,
+          "flapjack_base": 1004,
+          "cake_length": 64,
+          "flapjack_length": 104
+        }
+      },
+      {
+        "signature": "bytes/user:main:len_ne",
+        "detail": {
+          "cake_sha256": "1dab63bb33ecc74f254a17db05bd15901c3744ac3168a2c9e3ae395d55267f81",
+          "flapjack_sha256": "9209e24b23f9c690b2ccdc77ac7c20683a599e6c19fb69c53fc72463d0354a16",
+          "cake_bytes": "13 0c 0c ff 63 76 9c 01 13 65 20 00 6f f0 9f bf 93 66 40 00 13 66 30 00 93 65 20 00 13 65 10 00 23 34 1c 00 97 00 00 00 93 80 c0 00 6f f0 9f bb",
+          "flapjack_bytes": "93 05 10 00 93 07 20 00 93 09 30 00 93 0b 40 00 b3 eb 7b 01 b3 e9 39 01 b3 e7 f7 00 b3 e5 b5 00 33 e1 b5 00 33 e2 f7 00 33 e3 39 01 33 e4 7b 01"
+        }
+      }
+    ],
+    "class": "both-accepted"
+  },
+  "tool_versions": {
+    "cake": {
+      "path": "/home/zksecurity/pancake-lean/cakeml/developers/bin/cake",
+      "size": 15320616,
+      "sha256": "4768e33f6b280bfb1096beefdef96b3e6c6a69af6331e46af0d219df5f9c9c98"
+    },
+    "flapjack": {
+      "path": "/home/zksecurity/flapjack4/.lake/build/bin/flapjack-compile",
+      "size": 7982608,
+      "sha256": "c87c4881e258916037c3c6329fb0c3d66c633df46d1f33e2ad91610b076619d3",
+      "git_commit": "668e3f6b9cb2092b38def904f8036e5b2b2b0975"
+    }
+  },
+  "commands": {
+    "cake": [
+      "nice",
+      "-n",
+      "10",
+      "timeout",
+      "20s",
+      "/home/zksecurity/pancake-lean/cakeml/developers/bin/cake",
+      "--pancake",
+      "--target=riscv"
+    ],
+    "flapjack": [
+      "nice",
+      "-n",
+      "10",
+      "timeout",
+      "20s",
+      "/home/zksecurity/flapjack4/.lake/build/bin/flapjack-compile",
+      "--assembly",
+      "/tmp/opencode/preserved/ffi-min.pnk"
+    ]
+  },
+  "returncodes": {
+    "cake": 0,
+    "flapjack": 0
+  }
+}

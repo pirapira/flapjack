@@ -14,3 +14,8 @@
 # Local agent workspace state
 .cursor/
 .opencode/
+
+# Differential-fuzz scratch space (parity-difffuzz.py workdir / findings)
+.difffuzz-work/
+difffuzz-findings/
+__pycache__/

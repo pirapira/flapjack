@@ -46,6 +46,7 @@ namespace Flapjack
 inductive PipelineRiscVLoweringError where
   | wordToStack (error : RiscV.PipelineWordLoweringError)
   | allocationFailure (sectionId : Nat)
+  | wordToStackFailure (sectionId : Nat) (path : List Nat)
   | labToRiscV (error : RiscV.LabLoweringError)
   | stackToRiscV
   deriving DecidableEq, Repr
@@ -79,7 +80,10 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               renamedParameters wordAllocatableRegisters.length config.scratch
               allocation.nextSpill (some 1)
               (RiscV.wordStackInitialBitmaps false) renamedProgram with
-          | none => .error (.allocationFailure label)
+          | none =>
+              let path := (RiscV.wordProgFirstExpressionLoweringFailure config
+                (RiscV.wordProgToNat renamedProgram)).getD []
+              .error (.wordToStackFailure label path)
           | some (stackBody, _) =>
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked functions with
               | .error error => .error error
@@ -112,7 +116,10 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
           match RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
               renamedParameters wordAllocatableRegisters.length config.scratch
               (max allocation.nextSpill 1) (some 1) bitmaps renamedProgram with
-          | none => .error (.allocationFailure label)
+          | none =>
+              let path := (RiscV.wordProgFirstExpressionLoweringFailure config
+                (RiscV.wordProgToNat renamedProgram)).getD []
+              .error (.wordToStackFailure label path)
           | some (stackBody, bitmaps) =>
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
                   bitmaps functions with
@@ -144,6 +151,7 @@ inductive SourceRiscVImageError where
 def pipelineLoweringSectionId : PipelineRiscVLoweringError → Option Nat
   | .wordToStack error => some error.sectionId
   | .allocationFailure sectionId => some sectionId
+  | .wordToStackFailure sectionId _ => some sectionId
   | .labToRiscV error => some error.sectionId
   | .stackToRiscV => none
 

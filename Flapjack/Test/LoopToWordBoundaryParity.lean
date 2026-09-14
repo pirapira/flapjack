@@ -34,6 +34,17 @@ def p1WordVariableNames : Option (List (List Nat)) :=
     functions.map (fun (_, _, body) =>
       (wordProgVariables body).eraseDups.mergeSort (fun a b => a < b)))
 
+def runChecks : IO Bool := do
+  let expected : Option (List (List Nat)) := some [[], [2, 4], [2, 4]]
+  if p1WordVariableNames == expected then
+    IO.println "PASS loop_to_word p1 boundary uses dense even Word names"
+    pure true
+  else
+    IO.println s!"FAIL loop_to_word p1 boundary: expected {expected}, got {p1WordVariableNames}"
+    pure false
+
+#guard p1WordVariableNames == some [[], [2, 4], [2, 4]]
+
 end Flapjack.Test.LoopToWordBoundaryParity
 
 /-! Oracle tests for the dense-even Word naming boundary at the allocator.
@@ -41,7 +52,3 @@ end Flapjack.Test.LoopToWordBoundaryParity
     set, removes parameters, and assigns consecutive even Word names via
     `make_ctxt 2 (params ++ variables)`.  These tests pin that boundary on
     the `p1` fixture used by the frame-occupancy oracles. -/
-
-/-- The `p1` functions lower to dense even Word names through the
-    faithful `comp_func` boundary (`[[4,2]` frame oracle prerequisite]). -/
-#guard p1WordVariableNames == some [[], [2, 4], [2, 4]]

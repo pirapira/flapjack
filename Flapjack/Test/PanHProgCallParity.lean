@@ -1,7 +1,12 @@
 import Flapjack.PanHProgCall
 
 /-!
-# Parity checks for Pancake h_prog_call_def
+# Parity checks for Pancake `h_prog_call_def`
+
+The direct HOL fixture in `scripts/hol-probes/pan_itree_h_prog_call_probe.out`
+is generated from `pan_itreeSemScript.sml:377-385`.  The Lean checks cover
+argument failure, lookup failure, and the successful callee event with the
+source-created locals.
 -/
 
 namespace Flapjack.Test.PanHProgCallParity
@@ -10,53 +15,78 @@ open Flapjack
 
 structure TestState where
   locals : VarName → Option (PanValue Nat)
+  cleared : Bool
 
-def context : PanHProgCallContext Nat TestState where
-  evalArguments := fun _ arguments =>
-    if arguments.length == 1 then some [.word 7] else none
-  lookupCode := fun _ function _ =>
-    if function == "callee" then some (.skip, fun _ => none, .one) else none
+def hasWord (values : VarName → Option (PanValue Nat)) (name : VarName)
+    (expected : Nat) : Bool :=
+  match values name with
+  | some (.word value) => value == expected
+  | _ => false
+
+def initialState : TestState :=
+  { locals := updatePanValueMap (fun _ => none) "caller" (.word 3)
+    cleared := false }
+
+def handleContext : PanHHandleCallContext Nat TestState where
+  locals := fun state => state.locals
   setLocals := fun state locals => { state with locals := locals }
-  handleReturn :=
-    { locals := fun state => state.locals
-      setLocals := fun state locals => { state with locals := locals }
-      emptyLocals := fun state => { state with locals := fun _ => none }
-      setKvar := fun state _ _ _ => state
-      isValidValue := fun _ _ _ _ => true
-      exceptionShape := fun _ _ => none }
+  emptyLocals := fun state => { state with locals := fun _ => none, cleared := true }
+  setKvar := fun state _ name value =>
+    { state with locals := updatePanValueMap state.locals name value }
+  isValidValue := fun _ _ _ _ => true
+  exceptionShape := fun _ _ => none
 
-def sourceState : TestState := { locals := fun _ => none }
+def successContext : PanHProgCallContext Nat TestState where
+  evalArguments := fun _ _ => some [.word 1]
+  lookupCode := fun _ function _ =>
+    if function == "callee" then
+      some (.skip, updatePanValueMap (fun _ => none) "arg" (.word 1), .one)
+    else none
+  setLocals := fun state locals => { state with locals := locals }
+  handleReturn := handleContext
 
-def argumentFailure : Bool :=
-  match panHProgCall context none "callee" [] sourceState with
-  | .ret .error _ => true
+def evalFailureContext : PanHProgCallContext Nat TestState where
+  evalArguments := fun _ _ => none
+  lookupCode := fun _ _ _ => none
+  setLocals := fun state locals => { state with locals := locals }
+  handleReturn := handleContext
+
+def lookupFailureContext : PanHProgCallContext Nat TestState where
+  evalArguments := fun _ _ => some [.word 1]
+  lookupCode := fun _ _ _ => none
+  setLocals := fun state locals => { state with locals := locals }
+  handleReturn := handleContext
+
+def observeEvalFailure : Bool :=
+  match panHProgCall evalFailureContext none "callee" [] initialState with
+  | .ret .error state => hasWord state.locals "caller" 3
   | _ => false
 
-def lookupFailure : Bool :=
-  match panHProgCall context none "missing" [.const 7] sourceState with
-  | .ret .error _ => true
+def observeLookupFailure : Bool :=
+  match panHProgCall lookupFailureContext none "missing" [] initialState with
+  | .ret .error state => hasWord state.locals "caller" 3
   | _ => false
 
-def successfulEvent : Bool :=
-  match panHProgCall context none "callee" [.const 7] sourceState with
-  | .vis selected state _ =>
-      (match selected with | .skip => true | _ => false) &&
-        match state.locals "missing" with
-        | none => true
+def observeSuccess : Bool :=
+  match panHProgCall successContext none "callee" [] initialState with
+  | .vis .skip state continuation =>
+      hasWord state.locals "arg" 1 &&
+        match continuation .failed with
+        | .ret .error _ => true
         | _ => false
   | _ => false
 
-#guard argumentFailure
-#guard lookupFailure
-#guard successfulEvent
+#guard observeEvalFailure
+#guard observeLookupFailure
+#guard observeSuccess
 
 def runChecks : IO Bool := do
-  if argumentFailure then IO.println "PASS h_prog_call argument failure"
+  if observeEvalFailure then IO.println "PASS h_prog_call argument failure"
     else IO.println "FAIL h_prog_call argument failure"
-  if lookupFailure then IO.println "PASS h_prog_call lookup failure"
+  if observeLookupFailure then IO.println "PASS h_prog_call lookup failure"
     else IO.println "FAIL h_prog_call lookup failure"
-  if successfulEvent then IO.println "PASS h_prog_call callee event"
-    else IO.println "FAIL h_prog_call callee event"
-  pure (argumentFailure && lookupFailure && successfulEvent)
+  if observeSuccess then IO.println "PASS h_prog_call callee event and locals"
+    else IO.println "FAIL h_prog_call callee event and locals"
+  pure (observeEvalFailure && observeLookupFailure && observeSuccess)
 
 end Flapjack.Test.PanHProgCallParity

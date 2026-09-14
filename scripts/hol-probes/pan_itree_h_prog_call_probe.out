@@ -1,3 +1,5 @@
-argument_failure=T
+call_eval_failure=T
 
-lookup_failure=T
+call_lookup_failure=T
+
+call_success=T

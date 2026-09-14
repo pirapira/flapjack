@@ -1,0 +1,11 @@
+evaluate_store_word_hit=SOME (Word 0x1122334455667788w,Word 0w,20)
+
+evaluate_store_word_domain_failure=SOME Error
+
+evaluate_store32_hit=SOME (Word 0x807060511223344w,Word 0w,20)
+
+evaluate_store32_unaligned=SOME Error
+
+evaluate_store_byte_hit=SOME (Word 0x80706050403AA01w,Word 0w,20)
+
+evaluate_store_byte_domain_failure=SOME Error

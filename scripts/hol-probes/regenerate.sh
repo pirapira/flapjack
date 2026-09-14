@@ -165,6 +165,10 @@ run_probe pan_sem_evaluate_fixed_load_probeScript.sml \
   pan_sem_evaluate_fixed_load_probe.out \
   eval_byte_hit eval_load32_alignment_failure \
   "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_sem_evaluate_fixed_store_probeScript.sml \
+  pan_sem_evaluate_fixed_store_probe.out \
+  evaluate_store_word_hit evaluate_store_byte_domain_failure \
+  "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_itree_evaluate_probeScript.sml pan_itree_evaluate_probe.out \
   itree_evaluate_skip itree_evaluate_tick \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"

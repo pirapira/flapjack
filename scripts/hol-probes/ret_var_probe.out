@@ -1,0 +1,5 @@
+one_empty=NONE
+one_nonempty=SOME 3
+comb_one=SOME 5
+comb_many=NONE
+named=NONE

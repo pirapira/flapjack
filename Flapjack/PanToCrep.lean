@@ -51,6 +51,18 @@ def expHdl [OfNat α 0] [OfNat α 1] [Add α]
         (List.zipWith (fun destination source => .assign destination source)
           names (loadGlobals 0 1 names.length))
 
+/-! Faithful port of `pan_to_crep$ret_var` from
+    `cakeml/pancake/pan_to_crepScript.sml:114-119`.
+
+    A return variable exists only for a one-word shape.  Pancake's `oHD`
+    operation supplies the first flattened destination when one is present. -/
+def retVar (shape : Shape) (names : List Nat) : Option Nat :=
+  match shape with
+  | .one => names.head?
+  | .comb fields =>
+      if Shape.shapeSize (.comb fields) = 1 then names.head? else none
+  | .named _ => none
+
 def compileExp [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) : Exp α → List (CrepExp α) × Shape
   | .const value => ([.const value], .one)

@@ -130,6 +130,10 @@ run_probe pan_itree_h_prog_store_32_probeScript.sml \
   pan_itree_h_prog_store_32_probe.out \
   store_32_success store_32_domain_error \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_itree_h_prog_primitive_probeScript.sml \
+  pan_itree_h_prog_primitive_probe.out \
+  primitive_success primitive_shape_error \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_dec_probeScript.sml pan_itree_h_prog_dec_probe.out \
   dec_valid_event dec_failed_response "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_seq_probeScript.sml pan_itree_h_prog_seq_probe.out \

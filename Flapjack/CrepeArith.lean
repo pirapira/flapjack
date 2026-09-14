@@ -11,6 +11,10 @@ that inspect intermediate artifacts.
 
 namespace Flapjack
 
+def crepDestConst : CrepExp α → Option α
+  | .const value => some value
+  | _ => none
+
 def crepArithExp [Mul α] : CrepExp α → CrepExp α
   | .load address => .load (crepArithExp address)
   | .load32 address => .load32 (crepArithExp address)

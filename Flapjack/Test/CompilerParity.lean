@@ -109,6 +109,7 @@ import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.CrepeGlobalAddressParity
 import Flapjack.Test.ParsedFullSsaPipeline
 import Flapjack.Test.EndToEndParity
+import Flapjack.Test.RiscVArtifactParity
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -798,7 +799,8 @@ def main : IO Unit := do
     Flapjack.Test.LoopCallEnvParity.runChecks,
     Flapjack.Test.EndToEndParity.runChecks,
     Flapjack.Test.CakeStackReseatParity.runChecks,
-    Flapjack.Test.CrepeGlobalAddressParity.runChecks
+    Flapjack.Test.CrepeGlobalAddressParity.runChecks,
+    Flapjack.Test.RiscVArtifactParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

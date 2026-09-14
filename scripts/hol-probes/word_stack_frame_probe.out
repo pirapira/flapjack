@@ -13,6 +13,7 @@ fmt_none=INL 13
 argcount_inl=3
 argcount_inr=2
 stackfree_inl=20
+stackfree_inr=18
 bits_tft=5w
 bits_fff=0w
 wordlist_3=[13w; 2w]

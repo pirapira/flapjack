@@ -32,7 +32,8 @@ def formatExact : Bool :=
 def callFrameExact : Bool :=
   stackArgCount (.inl 3) 15 12 == 3 &&
     stackArgCount (.inr 3) 15 12 == 2 &&
-    stackFree (.inl 3) 8 12 20 19 == 20
+    stackFree (.inl 3) 8 12 20 19 == 20 &&
+    stackFree (.inr 3) 15 12 20 19 == 18
 
 #guard callFrameExact
 

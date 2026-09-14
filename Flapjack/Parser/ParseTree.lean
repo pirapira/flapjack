@@ -96,6 +96,13 @@ abbrev Trees := List ParseTree
 def mkLeaf (entry : Token × Locs) : Trees :=
   [.lf entry.1 entry.2]
 
+/-! `ptree_list_loc`: the empty list is unknown; otherwise the node spans
+    from the first child's start to the last child's stop. -/
+def listLoc : List ParseTree → Locs
+  | [] => unknownLoc
+  | [tree] => tree.locs
+  | tree :: rest => { start := tree.locs.start, stop := (listLoc rest).stop }
+
 /-- `consume_tok`: accept a token and contribute no child. -/
 def consume (expected : Token) (described : String) : P Trees := do
   P.expect expected described
@@ -150,6 +157,10 @@ def keepAnnot : P Trees :=
 /-- The `empty $ mkleaf (t, unknown_loc)` half of `try_default`. -/
 def defaultLeaf (token : Token) : P Trees :=
   pure (mkLeaf (token, unknownLoc))
+
+/-! Direct counterpart of `panPEG$mknode_def`. -/
+def mkNode (nonterminal : Nonterminal) (children : Trees) : ParseTree :=
+  .nd nonterminal children (listLoc children)
 
 /-- `try_default s t`. -/
 def tryDefault (p : P Trees) (token : Token) : P Trees :=

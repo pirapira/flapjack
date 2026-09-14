@@ -954,50 +954,6 @@ theorem evalPanMemProgFuel_while_const_zero [BEq α] [LawfulBEq α] [Add α]
   cases fuel <;>
     simp [evalPanMemProgFuel, evalPanMemWhileFuel, evalPanMemCondition, evalPanMemExp]
 
-def evalCrepMemProgFuel [BEq α] [Add α] [Mul α] [OfNat α 0]
-    (fuel : Nat) (locals : Nat → Option α) (memory : α → Option α) :
-    CrepProg α → Option ((Nat → Option α) × (α → Option α) × List α) :=
-  fun program =>
-    match fuel, program with
-    | _, .skip => some (locals, memory, [])
-    | 0, _ => none
-    | fuel + 1, .dec name value body => do
-        let value ← evalCrepMemExp locals memory value
-        evalCrepMemProgFuel fuel (updateCrepLocal locals name value) memory body
-    | _fuel + 1, .assign name value => do
-        let value ← evalCrepMemExp locals memory value
-        pure (updateCrepLocal locals name value, memory, [])
-    | _fuel + 1, .store address value => do
-        let address ← evalCrepMemExp locals memory address
-        let value ← evalCrepMemExp locals memory value
-        pure (locals, updateMemory memory address value, [])
-    | _fuel + 1, .store32 address value | _fuel + 1, .storeByte address value => do
-        let address ← evalCrepMemExp locals memory address
-        let value ← evalCrepMemExp locals memory value
-        pure (locals, updateMemory memory address value, [])
-    | _fuel + 1, .storeGlob address value => do
-        let value ← evalCrepMemExp locals memory value
-        pure (locals, updateMemory memory address value, [])
-    | _fuel + 1, .return values => do
-        let values ← evalCrepMemProg.evalCrepMemExps locals memory values
-        pure (locals, memory, values)
-    | fuel + 1, .seq first second => do
-        let (locals', memory', firstResult) ←
-          evalCrepMemProgFuel fuel locals memory first
-        if firstResult.isEmpty then
-          evalCrepMemProgFuel fuel locals' memory' second
-        else
-          pure (locals', memory', firstResult)
-    | fuel + 1, .ite condition thenBranch elseBranch => do
-        let condition ← evalCrepMemExp locals memory condition
-        if condition == 0 then
-          evalCrepMemProgFuel fuel locals memory elseBranch
-        else
-          evalCrepMemProgFuel fuel locals memory thenBranch
-    | _fuel + 1, .while _ _ => none
-    | _, _ => none
-termination_by fuel => fuel
-
 def evalPanMemResult [BEq α] [Add α] [Mul α] [OfNat α 0]
     (locals : VarName → Option α)
     (memory : α → Option α) (program : Prog α) : Option (List α) :=

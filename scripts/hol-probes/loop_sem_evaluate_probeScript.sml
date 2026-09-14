@@ -2,8 +2,8 @@
   Direct HOL-EVAL fixture for Pancake loopSem evaluate_def.
   Reference: cakeml/pancake/semantics/loopSemScript.sml:278-360.
   The observations cover normal completion, an intermediate assignment,
-  sequence return, a tail call whose callee returns NONE, and timeout local
-  clearing.
+  sequence return, break/continue result propagation, a tail call whose callee
+  returns NONE, and timeout local clearing.
 *)
 load "bossLib";
 load "preamble";
@@ -42,6 +42,14 @@ val _ = print_eval "seq_return"
   ``case loopSem$evaluate
       (Seq (Assign 1 (Const (7w : 8 word))) (Return [1]),
        ^s with <|locals := LN; clock := 5|>) of
+      (res,s') => (res, lookup 1 s'.locals, s'.clock)``
+val _ = print_eval "break"
+  ``case loopSem$evaluate
+      (Break 3, ^s with <|locals := insert 1 (Word 7w) LN; clock := 5|>) of
+      (res,s') => (res, lookup 1 s'.locals, s'.clock)``
+val _ = print_eval "continue"
+  ``case loopSem$evaluate
+      (Continue 2, ^s with <|locals := insert 1 (Word 7w) LN; clock := 5|>) of
       (res,s') => (res, lookup 1 s'.locals, s'.clock)``
 val _ = print_eval "tail_call_no_result"
   ``case loopSem$evaluate

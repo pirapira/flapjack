@@ -253,3 +253,7 @@ run_probe loop_sem_loop_arith_probeScript.sml loop_sem_loop_arith_probe.out \
 run_probe longdiv_code_probeScript.sml longdiv_code_probe.out \
   longdiv_code_software riscv_longdiv_encoding \
   "$cake_dir/compiler/backend/data_to_wordScript.sml"
+run_probe pan_itree_h_prog_deccall_probeScript.sml \
+  pan_itree_h_prog_deccall_probe.out \
+  argument_failure lookup_failure \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"

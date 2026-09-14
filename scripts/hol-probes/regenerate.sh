@@ -62,8 +62,7 @@ run_probe() {
 run_probe loop_to_word_probeScript.sml loop_to_word_probe.out \
   find_var_empty find_reg_imm_ctxt "$cake_dir/pancake/loop_to_wordScript.sml"
 # The get_stack_only probe observes the allocator driver's stack-only
-# analysis over wordLang programs (backend word_alloc).  Backend probes run
-# from the backend directory so its built theories load directly.
+# analysis over wordLang programs (backend word_alloc).
 run_probe get_stack_only_probeScript.sml get_stack_only_probe.out \
   skip assign_leaf "$cake_dir/compiler/backend/word_allocScript.sml" \
   "$cake_dir/compiler/backend"
@@ -151,7 +150,7 @@ run_probe reg_alloc_probeScript.sml reg_alloc_probe.out \
   "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe sort_moves_probeScript.sml sort_moves_probe.out \
-  sm_ties_two ra_moves_stemp_hi \
+  sm_ties_two sm_ties_three sm_desc ra_moves_stemp ra_moves_stemp_hi \
   "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \

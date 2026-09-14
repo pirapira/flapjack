@@ -284,6 +284,46 @@ where
   decreasing_by
     all_goals first | sizeOf_list_dec | decreasing_trivial
 
+/-! Direct source-shaped counterpart of `panLang$free_var_ids`.  The
+    expression helper is the existing `expLocalVars`, which mirrors the
+    source `var_exp` distinction between local and global variables. -/
+def freeVarIds : Prog α → List VarName
+  | .dec name _ value body =>
+      expLocalVars value ++ (freeVarIds body).filter (fun vname => vname != name)
+  | .seq first second => freeVarIds first ++ freeVarIds second
+  | .ite condition thenBranch elseBranch =>
+      expLocalVars condition ++ freeVarIds thenBranch ++ freeVarIds elseBranch
+  | .while condition body => expLocalVars condition ++ freeVarIds body
+  | .assign kind name value =>
+      (if kind == .local then [name] else []) ++ expLocalVars value
+  | .primitive name _ arguments => name :: arguments.flatMap expLocalVars
+  | .store address value => expLocalVars address ++ expLocalVars value
+  | .store32 address value => expLocalVars address ++ expLocalVars value
+  | .storeByte address value => expLocalVars address ++ expLocalVars value
+  | .raise _ value => expLocalVars value
+  | .return value => expLocalVars value
+  | .extCall _ configuration configurationLength array arrayLength =>
+      expLocalVars configuration ++ expLocalVars configurationLength ++
+        expLocalVars array ++ expLocalVars arrayLength
+  | .shMemLoad _ kind name address =>
+      (if kind == .local then [name] else []) ++ expLocalVars address
+  | .shMemStore _ address value => expLocalVars address ++ expLocalVars value
+  | .call (some (none, some (_, exceptionName, handler))) _ arguments =>
+      exceptionName :: freeVarIds handler ++ arguments.flatMap expLocalVars
+  | .call (some (some (kind, name), some (_, exceptionName, handler))) _ arguments =>
+      (if kind == .local then [name] else []) ++
+        exceptionName :: freeVarIds handler ++ arguments.flatMap expLocalVars
+  | .call (some (some (kind, name), none)) _ arguments =>
+      (if kind == .local then [name] else []) ++ arguments.flatMap expLocalVars
+  | .call (some (none, none)) _ arguments => arguments.flatMap expLocalVars
+  | .call none _ arguments => arguments.flatMap expLocalVars
+  | .decCall name _ _ arguments body =>
+      name :: freeVarIds body ++ arguments.flatMap expLocalVars
+  | _ => []
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def expGlobalVars : Exp α → List VarName
   | .const _ => []
   | .var .local _ => []

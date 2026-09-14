@@ -47,10 +47,9 @@ def wordAllocateFunctionWithOracleOrGraph (parameters : List Nat)
   let tree := WordClashTree.seq (.set renamedParameters)
     (wordClashTree renamedProgram [])
   let forced := wordProgForcedClashes renamedProgram
-  let colour := wordOracleColour oracle
   if wordOracleColouringOk colours stackStart tree forced oracle then
     some (.oracle state renamedParameters
-      (wordApplyColour colour renamedProgram))
+      (wordApplyTotalColour oracle renamedProgram))
   else
     match wordAllocateGraphFunctionWithStackOnlyRenamed parameters program
         fixedSources colours stackStart with

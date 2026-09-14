@@ -1,0 +1,3 @@
+empty=[]
+one=[StoreGlob 3w (Const 7w)]
+two=[StoreGlob 3w (Const 7w); StoreGlob 4w (Const 9w)]

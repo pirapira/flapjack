@@ -257,6 +257,12 @@ run_probe crep_dest_2exp_probeScript.sml crep_dest_2exp_probe.out \
   zero max "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_mul_const_probeScript.sml crep_mul_const_probe.out \
   zero eight "$cake_dir/pancake/crep_arithScript.sml"
+run_probe crep_simp_exp_probeScript.sml crep_simp_exp_probe.out \
+  const_mul fallback_var "$cake_dir/pancake/crep_arithScript.sml"
+run_probe crep_simp_prog_probeScript.sml crep_simp_prog_probe.out \
+  assign unchanged "$cake_dir/pancake/crep_arithScript.sml"
+run_probe afindi_probeScript.sml afindi_probe.out \
+  empty duplicate_first "$cake_dir/pancake/pan_structsScript.sml"
 run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
   semantics_timeout_is_nonterminal semantics_break_is_nonterminal \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

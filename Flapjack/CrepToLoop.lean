@@ -285,6 +285,14 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
   | .tick => .tick
 termination_by program => sizeOf program
 
+/-! Source-named entrypoint for `crep_to_loop$compile` (`compile_def`,
+    `crep_to_loopScript.sml:120`).  The lowering state is already represented
+    explicitly by `LoopContext` and the live set argument. -/
+def compileCrepToLoop [OfNat α 0] [OfNat α 1]
+    (context : LoopContext α) (live : List Nat) (program : CrepProg α) :
+    LoopProg α :=
+  loopCompileProg context live program
+
 theorem loopCompileProg_skip [OfNat α 0] [OfNat α 1]
     (context : LoopContext α) (live : List Nat) :
     loopCompileProg context live (.skip : CrepProg α) = .skip := by

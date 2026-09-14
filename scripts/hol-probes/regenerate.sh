@@ -95,6 +95,9 @@ run_probe pan_lang_decl_predicates_probeScript.sml pan_lang_decl_predicates_prob
   "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_var_exp_probeScript.sml pan_lang_var_exp_probe.out \
   local_var global_var nested nested_global "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_load_store_op_probeScript.sml pan_lang_load_store_op_probe.out \
+  load_op8 load_op16 load_opw load_op32 store_op8 store_op16 store_opw store_op32 \
+  "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

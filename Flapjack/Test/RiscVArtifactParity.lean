@@ -338,14 +338,16 @@ def nestedExpressionWordLoweringAccepted : Bool :=
     a larger temporary-register pool: the inner add is assigned first, then
     the outer add, and finally the original destination receives the result. -/
 def flattenExpressionProbe : WordProg Nat :=
-  .assign 0 (.op .add [.var 1, .op .add [.var 2, .var 3]])
+  .assign 0 nestedExpressionWord
 
 def flattenExpressionProbeMatches : Bool :=
   match RiscV.wordFlattenProgramFrom flattenExpressionProbe with
-  | .seq
-      (.seq
-        (.assign 5 (.op .add [.var 2, .var 3]))
-        (.assign 9 (.op .add [.var 1, .var 5])))
+  | .seq (.assign 9 (.shift .lsr
+        (.op .add [.var 0,
+          .op .add [.var 1,
+            .op .add [.var 2,
+              .op .add [.var 3, .var 4]]]])
+        (.const 1)))
       (.assign 0 (.var 9)) => true
   | _ => false
 

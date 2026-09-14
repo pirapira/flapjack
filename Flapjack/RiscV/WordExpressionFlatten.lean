@@ -13,16 +13,18 @@ to evaluate those trees directly with four reserved registers, which made
 the result depend on accidental dead registers and rejected large real
 functions such as `op_extcodecopy`.
 
-This pass restores the source shape: every non-atomic Word expression is
-materialized in a fresh name, with fresh names using the same `+4` stream as
-the SSA allocator.  The generated assignments are then ordinary Word
-instructions and therefore participate in the existing clash/spill analysis.
+This pass restores the source shape at the Word-to-Stack temporary boundary:
+expressions deeper than the bounded direct-lowering shape are materialized in
+fresh names, with fresh names using the same `+4` stream as the SSA allocator.
+The generated assignments are then ordinary Word instructions and therefore
+participate in the existing clash/spill analysis.
 -/
 
 structure WordFlattenExpResult (α : Type u) where
   code : WordProg α
   expression : WordExp α
   next : Nat
+  depth : Nat
 
 structure WordFlattenProgResult (α : Type u) where
   program : WordProg α
@@ -35,51 +37,74 @@ def wordFlattenSeq (first second : WordProg α) : WordProg α :=
   | _, _ => .seq first second
 
 def wordFlattenFresh (next : Nat) (expression : WordExp α)
-    (code : WordProg α) : WordFlattenExpResult α :=
+    (code : WordProg α) (depth : Nat) : WordFlattenExpResult α :=
   { code := wordFlattenSeq code (.assign next expression)
     expression := .var next
-    next := next + 4 }
+    next := next + 4
+    depth }
+
+/- Keep the current four-temporary lowering boundary explicit.  The parent
+   of a deeper expression is materialized, while ordinary trees remain in
+   the compact shape expected by the existing Word-to-Stack compiler. -/
+def wordFlattenDepthLimit : Nat := 4
 
 inductive WordFlattenWorkResult (α : Type u) where
   | expression (result : WordFlattenExpResult α)
-  | expressions (code : WordProg α) (expressions : List (WordExp α)) (next : Nat)
+  | expressions (code : WordProg α) (expressions : List (WordExp α))
+      (next depth : Nat)
 
 inductive WordFlattenWorkInput (α : Type u) where
   | expression (value : WordExp α)
   | expressions (values : List (WordExp α))
 
 def wordFlattenWork (next : Nat) : WordFlattenWorkInput α → WordFlattenWorkResult α
-  | .expressions [] => .expressions .skip [] next
+  | .expressions [] => .expressions .skip [] next 0
   | .expressions (value :: values) =>
       let first := wordFlattenWork next (.expression value)
       let first := match first with
         | .expression result => result
-        | .expressions _ _ _ =>
-            { code := .skip, expression := .var 0, next := next }
+        | .expressions _ _ _ _ =>
+            { code := .skip, expression := .var 0, next := next, depth := 0 }
       let rest := wordFlattenWork first.next (.expressions values)
       match rest with
-      | .expressions code expressions next =>
+      | .expressions code expressions next depth =>
           .expressions (wordFlattenSeq first.code code)
-            (first.expression :: expressions) next
-      | .expression _ => .expressions first.code [first.expression] first.next
+            (first.expression :: expressions) next (max first.depth depth)
+      | .expression _ => .expressions first.code [first.expression] first.next first.depth
   | .expression (.const value) =>
-      .expression { code := .skip, expression := .const value, next }
+      .expression { code := .skip, expression := .const value, next, depth := 0 }
   | .expression (.var name) =>
-      .expression { code := .skip, expression := .var name, next }
+      .expression { code := .skip, expression := .var name, next, depth := 0 }
   | .expression (.lookup store) =>
-      .expression { code := .skip, expression := .lookup store, next }
+      .expression { code := .skip, expression := .lookup store, next, depth := 0 }
   | .expression (.load address) =>
       let address := wordFlattenWork next (.expression address)
       match address with
       | .expression address =>
-          .expression (wordFlattenFresh address.next (.load address.expression) address.code)
-      | .expressions _ _ _ =>
-          .expression ({ code := .skip, expression := .var 0, next := next })
+          let depth := address.depth + 1
+          if depth > wordFlattenDepthLimit then
+            .expression (wordFlattenFresh address.next (.load address.expression)
+              address.code depth)
+          else
+            let flattened : WordExp α := .load address.expression
+            let result : WordFlattenExpResult α :=
+              { code := address.code, expression := flattened,
+                next := address.next, depth := depth }
+            .expression result
+      | .expressions _ _ _ _ =>
+          .expression { code := .skip, expression := .var 0, next, depth := 0 }
   | .expression (.op operator arguments) =>
       let arguments := wordFlattenWork next (.expressions arguments)
       match arguments with
-      | .expressions code arguments next =>
-          .expression (wordFlattenFresh next (.op operator arguments) code)
+      | .expressions code arguments next depth =>
+          let depth := depth + 1
+          if depth > wordFlattenDepthLimit then
+            .expression (wordFlattenFresh next (.op operator arguments) code depth)
+          else
+            let flattened : WordExp α := .op operator arguments
+            let result : WordFlattenExpResult α :=
+              { code := code, expression := flattened, next := next, depth := depth }
+            .expression result
       | .expression result => .expression result
   | .expression (.shift operator left right) =>
       let left := wordFlattenWork next (.expression left)
@@ -88,30 +113,39 @@ def wordFlattenWork (next : Nat) : WordFlattenWorkInput α → WordFlattenWorkRe
           let right := wordFlattenWork left.next (.expression right)
           match right with
           | .expression right =>
-              .expression (wordFlattenFresh right.next
-                (.shift operator left.expression right.expression)
-                (wordFlattenSeq left.code right.code))
-          | .expressions code _ next =>
+              let depth := max left.depth right.depth + 1
+              if depth > wordFlattenDepthLimit then
+                .expression (wordFlattenFresh right.next
+                  (.shift operator left.expression right.expression)
+                  (wordFlattenSeq left.code right.code) depth)
+              else
+                let flattened : WordExp α :=
+                  .shift operator left.expression right.expression
+                let result : WordFlattenExpResult α :=
+                  { code := wordFlattenSeq left.code right.code,
+                    expression := flattened, next := right.next, depth := depth }
+                .expression result
+          | .expressions code _ next _ =>
               let fallback : WordFlattenExpResult α :=
                 { code := wordFlattenSeq left.code code,
-                  expression := left.expression, next := next }
+                  expression := left.expression, next := next, depth := left.depth }
               .expression fallback
-      | .expressions code _ next =>
-          .expression { code := code, expression := .var 0, next := next }
+      | .expressions code _ next _ =>
+          .expression { code := code, expression := .var 0, next := next, depth := 0 }
 termination_by input => sizeOf input
 decreasing_by all_goals decreasing_trivial
 
 def wordFlattenExpList (next : Nat) (expressions : List (WordExp α)) :
     WordProg α × List (WordExp α) × Nat :=
   match wordFlattenWork next (.expressions expressions) with
-  | .expressions code expressions next => (code, expressions, next)
+  | .expressions code expressions next _ => (code, expressions, next)
   | .expression result => (result.code, [result.expression], result.next)
 
 def wordFlattenExp (next : Nat) (expression : WordExp α) : WordFlattenExpResult α :=
   match wordFlattenWork next (.expression expression) with
   | .expression result => result
-  | .expressions code _ next =>
-      { code := code, expression := .var 0, next := next }
+  | .expressions code _ next _ =>
+      { code := code, expression := .var 0, next := next, depth := 0 }
 
 def wordFlattenProgram (next : Nat) : WordProg α → WordFlattenProgResult α
   | .skip => { program := .skip, next }

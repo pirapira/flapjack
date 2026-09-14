@@ -84,6 +84,14 @@ def mapInverseStep : Bool :=
 
 #guard mapInverseStep
 
+/-- The reverse ordering also holds: one map application after eleven further
+applications returns the original name.  This computable shadow of
+`iterRegisterName_forward_eleven` completes the two-sided inverse step. -/
+def mapForwardInverseStep : Bool :=
+  (List.range 32).all (fun n => riscvRegisterName (iterRegisterName 11 n) == n)
+
+#guard mapForwardInverseStep
+
 example : riscvRegisterName (portToStack 0) = 0 := by decide
 example : riscvRegisterName (portToStack 1) = 1 := by decide
 example : riscvRegisterName (portToStack 10) = 10 := by decide
@@ -134,7 +142,9 @@ def runChecks : IO Bool := do
       ("the Cake map has order twelve on the architectural register file",
         mapOrderTwelve),
       ("the Cake map is inverted by eleven further applications",
-        mapInverseStep) ]
+        mapInverseStep),
+      ("the eleven-fold iterate also inverts the Cake map",
+        mapForwardInverseStep) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

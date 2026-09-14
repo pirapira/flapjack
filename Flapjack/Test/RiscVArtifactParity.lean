@@ -486,6 +486,24 @@ def bitmapCallsWordsMatch : Bool :=
   | some image => image.bitmaps.data == [4, 2, 2]
   | none => false
 
+/-! The smallest frame-occupancy oracle from
+`scripts/parity-difffuzz-findings/frame-occupancy/p1.cake.S`.  Its single
+non-tail call has no live value across the call, so Cake emits exactly the
+header word and one `2 ^ 1` frame word. -/
+def frameOccupancyP1Source : String :=
+  "fun 1 id (x) { return x; }\n" ++
+    "fun 1 main() { var 1 t = id(5); return 1; }"
+
+/-- CakeML's exact bitmap vector recorded by the `p1` oracle assembly. -/
+def cakeFrameOccupancyP1Bitmaps : List Nat := [4, 2]
+
+/-- The production runtime-image compiler preserves the complete Cake `p1`
+bitmap vector, including the initial header word. -/
+def frameOccupancyP1BitmapsMatch : Bool :=
+  match compileRuntimeImage frameOccupancyP1Source with
+  | some image => image.bitmaps.data == cakeFrameOccupancyP1Bitmaps
+  | none => false
+
 #guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
 #guard ffiNamesMatch
@@ -495,6 +513,7 @@ def bitmapCallsWordsMatch : Bool :=
 #guard deadFfiNamesDropped
 #guard deadFfiStubDropped
 #guard bitmapCallsWordsMatch
+#guard frameOccupancyP1BitmapsMatch
 #guard artifactAccepted
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches
@@ -547,7 +566,9 @@ def runChecks : IO Bool := do
       ("unreachable ffi calls gain no stub block",
          deadFfiStubDropped),
       ("bitmap_calls table matches the original [4, 2, 2]",
-         bitmapCallsWordsMatch) ]
+         bitmapCallsWordsMatch),
+      ("frame-occupancy p1 bitmap vector matches Cake [4, 2]",
+         frameOccupancyP1BitmapsMatch) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

@@ -24,8 +24,10 @@ theorem wordClashTreeBijection_lookup_preserves
   induction tree generalizing bijection with
   | delta writes reads =>
       intro name node hlookup
+      have hreads := wordListRemap_lookup_preserves reads bijection name node hlookup
       simpa [wordClashTreeBijection] using
-        wordListRemap_lookup_preserves (writes ++ reads) bijection name node hlookup
+        wordListRemap_lookup_preserves writes (wordListRemap reads bijection)
+          name node hreads
   | set names =>
       intro name node hlookup
       simpa [wordClashTreeBijection] using
@@ -59,8 +61,15 @@ theorem wordClashTreeBijection_maps_names
       intro name hname
       have hname' : name ∈ writes ++ reads := by
         simpa [wordClashTreeNames] using hname
-      simpa [wordClashTreeBijection] using
-        wordListRemap_lookup_of_mem (writes ++ reads) bijection name hname'
+      rcases List.mem_append.mp hname' with hwrite | hread
+      · simpa [wordClashTreeBijection] using
+          wordListRemap_lookup_of_mem writes (wordListRemap reads bijection)
+            name hwrite
+      · rcases wordListRemap_lookup_of_mem reads bijection name hread with
+          ⟨node, hnode⟩
+        have hnode' := wordListRemap_lookup_preserves writes
+          (wordListRemap reads bijection) name node hnode
+        exact ⟨node, by simpa [wordClashTreeBijection] using hnode'⟩
   | set names =>
       intro name hname
       have hname' : name ∈ names := by

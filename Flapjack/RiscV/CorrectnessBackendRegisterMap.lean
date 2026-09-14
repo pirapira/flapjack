@@ -37,6 +37,21 @@ theorem readRegisterInternal_transfer (state : State width) {name : Nat}
   rw [hmap]
   simp
 
+/-- Writing an internal Cake register into a transferred hardware state agrees
+with the raw internal write: the name is resolved through `labRegisterOfNat`
+once, and the hardware write lands on the same place the raw write does.  This
+is the write counterpart of `readRegisterInternal_transfer` and completes the
+register-boundary accessor pair the rebase consumes. -/
+theorem writeRegisterInternalNat_transfer (state : State width) {name : Nat}
+    {register : Fin 32} (h : registerOfNat name = some register) (value : Word width) :
+    writeRegisterInternalNat (transferState state) name value =
+      transferState (writeRegisterInternal riscvForward state register value) := by
+  have hmap : labRegisterOfNat name = some (riscvForward register) := by
+    rw [labRegisterOfNat_eq_registerOfNat_map_forward, h]
+    simp
+  rw [writeRegisterInternalNat_of_some (state := transferState state) hmap]
+  exact writeRegister_transfer_forward state register value
+
 /-- Backend correctness through the Cake register map: for a straight-line
 program, the relabeled image of the Backend-selected code executes on the
 transferred state exactly as transferring the raw selected execution. -/

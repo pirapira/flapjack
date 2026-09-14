@@ -27,3 +27,9 @@ comp_exp_base_addr=Lookup CurrHeap
 comp_exp_top_addr=Op Add [Lookup CurrHeap; ShiftN Lsl (Lookup HeapLength) 1]
 
 comp_exp_nested_op=Op Add [Const 1w; Var 6]
+
+to_num_set_empty=[]
+
+to_num_set_ordered=[(3,()); (1,()); (2,())]
+
+to_num_set_duplicate=[(3,()); (1,()); (2,())]

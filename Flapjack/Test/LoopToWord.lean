@@ -41,6 +41,8 @@ def originalCompExpTopAddr : WordExp Nat := .op .add
   [.lookup .currHeap,
    .shift .lsl (.lookup .heapLength) (.const 1)]
 def originalCompExpNestedOp : WordExp Nat := .op .add [.const 1, .var 6]
+def originalToNumSetOrdered : List Nat := [3, 1, 2]
+def originalToNumSetDuplicate : List Nat := [3, 1, 2]
 
 def sameRegImm : RegImm Nat → RegImm Nat → Bool
   | .imm left, .imm right => left == right
@@ -82,6 +84,12 @@ def sameOptionalWordExp : Option (WordExp Nat) → Option (WordExp Nat) → Bool
   | none, none => true
   | _, _ => false
 
+/-! `toAList` exposes the source sptree's implementation-dependent traversal
+    order.  Compare the observable finite-set membership, not that traversal
+    order, against the checked-in HOL records. -/
+def sameNatSet (left right : List Nat) : Bool :=
+  left.all (fun name => name ∈ right) && right.all (fun name => name ∈ left)
+
 #guard findVar [] 0 == originalFindVarEmpty
 #guard findVar [(3, 7)] 3 == originalFindVarHit
 #guard findVar [(3, 7)] 4 == originalFindVarMiss
@@ -114,6 +122,10 @@ example : wordCompileExp ({ vars := [(3, 6)] } : WordContext)
     some originalCompExpNestedOp := by
   simp [wordCompileExp, wordCompileExp.wordCompileExpList, wordFindVar,
     lookupNatInfo, originalCompExpNestedOp]
+
+example : toNumSet [] = [] := rfl
+example : sameNatSet (toNumSet [1, 2, 3]) originalToNumSetOrdered := by decide
+example : sameNatSet (toNumSet [3, 1, 3, 2]) originalToNumSetDuplicate := by decide
 
 def runChecks : IO Bool := do
   let mut ok := true
@@ -155,8 +167,12 @@ def runChecks : IO Bool := do
       (.op .add [.const 1, .var 3] : LoopExp Nat))
       (some originalCompExpNestedOp) then
     IO.println "FAIL LoopToWord.comp_exp nested op"; ok := false
+  if !sameNatSet (toNumSet [1, 2, 3]) originalToNumSetOrdered then
+    IO.println "FAIL LoopToWord.to_num_set ordered"; ok := false
+  if !sameNatSet (toNumSet [3, 1, 3, 2]) originalToNumSetDuplicate then
+    IO.println "FAIL LoopToWord.to_num_set duplicate"; ok := false
   if ok then
-    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp parity"
+    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set parity"
   pure ok
 
 end Flapjack.Test.LoopToWord

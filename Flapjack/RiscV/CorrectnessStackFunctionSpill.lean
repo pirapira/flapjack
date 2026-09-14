@@ -25,7 +25,7 @@ theorem evalWordStackMachine_wordToStackFunctionWithSpillStateAndLocationBitmaps
       registerCount bitmapRegister frameSlots storeConstsStub bitmapState program =
       some (body, bitmapFinal))
     (hmoves : wordStackMovesFromPhysical
-      { config with locations := allocation.locations } parameters 2 = some moves)
+      { config with locations := allocation.locations } parameters wordStackAbiBase = some moves)
     (hentry : evalWordStackMachine state moves = some middle)
     (hbodyEval : evalWordStackMachine middle body = some final) :
     evalWordStackMachine state
@@ -62,7 +62,7 @@ theorem wordToStackFunctionWithSpillStateAndLocationBitmaps_preserves_bitmap_len
       cases bodyResult with
       | mk body bodyState =>
           cases hmoves : wordStackMovesFromPhysical
-              { config with locations := allocation.locations } parameters 2 with
+              { config with locations := allocation.locations } parameters wordStackAbiBase with
           | none =>
               rw [hbody, hmoves] at hresult
               simp at hresult

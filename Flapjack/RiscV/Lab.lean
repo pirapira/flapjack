@@ -228,6 +228,17 @@ def labCompilePlain [NeZero width] :
   | .dataBufferWrite address value =>
       (wordInstToInstruction (.mem .store value address)).map List.singleton
 
+/-! StackLang's `LocValue` uses register 0 as the conventional link
+    register.  The port's ordinary register fields are hardware-numbered, so
+    this special carrier must be translated separately; sending port register
+    0 through `portToStack` would select the architectural zero register and
+    silently discard FFI/install return addresses. -/
+def labLocValueRegister (register : Nat) : Option (Fin 32) :=
+  if register = 0 then
+    labRegisterOfNat (portToStack portLinkRegister)
+  else
+    labRegisterOfNat (portToStack register)
+
 def labCompileAsm [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
@@ -241,7 +252,7 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
       pure [.jal link (labOffset target position)]
   | .locValue register target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
+      let register ← labLocValueRegister register
       let target ← labResolveRef sectionId labels target
       pure [.addi register zero (BitVec.ofNat width target)]
   | .linkValue target => do
@@ -386,7 +397,7 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
       pure [.jal link (labOffset target position)]
   | .locValue register target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
+      let register ← labLocValueRegister register
       let target ← labResolveProgramRef labels target
       pure [.addi register zero (BitVec.ofNat width target)]
   | .linkValue target => do
@@ -495,7 +506,7 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       pure [.jal link (labOffset target position)]
   | .locValue register target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
+      let register ← labLocValueRegister register
       let target ← labResolveProgramRef labels target
       pure [.addi register zero (BitVec.ofNat width target)]
   | .linkValue target => do
@@ -606,7 +617,7 @@ runtime blocks are reserved as non-falling-through placeholders. -/
 def labFfiServiceStub [NeZero width] (service : Nat) :
     List (Instruction width) :=
   [.addi 14 0 (BitVec.ofNat width service), .ecall,
-   .jalr 0 1 0, .addi 0 0 0]
+   .jalr 0 31 0, .addi 0 0 0]
 
 def labFfiStubPrefix [NeZero width] (context : WordFfiContext) :
     List (Instruction width) :=
@@ -614,6 +625,21 @@ def labFfiStubPrefix [NeZero width] (context : WordFfiContext) :
   else
     context.services.flatMap (fun (_, service) => labFfiServiceStub service) ++
       List.replicate 8 (.jal 0 0)
+
+/-! A linked FFI call is nested inside an ordinary Cake function call.  Its
+    continuation must not overwrite the caller's `x1` link: the service stub
+    returns through the reserved scratch `x31`, while the ordinary function
+    return still uses `x1`.  Rebase only the linked FFI carrier here; the
+    generic Lab flattening contract retains the source `returnAddress` field. -/
+def labRebaseLinkedFfiReturnLines [NeZero width] :
+    List (LabLine (Word width)) → List (LabLine (Word width))
+  | .labAsm (.locValue _ target) bytes length ::
+      .labAsm (.callFfi function) callBytes callLength :: lines =>
+      .labAsm (.locValue 31 target) bytes length ::
+        .labAsm (.callFfi function) callBytes callLength ::
+          labRebaseLinkedFfiReturnLines lines
+  | line :: lines => line :: labRebaseLinkedFfiReturnLines lines
+  | [] => []
 
 def labCompileAsmProgramWithFfiBase [NeZero width]
     (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
@@ -649,6 +675,8 @@ def compileLabProgramLinkedWithFfiStubsAux [NeZero width]
       Option (List (Nat × Word width × List (Instruction width)))
   | [] => some []
   | sectionData :: sections => do
+      let sectionData :=
+        { sectionData with lines := labRebaseLinkedFfiReturnLines sectionData.lines }
       let code ← labCompileProgramLinesWithFfiBase context labels base ffiBase
         sectionData.lines
       let rest ← compileLabProgramLinkedWithFfiStubsAux context labels

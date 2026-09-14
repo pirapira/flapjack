@@ -62,7 +62,10 @@ def parsedCallMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← parsedCallLinked
   let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 172 [] image [2] []
+  /- The linked main section's call continuation is at byte 252.  Stopping
+     there observes the value at the source-level function boundary before
+     the surrounding runtime wrapper resumes. -/
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 252 [] image [2] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
 
 def parsedCallSourceResult : Option (List (RiscV.Word 64)) := do
@@ -152,19 +155,13 @@ def parsedConditionalMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← parsedConditionalLinked
   let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  /- This fixture has no nested call, so its direct entry returns to the
-     sentinel link used by the small source-facing machine harness. -/
   RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
 
 def parsedConditionalSourceResult : Option (List (RiscV.Word 64)) := do
-  let functions ← parsedConditionalSourceFunctions
   let body ← parsedConditionalSourceMain
-  let result ← evalPanProgWithCallsAndFfi functions (fun _ _ _ _ _ _ => none) 30
-    (fun _ => none) body
-  match result with
-  | .returned _ values => some values
-  | _ => none
+  let result ← evalPanMemProgFuel 30 (fun _ => none) (fun _ => none) body
+  pure result.2.2
 
 def parsedConditionalLoopResult : Option (List (RiscV.Word 64)) := do
   let declarations ← parsedConditionalDeclarations

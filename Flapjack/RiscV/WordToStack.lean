@@ -34,8 +34,9 @@ structure WordStackConfig where
   deriving Repr
 
 /-! The executable StackLang model carries hardware RISC-V register numbers
-    directly at the ABI boundary.  Cake's first argument/return register is
-    therefore hardware `a0` (`x10`). -/
+    directly at the ABI boundary.  The CakeML ABI's first argument/result
+    register is stack register 1, which is hardware `x10`; the existing `+2`
+    layout supplies subsequent word locations. -/
 def wordStackAbiBase : Nat := 10
 
 def wordStackLocation (config : WordStackConfig) (name : Nat) :
@@ -1388,6 +1389,12 @@ def wordStackReturnCode (config : WordStackConfig) :
 
 def wordStackReturn (config : WordStackConfig) (values : List Nat) :
     Option (StackProg α) := do
+  /- The RISC-V port keeps allocator locations in hardware-numbered space.
+     Its ABI return value is therefore the hardware `a0` slot (10), while
+     `labCompileAsm` still uses the separate link register for the return
+     jump.  Using the old internal `1` here aliases the link register after
+     Lab's port-to-stack reseating and makes every non-leaf call return to the
+     value instead of its continuation. -/
   let moves ← wordStackMovesToPhysical config values wordStackAbiBase
   match values with
   | [] => pure moves

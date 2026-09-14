@@ -48,6 +48,14 @@ def originalFromNumSetDuplicate : List Nat := [3, 1, 2]
 def originalMkNewCutsetEmpty : List Nat := [0]
 def originalMkNewCutsetMapped : List Nat := [0, 6]
 def originalMkNewCutsetDuplicate : List Nat := [0, 6]
+def originalCompSkip : WordProg Nat := .skip
+def originalCompAssignConst : WordProg Nat := .assign 6 (.const 7)
+def originalCompSeqTick : WordProg Nat := .seq .skip .tick
+def originalCompLoop : WordProg Nat :=
+  .seq .tick (.seq (.loop [0, 6] .skip [0]) .tick)
+def originalCompBreak : WordProg Nat := .break 2
+def originalCompFail : WordProg Nat := .skip
+def originalCompSetGlobal : WordProg Nat := .set (.temp 9) (.const 7)
 
 def sameRegImm : RegImm Nat → RegImm Nat → Bool
   | .imm left, .imm right => left == right
@@ -87,6 +95,21 @@ where
 def sameOptionalWordExp : Option (WordExp Nat) → Option (WordExp Nat) → Bool
   | some left, some right => sameWordExp left right
   | none, none => true
+  | _, _ => false
+
+def sameWordProg : WordProg Nat → WordProg Nat → Bool
+  | .skip, .skip => true
+  | .assign leftName leftValue, .assign rightName rightValue =>
+      leftName == rightName && sameWordExp leftValue rightValue
+  | .inst left, .inst right => left == right
+  | .set leftStore leftValue, .set rightStore rightValue =>
+      sameWordStore leftStore rightStore && sameWordExp leftValue rightValue
+  | .seq leftFirst leftSecond, .seq rightFirst rightSecond =>
+      sameWordProg leftFirst rightFirst && sameWordProg leftSecond rightSecond
+  | .loop leftIn leftBody leftOut, .loop rightIn rightBody rightOut =>
+      leftIn == rightIn && sameWordProg leftBody rightBody && leftOut == rightOut
+  | .break left, .break right => left == right
+  | .tick, .tick => true
   | _, _ => false
 
 /-! `toAList` exposes the source sptree's implementation-dependent traversal
@@ -142,6 +165,21 @@ example : sameNatSet (mkNewCutset [(3, 6)] [1, 2, 3])
     originalMkNewCutsetMapped := by decide
 example : sameNatSet (mkNewCutset [(3, 6)] [3, 1, 3, 2])
     originalMkNewCutsetDuplicate := by decide
+
+#guard sameWordProg (loopToWordProg ({ vars := [] } : WordContext)
+    (.skip : LoopProg Nat)) originalCompSkip == true
+#guard sameWordProg (loopToWordProg ({ vars := [(3, 6)] } : WordContext)
+    (.assign 3 (.const 7) : LoopProg Nat)) originalCompAssignConst == true
+#guard sameWordProg (loopToWordProg ({ vars := [] } : WordContext)
+    (.seq .skip .tick : LoopProg Nat)) originalCompSeqTick == true
+#guard sameWordProg (loopToWordProg ({ vars := [(3, 6)] } : WordContext)
+    (.loop [3] .skip [] : LoopProg Nat)) originalCompLoop == true
+#guard sameWordProg (loopToWordProg ({ vars := [] } : WordContext)
+    (.break 2 : LoopProg Nat)) originalCompBreak == true
+#guard sameWordProg (loopToWordProg ({ vars := [] } : WordContext)
+    (.fail : LoopProg Nat)) originalCompFail == true
+#guard sameWordProg (loopToWordProg ({ vars := [] } : WordContext)
+    (.setGlobal 9 (.const 7) : LoopProg Nat)) originalCompSetGlobal == true
 
 def runChecks : IO Bool := do
   let mut ok := true
@@ -201,8 +239,29 @@ def runChecks : IO Bool := do
   if !sameNatSet (mkNewCutset [(3, 6)] [3, 1, 3, 2])
       originalMkNewCutsetDuplicate then
     IO.println "FAIL LoopToWord.mk_new_cutset duplicate"; ok := false
+  if !sameWordProg (loopToWordProg ({ vars := [] } : WordContext)
+      (.skip : LoopProg Nat)) originalCompSkip then
+    IO.println "FAIL LoopToWord.comp skip"; ok := false
+  if !sameWordProg (loopToWordProg ({ vars := [(3, 6)] } : WordContext)
+      (.assign 3 (.const 7) : LoopProg Nat)) originalCompAssignConst then
+    IO.println "FAIL LoopToWord.comp assign"; ok := false
+  if !sameWordProg (loopToWordProg ({ vars := [] } : WordContext)
+      (.seq .skip .tick : LoopProg Nat)) originalCompSeqTick then
+    IO.println "FAIL LoopToWord.comp sequence"; ok := false
+  if !sameWordProg (loopToWordProg ({ vars := [(3, 6)] } : WordContext)
+      (.loop [3] .skip [] : LoopProg Nat)) originalCompLoop then
+    IO.println "FAIL LoopToWord.comp loop"; ok := false
+  if !sameWordProg (loopToWordProg ({ vars := [] } : WordContext)
+      (.break 2 : LoopProg Nat)) originalCompBreak then
+    IO.println "FAIL LoopToWord.comp break"; ok := false
+  if !sameWordProg (loopToWordProg ({ vars := [] } : WordContext)
+      (.fail : LoopProg Nat)) originalCompFail then
+    IO.println "FAIL LoopToWord.comp fail"; ok := false
+  if !sameWordProg (loopToWordProg ({ vars := [] } : WordContext)
+      (.setGlobal 9 (.const 7) : LoopProg Nat)) originalCompSetGlobal then
+    IO.println "FAIL LoopToWord.comp set_global"; ok := false
   if ok then
-    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set/from_num_set/mk_new_cutset parity"
+    IO.println "PASS LoopToWord find_var/find_reg_imm/make_ctxt/comp_exp/to_num_set/from_num_set/mk_new_cutset/comp parity"
   pure ok
 
 end Flapjack.Test.LoopToWord

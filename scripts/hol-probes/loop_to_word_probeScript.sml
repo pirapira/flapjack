@@ -67,3 +67,21 @@ val _ = print_eval "mk_new_cutset_mapped"
   ``toAList (mk_new_cutset (insert 3 6 LN) (toNumSet [1; 2; 3]))``
 val _ = print_eval "mk_new_cutset_duplicate"
   ``toAList (mk_new_cutset (insert 3 6 LN) (toNumSet [3; 1; 3; 2]))``
+
+(* comp_def, loop_to_wordScript.sml:56-150 *)
+val _ = print_eval "comp_skip"
+  ``comp (LN : num num_map) loopLang$Skip (0,0)``
+val _ = print_eval "comp_assign_const"
+  ``comp (insert 3 6 LN) (loopLang$Assign 3 (Const (7w : 8 word))) (0,0)``
+val _ = print_eval "comp_seq_tick"
+  ``comp (LN : num num_map) (loopLang$Seq loopLang$Skip loopLang$Tick) (0,0)``
+val _ = print_eval "comp_loop"
+  ``comp (insert 3 6 LN)
+      (loopLang$Loop (toNumSet [3]) loopLang$Skip (toNumSet [])) (0,0)``
+val _ = print_eval "comp_break"
+  ``comp (LN : num num_map) (loopLang$Break 2) (0,0)``
+val _ = print_eval "comp_fail"
+  ``comp (LN : num num_map) loopLang$Fail (0,0)``
+val _ = print_eval "comp_set_global"
+  ``comp (LN : num num_map)
+      (loopLang$SetGlobal (9w : 5 word) (Const (7w : 8 word))) (0,0)``

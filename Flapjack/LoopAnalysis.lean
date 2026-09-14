@@ -127,6 +127,39 @@ def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
   | .call returns target arguments handler, live =>
       (.call returns target arguments handler, live)
 
+/-! Faithful executable port of `loop_live$mark_all` from
+    `cakeml/pancake/loop_liveScript.sml:189`.  The Boolean records whether
+    the source marked the whole node; the recursive calls preserve the
+    intermediate marked children before rebuilding each parent. -/
+def loopMarkAll : LoopProg α → LoopProg α × Bool
+  | .seq first second =>
+      let (first', firstMarked) := loopMarkAll first
+      let (second', secondMarked) := loopMarkAll second
+      let marked := firstMarked && secondMarked
+      (if marked then .mark (.seq first' second') else .seq first' second', marked)
+  | .loop liveIn body liveOut =>
+      let (body', _) := loopMarkAll body
+      (.loop liveIn body' liveOut, false)
+  | .ite operator condition right thenBranch elseBranch live =>
+      let (then', thenMarked) := loopMarkAll thenBranch
+      let (else', elseMarked) := loopMarkAll elseBranch
+      let marked := thenMarked && elseMarked
+      let program := .ite operator condition right then' else' live
+      (if marked then .mark program else program, marked)
+  | .mark body => loopMarkAll body
+  | .call returns target arguments .none =>
+      (.mark (.call returns target arguments .none), true)
+  | .call returns target arguments
+      (.some (exception, handler, normal, liveOut)) =>
+      let (handler', handlerMarked) := loopMarkAll handler
+      let (normal', normalMarked) := loopMarkAll normal
+      let marked := handlerMarked && normalMarked
+      let program :=
+        .call returns target arguments
+          (.some (exception, handler', normal', liveOut))
+      (if marked then .mark program else program, marked)
+  | program => (.mark program, true)
+
 /-! Faithful port of CakeML Pancake's `locals_touched_def` from
     `cakeml/pancake/loopLangScript.sml:77`.  The source definition is used on
     the original Loop expressions, before the later Flapjack-only `crepOp` and

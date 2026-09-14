@@ -264,3 +264,7 @@ run_probe pan_itree_h_prog_deccall_probeScript.sml \
   pan_itree_h_prog_deccall_probe.out \
   argument_failure lookup_failure \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_itree_h_prog_call_probeScript.sml \
+  pan_itree_h_prog_call_probe.out \
+  argument_failure lookup_failure \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"

@@ -77,6 +77,8 @@ run_probe pan_flat_store_probeScript.sml pan_flat_store_probe.out \
   store_hit stores_blocked "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_flatten_probeScript.sml pan_flatten_probe.out \
   word named "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_lang_nested_seq_probeScript.sml pan_lang_nested_seq_probe.out \
+  empty assign_seq "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \
   delete_hit update_hit "$cake_dir/pancake/semantics/panSemScript.sml"
 # The pan_primop probe prints numeric w2n values of the returned RStruct.

@@ -1,0 +1,7 @@
+empty=Skip
+
+one=Seq Skip Skip
+
+two=Seq Tick (Seq Skip Skip)
+
+assign_seq=Seq (Assign Local «x» (Const 7w)) (Seq (Assign Local «y» (Const 9w)) Skip)

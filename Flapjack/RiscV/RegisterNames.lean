@@ -1,4 +1,4 @@
-import Flapjack.RiscV.Backend
+import Flapjack.RiscV.RegisterMap
 
 /-!
 # CakeML RISC-V register names

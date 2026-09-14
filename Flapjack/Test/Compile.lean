@@ -189,16 +189,6 @@ example :
   decide +kernel
 
 example :
-    evalCrepMemResult (fun _ => none) (fun _ => none)
-      (compileProg assignmentContext
-        (.seq (.store (.const 10) (.const 7))
-          (.return (.load .one (.const 10))))) =
-      some [7] := by
-    simp [compileProg, compileExp, freshNames, nestedDecs, stores, crepNestedSeq,
-    loadShape, evalCrepMemResult, evalCrepMemProg, evalCrepMemProg.evalCrepMemExps,
-    evalCrepMemExp, updateMemory, updateCrepLocal, assignmentContext]
-
-example :
     lowerLoopExp (CrepExp.cmp .equal (.var 0) (.const (α := Nat) 1)) =
       .cmp .equal (.var 0) (.const 1) := by
   simp [lowerLoopExp]

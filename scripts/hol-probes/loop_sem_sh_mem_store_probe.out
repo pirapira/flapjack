@@ -1,0 +1,7 @@
+store_zero_width=(NONE,SOME (Word 7w),1)
+
+missing_word_error=(SOME Error,0)
+
+domain_error=(SOME Error,0)
+
+aligned_domain_original_payload=T

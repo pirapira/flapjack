@@ -287,6 +287,7 @@ example :
   rfl
 
 #guard
-  loopAccVars (LoopProg.assign 1 (.op .add [.var 2, .const 0])) [] = [2, 1]
+  -- `acc_vars` records assigned variables, not expression reads
+  loopAccVars (LoopProg.assign 1 (.op .add [.var 2, .const 0])) [] = [1]
 
 end Flapjack

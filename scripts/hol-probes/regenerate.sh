@@ -50,7 +50,8 @@ run_probe() {
   if probe_needs_refresh "$output" "$probe" "$source"; then
     (cd "$cake_dir/pancake" && \
       "$hol_dir/bin/hol" run "$probe") >"$tmp"
-    sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" > "$output"
+    sed -n "/^${first_label}=/,/^${last_label}=/p" "$tmp" \
+      | sed '/^<<HOL message:/,/^  pattern completion.*>>$/d' > "$output"
   fi
 }
 
@@ -96,8 +97,36 @@ run_probe pan_sem_memory_e2e_probeScript.sml pan_sem_memory_e2e_probe.out \
   memory_load_37 memory_load_37 "$cake_dir/pancake/semantics/panSemScript.sml"
 run_probe pan_sem_ffi_e2e_probeScript.sml pan_sem_ffi_e2e_probe.out \
   ffi_foo_event ffi_foo_event "$cake_dir/pancake/semantics/panSemScript.sml"
+run_probe pan_itree_comp_ffi_probeScript.sml pan_itree_comp_ffi_probe.out \
+  ret tau return length_failure final div_ret div_tau \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
   get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_get_var_imm_probeScript.sml \
+  loop_sem_get_var_imm_probe.out \
+  reg_hit reg_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_call_env_probeScript.sml \
+  loop_sem_call_env_probe.out \
+  arg_zero arg_missing "$cake_dir/pancake/semantics/loopSemScript.sml"
+# The locals_touched probe observes the structural Loop expression analysis.
+run_probe loop_lang_locals_touched_probeScript.sml \
+  loop_lang_locals_touched_probe.out \
+  const base_addr "$cake_dir/pancake/loopLangScript.sml"
+run_probe loop_lang_assigned_vars_probeScript.sml \
+  loop_lang_assigned_vars_probe.out \
+  skip load_byte "$cake_dir/pancake/loopLangScript.sml"
+run_probe loop_lang_acc_vars_probeScript.sml \
+  loop_lang_acc_vars_probe.out \
+  skip call_none "$cake_dir/pancake/loopLangScript.sml"
+run_probe loop_lang_nested_seq_probeScript.sml \
+  loop_lang_nested_seq_probe.out \
+  empty assign_load "$cake_dir/pancake/loopLangScript.sml"
+run_probe loop_call_is_load_probeScript.sml \
+  loop_call_is_load_probe.out \
+  load store32 "$cake_dir/pancake/loop_callScript.sml"
+run_probe loop_call_comp_probeScript.sml \
+  loop_call_comp_probe.out \
+  skip fallback_keeps "$cake_dir/pancake/loop_callScript.sml"
 # The set_globals probe observes FLOOKUP after the original map update.
 run_probe loop_sem_set_globals_probeScript.sml loop_sem_set_globals_probe.out \
   set_globals_new set_globals_sibling "$cake_dir/pancake/semantics/loopSemScript.sml"
@@ -120,6 +149,27 @@ run_probe loop_sem_mem_store_probeScript.sml loop_sem_mem_store_probe.out \
   mem_store_hit mem_store_other "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_mem_load_probeScript.sml loop_sem_mem_load_probe.out \
   mem_load_hit mem_load_miss "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_eval_probeScript.sml loop_sem_eval_probe.out \
+  const top_addr "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_evaluate_probeScript.sml loop_sem_evaluate_probe.out \
+  skip tick_timeout "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_semantics_probeScript.sml loop_semantics_probe.out \
+  return_clock_zero return_clock_one "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_lprefix_lub_probeScript.sml loop_sem_lprefix_lub_probe.out \
+  empty_lub_0 empty_lub_0 "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_cut_state_probeScript.sml loop_sem_cut_state_probe.out \
+  hit_first loc_preserved "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_cut_res_probeScript.sml loop_sem_cut_res_probe.out \
+  result_short_circuit clock_decrement_and_cut \
+  "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_sh_mem_load_probeScript.sml loop_sem_sh_mem_load_probe.out \
+  return_zero_width aligned_domain_original_payload \
+  "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_sh_mem_store_probeScript.sml loop_sem_sh_mem_store_probe.out \
+  store_zero_width aligned_domain_original_payload \
+  "$cake_dir/pancake/semantics/loopSemScript.sml"
+run_probe loop_sem_sh_mem_op_probeScript.sml loop_sem_sh_mem_op_probe.out \
+  load store32 "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_exit_loop_probeScript.sml loop_sem_exit_loop_probe.out \
   exit_loop_break exit_loop_error "$cake_dir/pancake/semantics/loopSemScript.sml"
 # The loop_arith probe prints numeric word values to avoid raw-literal ambiguity.

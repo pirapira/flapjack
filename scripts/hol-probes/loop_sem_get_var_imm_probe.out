@@ -1,0 +1,4 @@
+reg_hit=SOME (Word 5w)
+reg_miss=NONE
+imm_word=SOME (Word 7w)
+reg_loc=SOME (Loc 9 0)

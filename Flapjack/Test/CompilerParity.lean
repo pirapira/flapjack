@@ -29,6 +29,23 @@ import Flapjack.Test.LoopMemStoreParity
 import Flapjack.Test.LoopMemLoadParity
 import Flapjack.Test.LoopMemoryStateParity
 import Flapjack.Test.LoopStateResultParity
+import Flapjack.Test.LoopLocalsTouchedParity
+import Flapjack.Test.LoopAssignedVarsParity
+import Flapjack.Test.LoopAccVarsParity
+import Flapjack.Test.LoopNestedSeqParity
+import Flapjack.Test.LoopIsLoadParity
+import Flapjack.Test.LoopCallParity
+import Flapjack.Test.LoopEvalParity
+import Flapjack.Test.LoopEvaluateParity
+import Flapjack.Test.LoopObservationalSemanticsParity
+import Flapjack.Test.PanItreeFfiParity
+import Flapjack.Test.LoopCutStateParity
+import Flapjack.Test.LoopCutResParity
+import Flapjack.Test.LoopShMemLoadParity
+import Flapjack.Test.LoopShMemStoreParity
+import Flapjack.Test.LoopShMemOpParity
+import Flapjack.Test.LoopGetVarImmParity
+import Flapjack.Test.LoopCallEnvParity
 import Flapjack.Test.InstructionTransfer
 import Flapjack.Test.ArtifactFormat
 import Flapjack.Test.ParsedFullSsaPipeline
@@ -646,6 +663,23 @@ def main : IO Unit := do
     Flapjack.Test.LoopMemLoadParity.runChecks,
     Flapjack.Test.LoopMemoryStateParity.runChecks,
     Flapjack.Test.LoopStateResultParity.runChecks,
+    Flapjack.Test.LoopLocalsTouchedParity.runChecks,
+    Flapjack.Test.LoopAssignedVarsParity.runChecks,
+    Flapjack.Test.LoopAccVarsParity.runChecks,
+    Flapjack.Test.LoopNestedSeqParity.runChecks,
+    Flapjack.Test.LoopIsLoadParity.runChecks,
+    Flapjack.Test.LoopCallParity.runChecks,
+    Flapjack.Test.LoopEvalParity.runChecks,
+    Flapjack.Test.LoopEvaluateParity.runChecks,
+    Flapjack.Test.LoopObservationalSemanticsParity.runChecks,
+    Flapjack.Test.PanItreeFfiParity.runChecks,
+    Flapjack.Test.LoopCutStateParity.runChecks,
+    Flapjack.Test.LoopCutResParity.runChecks,
+    Flapjack.Test.LoopShMemLoadParity.runChecks,
+    Flapjack.Test.LoopShMemStoreParity.runChecks,
+    Flapjack.Test.LoopShMemOpParity.runChecks,
+    Flapjack.Test.LoopGetVarImmParity.runChecks,
+    Flapjack.Test.LoopCallEnvParity.runChecks,
     Flapjack.Test.EndToEndParity.runChecks,
     Flapjack.Test.CakeStackReseatParity.runChecks
     ].mapM id

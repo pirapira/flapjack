@@ -1,0 +1,9 @@
+const=[]
+
+var=[3]
+
+load_var=[4]
+
+op_nested=[2; 4]
+
+base_addr=[]

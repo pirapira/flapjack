@@ -52,6 +52,41 @@ def exitLoop : Option (LoopMachineResult α) → Option (LoopMachineResult α)
 def decrementLoopClock (state : LoopMachineState α) : LoopMachineState α :=
   { state with clock := state.clock - 1 }
 
+/-! Exact executable counterpart of CakeML's `cut_state_def`
+    (`loopSemScript.sml:182-186`).  The source checks that every live local is
+    present, then intersects the local map with the live set while preserving
+    every other machine-state component. -/
+def loopLiveLocalsPresent (locals : Nat → Option LoopWordLoc) : List Nat → Bool
+  | [] => true
+  | name :: names => (locals name).isSome && loopLiveLocalsPresent locals names
+
+def loopRestrictLocals (locals : Nat → Option LoopWordLoc) (live : List Nat) :
+    Nat → Option LoopWordLoc :=
+  fun name => if name ∈ live then locals name else none
+
+def cutLoopState (live : List Nat) (state : LoopMachineState α) :
+    Option (LoopMachineState α) :=
+  if loopLiveLocalsPresent state.locals live then
+    some { state with locals := loopRestrictLocals state.locals live }
+  else none
+
+/-! Exact executable counterpart of CakeML's `cut_res_def`
+    (`loopSemScript.sml:189-197`). -/
+def cutLoopResult (live : List Nat)
+    (step : Option (LoopMachineResult α) × LoopMachineState α) :
+    Option (LoopMachineResult α) × LoopMachineState α :=
+  let (result, state) := step
+  if result.isSome then
+    (result, state)
+  else
+    match cutLoopState live state with
+    | none => (some .error, state)
+    | some state =>
+        if state.clock = 0 then
+          (some .timeOut, { state with locals := fun _ => none })
+        else
+          (none, decrementLoopClock state)
+
 theorem exitLoop_none {α : Type} : exitLoop (none : Option (LoopMachineResult α)) = none := rfl
 
 theorem exitLoop_break {α : Type} (count : Nat) :

@@ -181,6 +181,70 @@ def loopFfiSharedLoad [BEq α] [OfNat α 1] [Add α]
             let state := loopFfiUpdateLocal { state with ffi := ffi } name value
             (.normal state, state)
 
+/-! Direct source-shaped counterpart of `loopSem$sh_mem_load_def`
+    (`loopSemScript.sml:198-215`).  Unlike the Crepe operator adapter above,
+    this takes the source byte count directly and preserves the source's
+    zero-byte address rule. -/
+def loopFfiShMemLoad [BEq α] [OfNat α 1] [Add α]
+    (state : LoopFfiState α σ) (name : Nat) (address : α) (width : Nat) :
+    LoopFfiStep α σ :=
+  let alignedAddress := if width = 0 then address else state.byteAlign address
+  if !state.shMemaddrs alignedAddress then
+    (.error state, state)
+  else
+    match callFfi state.ffi (.sharedMem .mappedRead)
+        (loopFfiByteCount state width)
+        (state.wordToBytes (if width = 0 then alignedAddress else address) false) with
+    | .final event =>
+        let state := loopFfiClearLocals state
+        (.finalFfi state event, state)
+    | .returned ffi bytes =>
+        let value := state.wordOfBytes state.bigEndian bytes
+        let state := loopFfiUpdateLocal { state with ffi := ffi } name value
+        (.normal state, state)
+
+/-! Direct source-shaped counterpart of `loopSem$sh_mem_store_def`
+    (`loopSemScript.sml:217-243`).  For nonzero widths the aligned address is
+    used only for the domain check; the FFI payload retains the original
+    address, as in CakeML's definition. -/
+def loopFfiShMemStore [BEq α] [OfNat α 1] [Add α]
+    (state : LoopFfiState α σ) (name : Nat) (address : α) (width : Nat) :
+    LoopFfiStep α σ :=
+  let alignedAddress := if width = 0 then address else state.byteAlign address
+  match state.locals name with
+  | none => (.error state, state)
+  | some value =>
+      if !state.shMemaddrs alignedAddress then
+        (.error state, state)
+      else
+        let valueBytes := state.wordToBytes value false
+        let addressBytes := state.wordToBytes address false
+        let payload := if width = 0 then valueBytes ++ addressBytes
+          else valueBytes.take width ++ addressBytes
+        match callFfi state.ffi (.sharedMem .mappedWrite)
+            (loopFfiByteCount state width) payload with
+        | .final event =>
+            let state := loopFfiClearLocals state
+            (.finalFfi state event, state)
+        | .returned ffi _ =>
+            let state := { state with ffi := ffi }
+            (.normal state, state)
+
+/-! Exact dispatch counterpart of `loopSem$sh_mem_op_def`
+    (`loopSemScript.sml:255-262`). -/
+def loopFfiShMemOp [BEq α] [OfNat α 1] [Add α]
+    (state : LoopFfiState α σ) (operator : CrepMemOp)
+    (name : Nat) (address : α) : LoopFfiStep α σ :=
+  match operator with
+  | .load => loopFfiShMemLoad state name address 0
+  | .store => loopFfiShMemStore state name address 0
+  | .load8 => loopFfiShMemLoad state name address 1
+  | .store8 => loopFfiShMemStore state name address 1
+  | .load16 => loopFfiShMemLoad state name address 2
+  | .store16 => loopFfiShMemStore state name address 2
+  | .load32 => loopFfiShMemLoad state name address 4
+  | .store32 => loopFfiShMemStore state name address 4
+
 def loopFfiSharedStore [BEq α] [OfNat α 1] [Add α]
     (state : LoopFfiState α σ) (operator : CrepMemOp)
     (name : Nat) (address : α) : LoopFfiStep α σ :=

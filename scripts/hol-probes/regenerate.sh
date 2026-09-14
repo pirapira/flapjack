@@ -42,10 +42,19 @@ probe_needs_refresh() {
 run_probe() {
   local probe_name="$1"
   local output_name="$2"
-  local first_label="$3"
-  local last_label="$4"
-  local source="$5"
-  local workdir="${6:-$cake_dir/pancake}"
+  shift 2
+  local labels=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      /*|\$*) break ;;
+      *) labels+=("$1"); shift ;;
+    esac
+  done
+  local first_label="${labels[0]}"
+  local last_label="${labels[${#labels[@]}-1]}"
+  local source="$1"
+  shift
+  local workdir="${1:-$cake_dir/pancake}"
   local probe="$probe_dir/$probe_name"
   local output="$probe_dir/$output_name"
   if probe_needs_refresh "$output" "$probe" "$source"; then

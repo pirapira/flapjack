@@ -1,0 +1,2 @@
+empty=[]
+inline_call=[(«id»,[],Return [Const 7w]); («main»,[],Seq Tick (Return [Const 7w]))]

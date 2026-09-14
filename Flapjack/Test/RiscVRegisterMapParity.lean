@@ -203,7 +203,6 @@ example (state : State 64) (value : Word 64) :
     readRegister (writeRegisterInternal riscvForward state (1 : Fin 32) value) 27 =
       readRegister state 27 :=
   readRegister_writeRegisterInternal_riscvForward_zero state _ value
-
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("production role registers are preserved by the one-time Cake map",

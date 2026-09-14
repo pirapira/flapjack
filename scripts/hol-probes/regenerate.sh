@@ -110,6 +110,8 @@ run_probe word_stack_frame_probeScript.sml word_stack_frame_probe.out \
   maxvar_skip limit_seq "$cake_dir/compiler/backend/word_to_stackScript.sml"
 run_probe pan_lang_free_var_ids_probeScript.sml pan_lang_free_var_ids_probe.out \
   empty dec_call "$cake_dir/pancake/panLangScript.sml"
+run_probe pan_lang_inlinable_probeScript.sml pan_lang_inlinable_probe.out \
+  inline_true non_function "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \

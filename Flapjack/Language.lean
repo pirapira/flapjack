@@ -180,6 +180,12 @@ inductive Decl (α : Type u) where
   | name (struct : StructName) (fields : List (FieldName × Shape))
   deriving Repr
 
+/-! Direct source-shaped counterpart of `panLang$inlinable`: only function
+    declarations expose their inline bit. -/
+def inlinable : Decl α → Bool
+  | .function declaration => declaration.inline
+  | _ => false
+
 def nestedSeq : List (Prog α) → Prog α
   | [] => .skip
   | statement :: statements => .seq statement (nestedSeq statements)

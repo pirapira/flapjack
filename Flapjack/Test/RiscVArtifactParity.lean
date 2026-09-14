@@ -101,7 +101,7 @@ def decClockSource : String := decClock.source
 def cakeGeneratedMainBytes : List (BitVec 8) :=
   [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)
 
-/-- Original CakeML `cml_main` bytes: `ori a0,x0,7; ret`. -/
+/-- Original CakeML `cml_main` bytes: `addi a0,x0,7; ret`. -/
 def cakeMainBytes : List (BitVec 8) :=
   [0x13, 0x65, 0x70, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
@@ -113,8 +113,9 @@ def flapjackGeneratedMainBytes : List (BitVec 8) :=
 tracked by `flapjack-pxn.8.5.10.1`. -/
 def flapjackMainBytes : List (BitVec 8) :=
   [0x13, 0x00, 0x00, 0x00,
-   0x13, 0x61, 0x70, 0x00,
+   0x13, 0x01, 0x70, 0x00,
    0x33, 0x61, 0x21, 0x00,
+   0xB3, 0x60, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
 /-- Run a source program through the production runtime-image entry point,
@@ -173,11 +174,11 @@ def bitmapsMatch : Bool :=
   | none => false
 
 /-- The residual `cml_main` mismatch, recorded with its exact bytes and owner
-rather than accepted: the original emits 8 bytes, the port 16, both terminate
+rather than accepted: the original emits 8 bytes, the port 20, both terminate
 in the same `ret` word, and the original source-backed probe pins that word. -/
 def trackedMainMismatch : Bool :=
   cakeMainBytes != flapjackMainBytes &&
-    cakeMainBytes.length == 8 && flapjackMainBytes.length == 16 &&
+    cakeMainBytes.length == 8 && flapjackMainBytes.length == 20 &&
     cakeMainBytes.drop (cakeMainBytes.length - 4) == decClock.cakeFinalBytes &&
     flapjackMainBytes.drop (flapjackMainBytes.length - 4) ==
       decClock.cakeFinalBytes
@@ -186,13 +187,14 @@ def trackedMainMismatch : Bool :=
 `dec_clock`, taken from the original-side probe fact. -/
 def constReturnSource : String := constReturn.source
 
-/-- Flapjack `cml_main` bytes for the no-tick `return 7` fixture: the 12-byte
-`ori x2,x0,7; or x2,x2,x2; ret` shape.  Its difference from `dec_clock` is
+/-- Flapjack `cml_main` bytes for the no-tick `return 7` fixture: the 16-byte
+`addi x2,x0,7; or x2,x2,x2; add x2,x2,x2; ret` shape.  Its difference from `dec_clock` is
 exactly the single leading `tick` nop, which is the residual gap isolated
 below. -/
 def flapjackConstReturnMainBytes : List (BitVec 8) :=
-  [0x13, 0x61, 0x70, 0x00,
+  [0x13, 0x01, 0x70, 0x00,
    0x33, 0x61, 0x21, 0x00,
+   0xB3, 0x60, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
 /-- The single 4-byte `tick` lowering emitted by the port: `addi x0,x0,0`. -/
@@ -225,7 +227,7 @@ original bytes are byte-identical to the `dec_clock` original, evidencing that
 the original drops the standalone `Tick`. -/
 def trackedConstReturnMismatch : Bool :=
   cakeMainBytes != flapjackConstReturnMainBytes &&
-    cakeMainBytes.length == 8 && flapjackConstReturnMainBytes.length == 12 &&
+    cakeMainBytes.length == 8 && flapjackConstReturnMainBytes.length == 16 &&
     cakeMainBytes.drop (cakeMainBytes.length - 4) ==
       constReturn.cakeFinalBytes &&
     flapjackConstReturnMainBytes.drop (flapjackConstReturnMainBytes.length - 4) ==
@@ -253,17 +255,17 @@ def cakeEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
     (6, 1016, [0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)) ]
 
 /-- Flapjack layout for the same fixture: `cml_generated_main` at 1000 (4B,
-`jal` straight to the renamed entry at 1028), helper `a` at 1004 (12B),
-helper `b` at 1016 (12B), and the entry `main` last at 1028 (4B, `jal` to
-`a`).  This is the source order produced by `globalResortDecls`, not the
-original entry-first order. -/
+`jal` to the entry at 1004), helper `a` at 1008 (12B), and helper `b` at
+1024 (16B).  The entry declaration is now moved to the front, matching
+CakeML's `pan_to_target_all` ordering. -/
 def flapjackEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
-  [ (3, 1000, [0x6F, 0x00, 0xC0, 0x01].map (BitVec.ofNat 8)),
-    (4, 1004, [0x13, 0x61, 0x10, 0x00, 0x33, 0x61, 0x21, 0x00,
-               0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
-    (5, 1016, [0x13, 0x61, 0x20, 0x00, 0x33, 0x61, 0x21, 0x00,
-               0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
-    (6, 1028, [0x6F, 0xF0, 0x9F, 0xFE].map (BitVec.ofNat 8)) ]
+  [ (3, 1000, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
+    (4, 1004, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
+    (5, 1008, [0x13, 0x01, 0x10, 0x00, 0x33, 0x61, 0x21, 0x00,
+               0xB3, 0x60, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    (6, 1024, [0x13, 0x01, 0x20, 0x00, 0x33, 0x61, 0x21, 0x00,
+               0xB3, 0x60, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    ]
 
 /-- Exact emitted `(label, base, bytes)` artifact for the `entry_order`
 fixture. -/
@@ -272,21 +274,21 @@ def entryOrderEmittedSections : List (Nat × Nat × List (BitVec 8)) :=
   | some image => emittedSections image
   | none => []
 
-/-- The port emits the four generated sections in source order. -/
+/-- The port now follows CakeML's entry-first section order. -/
 def entryOrderLayoutMatches : Bool :=
   entryOrderEmittedSections == flapjackEntryOrderSections
 
-/-- The residual ordering mismatch, recorded exactly rather than accepted:
+/-- The residual helper-body mismatch, recorded exactly rather than accepted:
 the original places the entry `cml_main` second (label 4, 4 bytes) and the
-helpers after it, while the port places helper `a` second (label 4, 12 bytes)
+helpers after it, while the port places helper `a` second (label 4, 16 bytes)
 and the entry `main` last (label 6).  Both entry sections are 4-byte jumps and
-both helper sets compute `1` and `2` via `addi`; the difference is the
-deterministic section order owned by `flapjack-pxn.8.5.10.3`. -/
+section order and both entry jumps now agree, while the two helper bodies
+retain the tracked 16-byte lowering. -/
 def entryOrderOrderingMismatch : Bool :=
   cakeEntryOrderSections != flapjackEntryOrderSections &&
     cakeEntryOrderSections.length == 4 && flapjackEntryOrderSections.length == 4 &&
     cakeEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 8, 8] &&
-    flapjackEntryOrderSections.map (fun s => s.2.2.length) == [4, 12, 12, 4] &&
+    flapjackEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 16, 16] &&
     entryOrder.cakeFinalBytes ==
       ([0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00,
         0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8))

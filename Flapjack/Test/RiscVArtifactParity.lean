@@ -332,6 +332,23 @@ def nestedExpressionWordLoweringAccepted : Bool :=
   | some _ => true
   | none => false
 
+/-! The production allocator path now performs the same expression
+    materialization that Cake's `crep_to_loop` performs before allocation.
+    Keep a small structural oracle here so this does not silently become only
+    a larger temporary-register pool: the inner add is assigned first, then
+    the outer add, and finally the original destination receives the result. -/
+def flattenExpressionProbe : WordProg Nat :=
+  .assign 0 (.op .add [.var 1, .op .add [.var 2, .var 3]])
+
+def flattenExpressionProbeMatches : Bool :=
+  match RiscV.wordFlattenProgramFrom flattenExpressionProbe with
+  | .seq
+      (.seq
+        (.assign 5 (.op .add [.var 2, .var 3]))
+        (.assign 9 (.op .add [.var 1, .var 5])))
+      (.assign 0 (.var 9)) => true
+  | _ => false
+
 /-- The differential-fuzzing `dup-global` fixture (GitHub issue #962 smoke,
     bead `flapjack-pxn.8.5.14.4`).  The original CakeML accepts a duplicate
     top-level global with the warning `variable g is redeclared in top-level
@@ -557,6 +574,7 @@ def frameOccupancyP9GapTracked : Bool :=
 #guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
 #guard nestedExpressionWordLoweringAccepted
+#guard flattenExpressionProbeMatches
 #guard ffiNamesMatch
 #guard ffiMinStubEmitted
 #guard ffiOrderStubsEmitted

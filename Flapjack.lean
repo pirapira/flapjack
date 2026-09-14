@@ -8,6 +8,10 @@ import Flapjack.PanHProgStore
 import Flapjack.PanHProg
 import Flapjack.PanHProgLoad
 import Flapjack.PanHProgReturn
+import Flapjack.PanHProgRaise
+import Flapjack.PanHProgExtCall
+import Flapjack.PanHProgStoreByte
+import Flapjack.PanHProgStore32
 import Flapjack.PanHProgDec
 import Flapjack.PanHProgSeq
 import Flapjack.PanHProgCond

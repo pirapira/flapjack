@@ -1,0 +1,3 @@
+store_byte_success=set_byte 3w 7w 0w s.be = 7w
+
+store_byte_domain_error=T

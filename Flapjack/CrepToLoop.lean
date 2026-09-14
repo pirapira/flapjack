@@ -278,7 +278,7 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
         maxVar := result.nextTemp }
       .seq (loopNestedSeq result.code)
         (.seq (.assign name result.expression)
-          (loopCompileProg nextContext (result.nextTemp :: result.live) body))
+          (loopCompileProg nextContext (result.nextTemp :: live) body))
   | .assign name value =>
       let result := loopCompileExp context (context.maxVar + 1) live value
       .seq (loopNestedSeq result.code) (.assign name result.expression)
@@ -318,17 +318,17 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
       .seq (loopNestedSeq result.code)
         (.seq (.assign result.nextTemp result.expression)
           (.ite .notEqual result.nextTemp (.imm (by exact 0))
-            (loopCompileProg context result.live thenBranch)
-            (loopCompileProg context result.live elseBranch) result.live))
+            (loopCompileProg context live thenBranch)
+            (loopCompileProg context live elseBranch) live))
   | .while condition body =>
       let result := loopCompileExp context (context.maxVar + 1) live condition
       .loop live
         (loopNestedSeq (result.code ++
           [.assign result.nextTemp result.expression,
            .ite .notEqual result.nextTemp (.imm (by exact 0))
-             (.seq (loopCompileProg context result.live body) (.continue 0))
-             (.break 0) result.live]))
-        result.live
+              (.seq (loopCompileProg context live body) (.continue 0))
+              (.break 0) live]))
+        live
   | .break label => .break label
   | .continue label => .continue label
   | .call returnInfo function arguments =>
@@ -340,15 +340,15 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
       let call := match returnInfo with
         | none => .call none target argumentNames none
         | some (returns, none) =>
-            .call (some (returns, result.live)) target argumentNames none
+            .call (some (returns, live)) target argumentNames none
         | some (returns, some (exception, handler)) =>
             let exceptionName := result.nextTemp + result.expressions.length
-            let handlerCode := loopCompileProg context result.live handler
-            .call (some (returns, result.live)) target argumentNames
+            let handlerCode := loopCompileProg context live handler
+            .call (some (returns, live)) target argumentNames
               (some (exceptionName,
                 .ite .notEqual exceptionName (.imm exception)
-                  (.raise exceptionName) (.seq .tick handlerCode) result.live,
-                .skip, result.live))
+                  (.raise exceptionName) (.seq .tick handlerCode) live,
+                .skip, live))
       .seq (loopNestedSeq (result.code ++ loopAssignTemps argumentNames result.expressions)) call
   | .extCall function configuration configurationLength array arrayLength =>
       .ffi function configuration configurationLength array arrayLength live

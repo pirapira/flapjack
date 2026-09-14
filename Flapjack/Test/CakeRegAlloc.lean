@@ -139,12 +139,120 @@ def bijCompositeGuard : Bool :=
       (.branch (some [6]) (.delta [] [4] : WordClashTree)
         (.delta [] [5] : WordClashTree)))).nextNode = 5
 
+
+/-! ## IRC graph construction guards
+
+Structural checks for `cakeMkGraph` / `cakeExtendGraph` / `cakeMkTags` /
+`cakeInitRaState`, derived from `reg_allocScript.sml`
+(`sorted_insert`:184, `insert_edge`:201, `extend_clique`:235, `mk_graph`:1179,
+`mk_tags`:1159).  The original threads its state through a monad over arrays,
+so there is no standalone HOL oracle for the internal adjacency; the
+end-to-end colouring oracle (`reg_alloc_probe.out`) validates the whole
+machine once the worklist slices land. -/
+
+private def graphAdj (tree : Flapjack.WordClashTree) (node : Nat) : List Nat :=
+  let bij := Flapjack.RiscV.CakeRegAlloc.cakeMkBij tree
+  let ta := Flapjack.RiscV.CakeAlloc.spDefault bij.toAllocator
+  let (adj, _) := Flapjack.RiscV.CakeRegAlloc.cakeMkGraph ta tree [] []
+  Flapjack.RiscV.CakeRegAlloc.cakeAdjSub adj node
+
+/-- Disjoint write and read sets never clash: no edges at all. -/
+def graphDeltaDisjointGuard : Bool :=
+  graphAdj (.delta [1] [3]) 0 == [] && graphAdj (.delta [1] [3]) 1 == []
+
+/-- A write clique gets one edge per pair, adjacency sorted descending. -/
+def graphDeltaCliqueGuard : Bool :=
+  graphAdj (.delta [1, 3] []) 0 == [1] && graphAdj (.delta [1, 3] []) 1 == [0]
+
+/-- The fixed `Set` node is a clique over the sorted members. -/
+def graphSetCliqueGuard : Bool :=
+  graphAdj (.set [4, 3]) 0 == [1] && graphAdj (.set [4, 3]) 1 == [0]
+
+/-- Forced edges are added through the same bijection (vars 1 and 3
+    are bijection members here: nodes 1 and 0). -/
+def graphForcedEdgeGuard : Bool :=
+  let bij := Flapjack.RiscV.CakeRegAlloc.cakeMkBij (.delta [1] [3])
+  let ta := Flapjack.RiscV.CakeAlloc.spDefault bij.toAllocator
+  let adj := Flapjack.RiscV.CakeRegAlloc.cakeExtendGraph ta [(1, 3)] []
+  Flapjack.RiscV.CakeRegAlloc.cakeAdjSub adj 0 == [1] &&
+    Flapjack.RiscV.CakeRegAlloc.cakeAdjSub adj 1 == [0]
+
+/-- Tagging: allocatable variable 9 -> Atemp, stack-only 13 -> Stemp,
+physical 2 -> Fixed 1. -/
+def graphTagsGuard : Bool :=
+  let tags := Flapjack.RiscV.CakeRegAlloc.cakeMkTags 3 [(0, 9), (1, 13), (2, 2)]
+    [13]
+  Flapjack.RiscV.CakeRegAlloc.cakeMapLookup tags 0 ==
+      some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.aTemp &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup tags 1 ==
+      some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.sTemp &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup tags 2 ==
+      some (Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.fixed 1)
+
+/-- `init_ra_state` combines the pieces: clique edge plus tags plus dim. -/
+def graphInitGuard : Bool :=
+  let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 3] []) [] []
+  Flapjack.RiscV.CakeRegAlloc.cakeAdjSub state.adjLists 0 == [1] &&
+    Flapjack.RiscV.CakeRegAlloc.cakeAdjSub state.adjLists 1 == [0] &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup state.nodeTag 0 ==
+      some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.aTemp &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup state.nodeTag 1 ==
+      some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.sTemp &&
+    state.dim == 2
+
+/-- `init_alloc1_heu` on a two-node clique: the allocation temp sees the
+    stack temp as unconsidered, so degree 0 lands on the simplify
+    worklist and the stack temp stays out of `allocs`. -/
+def heuDeltaGuard : Bool :=
+  let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 3] []) [] []
+  let (count, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu [] 4 state
+  count == 1 &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 0 == some 0 &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 1 == some 1 &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.coalesced 0 == some 0 &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.coalesced 1 == some 1 &&
+    after.simpWl == [0] && after.freezeWl == [] && after.spillWl == []
+
+/-- `init_alloc1_heu` sorts the move worklist by descending priority and
+    marks the non-fixed move endpoints move-related, sending the low-degree
+    allocation temp to the freeze worklist instead of simplify. -/
+def heuMovesGuard : Bool :=
+  let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 3] []) [] []
+  let moves := [(1, (0, 1)), (3, (0, 1))]
+  let (_, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu moves 4 state
+  after.availMovesWl == [(3, (0, 1)), (1, (0, 1))] &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.moveRelated 0 == some true &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.moveRelated 1 == some true &&
+    after.freezeWl == [0] && after.simpWl == [] && after.spillWl == []
+
+/-- `init_alloc1_heu` sends a clique of five allocation temps (degree 4)
+    over the register threshold `k = 4` to the spill worklist. -/
+def heuSpillGuard : Bool :=
+  let state :=
+    Flapjack.RiscV.CakeRegAlloc.cakeInitRaState
+      (.delta [1, 5, 9, 13, 17] []) [] []
+  let (count, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu [] 4 state
+  count == 5 && after.spillWl.length == 5 && after.simpWl == [] &&
+    after.freezeWl == []
+
+/-- A low physical register node counts towards its neighbour's degree
+    (`considered_var`) but never enters the allocation worklist itself. -/
+def heuFixedDegreeGuard : Bool :=
+  let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 2] [2, 1]) [] []
+  let (count, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu [] 4 state
+  count == 1 &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 1 == some 1 &&
+    after.simpWl == [1] && after.spillWl == []
+
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
     ifMergeAllocGuard && callMergeGuard && callTailGuard && assignLeafGuard &&
     bijDeltaBasicGuard && bijDeltaDedupGuard && bijSeqOrderGuard &&
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
-    bijSetUnsortedGuard && bijCompositeGuard
+    bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
+    graphDeltaCliqueGuard && graphSetCliqueGuard && graphForcedEdgeGuard &&
+    graphTagsGuard && graphInitGuard && heuDeltaGuard && heuMovesGuard &&
+    heuSpillGuard && heuFixedDegreeGuard
 
 #eval parityGuard
 #guard parityGuard
@@ -155,7 +263,10 @@ def runChecks : IO Bool := do
     ifMergeAllocGuard, callMergeGuard, callTailGuard, assignLeafGuard,
     bijDeltaBasicGuard, bijDeltaDedupGuard, bijSeqOrderGuard,
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
-    bijSetUnsortedGuard, bijCompositeGuard]
+    bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
+    graphDeltaCliqueGuard, graphSetCliqueGuard, graphForcedEdgeGuard,
+    graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
+    heuSpillGuard, heuFixedDegreeGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -163,7 +274,11 @@ def runChecks : IO Bool := do
     "get_stack_only call tail", "get_stack_only assign leaf",
     "mk_bij delta basic", "mk_bij delta dedup", "mk_bij seq order",
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
-    "mk_bij set unsorted", "mk_bij composite"]
+    "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",
+    "mk_graph delta clique", "mk_graph set clique", "extend_graph forced",
+    "mk_tags roles", "init_ra_state", "init_alloc1_heu delta",
+    "init_alloc1_heu moves", "init_alloc1_heu spill",
+    "init_alloc1_heu fixed degree"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

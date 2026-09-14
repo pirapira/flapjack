@@ -41,7 +41,6 @@ import Flapjack.Test.SourceToLoopFfi
 import Flapjack.Test.SourceFfiSimulation
 import Flapjack.CorrectnessFfi
 import Flapjack.Test.SourceToLoopMemory
-import Flapjack.Test.SourceToRiscVMemory
 import Flapjack.Test.PanMemoryModel
 import Flapjack.Test.CrepeMemorySemantics
 import Flapjack.Test.PanValueFfiSemantics

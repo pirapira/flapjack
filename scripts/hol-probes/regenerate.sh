@@ -144,6 +144,8 @@ run_probe pan_itree_h_prog_store_probeScript.sml pan_itree_h_prog_store_probe.ou
   store_success store_invalid_value "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_assign_probeScript.sml pan_itree_h_prog_assign_probe.out \
   assign_valid assign_failed_eval "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_itree_h_prog_while_probeScript.sml pan_itree_h_prog_while_probe.out \
+  while_zero_guard while_invalid_guard "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe loop_sem_get_vars_probeScript.sml loop_sem_get_vars_probe.out \
   get_vars_hit get_vars_loc "$cake_dir/pancake/semantics/loopSemScript.sml"
 run_probe loop_sem_get_var_imm_probeScript.sml \

@@ -71,3 +71,7 @@ compile_prog_empty=[]
 compile_prog_singleton=[(7,2,Skip)]
 
 compile_prog_two=[(7,2,Skip); (8,1,Assign 2 (Const 3w))]
+
+compile_empty=[]
+
+compile_singleton=[(7,2,Skip)]

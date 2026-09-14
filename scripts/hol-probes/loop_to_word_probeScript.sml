@@ -104,3 +104,9 @@ val _ = print_eval "compile_prog_singleton"
 val _ = print_eval "compile_prog_two"
   ``compile_prog [(7,[10],loopLang$Skip);
       (8,[],loopLang$Assign 11 (Const (3w : 8 word)))]``
+
+(* compile_def, loop_to_wordScript.sml:176-177 *)
+val _ = print_eval "compile_empty"
+  ``compile ([] : (num # num list # 8 word loopLang$prog) list)``
+val _ = print_eval "compile_singleton"
+  ``compile [(7,[10],loopLang$Skip)]``

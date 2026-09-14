@@ -113,4 +113,10 @@ def loopToWordCompileProg [OfNat α 1] :
       (name, params.length + 1, loopToWordCompFunc name params body) ::
         loopToWordCompileProg functions
 
+/-! Port of `compile_def` from `loop_to_wordScript.sml:176-177`. -/
+def loopToWordCompile [OfNat α 1]
+    (program : List (Nat × List Nat × LoopProg α)) :
+    List (Nat × Nat × WordProg α) :=
+  loopToWordCompileProg program
+
 end Flapjack.LoopToWord

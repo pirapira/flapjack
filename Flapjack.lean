@@ -20,6 +20,7 @@ import Flapjack.PanHHandleCallRet
 import Flapjack.PanHHandleDecCallRet
 import Flapjack.PanHProgDecCall
 import Flapjack.PanHProgCall
+import Flapjack.CrepExitLoop
 import Flapjack.PanBst
 import Flapjack.PanBStateUpdates
 import Flapjack.PanEmptyLocals

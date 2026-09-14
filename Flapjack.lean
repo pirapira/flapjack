@@ -29,6 +29,7 @@ import Flapjack.CrepShMemLoad
 import Flapjack.CrepShMemOp
 import Flapjack.CrepShMemStore
 import Flapjack.CrepMemLoad
+import Flapjack.CrepEval
 import Flapjack.CrepObservationalSemantics
 import Flapjack.PanBst
 import Flapjack.PanBStateUpdates

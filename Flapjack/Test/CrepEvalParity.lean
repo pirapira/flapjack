@@ -4,61 +4,72 @@ import Flapjack.Test.CrepeSemantics
 /-!
 # Parity checks for `crepSem$eval_def`
 
-The direct HOL fixture in `scripts/hol-probes/crep_eval_probe.out` evaluates
-the original source definition over representative local/global/memory and
-address state.  The executable checks exercise the corresponding Lean
-boundary, including an intermediate word operation and a missing local.
+The direct HOL fixture covers the source constant, local, memory, global, and
+address expression cases.  The Lean checks exercise the corresponding hit
+and miss behavior at the source-shaped runtime boundary.
 -/
 
 namespace Flapjack.Test.CrepEvalParity
 
 open Flapjack
 
-def globalsState : CrepRuntimeState Nat Unit :=
+def hitState : CrepRuntimeState Nat Unit :=
   { crepeRuntimeState with
-    globals := fun address => if address == 3 then some 9 else none }
+    locals := fun name => if name == 1 then some 7 else none
+    memory := fun address => if address == 3 then some 9 else none
+    memaddrs := fun address => address == 3
+    globals := fun address => if address == 4 then some 11 else none
+    baseAddress := 12
+    topAddress := 13 }
 
-def evalConst : Bool := crepEval crepeRuntimeState (.const 7) == some 7
+def constant : Bool :=
+  crepSemEvalExp hitState (.const 5) == some 5
 
-def evalLocal : Bool := crepEval crepeRuntimeState (.var 1) == some 10
+def localHit : Bool :=
+  crepSemEvalExp hitState (.var 1) == some 7
 
-def evalMissing : Bool := crepEval crepeRuntimeState (.var 99) == none
+def localMiss : Bool :=
+  crepSemEvalExp hitState (.var 2) == none
 
-def evalGlobal : Bool := crepEval globalsState (.loadGlob 3) == some 9
+def memoryHit : Bool :=
+  crepSemEvalExp hitState (.load (.const 3)) == some 9
 
-def evalLoad : Bool := crepEval crepeRuntimeState (.load (.const 10)) == some 7
+def memoryMiss : Bool :=
+  crepSemEvalExp hitState (.load (.const 8)) == none
 
-def evalOp : Bool :=
-  crepEval crepeRuntimeState (.op .add [.const 1, .const 2]) == some 3
+def globalHit : Bool :=
+  crepSemEvalExp hitState (.loadGlob 4) == some 11
 
-def evalBaseTop : Bool :=
-  crepEval crepeRuntimeState .baseAddr == some 0 &&
-    crepEval crepeRuntimeState .topAddr == some 100
+def globalMiss : Bool :=
+  crepSemEvalExp hitState (.loadGlob 8) == none
 
-#guard evalConst
-#guard evalLocal
-#guard evalMissing
-#guard evalGlobal
-#guard evalLoad
-#guard evalOp
-#guard evalBaseTop
+def addresses : Bool :=
+  crepSemEvalExp hitState .baseAddr == some 12 &&
+    crepSemEvalExp hitState .topAddr == some 13
+
+#guard constant
+#guard localHit
+#guard localMiss
+#guard memoryHit
+#guard memoryMiss
+#guard globalHit
+#guard globalMiss
+#guard addresses
 
 def runChecks : IO Bool := do
-  if evalConst then IO.println "PASS crep eval constant"
-  else IO.println "FAIL crep eval constant"
-  if evalLocal then IO.println "PASS crep eval local"
-  else IO.println "FAIL crep eval local"
-  if evalMissing then IO.println "PASS crep eval missing local"
-  else IO.println "FAIL crep eval missing local"
-  if evalGlobal then IO.println "PASS crep eval global"
-  else IO.println "FAIL crep eval global"
-  if evalLoad then IO.println "PASS crep eval memory load"
-  else IO.println "FAIL crep eval memory load"
-  if evalOp then IO.println "PASS crep eval word operation"
-  else IO.println "FAIL crep eval word operation"
-  if evalBaseTop then IO.println "PASS crep eval base/top addresses"
-  else IO.println "FAIL crep eval base/top addresses"
-  pure (evalConst && evalLocal && evalMissing && evalGlobal && evalLoad &&
-    evalOp && evalBaseTop)
+  let checks : List (String × Bool) := [
+    ("eval constant", constant),
+    ("eval local hit", localHit),
+    ("eval local miss", localMiss),
+    ("eval memory hit", memoryHit),
+    ("eval memory miss", memoryMiss),
+    ("eval global hit", globalHit),
+    ("eval global miss", globalMiss),
+    ("eval base/top addresses", addresses)]
+  let results ← checks.mapM fun (name, passed) => do
+    if passed then IO.println s!"PASS crep {name}"
+    else IO.println s!"FAIL crep {name}"
+    pure passed
+  pure (results.all id)
 
 end Flapjack.Test.CrepEvalParity

@@ -1,13 +1,15 @@
-eval_const=SOME (Word 7w)
+eval_const=SOME (Word 5w)
 
-eval_local=SOME (Word 7w)
+eval_local_hit=SOME (Word 7w)
 
-eval_global=SOME (Word 9w)
+eval_local_miss=NONE
 
-eval_load=SOME (Word 11w)
+eval_memory_hit=SOME (Word 9w)
 
-eval_op=SOME (Word 3w)
+eval_memory_miss=NONE
 
-eval_base_addr=SOME (Word 100w)
+eval_global_hit=SOME (Word 11w)
 
-eval_top_addr=SOME (Word 200w)
+eval_global_miss=NONE
+
+eval_base_top=(SOME (Word 12w),SOME (Word 13w))

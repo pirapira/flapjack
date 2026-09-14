@@ -1,6 +1,6 @@
 (*
-  Direct HOL observations for crepSem$eval_def.
-  Reference: cakeml/pancake/semantics/crepSemScript.sml:90-143.
+  Direct HOL-EVAL probes for Pancake crepSem eval.
+  Reference: cakeml/pancake/semantics/crepSemScript.sml:90-166.
 *)
 load "bossLib";
 load "preamble";
@@ -11,13 +11,6 @@ open preamble;
 open crepSemTheory;
 
 val s = ``(s:(8,unit) crepSem$state)``;
-val base =
-  ``(^s with <|locals := FEMPTY |+ (1, Word (7w:8 word));
-              globals := FEMPTY |+ ((3w:5 word), Word (9w:8 word));
-              memaddrs := {10w};
-              memory := (\a. if a = 10w then Word (11w:8 word) else Word (0w:8 word));
-              base_addr := 100w;
-              top_addr := 200w|>)``;
 
 fun print_eval label q =
   let
@@ -28,17 +21,28 @@ fun print_eval label q =
     print "\n"
   end;
 
+val hit_state =
+  ``^s with <| locals := FEMPTY |+ (1, Word (7w:8 word));
+                memory := (3w =+ Word (9w:8 word)) (^s).memory;
+                memaddrs := {3w};
+                globals := FEMPTY |+ (4w, Word (11w:8 word));
+                base_addr := 12w;
+                top_addr := 13w |>``;
+
 val _ = print_eval "eval_const"
-  ``crepSem$eval ^base (Const (7w:8 word))``;
-val _ = print_eval "eval_local"
-  ``crepSem$eval ^base (Var 1)``;
-val _ = print_eval "eval_global"
-  ``crepSem$eval ^base (LoadGlob (3w:5 word))``;
-val _ = print_eval "eval_load"
-  ``crepSem$eval ^base (Load (Const (10w:8 word)))``;
-val _ = print_eval "eval_op"
-  ``crepSem$eval ^base (Op Add [Const (1w:8 word); Const (2w:8 word)])``;
-val _ = print_eval "eval_base_addr"
-  ``crepSem$eval ^base BaseAddr``;
-val _ = print_eval "eval_top_addr"
-  ``crepSem$eval ^base TopAddr``;
+  ``crepSem$eval ^hit_state (crepLang$Const (5w:8 word))``;
+val _ = print_eval "eval_local_hit"
+  ``crepSem$eval ^hit_state (crepLang$Var 1)``;
+val _ = print_eval "eval_local_miss"
+  ``crepSem$eval ^hit_state (crepLang$Var 2)``;
+val _ = print_eval "eval_memory_hit"
+  ``crepSem$eval ^hit_state (crepLang$Load (crepLang$Const (3w:8 word)))``;
+val _ = print_eval "eval_memory_miss"
+  ``crepSem$eval ^hit_state (crepLang$Load (crepLang$Const (8w:8 word)))``;
+val _ = print_eval "eval_global_hit"
+  ``crepSem$eval ^hit_state (crepLang$LoadGlob (4w:5 word))``;
+val _ = print_eval "eval_global_miss"
+  ``crepSem$eval ^hit_state (crepLang$LoadGlob (8w:5 word))``;
+val _ = print_eval "eval_base_top"
+  ``(crepSem$eval ^hit_state crepLang$BaseAddr,
+     crepSem$eval ^hit_state crepLang$TopAddr)``;

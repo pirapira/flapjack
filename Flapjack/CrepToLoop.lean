@@ -196,6 +196,26 @@ def loopCompileExps [OfNat α 0] [OfNat α 1]
 def loopTempNames (start count : Nat) : List Nat :=
   (List.range count).map (fun offset => start + offset)
 
+/-! Source-named ports of the small temporary/return-variable helpers from
+    `crep_to_loopScript.sml:101-118`. -/
+def crepGenTemps (start count : Nat) : List Nat :=
+  loopTempNames start count
+
+def crepRtVar (context : NatInfoMap Nat) (value : Option Nat) (nextTemp maxVar : Nat) : Nat :=
+  match value with
+  | none => nextTemp
+  | some name => (lookupNatInfo name context).getD (maxVar + 1)
+
+def crepRtVarsAux (context : NatInfoMap Nat) : List Nat → Option (List Nat)
+  | [] => some []
+  | name :: names =>
+      match lookupNatInfo name context, crepRtVarsAux context names with
+      | some value, some values => some (value :: values)
+      | _, _ => none
+
+def crepRtVars (context : NatInfoMap Nat) (names : List Nat) (maxVar : Nat) : List Nat :=
+  (crepRtVarsAux context names).getD [maxVar + 1]
+
 def loopAssignTemps (names : List Nat) (expressions : List (LoopExp α)) :
     List (LoopProg α) :=
   names.zipWith (fun name expression => .assign name expression) expressions

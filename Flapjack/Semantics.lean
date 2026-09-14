@@ -166,14 +166,6 @@ def evalPanProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       else evalPanProg locals elseBranch
   | _ => none
 
-def evalCrepProg [Add α] [Mul α] (locals : Nat → Option α) : CrepProg α → Option (List α)
-  | .skip => some []
-  | .return expressions => evalCrepExps locals expressions
-  | .seq first second => do
-      let firstResult ← evalCrepProg locals first
-      if firstResult.isEmpty then evalCrepProg locals second else pure firstResult
-  | _ => none
-
 def updateCrepLocal (locals : Nat → Option α) (name : Nat) (value : α) :
     Nat → Option α :=
   fun current => if current = name then some value else locals current
@@ -583,21 +575,6 @@ theorem evalPanProgWithCallsAndFfi_while_false
     evalPanProgWithCallsAndFfi functions handler (fuel + 2) locals
       (.while condition body) = some (.normal locals) := by
   simp [evalPanProgWithCallsAndFfi, evalPanWhileWithCallsAndFfi, hcondition]
-
-def evalCrepStateProg [Add α] [Mul α] (locals : Nat → Option α) :
-    CrepProg α → Option ((Nat → Option α) × List α)
-  | .skip => some (locals, [])
-  | .assign name value => do
-      let value ← evalCrepExp locals value
-      pure (updateCrepLocal locals name value, [])
-  | .return values => do
-      let values ← evalCrepExps locals values
-      pure (locals, values)
-  | .seq first second => do
-      let (locals', firstResult) ← evalCrepStateProg locals first
-      if firstResult.isEmpty then evalCrepStateProg locals' second
-      else pure (locals', firstResult)
-  | _ => none
 
 /-!
 Call-aware Crepe semantics for the declaration-call fragment.  This is the

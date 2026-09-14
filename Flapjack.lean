@@ -5,6 +5,8 @@ import Flapjack.PanItreeFfi
 import Flapjack.PanItreeTracePrefix
 import Flapjack.PanItreeLtree
 import Flapjack.PanHProgStore
+import Flapjack.PanHProg
+import Flapjack.PanHProgLoad
 import Flapjack.PanSimp
 import Flapjack.PanStructs
 import Flapjack.PanGlobals

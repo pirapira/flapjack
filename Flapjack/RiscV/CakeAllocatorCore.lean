@@ -202,4 +202,77 @@ def spDefault (colour : List (Nat × Nat)) (n : Nat) : Nat :=
 def totalColour (colour : List (Nat × Nat)) (n : Nat) : Nat :=
   2 * spDefault colour n
 
+/-! ## Word-to-Stack frame occupancy
+
+These helpers mirror the frame-facing definitions in
+`word_to_stackScript.sml`.  In particular, a spilled Word register is
+addressed from the top of the frame (`f - 1 - (r DIV 2 - k)`), while the
+fresh SSA names produced by `full_ssa_cc_trans` remain in the allocator's
+source namespace until `formatVar` classifies them. -/
+
+/-- The source `wReg1` result: loads for a spilled first operand and its
+    physical register destination. -/
+def wReg1 (r k f _f' : Nat) : List (Nat × Nat) × Nat :=
+  let r := r / 2
+  if r < k then
+    ([], r)
+  else
+    ([(k, f - 1 - (r - k))], k)
+
+/-- The source `wReg2` result, using the second integer argument register. -/
+def wReg2 (r k f _f' : Nat) : List (Nat × Nat) × Nat :=
+  let r := r / 2
+  if r < k then
+    ([], r)
+  else
+    ([(k + 1, f - 1 - (r - k))], k + 1)
+
+/-- The two alternatives used by source `format_var`. -/
+inductive FrameVar where
+  | register (name : Nat)
+  | stack (name : Nat)
+  deriving DecidableEq, Repr
+
+def formatVar (k : Nat) : Option Nat → FrameVar
+  | none => .register (k + 1)
+  | some x => if x < k then .register x else .stack x
+
+/-- The source call destination classification (`INL` is a normal return,
+    `INR` is the exception/raise continuation). -/
+def stackArgCount : Sum Nat Nat → Nat → Nat → Nat
+  | .inl _, argumentCount, registerCount => argumentCount - registerCount
+  | .inr _, argumentCount, registerCount =>
+      (argumentCount - 1) - registerCount
+
+def stackFree (destination : Sum Nat Nat) (argumentCount : Nat)
+    (k f _f' : Nat) : Nat :=
+  f - stackArgCount destination argumentCount k
+
+/-- Exact source `bits_to_word`, before the bitmap terminator bit is added. -/
+def bitsToWord : List Bool → Nat
+  | [] => 0
+  | bit :: bits =>
+      bitsToWord bits * 2 + if bit then 1 else 0
+
+def frameBitmapWordsAux (chunkSize : Nat) :
+    Nat → List Bool → List Nat
+  | 0, _ => []
+  | fuel + 1, bits =>
+      if chunkSize = 0 || bits.length ≤ chunkSize then
+        [bitsToWord bits]
+      else
+        bitsToWord (bits.take chunkSize ++ [true]) ::
+          frameBitmapWordsAux chunkSize fuel (bits.drop chunkSize)
+
+def frameBitmapWords (chunkSize : Nat) (bits : List Bool) : List Nat :=
+  frameBitmapWordsAux chunkSize (bits.length + 1) bits
+
+/-- Source `write_bitmap` for the list representation of a live num-set.
+    Membership is the observable part of `toAList`; the list is used only as
+    an executable stand-in for the finite set in the HOL definition. -/
+def writeBitmap (live : List Nat) (k f' wordBits : Nat) : List Nat :=
+  let names := live.map (fun r => (f' - 1) - (r / 2 - k))
+  let bits := (List.range f').map (fun slot => names.contains slot)
+  frameBitmapWords (wordBits - 1) (bits ++ [true])
+
 end Flapjack.RiscV.CakeAlloc

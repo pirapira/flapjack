@@ -174,6 +174,9 @@ run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \
 run_probe crep_evaluate_probeScript.sml crep_evaluate_probe.out \
   evaluate_skip evaluate_tick_timeout \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_res_var_probeScript.sml crep_res_var_probe.out \
+  res_var_delete_hit res_var_update_hit \
+  "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe pan_empty_locals_probeScript.sml pan_empty_locals_probe.out \
   empty_locals empty_locals_clock \
   "$cake_dir/pancake/semantics/panSemScript.sml"

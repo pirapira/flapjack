@@ -113,6 +113,10 @@ run_probe pan_lang_fun_ids_probeScript.sml pan_lang_fun_ids_probe.out \
   empty call handler dec_call "$cake_dir/pancake/panLangScript.sml"
 run_probe word_stack_frame_probeScript.sml word_stack_frame_probe.out \
   maxvar_skip limit_seq "$cake_dir/compiler/backend/word_to_stackScript.sml"
+run_probe word_alloc_cost_probeScript.sml word_alloc_cost_probe.out \
+  spill_zero spill_c1 spill_lr1 spill_lm1 spill_rr1 spill_rm1 spill_all1 \
+  spill_all1_tail coal_empty coal_x_in coal_y_in coal_both_in coal_pri2_both_in \
+  "$cake_dir/compiler/backend/word_allocScript.sml" "$cake_dir/compiler/backend"
 run_probe pan_lang_free_var_ids_probeScript.sml pan_lang_free_var_ids_probe.out \
   empty dec_call "$cake_dir/pancake/panLangScript.sml"
 run_probe get_forced_probeScript.sml get_forced_probe.out \

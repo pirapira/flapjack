@@ -253,6 +253,8 @@ run_probe crep_mem_load_probeScript.sml crep_mem_load_probe.out \
 run_probe crep_eval_probeScript.sml crep_eval_probe.out \
   eval_const eval_base_top \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_dest_2exp_probeScript.sml crep_dest_2exp_probe.out \
+  zero max "$cake_dir/pancake/crep_arithScript.sml"
 run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
   semantics_timeout_is_nonterminal semantics_break_is_nonterminal \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

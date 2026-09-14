@@ -1,0 +1,48 @@
+cut_set_const_args=Seq (Assign 11 (Const 1w))
+  (Seq (Assign 12 (Const 2w))
+     (Seq
+        (Call (SOME ([5],⦕ 5 ⦖)) (SOME 64) [11; 12]
+           (SOME (11,Raise 11,Skip,⦕ 5 ⦖))) Skip))
+cut_set_load32_arg=Seq (Assign 11 (Const 0w))
+  (Seq (Load32 11 11)
+     (Seq (Assign 12 (Var 11))
+        (Seq
+           (Call (SOME ([5],⦕ 5 ⦖)) (SOME 64) [12]
+              (SOME (11,Raise 11,Skip,⦕ 5 ⦖))) Skip)))
+dec_continuation_live=Seq Skip
+  (Seq (Assign 11 (Const 7w))
+     (Seq (Assign 12 (Var 11))
+        (Seq
+           (Call (SOME ([11],⦕ 5; 11 ⦖)) (SOME 64) [12]
+              (SOME (12,Raise 12,Skip,⦕ 5; 11 ⦖))) Skip)))
+if_branches_original_live=Seq (Assign 11 (Const 0w))
+  (Seq (Load32 11 11)
+     (Seq (Assign 12 (Var 11))
+        (Seq
+           (If NotEqual 12 (Imm 0w)
+              (Seq (Assign 11 (Const 1w))
+                 (Seq
+                    (Call (SOME ([5],⦕ 5 ⦖)) (SOME 64) [11]
+                       (SOME (11,Raise 11,Skip,⦕ 5 ⦖))) Skip))
+              (Seq (Assign 11 (Const 2w))
+                 (Seq
+                    (Call (SOME ([5],⦕ 5 ⦖)) (SOME 64) [11]
+                       (SOME (11,Raise 11,Skip,⦕ 5 ⦖))) Skip)) ⦕ 5 ⦖) Skip)))
+while_body_original_live=Loop ⦕ 5 ⦖
+  (Seq (Assign 11 (Const 0w))
+     (Seq (Load32 11 11)
+        (Seq (Assign 12 (Var 11))
+           (Seq
+              (If NotEqual 12 (Imm 0w)
+                 (Seq
+                    (Seq (Assign 11 (Const 1w))
+                       (Seq
+                          (Call (SOME ([5],⦕ 5 ⦖)) (SOME 64) [11]
+                             (SOME (11,Raise 11,Skip,⦕ 5 ⦖))) Skip))
+                    (Continue 0)) (Break 0) ⦕ 5 ⦖) Skip)))) ⦕ 5 ⦖
+handler_original_live=Seq (Assign 11 (Const 1w))
+  (Seq
+     (Call (SOME ([5],⦕ 5 ⦖)) (SOME 64) [11]
+        (SOME
+           (11,If NotEqual 11 (Imm 3w) (Raise 11) (Seq Tick Skip) ⦕ 5 ⦖,Skip,
+            ⦕ 5 ⦖))) Skip)

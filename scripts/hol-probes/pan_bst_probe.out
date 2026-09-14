@@ -1,21 +1,23 @@
-locals=T
+bst_locals=T
 
-globals=T
+bst_globals=T
 
-structs=T
+bst_structs=T
 
-code=T
+bst_code=T
 
-eshapes=T
+bst_eshapes=T
 
-memory=T
+bst_memory=T
 
-memaddrs=T
+bst_memaddrs=T
 
-sh_memaddrs=T
+bst_sh_memaddrs=T
 
-be=T
+bst_be=T
 
-base_addr=T
+bst_base_addr=T
 
-top_addr=T
+bst_top_addr=T
+
+bst_clock_ffi_irrelevant=T

@@ -163,7 +163,7 @@ run_probe pan_itree_h_prog_call_probeScript.sml \
   call_eval_failure call_success \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_bst_probeScript.sml pan_bst_probe.out \
-  locals top_addr \
+  bst_locals bst_clock_ffi_irrelevant \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe crep_primop_probeScript.sml crep_primop_probe.out \
   crep_basic crep_wrong_length \

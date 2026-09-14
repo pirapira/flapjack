@@ -1,11 +1,7 @@
-evaluate_skip_result=T
+evaluate_skip=(NONE,s)
 
-evaluate_skip_clock=T
+evaluate_assign=(NONE,SOME (Word 7w),5)
 
-evaluate_assign_state=T
+evaluate_seq_return=(SOME (Return [Word 7w]),NONE,5)
 
-evaluate_seq_return=T
-
-evaluate_break=T
-
-evaluate_missing=T
+evaluate_tick_timeout=(SOME TimeOut,NONE,0)

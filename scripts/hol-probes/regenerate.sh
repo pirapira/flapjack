@@ -175,7 +175,7 @@ run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \
   exit_loop_break exit_loop_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_evaluate_probeScript.sml crep_evaluate_probe.out \
-  evaluate_skip_result evaluate_missing \
+  evaluate_skip evaluate_tick_timeout \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
 run_probe crep_semantics_probeScript.sml crep_semantics_probe.out \
   semantics_timeout_is_nonterminal semantics_break_is_nonterminal \

@@ -18,7 +18,6 @@ import Flapjack.PanSemSetGlobal
 import Flapjack.PanSemSetKvar
 import Flapjack.PanSemLookupKvar
 import Flapjack.PanSemIsValidValue
-import Flapjack.PanSemWriteBytearray
 import Flapjack.PanItreeEvaluate
 import Flapjack.PanWriteBytearray
 import Flapjack.PanExt
@@ -49,6 +48,7 @@ import Flapjack.PanNbOp
 import Flapjack.PanShMemLoad
 import Flapjack.PanShMemStore
 import Flapjack.PanEval
+import Flapjack.PanEvaluate
 import Flapjack.PanHHandleCallRet
 import Flapjack.PanMrec
 import Flapjack.PanHProgDec

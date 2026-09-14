@@ -1,5 +1,0 @@
-write_empty=Word 0w
-
-write_hit=Word 170w
-
-write_miss=Word 0w

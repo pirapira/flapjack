@@ -303,6 +303,8 @@ run_probe vars_of_exp_probeScript.sml vars_of_exp_probe.out \
   var shift_nested "$cake_dir/pancake/loop_liveScript.sml"
 run_probe arith_vars_probeScript.sml arith_vars_probe.out \
   long_mul long_div "$cake_dir/pancake/loop_liveScript.sml"
+run_probe shrink_leaf_probeScript.sml shrink_leaf_probe.out \
+  skip load32 "$cake_dir/pancake/loop_liveScript.sml"
 run_probe loop_lang_assigned_vars_probeScript.sml \
   loop_lang_assigned_vars_probe.out \
   skip load_byte "$cake_dir/pancake/loopLangScript.sml"

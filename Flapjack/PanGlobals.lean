@@ -354,6 +354,15 @@ def globalDeclShapes : List (Decl α) → List Shape
   | .exnDecl _ _ :: declarations => globalDeclShapes declarations
 termination_by declarations => sizeOf declarations
 
+def globalFindFunction [BEq String] (name : FunName) :
+    List (Decl α) → Option (FunDecl α)
+  | [] => none
+  | .function declaration :: declarations =>
+      if declaration.name == name then some declaration
+      else globalFindFunction name declarations
+  | _ :: declarations => globalFindFunction name declarations
+termination_by declarations => sizeOf declarations
+
 def globalCollect [Add α] [Mul α] (context : GlobalPassContext α) :
     List (Decl α) → GlobalPassContext α
   | [] => context
@@ -407,6 +416,41 @@ def globalCompileDecs [BEq String] [Add α] [Mul α]
     exceptions := globalDeclsFilter globalDeclIsException
       (globalCompileDecls collected declarations)
     context := collected }
+
+/-! The start-function form of CakeML's `pan_globals$compile_top_def`
+    (`pan_globalsScript.sml:236`).  The existing `globalCompileTop` below
+    exposes the lower-level context pass; this wrapper models the source
+    entry-point result, including the synthesized tail-calling function. -/
+def globalCompileTopForStart [BEq String] [Add α] [Mul α]
+    (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α))
+    (start : FunName) : Option (List (Decl α)) :=
+  match globalFindFunction start declarations with
+  | none => none
+  | some entry =>
+      let resorted := globalResortDecls declarations
+      let renamedStart := globalNewMainName declarations
+      let renamed := globalRenameDecls start renamedStart resorted
+      let maxGlobalsSize :=
+        bytesInWord * fromNat
+          ((globalDeclShapes renamed).map Shape.shapeSize |>.foldl (· + ·) 0)
+      let initial : GlobalPassContext α :=
+        { globals := []
+          globalsSize := fromNat 0
+          maxGlobalsSize := maxGlobalsSize
+          bytesInWord := bytesInWord
+          fromNat := fromNat }
+      let compiled := globalCompileDecs initial renamed
+      let parameters := entry.params.map (fun (name, _) => Exp.var .local name)
+      let newMain : Decl α :=
+        .function
+          { name := start
+            inline := false
+            exported := false
+            params := entry.params
+            body := .seq (nestedSeq compiled.initializers)
+              (.call none renamedStart parameters)
+            returnShape := entry.returnShape }
+      some (compiled.exceptions ++ [newMain] ++ compiled.functions)
 
 def globalCompileTop [BEq String] [Add α] [Mul α]
     (bytesInWord : α) (fromNat : Nat → α) (declarations : List (Decl α)) :

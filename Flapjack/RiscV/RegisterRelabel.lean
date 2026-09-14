@@ -46,6 +46,10 @@ def relabelRegisters (forward : Fin 32 → Fin 32) (state : State width) : State
   cases state
   simp [relabelRegisters]
 
+/-- The Cake register map fixes the canonical all-zero initial state. -/
+@[simp] theorem relabelRegisters_riscvForward_zeroState [NeZero width] :
+    relabelRegisters riscvForward (zeroState width) = zeroState width := rfl
+
 /-- Relabeling twice by `g` then `f` is one relabeling by their composition
 `fun name => g (f name)`.  This lets the Cake map be applied at a single
 boundary instead of being threaded twice through the relation. -/
@@ -244,5 +248,19 @@ theorem readRegister_writeRegisterInternal_riscvForward_other (state : State wid
   · rw [if_pos himage]
   · rw [if_neg himage]
     simp [hne]
+
+/-- The CakeML internal zero/link role register `27` is never modified by the
+internal accessor under the `riscvForward` relabeling: writes aimed at it are
+dropped at the hardwired architectural zero, and writes to any other role leave
+it untouched. -/
+theorem readRegister_writeRegisterInternal_riscvForward_zero (state : State width)
+    (name : Fin 32) (value : Word width) :
+    readRegister (writeRegisterInternal riscvForward state name value) 27 =
+      readRegister state 27 := by
+  by_cases hname : name = (27 : Fin 32)
+  · subst hname
+    rw [writeRegisterInternal_riscvForward_zero]
+  · exact readRegister_writeRegisterInternal_riscvForward_other state name 27 value
+      (fun h => hname h.symm)
 
 end Flapjack.RiscV

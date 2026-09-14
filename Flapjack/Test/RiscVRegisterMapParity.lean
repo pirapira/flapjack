@@ -186,6 +186,24 @@ example (state : State 64) (index : Fin 32) (value : Word 64) (hindex : index â‰
       transferState (writeRegisterInternal riscvForward state (riscvInverse index) value) :=
   writeRegister_transfer state index value hindex
 
+/-- The Cake register map fixes the canonical all-zero initial state. -/
+example : relabelRegisters (width := 64) riscvForward (zeroState 64) = zeroState 64 :=
+  relabelRegisters_riscvForward_zeroState
+
+/-- The `riscv_names` transfer fixes the canonical all-zero initial state. -/
+example : transferState (zeroState 64) = zeroState 64 :=
+  transferState_zeroState
+
+/-- The transferred initial state still satisfies the architectural
+zero-register contract. -/
+example : ZeroRegister (transferState (zeroState 64)) :=
+  zeroRegister_transferState_zeroState
+
+example (state : State 64) (value : Word 64) :
+    readRegister (writeRegisterInternal riscvForward state (1 : Fin 32) value) 27 =
+      readRegister state 27 :=
+  readRegister_writeRegisterInternal_riscvForward_zero state _ value
+
 def runChecks : IO Bool := do
   let checks : List (String Ã— Bool) :=
     [ ("production role registers are preserved by the one-time Cake map",

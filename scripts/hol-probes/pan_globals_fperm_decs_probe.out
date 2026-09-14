@@ -1,0 +1,9 @@
+mixed=[Decl One «g» (Const 7w);
+ Function
+   <|name := «bar»; inline := F; export := T; params := [];
+     body := TailCall «bar» []; return := One|>;
+ Function
+   <|name := «foo»; inline := T; export := F; params := [];
+     body := DecCall «x» One «bar» [] Skip; return := One|>]
+
+empty=[]

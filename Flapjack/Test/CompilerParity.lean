@@ -23,6 +23,7 @@ import Flapjack.Test.PanGlobalsCompileDecsParity
 import Flapjack.Test.PanGlobalsResortDeclsParity
 import Flapjack.Test.PanGlobalsFpermNameParity
 import Flapjack.Test.PanGlobalsFpermParity
+import Flapjack.Test.PanGlobalsFpermDecsParity
 import Flapjack.Test.PanResVarParity
 import Flapjack.Test.PanPrimopParity
 import Flapjack.Test.PanSetVarParity

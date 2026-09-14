@@ -35,6 +35,7 @@ import Flapjack.Test.CrepeSimpProgParity
 import Flapjack.Test.PanStructsAfindiParity
 import Flapjack.Test.PanStructsCompileShapeParity
 import Flapjack.Test.PanStructsOldExpShapeParity
+import Flapjack.Test.PanStructsCompileExpParity
 import Flapjack.Test.PanResVarParity
 import Flapjack.Test.PanPrimopParity
 import Flapjack.Test.PanSetVarParity

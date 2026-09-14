@@ -200,6 +200,7 @@ def pipelineWordFunctionsAllocatedWithSpills [NeZero width] :
           scratch := 31
           stackBase := 0
           addressScratch := 29
+          abiBase := 10
           sectionId := label
           handlerLabel := label }
       /- CakeML's spill path carries allocator-owned heap operations through
@@ -237,6 +238,7 @@ def pipelineWordFunctionAllocatedWithSpillsAndBitmaps [NeZero width]
         scratch := 31
         stackBase := 0
         addressScratch := 29
+        abiBase := 10
         sectionId := label
         handlerLabel := label }
     let (stackBody, bitmaps) ←
@@ -314,6 +316,7 @@ def pipelineWordFunctionAllocatedWithSpillsAndFullSsaAndBitmaps [NeZero width]
         scratch := 31
         stackBase := 0
         addressScratch := 29
+        abiBase := 10
         sectionId := label
         handlerLabel := label }
     let (stackBody, bitmaps) ←
@@ -405,6 +408,7 @@ def pipelineWordFunctionsAllocatedWithGraph [NeZero width] :
           scratch := 31
           stackBase := 0
           addressScratch := 29
+          abiBase := 10
           sectionId := label
           handlerLabel := label }
       let stackBody ← RiscV.wordToStackFunctionWithParameters config
@@ -433,6 +437,7 @@ def pipelineWordFunctionsAllocatedWithGraphAndFullSsa [NeZero width] :
           scratch := 31
           stackBase := 0
           addressScratch := 29
+          abiBase := 10
           sectionId := label
           handlerLabel := label }
       let stackBody ← RiscV.wordToStackFunctionWithParameters config
@@ -464,6 +469,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
           scratch := 31
           stackBase := 0
           addressScratch := 29
+          abiBase := 10
           sectionId := label
           handlerLabel := label }
       let (stackBody, _) ←

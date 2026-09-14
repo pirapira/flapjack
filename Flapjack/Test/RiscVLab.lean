@@ -204,7 +204,7 @@ example :
       stackRemoveRiscVConfig 2 3
       (.ffi "echo" 0 1 2 3 ([], []) : WordProg Nat) =
       some [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
-        .addi 0 0 (BitVec.ofNat 64 24),
+        .addi 1 0 (BitVec.ofNat 64 24),
         .jal 0 (0 - BitVec.ofNat 64 68)] := by
   native_decide
 

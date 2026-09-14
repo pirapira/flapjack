@@ -32,6 +32,7 @@ def pipelineWordFunctionsAllocatedWithHeuristics [NeZero width]
           scratch := 31
           stackBase := 0
           addressScratch := 29
+          abiBase := 10
           sectionId := label
           handlerLabel := label }
       let stackBody ← RiscV.wordToStackFunctionWithParameters config

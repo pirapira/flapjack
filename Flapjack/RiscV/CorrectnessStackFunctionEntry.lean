@@ -40,7 +40,7 @@ theorem evalWordStackMachine_wordToStackFunctionWithParameters
     (hbody :
       wordToStackProgWord config program = some body)
     (hmoves :
-      wordStackMovesFromPhysical config parameters wordStackAbiBase = some moves)
+      wordStackMovesFromPhysical config parameters config.abiBase = some moves)
     (hentry : evalWordStackMachine state moves = some middle)
     (hbodyEval : evalWordStackMachine middle body = some final) :
     evalWordStackMachine state

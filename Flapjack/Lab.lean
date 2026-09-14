@@ -206,7 +206,7 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         ⟨[], false, counter⟩
       else if labIsSkip thenBranch then
         let joinLabel := elseResult.nextLabel
-        ⟨[labJumpCmp operator condition right sectionId joinLabel] ++
+        ⟨[labJumpCmp (labNegateCmp operator) condition right sectionId joinLabel] ++
           elseResult.lines ++ [labLabel sectionId joinLabel],
           false, joinLabel + 1⟩
       else if labIsSkip elseBranch then

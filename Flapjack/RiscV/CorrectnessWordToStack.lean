@@ -500,7 +500,7 @@ theorem wordToStackProgNatWithBitmapBuilder_call_handler
     (exception handlerLabel entryLabel : Nat)
     (body : WordProg Nat)
     (argumentMoves liveCode returnCode handlerCode : StackProg Nat)
-    (hargs : wordStackMovesToPhysical config arguments wordStackAbiBase = some argumentMoves)
+    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
     (hlive : wordStackCallLiveBitmap config bitmapBuilder bitmapRegister frameSlots state returns =
       (liveCode, liveState))
     (hreturnSome : ∀ returnData, returns = some returnData →
@@ -540,7 +540,7 @@ theorem wordToStackProgNatWithBitmapBuilder_call_no_handler
     (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat))
     (target : Nat) (arguments : List Nat)
     (argumentMoves liveCode returnCode : StackProg Nat)
-    (hargs : wordStackMovesToPhysical config arguments wordStackAbiBase = some argumentMoves)
+    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
     (hlive : wordStackCallLiveBitmap config bitmapBuilder bitmapRegister frameSlots state returns =
       (liveCode, liveState))
     (hreturnSome : ∀ returnData, returns = some returnData →
@@ -583,7 +583,7 @@ theorem wordToStackProgNatWithBitmapBuilder_call_no_handler_none
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)
     (target : Nat) (arguments : List Nat)
     (argumentMoves : StackProg Nat)
-    (hargs : wordStackMovesToPhysical config arguments wordStackAbiBase = some argumentMoves) :
+    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves) :
     wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount
       bitmapRegister frameSlots wordBits storeConstsStub state
       (.call none (some target) arguments none) =
@@ -609,7 +609,7 @@ theorem wordToStackProgNatWithLocationBitmaps_call_handler
     (exception handlerLabel entryLabel : Nat)
     (body : WordProg Nat)
     (argumentMoves liveCode returnCode handlerCode : StackProg Nat)
-    (hargs : wordStackMovesToPhysical config arguments wordStackAbiBase = some argumentMoves)
+    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
     (hlive : wordStackCallLiveBitmap config
       (wordStackLiveBitmapFromLocations config frameSlots wordBits)
       bitmapRegister frameSlots state returns = (liveCode, liveState))
@@ -833,7 +833,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
     (hreturnNone : returns = none → some (.skip, bitmapState) = some (returnCode, bitmapState))
     (finalState : WordStackBitmapState)
     (value : Word width) (result : StackMachineControl width)
-    (hargs : wordStackMovesToPhysical config arguments wordStackAbiBase = some argumentMoves)
+    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
     (hhandler : wordToStackProgNatWithBitmapBuilder config bitmapBuilder
       registerCount bitmapRegister frameSlots wordBits storeConstsStub bitmapState body =
       some (handlerCode, finalState))
@@ -939,7 +939,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
     (hreturnNone : returns = none → some (.skip, bitmapState) = some (returnCode, bitmapState))
     (finalState : WordStackBitmapState)
     (result : StackMachineControl width)
-    (hargs : wordStackMovesToPhysical config arguments wordStackAbiBase = some argumentMoves)
+    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
     (hhandler : wordToStackProgNatWithBitmapBuilder config bitmapBuilder
       registerCount bitmapRegister frameSlots wordBits storeConstsStub bitmapState body =
       some (handlerCode, finalState))
@@ -1027,7 +1027,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
           wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount bitmapRegister
             frameSlots wordBits storeConstsStub bitmapState returnProgram = some (returnCode, bitmapState))
     (result : StackMachineControl width)
-    (hargs : wordStackMovesToPhysical config arguments wordStackAbiBase = some argumentMoves)
+    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
     (hreturns : returns ≠ none)
     (hargumentMovesNe : argumentMoves ≠ .skip)
     (hmove : evalStackProgFuelWithCodeAndFfi host fuel code machineState
@@ -1093,7 +1093,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
     (target : Nat) (arguments : List Nat)
     (argumentMoves : StackProg Nat)
     (result : StackMachineControl width)
-    (hargs : wordStackMovesToPhysical config arguments wordStackAbiBase = some argumentMoves)
+    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
     (hargumentMovesNe : argumentMoves ≠ .skip)
     (hmove : evalStackProgFuelWithCodeAndFfi host fuel code machineState
       argumentMoves = some (.normal middle))

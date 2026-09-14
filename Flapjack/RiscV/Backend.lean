@@ -969,9 +969,9 @@ theorem compileWordAdd_zeroState [NeZero width] :
     evalWordProg (zeroState width)
         (.assign 1 (.const (7 : Word width))) =
       some (executeInstructions (zeroState width) [.addi 1 0 7]) := by
-  simp [evalWordProg, wordExpToInstructions, wordExpToInstruction, 
-    executeInstructions, registerOfNat,
-    execute, writeRegister, nextPc, zeroState, readRegister]
+  simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+    executeInstructions, registerOfNat, execute, writeRegister, nextPc,
+    zeroState, readRegister]
 
 theorem compileWordLoadByte_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.mem .load8 1 2)) =
@@ -1132,9 +1132,10 @@ theorem evalWordFunction_return_add [NeZero width] (state : State width) :
 theorem wordFunctionToRiscV_return_const [NeZero width] (value : Word width) :
     wordFunctionToRiscV
         ((.seq (.assign 1 (.const value)) (.return 0 [1])) :
-          WordProg (Word width)) =
+      WordProg (Word width)) =
       some ([.addi 1 0 value], [1]) := by
-  simp [wordFunctionToRiscV, wordExpToInstructions, wordExpToInstruction, registerOfNat]
+  simp [wordFunctionToRiscV, wordExpToInstructions, wordExpToInstruction,
+    registerOfNat]
 
 theorem evalWordFunction_return_const [NeZero width] (state : State width)
     (value : Word width) (_zero : ZeroRegister state) :

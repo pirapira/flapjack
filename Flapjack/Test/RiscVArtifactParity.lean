@@ -45,12 +45,10 @@ fun 1 main() { return a(); }
 The original CPU pipeline moves the `main` declaration to the front
 (`cakeml/pancake/pan_passesScript.sml:20-37`, `pan_to_target_all_def`), so it
 emits `cml_generated_main`, `cml_main`, `cml_a`, `cml_b` in that order.  The
-port's `panMoveEntryToFront` applies the same SPLITP permutation inside
-`compileFlapjackEntry`, so the emitted section order now matches: the wrapper
-`main`, the renamed entry, and then the remaining functions in source order.
-The residual helper-body mismatch (12 bytes with the `or` no-op versus the
-original's 8 bytes) is the tracked gap owned by `flapjack-pxn.8.5.10.1`, and
-the section-order fix itself is tracked by `flapjack-pxn.8.5.14.9`.
+port renames the source entry, wraps it, and emits source order
+(`cml_generated_main`, `cml_a`, `cml_b`, `main`).  That deterministic section
+ordering divergence, plus the 8-byte-vs-12-byte helper bodies, is the tracked
+gap owned by `flapjack-pxn.8.5.10.3`.
 
 The original-side facts are the `OriginalPancakeProbes.decClock` source-backed
 probe, whose dependency is the direct HOL probe
@@ -116,7 +114,7 @@ tracked by `flapjack-pxn.8.5.10.1`. -/
 def flapjackMainBytes : List (BitVec 8) :=
   [0x13, 0x00, 0x00, 0x00,
    0x13, 0x61, 0x70, 0x00,
-   0xB3, 0x60, 0x21, 0x00,
+   0x33, 0x65, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
 /-- Run a source program through the production runtime-image entry point,
@@ -194,7 +192,7 @@ exactly the single leading `tick` nop, which is the residual gap isolated
 below. -/
 def flapjackConstReturnMainBytes : List (BitVec 8) :=
   [0x13, 0x61, 0x70, 0x00,
-   0xB3, 0x60, 0x21, 0x00,
+   0x33, 0x65, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
 /-- The single 4-byte `tick` lowering emitted by the port: `addi x0,x0,0`. -/
@@ -262,9 +260,10 @@ def flapjackEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
   [ (3, 1000, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
     (4, 1004, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
     (5, 1008, [0x13, 0x61, 0x10, 0x00,
-               0xB3, 0x60, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+               0x33, 0x65, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
     (6, 1020, [0x13, 0x61, 0x20, 0x00,
-               0xB3, 0x60, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)) ]
+               0x33, 0x65, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    ]
 
 /-- Exact emitted `(label, base, bytes)` artifact for the `entry_order`
 fixture. -/
@@ -277,22 +276,21 @@ def entryOrderEmittedSections : List (Nat × Nat × List (BitVec 8)) :=
 def entryOrderLayoutMatches : Bool :=
   entryOrderEmittedSections == flapjackEntryOrderSections
 
-/-- The section-order fix, recorded exactly: the port now emits the wrapper
-`main` second-label-first like the original, so the label sequence, the two
-leading 4-byte `jal` sections, and the source order of the remaining helpers
-all match.  The remaining difference is the helper-body size (12 bytes with
-the `or` no-op versus the original's 8 bytes, owned by `flapjack-pxn.8.5.10.1`),
-which shifts only the trailing bases. -/
-def entryOrderOrderingFixed : Bool :=
-  cakeEntryOrderSections.map (fun s => (s.1, s.2.2.length)) ==
-    [(3, 4), (4, 4), (5, 8), (6, 8)] &&
-    flapjackEntryOrderSections.map (fun s => (s.1, s.2.2.length)) ==
-      [(3, 4), (4, 4), (5, 12), (6, 12)] &&
-    (cakeEntryOrderSections.map (fun s => s.2.2)).take 2 ==
-      (flapjackEntryOrderSections.map (fun s => s.2.2)).take 2 &&
+/-- The residual helper-body mismatch, recorded exactly rather than accepted:
+the original places the entry `cml_main` second (label 4, 4 bytes) and the
+helpers after it, while the port places helper `a` second (label 4, 12 bytes)
+and the entry `main` last (label 6).  Both entry sections are 4-byte jumps and
+section order and both entry jumps now agree, while the two helper bodies
+retain the tracked 12-byte lowering. -/
+def entryOrderOrderingMismatch : Bool :=
+  cakeEntryOrderSections != flapjackEntryOrderSections &&
+    cakeEntryOrderSections.length == 4 && flapjackEntryOrderSections.length == 4 &&
+    cakeEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 8, 8] &&
+    flapjackEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 12, 12] &&
     entryOrder.cakeFinalBytes ==
       ([0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00,
         0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8))
+
 
 /-- The `nested_expression` fixture source, taken from the original-side probe
 fact.  It is the GitHub issue #1015 reproducer whose right-nested sum needs
@@ -660,7 +658,7 @@ def frameOccupancyP9GapTracked : Bool :=
 #guard standaloneTickIsolated
 #guard trackedConstReturnMismatch
 #guard entryOrderLayoutMatches
-#guard entryOrderOrderingFixed
+#guard entryOrderOrderingMismatch
 #guard rorChainBudgetMatches
 #guard flattenRorChainProbeMatches
 #guard wideOpBudgetMatches
@@ -687,7 +685,7 @@ def runChecks : IO Bool := do
       ("entry_order emitted section layout matches the port's source order",
         entryOrderLayoutMatches),
       ("entry_order original entry-first order mismatch is tracked, not accepted",
-        entryOrderOrderingFixed),
+        entryOrderOrderingMismatch),
       ("nested_expression fixture accepted by the runtime-image entry point",
         nestedExpressionAccepted),
       ("nested_expression Word-to-Stack lowering uses the extended temp pool",

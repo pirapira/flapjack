@@ -18,6 +18,83 @@ silently emitted.
 
 namespace Flapjack.RiscV
 
+/-! CakeML's `riscv_ast (Inst (Const r i))` uses three exact constant
+    materialization cases.  Keep the arithmetic here in `Nat` so the same
+    instruction-selection function can also provide the instruction count
+    needed while resolving Lab labels.  The emitted immediates are still
+    width-indexed words at the final instruction boundary. -/
+
+def labConst32 {width : Nat} [NeZero width]
+    (destination : Fin 32) (value : Nat) :
+    List (Instruction width) :=
+  let low32 := value % 2 ^ 32
+  let high20 := low32 / 2 ^ 12
+  let low12 := low32 % 2 ^ 12
+  if low12 / 2 ^ 11 % 2 = 1 then
+    [.lui destination (BitVec.ofNat width ((2 ^ 20 - 1) - high20)),
+      .xori destination destination (BitVec.ofNat width low12)]
+  else
+    [.lui destination (BitVec.ofNat width high20),
+      .addi destination destination (BitVec.ofNat width low12)]
+
+def labConstInstructions {width : Nat} [NeZero width]
+    (destination zero temporary : Fin 32) (value : Nat) :
+    List (Instruction width) :=
+  if value < 2 ^ 11 then
+    [.ori destination zero (BitVec.ofNat width value)]
+  else
+    let modulus := 2 ^ width
+    let normalized := value % modulus
+    let low12 := normalized % 2 ^ 12
+    let fitsImm12 :=
+      normalized ==
+        (if low12 / 2 ^ 11 % 2 = 0 then
+          low12
+        else
+          (modulus - (2 ^ 12 - low12)) % modulus)
+    if fitsImm12 then
+      [.ori destination zero (BitVec.ofNat width low12)]
+    else
+      let low32 := normalized % 2 ^ 32
+      let high32 := normalized / 2 ^ 32 % 2 ^ 32
+      let low32Sign := low32 / 2 ^ 31 % 2 = 1
+      let fitsSigned32 :=
+        (high32 = 0 ∧ !low32Sign) ||
+          (high32 = 2 ^ 32 - 1 ∧ low32Sign)
+      if fitsSigned32 then
+        labConst32 destination low32
+      else if low32Sign then
+        labConst32 temporary low32 ++
+          labConst32 destination ((2 ^ 32 - 1) - high32) ++
+          [.slli destination destination (BitVec.ofNat width 32),
+            .xor destination destination temporary]
+      else
+        labConst32 temporary low32 ++
+          labConst32 destination high32 ++
+          [.slli destination destination (BitVec.ofNat width 32),
+            .or destination destination temporary]
+
+def labConstInstructionCount (value : Nat) : Nat :=
+  if value < 2 ^ 11 then 1
+  else
+    let normalized := value % 2 ^ 64
+    let low12 := normalized % 2 ^ 12
+    let fitsImm12 :=
+      normalized ==
+        (if low12 / 2 ^ 11 % 2 = 0 then
+          low12
+        else
+          (2 ^ 64 - (2 ^ 12 - low12)) % 2 ^ 64)
+    if fitsImm12 then 1
+    else
+      let low32 := normalized % 2 ^ 32
+      let high32 := normalized / 2 ^ 32 % 2 ^ 32
+      let low32Sign := low32 / 2 ^ 31 % 2 = 1
+      let fitsSigned32 :=
+        (high32 = 0 ∧ !low32Sign) ||
+          (high32 = 2 ^ 32 - 1 ∧ low32Sign)
+      if fitsSigned32 then 2 else 6
+
 def labConditionPreludeCount (operator : Cmp)
     (right : WordRegImm (Word width)) : Nat :=
   match right with
@@ -34,6 +111,7 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       | .shift .ror _ _ _ => 5
       | .word (.arith (.longMul _ _ _ _)) => 2
       | .word (.arith (.addCarry _ _ _ _ _)) => 6
+      | .const _ value => labConstInstructionCount value
       | _ => 1
   | .labAsm operation _ _ =>
       match operation with
@@ -127,7 +205,11 @@ def labCompilePlain [NeZero width] :
   | .const destination value => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let destination ← labRegisterOfNat (portToStack destination)
-      pure [.addi destination zero (BitVec.ofNat width value)]
+      if value < 2 ^ 11 then
+        pure [.ori destination zero (BitVec.ofNat width value)]
+      else
+        let temporary ← labRegisterOfNat (portToStack 31)
+        pure (labConstInstructions destination zero temporary value)
   | .arith operator destination left right =>
       (labBinOpInstruction operator destination left right).map List.singleton
   | .shift operator destination left right =>
@@ -803,7 +885,7 @@ theorem compileLabProgram_cross_section_jump [NeZero width] :
       [⟨1, [.labAsm (.jump ⟨2, 0⟩) [] 0]⟩,
        ⟨2, [.label 2 0 0, .asm (.const 1 7) [] 0]⟩] =
       some [.jal 0 (BitVec.ofNat width 4),
-        .addi 1 0 (BitVec.ofNat width 7)] := by
+        .ori 1 0 (BitVec.ofNat width 7)] := by
   have hcount :
       labLineInstructionCount
           (.labAsm (.jump ⟨2, 0⟩) [] 0 : LabLine (Word width)) = 1 := by
@@ -811,7 +893,8 @@ theorem compileLabProgram_cross_section_jump [NeZero width] :
   simp [compileLabProgram, labCollectProgramLabels,
     labCollectLabels, labSectionInstructionCount, labCompileProgramSections,
     labCompileProgramLines, labCompileAsmProgram,
-    labCompilePlain, labLookupProgramPosition, labResolveProgramRef,
+    labCompilePlain,
+    labLookupProgramPosition, labResolveProgramRef,
     labOffset, hcount]
 
 end Flapjack.RiscV

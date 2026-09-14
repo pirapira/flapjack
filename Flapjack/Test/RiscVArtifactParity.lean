@@ -59,7 +59,7 @@ is the semantic result the generated artifact must implement.
 
 The generated `cml_generated_main` section is byte-identical.  The generated
 `cml_main` sections are not: the original emits the 8-byte constant return
-`addi a0,x0,7; ret`, while the port emits 16 bytes because it lowers `tick`
+`addi a0,x0,7; ret`, while the port emits 20 bytes because it lowers `tick`
 and the return move through its typed pipeline.  That residual mismatch is the
 reproducible, tracked gap owned by `flapjack-pxn.8.5.10.1`; it is recorded
 exactly here instead of being weakened to an acceptance check.
@@ -113,7 +113,7 @@ def flapjackGeneratedMainBytes : List (BitVec 8) :=
 tracked by `flapjack-pxn.8.5.10.1`. -/
 def flapjackMainBytes : List (BitVec 8) :=
   [0x13, 0x00, 0x00, 0x00,
-   0x13, 0x01, 0x70, 0x00,
+   0x13, 0x61, 0x70, 0x00,
    0x33, 0x61, 0x21, 0x00,
    0xB3, 0x60, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
@@ -192,7 +192,7 @@ def constReturnSource : String := constReturn.source
 exactly the single leading `tick` nop, which is the residual gap isolated
 below. -/
 def flapjackConstReturnMainBytes : List (BitVec 8) :=
-  [0x13, 0x01, 0x70, 0x00,
+  [0x13, 0x61, 0x70, 0x00,
    0x33, 0x61, 0x21, 0x00,
    0xB3, 0x60, 0x21, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
@@ -261,9 +261,9 @@ CakeML's `pan_to_target_all` ordering. -/
 def flapjackEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
   [ (3, 1000, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
     (4, 1004, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
-    (5, 1008, [0x13, 0x01, 0x10, 0x00, 0x33, 0x61, 0x21, 0x00,
+    (5, 1008, [0x13, 0x61, 0x10, 0x00, 0x33, 0x61, 0x21, 0x00,
                0xB3, 0x60, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
-    (6, 1024, [0x13, 0x01, 0x20, 0x00, 0x33, 0x61, 0x21, 0x00,
+    (6, 1024, [0x13, 0x61, 0x20, 0x00, 0x33, 0x61, 0x21, 0x00,
                0xB3, 0x60, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
     ]
 

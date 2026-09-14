@@ -34,4 +34,45 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-- Context used for the call-lowering characterization. Function `1` maps to
+    loop label `3`, so the generated call targets `some 3`. -/
+def callContext : LoopContext Nat :=
+  { vars := [(1, 5)], functions := [("f", (3, 1))], maxVar := 4, target := .rv64i }
+
+/-- `crep_to_loop$compile` on `call (SOME ([9], NONE)) 1 [Const 3]`.
+
+    The original always emits a default handler `rt2` for a call returning
+    through an exception channel (`crep_to_loopScript.sml:193-206`); for
+    `handler = NONE` that `rt2` binds the caught exception and immediately
+    re-raises it, which is observationally indistinguishable from the absent
+    handler.  The port currently omits the `rt2`, so this definition pins the
+    port's shape for the tracked artifact-parity gap (bead
+    flapjack-pxn.8.5.10.3). -/
+def leanCompileCallNoHandler : LoopProg Nat :=
+  compileCrepToLoop callContext [] (.call (some ([9], none)) "f" [.const 3])
+
+/-- `crep_to_loop$compile` on a call that names an exception handler, which
+    must carry an `rt2` handler exactly like the original. -/
+def leanCompileCallWithHandler : LoopProg Nat :=
+  compileCrepToLoop callContext []
+    (.call (some ([9], some (7, .skip))) "f" [.const 3])
+
+/-- The port's handler-less call lowering still emits no `rt2`. -/
+def handlerlessCallOmitsRaiseHandler : Bool :=
+  match leanCompileCallNoHandler with
+  | .seq _ (.call _ (some 3) _ none) => true
+  | _ => false
+
+/-- A call that names an exception handler does emit an `rt2`. -/
+def handledCallCarriesRaiseHandler : Bool :=
+  match leanCompileCallWithHandler with
+  | .seq _ (.call _ (some 3) _ (some _)) => true
+  | _ => false
+
+#eval leanCompileCallNoHandler
+#eval leanCompileCallWithHandler
+
+#guard handlerlessCallOmitsRaiseHandler
+#guard handledCallCarriesRaiseHandler
+
 end Flapjack.Test.CrepToLoopParity

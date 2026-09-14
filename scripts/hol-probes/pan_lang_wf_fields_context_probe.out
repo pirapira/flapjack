@@ -1,0 +1,11 @@
+empty_fields=T
+
+pair_fields=T
+
+unknown_field_shape=F
+
+forward_context=T
+
+duplicate_context=F
+
+self_reference_context=F

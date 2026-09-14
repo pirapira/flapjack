@@ -104,6 +104,20 @@ register `27`. -/
     readRegister (transferState state) (0 : Fin 32) = readRegister state (27 : Fin 32) := by
   simp [readRegister, transferState, riscvInverse_zero]
 
+/-- The hardware zero slot of a transferred state is exactly the internal Cake
+zero register `27`.  This is the sense in which the abstract relation does not
+assume a hardwired zero: the concrete zero-register fact is equivalent to an
+ordinary fact about internal register `27` of the abstract state. -/
+theorem zeroRegister_transferState_iff (state : State width) :
+    ZeroRegister (transferState state) ↔ readRegister state (27 : Fin 32) = 0 := by
+  simp [ZeroRegister]
+
+/-- Writing the hardware zero slot of a transferred state is discarded, exactly
+as `writeRegister` drops writes to the architectural zero register. -/
+@[simp] theorem writeRegister_transferState_zero (state : State width) (value : Word width) :
+    writeRegister (transferState state) (0 : Fin 32) value = transferState state := by
+  simp [writeRegister]
+
 /-- A hardware write to slot `riscvForward name` on a transferred state matches
 the internal write to register `name` (discarded when `name` is the Cake zero
 register `27`). -/

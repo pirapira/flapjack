@@ -65,6 +65,7 @@ import Flapjack.Test.PanHProgDecCallParity
 import Flapjack.Test.PanHProgCallParity
 import Flapjack.Test.CrepPrimopParity
 import Flapjack.Test.CrepProgIfParity
+import Flapjack.Test.CompileCrepOpParity
 import Flapjack.Test.CrepExitLoopParity
 import Flapjack.Test.CrepEvaluateParity
 import Flapjack.Test.CrepFixClockParity

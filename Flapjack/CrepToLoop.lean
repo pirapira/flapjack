@@ -70,6 +70,17 @@ def progIf [OfNat α 0] [OfNat α 1]
        (.assign condition (.const (0 : α)))
        (loopListInsert [condition, rightRegister] live)]
 
+/-! Source-named RISC-V port of `crep_to_loop$compile_crepop`
+    (`compile_crepop_def`, `crep_to_loopScript.sml:42`).  CakeML has an ARMv7
+    branch with two distinct long-multiply destinations; ARMv7 is outside the
+    supported Flapjack backend, so every supported architecture follows the
+    RISC-V same-destination case. -/
+def compileCrepOp [OfNat α 0] [OfNat α 1]
+    (operator : CrepOp) (_target : RiscV.Architecture)
+    (left right tmp : Nat) (_live : List Nat) : List (LoopProg α) × Nat :=
+  match operator with
+  | .mul => ([.arith (.longMul tmp tmp left right)], tmp)
+
 def lowerLoopExp : CrepExp α → LoopExp α
   | .const value => .const value
   | .var name => .var name

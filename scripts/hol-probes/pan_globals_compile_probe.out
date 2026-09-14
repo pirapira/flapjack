@@ -1,0 +1,9 @@
+local_assign=Assign Local «x» (Const 7w)
+
+global_assign=Store (Op Sub [TopAddr; Const 8w]) (Const 7w)
+
+missing_global_assign=Skip
+
+seq=Seq Skip (Return (Const 7w))
+
+return_global=Return (Load One (Op Sub [TopAddr; Const 8w]))

@@ -1,0 +1,8 @@
+missing=[]
+
+simple=[Function
+   <|name := «main»; inline := F; export := F; params := [];
+     body := Seq Skip (TailCall «main'» []); return := One|>;
+ Function
+   <|name := «main'»; inline := F; export := F; params := []; body := Skip;
+     return := One|>]

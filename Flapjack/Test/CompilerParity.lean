@@ -16,6 +16,17 @@ import Flapjack.Test.PanNestedSeqParity
 import Flapjack.Test.PanExpIdsParity
 import Flapjack.Test.PanWithShapeParity
 import Flapjack.Test.PanShapeValParity
+import Flapjack.Test.PanGlobalsCompileExpParity
+import Flapjack.Test.PanGlobalsFreshNameParity
+import Flapjack.Test.PanGlobalsCompileParity
+import Flapjack.Test.PanGlobalsCompileDecsParity
+import Flapjack.Test.PanGlobalsResortDeclsParity
+import Flapjack.Test.PanGlobalsFpermNameParity
+import Flapjack.Test.PanGlobalsFpermParity
+import Flapjack.Test.PanGlobalsFpermDecsParity
+import Flapjack.Test.PanGlobalsNewMainNameParity
+import Flapjack.Test.PanGlobalsDecShapesParity
+import Flapjack.Test.PanGlobalsCompileTopForStartParity
 import Flapjack.Test.PanResVarParity
 import Flapjack.Test.PanPrimopParity
 import Flapjack.Test.PanSetVarParity
@@ -41,6 +52,7 @@ import Flapjack.Test.LoopShrinkParity
 import Flapjack.Test.LoopMarkAllParity
 import Flapjack.Test.LoopLiveCompParity
 import Flapjack.Test.OCompileParity
+import Flapjack.Test.LoopLiveOptimiseParity
 import Flapjack.Test.LoopAccVarsParity
 import Flapjack.Test.LoopNestedSeqParity
 import Flapjack.Test.LoopIsLoadParity
@@ -80,6 +92,7 @@ import Flapjack.Test.CrepCompileExpParity
 import Flapjack.Test.CrepExitLoopParity
 import Flapjack.Test.CrepEvaluateParity
 import Flapjack.Test.CrepFixClockParity
+import Flapjack.Test.CrepEvalParity
 import Flapjack.Test.CrepShMemLoadParity
 import Flapjack.Test.CrepShMemOpParity
 import Flapjack.Test.CrepShMemStoreParity
@@ -100,6 +113,7 @@ import Flapjack.Test.PanShMemStoreParity
 import Flapjack.Test.PanEvalParity
 import Flapjack.Test.PanEvaluateParity
 import Flapjack.Test.PanObservationalSemanticsParity
+import Flapjack.Test.ParserTryDefaultParity
 import Flapjack.Test.PanHHandleCallRetParity
 import Flapjack.Test.PanMrecParity
 import Flapjack.Test.PanHProgDecParity
@@ -777,6 +791,7 @@ def main : IO Unit := do
     Flapjack.Test.CrepExitLoopParity.runChecks,
     Flapjack.Test.CrepEvaluateParity.runChecks,
     Flapjack.Test.CrepFixClockParity.runChecks,
+    Flapjack.Test.CrepEvalParity.runChecks,
     Flapjack.Test.CrepShMemLoadParity.runChecks,
     Flapjack.Test.CrepShMemOpParity.runChecks,
     Flapjack.Test.CrepShMemStoreParity.runChecks,

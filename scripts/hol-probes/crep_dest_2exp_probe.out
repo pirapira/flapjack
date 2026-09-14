@@ -1,13 +1,14 @@
 zero=NONE
-
-one=SOME 3
+one=SOME 0
 
 two=SOME 1
 
-four=SOME 6
+four=SOME 2
 
 eight=SOME 3
 
 odd=NONE
 
-even_odd=NONE
+six=NONE
+
+max=NONE

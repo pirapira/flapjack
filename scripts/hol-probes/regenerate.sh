@@ -307,6 +307,8 @@ run_probe shrink_leaf_probeScript.sml shrink_leaf_probe.out \
   skip load32 "$cake_dir/pancake/loop_liveScript.sml"
 run_probe mark_all_probeScript.sml mark_all_probe.out \
   seq_mark call_handler "$cake_dir/pancake/loop_liveScript.sml"
+run_probe loop_live_comp_probeScript.sml loop_live_comp_probe.out \
+  skip return "$cake_dir/pancake/loop_liveScript.sml"
 run_probe loop_lang_assigned_vars_probeScript.sml \
   loop_lang_assigned_vars_probe.out \
   skip load_byte "$cake_dir/pancake/loopLangScript.sml"

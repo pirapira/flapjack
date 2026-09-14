@@ -193,6 +193,7 @@ import Flapjack.Test.CakeFramePolicy
 import Flapjack.Test.CakeForcedParity
 import Flapjack.Test.CakeMkBijParity
 import Flapjack.Test.CakeSsaSetupParity
+import Flapjack.Test.ShapeToStringParity
 
 /-!
 # Pancake/RISC-V compiler parity tests

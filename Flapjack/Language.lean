@@ -28,6 +28,15 @@ def shapeSize : Shape → Nat
   | .comb fields => fields.foldl (fun total field => total + shapeSize field) 0
   | .named _ => 1
 
+/-! Exact source counterpart of Pancake's `shape_to_str_def`. -/
+def shapeToString : Shape → String
+  | .one => "1"
+  | .comb [] => "{}"
+  | .comb (head :: tail) =>
+      "{" ++ shapeToString head ++
+        tail.foldl (fun result field => result ++ "," ++ shapeToString field) "" ++ "}"
+  | .named name => name
+
 @[simp] theorem shapeSize_one : shapeSize Shape.one = 1 := by simp [shapeSize]
 
 @[simp] theorem shapeSize_named (name : StructName) : shapeSize (Shape.named name) = 1 := by

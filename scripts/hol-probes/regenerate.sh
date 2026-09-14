@@ -130,6 +130,8 @@ run_probe word_alloc_setup_colour_probeScript.sml word_alloc_setup_colour_probe.
   "$cake_dir/compiler/backend"
 run_probe pan_lang_shape_val_probeScript.sml pan_lang_shape_val_probe.out \
   one named "$cake_dir/pancake/panLangScript.sml"
+run_probe shape_to_str_probeScript.sml shape_to_str_probe.out \
+  one named "$cake_dir/pancake/panLangScript.sml"
 run_probe pan_res_var_probeScript.sml pan_res_var_probe.out \
   delete_hit update_hit "$cake_dir/pancake/semantics/panSemScript.sml"
 # The pan_primop probe prints numeric w2n values of the returned RStruct.

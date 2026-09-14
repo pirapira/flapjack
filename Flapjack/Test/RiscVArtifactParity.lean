@@ -1,4 +1,4 @@
-import Flapjack.CompileMain
+import Flapjack.RiscV.PipelineDiagnostics
 import Flapjack.Test.OriginalPancakeProbes
 
 /-!
@@ -38,6 +38,19 @@ namespace Flapjack.Test.RiscVArtifactParity
 open Flapjack Flapjack.RiscV
 open Flapjack.Test.OriginalPancakeProbes (decClock)
 
+/-- The checked source-facing pipeline configuration used by the compiler
+entry point, kept local so this parity test does not import the executable
+`CompileMain` module and collide with the test driver's `main`. -/
+def artifactCompileConfig : StackRemoveConfig :=
+  { storeBase := 10
+    currHeap := 12
+    scratch := 31
+    addressScratch := 29
+    stackPointer := 20
+    bytesInWord := 8
+    stackBase := 21
+    wordShift := 3 }
+
 /-- The fixture source, taken from the original-side probe fact so the two
 comparisons cannot drift apart. -/
 def decClockSource : String := decClock.source
@@ -68,7 +81,7 @@ which is the exact path `flapjack-compile --assembly` uses. -/
 def compileRuntimeImage (source : String) :
     Option (SourceRiscVRuntimeImage 64) :=
   match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
-      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] artifactCompileConfig
       "main" source with
   | .ok image => some image
   | .error _ => none

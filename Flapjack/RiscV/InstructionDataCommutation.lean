@@ -1,3 +1,4 @@
+import Flapjack.RiscV.Backend
 import Flapjack.RiscV.InstructionRelabel
 
 /-!

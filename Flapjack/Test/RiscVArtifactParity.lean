@@ -525,7 +525,7 @@ def bytesContain (needle haystack : List (BitVec 8)) : Bool :=
       (haystack.take needle.length == needle) || bytesContain needle rest
 
 def ffiMinCallStubBytes : Bool :=
-  let stubJump := [0x6f, 0xf0, 0xdf, 0x97].map (BitVec.ofNat 8)
+  let stubJump := [0x6f, 0xf0, 0x9f, 0x98].map (BitVec.ofNat 8)
   let ecall := [0x73, 0x00, 0x00, 0x00].map (BitVec.ofNat 8)
   match compileRuntimeImage ffiMinSource with
   | some image =>

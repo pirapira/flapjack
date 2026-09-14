@@ -27,8 +27,13 @@ def fullSsaHandlerMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← fullSsaHandlerLinkedSections
   let entry ← fullSsaHandlerSectionEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 244 [] image [2] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 244)
+  let mainLength ←
+    match sections.find? (fun (label, _, _) => label == 2) with
+    | some (_, _, code) => some code.length
+    | none => none
+  let returnAddress := entry + BitVec.ofNat 64 (4 * mainLength)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 def fullSsaHandlerSourceMain : Prog (RiscV.Word 64) :=
   .dec "exception" .one (.const (BitVec.ofNat 64 0))

@@ -1,3 +1,0 @@
-write_bytearray_two_cells=set_byte 3w 7w 0w F = 7w ∧ set_byte 4w 8w 0w F = 8w
-
-write_bytearray_failed_tail=set_byte 3w 7w 0w F = 7w

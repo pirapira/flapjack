@@ -91,6 +91,29 @@ def tailCallNoResult : Bool :=
     { (emptyState 5) with code := [(1, [], .skip)] }) ==
     (some .error, none, 4)
 
+/-! `loopSemScript.sml:278-360` uses `fromAList (ZIP (params,args))` for
+    `find_code`, so repeated parameters are first-occurrence-wins.  Its
+    returning call branch restores `s.locals` (the caller locals) before
+    setting return values, rather than retaining the liveness-cut locals. -/
+def callResultState : LoopMachineState LoopWordLoc :=
+  { (emptyState 5) with
+      locals := fun name =>
+        if name = 1 then some (.word 7)
+        else if name = 2 then some (.word 8)
+        else if name = 8 then some (.word 99)
+        else none
+      code := [(1, [4, 4], .return [4])] }
+
+def observeCallResult (step : LoopMachineStep) :
+    Option (LoopMachineResult LoopWordLoc) × Option LoopWordLoc ×
+      Option LoopWordLoc × Nat :=
+  (step.1, step.2.locals 5, step.2.locals 8, step.2.clock)
+
+def callResultFirstWinsAndRestoresCaller : Bool :=
+  observeCallResult (evaluateLoop 12 hooks
+    (.call (some ([5], [])) (some 1) [1, 2] none) callResultState) ==
+    (none, some (.word 7), some (.word 99), 4)
+
 #guard sequenceReturn
 #guard skip
 #guard assignment
@@ -98,6 +121,7 @@ def tailCallNoResult : Bool :=
 #guard continueResult
 #guard timeout
 #guard tailCallNoResult
+#guard callResultFirstWinsAndRestoresCaller
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) := [
@@ -107,7 +131,9 @@ def runChecks : IO Bool := do
     ("evaluate Break preserves state and result", breakResult),
     ("evaluate Continue preserves state and result", continueResult),
     ("evaluate Tick clears locals at clock zero", timeout),
-    ("evaluate tail call maps callee NONE to Error", tailCallNoResult)]
+    ("evaluate tail call maps callee NONE to Error", tailCallNoResult),
+    ("evaluate Call uses first-wins bindings and restores caller locals",
+      callResultFirstWinsAndRestoresCaller)]
   let results ← checks.mapM fun (name, passed) => do
     if passed then IO.println s!"PASS {name}"
     else IO.println s!"FAIL {name}"

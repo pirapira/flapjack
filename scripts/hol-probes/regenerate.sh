@@ -124,6 +124,10 @@ run_probe get_forced_probeScript.sml get_forced_probe.out \
 run_probe mk_bij_probeScript.sml mk_bij_probe.out \
   delta_basic composite "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \
   "$cake_dir/compiler/backend"
+run_probe apply_colour_probeScript.sml apply_colour_probe.out \
+  total_colour_alloc apply_colour_loop_live \
+  "$cake_dir/compiler/backend/word_allocScript.sml" \
+  "$cake_dir/compiler/backend"
 # The legacy allocator-map probe checks the existing WordBijection path too.
 run_probe reg_alloc_mk_bij_probeScript.sml reg_alloc_mk_bij_probe.out \
   empty_to seq_next "$cake_dir/compiler/backend/reg_alloc/reg_allocScript.sml" \

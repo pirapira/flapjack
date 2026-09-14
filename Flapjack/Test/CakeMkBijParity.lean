@@ -55,4 +55,11 @@ def parityGuard : Bool := emptyExact && deltaExact && setExact && seqExact
 #guard parityGuard
 #eval parityGuard
 
+def runChecks : IO Bool := do
+  if parityGuard then
+    IO.println "PASS Cake mk_bij HOL parity"
+  else
+    IO.println "FAIL Cake mk_bij HOL parity"
+  pure parityGuard
+
 end Flapjack.Test.CakeMkBijParity

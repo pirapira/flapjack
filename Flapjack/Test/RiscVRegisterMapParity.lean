@@ -1,5 +1,6 @@
 import Flapjack.RiscV.CakeStackReseat
 import Flapjack.RiscV.Lab
+import Flapjack.RiscV.RegisterNames
 
 /-!
 # Byte preservation of the Cake register map at the Lab boundary
@@ -65,6 +66,23 @@ def zeroPreimageExact : Bool :=
 
 #guard zeroPreimageExact
 
+/-- The one-time Cake map has order twelve: iterating it twelve times returns
+every hardware register to itself.  This computable shadow of
+`iterRegisterName_twelve` / `iterForward_twelve` closes the finite inverse bound
+on the register file. -/
+def mapOrderTwelve : Bool :=
+  (List.range 32).all (fun n => iterRegisterName 12 n == n)
+
+#guard mapOrderTwelve
+
+/-- The one-time Cake map is inverted by eleven further applications.  This
+computable shadow of `iterRegisterName_eleven_succ` supplies the explicit
+inverse step on the register file. -/
+def mapInverseStep : Bool :=
+  (List.range 32).all (fun n => iterRegisterName 11 (riscvRegisterName n) == n)
+
+#guard mapInverseStep
+
 example : riscvRegisterName (portToStack 0) = 0 := by decide
 example : riscvRegisterName (portToStack 1) = 1 := by decide
 example : riscvRegisterName (portToStack 10) = 10 := by decide
@@ -105,7 +123,11 @@ def runChecks : IO Bool := do
       ("the Cake map permutes the architectural register file",
         mapSurjective),
       ("the Cake map selects architectural zero exactly at role 27",
-        zeroPreimageExact) ]
+        zeroPreimageExact),
+      ("the Cake map has order twelve on the architectural register file",
+        mapOrderTwelve),
+      ("the Cake map is inverted by eleven further applications",
+        mapInverseStep) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

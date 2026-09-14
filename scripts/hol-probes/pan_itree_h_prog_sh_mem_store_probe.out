@@ -1,0 +1,6 @@
+store_zero_width=SOME (INR (SharedMem MappedWrite,[0w],[7w; 3w]))
+
+store_aligned_original=SOME (INR (SharedMem MappedWrite,[1w],[171w; 3w; 0w; 0w; 0w]))
+
+store_domain_error=SOME (INR (SOME Error,s with sh_memaddrs := ∅))
+

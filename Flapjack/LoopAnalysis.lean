@@ -50,6 +50,83 @@ def arithVars : LoopArith → List Nat → List Nat
       insertNatSorted dividend
         (insertNatSorted divisor (deleteNatSorted destination live))
 
+def loopListDeleteSorted (names : List Nat) (live : List Nat) : List Nat :=
+  names.foldl (fun current name => deleteNatSorted name current) live
+
+def loopIntersectSorted (left right : List Nat) : List Nat :=
+  left.filter (fun name => name ∈ right)
+
+/-! Source-shaped leaf and structured equations from `loop_live$shrink`
+    (`cakeml/pancake/loop_liveScript.sml:62`).  The recursive fixed-point
+    loop case is intentionally kept as the next refinement boundary; all
+    non-fixed-point equations are executable here with list-backed num_sets. -/
+def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
+  | .skip, live => (.skip, live)
+  | .assign name value, live =>
+      if name ∈ live then
+        (.assign name value, varsOfExp value (deleteNatSorted name live))
+      else
+        (.skip, live)
+  | .primitive destinations operator arguments, live =>
+      (.primitive destinations operator arguments,
+        loopListInsert arguments (loopListDeleteSorted destinations live))
+  | .arith operation, live => (.arith operation, arithVars operation live)
+  | .store address value, live =>
+      (.store address value, varsOfExp address (insertNatSorted value live))
+  | .setGlobal address value, live =>
+      (.setGlobal address value, varsOfExp value live)
+  | .load32 address destination, live =>
+      (.load32 address destination,
+        insertNatSorted address (deleteNatSorted destination live))
+  | .loadByte address destination, live =>
+      (.loadByte address destination,
+        insertNatSorted address (deleteNatSorted destination live))
+  | .store32 address value, live =>
+      (.store32 address value,
+        insertNatSorted address (insertNatSorted value live))
+  | .storeByte address value, live =>
+      (.storeByte address value,
+        insertNatSorted address (insertNatSorted value live))
+  | .seq first second, live =>
+      let (second', live') := loopShrinkLeaf second live
+      let (first', live'') := loopShrinkLeaf first live'
+      (.seq first' second', live'')
+  | .ite operator condition right thenBranch elseBranch branchLive, live =>
+      let restricted := loopIntersectSorted branchLive live
+      let (then', thenLive) := loopShrinkLeaf thenBranch restricted
+      let (else', elseLive) := loopShrinkLeaf elseBranch restricted
+      let rightLive := match right with
+        | .reg name => [name]
+        | .imm _ => []
+      (.ite operator condition right then' else' branchLive,
+        insertNatSorted condition
+          (loopListInsert rightLive (thenLive ++ elseLive)))
+  | .break label, _ => (.break label, [])
+  | .continue label, _ => (.continue label, [])
+  | .fail, _ => (.fail, [])
+  | .return values, _ => (.return values, loopListInsert values [])
+  | .raise exception, _ => (.raise exception, [exception])
+  | .shMem operator name address, live =>
+      (.shMem operator name address,
+        varsOfExp address (insertNatSorted name live))
+  | .tick, live => (.tick, live)
+  | .mark body, live =>
+      let (body', live') := loopShrinkLeaf body live
+      (.mark body', live')
+  | .locValue destination source, live =>
+      if destination ∈ live then
+        (.locValue destination source, deleteNatSorted destination live)
+      else
+        (.skip, live)
+  | .ffi function configuration configurationLength array arrayLength liveOut, live =>
+      let restricted := loopIntersectSorted liveOut live
+      (.ffi function configuration configurationLength array arrayLength restricted,
+        loopListInsert [configuration, configurationLength, array, arrayLength] restricted)
+  | .loop liveIn body liveOut, live =>
+      (.loop liveIn body liveOut, live)
+  | .call returns target arguments handler, live =>
+      (.call returns target arguments handler, live)
+
 /-! Faithful port of CakeML Pancake's `locals_touched_def` from
     `cakeml/pancake/loopLangScript.sml:77`.  The source definition is used on
     the original Loop expressions, before the later Flapjack-only `crepOp` and

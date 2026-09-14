@@ -916,4 +916,47 @@ def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (NatInfoMap Nat))
   let state := cakeAssignStemps k (fun s n bads => cakeNegBiasedPref s k mvs n bads) state
   some (cakeExtractColor state bij.toAllocator)
 
+/-! `get_prefs` from the original allocator driver: the move preferences fed
+    to IRC (`word_allocScript.sml:1203-1215` via `get_heuristics_def`). -/
+def cakeGetPrefs {α : Type u} [OfNat α 0] [OfNat α 1] :
+    WordProg α → List (Nat × (Nat × Nat)) → List (Nat × (Nat × Nat))
+  | .move priority moves, acc =>
+      moves.foldl (fun acc' move => (priority, (move.1, move.2)) :: acc') acc
+  | .mustTerminate body, acc => cakeGetPrefs body acc
+  | .seq first second, acc => cakeGetPrefs first (cakeGetPrefs second acc)
+  | .ite _ _ _ thenBranch elseBranch, acc =>
+      cakeGetPrefs thenBranch (cakeGetPrefs elseBranch acc)
+  | .call (some (_, _, returnHandler, _, _)) _ _ handler, acc =>
+      match handler with
+      | none => cakeGetPrefs returnHandler acc
+      | some (_, handlerBody, _, _) =>
+          cakeGetPrefs handlerBody (cakeGetPrefs returnHandler acc)
+  | .loop _ body _, acc => cakeGetPrefs body acc
+  | _, acc => acc
+  termination_by program _ => sizeOf program
+  decreasing_by
+    all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-! Frame occupancy from a full Cake IRC run, mirroring the original
+    `word_to_stack$compile_prog` stack-variable count
+    (`word_to_stackScript.sml:586-600`): the colouring rewrites spilled
+    variables to stack numbers `2*k + 2*slot`, so `max_var DIV 2 + 1 - k`
+    counts them, floored by the stack-argument area.  The result plays the
+    role of the frame-slot count `f'` in the bitmap writer. -/
+def cakeWordFrameSlots [OfNat α 0] [OfNat α 1]
+    (parameters : List Nat) (k : Nat) (program : WordProg α) : Nat :=
+  let tree := wordClashTree program []
+  let fs := cakeGetStackOnly program
+  let forced := cakeGetForced program
+  let moves := cakeGetPrefs program []
+  match cakeDoRegAlloc .irc none k moves tree forced fs with
+  | none => 1
+  | some colouring =>
+      let colour := CakeAlloc.totalColour colouring
+      let coloured := wordApplyColour colour program
+      let maxVar := (wordProgVariables coloured).foldl max 0
+      let stackArgs := parameters.length - k
+      let stackVars := max ((maxVar / 2 + 1) - k) stackArgs
+      max (stackVars + 1) 1
+
 end Flapjack.RiscV.CakeRegAlloc

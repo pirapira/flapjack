@@ -52,6 +52,23 @@ theorem writeRegisterInternalNat_transfer (state : State width) {name : Nat}
   rw [writeRegisterInternalNat_of_some (state := transferState state) hmap]
   exact writeRegister_transfer_forward state register value
 
+/-- Above the architectural range the one-time Cake map is the identity, so the
+internal register accessors reduce to the raw `registerOfNat` selection.  This
+confines the later emission rebase to registers `0`-`31`. -/
+theorem readRegisterInternal_eq_registerOfNat_map_of_ge_32 (state : State width)
+    {name : Nat} (h : 32 ≤ name) :
+    readRegisterInternal state name = (registerOfNat name).map (readRegister state) := by
+  unfold readRegisterInternal
+  rw [labRegisterOfNat_eq_registerOfNat_of_ge_32 h]
+
+/-- Write-side counterpart of `readRegisterInternal_eq_registerOfNat_map_of_ge_32`. -/
+theorem writeRegisterInternalNat_eq_registerOfNat_of_ge_32 (state : State width)
+    {name : Nat} (h : 32 ≤ name) (value : Word width) :
+    writeRegisterInternalNat state name value =
+      (registerOfNat name).elim state (fun register => writeRegister state register value) := by
+  unfold writeRegisterInternalNat
+  rw [labRegisterOfNat_eq_registerOfNat_of_ge_32 h]
+
 /-- Backend correctness through the Cake register map: for a straight-line
 program, the relabeled image of the Backend-selected code executes on the
 transferred state exactly as transferring the raw selected execution. -/

@@ -222,6 +222,39 @@ theorem labRegisterOfNat_eq {name : Nat} (h : riscvRegisterName name < 32) :
 /-- The internal scratch register `13` maps to hardware `30`. -/
 @[simp] theorem labRegisterOfNat_thirteen : labRegisterOfNat 13 = some 30 := by decide
 
+/-- The Cake map is the identity above the architectural register range, so the
+ABI rebase changes only registers `0`-`31`; every non-architectural internal
+register is selected exactly as before. -/
+theorem labRegisterOfNat_eq_registerOfNat_of_ge_32 {name : Nat} (h : 32 ≤ name) :
+    labRegisterOfNat name = registerOfNat name := by
+  unfold labRegisterOfNat
+  rw [riscvRegisterName_id_of_ge_32 h]
+
+/-- A register selected by the one-time Cake map is necessarily architectural. -/
+theorem labRegisterOfNat_some_lt {name : Nat} {register : Fin 32}
+    (h : labRegisterOfNat name = some register) : name < 32 := by
+  have hriscv : riscvRegisterName name < 32 := by
+    have h' : registerOfNat (riscvRegisterName name) = some register := h
+    exact registerOfNat_some_lt h'
+  exact lt_32_of_riscvRegisterName_lt_32 hriscv
+
+/-- The one-time Cake map is a faithful renaming on the architectural range: it
+never merges two distinct stack registers, so register-distinctness and
+allocator-disjointness proofs carry over unchanged. -/
+theorem labRegisterOfNat_injective {left right : Nat} {register : Fin 32}
+    (hleft : labRegisterOfNat left = some register)
+    (hright : labRegisterOfNat right = some register) : left = right := by
+  have hleft' : registerOfNat (riscvRegisterName left) = some register := by
+    simpa only [labRegisterOfNat] using hleft
+  have hright' : registerOfNat (riscvRegisterName right) = some register := by
+    simpa only [labRegisterOfNat] using hright
+  have hname : riscvRegisterName left = riscvRegisterName right :=
+    registerOfNat_injective hleft' hright' rfl
+  exact riscvRegisterName_injective_lt_32
+    (lt_32_of_riscvRegisterName_lt_32 (registerOfNat_some_lt hleft'))
+    (lt_32_of_riscvRegisterName_lt_32 (registerOfNat_some_lt hright'))
+    hname
+
 /-- Read the value of an internal Cake stack register from a hardware-indexed
 state through the one-time `riscv_names` map.  This is the register lookup the
 rebased Backend correctness lemmas use: the internal name is resolved to its

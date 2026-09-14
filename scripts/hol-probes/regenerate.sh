@@ -229,6 +229,8 @@ run_probe pan_itree_empty_locals_probeScript.sml pan_itree_empty_locals_probe.ou
 run_probe crep_primop_probeScript.sml crep_primop_probe.out \
   crep_basic crep_wrong_length \
   "$cake_dir/pancake/semantics/crepSemScript.sml"
+run_probe crep_load_shape_probeScript.sml crep_load_shape_probe.out \
+  empty nonzero_two "$cake_dir/pancake/crepLangScript.sml"
 run_probe crep_exit_loop_probeScript.sml crep_exit_loop_probe.out \
   exit_loop_break exit_loop_error \
   "$cake_dir/pancake/semantics/crepSemScript.sml"

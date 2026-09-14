@@ -82,7 +82,8 @@ theorem labCompileAsm_locValue_execute [NeZero width]
         (fun code => executeInstructions state code) =
       some (execute state
         (.addi register 0 (BitVec.ofNat width targetPosition))) := by
-  simp [labCompileAsm, hregister, htarget, executeInstructions]
+  simp [labCompileAsm, labRegisterOfNat_portToStack_all, hregister, htarget,
+    executeInstructions]
 
 theorem labCompileAsm_linkValue_execute [NeZero width]
     (context : WordFfiContext)

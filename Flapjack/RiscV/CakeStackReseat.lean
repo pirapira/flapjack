@@ -103,6 +103,25 @@ theorem labRegisterOfNat_portToStack_link :
       registerOfNat portLinkRegister :=
   labRegisterOfNat_portToStack (by decide)
 
+/-- Above the architectural range the reseat map is the identity, so the
+one-time Cake map still agrees with the raw register selection. -/
+theorem portToStack_id_of_ge_32 {name : Nat} (h : 32 ≤ name) :
+    portToStack name = name := by
+  unfold portToStack riscvInverseName
+  split <;> omega
+
+/-- Unconditional form of `labRegisterOfNat_portToStack`: reseating any port
+register number and then applying the one-time Cake map is exactly the raw
+register selection.  This is what makes `labRegisterOfNat` usable at the Lab
+boundary without moving a single emitted byte. -/
+theorem labRegisterOfNat_portToStack_all (name : Nat) :
+    labRegisterOfNat (portToStack name) = registerOfNat name := by
+  by_cases h : name < 32
+  · exact labRegisterOfNat_portToStack h
+  · have hge : 32 ≤ name := Nat.le_of_not_lt h
+    unfold labRegisterOfNat
+    rw [portToStack_id_of_ge_32 hge, riscvRegisterName_id_of_ge_32 hge]
+
 /-- Reseating the port's address scratch and then applying the one-time map
 selects the same register as the raw selection of the hardware address
 scratch. -/

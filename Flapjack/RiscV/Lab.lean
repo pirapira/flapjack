@@ -3,6 +3,7 @@ import Flapjack.StackAlloc
 import Flapjack.StackAlloc.Runtime
 import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.WordToStack
+import Flapjack.RiscV.CakeStackReseat
 import Flapjack.RiscV.LongDivRuntime
 
 /-!
@@ -81,9 +82,9 @@ def labBranch [NeZero width] (operator : Cmp) (left right : Fin 32)
 
 def labBinOpInstruction [NeZero width] (operator : BinOp)
     (destination left right : Nat) : Option (Instruction width) := do
-  let destination ← registerOfNat destination
-  let left ← registerOfNat left
-  let right ← registerOfNat right
+  let destination ← labRegisterOfNat (portToStack destination)
+  let left ← labRegisterOfNat (portToStack left)
+  let right ← labRegisterOfNat (portToStack right)
   pure (match operator with
     | .add => .add destination left right
     | .sub => .sub destination left right
@@ -97,9 +98,9 @@ def labShiftInstructions [NeZero width] (operator : Shift)
       [destination, left, right].any (· == 31) then
     none
   else
-    let destination ← registerOfNat destination
-    let left ← registerOfNat left
-    let right ← registerOfNat right
+    let destination ← labRegisterOfNat (portToStack destination)
+    let left ← labRegisterOfNat (portToStack left)
+    let right ← labRegisterOfNat (portToStack right)
     match operator with
     | .lsl => pure [.sll destination left right]
     | .lsr => pure [.srl destination left right]
@@ -116,7 +117,7 @@ def labCompilePlain [NeZero width] :
   | .word (.arith operation) => wordArithToInstructions operation
   | .word instruction => (wordInstToInstruction instruction).map List.singleton
   | .const destination value => do
-      let destination ← registerOfNat destination
+      let destination ← labRegisterOfNat (portToStack destination)
       pure [.addi destination 0 (BitVec.ofNat width value)]
   | .arith operator destination left right =>
       (labBinOpInstruction operator destination left right).map List.singleton
@@ -124,7 +125,7 @@ def labCompilePlain [NeZero width] :
       labShiftInstructions operator destination left right
   | .tick => pure [.addi 0 0 0]
   | .jumpReg register => do
-      let register ← registerOfNat register
+      let register ← labRegisterOfNat (portToStack register)
       pure [.jalr 0 register 0]
   | .shareMem operator register address =>
       wordShareInstToInstructions operator register (.var address)
@@ -143,7 +144,7 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
       let target ← labResolveRef sectionId labels target
       pure [.jal 1 (labOffset target position)]
   | .locValue register target => do
-      let register ← registerOfNat register
+      let register ← labRegisterOfNat (portToStack register)
       let target ← labResolveRef sectionId labels target
       pure [.addi register 0 (BitVec.ofNat width target)]
   | .linkValue target => do
@@ -280,7 +281,7 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
       let target ← labResolveProgramRef labels target
       pure [.jal 1 (labOffset target position)]
   | .locValue register target => do
-      let register ← registerOfNat register
+      let register ← labRegisterOfNat (portToStack register)
       let target ← labResolveProgramRef labels target
       pure [.addi register 0 (BitVec.ofNat width target)]
   | .linkValue target => do
@@ -380,7 +381,7 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       let target ← labResolveProgramRef labels target
       pure [.jal 1 (labOffset target position)]
   | .locValue register target => do
-      let register ← registerOfNat register
+      let register ← labRegisterOfNat (portToStack register)
       let target ← labResolveProgramRef labels target
       pure [.addi register 0 (BitVec.ofNat width target)]
   | .linkValue target => do
@@ -771,6 +772,6 @@ theorem compileLabProgram_cross_section_jump [NeZero width] :
     labCollectLabels, labSectionInstructionCount, labCompileProgramSections,
     labCompileProgramLines, labCompileAsmProgram,
     labCompilePlain, labLookupProgramPosition, labResolveProgramRef,
-    labOffset, registerOfNat, hcount]
+    labOffset, hcount]
 
 end Flapjack.RiscV

@@ -1,6 +1,7 @@
 import Flapjack.RiscV.CakeStackReseat
 import Flapjack.RiscV.Lab
 import Flapjack.RiscV.RegisterNames
+import Flapjack.RiscV.RegisterRelabel
 
 /-!
 # Byte preservation of the Cake register map at the Lab boundary
@@ -113,6 +114,12 @@ example (destination : Nat) (value : Nat) :
         (fun register => [.addi register 0 (BitVec.ofNat 64 value)]) := by
   cases h : registerOfNat destination <;>
     simp [labCompilePlain, labRegisterOfNat_portToStack_all, h]
+
+/-- The one-time Cake relabeling is a bijection on the 64-bit state space,
+packaging the injective and surjective boundary facts. -/
+example : Function.Injective (relabelRegisters (width := 64) riscvForward) ∧
+    Function.Surjective (relabelRegisters (width := 64) riscvForward) :=
+  relabelRegisters_riscvForward_bijective
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=

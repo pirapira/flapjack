@@ -197,8 +197,8 @@ structure CakeRaState where
   simpWl : List Nat
   spillWl : List Nat
   freezeWl : List Nat
-  availMovesWl : List (Nat × Nat)
-  unavailMovesWl : List (Nat × Nat)
+  availMovesWl : List (Nat × (Nat × Nat))
+  unavailMovesWl : List (Nat × (Nat × Nat))
   stack : List Nat
   deriving Repr
 
@@ -320,4 +320,89 @@ def cakeInitRaState (tree : WordClashTree) (forced : List (Nat × Nat))
   let tags := cakeMkTags bij.nextNode bij.fromAllocator fs
   { (CakeRaState.empty bij.nextNode) with
     adjLists := adj, nodeTag := tags }
+
+/-- `is_Fixed` (`reg_allocScript.sml:449-454`): a physical node. -/
+def cakeIsFixed (state : CakeRaState) (x : Nat) : Bool :=
+  match (cakeMapLookup state.nodeTag x).getD .aTemp with
+  | .fixed _ => true
+  | _ => false
+
+/-- `is_Fixed_k` (`reg_allocScript.sml:501-506`): a physical node within the
+    allocatable window `k`. -/
+def cakeIsFixedK (state : CakeRaState) (k : Nat) (x : Nat) : Bool :=
+  match (cakeMapLookup state.nodeTag x).getD .aTemp with
+  | .fixed n => n < k
+  | _ => false
+
+/-- `considered_var` (`reg_allocScript.sml:507-512`): allocation temps and
+    low physical registers count towards degrees. -/
+def cakeConsideredVar (state : CakeRaState) (k : Nat) (v : Nat) : Bool :=
+  ((cakeMapLookup state.nodeTag v).getD .aTemp == .aTemp) || cakeIsFixedK state k v
+
+/-- `is_not_coalesced` (`reg_allocScript.sml:320-327`): the node is its own
+    coalescing parent. -/
+def cakeIsNotCoalesced (state : CakeRaState) (v : Nat) : Bool :=
+  (cakeMapLookup state.coalesced v).getD v == v
+
+/-- `split_degree` (`reg_allocScript.sml:330-340`): low-degree (relative to
+    `k`) uncoalesced allocation nodes; nodes at or above the dimension stay
+    on the worklist side. -/
+def cakeSplitDegree (state : CakeRaState) (d k v : Nat) : Bool :=
+  if v < d then
+    ((cakeMapLookup state.degrees v).getD 0 < k) && cakeIsNotCoalesced state v
+  else true
+
+/-- `sort_moves` (`reg_allocScript.sml:343-346`): moves ordered by descending
+    priority; `smerge` (`:348-358`) keeps the earlier list on ties. -/
+def cakeSortMoves (moves : List (Nat × (Nat × Nat))) :
+    List (Nat × (Nat × Nat)) :=
+  moves.mergeSort (fun a b => a.1 > b.1)
+
+/-- `move_related_sub`: a node flagged by `reset_move_related`. -/
+def cakeMoveRelatedSub (state : CakeRaState) (v : Nat) : Bool :=
+  (cakeMapLookup state.moveRelated v).getD false
+
+/-- `init_alloc1_heu` (`reg_allocScript.sml:1262-1286`): degrees count only
+    considered neighbours, every node becomes its own coalescing parent, the
+    move worklist is sorted by priority, `reset_move_related`
+    (`:708-725`) clears the flags and re-marks non-fixed move endpoints, and
+    the allocation temps split into spill / freeze / simplify worklists. -/
+def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
+    (state : CakeRaState) : Nat × CakeRaState :=
+  let dim := state.dim
+  let ds := List.range dim
+  let allocs := ds.filter (fun i =>
+    (cakeMapLookup state.nodeTag i).getD .aTemp == .aTemp)
+  let withDegrees :=
+    ds.foldl (fun st i =>
+        let neighbours := (cakeMapLookup st.adjLists i).getD []
+        let fills := neighbours.filter (cakeConsideredVar st k)
+        { st with degrees := cakeMapUpdate st.degrees i fills.length })
+      state
+  let withCoalesced :=
+    ds.foldl (fun st i =>
+        { st with coalesced := cakeMapUpdate st.coalesced i (0 + i) })
+      withDegrees
+  let withMoves :=
+    { withCoalesced with
+      availMovesWl := cakeSortMoves moves }
+  let cleared :=
+    ds.foldl (fun st i =>
+        { st with moveRelated := cakeMapUpdate st.moveRelated i false })
+      withMoves
+  let withRelated :=
+    moves.foldl (fun st move =>
+        let x := move.2.1
+        let y := move.2.2
+        let fixedX := cakeIsFixed st x
+        let fixedY := cakeIsFixed st y
+        let st := { st with moveRelated := cakeMapUpdate st.moveRelated x (!fixedX) }
+        { st with moveRelated := cakeMapUpdate st.moveRelated y (!fixedY) })
+      cleared
+  let (ltk, gtk) := allocs.partition (fun v => cakeSplitDegree withRelated dim k v)
+  let (ltkfreeze, ltksimp) := ltk.partition (fun v => cakeMoveRelatedSub withRelated v)
+  let final :=
+    { withRelated with
+      spillWl := gtk, simpWl := ltksimp, freezeWl := ltkfreeze }
+  (allocs.length, final)
 end Flapjack.RiscV.CakeRegAlloc

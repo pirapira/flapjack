@@ -200,6 +200,50 @@ def graphInitGuard : Bool :=
       some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.sTemp &&
     state.dim == 2
 
+/-- `init_alloc1_heu` on a two-node clique: the allocation temp sees the
+    stack temp as unconsidered, so degree 0 lands on the simplify
+    worklist and the stack temp stays out of `allocs`. -/
+def heuDeltaGuard : Bool :=
+  let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 3] []) [] []
+  let (count, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu [] 4 state
+  count == 1 &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 0 == some 0 &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 1 == some 1 &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.coalesced 0 == some 0 &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.coalesced 1 == some 1 &&
+    after.simpWl == [0] && after.freezeWl == [] && after.spillWl == []
+
+/-- `init_alloc1_heu` sorts the move worklist by descending priority and
+    marks the non-fixed move endpoints move-related, sending the low-degree
+    allocation temp to the freeze worklist instead of simplify. -/
+def heuMovesGuard : Bool :=
+  let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 3] []) [] []
+  let moves := [(1, (0, 1)), (3, (0, 1))]
+  let (_, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu moves 4 state
+  after.availMovesWl == [(3, (0, 1)), (1, (0, 1))] &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.moveRelated 0 == some true &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.moveRelated 1 == some true &&
+    after.freezeWl == [0] && after.simpWl == [] && after.spillWl == []
+
+/-- `init_alloc1_heu` sends a clique of five allocation temps (degree 4)
+    over the register threshold `k = 4` to the spill worklist. -/
+def heuSpillGuard : Bool :=
+  let state :=
+    Flapjack.RiscV.CakeRegAlloc.cakeInitRaState
+      (.delta [1, 5, 9, 13, 17] []) [] []
+  let (count, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu [] 4 state
+  count == 5 && after.spillWl.length == 5 && after.simpWl == [] &&
+    after.freezeWl == []
+
+/-- A low physical register node counts towards its neighbour's degree
+    (`considered_var`) but never enters the allocation worklist itself. -/
+def heuFixedDegreeGuard : Bool :=
+  let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 2] [2, 1]) [] []
+  let (count, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu [] 4 state
+  count == 1 &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 1 == some 1 &&
+    after.simpWl == [1] && after.spillWl == []
+
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
     ifMergeAllocGuard && callMergeGuard && callTailGuard && assignLeafGuard &&
@@ -207,7 +251,8 @@ def parityGuard : Bool :=
     bijBranchOrderGuard && bijBranchLiveGuard && bijSetGuard &&
     bijSetUnsortedGuard && bijCompositeGuard && graphDeltaDisjointGuard &&
     graphDeltaCliqueGuard && graphSetCliqueGuard && graphForcedEdgeGuard &&
-    graphTagsGuard && graphInitGuard
+    graphTagsGuard && graphInitGuard && heuDeltaGuard && heuMovesGuard &&
+    heuSpillGuard && heuFixedDegreeGuard
 
 #eval parityGuard
 #guard parityGuard
@@ -220,7 +265,8 @@ def runChecks : IO Bool := do
     bijBranchOrderGuard, bijBranchLiveGuard, bijSetGuard,
     bijSetUnsortedGuard, bijCompositeGuard, graphDeltaDisjointGuard,
     graphDeltaCliqueGuard, graphSetCliqueGuard, graphForcedEdgeGuard,
-    graphTagsGuard, graphInitGuard]
+    graphTagsGuard, graphInitGuard, heuDeltaGuard, heuMovesGuard,
+    heuSpillGuard, heuFixedDegreeGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -230,7 +276,9 @@ def runChecks : IO Bool := do
     "mk_bij branch order", "mk_bij branch live", "mk_bij set",
     "mk_bij set unsorted", "mk_bij composite", "mk_graph delta disjoint",
     "mk_graph delta clique", "mk_graph set clique", "extend_graph forced",
-    "mk_tags roles", "init_ra_state"]
+    "mk_tags roles", "init_ra_state", "init_alloc1_heu delta",
+    "init_alloc1_heu moves", "init_alloc1_heu spill",
+    "init_alloc1_heu fixed degree"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

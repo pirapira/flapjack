@@ -1,2 +1,4 @@
-compile_exp_mul_three=([Assign 10 (Const 2w); Assign 11 (Const 3w); Assign 12 (Const 4w);
-  Arith (LLongMul 13 13 10 11)],Var 13,14,⦕ 10; 11; 12; 13 ⦖)
+leaves=(([Const 7w],One),([Const 0w],One),([BaseAddr],One),[TopAddr],One)
+struct_field=(([Const 1w; Const 2w],Comb [One; One]),[Const 2w],One)
+loads_ops=(([Load32 (Const 3w)],One),([LoadByte (Const 4w)],One),([Op Add [Const 1w; Const 2w]],One),[Crepop Mul [Const 5w; Const 6w]],One)
+cmp_shift=(([Cmp Equal (Const 1w) (Const 0w)],One),[Shift Lsl (Const 2w) (Const 1w)],One)

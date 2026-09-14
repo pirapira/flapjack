@@ -137,6 +137,9 @@ run_probe pan_itree_h_prog_primitive_probeScript.sml \
 run_probe pan_set_global_probeScript.sml pan_set_global_probe.out \
   set_global_insert set_global_locals \
   "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
+run_probe pan_itree_evaluate_probeScript.sml pan_itree_evaluate_probe.out \
+  itree_evaluate_skip itree_evaluate_tick \
+  "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_dec_probeScript.sml pan_itree_h_prog_dec_probe.out \
   dec_valid_event dec_failed_response "$cake_dir/pancake/semantics/pan_itreeSemScript.sml"
 run_probe pan_itree_h_prog_seq_probeScript.sml pan_itree_h_prog_seq_probe.out \

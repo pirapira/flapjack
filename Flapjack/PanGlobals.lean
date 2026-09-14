@@ -346,6 +346,14 @@ def globalResortDecls (declarations : List (Decl α)) : List (Decl α) :=
 def globalNewMainName [BEq String] (declarations : List (Decl α)) : FunName :=
   globalFreshName "main" (globalFunctionNames declarations)
 
+def globalDeclShapes : List (Decl α) → List Shape
+  | [] => []
+  | .function _ :: declarations => globalDeclShapes declarations
+  | .decl shape _ _ :: declarations => shape :: globalDeclShapes declarations
+  | .name _ _ :: declarations => globalDeclShapes declarations
+  | .exnDecl _ _ :: declarations => globalDeclShapes declarations
+termination_by declarations => sizeOf declarations
+
 def globalCollect [Add α] [Mul α] (context : GlobalPassContext α) :
     List (Decl α) → GlobalPassContext α
   | [] => context

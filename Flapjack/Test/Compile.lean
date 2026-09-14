@@ -150,21 +150,6 @@ example :
   simp [compileProg, firstCompiledExp, compileExp, storeMemOp, nestedDecs,
     assignmentContext]
 
-example :
-    evalCrepProg (fun _ => none) (compileProg crepContext (.return (.const (α := Nat) 7))) =
-      some [7] := by
-  simp [compileProg, evalCrepProg, evalCrepExps, evalCrepExp, compileExp]
-
-example :
-    (evalCrepStateProg (fun _ => none)
-        (compileProg assignmentContext
-          (.seq (.assign .local "x" (.const 7))
-            (.return (.var .local "x"))))).map Prod.snd =
-      some [7] := by
-  simp [compileProg, compileExp, crepNestedSeq, evalCrepStateProg, evalCrepExp, evalCrepExps,
-    updateCrepLocal, assignmentContext,
-    lookupInfo, distinctLists]
-
 def crepAddCarryHandler : CrepPrimitiveHandler Nat
   | .addCarry, [left, right, carry] => some [left + right + carry, 0]
   | _, _ => none

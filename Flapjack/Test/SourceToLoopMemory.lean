@@ -25,14 +25,6 @@ def sourceToLoopMemoryProgram : Prog (RiscV.Word 64) :=
     (evalLoopProg 40 sourceToLoopMemoryState
       (loopCompileProg sourceToLoopLoopContext []
         (compileProg sourceToLoopCompileContext sourceToLoopMemoryProgram))).map
-        loopResultValues =
-      evalPanMemResult (fun _ => none) (fun _ => none)
-        sourceToLoopMemoryProgram
-
-#guard
-    (evalLoopProg 40 sourceToLoopMemoryState
-      (loopCompileProg sourceToLoopLoopContext []
-        (compileProg sourceToLoopCompileContext sourceToLoopMemoryProgram))).map
         loopResultValues = some [BitVec.ofNat 64 42]
 
 end Flapjack

@@ -1,0 +1,7 @@
+store_global_insert=(NONE,SOME (Word 11w))
+
+store_global_update_sibling=(NONE,SOME (Word 22w),SOME (Word 9w))
+
+store_global_eval_failure=(SOME Error,SOME (Word 11w))
+
+store_global_then_load=(NONE,SOME (Word 11w))

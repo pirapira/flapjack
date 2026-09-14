@@ -1,4 +1,4 @@
-import Flapjack.RiscV.Backend
+import Flapjack.RiscV.RegisterMap
 
 /-!
 # CakeML RISC-V register names
@@ -131,6 +131,22 @@ theorem riscvForward_injective : Function.Injective riscvForward := by
   apply Fin.ext
   exact riscvRegisterName_injective_lt_32 left.isLt right.isLt
     (by simpa [riscvForward] using congrArg Fin.val hsame)
+
+/-- Selecting a register through the one-time Cake map is the same as selecting
+the raw internal register and then relabeling its hardware index through
+`riscvForward`. This is the bridge that lets raw Backend register selection be
+transported to the CakeML stack convention without a second map. -/
+theorem labRegisterOfNat_eq_registerOfNat_map_forward (name : Nat) :
+    labRegisterOfNat name = (registerOfNat name).map riscvForward := by
+  by_cases h : name < 32
+  · rw [labRegisterOfNat_of_lt_32 h]
+    simp only [registerOfNat]
+    rw [dif_pos h]
+    rfl
+  · have hge : 32 ≤ name := Nat.le_of_not_lt h
+    unfold labRegisterOfNat
+    rw [riscvRegisterName_id_of_ge_32 hge]
+    simp [registerOfNat, h]
 
 /-- The lifted `riscv_names` map sends a register to hardware `x0` exactly when
 that register is the Cake stack zero register `27`.  This is the precondition

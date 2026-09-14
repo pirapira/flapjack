@@ -1,0 +1,3 @@
+sh_mem_load_zero_width_domain_error=T
+
+sh_mem_load_nonzero_domain_error=T

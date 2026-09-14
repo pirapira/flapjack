@@ -1,0 +1,5 @@
+ext_call_event=SOME (INR (ExtCall «foo»,[],[]))
+
+ext_call_empty=T
+
+ext_call_final_locals=T

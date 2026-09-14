@@ -48,6 +48,12 @@ inductive WordArith where
   | longMul (destinationLeft destinationRight sourceLeft sourceRight : Nat)
   | longDiv (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)
   | addCarry (destination resultCarry sourceLeft sourceRight carryIn : Nat)
+  /- CakeML WordLang's AddCarry has four registers: r1 is the sum
+     destination, r2/r3 are the addends, and r4 is both carry input and
+     carry output.  Keep this distinct from Pancake's five-register
+     two-result primitive so the compiler boundary cannot silently encode a
+     different operation. -/
+  | cakeAddCarry (destination sourceLeft sourceRight carry : Nat)
   | div (destination dividend divisor : Nat)
   deriving DecidableEq, Repr
 
@@ -122,6 +128,15 @@ def wordFindVar (context : WordContext) (name : Nat) : Nat :=
 def wordMapVars (context : WordContext) : List Nat → List Nat
   | [] => []
   | name :: names => wordFindVar context name :: wordMapVars context names
+
+/-! `comp_def` rebuilds loop live sets through `mk_new_cutset`, retaining
+    register zero and removing duplicates after context mapping. -/
+def wordToNumSet : List Nat → List Nat
+  | [] => []
+  | name :: names => loopInsert name (wordToNumSet names)
+
+def wordMkNewCutset (context : WordContext) (live : List Nat) : List Nat :=
+  loopInsert 0 (wordToNumSet (wordMapVars context live))
 
 def wordRegImm (context : WordContext) : RegImm α → WordRegImm α
   | .imm value => .imm value
@@ -257,8 +272,8 @@ def loopToWordProg [OfNat α 1] (context : WordContext) :
       .seq (.ite operator (wordFindVar context condition) (wordRegImm context right)
         (loopToWordProg context thenBranch) (loopToWordProg context elseBranch)) .tick
   | .loop liveIn body liveOut =>
-      .seq .tick (.seq (.loop (wordMapVars context liveIn)
-        (loopToWordProg context body) (wordMapVars context liveOut)) .tick)
+      .seq .tick (.seq (.loop (wordMkNewCutset context liveIn)
+        (loopToWordProg context body) (wordMkNewCutset context liveOut)) .tick)
   | .break label => .break label
   | .continue label => .continue label
   | .raise exception => .raise (wordFindVar context exception)

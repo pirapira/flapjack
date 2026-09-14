@@ -1,0 +1,7 @@
+empty_locals_local=NONE
+
+empty_locals_other=NONE
+
+empty_locals_global=SOME 1
+
+empty_locals_base_addr=T

@@ -1,0 +1,5 @@
+empty_locals=T
+
+empty_locals_globals=T
+
+empty_locals_clock=T

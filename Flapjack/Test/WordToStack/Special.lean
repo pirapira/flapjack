@@ -39,6 +39,32 @@ example :
 
 example :
     wordStackArithInst
+        { locations := [(0, .register 4), (1, .register 6),
+            (2, .register 7), (3, .register 8)],
+          scratch := 31, stackBase := 10 } (.cakeAddCarry 0 1 2 3) =
+      some (.inst (.arith (.cakeAddCarry 4 6 7 8)) : StackProg Nat) := by
+  simp [wordStackArithInst, wordSpecialArithLocationsSafe,
+    wordStackCakeAddCarryInst, wordStackAddCarryLocationSafe,
+    wordStackLocation, lookupNatInfo]
+
+example :
+    wordStackArithInst
+        { locations := [(0, .stack 2), (1, .stack 3),
+            (2, .stack 4), (3, .stack 5)],
+          scratch := 31, stackBase := 10, addressScratch := 29,
+          specialScratch := 28, carryScratch := 27 } (.cakeAddCarry 0 1 2 3) =
+      some (.seq (.stackLoad 29 13)
+        (.seq (.stackLoad 28 14)
+          (.seq (.stackLoad 27 15)
+            (.seq (.inst (.arith (.cakeAddCarry 31 29 28 27)))
+              (.seq (.stackStore 31 12) (.stackStore 27 15))))) : StackProg Nat) := by
+  simp [wordStackArithInst, wordSpecialArithLocationsSafe,
+    wordStackCakeAddCarryInst, wordStackAddCarryLocationSafe,
+    wordStackLongMulMoveToPhysical, wordStackLongMulMoveFromPhysical,
+    wordStackJoin, wordStackLocation, wordStackOffset, lookupNatInfo]
+
+example :
+    wordStackArithInst
         { locations := [(0, .register 4), (1, .register 5),
             (2, .register 4), (3, .register 7)],
           scratch := 31, stackBase := 10 } (.longMul 0 1 2 3) =

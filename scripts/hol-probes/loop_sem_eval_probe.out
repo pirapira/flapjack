@@ -1,0 +1,27 @@
+const=SOME (Word 7w)
+
+var_hit=SOME (Word 7w)
+
+var_miss=NONE
+
+lookup_hit=SOME (Word 9w)
+
+lookup_miss=NONE
+
+load_hit=SOME (Word 11w)
+
+load_miss=NONE
+
+op_add_three=SOME (Word 6w)
+
+op_and_empty=SOME (Word 255w)
+
+op_sub_bad_arity=NONE
+
+shift_ror=SOME (Word 192w)
+
+shift_out_of_range=NONE
+
+base_addr=SOME (Word 4w)
+
+top_addr=SOME (Word 100w)

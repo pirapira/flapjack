@@ -17,71 +17,6 @@ while the remaining Word instructions are ported.
 
 namespace Flapjack.RiscV
 
-def registerOfNat (name : Nat) : Option (Fin 32) :=
-  if h : name < 32 then some ⟨name, h⟩ else none
-
-@[simp] theorem registerOfNat_zero : registerOfNat 0 = some 0 := by
-  simp [registerOfNat]
-
-theorem registerOfNat_some_lt {name : Nat} {register : Fin 32}
-    (h : registerOfNat name = some register) : name < 32 := by
-  simp only [registerOfNat] at h
-  split at h <;> simp_all
-
-theorem registerOfNat_injective {left right : Nat}
-    {leftRegister rightRegister : Fin 32}
-    (hleft : registerOfNat left = some leftRegister)
-    (hright : registerOfNat right = some rightRegister)
-    (hsame : leftRegister = rightRegister) : left = right := by
-  have hleft_lt := registerOfNat_some_lt hleft
-  have hright_lt := registerOfNat_some_lt hright
-  have hleft_fin :
-      (⟨left, hleft_lt⟩ : Fin 32) = leftRegister := by
-    have h := hleft
-    simp [registerOfNat, hleft_lt] at h
-    exact h
-  have hright_fin :
-      (⟨right, hright_lt⟩ : Fin 32) = rightRegister := by
-    have h := hright
-    simp [registerOfNat, hright_lt] at h
-    exact h
-  have hfin :
-      (⟨left, hleft_lt⟩ : Fin 32) = (⟨right, hright_lt⟩ : Fin 32) :=
-    hleft_fin.trans (hsame.trans hright_fin.symm)
-  exact congrArg Fin.val hfin
-
-/-- Convert a CakeML *stack* register number to a hardware RISC-V register by
-applying `riscv_names` once, mirroring the original CakeML backend's
-`reg_names`. -/
-def labRegisterOfNat (name : Nat) : Option (Fin 32) :=
-  registerOfNat (riscvRegisterName name)
-
-/-- The CakeML zero stack register maps to hardware `x0`. -/
-@[simp] theorem labRegisterOfNat_zeroStack : labRegisterOfNat 27 = some 0 := by
-  simp [labRegisterOfNat]
-
-/-- The CakeML link stack register maps to hardware `x1`. -/
-@[simp] theorem labRegisterOfNat_link : labRegisterOfNat 0 = some 1 := by
-  decide
-
-/-- The first argument/return stack register maps to hardware `a0`. -/
-@[simp] theorem labRegisterOfNat_argument0 : labRegisterOfNat 1 = some 10 := by
-  decide
-
-@[simp] theorem labRegisterOfNat_argument1 : labRegisterOfNat 2 = some 11 := by
-  decide
-
-@[simp] theorem labRegisterOfNat_argument2 : labRegisterOfNat 3 = some 12 := by
-  decide
-
-@[simp] theorem labRegisterOfNat_argument3 : labRegisterOfNat 4 = some 13 := by
-  decide
-
-/-- The mapped register is in range whenever the stack register is. -/
-theorem labRegisterOfNat_eq {name : Nat} (h : riscvRegisterName name < 32) :
-    labRegisterOfNat name = some ⟨riscvRegisterName name, h⟩ := by
-  simp [labRegisterOfNat, registerOfNat, h]
-
 def wordExpToInstruction [NeZero width] (destination : Nat) :
     WordExp (Word width) → Option (Instruction width)
   | .const value => do
@@ -213,6 +148,7 @@ def wordArithToInstruction [NeZero width] :
       none
   | .longDiv _ _ _ _ _ => none
   | .addCarry _ _ _ _ _ => none
+  | .cakeAddCarry _ _ _ _ => none
   | .div destination dividend divisor => do
       let destination ← registerOfNat destination
       let dividend ← registerOfNat dividend
@@ -247,6 +183,21 @@ def wordArithToInstructions [NeZero width] :
           .add destination destination 31,
           .sltu 31 destination 31,
           .or resultCarry resultCarry 31]
+  | .cakeAddCarry destination sourceLeft sourceRight carry => do
+      if [destination, sourceLeft, sourceRight, carry].any (· == 31) then
+        none
+      else
+        let destination ← registerOfNat destination
+        let sourceLeft ← registerOfNat sourceLeft
+        let sourceRight ← registerOfNat sourceRight
+        let carry ← registerOfNat carry
+        pure [
+          .sltu 31 0 carry,
+          .add destination sourceLeft sourceRight,
+          .sltu carry destination sourceRight,
+          .add destination destination 31,
+          .sltu 31 destination 31,
+          .or carry carry 31]
   | operation => (wordArithToInstruction operation).map (fun instruction => [instruction])
 
 def wordInstToInstruction [NeZero width] :
@@ -1244,6 +1195,20 @@ theorem wordArithToInstructions_addCarry [NeZero width] :
       some [.sltu 31 0 4, .add 5 2 3, .sltu 6 5 3, .add 5 5 31,
         .sltu 31 5 31, .or 6 6 31] := by
   simp [wordArithToInstructions, registerOfNat]
+
+theorem wordArithToInstructions_cakeAddCarry [NeZero width] :
+    wordArithToInstructions (width := width) (.cakeAddCarry 5 2 3 4) =
+      some [.sltu 31 0 4, .add 5 2 3, .sltu 4 5 3, .add 5 5 31,
+        .sltu 31 5 31, .or 4 4 31] := by
+  simp [wordArithToInstructions, registerOfNat]
+
+theorem compileWordCakeAddCarry_sound [NeZero width] (state : State width) :
+    evalWordProg state (.inst (.arith (.cakeAddCarry 5 2 3 4))) =
+      some (executeInstructions state
+        [.sltu 31 0 4, .add 5 2 3, .sltu 4 5 3, .add 5 5 31,
+          .sltu 31 5 31, .or 4 4 31]) := by
+  simp [evalWordProg, wordArithToInstructions, executeInstructions,
+    registerOfNat]
 
 theorem compileWordAddCarry_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.arith (.addCarry 5 6 2 3 4))) =

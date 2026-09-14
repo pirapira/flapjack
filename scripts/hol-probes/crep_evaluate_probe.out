@@ -1,0 +1,7 @@
+evaluate_skip=(NONE,s)
+
+evaluate_assign=(NONE,SOME (Word 7w),5)
+
+evaluate_seq_return=(SOME (Return [Word 7w]),NONE,5)
+
+evaluate_tick_timeout=(SOME TimeOut,NONE,0)

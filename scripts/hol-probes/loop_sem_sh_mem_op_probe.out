@@ -1,0 +1,15 @@
+load=[0w]
+
+store=[0w]
+
+load8=[1w]
+
+store8=[1w]
+
+load16=[2w]
+
+store16=[2w]
+
+load32=[4w]
+
+store32=[4w]

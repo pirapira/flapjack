@@ -1,0 +1,5 @@
+lookup_kvar_local=T
+
+lookup_kvar_global=T
+
+lookup_kvar_missing=T

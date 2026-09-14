@@ -1,0 +1,13 @@
+skip=(NONE,s)
+
+assign=(NONE,SOME (Word 7w),5)
+
+seq_return=(SOME (Result [Word 7w]),NONE,5)
+
+break=(SOME (Break 3),SOME (Word 7w),5)
+
+continue=(SOME (Continue 2),SOME (Word 7w),5)
+
+tail_call_no_result=(SOME Error,NONE,4)
+
+tick_timeout=(SOME TimeOut,NONE,0)

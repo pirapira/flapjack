@@ -1,0 +1,13 @@
+while_zero_guard=T
+
+while_body_event=T
+
+while_break=T
+
+while_continue=T
+
+while_normal=T
+
+while_failed=T
+
+while_invalid_guard=T

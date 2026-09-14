@@ -144,4 +144,34 @@ theorem executeInstructions_addCarry_general [NeZero width]
         
         addCarryWords_riscv_formula]
 
+theorem executeInstructions_cakeAddCarry [NeZero width]
+    (state : State width) (destination sourceLeft sourceRight carry : Fin 32)
+    (zero : readRegister state 0 = 0)
+    (destination_nonzero : destination ≠ 0)
+    (carry_nonzero : carry ≠ 0)
+    (destination_carry : destination ≠ carry)
+    (destination_sourceRight : destination ≠ sourceRight)
+    (destination_scratch : destination ≠ 31)
+    (sourceLeft_scratch : sourceLeft ≠ 31)
+    (sourceRight_scratch : sourceRight ≠ 31)
+    (carry_scratch : carry ≠ 31) :
+    (readRegister
+        (executeInstructions state
+          [.sltu 31 0 carry, .add destination sourceLeft sourceRight,
+            .sltu carry destination sourceRight,
+            .add destination destination 31, .sltu 31 destination 31,
+            .or carry carry 31]) destination,
+      readRegister
+        (executeInstructions state
+          [.sltu 31 0 carry, .add destination sourceLeft sourceRight,
+            .sltu carry destination sourceRight,
+            .add destination destination 31, .sltu 31 destination 31,
+            .or carry carry 31]) carry) =
+      addCarryWords (readRegister state sourceLeft)
+        (readRegister state sourceRight) (readRegister state carry) := by
+  apply executeInstructions_addCarry_general state destination carry sourceLeft
+    sourceRight carry zero destination_nonzero carry_nonzero destination_carry
+    destination_sourceRight destination_scratch carry_scratch sourceLeft_scratch
+    sourceRight_scratch carry_scratch
+
 end Flapjack.RiscV

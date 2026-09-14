@@ -239,16 +239,23 @@ def crepeRuntimeState : CrepRuntimeState Nat Unit :=
       | 2 => some 1
       | 3 => some 20
       | 4 => some 2
+      | 5 => some 0
       | _ => none
     globals := fun _ => none
     functions := []
-    memory := fun address => if address == 10 then some 7 else none
+    memory := fun address =>
+      if address == 10 then some 7
+      else if address == 20 then some 20
+      else if address == 21 then some 21
+      else none
     memaddrs := fun _ => true
     shMemaddrs := fun _ => true
-    byteAlign := id
+    memoryModel := natCrepRuntimeMemoryModel
+    bytesInWord := 1
+    ffiContext := natCrepRuntimeFfiContext
     clock := 10
     bigEndian := false
-    ffi := ()
+    ffi := natCrepRuntimeFfiState
     baseAddress := 0
     topAddress := 100 }
 
@@ -259,22 +266,40 @@ example : (decCrepClock { crepeRuntimeState with clock := 0 }).clock = 0 := by
   rfl
 
 def crepeRuntimeFinalHandler : CrepRuntimeFfiHandler Nat Unit String :=
-  fun request state =>
+  fun request ffi =>
     match request with
-    | .extCall _ _ _ _ _ => .final "halt"
-    | .sharedMem _ _ _ => .returned state
+    | .extCall _ _ _ => .final "halt"
+    | .sharedMem _ _ _ _ => .returned ffi []
 
 def crepeRuntimeSharedHandler : CrepRuntimeFfiHandler Nat Unit String :=
-  fun request state =>
+  fun request ffi =>
     match request with
-    | .sharedMem .load name address =>
-        match state.memory address with
-        | some value =>
-            .returned { state with
-              locals := updateCrepLocal state.locals name value }
-        | none => .returned state
-    | .sharedMem _ _ _ => .returned state
-    | .extCall _ _ _ _ _ => .returned state
+    | .sharedMem .load _ 10 _ => .returned ffi [7]
+    | .sharedMem .load _ _ _ => .returned ffi []
+    | .sharedMem _ _ _ _ => .returned ffi []
+    | .extCall _ _ _ => .returned ffi []
+
+def crepeRuntimeByteReturnHandler : CrepRuntimeFfiHandler Nat Unit String :=
+  fun request ffi =>
+    match request with
+    | .extCall _ _ _ => .returned ffi [99, 100]
+    | .sharedMem _ _ _ _ => .returned ffi []
+
+def crepeRuntimeFfiStatefulHandler : CrepRuntimeFfiHandler Nat Unit String :=
+  fun request ffi =>
+    match request with
+    | .extCall function configuration array =>
+        match callFfi ffi (.extCall function) configuration array with
+        | .returned ffi bytes => .returned ffi bytes
+        | .final _ => .final "halt"
+    | .sharedMem _ _ _ _ => .returned ffi []
+
+def crepeRuntimeShortOracle : FfiOracle Unit :=
+  fun _ state _ _ => .returned state []
+
+def crepeRuntimeShortState : CrepRuntimeState Nat Unit :=
+  { crepeRuntimeState with
+    ffi := { crepeRuntimeState.ffi with oracle := crepeRuntimeShortOracle } }
 
 theorem crepe_full_call_semantics :
     evalCrepFullResult crepeSemanticsFunctions
@@ -344,7 +369,57 @@ theorem crepe_full_ffi_lowering_noop :
 theorem crepe_runtime_extCall_final :
     (crepRuntimeExtCall crepeRuntimeFinalHandler crepeRuntimeState
       "host" 1 2 3 4).1 = .finalFfi "halt" := by
-  decide
+  simp [crepRuntimeExtCall, crepRuntimeExtCallValues, crepeRuntimeState,
+    natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
+    crepeRuntimeFinalHandler, crepRuntimeReadBytes, crepRuntimeLoadByte]
+
+theorem crepe_runtime_extCall_return_writes_bytes :
+    let result := crepRuntimeExtCall crepeRuntimeByteReturnHandler
+      crepeRuntimeState "host" 1 2 3 4
+    result.1 = .normal ∧ result.2.memory 20 = some 99 ∧
+      result.2.memory 21 = some 100 := by
+  simp [crepRuntimeExtCall, crepRuntimeExtCallValues, crepeRuntimeState,
+    natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
+    crepeRuntimeByteReturnHandler, crepRuntimeReadBytes, crepRuntimeLoadByte,
+    crepRuntimeWriteBytes, crepRuntimeStoreByte, updateMemory]
+
+theorem crepe_runtime_ffi_state_transition :
+    let result := crepRuntimeExtCall crepeRuntimeFfiStatefulHandler
+      crepeRuntimeState "host" 1 2 3 4
+    result.1 = .normal ∧ result.2.ffi.ioEvents.length = 1 := by
+  simp [crepRuntimeExtCall, crepRuntimeExtCallValues,
+    crepeRuntimeFfiStatefulHandler, crepeRuntimeState,
+    natCrepRuntimeFfiState, natCrepRuntimeFfiOracle,
+    natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
+    crepRuntimeReadBytes, crepRuntimeLoadByte, crepRuntimeWriteBytes,
+    crepRuntimeStoreByte, updateMemory, callFfi]
+
+theorem crepe_runtime_extCall_preserves_non_ffi_state :
+    let result := crepRuntimeExtCall crepeRuntimeFfiStatefulHandler
+      crepeRuntimeState "host" 1 2 3 4
+    result.2.locals 1 = some 10 ∧
+      result.2.globals 7 = none ∧
+      result.2.functions = crepeRuntimeState.functions ∧
+      result.2.memory 10 = some 7 ∧
+      result.2.clock = crepeRuntimeState.clock ∧
+      result.2.ffi.ioEvents.length = 1 := by
+  simp [crepRuntimeExtCall, crepRuntimeExtCallValues,
+    crepeRuntimeFfiStatefulHandler, crepeRuntimeState,
+    natCrepRuntimeFfiState, natCrepRuntimeFfiOracle,
+    natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
+    crepRuntimeReadBytes, crepRuntimeLoadByte, crepRuntimeWriteBytes,
+    crepRuntimeStoreByte, updateMemory, callFfi]
+
+theorem crepe_runtime_ffi_length_mismatch_is_final :
+    let result := crepRuntimeExtCall crepeRuntimeFfiStatefulHandler
+      crepeRuntimeShortState "host" 1 2 3 4
+    result.1 = .finalFfi "halt" ∧ result.2.ffi.ioEvents.length = 0 := by
+  simp [crepRuntimeExtCall, crepRuntimeExtCallValues,
+    crepeRuntimeFfiStatefulHandler, crepeRuntimeShortState,
+    crepeRuntimeShortOracle, crepeRuntimeState,
+    natCrepRuntimeFfiState,
+    natCrepRuntimeFfiContext, natCrepRuntimeMemoryModel,
+    crepRuntimeReadBytes, crepRuntimeLoadByte, callFfi]
 
 theorem crepe_runtime_shared_load :
     (crepRuntimeSharedMem crepeRuntimeSharedHandler crepeRuntimeState
@@ -383,6 +458,44 @@ theorem crepe_runtime_tick_timeout :
       some (.timeout : CrepRuntimeResult Nat String) := by
   decide +kernel
 
+def crepeRuntimeWhileTimeoutProgram : CrepProg Nat :=
+  .while (.const 1) .skip
+
+theorem crepe_runtime_while_zero_timeout_clears_locals :
+    let result := evalCrepRuntimeResult crepeRuntimeSharedHandler
+      crepeSemanticsPrimitive 20 { crepeRuntimeState with clock := 0 }
+      crepeRuntimeWhileTimeoutProgram
+    result.map Prod.fst = some (.timeout : CrepRuntimeResult Nat String) ∧
+      result.map (fun step => step.2.locals 5) = some none := by
+  decide +kernel
+
+def crepeRuntimeEndianHandler : CrepRuntimeFfiHandler Nat Unit String :=
+  fun request ffi =>
+    match request with
+    | .sharedMem .load _ _ _ => .returned ffi [11, 22]
+    | .sharedMem _ _ _ _ => .returned ffi []
+    | .extCall _ _ _ => .returned ffi []
+
+def crepeRuntimeEndianState : CrepRuntimeState Nat Unit :=
+  { crepeRuntimeState with
+    ffiContext :=
+      { natCrepRuntimeFfiContext with
+        bigEndian := true
+        wordOfBytes := fun bigEndian bytes =>
+          if bigEndian then
+            match bytes with
+            | _ :: value :: _ => value.toNat
+            | _ => 0
+          else
+            match bytes with
+            | value :: _ => value.toNat
+            | [] => 0 } }
+
+theorem crepe_runtime_shared_load_uses_source_little_endian :
+    (crepRuntimeSharedMem crepeRuntimeEndianHandler
+      crepeRuntimeEndianState .load 5 10).2.locals 5 = some 11 := by
+  decide
+
 /- CakeML `crepSemScript.sml:333` returns `TimeOut` with `empty_locals s`.
    Keep the post-state clause observable instead of checking only the result. -/
 theorem crepe_runtime_tick_timeout_clears_locals :
@@ -415,6 +528,42 @@ theorem crepe_runtime_call_result :
       (.call (some ([5], none)) "inc" [.const 41])).map
         (fun result => (result.1, result.2.locals 5)) =
       some (.normal, some 42) := by
+  decide +kernel
+
+theorem crepe_runtime_nary_add :
+    evalCrepRuntimeExp crepeRuntimeState
+      (.op .add [.const 1, .const 2, .const 3]) = some 6 := by
+  simp [evalCrepRuntimeExp, crepeRuntimeState, natCrepRuntimeMemoryModel]
+
+def crepeRuntimeDuplicateParameterState : CrepRuntimeState Nat Unit :=
+  { crepeRuntimeState with
+    functions :=
+      [{ name := "bad"
+         params := [0, 0]
+         body := .return [.const 0]
+         returnShape := .one }] }
+
+theorem crepe_runtime_call_rejects_duplicate_parameters :
+    (evalCrepRuntimeResult crepeRuntimeSharedHandler
+      crepeSemanticsPrimitive 20 crepeRuntimeDuplicateParameterState
+      (.call none "bad" [.const 1, .const 2])).map Prod.fst =
+      some (.error : CrepRuntimeResult Nat String) := by
+  decide +kernel
+
+def crepeRuntimeFallthroughState : CrepRuntimeState Nat Unit :=
+  { crepeRuntimeState with
+    functions :=
+      [{ name := "fallthrough"
+         params := [0]
+         body := .skip
+         returnShape := .one }] }
+
+theorem crepe_runtime_call_fallthrough_is_error :
+    (evalCrepRuntimeResult crepeRuntimeSharedHandler
+      crepeSemanticsPrimitive 20 crepeRuntimeFallthroughState
+      (.call none "fallthrough" [.const 41])).map
+        (fun result => (result.1, result.2.locals 0)) =
+      some (.error, some 41) := by
   decide +kernel
 
 def crepeCallFullState : CrepState (RiscV.Word 64) :=

@@ -1,0 +1,3 @@
+return_clock_zero=(SOME TimeOut,0)
+
+return_clock_one=(SOME (Result []),0)

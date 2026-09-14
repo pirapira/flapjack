@@ -20,6 +20,51 @@ def loopVarsOfExp : LoopExp α → List Nat
   | .baseAddr => []
   | .topAddr => []
 
+/-! Faithful port of CakeML Pancake's `locals_touched_def` from
+    `cakeml/pancake/loopLangScript.sml:77`.  The source definition is used on
+    the original Loop expressions, before the later Flapjack-only `crepOp` and
+    comparison expression forms are introduced; those forms are nevertheless
+    handled structurally here so the analysis remains total on `LoopExp`. -/
+def loopLocalsTouched : LoopExp α → List Nat
+  | .const _ => []
+  | .var name => [name]
+  | .lookup _ => []
+  | .load address => loopLocalsTouched address
+  | .op _ arguments => arguments.flatMap loopLocalsTouched
+  | .crepOp _ arguments => arguments.flatMap loopLocalsTouched
+  | .cmp _ left right => loopLocalsTouched left ++ loopLocalsTouched right
+  | .shift _ left right => loopLocalsTouched left ++ loopLocalsTouched right
+  | .baseAddr => []
+  | .topAddr => []
+
+@[simp] theorem loopLocalsTouched_const (value : α) :
+    loopLocalsTouched (.const value) = [] := by
+  simp [loopLocalsTouched]
+
+@[simp] theorem loopLocalsTouched_var (α : Type u) (name : Nat) :
+    loopLocalsTouched (α := α) (.var name) = [name] := by
+  simp [loopLocalsTouched]
+
+@[simp] theorem loopLocalsTouched_lookup (address : α) :
+    loopLocalsTouched (.lookup address) = [] := by
+  simp [loopLocalsTouched]
+
+@[simp] theorem loopLocalsTouched_load (address : LoopExp α) :
+    loopLocalsTouched (.load address) = loopLocalsTouched address := by
+  simp [loopLocalsTouched]
+
+@[simp] theorem loopLocalsTouched_op (operator : BinOp)
+    (arguments : List (LoopExp α)) :
+    loopLocalsTouched (.op operator arguments) =
+      arguments.flatMap loopLocalsTouched := by
+  simp [loopLocalsTouched]
+
+@[simp] theorem loopLocalsTouched_shift (operator : Shift)
+    (left right : LoopExp α) :
+    loopLocalsTouched (.shift operator left right) =
+      loopLocalsTouched left ++ loopLocalsTouched right := by
+  simp [loopLocalsTouched]
+
 def loopAssignedVars : LoopProg α → List Nat
   | .skip => []
   | .assign name _ => [name]
@@ -83,33 +128,25 @@ def loopAccVars : LoopProg α → List Nat → List Nat
   | .skip, names => names
   | .fail, names => names
   | .raise _, names => names
-  | .return values, names => loopInsertAll values names
-  | .call none _ arguments _, names => loopInsertAll arguments names
-  | .call (some (returns, live)) _ arguments none, names =>
-      loopInsertAll arguments (loopInsertAll returns (loopInsertAll live names))
-  | .call (some (returns, live)) _ arguments
-      (some (exception, handler, normal, handlerLive)), names =>
+  | .return _, names => names
+  | .call none _ _ _, names => names
+  | .call (some (returns, _)) _ _ none, names =>
+      loopInsertAll returns names
+  | .call (some (returns, _)) _ _
+      (some (exception, handler, normal, _)), names =>
       let names := loopAccVars handler (loopAccVars normal names)
-      loopInsertAll arguments
-        (loopInsertAll returns (loopInsertAll live
-          (loopInsert exception (loopInsertAll handlerLive names))))
+      loopInsert exception (loopInsertAll returns names)
   | .locValue destination _label, names => loopInsert destination names
-  | .assign destination expression, names =>
-      loopInsertAll (loopVarsOfExp expression) (loopInsert destination names)
-  | .primitive destinations _ arguments, names =>
-      loopInsertAll arguments (loopInsertAll destinations names)
-  | .shMem _ destination address, names =>
-      loopInsertAll (loopVarsOfExp address) (loopInsert destination names)
-  | .store address value, names =>
-      loopInsertAll (loopVarsOfExp address) (loopInsert value names)
-  | .setGlobal _ value, names => loopInsertAll (loopVarsOfExp value) names
-  | .load32 address destination, names => loopInsert address (loopInsert destination names)
-  | .loadByte address destination, names => loopInsert address (loopInsert destination names)
-  | .store32 address value, names => loopInsertAll [address, value] names
-  | .storeByte address value, names => loopInsertAll [address, value] names
-  | .ffi _ configuration configurationLength array arrayLength live, names =>
-      loopInsertAll [configuration, configurationLength, array, arrayLength]
-        (loopInsertAll live names)
+  | .assign destination _, names => loopInsert destination names
+  | .primitive destinations _ _, names => loopInsertAll destinations names
+  | .shMem _ destination _, names => loopInsert destination names
+  | .store _ _, names => names
+  | .setGlobal _ _, names => names
+  | .load32 _ destination, names => loopInsert destination names
+  | .loadByte _ destination, names => loopInsert destination names
+  | .store32 _ _, names => names
+  | .storeByte _ _, names => names
+  | .ffi _ _ _ _ _ _, names => names
 
 theorem loopVarsOfExp_load (address : LoopExp α) :
     loopVarsOfExp (.load address) = loopVarsOfExp address := by

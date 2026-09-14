@@ -1,0 +1,6 @@
+ext_ffi=T
+
+ext_clock=T
+
+ext_locals=T
+

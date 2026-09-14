@@ -1,0 +1,7 @@
+crep_basic=SOME [90; 0]
+
+crep_overflow=SOME [44; 1]
+
+crep_carry_is_bit=SOME [13; 0]
+
+crep_wrong_length=NONE

@@ -1,4 +1,5 @@
 import Flapjack.RiscV.PipelineDiagnostics
+import Flapjack.StackAlloc.Machine
 
 namespace Flapjack
 
@@ -40,6 +41,81 @@ example :
       [⟨29, [.asm (.word (.arith (.longDiv 0 3 3 0 6))) [] 0]⟩] =
         .error { sectionId := 29, position := 0, feature := .longDiv } := by
   rfl
+
+/-! CakeML's RISC-V target rejects a direct `LongDiv` instruction
+    (`riscv_targetScript.sml:143`).  Software lowering must therefore happen
+    through the `LongDiv_code`/`LongDiv1_code` helper path rather than by
+    teaching the direct instruction selector a new encoding. -/
+example :
+    RiscV.wordArithToInstructions (width := 64)
+      (.longDiv 0 3 3 0 6) = none := by
+  rfl
+
+/-! The direct selector rejection is distinct from the source compiler path:
+    the normalized source LongDiv is replaced by the linked CakeML software
+    helper sections before Lab lowering. -/
+def longDivSourceEntryRemoveConfig : StackRemoveConfig :=
+  { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
+    stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
+
+#guard
+  (RiscV.compileStackProgramNatToRiscVChecked (width := 64) { services := [] }
+    longDivSourceEntryRemoveConfig 29 0
+    (.inst (.arith (.longDiv 0 3 3 0 6)) : StackProg Nat)).isOk
+
+def longDivRuntimeSemanticConfig : StackRemoveConfig :=
+  { longDivSourceEntryRemoveConfig with bytesInWord := 1 }
+
+def longDivRuntimeSemanticState : WordStackMachineState 8 :=
+  { registers := fun register =>
+      if register = 3 then BitVec.ofNat 8 1
+      else if register = 0 then BitVec.ofNat 8 3
+      else if register = 6 then BitVec.ofNat 8 2
+      else 0
+    stack := fun _ => 0
+    stores := fun _ => 0
+    memory := fun _ => 0
+    sharedMemory := fun _ => 0 }
+
+def longDivRuntimeSemanticResult :
+    Option (StackMachineControl 8) := do
+  let helpers ← RiscV.cakeLongDivRuntimeSections longDivRuntimeSemanticConfig
+  RiscV.evalStackSectionsFuel 10000
+    (helpers ++ [(29, RiscV.cakeLongDivStackAdapter)]) 29
+    longDivRuntimeSemanticState
+
+#guard
+  match longDivRuntimeSemanticResult with
+  | some (.normal state) =>
+      state.registers 0 = BitVec.ofNat 8 129 &&
+        state.registers 3 = BitVec.ofNat 8 1
+  | _ => false
+
+/-! The HOL fixture `scripts/hol-probes/longdiv_code_probe.out` contains the
+    two source-level CakeML AddCarry operations
+    `AddCarry 10 10 16 1` and `AddCarry 12 12 14 1`.  Check the exact
+    four-register operations in the source-shaped helper, including order,
+    rather than only checking its end-to-end result. -/
+def cakeAddCarryOps : WordProg Nat → List (Nat × Nat × Nat × Nat)
+  | .inst (.arith (.cakeAddCarry destination sourceLeft sourceRight carry)) =>
+      [(destination, sourceLeft, sourceRight, carry)]
+  | .seq first second => cakeAddCarryOps first ++ cakeAddCarryOps second
+  | .ite _ _ _ thenBranch elseBranch =>
+      cakeAddCarryOps thenBranch ++ cakeAddCarryOps elseBranch
+  | .loop _ body _ => cakeAddCarryOps body
+  | .mustTerminate body => cakeAddCarryOps body
+  | .call returns _ _ handler =>
+      (match returns with
+      | some (_, _, body, _, _) => cakeAddCarryOps body
+      | none => []) ++
+      (match handler with
+      | some (_, body, _, _) => cakeAddCarryOps body
+      | none => [])
+  | _ => []
+
+#guard
+  cakeAddCarryOps (RiscV.cakeLongDiv1Code 8) =
+    [(10, 10, 16, 1), (12, 12, 14, 1)]
 
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }

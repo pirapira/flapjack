@@ -3,21 +3,52 @@ import Flapjack.CrepeRuntimeGlobalCorrectness
 namespace Flapjack
 
 def globalLoadRuntimeState : CrepRuntimeState Nat Unit :=
-  { locals := fun _ => none
+  { locals := fun name => if name == 5 then some 0 else none
     globals := fun address => if address == 200 then some 42 else none
     functions := []
     memory := fun _ => none
     memaddrs := fun _ => true
     shMemaddrs := fun _ => true
-    byteAlign := id
+    memoryModel := natCrepRuntimeMemoryModel
+    bytesInWord := 1
+    ffiContext := natCrepRuntimeFfiContext
     clock := 10
     bigEndian := false
-    ffi := ()
+    ffi := natCrepRuntimeFfiState
     baseAddress := 0
     topAddress := 100 }
 
 def globalLoadRuntimeHandler : CrepRuntimeFfiHandler Nat Unit Unit :=
-  fun _ state => .returned state
+  fun _ state => .returned state []
+
+/-! The runtime adapter keeps the target-width runtime state intact while
+    routing its global field through the source-shaped 5-bit evaluator. -/
+
+def runtimeTypedKey : Nat → CrepGlobalAddress := crepGlobalKeyOfNat
+
+def runtimeTypedBaseState : CrepGlobalState Nat :=
+  { locals := fun _ => none
+    memory := fun _ => none
+    globals := fun _ => none }
+
+def runtimeTypedRuntimeState : CrepRuntimeState Nat Unit :=
+  globalLoadRuntimeState.withTypedGlobalState runtimeTypedKey runtimeTypedBaseState
+
+def runtimeTypedStoredRuntimeState : CrepRuntimeState Nat Unit :=
+  storeCrepRuntimeTypedGlobalState runtimeTypedRuntimeState runtimeTypedKey
+    runtimeTypedBaseState 4 11
+
+def runtimeTypedStoreLoadValue : Option Nat :=
+  evalCrepRuntimeExp runtimeTypedStoredRuntimeState (.loadGlob 4)
+
+/- The guard routes runtime LoadGlob through the typed StoreGlob entrypoint,
+   whose expected value is the source `crepSem` store/load result. -/
+example : runtimeTypedStoreLoadValue = some 11 := by
+  simp only [runtimeTypedStoreLoadValue, runtimeTypedStoredRuntimeState,
+    storeCrepRuntimeTypedGlobalState]
+  rw [evalCrepRuntimeExp_loadGlob_typedState]
+  exact evalCrepTypedLoad_storeCrepTypedGlobal runtimeTypedKey
+    runtimeTypedBaseState 4 11
 
 theorem peerCrepRuntimeToLoop_loadGlob_regression :
     (evalCrepRuntimeResult globalLoadRuntimeHandler (fun _ _ => none) 2
@@ -34,7 +65,9 @@ theorem peerCrepRuntimeToLoop_loadGlob_regression :
     ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
       LoopContext Nat)
     [] globalLoadRuntimeHandler (fun _ _ => none) 1
-    globalLoadRuntimeState [] 5 200 42 (by simp [globalLoadRuntimeState])
+    globalLoadRuntimeState [] 5 200 42
+    ⟨0, by simp [globalLoadRuntimeState]⟩
+    (by simp [globalLoadRuntimeState])
 
 theorem peerCrepRuntimeToLoop_loadGlob_failure_regression :
     (evalCrepRuntimeResult globalLoadRuntimeHandler (fun _ _ => none) 2
@@ -55,6 +88,7 @@ theorem peerCrepRuntimeToLoop_loadGlob_failure_regression :
       LoopContext Nat)
     [] globalLoadRuntimeHandler (fun _ _ => none) 1
     { globalLoadRuntimeState with globals := fun _ => none } [] 5 200
+    ⟨0, by simp [globalLoadRuntimeState]⟩
 
 theorem peerCrepRuntimeToLoop_storeGlob_loadGlob_sequence_regression :
     (evalCrepRuntimeResult globalLoadRuntimeHandler (fun _ _ => none) 3
@@ -75,6 +109,7 @@ theorem peerCrepRuntimeToLoop_storeGlob_loadGlob_sequence_regression :
       LoopContext Nat)
     [] globalLoadRuntimeHandler (fun _ _ => none) 1
     { globalLoadRuntimeState with globals := fun _ => none } 5 200 42
+    ⟨0, by simp [globalLoadRuntimeState]⟩
 
 theorem peerCrepRuntimeToLoop_storeGlob_state_regression :
     ∃ sourceTarget loopTarget,

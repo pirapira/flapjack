@@ -1,0 +1,4 @@
+empty=Skip
+one=Seq Skip Skip
+two=Seq Tick (Seq Skip Skip)
+assign_load=Seq (Assign 1 (Const 7w)) (Seq (Load32 0 2) Skip)

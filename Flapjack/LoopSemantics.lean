@@ -150,6 +150,22 @@ def evalLoopBinOp [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
   | .or => OrOp.or left right
   | .xor => HXor.hXor left right
 
+/-! Exact list-valued counterpart of CakeML's `word_op_def`.  In particular,
+    Add/And/Or/Xor fold over every operand and Sub succeeds only for a pair. -/
+def evalLoopWordOp [OfNat α 0] [Add α] [Sub α] [AndOp α] [OrOp α]
+    [HXor α α α] [Complement α]
+    (operator : BinOp) (values : List α) : Option α :=
+  match operator with
+  | .add => some (values.foldr (fun left right => left + right) 0)
+  | .and => some (values.foldr (fun left right => AndOp.and left right)
+      (Complement.complement (0 : α)))
+  | .or => some (values.foldr (fun left right => OrOp.or left right) 0)
+  | .xor => some (values.foldr (fun left right => HXor.hXor left right) 0)
+  | .sub =>
+      match values with
+      | [left, right] => some (left - right)
+      | _ => none
+
 def evalLoopShift [ShiftLeft α] [ShiftRight α]
     (operator : Shift) (left right : α) : Option α :=
   match operator with
@@ -217,18 +233,17 @@ termination_by structural expression
 def evalLoopExpFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
-    (state : LoopState α) (expression : LoopExp α) : Option α :=
-  match expression with
+    [Complement α]
+    (state : LoopState α) : LoopExp α → Option α
   | .const value => some value
   | .var name => state.locals name
   | .lookup address => state.globals address
   | .load address => do
       let address ← evalLoopExpFull state address
       state.memory address
-  | .op operator [left, right] => do
-      let left ← evalLoopExpFull state left
-      let right ← evalLoopExpFull state right
-      pure (evalLoopBinOp operator left right)
+  | .op operator expressions => do
+      let values ← evalLoopExpListFull state expressions
+      evalLoopWordOp operator values
   | .crepOp .mul [left, right] => do
       let left ← evalLoopExpFull state left
       let right ← evalLoopExpFull state right
@@ -241,8 +256,60 @@ def evalLoopExpFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let left ← evalLoopExpFull state left
       let right ← evalLoopExpFull state right
       evalLoopShiftFull operator left right
+  | .baseAddr | .topAddr => none
   | _ => none
-termination_by structural expression
+termination_by expression => sizeOf expression
+
+where
+  evalLoopExpListFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+      [Complement α] (state : LoopState α) :
+      List (LoopExp α) → Option (List α)
+    | [] => some []
+    | expression :: expressions => do
+        let value ← evalLoopExpFull state expression
+        let values ← evalLoopExpListFull state expressions
+        pure (value :: values)
+    termination_by expressions => sizeOf expressions
+
+/-! Direct source-shaped evaluator for `loopSem$eval_def`.
+    Unlike the historical evaluator above, this exposes the two address
+    bounds explicitly because they are fields of CakeML's source state. -/
+def evalLoopExpSource [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+    [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α]
+    (state : LoopState α) (baseAddr topAddr : α) : LoopExp α → Option α
+  | .const value => some value
+  | .var name => state.locals name
+  | .lookup address => state.globals address
+  | .load address => do
+      let address ← evalLoopExpSource state baseAddr topAddr address
+      state.memory address
+  | .op operator expressions => do
+      let values ← evalLoopExpSourceList state baseAddr topAddr expressions
+      evalLoopWordOp operator values
+  | .shift operator left right => do
+      let left ← evalLoopExpSource state baseAddr topAddr left
+      let right ← evalLoopExpSource state baseAddr topAddr right
+      evalLoopShiftFull operator left right
+  | .baseAddr => some baseAddr
+  | .topAddr => some topAddr
+  | _ => none
+termination_by expression => sizeOf expression
+where
+  evalLoopExpSourceList [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+      [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
+      [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+      [Complement α] (state : LoopState α) (baseAddr topAddr : α) :
+      List (LoopExp α) → Option (List α)
+    | [] => some []
+    | expression :: expressions => do
+        let value ← evalLoopExpSource state baseAddr topAddr expression
+        let values ← evalLoopExpSourceList state baseAddr topAddr expressions
+        pure (value :: values)
+    termination_by expressions => sizeOf expressions
 
 def evalLoopCondition [BEq α] [OfNat α 0] [AndOp α] [PanCmp α]
     (operator : Cmp) (left right : α) : Option Bool :=
@@ -377,6 +444,7 @@ end
 def evalLoopProgFull [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α]
     : Nat → LoopState α → LoopProg α → Option (LoopResult α)
   | 0, _, _ => none
   | _fuel + 1, state, .skip => some (.normal state)
@@ -2061,6 +2129,7 @@ theorem evalLoopExp_shift [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 theorem evalLoopExpFull_shift [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [PanCmp α] [PanShiftWidth α] [ArithmeticShiftRight α] [RotateRightOp α]
+    [Complement α]
     (state : LoopState α) (operator : Shift) (left right : LoopExp α)
     (leftValue rightValue : α) (value : α)
     (hleft : evalLoopExpFull state left = some leftValue)

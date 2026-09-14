@@ -1,0 +1,7 @@
+h_prog_skip=Ret (INR (NONE,s))
+
+h_prog_break=Ret (INR (SOME Break,s))
+
+h_prog_continue=Ret (INR (SOME Continue,s))
+
+h_prog_tick=Ret (INR (NONE,s))

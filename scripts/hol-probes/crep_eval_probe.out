@@ -1,0 +1,13 @@
+eval_const=SOME (Word 7w)
+
+eval_local=SOME (Word 7w)
+
+eval_global=SOME (Word 9w)
+
+eval_load=SOME (Word 11w)
+
+eval_op=SOME (Word 3w)
+
+eval_base_addr=SOME (Word 100w)
+
+eval_top_addr=SOME (Word 200w)

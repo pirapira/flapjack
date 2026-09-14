@@ -62,6 +62,7 @@ import Flapjack.Test.CrepPrimopParity
 import Flapjack.Test.CrepExitLoopParity
 import Flapjack.Test.CrepEvaluateParity
 import Flapjack.Test.CrepFixClockParity
+import Flapjack.Test.CrepEvalParity
 import Flapjack.Test.CrepShMemLoadParity
 import Flapjack.Test.CrepShMemOpParity
 import Flapjack.Test.CrepShMemStoreParity
@@ -743,6 +744,7 @@ def main : IO Unit := do
     Flapjack.Test.CrepExitLoopParity.runChecks,
     Flapjack.Test.CrepEvaluateParity.runChecks,
     Flapjack.Test.CrepFixClockParity.runChecks,
+    Flapjack.Test.CrepEvalParity.runChecks,
     Flapjack.Test.CrepShMemLoadParity.runChecks,
     Flapjack.Test.CrepShMemOpParity.runChecks,
     Flapjack.Test.CrepShMemStoreParity.runChecks,

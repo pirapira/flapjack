@@ -24,6 +24,7 @@ import Flapjack.CrepPrimop
 import Flapjack.CrepExitLoop
 import Flapjack.CrepEvaluate
 import Flapjack.CrepFixClock
+import Flapjack.CrepEval
 import Flapjack.CrepShMemLoad
 import Flapjack.CrepShMemOp
 import Flapjack.CrepShMemStore

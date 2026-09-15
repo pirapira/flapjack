@@ -87,6 +87,30 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/- A returning call is itself a bitmap write site, even when its return
+   continuation contains no Alloc or StoreConsts node.  Keep this predicate
+   separate from `wordProgHasFrameOperations`: the latter selects the
+   state-threaded Cake frame wrapper, while this one only answers whether the
+   exact Cake IRC occupancy can be observed by the bitmap builder. -/
+def wordProgHasBitmapSites : WordProg α → Bool
+  | .seq first second =>
+      wordProgHasBitmapSites first || wordProgHasBitmapSites second
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordProgHasBitmapSites thenBranch || wordProgHasBitmapSites elseBranch
+  | .loop _ body _ | .mustTerminate body => wordProgHasBitmapSites body
+  | .call returns _ _ handler =>
+      (match returns with
+       | some (_, _, returnCode, _, _) => true || wordProgHasBitmapSites returnCode
+       | none => false) ||
+        (match handler with
+         | some (_, body, _, _) => wordProgHasBitmapSites body
+         | none => false)
+  | .alloc _ _ | .storeConsts _ _ _ _ _ | .ffi _ _ _ _ _ _ => true
+  | _ => false
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 /-- Collect the foreign-function names referenced by `ffi` nodes in a Word
     program.  The source-facing entrypoint uses this to register the services
     that an original Pancake program may call. -/

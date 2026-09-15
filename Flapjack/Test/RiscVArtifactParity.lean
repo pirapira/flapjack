@@ -666,7 +666,7 @@ def helloSource : String :=
 assembly oracle (CakeML emits 152 bytes; the port currently emits 224). -/
 def cakeHelloMainLength : Nat := 152
 
-def flapjackHelloMainLength : Nat := 224
+def flapjackHelloMainLength : Nat := 180
 
 def helloRuntimeImage : Option (SourceRiscVRuntimeImage 64) :=
   compileRuntimeImage helloSource

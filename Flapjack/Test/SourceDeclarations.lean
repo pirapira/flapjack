@@ -187,8 +187,11 @@ example :
       "main" []).isNone = true := by
   decide +kernel
 
-/- `lookup_code` rejects a function whose formal parameter names are not
-   distinct, even before a call can bind its arguments. -/
+/- CakeML's `evaluate_decls` installs a function whose formal parameter
+   names are duplicated (`panSemScript.sml:827-831` has no distinctness
+   check); the failure happens per call in `lookup_code`
+   (`panSemScript.sml:461-463` requires `ALL_DISTINCT`).  So merely
+   declaring such a function is fine, while calling it is an error. -/
 example :
     (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
       sourceDeclarationNoFfi 30
@@ -199,6 +202,20 @@ example :
        .function
          { name := "main", inline := false, exported := true, params := [],
            body := .return (.const 0), returnShape := .one }]
+      "main" []).isNone = false := by
+  decide +kernel
+
+example :
+    (evalPanValueProgram sourceDeclarationInitialState sourceDeclarationNoPrimitive
+      sourceDeclarationNoFfi 30
+      [.function
+         { name := "duplicateParameters", inline := false, exported := false,
+           params := [("x", .one), ("x", .one)],
+           body := .return (.var .local "x"), returnShape := .one },
+       .function
+         { name := "main", inline := false, exported := true, params := [],
+           body := .seq (.call none "duplicateParameters" [.const 1, .const 2])
+             (.return (.const 0)), returnShape := .one }]
       "main" []).isNone = true := by
   decide +kernel
 

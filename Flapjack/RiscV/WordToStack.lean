@@ -3319,6 +3319,15 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .set store value =>
       (wordStackSetNat config (wordStoreToNat store) (wordExpToNat value)).map
         (fun code => (code, state))
+  | .seq (.assign firstDestination (.const firstValue))
+      (.seq (.assign secondDestination (.const secondValue)) rest) => do
+      let firstCode ← wordStackCompileExpToPhysicalNat config secondDestination
+        (wordExpToNat (.const secondValue))
+      let secondCode ← wordStackCompileExpToPhysicalNat config firstDestination
+        (wordExpToNat (.const firstValue))
+      let (restCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state rest
+      pure (.seq firstCode (.seq secondCode restCode), state)
   | .seq first second => do
       let (firstCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state first
@@ -3350,7 +3359,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       (wordStackLocValue config destination source).map (fun code => (code, state))
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments config.callAbiBase
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
@@ -3367,7 +3376,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments config.callAbiBase
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))

@@ -366,7 +366,7 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVCakeChecked
   match stackProgramsWithLongDivRuntime removeConfig programs with
   | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
   | some programs =>
-      match compileLabProgramLinkedWithFfiStubsAndHalt context
+      match compileLabProgramLinkedWithPancakeRuntime context
           (((programs.map (fun (sectionId, program) =>
             if sectionId = cakeLongDiv1Location ||
                 sectionId = cakeLongDivLocation then

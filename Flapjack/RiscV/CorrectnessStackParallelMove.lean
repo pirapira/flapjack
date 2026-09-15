@@ -162,6 +162,7 @@ theorem wordStackPhysicalMovesFrom_mapM'
               have htail :
                   wordStackPhysicalMovesFrom config destinations
                       (source + config.abiStride) =
+                    (source + config.abiStride) =
                     none := by
                 rw [ih (source := source + config.abiStride), hrest]
                 rfl

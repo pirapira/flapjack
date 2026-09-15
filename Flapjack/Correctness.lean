@@ -1281,7 +1281,7 @@ theorem loopToWord_const_assign_register_agreement [NeZero width]
         | .normal state => state.locals 1
         | _ => none) =
       (RiscV.evalWordProg state
-        (loopToWordProg ({ vars := [] } : WordContext)
+        (loopToWordProg ({ vars := [(1, 1)] } : WordContext)
           (.assign 1 (.const value)))).map
         (fun state => RiscV.readRegister state 1) := by
   have hzero : state.registers 0 = (0 : RiscV.Word width) := by
@@ -1301,7 +1301,7 @@ theorem loopToWord_add_assign_register_agreement [NeZero width]
         | .normal state => state.locals 1
         | _ => none) =
       (RiscV.evalWordProg state
-        (loopToWordProg ({ vars := [] } : WordContext)
+        (loopToWordProg ({ vars := [(1, 1), (2, 2), (3, 3)] } : WordContext)
           (.assign 1 (.op .add [.var 2, .var 3])))).map
         (fun state => RiscV.readRegister state 1) := by
   have hzero : state.registers 0 = (0 : RiscV.Word width) := by
@@ -1322,7 +1322,7 @@ theorem loopToWord_longMul_register_agreement [NeZero width]
         | .normal state => state.locals 1
         | _ => none) =
       (RiscV.evalWordProg state
-        (loopToWordProg ({ vars := [] } : WordContext)
+        (loopToWordProg ({ vars := [(1, 1), (2, 2), (3, 3)] } : WordContext)
           (.arith (.longMul 1 1 2 3)))).map
         (fun state => RiscV.readRegister state 1) := by
   simp [evalLoopProg, loopRegisterState, loopToWordProg, wordArith,

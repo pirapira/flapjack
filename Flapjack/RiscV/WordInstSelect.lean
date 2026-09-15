@@ -113,6 +113,20 @@ def wordInstSelectProgram (temp : Nat) : WordProg α → WordProg α
       let (prelude, address) :=
         wordInstSelectAtom temp (wordInstNormalizeExp address)
       wordDeadSelectSeq prelude (.shareInst operator name address)
+  | .assign destination value =>
+      let value := wordInstNormalizeExp value
+      match value with
+      | .op operator [left, .const value] =>
+          let (prelude, left) := wordInstSelectAtom temp left
+          wordDeadSelectSeq prelude
+            (.assign destination (.op operator [left, .const value]))
+      | .op operator [left, right] =>
+          let (leftPrelude, left) := wordInstSelectAtom temp left
+          let (rightPrelude, right) := wordInstSelectAtom (temp + 1) right
+          wordDeadSelectSeq leftPrelude
+            (wordDeadSelectSeq rightPrelude
+              (.assign destination (.op operator [left, right])))
+      | value => .assign destination value
   | .ite operator condition right thenBranch elseBranch =>
       .ite operator condition right
         (wordInstSelectProgram temp thenBranch)
@@ -120,11 +134,24 @@ def wordInstSelectProgram (temp : Nat) : WordProg α → WordProg α
   | .loop liveIn body liveOut =>
       .loop liveIn (wordInstSelectProgram temp body) liveOut
   | .mustTerminate body => .mustTerminate (wordInstSelectProgram temp body)
-  | .call returns target arguments handler =>
-      /- The source-facing hello path has no nested call address.  Keep call
-         metadata opaque here; the dedicated call lowering owns its handler
-         recursion and remains unchanged. -/
-      .call returns target arguments handler
+  | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments none =>
+      .call (some (destinations, cutsets,
+        wordInstSelectProgram temp returnCode, returnLabel, entryLabel))
+        target arguments none
+  | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments (some (exception, body, handlerLabel, handlerEntryLabel)) =>
+      .call (some (destinations, cutsets,
+        wordInstSelectProgram temp returnCode, returnLabel, entryLabel))
+        target arguments
+        (some (exception, wordInstSelectProgram temp body,
+          handlerLabel, handlerEntryLabel))
+  | .call none target arguments none =>
+      .call none target arguments none
+  | .call none target arguments (some (exception, body, handlerLabel, handlerEntryLabel)) =>
+      .call none target arguments
+        (some (exception, wordInstSelectProgram temp body,
+          handlerLabel, handlerEntryLabel))
   | program => program
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial

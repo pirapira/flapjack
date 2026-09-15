@@ -22,6 +22,8 @@ structure StackRemoveConfig where
   bytesInWord : Nat
   stackBase : Nat
   wordShift : Nat
+  /- Register used by the checked stack-allocation failure branch. -/
+  haltRegister : Nat := 10
   /- Cake's checked stack allocation emits JumpLower after allocation. -/
   jump : Bool := false
   deriving Repr
@@ -115,7 +117,7 @@ def stackRemoveStackAlloc (config : StackRemoveConfig) (words : Nat) : StackProg
   else
       stackRemoveJoin delta
       (.ite .lower config.stackPointer (.reg config.stackBase)
-        (.seq (.const 10 2) (.halt 10)) .skip)
+        (.seq (.const config.haltRegister 2) (.halt config.haltRegister)) .skip)
 
 def stackRemoveStackFree (config : StackRemoveConfig) (words : Nat) : StackProg α :=
   stackRemoveStackDelta config .add words
@@ -127,9 +129,8 @@ def stackRemoveStackLoad (config : StackRemoveConfig) (register offset : Nat) :
 
 def stackRemoveStackStore (config : StackRemoveConfig) (register offset : Nat) :
     StackProg α :=
-  stackRemoveJoin (stackRemoveMove config.scratch register)
-    (stackRemoveJoin (stackRemoveStackAddress config offset)
-      (.inst (.mem .store config.scratch config.addressScratch)))
+  stackRemoveJoin (stackRemoveStackAddress config offset)
+    (.inst (.mem .store register config.addressScratch))
 
 def stackRemoveStackLoadAny (config : StackRemoveConfig)
     (register offsetRegister : Nat) : StackProg α :=

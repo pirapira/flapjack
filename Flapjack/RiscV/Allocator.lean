@@ -495,6 +495,21 @@ def wordSsaSeq (first second : WordProg α) : WordProg α :=
 def wordSsaKeys (state : WordSsaState) : List Nat :=
   state.current.map (fun entry => entry.1)
 
+/-- Insertion into a sorted variable list (structural, so `simp` unfolds
+    it on concrete lists).  CakeML enumerates `num_set` unions via
+    `MAP FST (toAList …)`, i.e. ascending key order; the port keeps
+    variables in association lists, so it sorts explicitly wherever the
+    original enumerates a tree. -/
+def wordSsaInsertSorted (name : Nat) : List Nat → List Nat
+  | [] => [name]
+  | x :: xs => if name ≤ x then name :: x :: xs
+    else x :: wordSsaInsertSorted name xs
+
+/-- Ascending variable order matching CakeML's `toAList` enumeration. -/
+def wordSsaSortNames : List Nat → List Nat
+  | [] => []
+  | x :: xs => wordSsaInsertSorted x (wordSsaSortNames xs)
+
 def wordSsaBranchNames (base left right : WordSsaState) : List Nat :=
   (wordSsaKeys base ++ wordSsaKeys left ++ wordSsaKeys right).eraseDups
 
@@ -584,7 +599,7 @@ decreasing_by all_goals decreasing_trivial
 def wordSsaFixInconsistencies [OfNat α 0] (preferred : Option Bool)
     (left right : WordSsaState) (next : Nat) :
     WordSsaState × WordProg α × WordProg α :=
-  let names := (wordSsaKeys left ++ wordSsaKeys right).eraseDups
+  let names := wordSsaSortNames ((wordSsaKeys left ++ wordSsaKeys right).eraseDups)
   let (mergeLeft, mergeRight, next, left, right) :=
     wordSsaMergeMoves names left right next
   let (fakeLeft, fakeRight, next, left, _right) :=
@@ -603,21 +618,22 @@ structure WordSsaLoopFrame where
 def wordSsaRestrict (state : WordSsaState) (names : List Nat) : WordSsaState :=
   { state with current := state.current.filter (fun entry => entry.1 ∈ names) }
 
-def wordSsaReconcileTo (source target : WordSsaState) : List Nat →
-    WordProg α
+/-- `ssa_reconcile` (`word_allocScript.sml:318-330`): one parallel
+    `Move 1` over the ascending variable list.  Variables missing from the
+    source contribute no move; variables missing from the target fall back
+    to register `0` (CakeML's `option_lookup`). -/
+def wordSsaReconcileTo (source target : WordSsaState) (names : List Nat) :
+    WordProg α :=
+  let moves := (wordSsaSortNames names.eraseDups).filterMap (fun name =>
+    match lookupNatInfo name source.current with
+      | none => none
+      | some sourceName =>
+          let targetName := (lookupNatInfo name target.current).getD 0
+          if targetName = sourceName then none
+          else some (targetName, sourceName))
+  match moves with
   | [] => .skip
-  | name :: names =>
-      let move := match lookupNatInfo name source.current,
-          lookupNatInfo name target.current with
-        | some sourceName, some targetName =>
-            if sourceName = targetName then
-              (.skip : WordProg α)
-            else
-              .move 1 [(targetName, sourceName)]
-        | _, _ => .skip
-      wordSsaSeq move (wordSsaReconcileTo source target names)
-termination_by names => sizeOf names
-decreasing_by all_goals decreasing_trivial
+  | _ => .move 1 moves
 
 def wordSsaRefreshList (state : WordSsaState) : List Nat →
     WordSsaState × WordProg α
@@ -642,7 +658,7 @@ def wordSsaFakeMoves [OfNat α 0] : List Nat → WordProg α
 
 def wordSsaLoopSetup [OfNat α 0] (state : WordSsaState)
     (liveIn liveOut : List Nat) : WordSsaState × WordProg α :=
-  let names := (liveIn ++ liveOut).eraseDups
+  let names := wordSsaSortNames ((liveIn ++ liveOut).eraseDups)
   let extend := names.filter (fun name =>
     (lookupNatInfo name state.current).isNone)
   let refresh := names.filter (fun name =>
@@ -914,6 +930,7 @@ theorem wordSsaRenameProgram_ite [OfNat α 0] :
     wordSsaFixInconsistencies, wordSsaPriorityMove,
     wordSsaBranchPriority, wordSsaMergeMoves,
     wordSsaFakeInconsistencyMoves, wordSsaForceRename,
+    wordSsaSortNames, wordSsaInsertSorted,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop,
     lookupNatInfo]
 

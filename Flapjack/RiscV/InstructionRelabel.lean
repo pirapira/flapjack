@@ -80,8 +80,10 @@ def relabelInstruction : Instruction width → Instruction width
   | .store32 s a => .store32 (riscvForward s) (riscvForward a)
   | .loadWord d a => .loadWord (riscvForward d) (riscvForward a)
   | .storeWord s a => .storeWord (riscvForward s) (riscvForward a)
-  | .loadWordOffset d a o => .loadWordOffset (riscvForward d) (riscvForward a) o
-  | .storeWordOffset s a o => .storeWordOffset (riscvForward s) (riscvForward a) o
+  | .loadWordOffset d a offset =>
+      .loadWordOffset (riscvForward d) (riscvForward a) offset
+  | .storeWordOffset s a offset =>
+      .storeWordOffset (riscvForward s) (riscvForward a) offset
 
 /-- The destination registers written by an instruction (empty for pure reads,
 branches, stores and `ecall`). -/

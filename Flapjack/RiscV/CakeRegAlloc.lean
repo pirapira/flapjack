@@ -942,14 +942,15 @@ def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (NatInfoMap Nat))
 
 /-! Convert Cake's `total_colour` result back into the location contract used
     by Word-to-Stack.  Cake colours are even Word names; their half is the
-    Cake stack-register number, which is translated to the target register at
-    the Lab boundary.  Colours outside the allocatable window are frame
-    variables numbered from the top of Cake's `f` frame. -/
+    abstract Cake stack-register number and must remain unchanged until the
+    Lab-to-RISC-V boundary applies `riscv_names`.  Colours outside the
+    allocatable window are frame variables numbered from the top of Cake's
+    `f` frame. -/
 
 def cakeColourLocation (k f colour : Nat) : WordLocation :=
   let stackRegister := colour / 2
   if stackRegister < k then
-    .register (riscvRegisterName stackRegister)
+    .register stackRegister
   else
     .stack (f - 1 - (stackRegister - k))
 

@@ -369,6 +369,19 @@ def negFirstMatchProjectionGuard : Bool :=
     Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [] [5, 7] ==
       none
 
+/- The HOL allocator updates fixed-size array cells.  Repeated writes to an
+   existing node must therefore not retain an unbounded history in the Lean
+   association-list representation. -/
+def mapUpdateBoundedGuard : Bool :=
+  let initial : Flapjack.NatInfoMap Nat := [(0, 0), (1, 1)]
+  let updated := (List.range 100).foldl
+    (fun map value => cakeMapUpdate map 0 value) initial
+  let inserted := cakeMapUpdate updated 2 7
+  updated.length == 2 &&
+    cakeMapLookup updated 0 == some 99 &&
+    cakeMapLookup updated 1 == some 1 &&
+    inserted.length == 3 && cakeMapLookup inserted 2 == some 7
+
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
     ifMergeAllocGuard && callMergeGuard && callTailGuard && assignLeafGuard &&
@@ -383,6 +396,7 @@ def parityGuard : Bool :=
     partOrderGuard && reviveOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     raMovesStempGuard && raMovesStempHiGuard && negFirstMatchProjectionGuard
+    && mapUpdateBoundedGuard
 
 #guard parityGuard
 def runChecks : IO Bool := do
@@ -399,7 +413,7 @@ def runChecks : IO Bool := do
     raMovesSelfFilteredGuard, raForcedEdgeGuard, partOrderGuard,
     reviveOrderGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
-    raMovesStempHiGuard, negFirstMatchProjectionGuard]
+    raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -418,7 +432,7 @@ def runChecks : IO Bool := do
     "sorting partition order", "revive moves order", "bg_ok order",
     "sort_moves tie two", "sort_moves tie three", "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
-    "neg_first_match_col projection"]
+    "neg_first_match_col projection", "Cake map updates stay bounded"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

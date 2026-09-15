@@ -29,6 +29,21 @@ def observe (result : Option (CrepControlResult Nat)) :
     | .returned state values => some (values, state.globals 5, state.memory 5)
     | _ => none
 
+def storeThenLoadGlobResult :=
+  observe (crepEvaluate [] noPrim (noCrepFfi Nat) shm 0 0 10 state5
+    (.seq (.store (.const 5) (.const 7))
+      (.return [.loadGlob 5])))
+
+def storeGlobThenLoadResult :=
+  observe (crepEvaluate [] noPrim (noCrepFfi Nat) shm 0 0 10 state5
+    (.seq (.storeGlob 5 (.const 7))
+      (.return [.load (.const 5)])))
+
+def storeGlobThenLoadGlobResult :=
+  observe (crepEvaluate [] noPrim (noCrepFfi Nat) shm 0 0 10 state5
+    (.seq (.storeGlob 5 (.const 7))
+      (.return [.loadGlob 5])))
+
 /-- `Store` writes main memory only: `LoadGlob` still reads the old global. -/
 example :
     observe (crepEvaluate [] noPrim (noCrepFfi Nat) shm 0 0 10 state5
@@ -53,6 +68,30 @@ example :
 /-- Call entry carries the caller's globals into the callee and back. -/
 def keepGlobalsFunctions : List (CompiledFunction Nat) :=
   [{ name := "f", params := [], body := .skip, returnShape := .one }]
+
+def callGlobalsResult :=
+  observe (crepEvaluate keepGlobalsFunctions noPrim (noCrepFfi Nat) shm
+    0 0 10 state5
+    (.seq (.storeGlob 5 (.const 7))
+      (.seq (.call none "f" [])
+        (.return [.loadGlob 5]))))
+
+def runChecks : IO Bool := do
+  let checks := [
+    (storeThenLoadGlobResult == some ([3], some 3, some 7),
+      "Store does not alias globals"),
+    (storeGlobThenLoadResult == some ([9], some 7, some 9),
+      "StoreGlob does not alias memory"),
+    (storeGlobThenLoadGlobResult == some ([7], some 7, some 9),
+      "StoreGlob round-trips through LoadGlob"),
+    (callGlobalsResult == some ([7], some 7, some 9),
+      "calls preserve caller globals")]
+  for (passed, label) in checks do
+    if passed then
+      IO.println s!"PASS crepEvaluate globals: {label}"
+    else
+      IO.println s!"FAIL crepEvaluate globals: {label}"
+  pure (checks.all Prod.fst)
 
 example :
     observe (crepEvaluate keepGlobalsFunctions noPrim (noCrepFfi Nat) shm

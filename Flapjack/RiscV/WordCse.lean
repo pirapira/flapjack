@@ -83,7 +83,7 @@ def wordCseProg : WordCseState α → WordProg α → WordProg α × WordCseStat
   | state, .inst instruction => (.inst instruction, state)
   | _state, .call returns target arguments handler =>
       (.call returns target arguments handler, wordCseEmpty)
-  | state, .loop liveIn body liveOut =>
+  | _state, .loop liveIn body liveOut =>
       let (body, _) := wordCseProg wordCseEmpty body
       (.loop liveIn body liveOut, wordCseEmpty)
   | state, .mustTerminate body =>

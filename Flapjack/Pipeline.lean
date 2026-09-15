@@ -3,6 +3,7 @@ import Flapjack.Compile
 import Flapjack.CrepeInlinePass
 import Flapjack.CrepeArith
 import Flapjack.CrepToLoop
+import Flapjack.CrepToLoopOptimise
 import Flapjack.LoopToWord
 import Flapjack.Word
 import Flapjack.RiscV.Allocator
@@ -103,7 +104,7 @@ def pipelineLoopFunctionsAux [OfNat α 0] [OfNat α 1]
           functions := functionInfos
           maxVar := function.params.length
           target := architecture }
-      (label, function.params, loopCompileProg context [] function.body) ::
+      (label, function.params, oCompile context function.params function.body) ::
         pipelineLoopFunctionsAux architecture functionInfos (label + 1) functions
 
 def pipelineLoopFunctions [OfNat α 0] [OfNat α 1]

@@ -66,7 +66,7 @@ def p1CallCutsets : Option (List (List (List Nat))) :=
 def runChecks : IO Bool := do
   let expected : Option (List (List Nat)) := some [[], [0, 2, 4], [2, 4]]
   let cutsetsExpected : Option (List (List (List Nat))) :=
-    some [[], [[0, 2]], []]
+    some [[], [[0]], []]
   let ok₁ := p1WordVariableNames == expected
   let ok₂ := p1CallCutsets == cutsetsExpected
   if ok₁ then
@@ -80,7 +80,7 @@ def runChecks : IO Bool := do
   pure (ok₁ && ok₂)
 
 #guard p1WordVariableNames == some [[], [0, 2, 4], [2, 4]]
-#guard p1CallCutsets == some [[], [[0, 2]], []]
+#guard p1CallCutsets == some [[], [[0]], []]
 
 end Flapjack.Test.LoopToWordBoundaryParity
 

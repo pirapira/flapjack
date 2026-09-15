@@ -4,6 +4,7 @@ import Flapjack.Parser
 import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.LabDiagnostics
 import Flapjack.RiscV.WordDiagnostics
+import Flapjack.RiscV.CakeRegAlloc
 
 /-!
 # Checked pipeline Word-to-Stack diagnostics
@@ -145,6 +146,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
   | [] => .ok ([], bitmaps)
   | (label, parameters, body) :: functions =>
       let wordParameters := wordSsaAbiParameters parameters.length
+      let unflattenedBody := wordProgDCE
+          (LoopToWord.loopToWordCompFunc label parameters body)
       let unallocatedBody := wordProgDCE
           (RiscV.wordFlattenProgramFrom
             (LoopToWord.loopToWordCompFunc label parameters body))
@@ -162,7 +165,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
               handlerLabel := label }
           match RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
               renamedParameters wordAllocatableRegisters.length config.scratch
-              (max allocation.nextSpill 1) (some 1) bitmaps renamedProgram with
+              (RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
+                wordAllocatableRegisters.length unflattenedBody)
+              (some 1) bitmaps renamedProgram with
           | none =>
               let path := (RiscV.wordProgFirstExpressionLoweringFailure config
                 (RiscV.wordProgToNat renamedProgram)).getD []

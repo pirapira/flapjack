@@ -38,6 +38,7 @@ def identityCallSourceMain (value : α) : Prog α :=
   .decCall "result" .one "id" [.const value]
     (.return (.var .local "result"))
 
+set_option maxHeartbeats 4000000 in
 theorem compilePanToLoop_identity_call_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
@@ -55,7 +56,13 @@ theorem compilePanToLoop_identity_call_correct
       (evalPanProgWithCalls identityCallSourceFunctions 20
         (fun _ => none) (identityCallSourceMain value)).map
         (fun result => result.2) := by
-  simp [pipelineLoopFunctions, pipelineLoopFunctionsAux,
+  simp [pipelineLoopFunctions, pipelineLoopFunctionsAux, oCompile, compileCrepToLoop, loopLiveOptimise,
+      loopLiveComp, loopShrink, loopShrinkLeaf, 
+      loopMarkAll, LoopCall.comp, LoopCall.compCall,
+      varsOfExp, loopVarsOfExp, loopListInsert, insertNatSorted, loopListDeleteSorted,
+      loopIntersectSorted, deleteNatSorted,
+      evalLoopCall, evalLoopProgWithFunctions, 
+      evalLoopProg,
     pipelineFunctionInfos, compileToCrepe, compileFunctions, compileFunDecl,
     compileParamVars, functionInfos, compileProg, compileExp,
     allocatedNames, compileArgs, nestedDecs,
@@ -129,6 +136,7 @@ def raiseHandlerSourceResult
       | .returned _ values => values
       | _ => [])
 
+set_option maxHeartbeats 4000000 in
 theorem compilePanToLoop_raise_handler_correct
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
@@ -138,7 +146,13 @@ theorem compilePanToLoop_raise_handler_correct
     raiseHandlerLoopResult exceptionCode value =
       raiseHandlerSourceResult value := by
   simp [raiseHandlerLoopResult, raiseHandlerSourceResult,
-    raiseHandlerLoopFunctions, pipelineLoopFunctions, pipelineLoopFunctionsAux,
+    raiseHandlerLoopFunctions, pipelineLoopFunctions, pipelineLoopFunctionsAux, oCompile, compileCrepToLoop, loopLiveOptimise,
+      loopLiveComp, loopShrink, loopShrinkLeaf, 
+      loopMarkAll, LoopCall.comp, LoopCall.compCall,
+      varsOfExp, loopVarsOfExp, loopListInsert, insertNatSorted, loopListDeleteSorted,
+      loopIntersectSorted, deleteNatSorted,
+      evalLoopCall, evalLoopProgWithFunctions, 
+      evalLoopProg,
     pipelineFunctionInfos, compileToCrepe, compileFunctions, compileFunDecl,
     compileParamVars, functionInfos, compileProg, compileExp,
     allocatedNames, freshNames, compileArgs, nestedDecs, crepNestedSeq,

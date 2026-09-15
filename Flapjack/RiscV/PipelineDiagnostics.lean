@@ -117,10 +117,11 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               stackBase := 0
               addressScratch := 29
               abiBase := 10
+              abiStride := 1
               sectionId := label
               handlerLabel := label }
           let lower :=
-            if (RiscV.wordProgFfiNames renamedProgram).isEmpty then
+            if !RiscV.wordProgNeedsCakeFrame renamedProgram then
               RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
                 renamedParameters wordAllocatableRegisters.length config.scratch
                 allocation.nextSpill (some 1)
@@ -166,10 +167,11 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
               stackBase := 0
               addressScratch := 29
               abiBase := 10
+              abiStride := 1
               sectionId := label
               handlerLabel := label }
           let lower :=
-            if (RiscV.wordProgFfiNames renamedProgram).isEmpty then
+            if !RiscV.wordProgNeedsCakeFrame renamedProgram then
               RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
                 renamedParameters wordAllocatableRegisters.length config.scratch
                 (RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters

@@ -35,6 +35,10 @@ structure WordStackConfig where
      Ordinary RISC-V pipeline configurations use hardware `x10`; the
      source-shaped Cake LongDiv helper retains its original stack ABI base. -/
   abiBase : Nat := 1
+  /- Hardware ABI arguments are consecutive (`x10`, `x11`, ...), while
+     source-shaped Cake helper programs retain the historical even-name
+     stride of two. -/
+  abiStride : Nat := 2
   deriving Repr
 
 /-! The executable StackLang model carries hardware RISC-V register numbers
@@ -1357,7 +1361,8 @@ def wordStackPhysicalMovesFrom (config : WordStackConfig) :
   | [], _ => some []
   | destination :: destinations, source => do
       let destination ← wordStackLocation config destination
-      let rest ← wordStackPhysicalMovesFrom config destinations (source + 2)
+      let rest ← wordStackPhysicalMovesFrom config destinations
+        (source + config.abiStride)
       pure ((destination, .register source) :: rest)
 termination_by destinations => sizeOf destinations
 decreasing_by all_goals decreasing_trivial
@@ -1367,7 +1372,8 @@ def wordStackPhysicalMovesTo (config : WordStackConfig) :
   | [], _ => some []
   | source :: sources, destination => do
       let source ← wordStackLocation config source
-      let rest ← wordStackPhysicalMovesTo config sources (destination + 2)
+      let rest ← wordStackPhysicalMovesTo config sources
+        (destination + config.abiStride)
       pure ((.register destination, source) :: rest)
 termination_by sources => sizeOf sources
 decreasing_by all_goals decreasing_trivial

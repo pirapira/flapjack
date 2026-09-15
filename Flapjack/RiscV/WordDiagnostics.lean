@@ -64,6 +64,29 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/- The bitmap-aware Cake frame path is required not only for foreign calls but
+   also for Word constructors that allocate or install constant data.  The
+   old selector looked only at FFI names, so an ordinary allocating function
+   was sent through the stateless lowering and failed with an empty path. -/
+def wordProgHasFrameOperations : WordProg α → Bool
+  | .seq first second =>
+      wordProgHasFrameOperations first || wordProgHasFrameOperations second
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordProgHasFrameOperations thenBranch || wordProgHasFrameOperations elseBranch
+  | .loop _ body _ | .mustTerminate body => wordProgHasFrameOperations body
+  | .call returns _ _ handler =>
+      (match returns with
+       | some (_, _, returnCode, _, _) => wordProgHasFrameOperations returnCode
+       | none => false) ||
+        (match handler with
+         | some (_, body, _, _) => wordProgHasFrameOperations body
+         | none => false)
+  | .alloc _ _ | .storeConsts _ _ _ _ _ => true
+  | _ => false
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 /-- Collect the foreign-function names referenced by `ffi` nodes in a Word
     program.  The source-facing entrypoint uses this to register the services
     that an original Pancake program may call. -/
@@ -84,6 +107,9 @@ def wordProgFfiNames : WordProg α → List FunName
 termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
+
+def wordProgNeedsCakeFrame (program : WordProg α) : Bool :=
+  !(wordProgFfiNames program).isEmpty || wordProgHasFrameOperations program
 
 def wordToStackProgNatChecked [BEq Nat]
     (config : WordStackConfig) (program : WordProg Nat) :

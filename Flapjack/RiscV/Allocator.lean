@@ -963,7 +963,7 @@ def wordProgReadVars : WordProg α → List Nat
   | .mustTerminate body => wordProgReadVars body
   | .break _ | .continue _ => []
   | .raise exception => [exception]
-  | .return _ values => values
+  | .return label values => label :: values
   | .tick => []
   | .locValue _ _label => []
   | .call returns _ arguments handler =>

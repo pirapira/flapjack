@@ -11,6 +11,11 @@ import Flapjack.RiscV.WordExpressionFlatten
 import Flapjack.RiscV.RegAlloc
 import Flapjack.RiscV.WordToStack
 import Flapjack.RiscV.WordDiagnostics
+import Flapjack.RiscV.CakeRegAlloc
+import Flapjack.RiscV.WordDeadCode
+import Flapjack.RiscV.WordFuseConditions
+import Flapjack.RiscV.WordInstSelect
+import Flapjack.RiscV.WordUnreach
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Loops
 import Flapjack.RiscV.Link
@@ -470,34 +475,38 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
       Option (List (Nat × List Nat × StackProg Nat))
   | [] => some []
   | (label, parameters, body) :: functions => do
-      let slots := loopAccVars body parameters
-      let context : WordContext :=
-        { vars := slots.map (fun name => (name, name + 2)) }
-      let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
+      let wordParameters := wordSsaAbiParameters parameters.length
+      let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
+        (RiscV.wordFuseConditions
+          (RiscV.wordInstSelectProgramFrom
+            (RiscV.wordFlattenProgramFrom
+              (LoopToWord.loopToWordCompFunc label parameters body)))))
       let (_, renamedParameters, renamedProgram, allocation) ←
-        wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
-          wordParameters unallocatedBody
+        RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead label wordParameters
+          unallocatedBody
+      let frameSlots := max allocation.nextSpill
+        (max (wordParameters.length - RiscV.CakeRegAlloc.cakeRiscVRegisterCount)
+          (RiscV.wordProgMaxCallArguments renamedProgram -
+            RiscV.CakeRegAlloc.cakeRiscVRegisterCount))
       let config : RiscV.WordStackConfig :=
         { locations := allocation.locations
-          scratch := 31
+          scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
           stackBase := 0
           addressScratch := 29
-          abiBase := 10
+          abiBase := 1
           abiStride := 1
+          abiFrameSlots := frameSlots
           sectionId := label
           handlerLabel := label }
       let lower :=
-        if !RiscV.wordProgNeedsCakeFrame renamedProgram then
-          RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
-            renamedParameters wordAllocatableRegisters.length config.scratch
-            allocation.nextSpill (some 1)
-            (RiscV.wordStackInitialBitmaps false) renamedProgram
+        if frameSlots = 0 then
+          RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves config
+            renamedParameters RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
+            frameSlots (some 1) (RiscV.wordStackInitialBitmaps false) renamedProgram
         else
-          RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
-            renamedParameters wordAllocatableRegisters.length config.scratch
-            allocation.nextSpill (some 1)
-            (RiscV.wordStackInitialBitmaps false) renamedProgram
+          RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves config
+            renamedParameters RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
+            frameSlots (some 1) (RiscV.wordStackInitialBitmaps false) renamedProgram
       let (stackBody, _) ← lower
       let rest ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa functions
       pure ((label, wordParameters, stackBody) :: rest)
@@ -1203,7 +1212,7 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked [NeZero width]
   let pipeline ← compileFlapjackEntry architecture bytesInWord fromNat start declarations
   let functions ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa pipeline.loop
   let initialLabel := fullSsaInitialLabLabel functions
-  RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscV { services := services }
+  RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscVCake { services := services }
     removeConfig 0 initialLabel (functions.map (fun (label, _, body) => (label, body)))
 
 def compileFlapjackChecked [BEq String] [BEq α] [OfNat α 0] [OfNat α 1]

@@ -406,9 +406,12 @@ def loopAccVars : LoopProg α → List Nat → List Nat
   | .break _, names => names
   | .continue _, names => names
   | .loop _ body _, names => loopAccVars body names
-  | .ite _ condition right thenBranch elseBranch _, names =>
-      let names := loopAccVars thenBranch (loopAccVars elseBranch names)
-      loopInsert condition (match right with | .reg value => value :: names | .imm _ => names)
+  | .ite _ _ _ thenBranch elseBranch _, names =>
+      /- `loopLang$acc_vars` intentionally records assigned variables only;
+         condition operands are reads and are not part of the dense
+         `loop_to_word` context.  In particular, do not include the
+         condition or register operand here (`loopLangScript.sml:123`). -/
+      loopAccVars thenBranch (loopAccVars elseBranch names)
   | .arith operation, names =>
       match operation with
       | .longMul left right _ _ => loopInsertAll [left, right] names

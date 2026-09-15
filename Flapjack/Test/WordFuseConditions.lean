@@ -89,3 +89,4 @@ def runChecks : IO Bool := do
   pure ok
 
 end Flapjack.Test.WordFuseConditions
+

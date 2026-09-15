@@ -49,6 +49,10 @@ def originalFromNumSetHelloAccVars : List Nat := [7, 3, 1, 5, 4, 2, 6]
 def originalMkNewCutsetEmpty : List Nat := [0]
 def originalMkNewCutsetMapped : List Nat := [0, 6]
 def originalMkNewCutsetDuplicate : List Nat := [0, 6]
+/-! `wordMkNewCutset` uses the same `fromNumSet` traversal as the source
+    `mk_new_cutset_def`; this is the direct oracle case with a nontrivial
+    Patricia-tree order. -/
+def originalWordMkNewCutsetPatricia : List Nat := [0, 9, 5, 3, 7, 6, 4, 8]
 def originalCompSkip : WordProg Nat := .skip
 def originalCompAssignConst : WordProg Nat := .assign 6 (.const 7)
 def originalCompSeqTick : WordProg Nat := .seq .skip .tick
@@ -145,6 +149,9 @@ def sameNatSet (left right : List Nat) : Bool :=
 #guard findVar (makeCtxt 2 [10, 11, 12] []) 10 == originalFindVarCtxt10
 #guard findVar (makeCtxt 2 [10, 11, 12] []) 11 == originalFindVarCtxt11
 #guard findVar (makeCtxt 2 [10, 11, 12] []) 12 == originalFindVarCtxt12
+#guard wordMkNewCutset
+    ({ vars := [(1, 3), (2, 4), (3, 5), (4, 6), (5, 7), (6, 8), (7, 9)] } : WordContext)
+    [1, 2, 5, 3, 5, 6, 7, 4] == originalWordMkNewCutsetPatricia
 
 example : findRegImm [] (.imm 5 : RegImm Nat) = originalFindRegImmImm := rfl
 example : findRegImm [] (.reg 11 : RegImm Nat) = originalFindRegImmReg := rfl

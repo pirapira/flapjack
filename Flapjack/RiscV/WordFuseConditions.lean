@@ -236,3 +236,4 @@ def wordFuseConditions [BEq α] [OfNat α 0] [OfNat α 1]
       (wordProgToList duplicated))
 
 end Flapjack.RiscV
+

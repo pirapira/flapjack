@@ -111,6 +111,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
+          let frameSlots := allocation.nextSpill
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := 31
@@ -118,18 +119,19 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               addressScratch := 29
               abiBase := 10
               abiStride := 1
+              abiFrameSlots := frameSlots
               sectionId := label
               handlerLabel := label }
           let lower :=
             if !RiscV.wordProgNeedsCakeFrame renamedProgram then
               RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
                 renamedParameters wordAllocatableRegisters.length config.scratch
-                allocation.nextSpill (some 1)
+                frameSlots (some 1)
                 (RiscV.wordStackInitialBitmaps false) renamedProgram
             else
               RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
                 renamedParameters wordAllocatableRegisters.length config.scratch
-                allocation.nextSpill (some 1)
+                frameSlots (some 1)
                 (RiscV.wordStackInitialBitmaps false) renamedProgram
           match lower with
           | none =>
@@ -161,6 +163,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
+          let frameSlots := RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
+            wordAllocatableRegisters.length unflattenedBody
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := 31
@@ -168,20 +172,19 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
               addressScratch := 29
               abiBase := 10
               abiStride := 1
+              abiFrameSlots := frameSlots
               sectionId := label
               handlerLabel := label }
           let lower :=
             if !RiscV.wordProgNeedsCakeFrame renamedProgram then
               RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
                 renamedParameters wordAllocatableRegisters.length config.scratch
-                (RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
-                  wordAllocatableRegisters.length unflattenedBody)
+                frameSlots
                 (some 1) bitmaps renamedProgram
             else
               RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
                 renamedParameters wordAllocatableRegisters.length config.scratch
-                (RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
-                  wordAllocatableRegisters.length unflattenedBody)
+                frameSlots
                 (some 1) bitmaps renamedProgram
           match lower with
           | none =>

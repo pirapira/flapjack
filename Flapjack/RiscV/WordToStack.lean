@@ -1663,6 +1663,23 @@ def evalWordStackMachine [NeZero width]
   | .seq first second => do
       let state ← evalWordStackMachine state first
       evalWordStackMachine state second
+  | .ite operator condition right thenBranch elseBranch =>
+      let rightValue := match right with
+        | .imm value => BitVec.ofNat width value
+        | .reg register => state.registers register
+      let conditionHolds := match operator with
+        | .equal => state.registers condition == rightValue
+        | .notEqual => state.registers condition != rightValue
+        | .lower => decide (state.registers condition < rightValue)
+        | .notLower => decide (¬ state.registers condition < rightValue)
+        | .less => signedLess (state.registers condition) rightValue
+        | .notLess => !signedLess (state.registers condition) rightValue
+        | .test => state.registers condition &&& rightValue == 0
+        | .notTest => state.registers condition &&& rightValue != 0
+      if conditionHolds then
+        evalWordStackMachine state thenBranch
+      else
+        evalWordStackMachine state elseBranch
   | _ => none
 
 def wordStackMachineValue [NeZero width] (config : WordStackConfig)
@@ -3336,8 +3353,8 @@ def wordToStackProgWordWithLocationBitmaps [NeZero width]
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)
     (program : WordProg (Word width)) :
   Option (StackProg Nat × WordStackBitmapState) :=
-  wordToStackProgWordWithLocationBitmapsFused config registerCount bitmapRegister frameSlots width
-    storeConstsStub state program
+  wordToStackProgNatWithLocationBitmaps config registerCount bitmapRegister frameSlots width
+    storeConstsStub state (wordProgToNat program)
 
 /-! Function-entry lowering for allocated Word programs.  Cake's stack ABI
     places arguments in stack registers beginning at 1; the allocator may

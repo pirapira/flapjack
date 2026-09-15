@@ -1650,9 +1650,8 @@ theorem evalWordStackMachine_move_preserves_value [NeZero width]
       ] at heval ⊢
   all_goals
     try split at heval <;>
-    simp_all [evalWordStackMachine, wordStackMachineValue, wordStackLocation,
-      wordStackOffset, wordStackMachineWriteRegister,
-      wordStackMachineWriteSlot, hdestination, hsource]
+    simp_all [evalWordStackMachine, wordStackMachineWriteRegister,
+      wordStackMachineWriteSlot]
     cases heval
     simp [
       
@@ -1891,9 +1890,7 @@ theorem evalWordStackBasic_move_preserves_value [NeZero width]
       hdestination, hsource] at heval ⊢
   all_goals
     try split at heval <;>
-    simp_all [evalWordStackBasic, wordStackValue, wordStackLocation,
-      wordStackOffset, wordStackWriteRegister, wordStackWriteSlot,
-      hdestination, hsource]
+    simp_all [evalWordStackBasic, wordStackWriteRegister, wordStackWriteSlot]
     cases heval
     simp [
       

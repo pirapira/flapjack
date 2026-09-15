@@ -401,6 +401,18 @@ theorem loopInsertAll_nodup (added names : List Nat)
       exact loopInsert_nodup name (loopInsertAll rest names)
         (ih names hnames)
 
+/-! `acc_vars` stores a finite `num_set`, not an insertion-ordered list.
+    Pancake later exposes it through `fromNumSet`, whose `toAList` traversal
+    is ascending.  Keep a separate sorted insertion boundary here so the
+    dense `loop_to_word` context receives the same variable order. -/
+def loopAccInsertNat (name : Nat) (names : List Nat) : List Nat :=
+  insertNatSorted name names
+
+def loopAccInsertAll : List Nat → List Nat → List Nat
+  | [], names => names
+  | name :: rest, names =>
+      loopAccInsertNat name (loopAccInsertAll rest names)
+
 def loopAccVars : LoopProg α → List Nat → List Nat
   | .seq first second, names => loopAccVars first (loopAccVars second names)
   | .break _, names => names
@@ -414,9 +426,11 @@ def loopAccVars : LoopProg α → List Nat → List Nat
       loopAccVars thenBranch (loopAccVars elseBranch names)
   | .arith operation, names =>
       match operation with
-      | .longMul left right _ _ => loopInsertAll [left, right] names
-      | .longDiv left right _ _ _ => loopInsertAll [left, right] names
-      | .div destination _ _ => loopInsert destination names
+      | .longMul left right _ _ =>
+          loopAccInsertAll [left, right] names
+      | .longDiv left right _ _ _ =>
+          loopAccInsertAll [left, right] names
+      | .div destination _ _ => loopAccInsertNat destination names
   | .mark body, names => loopAccVars body names
   | .tick, names => names
   | .skip, names => names
@@ -425,19 +439,19 @@ def loopAccVars : LoopProg α → List Nat → List Nat
   | .return _, names => names
   | .call none _ _ _, names => names
   | .call (some (returns, _)) _ _ none, names =>
-      loopInsertAll returns names
+      loopAccInsertAll returns names
   | .call (some (returns, _)) _ _
       (some (exception, handler, normal, _)), names =>
       let names := loopAccVars handler (loopAccVars normal names)
-      loopInsert exception (loopInsertAll returns names)
-  | .locValue destination _label, names => loopInsert destination names
-  | .assign destination _, names => loopInsert destination names
-  | .primitive destinations _ _, names => loopInsertAll destinations names
-  | .shMem _ destination _, names => loopInsert destination names
+      loopAccInsertNat exception (loopAccInsertAll returns names)
+  | .locValue destination _label, names => loopAccInsertNat destination names
+  | .assign destination _, names => loopAccInsertNat destination names
+  | .primitive destinations _ _, names => loopAccInsertAll destinations names
+  | .shMem _ destination _, names => loopAccInsertNat destination names
   | .store _ _, names => names
   | .setGlobal _ _, names => names
-  | .load32 _ destination, names => loopInsert destination names
-  | .loadByte _ destination, names => loopInsert destination names
+  | .load32 _ destination, names => loopAccInsertNat destination names
+  | .loadByte _ destination, names => loopAccInsertNat destination names
   | .store32 _ _, names => names
   | .storeByte _ _, names => names
   | .ffi _ _ _ _ _ _, names => names

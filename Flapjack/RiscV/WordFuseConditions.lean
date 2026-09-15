@@ -78,6 +78,84 @@ def wordBooleanDefinition? [BEq α] [OfNat α 0] [OfNat α 1] :
       else none
   | _ => none
 
+/-! The source `word_simp$simp_duplicate_if` hoists a second conditional over
+    the short sequence between it and a preceding boolean definition.  The
+    `crep_to_loop` shape is particularly regular: a comparison writes 1/0 to
+    its left operand, a copy carries that result to a temporary, and a
+    `!= 0` conditional consumes it.  Rebuild that as one conditional and put
+    the two constant-result writes in the corresponding branches. -/
+def wordSimpleStatement : WordProg α → Bool
+  | .skip | .tick | .move _ _ | .assign _ _ => true
+  | _ => false
+
+def wordFindBooleanTest [BEq α] [OfNat α 0] [OfNat α 1] :
+    Nat → Nat → List (WordProg α) →
+      Option (List (WordProg α) × Nat × WordProg α × WordProg α ×
+        List (WordProg α))
+  | 0, _, _ => none
+  | fuel + 1, condition, statements =>
+      match statements with
+      | .assign temporary (.var source) :: statement :: rest =>
+          if source == condition then
+            match statement with
+            | .ite .notEqual tested (.imm _) thenBranch elseBranch =>
+                if tested == temporary then
+                  some ([], temporary, thenBranch, elseBranch, rest)
+                else none
+            | _ =>
+                if wordSimpleStatement statement then
+                  match wordFindBooleanTest fuel condition (statement :: rest) with
+                  | some (intermediate, temporary, thenBranch, elseBranch, rest) =>
+                      some (.assign temporary (.var source) :: intermediate,
+                        temporary, thenBranch, elseBranch, rest)
+                  | none => none
+                else none
+          else none
+      | statement :: rest =>
+          if wordSimpleStatement statement then
+            match wordFindBooleanTest fuel condition rest with
+            | some (intermediate, temporary, thenBranch, elseBranch, rest) =>
+                some (statement :: intermediate, temporary, thenBranch, elseBranch, rest)
+            | none => none
+          else none
+      | [] => none
+def wordMergeBooleanIfs [BEq α] [OfNat α 0] [OfNat α 1] :
+    Nat → List (WordProg α) → List (WordProg α)
+  | 0, statements => statements
+  | _fuel + 1, [] => []
+  | fuel + 1, statement :: rest =>
+      let recurse := wordMergeBooleanIfs fuel
+      match statement with
+      | .loop liveIn body liveOut =>
+          .loop liveIn
+              (wordListToProg (recurse (wordProgToList body))) liveOut ::
+            recurse rest
+      | .ite operator condition right thenBranch elseBranch =>
+          let then' := wordListToProg (recurse (wordProgToList thenBranch))
+          let else' := wordListToProg (recurse (wordProgToList elseBranch))
+          match wordBooleanDefinition? statement with
+          | some defined =>
+              if defined == condition then
+                match wordFindBooleanTest fuel condition rest with
+                | some (intermediate, temporary, testThen, testElse, remaining) =>
+                    let thenTest := wordListToProg
+                      (recurse (wordProgToList testThen))
+                    let elseTest := wordListToProg
+                      (recurse (wordProgToList testElse))
+                    let mergedThen := wordListToProg
+                      ([then'] ++ intermediate ++
+                        [.assign temporary (.const (1 : α)), thenTest])
+                    let mergedElse := wordListToProg
+                      ([else'] ++ intermediate ++
+                        [.assign temporary (.const (0 : α)), elseTest])
+                    .ite operator condition right mergedThen mergedElse ::
+                      recurse remaining
+                | none => statement :: recurse rest
+              else statement :: recurse rest
+          | none => statement :: recurse rest
+      | other => other :: recurse rest
+  termination_by fuel => fuel
+
 def wordFuseConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
       (fuel : Nat) (facts : List (WordConditionFact α))
       (statements : List (WordProg α)) : List (WordProg α) :=
@@ -88,6 +166,11 @@ def wordFuseConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
       | [] => []
       | statement :: rest =>
           match statement with
+          | .loop liveIn body liveOut =>
+              let body' := wordListToProg
+                (wordFuseConditionsAux fuel [] (wordProgToList body))
+              .loop liveIn body' liveOut ::
+                wordFuseConditionsAux fuel facts rest
           | .ite .notEqual name (.imm _) thenBranch elseBranch =>
               let then' := wordListToProg
                 (wordFuseConditionsAux fuel facts (wordProgToList thenBranch))
@@ -128,11 +211,10 @@ def wordFuseConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
               let facts'' :=
                 match wordBooleanDefinition? statement with
                 | some name =>
-                    let operandsSafe :=
-                      !(written.contains condition) &&
-                        (match right with
-                         | .imm _ => true
-                         | .reg register => !(written.contains register))
+                  let operandsSafe :=
+                      match right with
+                      | .imm _ => true
+                      | .reg register => !(written.contains register)
                     if operandsSafe then
                       wordConditionFactSet facts' name
                         (some { name := name, operator := operator,
@@ -152,7 +234,9 @@ conditional branches; if the bound is exhausted the program is returned
 unchanged, so the pass is always sound. -/
 def wordFuseConditions [BEq α] [OfNat α 0] [OfNat α 1]
     (program : WordProg α) : WordProg α :=
+  let merged := wordListToProg
+    (wordMergeBooleanIfs (wordProgFuel program + 1) (wordProgToList program))
   wordListToProg
-    (wordFuseConditionsAux (wordProgFuel program + 1) [] (wordProgToList program))
+    (wordFuseConditionsAux (wordProgFuel merged + 1) [] (wordProgToList merged))
 
 end Flapjack.RiscV

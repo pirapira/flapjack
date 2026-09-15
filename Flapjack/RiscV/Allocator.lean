@@ -322,7 +322,7 @@ reconciliation, and carries loop entry/exit frames for back-edge moves. -/
 structure WordSsaState where
   current : NatInfoMap Nat
   next : Nat
-  deriving Repr
+  deriving DecidableEq, Repr
 
 def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
   match lookupNatInfo name state.current with
@@ -597,6 +597,7 @@ structure WordSsaLoopFrame where
   exit : WordSsaState
   entryNames : List Nat
   exitNames : List Nat
+  deriving DecidableEq, Repr
 
 def wordSsaRestrict (state : WordSsaState) (names : List Nat) : WordSsaState :=
   { state with current := state.current.filter (fun entry => entry.1 ∈ names) }
@@ -2326,7 +2327,7 @@ def wordProgSpecialConflictEdges : WordProg α → List (Nat × Nat)
 structure WordSpillState where
   locations : NatInfoMap WordLocation
   nextSpill : Nat
-  deriving Repr
+  deriving DecidableEq, Repr
 
 def wordUsedLocationRegisters (names : List Nat)
     (locations : NatInfoMap WordLocation) : List Nat :=

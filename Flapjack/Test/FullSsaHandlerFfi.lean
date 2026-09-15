@@ -342,12 +342,15 @@ theorem fullSsaCaughtHandlerFfi_source_loop_simulation :
 def fullSsaCaughtHandlerFfiHost : RiscV.WordFfiHost 64 :=
   fun service configuration _ _ _ state =>
     if service = 7 then
-      some { (RiscV.writeRegister state 10 (configuration + 1)) with
+      -- The full-SSA allocator assigns the caught-handler result to x21 in
+      -- this fixture; FFI results must be written to that allocated register.
+      some { (RiscV.writeRegister state 21 (configuration + 1)) with
         pc := state.pc + 4 }
     else none
 
 def fullSsaCaughtHandlerFfiMachineResult : Option (List (RiscV.Word 64)) := do
-  let sections ← compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked .rv64i
+  let sections : List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64)) ←
+    compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked .rv64i
     (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) [("inc", 7)]
     fullSsaHandlerFfiRemoveConfig fullSsaCaughtHandlerFfiDeclarations
   let entry ← fullSsaHandlerFfiLookupEntry 2 sections

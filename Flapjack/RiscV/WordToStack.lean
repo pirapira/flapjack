@@ -1472,10 +1472,18 @@ def wordStackReturn (config : WordStackConfig) (values : List Nat) :
   | [] => pure moves
   | _ => pure (wordStackJoin moves (.return config.abiBase))
 
-def wordToStackInst (config : WordStackConfig) : WordInst → Option (StackProg α)
+def wordToStackInst {α : Type} (config : WordStackConfig) :
+    WordInst α → Option (StackProg α)
   | .mem operator sourceOrDestination address =>
       wordStackMemoryInst config operator sourceOrDestination address
   | .arith operation => wordStackArithInst config operation
+  | .const destination value => pure (.inst (.const destination value))
+  | .binop operator destination source right =>
+      pure (.inst (.binop operator destination source right))
+  | .shiftInst operator destination source amount =>
+      pure (.inst (.shiftInst operator destination source amount))
+  | .memOffset operator destination base offset =>
+      pure (.inst (.memOffset operator destination base offset))
 
 /-! A compact executable semantics for the move fragment.  StackLang uses
 natural-number register names, so this boundary deliberately models the
@@ -3105,11 +3113,22 @@ def wordRegImmToNat : WordRegImm (Word width) → WordRegImm Nat
    programs at this representation boundary; replacing them with `skip`
    would make the generated call return without restoring the caller state or
    running its continuation. -/
+def wordInstToNat : WordInst (Word width) → WordInst Nat
+  | .arith operation => .arith operation
+  | .mem operator destination address => .mem operator destination address
+  | .const destination value => .const destination value.toNat
+  | .binop operator destination source right =>
+      .binop operator destination source (wordRegImmToNat right)
+  | .shiftInst operator destination source amount =>
+      .shiftInst operator destination source (wordRegImmToNat amount)
+  | .memOffset operator destination base offset =>
+      .memOffset operator destination base offset.toNat
+
 def wordProgToNat : WordProg (Word width) → WordProg Nat
   | .skip => .skip
   | .move priority moves => .move priority moves
   | .assign name value => .assign name (wordExpToNat value)
-  | .inst instruction => .inst instruction
+  | .inst instruction => .inst (wordInstToNat instruction)
   | .get destination store => .get destination (wordStoreToNat store)
   | .store address value => .store (wordExpToNat address) value
   | .set store value => .set (wordStoreToNat store) (wordExpToNat value)
@@ -3190,7 +3209,8 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .assign destination value =>
       (wordStackCompileExpToPhysicalNat config destination (wordExpToNat value)).map
         (fun code => (code, state))
-  | .inst instruction => (wordToStackInst config instruction).map (fun code => (code, state))
+  | .inst instruction =>
+      (wordToStackInst config (wordInstToNat instruction)).map (fun code => (code, state))
   | .get destination store =>
       (wordStackGet config destination (wordStoreToNat store)).map (fun code => (code, state))
   | .store address value =>

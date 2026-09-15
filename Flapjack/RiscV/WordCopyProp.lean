@@ -53,7 +53,7 @@ def wordCopyRegImm (state : WordCopyState) : WordRegImm α → WordRegImm α
   | .imm value => .imm value
   | .reg name => .reg (wordCopyLookup state name)
 
-def wordCopyInst (state : WordCopyState) : WordInst → WordInst × WordCopyState
+def wordCopyInst {α : Type u} (state : WordCopyState) : WordInst α → WordInst α × WordCopyState
   | .arith operation =>
       match operation with
       | .longMul left right sourceLeft sourceRight =>
@@ -83,6 +83,35 @@ def wordCopyInst (state : WordCopyState) : WordInst → WordInst × WordCopyStat
       | .store | .store8 | .store16 | .store32 =>
           (.mem operator (wordCopyLookup state destination)
             (wordCopyLookup state address), state)
+  | .const destination value =>
+      (.const destination value, wordCopyRemove state destination)
+  | .binop operator destination source right =>
+      match right with
+      | .imm value =>
+          (.binop operator destination (wordCopyLookup state source) (.imm value),
+            wordCopyRemove state destination)
+      | .reg name =>
+          (.binop operator destination (wordCopyLookup state source)
+            (.reg (wordCopyLookup state name)),
+            wordCopyRemove state destination)
+  | .shiftInst operator destination source amount =>
+      match amount with
+      | .imm value =>
+          (.shiftInst operator destination (wordCopyLookup state source)
+            (.imm value),
+            wordCopyRemove state destination)
+      | .reg name =>
+          (.shiftInst operator destination (wordCopyLookup state source)
+            (.reg (wordCopyLookup state name)),
+            wordCopyRemove state destination)
+  | .memOffset operator destination base offset =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 =>
+          (.memOffset operator destination (wordCopyLookup state base) offset,
+            wordCopyRemove state destination)
+      | .store | .store8 | .store16 | .store32 =>
+          (.memOffset operator (wordCopyLookup state destination)
+            (wordCopyLookup state base) offset, state)
 
 def wordCopyMerge (left right : WordCopyState) : WordCopyState :=
   { aliases := left.aliases.filter (fun entry =>

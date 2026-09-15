@@ -28,6 +28,57 @@ def wordDeadSelectSeq (first second : WordProg α) : WordProg α :=
   | program, .skip => program
   | _, _ => .seq first second
 
+/-! Cake's `pull_exp` and `flatten_exp` are observable before the allocator:
+    `pull_ops` accumulates operands on the left, and `flatten_exp` rebuilds an
+    n-ary operation as a right-associated binary tree.  In particular,
+    `Add [x, y]` becomes `Add [y, x]`.  Keeping these two small normalizers at
+    the instruction-selection boundary preserves the source operand order
+    that feeds Cake's move preferences and clash graph. -/
+
+def wordInstPullOps (operator : BinOp) :
+    List (WordExp α) → List (WordExp α) → List (WordExp α)
+  | [], accumulated => accumulated
+  | expression :: expressions, accumulated =>
+      match expression with
+      | .op nested args =>
+          if nested = operator then
+            wordInstPullOps operator expressions (args ++ accumulated)
+          else
+            wordInstPullOps operator expressions (expression :: accumulated)
+      | _ => wordInstPullOps operator expressions (expression :: accumulated)
+termination_by expressions _ => sizeOf expressions
+decreasing_by all_goals decreasing_trivial
+
+def wordInstPullExp : WordExp α → WordExp α
+  | .op operator [] => .op operator []
+  | .op operator [expression] => wordInstPullExp expression
+  | .op operator expressions =>
+      let expressions := expressions.map wordInstPullExp
+      .op operator (wordInstPullOps operator expressions [])
+  | .load address => .load (wordInstPullExp address)
+  | .shift operator left right =>
+      .shift operator (wordInstPullExp left) (wordInstPullExp right)
+  | expression => expression
+termination_by expression => sizeOf expression
+decreasing_by all_goals decreasing_trivial
+
+def wordInstFlattenExp : WordExp α → WordExp α
+  | .op operator [] => .op operator []
+  | .op operator [expression] => wordInstFlattenExp expression
+  | .op operator (expression :: expressions) =>
+      .op operator
+        [ wordInstFlattenExp (.op operator expressions)
+        , wordInstFlattenExp expression ]
+  | .load address => .load (wordInstFlattenExp address)
+  | .shift operator left right =>
+      .shift operator (wordInstFlattenExp left) (wordInstFlattenExp right)
+  | expression => expression
+termination_by expression => sizeOf expression
+decreasing_by all_goals decreasing_trivial
+
+def wordInstNormalizeExp (expression : WordExp α) : WordExp α :=
+  wordInstFlattenExp (wordInstPullExp expression)
+
 def wordInstSelectAtom (temp : Nat) : WordExp α → WordProg α × WordExp α
   | .const value => (.assign temp (.const value), .var temp)
   | .var name => (.assign temp (.var name), .var temp)
@@ -59,7 +110,8 @@ def wordInstSelectProgram (temp : Nat) : WordProg α → WordProg α
       wordDeadSelectSeq (wordInstSelectProgram temp first)
         (wordInstSelectProgram temp second)
   | .shareInst operator name address =>
-      let (prelude, address) := wordInstSelectAtom temp address
+      let (prelude, address) :=
+        wordInstSelectAtom temp (wordInstNormalizeExp address)
       wordDeadSelectSeq prelude (.shareInst operator name address)
   | .ite operator condition right thenBranch elseBranch =>
       .ite operator condition right

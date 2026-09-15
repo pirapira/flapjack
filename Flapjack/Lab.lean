@@ -214,14 +214,6 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
             handlerResult.nextLabel + 1⟩
   | .call _ _ _ =>
       ⟨[], false, counter⟩
-  | .seq (.seq (.const addressScratch offset)
-      (.arith .add scratch base right))
-      (.inst (.mem operator register address)) =>
-      ⟨[.asm (.stackMem operator register base offset) [] 0], false, counter⟩
-  | .seq (.seq (.const addressScratch offset)
-      (.arith .sub scratch base right))
-      (.inst (.mem operator register address)) =>
-      ⟨[.asm (.stackMemSub operator register base offset) [] 0], false, counter⟩
   | .seq (.const scratch value)
       (.arith operator destination left right) =>
       let canFuse :=

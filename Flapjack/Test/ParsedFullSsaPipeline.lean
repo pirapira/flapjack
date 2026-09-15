@@ -62,11 +62,16 @@ def parsedCallMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← parsedCallLinked
   let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  /- The linked main section's call continuation is at byte 252.  Stopping
-     there observes the value at the source-level function boundary before
-     the surrounding runtime wrapper resumes. -/
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 252 [] image [2] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
+  /- The call continuation sits two instructions before the end of the linked
+     main section (the `jalr` return and the instruction that follows the call
+     site), so it must track the section length rather than a fixed byte. -/
+  let mainLength ←
+    match sections.find? (fun (label, _, _) => label == 2) with
+    | some (_, _, code) => some code.length
+    | none => none
+  let returnAddress := entry + BitVec.ofNat 64 (4 * (mainLength - 2))
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 def parsedCallSourceResult : Option (List (RiscV.Word 64)) := do
   let functions ← parsedCallSourceFunctions
@@ -155,8 +160,13 @@ def parsedConditionalMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← parsedConditionalLinked
   let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
+  let mainLength ←
+    match sections.find? (fun (label, _, _) => label == 2) with
+    | some (_, _, code) => some code.length
+    | none => none
+  let returnAddress := entry + BitVec.ofNat 64 (4 * (mainLength - 2))
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 def parsedConditionalSourceResult : Option (List (RiscV.Word 64)) := do
   let body ← parsedConditionalSourceMain

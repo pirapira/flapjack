@@ -178,6 +178,9 @@ inductive Instruction (width : Nat) where
   | store32 (source address : Fin 32)
   | loadWord (destination address : Fin 32)
   | storeWord (source address : Fin 32)
+  /- CakeML's `Addr base offset` memory operand: the effective address is the
+     base register plus a byte offset encoded in the instruction immediate.
+     The stack remover emits this form directly, so the port must carry it. -/
   | loadWordOffset (destination address : Fin 32) (offset : Word width)
   | storeWordOffset (source address : Fin 32) (offset : Word width)
   deriving DecidableEq, Repr
@@ -569,6 +572,10 @@ def executeTrap (state : State width) : Instruction width → Option ExceptionTy
       accessAligned .read (readRegister state address) (width / 8)
   | .storeWord _ address =>
       accessAligned .write (readRegister state address) (width / 8)
+  | .loadWordOffset _ address offset =>
+      accessAligned .read (readRegister state address + offset) (width / 8)
+  | .storeWordOffset _ address offset =>
+      accessAligned .write (readRegister state address + offset) (width / 8)
   | _ => none
 
 /-! An execution boundary that rejects instructions classified as trapping.

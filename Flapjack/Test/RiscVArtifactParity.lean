@@ -629,17 +629,14 @@ def cakeRelationalConditionBytes : List (BitVec 8) :=
    0x13, 0x65, 0x00, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
-/-- The port currently lowers the same condition through the general
-`Lab.labFlatten` branch shape: the comparison is negated and the branches are
-swapped with an extra unconditional jump, so the emitted user section is not
-yet byte-identical to the original.  Tracked by `flapjack-pxn.8.5.14.11`
-(GH #1027); this guard pins the original-CakeML oracle bytes and asserts the
-gap instead of weakening the parity check. -/
-def relationalConditionGapTracked : Bool :=
+/-- The port now emits the same direct-branch section as CakeML for the
+relational-condition fixture.  The original bytes remain pinned here so this
+is an exact source-to-RISC-V oracle check. -/
+def relationalConditionExactParity : Bool :=
   match compileRuntimeImage relationalConditionSource with
   | some image =>
       match emittedSections image with
-      | _ :: _ :: fSection :: _ => fSection.2.2 != cakeRelationalConditionBytes
+      | _ :: _ :: fSection :: _ => fSection.2.2 == cakeRelationalConditionBytes
       | _ => false
   | none => false
 
@@ -663,10 +660,18 @@ def helloSource : String :=
     "}"
 
 /-- Original CakeML `cml_main` length for `hello.pnk` from the checked
-assembly oracle (CakeML emits 152 bytes; the port currently emits 224). -/
+assembly oracle (CakeML emits 152 bytes; the port currently emits 172 under
+`artifactCompileConfig`). -/
 def cakeHelloMainLength : Nat := 152
 
-def flapjackHelloMainLength : Nat := 180
+/-- Internal pin of the port's current `cml_main` length for `hello.pnk`
+(172 bytes under `artifactCompileConfig`, whose `stackPointer := 24`,
+`stackBase := 25`, `jump := true` differ from the CLI `compileRemoveConfig`;
+re-measured after the Cake base+offset memory addressing mode was fused at the
+Lab boundary, which shortened the generated initializer).  This is a port-side
+layout pin only; the CakeML comparison is enforced by
+`helloMainLengthGapTracked` and the corpus `cake_sha256`. -/
+def flapjackHelloMainLength : Nat := 172
 
 def helloRuntimeImage : Option (SourceRiscVRuntimeImage 64) :=
   compileRuntimeImage helloSource
@@ -715,6 +720,7 @@ def helloMainLengthGapTracked : Bool :=
 #guard bitmapCallsWordsMatch
 #guard frameOccupancyP1BitmapsMatch
 #guard frameOccupancyP9BitmapsMatch
+#guard relationalConditionExactParity
 #guard artifactAccepted
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches
@@ -780,8 +786,8 @@ def runChecks : IO Bool := do
          frameOccupancyP1BitmapsMatch),
       ("frame-occupancy p9 exact vector gap is tracked, not accepted",
          frameOccupancyP9BitmapsMatch),
-      ("relational condition direct-branch gap is tracked against the Cake oracle",
-        relationalConditionGapTracked),
+      ("relational condition direct-branch section is byte-identical to Cake",
+        relationalConditionExactParity),
       /- `helloEmittedSectionsMatch` is a known unresolved lowering gap.  Its
          oracle remains available above, while this stale expectation is kept
          out of the regression gate until the implementation is repaired. -/

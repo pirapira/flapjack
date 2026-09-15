@@ -50,6 +50,20 @@ def pipelineAllocatedCallDeclarations : List (Decl (RiscV.Word 64)) :=
         [.const (BitVec.ofNat 64 41)]
         (.return (.var .local "result")), returnShape := .one }]
 
+/- `pan_to_target` synthesizes and moves a zero-returning `main` before any
+   source declaration when the input has no entry function.  Keep this
+   target-level check separate from the source-facing parser checks: callers
+   of `compileFlapjackTarget` must get the same declaration order as Pancake. -/
+def pipelineNoMainTargetHasSyntheticMain : Bool :=
+  let result := compileFlapjackTarget (α := RiscV.Word 64) .rv64i
+    (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
+    pipelineStackAddDeclarations
+  match result.simplified with
+  | .function declaration :: _ => declaration.name == "main" && declaration.params.isEmpty
+  | _ => false
+
+#guard pipelineNoMainTargetHasSyntheticMain
+
 #guard
     (compileFlapjackRiscVViaStack (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
@@ -435,7 +449,7 @@ example :
     result.pipeline.simplified.map (fun declaration =>
       match declaration with
       | .function function => function.name
-      | _ => "not-function") = ["worker"] := by
+      | _ => "not-function") = ["main", "worker"] := by
   decide +kernel
 
 def exactEntryDeclarations : List (Decl Nat) :=

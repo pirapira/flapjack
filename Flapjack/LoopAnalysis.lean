@@ -152,11 +152,12 @@ def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
   | .loop liveIn body liveOut, live =>
       let loopLiveOut := loopIntersectSorted liveOut live
       let bodyEntryLive := loopListInsert liveIn loopLiveOut
-      /- Cake's `fixedpoint` repeats the body shrink with the loop's output
-         live set until the live-in set stabilizes.  The bound is an
-         executable representation of the finite-set decrease argument used
-         by the HOL definition; Pancake live sets are bounded by the source
-         program, so this comfortably covers generated bodies. -/
+      /- Cake's `fixedpoint` repeats the body shrink with the constant seed
+         `bex = live_in ∪ (inter live_out l)` until the live-in set
+         stabilizes (`loop_liveScript.sml:143-148`).  The bound
+         `liveIn.length + 1` is an executable representation of the
+         finite-set decrease argument used by the HOL definition: the
+         iterated live-in set grows monotonically within `liveIn`. -/
       let rec fixedpoint (fuel : Nat) (previous : List Nat) :
           LoopProg α × List Nat :=
         match fuel with
@@ -164,7 +165,7 @@ def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
             let (fallback, _) := loopShrinkLeaf body bodyEntryLive
             (.loop liveIn fallback loopLiveOut, liveIn)
         | fuel + 1 =>
-            let (body', bodyLive) := loopShrinkLeaf body loopLiveOut
+            let (body', bodyLive) := loopShrinkLeaf body bodyEntryLive
             let current := loopIntersectSorted liveIn bodyLive
             if current = previous then
               (.loop current body' loopLiveOut, current)
@@ -173,7 +174,7 @@ def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
               (.loop liveIn fallback loopLiveOut, liveIn)
             else
               fixedpoint fuel current
-      fixedpoint 32 []
+      fixedpoint (liveIn.length + 1) []
   | .call returns target arguments none, live =>
       loopShrinkCallNoHandler returns target arguments live
   | .call returns target arguments
@@ -223,8 +224,12 @@ def loopShrink (contexts : List (List Nat × List Nat)) :
       (.continue label, (loopContextAt label contexts).map Prod.fst |>.getD [])
   | .loop liveIn body liveOut, live =>
       let loopLiveOut := loopIntersectSorted liveOut live
+      /- CakeML seeds the fixed point with `bex = live_in ∪ (inter live_out l)`
+         and keeps it as the constant body seed and break context through
+         every iteration (`loop_liveScript.sml:67-74,143-148`). -/
       let bodyEntryLive := loopListInsert liveIn loopLiveOut
-      match loopShrinkFixed contexts liveIn body loopLiveOut 64 [] with
+      match loopShrinkFixed contexts liveIn body bodyEntryLive loopLiveOut
+        (liveIn.length + 1) [] with
       | some result => result
       | none =>
           let (body', _) := loopShrink ((liveIn, loopLiveOut) :: contexts)
@@ -253,20 +258,22 @@ def loopShrink (contexts : List (List Nat × List Nat)) :
 termination_by program => (sizeOf program, 0)
 
 def loopShrinkFixed (contexts : List (List Nat × List Nat))
-    (liveIn : List Nat) (body : LoopProg α) (loopLiveOut : List Nat) :
+    (liveIn : List Nat) (body : LoopProg α) (bodyEntryLive : List Nat)
+    (loopLiveOut : List Nat) :
     Nat → List Nat → Option (LoopProg α × List Nat)
   | 0, _ => none
   | fuel + 1, previous =>
       let (body', bodyLive) := loopShrink
-        ((loopIntersectSorted liveIn previous, loopLiveOut) :: contexts)
-        body loopLiveOut
+        ((loopIntersectSorted liveIn previous, bodyEntryLive) :: contexts)
+        body bodyEntryLive
       let current := loopIntersectSorted liveIn bodyLive
       if current = previous then
         some (.loop current body' loopLiveOut, current)
       else if current.length ≤ previous.length then
         none
       else
-        loopShrinkFixed contexts liveIn body loopLiveOut fuel current
+        loopShrinkFixed contexts liveIn body bodyEntryLive loopLiveOut
+          fuel current
   termination_by fuel _ => (sizeOf body, fuel)
 end
 

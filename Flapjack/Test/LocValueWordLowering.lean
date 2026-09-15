@@ -10,13 +10,13 @@ example :
         { vars := [(3, 10)] }
         (.locValue 3 100) =
       (.locValue 10 100 : WordProg Nat) := by
-  simp [loopToWordProg, wordFindVar, lookupNatInfo]
+  simp [loopToWordProg, loopToWordProgFrom, wordFindVar, lookupNatInfo]
 
 example :
     loopToWordProg
         { vars := [(3, 10), (100, 200)] }
         (.locValue 3 100) =
       (.locValue 10 100 : WordProg Nat) := by
-  simp [loopToWordProg, wordFindVar, lookupNatInfo]
+  simp [loopToWordProg, loopToWordProgFrom, wordFindVar, lookupNatInfo]
 
 end Flapjack

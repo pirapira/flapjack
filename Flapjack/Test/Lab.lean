@@ -38,7 +38,7 @@ example :
         .label 2 1 0,
         .labAsm .return [] 0,
         .label 2 3 0]⟩ := by
-  simp [labProgramToSection, labFlatten, labIsSequence, labLabel]
+  simp [labProgramToSection, labNextLab, labFlatten, labIsSequence, labLabel]
 
 example :
     labFlatten false 2 3 [] []
@@ -65,7 +65,7 @@ example :
       ⟨2, [
         .asm (.memOffset .load .sub 4 10 24) [] 0,
         .label 2 3 0]⟩ := by
-  simp [labProgramToSectionAfterStackRemove, labProgramToSection,
+  simp [labProgramToSectionAfterStackRemove, labProgramToSection, labNextLab,
     stackRemoveComplete, stackRemoveFuel, stackProgDepth, stackRemoveGet,
     stackRemoveAddress,
     stackRemoveJoin, stackStorePosition, labFlatten, labLabel,

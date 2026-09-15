@@ -750,9 +750,25 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         | .store | .store8 | .store16 | .store32 =>
             (state, .shareInst operator (wordSsaRead state name) address)
     | .call none target arguments none =>
-        let arguments := arguments.map (wordSsaRead state)
+        let renamedArguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 0 arguments.length
-        let moveArguments := .move 1 (abiArguments.zip arguments)
+        -- CakeML emits `Move1 (ZIP (conv_args, names))` here.  The leading
+        -- `loop_to_word` tail-call dummy register `0` is never clash-adjacent
+        -- to the argument position, so the original's register allocator
+        -- always coalesces that pair and the move disappears from the final
+        -- artifact; the dummy value is never consumed (the machine drops it
+        -- before binding parameters).  The reduced carrier pins register `0`
+        -- as a fixed source, so the equivalent end state is to drop the
+        -- leading move pair when it shuffles the injected dummy argument.
+        let allPairs := abiArguments.zip (arguments.zip renamedArguments)
+        let pairs := match allPairs with
+          | (_, original, _) :: rest =>
+              if original = 0 then rest else allPairs
+          | [] => []
+        let moveArguments :=
+          match pairs with
+          | [] => .skip
+          | _ => .move 1 (pairs.map (fun (abi, _, renamed) => (abi, renamed)))
         (state, wordSsaSeq moveArguments
           (.call none target abiArguments none))
     | .call none target arguments

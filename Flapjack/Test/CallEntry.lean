@@ -100,7 +100,7 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
     (finalLoop := handlerCallFinalLoop)
     (finalWord := handlerCallFinalWord)
     (hlookupLoop := by simp [lookupLoopFunction, handlerCallBody])
-    (hlookupWord := by simp [RiscV.lookupWordFunction, loopToWordProg,
+    (hlookupWord := by simp [RiscV.lookupWordFunction, loopToWordProg, loopToWordProgFrom,
       handlerCallBody, wordFindVar, wordMapVars, lookupNatInfo, wordCompileExp])
     (hread := by simp [loopReadLocals, handlerCallLoopState])
     (hloopBind := by simp [loopBindParameters])
@@ -122,7 +122,7 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
     (hbody := by
       intro calleeLoop calleeWord loopResult wordResult hzero hloop hword
       change calleeWord.registers 0 = 0 at hzero
-      simp [handlerCallBody, loopToWordProg, wordCompileExp,
+      simp [handlerCallBody, loopToWordProg, loopToWordProgFrom, wordCompileExp,
         wordFindVar, lookupNatInfo,
         evalLoopProgWithCallsAndFfi, evalLoopProg,
         evalLoopExp, updateLoopLocal,
@@ -145,7 +145,7 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
           some (RiscV.WordControlResult.normal handlerWord) =
             some (RiscV.WordControlResult.normal handlerFinalWord) := by
         simpa [RiscV.evalWordFunctionWithHandlersAndFfi,
-          RiscV.evalWordFunction, loopToWordProg] using hword
+          RiscV.evalWordFunction, loopToWordProg, loopToWordProgFrom] using hword
       injection hloop' with hloopResult
       injection hword' with hwordResult
       cases hloopResult
@@ -160,7 +160,7 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
       wordMapVars, wordFindVar, lookupNatInfo, RiscV.readWordRegisters,
       RiscV.bindWordRegisters, List.foldl, List.zip,
       RiscV.clearWordRegisters, handlerCallBody,
-      handlerCallWordState, handlerCallFinalWord, loopToWordProg,
+      handlerCallWordState, handlerCallFinalWord, loopToWordProg, loopToWordProgFrom,
       wordCompileExp, wordFindVar, lookupNatInfo,
       RiscV.evalWordFunctionWithHandlersAndFfi, RiscV.evalWordFunction,
       RiscV.wordExpToInstructions,

@@ -118,12 +118,12 @@ def wordFunctionToRiscVWithCalls [NeZero width]
       pure (code, [])
   | .call none (some label) arguments none => do
       let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
-      let code ← wordTailCallToRiscV entry parameters arguments
+      let code ← wordTailCallToRiscV entry parameters arguments.tail
       let returns ← returns.mapM registerOfNat
       pure (code, returns)
   | .call none (some label) arguments (some (_, .raise _, _, _)) => do
       let (entry, parameters, returns) ← lookupWordCallTarget label context.targets
-      let code ← wordTailCallToRiscV entry parameters arguments
+      let code ← wordTailCallToRiscV entry parameters arguments.tail
       let returns ← returns.mapM registerOfNat
       pure (code, returns)
   | .ite operator condition rightValue thenBranch elseBranch => do
@@ -265,7 +265,7 @@ theorem wordFunctionToRiscVWithCalls_shape [NeZero width] :
 theorem wordFunctionToRiscVWithCalls_tailCall [NeZero width] :
     wordFunctionToRiscVWithCalls
       { targets := [(7, BitVec.ofNat width 32, [2], [10])] }
-      (.call none (some 7) [6] none) =
+      (.call none (some 7) [0, 6] none) =
       some ([.addi 2 6 0, .addi 31 0 (BitVec.ofNat width 32),
         .jalr 0 31 0], [10]) := by
   simp [wordFunctionToRiscVWithCalls, wordTailCallToRiscV,
@@ -317,7 +317,7 @@ theorem evalWordTailCall_return_general [NeZero width]
     (evalWordFunctionWithCalls
       [(7, [2], (.return 0 [2] : WordProg (Word width)))] 10
       (writeRegister (zeroState width) 2 value)
-      (.call none (some 7) [2] none)).map
+      (.call none (some 7) [0, 2] none)).map
         (fun result => result.2) = some [value] := by
   simp [evalWordFunctionWithCalls, evalWordCall,
     lookupWordFunction, readWordRegisters, bindWordRegisters,

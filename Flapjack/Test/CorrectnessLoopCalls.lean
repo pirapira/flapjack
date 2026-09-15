@@ -53,7 +53,7 @@ theorem loopCallControl_break_simulation :
     (wordResult := .broke loopCallControlWordState 0)
     (hlookupLoop := by simp [lookupLoopFunction])
     (hlookupWord := by simp [lookupWordFunction, wordFindVar, lookupNatInfo,
-      loopToWordProg])
+      loopToWordProgFrom])
     (hparameter := by decide)
     (hparameter_nonzero := by decide)
     (hargument := by simp [loopCallControlLoopState])
@@ -61,7 +61,7 @@ theorem loopCallControl_break_simulation :
       intro calleeLoop calleeWord bodyResult bodyWordResult hcallee hloop hword
       cases bodyResult <;> cases bodyWordResult <;>
         simp [evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
-          loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi] at hloop hword ⊢ <;>
+          loopToWordProgFrom, RiscV.evalWordLoopProgWithHandlersAndFfi] at hloop hword ⊢ <;>
         rcases hloop with ⟨rfl, rfl⟩ <;>
         rcases hword with ⟨rfl, rfl⟩ <;>
         exact ⟨rfl, hcallee⟩)
@@ -106,7 +106,7 @@ theorem loopCallFfi_simulation :
     (wordResult := .normal loopCallControlWordState)
     (hlookupLoop := by simp [lookupLoopFunction, loopCallFfiBody])
     (hlookupWord := by simp [lookupWordFunction, wordFindVar, lookupNatInfo,
-      loopToWordProg, loopCallFfiBody])
+      loopToWordProg, loopToWordProgFrom, loopCallFfiBody])
     (hparameter := by decide)
     (hparameter_nonzero := by decide)
     (hargument := by simp [loopCallControlLoopState])
@@ -143,16 +143,16 @@ theorem loopCallFfi_simulation :
                 (hlocals := hcallee)
                 loopResult wordResult hloop hword
           | returned wordState values =>
-              simp [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+              simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProgWithHandlersAndFfi,
                 loopCallFfiBody, registerOfNat, wordFindVar, lookupNatInfo] at hword
           | raised wordState exception =>
-              simp [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+              simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProgWithHandlersAndFfi,
                 loopCallFfiBody, registerOfNat, wordFindVar, lookupNatInfo] at hword
           | broke wordState label =>
-              simp [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+              simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProgWithHandlersAndFfi,
                 loopCallFfiBody, registerOfNat, wordFindVar, lookupNatInfo] at hword
           | continued wordState label =>
-              simp [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+              simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProgWithHandlersAndFfi,
                 loopCallFfiBody, registerOfNat, wordFindVar, lookupNatInfo] at hword
       | returned loopState values =>
           cases hconfig : calleeLoop.locals 10 <;>
@@ -179,7 +179,7 @@ theorem loopCallFfi_simulation :
     (hword := by
       simp [RiscV.evalWordLoopCallWithHandlersAndFfi,
         RiscV.evalWordLoopProgWithHandlersAndFfi, RiscV.lookupWordFunction,
-        loopToWordProg, loopCallFfiBody, loopCallControlWordState,
+        loopToWordProg, loopToWordProgFrom, loopCallFfiBody, loopCallControlWordState,
         writeRegister, readRegister, RiscV.readWordRegisters,
         RiscV.bindWordRegisters, RiscV.clearWordRegisters,
         registerOfNat, wordFindVar, lookupNatInfo])
@@ -248,7 +248,7 @@ theorem loopCall_handler_ffi_simulation :
     (wordResult := .normal (writeRegister loopCallHandlerFfiWordState 8 9))
   · simp [lookupLoopFunction]
   · simp [RiscV.lookupWordFunction, wordFindVar, lookupNatInfo,
-      loopToWordProg]
+      loopToWordProgFrom]
   · decide
   · decide
   · decide
@@ -281,7 +281,7 @@ theorem loopCall_handler_ffi_simulation :
         have hword' :
             some (.raised calleeWord (readRegister calleeWord 10)) =
               some bodyWordResult := by
-          simpa [RiscV.evalWordLoopProgWithHandlersAndFfi, loopToWordProg,
+          simpa [RiscV.evalWordLoopProgWithHandlersAndFfi, loopToWordProg, loopToWordProgFrom,
             wordFindVar, lookupNatInfo, registerOfNat] using hword
         cases hword'
         rcases hcallee 10 value hvalue with ⟨register, hregister, hvalue'⟩
@@ -319,7 +319,7 @@ theorem loopCall_handler_ffi_simulation :
               (live := []) (fuel := 3) (hlocals := hhandlerLocals')
               handlerOutput handlerWordOutput hhandlerLoop hhandlerWord
         | returned _ _ | raised _ _ | broke _ _ | continued _ _ =>
-            simp [RiscV.evalWordLoopProgWithHandlersAndFfi, loopToWordProg,
+            simp [RiscV.evalWordLoopProgWithHandlersAndFfi, loopToWordProgFrom,
               loopCallHandlerFfiBody, loopCallHandlerFfiWordHandler,
               registerOfNat, wordFindVar, lookupNatInfo] at hhandlerWord
     | returned _ _ | raised _ _ | broke _ _ | continued _ _ =>
@@ -333,7 +333,7 @@ theorem loopCall_handler_ffi_simulation :
       loopReadLocals, loopBindParameters, updateLoopLocal, evalLoopProg]
   · simp [RiscV.evalWordLoopCallWithHandlersAndFfi,
       RiscV.evalWordLoopProgWithHandlersAndFfi, RiscV.lookupWordFunction,
-      loopToWordProg, loopCallHandlerFfiBody, loopCallHandlerFfiWordHandler,
+      loopToWordProgFrom, loopCallHandlerFfiBody, loopCallHandlerFfiWordHandler,
       loopCallHandlerFfiWordState, writeRegister, readRegister,
       RiscV.readWordRegisters, RiscV.bindWordRegisters,
       RiscV.clearWordRegisters, registerOfNat, wordFindVar, lookupNatInfo]

@@ -122,7 +122,7 @@ theorem loopToWord_primitive_addCarry_agreement [NeZero width]
     exact h
   simp [evalLoopProgWithPrimitive, RiscV.loopPrimitiveHandler,
     loopReadLocals, loopAssignValues, 
-    hleft, hright, hcarry, loopToWordProg, RiscV.evalWordProg,
+    hleft, hright, hcarry, loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg,
     RiscV.wordArithToInstructions,
     RiscV.registerOfNat, hleft_lt, hright_lt, hcarry_lt,
     hdestination_lt, hresultCarry_lt, hleft_fin, hright_fin,
@@ -476,7 +476,7 @@ theorem loopToWord_primitive_addCarry_preserves_mapped_locals [NeZero width]
           .add destinationRegister destinationRegister 31,
           .sltu 31 destinationRegister 31,
           .or resultCarryRegister resultCarryRegister 31] = resultState := by
-    simpa [loopToWordProg, RiscV.evalWordProg,
+    simpa [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg,
       RiscV.wordArithToInstructions, RiscV.registerOfNat,
       RiscV.executeInstructions, hdestination, hresultCarry,
       hleft_register, hright_register, hcarry_register,
@@ -546,13 +546,13 @@ theorem loopToWord_primitive_addCarry_combined_simulation [NeZero width]
             (.primitive [destination, resultCarry] .addCarry
               [left, right, carry])) =
         some (wordResult, []) := by
-    simp only [loopToWordProg]
+    simp only [loopToWordProg, loopToWordProgFrom]
     change RiscV.evalWordFunction state
         (.inst (.arith (.addCarry (wordFindVar context destination)
           (wordFindVar context resultCarry) (wordFindVar context left)
           (wordFindVar context right) (wordFindVar context carry)))) =
       some (wordResult, [])
-    simp only [loopToWordProg] at hword
+    simp only [loopToWordProg, loopToWordProgFrom] at hword
     simp only [RiscV.evalWordFunctionWithHandlersAndFfi] at hword
     cases hfunction : RiscV.evalWordFunction state
         (.inst (.arith (.addCarry (wordFindVar context destination)
@@ -576,7 +576,7 @@ theorem loopToWord_primitive_addCarry_combined_simulation [NeZero width]
           (loopToWordProg context
             (.primitive [destination, resultCarry] .addCarry
               [left, right, carry])) = some wordResult := by
-    simp only [loopToWordProg] at hwordFunction ⊢
+    simp only [loopToWordProg, loopToWordProgFrom] at hwordFunction ⊢
     change RiscV.evalWordFunction state
         (.inst (.arith (.addCarry (wordFindVar context destination)
           (wordFindVar context resultCarry) (wordFindVar context left)
@@ -650,7 +650,7 @@ theorem loopToWord_longMul_combined_simulation [NeZero width]
             (.arith (.longMul destinationLeft destinationRight
               sourceLeft sourceRight))) =
         some (wordResult, []) := by
-    simp only [loopToWordProg] at hword
+    simp only [loopToWordProg, loopToWordProgFrom] at hword
     simp only [RiscV.evalWordFunctionWithHandlersAndFfi] at hword
     cases hfunction : RiscV.evalWordFunction state
         (.inst (.arith (wordArith context
@@ -665,7 +665,7 @@ theorem loopToWord_longMul_combined_simulation [NeZero width]
                 have hstate : intermediate = wordResult := by
                   simpa [hfunction, hvalues] using hword
                 subst wordResult
-                simpa [loopToWordProg, hvalues] using hfunction
+                simpa [loopToWordProg, loopToWordProgFrom, hvalues] using hfunction
             | cons value values =>
                 simp [hfunction, hvalues] at hword
   have hwordProg :
@@ -673,7 +673,7 @@ theorem loopToWord_longMul_combined_simulation [NeZero width]
           (loopToWordProg context
             (.arith (.longMul destinationLeft destinationRight
               sourceLeft sourceRight))) = some wordResult := by
-    simp only [loopToWordProg] at hwordFunction ⊢
+    simp only [loopToWordProg, loopToWordProgFrom] at hwordFunction ⊢
     change RiscV.evalWordProg state
         (.inst (.arith (wordArith context
           (.longMul destinationLeft destinationRight sourceLeft sourceRight)))) =
@@ -729,7 +729,7 @@ theorem loopToWord_div_combined_simulation [NeZero width]
       RiscV.evalWordFunction state
           (loopToWordProg context (.arith (.div destination dividend divisor))) =
         some (wordResult, []) := by
-    simp only [loopToWordProg] at hword
+    simp only [loopToWordProg, loopToWordProgFrom] at hword
     simp only [RiscV.evalWordFunctionWithHandlersAndFfi] at hword
     cases hfunction : RiscV.evalWordFunction state
         (.inst (.arith (wordArith context (.div destination dividend divisor)))) with
@@ -743,14 +743,14 @@ theorem loopToWord_div_combined_simulation [NeZero width]
                 have hstate : intermediate = wordResult := by
                   simpa [hfunction, hvalues] using hword
                 subst wordResult
-                simpa [loopToWordProg, hvalues] using hfunction
+                simpa [loopToWordProg, loopToWordProgFrom, hvalues] using hfunction
             | cons value values =>
                 simp [hfunction, hvalues] at hword
   have hwordProg :
       RiscV.evalWordProg state
           (loopToWordProg context (.arith (.div destination dividend divisor))) =
         some wordResult := by
-    simp only [loopToWordProg] at hwordFunction ⊢
+    simp only [loopToWordProg, loopToWordProgFrom] at hwordFunction ⊢
     change RiscV.evalWordProg state
         (.inst (.arith (wordArith context (.div destination dividend divisor)))) =
       some wordResult
@@ -805,7 +805,7 @@ theorem loopToWord_longMul_combined_simulation_fuel [NeZero width]
     context functions ffiHandler wordFunctions wordHandler loopState state
     destinationLeft destinationRight sourceLeft sourceRight hatomic
   · simpa [evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg] using hloop
-  · simpa [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi] using hword
+  · simpa [loopToWordProg, loopToWordProgFrom, RiscV.evalWordFunctionWithHandlersAndFfi] using hword
 
 theorem loopToWord_div_combined_simulation_fuel [NeZero width]
     (context : WordContext)
@@ -844,7 +844,7 @@ theorem loopToWord_div_combined_simulation_fuel [NeZero width]
     context functions ffiHandler wordFunctions wordHandler loopState state
     destination dividend divisor hatomic
   · simpa [evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg] using hloop
-  · simpa [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi] using hword
+  · simpa [loopToWordProg, loopToWordProgFrom, RiscV.evalWordFunctionWithHandlersAndFfi] using hword
 
 theorem loopToWord_primitive_addCarry_combined_simulation_fuel [NeZero width]
     (context : WordContext)
@@ -887,6 +887,6 @@ theorem loopToWord_primitive_addCarry_combined_simulation_fuel [NeZero width]
     context functions ffiHandler wordFunctions wordHandler loopState state
     destination resultCarry left right carry hprimitive
   · simpa [evalLoopProgWithPrimitiveCallsAndFfi] using hloop
-  · simpa [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi] using hword
+  · simpa [loopToWordProg, loopToWordProgFrom, RiscV.evalWordFunctionWithHandlersAndFfi] using hword
 
 end Flapjack

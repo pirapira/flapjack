@@ -86,7 +86,7 @@ theorem loopFfi_simulation_mapped_locals :
             · simp [loopFfiSimulationLoopState, h1, h2, h3, h4] at hvalue)
   · simp [evalLoopProgWithPrimitiveCallsAndFfi,
       loopFfiSimulationLoopHandler, loopFfiSimulationLoopState]
-  · simp [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+  · simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProgWithHandlersAndFfi,
       loopFfiSimulationWordHandler, registerOfNat, wordFindVar,
       lookupNatInfo]
 

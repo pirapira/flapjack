@@ -42,9 +42,14 @@ def parityGuard : Bool :=
   | (.call (some ([2], [3])) (some 7) [1]
         (some (9, .return [4], .skip, [2, 3])), [1, 3]) => true
   | _ => false) &&
+  -- Faithful `loop_live$fixedpoint` seeds the body with
+  -- `bex = live_in ∪ (live_out ∩ l)` (loop_liveScript.sml:67-74,143-148),
+  -- so the loop cut set keeps `live_in` (no HOL probe covered this case;
+  -- the previous expectation recorded the old seed-`live_out`-only
+  -- behaviour).
   (match loopShrinkLeaf
       (.loop [1] (.assign 2 (.const 7)) [] : LoopProg Nat) [] with
-  | (.loop [] .skip [], []) => true
+  | (.loop [1] .skip [], [1]) => true
   | _ => false) &&
   (match loopShrink [([5], [8])] (.continue 0 : LoopProg Nat) [] with
   | (.continue 0, [5]) => true

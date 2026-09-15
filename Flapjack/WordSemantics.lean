@@ -66,6 +66,9 @@ mutual
         let target ← target
         let (parameters, body) ← lookupWordFunction target functions
         let values ← readWordRegisters state arguments
+        let values := match returns with
+          | none => values.drop 1
+          | some _ => values
         let calleeState ← bindWordRegisters state parameters values
         match evalWordFunctionWithCalls functions fuel calleeState body with
         | none =>
@@ -179,6 +182,9 @@ mutual
         let target ← target
         let (parameters, body) ← lookupWordFunction target functions
         let values ← readWordRegisters state arguments
+        let values := match returns with
+          | none => values.drop 1
+          | some _ => values
         let calleeState ← bindWordRegisters state parameters values
         let result ← evalWordLoopProgWithHandlersAndFfi functions ffiHandler
           fuel calleeState body
@@ -343,6 +349,9 @@ mutual
         let target ← target
         let (parameters, body) ← lookupWordFunction target functions
         let values ← readWordRegisters state arguments
+        let values := match returns with
+          | none => values.drop 1
+          | some _ => values
         let calleeState ← bindWordRegisters state parameters values
         let result ← evalWordFunctionWithHandlers functions fuel calleeState body
         let returnedState := match result with
@@ -483,6 +492,9 @@ mutual
         let target ← target
         let (parameters, body) ← lookupWordFunction target functions
         let values ← readWordRegisters state arguments
+        let values := match returns with
+          | none => values.drop 1
+          | some _ => values
         let calleeState ← bindWordRegisters state parameters values
         let result ← evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel
           calleeState body
@@ -580,7 +592,7 @@ theorem evalWordCallWithHandlersAndFfi_return_of_eval [NeZero width]
     (body : WordProg (Word width)) (values returnValues : List (Word width))
     (hlookup : lookupWordFunction target functions = some (parameters, body))
     (hread : readWordRegisters state arguments = some values)
-    (hbind : bindWordRegisters state parameters values = some calleeState)
+    (hbind : bindWordRegisters state parameters values.tail = some calleeState)
     (hbody : evalWordFunctionWithHandlersAndFfi functions ffiHandler fuel
       calleeState body = some (.returned bodyState returnValues)) :
     evalWordCallWithHandlersAndFfi functions ffiHandler (fuel + 1) state

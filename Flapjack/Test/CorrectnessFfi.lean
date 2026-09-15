@@ -66,7 +66,7 @@ theorem ffiIdentity_mappedLocals : loopLocalsMappedToRiscV ({ vars := [] } : Wor
                 readRegister, writeRegister] using hvalue
             · simp [ffiIdentityLoopState, h1, h2, h3, h4] at hvalue)
   · simp [evalLoopFfi, ffiIdentityLoopHandler, ffiIdentityLoopState]
-  · simp [loopToWordProg, evalWordFfi, ffiIdentityWordHandler,
+  · simp [loopToWordProg, loopToWordProgFrom, evalWordFfi, ffiIdentityWordHandler,
       registerOfNat, wordFindVar, lookupNatInfo, 
       ]
 
@@ -97,7 +97,7 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
     (hlocals := ffiIdentity_mappedLocals)
   · simp [evalLoopProgWithCallsAndFfi, ffiIdentityLoopHandler,
       ffiIdentityLoopState]
-  · simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi,
+  · simp [loopToWordProg, loopToWordProgFrom, evalWordFunctionWithHandlersAndFfi,
       ffiIdentityWordHandler, registerOfNat, wordFindVar, lookupNatInfo,
       ]
 
@@ -153,13 +153,13 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
       subst finalLoop
       have hword' : RiscV.evalWordProg middleWord (.tick : WordProg (Word 64)) =
           some finalWord := by
-        simpa [loopToWordProg, evalWordFunctionWithHandlersAndFfi,
+        simpa [loopToWordProg, loopToWordProgFrom, evalWordFunctionWithHandlersAndFfi,
           evalWordFunction, RiscV.evalWordProg] using hword
       exact loopToWord_tick_preserves_mapped_locals ({ vars := [] } : WordContext)
         middleLoop.locals middleWord hlocals finalWord hword')
   · simp [evalLoopProgWithCallsAndFfi, evalLoopProg, ffiIdentityLoopHandler,
       ffiIdentityLoopState]
-  · simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi,
+  · simp [loopToWordProg, loopToWordProgFrom, evalWordFunctionWithHandlersAndFfi,
       evalWordFunction, ffiIdentityWordHandler, registerOfNat, wordFindVar,
       lookupNatInfo, RiscV.execute, RiscV.writeRegister, RiscV.nextPc]
 

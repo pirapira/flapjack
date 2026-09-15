@@ -62,25 +62,25 @@ theorem loopFfi_break_control_simulation :
                   exact loopFfi_simulation_mapped_locals)
                 loopResult wordResult hloop hword
           | returned wordState values =>
-              simp [loopToWordProg,
+              simp [loopToWordProgFrom,
                 RiscV.evalWordLoopProgWithHandlersAndFfi,
                 loopFfiSimulationWordHandler, registerOfNat, wordFindVar,
                 lookupNatInfo, loopFfiSimulationWordState, writeRegister,
                 ] at hword
           | raised wordState exception =>
-              simp [loopToWordProg,
+              simp [loopToWordProgFrom,
                 RiscV.evalWordLoopProgWithHandlersAndFfi,
                 loopFfiSimulationWordHandler, registerOfNat, wordFindVar,
                 lookupNatInfo, loopFfiSimulationWordState, writeRegister,
                 ] at hword
           | broke wordState label =>
-              simp [loopToWordProg,
+              simp [loopToWordProgFrom,
                 RiscV.evalWordLoopProgWithHandlersAndFfi,
                 loopFfiSimulationWordHandler, registerOfNat, wordFindVar,
                 lookupNatInfo, loopFfiSimulationWordState, writeRegister,
                 ] at hword
           | continued wordState label =>
-              simp [loopToWordProg,
+              simp [loopToWordProgFrom,
                 RiscV.evalWordLoopProgWithHandlersAndFfi,
                 loopFfiSimulationWordHandler, registerOfNat, wordFindVar,
                 lookupNatInfo, loopFfiSimulationWordState, writeRegister,
@@ -101,7 +101,7 @@ theorem loopFfi_break_control_simulation :
       intro middleLoop middleWord secondResult secondWordResult hlocals hloop hword
       cases secondResult <;> cases secondWordResult <;>
         simp [evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
-          loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+          loopToWordProgFrom, RiscV.evalWordLoopProgWithHandlersAndFfi,
           ] at hloop hword ⊢ <;>
         rcases hloop with ⟨rfl, rfl⟩ <;>
         rcases hword with ⟨rfl, rfl⟩ <;>
@@ -110,7 +110,7 @@ theorem loopFfi_break_control_simulation :
       simp [evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
         loopFfiSimulationLoopHandler, loopFfiSimulationLoopState])
     (hword := by
-      simp [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+      simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProgWithHandlersAndFfi,
         loopFfiSimulationWordHandler, registerOfNat, wordFindVar,
         lookupNatInfo])
 

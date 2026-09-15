@@ -2349,10 +2349,10 @@ theorem evalWordCallWithHandlersAndFfi_return_applyColour_general [NeZero width]
       some argumentValues)
     (hargumentsTarget : readWordRegisters targetState colouredArguments =
       some argumentValues)
-    (hbindSource : bindWordRegisters sourceState parameters argumentValues =
+    (hbindSource : bindWordRegisters sourceState parameters argumentValues.tail =
       some sourceCallee)
     (hbindTarget : bindWordRegisters targetState (parameters.map colour)
-      argumentValues = some targetCallee)
+      argumentValues.tail = some targetCallee)
     (hbodySource : evalWordFunctionWithHandlersAndFfi sourceFunctions
       sourceHandler fuel sourceCallee sourceBody =
       some (.returned sourceBodyState sourceValues))

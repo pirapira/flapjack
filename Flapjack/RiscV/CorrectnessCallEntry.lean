@@ -107,15 +107,15 @@ theorem loopToWord_call_tail_simulation_general [NeZero width]
         some (.returned finalLoop loopResultValues))
     (hword :
       RiscV.evalWordCallWithHandlersAndFfi wordFunctions wordHandler (fuel + 1)
-        wordState none (some target) (wordMapVars context arguments) none =
+        wordState none (some target) (0 :: wordMapVars context arguments) none =
         some (.returned finalWord wordResultValues)) :
     loopLocalsMappedToRiscV context finalLoop.locals finalWord ∧
       wordResultValues = loopResultValues := by
   have harguments' := loopReadLocals_wordMapVars_agreement context loopState
     wordState arguments argumentValues hlocals hread
   have harguments :
-      RiscV.readWordRegisters wordState (wordMapVars context arguments) =
-        some argumentValues := by
+      RiscV.readWordRegisters wordState (0 :: wordMapVars context arguments) =
+        some (RiscV.readRegister wordState 0 :: argumentValues) := by
     have hreader : ∀ names : List Nat,
         RiscV.readWordRegisters wordState names =
           names.mapM (fun name => do
@@ -127,7 +127,9 @@ theorem loopToWord_call_tail_simulation_general [NeZero width]
       | cons name names ih =>
           simp [RiscV.readWordRegisters, ih, Option.bind_assoc]
     rw [hreader]
-    exact harguments'
+    simp only [List.mapM_cons]
+    rw [harguments']
+    simp [RiscV.registerOfNat_zero]
   cases hbodyLoop :
       evalLoopProgWithCallsAndFfi functions loopHandler fuel
         { loopState with locals := calleeLocals } loopBody with
@@ -271,7 +273,7 @@ theorem loopToWord_call_handler_simulation_general [NeZero width]
           some (.normal finalLoop))
     (hword :
       RiscV.evalWordCallWithHandlersAndFfi wordFunctions wordHandler (fuel + 1)
-        wordState none (some target) (wordMapVars context arguments)
+        wordState none (some target) (0 :: wordMapVars context arguments)
         (some (wordFindVar context exception, loopToWordProg context handlerBody,
           0, 0)) =
           some (.normal finalWord)) :
@@ -279,8 +281,8 @@ theorem loopToWord_call_handler_simulation_general [NeZero width]
   have harguments' := loopReadLocals_wordMapVars_agreement context loopState
     wordState arguments argumentValues hlocals hread
   have harguments :
-      RiscV.readWordRegisters wordState (wordMapVars context arguments) =
-        some argumentValues := by
+      RiscV.readWordRegisters wordState (0 :: wordMapVars context arguments) =
+        some (RiscV.readRegister wordState 0 :: argumentValues) := by
     have hreader : ∀ names : List Nat,
         RiscV.readWordRegisters wordState names =
           names.mapM (fun name => do
@@ -292,7 +294,9 @@ theorem loopToWord_call_handler_simulation_general [NeZero width]
       | cons name names ih =>
           simp [RiscV.readWordRegisters, ih, Option.bind_assoc]
     rw [hreader]
-    exact harguments'
+    simp only [List.mapM_cons]
+    rw [harguments']
+    simp [RiscV.registerOfNat_zero]
   cases hbodyLoop :
       evalLoopProgWithCallsAndFfi functions loopHandler fuel
         { loopState with locals := calleeLocals } loopBody with

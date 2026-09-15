@@ -374,7 +374,7 @@ def colouredCallHandler : FunName → Word 8 → Word 8 → Word 8 → Word 8 �
 example :
     evalWordCallWithHandlersAndFfi
         [(7, [1], colouredCallSourceBody)] colouredCallHandler 2
-        colouredCallSourceState none (some 7) [1] none =
+        colouredCallSourceState none (some 7) [0, 1] none =
       some (.returned
         { colouredCallSourceState with
           memory := colouredCallSourceCallee.memory
@@ -382,7 +382,7 @@ example :
           mode := colouredCallSourceCallee.mode } [9]) ∧
     evalWordCallWithHandlersAndFfi
         [(7, [2], colouredCallTargetBody)] colouredCallHandler 2
-        colouredCallTargetState none (some 7) [2] none =
+        colouredCallTargetState none (some 7) [0, 2] none =
       some (.returned
         { colouredCallTargetState with
           memory := colouredCallTargetCallee.memory
@@ -405,8 +405,8 @@ example :
     (sourceHandler := colouredCallHandler)
     (targetHandler := colouredCallHandler)
     (fuel := 1) (functionLabel := 7)
-    (parameters := [1]) (arguments := [1]) (colouredArguments := [2])
-    (argumentValues := [9])
+    (parameters := [1]) (arguments := [0, 1]) (colouredArguments := [0, 2])
+    (argumentValues := [0, 9])
     (sourceBody := colouredCallSourceBody)
     (targetBody := colouredCallTargetBody)
     (sourceState := colouredCallSourceState)

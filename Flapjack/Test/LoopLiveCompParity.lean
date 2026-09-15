@@ -19,9 +19,12 @@ def parityGuard : Bool :=
   (match loopLiveComp (.return [7] : LoopProg Nat) with
   | .mark (.return [7]) => true
   | _ => false) &&
+  -- The loop cut set keeps `live_in` because the faithful fixed point
+  -- seeds the body with `bex = live_in ∪ (live_out ∩ l)`
+  -- (loop_liveScript.sml:67-74,143-148).
   (match loopLiveComp
       (.loop [1] (.assign 2 (.const 7)) [] : LoopProg Nat) with
-  | .loop [] (.mark .skip) [] => true
+  | .loop [1] (.mark .skip) [] => true
   | _ => false)
 
 #eval parityGuard

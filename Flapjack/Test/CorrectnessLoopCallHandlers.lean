@@ -66,7 +66,7 @@ theorem loopCallHandler_simulation :
     (wordResult := .normal (writeRegister loopCallHandlerWordState 11 9))
     (hlookupLoop := by simp [lookupLoopFunction, loopCallHandlerBody])
     (hlookupWord := by simp [lookupWordFunction, wordFindVar, lookupNatInfo,
-      loopToWordProg, loopCallHandlerBody])
+      loopToWordProg, loopToWordProgFrom, loopCallHandlerBody])
     (hparameter := by decide)
     (hparameter_nonzero := by decide)
     (hexception := by decide)
@@ -99,7 +99,7 @@ theorem loopCallHandler_simulation :
           have hword' :
               some (.raised calleeWord (readRegister calleeWord 10)) =
                 some bodyWordResult := by
-            simpa [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+            simpa [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProgWithHandlersAndFfi,
               loopCallHandlerBody, registerOfNat, wordFindVar, lookupNatInfo] using hword
           cases hloop'
           cases hword'
@@ -117,7 +117,7 @@ theorem loopCallHandler_simulation :
         simpa [evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg,
           loopCallHandlerHandler] using hloop
       have hword' : some (.normal handlerWordState) = some handlerWordResult := by
-        simpa [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+        simpa [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProgWithHandlersAndFfi,
           RiscV.evalWordFunction, loopCallHandlerHandler] using hword
       cases hloop'
       cases hword'
@@ -132,7 +132,7 @@ theorem loopCallHandler_simulation :
     (hword := by
       simp [RiscV.evalWordLoopCallWithHandlersAndFfi,
         RiscV.evalWordLoopProgWithHandlersAndFfi, RiscV.lookupWordFunction,
-        loopToWordProg, loopCallHandlerBody, loopCallHandlerHandler,
+        loopToWordProg, loopToWordProgFrom, loopCallHandlerBody, loopCallHandlerHandler,
         loopCallHandlerWordState, writeRegister, readRegister,
         RiscV.readWordRegisters, RiscV.bindWordRegisters,
         RiscV.clearWordRegisters, registerOfNat, wordFindVar, lookupNatInfo,

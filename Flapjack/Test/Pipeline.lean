@@ -88,7 +88,7 @@ def pipelineHandlerHasCrossSectionAddress : Bool :=
       pipelineStackRemoveConfig pipelineHandlerDeclarations with
   | some instructions =>
       instructions.any (fun instruction =>
-        instruction == .addi 31 0 (BitVec.ofNat 64 148))
+        instruction == .addi 31 0 (BitVec.ofNat 64 164))
   | none => false
 
 #guard pipelineHandlerHasCrossSectionAddress
@@ -428,7 +428,7 @@ example :
     loopToWordProg ({ vars := [] } : WordContext)
       (.primitive [7, 8] .addCarry [2, 3, 4]) =
       .inst (.arith (.addCarry 7 8 2 3 4)) := by
-  simp [loopToWordProg, wordFindVar, lookupNatInfo]
+  simp [loopToWordProg, loopToWordProgFrom, wordFindVar, lookupNatInfo]
 
 example [NeZero width] :
     RiscV.wordArithToInstruction (width := width) (.div 1 2 3) =

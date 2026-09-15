@@ -29,8 +29,8 @@ example :
             (some ([], ([], []), .skip, 0, 0)))
           (wordStackEntryLabel handlerLoweringConfig
             (some ([], ([], []), .skip, 0, 0)))
-          (wordStackHandlerLabel handlerLoweringConfig 30)
-          (wordStackHandlerEntryLabel handlerLoweringConfig 21) 1,
+          (wordStackHandlerLabel handlerLoweringConfig 21)
+          (wordStackHandlerEntryLabel handlerLoweringConfig 30) 1,
         handlerLoweringInitial) := by
   have h := wordToStackProgNatWithBitmapBuilder_call_handler
     (config := handlerLoweringConfig) (bitmapBuilder := fun live => live)

@@ -274,93 +274,127 @@ def wordProgDCE : WordProg α → WordProg α
   decreasing_by
     all_goals decreasing_trivial
 
-def loopToWordProg [OfNat α 1] (context : WordContext) :
-    LoopProg α → WordProg α
-  | .skip => .skip
-  | .assign name value =>
+/-- Label-threading core of `loop_to_word$comp`
+    (`cakeml/pancake/loop_to_wordScript.sml:64-150`).  `sectionLabel` is the
+    constant first label component (the function name in CakeML's
+    `comp_func`); the returned counter is the threaded second component.
+    Handled calls append a `Tick`, compile the normal-return handler into
+    the return slot, and receive fresh labels; tail calls drop their
+    handler and prepend register `0` to the arguments, exactly as the
+    source. -/
+def loopToWordProgFrom [OfNat α 1] (context : WordContext) (sectionLabel : Nat) :
+    Nat → LoopProg α → WordProg α × Nat
+  | counter, .skip => (.skip, counter)
+  | counter, .assign name value =>
       match wordCompileExp context value with
-      | some value => .assign (wordFindVar context name) value
-      | none => .skip
-  | .primitive [result, resultCarry] .addCarry [left, right, carryIn] =>
+      | some value => (.assign (wordFindVar context name) value, counter)
+      | none => (.skip, counter)
+  | counter, .primitive [result, resultCarry] .addCarry [left, right, carryIn] =>
       /- Keep the carry input explicit at this boundary.  CakeML's
          loop_to_word pass lowers this to virtual scratch registers 1 and 3,
          but Flapjack has not yet ported the subsequent word allocator.  The
          RISC-V instruction selector can lower this five-register Word
          operation directly using its architectural x31 scratch, preserving
          the x1 link register for call-aware code. -/
-      .inst (.arith (.addCarry (wordFindVar context result)
+      (.inst (.arith (.addCarry (wordFindVar context result)
         (wordFindVar context resultCarry) (wordFindVar context left)
-        (wordFindVar context right) (wordFindVar context carryIn)))
-  | .primitive _ _ _ => .skip
-  | .arith operation => .inst (.arith (wordArith context operation))
-  | .store address value =>
+        (wordFindVar context right) (wordFindVar context carryIn))), counter)
+  | counter, .primitive _ _ _ => (.skip, counter)
+  | counter, .arith operation => (.inst (.arith (wordArith context operation)), counter)
+  | counter, .store address value =>
       match wordCompileExp context address with
-      | some address => .store address (wordFindVar context value)
-      | none => .skip
-  | .setGlobal address value =>
+      | some address => (.store address (wordFindVar context value), counter)
+      | none => (.skip, counter)
+  | counter, .setGlobal address value =>
       match wordCompileExp context value with
-      | some value => .set (.temp address) value
-      | none => .skip
-  | .load32 address destination =>
-      .inst (.mem .load32 (wordFindVar context destination) (wordFindVar context address))
-  | .loadByte address destination =>
-      .inst (.mem .load8 (wordFindVar context destination) (wordFindVar context address))
-  | .store32 address value =>
-      .inst (.mem .store32 (wordFindVar context value) (wordFindVar context address))
-  | .storeByte address value =>
-      .inst (.mem .store8 (wordFindVar context value) (wordFindVar context address))
-  | .seq first second => .seq (loopToWordProg context first) (loopToWordProg context second)
-  | .ite operator condition right thenBranch elseBranch _ =>
-      .seq (.ite operator (wordFindVar context condition) (wordRegImm context right)
-        (loopToWordProg context thenBranch) (loopToWordProg context elseBranch)) .tick
-  | .loop liveIn body liveOut =>
-      .seq .tick (.seq (.loop (wordMkNewCutset context liveIn)
-        (loopToWordProg context body) (wordMkNewCutset context liveOut)) .tick)
-  | .break label => .break label
-  | .continue label => .continue label
-  | .raise exception => .raise (wordFindVar context exception)
-  | .return values => .return 0 (wordMapVars context values)
-  | .tick => .tick
-  | .mark body => loopToWordProg context body
-  | .fail => .skip
-  | .locValue destination source =>
+      | some value => (.set (.temp address) value, counter)
+      | none => (.skip, counter)
+  | counter, .load32 address destination =>
+      (.inst (.mem .load32 (wordFindVar context destination) (wordFindVar context address)),
+        counter)
+  | counter, .loadByte address destination =>
+      (.inst (.mem .load8 (wordFindVar context destination) (wordFindVar context address)),
+        counter)
+  | counter, .store32 address value =>
+      (.inst (.mem .store32 (wordFindVar context value) (wordFindVar context address)),
+        counter)
+  | counter, .storeByte address value =>
+      (.inst (.mem .store8 (wordFindVar context value) (wordFindVar context address)),
+        counter)
+  | counter, .seq first second =>
+      let (first', counter) := loopToWordProgFrom context sectionLabel counter first
+      let (second', counter) := loopToWordProgFrom context sectionLabel counter second
+      (.seq first' second', counter)
+  | counter, .ite operator condition right thenBranch elseBranch _ =>
+      let (then', counter) := loopToWordProgFrom context sectionLabel counter thenBranch
+      let (else', counter) := loopToWordProgFrom context sectionLabel counter elseBranch
+      (.seq (.ite operator (wordFindVar context condition) (wordRegImm context right)
+        then' else') .tick, counter)
+  | counter, .loop liveIn body liveOut =>
+      let (body', counter) := loopToWordProgFrom context sectionLabel counter body
+      (.seq .tick (.seq (.loop (wordMkNewCutset context liveIn)
+        body' (wordMkNewCutset context liveOut)) .tick), counter)
+  | counter, .break label => (.break label, counter)
+  | counter, .continue label => (.continue label, counter)
+  | counter, .raise exception => (.raise (wordFindVar context exception), counter)
+  | counter, .return values => (.return 0 (wordMapVars context values), counter)
+  | counter, .tick => (.tick, counter)
+  | counter, .mark body => loopToWordProgFrom context sectionLabel counter body
+  | counter, .fail => (.skip, counter)
+  | counter, .locValue destination source =>
       /- The second field is a code label, not a virtual register.  CakeML's
          loop_to_word pass renames only the destination variable and preserves
          the label for the later code-environment lookup. -/
-      .locValue (wordFindVar context destination) source
-  | .call returns target arguments none =>
-      .call (returns.map (fun (values, live) =>
-        (wordMapVars context values, (wordMkNewCutset context live, []),
-          .skip, 0, 0))) target
-        (wordMapVars context arguments)
-        none
-  | .call returns target arguments (some (exception, body, _, _)) =>
-      .call (returns.map (fun (values, live) =>
-        (wordMapVars context values, (wordMkNewCutset context live, []),
-          .skip, 0, 0))) target
-        (wordMapVars context arguments)
-        (some (wordFindVar context exception, loopToWordProg context body, 0, 0))
-  | .ffi function configuration configurationLength array arrayLength live =>
-      .ffi function (wordFindVar context configuration)
+      (.locValue (wordFindVar context destination) source, counter)
+  | counter, .call none target arguments _ =>
+      /- Tail call: CakeML drops the handler and prepends register 0 to the
+         argument list (`loop_to_wordScript.sml:131`). -/
+      (.call none target (0 :: wordMapVars context arguments) none, counter)
+  | counter, .call (some (values, live)) target arguments none =>
+      (.call (some (wordMapVars context values,
+          (wordMkNewCutset context live, []), .skip, sectionLabel, counter)) target
+        (wordMapVars context arguments) none, counter + 1)
+  | counter, .call (some (values, live)) target arguments
+      (some (exception, body, normal, _)) =>
+      /- Handled call: the handler body and the normal-return handler are
+         compiled with the threaded counter, the return slot keeps the
+         entry label, the handler receives the label after both compilations,
+         and a trailing `Tick` accounts for the clock
+         (`loop_to_wordScript.sml:138-143`). -/
+      let (body', counter') := loopToWordProgFrom context sectionLabel (counter + 1) body
+      let (normal', counter'') := loopToWordProgFrom context sectionLabel counter' normal
+      (.seq (.call (some (wordMapVars context values,
+            (wordMkNewCutset context live, []), normal', sectionLabel, counter)) target
+          (wordMapVars context arguments)
+          (some (wordFindVar context exception, body', sectionLabel, counter''))) .tick,
+        counter'' + 1)
+  | counter, .ffi function configuration configurationLength array arrayLength live =>
+      (.ffi function (wordFindVar context configuration)
         (wordFindVar context configurationLength) (wordFindVar context array)
-        (wordFindVar context arrayLength) (wordMkNewCutset context live, [])
-  | .shMem operator name address =>
+        (wordFindVar context arrayLength) (wordMkNewCutset context live, []), counter)
+  | counter, .shMem operator name address =>
       match wordMemOp operator, wordCompileExp context address with
       | some operator, some address =>
-          .shareInst operator (wordFindVar context name) address
-      | _, _ => .skip
-termination_by program => sizeOf program
-decreasing_by
-  all_goals decreasing_trivial
+          (.shareInst operator (wordFindVar context name) address, counter)
+      | _, _ => (.skip, counter)
+  termination_by _ program => sizeOf program
+  decreasing_by
+    all_goals decreasing_trivial
+
+def loopToWordProg [OfNat α 1] (context : WordContext) (program : LoopProg α) :
+    WordProg α :=
+  (loopToWordProgFrom context 0 2 program).1
 
 theorem loopToWordProg_skip [OfNat α 1] (context : WordContext) :
     loopToWordProg context (.skip : LoopProg α) = .skip := by
-  simp [loopToWordProg]
+  simp [loopToWordProg, loopToWordProgFrom]
 
-theorem loopToWordProg_seq [OfNat α 1] (context : WordContext)
-    (first second : LoopProg α) :
-    loopToWordProg context (.seq first second) =
-      .seq (loopToWordProg context first) (loopToWordProg context second) := by
-  simp [loopToWordProg]
+theorem loopToWordProgFrom_seq [OfNat α 1] (context : WordContext)
+    (sectionLabel counter : Nat) (first second : LoopProg α) :
+    loopToWordProgFrom context sectionLabel counter (.seq first second) =
+      (let (first', counter') := loopToWordProgFrom context sectionLabel counter first
+       let (second', counter'') := loopToWordProgFrom context sectionLabel counter' second
+       (.seq first' second', counter'')) := by
+  simp [loopToWordProgFrom]
 
 end Flapjack

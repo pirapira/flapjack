@@ -346,7 +346,7 @@ def pipelineCallImage : List (RiscV.Instruction 64) :=
    .addi 2 4 0, .addi 30 30 (0 - BitVec.ofNat 64 8),
    .storeWord 1 30, .addi 31 0 0, .jalr 1 31 0,
    .addi 3 4 0, .loadWord 1 30,
-   .addi 30 30 (BitVec.ofNat 64 8), .addi 4 3 0,
+   .addi 30 30 (BitVec.ofNat 64 8), .addi 0 0 0, .addi 4 3 0,
    .jalr 0 1 0]
 
 def pipelineCallLinkedImage : Option (List (RiscV.Instruction 64)) :=
@@ -907,7 +907,7 @@ theorem loopToWord_const_assign_register_agreement_mapped [NeZero width]
   have hzero : state.registers 0 = (0 : RiscV.Word width) := by
     exact zero
   simp [evalLoopProg, evalLoopExp, loopRegisterStateMapped,
-    loopToWordProg, wordCompileExp, RiscV.evalWordProg,
+    loopToWordProg, loopToWordProgFrom, wordCompileExp, RiscV.evalWordProg,
     RiscV.wordExpToInstructions, RiscV.wordExpToInstruction,
     RiscV.executeInstructions, RiscV.execute,
     RiscV.writeRegister, RiscV.readRegister, RiscV.nextPc,
@@ -938,7 +938,7 @@ theorem loopToWord_add_assign_register_agreement_mapped [NeZero width]
   have hzero : state.registers 0 = (0 : RiscV.Word width) := by
     exact zero
   simp [evalLoopProg, evalLoopExp, evalLoopBinOp,
-    loopRegisterStateMapped, loopToWordProg, wordCompileExp,
+    loopRegisterStateMapped, loopToWordProg, loopToWordProgFrom, wordCompileExp,
     wordCompileExp.wordCompileExpList,
     RiscV.evalWordProg, RiscV.wordExpToInstructions,
     RiscV.wordExpToInstruction, RiscV.executeInstructions,
@@ -978,7 +978,7 @@ theorem loopToWord_binop_assign_register_agreement_mapped [NeZero width]
     exact BitVec.or_eq x y
   cases operator <;>
     simp [evalLoopProg, evalLoopExp, evalLoopBinOp,
-      loopRegisterStateMapped, loopToWordProg, wordCompileExp,
+      loopRegisterStateMapped, loopToWordProg, loopToWordProgFrom, wordCompileExp,
       wordCompileExp.wordCompileExpList,
       RiscV.evalWordProg, RiscV.wordExpToInstructions,
       RiscV.wordExpToInstruction, RiscV.executeInstructions,
@@ -1013,10 +1013,10 @@ theorem loopToWord_load32_register_agreement_mapped [NeZero width]
   have hzero : state.registers 0 = (0 : RiscV.Word width) := by
     exact zero
   simp [evalLoopProg, loopRegisterStateMappedWithMemory,
-    loopRegisterStateMapped, loopToWordProg, 
+    loopRegisterStateMapped, loopToWordProg, loopToWordProgFrom,
     RiscV.evalWordProg, RiscV.execute, RiscV.writeRegister,
     RiscV.readRegister, RiscV.nextPc,
-    haddress, hdestination, 
+    haddress, hdestination,
     hdestination_nonzero]
   have haddress_value' : state.registers addressRegister = addressValue := by
     exact haddress_value
@@ -1063,11 +1063,11 @@ theorem loopToWord_loadByte_register_agreement_mapped [NeZero width]
     destination (.var address) addressValue
     (BitVec.ofNat width byteValue.toNat) (by simp) haddress_eval hmemory]
   simp [loopRegisterStateMappedWithMemory, loopRegisterStateMapped,
-    loopToWordProg, wordMemOp, wordCompileExp, RiscV.evalWordProg,
+    loopToWordProg, loopToWordProgFrom, wordMemOp, wordCompileExp, RiscV.evalWordProg,
     RiscV.evalWordShareInst, RiscV.wordShareInstToInstructions,
     RiscV.wordInstToInstruction, RiscV.executeInstructions, RiscV.execute,
     RiscV.writeRegister, RiscV.readRegister, RiscV.nextPc,
-    updateLoopLocal, haddress, hdestination, 
+    updateLoopLocal, haddress, hdestination,
     hdestination_nonzero]
   have haddress_value' : state.registers addressRegister = addressValue := by
     exact haddress_value
@@ -1114,7 +1114,7 @@ theorem loopToWord_storeByte_memory_agreement_mapped [NeZero width]
     value (.var address) addressValue valueValue
     (by simp) haddress_eval hvalue_eval]
   simp [loopRegisterStateMappedWithMemory, loopRegisterStateMapped,
-    loopToWordProg, wordMemOp, wordCompileExp, RiscV.evalWordProg,
+    loopToWordProg, loopToWordProgFrom, wordMemOp, wordCompileExp, RiscV.evalWordProg,
     RiscV.evalWordShareInst, RiscV.wordShareInstToInstructions,
     RiscV.wordInstToInstruction, RiscV.executeInstructions, RiscV.execute,
     RiscV.writeByte, RiscV.readByte, RiscV.nextPc,
@@ -1158,11 +1158,11 @@ theorem loopToWord_load16_register_agreement_mapped [NeZero width]
     (loopRegisterStateMappedWithMemory context state memory) .load16
     destination (.var address) addressValue value (by simp) haddress_eval hmemory]
   simp [loopRegisterStateMappedWithMemory, loopRegisterStateMapped,
-    loopToWordProg, wordMemOp, wordCompileExp, RiscV.evalWordProg,
+    loopToWordProg, loopToWordProgFrom, wordMemOp, wordCompileExp, RiscV.evalWordProg,
     RiscV.evalWordShareInst, RiscV.wordShareInstToInstructions,
     RiscV.wordInstToInstruction, RiscV.executeInstructions, RiscV.execute,
     RiscV.writeRegister, RiscV.readRegister, RiscV.nextPc,
-    updateLoopLocal, haddress, hdestination, 
+    updateLoopLocal, haddress, hdestination,
     hdestination_nonzero]
   have haddress_value' : state.registers addressRegister = addressValue := by
     exact haddress_value
@@ -1195,9 +1195,9 @@ theorem loopToWord_store16_memory_agreement_mapped [NeZero width]
           BitVec.ofNat width
             (RiscV.readByte state (RiscV.byteAddress addressValue 0)).toNat) := by
   simp [evalLoopProg, evalLoopExp, loopRegisterStateMappedWithMemory,
-    loopRegisterStateMapped, loopToWordProg, wordMemOp, wordCompileExp,
+    loopRegisterStateMapped, loopToWordProg, loopToWordProgFrom, wordMemOp, wordCompileExp,
     RiscV.evalWordProg, RiscV.evalWordShareInst,
-    RiscV.wordShareInstToInstructions, 
+    RiscV.wordShareInstToInstructions,
     RiscV.wordInstToInstruction,
     RiscV.executeInstructions, RiscV.execute, RiscV.writeWord16,
     RiscV.writeByte, RiscV.readByte, RiscV.byteAddress, RiscV.nextPc,
@@ -1259,7 +1259,7 @@ theorem loopToWord_store32_memory_agreement_mapped [NeZero width]
         Nat.mod_eq_of_lt hlt] at h'
     omega
   simp [evalLoopProg, loopRegisterStateMappedWithMemory,
-    loopRegisterStateMapped, loopToWordProg, RiscV.evalWordProg,
+    loopRegisterStateMapped, loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg,
     RiscV.execute, RiscV.writeWord32, RiscV.writeByte,
     RiscV.readByte, RiscV.byteAddress, RiscV.nextPc,
     haddress, hvalue, haddress_value, hvalue_value, updateLoopMemory]
@@ -1286,7 +1286,7 @@ theorem loopToWord_const_assign_register_agreement [NeZero width]
         (fun state => RiscV.readRegister state 1) := by
   have hzero : state.registers 0 = (0 : RiscV.Word width) := by
     exact zero
-  simp [evalLoopProg, evalLoopExp, loopRegisterState, loopToWordProg, 
+  simp [evalLoopProg, evalLoopExp, loopRegisterState, loopToWordProg, loopToWordProgFrom,
     wordCompileExp, wordFindVar, lookupNatInfo,
     RiscV.evalWordProg, RiscV.wordExpToInstructions,
     RiscV.wordExpToInstruction, RiscV.executeInstructions,
@@ -1307,7 +1307,7 @@ theorem loopToWord_add_assign_register_agreement [NeZero width]
   have hzero : state.registers 0 = (0 : RiscV.Word width) := by
     exact zero
   simp [evalLoopProg, evalLoopExp, evalLoopBinOp, loopRegisterState,
-    loopToWordProg, wordCompileExp, wordCompileExp.wordCompileExpList,
+    loopToWordProg, loopToWordProgFrom, wordCompileExp, wordCompileExp.wordCompileExpList,
     wordFindVar, lookupNatInfo,
     RiscV.evalWordProg, RiscV.wordExpToInstructions,
     RiscV.wordExpToInstruction, RiscV.executeInstructions,
@@ -1325,7 +1325,7 @@ theorem loopToWord_longMul_register_agreement [NeZero width]
         (loopToWordProg ({ vars := [(1, 1), (2, 2), (3, 3)] } : WordContext)
           (.arith (.longMul 1 1 2 3)))).map
         (fun state => RiscV.readRegister state 1) := by
-  simp [evalLoopProg, loopRegisterState, loopToWordProg, wordArith,
+  simp [evalLoopProg, loopRegisterState, loopToWordProg, loopToWordProgFrom, wordArith,
     wordFindVar, lookupNatInfo, RiscV.evalWordProg,
     RiscV.wordArithToInstructions, RiscV.executeInstructions,
     RiscV.registerOfNat, RiscV.execute, RiscV.writeRegister,
@@ -1404,9 +1404,9 @@ theorem loopToWord_longMul_preserves_mapped_locals [NeZero width]
   by_cases halias :
       wordFindVar context destination = wordFindVar context sourceLeft ∨
         wordFindVar context destination = wordFindVar context sourceRight
-  · simp [loopToWordProg, wordArith, RiscV.evalWordProg,
+  · simp [loopToWordProg, loopToWordProgFrom, wordArith, RiscV.evalWordProg,
       RiscV.wordArithToInstructions, halias] at hresult
-  · simp [loopToWordProg, wordArith, RiscV.evalWordProg,
+  · simp [loopToWordProg, loopToWordProgFrom, wordArith, RiscV.evalWordProg,
       RiscV.wordArithToInstructions, RiscV.executeInstructions,
       RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
       RiscV.registerOfNat, hleft_lt, hright_lt, hdestination_lt,
@@ -1430,8 +1430,8 @@ theorem loopToWord_longMul_preserves_mapped_locals [NeZero width]
         simpa [updateLoopLocal] using hcurrent
       subst current
       refine ⟨destinationRegister, hdestination, ?_⟩
-      simp [RiscV.readRegister, 
-        
+      simp [RiscV.readRegister,
+
         hleft_not_destination,
         hright_not_destination]
     · have hcurrent' : loopState.locals name = some current := by
@@ -1440,7 +1440,7 @@ theorem loopToWord_longMul_preserves_mapped_locals [NeZero width]
         ⟨register, hregister, hregister_value⟩
       refine ⟨register, hregister, ?_⟩
       have hregister_nonalias := hnoalias name hname register hregister
-      simp [RiscV.readRegister, 
+      simp [RiscV.readRegister,
         hregister_nonalias]
       exact hregister_value
 
@@ -1546,7 +1546,7 @@ theorem loopToWord_skip_preserves_mapped_locals [NeZero width]
       loopLocalsMappedToRiscV context finalLoop.locals finalWord := by
   intro finalLoop finalWord hloop hword
   simp [evalLoopProg] at hloop
-  simp [loopToWordProg, RiscV.evalWordProg] at hword
+  simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg] at hword
   subst finalLoop
   subst finalWord
   exact hlocals
@@ -1593,6 +1593,7 @@ theorem loopToWord_seq_control_simulation [NeZero width]
       RiscV.Word width → RiscV.Word width → RiscV.State width →
       Option (RiscV.State width))
     (fuel : Nat) (first second : LoopProg (RiscV.Word width))
+    (sectionLabel counter : Nat)
     (loopResult : LoopResult (RiscV.Word width))
     (wordResult : RiscV.WordControlResult width)
     (hfirst : ∀ (_middleLoop : LoopState (RiscV.Word width))
@@ -1600,21 +1601,22 @@ theorem loopToWord_seq_control_simulation [NeZero width]
       evalLoopProgWithCallsAndFfi functions loopHandler fuel loopState first =
         some firstResult →
       RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
-        wordState (loopToWordProg context first) = some firstWordResult →
+        wordState (loopToWordProgFrom context sectionLabel counter first).1 = some firstWordResult →
       loopControlResultMappedToRiscV context firstResult firstWordResult)
     (hsecond : ∀ middleLoop middleWord secondResult secondWordResult,
       loopLocalsMappedToRiscV context middleLoop.locals middleWord →
       evalLoopProgWithCallsAndFfi functions loopHandler fuel middleLoop second =
         some secondResult →
       RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
-        middleWord (loopToWordProg context second) = some secondWordResult →
+        middleWord (loopToWordProgFrom context sectionLabel
+        (loopToWordProgFrom context sectionLabel counter first).2 second).1 = some secondWordResult →
       loopControlResultMappedToRiscV context secondResult secondWordResult)
     (hloop :
       evalLoopProgWithCallsAndFfi functions loopHandler (fuel + 1) loopState
         (.seq first second) = some loopResult)
     (hword :
       RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler (fuel + 1)
-        wordState (loopToWordProg context (.seq first second)) = some wordResult) :
+        wordState (loopToWordProgFrom context sectionLabel counter (.seq first second)).1 = some wordResult) :
     loopControlResultMappedToRiscV context loopResult wordResult := by
   cases hfirstLoop :
       evalLoopProgWithCallsAndFfi functions loopHandler fuel loopState first with
@@ -1629,17 +1631,18 @@ theorem loopToWord_seq_control_simulation [NeZero width]
             simpa [evalLoopProgWithCallsAndFfi, hfirstLoop] using hloop
           cases hfirstWord :
               RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
-                wordState (loopToWordProg context first) with
+                wordState (loopToWordProgFrom context sectionLabel counter first).1 with
           | none =>
-              simp [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi,
+              simp [loopToWordProgFrom, RiscV.evalWordFunctionWithHandlersAndFfi,
                 hfirstWord] at hword
           | some firstWordResult =>
               cases firstWordResult with
               | normal middleWord =>
                   have hsecondWord :
                       RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
-                        middleWord (loopToWordProg context second) = some wordResult := by
-                    simpa [loopToWordProg,
+                        middleWord (loopToWordProgFrom context sectionLabel
+                        (loopToWordProgFrom context sectionLabel counter first).2 second).1 = some wordResult := by
+                    simpa [loopToWordProg, loopToWordProgFrom,
                       RiscV.evalWordFunctionWithHandlersAndFfi, hfirstWord] using hword
                   have hfirstResult := hfirst middleLoop middleWord
                     (.normal middleLoop) (.normal middleWord) hfirstLoop hfirstWord
@@ -1658,9 +1661,9 @@ theorem loopToWord_seq_control_simulation [NeZero width]
       | returned middleLoop values =>
           cases hfirstWord :
               RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
-                wordState (loopToWordProg context first) with
+                wordState (loopToWordProgFrom context sectionLabel counter first).1 with
           | none =>
-              simp [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi,
+              simp [loopToWordProgFrom, RiscV.evalWordFunctionWithHandlersAndFfi,
                 hfirstWord] at hword
           | some firstWordResult =>
               cases firstWordResult with
@@ -1678,7 +1681,7 @@ theorem loopToWord_seq_control_simulation [NeZero width]
                     simpa [evalLoopProgWithCallsAndFfi, hfirstLoop] using hloop
                   have hword' :
                       some (.returned middleWord wordValues) = some wordResult := by
-                    simpa [loopToWordProg,
+                    simpa [loopToWordProg, loopToWordProgFrom,
                       RiscV.evalWordFunctionWithHandlersAndFfi, hfirstWord] using hword
                   injection hloop' with hloopResult
                   injection hword' with hwordResult
@@ -1693,9 +1696,9 @@ theorem loopToWord_seq_control_simulation [NeZero width]
       | raised middleLoop exception =>
           cases hfirstWord :
               RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
-                wordState (loopToWordProg context first) with
+                wordState (loopToWordProgFrom context sectionLabel counter first).1 with
           | none =>
-              simp [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi,
+              simp [loopToWordProgFrom, RiscV.evalWordFunctionWithHandlersAndFfi,
                 hfirstWord] at hword
           | some firstWordResult =>
               cases firstWordResult with
@@ -1718,7 +1721,7 @@ theorem loopToWord_seq_control_simulation [NeZero width]
                     simpa [evalLoopProgWithCallsAndFfi, hfirstLoop] using hloop
                   have hword' :
                       some (.raised middleWord wordException) = some wordResult := by
-                    simpa [loopToWordProg,
+                    simpa [loopToWordProg, loopToWordProgFrom,
                       RiscV.evalWordFunctionWithHandlersAndFfi, hfirstWord] using hword
                   injection hloop' with hloopResult
                   injection hword' with hwordResult
@@ -1728,9 +1731,9 @@ theorem loopToWord_seq_control_simulation [NeZero width]
       | broke middleLoop label =>
           cases hfirstWord :
               RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
-                wordState (loopToWordProg context first) with
+                wordState (loopToWordProgFrom context sectionLabel counter first).1 with
           | none =>
-              simp [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi,
+              simp [loopToWordProgFrom, RiscV.evalWordFunctionWithHandlersAndFfi,
                 hfirstWord] at hword
           | some firstWordResult =>
               cases firstWordResult with
@@ -1752,9 +1755,9 @@ theorem loopToWord_seq_control_simulation [NeZero width]
       | continued middleLoop label =>
           cases hfirstWord :
               RiscV.evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
-                wordState (loopToWordProg context first) with
+                wordState (loopToWordProgFrom context sectionLabel counter first).1 with
           | none =>
-              simp [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi,
+              simp [loopToWordProgFrom, RiscV.evalWordFunctionWithHandlersAndFfi,
                 hfirstWord] at hword
           | some firstWordResult =>
               cases firstWordResult with
@@ -1860,7 +1863,7 @@ theorem loopToWord_return_simulation [NeZero width]
                 (RiscV.registerOfNat name).bind (fun register =>
                   some (RiscV.readRegister wordState register))) = none := by
             simpa using hwordValues
-          simp [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi,
+          simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordFunctionWithHandlersAndFfi,
             hwordValues'] at hword
       | some mappedValues =>
           have hwordValues' :
@@ -1871,7 +1874,7 @@ theorem loopToWord_return_simulation [NeZero width]
           have hword' :
               some (RiscV.WordControlResult.returned wordState mappedValues) =
                 some (RiscV.WordControlResult.returned finalWord wordResultValues) := by
-            simpa [loopToWordProg,
+            simpa [loopToWordProg, loopToWordProgFrom,
               RiscV.evalWordFunctionWithHandlersAndFfi, hwordValues'] using hword
           injection hword' with hreturnedWord
           injection hreturnedWord with hfinalWord hwordResultValues
@@ -1921,14 +1924,14 @@ theorem loopToWord_raise_simulation [NeZero width]
       cases hwordRegister :
           RiscV.registerOfNat (wordFindVar context exception) with
       | none =>
-          simp [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi,
+          simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordFunctionWithHandlersAndFfi,
             hwordRegister] at hword
       | some register =>
           have hword' :
               some (RiscV.WordControlResult.raised wordState
                 (RiscV.readRegister wordState register)) =
                 some (RiscV.WordControlResult.raised finalWord wordException) := by
-            simpa [loopToWordProg,
+            simpa [loopToWordProg, loopToWordProgFrom,
               RiscV.evalWordFunctionWithHandlersAndFfi, hwordRegister] using hword
           injection hword' with hraisedWord
           injection hraisedWord with hfinalWord hwordException
@@ -2081,7 +2084,7 @@ theorem loopToWord_loop_simulation [NeZero width]
     simpa [evalLoopProg] using hloop
   cases htick : RiscV.evalWordProg wordState (.tick) with
   | none =>
-      simp [loopToWordProg, RiscV.evalWordLoopProg, htick] at hword
+      simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProg, htick] at hword
   | some tickedWordState =>
       have hlocals' :
           loopLocalsMappedToRiscV context loopState.locals tickedWordState :=
@@ -2089,9 +2092,9 @@ theorem loopToWord_loop_simulation [NeZero width]
           wordState hlocals tickedWordState htick
       cases hbodyWord :
           RiscV.evalWordLoopRepeat fuel tickedWordState
-            (loopToWordProg context body) with
+            (loopToWordProgFrom context 0 2 body).fst with
       | none =>
-          simp [loopToWordProg, RiscV.evalWordLoopProg, htick,
+          simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProg, htick,
             hbodyWord] at hword
       | some bodyWordResult =>
           have hrepeat := loopRepeat_mapped_locals context body
@@ -2101,26 +2104,26 @@ theorem loopToWord_loop_simulation [NeZero width]
           | broke middleWord label =>
               have hword' :
                   some (.broke middleWord label) = some wordResult := by
-                simpa [loopToWordProg, RiscV.evalWordLoopProg, htick,
+                simpa [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProg, htick,
                   hbodyWord] using hword
               cases hword'
               exact hrepeat
           | continued middleWord label =>
               have hword' :
                   some (.continued middleWord label) = some wordResult := by
-                simpa [loopToWordProg, RiscV.evalWordLoopProg, htick,
+                simpa [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProg, htick,
                   hbodyWord] using hword
               cases hword'
               exact hrepeat
           | normal middleWord =>
               cases hfinalTick : RiscV.evalWordProg middleWord (.tick) with
               | none =>
-                  simp [loopToWordProg, RiscV.evalWordLoopProg, htick,
+                  simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProg, htick,
                     hbodyWord, hfinalTick] at hword
               | some finalWord =>
                   have hword' :
                       some (.normal finalWord) = some wordResult := by
-                    simpa [loopToWordProg, RiscV.evalWordLoopProg, htick,
+                    simpa [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProg, htick,
                       hbodyWord, hfinalTick] using hword
                   cases hword'
                   cases loopResult with
@@ -2233,7 +2236,7 @@ theorem loopToWord_call_tail_simulation_single_parameter [NeZero width]
         some (.returned finalLoop loopResultValues))
     (hword :
       RiscV.evalWordCallWithHandlersAndFfi wordFunctions wordHandler (fuel + 1)
-        wordState none (some target) [wordFindVar context argument] none =
+        wordState none (some target) [0, wordFindVar context argument] none =
         some (.returned finalWord wordResultValues)) :
     loopLocalsMappedToRiscV context finalLoop.locals finalWord ∧
       wordResultValues = loopResultValues := by
@@ -2243,9 +2246,10 @@ theorem loopToWord_call_tail_simulation_single_parameter [NeZero width]
       loopReadLocals loopState.locals [argument] = some [argumentValue] := by
     simp [loopReadLocals, hargument]
   have harguments :
-      RiscV.readWordRegisters wordState [wordFindVar context argument] =
-        some [argumentValue] := by
-    simp [RiscV.readWordRegisters, hargumentRegister, hargumentValue]
+      RiscV.readWordRegisters wordState [0, wordFindVar context argument] =
+        some [RiscV.readRegister wordState 0, argumentValue] := by
+    simp [RiscV.readWordRegisters, RiscV.registerOfNat_zero,
+      hargumentRegister, hargumentValue]
   rcases loopBindParameters_single_parameter_agreement context wordState
       parameter argumentValue parameterRegister hparameter hparameter_nonzero with
     ⟨calleeLocals, calleeWord, hcalleeBind, hwordBind, hcallee⟩
@@ -2655,7 +2659,7 @@ theorem loopToWord_call_handler_simulation_single_parameter [NeZero width]
           some (.normal finalLoop))
     (hword :
       RiscV.evalWordCallWithHandlersAndFfi wordFunctions wordHandler (fuel + 1)
-        wordState none (some target) [wordFindVar context argument]
+        wordState none (some target) [0, wordFindVar context argument]
         (some (wordFindVar context exception, loopToWordProg context handlerBody,
           0, 0)) =
           some (.normal finalWord)) :
@@ -2666,9 +2670,10 @@ theorem loopToWord_call_handler_simulation_single_parameter [NeZero width]
       loopReadLocals loopState.locals [argument] = some [argumentValue] := by
     simp [loopReadLocals, hargument]
   have harguments :
-      RiscV.readWordRegisters wordState [wordFindVar context argument] =
-        some [argumentValue] := by
-    simp [RiscV.readWordRegisters, hargumentRegister, hargumentValue]
+      RiscV.readWordRegisters wordState [0, wordFindVar context argument] =
+        some [RiscV.readRegister wordState 0, argumentValue] := by
+    simp [RiscV.readWordRegisters, RiscV.registerOfNat_zero,
+      hargumentRegister, hargumentValue]
   rcases loopBindParameters_single_parameter_agreement context wordState
       parameter argumentValue parameterRegister hparameter hparameter_nonzero with
     ⟨calleeLocals, calleeWord, hcalleeBind, hwordBind, _⟩
@@ -2866,7 +2871,7 @@ theorem loopToWord_binop_assign_preserves_mapped_locals [NeZero width]
       HXor.hXor x y = x ^^^ y := by
     rfl
   cases operator <;>
-    simp [loopToWordProg, wordCompileExp,
+    simp [loopToWordProg, loopToWordProgFrom, wordCompileExp,
       wordCompileExp.wordCompileExpList] at hresult <;>
     simp [RiscV.evalWordProg, RiscV.wordExpToInstructions,
       RiscV.wordExpToInstruction, RiscV.executeInstructions,
@@ -2880,7 +2885,7 @@ theorem loopToWord_binop_assign_preserves_mapped_locals [NeZero width]
       subst current
       refine ⟨destinationRegister, hdestination, ?_⟩
       simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
-        hdestination_nonzero, 
+        hdestination_nonzero,
         hleft_value', hright_value', evalLoopBinOp]
     · have hcurrent' : loopState.locals name = some current := by
         simpa [updateLoopLocal, hname] using hcurrent
@@ -2900,7 +2905,7 @@ theorem loopToWord_binop_assign_preserves_mapped_locals [NeZero width]
       subst current
       refine ⟨destinationRegister, hdestination, ?_⟩
       simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
-        hdestination_nonzero, 
+        hdestination_nonzero,
         hleft_value', hright_value', evalLoopBinOp]
     · have hcurrent' : loopState.locals name = some current := by
         simpa [updateLoopLocal, hname] using hcurrent
@@ -2920,7 +2925,7 @@ theorem loopToWord_binop_assign_preserves_mapped_locals [NeZero width]
       subst current
       refine ⟨destinationRegister, hdestination, ?_⟩
       simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
-        hdestination_nonzero, 
+        hdestination_nonzero,
         hleft_value', hright_value', hand, evalLoopBinOp]
     · have hcurrent' : loopState.locals name = some current := by
         simpa [updateLoopLocal, hname] using hcurrent
@@ -2940,7 +2945,7 @@ theorem loopToWord_binop_assign_preserves_mapped_locals [NeZero width]
       subst current
       refine ⟨destinationRegister, hdestination, ?_⟩
       simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
-        hdestination_nonzero, 
+        hdestination_nonzero,
         hleft_value', hright_value', hor, evalLoopBinOp]
     · have hcurrent' : loopState.locals name = some current := by
         simpa [updateLoopLocal, hname] using hcurrent
@@ -2960,7 +2965,7 @@ theorem loopToWord_binop_assign_preserves_mapped_locals [NeZero width]
       subst current
       refine ⟨destinationRegister, hdestination, ?_⟩
       simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
-        hdestination_nonzero, 
+        hdestination_nonzero,
         hleft_value', hright_value', evalLoopBinOp]
     · have hcurrent' : loopState.locals name = some current := by
         simpa [updateLoopLocal, hname] using hcurrent
@@ -3023,7 +3028,7 @@ theorem loopToWord_shift_assign_preserves_mapped_locals [NeZero width]
     have hshiftRight (x y : RiscV.Word width) :
         ShiftRight.shiftRight x y = x >>> y.toNat := by
       rfl
-    simp [loopToWordProg, wordCompileExp,
+    simp [loopToWordProg, loopToWordProgFrom, wordCompileExp,
       ] at hresult
     simp [RiscV.evalWordProg, RiscV.wordExpToInstructions,
       RiscV.wordExpToInstruction, RiscV.executeInstructions,
@@ -3036,7 +3041,7 @@ theorem loopToWord_shift_assign_preserves_mapped_locals [NeZero width]
       subst current
       refine ⟨destinationRegister, hdestination, ?_⟩
       simp [RiscV.execute, RiscV.writeRegister,
-        RiscV.readRegister, hdestination_nonzero, 
+        RiscV.readRegister, hdestination_nonzero,
         hleft_value', hright_value', hright_amount,
         hshiftLeft, hshiftRight]
     · have hcurrent' : loopState.locals name = some current := by
@@ -3071,7 +3076,7 @@ theorem loopToWord_const_assign_preserves_mapped_locals [NeZero width]
       loopLocalsMappedToRiscV context
         (updateLoopLocal loopState.locals destination value) resultState := by
   intro resultState hresult
-  simp [loopToWordProg, wordCompileExp] at hresult
+  simp [loopToWordProg, loopToWordProgFrom, wordCompileExp] at hresult
   have hdestination_lt : wordFindVar context destination < 32 :=
     RiscV.registerOfNat_some_lt hdestination
   have hdestination_fin :
@@ -3118,9 +3123,10 @@ theorem loopToWord_seq_evaluation_decomposition [NeZero width]
     ∃ middleLoop middleWord,
       evalLoopProg 1 loopState first = some (.normal middleLoop) ∧
         evalLoopProg 1 middleLoop second = some (.normal finalLoop) ∧
-        RiscV.evalWordProg state (loopToWordProg context first) =
+        RiscV.evalWordProg state (loopToWordProgFrom context 0 2 first).1 =
           some middleWord ∧
-        RiscV.evalWordProg middleWord (loopToWordProg context second) =
+        RiscV.evalWordProg middleWord (loopToWordProgFrom context 0
+            (loopToWordProgFrom context 0 2 first).2 second).1 =
           some finalWord := by
   cases hfirst : evalLoopProg 1 loopState first with
   | none =>
@@ -3132,14 +3138,15 @@ theorem loopToWord_seq_evaluation_decomposition [NeZero width]
               evalLoopProg 1 middleLoop second = some (.normal finalLoop) := by
             simpa [evalLoopProg, hfirst] using hloop
           cases hwordFirst :
-              RiscV.evalWordProg state (loopToWordProg context first) with
+              RiscV.evalWordProg state (loopToWordProgFrom context 0 2 first).1 with
           | none =>
-              simp [loopToWordProg, RiscV.evalWordProg, hwordFirst] at hword
+              simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg, hwordFirst] at hword
           | some middleWord =>
               have hwordSecond :
                   RiscV.evalWordProg middleWord
-                    (loopToWordProg context second) = some finalWord := by
-                simpa [loopToWordProg, RiscV.evalWordProg, hwordFirst] using hword
+                    (loopToWordProgFrom context 0
+            (loopToWordProgFrom context 0 2 first).2 second).1 = some finalWord := by
+                simpa [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg, hwordFirst] using hword
               exact ⟨middleLoop, middleWord, rfl, hsecond,
                 rfl, hwordSecond⟩
       | returned middleLoop values =>
@@ -3165,7 +3172,7 @@ theorem loopToWord_seq_preserves_mapped_locals [NeZero width]
     (hfirst :
       ∀ middleLoop middleWord,
         evalLoopProg 1 loopState first = some (.normal middleLoop) →
-        RiscV.evalWordProg state (loopToWordProg context first) =
+        RiscV.evalWordProg state (loopToWordProgFrom context 0 2 first).1 =
           some middleWord →
         loopLocalsMappedToRiscV context middleLoop.locals middleWord)
     (hsecond :
@@ -3173,7 +3180,8 @@ theorem loopToWord_seq_preserves_mapped_locals [NeZero width]
         loopLocalsMappedToRiscV context middleLoop.locals middleWord →
         ∀ finalLoop finalWord,
           evalLoopProg 1 middleLoop second = some (.normal finalLoop) →
-          RiscV.evalWordProg middleWord (loopToWordProg context second) =
+          RiscV.evalWordProg middleWord (loopToWordProgFrom context 0
+            (loopToWordProgFrom context 0 2 first).2 second).1 =
             some finalWord →
           loopLocalsMappedToRiscV context finalLoop.locals finalWord) :
     loopLocalsMappedToRiscV context finalLoop.locals finalWord := by
@@ -3197,13 +3205,14 @@ theorem loopToWord_seq_preserves_mapped_locals_fuel [NeZero width]
     (finalWord : RiscV.State width)
     (hfirst : ∀ middleLoop middleWord,
       evalLoopProg fuel loopState first = some (.normal middleLoop) →
-      RiscV.evalWordProg state (loopToWordProg context first) = some middleWord →
+      RiscV.evalWordProg state (loopToWordProgFrom context 0 2 first).1 = some middleWord →
       loopLocalsMappedToRiscV context middleLoop.locals middleWord)
     (hsecond : ∀ middleLoop middleWord,
       loopLocalsMappedToRiscV context middleLoop.locals middleWord →
       ∀ finalLoop finalWord,
         evalLoopProg fuel middleLoop second = some (.normal finalLoop) →
-        RiscV.evalWordProg middleWord (loopToWordProg context second) =
+        RiscV.evalWordProg middleWord (loopToWordProgFrom context 0
+            (loopToWordProgFrom context 0 2 first).2 second).1 =
           some finalWord →
         loopLocalsMappedToRiscV context finalLoop.locals finalWord)
     (hloop :
@@ -3223,14 +3232,15 @@ theorem loopToWord_seq_preserves_mapped_locals_fuel [NeZero width]
               evalLoopProg fuel middleLoop second = some (.normal finalLoop) := by
             simpa [evalLoopProg, hfirstLoop] using hloop
           cases hfirstWord : RiscV.evalWordProg state
-              (loopToWordProg context first) with
+              (loopToWordProgFrom context 0 2 first).1 with
           | none =>
-              simp [loopToWordProg, RiscV.evalWordProg, hfirstWord] at hword
+              simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg, hfirstWord] at hword
           | some middleWord =>
               have hsecondWord :
-                  RiscV.evalWordProg middleWord (loopToWordProg context second) =
+                  RiscV.evalWordProg middleWord (loopToWordProgFrom context 0
+            (loopToWordProgFrom context 0 2 first).2 second).1 =
                     some finalWord := by
-                simpa [loopToWordProg, RiscV.evalWordProg, hfirstWord] using hword
+                simpa [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg, hfirstWord] using hword
               exact hsecond middleLoop middleWord
                 (hfirst middleLoop middleWord hfirstLoop hfirstWord)
                 finalLoop finalWord hsecondLoop hsecondWord
@@ -3307,11 +3317,12 @@ theorem loopToWord_ite_preserves_mapped_locals [NeZero width]
         (wordFindVar context condition) (wordRegImm context right) = some choose)
     (hthen : ∀ middleLoop middleWord,
       evalLoopProg 1 loopState thenBranch = some (.normal middleLoop) →
-      RiscV.evalWordProg state (loopToWordProg context thenBranch) = some middleWord →
+      RiscV.evalWordProg state (loopToWordProgFrom context 0 2 thenBranch).1 = some middleWord →
       loopLocalsMappedToRiscV context middleLoop.locals middleWord)
     ( helse : ∀ middleLoop middleWord,
       evalLoopProg 1 loopState elseBranch = some (.normal middleLoop) →
-      RiscV.evalWordProg state (loopToWordProg context elseBranch) = some middleWord →
+      RiscV.evalWordProg state (loopToWordProgFrom context 0
+            (loopToWordProgFrom context 0 2 thenBranch).2 elseBranch).1 = some middleWord →
       loopLocalsMappedToRiscV context middleLoop.locals middleWord) :
     ∀ finalLoop finalWord,
       evalLoopProg 2 loopState
@@ -3328,18 +3339,20 @@ theorem loopToWord_ite_preserves_mapped_locals [NeZero width]
       have helse_loop :
           evalLoopProg 1 loopState elseBranch = some (.normal finalLoop) := by
         cases right <;> simp_all [evalLoopProg]
-      cases hmiddle : RiscV.evalWordProg state (loopToWordProg context elseBranch) with
+      cases hmiddle : RiscV.evalWordProg state (loopToWordProgFrom context 0
+            (loopToWordProgFrom context 0 2 thenBranch).2 elseBranch).1 with
       | none =>
           cases right <;>
-            simp_all [loopToWordProg, RiscV.evalWordProg]
+            simp_all [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg]
       | some middleWord =>
           have helse_word :
-              RiscV.evalWordProg state (loopToWordProg context elseBranch) =
+              RiscV.evalWordProg state (loopToWordProgFrom context 0
+            (loopToWordProgFrom context 0 2 thenBranch).2 elseBranch).1 =
                 some middleWord := hmiddle
           have htick : RiscV.evalWordProg middleWord
               (.tick : WordProg (RiscV.Word width)) = some finalWord := by
             cases right <;>
-              simp_all [loopToWordProg, RiscV.evalWordProg]
+              simp_all [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg]
           exact loopToWord_tick_preserves_mapped_locals context finalLoop.locals
             middleWord (helse finalLoop middleWord helse_loop helse_word) finalWord htick
   | true =>
@@ -3347,18 +3360,18 @@ theorem loopToWord_ite_preserves_mapped_locals [NeZero width]
       have hthen_loop :
           evalLoopProg 1 loopState thenBranch = some (.normal finalLoop) := by
         cases right <;> simp_all [evalLoopProg]
-      cases hmiddle : RiscV.evalWordProg state (loopToWordProg context thenBranch) with
+      cases hmiddle : RiscV.evalWordProg state (loopToWordProgFrom context 0 2 thenBranch).1 with
       | none =>
           cases right <;>
-            simp_all [loopToWordProg, RiscV.evalWordProg]
+            simp_all [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg]
       | some middleWord =>
           have hthen_word :
-              RiscV.evalWordProg state (loopToWordProg context thenBranch) =
+              RiscV.evalWordProg state (loopToWordProgFrom context 0 2 thenBranch).1 =
                 some middleWord := hmiddle
           have htick : RiscV.evalWordProg middleWord
               (.tick : WordProg (RiscV.Word width)) = some finalWord := by
             cases right <;>
-              simp_all [loopToWordProg, RiscV.evalWordProg]
+              simp_all [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg]
           exact loopToWord_tick_preserves_mapped_locals context finalLoop.locals
             middleWord (hthen finalLoop middleWord hthen_loop hthen_word) finalWord htick
 
@@ -3368,7 +3381,7 @@ theorem loopToWord_loop_break_exec [NeZero width] (state : RiscV.State width) :
           (.loop [] (.break 0) [])) =
       some (.normal (RiscV.execute (RiscV.execute state (.addi 0 0 0))
         (.addi 0 0 0))) := by
-  simp [loopToWordProg, RiscV.evalWordLoopProg, RiscV.evalWordLoopRepeat,
+  simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProg, RiscV.evalWordLoopRepeat,
     RiscV.evalWordProg, RiscV.execute, RiscV.writeRegister, RiscV.nextPc]
 
 theorem loopToWord_div_assign_preserves_mapped_locals [NeZero width]
@@ -3425,7 +3438,7 @@ theorem loopToWord_div_assign_preserves_mapped_locals [NeZero width]
     have h := hdivisor_register
     simp [RiscV.registerOfNat, hdivisor_lt] at h
     exact h
-  simp [loopToWordProg, wordArith] at hresult
+  simp [loopToWordProg, loopToWordProgFrom, wordArith] at hresult
   simp [RiscV.evalWordProg, RiscV.wordArithToInstructions,
     RiscV.wordArithToInstruction, RiscV.executeInstructions,
     RiscV.registerOfNat, hdestination_lt, hdividend_lt, hdivisor_lt,
@@ -3444,8 +3457,8 @@ theorem loopToWord_div_assign_preserves_mapped_locals [NeZero width]
         state.registers divisorRegister = divisorValue := by
       exact hdivisor_value
     simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
-      hdestination_nonzero, 
-      hdividend_value', hdivisor_value', 
+      hdestination_nonzero,
+      hdividend_value', hdivisor_value',
       BitVec.udiv_def]
     intro hzero
     exact (hdivisor_nonzero hzero).elim
@@ -3511,7 +3524,7 @@ theorem loopToWord_assign_var_preserves_mapped_locals [NeZero width]
     have h := hsource_register
     simp [RiscV.registerOfNat, hsource_lt] at h
     exact h
-  simp [loopToWordProg, wordCompileExp, RiscV.evalWordProg,
+  simp [loopToWordProg, loopToWordProgFrom, wordCompileExp, RiscV.evalWordProg,
     RiscV.wordExpToInstructions, RiscV.wordExpToInstruction,
     RiscV.executeInstructions, RiscV.registerOfNat, hdestination_lt,
     hsource_lt, hdestination_fin, hsource_fin] at hresult
@@ -3586,13 +3599,13 @@ theorem loopToWord_binop_assign_agreement_of_locals [NeZero width]
               HXor.hXor x y = x ^^^ y := by
             rfl
           cases operator <;>
-            simp [evalLoopProg, evalLoopExp, evalLoopBinOp, loopToWordProg,
+            simp [evalLoopProg, evalLoopExp, evalLoopBinOp, loopToWordProg, loopToWordProgFrom,
               wordCompileExp, wordCompileExp.wordCompileExpList,
               RiscV.evalWordProg, RiscV.wordExpToInstructions,
               RiscV.wordExpToInstruction, RiscV.executeInstructions,
               RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
               RiscV.nextPc, updateLoopLocal, hleft, hright,
-              hleft_register, hright_register, 
+              hleft_register, hright_register,
               hleft_value', hright_value',
               hdestination, hdestination_nonzero, hand, hor]
 
@@ -3649,13 +3662,13 @@ theorem loopToWord_shift_assign_agreement_of_locals [NeZero width]
               ShiftRight.shiftRight x y = x >>> y.toNat := by
             rfl
           rcases hoperator with rfl | rfl <;>
-            simp [evalLoopProg, evalLoopExp, evalLoopShift, loopToWordProg,
-              wordCompileExp, 
+            simp [evalLoopProg, evalLoopExp, evalLoopShift, loopToWordProg, loopToWordProgFrom,
+              wordCompileExp,
               RiscV.evalWordProg, RiscV.wordExpToInstructions,
               RiscV.wordExpToInstruction, RiscV.executeInstructions,
               RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
               RiscV.nextPc, updateLoopLocal, hleft, hright,
-              hleft_register, hright_register, 
+              hleft_register, hright_register,
               hleft_value', hright_value', hdestination,
               hdestination_nonzero, hright_amount,
               hshiftLeft, hshiftRight,
@@ -3730,10 +3743,10 @@ theorem loopToWord_load32_preserves_mapped_locals [NeZero width]
     have h := hdestination
     simp [RiscV.registerOfNat, hdestination_lt] at h
     exact h
-  simp [loopToWordProg, RiscV.evalWordProg,
+  simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg,
     RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
     RiscV.nextPc, RiscV.registerOfNat, haddress_lt, hdestination_lt,
-    haddress_fin, hdestination_fin, 
+    haddress_fin, hdestination_fin,
     hdestination_nonzero] at hresult
   subst resultState
   have hloaded :
@@ -3788,7 +3801,7 @@ theorem loopToWord_store32_preserves_mapped_locals [NeZero width]
     have h := hvalue
     simp [RiscV.registerOfNat, hvalue_lt] at h
     exact h
-  simp [loopToWordProg, RiscV.evalWordProg, RiscV.execute,
+  simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg, RiscV.execute,
     RiscV.writeByte, RiscV.writeWord32, RiscV.byteAddress,
     RiscV.registerOfNat, haddress_lt, hvalue_lt, haddress_fin, hvalue_fin] at hresult
   subst resultState
@@ -3842,10 +3855,10 @@ theorem loopToWord_loadByte_preserves_mapped_locals [NeZero width]
     have h := hdestination
     simp [RiscV.registerOfNat, hdestination_lt] at h
     exact h
-  simp [loopToWordProg, RiscV.evalWordProg,
+  simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg,
     RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
     RiscV.nextPc, RiscV.registerOfNat, haddress_lt, hdestination_lt,
-    haddress_fin, hdestination_fin, 
+    haddress_fin, hdestination_fin,
     haddress_value', hmachine, hdestination_nonzero] at hresult
   subst resultState
   intro name current hcurrent
@@ -3895,7 +3908,7 @@ theorem loopToWord_storeByte_preserves_mapped_locals [NeZero width]
     have h := hvalue
     simp [RiscV.registerOfNat, hvalue_lt] at h
     exact h
-  simp [loopToWordProg, RiscV.evalWordProg, RiscV.execute,
+  simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordProg, RiscV.execute,
     RiscV.writeByte, RiscV.registerOfNat,
     haddress_lt, hvalue_lt, haddress_fin, hvalue_fin] at hresult
   subst resultState
@@ -3979,7 +3992,7 @@ theorem loopToWord_shMem_load8_preserves_mapped_locals [NeZero width]
     have h := hdestination
     simp [RiscV.registerOfNat, hdestination_lt] at h
     exact h
-  simp [loopToWordProg, wordMemOp, wordCompileExp,
+  simp [loopToWordProg, loopToWordProgFrom, wordMemOp, wordCompileExp,
     RiscV.evalWordProg, RiscV.evalWordShareInst,
     RiscV.wordShareInstToInstructions, RiscV.wordInstToInstruction,
     RiscV.executeInstructions, RiscV.execute, RiscV.writeRegister,
@@ -4034,7 +4047,7 @@ theorem loopToWord_shMem_store8_preserves_mapped_locals [NeZero width]
     have h := hvalue
     simp [RiscV.registerOfNat, hvalue_lt] at h
     exact h
-  simp [loopToWordProg, wordMemOp, wordCompileExp,
+  simp [loopToWordProg, loopToWordProgFrom, wordMemOp, wordCompileExp,
     RiscV.evalWordProg, RiscV.evalWordShareInst,
     RiscV.wordShareInstToInstructions, RiscV.wordInstToInstruction,
     RiscV.executeInstructions, RiscV.execute, RiscV.writeByte,
@@ -4115,7 +4128,7 @@ theorem loopToWord_shMem_load16_preserves_mapped_locals [NeZero width]
     have h := hdestination
     simp [RiscV.registerOfNat, hdestination_lt] at h
     exact h
-  simp [loopToWordProg, wordMemOp, wordCompileExp,
+  simp [loopToWordProg, loopToWordProgFrom, wordMemOp, wordCompileExp,
     RiscV.evalWordProg, RiscV.evalWordShareInst,
     RiscV.wordShareInstToInstructions, RiscV.wordInstToInstruction,
     RiscV.executeInstructions, RiscV.execute, RiscV.writeRegister,
@@ -4170,7 +4183,7 @@ theorem loopToWord_shMem_store16_preserves_mapped_locals [NeZero width]
     have h := hvalue
     simp [RiscV.registerOfNat, hvalue_lt] at h
     exact h
-  simp [loopToWordProg, wordMemOp, wordCompileExp,
+  simp [loopToWordProg, loopToWordProgFrom, wordMemOp, wordCompileExp,
     RiscV.evalWordProg, RiscV.evalWordShareInst,
     RiscV.wordShareInstToInstructions, RiscV.wordInstToInstruction,
     RiscV.executeInstructions, RiscV.execute, RiscV.writeWord16,
@@ -4231,7 +4244,7 @@ theorem loopToWord_shMem_load_const_preserves_mapped_locals [NeZero width]
     simpa [RiscV.readWordValue, RiscV.readByte] using hmachine
   have hzero : state.registers 0 = 0 := by
     exact zero
-  simp [loopToWordProg, wordMemOp, wordCompileExp,
+  simp [loopToWordProg, loopToWordProgFrom, wordMemOp, wordCompileExp,
     RiscV.evalWordProg, RiscV.evalWordShareInst,
     RiscV.wordShareInstToInstructions, RiscV.wordExpToInstructions,
     RiscV.wordExpToInstruction, RiscV.wordInstToInstruction,
@@ -4301,7 +4314,7 @@ theorem loopToWord_shMem_load_preserves_mapped_locals [NeZero width]
     have h := hdestination
     simp [RiscV.registerOfNat, hdestination_lt] at h
     exact h
-  simp [loopToWordProg, wordMemOp, wordCompileExp,
+  simp [loopToWordProg, loopToWordProgFrom, wordMemOp, wordCompileExp,
     RiscV.evalWordProg, RiscV.evalWordShareInst,
     RiscV.wordShareInstToInstructions, RiscV.wordInstToInstruction,
     RiscV.executeInstructions, RiscV.execute, RiscV.writeRegister,
@@ -4356,11 +4369,11 @@ theorem loopToWord_shMem_store_preserves_mapped_locals [NeZero width]
     have h := hvalue
     simp [RiscV.registerOfNat, hvalue_lt] at h
     exact h
-  simp [loopToWordProg, wordMemOp, wordCompileExp,
+  simp [loopToWordProg, loopToWordProgFrom, wordMemOp, wordCompileExp,
     RiscV.evalWordProg, RiscV.evalWordShareInst,
     RiscV.wordShareInstToInstructions, RiscV.wordInstToInstruction,
     RiscV.executeInstructions, RiscV.execute,
-    
+
     RiscV.registerOfNat,
     haddress_lt, hvalue_lt, haddress_fin, hvalue_fin] at hresult
   subst resultState
@@ -4408,7 +4421,7 @@ theorem loopToWord_store_const_preserves_mapped_locals [NeZero width]
     simp [RiscV.registerOfNat, h] at hregister
     exact hscratch value valueValue hvalue valueRegister hvalue_register
       hregister.symm
-  simp [loopToWordProg, wordCompileExp, RiscV.evalWordProg,
+  simp [loopToWordProg, loopToWordProgFrom, wordCompileExp, RiscV.evalWordProg,
     RiscV.evalWordShareInst, RiscV.wordShareInstToInstructions,
     RiscV.wordInstToInstruction, RiscV.wordExpToInstructions,
     RiscV.wordExpToInstruction, RiscV.executeInstructions,

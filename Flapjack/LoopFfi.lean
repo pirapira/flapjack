@@ -305,11 +305,14 @@ def loopFfiProgramBoundary [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (state : LoopFfiState α σ) : LoopProg α → Option (LoopFfiStep α σ)
   | .ffi function configuration configurationLength array arrayLength live => do
+      /- CakeML reads the four FFI variables from the pre-cut locals;
+         `cut_state` only determines the state used afterwards
+         (`loopSemScript.sml:426-428`). -/
+      let configuration ← state.locals configuration
+      let configurationLength ← state.locals configurationLength
+      let array ← state.locals array
+      let arrayLength ← state.locals arrayLength
       let cutState ← loopFfiCutState state live
-      let configuration ← cutState.locals configuration
-      let configurationLength ← cutState.locals configurationLength
-      let array ← cutState.locals array
-      let arrayLength ← cutState.locals arrayLength
       pure (loopFfiExtCall cutState function configuration configurationLength
         array arrayLength)
   | .shMem operator name address => do
@@ -344,11 +347,11 @@ theorem loopFfiProgramBoundary_ffi
     (live : List Nat) (configurationValue configurationLengthValue
       arrayValue arrayLengthValue : α)
     (hcut : loopFfiCutState state live = some cutState)
-    (hconfiguration : cutState.locals configuration = some configurationValue)
-    (hconfigurationLength : cutState.locals configurationLength =
+    (hconfiguration : state.locals configuration = some configurationValue)
+    (hconfigurationLength : state.locals configurationLength =
       some configurationLengthValue)
-    (harray : cutState.locals array = some arrayValue)
-    (harrayLength : cutState.locals arrayLength = some arrayLengthValue) :
+    (harray : state.locals array = some arrayValue)
+    (harrayLength : state.locals arrayLength = some arrayLengthValue) :
     loopFfiProgramBoundary state
         (.ffi function configuration configurationLength array arrayLength live) =
       some (loopFfiExtCall cutState function configurationValue

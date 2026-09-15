@@ -28,18 +28,18 @@ theorem evalStackProgFuelWithCodeAndFfi_wordStackMove
   cases sourceLocation with
   | register register =>
       by_cases hsame : register = destination
-      · simp [wordStackFfiMove, wordStackLocation, 
+      · simp [wordStackFfiMove, wordStackLocation,
           hsource, hsame] at hmove heval
         cases hmove
         cases heval
         rfl
-      · simp [wordStackFfiMove, wordStackLocation, 
+      · simp [wordStackFfiMove, wordStackLocation,
           hsource, hsame] at hmove heval
         cases hmove
         cases heval
         rfl
   | stack slot =>
-      simp [wordStackFfiMove, wordStackLocation, 
+      simp [wordStackFfiMove, wordStackLocation,
         hsource] at hmove heval
       cases hmove
       cases heval
@@ -59,12 +59,12 @@ theorem wordStackFfiMove_ne_skip
         intro heq
         apply hdestination
         simp [heq]
-      simp [wordStackFfiMove, wordStackLocation, 
+      simp [wordStackFfiMove, wordStackLocation,
         hsource, hregister] at hmove
       cases hmove
       simp
   | stack slot =>
-      simp [wordStackFfiMove, wordStackLocation, 
+      simp [wordStackFfiMove, wordStackLocation,
         hsource] at hmove
       cases hmove
       simp
@@ -521,8 +521,8 @@ theorem wordToStackProgNatWithBitmapBuilder_call_handler
           (wordToStackCallWithHandlerInSection config.perf target arguments.length
             config.frameOffset config.scratch returnCode handlerCode
             (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
-            (wordStackHandlerLabel config handlerLabel)
-            (wordStackHandlerEntryLabel config entryLabel) exception)),
+            (wordStackHandlerLabel config entryLabel)
+            (wordStackHandlerEntryLabel config handlerLabel) exception)),
         finalState) := by
   cases returns with
   | none =>
@@ -631,8 +631,8 @@ theorem wordToStackProgNatWithLocationBitmaps_call_handler
           (wordToStackCallWithHandlerInSection config.perf target arguments.length
             config.frameOffset config.scratch returnCode handlerCode
             (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
-            (wordStackHandlerLabel config handlerLabel)
-            (wordStackHandlerEntryLabel config entryLabel) exception)),
+            (wordStackHandlerLabel config entryLabel)
+            (wordStackHandlerEntryLabel config handlerLabel) exception)),
         finalState) := by
   simpa [wordToStackProgNatWithLocationBitmaps] using
     (wordToStackProgNatWithBitmapBuilder_call_handler
@@ -882,8 +882,9 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
         (wordToStackCallWithHandlerInSection config.perf target arguments.length
           config.frameOffset config.scratch returnCode handlerCode
           (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
-          (wordStackHandlerLabel config handlerLabel)
-          (wordStackHandlerEntryLabel config entryLabel) exception), finalState) := by
+          (wordStackHandlerLabel config entryLabel)
+
+          (wordStackHandlerEntryLabel config handlerLabel) exception), finalState) := by
     simpa [wordStackJoin] using hcompile
   rw [hcompile']
   simp only [Option.bind_some]
@@ -891,8 +892,9 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
       wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch returnCode handlerCode
         (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
-        (wordStackHandlerLabel config handlerLabel)
-        (wordStackHandlerEntryLabel config entryLabel) exception ≠
+        (wordStackHandlerLabel config entryLabel)
+
+        (wordStackHandlerEntryLabel config handlerLabel) exception ≠
         (.skip : StackProg Nat) := by
     simp [wordToStackCallWithHandlerInSection, stackSeq, stackPushHandler,
       stackHandlerArgs, stackArgs, stackMove]
@@ -911,8 +913,9 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
     (second := wordToStackCallWithHandlerInSection config.perf target arguments.length
       config.frameOffset config.scratch returnCode handlerCode
       (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
-      (wordStackHandlerLabel config handlerLabel)
-      (wordStackHandlerEntryLabel config entryLabel) exception)
+      (wordStackHandlerLabel config entryLabel)
+
+      (wordStackHandlerEntryLabel config handlerLabel) exception)
     (result := some result) hmove hcall
   simp [hseq]
 
@@ -949,9 +952,10 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
     (hcall : evalStackProgFuelWithCodeAndFfi host fuel code middle
       (wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch returnCode handlerCode
-        (wordStackReturnLabel config returns) (wordStackEntryLabel config returns) 
-        (wordStackHandlerLabel config handlerLabel)
-        (wordStackHandlerEntryLabel config entryLabel) exception) =
+        (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
+        (wordStackHandlerLabel config entryLabel)
+
+        (wordStackHandlerEntryLabel config handlerLabel) exception) =
       some result) :
     (wordToStackProgNatWithBitmapBuilder config bitmapBuilder
       registerCount bitmapRegister frameSlots wordBits storeConstsStub bitmapState
@@ -982,8 +986,9 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
         (wordToStackCallWithHandlerInSection config.perf target arguments.length
           config.frameOffset config.scratch returnCode handlerCode
           (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
-          (wordStackHandlerLabel config handlerLabel)
-          (wordStackHandlerEntryLabel config entryLabel) exception), finalState) := by
+          (wordStackHandlerLabel config entryLabel)
+
+          (wordStackHandlerEntryLabel config handlerLabel) exception), finalState) := by
     simpa [wordStackJoin] using hcompile
   rw [hcompile']
   simp only [Option.bind_some]
@@ -991,8 +996,9 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
       wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch returnCode handlerCode
         (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
-        (wordStackHandlerLabel config handlerLabel)
-        (wordStackHandlerEntryLabel config entryLabel) exception ≠
+        (wordStackHandlerLabel config entryLabel)
+
+        (wordStackHandlerEntryLabel config handlerLabel) exception ≠
         (.skip : StackProg Nat) := by
     simp [wordToStackCallWithHandlerInSection, stackSeq, stackPushHandler,
       stackHandlerArgs, stackArgs, stackMove, stackHandlerSlots]
@@ -1003,8 +1009,9 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
     (second := wordToStackCallWithHandlerInSection config.perf target arguments.length
       config.frameOffset config.scratch returnCode handlerCode
       (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
-      (wordStackHandlerLabel config handlerLabel)
-      (wordStackHandlerEntryLabel config entryLabel) exception)
+      (wordStackHandlerLabel config entryLabel)
+
+      (wordStackHandlerEntryLabel config handlerLabel) exception)
     (result := some result) hmove hcall
   simp [hseq]
 

@@ -124,7 +124,7 @@ def pipelineWordFunctions [OfNat α 1]
     let context : WordContext :=
       { vars := slots.map (fun name => (name, name + 2)) }
     (label, parameters.map (fun name => name + 2),
-      wordProgDCE (loopToWordProg context body)))
+      wordProgDCE ((loopToWordProgFrom context label 2 body).1)))
 
 /-! Source-shaped `loop_to_word$compile_prog` output.  The ordinary pipeline
     keeps parameter names for later register allocation; `pan_to_word` instead
@@ -135,24 +135,10 @@ def pipelineWordCompileProg [OfNat α 1]
     List (Nat × Nat × WordProg α) :=
   LoopToWord.loopToWordCompileProg functions
 
-/-! The source `crep_to_loop` compiler folds a tail call into the generated
-    sequence and `loop_to_word$comp` prepends the entry slot.  The general
-    allocator-facing Loop bridge predates that source-shaped contract, so this
-    small adapter restores it only at the `pan_to_word` boundary. -/
-def panToWordTailCall : WordProg α → WordProg α
-  | .seq .skip (.seq .skip (.call none target arguments none)) =>
-      .seq .skip (.seq (.call none target (0 :: arguments) none) .skip)
-  | .seq first second =>
-      .seq (panToWordTailCall first) (panToWordTailCall second)
-  | .call none target arguments none =>
-      .call none target (0 :: arguments) none
-  | program => program
-
 def panToWordCompileProg [OfNat α 1]
     (functions : List (Nat × List Nat × LoopProg α)) :
     List (Nat × Nat × WordProg α) :=
-  (pipelineWordCompileProg functions).map
-    (fun (label, arity, body) => (label, arity, panToWordTailCall body))
+  pipelineWordCompileProg functions
 
 /-! StackLang view of the register-coloured Word pipeline.  This is the
     executable bridge used by the RISC-V-only backend path below; functions
@@ -194,7 +180,7 @@ def pipelineWordFunctionsAllocatedWithSpills [NeZero width] :
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
       let unallocatedBody :=
-        RiscV.wordFlattenProgramFrom (loopToWordProg context body)
+        RiscV.wordFlattenProgramFrom ((loopToWordProgFrom context label 2 body).1)
       let (_, renamedParameters, renamedBody, allocation) ←
         wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences
           wordParameters unallocatedBody
@@ -233,7 +219,7 @@ def pipelineWordFunctionAllocatedWithSpillsAndBitmaps [NeZero width]
     let context : WordContext :=
       { vars := slots.map (fun name => (name, name + 2)) }
     let wordParameters := parameters.map (fun name => name + 2)
-    let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
+    let unallocatedBody := RiscV.wordFlattenProgramFrom ((loopToWordProgFrom context label 2 body).1)
     let (_, renamedParameters, renamedBody, allocation) ←
       wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences
         wordParameters unallocatedBody
@@ -312,7 +298,7 @@ def pipelineWordFunctionAllocatedWithSpillsAndFullSsaAndBitmaps [NeZero width]
     let context : WordContext :=
       { vars := slots.map (fun name => (name, name + 2)) }
     let wordParameters := parameters.map (fun name => name + 2)
-    let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
+    let unallocatedBody := RiscV.wordFlattenProgramFrom ((loopToWordProgFrom context label 2 body).1)
     let (_, renamedParameters, renamedProgram, allocation) ←
       wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
         wordParameters unallocatedBody
@@ -411,7 +397,7 @@ def pipelineWordFunctionsAllocatedWithGraph [NeZero width] :
       let context : WordContext :=
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
+      let unallocatedBody := RiscV.wordFlattenProgramFrom ((loopToWordProgFrom context label 2 body).1)
       let (_, renamedParameters, allocation, renamedBody) ←
         wordAllocateGraphFunctionWithStackOnlyPrefreezeRenamed wordParameters unallocatedBody
           [] 13 14
@@ -441,7 +427,7 @@ def pipelineWordFunctionsAllocatedWithGraphAndFullSsa [NeZero width] :
       let context : WordContext :=
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
+      let unallocatedBody := RiscV.wordFlattenProgramFrom ((loopToWordProgFrom context label 2 body).1)
       let (_, renamedParameters, allocation, renamedProgram) ←
         wordAllocateGraphFunctionWithEntryPrefreezeRenamed wordParameters unallocatedBody
           wordParameters 13 14
@@ -474,7 +460,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
       let context : WordContext :=
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
+      let unallocatedBody := RiscV.wordFlattenProgramFrom ((loopToWordProgFrom context label 2 body).1)
       let (_, renamedParameters, renamedProgram, allocation) ←
         wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
           wordParameters unallocatedBody
@@ -526,7 +512,7 @@ def pipelineWordFunctionsAllocated [OfNat α 1]
       let slots := loopAccVars body parameters
       let context ← wordAllocateContext slots
       let rest ← pipelineWordFunctionsAllocated functions
-      pure ((label, wordMapVars context parameters, loopToWordProg context body) :: rest)
+      pure ((label, wordMapVars context parameters, (loopToWordProgFrom context label 2 body).1) :: rest)
 
 /-! Allocation-aware variant that derives clashes from the generated Word
 program.  It is still separate from the historical artifact boundary while
@@ -537,10 +523,10 @@ def pipelineWordFunctionsAllocatedWithAnalysis [OfNat α 1]
   | [] => some []
   | (label, parameters, body) :: functions => do
       let slots := loopAccVars body parameters
-      let unallocatedBody := loopToWordProg ({ vars := [] } : WordContext) body
+      let unallocatedBody := (loopToWordProgFrom ({ vars := [] } : WordContext) label 2 body).1
       let context ← wordAllocateProgramWithSlots slots unallocatedBody
       let rest ← pipelineWordFunctionsAllocatedWithAnalysis functions
-      pure ((label, wordMapVars context parameters, loopToWordProg context body) :: rest)
+      pure ((label, wordMapVars context parameters, (loopToWordProgFrom context label 2 body).1) :: rest)
 
 /-! Variant that consumes the same analysis boundary but returns the coloured
     Word program directly.  This is the form expected by the target selector;
@@ -551,7 +537,7 @@ def pipelineWordFunctionsAllocatedWithAnalysisAndColour [OfNat α 1]
   | [] => some []
   | (label, parameters, body) :: functions => do
       let slots := loopAccVars body parameters
-      let unallocatedBody := loopToWordProg ({ vars := [] } : WordContext) body
+      let unallocatedBody := (loopToWordProgFrom ({ vars := [] } : WordContext) label 2 body).1
       let (context, allocatedBody) ←
         wordAllocateProgramWithSlotsAndColour slots unallocatedBody
       let rest ← pipelineWordFunctionsAllocatedWithAnalysisAndColour functions

@@ -55,7 +55,7 @@ theorem repeatControl_simulation :
               repeatControlBody] using hloop
           have hword' :
               some (.broke bodyWord 0) = some bodyWordResult := by
-            simpa [loopToWordProg, RiscV.evalWordLoopProgWithHandlersAndFfi,
+            simpa [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProgWithHandlersAndFfi,
               repeatControlBody] using hword
           cases hloop'
           cases hword'
@@ -67,7 +67,7 @@ theorem repeatControl_simulation :
         repeatControlBody, repeatControlLoopState])
     (hword := by
       simp [RiscV.evalWordLoopRepeatWithHandlersAndFfi,
-        RiscV.evalWordLoopProgWithHandlersAndFfi, loopToWordProg,
+        RiscV.evalWordLoopProgWithHandlersAndFfi, loopToWordProg, loopToWordProgFrom,
         repeatControlBody, repeatControlWordState])
 
 end Flapjack

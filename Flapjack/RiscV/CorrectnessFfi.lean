@@ -77,7 +77,7 @@ theorem loopToWord_ffi_single_simulation [NeZero width]
                         configurationLengthValue arrayValue arrayLengthValue wordState).bind
                         (fun state => some (state, ([] : List (Word width)))) =
                         some (wordResult, ([] : List (Word width))) := by
-                    simpa [loopToWordProg, evalWordFfi,
+                    simpa [loopToWordProg, loopToWordProgFrom, evalWordFfi,
                       hconfigurationRegister, hconfigurationLengthRegister,
                       harrayRegister, harrayLengthRegister,
                       hconfigurationValue, hconfigurationLengthValue,
@@ -176,7 +176,7 @@ theorem loopToWord_ffi_single_combined_simulation [NeZero width]
                         configurationLengthValue arrayValue arrayLengthValue wordState).bind
                         (fun state => some (WordControlResult.normal state)) =
                         some (WordControlResult.normal wordResult) := by
-                    simpa [loopToWordProg,
+                    simpa [loopToWordProg, loopToWordProgFrom,
                       evalWordFunctionWithHandlersAndFfi,
                       hconfigurationRegister, hconfigurationLengthRegister,
                       harrayRegister, harrayLengthRegister,
@@ -243,7 +243,7 @@ theorem loopToWord_ffi_single_combined_simulation_fuel [NeZero width]
     loopHandler wordHandler handler_agrees function configuration configurationLength array
     arrayLength live hlocals
   · simpa [evalLoopProgWithCallsAndFfi] using hloop
-  · simpa [loopToWordProg, evalWordFunctionWithHandlersAndFfi] using hword
+  · simpa [loopToWordProg, loopToWordProgFrom, evalWordFunctionWithHandlersAndFfi] using hword
 
 /-!
 Compose two normal-returning programs under the call/FFI evaluators.  This is
@@ -278,7 +278,8 @@ theorem loopToWord_seq_combined_simulation [NeZero width]
         evalLoopProgWithCallsAndFfi functions loopHandler fuel middleLoop second =
           some (.normal finalLoop) →
         evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel middleWord
-          (loopToWordProg context second) = some (.normal finalWord) →
+          (loopToWordProgFrom context 0
+            (loopToWordProgFrom context 0 2 first).2 second).1 = some (.normal finalWord) →
         loopLocalsMappedToRiscV context finalLoop.locals finalWord)
     (hloop :
       evalLoopProgWithCallsAndFfi functions loopHandler (fuel + 1) loopState
@@ -299,25 +300,26 @@ theorem loopToWord_seq_combined_simulation [NeZero width]
             simpa [evalLoopProgWithCallsAndFfi, hfirstLoop] using hloop
           cases hfirstWord :
               evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel wordState
-                (loopToWordProg context first) with
+                (loopToWordProgFrom context 0 2 first).1 with
           | none =>
-              simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi, hfirstWord] at hword
+              simp [loopToWordProg, loopToWordProgFrom, evalWordFunctionWithHandlersAndFfi, hfirstWord] at hword
           | some firstWordResult =>
               cases firstWordResult with
               | normal middleWord =>
                   have hsecondWord :
                       evalWordFunctionWithHandlersAndFfi wordFunctions wordHandler fuel
-                        middleWord (loopToWordProg context second) =
+                        middleWord (loopToWordProgFrom context 0
+                          (loopToWordProgFrom context 0 2 first).2 second).1 =
                         some (.normal finalWord) := by
-                    simpa [loopToWordProg, evalWordFunctionWithHandlersAndFfi,
+                    simpa [loopToWordProg, loopToWordProgFrom, evalWordFunctionWithHandlersAndFfi,
                       hfirstWord] using hword
                   exact hsecond middleLoop middleWord
                     (hfirst middleLoop middleWord hfirstLoop hfirstWord)
                     finalLoop finalWord hsecondLoop hsecondWord
               | returned middleWord values =>
-                  simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi, hfirstWord] at hword
+                  simp [loopToWordProg, loopToWordProgFrom, evalWordFunctionWithHandlersAndFfi, hfirstWord] at hword
               | raised middleWord exception =>
-                  simp [loopToWordProg, evalWordFunctionWithHandlersAndFfi, hfirstWord] at hword
+                  simp [loopToWordProg, loopToWordProgFrom, evalWordFunctionWithHandlersAndFfi, hfirstWord] at hword
       | returned middleLoop values =>
           simp [evalLoopProgWithCallsAndFfi, hfirstLoop] at hloop
       | broke middleLoop label =>
@@ -410,7 +412,7 @@ theorem loopToWord_ffi_loop_simulation [NeZero width]
                         (fun state =>
                           some (RiscV.WordLoopControlResult.normal state)) =
                         some (RiscV.WordLoopControlResult.normal wordResult) := by
-                    simpa [loopToWordProg,
+                    simpa [loopToWordProg, loopToWordProgFrom,
                       RiscV.evalWordLoopProgWithHandlersAndFfi,
                       hconfigurationRegister, hconfigurationLengthRegister,
                       harrayRegister, harrayLengthRegister,
@@ -468,7 +470,8 @@ theorem loopToWord_seq_loop_simulation [NeZero width]
         evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
             middleLoop second = some (.normal finalLoop) →
         RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
-            middleWord (loopToWordProg context second) = some (.normal finalWord) →
+            middleWord (loopToWordProgFrom context 0
+              (loopToWordProgFrom context 0 2 first).2 second).1 = some (.normal finalWord) →
         loopLocalsMappedToRiscV context finalLoop.locals finalWord)
     (hloop :
       evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler (fuel + 1)
@@ -491,33 +494,34 @@ theorem loopToWord_seq_loop_simulation [NeZero width]
             simpa [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] using hloop
           cases hfirstWord :
               RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
-                wordState (loopToWordProg context first) with
+                wordState (loopToWordProgFrom context 0 2 first).1 with
           | none =>
-              simp [loopToWordProg,
+              simp [loopToWordProg, loopToWordProgFrom,
                 RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] at hword
           | some firstWordResult =>
               cases firstWordResult with
               | normal middleWord =>
                   have hsecondWord :
                       RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
-                        middleWord (loopToWordProg context second) =
+                        middleWord (loopToWordProgFrom context 0
+                          (loopToWordProgFrom context 0 2 first).2 second).1 =
                         some (.normal finalWord) := by
-                    simpa [loopToWordProg,
+                    simpa [loopToWordProg, loopToWordProgFrom,
                       RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] using hword
                   exact hsecond middleLoop middleWord
                     (hfirst middleLoop middleWord hfirstLoop hfirstWord)
                     finalLoop finalWord hsecondLoop hsecondWord
               | returned middleWord values =>
-                  simp [loopToWordProg,
+                  simp [loopToWordProg, loopToWordProgFrom,
                     RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] at hword
               | raised middleWord exception =>
-                  simp [loopToWordProg,
+                  simp [loopToWordProg, loopToWordProgFrom,
                     RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] at hword
               | broke middleWord label =>
-                  simp [loopToWordProg,
+                  simp [loopToWordProg, loopToWordProgFrom,
                     RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] at hword
               | continued middleWord label =>
-                  simp [loopToWordProg,
+                  simp [loopToWordProg, loopToWordProgFrom,
                     RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] at hword
       | returned middleLoop values =>
           simp [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] at hloop
@@ -577,14 +581,15 @@ theorem loopToWord_seq_loop_control_simulation [NeZero width]
       evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
           loopState first = some firstResult →
       RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
-          wordState (loopToWordProg context first) = some firstWordResult →
+          wordState (loopToWordProgFrom context 0 2 first).1 = some firstWordResult →
       loopResultMappedToWordLoop context firstResult firstWordResult)
     (hsecond : ∀ middleLoop middleWord secondResult secondWordResult,
       loopLocalsMappedToRiscV context middleLoop.locals middleWord →
       evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
           middleLoop second = some secondResult →
       RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
-          middleWord (loopToWordProg context second) = some secondWordResult →
+          middleWord (loopToWordProgFrom context 0
+            (loopToWordProgFrom context 0 2 first).2 second).1 = some secondWordResult →
       loopResultMappedToWordLoop context secondResult secondWordResult)
     (hloop :
       evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler (fuel + 1)
@@ -600,9 +605,9 @@ theorem loopToWord_seq_loop_control_simulation [NeZero width]
   | some firstResult =>
       cases hfirstWord :
           RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
-            wordState (loopToWordProg context first) with
+            wordState (loopToWordProgFrom context 0 2 first).1 with
       | none =>
-          simp [loopToWordProg,
+          simp [loopToWordProg, loopToWordProgFrom,
             RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] at hword
       | some firstWordResult =>
           have hfirstResult := hfirst firstResult firstWordResult hfirstLoop hfirstWord
@@ -616,8 +621,9 @@ theorem loopToWord_seq_loop_control_simulation [NeZero width]
                     simpa [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] using hloop
                   have hsecondWord :
                       RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
-                          middleWord (loopToWordProg context second) = some wordResult := by
-                    simpa [loopToWordProg,
+                          middleWord (loopToWordProgFrom context 0
+                            (loopToWordProgFrom context 0 2 first).2 second).1 = some wordResult := by
+                    simpa [loopToWordProg, loopToWordProgFrom,
                       RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] using hword
                   exact hsecond middleLoop middleWord loopResult wordResult
                     hfirstResult hsecondLoop hsecondWord
@@ -639,7 +645,7 @@ theorem loopToWord_seq_loop_control_simulation [NeZero width]
                     simpa [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] using hloop
                   have hword' :
                       some (.returned middleWord wordValues) = some wordResult := by
-                    simpa [loopToWordProg,
+                    simpa [loopToWordProg, loopToWordProgFrom,
                       RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] using hword
                   injection hloop' with hloopResult
                   injection hword' with hwordResult
@@ -664,7 +670,7 @@ theorem loopToWord_seq_loop_control_simulation [NeZero width]
                     simpa [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] using hloop
                   have hword' :
                       some (.raised middleWord wordException) = some wordResult := by
-                    simpa [loopToWordProg,
+                    simpa [loopToWordProg, loopToWordProgFrom,
                       RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] using hword
                   injection hloop' with hloopResult
                   injection hword' with hwordResult
@@ -689,7 +695,7 @@ theorem loopToWord_seq_loop_control_simulation [NeZero width]
                     simpa [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] using hloop
                   have hword' :
                       some (.broke middleWord wordLabel) = some wordResult := by
-                    simpa [loopToWordProg,
+                    simpa [loopToWordProg, loopToWordProgFrom,
                       RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] using hword
                   injection hloop' with hloopResult
                   injection hword' with hwordResult
@@ -714,7 +720,7 @@ theorem loopToWord_seq_loop_control_simulation [NeZero width]
                     simpa [evalLoopProgWithPrimitiveCallsAndFfi, hfirstLoop] using hloop
                   have hword' :
                       some (.continued middleWord wordLabel) = some wordResult := by
-                    simpa [loopToWordProg,
+                    simpa [loopToWordProg, loopToWordProgFrom,
                       RiscV.evalWordLoopProgWithHandlersAndFfi, hfirstWord] using hword
                   injection hloop' with hloopResult
                   injection hword' with hwordResult
@@ -749,7 +755,8 @@ theorem loopToWord_call_loop_control_simulation_single_parameter [NeZero width]
       lookupLoopFunction target functions = some ([parameter], loopBody))
     (hlookupWord :
       RiscV.lookupWordFunction target wordFunctions =
-        some ([wordFindVar context parameter], loopToWordProg context loopBody))
+        some ([wordFindVar context parameter],
+          (loopToWordProgFrom context 0 2 loopBody).1))
     (hparameter :
       RiscV.registerOfNat (wordFindVar context parameter) =
         some parameterRegister)
@@ -760,7 +767,8 @@ theorem loopToWord_call_loop_control_simulation_single_parameter [NeZero width]
       evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
           calleeLoop loopBody = some bodyResult →
       RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
-          calleeWord (loopToWordProg context loopBody) = some bodyWordResult →
+          calleeWord (loopToWordProgFrom context 0 2 loopBody).1 =
+            some bodyWordResult →
       loopResultMappedToWordLoop context bodyResult bodyWordResult)
     (hlocals : loopLocalsMappedToRiscV context loopState.locals wordState)
     (hloop :
@@ -770,7 +778,7 @@ theorem loopToWord_call_loop_control_simulation_single_parameter [NeZero width]
     (hword :
       RiscV.evalWordLoopCallWithHandlersAndFfi wordFunctions wordHandler
         (fuel + 1) wordState none (some target)
-        [wordFindVar context argument] none = some wordResult) :
+        [0, wordFindVar context argument] none = some wordResult) :
     loopResultMappedToWordLoop context loopResult wordResult := by
   rcases hlocals argument argumentValue hargument with
     ⟨argumentRegister, hargumentRegister, hargumentValue⟩
@@ -778,9 +786,10 @@ theorem loopToWord_call_loop_control_simulation_single_parameter [NeZero width]
       loopReadLocals loopState.locals [argument] = some [argumentValue] := by
     simp [loopReadLocals, hargument]
   have harguments :
-      RiscV.readWordRegisters wordState [wordFindVar context argument] =
-        some [argumentValue] := by
-    simp [RiscV.readWordRegisters, hargumentRegister, hargumentValue]
+      RiscV.readWordRegisters wordState [0, wordFindVar context argument] =
+        some [RiscV.readRegister wordState 0, argumentValue] := by
+    simp [RiscV.readWordRegisters, RiscV.registerOfNat_zero, hargumentRegister,
+      hargumentValue]
   rcases loopBindParameters_single_parameter_agreement context wordState
       parameter argumentValue parameterRegister hparameter hparameter_nonzero with
     ⟨calleeLocals, calleeWord, hcalleeBind, hwordBind, hcallee⟩
@@ -793,7 +802,7 @@ theorem loopToWord_call_loop_control_simulation_single_parameter [NeZero width]
   | some bodyResult =>
       cases hbodyWord :
           RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
-            calleeWord (loopToWordProg context loopBody) with
+            calleeWord (loopToWordProgFrom context 0 2 loopBody).1 with
       | none =>
           simp [RiscV.evalWordLoopCallWithHandlersAndFfi, hlookupWord,
             harguments, hwordBind, hbodyWord] at hword
@@ -982,7 +991,8 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
       lookupLoopFunction target functions = some ([parameter], loopBody))
     (hlookupWord :
       RiscV.lookupWordFunction target wordFunctions =
-        some ([wordFindVar context parameter], loopToWordProg context loopBody))
+        some ([wordFindVar context parameter],
+          (loopToWordProgFrom context 0 2 loopBody).1))
     (hparameter :
       RiscV.registerOfNat (wordFindVar context parameter) =
         some parameterRegister)
@@ -1002,7 +1012,8 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
       evalLoopProgWithPrimitiveCallsAndFfi primitive functions loopHandler fuel
           calleeLoop loopBody = some bodyResult →
       RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
-          calleeWord (loopToWordProg context loopBody) = some bodyWordResult →
+          calleeWord (loopToWordProgFrom context 0 2 loopBody).1 =
+            some bodyWordResult →
       loopResultMappedToWordLoop context bodyResult bodyWordResult)
     (hhandler : ∀ exceptionValue
         (handlerLoopState : LoopState (Word width))
@@ -1018,7 +1029,7 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
           handlerLoopState
           handlerBody = some handlerResult →
       RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
-          handlerWordState (loopToWordProg context handlerBody) =
+          handlerWordState (loopToWordProgFrom context 0 2 handlerBody).1 =
             some handlerWordResult →
       loopResultMappedToWordLoop context handlerResult handlerWordResult)
     (hlocals : loopLocalsMappedToRiscV context loopState.locals wordState)
@@ -1029,8 +1040,9 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
     (hword :
       RiscV.evalWordLoopCallWithHandlersAndFfi wordFunctions wordHandler
         (fuel + 1) wordState none (some target)
-        [wordFindVar context argument]
-        (some (wordFindVar context exception, loopToWordProg context handlerBody,
+        [0, wordFindVar context argument]
+        (some (wordFindVar context exception,
+          (loopToWordProgFrom context 0 2 handlerBody).1,
           0, 0)) =
           some wordResult) :
     loopResultMappedToWordLoop context loopResult wordResult := by
@@ -1040,9 +1052,10 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
       loopReadLocals loopState.locals [argument] = some [argumentValue] := by
     simp [loopReadLocals, hargument]
   have harguments :
-      RiscV.readWordRegisters wordState [wordFindVar context argument] =
-        some [argumentValue] := by
-    simp [RiscV.readWordRegisters, hargumentRegister, hargumentValue]
+      RiscV.readWordRegisters wordState [0, wordFindVar context argument] =
+        some [RiscV.readRegister wordState 0, argumentValue] := by
+    simp [RiscV.readWordRegisters, RiscV.registerOfNat_zero, hargumentRegister,
+      hargumentValue]
   rcases loopBindParameters_single_parameter_agreement context wordState
       parameter argumentValue parameterRegister hparameter hparameter_nonzero with
     ⟨calleeLocals, calleeWord, hcalleeBind, hwordBind, hcallee⟩
@@ -1055,7 +1068,7 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
   | some bodyResult =>
       cases hbodyWord :
           RiscV.evalWordLoopProgWithHandlersAndFfi wordFunctions wordHandler fuel
-            calleeWord (loopToWordProg context loopBody) with
+            calleeWord (loopToWordProgFrom context 0 2 loopBody).1 with
       | none =>
           simp [RiscV.evalWordLoopCallWithHandlersAndFfi, hlookupWord,
             harguments, hwordBind, hbodyWord] at hword
@@ -1214,7 +1227,7 @@ theorem loopToWord_call_loop_control_simulation_single_parameter_with_handler
                         wordHandler fuel
                         (RiscV.writeRegister returnedWordState exceptionRegister
                           sourceException)
-                        (loopToWordProg context handlerBody) = some wordResult := by
+                        (loopToWordProgFrom context 0 2 handlerBody).1 = some wordResult := by
                     simpa [RiscV.evalWordLoopCallWithHandlersAndFfi, hlookupWord,
                       harguments, hwordBind, hbodyWord, hexception,
                       hexceptionValue] using hword

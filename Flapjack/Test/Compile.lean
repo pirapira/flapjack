@@ -232,12 +232,12 @@ example :
 example :
     loopToWordProg wordContext (.assign 3 (.const (α := Nat) 7)) =
       .assign 2 (.const 7) := by
-  simp [loopToWordProg, wordCompileExp, wordFindVar, lookupNatInfo, wordContext]
+  simp [loopToWordProg, loopToWordProgFrom, wordCompileExp, wordFindVar, lookupNatInfo, wordContext]
 
 example :
     loopToWordProg wordContext (.seq (.load32 3 4) (.store32 3 4)) =
       .seq (.inst (.mem .load32 3 2)) (.inst (.mem .store32 3 2)) := by
-  simp [loopToWordProg, wordFindVar, lookupNatInfo, wordContext]
+  simp [loopToWordProg, loopToWordProgFrom, wordFindVar, lookupNatInfo, wordContext]
 
 example :
     loopVarsOfExp ((LoopExp.op .add [.var 1, .load (.var 2)]) : LoopExp Nat) =

@@ -163,14 +163,15 @@ example :
           have hloop' : loopResult = .broke loopState 0 := by
             simpa [evalLoopProg] using hloop.symm
           have hword' : wordResult = .broke state 0 := by
-            simpa [RiscV.evalWordLoopProg, loopToWordProg] using hword.symm
+            simpa [RiscV.evalWordLoopProg, loopToWordProg,
+              loopToWordProgFrom] using hword.symm
           subst loopResult
           subst wordResult
           exact ⟨rfl, hlocals⟩)
     (hlocals := memoryCorrectness_mappedLocals)
     (hloop := by simp [evalLoopProg, evalLoopRepeat])
     (hword := by
-      simp [loopToWordProg, RiscV.evalWordLoopProg,
+      simp [loopToWordProg, loopToWordProgFrom, RiscV.evalWordLoopProg,
         RiscV.evalWordLoopRepeat, RiscV.evalWordProg, RiscV.execute,
         RiscV.writeRegister, RiscV.nextPc])
 

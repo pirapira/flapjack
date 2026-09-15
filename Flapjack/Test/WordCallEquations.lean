@@ -30,7 +30,7 @@ def wordCallEquationHandlerBody : WordProg (Word 8) :=
 example :
     evalWordCallWithHandlersAndFfi
         [(7, [2], wordCallEquationReturnBody)] wordCallEquationHost 5
-        wordCallEquationState none (some 7) [2] none =
+        wordCallEquationState none (some 7) [0, 2] none =
       some (.returned wordCallEquationState [9]) := by
   apply evalWordCallWithHandlersAndFfi_return_of_eval
     (functions := [(7, [2], wordCallEquationReturnBody)])
@@ -38,12 +38,12 @@ example :
     (state := wordCallEquationState)
     (calleeState := wordCallEquationCalleeState)
     (bodyState := wordCallEquationCalleeState) (target := 7)
-    (parameters := [2]) (arguments := [2])
-    (body := wordCallEquationReturnBody) (values := [9])
+    (parameters := [2]) (arguments := [0, 2])
+    (body := wordCallEquationReturnBody) (values := [0, 9])
     (returnValues := [9])
   · rfl
   · simp [wordCallEquationState, readWordRegisters, registerOfNat,
-      readRegister, writeRegister]
+      readRegister, writeRegister, zeroState]
   · simp [wordCallEquationState, wordCallEquationCalleeState,
       bindWordRegisters, clearWordRegisters, registerOfNat, writeRegister]
   · simp [wordCallEquationReturnBody,

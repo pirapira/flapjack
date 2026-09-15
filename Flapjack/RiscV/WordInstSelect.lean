@@ -140,7 +140,7 @@ def wordInstSelectPullExp [NeZero width] : WordExp (Word width) → WordExp (Wor
   | .op .sub arguments =>
       wordInstSelectConvertSub (arguments.map wordInstSelectPullExp)
   | .op operator [] => wordInstSelectOpConsts operator
-  | .op operator [expression] => wordInstSelectPullExp expression
+  | .op _ [expression] => wordInstSelectPullExp expression
   | .op operator arguments =>
       wordInstSelectOptimizeConsts operator
         (wordInstSelectPullOps operator
@@ -159,7 +159,7 @@ end up in the right operand position. -/
 def wordInstSelectFlattenExp [NeZero width] : WordExp (Word width) → WordExp (Word width)
   | .op .sub arguments => .op .sub (arguments.map wordInstSelectFlattenExp)
   | .op operator [] => wordInstSelectOpConsts operator
-  | .op operator [expression] => wordInstSelectFlattenExp expression
+  | .op _ [expression] => wordInstSelectFlattenExp expression
   | .op operator (expression :: rest) =>
       .op operator
         [wordInstSelectFlattenExp (.op operator rest),
@@ -204,6 +204,18 @@ def wordInstSelectExp [NeZero width] (target temporary : Nat) :
       else
         .seq prelude
           (.seq (.inst (.const (temporary + 1) value))
+            (.inst (.binop operator target temporary
+              (.reg (temporary + 1)))))
+  | .op operator [left, .lookup .currHeap] =>
+      .seq (wordInstSelectExp temporary temporary left)
+        (.opCurrHeap operator target temporary)
+  | .op operator [.lookup .currHeap, right] =>
+      if operator != .sub then
+        .seq (wordInstSelectExp temporary temporary right)
+          (.opCurrHeap operator target temporary)
+      else
+        .seq (wordInstSelectExp temporary temporary (.lookup .currHeap))
+          (.seq (wordInstSelectExp (temporary + 1) (temporary + 1) right)
             (.inst (.binop operator target temporary
               (.reg (temporary + 1)))))
   | .op operator [left, right] =>
@@ -268,19 +280,9 @@ def wordInstSelectProgram [NeZero width] (temporary : Nat) :
   | .mustTerminate body =>
       .mustTerminate (wordInstSelectProgram temporary body)
   | .shareInst operator name address =>
-      match wordInstSelectFlattenExp (wordInstSelectPullExp address) with
-      | .op .add [base, .const offset] =>
-          if wordInstSelectOffsetOk offset then
-            .seq (wordInstSelectExp temporary temporary base)
-              (.shareInst operator name
-                (.op .add [.var temporary, .const offset]))
-          else
-            .seq (wordInstSelectExp temporary temporary
-                (.op .add [base, .const offset]))
-              (.shareInst operator name (.var temporary))
-      | address =>
-          .seq (wordInstSelectExp temporary temporary address)
-            (.shareInst operator name (.var temporary))
+      .seq (wordInstSelectExp temporary temporary
+          (wordInstSelectFlattenExp (wordInstSelectPullExp address)))
+        (.shareInst operator name (.var temporary))
   | .ite operator condition right thenBranch elseBranch =>
       .ite operator condition right
         (wordInstSelectProgram temporary thenBranch)

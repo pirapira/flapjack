@@ -22,7 +22,7 @@ theorem evalStackRemoveGet [NeZero width]
             BitVec.ofNat width
               (config.bytesInWord * stackStorePosition store)) =
         state.stores store) :
-    (evalWordStackMachine state (stackRemoveGet config destination store)).map
+    (evalWordStackMachine state (stackRemoveGet config none destination store)).map
         (fun final => final.registers destination) =
       some (state.stores store) := by
   cases store <;>
@@ -36,7 +36,7 @@ theorem evalStackRemoveSet [NeZero width]
     (hstore : store ≠ .currHeap)
     (haddress : config.addressScratch ≠ config.storeBase)
     (hsource : config.addressScratch ≠ source) :
-    (evalWordStackMachine state (stackRemoveSet config store source)).map
+    (evalWordStackMachine state (stackRemoveSet config none store source)).map
         (fun final =>
           final.memory
             (state.registers config.storeBase -
@@ -53,7 +53,7 @@ theorem evalStackRemoveGetCurrHeap [NeZero width]
     (config : StackRemoveConfig) (state : WordStackMachineState width)
     (destination : Nat) :
     (evalWordStackMachine state
-      (stackRemoveGet config destination .currHeap)).map
+      (stackRemoveGet config none destination .currHeap)).map
         (fun final => final.registers destination) =
       some (state.registers config.currHeap) := by
   by_cases hsame : destination = config.currHeap
@@ -66,7 +66,7 @@ theorem evalStackRemoveSetCurrHeap [NeZero width]
     (config : StackRemoveConfig) (state : WordStackMachineState width)
     (source : Nat) :
     (evalWordStackMachine state
-      (stackRemoveSet config .currHeap source)).map
+      (stackRemoveSet config none .currHeap source)).map
         (fun final => final.registers config.currHeap) =
       some (state.registers source) := by
   by_cases hsame : config.currHeap = source

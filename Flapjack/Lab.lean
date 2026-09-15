@@ -206,13 +206,19 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
   | .seq (.const scratch value)
       (.arith operator destination left right) =>
       let canFuse :=
-        right == scratch && destination == left &&
+        scratch != destination && right == scratch && destination == left &&
           match operator with
           | .add => value < 2 ^ 11
           | .sub => value ≤ 2 ^ 11
           | .and | .or | .xor => false
       if canFuse then
-        ⟨[.asm (.arithImm operator destination left value) [] 0], false, counter⟩
+        if destination = left && value = 0 then
+          /- Cake's final Lab filter drops an arithmetic identity.  Keeping
+             this out of the line stream is important because otherwise the
+             encoder emits `addi rd, rd, 0` and label positions drift. -/
+          ⟨[], false, counter⟩
+        else
+          ⟨[.asm (.arithImm operator destination left value) [] 0], false, counter⟩
       else
         let firstResult :=
           labFlatten false sectionId counter continues breaks (.const scratch value)

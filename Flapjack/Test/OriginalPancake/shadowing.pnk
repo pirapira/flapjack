@@ -1,0 +1,8 @@
+var 1 x = 1;
+fun 1 g() { return 9; }
+fun 1 f() {
+  var 1 x = 0;
+  var 1 x = g();
+  return x;
+}
+fun 1 main() { return f(); }

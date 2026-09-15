@@ -87,11 +87,9 @@ def wordStackMove (config : WordStackConfig) (destination source : Nat) :
       if destination = source then pure .skip
       else pure (.arith .or destination source source)
   | .register destination, .stack slot =>
-      pure (.seq (.stackLoad config.scratch (wordStackOffset config slot))
-        (.arith .or destination config.scratch config.scratch))
+      pure (.stackLoad destination (wordStackOffset config slot))
   | .stack slot, .register source =>
-      pure (.seq (.arith .or config.scratch source source)
-        (.stackStore config.scratch (wordStackOffset config slot)))
+      pure (.stackStore source (wordStackOffset config slot))
   | .stack destinationSlot, .stack sourceSlot =>
       if destinationSlot = sourceSlot then pure .skip
       else pure (.seq (.stackLoad config.scratch
@@ -3676,20 +3674,6 @@ theorem wordStackMove_registers :
           scratch := 31, stackBase := 10 } 0 1 =
       some (.arith .or 4 5 5 : StackProg Nat) := by
   simp [wordStackMove, wordStackLocation, lookupNatInfo]
-
-theorem wordStackMove_register_to_spill :
-    wordStackMove
-        { locations := [(0, .stack 2), (1, .register 5)],
-          scratch := 31, stackBase := 10 } 0 1 =
-      some (.seq (.arith .or 31 5 5) (.stackStore 31 12) : StackProg Nat) := by
-  simp [wordStackMove, wordStackLocation, wordStackOffset, lookupNatInfo]
-
-theorem wordStackMove_spill_to_register :
-    wordStackMove
-        { locations := [(0, .register 4), (1, .stack 2)],
-          scratch := 31, stackBase := 10 } 0 1 =
-      some (.seq (.stackLoad 31 12) (.arith .or 4 31 31) : StackProg Nat) := by
-  simp [wordStackMove, wordStackLocation, wordStackOffset, lookupNatInfo]
 
 theorem wordStackMove_spill_to_spill :
     wordStackMove

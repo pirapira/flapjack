@@ -252,6 +252,32 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         ⟨firstResult.lines ++ separator ++ secondResult.lines,
           firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
   | .seq (.const scratch value)
+      (.seq (.arith operator destination left right) rest) =>
+      let canFuseAliasedAdd :=
+        scratch = destination && left = destination && operator = .add
+      if canFuseAliasedAdd then
+        let restResult :=
+          labFlatten false sectionId counter continues breaks rest
+        let arithmetic :=
+          if value = 0 then
+            []
+          else
+            [.asm (.arithImm .add destination right value) [] 0]
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨arithmetic ++ separator ++ restResult.lines,
+          restResult.terminal, restResult.nextLabel⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks
+            (.seq (.const scratch value) (.arith operator destination left right))
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks rest
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
+  | .seq (.const scratch value)
       (.arith operator destination left right) =>
       let canFuse :=
         scratch != destination && right == scratch &&
@@ -261,14 +287,19 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
                 (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64)
           | .sub => value ≤ 2 ^ 11
           | .and | .or | .xor => false
-      if canFuse then
+      let canFuseAliasedAdd :=
+        scratch = destination && left = destination && operator = .add
+      if canFuse || canFuseAliasedAdd then
         if destination = left && value = 0 then
           /- Cake's final Lab filter drops an arithmetic identity.  Keeping
              this out of the line stream is important because otherwise the
              encoder emits `addi rd, rd, 0` and label positions drift. -/
           ⟨[], false, counter⟩
         else
-          ⟨[.asm (.arithImm operator destination left value) [] 0], false, counter⟩
+          if canFuseAliasedAdd then
+            ⟨[.asm (.arithImm .add destination right value) [] 0], false, counter⟩
+          else
+            ⟨[.asm (.arithImm operator destination left value) [] 0], false, counter⟩
       else
         let firstResult :=
           labFlatten false sectionId counter continues breaks (.const scratch value)
@@ -348,9 +379,33 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+ /-- `stack_alloc$next_lab` (`stack_allocScript.sml:649-662`): one plus the
+    largest label value referenced by the program, floored at the caller's
+    accumulator.  `stack_to_lab` seeds `flatten`'s fresh-label counter with
+    `next_lab p 2` so labels introduced while flattening control flow can
+    never collide with labels that already occur in the program. -/
+def labNextLab : StackProg α → Nat → Nat
+  | .seq first second, aux => labNextLab first (labNextLab second aux)
+  | .ite _ _ _ thenBranch elseBranch, aux =>
+      labNextLab thenBranch (labNextLab elseBranch aux)
+  | .loop body, aux => labNextLab body aux
+  | .call none _ none, aux => aux
+  | .call none _ (some (_, _, handlerLabel)), aux => max aux (handlerLabel + 2)
+  | .call (some (program, _, _, entryLabel)) _ none, aux =>
+      labNextLab program (max aux (entryLabel + 2))
+  | .call (some (program, _, _, entryLabel)) _
+      (some (handler, _, handlerLabel)), aux =>
+      labNextLab program
+        (labNextLab handler (max (max entryLabel handlerLabel + 2) aux))
+  | _, aux => aux
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def labProgramToSection (sectionId initialLabel : Nat) (program : StackProg α) :
-    LabSection α :=
-  let result := labFlatten true sectionId initialLabel [] [] program
+      LabSection α :=
+  let result := labFlatten true sectionId (max initialLabel (labNextLab program 2))
+    [] [] program
   let finalLabel := if labIsSequence program then result.nextLabel else 1
   ⟨sectionId, result.lines ++ [labLabel sectionId finalLabel]⟩
 

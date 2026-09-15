@@ -829,6 +829,25 @@ def compileLabProgramLinkedWithFfiStubsAndHalt [NeZero width]
   | some ((sectionId, _, code) :: sections) =>
       some ((sectionId, 0, stubCode ++ code) :: sections)
 
+/-! The Pancake artifact carries Cake's fixed runtime byte prefix separately.
+    Runtime sections 0, 1, and 2 remain symbolic jump targets, but do not
+    contribute to the linked source-section base. -/
+def labCollectPancakeRuntimeLabels : LabProgram (Word width) →
+    List (Nat × Nat × Nat)
+  | program =>
+      let sourceProgram := program.filter (fun entry => entry.name >= 3)
+      [(0, 0, 812), (1, 0, 848), (2, 0, 772)] ++
+        labCollectProgramLabels 1000 sourceProgram
+
+def compileLabProgramLinkedWithPancakeRuntime [NeZero width]
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    Option (List (Nat × Word width × List (Instruction width))) :=
+  let sourceProgram := program.filter (fun entry => entry.name >= 3)
+  let labels := labCollectPancakeRuntimeLabels program
+  let haltPc := 1000 + 4 * labProgramInstructionCount sourceProgram
+  compileLabProgramLinkedWithFfiStubsAndHaltAux context labels 1000 1000 haltPc
+    sourceProgram
+
 def flattenLabProgramLinked :
     List (Nat × Word width × List (Instruction width)) → List (Instruction width)
   | [] => []

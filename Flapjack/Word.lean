@@ -376,7 +376,9 @@ def loopToWordProgWithLabels [OfNat α 1] (context : WordContext) :
   | labels, .mark body =>
       loopToWordProgWithLabels context labels body
   | labels, .call none target arguments _ =>
-      (.call none target (wordMapVars context arguments) none, labels)
+      /- Tail call: CakeML drops the handler and prepends register 0 (the
+         link slot) to the argument list (`loop_to_wordScript.sml:131`). -/
+      (.call none target (0 :: wordMapVars context arguments) none, labels)
   | labels, .call (some (values, live)) target arguments none =>
       let nextLabels := (labels.1, labels.2 + 1)
       (.call (some (wordMapVars context values,

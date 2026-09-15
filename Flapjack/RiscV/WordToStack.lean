@@ -3319,6 +3319,15 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .set store value =>
       (wordStackSetNat config (wordStoreToNat store) (wordExpToNat value)).map
         (fun code => (code, state))
+  | .seq (.assign firstDestination (.const firstValue))
+      (.seq (.assign secondDestination (.const secondValue)) rest) => do
+      let firstCode ← wordStackCompileExpToPhysicalNat config secondDestination
+        (wordExpToNat (.const secondValue))
+      let secondCode ← wordStackCompileExpToPhysicalNat config firstDestination
+        (wordExpToNat (.const firstValue))
+      let (restCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state rest
+      pure (.seq firstCode (.seq secondCode restCode), state)
   | .seq first second => do
       let (firstCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state first
@@ -3351,8 +3360,9 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
       /- Returning calls carry only value arguments.  The source-shaped
-         `panToWordTailCall` adapter adds the link slot only to tail calls;
-         ordinary calls therefore begin at the value ABI base. -/
+         `loop_to_word$comp` adds the link slot only to tail calls
+         (`loop_to_wordScript.sml:131`); ordinary calls therefore begin at
+         the value ABI base. -/
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state

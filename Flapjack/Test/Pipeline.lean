@@ -81,14 +81,21 @@ def pipelineNoMainTargetHasSyntheticMain : Bool :=
 
 /- The handler address is a cross-section address.  This checks the emitted
    setup code directly: the handler for `main` must not be encoded as a local
-   offset or as the exception-register number. -/
+   offset or as the exception-register number.
+
+   The constant is the byte address of the handler code in the emitted image.
+   It moved from 72 to 88 when the loop-to-word bridge was made faithful to
+   `loop_to_word$comp` (cakeml/pancake/loop_to_wordScript.sml:128-143):
+   handled calls now compile the normal-return body and the trailing `Tick`
+   instead of dropping them as `Skip`, adding four instructions (16 bytes)
+   before the handler section. -/
 def pipelineHandlerHasCrossSectionAddress : Bool :=
   match compileFlapjackRiscVViaStack (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
       pipelineStackRemoveConfig pipelineHandlerDeclarations with
   | some instructions =>
       instructions.any (fun instruction =>
-        instruction == .addi 31 31 (BitVec.ofNat 64 72))
+        instruction == .addi 31 31 (BitVec.ofNat 64 88))
   | none => false
 
 #guard pipelineHandlerHasCrossSectionAddress
@@ -240,7 +247,7 @@ example :
     compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
     compileProg, crepInlineTopRecursiveByNames, crepInlineTopRecursive,
     crepInlineFunctionsRecursive, crepInlineActiveNames,
-    crepArithFunctions]
+    crepSimpFunctions]
 
 example [NeZero width] :
     pipelineRiscVFunctions

@@ -80,7 +80,7 @@ example :
     compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
     compileProg, crepInlineTopRecursiveByNames, crepInlineTopRecursive,
     crepInlineFunctionsRecursive, crepInlineActiveNames,
-    crepArithFunctions
+    crepSimpFunctions
     ]
 
 example :

@@ -750,9 +750,21 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         | .store | .store8 | .store16 | .store32 =>
             (state, .shareInst operator (wordSsaRead state name) address)
     | .call none target arguments none =>
-        let arguments := arguments.map (wordSsaRead state)
+        let renamedArguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 0 arguments.length
-        let moveArguments := .move 1 (abiArguments.zip arguments)
+        /- CakeML emits `Move1 (ZIP (conv_args, names))` here.  The leading
+           `loop_to_word` tail-call dummy register `0` is coalesced away by
+           the original allocator and is not consumed when binding the
+           callee parameters. -/
+        let allPairs := abiArguments.zip (arguments.zip renamedArguments)
+        let pairs := match allPairs with
+          | (_, original, _) :: rest =>
+              if original = 0 then rest else allPairs
+          | [] => []
+        let moveArguments :=
+          match pairs with
+          | [] => .skip
+          | _ => .move 1 (pairs.map (fun (abi, _, renamed) => (abi, renamed)))
         (state, wordSsaSeq moveArguments
           (.call none target abiArguments none))
     | .call none target arguments
@@ -963,7 +975,7 @@ def wordProgReadVars : WordProg α → List Nat
   | .mustTerminate body => wordProgReadVars body
   | .break _ | .continue _ => []
   | .raise exception => [exception]
-  | .return _ values => values
+  | .return label values => label :: values
   | .tick => []
   | .locValue _ _label => []
   | .call returns _ arguments handler =>

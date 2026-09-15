@@ -147,6 +147,13 @@ class PanShiftWidth (α : Type u) where
   width : Nat
   amount : α → Nat
 
+/-! Natural-number pipeline instantiations (used by pass-local fixtures) treat
+    the word width as the 64-bit RISC-V target and extract shift amounts
+    unchanged. -/
+instance natPanShiftWidth : PanShiftWidth Nat where
+  width := 64
+  amount := id
+
 inductive Prog (α : Type u) where
   | skip
   | dec (name : VarName) (shape : Shape) (value : Exp α) (body : Prog α)

@@ -221,11 +221,15 @@ def wordToStackRaise (_exception : Nat) : StackProg α :=
 def wordToStackCallNoHandler (_perf : Bool) (target : Nat)
     (argumentCount frameOffset scratch : Nat)
     (returnValues : List Nat) (returnCode : StackProg α)
-    (returnLabel entryLabel : Nat) : StackProg α :=
+    (returnLabel entryLabel : Nat) (registerCount : Nat := 22) :
+    StackProg α :=
+  /- Cake `stack_arg_count` for a label target is `(arg count - 1) - k`
+     with `arg count = length args + 1`, truncated at zero: only the
+     stack-resident arguments are copied into the fresh frame. -/
   let callCode :=
     .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target) none
   stackSeq [
-    stackArgs (argumentCount + 1) frameOffset scratch,
+    stackArgs (argumentCount - registerCount) frameOffset scratch,
     callCode,
     .stackFree (returnValues.length)
   ]
@@ -233,27 +237,35 @@ def wordToStackCallNoHandler (_perf : Bool) (target : Nat)
 def wordToStackCallWithHandlerInSection (perf : Bool) (target : Nat)
     (argumentCount frameOffset scratch : Nat)
     (returnCode handlerCode : StackProg α)
-    (returnLabel entryLabel handlerLabel handlerEntryLabel exceptionLabel : Nat) : StackProg α :=
+    (returnLabel entryLabel handlerLabel handlerEntryLabel exceptionLabel : Nat)
+    (registerCount : Nat := 22) : StackProg α :=
+  /- Cake `stack_arg_count` for a label target is `(arg count - 1) - k`
+     with `arg count = length args + 1`, truncated at zero: only the
+     stack-resident arguments are copied into the fresh frame. -/
   let returnCode := stackPopHandler perf scratch returnCode
   let callCode :=
     .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target)
       (some (handlerCode, exceptionLabel, handlerLabel))
   stackSeq [
     stackPushHandler perf handlerLabel handlerEntryLabel scratch,
-    stackHandlerArgs perf (argumentCount + 1) frameOffset scratch,
+    stackHandlerArgs perf (argumentCount - registerCount) frameOffset scratch,
     callCode
   ]
 
 def wordToStackCallWithHandler (perf : Bool) (target : Nat)
     (argumentCount frameOffset scratch : Nat)
     (returnCode handlerCode : StackProg α)
-    (returnLabel entryLabel handlerLabel exceptionLabel : Nat) : StackProg α :=
+    (returnLabel entryLabel handlerLabel exceptionLabel : Nat)
+    (registerCount : Nat := 22) : StackProg α :=
+  /- Cake `stack_arg_count` for a label target is `(arg count - 1) - k`
+     with `arg count = length args + 1`, truncated at zero: only the
+     stack-resident arguments are copied into the fresh frame. -/
   let callCode :=
     .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target)
       (some (handlerCode, exceptionLabel, handlerLabel))
   stackSeq [
     stackPushHandler perf handlerLabel exceptionLabel scratch,
-    stackHandlerArgs perf (argumentCount + 1) frameOffset scratch,
+    stackHandlerArgs perf (argumentCount - registerCount) frameOffset scratch,
     callCode
   ]
 

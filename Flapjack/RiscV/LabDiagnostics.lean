@@ -288,6 +288,10 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
      lower to Cake's single `Addr`-form instruction: the negated byte offset
      is encoded as the two's-complement `Nat` representative for `width`. -/
   let offsetImm := some (fun byteOffset : Nat => 2 ^ width - byteOffset)
+  /- Stack slots sit above the stack pointer, so their byte offsets encode
+     directly as positive immediates. -/
+  let slotImm := some (fun byteOffset : Nat => byteOffset)
+                let shiftImm := some (fun amount : Nat => amount)
   let programs :=
     (stackRaiseStubLocation, stackRaiseStub false removeConfig.addressScratch) ::
       stackAllocCompileWithSimpleGcAndStoreConsts allocConfig gcConfig
@@ -300,10 +304,11 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
             if sectionId = cakeLongDiv1Location ||
                 sectionId = cakeLongDivLocation then
               labProgramToEntrySection sectionId 0 initialLabel
-                (stackRemoveComplete removeConfig program offsetImm)
+                (stackRemoveComplete removeConfig program offsetImm slotImm shiftImm)
             else
               labProgramToEntrySection sectionId entryLabel initialLabel
-                (stackRemoveComplete removeConfig program offsetImm))).map labSectionNatToWord)) with
+                (stackRemoveComplete removeConfig program offsetImm
+                  slotImm shiftImm))).map labSectionNatToWord)) with
       | some sections => .ok sections
       | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
 

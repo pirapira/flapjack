@@ -3557,8 +3557,14 @@ def wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMovesWithSources
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
     Option (StackProg Nat × WordStackBitmapState) := do
+  /- Cake's `comp` lowers the SSA entry move exactly once: the physical
+     parameter moves below stand in for that move, so the head of the
+     renamed program must not be lowered a second time through the body. -/
+  let stripped := match program with
+    | .seq (.move _ _) rest => rest
+    | other => other
   let (body, state) ← wordToStackProgWordWithLocationBitmapsFused config registerCount
-    bitmapRegister frameSlots width storeConstsStub state program
+    bitmapRegister frameSlots width storeConstsStub state stripped
   let entryMoves := wordStackLiveEntryMoves program
   let parameterMoves ← wordStackMovesFromPhysicalSources config
     (entryMoves.map Prod.fst) (entryMoves.map (fun move => sourceRegister move.2))
@@ -3570,8 +3576,11 @@ def wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMovesWithSources
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
     Option (StackProg Nat × WordStackBitmapState) := do
+  let stripped := match program with
+    | .seq (.move _ _) rest => rest
+    | other => other
   let (body, state) ← wordToStackProgWordWithLocationBitmapsFused config registerCount
-    bitmapRegister frameSlots width storeConstsStub state program
+    bitmapRegister frameSlots width storeConstsStub state stripped
   let entryMoves := wordStackLiveEntryMoves program
   let parameterMoves ← wordStackMovesFromPhysicalSources config
     (entryMoves.map Prod.fst) (entryMoves.map (fun move => sourceRegister move.2))

@@ -134,16 +134,26 @@ def stackRemoveStackAlloc (config : StackRemoveConfig) (words : Nat) : StackProg
 def stackRemoveStackFree (config : StackRemoveConfig) (words : Nat) : StackProg α :=
   stackRemoveStackDelta config .add words
 
-def stackRemoveStackLoad (config : StackRemoveConfig) (register offset : Nat) :
-    StackProg α :=
-  stackRemoveJoin (stackRemoveStackAddress config offset)
-    (.inst (.mem .load register config.addressScratch))
+def stackRemoveStackLoad (config : StackRemoveConfig) (slotImm : Option (Nat → α))
+    (register offset : Nat) : StackProg α :=
+  match slotImm with
+  | some imm =>
+      .inst (.memOffset .load register config.stackPointer
+        (imm (config.bytesInWord * offset)))
+  | none =>
+      stackRemoveJoin (stackRemoveStackAddress config offset)
+        (.inst (.mem .load register config.addressScratch))
 
-def stackRemoveStackStore (config : StackRemoveConfig) (register offset : Nat) :
-    StackProg α :=
-  stackRemoveJoin (stackRemoveMove config.scratch register)
-    (stackRemoveJoin (stackRemoveStackAddress config offset)
-      (.inst (.mem .store config.scratch config.addressScratch)))
+def stackRemoveStackStore (config : StackRemoveConfig) (slotImm : Option (Nat → α))
+    (register offset : Nat) : StackProg α :=
+  match slotImm with
+  | some imm =>
+      .inst (.memOffset .store register config.stackPointer
+        (imm (config.bytesInWord * offset)))
+  | none =>
+      stackRemoveJoin (stackRemoveMove config.scratch register)
+        (stackRemoveJoin (stackRemoveStackAddress config offset)
+          (.inst (.mem .store config.scratch config.addressScratch)))
 
 def stackRemoveStackLoadAny (config : StackRemoveConfig)
     (register offsetRegister : Nat) : StackProg α :=
@@ -162,39 +172,64 @@ def stackRemoveOpCurrHeap (config : StackRemoveConfig) (operator : BinOp)
     (destination source : Nat) : StackProg α :=
   .arith operator destination source config.currHeap
 
-def stackRemoveStackGetSize (config : StackRemoveConfig) (register : Nat) :
-    StackProg α :=
-  let shiftRegister :=
-    if register = config.scratch then config.addressScratch else config.scratch
-  stackRemoveJoin (stackRemoveMove register config.stackPointer)
-    (stackRemoveJoin
-      (.arith .sub register register config.stackBase)
-      (stackRemoveJoin
-        (.const shiftRegister config.wordShift)
-        (.shift .lsr register register shiftRegister)))
+def stackRemoveStackGetSize (config : StackRemoveConfig)
+    (shiftImm : Option (Nat → α)) (register : Nat) : StackProg α :=
+  match shiftImm with
+  | some imm =>
+      stackRemoveJoin (stackRemoveMove register config.stackPointer)
+        (stackRemoveJoin (.arith .sub register register config.stackBase)
+          (.inst (.shiftInst .lsr register register (.imm (imm config.wordShift)))))
+  | none =>
+      let shiftRegister :=
+        if register = config.scratch then config.addressScratch else config.scratch
+      stackRemoveJoin (stackRemoveMove register config.stackPointer)
+        (stackRemoveJoin
+          (.arith .sub register register config.stackBase)
+          (stackRemoveJoin
+            (.const shiftRegister config.wordShift)
+            (.shift .lsr register register shiftRegister)))
 
-def stackRemoveStackSetSize (config : StackRemoveConfig) (register : Nat) :
-    StackProg α :=
-  let shiftRegister :=
-    if register = config.scratch then config.addressScratch else config.scratch
-  stackRemoveJoin
-    (.const shiftRegister config.wordShift)
-    (stackRemoveJoin
-      (.shift .lsl register register shiftRegister)
-      (stackRemoveJoin
-        (.arith .or config.stackPointer config.stackBase config.stackBase)
-        (.arith .add config.stackPointer config.stackPointer register)))
+def stackRemoveStackSetSize (config : StackRemoveConfig)
+    (shiftImm : Option (Nat → α)) (register : Nat) : StackProg α :=
+  match shiftImm with
+  | some imm =>
+      stackRemoveJoin
+        (.inst (.shiftInst .lsl register register (.imm (imm config.wordShift))))
+        (stackRemoveJoin
+          (.arith .or config.stackPointer config.stackBase config.stackBase)
+          (.arith .add config.stackPointer config.stackPointer register))
+  | none =>
+      let shiftRegister :=
+        if register = config.scratch then config.addressScratch else config.scratch
+      stackRemoveJoin
+        (.const shiftRegister config.wordShift)
+        (stackRemoveJoin
+          (.shift .lsl register register shiftRegister)
+          (stackRemoveJoin
+            (.arith .or config.stackPointer config.stackBase config.stackBase)
+            (.arith .add config.stackPointer config.stackPointer register)))
 
 def stackRemoveBitmapLoad (config : StackRemoveConfig)
-    (offsetImm : Option (Nat → α)) (destination address : Nat) : StackProg α :=
-  stackRemoveJoin (stackRemoveGet config offsetImm destination .bitmapBase)
-    (stackRemoveJoin
-      (.arith .add destination destination address)
-      (stackRemoveJoin
-        (.const config.scratch config.wordShift)
+    (offsetImm : Option (Nat → α)) (shiftImm : Option (Nat → α))
+    (destination address : Nat) : StackProg α :=
+  match shiftImm with
+  | some imm =>
+      stackRemoveJoin (stackRemoveGet config offsetImm destination .bitmapBase)
         (stackRemoveJoin
-          (.shift .lsl destination destination config.scratch)
-          (.inst (.mem .load destination destination)))))
+          (.arith .add destination destination address)
+          (stackRemoveJoin
+            (.inst (.shiftInst .lsl destination destination
+              (.imm (imm config.wordShift))))
+            (.inst (.mem .load destination destination))))
+  | none =>
+      stackRemoveJoin (stackRemoveGet config offsetImm destination .bitmapBase)
+        (stackRemoveJoin
+          (.arith .add destination destination address)
+          (stackRemoveJoin
+            (.const config.scratch config.wordShift)
+            (stackRemoveJoin
+              (.shift .lsl destination destination config.scratch)
+              (.inst (.mem .load destination destination)))))
 
 /-! `StoreConsts` copies the read-only constant area selected by a bitmap into
     the data buffer.  The HOL pass expresses the copy as two nested `While`s;
@@ -227,97 +262,105 @@ def stackRemoveCopyLoop [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
         copyEach))
 
 def stackRemoveStoreConsts [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
-    (offsetImm : Option (Nat → α)) (source bitmap : Nat) (_stub : Option Nat) :
+    (offsetImm : Option (Nat → α)) (shiftImm : Option (Nat → α))
+    (source bitmap : Nat) (_stub : Option Nat) :
     StackProg α :=
+  let shiftCode : StackProg α :=
+    match shiftImm with
+    | some imm =>
+        .inst (.shiftInst .lsl bitmap bitmap (.imm (imm config.wordShift)))
+    | none =>
+        .seq (.const config.scratch config.wordShift)
+          (.shift .lsl bitmap bitmap config.scratch)
   stackRemoveJoin (stackRemoveGet config offsetImm bitmap .bitmapBase)
     (stackRemoveJoin (.const config.scratch 1)
       (stackRemoveJoin (.arith .add bitmap bitmap config.scratch)
-        (stackRemoveJoin (.const config.scratch config.wordShift)
-          (stackRemoveJoin (.shift .lsl bitmap bitmap config.scratch)
-            (stackRemoveJoin (stackRemoveCopyLoop config source bitmap)
-              (stackRemoveJoin (stackRemoveMove source 1)
-                (stackRemoveMove bitmap 1)))))))
+        (stackRemoveJoin shiftCode
+          (stackRemoveJoin (stackRemoveCopyLoop config source bitmap)
+            (stackRemoveJoin (stackRemoveMove source 1)
+              (stackRemoveMove bitmap 1))))))
 
 def stackRemoveFuel [OfNat α 0] [OfNat α 1] :
-    Nat → StackRemoveConfig → Option (Nat → α) → StackProg α → StackProg α
-  | 0, _, _, program => program
-  | _fuel + 1, _, _, .skip => .skip
-  | _fuel + 1, config, offsetImm, .get destination store =>
+    Nat → StackRemoveConfig → Option (Nat → α) → Option (Nat → α) →
+      Option (Nat → α) → StackProg α → StackProg α
+  | 0, _, _, _, _, program => program
+  | _fuel + 1, _, _, _, _, .skip => .skip
+  | _fuel + 1, config, offsetImm, _slotImm, _shiftImm, .get destination store =>
       stackRemoveGet config offsetImm destination store
-  | _fuel + 1, config, offsetImm, .set store source =>
+  | _fuel + 1, config, offsetImm, _slotImm, _shiftImm, .set store source =>
       stackRemoveSet config offsetImm store source
-  | _fuel + 1, _, _, .inst instruction => .inst instruction
-  | _fuel + 1, _, _, .shMem operator source address =>
+  | _fuel + 1, _, _, _, _, .inst instruction => .inst instruction
+  | _fuel + 1, _, _, _, _, .shMem operator source address =>
       .shMem operator source address
-  | _fuel + 1, _, _, .const destination value => .const destination value
-  | _fuel + 1, _, _, .arith operator destination left right =>
+  | _fuel + 1, _, _, _, _, .const destination value => .const destination value
+  | _fuel + 1, _, _, _, _, .arith operator destination left right =>
       .arith operator destination left right
-  | _fuel + 1, _, _, .shift operator destination left right =>
+  | _fuel + 1, _, _, _, _, .shift operator destination left right =>
       .shift operator destination left right
-  | _fuel + 1, config, _offsetImm, .opCurrHeap operator destination source =>
+  | _fuel + 1, config, _offsetImm, _slotImm, _shiftImm, .opCurrHeap operator destination source =>
       stackRemoveOpCurrHeap config operator destination source
-  | fuel + 1, config, offsetImm, .call returnHandler target handler =>
+  | fuel + 1, config, offsetImm, slotImm, shiftImm, .call returnHandler target handler =>
       match returnHandler, handler with
       | none, none => .call none target none
       | some (program, link, returnLabel, entryLabel), none =>
-          .call (some (stackRemoveFuel fuel config offsetImm program, link, returnLabel, entryLabel))
+          .call (some (stackRemoveFuel fuel config offsetImm slotImm shiftImm program, link, returnLabel, entryLabel))
             target none
       | none, some (program, exceptionLabel, handlerLabel) =>
           .call none target
-            (some (stackRemoveFuel fuel config offsetImm program, exceptionLabel, handlerLabel))
+            (some (stackRemoveFuel fuel config offsetImm slotImm shiftImm program, exceptionLabel, handlerLabel))
       | some (returnProgram, link, returnLabel, entryLabel),
           some (handlerProgram, exceptionLabel, handlerLabel) =>
           .call
-            (some (stackRemoveFuel fuel config offsetImm returnProgram, link, returnLabel, entryLabel))
+            (some (stackRemoveFuel fuel config offsetImm slotImm shiftImm returnProgram, link, returnLabel, entryLabel))
             target
-            (some (stackRemoveFuel fuel config offsetImm handlerProgram, exceptionLabel, handlerLabel))
-  | fuel + 1, config, offsetImm, .seq first second =>
-      .seq (stackRemoveFuel fuel config offsetImm first) (stackRemoveFuel fuel config offsetImm second)
-  | fuel + 1, config, offsetImm, .ite operator condition right thenBranch elseBranch =>
-      .ite operator condition right (stackRemoveFuel fuel config offsetImm thenBranch)
-        (stackRemoveFuel fuel config offsetImm elseBranch)
-  | fuel + 1, config, offsetImm, .loop body => .loop (stackRemoveFuel fuel config offsetImm body)
-  | _fuel + 1, _, _, .jumpLower register target label =>
+            (some (stackRemoveFuel fuel config offsetImm slotImm shiftImm handlerProgram, exceptionLabel, handlerLabel))
+  | fuel + 1, config, offsetImm, slotImm, shiftImm, .seq first second =>
+      .seq (stackRemoveFuel fuel config offsetImm slotImm shiftImm first) (stackRemoveFuel fuel config offsetImm slotImm shiftImm second)
+  | fuel + 1, config, offsetImm, slotImm, shiftImm, .ite operator condition right thenBranch elseBranch =>
+      .ite operator condition right (stackRemoveFuel fuel config offsetImm slotImm shiftImm thenBranch)
+        (stackRemoveFuel fuel config offsetImm slotImm shiftImm elseBranch)
+  | fuel + 1, config, offsetImm, slotImm, shiftImm, .loop body => .loop (stackRemoveFuel fuel config offsetImm slotImm shiftImm body)
+  | _fuel + 1, _, _, _, _, .jumpLower register target label =>
       .jumpLower register target label
-  | _fuel + 1, _, _, .alloc words => .alloc words
-  | _fuel + 1, config, offsetImm, .storeConsts source bitmap stub =>
-      stackRemoveStoreConsts config offsetImm source bitmap stub
-  | _fuel + 1, _, _, .codeBufferWrite address value =>
+  | _fuel + 1, _, _, _, _, .alloc words => .alloc words
+  | _fuel + 1, config, offsetImm, _slotImm, shiftImm, .storeConsts source bitmap stub =>
+      stackRemoveStoreConsts config offsetImm shiftImm source bitmap stub
+  | _fuel + 1, _, _, _, _, .codeBufferWrite address value =>
       .codeBufferWrite address value
-  | _fuel + 1, _, _, .dataBufferWrite address value =>
+  | _fuel + 1, _, _, _, _, .dataBufferWrite address value =>
       .inst (.mem .store value address)
-  | _fuel + 1, _, _, .raise exception => .raise exception
-  | _fuel + 1, _, _, .return value => .return value
-  | _fuel + 1, _, _, .break label => .break label
-  | _fuel + 1, _, _, .continue label => .continue label
-  | _fuel + 1, _, _, .ffi function configuration configurationLength array arrayLength
+  | _fuel + 1, _, _, _, _, .raise exception => .raise exception
+  | _fuel + 1, _, _, _, _, .return value => .return value
+  | _fuel + 1, _, _, _, _, .break label => .break label
+  | _fuel + 1, _, _, _, _, .continue label => .continue label
+  | _fuel + 1, _, _, _, _, .ffi function configuration configurationLength array arrayLength
       returnAddress =>
       .ffi function configuration configurationLength array arrayLength returnAddress
-  | _fuel + 1, _, _, .tick => .tick
-  | _fuel + 1, _, _, .locValue destination label entry =>
+  | _fuel + 1, _, _, _, _, .tick => .tick
+  | _fuel + 1, _, _, _, _, .locValue destination label entry =>
       .locValue destination label entry
-  | _fuel + 1, _, _, .install codeBuffer codeLength dataBuffer dataLength returnAddress =>
+  | _fuel + 1, _, _, _, _, .install codeBuffer codeLength dataBuffer dataLength returnAddress =>
       .install codeBuffer codeLength dataBuffer dataLength returnAddress
-  | _fuel + 1, _, _, .rawCall target => .rawCall target
-  | _fuel + 1, config, _offsetImm, .stackAlloc words =>
+  | _fuel + 1, _, _, _, _, .rawCall target => .rawCall target
+  | _fuel + 1, config, _offsetImm, _slotImm, _shiftImm, .stackAlloc words =>
       stackRemoveStackAlloc config words
-  | _fuel + 1, config, _offsetImm, .stackFree words =>
+  | _fuel + 1, config, _offsetImm, _slotImm, _shiftImm, .stackFree words =>
       stackRemoveStackFree config words
-  | _fuel + 1, config, _offsetImm, .stackStore register offset =>
-      stackRemoveStackStore config register offset
-  | _fuel + 1, config, _offsetImm, .stackStoreAny register offsetRegister =>
+  | _fuel + 1, config, _offsetImm, slotImm, _shiftImm, .stackStore register offset =>
+      stackRemoveStackStore config slotImm register offset
+  | _fuel + 1, config, _offsetImm, _slotImm, _shiftImm, .stackStoreAny register offsetRegister =>
       stackRemoveStackStoreAny config register offsetRegister
-  | _fuel + 1, config, _offsetImm, .stackLoad register offset =>
-      stackRemoveStackLoad config register offset
-  | _fuel + 1, config, offsetImm, .stackLoadAny register offsetRegister =>
+  | _fuel + 1, config, _offsetImm, slotImm, _shiftImm, .stackLoad register offset =>
+      stackRemoveStackLoad config slotImm register offset
+  | _fuel + 1, config, _offsetImm, _slotImm, _shiftImm, .stackLoadAny register offsetRegister =>
       stackRemoveStackLoadAny config register offsetRegister
-  | _fuel + 1, config, offsetImm, .stackGetSize register =>
-      stackRemoveStackGetSize config register
-  | _fuel + 1, config, offsetImm, .stackSetSize register =>
-      stackRemoveStackSetSize config register
-  | _fuel + 1, config, offsetImm, .bitmapLoad destination address =>
-      stackRemoveBitmapLoad config offsetImm destination address
-  | _fuel + 1, _, _, .halt register => .halt register
+  | _fuel + 1, config, _offsetImm, _slotImm, shiftImm, .stackGetSize register =>
+      stackRemoveStackGetSize config shiftImm register
+  | _fuel + 1, config, _offsetImm, _slotImm, shiftImm, .stackSetSize register =>
+      stackRemoveStackSetSize config shiftImm register
+  | _fuel + 1, config, offsetImm, _slotImm, shiftImm, .bitmapLoad destination address =>
+      stackRemoveBitmapLoad config offsetImm shiftImm destination address
+  | _fuel + 1, _, _, _, _, .halt register => .halt register
 
 /- A generous default keeps the public pass total and executable.  The worker
    is exposed so callers processing generated programs can choose a larger
@@ -325,7 +368,7 @@ def stackRemoveFuel [OfNat α 0] [OfNat α 1] :
    CakeML pass is ported. -/
 def stackRemove [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
     (program : StackProg α) : StackProg α :=
-  stackRemoveFuel 1024 config none program
+  stackRemoveFuel 1024 config none none none program
 
 def stackProgDepth : StackProg α → Nat
   | .call returnHandler _ handler =>
@@ -349,9 +392,10 @@ decreasing_by all_goals decreasing_trivial
     `stackProgDepth program` supplies enough fuel for the maximum nesting depth
     without imposing a fixed limit on the source program. -/
 def stackRemoveComplete [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
-    (program : StackProg α) (offsetImm : Option (Nat → α) := none) :
-    StackProg α :=
-  stackRemoveFuel (stackProgDepth program) config offsetImm program
+    (program : StackProg α) (offsetImm : Option (Nat → α) := none)
+    (slotImm : Option (Nat → α) := none)
+    (shiftImm : Option (Nat → α) := none) : StackProg α :=
+  stackRemoveFuel (stackProgDepth program) config offsetImm slotImm shiftImm program
 
 theorem stackRemove_get_currHeap [OfNat α 0] [OfNat α 1]
     (config : StackRemoveConfig) (destination : Nat) :

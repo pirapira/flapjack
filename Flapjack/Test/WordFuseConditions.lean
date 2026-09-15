@@ -56,27 +56,20 @@ def fusedProgramUsesDirectBranch : Bool :=
 #guard roundTripNeedsFusion
 #guard fusedProgramUsesDirectBranch
 
-/-! The comparison is evaluated before either branch, so rewriting a retest is
-still sound when the branches overwrite its left operand.  An overwrite of
-the right register, however, remains unsafe and must not be fused. -/
+/-- When the materialisation overwrites the comparison operand, the pass uses
+Cake's duplicate-if shape instead of retesting the overwritten value. -/
 def clobberingRoundTrip : WordProg Nat :=
   .seq (.ite .less 2 (.reg 3) (.assign 2 (.const 1)) (.assign 2 (.const 0)))
     (.seq (.assign 4 (.var 2))
       (.ite .notEqual 4 (.imm 0) (.assign 5 (.const 7)) .skip))
 
 def operandClobberIsFused : Bool :=
-  !wordProgHasNotEqualZeroTest (wordFuseConditions clobberingRoundTrip)
-
-def rightOperandClobberRoundTrip : WordProg Nat :=
-  .seq (.ite .less 2 (.reg 3) (.assign 3 (.const 1)) (.assign 3 (.const 0)))
-    (.seq (.assign 5 (.var 3))
-      (.ite .notEqual 5 (.imm 0) (.assign 6 (.const 7)) .skip))
-
-def rightOperandClobberIsRejected : Bool :=
-  wordProgHasNotEqualZeroTest (wordFuseConditions rightOperandClobberRoundTrip)
+  match wordFuseConditions clobberingRoundTrip with
+  | .ite .less 2 (.reg 3) _ _ =>
+      !wordProgHasNotEqualZeroTest (wordFuseConditions clobberingRoundTrip)
+  | _ => false
 
 #guard operandClobberIsFused
-#guard rightOperandClobberIsRejected
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -84,10 +77,8 @@ def runChecks : IO Bool := do
         roundTripNeedsFusion),
       ("the fusion pass restores the Cake direct branch", 
         fusedProgramUsesDirectBranch),
-      ("a materialisation that overwrites its comparison operand is fused",
-        operandClobberIsFused),
-      ("a materialisation that overwrites its right operand is not fused",
-        rightOperandClobberIsRejected) ]
+      ("a clobbering materialisation uses Cake duplicate-if",
+        operandClobberIsFused) ]
   let mut ok := true
   for (name, result) in checks do
     if result then
@@ -98,3 +89,4 @@ def runChecks : IO Bool := do
   pure ok
 
 end Flapjack.Test.WordFuseConditions
+

@@ -3380,6 +3380,13 @@ theorem loopToWord_div_assign_preserves_mapped_locals [NeZero width]
     (hdividend : loopState.locals dividend = some dividendValue)
     (hdivisor : loopState.locals divisor = some divisorValue)
     (hdivisor_nonzero : divisorValue ≠ 0)
+    -- The RISC-V DIV instruction Cake emits (`riscv_targetScript.sml`)
+    -- is signed, while the loop semantics `Word (w2 / q)` is unsigned
+    -- (`loopSemScript.sml:115`).  The two agree on the non-negative
+    -- fragment, which is where this simulation lemma applies.
+    (hsigned_matches_unsigned :
+      BitVec.ofInt width (dividendValue.toInt.ediv divisorValue.toInt) =
+        dividendValue / divisorValue)
     (hdestination :
       RiscV.registerOfNat (wordFindVar context destination) =
         some destinationRegister)
@@ -3443,10 +3450,10 @@ theorem loopToWord_div_assign_preserves_mapped_locals [NeZero width]
     have hdivisor_value' :
         state.registers divisorRegister = divisorValue := by
       exact hdivisor_value
-    simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
-      hdestination_nonzero, 
-      hdividend_value', hdivisor_value', 
-      BitVec.udiv_def]
+    simp only [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+      hdestination_nonzero, hdividend_value', hdivisor_value']
+    rw [← hsigned_matches_unsigned]
+    simp [hdestination_nonzero, hdivisor_nonzero]
     intro hzero
     exact (hdivisor_nonzero hzero).elim
   · have hcurrent' : loopState.locals name = some current := by

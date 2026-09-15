@@ -45,8 +45,7 @@ theorem wordToStackFunctionWithSpillStateAndLocationBitmaps_preserves_bitmap_len
       allocation registerCount bitmapRegister frameSlots storeConstsStub bitmapState
       program = some (stackProgram, finalState)) :
     finalState.length = finalState.data.length := by
-  simp only [wordToStackFunctionWithSpillStateAndLocationBitmaps,
-    wordToStackFunctionWithParametersAndLocationBitmaps] at hresult
+  simp only [wordToStackFunctionWithSpillStateAndLocationBitmaps] at hresult
   cases hbody : wordToStackProgWordWithLocationBitmaps
       { config with locations := allocation.locations }
       registerCount bitmapRegister frameSlots storeConstsStub bitmapState program with

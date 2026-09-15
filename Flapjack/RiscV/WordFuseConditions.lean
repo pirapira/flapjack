@@ -36,6 +36,19 @@ def wordConditionFactSet (facts : List (WordConditionFact α)) (name : Nat)
   | some fact => { fact with name := name } :: cleared
   | none => cleared
 
+/-- Drop every fact whose variable or whose comparison operands are written by
+the given statement.  A fact records that a variable holds the truth of
+`condition = right`, so it survives only while both the variable and the
+operands keep their values. -/
+def wordConditionFactInvalidate (facts : List (WordConditionFact α))
+    (written : List Nat) : List (WordConditionFact α) :=
+  facts.filter (fun fact =>
+    !(written.contains fact.name) &&
+      !(written.contains fact.condition) &&
+      (match fact.right with
+       | .imm _ => true
+       | .reg register => !(written.contains register)))
+
 /-- Split a program into its top-level statements. -/
 def wordProgToList : WordProg α → List (WordProg α)
   | .seq first second => wordProgToList first ++ wordProgToList second
@@ -97,28 +110,40 @@ def wordFuseConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
                     wordFuseConditionsAux fuel
                       (wordConditionFactSet facts name none) rest
           | .assign name (.var source) =>
+              let facts' := wordConditionFactInvalidate facts
+                (wordProgWriteVars statement)
+              let facts'' :=
+                match wordConditionFactLookup facts' source with
+                | some fact => wordConditionFactSet facts' name (some fact)
+                | none => facts'
               .assign name (.var source) ::
-                wordFuseConditionsAux fuel
-                  (wordConditionFactSet facts name (wordConditionFactLookup facts source))
-                  rest
+                wordFuseConditionsAux fuel facts'' rest
           | .ite operator condition right thenBranch elseBranch =>
               let then' := wordListToProg
                 (wordFuseConditionsAux fuel facts (wordProgToList thenBranch))
               let else' := wordListToProg
                 (wordFuseConditionsAux fuel facts (wordProgToList elseBranch))
-              let facts' := match wordBooleanDefinition? statement with
+              let written := wordProgWriteVars statement
+              let facts' := wordConditionFactInvalidate facts written
+              let facts'' :=
+                match wordBooleanDefinition? statement with
                 | some name =>
-                    wordConditionFactSet facts name
-                      (some { name := name, operator := operator,
-                              condition := condition, right := right })
-                | none =>
-                    (wordProgWriteVars statement).foldl
-                      (fun facts name => wordConditionFactSet facts name none) facts
+                    let operandsSafe :=
+                      !(written.contains condition) &&
+                        (match right with
+                         | .imm _ => true
+                         | .reg register => !(written.contains register))
+                    if operandsSafe then
+                      wordConditionFactSet facts' name
+                        (some { name := name, operator := operator,
+                                condition := condition, right := right })
+                    else facts'
+                | none => facts'
               .ite operator condition right then' else' ::
-                wordFuseConditionsAux fuel facts' rest
+                wordFuseConditionsAux fuel facts'' rest
           | other =>
-              let facts' := (wordProgWriteVars other).foldl
-                (fun facts name => wordConditionFactSet facts name none) facts
+              let facts' := wordConditionFactInvalidate facts
+                (wordProgWriteVars other)
               other :: wordFuseConditionsAux fuel facts' rest
 
 /-- Fuse materialized comparison round trips in a Word program.  The fuel

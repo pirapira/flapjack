@@ -78,19 +78,19 @@ example :
     labCompileAsm ({ services := [("echo", 7)] } : WordFfiContext)
       2 [] 0 (.callFfi "echo") =
       some [.jal 0 (0 - BitVec.ofNat 64 48)] := by
-  native_decide
+  decide +kernel
 
 example :
     compileLabSection ({ services := [("echo", 7)] } : WordFfiContext)
       ⟨2, [.labAsm (.callFfi "echo") [] 0]⟩ =
       some [.jal 0 (0 - BitVec.ofNat 64 48)] := by
-  native_decide
+  decide +kernel
 
 example :
     compileLabProgram ({ services := [("echo", 7)] } : WordFfiContext)
       [⟨2, [.labAsm (.callFfi "echo") [] 0]⟩] =
       some [.jal 0 (0 - BitVec.ofNat 64 48)] := by
-  native_decide
+  decide +kernel
 
 example :
     (compileLabProgramLinked ({ services := [("echo", 7)] } : WordFfiContext)
@@ -119,7 +119,7 @@ example :
       [⟨2, [.labAsm (.callFfi "echo") [] 0,
             .labAsm (.return) [] 0]⟩] =
       some [.jal 0 (0 - BitVec.ofNat 64 48), .jalr 0 1 0] := by
-  native_decide
+  decide +kernel
 
 example :
     (wordFfiToRiscV ({ services := [("echo", 7)] } : WordFfiContext)
@@ -263,7 +263,7 @@ example :
         .jal 0 (0 - BitVec.ofNat 64 68)] := by
   exact compileWordProgramNatToRiscV_pipeline_ffi
 
-example (state : State 64) (hzero : readRegister state 0 = 0) :
+example (state : State 64) (_hzero : readRegister state 0 = 0) :
     compileWordProgramNatToRiscV (width := 64)
       { services := [("echo", 7)] } pipelineFfiWordConfigSource
       pipelineFfiStackRemoveConfig 2 3

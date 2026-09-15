@@ -325,7 +325,7 @@ def pipelineWordFunctionAllocatedWithSpillsAndFullSsaAndBitmaps [NeZero width]
         sectionId := label
         handlerLabel := label }
     let lower :=
-      if (RiscV.wordProgFfiNames renamedProgram).isEmpty then
+      if !RiscV.wordProgNeedsCakeFrame renamedProgram then
         RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
           renamedParameters wordAllocatableRegisters.length config.scratch
           allocation.nextSpill (some 1) bitmaps renamedProgram
@@ -487,7 +487,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
           sectionId := label
           handlerLabel := label }
       let lower :=
-        if (RiscV.wordProgFfiNames renamedProgram).isEmpty then
+        if !RiscV.wordProgNeedsCakeFrame renamedProgram then
           RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
             renamedParameters wordAllocatableRegisters.length config.scratch
             allocation.nextSpill (some 1)

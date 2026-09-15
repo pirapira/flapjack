@@ -74,7 +74,7 @@ def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
     (parameters : List Nat) (program : WordProg α) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, program) :=
-    wordSsaRenameFunctionWithEntry parameters program
+    wordSsaRenameFunctionWithEntryAndDeadMoves parameters program
   let tree := wordClashTree program []
   let (liveIn, edges) := wordClashTreeAnalyze tree []
   let edges := edges ++ wordProgSpecialConflictEdges program
@@ -123,7 +123,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               sectionId := label
               handlerLabel := label }
           let lower :=
-            if (RiscV.wordProgFfiNames renamedProgram).isEmpty then
+            if !RiscV.wordProgNeedsCakeFrame renamedProgram then
               RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
                 renamedParameters wordAllocatableRegisters.length config.scratch
                 frameSlots (some 1)
@@ -176,7 +176,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
               sectionId := label
               handlerLabel := label }
           let lower :=
-            if (RiscV.wordProgFfiNames renamedProgram).isEmpty then
+            if !RiscV.wordProgNeedsCakeFrame renamedProgram then
               RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
                 renamedParameters wordAllocatableRegisters.length config.scratch
                 frameSlots

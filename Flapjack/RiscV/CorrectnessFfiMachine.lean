@@ -293,7 +293,7 @@ theorem labCompileAsm_callFfi_stub_shape
     (hindex : lookupWordFfiIndex function context.services = some index) :
     labCompileAsm context sectionId labels position (.callFfi function) =
       some [.jal 0 (0 - BitVec.ofNat width
-        (position + (context.services.length + 2 - index) * 16))] := by
+        (position + (3 + index) * 16))] := by
   simp [labCompileAsm, labFfiStubOffset, hindex]
 
 theorem compileLabSection_callFfi_stub_shape
@@ -303,7 +303,7 @@ theorem compileLabSection_callFfi_stub_shape
     compileLabSection context
       ⟨sectionId, [.labAsm (.callFfi function) [] 0]⟩ =
       some [.jal 0 (0 - BitVec.ofNat width
-        ((context.services.length + 2 - index) * 16))] := by
+        ((3 + index) * 16))] := by
   simp [compileLabSection, labCompileLines, labCompileAsm,
     labFfiStubOffset, hindex]
 
@@ -314,7 +314,7 @@ theorem compileLabProgram_callFfi_stub_shape
     compileLabProgram context
       [⟨sectionId, [.labAsm (.callFfi function) [] 0]⟩] =
       some [.jal 0 (0 - BitVec.ofNat width
-        ((context.services.length + 2 - index) * 16))] := by
+        ((3 + index) * 16))] := by
   simp [compileLabProgram, labCompileProgramSections,
     labCompileProgramLines, labCompileAsmProgram,
     labFfiStubOffset, hindex]
@@ -328,7 +328,7 @@ theorem compileLabProgram_callFfi_return_stub_shape
         .labAsm (.callFfi function) [] 0,
         .labAsm (.return) [] 0]⟩] =
       some [.jal 0 (0 - BitVec.ofNat 64
-          ((context.services.length + 2 - index) * 16)),
+          ((3 + index) * 16)),
         .jalr 0 1 0] := by
   simp [compileLabProgram, labCompileProgramSections,
     labCompileProgramLines, labCompileAsmProgram,

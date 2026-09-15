@@ -152,7 +152,8 @@ theorem panValueCrepProgramStateCorrect_shMemLoad_source_word
                       compileProg context
                           (.shMemLoad size .local name address.toExp) =
                         .shMem (loadMemOp size) slot compiledAddress := by
-                    simp [compileProg, hslot, hfirstAddress]
+                    simp [compileProg, hslot,
+                      firstCompiledExpAnyShape_of_firstCompiledExp hfirstAddress]
                   rw [hcompileProg] at hcrep
                   cases targetFuel with
                   | zero =>

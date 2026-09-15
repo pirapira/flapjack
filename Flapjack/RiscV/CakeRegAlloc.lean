@@ -27,6 +27,11 @@ namespace Flapjack.RiscV.CakeRegAlloc
 open Flapjack.RiscV.CakeAlloc (mergeStackOnly mergeStackSets removeTempStack
   getForcedAddCarry getForcedLongMul)
 
+/-! RISC-V exposes 32 hardware registers, with five avoided by Cake's
+    backend configuration (`0, 2, 3, 4, 31`).  `word_alloc` therefore colours
+    against 22 usable registers, not the raw Word-name pool size. -/
+def cakeRiscVRegisterCount : Nat := 32 - (5 + 5)
+
 /-- `get_stack_only_aux` (`word_allocScript.sml:1741-1789`).
 
     Threads the temporary/forced-stack pair `(ts, fs)` backwards through
@@ -783,8 +788,10 @@ def cakeMovesToSp : List (Nat × (Nat × Nat)) →
     list by descending priority, then drop the priorities. -/
 def cakeResortMovesSp (table : NatInfoMap (List (Nat × Nat))) :
     NatInfoMap (List Nat) :=
+  -- `cakeQSort`, not a stable sort: the original's `sort_moves` flips
+  -- equal-priority entries (probes `sort_moves_probe.out`).
   table.map (fun entry =>
-    (entry.1, (entry.2.mergeSort (fun a b => a.1 > b.1)).map (·.2)))
+    (entry.1, (cakeQSort (fun a b => a.1 >= b.1) entry.2).map (·.2)))
 
 /-- `update_move` (`reg_allocScript.sml:1407-1414`). -/
 def cakeUpdateMove (spta : Nat → Nat) (move : Nat × (Nat × Nat)) :
@@ -857,7 +864,10 @@ def cakeAssignAtempTag (k : Nat)
 def cakeAssignAtemps (k : Nat) (ls : List Nat)
     (prefs : CakeRaState → Nat → List Nat → Option Nat)
     (state : CakeRaState) : CakeRaState :=
-  let lsF := ls.filter (· < state.dim)
+  /- Cake's state-stack is consumed in the order in which entries were
+     pushed by the worklist traversal; the functional list stores that order
+     newest-first, so restore the traversal order before assigning colours. -/
+  let lsF := ls.reverse.filter (· < state.dim)
   let state := lsF.foldl (fun s n => cakeAssignAtempTag k prefs n s) state
   (List.range state.dim).foldl (fun s n => cakeAssignAtempTag k prefs n s) state
 
@@ -965,7 +975,7 @@ def cakeColourWordSpillState (k : Nat) (parameters : List Nat)
     entry moves and IRC coalescing in the returned Word program, while
     exposing the existing `WordSpillState` shape to the shared pipeline. -/
 
-def cakeAllocateWordFunction (parameters : List Nat) (program : WordProg α)
+def cakeAllocateWordFunction [OfNat α 0] (parameters : List Nat) (program : WordProg α)
     (currentFunction : Nat) (k : Nat) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, ssaProgram) :=

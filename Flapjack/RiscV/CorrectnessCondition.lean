@@ -96,7 +96,7 @@ theorem wordConditionOperands_register_sound [NeZero width] (state : State width
                   hconditionZero]
               · simp [evalWordCondition, riscVCondition, executeInstructions,
                   execute, writeRegister, readRegister, hcondition, hsource, hzero',
-                  hconditionZero, eq_comm]
+                  eq_comm]
           | notTest =>
               simp [wordConditionOperands, hcondition, hsource] at hoperands
               rcases hoperands with ⟨hleft, hright, hprelude⟩
@@ -110,7 +110,7 @@ theorem wordConditionOperands_register_sound [NeZero width] (state : State width
                   hconditionZero]
               · simp [evalWordCondition, riscVCondition, executeInstructions,
                   execute, writeRegister, readRegister, hcondition, hsource, hzero',
-                  hconditionZero, eq_comm]
+                  eq_comm]
 
 theorem wordConditionOperands_immediate_zero_sound [NeZero width]
     (state : State width) (operator : Cmp) (condition : Nat)

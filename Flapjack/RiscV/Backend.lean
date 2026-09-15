@@ -330,12 +330,12 @@ def wordMoveToInstructions [NeZero width] (moves : List (Nat × Nat)) :
   | .reg right =>
       let right ← registerOfNat right
       match operator with
-      | .test | .notTest => pure (condition, 0, [.and condition condition right])
+      | .test | .notTest => pure (31, 0, [.and 31 condition right])
       | _ => pure (condition, right, [])
   | .imm value =>
       if value == 0 then
         match operator with
-        | .test | .notTest => pure (condition, 0, [.and condition condition 0])
+        | .test | .notTest => pure (31, 0, [.and 31 condition 0])
         | _ => pure (condition, 0, [])
       else if condition == 31 then
         none

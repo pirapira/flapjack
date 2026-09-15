@@ -4667,19 +4667,16 @@ theorem crepToLoop_assign_cmp_equal_vars_agreement
   have hleftTemp'' : left ≠ context.maxVar + 1 + 1 + 1 := by omega
   have hrightTemp'' : right ≠ context.maxVar + 1 + 1 + 1 := by omega
   by_cases heq : (leftValue == rightValue) = true
-  · simp [evalCrepFullProg, evalCrepFullExp, evalPanCmp,
+  · simp_all [evalCrepFullProg, evalCrepFullExp, evalPanCmp,
       crepControlLocal, loopControlLocal, loopCompileProg,
       loopCompileExp, loopNestedSeq, evalLoopProgWithCallsAndFfi,
       evalLoopProg, evalLoopExp, evalLoopCondition, loopStateOfCrepState,
-      updateCrepLocal, updateLoopLocal, hleft, hright, heq,
-      hrightTemp']
-  · simp [evalCrepFullProg, evalCrepFullExp, evalPanCmp,
+      updateCrepLocal, updateLoopLocal]
+  · simp_all [evalCrepFullProg, evalCrepFullExp, evalPanCmp,
       crepControlLocal, loopControlLocal, loopCompileProg,
       loopCompileExp, loopNestedSeq, evalLoopProgWithCallsAndFfi,
       evalLoopProg, evalLoopExp, evalLoopCondition, loopStateOfCrepState,
-      updateCrepLocal, updateLoopLocal, hleft, hright, heq,
-      hrightTemp']
-
+      updateCrepLocal, updateLoopLocal]
 theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notEqual_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

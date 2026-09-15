@@ -262,4 +262,57 @@ example :
         .or 4 4 31] := by
   decide
 
+/-! GH #1093 (bead flapjack-lhj): end-to-end regression for the `labFlatten`
+   `ite` cases — a Stack-level conditional compiled all the way to RISC-V
+   must execute the then-branch when the condition holds and the
+   else-branch when it does not (previously the general case left the
+   then-branch dead, and the skip-then case ran the else-branch on a true
+   condition). -/
+
+/-- `if reg4 == 0 then reg1 := 1 else reg1 := 2`, compiled and executed. -/
+def labIteGeneralProgram : StackProg (Word 64) :=
+  .ite .equal 4 (.imm 0) (.const 1 1) (.const 1 2)
+
+def labIteGeneralCode : Option (List (Instruction 64)) :=
+  compileStackProgramToRiscV (width := 64) { services := [] }
+    stackRemoveRiscVConfig 2 3 labIteGeneralProgram
+
+-- Condition true: the then-branch runs.
+#guard
+    labIteGeneralCode.bind (fun code =>
+      (executeCode 30 (0 : Word 64) code
+        (writeRegister (zeroState 64) 4 0)).map
+          (fun state => readRegister state 1)) =
+      some (1 : Word 64)
+
+-- Condition false: the else-branch runs.
+#guard
+    labIteGeneralCode.bind (fun code =>
+      (executeCode 30 (0 : Word 64) code
+        (writeRegister (zeroState 64) 4 7)).map
+          (fun state => readRegister state 1)) =
+      some (2 : Word 64)
+
+/-- `if reg4 == 0 then skip else reg1 := 2`, compiled and executed. -/
+def labIteSkipThenCode : Option (List (Instruction 64)) :=
+  compileStackProgramToRiscV (width := 64) { services := [] }
+    stackRemoveRiscVConfig 2 3
+    (.ite .equal 4 (.imm 0) .skip (.const 1 2) : StackProg (Word 64))
+
+-- Condition true: the else-branch must NOT run (reg1 keeps its old value).
+#guard
+    labIteSkipThenCode.bind (fun code =>
+      (executeCode 30 (0 : Word 64) code
+        (writeRegister (writeRegister (zeroState 64) 4 0) 1 9)).map
+          (fun state => readRegister state 1)) =
+      some (9 : Word 64)
+
+-- Condition false: the else-branch runs.
+#guard
+    labIteSkipThenCode.bind (fun code =>
+      (executeCode 30 (0 : Word 64) code
+        (writeRegister (writeRegister (zeroState 64) 4 7) 1 9)).map
+          (fun state => readRegister state 1)) =
+      some (2 : Word 64)
+
 end Flapjack.RiscV

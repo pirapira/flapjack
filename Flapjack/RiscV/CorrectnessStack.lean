@@ -79,7 +79,11 @@ theorem evalStackRemoveStackAlloc_small [NeZero width]
     (config : StackRemoveConfig) (state : WordStackMachineState width)
     (words : Nat) (hwords : words ≤ 255)
     (hscratch : config.scratch ≠ config.stackPointer)
-    (hjump : config.jump = false) :
+    (hjump : config.jump = false)
+    (hbase : config.stackBase ≠ config.scratch)
+    (hsafe : ¬ (state.registers config.stackPointer -
+      BitVec.ofNat width (config.bytesInWord * words)) <
+      state.registers config.stackBase) :
     (evalWordStackMachine state
       (stackRemoveStackAlloc config words)).map
         (fun final => final.registers config.stackPointer) =
@@ -89,9 +93,18 @@ theorem evalStackRemoveStackAlloc_small [NeZero width]
   · subst words
     simp [stackRemoveStackAlloc, stackRemoveStackDelta, hjump,
       evalWordStackMachine]
-  · simp [stackRemoveStackAlloc, stackRemoveStackDelta, hzero, hjump,
+  · have horder : state.registers config.stackBase ≤
+        state.registers config.stackPointer -
+          BitVec.ofNat width (config.bytesInWord * words) := (BitVec.not_lt).mp hsafe
+    by_cases hbasePointer : config.stackBase = config.stackPointer
+    · simp [stackRemoveStackAlloc, stackRemoveStackDelta, hzero, hjump,
+        stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
+        wordStackMachineWriteRegister, hwords, hbasePointer, horder,
+        hbase, Ne.symm hscratch]
+    · simp [stackRemoveStackAlloc, stackRemoveStackDelta, hzero, hjump,
       stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
-      wordStackMachineWriteRegister, hwords, Ne.symm hscratch]
+      wordStackMachineWriteRegister, hwords, hsafe, horder, hbase,
+      hbasePointer, Ne.symm hscratch]
 
 theorem evalStackRemoveStackFree_small [NeZero width]
     (config : StackRemoveConfig) (state : WordStackMachineState width)

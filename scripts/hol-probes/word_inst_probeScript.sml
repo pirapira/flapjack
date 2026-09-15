@@ -105,3 +105,28 @@ val _ = print_eval "opt_three_vars_rev"
   ``optimize_consts Add ([Var (3:num); Var (2:num); Var (1:num)] : 64 wordLang$exp list)``
 val _ = print_eval "pull_two_vars_again"
   ``pull_exp ((Op Add [Var (2:num); Var (4:num)]) : 64 wordLang$exp)``
+
+(* Or/Xor/And constant cases: reduce_const keeps the `0w` identity drop for
+   Or and Xor and collapses a zero fold to `Const 0w` for And. *)
+val _ = print_eval "optimize_consts_or_zero"
+  ``optimize_consts Or ([Const (0w:64 word); Var (3:num)] : 64 wordLang$exp list)``
+val _ = print_eval "optimize_consts_xor_zero"
+  ``optimize_consts Xor ([Const (0w:64 word); Var (3:num)] : 64 wordLang$exp list)``
+val _ = print_eval "optimize_consts_and_zero"
+  ``optimize_consts And ([Const (0w:64 word); Var (3:num)] : 64 wordLang$exp list)``
+val _ = print_eval "optimize_consts_or_two"
+  ``optimize_consts Or
+      ([Const (1w:64 word); Const (2w:64 word); Var (3:num)] : 64 wordLang$exp list)``
+val _ = print_eval "optimize_consts_and_two"
+  ``optimize_consts And
+      ([Const (1w:64 word); Const (3w:64 word); Var (3:num)] : 64 wordLang$exp list)``
+val _ = print_eval "pull_or_zero"
+  ``pull_exp ((Op Or [Const (0w:64 word); Var (3:num)]) : 64 wordLang$exp)``
+val _ = print_eval "norm_or_zero"
+  ``(flatten_exp o pull_exp) ((Op Or [Const (0w:64 word); Var (3:num)]) : 64 wordLang$exp)``
+val _ = print_eval "norm_and_zero"
+  ``(flatten_exp o pull_exp) ((Op And [Const (0w:64 word); Var (3:num)]) : 64 wordLang$exp)``
+val _ = print_eval "op_consts_or"
+  ``(op_consts Or : 64 wordLang$exp)``
+val _ = print_eval "op_consts_and"
+  ``(op_consts And : 64 wordLang$exp)``

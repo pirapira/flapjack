@@ -62,31 +62,70 @@ def wordInstIsConstant : WordExp α → Bool
     the non-constant operands in the `pull_ops` order and puts the folded
     constant at the end.  Flapjack represents the same normal form directly:
     constants go last, which is what Cake's `inst_select_exp` immediate
-    (`Const` as the second operand) case expects.  Folding several constants
-    into one value is still a separate gap (`optimize_consts` proper); here
-    they are only moved, which is exact whenever an operation has one
-    constant operand - the case exercised by the parity corpus. -/
-def wordInstConstantsToEnd (expressions : List (WordExp α)) : List (WordExp α) :=
-  let constants := expressions.filter wordInstIsConstant
+    (`Const` as the second operand) case expects.  `reduce_const` drops the
+    folded identity `0w` for `Add`, `Or` and `Xor`, and collapses a zero fold
+    to `Const 0w` for `And` (HOL probe labels `optimize_consts_or_zero`,
+    `optimize_consts_xor_zero`, `optimize_consts_and_zero`, `norm_or_zero`,
+    `norm_and_zero`), so the zero cases are reproduced here.  Folding
+    *non-zero* constants for `Or`, `Xor` and `And` needs the operator
+    semantics, which this module (core type classes only, no Mathlib) cannot
+    assume, and `op_consts` for empty operand lists remains a separate gap. -/
+def wordInstConstantValue : WordExp α → Option α
+  | .const value => some value
+  | _ => none
+
+def wordInstConstantsToEnd [Add α] [DecidableEq α] [OfNat α 0]
+    (operator : BinOp) (expressions : List (WordExp α)) : List (WordExp α) :=
+  let constants := expressions.filterMap wordInstConstantValue
+  let others := expressions.filter (fun expression => !wordInstIsConstant expression)
   match constants with
   | [] => expressions
   | _ =>
-      expressions.filter (fun expression => !wordInstIsConstant expression)
-        ++ constants
+      match operator with
+      | .add =>
+          -- Cake's `optimize_consts` folds the constant operands with `word_op`
+          -- and `reduce_const` drops the result when it is the identity `0`, so
+          -- `[Const 0; x]` normalizes to `[x]` and `[Const 0]` to `[Const 0]`.
+          let folded := constants.foldr (fun value rest => value + rest) 0
+          if folded = 0 then
+            match others with
+            | [] => [.const 0]
+            | [single] => [single]
+            | _ => others
+          else
+            others ++ [.const folded]
+      | .or | .xor =>
+          -- `reduce_const` drops a zero fold for `Or`/`Xor` exactly as for
+          -- `Add`; only the all-zero fold is decidable without the operator.
+          if constants.all (fun value => value = 0) then
+            match others with
+            | [] => [.const 0]
+            | [single] => [single]
+            | _ => others
+          else
+            others ++ constants.map (fun value => .const value)
+      | .and =>
+          -- `reduce_const And 0w rest = Const 0w` collapses the whole
+          -- expression; a non-zero fold keeps the constant last.
+          if constants.all (fun value => value = 0) then
+            [.const 0]
+          else
+            others ++ constants.map (fun value => .const value)
+      | _ => others ++ constants.map (fun value => .const value)
 
 def wordInstConvertSub [Sub α] [OfNat α 0] : List (WordExp α) → WordExp α
   | [.const left, .const right] => .const (left - right)
   | [expression, .const value] => .op .add [expression, .const (0 - value)]
   | expressions => .op .sub expressions
 
-def wordInstPullExp [Sub α] [OfNat α 0] : WordExp α → WordExp α
+def wordInstPullExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] : WordExp α → WordExp α
   | .op operator [] => .op operator []
   | .op _ [expression] => wordInstPullExp expression
   | .op .sub expressions =>
       wordInstConvertSub (expressions.map wordInstPullExp)
   | .op operator expressions =>
       let expressions := expressions.map wordInstPullExp
-      .op operator (wordInstConstantsToEnd (wordInstPullOps operator expressions []))
+      .op operator (wordInstConstantsToEnd operator (wordInstPullOps operator expressions []))
   | .load address => .load (wordInstPullExp address)
   | .shift operator left right =>
       .shift operator (wordInstPullExp left) (wordInstPullExp right)
@@ -108,10 +147,10 @@ def wordInstFlattenExp : WordExp α → WordExp α
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
-def wordInstNormalizeExp [Sub α] [OfNat α 0] (expression : WordExp α) : WordExp α :=
+def wordInstNormalizeExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] (expression : WordExp α) : WordExp α :=
   wordInstFlattenExp (wordInstPullExp expression)
 
-def wordInstSelectAtom [Sub α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
+def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
     (temp : Nat) : WordExp α → WordProg α × WordExp α
   | .const value => (.assign temp (.const value), .var temp)
   | .var name => (.assign temp (.var name), .var temp)
@@ -155,7 +194,7 @@ def wordInstSelectAtom [Sub α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgram [Sub α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
+def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
     (temp : Nat) : WordProg α → WordProg α
   | .seq first second =>
       wordDeadSelectSeq (wordInstSelectProgram temp first)
@@ -213,7 +252,7 @@ def wordInstSelectProgram [Sub α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgramFrom [Sub α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
+def wordInstSelectProgramFrom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
     (program : WordProg α) : WordProg α :=
   wordInstSelectProgram (wordInstSelectMaximum (wordProgVariables program) + 1) program
 

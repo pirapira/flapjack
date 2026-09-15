@@ -28,9 +28,9 @@ reversed `pull_ops` order (`Op Add [Var 2; Var 4]` normalizes to
 second operand is a constant, so this is exactly the `addi` shape.
 
 The port keeps Cake's constant-right `convert_sub` and head-first
-`wordInstFlattenExp`; the missing piece was Cake's constant placement, which
-`wordInstConstantsToEnd` now reproduces (constants last).  Folding *several*
-constants into one value (`optimize_consts` proper) is still a separate gap.
+`wordInstFlattenExp`; `wordInstConstantsToEnd` reproduces Cake's constant
+placement (constants last) and, for `Add`, Cake's `optimize_consts` folding of
+several constants into one value together with `reduce_const`'s zero drop.
 
 This module pins the oracle values from `word_inst_probe.out` and checks that
 the port's normalizer reaches them.
@@ -102,18 +102,67 @@ def constMiddleOrderMatches : Bool :=
         (.op .add [.var 1, .const 5, .var 3]))
     == cakeConstMiddleAtoms
 
+/-- `word_inst_probe.out: optimize_consts_two_consts` composed with flatten:
+`1 + 2 + t` folds to `t + 3` with the constant second. -/
+def foldTwoConstantsMatches : Bool :=
+  addOperandAtoms
+      (wordInstNormalizeExp (α := Nat)
+        (.op .add [.const 1, .const 2, .var 3]))
+    == [some 3, none]
+
+/-- `word_inst_probe.out: optimize_consts_zero_add` / `reduce_const_add_zero_tail`:
+`0 + t` drops the identity constant and normalizes to `t`. -/
+def zeroConstantDropped : Bool :=
+  addOperandAtoms
+      (wordInstNormalizeExp (α := Nat) (.op .add [.const 0, .var 3]))
+    == [some 3]
+
+/-- `word_inst_probe.out: norm_nested_add_consts`: an all-constant `Add`
+normalizes to the folded constant `0`. -/
+def allConstantAddFolds : Bool :=
+  match wordInstNormalizeExp (α := Nat) (.op .add [.const 0, .const 0]) with
+  | .const value => value == 0
+  | _ => false
+
 /-- `x - 8` is `x + (-8)` with the constant second, like Cake's `convert_sub`
 composed with the constant placement. -/
 def subtractionConstantSecond : Bool :=
   addVarConstValueShape ((0 : BitVec 64) - 8)
     (wordInstNormalizeExp (α := BitVec 64) (.op .sub [.var 7, .const 8]))
 
+/-- `word_inst_probe.out: optimize_consts_or_zero` / `norm_or_zero`: the `0w`
+identity is dropped for `Or` exactly as for `Add`. -/
+def orZeroConstantDropped : Bool :=
+  addOperandAtoms
+      (wordInstNormalizeExp (α := Nat) (.op .or [.const 0, .var 3]))
+    == [some 3]
+
+/-- `word_inst_probe.out: optimize_consts_xor_zero`: the `0w` identity is also
+dropped for `Xor`. -/
+def xorZeroConstantDropped : Bool :=
+  addOperandAtoms
+      (wordInstNormalizeExp (α := Nat) (.op .xor [.const 0, .var 3]))
+    == [some 3]
+
+/-- `word_inst_probe.out: optimize_consts_and_zero` / `norm_and_zero`:
+`reduce_const And 0w rest = Const 0w` collapses the whole expression. -/
+def andZeroConstantCollapses : Bool :=
+  match wordInstNormalizeExp (α := Nat) (.op .and [.const 0, .var 3]) with
+  | .const value => value == 0
+  | _ => false
+
 #guard twoVarOrderMatches
 #guard varConstOrderMatches
 #guard constFirstOrderMatches
 #guard nestedOrderMatches
 #guard constMiddleOrderMatches
+#guard foldTwoConstantsMatches
+#guard zeroConstantDropped
+#guard allConstantAddFolds
 #guard subtractionConstantSecond
+#guard orZeroConstantDropped
+#guard xorZeroConstantDropped
+#guard andZeroConstantCollapses
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -123,6 +172,12 @@ def runChecks : IO Bool := do
     , ("a nested addition keeps the constant last like Cake", nestedOrderMatches)
     , ("a constant in the middle moves after the variables", constMiddleOrderMatches)
     , ("x - 8 normalizes to x + (-8) with the constant second", subtractionConstantSecond)
+    , ("several constants fold into one value with the constant second", foldTwoConstantsMatches)
+    , ("a zero constant is dropped like Cake reduce_const", zeroConstantDropped)
+    , ("an all-constant addition folds to the constant", allConstantAddFolds)
+    , ("the Or zero identity is dropped like Cake reduce_const", orZeroConstantDropped)
+    , ("the Xor zero identity is dropped like Cake reduce_const", xorZeroConstantDropped)
+    , ("the And zero fold collapses to the constant like Cake reduce_const", andZeroConstantCollapses)
     ]
   let mut ok := true
   for (label, passed) in checks do

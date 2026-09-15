@@ -199,6 +199,25 @@ example :
   wordGreedyAllocateWithSpillsAndPreferences [0, 2, 4, 6] []
     [(0, 2), (2, 4), (4, 6), (6, 0)] { locations := [], nextSpill := 0 }
 
+/- The production clash index preserves the oracle's undirected edge order,
+   including repeated endpoints and self-edges. -/
+#guard (wordClashIndex [(0, 2), (0, 4), (2, 6), (4, 6), (0, 0)]).get? 0 ==
+  some [2, 4, 0]
+
+#guard wordGreedyAllocateWithSpillsAndPreferencesClashFast
+    [0, 2, 4, 6] [(0, 2), (2, 4), (4, 6), (6, 0)]
+      [(0, 2), (2, 4), (4, 6), (6, 0)] { locations := [], nextSpill := 0 } =
+  wordGreedyAllocateWithSpillsAndPreferences [0, 2, 4, 6]
+    [(0, 2), (2, 4), (4, 6), (6, 0)]
+      [(0, 2), (2, 4), (4, 6), (6, 0)] { locations := [], nextSpill := 0 }
+
+#guard wordAllocateVarsWithFixedSourcesClashFast
+    [0, 2, 4, 6] [(0, 2), (2, 4), (4, 6), (6, 0)]
+      [(0, 2), (2, 4), (4, 6), (6, 0)] [] =
+  wordAllocateVarsWithFixedSources
+    [0, 2, 4, 6] [(0, 2), (2, 4), (4, 6), (6, 0)]
+      [(0, 2), (2, 4), (4, 6), (6, 0)] []
+
 #guard (wordPreferenceReachableRegisters 0 [(0, 2), (2, 4), (4, 6), (6, 0)] []).eraseDups =
   (wordPreferenceReachableRegistersIndexedFast 0
     [(0, 2), (2, 4), (4, 6), (6, 0)]

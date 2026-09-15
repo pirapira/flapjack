@@ -45,7 +45,6 @@ def labCompileAsmChecked [NeZero width] (context : WordFfiContext)
     Except LabLoweringError (List (Instruction width)) :=
   match operation with
   | .heapAlloc _ => .error (labLoweringError sectionId position .heapAlloc)
-  | .halt => .error (labLoweringError sectionId position .halt)
   | operation =>
       match labCompileAsm context sectionId labels position operation with
       | some code => .ok code
@@ -87,7 +86,6 @@ def labCompileAsmProgramChecked [NeZero width] (context : WordFfiContext)
     Except LabLoweringError (List (Instruction width)) :=
   match operation with
   | .heapAlloc _ => .error (labLoweringError sectionId position .heapAlloc)
-  | .halt => .error (labLoweringError sectionId position .halt)
   | operation =>
       match labCompileAsmProgram context labels position operation with
       | some code => .ok code

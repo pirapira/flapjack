@@ -927,6 +927,62 @@ def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (NatInfoMap Nat))
   let state := cakeAssignStemps k (fun s n bads => cakeNegBiasedPref s k mvs n bads) state
   some (cakeExtractColor state bij.toAllocator)
 
+/-! Convert Cake's `total_colour` result back into the location contract used
+    by Word-to-Stack.  Cake colours are even Word names; their half is the
+    Cake stack-register number, which is translated to the target register at
+    the Lab boundary.  Colours outside the allocatable window are frame
+    variables numbered from the top of Cake's `f` frame. -/
+
+def cakeColourLocation (k f colour : Nat) : WordLocation :=
+  let stackRegister := colour / 2
+  if stackRegister < k then
+    .register (riscvRegisterName stackRegister)
+  else
+    .stack (f - 1 - (stackRegister - k))
+
+def cakeColourFrameSlots (k : Nat) (parameters : List Nat)
+    (program : WordProg α) (colouring : NatInfoMap Nat) : Nat × Nat :=
+  let colour := CakeAlloc.totalColour colouring
+  let coloured := wordApplyColour colour program
+  let maxVar := (wordProgVariables coloured).foldl max 0
+  let stackArgs := parameters.length - k
+  let f' := max ((maxVar / 2 + 1) - k) stackArgs
+  (f', if f' = 0 then 0 else f' + 1)
+
+def cakeColourWordSpillState (k : Nat) (parameters : List Nat)
+    (program : WordProg α) (colouring : NatInfoMap Nat) : WordSpillState :=
+  let colour := CakeAlloc.totalColour colouring
+  let (_, f) := cakeColourFrameSlots k parameters program colouring
+  let names := (parameters ++ wordProgVariables program).eraseDups
+  let locations := names.map (fun name =>
+    (name, cakeColourLocation k f (colour name)))
+  { locations, nextSpill := if f = 0 then 0 else f - 1 }
+
+/-! Production-facing Cake allocator adapter.  This keeps Cake's full SSA
+    entry moves and IRC coalescing in the returned Word program, while
+    exposing the existing `WordSpillState` shape to the shared pipeline. -/
+
+def cakeAllocateWordFunction (parameters : List Nat) (program : WordProg α)
+    (currentFunction : Nat) (k : Nat) :
+    Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
+  let (state, renamedParameters, ssaProgram) :=
+    wordFullSsaCcTrans parameters.length program
+  let tree := wordClashTree ssaProgram []
+  let fs := cakeGetStackOnly ssaProgram
+  let forced := cakeGetForced ssaProgram
+  let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
+  let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
+  let bij := cakeMkBij tree
+  let scost := spillCosts.map (fun costs =>
+    costs.filterMap (fun entry =>
+      (lookupNatInfo entry.1 bij.toAllocator).map
+        (fun node => (node, entry.2))))
+  match cakeDoRegAlloc .irc scost k moves tree forced fs with
+  | none => none
+  | some colouring =>
+      some (state, renamedParameters, ssaProgram,
+        cakeColourWordSpillState k parameters ssaProgram colouring)
+
 /-! `get_prefs` from the original allocator driver: the move preferences fed
     to IRC (`word_allocScript.sml:1203-1215` via `get_heuristics_def`). -/
 def cakeGetPrefs {α : Type u} [OfNat α 0] [OfNat α 1] :

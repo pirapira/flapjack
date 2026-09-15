@@ -663,10 +663,10 @@ def helloSource : String :=
     "}"
 
 /-- Original CakeML `cml_main` length for `hello.pnk` from the checked
-assembly oracle (CakeML emits 152 bytes; the port currently emits 216). -/
+assembly oracle (CakeML emits 152 bytes; the port currently emits 204). -/
 def cakeHelloMainLength : Nat := 152
 
-def flapjackHelloMainLength : Nat := 216
+def flapjackHelloMainLength : Nat := 204
 
 def helloRuntimeImage : Option (SourceRiscVRuntimeImage 64) :=
   compileRuntimeImage helloSource

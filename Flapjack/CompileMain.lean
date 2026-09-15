@@ -21,7 +21,7 @@ def compileRemoveConfig : StackRemoveConfig :=
     bytesInWord := 8
     stackBase := 25
     wordShift := 3
-    jump := true }
+    jump := false }
 
 def hexDigit (value : Nat) : Char :=
   if value < 10 then

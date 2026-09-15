@@ -25,6 +25,21 @@ structure LabLoweringError where
   feature : LabUnsupportedFeature
   deriving DecidableEq, Repr
 
+/- Lean core provides no `DecidableEq` for `Except`, so the checked-lowering
+    tests cannot `decide` on results without it. -/
+instance instDecidableEqExcept {ε α : Type u} [DecidableEq ε] [DecidableEq α] :
+    DecidableEq (Except ε α)
+  | .error e, .error e' =>
+      match decEq (α := ε) e e' with
+      | isTrue h => isTrue (h ▸ rfl)
+      | isFalse n => isFalse (fun h => match h with | rfl => n rfl)
+  | .ok a, .ok a' =>
+      match decEq (α := α) a a' with
+      | isTrue h => isTrue (h ▸ rfl)
+      | isFalse n => isFalse (fun h => match h with | rfl => n rfl)
+  | .error _, .ok _ => isFalse (fun h => nomatch h)
+  | .ok _, .error _ => isFalse (fun h => nomatch h)
+
 def labLoweringError (sectionId position : Nat)
     (feature : LabUnsupportedFeature) : LabLoweringError :=
   { sectionId, position, feature }

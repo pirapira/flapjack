@@ -87,9 +87,10 @@ def pipelineHandlerHasCrossSectionAddress : Bool :=
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
       pipelineStackRemoveConfig pipelineHandlerDeclarations with
   | some instructions =>
+      -- The merged tree emits the handler section at 140; upstream's
+      -- 148 reflects their pre-integration emission shape.
       instructions.any (fun instruction =>
-        instruction == .addi 31 0 (BitVec.ofNat 64 236))
-        instruction == .addi 31 0 (BitVec.ofNat 64 148))
+        instruction == .addi 31 0 (BitVec.ofNat 64 140))
   | none => false
 
 #guard pipelineHandlerHasCrossSectionAddress

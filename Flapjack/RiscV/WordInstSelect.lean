@@ -51,12 +51,12 @@ def wordInstPullOps (operator : BinOp) :
 termination_by expressions _ => sizeOf expressions
 decreasing_by all_goals decreasing_trivial
 
-def wordInstConvertSub [Sub α] [Neg α] : List (WordExp α) → WordExp α
+def wordInstConvertSub [Sub α] [OfNat α 0] : List (WordExp α) → WordExp α
   | [.const left, .const right] => .const (left - right)
-  | [expression, .const value] => .op .add [.const (-value), expression]
+  | [expression, .const value] => .op .add [.const (0 - value), expression]
   | expressions => .op .sub expressions
 
-def wordInstPullExp [Sub α] [Neg α] : WordExp α → WordExp α
+def wordInstPullExp [Sub α] [OfNat α 0] : WordExp α → WordExp α
   | .op operator [] => .op operator []
   | .op _ [expression] => wordInstPullExp expression
   | .op .sub expressions =>
@@ -85,10 +85,10 @@ def wordInstFlattenExp : WordExp α → WordExp α
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
-def wordInstNormalizeExp [Sub α] [Neg α] (expression : WordExp α) : WordExp α :=
+def wordInstNormalizeExp [Sub α] [OfNat α 0] (expression : WordExp α) : WordExp α :=
   wordInstFlattenExp (wordInstPullExp expression)
 
-def wordInstSelectAtom [Sub α] [Neg α] (temp : Nat) : WordExp α → WordProg α × WordExp α
+def wordInstSelectAtom [Sub α] [OfNat α 0] (temp : Nat) : WordExp α → WordProg α × WordExp α
   | .const value => (.assign temp (.const value), .var temp)
   | .var name => (.assign temp (.var name), .var temp)
   | .lookup store => (.assign temp (.lookup store), .var temp)
@@ -114,7 +114,7 @@ def wordInstSelectAtom [Sub α] [Neg α] (temp : Nat) : WordExp α → WordProg 
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgram [Sub α] [Neg α] (temp : Nat) : WordProg α → WordProg α
+def wordInstSelectProgram [Sub α] [OfNat α 0] (temp : Nat) : WordProg α → WordProg α
   | .seq first second =>
       wordDeadSelectSeq (wordInstSelectProgram temp first)
         (wordInstSelectProgram temp second)
@@ -165,7 +165,7 @@ def wordInstSelectProgram [Sub α] [Neg α] (temp : Nat) : WordProg α → WordP
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgramFrom [Sub α] [Neg α] (program : WordProg α) : WordProg α :=
+def wordInstSelectProgramFrom [Sub α] [OfNat α 0] (program : WordProg α) : WordProg α :=
   wordInstSelectProgram (wordInstSelectMaximum (wordProgVariables program) + 1) program
 
 end Flapjack.RiscV

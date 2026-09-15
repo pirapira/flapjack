@@ -2568,6 +2568,16 @@ def wordStackEmbeddedReturnCode [BEq Nat] (config : WordStackConfig)
   | none => some .skip
   | some (_, _, returnProgram, _, _) => wordToStackProgNat config returnProgram
 
+/-! The Cake full-SSA pass prefixes the renamed body with an entry move, then
+    `remove_dead_prog` can delete formals which are never read.  The frame
+    reservation still uses the complete formal count, but the physical entry
+    moves must use only the surviving destinations; otherwise dead formals can
+    be allocated to the same register and make `parmove` reject the list. -/
+def wordStackLiveEntryParameters (program : WordProg (Word width)) : List Nat :=
+  match program with
+  | .seq (.move _ moves) _ => moves.map Prod.fst
+  | _ => []
+
 def wordStackReturnLabel (config : WordStackConfig)
     (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat)) : Nat :=
   returns.map (fun result => result.2.2.2.fst) |>.getD config.returnLabel
@@ -3185,6 +3195,34 @@ def wordToStackFunctionWithCakeFrameAndLocationBitmaps [NeZero width]
   let (body, state) ← wordToStackProgWordWithLocationBitmaps config registerCount
     bitmapRegister frameSlots storeConstsStub state program
   let parameterMoves ← wordStackMovesFromPhysical config parameters config.abiBase
+  let frameWords := wordStackFrameWords parameters registerCount frameSlots
+  pure (wordStackJoin (.stackAlloc frameWords)
+    (wordStackJoin parameterMoves body), state)
+
+/-! Source-facing full-SSA lowering has already applied Cake's dead-program
+    pass.  In that path an absent entry move means that all formal copies were
+    removed; keep the complete formal list for frame sizing but emit no dead
+    physical entry moves. -/
+def wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves
+    [NeZero width] (config : WordStackConfig) (_parameters : List Nat)
+    (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
+    (state : WordStackBitmapState) (program : WordProg (Word width)) :
+    Option (StackProg Nat × WordStackBitmapState) := do
+  let (body, state) ← wordToStackProgWordWithLocationBitmaps config registerCount
+    bitmapRegister frameSlots storeConstsStub state program
+  let parameterMoves ← wordStackMovesFromPhysical config
+    (wordStackLiveEntryParameters program) config.abiBase
+  pure (wordStackJoin parameterMoves body, state)
+
+def wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves
+    [NeZero width] (config : WordStackConfig) (parameters : List Nat)
+    (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
+    (state : WordStackBitmapState) (program : WordProg (Word width)) :
+    Option (StackProg Nat × WordStackBitmapState) := do
+  let (body, state) ← wordToStackProgWordWithLocationBitmaps config registerCount
+    bitmapRegister frameSlots storeConstsStub state program
+  let parameterMoves ← wordStackMovesFromPhysical config
+    (wordStackLiveEntryParameters program) config.abiBase
   let frameWords := wordStackFrameWords parameters registerCount frameSlots
   pure (wordStackJoin (.stackAlloc frameWords)
     (wordStackJoin parameterMoves body), state)

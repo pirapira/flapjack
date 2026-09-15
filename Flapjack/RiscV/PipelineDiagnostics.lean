@@ -111,7 +111,12 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
-          let frameSlots := allocation.nextSpill
+          /- Cake reserves enough `f'` slots for both allocator spills and
+             arguments outside the physical ABI window, including nested
+             calls whose arity exceeds the formal-parameter count. -/
+          let frameSlots := max allocation.nextSpill
+            (max (wordParameters.length - 12)
+              (RiscV.wordProgMaxCallArguments renamedProgram - 12))
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := 31
@@ -124,12 +129,12 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               handlerLabel := label }
           let lower :=
             if !RiscV.wordProgNeedsCakeFrame renamedProgram then
-              RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+              RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves config
                 renamedParameters wordAllocatableRegisters.length config.scratch
                 frameSlots (some 1)
                 (RiscV.wordStackInitialBitmaps false) renamedProgram
             else
-              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
+              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves config
                 renamedParameters wordAllocatableRegisters.length config.scratch
                 frameSlots (some 1)
                 (RiscV.wordStackInitialBitmaps false) renamedProgram
@@ -163,8 +168,11 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
-          let frameSlots := RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
-            wordAllocatableRegisters.length unflattenedBody
+          let frameSlots := max
+            (RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
+              wordAllocatableRegisters.length unflattenedBody)
+            (max (wordParameters.length - 12)
+              (RiscV.wordProgMaxCallArguments renamedProgram - 12))
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := 31
@@ -177,12 +185,12 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
               handlerLabel := label }
           let lower :=
             if !RiscV.wordProgNeedsCakeFrame renamedProgram then
-              RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+              RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves config
                 renamedParameters wordAllocatableRegisters.length config.scratch
                 frameSlots
                 (some 1) bitmaps renamedProgram
             else
-              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
+              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves config
                 renamedParameters wordAllocatableRegisters.length config.scratch
                 frameSlots
                 (some 1) bitmaps renamedProgram

@@ -111,6 +111,28 @@ decreasing_by
 def wordProgNeedsCakeFrame (program : WordProg α) : Bool :=
   !(wordProgFfiNames program).isEmpty || wordProgHasFrameOperations program
 
+/-! The Cake frame must also hold the stack arguments of the largest call in a
+    function. Those argument names are not allocator spills, so
+    `allocation.nextSpill` alone is insufficient for `format_var`. -/
+def wordProgMaxCallArguments : WordProg α → Nat
+  | .seq first second =>
+      max (wordProgMaxCallArguments first) (wordProgMaxCallArguments second)
+  | .ite _ _ _ thenBranch elseBranch =>
+      max (wordProgMaxCallArguments thenBranch) (wordProgMaxCallArguments elseBranch)
+  | .loop _ body _ | .mustTerminate body => wordProgMaxCallArguments body
+  | .call returns _ arguments handler =>
+      let returnCount := match returns with
+        | some (_, _, returnCode, _, _) => wordProgMaxCallArguments returnCode
+        | none => 0
+      let handlerCount := match handler with
+        | some (_, body, _, _) => wordProgMaxCallArguments body
+        | none => 0
+      max arguments.length (max returnCount handlerCount)
+  | _ => 0
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def wordToStackProgNatChecked [BEq Nat]
     (config : WordStackConfig) (program : WordProg Nat) :
     Except WordLoweringError (StackProg Nat) :=

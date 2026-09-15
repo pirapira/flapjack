@@ -148,7 +148,7 @@ def wordCopyProg : WordCopyState → WordProg α → WordProg α × WordCopyStat
   | state, .tick => (.tick, state)
   | state, .locValue destination source =>
       (.locValue destination source, wordCopyRemove state destination)
-  | state, .call returns target arguments handler =>
+  | _state, .call returns target arguments handler =>
       (.call returns target arguments handler, wordCopyEmpty)
   | state, .shareInst operator name address =>
       match operator with
@@ -160,7 +160,7 @@ def wordCopyProg : WordCopyState → WordProg α → WordProg α × WordCopyStat
             (wordCopyShareExp state address), state)
   | state, .break label => (.break label, state)
   | state, .continue label => (.continue label, state)
-  | state, program => (program, wordCopyEmpty)
+  | _state, program => (program, wordCopyEmpty)
 termination_by _ program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 

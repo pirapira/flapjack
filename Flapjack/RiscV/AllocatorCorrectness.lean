@@ -1070,8 +1070,7 @@ theorem wordMoveToInstructions_abi_singleton [NeZero width]
   · subst source
     simp [wordMoveToInstructions, wordMoveToInstructionsAux,
       wordMoveRegisterDestinations, wordMoveRegisterReady,
-      wordMoveRegisterRemoveDestination, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat]
+      wordMoveRegisterRemoveDestination]
   · have htwo' : ¬2 = source := by
       intro h
       exact htwo h.symm
@@ -1122,8 +1121,8 @@ theorem evalWordSsaRenameProgram_raise [NeZero width]
       simpa [htwo] using hmove
     simp only [evalWordFunctionWithHandlersAndFfi, evalWordFunction]
     rw [hmove']
-    simp [registerOfNat, hsource, executeInstructions, execute, nextPc,
-      writeRegister, readRegister, wordControlResultException]
+    simp [registerOfNat, hsource, executeInstructions, readRegister,
+      wordControlResultException]
     simpa [readRegister, htwo] using hexceptionValue
   · have hmove' : wordMoveToInstructions (width := width)
         [(2, wordSsaRead ssa exception)] =
@@ -1180,8 +1179,8 @@ theorem evalWordSsaRenameProgram_return_singleton [NeZero width]
       simpa [htwo] using hmove
     simp only [evalWordFunctionWithHandlersAndFfi, evalWordFunction]
     rw [hmove']
-    simp [registerOfNat, hsource, executeInstructions, execute, nextPc,
-      writeRegister, readRegister, wordControlResultValues]
+    simp [registerOfNat, hsource, executeInstructions, readRegister,
+      wordControlResultValues]
     simpa [readRegister, htwo] using hvalue
   · have hmove' : wordMoveToInstructions (width := width)
         [(2, wordSsaRead ssa value)] =

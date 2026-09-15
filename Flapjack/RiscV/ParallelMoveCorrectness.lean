@@ -140,7 +140,7 @@ theorem wordMoveToInstructions_of_no_source_destination [NeZero width]
       have hheadNe : head.1 ≠ head.2 := by
         intro heq
         apply hnoSource head (by simp)
-        simpa [heq]
+        simp [heq]
       have hheadCode :
           wordExpToInstructions (width := width) head.1 (.var head.2) =
             some (wordMoveInstructionList (width := width) head) := by

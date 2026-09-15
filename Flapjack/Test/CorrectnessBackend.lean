@@ -73,7 +73,7 @@ example [NeZero width] (state : State width) :
 
 example [NeZero width] (state : State width)
     (hdivisor : readRegister state 3 ≠ 0) :
-    readRegister (executeInstructions state [.divU 5 2 3]) 5 =
+    readRegister (executeInstructions state [.div 5 2 3]) 5 =
       (BitVec.ofInt width
         ((readRegister state 2).toInt.ediv (readRegister state 3).toInt)) := by
   exact wordFunctionToRiscVWithCalls_div_result

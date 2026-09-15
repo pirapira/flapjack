@@ -166,7 +166,13 @@ def callOriginalProbeResult : Option (List (RiscV.Word 64)) :=
 
 /-! The global fixture exercises declaration initialization followed by a
     global load in the entry function; its expected value comes from the
-    independent `global_g_7` panSem probe. -/
+    independent `global_g_7` panSem probe.  Section 1 is the generated
+    wrapper: it runs the global initializer and then tail-calls `main` with
+    Cake's `0::args` link convention
+    (cakeml/pancake/loop_to_wordScript.sml:131), whose lowering moves the
+    constant 0 into the link register.  The harness therefore uses return
+    address 0: `executeCodeUntil` stops when `pc` reaches it, right after
+    `main` returns through the zeroed link register. -/
 def globalSource : String :=
   "var 1 g = 7; fun 1 main() { return g; }"
 
@@ -184,8 +190,8 @@ def globalMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← globalLinked
   let entry ← parsedCallLookupEntry 1 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 0 [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 0)
 
 def globalOriginalProbeResult : Option (List (RiscV.Word 64)) :=
   some [BitVec.ofNat 64 7]

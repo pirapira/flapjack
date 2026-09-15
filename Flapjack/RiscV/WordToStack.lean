@@ -2552,8 +2552,8 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch returnCode handlerCode
         config.returnLabel config.entryLabel
-        (wordStackHandlerLabel config entryLabel)
-        (wordStackHandlerEntryLabel config handlerLabel) exception
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config entryLabel) exception
       pure (wordStackJoin argumentMoves callCode)
   | .opCurrHeap operator destination source =>
       wordStackOpCurrHeap config operator destination source
@@ -2630,8 +2630,8 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch .skip handlerCode
         config.returnLabel config.entryLabel
-        (wordStackHandlerLabel config handlerEntryLabel)
-        (wordStackHandlerEntryLabel config handlerLabel) exception
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
       pure (wordStackJoin argumentMoves callCode)
   | .call (some (_destinations, _cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments
@@ -2642,8 +2642,8 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch returnCode handlerCode
         returnLabel entryLabel
-        (wordStackHandlerLabel config handlerEntryLabel)
-        (wordStackHandlerEntryLabel config handlerLabel) exception
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
       pure (wordStackJoin argumentMoves callCode)
   | .call none none arguments none => do
       let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
@@ -2811,8 +2811,8 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch returnCode handlerCode
         (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
-        (wordStackHandlerLabel config handlerEntryLabel)
-        (wordStackHandlerEntryLabel config handlerLabel) exception
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
@@ -3351,8 +3351,9 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
       /- Returning calls carry only value arguments.  The source-shaped
-         `panToWordTailCall` adapter adds the link slot only to tail calls;
-         ordinary calls therefore begin at the value ABI base. -/
+         `loop_to_word$comp` adds the link slot only to tail calls
+         (`loop_to_wordScript.sml:131`); ordinary calls therefore begin at
+         the value ABI base. -/
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
@@ -3365,8 +3366,8 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let callCode := wordToStackCallWithHandlerInSectionAtRegisterCount config.perf target
         arguments.length registerCount config.frameOffset config.scratch returnCode handlerCode
         returnLabel entryLabel
-        (wordStackHandlerLabel config handlerEntryLabel)
-        (wordStackHandlerEntryLabel config handlerLabel) exception
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
@@ -3392,8 +3393,8 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch .skip handlerCode
         config.returnLabel config.entryLabel
-        (wordStackHandlerLabel config handlerEntryLabel)
-        (wordStackHandlerEntryLabel config handlerLabel) exception
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
       pure (wordStackJoin argumentMoves callCode, state)
   | .call none none arguments none => do
       let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments

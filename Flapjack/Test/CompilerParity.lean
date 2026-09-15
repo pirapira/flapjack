@@ -199,6 +199,7 @@ import Flapjack.Test.CakeSsaTempParity
 import Flapjack.Test.CakeApplyColourParity
 import Flapjack.Test.CakeSpillCostParity
 import Flapjack.Test.CakeFrameVectorParity
+import Flapjack.Test.RiscVAbiAdapterParity
 import Flapjack.Test.LoopToWordBoundaryParity
 
 /-!
@@ -1008,6 +1009,7 @@ def main : IO Unit := do
     Flapjack.Test.CakeApplyColourParity.runChecks,
     Flapjack.Test.CakeSpillCostParity.runChecks,
     Flapjack.Test.CakeFrameVectorParity.runChecks,
+    Flapjack.Test.RiscVAbiAdapterParity.runChecks,
     Flapjack.Test.LoopToWordBoundaryParity.runChecks
     ].mapM id
   unless results.all id do

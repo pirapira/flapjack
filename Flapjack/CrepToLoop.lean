@@ -200,7 +200,12 @@ def loopCompileExp [OfNat α 0] [OfNat α 1]
   | .cmp operator left right =>
       let leftResult := loopCompileExp context tmp live left
       let rightResult := loopCompileExp context leftResult.nextTemp leftResult.live right
-      let leftTemp := rightResult.nextTemp
+      /- Cake's `compile_exp` reserves the next temporary returned by the
+         right operand and materializes the comparison into the following two
+         names (`tmp' + 1`, `tmp' + 2`).  The old port reused `tmp'` for the
+         left operand, shifting every comparison/while temporary by one and
+         changing the observable Word/RISC-V artifact. -/
+      let leftTemp := rightResult.nextTemp + 1
       let rightTemp := leftTemp + 1
       { code := leftResult.code ++ rightResult.code ++
           [.assign leftTemp leftResult.expression,

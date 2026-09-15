@@ -72,7 +72,9 @@ example :
     (evalStackRemoveStackAlloc_small (width := 64)
       stackGetCorrectnessConfig stackGetCorrectnessState 2 (by omega)
       (by simp [stackGetCorrectnessConfig])
-      (by rfl))
+      (by simp [stackGetCorrectnessConfig])
+      (by simp [stackGetCorrectnessConfig, stackGetCorrectnessState])
+      (by simp [stackGetCorrectnessConfig, stackGetCorrectnessState]))
 
 example :
     (evalWordStackMachine stackGetCorrectnessState

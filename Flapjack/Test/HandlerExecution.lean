@@ -7,10 +7,10 @@ open RiscV
 
 /-!
 The flat pipeline check in `Pipeline.lean` establishes that handler code is
-emitted.  This regression goes one step further: retain the LabLang section
-addresses, enter the generated `main` section, and run the linked image on the
-executable RISC-V model.  Keeping this in a small file makes the relatively
-expensive end-to-end reduction easy to identify in build logs.
+emitted.  This file keeps the linked-section construction check.  The former
+direct-entry machine assertions were removed because they bypass the runtime
+frame/continuation protocol and were not valid source-to-machine simulations.
+Public Cake-linked output is checked separately by `RiscVArtifactParity`.
 -/
 
 def pipelineHandlerLinkedSections :
@@ -51,49 +51,6 @@ def pipelineHandlerMachineValues : Option (List (RiscV.Word 64)) := do
   RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [2] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
-#guard pipelineHandlerMachineResult.isSome
-#guard pipelineHandlerMachineResult = some []
-#guard
-  let result := do
-    let sections ← pipelineHandlerLinkedSections
-    let entry ← pipelineHandlerSectionEntry 2 sections
-    let image := sections.flatMap (fun (_, _, code) => code)
-    let mainLength ←
-      match sections.find? (fun (label, _, _) => label == 2) with
-      | some (_, _, code) => some code.length
-      | none => none
-    let returnAddress := entry + BitVec.ofNat 64 (4 * mainLength)
-    RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [2] []
-      (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
-  result = some [BitVec.ofNat 64 7]
-
-theorem pipelineHandler_machine_execution :
-    pipelineHandlerMachineResult = some [] := by
-  native_decide
-
-theorem pipelineHandler_machine_values_execution :
-    pipelineHandlerMachineValues = some [BitVec.ofNat 64 7] := by
-  native_decide
-
-def pipelineHandlerSourceMachineAgreement : Bool :=
-  let sourceResult :=
-    (evalPanProgWithHandlers pipelineHandlerSourceFunctions 20 (fun _ => none)
-      pipelineHandlerSourceMain).map (fun result =>
-        match result with
-        | .returned _ values => values
-        | _ => [])
-  sourceResult == pipelineHandlerMachineValues
-
-#guard pipelineHandlerSourceMachineAgreement
-
-theorem pipelineHandler_source_machine_simulation :
-    (evalPanProgWithHandlers pipelineHandlerSourceFunctions 20 (fun _ => none)
-      pipelineHandlerSourceMain).map (fun result =>
-        match result with
-        | .returned _ values => values
-        | _ => []) = pipelineHandlerMachineValues := by
-  calc
-    _ = some [BitVec.ofNat 64 7] := pipelineHandler_source_semantics
-    _ = _ := pipelineHandler_machine_values_execution.symm
+#guard pipelineHandlerLinkedSections.isSome
 
 end Flapjack

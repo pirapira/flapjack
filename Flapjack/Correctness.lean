@@ -3453,7 +3453,7 @@ theorem loopToWord_div_assign_preserves_mapped_locals [NeZero width]
     simp only [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
       hdestination_nonzero, hdividend_value', hdivisor_value']
     rw [← hsigned_matches_unsigned]
-    simp [hdestination_nonzero, hdivisor_nonzero]
+    simp
     intro hzero
     exact (hdivisor_nonzero hzero).elim
   · have hcurrent' : loopState.locals name = some current := by

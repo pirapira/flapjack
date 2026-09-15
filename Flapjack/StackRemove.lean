@@ -67,35 +67,21 @@ def stackRemoveMove (destination source : Nat) :
   if destination = source then .skip
   else .arith .or destination source source
 
-/- When `offsetImm` is supplied, store accesses lower to Cake's single
-    `Mem … (Addr (k+1) (store_offset name))` form: one immediate-offset
-    instruction from `storeBase`.  Without it, the address is materialized
-    into `addressScratch` first. -/
-def stackRemoveGet (config : StackRemoveConfig) (offsetImm : Option (Nat → α))
-    (destination : Nat) (store : StackStore) : StackProg α :=
+def stackRemoveGet (config : StackRemoveConfig) (destination : Nat)
+    (store : StackStore) : StackProg α :=
   match store with
   | .currHeap => stackRemoveMove destination config.currHeap
   | _ =>
-      match offsetImm with
-      | some imm =>
-          .inst (.memOffset .load destination config.storeBase
-            (imm (config.bytesInWord * stackStorePosition store)))
-      | none =>
-          stackRemoveJoin (stackRemoveAddress config store)
-            (.inst (.mem .load destination config.addressScratch))
+      stackRemoveJoin (stackRemoveAddress config store)
+        (.inst (.mem .load destination config.addressScratch))
 
-def stackRemoveSet (config : StackRemoveConfig) (offsetImm : Option (Nat → α))
-    (store : StackStore) (source : Nat) : StackProg α :=
+def stackRemoveSet (config : StackRemoveConfig) (store : StackStore)
+    (source : Nat) : StackProg α :=
   match store with
   | .currHeap => stackRemoveMove config.currHeap source
   | _ =>
-      match offsetImm with
-      | some imm =>
-          .inst (.memOffset .store source config.storeBase
-            (imm (config.bytesInWord * stackStorePosition store)))
-      | none =>
-          stackRemoveJoin (stackRemoveAddress config store)
-            (.inst (.mem .store source config.addressScratch))
+      stackRemoveJoin (stackRemoveAddress config store)
+        (.inst (.mem .store source config.addressScratch))
 
 def stackRemoveStackAddress (config : StackRemoveConfig) (offset : Nat) :
     StackProg α :=
@@ -186,8 +172,8 @@ def stackRemoveStackSetSize (config : StackRemoveConfig) (register : Nat) :
         (.arith .add config.stackPointer config.stackPointer register)))
 
 def stackRemoveBitmapLoad (config : StackRemoveConfig)
-    (offsetImm : Option (Nat → α)) (destination address : Nat) : StackProg α :=
-  stackRemoveJoin (stackRemoveGet config offsetImm destination .bitmapBase)
+    (destination address : Nat) : StackProg α :=
+  stackRemoveJoin (stackRemoveGet config destination .bitmapBase)
     (stackRemoveJoin
       (.arith .add destination destination address)
       (stackRemoveJoin
@@ -227,9 +213,8 @@ def stackRemoveCopyLoop [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
         copyEach))
 
 def stackRemoveStoreConsts [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
-    (offsetImm : Option (Nat → α)) (source bitmap : Nat) (_stub : Option Nat) :
-    StackProg α :=
-  stackRemoveJoin (stackRemoveGet config offsetImm bitmap .bitmapBase)
+    (source bitmap : Nat) (_stub : Option Nat) : StackProg α :=
+  stackRemoveJoin (stackRemoveGet config bitmap .bitmapBase)
     (stackRemoveJoin (.const config.scratch 1)
       (stackRemoveJoin (.arith .add bitmap bitmap config.scratch)
         (stackRemoveJoin (.const config.scratch config.wordShift)
@@ -238,86 +223,85 @@ def stackRemoveStoreConsts [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig
               (stackRemoveJoin (stackRemoveMove source 1)
                 (stackRemoveMove bitmap 1)))))))
 
-def stackRemoveFuel [OfNat α 0] [OfNat α 1] :
-    Nat → StackRemoveConfig → Option (Nat → α) → StackProg α → StackProg α
-  | 0, _, _, program => program
-  | _fuel + 1, _, _, .skip => .skip
-  | _fuel + 1, config, offsetImm, .get destination store =>
-      stackRemoveGet config offsetImm destination store
-  | _fuel + 1, config, offsetImm, .set store source =>
-      stackRemoveSet config offsetImm store source
-  | _fuel + 1, _, _, .inst instruction => .inst instruction
-  | _fuel + 1, _, _, .shMem operator source address =>
+def stackRemoveFuel [OfNat α 0] [OfNat α 1] : Nat → StackRemoveConfig → StackProg α → StackProg α
+  | 0, _, program => program
+  | _fuel + 1, _, .skip => .skip
+  | _fuel + 1, config, .get destination store =>
+      stackRemoveGet config destination store
+  | _fuel + 1, config, .set store source =>
+      stackRemoveSet config store source
+  | _fuel + 1, _, .inst instruction => .inst instruction
+  | _fuel + 1, _, .shMem operator source address =>
       .shMem operator source address
-  | _fuel + 1, _, _, .const destination value => .const destination value
-  | _fuel + 1, _, _, .arith operator destination left right =>
+  | _fuel + 1, _, .const destination value => .const destination value
+  | _fuel + 1, _, .arith operator destination left right =>
       .arith operator destination left right
-  | _fuel + 1, _, _, .shift operator destination left right =>
+  | _fuel + 1, _, .shift operator destination left right =>
       .shift operator destination left right
-  | _fuel + 1, config, _offsetImm, .opCurrHeap operator destination source =>
+  | _fuel + 1, config, .opCurrHeap operator destination source =>
       stackRemoveOpCurrHeap config operator destination source
-  | fuel + 1, config, offsetImm, .call returnHandler target handler =>
+  | fuel + 1, config, .call returnHandler target handler =>
       match returnHandler, handler with
       | none, none => .call none target none
       | some (program, link, returnLabel, entryLabel), none =>
-          .call (some (stackRemoveFuel fuel config offsetImm program, link, returnLabel, entryLabel))
+          .call (some (stackRemoveFuel fuel config program, link, returnLabel, entryLabel))
             target none
       | none, some (program, exceptionLabel, handlerLabel) =>
           .call none target
-            (some (stackRemoveFuel fuel config offsetImm program, exceptionLabel, handlerLabel))
+            (some (stackRemoveFuel fuel config program, exceptionLabel, handlerLabel))
       | some (returnProgram, link, returnLabel, entryLabel),
           some (handlerProgram, exceptionLabel, handlerLabel) =>
           .call
-            (some (stackRemoveFuel fuel config offsetImm returnProgram, link, returnLabel, entryLabel))
+            (some (stackRemoveFuel fuel config returnProgram, link, returnLabel, entryLabel))
             target
-            (some (stackRemoveFuel fuel config offsetImm handlerProgram, exceptionLabel, handlerLabel))
-  | fuel + 1, config, offsetImm, .seq first second =>
-      .seq (stackRemoveFuel fuel config offsetImm first) (stackRemoveFuel fuel config offsetImm second)
-  | fuel + 1, config, offsetImm, .ite operator condition right thenBranch elseBranch =>
-      .ite operator condition right (stackRemoveFuel fuel config offsetImm thenBranch)
-        (stackRemoveFuel fuel config offsetImm elseBranch)
-  | fuel + 1, config, offsetImm, .loop body => .loop (stackRemoveFuel fuel config offsetImm body)
-  | _fuel + 1, _, _, .jumpLower register target label =>
+            (some (stackRemoveFuel fuel config handlerProgram, exceptionLabel, handlerLabel))
+  | fuel + 1, config, .seq first second =>
+      .seq (stackRemoveFuel fuel config first) (stackRemoveFuel fuel config second)
+  | fuel + 1, config, .ite operator condition right thenBranch elseBranch =>
+      .ite operator condition right (stackRemoveFuel fuel config thenBranch)
+        (stackRemoveFuel fuel config elseBranch)
+  | fuel + 1, config, .loop body => .loop (stackRemoveFuel fuel config body)
+  | _fuel + 1, _, .jumpLower register target label =>
       .jumpLower register target label
-  | _fuel + 1, _, _, .alloc words => .alloc words
-  | _fuel + 1, config, offsetImm, .storeConsts source bitmap stub =>
-      stackRemoveStoreConsts config offsetImm source bitmap stub
-  | _fuel + 1, _, _, .codeBufferWrite address value =>
+  | _fuel + 1, _, .alloc words => .alloc words
+  | _fuel + 1, config, .storeConsts source bitmap stub =>
+      stackRemoveStoreConsts config source bitmap stub
+  | _fuel + 1, _, .codeBufferWrite address value =>
       .codeBufferWrite address value
-  | _fuel + 1, _, _, .dataBufferWrite address value =>
+  | _fuel + 1, _, .dataBufferWrite address value =>
       .inst (.mem .store value address)
-  | _fuel + 1, _, _, .raise exception => .raise exception
-  | _fuel + 1, _, _, .return value => .return value
-  | _fuel + 1, _, _, .break label => .break label
-  | _fuel + 1, _, _, .continue label => .continue label
-  | _fuel + 1, _, _, .ffi function configuration configurationLength array arrayLength
+  | _fuel + 1, _, .raise exception => .raise exception
+  | _fuel + 1, _, .return value => .return value
+  | _fuel + 1, _, .break label => .break label
+  | _fuel + 1, _, .continue label => .continue label
+  | _fuel + 1, _, .ffi function configuration configurationLength array arrayLength
       returnAddress =>
       .ffi function configuration configurationLength array arrayLength returnAddress
-  | _fuel + 1, _, _, .tick => .tick
-  | _fuel + 1, _, _, .locValue destination label entry =>
+  | _fuel + 1, _, .tick => .tick
+  | _fuel + 1, _, .locValue destination label entry =>
       .locValue destination label entry
-  | _fuel + 1, _, _, .install codeBuffer codeLength dataBuffer dataLength returnAddress =>
+  | _fuel + 1, _, .install codeBuffer codeLength dataBuffer dataLength returnAddress =>
       .install codeBuffer codeLength dataBuffer dataLength returnAddress
-  | _fuel + 1, _, _, .rawCall target => .rawCall target
-  | _fuel + 1, config, _offsetImm, .stackAlloc words =>
+  | _fuel + 1, _, .rawCall target => .rawCall target
+  | _fuel + 1, config, .stackAlloc words =>
       stackRemoveStackAlloc config words
-  | _fuel + 1, config, _offsetImm, .stackFree words =>
+  | _fuel + 1, config, .stackFree words =>
       stackRemoveStackFree config words
-  | _fuel + 1, config, _offsetImm, .stackStore register offset =>
+  | _fuel + 1, config, .stackStore register offset =>
       stackRemoveStackStore config register offset
-  | _fuel + 1, config, _offsetImm, .stackStoreAny register offsetRegister =>
+  | _fuel + 1, config, .stackStoreAny register offsetRegister =>
       stackRemoveStackStoreAny config register offsetRegister
-  | _fuel + 1, config, _offsetImm, .stackLoad register offset =>
+  | _fuel + 1, config, .stackLoad register offset =>
       stackRemoveStackLoad config register offset
-  | _fuel + 1, config, offsetImm, .stackLoadAny register offsetRegister =>
+  | _fuel + 1, config, .stackLoadAny register offsetRegister =>
       stackRemoveStackLoadAny config register offsetRegister
-  | _fuel + 1, config, offsetImm, .stackGetSize register =>
+  | _fuel + 1, config, .stackGetSize register =>
       stackRemoveStackGetSize config register
-  | _fuel + 1, config, offsetImm, .stackSetSize register =>
+  | _fuel + 1, config, .stackSetSize register =>
       stackRemoveStackSetSize config register
-  | _fuel + 1, config, offsetImm, .bitmapLoad destination address =>
-      stackRemoveBitmapLoad config offsetImm destination address
-  | _fuel + 1, _, _, .halt register => .halt register
+  | _fuel + 1, config, .bitmapLoad destination address =>
+      stackRemoveBitmapLoad config destination address
+  | _fuel + 1, _, .halt register => .halt register
 
 /- A generous default keeps the public pass total and executable.  The worker
    is exposed so callers processing generated programs can choose a larger
@@ -325,7 +309,7 @@ def stackRemoveFuel [OfNat α 0] [OfNat α 1] :
    CakeML pass is ported. -/
 def stackRemove [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
     (program : StackProg α) : StackProg α :=
-  stackRemoveFuel 1024 config none program
+  stackRemoveFuel 1024 config program
 
 def stackProgDepth : StackProg α → Nat
   | .call returnHandler _ handler =>
@@ -349,9 +333,8 @@ decreasing_by all_goals decreasing_trivial
     `stackProgDepth program` supplies enough fuel for the maximum nesting depth
     without imposing a fixed limit on the source program. -/
 def stackRemoveComplete [OfNat α 0] [OfNat α 1] (config : StackRemoveConfig)
-    (program : StackProg α) (offsetImm : Option (Nat → α) := none) :
-    StackProg α :=
-  stackRemoveFuel (stackProgDepth program) config offsetImm program
+    (program : StackProg α) : StackProg α :=
+  stackRemoveFuel (stackProgDepth program) config program
 
 theorem stackRemove_get_currHeap [OfNat α 0] [OfNat α 1]
     (config : StackRemoveConfig) (destination : Nat) :

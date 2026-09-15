@@ -87,11 +87,9 @@ def wordStackMove (config : WordStackConfig) (destination source : Nat) :
       if destination = source then pure .skip
       else pure (.arith .or destination source source)
   | .register destination, .stack slot =>
-      pure (.seq (.stackLoad config.scratch (wordStackOffset config slot))
-        (.arith .or destination config.scratch config.scratch))
+      pure (.stackLoad destination (wordStackOffset config slot))
   | .stack slot, .register source =>
-      pure (.seq (.arith .or config.scratch source source)
-        (.stackStore config.scratch (wordStackOffset config slot)))
+      pure (.stackStore source (wordStackOffset config slot))
   | .stack destinationSlot, .stack sourceSlot =>
       if destinationSlot = sourceSlot then pure .skip
       else pure (.seq (.stackLoad config.scratch
@@ -1472,113 +1470,10 @@ def wordStackReturn (config : WordStackConfig) (values : List Nat) :
   | [] => pure moves
   | _ => pure (wordStackJoin moves (.return config.abiBase))
 
-/-! The immediate instruction forms selected by `inst_select` carry virtual
-    variable numbers like every other Word instruction.  Route their operands
-    through the allocation's location map exactly like `wordStackLoadInst`
-    does: register-resident variables feed the instruction directly, spilled
-    variables are staged through the scratch registers. -/
-
-def wordStackRegImmOperand (config : WordStackConfig) (right : WordRegImm Nat)
-    (temporary : Nat) : Option (StackProg Nat × WordRegImm Nat) :=
-  match right with
-  | .imm value => pure (.skip, .imm value)
-  | .reg name => do
-      let (prelude, register) ← wordStackReadRegister config name temporary
-      pure (prelude, .reg register)
-
-def wordStackPreludeIsSkip : StackProg Nat → Bool
-  | .skip => true
-  | _ => false
-
-def wordStackConstInst (config : WordStackConfig) (destination value : Nat) :
-    Option (StackProg Nat) := do
-  let location ← wordStackLocation config destination
-  match location with
-  | .register register => pure (.const register value)
-  | .stack slot =>
-      pure (.seq (.const config.scratch value)
-        (.stackStore config.scratch (wordStackOffset config slot)))
-
-def wordStackComputeInst (config : WordStackConfig) (destination source : Nat)
-    (right : WordRegImm Nat)
-    (make : Nat → Nat → WordRegImm Nat → WordInst Nat) :
-    Option (StackProg Nat) := do
-  let (sourcePrelude, sourceRegister) ←
-    wordStackReadRegister config source config.scratch
-  let (rightPrelude, rightOperand) ←
-    wordStackRegImmOperand config right config.addressScratch
-  if !(wordStackPreludeIsSkip sourcePrelude) then
-    match right with
-    | .reg name =>
-        if (wordStackLocation config name) = some (.register config.scratch) then
-          none
-        else
-          pure ()
-    | .imm _ => pure ()
-  else
-    pure ()
-  let prelude := wordStackJoin sourcePrelude rightPrelude
-  let location ← wordStackLocation config destination
-  match location with
-  | .register register =>
-      pure (.seq prelude (.inst (make register sourceRegister rightOperand)))
-  | .stack slot =>
-      pure (.seq prelude (.seq (.inst (make config.scratch sourceRegister rightOperand))
-        (.stackStore config.scratch (wordStackOffset config slot))))
-
-def wordStackMemOffsetInst (config : WordStackConfig) (operator : WordMemOp)
-    (destination base offset : Nat) : Option (StackProg Nat) :=
-  match operator with
-  | .load | .load8 | .load16 | .load32 => do
-      let (basePrelude, baseRegister) ←
-        wordStackReadRegister config base config.addressScratch
-      let location ← wordStackLocation config destination
-      match location with
-      | .register register =>
-          pure (.seq basePrelude
-            (.inst (.memOffset operator register baseRegister offset)))
-      | .stack slot =>
-          pure (.seq basePrelude (.seq
-            (.inst (.memOffset operator config.scratch baseRegister offset))
-            (.stackStore config.scratch (wordStackOffset config slot))))
-  | .store | .store8 | .store16 | .store32 => do
-      let (valuePrelude, valueRegister) ←
-        wordStackReadRegister config destination config.scratch
-      let (basePrelude, baseRegister) ←
-        wordStackReadRegister config base config.addressScratch
-      if !(wordStackPreludeIsSkip basePrelude) ∧
-          (wordStackLocation config destination) = some (.register config.addressScratch) then
-        none
-      else if !(wordStackPreludeIsSkip valuePrelude) ∧
-          (wordStackLocation config base) = some (.register config.scratch) then
-        none
-      else
-        pure (.seq (wordStackJoin valuePrelude basePrelude)
-          (.inst (.memOffset operator valueRegister baseRegister offset)))
-
-def wordStackSelectedInst (config : WordStackConfig) :
-    WordInst Nat → Option (StackProg Nat)
+def wordToStackInst (config : WordStackConfig) : WordInst → Option (StackProg α)
   | .mem operator sourceOrDestination address =>
       wordStackMemoryInst config operator sourceOrDestination address
   | .arith operation => wordStackArithInst config operation
-  | .const destination value => wordStackConstInst config destination value
-  | .binop operator destination source right =>
-      wordStackComputeInst config destination source right
-        (fun register sourceRegister rightOperand =>
-          .binop operator register sourceRegister rightOperand)
-  | .shiftInst operator destination source amount =>
-      wordStackComputeInst config destination source amount
-        (fun register sourceRegister rightOperand =>
-          .shiftInst operator register sourceRegister rightOperand)
-  | .memOffset operator destination base offset =>
-      wordStackMemOffsetInst config operator destination base offset
-
-def wordToStackInst {α : Type} (config : WordStackConfig) :
-    WordInst α → Option (StackProg α)
-  | .mem operator sourceOrDestination address =>
-      wordStackMemoryInst config operator sourceOrDestination address
-  | .arith operation => wordStackArithInst config operation
-  | .const _ _ | .binop _ _ _ _ | .shiftInst _ _ _ _ | .memOffset _ _ _ _ => none
 
 /-! A compact executable semantics for the move fragment.  StackLang uses
 natural-number register names, so this boundary deliberately models the
@@ -2625,7 +2520,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .move _ moves => wordStackMoveList config moves
   | .assign destination value => wordStackCompileExpNat config destination value
   | .locValue destination source => wordStackLocValue config destination source
-  | .inst instruction => wordStackSelectedInst config instruction
+  | .inst instruction => wordToStackInst config instruction
   | .get destination store => wordStackGet config destination store
   | .store address value =>
       match address with
@@ -3225,22 +3120,11 @@ def wordRegImmToNat : WordRegImm (Word width) → WordRegImm Nat
    programs at this representation boundary; replacing them with `skip`
    would make the generated call return without restoring the caller state or
    running its continuation. -/
-def wordInstToNat : WordInst (Word width) → WordInst Nat
-  | .arith operation => .arith operation
-  | .mem operator destination address => .mem operator destination address
-  | .const destination value => .const destination value.toNat
-  | .binop operator destination source right =>
-      .binop operator destination source (wordRegImmToNat right)
-  | .shiftInst operator destination source amount =>
-      .shiftInst operator destination source (wordRegImmToNat amount)
-  | .memOffset operator destination base offset =>
-      .memOffset operator destination base offset.toNat
-
 def wordProgToNat : WordProg (Word width) → WordProg Nat
   | .skip => .skip
   | .move priority moves => .move priority moves
   | .assign name value => .assign name (wordExpToNat value)
-  | .inst instruction => .inst (wordInstToNat instruction)
+  | .inst instruction => .inst instruction
   | .get destination store => .get destination (wordStoreToNat store)
   | .store address value => .store (wordExpToNat address) value
   | .set store value => .set (wordStoreToNat store) (wordExpToNat value)
@@ -3321,9 +3205,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .assign destination value =>
       (wordStackCompileExpToPhysicalNat config destination (wordExpToNat value)).map
         (fun code => (code, state))
-  | .inst instruction =>
-      (wordStackSelectedInst config (wordInstToNat instruction)).map
-        (fun code => (code, state))
+  | .inst instruction => (wordToStackInst config instruction).map (fun code => (code, state))
   | .get destination store =>
       (wordStackGet config destination (wordStoreToNat store)).map (fun code => (code, state))
   | .store address value =>
@@ -3676,20 +3558,6 @@ theorem wordStackMove_registers :
           scratch := 31, stackBase := 10 } 0 1 =
       some (.arith .or 4 5 5 : StackProg Nat) := by
   simp [wordStackMove, wordStackLocation, lookupNatInfo]
-
-theorem wordStackMove_register_to_spill :
-    wordStackMove
-        { locations := [(0, .stack 2), (1, .register 5)],
-          scratch := 31, stackBase := 10 } 0 1 =
-      some (.seq (.arith .or 31 5 5) (.stackStore 31 12) : StackProg Nat) := by
-  simp [wordStackMove, wordStackLocation, wordStackOffset, lookupNatInfo]
-
-theorem wordStackMove_spill_to_register :
-    wordStackMove
-        { locations := [(0, .register 4), (1, .stack 2)],
-          scratch := 31, stackBase := 10 } 0 1 =
-      some (.seq (.stackLoad 31 12) (.arith .or 4 31 31) : StackProg Nat) := by
-  simp [wordStackMove, wordStackLocation, wordStackOffset, lookupNatInfo]
 
 theorem wordStackMove_spill_to_spill :
     wordStackMove

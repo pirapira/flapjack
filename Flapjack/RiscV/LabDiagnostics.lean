@@ -284,10 +284,6 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
     (programs : List (Nat × StackProg Nat)) :
     Except LabLoweringError
       (List (Nat × Word width × List (Instruction width))) :=
-  /- Store slots sit within the 12-bit immediate range, so store accesses
-     lower to Cake's single `Addr`-form instruction: the negated byte offset
-     is encoded as the two's-complement `Nat` representative for `width`. -/
-  let offsetImm := some (fun byteOffset : Nat => 2 ^ width - byteOffset)
   let programs :=
     (stackRaiseStubLocation, stackRaiseStub false removeConfig.addressScratch) ::
       stackAllocCompileWithSimpleGcAndStoreConsts allocConfig gcConfig
@@ -300,10 +296,10 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
             if sectionId = cakeLongDiv1Location ||
                 sectionId = cakeLongDivLocation then
               labProgramToEntrySection sectionId 0 initialLabel
-                (stackRemoveComplete removeConfig program offsetImm)
+                (stackRemoveComplete removeConfig program)
             else
               labProgramToEntrySection sectionId entryLabel initialLabel
-                (stackRemoveComplete removeConfig program offsetImm))).map labSectionNatToWord)) with
+                (stackRemoveComplete removeConfig program))).map labSectionNatToWord)) with
       | some sections => .ok sections
       | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
 

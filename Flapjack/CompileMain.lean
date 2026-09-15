@@ -13,8 +13,8 @@ is the default and `--assembly` is retained as a compatibility alias for
 namespace Flapjack
 
 def compileRemoveConfig : StackRemoveConfig :=
-  { storeBase := 25
-    currHeap := 26
+  { storeBase := 10
+    currHeap := 12
     scratch := 31
     addressScratch := 29
     stackPointer := 24

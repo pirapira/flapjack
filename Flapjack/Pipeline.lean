@@ -311,7 +311,7 @@ def pipelineWordFunctionAllocatedWithSpillsAndFullSsaAndBitmaps [NeZero width]
     let wordParameters := parameters.map (fun name => name + 2)
     let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
     let (_, renamedParameters, renamedProgram, allocation) ←
-      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast
         wordParameters unallocatedBody
     let config : RiscV.WordStackConfig :=
       { locations := allocation.locations
@@ -470,7 +470,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
       let wordParameters := parameters.map (fun name => name + 2)
       let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
       let (_, renamedParameters, renamedProgram, allocation) ←
-        wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+        wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast
           wordParameters unallocatedBody
       let config : RiscV.WordStackConfig :=
         { locations := allocation.locations

@@ -1,4 +1,5 @@
 import Flapjack.Word
+import Std.Data.HashMap
 
 /-!
 The first explicit register-allocation boundary for the Word backend.
@@ -2401,6 +2402,115 @@ def wordColourCandidatesWithSpillPreferences (name : Nat)
     (fun register => register ∈ wordAllocatableRegisters) ++
     wordColourCandidates name
 
+/-! The preference graph is static during one allocation, but the previous
+    reachability query rescanned every preference edge at every graph node for
+    every candidate.  The full guest's `main'` has 596 preference edges and
+    11,538 candidate slots, making that otherwise faithful traversal dominate
+    allocation.  Build an indexed undirected adjacency table once and retain
+    the same depth-first neighbour order and location barrier semantics. -/
+
+def wordPreferenceIndexAdd (index : Std.HashMap Nat (List Nat))
+    (left right : Nat) : Std.HashMap Nat (List Nat) :=
+  let add := fun index source target =>
+    index.insert source ((index.get? source).getD [] ++ [target])
+  let index := add index left right
+  if left = right then index else add index right left
+
+def wordPreferenceIndex : List (Nat × Nat) → Std.HashMap Nat (List Nat)
+  | preferences =>
+      preferences.foldl (fun index edge => wordPreferenceIndexAdd index edge.1 edge.2) ∅
+
+def wordPreferenceNeighboursIndexed (index : Std.HashMap Nat (List Nat))
+    (name : Nat) : List Nat :=
+  (index.get? name).getD []
+
+def wordLocationIndex : NatInfoMap WordLocation → Std.HashMap Nat WordLocation
+  | locations =>
+      locations.foldl (fun index entry => index.insert entry.1 entry.2) ∅
+
+def wordUsedLocationRegistersIndexed (names : List Nat)
+    (locations : Std.HashMap Nat WordLocation) : List Nat :=
+  match names with
+  | [] => []
+  | name :: names =>
+      let registers := match locations.get? name with
+        | some (.register register) => [register]
+        | some (.stack _) | none => []
+      registers ++ wordUsedLocationRegistersIndexed names locations
+
+def wordPreferenceLocationRegistersIndexed (name : Nat)
+    (index : Std.HashMap Nat (List Nat))
+    (locations : Std.HashMap Nat WordLocation) : List Nat :=
+  (wordPreferenceNeighboursIndexed index name).flatMap (fun neighbour =>
+    match locations.get? neighbour with
+    | some (.register register) => [register]
+    | some (.stack _) | none => [])
+
+def wordPreferenceReachableRegistersIndexedFastAux :
+    Nat → Nat → Std.HashMap Nat (List Nat) → Std.HashMap Nat WordLocation →
+      List Nat → List Nat × List Nat
+  | 0, _, _, _, seen => (seen, [])
+  | fuel + 1, name, index, locations, seen =>
+      if name ∈ seen then (seen, [])
+      else
+        let seen := name :: seen
+        match locations.get? name with
+        | some (.register register) => (seen, [register])
+        | some (.stack _) => (seen, [])
+        | none =>
+            let rec visit : List Nat → List Nat → List Nat × List Nat
+              | [], seen => (seen, [])
+              | neighbour :: neighbours, seen =>
+                  let (seen, registers) :=
+                    wordPreferenceReachableRegistersIndexedFastAux fuel neighbour index
+                      locations seen
+                  let (seen, rest) := visit neighbours seen
+                  (seen, registers ++ rest)
+            visit (wordPreferenceNeighboursIndexed index name) seen
+
+def wordPreferenceReachableRegistersIndexedFast (name : Nat)
+    (preferences : List (Nat × Nat))
+    (index : Std.HashMap Nat (List Nat))
+    (locations : Std.HashMap Nat WordLocation) : List Nat :=
+  (wordPreferenceReachableRegistersIndexedFastAux (preferences.length + 1)
+    name index locations []).2
+
+def wordColourCandidatesWithSpillPreferencesIndexed (name : Nat)
+    (preferences : List (Nat × Nat))
+    (index : Std.HashMap Nat (List Nat))
+    (locations : Std.HashMap Nat WordLocation) : List Nat :=
+  ((wordPreferenceReachableRegistersIndexedFast name preferences index locations ++
+      wordPreferenceLocationRegistersIndexed name index locations).eraseDups).filter
+    (fun register => register ∈ wordAllocatableRegisters) ++
+    wordColourCandidates name
+
+def wordGreedyAllocateWithSpillsAndPreferencesIndexed : List Nat →
+    List (Nat × Nat) → List (Nat × Nat) → Std.HashMap Nat (List Nat) →
+      Std.HashMap Nat WordLocation → WordSpillState → WordSpillState
+  | [], _, _, _, _, state => state
+  | name :: names, edges, preferences, index, locations, state =>
+      let forbidden :=
+        wordUsedLocationRegistersIndexed (wordNeighbours name edges) locations
+      let candidates := wordColourCandidatesWithSpillPreferencesIndexed name
+        preferences index locations
+      let available := wordFirstAvailable candidates forbidden
+      let state := match available with
+        | some register =>
+            { state with locations := (name, .register register) :: state.locations }
+        | none =>
+            { locations := (name, .stack state.nextSpill) :: state.locations,
+              nextSpill := state.nextSpill + 1 }
+      let locations := match available with
+        | some register => locations.insert name (.register register)
+        | none => locations.insert name (WordLocation.stack (state.nextSpill - 1))
+      wordGreedyAllocateWithSpillsAndPreferencesIndexed names edges preferences index
+        locations state
+
+def wordGreedyAllocateWithSpillsAndPreferencesFast (names : List Nat)
+    (edges preferences : List (Nat × Nat)) (state : WordSpillState) : WordSpillState :=
+  wordGreedyAllocateWithSpillsAndPreferencesIndexed names edges preferences
+    (wordPreferenceIndex preferences) (wordLocationIndex state.locations) state
+
 def wordGreedyAllocateWithSpillsAndPreferences : List Nat →
     List (Nat × Nat) → List (Nat × Nat) → WordSpillState → WordSpillState
   | [], _, _, state => state
@@ -2503,10 +2613,34 @@ def wordAllocateVarsWithFixedLocations (slots : List Nat)
   if wordSpillAllocationRespectsClashes edges state.locations then some state
   else none
 
+/-! Fast source-facing sibling.  It has the same fixed locations, work-list,
+    candidate order, and clash check as `wordAllocateVarsWithFixedLocations`,
+    but indexes the static preference graph once per function. -/
+def wordAllocateVarsWithFixedLocationsIndexed (slots : List Nat)
+    (edges preferences : List (Nat × Nat))
+    (fixedLocations : NatInfoMap WordLocation) : Option WordSpillState :=
+  let fixedSources := fixedLocations.map (fun entry => entry.1)
+  let initial : WordSpillState :=
+    { locations := fixedLocations, nextSpill := 0 }
+  let names := slots.eraseDups.filter (fun name => name ∉ fixedSources)
+  let state := wordGreedyAllocateWithSpillsAndPreferencesFast names
+    edges preferences initial
+  if wordSpillAllocationRespectsClashes edges state.locations then some state
+  else none
+
 def wordAllocateVarsWithFixedSources (slots : List Nat)
     (edges preferences : List (Nat × Nat))
     (fixedSources : List Nat) : Option WordSpillState :=
   wordAllocateVarsWithFixedLocations slots edges preferences
+    (wordFixedSourceLocations fixedSources)
+
+/-! Production sibling using the indexed preference graph.  Keep the historical
+    entry point above intact for its existing correctness proofs while routing
+    the source-facing full-SSA pipeline through the equivalent fast traversal. -/
+def wordAllocateVarsWithFixedSourcesFast (slots : List Nat)
+    (edges preferences : List (Nat × Nat))
+    (fixedSources : List Nat) : Option WordSpillState :=
+  wordAllocateVarsWithFixedLocationsIndexed slots edges preferences
     (wordFixedSourceLocations fixedSources)
 
 theorem lookupNatInfo_wordFixedSourceLocations_mem
@@ -3046,6 +3180,28 @@ def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
     renamedParameters ++ wordProgVariables program ++ liveIn ++
       edges.flatMap (fun edge => [edge.1, edge.2])
   match wordAllocateVarsWithFixedSources slots
+      edges preferences (wordPhysicalFixedSources parameters program) with
+  | none => none
+  | some allocation =>
+      if wordProgSpecialLocationsSafe allocation.locations program = true &&
+          wordSpillClashTreeChecked tree allocation.locations then
+        some (state, renamedParameters, program, allocation)
+      else
+        none
+
+def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast
+    (parameters : List Nat) (program : WordProg α) :
+    Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
+  let (state, renamedParameters, program) :=
+    wordSsaRenameFunctionWithEntry parameters program
+  let tree := wordClashTree program []
+  let (liveIn, edges) := wordClashTreeAnalyze tree []
+  let edges := edges ++ wordProgSpecialConflictEdges program
+  let preferences := wordProgPreferenceEdges program
+  let slots :=
+    renamedParameters ++ wordProgVariables program ++ liveIn ++
+      edges.flatMap (fun edge => [edge.1, edge.2])
+  match wordAllocateVarsWithFixedSourcesFast slots
       edges preferences (wordPhysicalFixedSources parameters program) with
   | none => none
   | some allocation =>

@@ -3192,7 +3192,7 @@ def wordAllocateSsaFunctionWithEntryAndSpillToStack [NeZero width]
     Option (WordSsaState × List Nat × WordProg (Word width) ×
       WordSpillState × StackProg Nat × WordStackBitmapState) := do
   let (ssaState, renamedParameters, renamedProgram, allocation) ←
-    wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+    wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast
       parameters program
   let (stackProgram, finalState) ←
     wordToStackFunctionWithSpillStateAndLocationBitmaps config

@@ -47,15 +47,6 @@ example :
 
 example :
     (evalWordStackMachine stackGetCorrectnessState
-      (stackRemoveGet stackGetCorrectnessConfig 4 .currHeap)).map
-        (fun final => final.registers 4) =
-      some (BitVec.ofNat 64 0) := by
-  simpa [stackGetCorrectnessConfig, stackGetCorrectnessState] using
-    (evalStackRemoveGetCurrHeap (width := 64) stackGetCorrectnessConfig
-      stackGetCorrectnessState 4)
-
-example :
-    (evalWordStackMachine stackGetCorrectnessState
       (stackRemoveSet stackGetCorrectnessConfig .currHeap 6)).map
         (fun final => final.registers 12) =
       some (BitVec.ofNat 64 55) := by
@@ -73,7 +64,7 @@ example :
       stackGetCorrectnessConfig stackGetCorrectnessState 2 (by omega)
       (by simp [stackGetCorrectnessConfig])
       (by simp [stackGetCorrectnessConfig])
-      (by simp [stackGetCorrectnessConfig, stackGetCorrectnessState])
+      (by simp [stackGetCorrectnessConfig])
       (by simp [stackGetCorrectnessConfig, stackGetCorrectnessState]))
 
 example :

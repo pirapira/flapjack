@@ -67,21 +67,35 @@ def stackRemoveMove (destination source : Nat) :
   if destination = source then .skip
   else .arith .or destination source source
 
-def stackRemoveGet (config : StackRemoveConfig) (destination : Nat)
-    (store : StackStore) : StackProg α :=
+/- When `offsetImm` is supplied, store accesses lower to Cake's single
+    `Mem … (Addr (k+1) (store_offset name))` form: one immediate-offset
+    instruction from `storeBase`.  Without it, the address is materialized
+    into `addressScratch` first. -/
+def stackRemoveGet (config : StackRemoveConfig) (offsetImm : Option (Nat → α))
+    (destination : Nat) (store : StackStore) : StackProg α :=
   match store with
   | .currHeap => stackRemoveMove destination config.currHeap
   | _ =>
-      stackRemoveJoin (stackRemoveAddress config store)
-        (.inst (.mem .load destination config.addressScratch))
+      match offsetImm with
+      | some imm =>
+          .inst (.memOffset .load destination config.storeBase
+            (imm (config.bytesInWord * stackStorePosition store)))
+      | none =>
+          stackRemoveJoin (stackRemoveAddress config store)
+            (.inst (.mem .load destination config.addressScratch))
 
-def stackRemoveSet (config : StackRemoveConfig) (store : StackStore)
-    (source : Nat) : StackProg α :=
+def stackRemoveSet (config : StackRemoveConfig) (offsetImm : Option (Nat → α))
+    (store : StackStore) (source : Nat) : StackProg α :=
   match store with
   | .currHeap => stackRemoveMove config.currHeap source
   | _ =>
-      stackRemoveJoin (stackRemoveAddress config store)
-        (.inst (.mem .store source config.addressScratch))
+      match offsetImm with
+      | some imm =>
+          .inst (.memOffset .store source config.storeBase
+            (imm (config.bytesInWord * stackStorePosition store)))
+      | none =>
+          stackRemoveJoin (stackRemoveAddress config store)
+            (.inst (.mem .store source config.addressScratch))
 
 def stackRemoveStackAddress (config : StackRemoveConfig) (offset : Nat) :
     StackProg α :=

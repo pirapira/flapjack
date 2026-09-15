@@ -291,7 +291,7 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
   /- Stack slots sit above the stack pointer, so their byte offsets encode
      directly as positive immediates. -/
   let slotImm := some (fun byteOffset : Nat => byteOffset)
-  let shiftImm := some (fun amount : Nat => amount)
+                let shiftImm := some (fun amount : Nat => amount)
   let programs :=
     (stackRaiseStubLocation, stackRaiseStub false removeConfig.addressScratch) ::
       stackAllocCompileWithSimpleGcAndStoreConsts allocConfig gcConfig

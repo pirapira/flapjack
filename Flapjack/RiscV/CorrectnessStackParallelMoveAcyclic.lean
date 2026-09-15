@@ -19,6 +19,17 @@ def wordStackSequentialLocationMove (config : WordStackConfig) :
       let rest ← wordStackSequentialLocationMove config moves
       pure (wordStackJoin first rest)
 
+/-- The same move list emitted in the dependency order the scheduler uses:
+    each selected move is postponed until every move that overwrites one of its
+    sources has run. -/
+def wordStackReversedSequentialLocationMove (config : WordStackConfig) :
+    List (WordLocation × WordLocation) → Option (StackProg α)
+  | [] => some .skip
+  | (destination, source) :: moves => do
+      let rest ← wordStackReversedSequentialLocationMove config moves
+      let last ← wordStackLocationMove config destination source
+      pure (wordStackJoin rest last)
+
 theorem wordStackParallelLocationMove_acyclic_eq_sequential
     (config : WordStackConfig)
     (moves : List (WordLocation × WordLocation))
@@ -31,13 +42,13 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
       move.2 ≠ .register config.scratch ∧
       move.2 ≠ .register config.addressScratch) :
     wordStackParallelLocationMove (α := Nat) config moves =
-      wordStackSequentialLocationMove (α := Nat) config moves := by
+      wordStackReversedSequentialLocationMove (α := Nat) config moves := by
   induction moves with
   | nil =>
       simp only [wordStackParallelLocationMove,
         wordStackParallelLocationMoveAux]
       simp [wordStackLocationMoveDestinations,
-        wordStackSequentialLocationMove]
+        wordStackReversedSequentialLocationMove]
   | cons head tail ih =>
       have hdestinations' :
           (head.1 :: tail.map Prod.fst).Nodup := by
@@ -109,12 +120,12 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
       have htailResult := ih htailDestinations htailNoSource htailReserved
       have htailAux :
           wordStackParallelLocationMoveAux config (tail.length + 1) tail =
-            wordStackSequentialLocationMove (α := Nat) config tail := by
+            wordStackReversedSequentialLocationMove (α := Nat) config tail := by
         simpa [wordStackParallelLocationMove] using htailResult
       simp [wordStackParallelLocationMove,
         wordStackParallelLocationMoveAux,
         wordStackLocationMoveDestinations, hdestinations', hany,
-        hheadReady, hremoved, wordStackSequentialLocationMove,
+        hheadReady, hremoved, wordStackReversedSequentialLocationMove,
         htailAux]
 
 end Flapjack.RiscV

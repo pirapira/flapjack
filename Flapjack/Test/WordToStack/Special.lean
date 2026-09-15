@@ -116,9 +116,10 @@ example :
           scratch := 31, stackBase := 10 }
         ((.ffi "sum" 0 1 2 3 ([], [])) : WordProg Nat) =
       some (.seq
-        (.seq (.arith .or 11 2 2)
-          (.seq (.arith .or 12 3 3)
-            (.arith .or 13 4 4)))
+        (.seq
+          (.seq (.arith .or 13 4 4)
+            (.arith .or 12 3 3))
+          (.arith .or 11 2 2))
         (.ffi "sum" 10 11 12 13 0)) := by
   simp [wordToStackProgNat, wordStackFfi, wordStackFfiSourcesSafe,
     wordStackFfiSourceSafe, wordStackFfiRegisterSafe, wordStackLocation,

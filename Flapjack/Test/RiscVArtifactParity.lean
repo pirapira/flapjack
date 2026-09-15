@@ -609,6 +609,41 @@ def frameOccupancyP9BitmapsMatch : Bool :=
   | some image => image.bitmaps.data == cakeFrameOccupancyP9Bitmaps
   | none => false
 
+/-- Source for the GH #1027 relational-condition case: `if x < 10` over a
+parameter. -/
+def relationalConditionSource : String :=
+  "fun 1 f(1 x) {\n  if x < 10 { return 1; }\n  return 0;\n}\n" ++
+    "fun 1 main() {\n  return f(5);\n}\n"
+
+/-- The exact original-CakeML bytes for the `f` section of
+`relational_condition.pnk`: `addi a1, x0, 10; bge a0, a1, +12;
+addi a0, x0, 1; ret; addi a0, x0, 0; ret` (24 bytes).  The comparison is a
+direct control-flow branch on the negated condition with the then-branch as
+the fall-through path: no boolean is materialized and there is no extra
+unconditional jump. -/
+def cakeRelationalConditionBytes : List (BitVec 8) :=
+  [0x93, 0x65, 0xa0, 0x00,
+   0x63, 0x56, 0xb5, 0x00,
+   0x13, 0x65, 0x10, 0x00,
+   0x67, 0x80, 0x00, 0x00,
+   0x13, 0x65, 0x00, 0x00,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+/-- The port currently lowers the same condition through the general
+`Lab.labFlatten` branch shape: the comparison is negated and the branches are
+swapped with an extra unconditional jump, so the emitted user section is not
+yet byte-identical to the original.  Tracked by `flapjack-pxn.8.5.14.11`
+(GH #1027); this guard pins the original-CakeML oracle bytes and asserts the
+gap instead of weakening the parity check. -/
+def relationalConditionGapTracked : Bool :=
+  match compileRuntimeImage relationalConditionSource with
+  | some image =>
+      match emittedSections image with
+      | _ :: _ :: fSection :: _ => fSection.2.2 != cakeRelationalConditionBytes
+      | _ => false
+  | none => false
+
+#guard relationalConditionGapTracked
 #guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
 #guard nestedExpressionWordLoweringAccepted
@@ -688,7 +723,9 @@ def runChecks : IO Bool := do
       ("frame-occupancy p1 bitmap vector matches Cake [4, 2]",
          frameOccupancyP1BitmapsMatch),
       ("frame-occupancy p9 exact vector gap is tracked, not accepted",
-         frameOccupancyP9BitmapsMatch) ]
+         frameOccupancyP9BitmapsMatch),
+      ("relational condition direct-branch gap is tracked against the Cake oracle",
+         relationalConditionGapTracked) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

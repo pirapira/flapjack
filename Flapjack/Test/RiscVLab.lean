@@ -116,6 +116,24 @@ example :
         .slli 1 1 (BitVec.ofNat 64 32), .or 1 1 31] := by
   decide
 
+/-! These cases exercise the sign-aware branches of CakeML's `riscv_ast
+    (Const ...)`: a value with bit 31 set is still a positive RV64 value and
+    therefore needs the two-half XOR sequence, while all ones fits the signed
+    12-bit ORI case after sign extension. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.const 1 0xa0010000) [] 0]⟩ =
+      some [.lui 31 (BitVec.ofNat 64 0xa0010), .addi 31 31 0,
+        .lui 1 0, .xori 1 1 (BitVec.ofNat 64 0xfff),
+        .slli 1 1 (BitVec.ofNat 64 32), .xor 1 1 31] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.const 1 0xffffffffffffffff) [] 0]⟩ =
+      some [.ori 1 0 (BitVec.ofNat 64 0xfff)] := by
+  decide
+
 example :
     labLineInstructionCount
         (.asm (.const 1 0x40000008) [] 0 : LabLine (Word 64)) = 2 := by

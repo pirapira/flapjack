@@ -72,6 +72,12 @@
       "tracked_beads": ["flapjack-pxn.2.5"]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/wide_constants.pnk",
+      "source_reference": "GitHub issue #1020 reproducer: CakeML riscv_ast Const lowering for 0x40000008 uses LUI+ADDI; the port now materializes all bits but still has an allocator-induced result-register copy.",
+      "cake_sha256": "0e44aff3f32b030f11d33c4519139a56c0d53f771f68e8ec2e8197031451419e",
+      "tracked_beads": ["flapjack-pxn.8.5.14.6", "flapjack-pxn.8.5.14.6.1", "flapjack-pxn.8.5.10.1"]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/dup_global.pnk",
       "source_reference": "Differential-fuzzing finding dup-global (GitHub issue #962 smoke): CakeML accepts a duplicate top-level global with the warning 'variable g is redeclared in top-level declaration' and keeps the later declaration; Flapjack previously rejected it in staticCheckDecls. Tracked by flapjack-pxn.8.5.14.4.",
       "cake_sha256": "a79e87b5048cf7c9f2e5e8c830062424e3231cb92b69519995fe54ffac4d3680",

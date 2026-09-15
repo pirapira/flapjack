@@ -322,7 +322,7 @@ reconciliation, and carries loop entry/exit frames for back-edge moves. -/
 structure WordSsaState where
   current : NatInfoMap Nat
   next : Nat
-  deriving Repr
+  deriving DecidableEq, Repr
 
 def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
   match lookupNatInfo name state.current with
@@ -597,6 +597,7 @@ structure WordSsaLoopFrame where
   exit : WordSsaState
   entryNames : List Nat
   exitNames : List Nat
+  deriving DecidableEq, Repr
 
 def wordSsaRestrict (state : WordSsaState) (names : List Nat) : WordSsaState :=
   { state with current := state.current.filter (fun entry => entry.1 ∈ names) }
@@ -2326,7 +2327,7 @@ def wordProgSpecialConflictEdges : WordProg α → List (Nat × Nat)
 structure WordSpillState where
   locations : NatInfoMap WordLocation
   nextSpill : Nat
-  deriving Repr
+  deriving DecidableEq, Repr
 
 def wordUsedLocationRegisters (names : List Nat)
     (locations : NatInfoMap WordLocation) : List Nat :=
@@ -2359,10 +2360,44 @@ def wordPreferenceLocationRegisters (name : Nat)
       else
         wordPreferenceLocationRegisters name preferences locations
 
+/-! Follow preference edges through not-yet-coloured variables.  CakeML's
+    allocator can coalesce a whole move chain with a fixed ABI source, even
+    when the source variable is encountered after an intermediate copy in the
+    work list.  A direct-only lookup misses that transitive opportunity and
+    creates avoidable copies at returns (notably for a wide constant). -/
+def wordPreferenceNeighbours (name : Nat) : List (Nat × Nat) → List Nat
+  | [] => []
+  | (left, right) :: preferences =>
+      if left == name then right :: wordPreferenceNeighbours name preferences
+      else if right == name then left :: wordPreferenceNeighbours name preferences
+      else wordPreferenceNeighbours name preferences
+
+def wordPreferenceReachableRegistersAux :
+    Nat → Nat → List (Nat × Nat) → NatInfoMap WordLocation → List Nat → List Nat
+  | 0, _, _, _, _ => []
+  | fuel + 1, name, preferences, locations, seen =>
+      if name ∈ seen then []
+      else
+        match lookupNatInfo name locations with
+        | some (.register register) => [register]
+        | some (.stack _) => []
+        | none =>
+            (wordPreferenceNeighbours name preferences).flatMap
+              (fun neighbour =>
+                wordPreferenceReachableRegistersAux fuel neighbour preferences locations
+                  (name :: seen))
+termination_by fuel => fuel
+
+def wordPreferenceReachableRegisters (name : Nat)
+    (preferences : List (Nat × Nat))
+    (locations : NatInfoMap WordLocation) : List Nat :=
+  wordPreferenceReachableRegistersAux (preferences.length + 1) name preferences locations []
+
 def wordColourCandidatesWithSpillPreferences (name : Nat)
     (preferences : List (Nat × Nat))
     (locations : NatInfoMap WordLocation) : List Nat :=
-  (wordPreferenceLocationRegisters name preferences locations).filter
+  ((wordPreferenceReachableRegisters name preferences locations ++
+      wordPreferenceLocationRegisters name preferences locations).eraseDups).filter
     (fun register => register ∈ wordAllocatableRegisters) ++
     wordColourCandidates name
 

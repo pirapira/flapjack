@@ -158,15 +158,11 @@ example :
     wordProgSpecialLocationsSafe, lookupNatInfo, List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop]
 
-example :
-    wordAllocateVarsWithSpillsAndPreferences [0, 4] [] [(4, 0)] =
-      some (⟨[(4, .register 2), (0, .register 2)], 0⟩ : WordSpillState) := by
-  rfl
+#guard wordAllocateVarsWithSpillsAndPreferences [0, 4] [] [(4, 0)] =
+  some (⟨[(4, .register 2), (0, .register 2)], 0⟩ : WordSpillState)
 
-example :
-    wordAllocateVarsWithSpillsAndPreferences [0, 4] [(0, 4)] [(4, 0)] =
-      some (⟨[(4, .register 6), (0, .register 2)], 0⟩ : WordSpillState) := by
-  rfl
+#guard wordAllocateVarsWithSpillsAndPreferences [0, 4] [(0, 4)] [(4, 0)] =
+  some (⟨[(4, .register 6), (0, .register 2)], 0⟩ : WordSpillState)
 
 example (slots : List Nat) (edges preferences : List (Nat × Nat))
     (state : WordSpillState)
@@ -191,15 +187,16 @@ example :
     wordProgWriteVars, wordExpReadVars,
     wordAllocateVarsWithSpillsAndPreferences,
     wordGreedyAllocateWithSpillsAndPreferences,
-    wordPreferenceLocationRegisters,
+    wordPreferenceReachableRegisters, wordPreferenceReachableRegistersAux,
+    wordPreferenceNeighbours, wordPreferenceLocationRegisters,
     wordColourCandidatesWithSpillPreferences,
     wordUsedLocationRegisters, wordColourCandidates, wordFirstAvailable,
-    wordNeighbours, wordPreferredRegister, 
-    wordAllocatableRegisters, wordSpillAllocationRespectsClashes,
-    wordProgSpecialLocationsSafe,
+    wordNeighbours, wordPreferredRegister, wordAllocatableRegisters,
+    wordSpillAllocationRespectsClashes, wordProgSpecialLocationsSafe,
     wordProgPreferenceEdges, lookupNatInfo, wordSpillClashTreeChecked,
     wordSpillLocationColour, wordClashTreeCheck, wordCheckPartialColour,
-    wordNumSetDelete, List.eraseDups,
+    wordNumSetDelete, List.filter, List.map, List.range, List.range.loop,
+    List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop]
 
 example (slots : List Nat) (edges : List (Nat × Nat))

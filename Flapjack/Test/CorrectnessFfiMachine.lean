@@ -259,8 +259,9 @@ example :
       pipelineFfiStackRemoveConfig 2 3
       (.ffi "echo" 0 1 2 3 ([], []) : WordProg Nat) =
       some [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
-        .addi 1 0 (BitVec.ofNat 64 24),
-        .jal 0 (0 - BitVec.ofNat 64 68)] := by
+        .auipc 1 (BitVec.ofNat 64 0),
+        .addi 1 1 (BitVec.ofNat 64 12),
+        .jal 0 (0 - BitVec.ofNat 64 72)] := by
   exact compileWordProgramNatToRiscV_pipeline_ffi
 
 example (state : State 64) (_hzero : readRegister state 0 = 0) :
@@ -269,8 +270,9 @@ example (state : State 64) (_hzero : readRegister state 0 = 0) :
       pipelineFfiStackRemoveConfig 2 3
       (.ffi "echo" 4 5 6 7 ([], []) : WordProg Nat) =
       some [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
-        .addi 1 0 (BitVec.ofNat 64 24),
-        .jal 0 (0 - BitVec.ofNat 64 68)] := by
+        .auipc 1 (BitVec.ofNat 64 0),
+        .addi 1 1 (BitVec.ofNat 64 12),
+        .jal 0 (0 - BitVec.ofNat 64 72)] := by
   exact compileWordProgramNatToRiscV_pipeline_ffi_source
 
 example (state : ExactRiscVFfiState 64 Unit)

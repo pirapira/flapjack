@@ -150,9 +150,6 @@ def callMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← callLinked
   let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  /- The call continuation sits two instructions before the end of the linked
-     main section, so the return address must track the section length rather
-     than a fixed byte offset. -/
   let mainLength ←
     match sections.find? (fun (label, _, _) => label == 2) with
     | some (_, _, code) => some code.length

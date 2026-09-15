@@ -40,16 +40,22 @@ theorem tailCallArgumentMoves :
     wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
     wordStackJoin]
 
+theorem tailCallFreeCountZero :
+    wordStackCallFreeCount tailCallTestConfig 1 = 0 := by
+  simp [wordStackCallFreeCount, wordStackCakeFrameSize, tailCallTestConfig]
+
 example :
     wordToStackProg tailCallTestConfig
         (.call none (some 7) [6] none : WordProg Nat) =
       some (.call none (.label 7) none) := by
-  simp [wordToStackProg, tailCallArgumentMoves, wordStackJoin]
+  simp [wordToStackProg, tailCallArgumentMoves, wordStackJoin,
+    tailCallFreeCountZero, stackFreeIfNonzero]
 
 example :
     wordToStackProgNat tailCallTestConfig
         (.call none (some 7) [6] none : WordProg Nat) =
       some (.call none (.label 7) none) := by
-  simp [wordToStackProgNat, tailCallArgumentMoves, wordStackJoin]
+  simp [wordToStackProgNat, tailCallArgumentMoves, wordStackJoin,
+    tailCallFreeCountZero, stackFreeIfNonzero]
 
 end Flapjack

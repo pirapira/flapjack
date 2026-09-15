@@ -155,9 +155,7 @@ def loopToWordCompFunc [OfNat α 1] (name : Nat) (params : List Nat)
   let assigned := loopAccVars body []
   let variables := fromNumSet (differenceNumSet assigned (toNumSet params))
   let context := makeCtxt 2 (params ++ variables) []
-  /- CakeML's `comp_func` seeds the label counter with `(name, 2)`
-     (`loop_to_wordScript.sml:166-168`). -/
-  (loopToWordProgFrom { vars := context } name 2 body).1
+  (loopToWordProgWithLabels { vars := context } (name, 2) body).1
 
 /-! Port of `compile_prog_def` from `loop_to_wordScript.sml:171-174`.
     The source adds one entry slot to each function's parameter count while

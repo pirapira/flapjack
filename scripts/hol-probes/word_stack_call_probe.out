@@ -1,0 +1,32 @@
+calldest_some=(Skip,INL 7)
+calldest_none_last_phy=(Skip,INR 4)
+calldest_none_last_stack=(Seq (StackLoad 13 18) Skip,INR 13)
+calldest_none_empty=(Skip,INL 5)
+argcount_inl_15_12=3
+argcount_inr_15_12=2
+argcount_inl_5_3=2
+argcount_inr_5_3=1
+stackfree_inl_15_12=17
+stackfree_inr_15_12=18
+stackfree_inl_5_3=4
+stackfree_inr_5_3=5
+stackargs_inl_3=StackAlloc 0
+stackargs_inr_3=StackAlloc 0
+stackargs_inl_5_3=Seq (Seq (StackAlloc 2) (Seq (StackLoad 3 7) (StackStore 3 1)))
+  (Seq (StackLoad 3 6) (StackStore 3 0))
+stackargs_inr_5_3=Seq (StackAlloc 1) (Seq (StackLoad 3 6) (StackStore 3 0))
+handlerargs_inl_3=StackAlloc 0
+seqstackfree_0=Skip
+seqstackfree_2=Seq (StackFree 2) Skip
+num_stack_ret_12_3=0
+num_stack_ret_2_3=2
+copy_ret_none_12=Skip
+copy_ret_handler_2=Seq
+  (Seq (StackLoad 2 1)
+     (Seq (StackStore 2 10) (Seq (StackLoad 2 0) (Seq (StackStore 2 9) Skip))))
+  (Seq (StackFree 2) Skip)
+compileprog_f_3_3=0
+compileprog_alloc_3_3=Seq (StackAlloc 0) Skip
+compileprog_f_assign_3_3=12
+compileprog_f_15_12=4
+compileprog_f_5_3=3

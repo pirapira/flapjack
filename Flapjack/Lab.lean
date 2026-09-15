@@ -38,11 +38,14 @@ inductive LabJump where
 
 inductive LabPlain (α : Type u) where
   | word (instruction : WordInst)
+  | stackMem (operator : WordMemOp) (register base offset : Nat)
+  | stackMemSub (operator : WordMemOp) (register base offset : Nat)
   | const (destination value : Nat)
   | arith (operator : BinOp) (destination left right : Nat)
   /- The stack remover represents Cake's immediate stack-pointer update as a
      constant followed by a register arithmetic operation. -/
   | arithImm (operator : BinOp) (destination left immediate : Nat)
+  | shiftImm (operator : Shift) (destination left immediate : Nat)
   | shift (operator : Shift) (destination left right : Nat)
   | tick
   | jumpReg (register : Nat)
@@ -211,12 +214,51 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
             handlerResult.nextLabel + 1⟩
   | .call _ _ _ =>
       ⟨[], false, counter⟩
+  | .seq (.seq (.const scratch value) (.arith operator addressRegister base right))
+      (.inst (.mem memoryOperator destination address)) =>
+      /- Recover a static address displacement before the more general
+         const/arithmetic cases consume the prefix.  Negative Word64
+         displacements are represented by their two's-complement Nat value. -/
+      let offsetOperator :=
+        match operator with
+        | .add | .sub => true
+        | _ => false
+      let offsetFits :=
+        match operator with
+        | .add =>
+            value < 2 ^ 11 ||
+              (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64)
+        | .sub => value ≤ 2 ^ 11
+        | _ => false
+      let memorySupported :=
+        match memoryOperator with
+        | .load | .store => true
+        | _ => false
+      let canFuse :=
+        right == scratch && address == addressRegister &&
+          offsetOperator && offsetFits && memorySupported
+      if canFuse then
+        ⟨[.asm (.memOffset memoryOperator operator destination base value) [] 0],
+          false, counter⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks
+            (.seq (.const scratch value) (.arith operator addressRegister base right))
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks
+            (.inst (.mem memoryOperator destination address))
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
   | .seq (.const scratch value)
       (.arith operator destination left right) =>
       let canFuse :=
-        scratch != destination && right == scratch && destination == left &&
+        scratch != destination && right == scratch &&
           match operator with
-          | .add => value < 2 ^ 11
+          | .add =>
+              value < 2 ^ 11 ||
+                (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64)
           | .sub => value ≤ 2 ^ 11
           | .and | .or | .xor => false
       if canFuse then
@@ -237,40 +279,16 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
           if tail then [labLabel sectionId 1] else []
         ⟨firstResult.lines ++ separator ++ secondResult.lines,
           firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
-  | .seq (.seq (.const scratch value) (.arith operator addressRegister base right))
-      (.inst (.mem memoryOperator destination address)) =>
-      /- Recover CakeML's `Addr base offset` memory operand: the stack remover
-         materializes `<const> ; <base ± value>` and then loads/stores through
-         the scratch register, which CakeML lower to a single offset access.
-         Fuse those three statements back into one Lab operation so the
-         encoder can emit the architectural base+immediate form. -/
-      let offsetOperator :=
-        match operator with
-        | .add => true
-        | .sub => true
-        | _ => false
-      let offsetFits :=
-        match operator with
-        | .add => decide (value < 2 ^ 11)
-        | .sub => decide (value ≤ 2 ^ 11)
-        | _ => false
-      let memorySupported :=
-        match memoryOperator with
-        | .load | .store => true
-        | _ => false
-      let canFuse :=
-        scratch == addressRegister && right == scratch && address == addressRegister &&
-          offsetOperator && offsetFits && memorySupported
-      if canFuse then
-        ⟨[.asm (.memOffset memoryOperator operator destination base value) [] 0],
-          false, counter⟩
+  | .seq (.const scratch value)
+      (.shift operator destination left right) =>
+      if scratch != destination && right = scratch && destination = left then
+        ⟨[.asm (.shiftImm operator destination left value) [] 0], false, counter⟩
       else
         let firstResult :=
-          labFlatten false sectionId counter continues breaks
-            (.seq (.const scratch value) (.arith operator addressRegister base right))
+          labFlatten false sectionId counter continues breaks (.const scratch value)
         let secondResult :=
           labFlatten false sectionId firstResult.nextLabel continues breaks
-            (.inst (.mem memoryOperator destination address))
+            (.shift operator destination left right)
         let separator :=
           if tail then [labLabel sectionId 1] else []
         ⟨firstResult.lines ++ separator ++ secondResult.lines,

@@ -280,7 +280,7 @@ def wordMoveRegisterReady (destinations : List Nat) :
     List (Nat × Nat) → Option (Nat × Nat)
   | [] => none
   | move :: moves =>
-      if move.2 ∉ destinations then
+      if move.1 = move.2 ∨ move.2 ∉ destinations then
         some move
       else
         wordMoveRegisterReady destinations moves
@@ -301,10 +301,13 @@ def wordMoveToInstructionsAux [NeZero width] :
       else
         match wordMoveRegisterReady destinations moves with
         | some (destination, source) => do
-            let first ← wordExpToInstructions destination (.var source)
             let rest ← wordMoveToInstructionsAux fuel
               (wordMoveRegisterRemoveDestination destination moves)
-            pure (first ++ rest)
+            if destination = source then
+              pure rest
+            else
+              let first ← wordExpToInstructions destination (.var source)
+              pure (first ++ rest)
         | none =>
             match moves with
             | [] => some []

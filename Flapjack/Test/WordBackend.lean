@@ -76,6 +76,13 @@ example [NeZero width] (state : RiscV.State width) :
   exact RiscV.compileWordShiftAsr_sound state
 
 example :
+    RiscV.wordMoveToInstructions (width := 8) [(3, 3), (4, 4)] =
+      some [] := by
+  simp [RiscV.wordMoveToInstructions, RiscV.wordMoveToInstructionsAux,
+    RiscV.wordMoveRegisterDestinations, RiscV.wordMoveRegisterReady,
+    RiscV.wordMoveRegisterRemoveDestination]
+
+example :
     RiscV.shiftAmount (BitVec.ofNat 64 65) = 1 := by
   decide
 

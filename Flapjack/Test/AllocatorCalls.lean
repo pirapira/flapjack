@@ -19,7 +19,7 @@ example :
           (some (9, .return 0 [10], 0, 0)) : WordProg Nat) [] =
       .branch (some [6, 8])
         (.seq (.set [5, 6]) (.delta [] []))
-        (.seq (.set [9, 6]) (.delta [] [10])) := by
+        (.seq (.set [9, 6]) (.delta [] [0, 10])) := by
   simp [wordClashTree, wordClashTreeCallSet,
     List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop]

@@ -377,16 +377,17 @@ def wordLinearScanAllocateClashTreeRegisters
       WordLinearScanState → Option WordLinearScanState
   | [], _, _, state => some state
   | register :: registers, beginnings, endings, state =>
-      match lookupNatInfo register beginnings,
-        lookupNatInfo register endings with
-      | some beginning, some ending =>
-          let state := wordLinearScanStep
-            (wordLinearScanForcedColours forced register state)
-            (wordLinearScanPreferredColours moves register state)
-            register beginning ending (register % 2 == 0) state
-          wordLinearScanAllocateClashTreeRegisters forced moves registers
-            beginnings endings state
-      | _, _ => none
+      -- CakeML's monadic interval arrays default to 0, so a register that
+      -- only ever appears as a read (e.g. a `Return` head variable) is
+      -- allocated with beginning 0 rather than failing.
+      let beginning := (lookupNatInfo register beginnings).getD 0
+      let ending := (lookupNatInfo register endings).getD 0
+      let state := wordLinearScanStep
+        (wordLinearScanForcedColours forced register state)
+        (wordLinearScanPreferredColours moves register state)
+        register beginning ending (register % 2 == 0) state
+      wordLinearScanAllocateClashTreeRegisters forced moves registers
+        beginnings endings state
 termination_by registers => sizeOf registers
 decreasing_by all_goals decreasing_trivial
 

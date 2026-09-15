@@ -111,6 +111,7 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       | .shift .ror _ _ _ => 5
       | .word (.arith (.longMul _ _ _ _)) => 2
       | .word (.arith (.addCarry _ _ _ _ _)) => 6
+      | .word (.arith (.cakeAddCarry _ _ _ _)) => 6
       | .const _ value => labConstInstructionCount value
       | .arithImm _ destination left immediate =>
           if destination = left && immediate = 0 then 0 else 1

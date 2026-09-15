@@ -75,7 +75,7 @@ def parallelMoveKeepsLiveSource : Bool :=
   | some (.seq (.arith .or 3 1 1) (.arith .or 1 2 2)) => true
   | _ => false
 
-/-- The same dependency order for the `WordLocation` scheduler, which drives
+/-! The same dependency order for the `WordLocation` scheduler, which drives
     the call argument/return and FFI moves.  For `{r3 <- r1, r1 <- r2}` the
     ready move `r1 <- r2` is emitted first and the postponed `r3 <- r1` last, so
     `r3` keeps the original `r1` instead of the new `r2`. -/
@@ -123,11 +123,11 @@ def overflowConfig : WordStackConfig :=
     abiFrameSlots := 0 }
 
 def overflowDemandMatches : Bool :=
-  wordProgMaxCallArguments overflowingCallProgram == 17 &&
-    wordProgMaxCallArguments (.call none (some 7) [2, 4, 6] none : WordProg Nat) == 3
+  wordProgAbiFrameDemand 12 overflowingCallProgram == 4 &&
+    wordProgAbiFrameDemand 12 (.call none (some 7) [2, 4, 6] none : WordProg Nat) == 0
 
 def overflowLowersWithDemandFrame : Bool :=
-  let demand := wordProgMaxCallArguments overflowingCallProgram - 12
+  let demand := wordProgAbiFrameDemand 12 overflowingCallProgram
   match wordToStackProgNatWithLocationBitmaps
       { overflowConfig with abiFrameSlots := demand }
       25 31 demand 64 (some 1) (wordStackInitialBitmaps false)
@@ -146,7 +146,6 @@ def overflowRejectedWithTinyFrame : Bool :=
 #guard overflowDemandMatches
 #guard overflowLowersWithDemandFrame
 #guard overflowRejectedWithTinyFrame
-
 
 def runChecks : IO Bool := do
   let checks := [

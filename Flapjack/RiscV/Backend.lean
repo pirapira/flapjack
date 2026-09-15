@@ -153,7 +153,9 @@ def wordArithToInstruction [NeZero width] :
       let destination ← registerOfNat destination
       let dividend ← registerOfNat dividend
       let divisor ← registerOfNat divisor
-      pure (.divU destination dividend divisor)
+      -- HOL `riscv_ast` Div compiles to the signed DIV instruction
+      -- (`riscv_enc` funct3 4), not DIVU.
+      pure (.div destination dividend divisor)
 
 def wordArithToInstructions [NeZero width] :
     WordArith → Option (List (Instruction width))
@@ -1283,12 +1285,12 @@ theorem evalWordFunction_longMul [NeZero width] (state : State width) :
 
 theorem wordArithToInstruction_div [NeZero width] :
     wordArithToInstruction (width := width) (.div 1 2 3) =
-      some (.divU 1 2 3) := by
+      some (.div 1 2 3) := by
   simp [wordArithToInstruction, registerOfNat]
 
 theorem compileWordDiv_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.arith (.div 1 2 3))) =
-      some (execute state (.divU 1 2 3)) := by
+      some (execute state (.div 1 2 3)) := by
   simp [evalWordProg, wordArithToInstructions, wordArithToInstruction,
     executeInstructions, registerOfNat]
 

@@ -133,6 +133,14 @@ def crepeBitmapCallEntries : List (CompiledFunction α) → Nat
 
 def pancakeBitmapData (state : RiscV.WordStackBitmapState) : List Nat :=
   state.data
+
+/-! CakeML `export_riscvScript.sml` emits the bitmap data through
+`split16 (words_line «\t.quad » word_to_string)`: sixteen values per
+`.quad` line, comma separated, and no line at all when the data is empty. -/
+def pancakeBitmapQuadLines (data : List Nat) : List String :=
+  (List.range ((data.length + 15) / 16)).map (fun index =>
+    let chunk := (data.drop (index * 16)).take 16
+    "\t.quad " ++ String.intercalate "," (chunk.map (fun value => s!"{value}")))
 def pancakePrologue : List String :=
   ["/* Preprocessor to get around Mac OS, Windows, and Linux differences in naming and calling conventions */",
    "", "#if defined(__APPLE__)", "# define cdecl(s) _##s", "#else",
@@ -193,8 +201,7 @@ def pancakeRuntimeAssembly
     (crepe : List (CompiledFunction (RiscV.Word 64)))
     (image : Flapjack.SourceRiscVRuntimeImage 64) : String :=
   let bytes := cakeRuntimeBytes ++ runtimeFunctionBytes image.sections
-  let bitmapWords := String.intercalate ","
-    ((pancakeBitmapData image.bitmaps).map (fun value => s!"{value}"))
+  let bitmapLines := pancakeBitmapQuadLines (pancakeBitmapData image.bitmaps)
   let ffiStubLines := image.ffiNames.flatMap (fun name =>
     [s!"cake_ffi{name}:", s!"     tail cdecl(ffi{name})", "     .p2align 4", ""])
   String.intercalate "\n"
@@ -202,8 +209,8 @@ def pancakeRuntimeAssembly
       ["", "     .file        \"cake.S\"", "", "     .data",
        "     .p2align 3", "cdecl(cml_heap): .quad 0",
        "cdecl(cml_stack): .quad 0", "cdecl(cml_stackend): .quad 0",
-        "     .p2align 3", "cake_bitmaps:", s!"\t.quad {bitmapWords}",
-        "     .globl cdecl(cake_bitmaps_buffer_begin)",
+        "     .p2align 3", "cake_bitmaps:"] ++ bitmapLines ++
+       ["     .globl cdecl(cake_bitmaps_buffer_begin)",
         "cdecl(cake_bitmaps_buffer_begin):", "#if defined(EVAL)",
         "     .space DATA_BUFFER_SIZE", "#endif",
         "     .globl cdecl(cake_bitmaps_buffer_end)",

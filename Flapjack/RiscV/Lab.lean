@@ -229,7 +229,14 @@ def labCompilePlain [NeZero width] :
       | .lsl => pure [.slli destination source value]
       | .lsr => pure [.srli destination source value]
       | .asr => pure [.srai destination source value]
-      | .ror => none
+      -- HOL `riscv_ast` compiles an immediate rotate as three
+      -- instructions through the temporary register 31
+      -- (`riscv_targetScript.sml:121-126`).
+      | .ror =>
+          let temporary ← labRegisterOfNat (portToStack 31)
+          pure [.srli temporary source value,
+            .slli destination source ((BitVec.ofNat width width) - value),
+            .or destination destination temporary]
   | .word (.shiftInst operator destination source (.reg name)) =>
       labShiftInstructions operator destination source name
   | .word instruction => (wordInstToInstruction instruction).map List.singleton
@@ -252,7 +259,9 @@ def labCompilePlain [NeZero width] :
         match operator with
         | .add => pure [.addi destination left (BitVec.ofNat width immediate)]
         | .sub => pure [.addi destination left (0 - BitVec.ofNat width immediate)]
-        | .and | .or | .xor => none
+        | .and => pure [.andi destination left (BitVec.ofNat width immediate)]
+        | .or => pure [.ori destination left (BitVec.ofNat width immediate)]
+        | .xor => pure [.xori destination left (BitVec.ofNat width immediate)]
   | .shift operator destination left right =>
       labShiftInstructions operator destination left right
   | .tick =>

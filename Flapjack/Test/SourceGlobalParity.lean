@@ -307,6 +307,30 @@ def ffiRegisterSource : String :=
     "  return 1;\n" ++
     "}"
 
+/-! A small source-to-RISC-V oracle for the allocator's preference-chain
+regression.  Cake emits the wide constant directly in the ABI return register;
+the original port instead introduced a temporary and a return copy because it
+fixed the ABI source but did not propagate that preference through the
+temporary-copy chain. -/
+def wideConstantsSource : String :=
+  "fun 1 main() { var 1 x = 1073741832; return x; }"
+
+def cakeWideConstantsMain : List (BitVec 8) :=
+  [ BitVec.ofNat 8 0x37, BitVec.ofNat 8 0x05, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0x40, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x05,
+    BitVec.ofNat 8 0x85, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x67,
+    BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x00 ]
+
+def wideConstantsExact : Bool :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] checkedPipelineRemoveConfig
+      "main" wideConstantsSource with
+  | .ok image =>
+      match image.sections.find? (fun encodedSection => encodedSection.label == 4) with
+      | some encodedSection => encodedSection.bytes == cakeWideConstantsMain
+      | none => false
+  | .error _ => false
+
 /-- CakeML `cml_generated_main` for `globalSource` (offset 1000, 28 bytes). -/
 def cakeGlobalGeneratedMain : List (BitVec 8) :=
   [ BitVec.ofNat 8 0x03, BitVec.ofNat 8 0xb5, BitVec.ofNat 8 0x8c,
@@ -919,6 +943,7 @@ def cakeGoldenShape : Bool :=
 #guard auditedAccepted
 #guard auditedEntrypointsAccepted
 #guard cakeGoldenShape
+#guard wideConstantsExact
 
 def checkBool (name : String) (condition : Bool) : IO Bool := do
   if condition then
@@ -978,7 +1003,8 @@ def runChecks : IO Bool := do
       auditedAccepted,
     checkBool "Pancake audited source constructs reach image and runtime image"
       auditedEntrypointsAccepted,
-    checkBool "CakeML global golden sections pinned" cakeGoldenShape
+    checkBool "CakeML global golden sections pinned" cakeGoldenShape,
+    checkBool "CakeML wide-constant return section is exact" wideConstantsExact
     ].mapM id
   pure (results.all id)
 

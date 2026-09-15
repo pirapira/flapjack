@@ -130,6 +130,27 @@ def subtractionConstantSecond : Bool :=
   addVarConstValueShape ((0 : BitVec 64) - 8)
     (wordInstNormalizeExp (α := BitVec 64) (.op .sub [.var 7, .const 8]))
 
+/-- `word_inst_probe.out: optimize_consts_or_zero` / `norm_or_zero`: the `0w`
+identity is dropped for `Or` exactly as for `Add`. -/
+def orZeroConstantDropped : Bool :=
+  addOperandAtoms
+      (wordInstNormalizeExp (α := Nat) (.op .or [.const 0, .var 3]))
+    == [some 3]
+
+/-- `word_inst_probe.out: optimize_consts_xor_zero`: the `0w` identity is also
+dropped for `Xor`. -/
+def xorZeroConstantDropped : Bool :=
+  addOperandAtoms
+      (wordInstNormalizeExp (α := Nat) (.op .xor [.const 0, .var 3]))
+    == [some 3]
+
+/-- `word_inst_probe.out: optimize_consts_and_zero` / `norm_and_zero`:
+`reduce_const And 0w rest = Const 0w` collapses the whole expression. -/
+def andZeroConstantCollapses : Bool :=
+  match wordInstNormalizeExp (α := Nat) (.op .and [.const 0, .var 3]) with
+  | .const value => value == 0
+  | _ => false
+
 #guard twoVarOrderMatches
 #guard varConstOrderMatches
 #guard constFirstOrderMatches
@@ -139,6 +160,9 @@ def subtractionConstantSecond : Bool :=
 #guard zeroConstantDropped
 #guard allConstantAddFolds
 #guard subtractionConstantSecond
+#guard orZeroConstantDropped
+#guard xorZeroConstantDropped
+#guard andZeroConstantCollapses
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -151,6 +175,9 @@ def runChecks : IO Bool := do
     , ("several constants fold into one value with the constant second", foldTwoConstantsMatches)
     , ("a zero constant is dropped like Cake reduce_const", zeroConstantDropped)
     , ("an all-constant addition folds to the constant", allConstantAddFolds)
+    , ("the Or zero identity is dropped like Cake reduce_const", orZeroConstantDropped)
+    , ("the Xor zero identity is dropped like Cake reduce_const", xorZeroConstantDropped)
+    , ("the And zero fold collapses to the constant like Cake reduce_const", andZeroConstantCollapses)
     ]
   let mut ok := true
   for (label, passed) in checks do

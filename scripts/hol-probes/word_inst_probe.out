@@ -46,3 +46,13 @@ else
 opt_two_vars_rev=Op Add [Var 2; Var 4]
 opt_three_vars_rev=Op Add [Var 1; Var 2; Var 3]
 pull_two_vars_again=Op Add [Var 2; Var 4]
+optimize_consts_or_zero=Var 3
+optimize_consts_xor_zero=Var 3
+optimize_consts_and_zero=Const 0w
+optimize_consts_or_two=Op Or [Const 3w; Var 3]
+optimize_consts_and_two=Op And [Const 1w; Var 3]
+pull_or_zero=Var 3
+norm_or_zero=Var 3
+norm_and_zero=Const 0w
+op_consts_or=Const 0w
+op_consts_and=Const 0xFFFFFFFFFFFFFFFFw

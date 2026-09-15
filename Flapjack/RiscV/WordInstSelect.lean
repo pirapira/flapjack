@@ -62,11 +62,14 @@ def wordInstIsConstant : WordExp α → Bool
     the non-constant operands in the `pull_ops` order and puts the folded
     constant at the end.  Flapjack represents the same normal form directly:
     constants go last, which is what Cake's `inst_select_exp` immediate
-    (`Const` as the second operand) case expects.  For `Add` the constants are
-    also folded into a single value, and a folded `0` is dropped, matching
-    `optimize_consts` composed with `reduce_const`.  Folding for the other
-    associative operators (`Or`, `Xor`, `And`) and `op_consts` for empty
-    operand lists remain separate gaps. -/
+    (`Const` as the second operand) case expects.  `reduce_const` drops the
+    folded identity `0w` for `Add`, `Or` and `Xor`, and collapses a zero fold
+    to `Const 0w` for `And` (HOL probe labels `optimize_consts_or_zero`,
+    `optimize_consts_xor_zero`, `optimize_consts_and_zero`, `norm_or_zero`,
+    `norm_and_zero`), so the zero cases are reproduced here.  Folding
+    *non-zero* constants for `Or`, `Xor` and `And` needs the operator
+    semantics, which this module (core type classes only, no Mathlib) cannot
+    assume, and `op_consts` for empty operand lists remains a separate gap. -/
 def wordInstConstantValue : WordExp α → Option α
   | .const value => some value
   | _ => none
@@ -91,6 +94,23 @@ def wordInstConstantsToEnd [Add α] [DecidableEq α] [OfNat α 0]
             | _ => others
           else
             others ++ [.const folded]
+      | .or | .xor =>
+          -- `reduce_const` drops a zero fold for `Or`/`Xor` exactly as for
+          -- `Add`; only the all-zero fold is decidable without the operator.
+          if constants.all (fun value => value = 0) then
+            match others with
+            | [] => [.const 0]
+            | [single] => [single]
+            | _ => others
+          else
+            others ++ constants.map (fun value => .const value)
+      | .and =>
+          -- `reduce_const And 0w rest = Const 0w` collapses the whole
+          -- expression; a non-zero fold keeps the constant last.
+          if constants.all (fun value => value = 0) then
+            [.const 0]
+          else
+            others ++ constants.map (fun value => .const value)
       | _ => others ++ constants.map (fun value => .const value)
 
 def wordInstConvertSub [Sub α] [OfNat α 0] : List (WordExp α) → WordExp α

@@ -2511,6 +2511,162 @@ def wordGreedyAllocateWithSpillsAndPreferencesFast (names : List Nat)
   wordGreedyAllocateWithSpillsAndPreferencesIndexed names edges preferences
     (wordPreferenceIndex preferences) (wordLocationIndex state.locations) state
 
+theorem wordGreedyAllocateWithSpillsAndPreferencesIndexed_preserves_lookup
+    (names : List Nat) (edges preferences : List (Nat × Nat))
+    (index : Std.HashMap Nat (List Nat))
+    (locations : Std.HashMap Nat WordLocation) (state : WordSpillState) :
+    ∀ name, name ∉ names →
+      lookupNatInfo name
+          (wordGreedyAllocateWithSpillsAndPreferencesIndexed names edges preferences
+            index locations state).locations =
+        lookupNatInfo name state.locations := by
+  induction names generalizing locations state with
+  | nil =>
+      intro name hname
+      rfl
+  | cons head tail ih =>
+      intro name hname
+      have hneq : name ≠ head := by
+        intro heq
+        apply hname
+        simp [heq]
+      have hneq' : ¬ head == name := by
+        intro heq
+        have heq' : head = name := by simpa using heq
+        exact hneq heq'.symm
+      let forbidden :=
+        wordUsedLocationRegistersIndexed (wordNeighbours head edges) locations
+      let candidates := wordColourCandidatesWithSpillPreferencesIndexed head
+        preferences index locations
+      let available := wordFirstAvailable candidates forbidden
+      let allocated := match available with
+        | some register =>
+            { state with locations := (head, .register register) :: state.locations }
+        | none =>
+            { locations := (head, .stack state.nextSpill) :: state.locations,
+              nextSpill := state.nextSpill + 1 }
+      let locations' := match available with
+        | some register => locations.insert head (.register register)
+        | none => locations.insert head (WordLocation.stack state.nextSpill)
+      have htail := ih locations' allocated name (by
+        intro htail
+        apply hname
+        exact List.mem_cons_of_mem _ htail)
+      cases havailable : available with
+      | none =>
+          calc
+            lookupNatInfo name
+                (wordGreedyAllocateWithSpillsAndPreferencesIndexed (head :: tail)
+                  edges preferences index locations state).locations =
+                lookupNatInfo name
+                  (wordGreedyAllocateWithSpillsAndPreferencesIndexed tail edges preferences
+                    index locations' allocated).locations := by
+                      simp [wordGreedyAllocateWithSpillsAndPreferencesIndexed,
+                        forbidden, candidates, available, allocated, locations', havailable]
+            _ = lookupNatInfo name allocated.locations := htail
+            _ = lookupNatInfo name state.locations := by
+              simp [allocated, havailable, lookupNatInfo, hneq']
+
+      | some register =>
+          calc
+            lookupNatInfo name
+                (wordGreedyAllocateWithSpillsAndPreferencesIndexed (head :: tail)
+                  edges preferences index locations state).locations =
+                lookupNatInfo name
+                  (wordGreedyAllocateWithSpillsAndPreferencesIndexed tail edges preferences
+                    index locations' allocated).locations := by
+                      simp [wordGreedyAllocateWithSpillsAndPreferencesIndexed,
+                        forbidden, candidates, available, allocated, locations', havailable]
+            _ = lookupNatInfo name allocated.locations := htail
+            _ = lookupNatInfo name state.locations := by
+              simp [allocated, havailable, lookupNatInfo, hneq']
+
+theorem wordGreedyAllocateWithSpillsAndPreferencesIndexed_maps_names
+    (names : List Nat) (edges preferences : List (Nat × Nat))
+    (index : Std.HashMap Nat (List Nat))
+    (locations : Std.HashMap Nat WordLocation) (state : WordSpillState) :
+    ∀ name, name ∈ names →
+      ∃ location, lookupNatInfo name
+          (wordGreedyAllocateWithSpillsAndPreferencesIndexed names edges preferences
+            index locations state).locations = some location := by
+  induction names generalizing locations state with
+  | nil =>
+      intro name hname
+      simp at hname
+  | cons head tail ih =>
+      intro name hname
+      let forbidden :=
+        wordUsedLocationRegistersIndexed (wordNeighbours head edges) locations
+      let candidates := wordColourCandidatesWithSpillPreferencesIndexed head
+        preferences index locations
+      let available := wordFirstAvailable candidates forbidden
+      let allocated := match available with
+        | some register =>
+            { state with locations := (head, .register register) :: state.locations }
+        | none =>
+            { locations := (head, .stack state.nextSpill) :: state.locations,
+              nextSpill := state.nextSpill + 1 }
+      let locations' := match available with
+        | some register => locations.insert head (.register register)
+        | none => locations.insert head (WordLocation.stack state.nextSpill)
+      cases havailable : available with
+      | none =>
+          have hname_cases : name = head ∨ name ∈ tail := by
+            simpa [List.mem_cons] using hname
+          rcases hname_cases with heq | htail
+          · subst name
+            by_cases hdup : head ∈ tail
+            · simpa [wordGreedyAllocateWithSpillsAndPreferencesIndexed,
+                forbidden, candidates, available, allocated, locations', havailable] using
+                ih locations' allocated head hdup
+            · have htail_lookup :=
+                wordGreedyAllocateWithSpillsAndPreferencesIndexed_preserves_lookup
+                  tail edges preferences index locations' allocated head hdup
+              refine ⟨.stack state.nextSpill, ?_⟩
+              calc
+                lookupNatInfo head
+                    (wordGreedyAllocateWithSpillsAndPreferencesIndexed (head :: tail)
+                      edges preferences index locations state).locations =
+                    lookupNatInfo head
+                      (wordGreedyAllocateWithSpillsAndPreferencesIndexed tail edges preferences
+                        index locations' allocated).locations := by
+                          simp [wordGreedyAllocateWithSpillsAndPreferencesIndexed,
+                            forbidden, candidates, available, allocated, locations', havailable]
+                _ = lookupNatInfo head allocated.locations := htail_lookup
+                _ = some (.stack state.nextSpill) := by
+                  simp [allocated, havailable, lookupNatInfo]
+          · have htail_result := ih locations' allocated name htail
+            simpa [wordGreedyAllocateWithSpillsAndPreferencesIndexed,
+              forbidden, candidates, available, allocated, locations', havailable] using htail_result
+      | some register =>
+          have hname_cases : name = head ∨ name ∈ tail := by
+            simpa [List.mem_cons] using hname
+          rcases hname_cases with heq | htail
+          · subst name
+            by_cases hdup : head ∈ tail
+            · simpa [wordGreedyAllocateWithSpillsAndPreferencesIndexed,
+                forbidden, candidates, available, allocated, locations', havailable] using
+                ih locations' allocated head hdup
+            · have htail_lookup :=
+                wordGreedyAllocateWithSpillsAndPreferencesIndexed_preserves_lookup
+                  tail edges preferences index locations' allocated head hdup
+              refine ⟨.register register, ?_⟩
+              calc
+                lookupNatInfo head
+                    (wordGreedyAllocateWithSpillsAndPreferencesIndexed (head :: tail)
+                      edges preferences index locations state).locations =
+                    lookupNatInfo head
+                      (wordGreedyAllocateWithSpillsAndPreferencesIndexed tail edges preferences
+                        index locations' allocated).locations := by
+                          simp [wordGreedyAllocateWithSpillsAndPreferencesIndexed,
+                            forbidden, candidates, available, allocated, locations', havailable]
+                _ = lookupNatInfo head allocated.locations := htail_lookup
+                _ = some (.register register) := by
+                  simp [allocated, havailable, lookupNatInfo]
+          · have htail_result := ih locations' allocated name htail
+            simpa [wordGreedyAllocateWithSpillsAndPreferencesIndexed,
+              forbidden, candidates, available, allocated, locations', havailable] using htail_result
+
 def wordGreedyAllocateWithSpillsAndPreferences : List Nat →
     List (Nat × Nat) → List (Nat × Nat) → WordSpillState → WordSpillState
   | [], _, _, state => state
@@ -2634,6 +2790,22 @@ def wordAllocateVarsWithFixedSources (slots : List Nat)
   wordAllocateVarsWithFixedLocations slots edges preferences
     (wordFixedSourceLocations fixedSources)
 
+theorem lookupNatInfo_wordFixedSourceLocations_mem_fast
+    (fixedSources : List Nat) (name : Nat) (hname : name ∈ fixedSources) :
+    lookupNatInfo name (wordFixedSourceLocations fixedSources) =
+      some (.register name) := by
+  induction fixedSources with
+  | nil => simp at hname
+  | cons source sources ih =>
+      simp only [wordFixedSourceLocations, List.mem_cons] at hname ⊢
+      by_cases hsource : source = name
+      · subst source
+        simp [lookupNatInfo]
+      · have hname' : name ∈ sources := by
+          have hsource' : name ≠ source := Ne.symm hsource
+          simpa [hsource'] using hname
+        simp [lookupNatInfo, hsource, ih hname']
+
 /-! Production sibling using the indexed preference graph.  Keep the historical
     entry point above intact for its existing correctness proofs while routing
     the source-facing full-SSA pipeline through the equivalent fast traversal. -/
@@ -2642,6 +2814,94 @@ def wordAllocateVarsWithFixedSourcesFast (slots : List Nat)
     (fixedSources : List Nat) : Option WordSpillState :=
   wordAllocateVarsWithFixedLocationsIndexed slots edges preferences
     (wordFixedSourceLocations fixedSources)
+
+theorem wordAllocateVarsWithFixedSourcesFast_preserves_fixed_source
+    (slots : List Nat) (edges preferences : List (Nat × Nat))
+    (fixedSources : List Nat) (state : WordSpillState)
+    (hstate : wordAllocateVarsWithFixedSourcesFast slots edges preferences
+      fixedSources = some state) (name : Nat) (hname : name ∈ fixedSources) :
+    lookupNatInfo name state.locations = some (.register name) := by
+  let initial : WordSpillState :=
+    { locations := wordFixedSourceLocations fixedSources, nextSpill := 0 }
+  let names := slots.eraseDups.filter (fun candidate => candidate ∉ fixedSources)
+  let allocated := wordGreedyAllocateWithSpillsAndPreferencesFast names
+    edges preferences initial
+  have hstate' :
+      (if wordSpillAllocationRespectsClashes edges allocated.locations = true then
+          some allocated else none) = some state := by
+    simpa [wordAllocateVarsWithFixedSourcesFast,
+      wordAllocateVarsWithFixedLocationsIndexed, initial, names, allocated] using hstate
+  split at hstate'
+  · have heq : allocated = state := Option.some.inj hstate'
+    subst state
+    have hnot : name ∉ names := by
+      simp [names, hname]
+    have hlookup :=
+      wordGreedyAllocateWithSpillsAndPreferencesIndexed_preserves_lookup
+        names edges preferences (wordPreferenceIndex preferences)
+        (wordLocationIndex initial.locations) initial name hnot
+    calc
+      lookupNatInfo name allocated.locations =
+          lookupNatInfo name initial.locations := by
+        simpa [wordGreedyAllocateWithSpillsAndPreferencesFast, allocated] using hlookup
+      _ = some (.register name) := by
+        exact lookupNatInfo_wordFixedSourceLocations_mem_fast fixedSources name hname
+  · contradiction
+
+theorem wordAllocateVarsWithFixedSourcesFast_maps_slots
+    (slots : List Nat) (edges preferences : List (Nat × Nat))
+    (fixedSources : List Nat) (state : WordSpillState)
+    (hstate : wordAllocateVarsWithFixedSourcesFast slots edges preferences
+      fixedSources = some state) :
+    ∀ name, name ∈ slots.eraseDups →
+      ∃ location, lookupNatInfo name state.locations = some location := by
+  let initial : WordSpillState :=
+    { locations := wordFixedSourceLocations fixedSources, nextSpill := 0 }
+  let names := slots.eraseDups.filter (fun candidate => candidate ∉ fixedSources)
+  let allocated := wordGreedyAllocateWithSpillsAndPreferencesFast names
+    edges preferences initial
+  have hstate' :
+      (if wordSpillAllocationRespectsClashes edges allocated.locations = true then
+          some allocated else none) = some state := by
+    simpa [wordAllocateVarsWithFixedSourcesFast,
+      wordAllocateVarsWithFixedLocationsIndexed, initial, names, allocated] using hstate
+  split at hstate'
+  · have heq : allocated = state := Option.some.inj hstate'
+    subst state
+    intro name hslot
+    by_cases hfixed : name ∈ fixedSources
+    · have hnot : name ∉ names := by
+        simp [names, hfixed]
+      refine ⟨.register name, ?_⟩
+      have hlookup :=
+        wordGreedyAllocateWithSpillsAndPreferencesIndexed_preserves_lookup
+          names edges preferences (wordPreferenceIndex preferences)
+          (wordLocationIndex initial.locations) initial name hnot
+      calc
+        lookupNatInfo name allocated.locations =
+            lookupNatInfo name initial.locations := by
+          simpa [wordGreedyAllocateWithSpillsAndPreferencesFast, allocated] using hlookup
+        _ = some (.register name) :=
+          lookupNatInfo_wordFixedSourceLocations_mem_fast fixedSources name hfixed
+    · have hname : name ∈ names := by
+        simp [names, hslot, hfixed]
+      have hnames :=
+        wordGreedyAllocateWithSpillsAndPreferencesIndexed_maps_names
+          names edges preferences (wordPreferenceIndex preferences)
+          (wordLocationIndex initial.locations) initial name hname
+      simpa [wordGreedyAllocateWithSpillsAndPreferencesFast, allocated] using hnames
+  · contradiction
+
+theorem wordAllocateVarsWithFixedSourcesFast_sound
+    (slots : List Nat) (edges preferences : List (Nat × Nat))
+    (fixedSources : List Nat) (state : WordSpillState)
+    (hstate : wordAllocateVarsWithFixedSourcesFast slots edges preferences
+      fixedSources = some state) :
+    wordSpillAllocationRespectsClashes edges state.locations = true := by
+  simp [wordAllocateVarsWithFixedSourcesFast,
+    wordAllocateVarsWithFixedLocationsIndexed] at hstate
+  rcases hstate with ⟨hcheck, heq⟩
+  simpa [heq] using hcheck
 
 theorem lookupNatInfo_wordFixedSourceLocations_mem
     (fixedSources : List Nat) (name : Nat) (hname : name ∈ fixedSources) :

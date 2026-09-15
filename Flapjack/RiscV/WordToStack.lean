@@ -1506,12 +1506,14 @@ def wordStackPhysicalMovesToIndexed (config : WordStackConfig) :
   | index, source :: sources, base => do
       let source ← wordStackLocation config source
       let destinationLocation :=
-        if config.abiFrameSlots = 0 then .register base
-        else wordStackPhysicalLocation config index base
+        if config.abiFrameSlots = 0 then
+          .register (base + config.abiStride * index)
+        else
+          wordStackPhysicalLocation config index base
       let rest ← wordStackPhysicalMovesToIndexed config (index + 1) sources
-        (base + config.abiStride)
+        base
       pure ((destinationLocation, source) :: rest)
-termination_by index sources _ => sizeOf sources
+termination_by _ sources _ => sizeOf sources
 decreasing_by all_goals decreasing_trivial
 
 def wordStackPhysicalMovesTo (config : WordStackConfig) :

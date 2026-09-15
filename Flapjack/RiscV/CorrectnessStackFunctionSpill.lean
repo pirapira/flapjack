@@ -61,24 +61,24 @@ theorem wordToStackFunctionWithSpillStateAndLocationBitmaps_preserves_bitmap_len
               have hbitmap : bodyState = finalState :=
                 congrArg Prod.snd hpair
               have hinner :
-                  wordToStackProgWordWithBitmapBuilder
+                  wordToStackProgNatWithBitmapBuilder
                     { config with locations := allocation.locations }
                     (wordStackLiveBitmapFromLocations
                       { config with locations := allocation.locations }
                       frameSlots width)
                     registerCount bitmapRegister frameSlots width storeConstsStub
-                    bitmapState program =
+                    bitmapState (wordProgToNat program) =
                     some (body, bodyState) := by
                 simpa [wordToStackProgWordWithLocationBitmaps,
-                  wordToStackProgWordWithLocationBitmapsFused] using hbody
+                  wordToStackProgNatWithLocationBitmaps] using hbody
               have hbodyLength :=
-                wordToStackProgWordWithBitmapBuilder_preserves_length
+                wordToStackProgNatWithBitmapBuilder_preserves_length
                   { config with locations := allocation.locations }
                   (wordStackLiveBitmapFromLocations
                     { config with locations := allocation.locations }
                     frameSlots width)
                   registerCount bitmapRegister frameSlots width storeConstsStub
-                  bitmapState program hstate body bodyState hinner
+                  bitmapState (wordProgToNat program) hstate body bodyState hinner
               rw [← hbitmap]
               exact hbodyLength
 

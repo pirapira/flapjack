@@ -69,13 +69,12 @@ def fullSsaBitmapLookupEntry (label : Nat)
 
 /- The linked image layout is: stubs (raise, store-consts, GC) at labels
    0–2, the Cake-generated entry wrapper at label 3, and the compiled
-   function at label 4.  The wrapper is a Cake tail call
-   (`Call NONE dest (0::args) NONE`, cakeml/pancake/loop_to_wordScript.sml:131)
-   whose lowering moves the link-slot constant 0 into the link register
-   before jumping, so a function entered through the wrapper returns to
-   address 0 (the top-level halt convention).  `executeFunctionAt` has no
-   halt-at-0 protocol, so the harness enters the compiled function (label 4)
-   directly with its own link register. -/
+   function at label 4.  The following helpers are retained for inspecting
+   that layout, but are not execution tests: entering an allocated full-SSA
+   function directly bypasses the runtime frame/continuation protocol.  The
+   public Cake-linked artifact is checked by `RiscVArtifactParity`; these
+   low-level helpers must not be presented as source-to-machine simulations.
+ -/
 def fullSsaMainBitmapSimpleGcMachineResult :
     Option (List (RiscV.Word 64)) := do
   let result ← fullSsaMainBitmapSimpleGcTargetLinked
@@ -134,14 +133,6 @@ example :
 #guard
     fullSsaMainGraphImage.isSome
 
-theorem fullSsaMain_bitmap_simple_gc_machine_execution :
-    fullSsaMainBitmapSimpleGcMachineResult = some [BitVec.ofNat 64 7] := by
-  native_decide
-
-theorem fullSsaEntry_bitmap_simple_gc_machine_execution :
-    fullSsaEntryBitmapSimpleGcMachineResult = some [BitVec.ofNat 64 9] := by
-  native_decide
-
 def fullSsaMainSourceBody : Prog (RiscV.Word 64) :=
   .return (.const (BitVec.ofNat 64 7))
 
@@ -159,38 +150,6 @@ theorem fullSsaEntry_bitmap_simple_gc_source_execution :
       fullSsaEntrySourceBody).map (fun result => result.2) =
       some [BitVec.ofNat 64 9] := by
   simp [fullSsaEntrySourceBody, evalPanProgWithCalls, evalPanExp]
-
-theorem fullSsaMain_bitmap_simple_gc_source_machine_simulation :
-    (evalPanProgWithCalls [] 20 (fun _ => none)
-      fullSsaMainSourceBody).map (fun result => result.2) =
-      fullSsaMainBitmapSimpleGcMachineResult := by
-  calc
-    _ = some [BitVec.ofNat 64 7] := fullSsaMain_bitmap_simple_gc_source_execution
-    _ = _ := fullSsaMain_bitmap_simple_gc_machine_execution.symm
-
-theorem fullSsaEntry_bitmap_simple_gc_source_machine_simulation :
-    (evalPanProgWithCalls [] 20 (fun _ => none)
-      fullSsaEntrySourceBody).map (fun result => result.2) =
-      fullSsaEntryBitmapSimpleGcMachineResult := by
-  calc
-    _ = some [BitVec.ofNat 64 9] := fullSsaEntry_bitmap_simple_gc_source_execution
-    _ = _ := fullSsaEntry_bitmap_simple_gc_machine_execution.symm
-
-theorem fullSsaMain_compiled_execution :
-    (do
-      let image ← fullSsaMainImage
-      RiscV.executeFunctionAt 100 0 40 6 [] image [2] []
-        (RiscV.writeRegister (RiscV.zeroState 64) 1 (BitVec.ofNat 64 6))) =
-      some [BitVec.ofNat 64 7] := by
-  native_decide
-
-theorem fullSsaMain_graph_compiled_execution :
-    (do
-      let image ← fullSsaMainGraphImage
-      RiscV.executeFunctionAt 100 0 40 6 [] image [2] []
-        (RiscV.writeRegister (RiscV.zeroState 64) 1 (BitVec.ofNat 64 6))) =
-      some [BitVec.ofNat 64 7] := by
-  native_decide
 
 def fullSsaFfiMainBody : Prog (RiscV.Word 64) :=
   .dec "result" .one (.const 0)
@@ -248,11 +207,6 @@ def fullSsaFfiMachineResult : Option (List (RiscV.Word 64)) := do
     (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 
-theorem fullSsaFfi_compiled_execution :
-    fullSsaFfiMachineResult =
-      some [BitVec.ofNat 64 42] := by
-  native_decide
-
 theorem fullSsaFfi_source_execution :
     (evalPanProgWithCallsAndFfi [] fullSsaFfiSourceHandler 20
       (fun _ => none) fullSsaFfiMainBody).map (fun result =>
@@ -260,15 +214,6 @@ theorem fullSsaFfi_source_execution :
         | .returned _ values => values
         | _ => []) = some [BitVec.ofNat 64 42] := by
   decide +kernel
-
-theorem fullSsaFfi_source_machine_agreement :
-      (evalPanProgWithCallsAndFfi [] fullSsaFfiSourceHandler 20
-      (fun _ => none) fullSsaFfiMainBody).map (fun result =>
-        match result with
-        | .returned _ values => values
-        | _ => []) = some [BitVec.ofNat 64 42] ∧
-      fullSsaFfiMachineResult = some [BitVec.ofNat 64 42] :=
-  ⟨fullSsaFfi_source_execution, fullSsaFfi_compiled_execution⟩
 
 /-! The full-SSA call path exercises entry moves, the spill-aware allocator,
     stack-based call linkage, and the linked RISC-V image together. -/
@@ -319,8 +264,6 @@ def fullSsaCallSourceMain : Prog (RiscV.Word 64) :=
     (.return (.var .local "answer"))
 
 #guard fullSsaCallLinked.isSome
-#guard fullSsaCallMachineResult = some [BitVec.ofNat 64 41]
-
 #guard
   (evalPanProgWithCalls fullSsaCallSourceFunctions 20 (fun _ => none)
     fullSsaCallSourceMain).map (fun result => result.2) =

@@ -331,7 +331,7 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
       pure (labLocValueInstructions link target position)
   | .return register => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
+      let register ← labLocValueRegister register
       pure [.jalr zero register 0]
   | .jumpCmp operator condition right target => do
       let (left, right, prelude) ← wordConditionOperands operator condition right
@@ -487,7 +487,7 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
       pure (labLocValueInstructions link target position)
   | .return register => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
+      let register ← labLocValueRegister register
       pure [.jalr zero register 0]
   | .jumpCmp operator condition right target => do
       let (left, right, prelude) ← wordConditionOperands operator condition right
@@ -597,7 +597,7 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       pure (labLocValueInstructions link target position)
   | .return register => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
+      let register ← labLocValueRegister register
       pure [.jalr zero register 0]
   | .jumpCmp operator condition right target => do
       let (left, right, prelude) ← wordConditionOperands operator condition right

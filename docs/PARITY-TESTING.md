@@ -131,6 +131,41 @@ Minimized, replayable reproducers for the found mismatches are preserved under
 (one directory per owning bead). Do not put unbounded fuzzing into CI; the
 smoke corpus is the small deterministic check.
 
+## Debugging a discrepancy
+
+Use [`scripts/parity-debug.py`](../scripts/parity-debug.py) for a single
+reproducer. It saves the source, both final assembly frames, compiler stderr,
+a machine-readable comparison, and a unified final-output diff in one
+directory:
+
+```sh
+python3 scripts/parity-debug.py scripts/parity-difffuzz-findings/dup-global/case.pnk \
+    --out /tmp/dup-global-debug --minimize
+```
+
+The optional `--minimize` pass is a bounded, signature-preserving delta
+debugger. It removes source lines only when Cake and Flapjack retain exactly
+the same acceptance/artifact mismatch signature. `case.min.pnk` is therefore
+a useful repro, but it must still be reviewed for readability and semantic
+intent before being checked in. This is the repository's small, reproducible
+analogue of C-Reduce; it does not invoke arbitrary source transformations
+that might accidentally change the language category being tested.
+
+The same command also captures intermediate values from both implementations:
+`flapjack-stages.txt` comes from `lake exe flapjack-debug`, while
+`cake-stages.txt` comes from the original HOL definitions through
+[`scripts/hol-probes/pancake-stage-probeScript.sml`](../scripts/hol-probes/pancake-stage-probeScript.sml).
+The stage sequence is the original `pan_simp`, `pan_structs`, `pan_globals`,
+`pan_to_crep`, `crep_to_loop`, and `loop_to_word` boundary. Compare matching
+stage records first; the first divergence identifies the pass that should be
+ported or repaired. The HOL stage capture requires a built HOL4/CakeML tree,
+but final artifacts and the Lean dump remain available without it.
+
+For a larger campaign, preserve the complete finding directory produced by
+`parity-difffuzz.py --out ... --minimize` and then run `parity-debug.py` on its
+`case.min.pnk`. This keeps fuzzing, shrinking, stage inspection, and review
+evidence separate while retaining exact replay commands and tool provenance.
+
 ## Review and Beads
 
 Keep the porting Bead open until the original evidence and the Lean test are

@@ -525,4 +525,53 @@ example :
       ["global", "main", "worker"] := by
   decide +kernel
 
+/-! A program without `main` still gets the CakeML entry treatment
+    (`pan_passesScript.sml:23-44`): a zero-returning `main` is synthesized
+    first, and the entry wrapper runs the global initializers before the
+    tail call to the renamed entry, so exported functions never read
+    uninitialized global memory. -/
+
+def noMainGlobalFixture : List (Decl Nat) :=
+  [.decl .one "g" (.const 7),
+    .function
+      { name := "worker", inline := false, exported := true, params := [],
+        body := .return (.var .global "g"), returnShape := .one }]
+
+example :
+    (compileFlapjackTarget (α := Nat) .rv64i 1 id noMainGlobalFixture).simplified.map
+      (fun declaration =>
+        match declaration with
+        | .function function => function.name
+        | .decl _ name _ => name
+        | .name name _ => name
+        | .exnDecl exception _ => exception) =
+      ["main", "g", "worker"] := by
+  decide +kernel
+
+/-- Fingerprint of the synthesized `main` body: initializer stores followed
+    by the tail call to the renamed entry (`main = Seq (nested_seq decls)
+    (TailCall …)`), asserted decidably. -/
+def noMainEntrySteps : Option (List String) :=
+  (compileFlapjackTarget (α := Nat) .rv64i 1 id noMainGlobalFixture).globals.declarations.findSome?
+    (fun declaration =>
+      match declaration with
+      | .function function =>
+          if function.name = "main" then some function.body else none
+      | _ => none) |>.map
+    (fun body =>
+      (go body).flatten
+    )
+where
+  go : Prog Nat → List (List String)
+    | .seq first second => go first ++ go second
+    | .store _ _ => [["store"]]
+    | .store32 _ _ => [["store32"]]
+    | .storeByte _ _ => [["storeByte"]]
+    | .call info name _ => [["call " ++ name ++
+        (match info with | none => " tail" | some _ => " handled")]]
+    | _ => [[]]
+
+example : noMainEntrySteps = some ["store", "call main' tail"] := by
+  decide +kernel
+
 end Flapjack

@@ -325,17 +325,17 @@ theorem evalWordStackMachine_parallelLocationMove_acyclic_preserves_mapped_value
         wordStackLocationValue, hlocation] using hfinalLocationValue
 
 theorem wordStackPhysicalMovesFromSpec_mem_source
-    (locations : List WordLocation) (source : Nat)
+    (stride : Nat) (locations : List WordLocation) (source : Nat)
     (move : WordLocation × WordLocation)
-    (hmove : move ∈ wordStackPhysicalMovesFromSpec locations source) :
-    ∃ index, move.2 = .register (source + 2 * index) := by
+    (hmove : move ∈ wordStackPhysicalMovesFromSpec stride locations source) :
+    ∃ index, move.2 = .register (source + stride * index) := by
   induction locations generalizing source with
   | nil => simp [wordStackPhysicalMovesFromSpec] at hmove
   | cons location locations ih =>
       simp only [wordStackPhysicalMovesFromSpec, List.mem_cons] at hmove
       rcases hmove with rfl | hmove
       · exact ⟨0, by simp⟩
-      · obtain ⟨index, hindex⟩ := ih (source := source + 2) hmove
+      · obtain ⟨index, hindex⟩ := ih (source := source + stride) hmove
         refine ⟨index + 1, ?_⟩
         simpa [Nat.mul_succ, Nat.add_assoc, Nat.add_left_comm,
           Nat.add_comm] using hindex
@@ -363,18 +363,18 @@ theorem evalWordStackMachine_movesFromPhysical_preserves_source_shape
       (evalWordStackMachine state) = some final) :
     ∀ move, move ∈ moves →
       ∃ index,
-        move.2 = .register (source + 2 * index) ∧
+        move.2 = .register (source + config.abiStride * index) ∧
         wordStackLocationValue config final move.1 =
           wordStackLocationValue config state move.2 := by
   have hspec := wordStackPhysicalMovesFrom_eq_spec config destinations source
     locations hlookup
-  have hmoveSpec : moves = wordStackPhysicalMovesFromSpec locations source := by
+  have hmoveSpec : moves = wordStackPhysicalMovesFromSpec config.abiStride locations source := by
     exact (Option.some.inj (hspec.symm.trans hphysical)).symm
   intro move hmove
-  have hmoveSpec' : move ∈ wordStackPhysicalMovesFromSpec locations source := by
+  have hmoveSpec' : move ∈ wordStackPhysicalMovesFromSpec config.abiStride locations source := by
     simpa [hmoveSpec] using hmove
   obtain ⟨index, hsource⟩ := wordStackPhysicalMovesFromSpec_mem_source
-    locations source move hmoveSpec'
+    config.abiStride locations source move hmoveSpec'
   refine ⟨index, hsource, ?_⟩
   exact evalWordStackMachine_parallelLocationMove_acyclic_preserves_move_value
     config state final moves move hdestinations hnoSource hreserved hmove heval

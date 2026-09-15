@@ -30,6 +30,7 @@ def pipelineWordFunctionsAllocatedWithLinearScan [NeZero width]
           stackBase := 0
           addressScratch := 29
           abiBase := 10
+          abiStride := 1
           sectionId := label
           handlerLabel := label }
       let stackBody ← RiscV.wordToStackFunctionWithParameters config

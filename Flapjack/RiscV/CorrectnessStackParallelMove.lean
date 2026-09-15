@@ -128,18 +128,18 @@ theorem wordStackMovesFromPhysical_singleton
         [(destinationLocation, .register source)] := by
   simp [wordStackMovesFromPhysical, wordStackPhysicalMovesFrom, hdestination]
 
-def wordStackPhysicalMovesFromSpec : List WordLocation → Nat →
+def wordStackPhysicalMovesFromSpec (stride : Nat) : List WordLocation → Nat →
     List (WordLocation × WordLocation)
   | [], _ => []
   | location :: locations, source =>
       (location, .register source) ::
-        wordStackPhysicalMovesFromSpec locations (source + 2)
+        wordStackPhysicalMovesFromSpec stride locations (source + stride)
 
 theorem wordStackPhysicalMovesFrom_mapM'
     (config : WordStackConfig) (destinations : List Nat) (source : Nat) :
     wordStackPhysicalMovesFrom config destinations source =
       (List.mapM' (wordStackLocation config) destinations).map
-        (fun locations => wordStackPhysicalMovesFromSpec locations source) := by
+        (fun locations => wordStackPhysicalMovesFromSpec config.abiStride locations source) := by
   induction destinations generalizing source with
   | nil =>
       simp [wordStackPhysicalMovesFrom, wordStackPhysicalMovesFromSpec,
@@ -152,9 +152,10 @@ theorem wordStackPhysicalMovesFrom_mapM'
           cases hrest : List.mapM' (wordStackLocation config) destinations with
           | none =>
               have htail :
-                  wordStackPhysicalMovesFrom config destinations (source + 2) =
+                  wordStackPhysicalMovesFrom config destinations
+                    (source + config.abiStride) =
                     none := by
-                rw [ih (source := source + 2), hrest]
+                rw [ih (source := source + config.abiStride), hrest]
                 rfl
               simp [wordStackPhysicalMovesFrom, List.mapM', hlocation, hrest,
                 htail]
@@ -168,7 +169,7 @@ theorem wordStackPhysicalMovesFrom_eq_spec
     (hlookup :
       destinations.mapM (wordStackLocation config) = some locations) :
     wordStackPhysicalMovesFrom config destinations source =
-      some (wordStackPhysicalMovesFromSpec locations source) := by
+      some (wordStackPhysicalMovesFromSpec config.abiStride locations source) := by
   have hlookup' :
       List.mapM' (wordStackLocation config) destinations = some locations := by
     rw [List.mapM'_eq_mapM]

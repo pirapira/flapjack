@@ -55,9 +55,9 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/shadowing.pnk",
-      "source_reference": "Original Pancake redeclaration warning behavior; Cake accepts two local declarations of x in f and emits distinct cml_generated_main/cml_main/cml_g/cml_f sections.",
+      "source_reference": "Local shadowing regression (`var 1 x = 0; var 1 x = g();`) reproduced from Flapjack.Test.SourceGlobalParity.shadowingSource. The original CakeML accepts it with a redeclaration warning and emits cml_generated_main 28 bytes, cml_main 4, cml_g 8, cml_f 144; the port expands the global-initializer address inline (heapLength shift and subtract) so generated_main is 48 bytes and every later section base shifts by 20, and cml_f additionally differs in allocator move and register choice. Tracked by flapjack-pxn.8.5.10.2 (global-initializer generated entry bytes) together with flapjack-8tb.",
       "cake_sha256": "b7343fcd21e99f4cae4cc800a922325bca143f9624b8b007f2c357cfdd787e60",
-      "tracked_beads": ["flapjack-pxn.8.5.12.12"]
+      "tracked_beads": ["flapjack-pxn.8.5.12.12", "flapjack-pxn.8.5.10.2", "flapjack-8tb"]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_expression.pnk",

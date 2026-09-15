@@ -387,6 +387,36 @@ def wordToStackCallWithHandler (perf : Bool) (target : Nat)
     callCode
   ]
 
+/-! CakeML's `call_dest` accepts either a code label (`INL`) or a computed
+    register (`INR`, an indirect call).  These two carriers are the same as the
+    labelled versions above but keep the computed target instead of fixing a
+    label, which is how the original lowers an indirect call. -/
+def wordToStackCallNoHandlerTarget (_perf : Bool) (target : StackCallTarget)
+    (argumentCount frameOffset scratch : Nat)
+    (returnValues : List Nat) (returnCode : StackProg α)
+    (returnLabel entryLabel : Nat) : StackProg α :=
+  let callCode :=
+    .call (some (returnCode, 0, returnLabel, entryLabel)) target none
+  stackSeq [
+    stackArgs (argumentCount + 1) frameOffset scratch,
+    callCode,
+    .stackFree (returnValues.length)
+  ]
+
+def wordToStackCallWithHandlerInSectionTarget (perf : Bool) (target : StackCallTarget)
+    (argumentCount frameOffset scratch : Nat)
+    (returnCode handlerCode : StackProg α)
+    (returnLabel entryLabel handlerLabel handlerEntryLabel exceptionLabel : Nat) : StackProg α :=
+  let returnCode := stackPopHandler perf scratch returnCode
+  let callCode :=
+    .call (some (returnCode, 0, returnLabel, entryLabel)) target
+      (some (handlerCode, exceptionLabel, handlerLabel))
+  stackSeq [
+    stackPushHandler perf handlerLabel handlerEntryLabel scratch,
+    stackHandlerArgs perf (argumentCount + 1) frameOffset scratch,
+    callCode
+  ]
+
 theorem stackSeq_single (program : StackProg α) :
     stackSeq [program] = program := by
   rfl

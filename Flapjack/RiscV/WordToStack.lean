@@ -765,27 +765,58 @@ def wordStackConstBitmapWords (wordBits : Nat)
     (constants : List (Bool × Nat)) : List Nat :=
   wordStackConstBitmapWordsAux wordBits (constants.length + 1) constants
 
+/- CakeML `bits_to_word` (word_to_stackScript.sml:225-229): the empty list
+    folds to `0w` and the head of the list becomes the least significant
+    bit, so no implicit terminator bit is added to a trailing partial
+    word.  The base-1 `wordStackBitsToNat` above stays untouched because
+    the constant-pool bitmap relies on its implicit top bit. -/
+def wordStackBitsToWord : List Bool → Nat
+  | [] => 0
+  | bit :: bits =>
+      wordStackBitsToWord bits * 2 + if bit then 1 else 0
+
+/- CakeML `word_list` (word_to_stackScript.sml:231-235): each full chunk
+    carries an explicit `T` in its top bit, and a trailing list that fits
+    the chunk is folded as-is. -/
+def wordStackWordListAux (chunkSize : Nat) :
+    Nat → List Bool → List Nat
+  | 0, _ => []
+  | fuel + 1, bits =>
+      if chunkSize = 0 || bits.length ≤ chunkSize then
+        [wordStackBitsToWord bits]
+      else
+        wordStackBitsToWord (bits.take chunkSize ++ [true]) ::
+          wordStackWordListAux chunkSize fuel (bits.drop chunkSize)
+
+def wordStackWordList (chunkSize : Nat) (bits : List Bool) : List Nat :=
+  wordStackWordListAux chunkSize (bits.length + 1) bits
+
 def wordStackLiveBitmap (registerCount frameSlots wordBits : Nat)
     (live : List Nat) : List Nat :=
   let names := live.map (fun register =>
-    frameSlots - 1 - (register / 2 - registerCount))
-  let bits := (List.range frameSlots).map (fun slot => names.contains slot)
-  wordStackBitmapWords (wordBits - 1) (bits ++ [true])
+    frameSlots - 1 - 1 - (register / 2 - registerCount))
+  let bits := (List.range (frameSlots - 1)).map (fun slot => names.contains slot)
+  wordStackWordList (wordBits - 1) (bits ++ [true])
 
 /- Location-derived mirror of the original `write_bitmap`: one membership bit
-    per frame slot for the live cut-set variables that the allocator actually
-    placed on the stack, folded with the base-1 `wordStackBitsToNat` whose
-    implicit top bit terminates the word.  Register-resident live values carry
-    no stack root; the original's pancake artifacts pin the allocator to an
-    empty stack live set there, keeping the words pure `2 ^ frameSlots`. -/
+    per stack-variable slot for the live cut-set variables that the allocator
+    actually placed on the stack, folded with the Cake-faithful
+    `wordStackWordList`.  A variable stored at frame address `slot` sets bit
+    `slot - 1`, because the original's `compile_prog` sizes the frame at
+    `f = stack_var_count + 1` while `write_bitmap` ranges over
+    `f' = stack_var_count`; the closing `T` is the explicit terminator that
+    also guarantees a multi-word bitmap whenever `f'` reaches the chunk
+    width.  Register-resident live values carry no stack root; the
+    original's pancake artifacts pin the allocator to an empty stack live
+    set there. -/
 def wordStackLiveBitmapFromLocations (config : WordStackConfig)
     (frameSlots wordBits : Nat) (live : List Nat) : List Nat :=
   let slots := live.filterMap (fun name =>
     match wordStackLocation config name with
-    | some (.stack slot) => some slot
+    | some (.stack slot) => some (slot - 1)
     | _ => none)
-  let bits := (List.range frameSlots).map (fun slot => slots.contains slot)
-  wordStackBitmapWords (wordBits - 1) bits
+  let bits := (List.range (frameSlots - 1)).map (fun slot => slots.contains slot)
+  wordStackWordList (wordBits - 1) (bits ++ [true])
 
 def wordStackInsertBitmap (state : WordStackBitmapState)
     (bitmap : List Nat) : WordStackBitmapState × Nat :=

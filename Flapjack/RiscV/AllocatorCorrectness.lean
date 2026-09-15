@@ -1062,8 +1062,7 @@ theorem wordMoveToInstructions_abi_singleton [NeZero width]
     (source : Nat) (hsource : source < 32) (hsourceScratch : source ≠ 31) :
     wordMoveToInstructions (width := width) [(2, source)] =
       if source = 2 then
-        some ([.addi 31 2 (0 : Word width), .addi 2 31 0] :
-          List (Instruction width))
+        some []
       else
         some ([.addi 2 ⟨source, hsource⟩ (0 : Word width)] :
           List (Instruction width)) := by
@@ -1073,10 +1072,14 @@ theorem wordMoveToInstructions_abi_singleton [NeZero width]
       wordMoveRegisterDestinations, wordMoveRegisterReady,
       wordMoveRegisterRemoveDestination, wordExpToInstructions,
       wordExpToInstruction, registerOfNat]
-  · simp [wordMoveToInstructions, wordMoveToInstructionsAux,
+  · have htwo' : ¬2 = source := by
+      intro h
+      exact htwo h.symm
+    simp [wordMoveToInstructions, wordMoveToInstructionsAux,
       wordMoveRegisterDestinations, wordMoveRegisterReady,
       wordMoveRegisterRemoveDestination, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat, hsource, hsourceScratch, htwo]
+      wordExpToInstruction, registerOfNat, hsource, hsourceScratch, htwo,
+      htwo']
 
 theorem evalWordSsaRenameProgram_raise [NeZero width]
     (ssa : WordSsaState) (source target : State width)
@@ -1115,8 +1118,7 @@ theorem evalWordSsaRenameProgram_raise [NeZero width]
   by_cases htwo : wordSsaRead ssa exception = 2
   · have hmove' : wordMoveToInstructions (width := width)
         [(2, wordSsaRead ssa exception)] =
-        some ([.addi 31 2 (0 : Word width), .addi 2 31 0] :
-          List (Instruction width)) := by
+        some [] := by
       simpa [htwo] using hmove
     simp only [evalWordFunctionWithHandlersAndFfi, evalWordFunction]
     rw [hmove']
@@ -1174,8 +1176,7 @@ theorem evalWordSsaRenameProgram_return_singleton [NeZero width]
   by_cases htwo : wordSsaRead ssa value = 2
   · have hmove' : wordMoveToInstructions (width := width)
         [(2, wordSsaRead ssa value)] =
-        some ([.addi 31 2 (0 : Word width), .addi 2 31 0] :
-          List (Instruction width)) := by
+        some [] := by
       simpa [htwo] using hmove
     simp only [evalWordFunctionWithHandlersAndFfi, evalWordFunction]
     rw [hmove']

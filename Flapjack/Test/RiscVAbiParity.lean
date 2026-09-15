@@ -123,11 +123,11 @@ def overflowConfig : WordStackConfig :=
     abiFrameSlots := 0 }
 
 def overflowDemandMatches : Bool :=
-  wordProgAbiFrameDemand 12 overflowingCallProgram == 4 &&
-    wordProgAbiFrameDemand 12 (.call none (some 7) [2, 4, 6] none : WordProg Nat) == 0
+  wordProgMaxCallArguments overflowingCallProgram == 17 &&
+    wordProgMaxCallArguments (.call none (some 7) [2, 4, 6] none : WordProg Nat) == 3
 
 def overflowLowersWithDemandFrame : Bool :=
-  let demand := wordProgAbiFrameDemand 12 overflowingCallProgram
+  let demand := wordProgMaxCallArguments overflowingCallProgram - 12
   match wordToStackProgNatWithLocationBitmaps
       { overflowConfig with abiFrameSlots := demand }
       25 31 demand 64 (some 1) (wordStackInitialBitmaps false)

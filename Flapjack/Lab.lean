@@ -121,6 +121,16 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
   | .inst instruction => ⟨[.asm (.word instruction) [] 0], false, counter⟩
   | .shMem operator source address =>
       ⟨[.asm (.shareMem operator source address) [] 0], false, counter⟩
+  | .arith .or destination left right =>
+      /- `wMoveSingle` represents a physical register copy as `or r s s`.
+         Once allocation has made source and destination the same register,
+         CakeML's final Lab filtering removes this identity instruction.  Do
+         the same at the artifact boundary; retaining it would change section
+         sizes and can consume space needed by the following labels. -/
+      if destination = left && left = right then
+        ⟨[], false, counter⟩
+      else
+        ⟨[.asm (.arith .or destination left right) [] 0], false, counter⟩
   | .arith operator destination left right =>
       ⟨[.asm (.arith operator destination left right) [] 0], false, counter⟩
   | .shift operator destination left right =>

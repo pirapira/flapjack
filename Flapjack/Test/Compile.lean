@@ -140,14 +140,14 @@ example :
     compileProg assignmentContext
       (.shMemLoad .op8 .local "x" (.const 10)) =
       .shMem .load8 0 (.const 10) := by
-  simp [compileProg, firstCompiledExp, compileExp, loadMemOp,
+  simp [compileProg, firstCompiledExpAnyShape, compileExp, loadMemOp,
     assignmentContext, lookupInfo]
 
 example :
     compileProg assignmentContext
       (.shMemStore .op8 (.const 10) (.const 7)) =
       .dec 1 (.const 7) (.shMem .store8 1 (.const 10)) := by
-  simp [compileProg, firstCompiledExp, compileExp, storeMemOp, nestedDecs,
+  simp [compileProg, firstCompiledExpAnyShape, compileExp, storeMemOp, nestedDecs,
     assignmentContext]
 
 def crepAddCarryHandler : CrepPrimitiveHandler Nat

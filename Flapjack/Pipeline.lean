@@ -48,11 +48,12 @@ termination_by declarations => sizeOf declarations
     `cakeml/pancake/pan_to_crepScript.sml:393-398`.
 
     The source first builds the Crep table and then applies the inline pass to
-    exactly the names of declarations marked `inlinable`. -/
+    exactly the names of declarations marked `inlinable`; the callee body is
+    recursively inlined before being spliced in (`crep_inlineScript.sml:215`). -/
 def compileProgToCrep [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     List (CompiledFunction α) :=
-  crepInlineTop (pipelineInlineNames declarations)
+  crepInlineTopRecursiveByNames (pipelineInlineNames declarations)
     (compileToCrep context declarations)
 
 def pipelineFindFunction (name : FunName) :
@@ -657,7 +658,9 @@ def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
   match pipelineFindFunction start structured with
   | none => none
   | some entry =>
-      let renamed := globalFreshName start (globalFunctionNames structured)
+      /- CakeML's `compile_top` always freshens the literal `main`, not the
+         `start` parameter (`pan_globalsScript.sml:224-226,242`). -/
+      let renamed := globalNewMainName structured
       let prepared := globalRenameDecls start renamed (globalResortDecls structured)
       let globals := globalCompileTop bytesInWord fromNat prepared
       let entryArguments := entry.params.map (fun parameter =>

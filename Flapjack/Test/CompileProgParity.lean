@@ -28,9 +28,11 @@ theorem compile_prog_inline_call_parity :
     compileFunctionsSource, compileFunDeclSource, compileParamVars,
     functionInfos, compileProgProbeContext, compileProgProbeDecls,
     compileProg, compileExp, compileArgs,
-    crepInlineTop, crepInlineFunctions, crepInlineProg,
+    crepInlineTopRecursiveByNames, crepInlineTopRecursive,
+    crepInlineFunctionsRecursive, crepInlineActiveNames,
+    crepInlineProgRecursive, crepInlineProg,
     crepInlineRemove, crepInlineLookup, crepInlineCall, crepInlineCallBody,
-    crepInlineTail, crepArgLoad] <;> rfl
+    crepInlineTail, crepArgLoad, crepInlineTmpNames, nestedDecs]
 
 def parityGuard : Bool :=
   match compileProgToCrep compileProgProbeContext compileProgProbeDecls with

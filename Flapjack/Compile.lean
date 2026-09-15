@@ -48,6 +48,23 @@ def firstCompiledExp [BEq α] [OfNat α 0] [Add α]
   | (compiled :: _, .one) => some compiled
   | _ => none
 
+/-- CakeML's shared-memory compilation only requires the compiled
+    address/value list to be nonempty and proceeds with the head word, for
+    any shape (`pan_to_crepScript.sml:291-305`). -/
+def firstCompiledExpAnyShape [BEq α] [OfNat α 0] [Add α]
+    (context : CompileContext α) (expression : Exp α) : Option (CrepExp α) :=
+  match compileExp context expression with
+  | (compiled :: _, _) => some compiled
+  | _ => none
+
+theorem firstCompiledExpAnyShape_of_firstCompiledExp [BEq α] [OfNat α 0] [Add α]
+    {context : CompileContext α} {expression : Exp α} {compiled : CrepExp α}
+    (h : firstCompiledExp context expression = some compiled) :
+    firstCompiledExpAnyShape context expression = some compiled := by
+  unfold firstCompiledExp at h
+  unfold firstCompiledExpAnyShape
+  split at h <;> split <;> simp_all
+
 structure CompiledFunction (α : Type u) where
   name : FunName
   params : List Nat
@@ -82,12 +99,15 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
     (context : CompileContext α) (program : Prog α) : CrepProg α :=
   match program with
   | .skip => .skip
-  | .dec name shape value body =>
+  | .dec name _shape value body =>
+      /- CakeML derives the slot count, vmap entry, and `vmax` bump from the
+         compiled expression's shape; the declared shape is ignored
+         (`pan_to_crepScript.sml:141-149`). -/
       let compiled := compileExp context value
-      let names := allocatedNames context shape
+      let names := allocatedNames context compiled.2
       let nextContext := { context with
-        vars := (name, (shape, names)) :: context.vars
-        maxVar := context.maxVar + Shape.shapeSize shape }
+        vars := (name, (compiled.2, names)) :: context.vars
+        maxVar := context.maxVar + Shape.shapeSize compiled.2 }
       if names.length = compiled.1.length then
         nestedDecs names compiled.1 (compileProg nextContext body)
       else .skip
@@ -210,12 +230,12 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
       | none => .skip
   | .return value => .return (compileExp context value).1
   | .shMemLoad size .local name address =>
-      match lookupInfo name context.vars, firstCompiledExp context address with
+      match lookupInfo name context.vars, firstCompiledExpAnyShape context address with
       | some (_, destination :: _), some address => .shMem (loadMemOp size) destination address
       | _, _ => .skip
   | .shMemLoad _ .global _ _ => .skip
   | .shMemStore size address value =>
-      match firstCompiledExp context address, firstCompiledExp context value with
+      match firstCompiledExpAnyShape context address, firstCompiledExpAnyShape context value with
       | some address, some value =>
           let temporary := context.maxVar + 1
           nestedDecs [temporary] [value] (.shMem (storeMemOp size) temporary address)

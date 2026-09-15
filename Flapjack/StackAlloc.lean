@@ -169,6 +169,11 @@ def stackAllocStubs (config : StackAllocConfig) : List (Nat × StackProg α) :=
 def stackAllocProgram (config : StackAllocConfig)
     (program : Nat × StackProg α) : Nat × StackProg α :=
   let (sectionId, program) := program
+  -- CakeML's `comp n m p` labels the GC/StoreConsts call's return point with
+  -- the *section id* `n` (`stack_allocScript.sml`: `Call (SOME (Skip, 0, n, m))`),
+  -- so each section's configuration carries its own id here rather than the
+  -- caller-wide `returnLabel` default.
+  let config := { config with returnLabel := sectionId }
   let (program, _) :=
     stackAllocComp config (stackAllocNextLab program 2) program
   (sectionId, program)

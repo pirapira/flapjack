@@ -44,11 +44,13 @@ example :
       (.call none (.label 88) none, 20) := by
   simp [stackAllocComp]
 
+/- The section's GC-call return point carries the section id (1), matching
+    CakeML's `Call (SOME (Skip, 0, n, m))` with `n` the section id. -/
 example :
     stackAllocCompile stackAllocTestConfig
         [(1, (.alloc 3 : StackProg Nat))] =
       [(77, (.return 0 : StackProg Nat)),
-       (1, (.call (some (.skip, 0, 12, 2)) (.label 77) none))] := by
+       (1, (.call (some (.skip, 0, 1, 2)) (.label 77) none))] := by
   simp [stackAllocCompile, stackAllocStubs, stackAllocProgram,
     stackAllocComp, stackAllocRuntimeCall, stackAllocNextLab,
     stackAllocTestConfig, stackAllocStub]

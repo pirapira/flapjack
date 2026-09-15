@@ -430,14 +430,20 @@ def globalCompileDecls [BEq String] [Add α] [Mul α]
 def globalCompileInitializers [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) : List (Decl α) → List (Prog α)
   | [] => []
-  | .decl _shape name value :: declarations =>
+  | .decl shape _name value :: declarations =>
+      /- `pan_globals$compile_decs` computes this declaration's address from
+         the context before recursing.  In particular, duplicate names must
+         retain the address of each declaration's own store; looking them up
+         in the final map would incorrectly give every initializer the last
+         declaration's address. -/
+      let address := globalAddress context shape
+      let nextContext := { context with
+        globals := (_name, (shape, address)) :: context.globals
+        globalsSize := address }
       let initializer :=
-        match lookupInfo name context.globals with
-        | some (_, address) =>
-            .store (.op .sub [.topAddr, .const address])
-              (globalCompileExp context value)
-        | none => .skip
-      initializer :: globalCompileInitializers context declarations
+        .store (.op .sub [.topAddr, .const address])
+          (globalCompileExp context value)
+      initializer :: globalCompileInitializers nextContext declarations
   | _ :: declarations => globalCompileInitializers context declarations
 
 /-! The four-result shape of Pancake's `pan_globals$compile_decs_def`
@@ -454,7 +460,7 @@ def globalCompileDecs [BEq String] [Add α] [Mul α]
     (context : GlobalPassContext α) (declarations : List (Decl α)) :
     GlobalCompileDecsResult α :=
   let collected := globalCollect context declarations
-  { initializers := globalCompileInitializers collected declarations
+  { initializers := globalCompileInitializers context declarations
     functions := globalDeclsFilter globalDeclIsFunction
       (globalCompileDecls collected declarations)
     exceptions := globalDeclsFilter globalDeclIsException
@@ -507,7 +513,8 @@ def globalCompileTop [BEq String] [Add α] [Mul α]
       fromNat := fromNat }
   let collected := globalCollect initial declarations
   let context := { collected with maxGlobalsSize := collected.globalsSize }
-  { initializers := globalCompileInitializers context declarations
+  let initializerContext := { initial with maxGlobalsSize := collected.globalsSize }
+  { initializers := globalCompileInitializers initializerContext declarations
     declarations := globalCompileDecls context declarations
     context := context }
 

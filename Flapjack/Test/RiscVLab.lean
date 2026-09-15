@@ -93,6 +93,19 @@ example :
       some [.addi 20 20 (0 - BitVec.ofNat 64 16)] := by
   decide
 
+/- CakeML's final Lab filter removes arithmetic identities, including the
+   zero-immediate forms that can arise from a fused stack-pointer update. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arithImm .add 20 20 0) [] 0]⟩ =
+      some [] := by
+  decide
+
+example :
+    labLineInstructionCount
+        (.asm (.arithImm .sub 20 20 0) [] 0 : LabLine (Word 64)) = 0 := by
+  rfl
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.codeBufferWrite 7 6) [] 0]⟩ =

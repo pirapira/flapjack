@@ -1,10 +1,6 @@
 {
   "policy": "Differential-fuzz mismatch signatures that may pass without a new finding. Values list the owning P1 beads. Acceptance (acceptance/*) and tool failures (tool-*) are never known gaps and always surface as findings. Of the frame signatures, only frame/bitmap-table and frame/ffi-stub are known; any other frame/* signature surfaces as a finding. Signatures are shell-style patterns. The only artifact normalization is the documented cml_ prefix / _<digits> suffix strip on section names.",
  "signatures": {
-  "sections/order": {
-   "beads": ["flapjack-pxn.8.5.10.3"],
-   "reason": "Flapjack appends the user entry function after the other user functions while CakeML places cml_main directly after cml_generated_main; tracked by the entry_order.pnk corpus fixture."
-  },
   "bytes/user:*:len_eq": {
    "beads": ["flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"],
    "reason": "Known lowering differences in user function bodies (constant-return ABI, call lowering) with equal section length."

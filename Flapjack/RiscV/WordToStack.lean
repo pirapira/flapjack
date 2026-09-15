@@ -38,6 +38,9 @@ structure WordStackConfig where
   /- Physical ABI argument/result registers are consecutive on RISC-V.  The
      source-shaped Cake helper retains its historical two-slot numbering. -/
   abiStride : Nat := 2
+  /- Source-shaped Cake calls include the link slot (Word name 0) in their
+     argument list, while value returns still begin at abiBase. -/
+  callAbiBase : Nat := 1
   /- Number of physical ABI argument/result slots.  Cake's RISC-V window is
      x10--x21; values after this window use the current Cake frame. -/
   abiRegisterCount : Nat := 12
@@ -1481,6 +1484,14 @@ def wordStackReturnCode (config : WordStackConfig) :
   | some (destinations, _, _, _, _) =>
       wordStackMovesFromPhysical config destinations config.abiBase
 
+/-! The `Return v1 vs` case in Cake's `comp` frees the part of the current
+    frame occupied by returned values which do not fit in the ABI result
+    registers.  Flapjack stores all returned values in one list (where Cake
+    stores `v1` separately from `vs`), so the corresponding count is
+    `f - (LENGTH values - k)`. -/
+def wordStackReturnFreeCount (config : WordStackConfig) (values : List Nat) : Nat :=
+  wordStackCakeFrameSize config - (values.length - config.abiRegisterCount)
+
 def wordStackReturn (config : WordStackConfig) (returnLabel : Nat) (values : List Nat) :
     Option (StackProg α) := do
   let moves ← wordStackMovesToPhysical config values config.abiBase
@@ -1489,7 +1500,9 @@ def wordStackReturn (config : WordStackConfig) (returnLabel : Nat) (values : Lis
     | _ => returnLabel
   match values with
   | [] => pure moves
-  | _ => pure (wordStackJoin moves (.return returnRegister))
+  | _ => pure (wordStackJoin moves
+      (stackFreeIfNonzero (wordStackReturnFreeCount config values)
+        (.return returnRegister)))
 
 def wordToStackInst (config : WordStackConfig) : WordInst → Option (StackProg α)
   | .mem operator sourceOrDestination address =>
@@ -3337,6 +3350,9 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       (wordStackLocValue config destination source).map (fun code => (code, state))
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
+      /- Returning calls carry only value arguments.  The source-shaped
+         `panToWordTailCall` adapter adds the link slot only to tail calls;
+         ordinary calls therefore begin at the value ABI base. -/
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
@@ -3364,13 +3380,13 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
         config.frameOffset config.scratch destinations returnCode returnLabel entryLabel
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .call none (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.callAbiBase
       let callCode := .call none (.label target) none
       let freeCount := wordStackCallFreeCount config arguments.length
       pure (wordStackJoin argumentMoves (stackFreeIfNonzero freeCount callCode), state)
   | .call none (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.callAbiBase
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length

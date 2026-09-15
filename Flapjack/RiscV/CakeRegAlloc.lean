@@ -316,7 +316,7 @@ def cakeExtendGraph (ta : Nat → Nat) : List (Nat × Nat) →
 def cakeMkTags (n : Nat) (fromAllocator : NatInfoMap Nat) (fs : List Nat) :
     NatInfoMap CakeNodeTag :=
   (List.range n).foldl (fun tags i =>
-      let v := (cakeMapLookup fromAllocator i).getD 0
+      let v := CakeAlloc.spDefault fromAllocator i
       match v % 4 with
       | 1 => cakeMapUpdate tags i (if fs.contains v then .sTemp else .aTemp)
       | 3 => cakeMapUpdate tags i .sTemp

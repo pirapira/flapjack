@@ -1864,7 +1864,7 @@ def wordAllocateGraphProgram (program : WordProg α)
    The seed `Set` below still gives the graph all renamed formals and the
    clash oracle their ABI-entry interference; explicit entry `Move` programs
    are represented separately when the stack boundary is emitted. -/
-def wordAllocateGraphFunction (parameters : List Nat)
+def wordAllocateGraphFunction [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat) (colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
   let (state, renamedParameters, renamedProgram) :=
@@ -1884,7 +1884,7 @@ def wordAllocateGraphFunction (parameters : List Nat)
     list explicit lets callers choose the same fixed-source policy as the HOL
     allocator. -/
 
-def wordAllocateGraphFunctionWithEntry (parameters : List Nat)
+def wordAllocateGraphFunctionWithEntry [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat) (colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
   let (state, renamedParameters, renamedProgram) :=
@@ -1901,7 +1901,7 @@ def wordAllocateGraphFunctionWithEntry (parameters : List Nat)
 /-! The stack boundary needs the SSA names and allocation map together; it
     applies locations there rather than consuming graph-coloured names. -/
 
-def wordAllocateGraphFunctionWithEntryRenamed (parameters : List Nat)
+def wordAllocateGraphFunctionWithEntryRenamed [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat) (colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
   let (state, renamedParameters, renamedProgram) :=
@@ -2019,7 +2019,7 @@ def wordStackOnlyProgramAux (program : WordProg α)
 def wordStackOnly (program : WordProg α) : WordStackOnlyState :=
   wordStackOnlyProgramAux program { temporary := [], forced := [] }
 
-def wordAllocateGraphFunctionWithStackOnly (parameters : List Nat)
+def wordAllocateGraphFunctionWithStackOnly [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat) (colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
   let (state, renamedParameters, renamedProgram) :=
@@ -2039,7 +2039,7 @@ def wordAllocateGraphFunctionWithStackOnly (parameters : List Nat)
 /-! Stack lowering consumes the SSA names together with a `WordLocation` map;
 it must not consume the graph-coloured names, since those names erase the
 identity needed by `word_to_stack` to perform loads and stores. -/
-def wordAllocateGraphFunctionWithStackOnlyRenamed (parameters : List Nat)
+def wordAllocateGraphFunctionWithStackOnlyRenamed [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat) (colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
   let (state, renamedParameters, renamedProgram) :=
@@ -2055,7 +2055,7 @@ def wordAllocateGraphFunctionWithStackOnlyRenamed (parameters : List Nat)
     (fun allocation =>
       (state, renamedParameters, allocation, renamedProgram))
 
-def wordAllocateGraphFunctionWithStackOnlyPrefreezeRenamed (parameters : List Nat)
+def wordAllocateGraphFunctionWithStackOnlyPrefreezeRenamed [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat) (colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
   let (state, renamedParameters, renamedProgram) :=
@@ -2070,7 +2070,7 @@ def wordAllocateGraphFunctionWithStackOnlyPrefreezeRenamed (parameters : List Na
       moves colours stackStart).map
     (fun allocation => (state, renamedParameters, allocation, renamedProgram))
 
-def wordAllocateGraphFunctionWithEntryPrefreezeRenamed (parameters : List Nat)
+def wordAllocateGraphFunctionWithEntryPrefreezeRenamed [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat) (colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
   let (state, renamedParameters, renamedProgram) :=

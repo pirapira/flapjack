@@ -12,7 +12,7 @@ program-level linear allocator supplies the locations consumed by
 
 namespace Flapjack
 
-def wordAllocateLinearScanFunction (parameters : List Nat)
+def wordAllocateLinearScanFunction [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordLinearScanState × WordProg α) :=
   let (state, renamedParameters, renamedProgram) :=
@@ -26,7 +26,7 @@ def wordAllocateLinearScanFunction (parameters : List Nat)
     (fun allocation =>
       (state, renamedParameters, allocation, renamedProgram))
 
-theorem wordAllocateLinearScanFunction_safe
+theorem wordAllocateLinearScanFunction_safe [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
@@ -69,7 +69,7 @@ theorem wordLinearScanLocationsComplete_mem
         | some location => exact ⟨location, rfl⟩
       · exact ih hcomplete.2 name htail
 
-theorem wordAllocateLinearScanFunction_maps_parameters
+theorem wordAllocateLinearScanFunction_maps_parameters [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
@@ -104,7 +104,7 @@ theorem wordAllocateLinearScanFunction_maps_parameters
 
 /-! Full-SSA linear-scan allocation, including the explicit formal-entry
     move prefix used by the CakeML calling convention. -/
-def wordAllocateLinearScanFunctionWithEntry (parameters : List Nat)
+def wordAllocateLinearScanFunctionWithEntry [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordLinearScanState × WordProg α) :=
   let (state, renamedParameters, renamedProgram) :=
@@ -118,7 +118,7 @@ def wordAllocateLinearScanFunctionWithEntry (parameters : List Nat)
     (fun allocation =>
       (state, renamedParameters, allocation, renamedProgram))
 
-theorem wordAllocateLinearScanFunctionWithEntry_safe
+theorem wordAllocateLinearScanFunctionWithEntry_safe [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
@@ -143,7 +143,7 @@ theorem wordAllocateLinearScanFunctionWithEntry_safe
       (wordProgPreferenceEdges (wordSsaRenameFunctionWithEntry parameters program).2.snd))
     allocation_ hchecked
 
-theorem wordAllocateLinearScanFunctionWithEntry_maps_parameters
+theorem wordAllocateLinearScanFunctionWithEntry_maps_parameters [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)

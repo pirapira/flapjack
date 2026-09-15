@@ -75,7 +75,7 @@ theorem wordSsaRenameProgram_assign_state
       simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
         wordSsaFresh, wordSsaRenameExp]
 
-theorem wordSsaRenameProgram_seq
+theorem wordSsaRenameProgram_seq [OfNat α 0]
     (ssa : WordSsaState) (first second : WordProg α) :
     wordSsaRenameProgram ssa (.seq first second) =
       let (ssaFirst, renamedFirst) := wordSsaRenameProgram ssa first

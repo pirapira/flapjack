@@ -180,7 +180,8 @@ example :
     wordToStackProg
         { locations := [(0, .stack 2)], scratch := 31, stackBase := 10 }
         ((.return 0 [0]) : WordProg Nat) =
-      some (.seq (.stackLoad 1 12) (.return 0) : StackProg Nat) := by
+      some (.seq (.stackLoad 1 12)
+        (.seq (.stackLoad 31 12) (.return 31)) : StackProg Nat) := by
   simp [wordToStackProg, wordStackReturn, wordStackMovesToPhysical,
     wordStackReturnFreeCount, wordStackCakeFrameSize, stackFreeIfNonzero,
     wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,

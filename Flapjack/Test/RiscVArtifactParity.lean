@@ -100,9 +100,20 @@ def cakeGeneratedMainBytes : List (BitVec 8) :=
 def cakeMainBytes : List (BitVec 8) :=
   [0x13, 0x65, 0x70, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
-/-- Flapjack `cml_generated_main` bytes, identical to the original. -/
+/-- Flapjack `cml_generated_main` bytes.  With the faithful `loop_to_word`
+tail-call shape (`0 :: args`, loop_to_wordScript.sml:131) applied at the
+same pipeline point Cake uses (inside `loop_to_word$comp`, not via a later
+pan-to-word adapter), the dummy constant-`0` argument coalesces onto the
+`x0` sink exactly as CakeML's does, so the port's artifact is just the
+4-byte `jal`: byte-identical to Cake. -/
 def flapjackGeneratedMainBytes : List (BitVec 8) :=
   [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)
+
+/-- The wrapper is byte-identical to Cake: the former residual leading ABI
+move for the dummy tail-call argument is gone now that the `0 :: args`
+dummy is injected where Cake injects it. -/
+def generatedMainExactMatch : Bool :=
+  flapjackGeneratedMainBytes == cakeGeneratedMainBytes
 
 /-- Flapjack `cml_main` bytes: Cake's 8-byte return shape.  The Lab filter
 removes the no-op generated for Tick before final assembly. -/
@@ -149,12 +160,14 @@ def artifactAccepted : Bool :=
   | some image => image.sections.length == 2 && image.warnings.isEmpty
   | none => false
 
-/-- The generated initializer section is byte-identical across the compilers. -/
+/-- The generated initializer section is byte-identical to Cake (see
+`flapjackGeneratedMainBytes`). -/
 def generatedMainBytesMatch : Bool :=
-  cakeGeneratedMainBytes == flapjackGeneratedMainBytes
+  generatedMainExactMatch
 
-/-- The port lays out the two emitted sections exactly as the original does:
-`cml_generated_main` at base 1000 and `cml_main` at base 1004. -/
+/-- The port lays out the two emitted sections with `cml_generated_main` at
+base 1000 (4 bytes: Cake's direct `jal`) and `cml_main` at base 1004,
+exactly Cake's layout. -/
 def emittedLayoutMatches : Bool :=
   decClockEmittedSections ==
     [ (3, 1000, flapjackGeneratedMainBytes),
@@ -188,8 +201,9 @@ def constReturnEmittedSections : List (Nat × Nat × List (BitVec 8)) :=
   | some image => emittedSections image
   | none => []
 
-/-- The port lays out the two emitted sections exactly as it does for
-`dec_clock`: `cml_generated_main` at base 1000 and `cml_main` at base 1004. -/
+/-- The port lays out the two emitted sections as it does for `dec_clock`:
+`cml_generated_main` at base 1000 (4 bytes) and `cml_main` at base 1004,
+exactly Cake's layout. -/
 def constReturnLayoutMatches : Bool :=
   constReturnEmittedSections ==
     [ (3, 1000, flapjackGeneratedMainBytes),
@@ -224,7 +238,13 @@ def cakeEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
     (5, 1008, [0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
     (6, 1016, [0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)) ]
 
-/-- Flapjack emits the same layout and bytes as CakeML for this fixture. -/
+/-- Flapjack emits the same section order and bodies as CakeML for this
+fixture.  With the `0 :: args` dummy injected at the Cake point in
+`loop_to_word$comp` (see `flapjackGeneratedMainBytes`), the two entry
+sections (`cml_generated_main` at label 3 and the tail-calling `cml_main`
+at label 4) are Cake's 4-byte `jal` exactly, and the helper bodies
+(labels 5 and 6) are byte-identical to Cake: the whole artifact now matches
+`cakeEntryOrderSections`. -/
 def flapjackEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
   [ (3, 1000, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
     (4, 1004, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
@@ -243,14 +263,13 @@ def entryOrderEmittedSections : List (Nat × Nat × List (BitVec 8)) :=
 def entryOrderLayoutMatches : Bool :=
   entryOrderEmittedSections == cakeEntryOrderSections
 
-/-- The residual helper-body mismatch, recorded exactly rather than accepted:
-the original places the entry `cml_main` second (label 4, 4 bytes) and the
-helpers after it, while the port places helper `a` second (label 4, 12 bytes)
-and the entry `main` last (label 6).  Both entry sections are 4-byte jumps and
-section order and both entry jumps now agree, while the two helper bodies
-retain the tracked 12-byte lowering. -/
+/-- The artifact is now byte-identical to Cake: the emitted sections equal
+the port pin, and the port pin equals `cakeEntryOrderSections` (the former
+residual leading dummy-argument ABI move in the two entry sections is
+gone). -/
 def entryOrderExactParity : Bool :=
-  entryOrderEmittedSections == cakeEntryOrderSections
+  entryOrderEmittedSections == flapjackEntryOrderSections &&
+    flapjackEntryOrderSections == cakeEntryOrderSections
 
 
 /-- The `nested_expression` fixture source, taken from the original-side probe

@@ -67,11 +67,20 @@ def fullSsaBitmapLookupEntry (label : Nat)
       if candidate == label then some entry
       else fullSsaBitmapLookupEntry label sections
 
+/- The linked image layout is: stubs (raise, store-consts, GC) at labels
+   0–2, the Cake-generated entry wrapper at label 3, and the compiled
+   function at label 4.  The wrapper is a Cake tail call
+   (`Call NONE dest (0::args) NONE`, cakeml/pancake/loop_to_wordScript.sml:131)
+   whose lowering moves the link-slot constant 0 into the link register
+   before jumping, so a function entered through the wrapper returns to
+   address 0 (the top-level halt convention).  `executeFunctionAt` has no
+   halt-at-0 protocol, so the harness enters the compiled function (label 4)
+   directly with its own link register. -/
 def fullSsaMainBitmapSimpleGcMachineResult :
     Option (List (RiscV.Word 64)) := do
   let result ← fullSsaMainBitmapSimpleGcTargetLinked
   let sections := result.2
-  let entry ← fullSsaBitmapLookupEntry 3 sections
+  let entry ← fullSsaBitmapLookupEntry 4 sections
   let image := sections.flatMap (fun (_, _, code) => code)
   let returnAddress := BitVec.ofNat 64 (4 * image.length)
   RiscV.executeFunctionAt 10000 0 entry returnAddress [] image [2] []
@@ -81,7 +90,7 @@ def fullSsaEntryBitmapSimpleGcMachineResult :
     Option (List (RiscV.Word 64)) := do
   let result ← fullSsaEntryBitmapSimpleGcLinked
   let sections := result.2
-  let entry ← fullSsaBitmapLookupEntry 3 sections
+  let entry ← fullSsaBitmapLookupEntry 4 sections
   let image := sections.flatMap (fun (_, _, code) => code)
   let returnAddress := BitVec.ofNat 64 (4 * image.length)
   RiscV.executeFunctionAt 10000 0 entry returnAddress [] image [2] []

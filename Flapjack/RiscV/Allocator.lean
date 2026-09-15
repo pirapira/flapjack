@@ -1300,7 +1300,8 @@ def wordClashTree : WordProg α → List (List Nat × List Nat) → WordClashTre
       | some (entryNames, _) => .set entryNames
       | none => .set []
   | .raise exception, _ => .delta [] [exception]
-  | .return _ values, _ => .delta [] values
+  -- CakeML `word_allocScript.sml:1159`: the Return head variable is a read too.
+  | .return name values, _ => .delta [] (name :: values)
   | .tick, _ => .delta [] []
   | .locValue destination _label, _ => .delta [destination] []
   | .call returns _ arguments none, frames =>

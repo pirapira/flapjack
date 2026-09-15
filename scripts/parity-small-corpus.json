@@ -100,6 +100,12 @@
       "source_reference": "Relational-condition lowering (GitHub issue #1027 / flapjack-pxn.8.5.14.11): the original CakeML emitter branches directly on the negated comparison against the argument register with the then-branch as the fall-through path (addi a1,x0,10; bge a0,a1,+12; addi a0,x0,1; ret; addi a0,x0,0; ret), so no boolean is materialized and no extra jump is emitted; the port currently negates and swaps branches in Lab.labFlatten with an extra unconditional jump.",
       "cake_sha256": "824cf4a9a394bad0b27eea57244f11a52203123fa5587f63607cbd7e195d0fc5",
       "tracked_beads": ["flapjack-pxn.8.5.14.11"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/hello.pnk",
+      "source_reference": "hello.pnk whole-artifact parity (GitHub issue #1022 / bead flapjack-8tb): runtime sections cml__Init_0..cml__StoreConsts_5 and cml_generated_main_6 are byte-identical between the original and the port, and only cml_main differs (Cake 152 bytes versus Flapjack 216 bytes). The port keeps the incoming link-register copy and uncoalesced parallel-move copies, uses a direct JumpLower to the halt section for the frame-overflow check instead of the original inline halt form, and materialises the result through a shared return variable.",
+      "cake_sha256": "72e2d0d849bfcb8d5070a06c35d148d81c032982cd0ca5ce6e12bd91843dc270",
+      "tracked_beads": ["flapjack-8tb"]
     }
 
   ]

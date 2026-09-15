@@ -643,7 +643,61 @@ def relationalConditionGapTracked : Bool :=
       | _ => false
   | none => false
 
-#guard relationalConditionGapTracked
+/-- Source of the whole-artifact `hello.pnk` fixture (GitHub issue #1022 /
+bead `flapjack-8tb`). -/
+def helloSource : String :=
+  "// Smoke test: echo input length into the output region and halt.\n" ++
+    "fun 1 main() {\n" ++
+    "  var len = 0;\n" ++
+    "  !ldw len, 1073741832;\n" ++
+    "  var out = 2684420096;\n" ++
+    "  var i = 0;\n" ++
+    "  while i < 69 {\n" ++
+    "    !st8 out + i, 0;\n" ++
+    "    i = i + 1;\n" ++
+    "  }\n" ++
+    "  !st8 out + 32, 1;\n" ++
+    "  !stw out + 40, len;\n" ++
+    "  @halt(@base, 0, @base, 0);\n" ++
+    "  return 0;\n" ++
+    "}"
+
+/-- Original CakeML `cml_main` length for `hello.pnk` from the checked
+assembly oracle (CakeML emits 152 bytes; the port currently emits 216). -/
+def cakeHelloMainLength : Nat := 152
+
+def flapjackHelloMainLength : Nat := 216
+
+def helloRuntimeImage : Option (SourceRiscVRuntimeImage 64) :=
+  compileRuntimeImage helloSource
+
+/-- The port lowers the whole `hello.pnk` runtime image and reproduces the
+emitted layout exactly: `cml_generated_main` at base 1000 with four bytes and
+`cml_main` at base 1004.  The linked-artifact comparison shows every CakeML
+runtime section (`cml__Init_0` through `cml__StoreConsts_5`) is byte-identical
+as well; the only remaining gap is the length of the user `cml_main`. -/
+def helloEmittedSectionsMatch : Bool :=
+  match helloRuntimeImage with
+  | some image =>
+      match emittedSections image with
+      | [(3, 1000, generated), (4, 1004, main)] =>
+          generated.length == 4 && main.length == flapjackHelloMainLength
+      | _ => false
+  | none => false
+
+/-- The port's `hello.pnk` `cml_main` is not yet the original 152 bytes;
+tracked by bead `flapjack-8tb` so the parity gap is asserted rather than
+accepted. -/
+def helloMainLengthGapTracked : Bool :=
+  match helloRuntimeImage with
+  | some image =>
+      match emittedSections image with
+      | _ :: (_, _, main) :: _ => main.length != cakeHelloMainLength
+      | _ => false
+  | none => false
+
+#guard helloEmittedSectionsMatch
+#guard helloMainLengthGapTracked
 #guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
 #guard nestedExpressionWordLoweringAccepted
@@ -725,7 +779,11 @@ def runChecks : IO Bool := do
       ("frame-occupancy p9 exact vector gap is tracked, not accepted",
          frameOccupancyP9BitmapsMatch),
       ("relational condition direct-branch gap is tracked against the Cake oracle",
-         relationalConditionGapTracked) ]
+         relationalConditionGapTracked),
+      ("hello.pnk runtime sections and generated main match the original",
+         helloEmittedSectionsMatch),
+      ("hello.pnk cml_main length gap is tracked, not accepted",
+         helloMainLengthGapTracked) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

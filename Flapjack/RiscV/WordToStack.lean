@@ -1428,6 +1428,24 @@ def wordStackMovesFromPhysical (config : WordStackConfig) :
       let moves ← wordStackPhysicalMovesFrom config destinations source
       wordStackParallelLocationMove config moves
 
+/-! Entry parameters are Word names, while the RISC-V ABI source registers
+    are supplied by the target register-name map.  In particular Cake maps
+    Word slot 0 to the link register, so a source-shaped function must not
+    treat every entry slot as a consecutive ordinary argument register. -/
+def wordStackPhysicalMovesFromSources (config : WordStackConfig) :
+    List Nat → List Nat → Option (List (WordLocation × WordLocation))
+  | [], [] => some []
+  | destination :: destinations, source :: sources => do
+      let destination ← wordStackLocation config destination
+      let rest ← wordStackPhysicalMovesFromSources config destinations sources
+      pure ((destination, .register source) :: rest)
+  | _, _ => none
+
+def wordStackMovesFromPhysicalSources (config : WordStackConfig)
+    (destinations : List Nat) (sources : List Nat) : Option (StackProg α) := do
+  let moves ← wordStackPhysicalMovesFromSources config destinations sources
+  wordStackParallelLocationMove config moves
+
 def wordStackMovesToPhysical (config : WordStackConfig) :
     List Nat → Nat → Option (StackProg α)
   | sources, destination => do
@@ -2587,6 +2605,11 @@ def wordStackLiveEntryParameters (program : WordProg (Word width)) : List Nat :=
   | .seq (.move _ moves) _ => moves.map Prod.fst
   | _ => []
 
+def wordStackLiveEntryMoves (program : WordProg (Word width)) : List (Nat × Nat) :=
+  match program with
+  | .seq (.move _ moves) _ => moves
+  | _ => []
+
 def wordStackReturnLabel (config : WordStackConfig)
     (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat)) : Nat :=
   returns.map (fun result => result.2.2.2.fst) |>.getD config.returnLabel
@@ -3389,6 +3412,38 @@ def wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves
     bitmapRegister frameSlots width storeConstsStub state program
   let parameterMoves ← wordStackMovesFromPhysical config
     (wordStackLiveEntryParameters program) config.abiBase
+  let frameWords := wordStackFrameWords parameters registerCount frameSlots
+  pure (wordStackJoin (.stackAlloc frameWords)
+    (wordStackJoin parameterMoves body), state)
+
+/-! Source-shaped entry lowering with an explicit target ABI source map.  This
+    is the same Cake frame and bitmap lowering as the ordinary entrypoint, but
+    it preserves special source names such as Word slot 0 -> RISC-V link
+    register instead of assuming a single consecutive source-register base. -/
+def wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMovesWithSources
+    [NeZero width] (config : WordStackConfig) (_parameters : List Nat)
+    (sourceRegister : Nat → Nat)
+    (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
+    (state : WordStackBitmapState) (program : WordProg (Word width)) :
+    Option (StackProg Nat × WordStackBitmapState) := do
+  let (body, state) ← wordToStackProgWordWithLocationBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
+  let entryMoves := wordStackLiveEntryMoves program
+  let parameterMoves ← wordStackMovesFromPhysicalSources config
+    (entryMoves.map Prod.fst) (entryMoves.map (fun move => sourceRegister move.2))
+  pure (wordStackJoin parameterMoves body, state)
+
+def wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMovesWithSources
+    [NeZero width] (config : WordStackConfig) (parameters : List Nat)
+    (sourceRegister : Nat → Nat)
+    (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
+    (state : WordStackBitmapState) (program : WordProg (Word width)) :
+    Option (StackProg Nat × WordStackBitmapState) := do
+  let (body, state) ← wordToStackProgWordWithLocationBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
+  let entryMoves := wordStackLiveEntryMoves program
+  let parameterMoves ← wordStackMovesFromPhysicalSources config
+    (entryMoves.map Prod.fst) (entryMoves.map (fun move => sourceRegister move.2))
   let frameWords := wordStackFrameWords parameters registerCount frameSlots
   pure (wordStackJoin (.stackAlloc frameWords)
     (wordStackJoin parameterMoves body), state)

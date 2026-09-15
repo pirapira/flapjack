@@ -156,7 +156,10 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
       | .opW => (panModelReadWord sharedDomain (panValueWordMemory memory) address).map .word
       | .op8 => (panModelReadByte model sharedDomain (panValueWordMemory memory)
           bytesInWord address false).map .word
-      | .op16 => if model.aligned 2 address then
+      /- CakeML's `sh_mem_load` has no `aligned` requirement for Op16/Op32;
+         the only check is `byte_align addr ∈ sh_memaddrs`
+         (`panSemScript.sml:519-520`). -/
+      | .op16 =>
           let alignedAddress := model.byteAlign bytesInWord address
           if sharedDomain alignedAddress then do
             let cell ← memory alignedAddress
@@ -165,9 +168,17 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
               [model.getByte bytesInWord address cell false,
                model.getByte bytesInWord (address + 1) cell false]))
           else none
-        else none
-      | .op32 => (panModelRead32 model sharedDomain (panValueWordMemory memory)
-          bytesInWord address false).map .word
+      | .op32 =>
+          let alignedAddress := model.byteAlign bytesInWord address
+          if sharedDomain alignedAddress then do
+            let cell ← memory alignedAddress
+            let .word cell := cell | none
+            pure (.word (model.wordOfBytes false
+              [model.getByte bytesInWord address cell false,
+               model.getByte bytesInWord (address + 1) cell false,
+               model.getByte bytesInWord (address + 2) cell false,
+               model.getByte bytesInWord (address + 3) cell false]))
+          else none
     sharedStore := fun memory bytesInWord size address value =>
       match value with
       | .word value => match size with
@@ -180,7 +191,10 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
                 if current == model.byteAlign bytesInWord address then
                   (wordMemory current).map .word
                 else memory current
-          | .op16 => if model.aligned 2 address then
+          /- CakeML's `sh_mem_store` has no `aligned` requirement for
+             Op16/Op32; the only check is `byte_align addr ∈ sh_memaddrs`
+             (`panSemScript.sml:537-540`). -/
+          | .op16 =>
               let alignedAddress := model.byteAlign bytesInWord address
               if sharedDomain alignedAddress then do
                 let cell ← memory alignedAddress
@@ -192,12 +206,22 @@ def panValueMemoryAccessOfModel [BEq α] [Add α] [OfNat α 0] [OfNat α 1]
                 pure (fun current =>
                   if current == alignedAddress then some (.word cell1) else memory current)
               else none
-            else none
-          | .op32 => (panModelStore32 model sharedDomain (panValueWordMemory memory)
-              bytesInWord address value false).map fun wordMemory current =>
-                if current == model.byteAlign bytesInWord address then
-                  (wordMemory current).map .word
-                else memory current
+          | .op32 =>
+              let alignedAddress := model.byteAlign bytesInWord address
+              if sharedDomain alignedAddress then do
+                let cell ← memory alignedAddress
+                let .word cell := cell | none
+                let cell0 := model.setByte bytesInWord address
+                  (model.getByte bytesInWord 0 value false) cell false
+                let cell1 := model.setByte bytesInWord (address + 1)
+                  (model.getByte bytesInWord 1 value false) cell0 false
+                let cell2 := model.setByte bytesInWord (address + 2)
+                  (model.getByte bytesInWord 2 value false) cell1 false
+                let cell3 := model.setByte bytesInWord (address + 3)
+                  (model.getByte bytesInWord 3 value false) cell2 false
+                pure (fun current =>
+                  if current == alignedAddress then some (.word cell3) else memory current)
+              else none
       | .rStruct _ | .nStruct _ _ => none
   }
 

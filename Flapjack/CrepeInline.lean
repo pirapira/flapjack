@@ -56,7 +56,10 @@ decreasing_by
 
 def crepNotBranchRet : CrepProg α → Bool
   | .dec _ _ body => crepNotBranchRet body
-  | .seq first second => !crepHasReturn first && !crepHasReturn second
+  /- CakeML recurses `not_branch_ret` into both `Seq` children
+     (`crep_inlineScript.sml:70`); the non-recursive `has_return` test is
+     only used for `If`/`While`. -/
+  | .seq first second => crepNotBranchRet first && crepNotBranchRet second
   | .ite _ thenBranch elseBranch =>
       !crepHasReturn thenBranch && !crepHasReturn elseBranch
   | .while _ body => !crepHasReturn body

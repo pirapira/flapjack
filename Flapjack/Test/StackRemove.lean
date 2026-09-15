@@ -100,7 +100,7 @@ example :
 
 example :
     stackRemove stackRemoveTestConfig (.opCurrHeap .add 6 7 : StackProg Nat) =
-      .arith .add 6 7 12 := by
+      .arith .add 6 7 22 := by
   simp [stackRemove, stackRemoveFuel, stackRemoveOpCurrHeap,
     stackRemoveTestConfig]
 

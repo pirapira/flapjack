@@ -127,7 +127,7 @@ theorem compileLabProgram_call_return_execute :
        ⟨2, [
           .label 2 0 0,
           .asm (.const 2 7) [] 0,
-          .labAsm .return [] 0]⟩,
+          .labAsm (.return 0) [] 0]⟩,
        ⟨3, [.label 3 0 0]⟩]).bind
         (fun code =>
           (executeCodeUntil 20 (0 : Word 64) (BitVec.ofNat 64 28) code

@@ -288,7 +288,6 @@ def cakeAllocateWordFunctionAfterDead [OfNat α 0] (currentFunction : Nat)
   let ssaProgram := wordRemoveDeadProgram ssaProgram
   let ssaProgram := wordCseProp ssaProgram
   let ssaProgram := wordCopyProp ssaProgram
-  let ssaProgram := wordThreeToTwoReg ssaProgram
   let ssaProgram := wordRemoveUnreachableAfterCopy ssaProgram
   let ssaProgram := wordRemoveDeadProgram ssaProgram
   let tree := wordClashTree ssaProgram []

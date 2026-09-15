@@ -99,8 +99,8 @@ def selectedBinaryAssignment : WordProg Nat :=
 
 def selectedBinaryAssignmentShape : Bool :=
   match selectedBinaryAssignment with
-  | .seq (.assign 6 (.var 2))
-      (.seq (.assign 7 (.var 4))
+  | .seq (.assign 6 (.var 4))
+      (.seq (.assign 7 (.var 2))
         (.assign 5 (.op .add [.var 6, .var 7]))) => true
   | _ => false
 

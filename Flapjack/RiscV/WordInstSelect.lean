@@ -67,8 +67,8 @@ def wordInstFlattenExp : WordExp α → WordExp α
   | .op _ [expression] => wordInstFlattenExp expression
   | .op operator (expression :: expressions) =>
       .op operator
-        [ wordInstFlattenExp (.op operator expressions)
-        , wordInstFlattenExp expression ]
+        [ wordInstFlattenExp expression
+        , wordInstFlattenExp (.op operator expressions) ]
   | .load address => .load (wordInstFlattenExp address)
   | .shift operator left right =>
       .shift operator (wordInstFlattenExp left) (wordInstFlattenExp right)

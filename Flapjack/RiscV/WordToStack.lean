@@ -355,18 +355,23 @@ def wordStackLongMulMoveFromPhysical (config : WordStackConfig)
 
 def wordStackLongMulInst (config : WordStackConfig)
     (operation : WordArith) : Option (StackProg α) :=
-  if wordStackLongMulLocationsSafe config operation then
-    match operation with
-    | .longMul destinationLeft destinationRight sourceLeft sourceRight => do
-        match wordStackLocation config destinationLeft,
-          wordStackLocation config destinationRight,
-          wordStackLocation config sourceLeft,
-          wordStackLocation config sourceRight with
-        | some (.register destinationLeft), some (.register destinationRight),
-            some (.register sourceLeft), some (.register sourceRight) =>
-            pure (.inst (.arith (.longMul destinationLeft destinationRight
-              sourceLeft sourceRight)))
-        | _, _, _, _ =>
+  match operation with
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      /- As for `AddCarry`, CakeML's `wInst` emits the architectural
+         instruction directly when the operands already live in registers and
+         only loads them through the frame otherwise
+         (`word_to_stackScript.sml` via `wReg1`, `wReg2`, `wRegWrite1`), so the
+         scratch-exclusion guard only restricts the loading fallback. -/
+      match wordStackLocation config destinationLeft,
+        wordStackLocation config destinationRight,
+        wordStackLocation config sourceLeft,
+        wordStackLocation config sourceRight with
+      | some (.register destinationLeft), some (.register destinationRight),
+          some (.register sourceLeft), some (.register sourceRight) =>
+          pure (.inst (.arith (.longMul destinationLeft destinationRight
+            sourceLeft sourceRight)))
+      | _, _, _, _ =>
+          if wordStackLongMulLocationsSafe config operation then do
             let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft config.scratch
             let loadRight ← wordStackLongMulMoveToPhysical config sourceRight config.addressScratch
             let writeLeft ← wordStackLongMulMoveFromPhysical config destinationLeft
@@ -378,30 +383,76 @@ def wordStackLongMulInst (config : WordStackConfig)
                   (.inst (.arith (.longMul config.specialScratch config.scratch
                     config.scratch config.addressScratch)))
                   (wordStackJoin writeLeft writeRight))))
-    | _ => none
-  else
-    none
+          else
+          match wordStackLocation config sourceLeft, wordStackLocation config sourceRight,
+            wordStackLocation config destinationLeft,
+            wordStackLocation config destinationRight with
+          | some leftLocation, some rightLocation, some destLocation, some destRightLocation =>
+              /- The allocator may colour an operand onto one of the staging
+                 registers, so the load order has to be chosen dynamically:
+                 the left load writes `scratch` and the right load writes
+                 `addressScratch`, so whichever source still lives in the
+                 register about to be written must be read first.  The result
+                 moves read `specialScratch` and `scratch`, so the write order
+                 is chosen the same way.  The two degenerate cases where
+                 neither order works keep failing explicitly. -/
+              if (leftLocation = .register config.addressScratch &&
+                    rightLocation = .register config.scratch) ||
+                  (destLocation = .register config.scratch &&
+                    destRightLocation = .register config.specialScratch) then
+                none
+              else do
+                let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft config.scratch
+                let loadRight ← wordStackLongMulMoveToPhysical config sourceRight config.addressScratch
+                let writeLeft ← wordStackLongMulMoveFromPhysical config destinationLeft
+                  config.specialScratch
+                let writeRight ← wordStackLongMulMoveFromPhysical config destinationRight
+                  config.scratch
+                let loads :=
+                  if leftLocation = .register config.addressScratch then
+                    wordStackJoin loadLeft loadRight
+                  else wordStackJoin loadRight loadLeft
+                let writes :=
+                  if destLocation = .register config.scratch then
+                    wordStackJoin writeRight writeLeft
+                  else wordStackJoin writeLeft writeRight
+                pure (wordStackJoin loads
+                  (wordStackJoin
+                    (.inst (.arith (.longMul config.specialScratch config.scratch
+                      config.scratch config.addressScratch)))
+                    writes))
+          | _, _, _, _ => none
+  | _ => none
 
 def wordStackAddCarryInst (config : WordStackConfig)
     (operation : WordArith) : Option (StackProg α) :=
   match operation with
   | .addCarry destination resultCarry sourceLeft sourceRight carryIn =>
-      let safe name := match wordStackLocation config name with
-        | some location => wordStackAddCarryLocationSafe config location
-        | none => false
-      if safe destination && safe resultCarry && safe sourceLeft &&
-          safe sourceRight && safe carryIn then
-        match wordStackLocation config destination,
-          wordStackLocation config resultCarry,
-          wordStackLocation config sourceLeft,
-          wordStackLocation config sourceRight,
-          wordStackLocation config carryIn with
-        | some (.register destination), some (.register resultCarry),
-            some (.register sourceLeft), some (.register sourceRight),
-            some (.register carryIn) =>
-            some (.inst (.arith (.addCarry destination resultCarry sourceLeft
-              sourceRight carryIn)))
-        | _, _, _, _, _ => do
+      /- CakeML's `wInst (Arith (AddCarry n1 n2 n3 n4))` emits the
+         architectural instruction directly whenever the operands already
+         live in registers, and only falls back to loading them through the
+         frame otherwise (`word_to_stackScript.sml:114-118` via `wReg1`,
+         `wReg2` and `wRegWrite1`).  The all-register case therefore does not
+         touch any scratch register, so the scratch-exclusion guard below
+         must only restrict the fallback: guarding the direct case made the
+         lowering fail whenever the allocator coloured an operand with a
+         scratch register such as the carry scratch (GH #1015 `u256_sub`). -/
+      match wordStackLocation config destination,
+        wordStackLocation config resultCarry,
+        wordStackLocation config sourceLeft,
+        wordStackLocation config sourceRight,
+        wordStackLocation config carryIn with
+      | some (.register destination), some (.register resultCarry),
+          some (.register sourceLeft), some (.register sourceRight),
+          some (.register carryIn) =>
+          some (.inst (.arith (.addCarry destination resultCarry sourceLeft
+            sourceRight carryIn)))
+      | _, _, _, _, _ =>
+          let safe name := match wordStackLocation config name with
+            | some location => wordStackAddCarryLocationSafe config location
+            | none => false
+          if safe destination && safe resultCarry && safe sourceLeft &&
+              safe sourceRight && safe carryIn then do
             let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
               config.addressScratch
             let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
@@ -420,8 +471,8 @@ def wordStackAddCarryInst (config : WordStackConfig)
                       config.addressScratch config.addressScratch
                       config.specialScratch config.carryScratch)))
                     (wordStackJoin writeDestination writeResultCarry)))))
-      else
-        none
+          else
+            none
   | _ => none
 
 /-! Lower CakeML WordLang's four-register AddCarry without re-encoding it as
@@ -431,19 +482,22 @@ def wordStackCakeAddCarryInst (config : WordStackConfig)
     (operation : WordArith) : Option (StackProg α) :=
   match operation with
   | .cakeAddCarry destination sourceLeft sourceRight carry =>
-      let safe name := match wordStackLocation config name with
-        | some location => wordStackAddCarryLocationSafe config location
-        | none => false
-      if safe destination && safe sourceLeft && safe sourceRight && safe carry then
-        match wordStackLocation config destination,
-          wordStackLocation config sourceLeft,
-          wordStackLocation config sourceRight,
-          wordStackLocation config carry with
-        | some (.register destination), some (.register sourceLeft),
-            some (.register sourceRight), some (.register carry) =>
-            some (.inst (.arith (.cakeAddCarry destination sourceLeft
-              sourceRight carry)))
-        | _, _, _, _ => do
+      /- The all-register case emits the architectural instruction directly and
+         needs no scratch register, so the guard only restricts the fallback
+         (see `wordStackAddCarryInst`). -/
+      match wordStackLocation config destination,
+        wordStackLocation config sourceLeft,
+        wordStackLocation config sourceRight,
+        wordStackLocation config carry with
+      | some (.register destination), some (.register sourceLeft),
+          some (.register sourceRight), some (.register carry) =>
+          some (.inst (.arith (.cakeAddCarry destination sourceLeft
+            sourceRight carry)))
+      | _, _, _, _ =>
+          let safe name := match wordStackLocation config name with
+            | some location => wordStackAddCarryLocationSafe config location
+            | none => false
+          if safe destination && safe sourceLeft && safe sourceRight && safe carry then do
             let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
               config.addressScratch
             let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
@@ -461,8 +515,8 @@ def wordStackCakeAddCarryInst (config : WordStackConfig)
                     (.inst (.arith (.cakeAddCarry config.scratch
                       config.addressScratch config.specialScratch config.carryScratch)))
                     (wordStackJoin writeDestination writeCarry)))))
-      else
-        none
+          else
+            none
   | _ => none
 
 /-! CakeML's `LongDiv` uses a fixed four-register convention: the two-word
@@ -1288,11 +1342,9 @@ def wordStackLocationMove (config : WordStackConfig)
       if destination = source then some .skip
       else some (.arith .or destination source source)
   | .register destination, .stack slot =>
-      pure (.seq (.stackLoad config.scratch (wordStackOffset config slot))
-        (.arith .or destination config.scratch config.scratch))
+      pure (.stackLoad destination (wordStackOffset config slot))
   | .stack slot, .register source =>
-      pure (.seq (.arith .or config.scratch source source)
-        (.stackStore config.scratch (wordStackOffset config slot)))
+      pure (.stackStore source (wordStackOffset config slot))
   | .stack destinationSlot, .stack sourceSlot =>
       if destinationSlot = sourceSlot then
         some .skip
@@ -1356,10 +1408,24 @@ def wordStackParallelLocationMoveAux (config : WordStackConfig) :
   | 0, _ => none
   | fuel + 1, moves =>
       let destinations := wordStackLocationMoveDestinations moves
-      let reserved location :=
-        location = .register config.scratch ||
-          location = .register config.addressScratch
-      if moves.any (fun move => reserved move.1) then
+      -- A reserved register may be a move destination as long as the
+      -- scheduling below never has to borrow it as a temporary.  After the
+      -- Cake-style single-instruction moves only a stack-to-stack move borrows
+      -- `scratch`, and only an unbreakable cycle borrows `addressScratch`;
+      -- rejecting every reserved destination up front refuses register-only
+      -- programs that need no temporary at all.
+      let stackToStack (move : WordLocation × WordLocation) : Bool :=
+        match move.1, move.2 with
+        | .stack _, .stack _ => true
+        | _, _ => false
+      let scratchBusy :=
+        moves.any (fun (move : WordLocation × WordLocation) =>
+          move.1 = WordLocation.register config.scratch)
+      let addressScratchBusy :=
+        moves.any (fun (move : WordLocation × WordLocation) =>
+          move.1 = WordLocation.register config.addressScratch)
+      if (moves.any stackToStack && scratchBusy) ||
+          (addressScratchBusy && (wordStackLocationMoveReady destinations moves).isNone) then
         none
       else if !destinations.Nodup then
         none
@@ -1430,22 +1496,27 @@ def wordStackPhysicalMovesFrom (config : WordStackConfig) :
 termination_by destinations => sizeOf destinations
 decreasing_by all_goals decreasing_trivial
 
+/-! Argument moves start at the ABI base the caller supplied, so the
+    overflow index must be counted from that same base.  Counting from
+    `config.abiBase` instead collapsed the first arguments onto one
+    destination whenever a call used a different base. -/
+def wordStackPhysicalMovesToIndexed (config : WordStackConfig) :
+    Nat → List Nat → Nat → Option (List (WordLocation × WordLocation))
+  | _, [], _ => some []
+  | index, source :: sources, base => do
+      let source ← wordStackLocation config source
+      let destinationLocation :=
+        if config.abiFrameSlots = 0 then .register base
+        else wordStackPhysicalLocation config index base
+      let rest ← wordStackPhysicalMovesToIndexed config (index + 1) sources
+        (base + config.abiStride)
+      pure ((destinationLocation, source) :: rest)
+termination_by index sources _ => sizeOf sources
+decreasing_by all_goals decreasing_trivial
+
 def wordStackPhysicalMovesTo (config : WordStackConfig) :
     List Nat → Nat → Option (List (WordLocation × WordLocation))
-  | [], _ => some []
-  | source :: sources, destination => do
-      let source ← wordStackLocation config source
-      let index :=
-        if config.abiFrameSlots = 0 then 0
-        else (destination - config.abiBase) / config.abiStride
-      let destinationLocation :=
-        if config.abiFrameSlots = 0 then .register destination
-        else wordStackPhysicalLocation config index config.abiBase
-      let rest ← wordStackPhysicalMovesTo config sources
-        (destination + config.abiStride)
-      pure ((destinationLocation, source) :: rest)
-termination_by sources => sizeOf sources
-decreasing_by all_goals decreasing_trivial
+  | sources, base => wordStackPhysicalMovesToIndexed config 0 sources base
 
 def wordStackMovesFromPhysical (config : WordStackConfig) :
     List Nat → Nat → Option (StackProg α)

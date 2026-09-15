@@ -45,7 +45,8 @@ example :
     (handlerCode := .seq .skip (.call none (.label 0) none))
     (hargs := by
       simp [handlerLoweringConfig, wordStackMovesToPhysical,
-        wordStackPhysicalMovesTo, wordStackParallelLocationMove,
+        wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
+        wordStackParallelLocationMove,
         wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
         wordStackLocationMoveRemoveDestination, wordStackLocationMove])
     (hlive := by

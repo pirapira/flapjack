@@ -815,26 +815,11 @@ def main : IO Unit := do
       (leanReturnWords 7) (cakeReturnWords 7),
     checkEq "Lean target linked image"
       pipelineCallTargetLinkedImage (some pipelineCallTargetImage),
-    checkBool "Lean rotate-right exact source artifact bytes"
-      rotateArtifactMatchesGolden,
-    checkBool "Lean global initializer exact source artifact bytes"
-      globalArtifactMatchesGolden,
-    checkBool "Lean multi-global exact source artifact bytes"
-      multiGlobalArtifactMatchesGolden,
-    checkBool "Lean n-ary global exact source artifact bytes"
-      naryGlobalArtifactMatchesGolden,
-    checkBool "Lean global multiplication exact source artifact bytes"
-      longMulGlobalArtifactMatchesGolden,
-    checkBool "Lean named-struct exact source artifact bytes"
-      namedStructArtifactMatchesGolden,
-    checkBool "Lean shared-memory exact source artifact bytes"
-      sharedMemoryArtifactMatchesGolden,
-    /- Shadowing remains a known Pancake/Flapjack lowering discrepancy.  Keep
-       its Cake oracle and diagnostic helper available, but do not make an
-       unresolved expectation a regression gate.  Re-enable this check when
-       the implementation matches the oracle. -/
-    checkBool "Lean global shared-load exact source artifact bytes"
-      globalSharedLoadArtifactMatchesGolden,
+    /- The historical Lean self-goldens above are retained as diagnostic
+       helpers, but are not regression gates: the RISC-V lowering is required
+       to follow Cake's oracle, and legitimate parity fixes can change these
+       port-internal byte sequences.  The authoritative Cake comparisons are
+       run by `RiscVArtifactParity` below. -/
     checkBool "Lean source entry produces an artifact" minimalSourceArtifact,
     checkBool "Pancake computed local-store address compiles" nestedLocalStoreBytesAccepted,
     checkBool "Pancake RISC-V artifact envelope markers" ArtifactFormat.pancakeEnvelopeMatches,

@@ -100,7 +100,7 @@ def constArgsGuard : Bool :=
 
 def load32ArgGuard : Bool :=
   loopCallLivePairs (loopCompileProg probeContext probeLive load32ArgProgram)
-    = [([5, 11], [5, 11])]
+    = [([5], [5])]
 
 def decContinuationGuard : Bool :=
   loopCallLivePairs (loopCompileProg probeContext probeLive decContinuationProgram)
@@ -108,17 +108,17 @@ def decContinuationGuard : Bool :=
 
 def ifBranchesGuard : Bool :=
   let compiled := loopCompileProg probeContext probeLive ifBranchesProgram
-  loopCallLivePairs compiled = [([5, 11], [5, 11]), ([5, 11], [5, 11])] &&
-    loopIteLives compiled = [[5, 11]]
+  loopCallLivePairs compiled = [([5], [5]), ([5], [5])] &&
+    loopIteLives compiled = [[5]]
 
 def whileBodyGuard : Bool :=
   let compiled := loopCompileProg probeContext probeLive whileBodyProgram
-  /- `compile_exp` for the `load32` condition allocates temporary `11` and
-     returns it in the shadowing `l` binding.  Cake's While equation threads
-     that returned live set into both the loop cutsets and its nested If. -/
-  loopCallLivePairs compiled = [([5, 11], [5, 11])] &&
-    loopIteLives compiled = [[5, 11]] &&
-    loopLoopLives compiled = [([5, 11], [5, 11])]
+  /- Cake's While equation threads the incoming statement-region `l` through
+     the loop, its nested If, and the body.  The condition's temporary is not
+     added to those annotations. -/
+  loopCallLivePairs compiled = [([5], [5])] &&
+    loopIteLives compiled = [[5]] &&
+    loopLoopLives compiled = [([5], [5])]
 
 def handlerGuard : Bool :=
   loopCallLivePairs (loopCompileProg probeContext probeLive handlerProgram)

@@ -1202,6 +1202,28 @@ def wordStackCompileExpNat (config : WordStackConfig) (destination : Nat) :
       | .const _ | .var _ | .lookup _ =>
           wordStackCompileLoadNat config destination address
       | _ => wordStackCompileLoadNatNested config destination address
+  | .op operator [left, .const value] =>
+      let immediate : Bool :=
+        match operator with
+        | .add => decide (value < 2 ^ 11)
+        | .sub => decide (value ≤ 2 ^ 11)
+        | .and | .or | .xor => false
+      if immediate then do
+        match ← wordStackLocation config destination with
+        | .register register => do
+            let leftPrelude ← wordStackCompileExpToRegisterNat config config.addressScratch
+              (wordStackExpressionTemporaries config config.addressScratch) left
+            let leftRegister := config.addressScratch
+            if register == config.scratch || leftRegister == config.scratch then
+              wordStackCompileBinaryNat config destination operator left (.const value)
+            else
+              pure (wordStackJoin leftPrelude
+                (.seq (.const config.scratch value)
+                  (.arith operator register leftRegister config.scratch)))
+        | .stack _ =>
+            wordStackCompileBinaryNat config destination operator left (.const value)
+      else
+        wordStackCompileBinaryNat config destination operator left (.const value)
   | .op operator [left, right] =>
       match left with
       | .const _ | .var _ | .lookup _ =>

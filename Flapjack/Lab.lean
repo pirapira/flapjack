@@ -217,7 +217,7 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
   | .seq (.const scratch value)
       (.arith operator destination left right) =>
       let canFuse :=
-        scratch != destination && right == scratch && destination == left &&
+        scratch != destination && right == scratch &&
           match operator with
           | .add => value < 2 ^ 11
           | .sub => value ≤ 2 ^ 11

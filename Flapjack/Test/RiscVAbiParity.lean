@@ -75,10 +75,21 @@ def parallelMoveKeepsLiveSource : Bool :=
   | some (.seq (.arith .or 3 1 1) (.arith .or 1 2 2)) => true
   | _ => false
 
+/-- The same dependency order for the `WordLocation` scheduler, which drives
+    the call argument/return and FFI moves.  For `{r3 <- r1, r1 <- r2}` the
+    ready move `r1 <- r2` is emitted first and the postponed `r3 <- r1` last, so
+    `r3` keeps the original `r1` instead of the new `r2`. -/
+def parallelLocationMoveKeepsLiveSource : Bool :=
+  match wordStackParallelLocationMove (α := Nat) parallelMoveConfig
+      [(.register 3, .register 1), (.register 1, .register 2)] with
+  | some (.seq (.arith .or 3 1 1) (.arith .or 1 2 2)) => true
+  | _ => false
+
 #guard abiArgumentRegistersMatch
 #guard abiLinkRegisterMatches
 #guard abiNamesIncludeLinkSlot
 #guard parallelMoveKeepsLiveSource
+#guard parallelLocationMoveKeepsLiveSource
 
 def runChecks : IO Bool := do
   let checks := [
@@ -86,7 +97,9 @@ def runChecks : IO Bool := do
     ("the Cake ABI link register is hardware one", abiLinkRegisterMatches),
     ("the Cake ABI name list includes the link slot", abiNamesIncludeLinkSlot),
     ("parallel moves preserve a source that a later move reads",
-      parallelMoveKeepsLiveSource)]
+      parallelMoveKeepsLiveSource),
+    ("parallel location moves preserve a source that a later move reads",
+      parallelLocationMoveKeepsLiveSource)]
   let mut ok := true
   for (label, passed) in checks do
     if passed then

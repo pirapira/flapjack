@@ -34,6 +34,186 @@ theorem evalWordStackMachine_wordStackJoin_exists [NeZero width]
         refine ⟨middle, rfl, ?_⟩
         simpa [hfirst] using heval
 
+theorem evalWordStackMachine_reversedSequentialLocationMove_preserves_other_value
+    [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (moves : List (WordLocation × WordLocation)) (other : WordLocation)
+    (hdestinations : (moves.map Prod.fst).Nodup)
+    (hreserved : ∀ move, move ∈ moves →
+      move.1 ≠ .register config.scratch ∧
+      move.1 ≠ .register config.addressScratch ∧
+      move.2 ≠ .register config.scratch ∧
+      move.2 ≠ .register config.addressScratch)
+    (hotherDestination : other ∉ moves.map Prod.fst)
+    (hotherScratch : other ≠ .register config.scratch)
+    (heval : (wordStackReversedSequentialLocationMove (α := Nat) config moves).bind
+      (evalWordStackMachine state) = some final) :
+    wordStackLocationValue config final other =
+      wordStackLocationValue config state other := by
+  induction moves generalizing state final with
+  | nil =>
+      simp [wordStackReversedSequentialLocationMove] at heval
+      cases heval
+      rfl
+  | cons head tail ih =>
+      have hdestinations' :
+          (head.1 :: tail.map Prod.fst).Nodup := by
+        simpa only [List.map_cons] using hdestinations
+      have htailDestinations : (tail.map Prod.fst).Nodup :=
+        (List.nodup_cons.mp hdestinations').2
+      have htailReserved : ∀ move, move ∈ tail →
+          move.1 ≠ .register config.scratch ∧
+          move.1 ≠ .register config.addressScratch ∧
+          move.2 ≠ .register config.scratch ∧
+          move.2 ≠ .register config.addressScratch := by
+        intro move hmove
+        exact hreserved move (by simp [hmove])
+      have hotherHead : other ≠ head.1 := by
+        intro heq
+        apply hotherDestination
+        simp [heq]
+      have hotherTail : other ∉ tail.map Prod.fst := by
+        intro hmove
+        apply hotherDestination
+        simp [hmove]
+      have hheadMove :
+          wordStackLocationMove (α := Nat) config head.1 head.2 ≠ none := by
+        cases head.1 <;> cases head.2 <;>
+          simp [wordStackLocationMove] <;> split <;> simp
+      have hheadMove' : ∃ last,
+          wordStackLocationMove (α := Nat) config head.1 head.2 = some last := by
+        cases hmove : wordStackLocationMove (α := Nat) config head.1 head.2 with
+        | none => exact False.elim (hheadMove hmove)
+        | some last => exact ⟨last, rfl⟩
+      obtain ⟨last, hlast⟩ := hheadMove'
+      rw [wordStackReversedSequentialLocationMove, hlast] at heval
+      cases htail : wordStackReversedSequentialLocationMove (α := Nat) config tail with
+      | none => simp [htail] at heval
+      | some rest =>
+          simp [htail] at heval
+          obtain ⟨middle, hrestEval, hlastEval⟩ :=
+            evalWordStackMachine_wordStackJoin_exists state final rest last heval
+          have htailEval :
+              (wordStackReversedSequentialLocationMove (α := Nat) config tail).bind
+                (evalWordStackMachine state) = some middle := by
+            rw [htail]
+            simpa using hrestEval
+          have hlastEval' :
+              (wordStackLocationMove (α := Nat) config head.1 head.2).bind
+                (evalWordStackMachine middle) = some final := by
+            simpa [hlast] using hlastEval
+          have htailOther := ih state middle htailDestinations htailReserved
+            hotherTail htailEval
+          have hlastOther :=
+            evalWordStackMachine_locationMove_preserves_other_value
+              config middle final head.1 head.2 other hotherHead hotherScratch
+              hlastEval'
+          calc
+            wordStackLocationValue config final other =
+                wordStackLocationValue config middle other := hlastOther
+            _ = wordStackLocationValue config state other := htailOther
+
+theorem evalWordStackMachine_reversedSequentialLocationMove_preserves_move_value
+    [NeZero width]
+    (config : WordStackConfig) (state final : WordStackMachineState width)
+    (moves : List (WordLocation × WordLocation))
+    (target : WordLocation × WordLocation)
+    (hdestinations : (moves.map Prod.fst).Nodup)
+    (hnoSource : ∀ move, move ∈ moves →
+      move.2 ∉ moves.map Prod.fst)
+    (hreserved : ∀ move, move ∈ moves →
+      move.1 ≠ .register config.scratch ∧
+      move.1 ≠ .register config.addressScratch ∧
+      move.2 ≠ .register config.scratch ∧
+      move.2 ≠ .register config.addressScratch)
+    (htarget : target ∈ moves)
+    (heval : (wordStackReversedSequentialLocationMove (α := Nat) config moves).bind
+      (evalWordStackMachine state) = some final) :
+    wordStackLocationValue config final target.1 =
+      wordStackLocationValue config state target.2 := by
+  induction moves generalizing state final with
+  | nil => simp at htarget
+  | cons head tail ih =>
+      have hdestinations' :
+          (head.1 :: tail.map Prod.fst).Nodup := by
+        simpa only [List.map_cons] using hdestinations
+      have htailDestinations : (tail.map Prod.fst).Nodup :=
+        (List.nodup_cons.mp hdestinations').2
+      have htailNoSource : ∀ move, move ∈ tail →
+          move.2 ∉ tail.map Prod.fst := by
+        intro move hmove hsource
+        apply hnoSource move (by simp [hmove])
+        simp [hsource]
+      have htailReserved : ∀ move, move ∈ tail →
+          move.1 ≠ .register config.scratch ∧
+          move.1 ≠ .register config.addressScratch ∧
+          move.2 ≠ .register config.scratch ∧
+          move.2 ≠ .register config.addressScratch := by
+        intro move hmove
+        exact hreserved move (by simp [hmove])
+      have hheadReserved := hreserved head (by simp)
+      have hheadMove :
+          wordStackLocationMove (α := Nat) config head.1 head.2 ≠ none := by
+        cases head.1 <;> cases head.2 <;>
+          simp [wordStackLocationMove] <;> split <;> simp
+      have hheadMove' : ∃ last,
+          wordStackLocationMove (α := Nat) config head.1 head.2 = some last := by
+        cases hmove : wordStackLocationMove (α := Nat) config head.1 head.2 with
+        | none => exact False.elim (hheadMove hmove)
+        | some last => exact ⟨last, rfl⟩
+      obtain ⟨last, hlast⟩ := hheadMove'
+      rw [wordStackReversedSequentialLocationMove, hlast] at heval
+      cases htail : wordStackReversedSequentialLocationMove (α := Nat) config tail with
+      | none => simp [htail] at heval
+      | some rest =>
+          simp [htail] at heval
+          obtain ⟨middle, hrestEval, hlastEval⟩ :=
+            evalWordStackMachine_wordStackJoin_exists state final rest last heval
+          have htailEval :
+              (wordStackReversedSequentialLocationMove (α := Nat) config tail).bind
+                (evalWordStackMachine state) = some middle := by
+            rw [htail]
+            simpa using hrestEval
+          have hlastEval' :
+              (wordStackLocationMove (α := Nat) config head.1 head.2).bind
+                (evalWordStackMachine middle) = some final := by
+            simpa [hlast] using hlastEval
+          have htarget' : target = head ∨ target ∈ tail := by
+            simpa using htarget
+          rcases htarget' with hhead | htarget
+          · subst target
+            have hheadSourceNotTailDestination : head.2 ∉ tail.map Prod.fst := by
+              intro hmove
+              exact hnoSource head (by simp) (by simp [hmove])
+            have hheadValue :=
+              evalWordStackMachine_locationMove_preserves_value
+                config middle final head.1 head.2 hlastEval'
+            have htailValue :=
+              evalWordStackMachine_reversedSequentialLocationMove_preserves_other_value
+                config state middle tail head.2 htailDestinations htailReserved
+                hheadSourceNotTailDestination hheadReserved.2.2.1 htailEval
+            calc
+              wordStackLocationValue config final head.1 =
+                  wordStackLocationValue config middle head.2 := hheadValue
+              _ = wordStackLocationValue config state head.2 := htailValue
+          · have htargetTail : target ∈ tail := htarget
+            have htargetNotHeadDestination : target.1 ≠ head.1 := by
+              intro heq
+              apply (List.nodup_cons.mp hdestinations').1
+              exact List.mem_map.mpr ⟨target, htargetTail, heq⟩
+            have htargetDestinationScratch :=
+              hreserved target (by simp [htargetTail])
+            have hlastOther :=
+              evalWordStackMachine_locationMove_preserves_other_value
+                config middle final head.1 head.2 target.1
+                htargetNotHeadDestination htargetDestinationScratch.1 hlastEval'
+            have htailValue := ih state middle htailDestinations htailNoSource
+              htailReserved htargetTail htailEval
+            calc
+              wordStackLocationValue config final target.1 =
+                  wordStackLocationValue config middle target.1 := hlastOther
+              _ = wordStackLocationValue config state target.2 := htailValue
+
 theorem evalWordStackMachine_sequentialLocationMove_preserves_other_value
     [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)
@@ -134,7 +314,7 @@ theorem evalWordStackMachine_parallelLocationMove_acyclic_preserves_other_value
       wordStackLocationValue config state other := by
   rw [wordStackParallelLocationMove_acyclic_eq_sequential config moves
     hdestinations hnoSource hreserved] at heval
-  exact evalWordStackMachine_sequentialLocationMove_preserves_other_value
+  exact evalWordStackMachine_reversedSequentialLocationMove_preserves_other_value
     config state final moves other hdestinations hreserved hotherDestination
     hotherScratch heval
 
@@ -261,7 +441,7 @@ theorem evalWordStackMachine_parallelLocationMove_acyclic_preserves_move_value
       wordStackLocationValue config state target.2 := by
   rw [wordStackParallelLocationMove_acyclic_eq_sequential config moves
     hdestinations hnoSource hreserved] at heval
-  exact evalWordStackMachine_sequentialLocationMove_preserves_move_value
+  exact evalWordStackMachine_reversedSequentialLocationMove_preserves_move_value
     config state final moves target hdestinations hnoSource hreserved htarget heval
 
 /-! The location-level frame theorem lifts directly to the allocator's
@@ -308,7 +488,7 @@ theorem evalWordStackMachine_parallelLocationMove_acyclic_preserves_mapped_value
         simpa [wordStackMachineValue, wordStackLocation,
           wordStackLocationValue, hlocation] using hstateValue
   have hpreserved :=
-    evalWordStackMachine_sequentialLocationMove_preserves_other_value
+    evalWordStackMachine_reversedSequentialLocationMove_preserves_other_value
       config state final moves location hdestinations hreserved
       (houtside name value location hvalue hlocation)
       (hnotScratch name value location hvalue hlocation) heval

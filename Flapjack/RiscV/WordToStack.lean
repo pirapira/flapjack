@@ -1293,6 +1293,15 @@ def wordStackLocationMoveReady (destinations : List WordLocation) :
 termination_by moves => sizeOf moves
 decreasing_by all_goals decreasing_trivial
 
+/-- Schedule a parallel move list over `WordLocation`s in CakeML dependency
+    order.  As in `wordStackParallelMoveAux`, a move whose source is no longer a
+    pending destination reads a value that no remaining move overwrites, so it
+    is safe only to emit **last**; `wordStackLocationMoveReady` selects exactly
+    such a move, and emitting it first would clobber a destination that a
+    remaining move still has to read (e.g. `[a <- b, b <- c]` must emit
+    `a <- b` before `b <- c`).  Cycles are handled by saving one source in the
+    reserved address scratch register and restoring it afterwards, the same
+    temporary-register idea as `parmove`. -/
 def wordStackParallelLocationMoveAux (config : WordStackConfig) :
     Nat → List (WordLocation × WordLocation) → Option (StackProg α)
   | 0, _ => none
@@ -1310,10 +1319,10 @@ def wordStackParallelLocationMoveAux (config : WordStackConfig) :
       else
         match wordStackLocationMoveReady destinations moves with
         | some (destination, source) => do
-            let first ← wordStackLocationMove config destination source
             let rest ← wordStackParallelLocationMoveAux config fuel
               (wordStackLocationMoveRemoveDestination destination moves)
-            pure (wordStackJoin first rest)
+            let last ← wordStackLocationMove config destination source
+            pure (wordStackJoin rest last)
         | none =>
             match moves with
             | [] => some .skip

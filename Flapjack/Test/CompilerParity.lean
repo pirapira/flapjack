@@ -590,7 +590,6 @@ def longMulGlobalArtifactMatchesGolden : Bool :=
       Flapjack.Test.SourceGlobalParity.longMulGlobalSource with
   | some bytes => bytes == longMulGlobalArtifactGolden
   | none => false
-/-! Exact source-entry golden for the existing named-struct fixture. -/
 def namedStructArtifactGolden : List (BitVec 8) :=
   [
     BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6E, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x03,
@@ -614,8 +613,8 @@ def namedStructArtifactGolden : List (BitVec 8) :=
     BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40, BitVec.ofNat 8 0x00,
     BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x61, BitVec.ofNat 8 0x30, BitVec.ofNat 8 0x00,
     BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x62, BitVec.ofNat 8 0x40, BitVec.ofNat 8 0x00,
-    BitVec.ofNat 8 0xB3, BitVec.ofNat 8 0x61, BitVec.ofNat 8 0x42, BitVec.ofNat 8 0x00,
     BitVec.ofNat 8 0xB3, BitVec.ofNat 8 0xE0, BitVec.ofNat 8 0x31, BitVec.ofNat 8 0x00,
+    BitVec.ofNat 8 0xB3, BitVec.ofNat 8 0x61, BitVec.ofNat 8 0x42, BitVec.ofNat 8 0x00,
     BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x00, BitVec.ofNat 8 0x40, BitVec.ofNat 8 0x00,
     BitVec.ofNat 8 0xB3, BitVec.ofNat 8 0x02, BitVec.ofNat 8 0x31, BitVec.ofNat 8 0x00,
     BitVec.ofNat 8 0xB3, BitVec.ofNat 8 0xE0, BitVec.ofNat 8 0x52, BitVec.ofNat 8 0x00,

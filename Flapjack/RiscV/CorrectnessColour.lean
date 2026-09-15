@@ -1179,7 +1179,7 @@ theorem evalWordProg_moveOne_applyColour [NeZero width]
       wordMoveRegisterDestinations, wordMoveRegisterReady,
       wordMoveRegisterRemoveDestination, wordExpToInstructions,
       wordExpToInstruction, registerOfNat, hname, hsource, hname31, hsource31,
-      hne, hne', hcolourNe]
+      hne, hne']
   have htargetMove :
       evalWordProg target
           (wordApplyColour colour (.move 1 [(name, sourceName)])) =
@@ -1285,7 +1285,7 @@ theorem evalWordProg_moveTwo_applyColour [NeZero width]
       hcolourDestinationOne31, hcolourSourceOne31,
       hcolourDestinationTwo31, hcolourSourceTwo31, hcolourDestinations,
       hcolourDestinations', hcolourSourceOneDestinationOne,
-      hcolourSourceOneDestinationTwo, hcolourSourceTwoDestinationOne,
+      hcolourSourceOneDestinationTwo,
       hcolourSourceTwoDestinationTwo, hcolourDestinationOneSourceOne,
       hcolourDestinationTwoSourceTwo,
       executeInstructions_two]

@@ -38,6 +38,13 @@ structure WordStackConfig where
   /- Physical ABI argument/result registers are consecutive on RISC-V.  The
      source-shaped Cake helper retains its historical two-slot numbering. -/
   abiStride : Nat := 2
+  /- Number of physical ABI argument/result slots.  Cake's RISC-V window is
+     x10--x21; values after this window use the current Cake frame. -/
+  abiRegisterCount : Nat := 12
+  /- Cake's `f` frame size used by `format_var`/`wMoveSingle`.  The public
+     pipeline records `stack_var_count` (`f'`), so this is normally `f'+1`
+     when the frame is non-empty. -/
+  abiFrameSlots : Nat := 0
   deriving Repr
 
 /-! The executable StackLang model carries hardware RISC-V register numbers
@@ -52,6 +59,24 @@ def wordStackLocation (config : WordStackConfig) (name : Nat) :
 
 def wordStackOffset (config : WordStackConfig) (slot : Nat) : Nat :=
   config.stackBase + slot
+
+/-! Cake's `compile_prog` chooses `f = 0` for an empty frame and otherwise
+    `f = stack_var_count + 1`.  Keep the conversion at the ABI boundary so
+    callers can continue to provide the source-shaped `f'` occupancy. -/
+def wordStackCakeFrameSize (config : WordStackConfig) : Nat :=
+  if config.abiFrameSlots = 0 then 0 else config.abiFrameSlots + 1
+
+/-! `format_var k` classifies the first `k` physical argument slots as
+    registers and the remaining slots as frame variables.  `wMoveSingle`
+    materializes a frame variable at `f - 1 - (r - k)`; this is the direct
+    location form used by the parallel move compiler below. -/
+def wordStackPhysicalLocation (config : WordStackConfig)
+    (index base : Nat) : WordLocation :=
+  if index < config.abiRegisterCount then
+    .register (base + config.abiStride * index)
+  else
+    .stack (wordStackCakeFrameSize config - 1 -
+      (index - config.abiRegisterCount))
 
 def wordStackMove (config : WordStackConfig) (destination source : Nat) :
     Option (StackProg α) := do
@@ -1371,9 +1396,15 @@ def wordStackPhysicalMovesTo (config : WordStackConfig) :
   | [], _ => some []
   | source :: sources, destination => do
       let source ← wordStackLocation config source
+      let index :=
+        if config.abiFrameSlots = 0 then 0
+        else (destination - config.abiBase) / config.abiStride
+      let destinationLocation :=
+        if config.abiFrameSlots = 0 then .register destination
+        else wordStackPhysicalLocation config index config.abiBase
       let rest ← wordStackPhysicalMovesTo config sources
         (destination + config.abiStride)
-      pure ((.register destination, source) :: rest)
+      pure ((destinationLocation, source) :: rest)
 termination_by sources => sizeOf sources
 decreasing_by all_goals decreasing_trivial
 

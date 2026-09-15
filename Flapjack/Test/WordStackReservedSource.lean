@@ -41,4 +41,28 @@ def riscvAbiParameterMoveConfig : WordStackConfig :=
   (wordStackParallelLocationMove (α := Nat) reservedSourceMoveConfig
     [(.register 29, .register 10)]).isNone
 
+/- Cake's `format_var` keeps the first twelve RISC-V ABI slots in x10--x21
+   and maps the remaining call arguments into the current `f` frame from its
+   highest slot downward.  This is the concrete 25-argument shape that used
+   to synthesize x22 and above instead of spilling. -/
+def abiOverflowMoveConfig : WordStackConfig :=
+  { locations := (List.range 25).map (fun name => (name, .register (2 + name)))
+    scratch := 31
+    stackBase := 0
+    addressScratch := 29
+    abiBase := 10
+    abiStride := 1
+    abiRegisterCount := 12
+    abiFrameSlots := 25 }
+
+#guard
+  wordStackPhysicalMovesTo abiOverflowMoveConfig (List.range 25) 10 =
+    some ((List.range 25).map (fun index =>
+      (if index < 12 then .register (10 + index)
+       else .stack (25 - (index - 12)), .register (2 + index))))
+
+#guard
+  (wordStackMovesToPhysical (α := Nat) abiOverflowMoveConfig
+    (List.range 25) 10).isSome
+
 end Flapjack

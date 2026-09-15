@@ -276,6 +276,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
               carryScratch := RiscV.cakeCarryScratch
               abiBase := 1
               abiStride := 1
+              callAbiBase := 0
               abiFrameSlots := frameSlots
               sectionId := label
               handlerLabel := label }
@@ -550,7 +551,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
           | none => .error .entryNotFound
           | some pipeline =>
               let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
-              let sourceWords := pipelineWordCompileProg loop
+              let sourceWords := panToWordCompileProg loop
               let discoveryWords :=
                 sourceWords.map
                   (fun (label, arity, body) => (label, arity, wordProgDCE body))

@@ -2946,7 +2946,7 @@ def wordAllocateVarsWithFixedLocationsClashIndexed (slots : List Nat)
   let names := slots.eraseDups.filter (fun name => name ∉ fixedSources)
   let state := wordGreedyAllocateWithSpillsAndPreferencesClashFast names
     edges preferences initial
-  if wordSpillAllocationRespectsClashes edges state.locations then some state
+  if wordSpillAllocationRespectsClashesFast edges state.locations then some state
   else none
 
 def wordAllocateVarsWithFixedSourcesClashFast (slots : List Nat)

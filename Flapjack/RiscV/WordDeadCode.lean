@@ -1,4 +1,6 @@
 import Flapjack.RiscV.CakeRegAlloc
+import Flapjack.RiscV.WordCse
+import Flapjack.RiscV.WordCopyProp
 
 /-!
 # Word dead-program elimination
@@ -149,6 +151,49 @@ decreasing_by all_goals decreasing_trivial
 def wordRemoveDeadProgram (program : WordProg α) : WordProg α :=
   (wordDeadCode program []).1
 
+/-! The post-copy `word_unreach` boundary.  The public WordUnreach module
+    depends on this file for its dead-code definitions, so keep this small
+    local copy here to preserve the allocator pass order without introducing
+    an import cycle. -/
+def wordCopyUnreachMergeMoves (first second : List (Nat × Nat)) :
+    List (Nat × Nat) :=
+  let rewritten := second.map (fun move =>
+    (move.1, (lookupNatInfo move.2 first).getD move.2))
+  (rewritten ++ first).foldl (fun seen move =>
+    if seen.any (fun prior => prior.1 == move.1) then seen
+    else seen ++ [move]) []
+
+def wordCopyUnreachSeq (first second : WordProg α) : WordProg α :=
+  match first, second with
+  | .skip, program => program
+  | .raise _, _ => first
+  | .return _ _, _ => first
+  | .break _, _ => first
+  | .continue _, _ => first
+  | .call none _ _ _, _ => first
+  | .move firstPriority firstMoves, .skip =>
+      .move firstPriority firstMoves
+  | .move firstPriority firstMoves, .move secondPriority secondMoves =>
+      .move (max firstPriority secondPriority)
+        (wordCopyUnreachMergeMoves firstMoves secondMoves)
+  | _, .skip => first
+  | _, _ => .seq first second
+
+def wordRemoveUnreachableAfterCopy : WordProg α → WordProg α
+  | .seq first second =>
+      wordCopyUnreachSeq (wordRemoveUnreachableAfterCopy first)
+        (wordRemoveUnreachableAfterCopy second)
+  | .ite operator condition right thenBranch elseBranch =>
+      .ite operator condition right
+        (wordRemoveUnreachableAfterCopy thenBranch)
+        (wordRemoveUnreachableAfterCopy elseBranch)
+  | .loop liveIn body liveOut =>
+      .loop liveIn (wordRemoveUnreachableAfterCopy body) liveOut
+  | .mustTerminate body => .mustTerminate (wordRemoveUnreachableAfterCopy body)
+  | program => program
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
 end Flapjack.RiscV
 
 namespace Flapjack.RiscV.CakeRegAlloc
@@ -163,6 +208,10 @@ def cakeAllocateWordFunctionAfterDead (currentFunction : Nat)
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, ssaProgram) :=
     wordFullSsaCcTrans parameters.length program
+  let ssaProgram := wordRemoveDeadProgram ssaProgram
+  let ssaProgram := wordCseProp ssaProgram
+  let ssaProgram := wordCopyProp ssaProgram
+  let ssaProgram := wordRemoveUnreachableAfterCopy ssaProgram
   let ssaProgram := wordRemoveDeadProgram ssaProgram
   let tree := wordClashTree ssaProgram []
   let fs := cakeGetStackOnly ssaProgram

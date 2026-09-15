@@ -281,12 +281,14 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
             { data := [], length := bitmaps.length }
           let lower :=
             if !RiscV.wordProgNeedsCakeFrame renamedProgram then
-              RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves config
-                renamedParameters wordAllocatableRegisters.length config.scratch
+              RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMovesWithSources
+                config renamedParameters wordRiscVAbiSourceRegister
+                wordAllocatableRegisters.length config.scratch
                 frameSlots (some 1) localState renamedProgram
             else
-              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves config
-                renamedParameters wordAllocatableRegisters.length config.scratch
+              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMovesWithSources
+                config renamedParameters wordRiscVAbiSourceRegister
+                wordAllocatableRegisters.length config.scratch
                 frameSlots (some 1) localState renamedProgram
           match lower with
           | none =>

@@ -239,6 +239,18 @@ def labCompilePlain [NeZero width] :
       pure [.jalr zero register zero]
   | .shareMem operator register address =>
       wordShareInstToInstructions operator register (.var address)
+  | .memOffset memoryOperator operator destination address offset => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      let immediate : Word width :=
+        match operator with
+        | .add => BitVec.ofNat width offset
+        | .sub => 0 - BitVec.ofNat width offset
+        | _ => 0
+      match memoryOperator with
+      | .load => pure [.loadWordOffset destination address immediate]
+      | .store => pure [.storeWordOffset destination address immediate]
+      | _ => none
   | .codeBufferWrite address value =>
       (wordInstToInstruction (.mem .store8 value address)).map List.singleton
   | .dataBufferWrite address value =>
@@ -363,6 +375,8 @@ def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
   | .dataBufferWrite address value => .dataBufferWrite address value
   | .shareMem operator register address =>
       .shareMem operator register address
+  | .memOffset memoryOperator operator destination address offset =>
+      .memOffset memoryOperator operator destination address offset
 
 def labLineNatToWord [NeZero width] : LabLine Nat → LabLine (Word width)
   | .label sectionId label length => .label sectionId label length

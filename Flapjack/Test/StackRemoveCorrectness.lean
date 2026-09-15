@@ -73,7 +73,7 @@ example :
       stackGetCorrectnessConfig stackGetCorrectnessState 2 (by omega)
       (by simp [stackGetCorrectnessConfig])
       (by simp [stackGetCorrectnessConfig])
-      (by simp [stackGetCorrectnessConfig, stackGetCorrectnessState])
+      (by simp [stackGetCorrectnessConfig])
       (by simp [stackGetCorrectnessConfig, stackGetCorrectnessState]))
 
 example :

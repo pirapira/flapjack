@@ -51,7 +51,7 @@ decreasing_by all_goals decreasing_trivial
 
 def wordInstPullExp : WordExp α → WordExp α
   | .op operator [] => .op operator []
-  | .op operator [expression] => wordInstPullExp expression
+  | .op _operator [expression] => wordInstPullExp expression
   | .op operator expressions =>
       let expressions := expressions.map wordInstPullExp
       .op operator (wordInstPullOps operator expressions [])
@@ -64,7 +64,7 @@ decreasing_by all_goals decreasing_trivial
 
 def wordInstFlattenExp : WordExp α → WordExp α
   | .op operator [] => .op operator []
-  | .op operator [expression] => wordInstFlattenExp expression
+  | .op _operator [expression] => wordInstFlattenExp expression
   | .op operator (expression :: expressions) =>
       .op operator
         [ wordInstFlattenExp (.op operator expressions)

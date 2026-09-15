@@ -199,9 +199,7 @@ example :
       stackRemoveRiscVConfig 2 3
       (.get 4 .heapLength : StackProg (Word 64)) =
       some [
-        .ori 29 0 (BitVec.ofNat 64 24),
-        .sub 29 10 29,
-        .loadWord 4 29] := by
+        .loadWordOffset 4 10 (0 - BitVec.ofNat 64 24)] := by
   decide +kernel
 
 example :

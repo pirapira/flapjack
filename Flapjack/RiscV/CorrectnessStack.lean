@@ -91,19 +91,18 @@ theorem evalStackRemoveStackAlloc_small [NeZero width]
         BitVec.ofNat width (config.bytesInWord * words)) := by
   by_cases hzero : words = 0
   · subst words
-    simp [stackRemoveStackAlloc, stackRemoveStackDelta, hjump,
-      evalWordStackMachine]
+    simp [stackRemoveStackAlloc, evalWordStackMachine]
   · have horder : state.registers config.stackBase ≤
         state.registers config.stackPointer -
           BitVec.ofNat width (config.bytesInWord * words) := (BitVec.not_lt).mp hsafe
     by_cases hbasePointer : config.stackBase = config.stackPointer
     · simp [stackRemoveStackAlloc, stackRemoveStackDelta, hzero, hjump,
         stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
-        wordStackMachineWriteRegister, hwords, hbasePointer, horder,
-        hbase, Ne.symm hscratch]
+        wordStackMachineWriteRegister, hwords, hbasePointer,
+        Ne.symm hscratch]
     · simp [stackRemoveStackAlloc, stackRemoveStackDelta, hzero, hjump,
       stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
-      wordStackMachineWriteRegister, hwords, hsafe, horder, hbase,
+      wordStackMachineWriteRegister, hwords, hsafe, hbase,
       hbasePointer, Ne.symm hscratch]
 
 theorem evalStackRemoveStackFree_small [NeZero width]

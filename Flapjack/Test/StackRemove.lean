@@ -6,6 +6,9 @@ def stackRemoveTestConfig : StackRemoveConfig :=
   { storeBase := 10, currHeap := 12, scratch := 31, addressScratch := 29,
     stackPointer := 20, bytesInWord := 8, stackBase := 21, wordShift := 3 }
 
+def stackRemoveCakeFrameConfig : StackRemoveConfig :=
+  { stackRemoveTestConfig with jump := true }
+
 example :
     stackRemove stackRemoveTestConfig (.get 4 .heapLength : StackProg Nat) =
       .seq (.seq (.const 29 24) (.arith .sub 29 10 29))
@@ -41,6 +44,14 @@ example :
       .seq (.const 31 16) (.arith .sub 20 20 31) := by
   simp [stackRemove, stackRemoveFuel, stackRemoveStackAlloc,
     stackRemoveStackDelta, stackRemoveJoin, stackRemoveTestConfig]
+
+example :
+    stackRemove stackRemoveCakeFrameConfig (.stackAlloc 2 : StackProg Nat) =
+      .seq (.seq (.const 31 16) (.arith .sub 20 20 31))
+        (.jumpLower 20 21 2) := by
+  simp [stackRemove, stackRemoveFuel, stackRemoveStackAlloc,
+    stackRemoveStackDelta, stackRemoveJoin, stackRemoveCakeFrameConfig,
+    stackRemoveTestConfig]
 
 example :
     stackRemove stackRemoveTestConfig (.stackFree 2 : StackProg Nat) =

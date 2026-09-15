@@ -73,4 +73,15 @@ def handledCallCarriesRaiseHandler : Bool :=
 #guard handlerlessCallCarriesRaiseHandler
 #guard handledCallCarriesRaiseHandler
 
+def runChecks : IO Bool := do
+  let results := [handlerlessCallCarriesRaiseHandler, handledCallCarriesRaiseHandler]
+  let names := [
+    "crep_to_loop default call handler",
+    "crep_to_loop explicit call handler"]
+  let mut all := true
+  for (name, result) in names.zip results do
+    if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"
+    all := all && result
+  pure all
+
 end Flapjack.Test.CrepToLoopParity

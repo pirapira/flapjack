@@ -5,6 +5,19 @@ namespace Flapjack
 
 open RiscV
 
+/-! Direct Cake oracle guard for the six-instruction RISC-V carry expansion.
+    This count is consumed by the Lab linker when computing later labels. -/
+#guard
+  RiscV.labLineInstructionCount
+      (.asm (.word (.arith (.cakeAddCarry 10 10 16 1))) [] 0 :
+        LabLine (RiscV.Word 64)) = 6
+
+#guard
+  RiscV.labSectionInstructionCount
+      ({ name := 17,
+         lines := [.asm (.word (.arith (.cakeAddCarry 10 10 16 1))) [] 0] } :
+        LabSection (RiscV.Word 64)) = 6
+
 def pipelineDiagnosticsConfig : WordStackConfig :=
   { locations := [(0, .register 5), (1, .register 6),
       (2, .register 7), (3, .register 8)]

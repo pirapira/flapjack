@@ -38,6 +38,9 @@ structure WordStackConfig where
   /- Physical ABI argument/result registers are consecutive on RISC-V.  The
      source-shaped Cake helper retains its historical two-slot numbering. -/
   abiStride : Nat := 2
+  /- Source-shaped Cake calls include the link slot (Word name 0) in their
+     argument list, while value returns still begin at abiBase. -/
+  callAbiBase : Nat := 1
   /- Number of physical ABI argument/result slots.  Cake's RISC-V window is
      x10--x21; values after this window use the current Cake frame. -/
   abiRegisterCount : Nat := 12
@@ -3347,7 +3350,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       (wordStackLocValue config destination source).map (fun code => (code, state))
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.callAbiBase
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
@@ -3364,7 +3367,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.callAbiBase
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
@@ -3374,13 +3377,13 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
         config.frameOffset config.scratch destinations returnCode returnLabel entryLabel
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .call none (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.callAbiBase
       let callCode := .call none (.label target) none
       let freeCount := wordStackCallFreeCount config arguments.length
       pure (wordStackJoin argumentMoves (stackFreeIfNonzero freeCount callCode), state)
   | .call none (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.callAbiBase
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length

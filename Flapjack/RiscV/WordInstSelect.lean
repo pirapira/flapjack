@@ -53,7 +53,7 @@ decreasing_by all_goals decreasing_trivial
 
 def wordInstConvertSub [Sub α] [OfNat α 0] : List (WordExp α) → WordExp α
   | [.const left, .const right] => .const (left - right)
-  | [expression, .const value] => .op .add [.const (0 - value), expression]
+  | [expression, .const value] => .op .add [expression, .const (0 - value)]
   | expressions => .op .sub expressions
 
 def wordInstPullExp [Sub α] [OfNat α 0] : WordExp α → WordExp α

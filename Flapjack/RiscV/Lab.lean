@@ -1178,6 +1178,15 @@ theorem labLineInstructionCount_ffi :
         (.labAsm (.callFfi "sum") [] 0 : LabLine (Word width)) = 1 := by
   rfl
 
+/-! Cake's RISC-V `cakeAddCarry` expands to six instructions.  Keep the
+    section-size accounting tied to that source expansion so later labels do
+    not drift when a carry operation is present. -/
+theorem labLineInstructionCount_cakeAddCarry :
+    labLineInstructionCount
+        (.asm (.word (.arith (.cakeAddCarry 10 10 16 1))) [] 0 :
+          LabLine (Word width)) = 6 := by
+  rfl
+
 theorem compileLabSection_ffi [NeZero width] :
     compileLabSection { services := [("sum", 7)] }
       ⟨2, [

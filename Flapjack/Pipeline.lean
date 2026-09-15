@@ -140,24 +140,10 @@ def pipelineWordCompileProg [OfNat α 1]
     List (Nat × Nat × WordProg α) :=
   LoopToWord.loopToWordCompileProg functions
 
-/-! The source `crep_to_loop` compiler folds a tail call into the generated
-    sequence and `loop_to_word$comp` prepends the entry slot.  The general
-    allocator-facing Loop bridge predates that source-shaped contract, so this
-    small adapter restores it only at the `pan_to_word` boundary. -/
-def panToWordTailCall : WordProg α → WordProg α
-  | .seq .skip (.seq .skip (.call none target arguments none)) =>
-      .seq .skip (.seq (.call none target (0 :: arguments) none) .skip)
-  | .seq first second =>
-      .seq (panToWordTailCall first) (panToWordTailCall second)
-  | .call none target arguments none =>
-      .call none target (0 :: arguments) none
-  | program => program
-
 def panToWordCompileProg [OfNat α 1]
     (functions : List (Nat × List Nat × LoopProg α)) :
     List (Nat × Nat × WordProg α) :=
-  (pipelineWordCompileProg functions).map
-    (fun (label, arity, body) => (label, arity, panToWordTailCall body))
+  pipelineWordCompileProg functions
 
 /-! StackLang view of the register-coloured Word pipeline.  This is the
     executable bridge used by the RISC-V-only backend path below; functions

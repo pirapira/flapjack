@@ -628,11 +628,15 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               progOk .retLast true false context.location
             else
               staticError (.shape "return expression has the wrong shape"))
-  | .shMemLoad _ _ name address =>
+  | .shMemLoad _ varKind name address =>
+      /- CakeML looks the destination up in locals only for `Local` and in
+         globals only for `Global` (`panStaticScript.sml:1642,1676`). -/
       let destinationIsWord : Option Bool :=
-        match lookupInfo name context.locals with
-        | some info => some (shapedBasedIsWord info.shapedBased)
-        | none =>
+        match varKind with
+        | .local =>
+            (lookupInfo name context.locals).map
+              (fun info => shapedBasedIsWord info.shapedBased)
+        | .global =>
             match lookupInfo name context.globals with
             | some info => (shapedBasedFromShape context.structs info.shape).map shapedBasedIsWord
             | none => none
@@ -769,10 +773,11 @@ def staticCheckDecls [BEq String] (structs : StructContext) :
       if (lookupInfo exception context.exceptions).isSome then
         staticError (.scope ("exception is redeclared: " ++ exception))
       else
-        staticBind (checkShape structs shape) (fun _ =>
-          staticCheckDecls structs
-            { context with exceptions := (exception, shape) :: context.exceptions }
-            declarations)
+        /- CakeML only checks for redeclaration here; the exception shape
+           itself is not validated (`panStaticScript.sml:1858-1868`). -/
+        staticCheckDecls structs
+          { context with exceptions := (exception, shape) :: context.exceptions }
+          declarations
   | context, .decl shape name value :: declarations =>
       staticBind
         (if (lookupInfo name context.globals).isSome then

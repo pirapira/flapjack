@@ -1511,7 +1511,7 @@ theorem compile_full_pan_value_shMemLoad_word_correct
     (haddress : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
       baseAddress topAddress bytesInWord sourceAddress = some (.word address))
     (hmemory : sourceMemory address = some (.word value))
-    (hcompiledAddress : firstCompiledExp context sourceAddress = some compiledAddress)
+    (hcompiledAddress : firstCompiledExpAnyShape context sourceAddress = some compiledAddress)
     (hcrepAddress : evalCrepFullExp state.locals state.memory
       baseAddress topAddress compiledAddress = some address)
     (hsharedMem : sharedMem (loadMemOp size) slot address state = some targetState)
@@ -1560,7 +1560,7 @@ theorem compile_full_pan_value_shMemLoad_word_state_correct
     (haddress : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
       baseAddress topAddress bytesInWord sourceAddress = some (.word address))
     (hmemory : sourceMemory address = some (.word value))
-    (hcompiledAddress : firstCompiledExp context sourceAddress = some compiledAddress)
+    (hcompiledAddress : firstCompiledExpAnyShape context sourceAddress = some compiledAddress)
     (hcrepAddress : evalCrepFullExpState state baseAddress topAddress
       compiledAddress = some address)
     (hsharedMem : sharedMem (loadMemOp size) slot address state = some targetState)
@@ -1606,8 +1606,8 @@ theorem compile_full_pan_value_shMemStore_word_correct
       baseAddress topAddress bytesInWord sourceAddress = some (.word address))
     (hvalue : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
       baseAddress topAddress bytesInWord sourceValue = some (.word value))
-    (hcompiledAddress : firstCompiledExp context sourceAddress = some compiledAddress)
-    (hcompiledValue : firstCompiledExp context sourceValue = some compiledValue)
+    (hcompiledAddress : firstCompiledExpAnyShape context sourceAddress = some compiledAddress)
+    (hcompiledValue : firstCompiledExpAnyShape context sourceValue = some compiledValue)
     (hcrepAddress : evalCrepFullExp
       (updateCrepLocal state.locals (context.maxVar + 1) value) state.memory
       baseAddress topAddress compiledAddress = some address)
@@ -1663,8 +1663,8 @@ theorem compile_full_pan_value_shMemStore_word_state_correct
       baseAddress topAddress bytesInWord sourceAddress = some (.word address))
     (hvalue : evalPanValueExp structs sourceLocals sourceGlobals sourceMemory
       baseAddress topAddress bytesInWord sourceValue = some (.word value))
-    (hcompiledAddress : firstCompiledExp context sourceAddress = some compiledAddress)
-    (hcompiledValue : firstCompiledExp context sourceValue = some compiledValue)
+    (hcompiledAddress : firstCompiledExpAnyShape context sourceAddress = some compiledAddress)
+    (hcompiledValue : firstCompiledExpAnyShape context sourceValue = some compiledValue)
     (hcrepAddress : evalCrepFullExpState
       { state with locals := updateCrepLocal state.locals (context.maxVar + 1) value }
       baseAddress topAddress compiledAddress = some address)

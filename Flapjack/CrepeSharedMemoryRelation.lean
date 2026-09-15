@@ -65,7 +65,8 @@ theorem compile_full_pan_value_shMemLoad_word_relation
     sourceMemory state targetState primitive sourceHandler crepPrimitive ffi
     sharedMem baseAddress topAddress bytesInWord fuel size name slot address
     value oldValue sourceAddress compiledAddress lookup haddress hmemory
-    hcompiledAddress hcrepAddress hsharedMem hlocals
+    (firstCompiledExpAnyShape_of_firstCompiledExp hcompiledAddress)
+    hcrepAddress hsharedMem hlocals
   exact ⟨hsteps.1, hsteps.2,
     by simpa [panValueCrepControlRel] using htargetRel⟩
 
@@ -137,7 +138,9 @@ theorem compile_full_pan_value_shMemStore_word_relation
     sourceMemory state targetState primitive sourceHandler crepPrimitive ffi
     sharedMem baseAddress topAddress bytesInWord fuel size address value
     sourceAddress sourceValue compiledAddress compiledValue haddress hvalue
-    hcompiledAddress hcompiledValue hcrepAddress hcrepValue hsharedMem
+    (firstCompiledExpAnyShape_of_firstCompiledExp hcompiledAddress)
+    (firstCompiledExpAnyShape_of_firstCompiledExp hcompiledValue)
+    hcrepAddress hcrepValue hsharedMem
   exact ⟨hsteps.1, hsteps.2,
     by simpa [panValueCrepControlRel] using htargetRel⟩
 

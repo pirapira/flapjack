@@ -133,7 +133,8 @@ def encodeInstruction [NeZero width] : Instruction width → BitVec 32
   | .lui destination immediate => encodeU 0x37 destination immediate
   | .auipc destination immediate => encodeU 0x17 destination immediate
   | .divU destination sourceLeft sourceRight =>
-      encodeR 0x33 5 1 destination sourceLeft sourceRight
+      /- Cake's `riscv$DIV` is the target encoding selected for Word Div. -/
+      encodeR 0x33 4 1 destination sourceLeft sourceRight
   | .remU destination sourceLeft sourceRight =>
       encodeR 0x33 7 1 destination sourceLeft sourceRight
   | .branchEq sourceLeft sourceRight offset => encodeB 0 sourceLeft sourceRight offset

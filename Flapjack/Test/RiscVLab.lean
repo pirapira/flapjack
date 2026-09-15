@@ -25,7 +25,7 @@ example :
 example :
     compileLabSectionChecked (width := 64) { services := [] }
       ⟨9, [.labAsm (.halt : LabAsm (Word 64)) [] 0]⟩ =
-      .error { sectionId := 9, position := 0, feature := .halt } := by
+      .ok [.jal 0 (0 - BitVec.ofNat 64 16)] := by
   rfl
 
 def stackRemoveRiscVConfig : StackRemoveConfig :=
@@ -166,10 +166,13 @@ example :
 def haltLabProgram : LabProgram (Word 64) :=
   [⟨1, [.labAsm (.halt : LabAsm (Word 64)) [] 0]⟩]
 
+-- `LabAsm.halt` lowers to a backward jump into the linked runtime halt
+-- region, which is not part of a bare program; the standalone model
+-- therefore never reaches the synthetic end-of-program halt.
 example :
     (executeLabProgramWithHalt 10 { services := [] } haltLabProgram
       (zeroState 64)).map (fun state => state.pc) =
-      some (BitVec.ofNat 64 4) := by
+      none := by
   decide
 
 example :

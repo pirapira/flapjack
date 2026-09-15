@@ -156,7 +156,8 @@ def cakeMkBijAux : WordClashTree → CakeNodeBijection → CakeNodeBijection
       let mapped := cakeMkBijAux elseBranch (cakeMkBijAux thenBranch bijection)
       match live with
       | none => mapped
-      | some names => cakeListRemap names mapped
+      | some names =>
+          cakeListRemap (names.mergeSort (fun a b => a < b)) mapped
   | .seq first second, bijection => cakeMkBijAux first (cakeMkBijAux second bijection)
 
 /-- `mk_bij` (`reg_allocScript.sml:1119-1127`): the node bijection for a
@@ -290,7 +291,9 @@ def cakeMkGraph (ta : Nat → Nat) : WordClashTree → List Nat →
       let (adj2, t2Live) := cakeMkGraph ta t2 liveout adj1
       match topt with
       | none => cakeExtendClique t1Live t2Live adj2
-      | some t => (cakeCliqueInsertEdge (t.map ta) adj2, t.map ta)
+      | some t =>
+          let live := (t.mergeSort (fun a b => a < b)).map ta
+          (cakeCliqueInsertEdge live adj2, live)
   | .seq t1 t2, liveout, adj =>
       let (adj1, live) := cakeMkGraph ta t2 liveout adj
       cakeMkGraph ta t1 live adj1

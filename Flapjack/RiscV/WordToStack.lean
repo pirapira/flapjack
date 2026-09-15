@@ -1297,7 +1297,7 @@ def wordStackParallelLocationMoveAux (config : WordStackConfig) :
       let reserved location :=
         location = .register config.scratch ||
           location = .register config.addressScratch
-      if moves.any (fun move => reserved move.1 || reserved move.2) then
+      if moves.any (fun move => reserved move.1) then
         none
       else if !destinations.Nodup then
         none

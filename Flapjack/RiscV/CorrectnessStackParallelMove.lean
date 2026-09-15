@@ -40,8 +40,7 @@ theorem wordStackParallelLocationMove_singleton
               wordStackLocationMoveRemoveDestination, wordStackLocationMove,
               wordStackJoin,
               hsame, Ne.symm hsame, hdestinationScratch,
-              hdestinationAddressScratch, hsourceScratch,
-              hsourceAddressScratch]
+              hdestinationAddressScratch]
       | stack source =>
           simp [wordStackParallelLocationMove,
             wordStackParallelLocationMoveAux,
@@ -49,8 +48,7 @@ theorem wordStackParallelLocationMove_singleton
             wordStackLocationMoveReady,
             wordStackLocationMoveRemoveDestination, wordStackLocationMove,
             wordStackJoin,
-            hdestinationScratch, hdestinationAddressScratch, hsourceScratch,
-            hsourceAddressScratch]
+            hdestinationScratch, hdestinationAddressScratch]
   | stack destination =>
       cases source with
       | register source =>
@@ -60,8 +58,7 @@ theorem wordStackParallelLocationMove_singleton
             wordStackLocationMoveReady,
             wordStackLocationMoveRemoveDestination, wordStackLocationMove,
             wordStackJoin,
-            hdestinationScratch, hdestinationAddressScratch, hsourceScratch,
-            hsourceAddressScratch]
+            hdestinationScratch, hdestinationAddressScratch]
       | stack source =>
           by_cases hsame : destination = source
           · subst source
@@ -79,8 +76,7 @@ theorem wordStackParallelLocationMove_singleton
               wordStackLocationMoveRemoveDestination, wordStackLocationMove,
               wordStackJoin,
               hsame, Ne.symm hsame, hdestinationScratch,
-              hdestinationAddressScratch, hsourceScratch,
-              hsourceAddressScratch]
+              hdestinationAddressScratch]
 
 theorem evalWordStackMachine_parallelLocationMove_singleton_preserves_value
     [NeZero width]

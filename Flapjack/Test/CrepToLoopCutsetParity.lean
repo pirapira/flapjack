@@ -100,7 +100,7 @@ def constArgsGuard : Bool :=
 
 def load32ArgGuard : Bool :=
   loopCallLivePairs (loopCompileProg probeContext probeLive load32ArgProgram)
-    = [([5], [5])]
+    = [([5, 11], [5, 11])]
 
 def decContinuationGuard : Bool :=
   loopCallLivePairs (loopCompileProg probeContext probeLive decContinuationProgram)
@@ -108,14 +108,17 @@ def decContinuationGuard : Bool :=
 
 def ifBranchesGuard : Bool :=
   let compiled := loopCompileProg probeContext probeLive ifBranchesProgram
-  loopCallLivePairs compiled = [([5], [5]), ([5], [5])] &&
-    loopIteLives compiled = [[5]]
+  loopCallLivePairs compiled = [([5, 11], [5, 11]), ([5, 11], [5, 11])] &&
+    loopIteLives compiled = [[5, 11]]
 
 def whileBodyGuard : Bool :=
   let compiled := loopCompileProg probeContext probeLive whileBodyProgram
-  loopCallLivePairs compiled = [([5], [5])] &&
-    loopIteLives compiled = [[5]] &&
-    loopLoopLives compiled = [([5], [5])]
+  /- `compile_exp` for the `load32` condition allocates temporary `11` and
+     returns it in the shadowing `l` binding.  Cake's While equation threads
+     that returned live set into both the loop cutsets and its nested If. -/
+  loopCallLivePairs compiled = [([5, 11], [5, 11])] &&
+    loopIteLives compiled = [[5, 11]] &&
+    loopLoopLives compiled = [([5, 11], [5, 11])]
 
 def handlerGuard : Bool :=
   loopCallLivePairs (loopCompileProg probeContext probeLive handlerProgram)
@@ -135,7 +138,7 @@ def runChecks : IO Bool := do
   let names := [
     "crep_to_loop cutset const args", "crep_to_loop cutset load32 arg",
     "crep_to_loop dec continuation live", "crep_to_loop if branches live",
-    "crep_to_loop while body live", "crep_to_loop handler live"]
+    "crep_to_loop while condition live", "crep_to_loop handler live"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"
@@ -143,4 +146,3 @@ def runChecks : IO Bool := do
   pure all
 
 end Flapjack.Test.CrepToLoopCutsetParity
-

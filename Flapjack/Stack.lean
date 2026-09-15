@@ -348,9 +348,9 @@ def wordToStackCallWithHandlerInSection (perf : Bool) (target : Nat)
   let returnCode := stackPopHandler perf scratch returnCode
   let callCode :=
     .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target)
-      (some (handlerCode, exceptionLabel, handlerLabel))
+      (some (handlerCode, exceptionLabel, handlerEntryLabel))
   stackSeq [
-    stackPushHandler perf handlerLabel handlerEntryLabel scratch,
+    stackPushHandler perf handlerEntryLabel handlerLabel scratch,
     stackHandlerArgs perf (argumentCount + 1) frameOffset scratch,
     callCode
   ]
@@ -366,10 +366,10 @@ def wordToStackCallWithHandlerInSectionAtRegisterCount (perf : Bool) (target : N
   let returnCode := stackPopHandler perf scratch returnCode
   let callCode :=
     .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target)
-      (some (handlerCode, exceptionLabel, handlerLabel))
+      (some (handlerCode, exceptionLabel, handlerEntryLabel))
   let stackArgumentCount := argumentCount + 1 - registerCount
   stackSeq [
-    stackPushHandler perf handlerLabel handlerEntryLabel scratch,
+    stackPushHandler perf handlerEntryLabel handlerLabel scratch,
     stackHandlerArgs perf stackArgumentCount frameOffset scratch,
     callCode
   ]

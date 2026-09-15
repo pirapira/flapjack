@@ -1481,6 +1481,14 @@ def wordStackReturnCode (config : WordStackConfig) :
   | some (destinations, _, _, _, _) =>
       wordStackMovesFromPhysical config destinations config.abiBase
 
+/-! The `Return v1 vs` case in Cake's `comp` frees the part of the current
+    frame occupied by returned values which do not fit in the ABI result
+    registers.  Flapjack stores all returned values in one list (where Cake
+    stores `v1` separately from `vs`), so the corresponding count is
+    `f - (LENGTH values - k)`. -/
+def wordStackReturnFreeCount (config : WordStackConfig) (values : List Nat) : Nat :=
+  wordStackCakeFrameSize config - (values.length - config.abiRegisterCount)
+
 def wordStackReturn (config : WordStackConfig) (returnLabel : Nat) (values : List Nat) :
     Option (StackProg α) := do
   let moves ← wordStackMovesToPhysical config values config.abiBase
@@ -1489,7 +1497,9 @@ def wordStackReturn (config : WordStackConfig) (returnLabel : Nat) (values : Lis
     | _ => returnLabel
   match values with
   | [] => pure moves
-  | _ => pure (wordStackJoin moves (.return returnRegister))
+  | _ => pure (wordStackJoin moves
+      (stackFreeIfNonzero (wordStackReturnFreeCount config values)
+        (.return returnRegister)))
 
 def wordToStackInst (config : WordStackConfig) : WordInst → Option (StackProg α)
   | .mem operator sourceOrDestination address =>

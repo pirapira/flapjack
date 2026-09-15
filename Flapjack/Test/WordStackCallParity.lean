@@ -70,6 +70,22 @@ def callFrameFreeCountExact : Bool :=
 
 #guard callFrameFreeCountExact
 
+/-! Cake's `comp Return` frees a non-empty current frame after moving the
+    returned ABI values.  The source-shaped port keeps `v1` in the values list,
+    so one returned value in a two-word frame still frees both frame words. -/
+def returnFrameFreeExact : Bool :=
+  wordStackReturnFreeCount
+      { locations := [(0, .register 5)], scratch := 31, stackBase := 0,
+        abiFrameSlots := 1 } [0] == 2 &&
+    match (wordStackReturn
+        { locations := [(0, .register 5)], scratch := 31, stackBase := 0,
+          abiFrameSlots := 1 } 0 [0] : Option (StackProg Nat)) with
+    | some (.seq (.arith .or 1 5 5)
+        (.seq (.stackFree 2) (.return 5))) => true
+    | _ => false
+
+#guard returnFrameFreeExact
+
 /-! Indirect-call targets follow `call_dest NONE`: the last argument names the
     target, a register-resident target is used directly, a stack-resident one
     is loaded into `scratch`, and the remaining arguments are the formals. -/
@@ -105,6 +121,8 @@ def runChecks : IO Bool := do
         frameReservationExact),
       ("wordStackCallFreeCount matches stack_free for direct calls",
         callFrameFreeCountExact),
+      ("returns free the Cake current frame after ABI moves",
+        returnFrameFreeExact),
       ("indirect calls take a register target from the last argument",
         indirectRegisterTargetExact),
       ("indirect calls load a stack target through scratch",

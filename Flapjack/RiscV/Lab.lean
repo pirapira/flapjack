@@ -512,7 +512,7 @@ def compileWordProgramToRiscV [NeZero width]
     this parallel path computes a halt PC immediately after the linked image,
     emits the jump, and appends a self-loop at that PC. -/
 def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
-    (labels : List (Nat × Nat × Nat)) (position haltPc : Nat) :
+    (labels : List (Nat × Nat × Nat)) (position _haltPc : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .jump target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
@@ -548,7 +548,7 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       pure [.jal zero offset]
   | .halt => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      pure [.jal zero (labOffset haltPc position)]
+      pure [.jal zero (0 - BitVec.ofNat width (position + 16))]
   | .install => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       pure [.jal zero (0 - BitVec.ofNat width (position + 2 * 16))]

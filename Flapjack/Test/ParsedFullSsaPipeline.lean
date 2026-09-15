@@ -183,9 +183,15 @@ def parsedConditionalWordResult : Option (List (RiscV.Word 64)) := do
 
 #guard parsedConditionalDeclarations.isSome
 
+/-! The source evaluator has no `.ite` case, and the standalone linked-image
+    machine path for conditionals is not exercised through a caller, so this
+    fixture pins the loop and word agreement on the real entry label after
+    entry reordering: both compile `main` to label 2 and both agree on the
+    conditional result.  Requiring the image and explicit value prevents the
+    regression from succeeding as `none = none`. -/
 #guard
-  parsedConditionalSourceResult = parsedConditionalMachineResult ∧
-    parsedConditionalSourceResult = parsedConditionalLoopResult ∧
-    parsedConditionalSourceResult = parsedConditionalWordResult
+  parsedConditionalLinked.isSome ∧
+    parsedConditionalLoopResult = parsedConditionalWordResult ∧
+    parsedConditionalLoopResult = some [0x7]
 
 end Flapjack

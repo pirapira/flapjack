@@ -19,7 +19,7 @@ example :
     compileLabSectionChecked (width := 64) { services := [] }
       ⟨8, [.asm (.tick : LabPlain (Word 64)) [] 0,
         .labAsm (.install : LabAsm (Word 64)) [] 0]⟩ =
-      .ok [.addi 0 0 0, .jal 0 (0 - BitVec.ofNat 64 36)] := by
+      .ok [.jal 0 (0 - BitVec.ofNat 64 32)] := by
   rfl
 
 example :
@@ -162,7 +162,7 @@ example :
         .ori 29 0 (BitVec.ofNat 64 24),
         .sub 29 10 29,
         .loadWord 4 29] := by
-  native_decide
+  decide +kernel
 
 example :
     compileStackProgramToRiscV (width := 64) { services := [] }
@@ -206,7 +206,7 @@ example :
       some [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
         .addi 1 0 (BitVec.ofNat 64 24),
         .jal 0 (0 - BitVec.ofNat 64 68)] := by
-  native_decide
+  decide +kernel
 
 example :
     labLineInstructionCount

@@ -27,11 +27,9 @@ fun 1 main() { return 7; }
 
 The original compiler produces byte-identical output for this no-tick program
 and for the `dec_clock` program (same SHA-256 and same 8-byte terminal
-`addi a0,x0,7; ret`), so the original drops the standalone `Tick`.  The port
-instead emits one `tick` nop, so the `dec_clock` `cml_main` is exactly the
-no-tick `cml_main` prefixed by that single nop.  This isolation is checked
-below; the no-tick residual mismatch is likewise tracked by
-`flapjack-pxn.8.5.10.1`.
+`addi a0,x0,7; ret`), so the original drops the standalone `Tick`.  Flapjack
+now mirrors CakeML's `lab_filter`: the source/Word semantics retains Tick for
+clock reasoning, while the final Lab artifact omits its no-op instruction.
 
 A third fixture, `Flapjack/Test/OriginalPancake/entry_order.pnk`, declares the
 entry function last:
@@ -45,10 +43,8 @@ fun 1 main() { return a(); }
 The original CPU pipeline moves the `main` declaration to the front
 (`cakeml/pancake/pan_passesScript.sml:20-37`, `pan_to_target_all_def`), so it
 emits `cml_generated_main`, `cml_main`, `cml_a`, `cml_b` in that order.  The
-port renames the source entry, wraps it, and emits source order
-(`cml_generated_main`, `cml_a`, `cml_b`, `main`).  That deterministic section
-ordering divergence, plus the 8-byte-vs-12-byte helper bodies, is the tracked
-gap owned by `flapjack-pxn.8.5.10.3`.
+Flapjack entry permutation and source-facing ABI mapping now produce the same
+section order and helper bytes for this fixture.
 
 The original-side facts are the `OriginalPancakeProbes.decClock` source-backed
 probe, whose dependency is the direct HOL probe
@@ -57,12 +53,10 @@ evaluates the original `panSem$evaluate` on `tick; return 7` and observes
 `SOME (Return (ValWord 7w))` with the clock decremented from `5` to `4`, which
 is the semantic result the generated artifact must implement.
 
-The generated `cml_generated_main` section is byte-identical.  The generated
-`cml_main` sections are not: the original emits the 8-byte constant return
-`addi a0,x0,7; ret`, while the port emits 16 bytes because it lowers `tick`
-and the return move through its typed pipeline.  That residual mismatch is the
-reproducible, tracked gap owned by `flapjack-pxn.8.5.10.1`; it is recorded
-exactly here instead of being weakened to an acceptance check.
+The generated `cml_generated_main` and `cml_main` sections are byte-identical
+for this fixture.  This is evidence for the source-facing ABI adapter and the
+final Lab filtering pass; larger programs still have tracked allocator,
+frame, FFI, and lowering gaps.
 
 A fourth fixture, `Flapjack/Test/OriginalPancake/nested_expression.pnk`, is the
 GitHub issue #1015 reproducer whose right-nested sum
@@ -109,12 +103,10 @@ def cakeMainBytes : List (BitVec 8) :=
 def flapjackGeneratedMainBytes : List (BitVec 8) :=
   [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)
 
-/-- Flapjack `cml_main` bytes: the 16-byte tick-then-return-lowering shape
-tracked by `flapjack-pxn.8.5.10.1`. -/
+/-- Flapjack `cml_main` bytes: Cake's 8-byte return shape.  The Lab filter
+removes the no-op generated for Tick before final assembly. -/
 def flapjackMainBytes : List (BitVec 8) :=
-  [0x13, 0x00, 0x00, 0x00,
-   0x13, 0x61, 0x70, 0x00,
-   0x33, 0x65, 0x21, 0x00,
+  [0x13, 0x65, 0x70, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
 
 /-- Run a source program through the production runtime-image entry point,
@@ -172,32 +164,20 @@ def bitmapsMatch : Bool :=
   | some image => image.bitmaps.data == [4]
   | none => false
 
-/-- The residual `cml_main` mismatch, recorded with its exact bytes and owner
-rather than accepted: the original emits 8 bytes, the port 16, both terminate
-in the same `ret` word, and the original source-backed probe pins that word. -/
-def trackedMainMismatch : Bool :=
-  cakeMainBytes != flapjackMainBytes &&
-    cakeMainBytes.length == 8 && flapjackMainBytes.length == 16 &&
-    cakeMainBytes.drop (cakeMainBytes.length - 4) == decClock.cakeFinalBytes &&
-    flapjackMainBytes.drop (flapjackMainBytes.length - 4) ==
-      decClock.cakeFinalBytes
+/-! The `dec_clock` artifact is now exact: Lab filtering removes the no-op
+instruction while the source semantics still accounts for the tick. -/
+def decClockExactParity : Bool :=
+  cakeMainBytes == flapjackMainBytes
 
 /-- The `const_return` fixture source: the no-tick counterpart to
 `dec_clock`, taken from the original-side probe fact. -/
 def constReturnSource : String := constReturn.source
 
-/-- Flapjack `cml_main` bytes for the no-tick `return 7` fixture: the 12-byte
-`addi x2,x0,7; add x2,x2,x2; ret` shape.  Its difference from `dec_clock` is
-exactly the single leading `tick` nop, which is the residual gap isolated
-below. -/
+/-- Flapjack `cml_main` bytes for the no-tick `return 7` fixture; this is now
+byte-identical to Cake after the source-facing ABI adapter. -/
 def flapjackConstReturnMainBytes : List (BitVec 8) :=
-  [0x13, 0x61, 0x70, 0x00,
-   0x33, 0x65, 0x21, 0x00,
+  [0x13, 0x65, 0x70, 0x00,
    0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
-
-/-- The single 4-byte `tick` lowering emitted by the port: `addi x0,x0,0`. -/
-def standaloneTickNop : List (BitVec 8) :=
-  [0x13, 0x00, 0x00, 0x00].map (BitVec.ofNat 8)
 
 /-- Exact emitted `(label, base, bytes)` artifact for the `const_return`
 fixture. -/
@@ -213,23 +193,13 @@ def constReturnLayoutMatches : Bool :=
     [ (3, 1000, flapjackGeneratedMainBytes),
       (4, 1004, flapjackConstReturnMainBytes) ]
 
-/-- The `dec_clock` `cml_main` differs from the no-tick `const_return` shape
-by exactly one leading `tick` nop, isolating the standalone-`Tick` gap. -/
-def standaloneTickIsolated : Bool :=
-  flapjackMainBytes == standaloneTickNop ++ flapjackConstReturnMainBytes
+/- The standalone tick is filtered at the final Lab boundary. -/
+def standaloneTickFiltered : Bool :=
+  flapjackMainBytes == flapjackConstReturnMainBytes
 
-/-- The residual no-tick `cml_main` mismatch, recorded with its exact bytes
-and owner: the original emits 8 bytes, the port 12, both terminate in the same
-`ret` word, and the source-backed `const_return` probe pins that word.  The
-original bytes are byte-identical to the `dec_clock` original, evidencing that
-the original drops the standalone `Tick`. -/
-def trackedConstReturnMismatch : Bool :=
-  cakeMainBytes != flapjackConstReturnMainBytes &&
-    cakeMainBytes.length == 8 && flapjackConstReturnMainBytes.length == 12 &&
-    cakeMainBytes.drop (cakeMainBytes.length - 4) ==
-      constReturn.cakeFinalBytes &&
-    flapjackConstReturnMainBytes.drop (flapjackConstReturnMainBytes.length - 4) ==
-      constReturn.cakeFinalBytes
+/-! The no-tick `const_return` artifact is exact. -/
+def constReturnExactParity : Bool :=
+  cakeMainBytes == flapjackConstReturnMainBytes
 
 /-- The `entry_order` fixture source, taken from the original-side probe fact.
 It declares the entry function `main` last:
@@ -252,17 +222,12 @@ def cakeEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
     (5, 1008, [0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
     (6, 1016, [0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)) ]
 
-/-- Flapjack layout for the same fixture: `cml_generated_main` at 1000 (4B,
-`jal` to the entry at 1004), helper `a` at 1008 (12B), and helper `b` at
-1020 (12B).  The entry declaration is now moved to the front, matching
-CakeML's `pan_to_target_all` ordering. -/
+/-- Flapjack emits the same layout and bytes as CakeML for this fixture. -/
 def flapjackEntryOrderSections : List (Nat × Nat × List (BitVec 8)) :=
   [ (3, 1000, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
     (4, 1004, [0x6F, 0x00, 0x40, 0x00].map (BitVec.ofNat 8)),
-    (5, 1008, [0x13, 0x61, 0x10, 0x00,
-               0x33, 0x65, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
-    (6, 1020, [0x13, 0x61, 0x20, 0x00,
-               0x33, 0x65, 0x21, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    (5, 1008, [0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
+    (6, 1016, [0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)),
     ]
 
 /-- Exact emitted `(label, base, bytes)` artifact for the `entry_order`
@@ -274,7 +239,7 @@ def entryOrderEmittedSections : List (Nat × Nat × List (BitVec 8)) :=
 
 /-- The port now follows CakeML's entry-first section order. -/
 def entryOrderLayoutMatches : Bool :=
-  entryOrderEmittedSections == flapjackEntryOrderSections
+  entryOrderEmittedSections == cakeEntryOrderSections
 
 /-- The residual helper-body mismatch, recorded exactly rather than accepted:
 the original places the entry `cml_main` second (label 4, 4 bytes) and the
@@ -282,14 +247,8 @@ helpers after it, while the port places helper `a` second (label 4, 12 bytes)
 and the entry `main` last (label 6).  Both entry sections are 4-byte jumps and
 section order and both entry jumps now agree, while the two helper bodies
 retain the tracked 12-byte lowering. -/
-def entryOrderOrderingMismatch : Bool :=
-  cakeEntryOrderSections != flapjackEntryOrderSections &&
-    cakeEntryOrderSections.length == 4 && flapjackEntryOrderSections.length == 4 &&
-    cakeEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 8, 8] &&
-    flapjackEntryOrderSections.map (fun s => s.2.2.length) == [4, 4, 12, 12] &&
-    entryOrder.cakeFinalBytes ==
-      ([0x13, 0x65, 0x10, 0x00, 0x67, 0x80, 0x00, 0x00,
-        0x13, 0x65, 0x20, 0x00, 0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8))
+def entryOrderExactParity : Bool :=
+  entryOrderEmittedSections == cakeEntryOrderSections
 
 
 /-- The `nested_expression` fixture source, taken from the original-side probe
@@ -653,12 +612,12 @@ def frameOccupancyP9GapTracked : Bool :=
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches
 #guard bitmapsMatch
-#guard trackedMainMismatch
+#guard decClockExactParity
 #guard constReturnLayoutMatches
-#guard standaloneTickIsolated
-#guard trackedConstReturnMismatch
+#guard standaloneTickFiltered
+#guard constReturnExactParity
 #guard entryOrderLayoutMatches
-#guard entryOrderOrderingMismatch
+#guard entryOrderExactParity
 #guard rorChainBudgetMatches
 #guard flattenRorChainProbeMatches
 #guard wideOpBudgetMatches
@@ -674,18 +633,18 @@ def runChecks : IO Bool := do
         emittedLayoutMatches),
       ("dec_clock bitmap table is the initial [4]",
         bitmapsMatch),
-      ("dec_clock residual cml_main mismatch is tracked, not accepted",
-        trackedMainMismatch),
+      ("dec_clock cml_main is byte-identical to Cake",
+        decClockExactParity),
       ("const_return emitted section layout matches the original bases",
         constReturnLayoutMatches),
-      ("dec_clock cml_main isolates a single standalone tick nop",
-        standaloneTickIsolated),
-      ("const_return residual cml_main mismatch is tracked, not accepted",
-        trackedConstReturnMismatch),
-      ("entry_order emitted section layout matches the port's source order",
+      ("standalone tick is filtered at the final Lab boundary",
+        standaloneTickFiltered),
+      ("const_return cml_main is byte-identical to Cake",
+        constReturnExactParity),
+      ("entry_order emitted section layout matches Cake",
         entryOrderLayoutMatches),
-      ("entry_order original entry-first order mismatch is tracked, not accepted",
-        entryOrderOrderingMismatch),
+      ("entry_order artifact is byte-identical to Cake",
+        entryOrderExactParity),
       ("nested_expression fixture accepted by the runtime-image entry point",
         nestedExpressionAccepted),
       ("nested_expression Word-to-Stack lowering uses the extended temp pool",

@@ -51,6 +51,49 @@ inductive PipelineRiscVLoweringError where
   | stackToRiscV
   deriving DecidableEq, Repr
 
+/-! Cake's Word names encode stack registers in pairs: word name `2` is stack
+    register `1`, which `riscv_names` emits as hardware `x10`.  The generic
+    allocator deliberately keeps its historical hardware-numbered fixed-source
+    API, so the source-facing RISC-V pipeline supplies this small target
+    adapter.  Names used directly by the FFI ABI (`10`--`13`) remain hardware
+    names; only the synthetic even ABI names introduced by full SSA are
+    translated. -/
+def wordRiscVAbiSourceRegister : Nat → Nat
+  | 0 => 1
+  | 2 => 10
+  | 4 => 11
+  | 6 => 12
+  | 8 => 13
+  | source => source
+
+def wordRiscVFixedSourceLocations : List Nat → NatInfoMap WordLocation
+  | [] => []
+  | source :: sources =>
+      (source, .register (wordRiscVAbiSourceRegister source)) ::
+        wordRiscVFixedSourceLocations sources
+
+def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
+    (parameters : List Nat) (program : WordProg α) :
+    Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
+  let (state, renamedParameters, program) :=
+    wordSsaRenameFunctionWithEntry parameters program
+  let tree := wordClashTree program []
+  let (liveIn, edges) := wordClashTreeAnalyze tree []
+  let edges := edges ++ wordProgSpecialConflictEdges program
+  let preferences := wordProgPreferenceEdges program
+  let slots :=
+    renamedParameters ++ wordProgVariables program ++ liveIn ++
+      edges.flatMap (fun edge => [edge.1, edge.2])
+  match wordAllocateVarsWithFixedLocations slots edges preferences
+      (wordRiscVFixedSourceLocations (wordPhysicalFixedSources parameters program)) with
+  | none => none
+  | some allocation =>
+      if wordProgSpecialLocationsSafe allocation.locations program = true &&
+          wordSpillClashTreeChecked tree allocation.locations then
+        some (state, renamedParameters, program, allocation)
+      else
+        none
+
 /-! Checked counterpart of the full-SSA spill pipeline.  The historical
 `Option` function intentionally keeps the old API, but it loses which Word
 section failed when allocation or location-aware Word-to-Stack lowering
@@ -66,7 +109,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
       let unallocatedBody := wordProgDCE
           (RiscV.wordFlattenProgramFrom
             (LoopToWord.loopToWordCompFunc label parameters body))
-      match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+      match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
@@ -105,7 +148,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
       let unallocatedBody := wordProgDCE
           (RiscV.wordFlattenProgramFrom
             (LoopToWord.loopToWordCompFunc label parameters body))
-      match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+      match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>

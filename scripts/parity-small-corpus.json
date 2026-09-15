@@ -15,13 +15,13 @@
       "path": "Flapjack/Test/OriginalPancake/dec_clock.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:145-148 (dec_clock_def)",
       "cake_sha256": "68281f19fe25699e613b31faebbd8bf54d7e18ad918c04af5ea43f1bc52aa8fa",
-      "tracked_beads": ["flapjack-pxn.8.5.10.1"]
+      "tracked_beads": []
     },
     {
       "path": "Flapjack/Test/OriginalPancake/const_return.pnk",
-      "source_reference": "no-tick counterpart to dec_clock.pnk; its original CakeML stdout is byte-identical (same sha256) to dec_clock.pnk, showing the original drops the standalone Tick while Flapjack lowers Tick to a Skip nop (Flapjack/RiscV/Backend.lean:365, .tick => some [.addi 0 0 0])",
+      "source_reference": "no-tick counterpart to dec_clock.pnk; its original CakeML stdout is byte-identical (same sha256) to dec_clock.pnk. Flapjack mirrors CakeML lab_filter at Flapjack/RiscV/Lab.lean:218 and omits the final Tick no-op.",
       "cake_sha256": "68281f19fe25699e613b31faebbd8bf54d7e18ad918c04af5ea43f1bc52aa8fa",
-      "tracked_beads": ["flapjack-pxn.8.5.10.1"]
+      "tracked_beads": []
     },
     {
       "path": "Flapjack/Test/OriginalPancake/crep_op.pnk",
@@ -49,9 +49,9 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/entry_order.pnk",
-      "source_reference": "cakeml/pancake/pan_passesScript.sml:20-37 (pan_to_target_all_def; SPLITP moves the `main` declaration to the front, so the original emits the entry function first and then source order, while Flapjack renames main and emits source order with a wrapper)",
+      "source_reference": "cakeml/pancake/pan_passesScript.sml:20-37 (pan_to_target_all_def; SPLITP moves the `main` declaration to the front; Flapjack now mirrors this in Pipeline.lean)",
       "cake_sha256": "76fe76be79451cd5595661e8ad912dc5f266ddeb58efa4b3e510bd70082b94fc",
-      "tracked_beads": ["flapjack-pxn.8.5.10.3"]
+      "tracked_beads": []
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_expression.pnk",

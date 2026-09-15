@@ -28,12 +28,14 @@ def wordDeadSelectSeq (first second : WordProg α) : WordProg α :=
   | program, .skip => program
   | _, _ => .seq first second
 
-/-! Cake's `pull_exp` and `flatten_exp` are observable before the allocator:
+/-! Cake's `pull_exp` and `flatten_exp` are observable before the allocator.
     `pull_ops` accumulates operands on the left, and `flatten_exp` rebuilds an
-    n-ary operation as a right-associated binary tree.  In particular,
-    `Add [x, y]` becomes `Add [y, x]`.  Keeping these two small normalizers at
-    the instruction-selection boundary preserves the source operand order
-    that feeds Cake's move preferences and clash graph. -/
+    n-ary operation as a right-associated binary tree.  Subtraction is the
+    important exception: Cake handles it with `convert_sub` and never feeds
+    it through the associative operand collector.  In particular, applying
+    `pull_ops` to `Sub [x, y]` would incorrectly turn the expression into
+    `Sub [y, x]`.  Keeping these cases explicit preserves the source operand
+    order that feeds Cake's move preferences and clash graph. -/
 
 def wordInstPullOps (operator : BinOp) :
     List (WordExp α) → List (WordExp α) → List (WordExp α)
@@ -49,12 +51,81 @@ def wordInstPullOps (operator : BinOp) :
 termination_by expressions _ => sizeOf expressions
 decreasing_by all_goals decreasing_trivial
 
-def wordInstPullExp : WordExp α → WordExp α
+def wordInstIsConstant : WordExp α → Bool
+  | .const _ => true
+  | _ => false
+
+/-! Cake's `optimize_consts` folds the constant operands of an associative
+    operation into a single constant and places it at the front of its
+    (already `pull_ops`-reversed) operand list, and `flatten_exp` then moves
+    that constant back to the last position.  The composition therefore keeps
+    the non-constant operands in the `pull_ops` order and puts the folded
+    constant at the end.  Flapjack represents the same normal form directly:
+    constants go last, which is what Cake's `inst_select_exp` immediate
+    (`Const` as the second operand) case expects.  `reduce_const` drops the
+    folded identity `0w` for `Add`, `Or` and `Xor`, and collapses a zero fold
+    to `Const 0w` for `And` (HOL probe labels `optimize_consts_or_zero`,
+    `optimize_consts_xor_zero`, `optimize_consts_and_zero`, `norm_or_zero`,
+    `norm_and_zero`), so the zero cases are reproduced here.  Folding
+    *non-zero* constants for `Or`, `Xor` and `And` needs the operator
+    semantics, which this module (core type classes only, no Mathlib) cannot
+    assume, and `op_consts` for empty operand lists remains a separate gap. -/
+def wordInstConstantValue : WordExp α → Option α
+  | .const value => some value
+  | _ => none
+
+def wordInstConstantsToEnd [Add α] [DecidableEq α] [OfNat α 0]
+    (operator : BinOp) (expressions : List (WordExp α)) : List (WordExp α) :=
+  let constants := expressions.filterMap wordInstConstantValue
+  let others := expressions.filter (fun expression => !wordInstIsConstant expression)
+  match constants with
+  | [] => expressions
+  | _ =>
+      match operator with
+      | .add =>
+          -- Cake's `optimize_consts` folds the constant operands with `word_op`
+          -- and `reduce_const` drops the result when it is the identity `0`, so
+          -- `[Const 0; x]` normalizes to `[x]` and `[Const 0]` to `[Const 0]`.
+          let folded := constants.foldr (fun value rest => value + rest) 0
+          if folded = 0 then
+            match others with
+            | [] => [.const 0]
+            | [single] => [single]
+            | _ => others
+          else
+            others ++ [.const folded]
+      | .or | .xor =>
+          -- `reduce_const` drops a zero fold for `Or`/`Xor` exactly as for
+          -- `Add`; only the all-zero fold is decidable without the operator.
+          if constants.all (fun value => value = 0) then
+            match others with
+            | [] => [.const 0]
+            | [single] => [single]
+            | _ => others
+          else
+            others ++ constants.map (fun value => .const value)
+      | .and =>
+          -- `reduce_const And 0w rest = Const 0w` collapses the whole
+          -- expression; a non-zero fold keeps the constant last.
+          if constants.all (fun value => value = 0) then
+            [.const 0]
+          else
+            others ++ constants.map (fun value => .const value)
+      | _ => others ++ constants.map (fun value => .const value)
+
+def wordInstConvertSub [Sub α] [OfNat α 0] : List (WordExp α) → WordExp α
+  | [.const left, .const right] => .const (left - right)
+  | [expression, .const value] => .op .add [expression, .const (0 - value)]
+  | expressions => .op .sub expressions
+
+def wordInstPullExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] : WordExp α → WordExp α
   | .op operator [] => .op operator []
   | .op _ [expression] => wordInstPullExp expression
+  | .op .sub expressions =>
+      wordInstConvertSub (expressions.map wordInstPullExp)
   | .op operator expressions =>
       let expressions := expressions.map wordInstPullExp
-      .op operator (wordInstPullOps operator expressions [])
+      .op operator (wordInstConstantsToEnd operator (wordInstPullOps operator expressions []))
   | .load address => .load (wordInstPullExp address)
   | .shift operator left right =>
       .shift operator (wordInstPullExp left) (wordInstPullExp right)
@@ -67,8 +138,8 @@ def wordInstFlattenExp : WordExp α → WordExp α
   | .op _ [expression] => wordInstFlattenExp expression
   | .op operator (expression :: expressions) =>
       .op operator
-        [ wordInstFlattenExp (.op operator expressions)
-        , wordInstFlattenExp expression ]
+        [ wordInstFlattenExp expression
+        , wordInstFlattenExp (.op operator expressions) ]
   | .load address => .load (wordInstFlattenExp address)
   | .shift operator left right =>
       .shift operator (wordInstFlattenExp left) (wordInstFlattenExp right)
@@ -76,10 +147,11 @@ def wordInstFlattenExp : WordExp α → WordExp α
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
-def wordInstNormalizeExp (expression : WordExp α) : WordExp α :=
+def wordInstNormalizeExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] (expression : WordExp α) : WordExp α :=
   wordInstFlattenExp (wordInstPullExp expression)
 
-def wordInstSelectAtom (temp : Nat) : WordExp α → WordProg α × WordExp α
+def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
+    (temp : Nat) : WordExp α → WordProg α × WordExp α
   | .const value => (.assign temp (.const value), .var temp)
   | .var name => (.assign temp (.var name), .var temp)
   | .lookup store => (.assign temp (.lookup store), .var temp)
@@ -93,8 +165,25 @@ def wordInstSelectAtom (temp : Nat) : WordExp α → WordProg α × WordExp α
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
       let code := wordDeadSelectSeq leftPrelude rightPrelude
-      (wordDeadSelectSeq code
-        (.assign temp (.op operator [.var temp, .var (temp + 1)])), .var temp)
+      let generic :=
+        (wordDeadSelectSeq code
+          (.assign temp (.op operator [.var temp, .var (temp + 1)])), .var temp)
+      match operator, left, right with
+      | .add, .lookup .currHeap,
+          .shift .lsl (.lookup .heapLength) (.const value) =>
+          if value = (1 : α) then
+            (.seq (.get temp .heapLength)
+              (.seq (.assign temp (.shift .lsl (.var temp) (.const (1 : α))))
+                (.opCurrHeap .add temp temp)), .var temp)
+          else generic
+      | .add, .shift .lsl (.lookup .heapLength) (.const value),
+          .lookup .currHeap =>
+          if value = (1 : α) then
+            (.seq (.get temp .heapLength)
+              (.seq (.assign temp (.shift .lsl (.var temp) (.const (1 : α))))
+                (.opCurrHeap .add temp temp)), .var temp)
+          else generic
+      | _, _, _ => generic
   | .shift operator left right =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
@@ -105,7 +194,8 @@ def wordInstSelectAtom (temp : Nat) : WordExp α → WordProg α × WordExp α
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgram (temp : Nat) : WordProg α → WordProg α
+def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
+    (temp : Nat) : WordProg α → WordProg α
   | .seq first second =>
       wordDeadSelectSeq (wordInstSelectProgram temp first)
         (wordInstSelectProgram temp second)
@@ -113,6 +203,26 @@ def wordInstSelectProgram (temp : Nat) : WordProg α → WordProg α
       let (prelude, address) :=
         wordInstSelectAtom temp (wordInstNormalizeExp address)
       wordDeadSelectSeq prelude (.shareInst operator name address)
+  | .assign destination value =>
+      let value := wordInstNormalizeExp value
+      match value with
+      | .load address =>
+          if wordExpIsAtom address then
+            .assign destination value
+          else
+            let (prelude, address) := wordInstSelectAtom temp address
+            wordDeadSelectSeq prelude (.assign destination (.load address))
+      | .op operator [left, .const value] =>
+          let (prelude, left) := wordInstSelectAtom temp left
+          wordDeadSelectSeq prelude
+            (.assign destination (.op operator [left, .const value]))
+      | .op operator [left, right] =>
+          let (leftPrelude, left) := wordInstSelectAtom temp left
+          let (rightPrelude, right) := wordInstSelectAtom (temp + 1) right
+          wordDeadSelectSeq leftPrelude
+            (wordDeadSelectSeq rightPrelude
+              (.assign destination (.op operator [left, right])))
+      | value => .assign destination value
   | .ite operator condition right thenBranch elseBranch =>
       .ite operator condition right
         (wordInstSelectProgram temp thenBranch)
@@ -120,16 +230,30 @@ def wordInstSelectProgram (temp : Nat) : WordProg α → WordProg α
   | .loop liveIn body liveOut =>
       .loop liveIn (wordInstSelectProgram temp body) liveOut
   | .mustTerminate body => .mustTerminate (wordInstSelectProgram temp body)
-  | .call returns target arguments handler =>
-      /- The source-facing hello path has no nested call address.  Keep call
-         metadata opaque here; the dedicated call lowering owns its handler
-         recursion and remains unchanged. -/
-      .call returns target arguments handler
+  | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments none =>
+      .call (some (destinations, cutsets,
+        wordInstSelectProgram temp returnCode, returnLabel, entryLabel))
+        target arguments none
+  | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments (some (exception, body, handlerLabel, handlerEntryLabel)) =>
+      .call (some (destinations, cutsets,
+        wordInstSelectProgram temp returnCode, returnLabel, entryLabel))
+        target arguments
+        (some (exception, wordInstSelectProgram temp body,
+          handlerLabel, handlerEntryLabel))
+  | .call none target arguments none =>
+      .call none target arguments none
+  | .call none target arguments (some (exception, body, handlerLabel, handlerEntryLabel)) =>
+      .call none target arguments
+        (some (exception, wordInstSelectProgram temp body,
+          handlerLabel, handlerEntryLabel))
   | program => program
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgramFrom (program : WordProg α) : WordProg α :=
+def wordInstSelectProgramFrom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
+    (program : WordProg α) : WordProg α :=
   wordInstSelectProgram (wordInstSelectMaximum (wordProgVariables program) + 1) program
 
 end Flapjack.RiscV

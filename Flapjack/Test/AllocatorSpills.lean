@@ -164,6 +164,34 @@ example :
 #guard wordAllocateVarsWithSpillsAndPreferences [0, 4] [(0, 4)] [(4, 0)] =
   some (⟨[(4, .register 6), (0, .register 2)], 0⟩ : WordSpillState)
 
+/- The indexed preference traversal preserves the exact small allocator
+   outputs while avoiding a full preference-edge rescan for every candidate. -/
+#guard wordGreedyAllocateWithSpillsAndPreferencesFast [0, 4] [] [(4, 0)]
+    { locations := [], nextSpill := 0 } =
+  (⟨[(4, .register 2), (0, .register 2)], 0⟩ : WordSpillState)
+
+#guard wordGreedyAllocateWithSpillsAndPreferencesFast [0, 4] [(0, 4)] [(4, 0)]
+    { locations := [], nextSpill := 0 } =
+  (⟨[(4, .register 6), (0, .register 2)], 0⟩ : WordSpillState)
+
+#guard wordGreedyAllocateWithSpillsAndPreferencesFast [0, 2, 4, 6] []
+    [(0, 2), (2, 4), (4, 6), (6, 0)] { locations := [], nextSpill := 0 } =
+  wordGreedyAllocateWithSpillsAndPreferences [0, 2, 4, 6] []
+    [(0, 2), (2, 4), (4, 6), (6, 0)] { locations := [], nextSpill := 0 }
+
+#guard (wordPreferenceReachableRegisters 0 [(0, 2), (2, 4), (4, 6), (6, 0)] []).eraseDups =
+  (wordPreferenceReachableRegistersIndexedFast 0
+    [(0, 2), (2, 4), (4, 6), (6, 0)]
+    (wordPreferenceIndex [(0, 2), (2, 4), (4, 6), (6, 0)])
+    (wordLocationIndex [])).eraseDups
+
+#guard (wordPreferenceReachableRegisters 0 [(0, 2), (0, 4), (2, 6), (4, 6)]
+    [(6, .register 10)]).eraseDups =
+  (wordPreferenceReachableRegistersIndexedFast 0
+    [(0, 2), (0, 4), (2, 6), (4, 6)]
+    (wordPreferenceIndex [(0, 2), (0, 4), (2, 6), (4, 6)])
+    (wordLocationIndex [(6, .register 10)])).eraseDups
+
 example (slots : List Nat) (edges preferences : List (Nat × Nat))
     (state : WordSpillState)
     (hstate : wordAllocateVarsWithSpillsAndPreferences slots edges preferences =

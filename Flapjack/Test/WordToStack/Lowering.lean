@@ -183,6 +183,7 @@ example :
       some (.seq (.seq (.stackLoad 31 12) (.arith .or 1 31 31)) (.return 0) :
         StackProg Nat) := by
   simp [wordToStackProg, wordStackReturn, wordStackMovesToPhysical,
+    wordStackReturnFreeCount, wordStackCakeFrameSize, stackFreeIfNonzero,
     wordStackPhysicalMovesTo, wordStackParallelLocationMove,
     wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
     wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,

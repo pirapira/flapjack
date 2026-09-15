@@ -111,23 +111,38 @@ decreasing_by
 def wordProgNeedsCakeFrame (program : WordProg α) : Bool :=
   !(wordProgFfiNames program).isEmpty || wordProgHasFrameOperations program
 
-/-! The Cake frame must also hold the stack arguments of the largest call in a
-    function. Those argument names are not allocator spills, so
-    `allocation.nextSpill` alone is insufficient for `format_var`. -/
-def wordProgMaxCallArguments : WordProg α → Nat
+/-! Cake's RISC-V call ABI passes the first `abiRegisterCount` arguments in
+    registers and materializes the remaining arguments at the top of the
+    frame (`format_var` / `wMoveSingle`).  The frame therefore needs room for
+    the overflowing argument words even when the allocator itself spills
+    nothing; without that room the physical argument destinations collide and
+    the parallel move refuses to lower.  This mirrors the original
+    `stack_var_count = MAX (...) stack_arg_count` clause. -/
+def wordStackAbiFrameDemand (abiRegisterCount argumentCount : Nat) : Nat :=
+  if argumentCount ≤ abiRegisterCount then 0
+  else argumentCount - abiRegisterCount - 1
+
+def wordProgAbiFrameDemand (abiRegisterCount : Nat) : WordProg α → Nat
   | .seq first second =>
-      max (wordProgMaxCallArguments first) (wordProgMaxCallArguments second)
+      max (wordProgAbiFrameDemand abiRegisterCount first)
+        (wordProgAbiFrameDemand abiRegisterCount second)
   | .ite _ _ _ thenBranch elseBranch =>
-      max (wordProgMaxCallArguments thenBranch) (wordProgMaxCallArguments elseBranch)
-  | .loop _ body _ | .mustTerminate body => wordProgMaxCallArguments body
+      max (wordProgAbiFrameDemand abiRegisterCount thenBranch)
+        (wordProgAbiFrameDemand abiRegisterCount elseBranch)
+  | .loop _ body _ | .mustTerminate body =>
+      wordProgAbiFrameDemand abiRegisterCount body
   | .call returns _ arguments handler =>
-      let returnCount := match returns with
-        | some (_, _, returnCode, _, _) => wordProgMaxCallArguments returnCode
+      let returnsDemand :=
+        match returns with
+        | some (_, _, returnProgram, _, _) =>
+            wordProgAbiFrameDemand abiRegisterCount returnProgram
         | none => 0
-      let handlerCount := match handler with
-        | some (_, body, _, _) => wordProgMaxCallArguments body
+      let handlerDemand :=
+        match handler with
+        | some (_, body, _, _) => wordProgAbiFrameDemand abiRegisterCount body
         | none => 0
-      max arguments.length (max returnCount handlerCount)
+      max (wordStackAbiFrameDemand abiRegisterCount arguments.length)
+        (max returnsDemand handlerDemand)
   | _ => 0
 termination_by program => sizeOf program
 decreasing_by

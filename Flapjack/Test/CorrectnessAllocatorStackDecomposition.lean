@@ -16,15 +16,12 @@ example [NeZero width]
       program registerCount bitmapRegister frameSlots storeConstsStub bitmapState =
       some (ssaState, renamedParameters, renamedProgram, allocation,
         stackProgram, finalState)) :
-    ∃ body moves bitmapFinal,
+    ∃ body bitmapFinal,
       wordToStackProgWordWithLocationBitmaps
         { config with locations := allocation.locations }
         registerCount bitmapRegister frameSlots storeConstsStub bitmapState
         renamedProgram = some (body, bitmapFinal) ∧
-      wordStackMovesFromPhysical
-        { config with locations := allocation.locations } renamedParameters config.abiBase =
-        some moves ∧
-      stackProgram = wordStackJoin moves body ∧
+      stackProgram = body ∧
       bitmapFinal = finalState := by
   exact wordAllocateSsaFunctionWithEntryAndSpillToStack_decompose
     config parameters program registerCount bitmapRegister frameSlots storeConstsStub

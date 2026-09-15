@@ -34,21 +34,21 @@ example :
     observe (crepEvaluate [] noPrim (noCrepFfi Nat) shm 0 0 10 state5
       (.seq (.store (.const 5) (.const 7))
         (.return [.loadGlob 5]))) = some ([3], some 3, some 7) := by
-  native_decide
+  decide +kernel
 
 /-- `StoreGlob` writes the globals map only: `Load` still reads old memory. -/
 example :
     observe (crepEvaluate [] noPrim (noCrepFfi Nat) shm 0 0 10 state5
       (.seq (.storeGlob 5 (.const 7))
         (.return [.load (.const 5)]))) = some ([9], some 7, some 9) := by
-  native_decide
+  decide +kernel
 
 /-- A global written by `StoreGlob` is read back by `LoadGlob`. -/
 example :
     observe (crepEvaluate [] noPrim (noCrepFfi Nat) shm 0 0 10 state5
       (.seq (.storeGlob 5 (.const 7))
         (.return [.loadGlob 5]))) = some ([7], some 7, some 9) := by
-  native_decide
+  decide +kernel
 
 /-- Call entry carries the caller's globals into the callee and back. -/
 def keepGlobalsFunctions : List (CompiledFunction Nat) :=
@@ -60,6 +60,6 @@ example :
       (.seq (.storeGlob 5 (.const 7))
         (.seq (.call none "f" [])
           (.return [.loadGlob 5])))) = some ([7], some 7, some 9) := by
-  native_decide
+  decide +kernel
 
 end Flapjack.Test.CrepEvaluateGlobals

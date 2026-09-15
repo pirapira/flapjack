@@ -572,6 +572,6 @@ where
     | _ => [[]]
 
 example : noMainEntrySteps = some ["store", "call main' tail"] := by
-  native_decide
+  decide +kernel
 
 end Flapjack

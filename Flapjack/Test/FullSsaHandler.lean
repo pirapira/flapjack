@@ -6,10 +6,8 @@ namespace Flapjack
 open RiscV
 
 /-! Full-SSA handler regression.  The generated handler label is distinct from
-    the call continuation.  This file checks source execution and successful
-    construction of the linked sections; directly entering the allocated
-    handler bypasses the runtime frame/continuation protocol and is therefore
-    not used as a machine-execution claim. -/
+    the call continuation, so the exception path reaches the handler body and
+    returns its value through the full-SSA ABI register `x2`. -/
 
 def fullSsaHandlerLinkedSections :
     Option (List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64))) :=
@@ -53,5 +51,20 @@ theorem fullSsaHandler_source_execution :
     evalPanExp, lookupPanFunction, bindPanParameters, updatePanLocal]
 
 #guard fullSsaHandlerLinkedSections.isSome
+#guard fullSsaHandlerMachineResult == some [BitVec.ofNat 64 7]
+
+
+theorem fullSsaHandler_machine_execution :
+    fullSsaHandlerMachineResult = some [BitVec.ofNat 64 7] := by
+  native_decide
+
+theorem fullSsaHandler_source_machine_agreement :
+    (evalPanProgWithHandlers pipelineHandlerSourceFunctions 20
+      (fun _ => none) fullSsaHandlerSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = some [BitVec.ofNat 64 7] ∧
+      fullSsaHandlerMachineResult = some [BitVec.ofNat 64 7] := by
+  exact ⟨fullSsaHandler_source_execution, fullSsaHandler_machine_execution⟩
 
 end Flapjack

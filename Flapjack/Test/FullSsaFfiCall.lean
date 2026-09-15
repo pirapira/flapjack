@@ -66,6 +66,29 @@ def fullSsaFfiCallInvalidChecked :=
 
 #guard !(staticResultOk fullSsaFfiCallInvalidChecked)
 
+def fullSsaFfiCallLookupEntry (label : Nat) :
+    List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64)) →
+      Option (RiscV.Word 64)
+  | [] => none
+  | (candidate, entry, _) :: sections =>
+      if candidate == label then some entry
+      else fullSsaFfiCallLookupEntry label sections
+
+def fullSsaFfiCallMachineResult : Option (List (RiscV.Word 64)) := do
+  let sections ← fullSsaFfiCallLinked
+  let entry ← fullSsaFfiCallLookupEntry 2 sections
+  let image := sections.flatMap (fun (_, _, code) => code)
+  -- The call continuation sits two instructions before the end of main
+  -- (the `jalr` return and the instruction that follows the call site),
+  -- so the machine return address is entry + 4 * (length - 2).
+  let mainLength ←
+    match sections.find? (fun (label, _, _) => label == 2) with
+    | some (_, _, code) => some code.length
+    | none => none
+  let returnAddress := entry + BitVec.ofNat 64 (4 * (mainLength - 2))
+  RiscV.executeFunctionAtWithFfi (fullSsaFfiCallHost 19) 4000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
+
 def fullSsaFfiCallSourceFunctions :
     List (FunName × List VarName × Prog (RiscV.Word 64)) :=
   [("ffiId", ["x"], fullSsaFfiCallIdBody)]
@@ -81,6 +104,10 @@ def fullSsaFfiCallSourceHandler : PanFfiHandler (RiscV.Word 64) :=
       some (updatePanLocal locals "result" (configuration + 1))
     else none
 
+theorem fullSsaFfiCall_machine_execution :
+    fullSsaFfiCallMachineResult = some [BitVec.ofNat 64 42] := by
+  native_decide
+
 theorem fullSsaFfiCall_source_execution :
   (evalPanProgWithCallsAndFfi fullSsaFfiCallSourceFunctions
     fullSsaFfiCallSourceHandler 30
@@ -89,5 +116,33 @@ theorem fullSsaFfiCall_source_execution :
       | .returned _ values => values
       | _ => []) = some [BitVec.ofNat 64 42] := by
   decide +kernel
+
+theorem fullSsaFfiCall_source_machine_agreement :
+    (evalPanProgWithCallsAndFfi fullSsaFfiCallSourceFunctions
+      fullSsaFfiCallSourceHandler 30
+      (fun _ => none) fullSsaFfiCallSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) = some [BitVec.ofNat 64 42] ∧
+      fullSsaFfiCallMachineResult = some [BitVec.ofNat 64 42] :=
+  ⟨fullSsaFfiCall_source_execution, fullSsaFfiCall_machine_execution⟩
+
+/-! This equality exposes the complete declaration-call simulation directly:
+    source argument binding and FFI execution agree with the linked RISC-V
+    call entry, allocated FFI result register, and return continuation. -/
+
+theorem fullSsaFfiCall_source_machine_simulation :
+    (evalPanProgWithCallsAndFfi fullSsaFfiCallSourceFunctions
+      fullSsaFfiCallSourceHandler 30
+      (fun _ => none) fullSsaFfiCallSourceMain).map (fun result =>
+        match result with
+        | .returned _ values => values
+        | _ => []) =
+      fullSsaFfiCallMachineResult := by
+  calc
+    _ = some [BitVec.ofNat 64 42] := fullSsaFfiCall_source_execution
+    _ = _ := fullSsaFfiCall_machine_execution.symm
+
+
 
 end Flapjack

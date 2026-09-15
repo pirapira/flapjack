@@ -179,7 +179,7 @@ theorem compileLabProgram_callFfi_return_executeFunctionAt_agreement
     (compileLabProgram context
       [⟨sectionId, [
         .labAsm (.callFfi function) [] 0,
-        .labAsm (.return 0) [] 0]⟩]).bind
+        .labAsm (.return) [] 0]⟩]).bind
     (fun code =>
           (executeFunctionAtWithFfi host 4 0 0 (BitVec.ofNat 64 100)
             [] code [] [] state)) = some [] := by
@@ -271,7 +271,7 @@ theorem compileLabProgram_callFfi_return_executeFunctionAt_agreement
       compileLabProgram context
         [⟨sectionId, [
           .labAsm (.callFfi function) [] 0,
-          .labAsm (.return 0) [] 0]⟩] =
+          .labAsm (.return) [] 0]⟩] =
         some [.addi 14 0 (BitVec.ofNat 64 service), .ecall, .jalr 0 1 0] := by
     simp [compileLabProgram, labCompileProgramSections,
       labCompileProgramLines, labCompileAsmProgram, hservice]
@@ -326,13 +326,13 @@ theorem compileLabProgram_callFfi_return_stub_shape
     compileLabProgram context
       [⟨sectionId, [
         .labAsm (.callFfi function) [] 0,
-        .labAsm (.return 0) [] 0]⟩] =
+        .labAsm (.return) [] 0]⟩] =
       some [.jal 0 (0 - BitVec.ofNat 64
           ((3 + index) * 16)),
         .jalr 0 1 0] := by
   simp [compileLabProgram, labCompileProgramSections,
     labCompileProgramLines, labCompileAsmProgram,
-    labFfiStubOffset, labLocValueRegister, hindex]
+    labFfiStubOffset, hindex]
 
 theorem executeInstructionsWithFfi_wordFfi_abi
     [NeZero width] (host : WordFfiHost width) (state : State width)

@@ -35,6 +35,26 @@ example :
     { locations := [(10, .register 12), (0, .register 2)], nextSpill := 0 }
   exact wordAllocateSsaProgramWithSpills_example
 
+/- The indexed clash oracle is extensionally identical to the historical
+   association-list checker, including its first-binding lookup convention. -/
+example :
+    (wordLocationIndex
+        ([(2, .register 7), (2, .stack 1)] : NatInfoMap WordLocation)).get? 2 =
+      some (.register 7) := by
+  rw [wordLocationIndex_get?]
+  rfl
+
+example :
+    wordSpillAllocationRespectsClashesFast
+        [(0, 1), (1, 2)]
+        ([(0, .register 2), (1, .register 3), (2, .stack 0)] :
+          NatInfoMap WordLocation) =
+      wordSpillAllocationRespectsClashes
+        [(0, 1), (1, 2)]
+        ([(0, .register 2), (1, .register 3), (2, .stack 0)] :
+          NatInfoMap WordLocation) := by
+  exact wordSpillAllocationRespectsClashesFast_eq _ _
+
 example :
     ∀ name, name ∈ [10] →
       ∃ location, lookupNatInfo name

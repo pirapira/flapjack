@@ -31,17 +31,25 @@ def pipelineHandlerMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← pipelineHandlerLinkedSections
   let entry ← pipelineHandlerSectionEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 244 [] image [] []
-    (RiscV.writeRegister (RiscV.writeRegister (RiscV.writeRegister
-      (RiscV.writeRegister (RiscV.zeroState 64) 1 244) 10 56) 21 288) 8 0)
+  let mainLength ←
+    match sections.find? (fun (label, _, _) => label == 2) with
+    | some (_, _, code) => some code.length
+    | none => none
+  let returnAddress := entry + BitVec.ofNat 64 (4 * mainLength)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 def pipelineHandlerMachineValues : Option (List (RiscV.Word 64)) := do
   let sections ← pipelineHandlerLinkedSections
   let entry ← pipelineHandlerSectionEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 244 [] image [7] []
-    (RiscV.writeRegister (RiscV.writeRegister (RiscV.writeRegister
-      (RiscV.writeRegister (RiscV.zeroState 64) 1 244) 10 56) 21 288) 8 0)
+  let mainLength ←
+    match sections.find? (fun (label, _, _) => label == 2) with
+    | some (_, _, code) => some code.length
+    | none => none
+  let returnAddress := entry + BitVec.ofNat 64 (4 * mainLength)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 #guard pipelineHandlerMachineResult.isSome
 #guard pipelineHandlerMachineResult = some []
@@ -50,9 +58,13 @@ def pipelineHandlerMachineValues : Option (List (RiscV.Word 64)) := do
     let sections ← pipelineHandlerLinkedSections
     let entry ← pipelineHandlerSectionEntry 2 sections
     let image := sections.flatMap (fun (_, _, code) => code)
-    RiscV.executeFunctionAtAfterEntry 4000 0 entry 244 [] image [7] []
-      (RiscV.writeRegister (RiscV.writeRegister (RiscV.writeRegister
-        (RiscV.writeRegister (RiscV.zeroState 64) 1 244) 10 56) 21 288) 8 0)
+    let mainLength ←
+      match sections.find? (fun (label, _, _) => label == 2) with
+      | some (_, _, code) => some code.length
+      | none => none
+    let returnAddress := entry + BitVec.ofNat 64 (4 * mainLength)
+    RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [2] []
+      (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
   result = some [BitVec.ofNat 64 7]
 
 theorem pipelineHandler_machine_execution :

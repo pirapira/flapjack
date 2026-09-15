@@ -25,6 +25,15 @@ def parityGuard : Bool :=
       { globals := [("g", (.one, 2))], globalsSize := 2,
         maxGlobalsSize := 16, bytesInWord := 1, fromNat := _ } } => true
   | _ => false) &&
+  (match globalCompileDecs compileContext
+      [.decl .one "g" (.const 7), .decl .one "g" (.const 8)] with
+  | { initializers :=
+      [.store (.op .sub [.topAddr, .const 2]) (.const 7),
+       .store (.op .sub [.topAddr, .const 3]) (.const 8)],
+      functions := [], exceptions := [], context :=
+      { globals := [("g", (.one, 3)), ("g", (.one, 2))], globalsSize := 3,
+        maxGlobalsSize := 16, bytesInWord := 1, fromNat := _ } } => true
+  | _ => false) &&
   (match globalCompileDecs compileContext [.exnDecl "E" .one] with
   | { initializers := [], functions := [], exceptions := [.exnDecl "E" .one],
       context :=

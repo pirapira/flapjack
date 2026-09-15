@@ -112,7 +112,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               stackBase := 0
               addressScratch := 29
-              abiBase := 10
+              abiBase := 1
               abiStride := 1
               abiFrameSlots := frameSlots
               sectionId := label
@@ -191,7 +191,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
               scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               stackBase := 0
               addressScratch := 29
-              abiBase := 10
+              abiBase := 1
               abiStride := 1
               abiFrameSlots := frameSlots
               sectionId := label
@@ -271,8 +271,10 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
             { locations := allocation.locations
               scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               stackBase := 0
-              addressScratch := 29
-              abiBase := 10
+              addressScratch := RiscV.cakeAddressScratch
+              specialScratch := RiscV.cakeSpecialScratch
+              carryScratch := RiscV.cakeCarryScratch
+              abiBase := 1
               abiStride := 1
               abiFrameSlots := frameSlots
               sectionId := label
@@ -471,7 +473,7 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
                       .error (sourceRiscVCompileErrorOfLowering 1 pipeline.crepe error)
                   | .ok functions =>
                       let initialLabel := fullSsaInitialLabLabel functions
-                      match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
+                      match RiscV.compileStackProgramNatListWithRaiseStubToRiscVCakeChecked
                           (width := width)
                           { services := services } removeConfig 0 initialLabel
                           (functions.map (fun (label, _, body) => (label, body))) with
@@ -515,7 +517,7 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
                   .error (sourceRiscVImageErrorOfLowering 1 pipeline.crepe error)
               | .ok functions =>
                   let initialLabel := fullSsaInitialLabLabel functions
-                  match RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscVChecked
+                  match RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscVCakeChecked
                       (width := width) { services := services } removeConfig 0 initialLabel
                       (functions.map (fun (label, _, body) => (label, body))) with
                   | .error error =>
@@ -565,7 +567,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
                     pipeline.crepe error)
               | .ok (functions, bitmaps) =>
                   let initialLabel := fullSsaInitialLabLabel functions
-                  match RiscV.compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
+                  match RiscV.compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVCakeChecked
                       { services := services } removeConfig
                       { gcStubLocation := stackGcStubLocation, returnLabel := 0,
                         firstFreshLabel := stackFunctionFirstLabel }

@@ -172,12 +172,12 @@ def loopFfiSharedLoad [BEq α] [OfNat α 1] [Add α]
       else
         match callFfi state.ffi (.sharedMem (loopFfiSharedOperator operator))
             (loopFfiByteCount state width)
-            (state.wordToBytes alignedAddress false) with
+            (state.wordToBytes address false) with
         | .final event =>
             let state := loopFfiClearLocals state
             (.finalFfi state event, state)
         | .returned ffi bytes =>
-            let value := state.wordOfBytes state.bigEndian bytes
+            let value := state.wordOfBytes false bytes
             let state := loopFfiUpdateLocal { state with ffi := ffi } name value
             (.normal state, state)
 
@@ -199,7 +199,7 @@ def loopFfiShMemLoad [BEq α] [OfNat α 1] [Add α]
         let state := loopFfiClearLocals state
         (.finalFfi state event, state)
     | .returned ffi bytes =>
-        let value := state.wordOfBytes state.bigEndian bytes
+        let value := state.wordOfBytes false bytes
         let state := loopFfiUpdateLocal { state with ffi := ffi } name value
         (.normal state, state)
 
@@ -258,10 +258,10 @@ def loopFfiSharedStore [BEq α] [OfNat α 1] [Add α]
       else
         let bytes :=
           if width = 0 then
-            state.wordToBytes value false ++ state.wordToBytes alignedAddress false
+            state.wordToBytes value false ++ state.wordToBytes address false
           else
             (state.wordToBytes value false).take width ++
-              state.wordToBytes alignedAddress false
+              state.wordToBytes address false
         match callFfi state.ffi (.sharedMem (loopFfiSharedOperator operator))
             (loopFfiByteCount state width) bytes with
         | .final event =>
@@ -365,8 +365,7 @@ theorem loopFfiSharedLoad_final [BEq α] [OfNat α 1] [Add α]
     (horacle : callFfi state.ffi
       (.sharedMem (loopFfiSharedOperator operator))
       (loopFfiByteCount state (loopFfiMemWidth operator))
-      (state.wordToBytes (loopFfiSharedAddress state address
-        (loopFfiMemWidth operator)) false) = .final event) :
+      (state.wordToBytes address false) = .final event) :
     (loopFfiSharedLoad state operator name address).1 =
       .finalFfi (loopFfiClearLocals state) event := by
   have hvalid' : state.shMemaddrs

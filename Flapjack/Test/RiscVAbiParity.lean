@@ -91,6 +91,51 @@ def parallelLocationMoveKeepsLiveSource : Bool :=
 #guard parallelMoveKeepsLiveSource
 #guard parallelLocationMoveKeepsLiveSource
 
+/-! Cake's `inst_select_exp` materializes the two operands in successive
+    temporaries before the selected binary assignment reaches SSA. -/
+def selectedBinaryAssignment : WordProg Nat :=
+  wordInstSelectProgramFrom
+    (.assign 5 (.op .add [.var 2, .var 4]))
+
+def selectedBinaryAssignmentShape : Bool :=
+  match selectedBinaryAssignment with
+  | .seq (.assign 6 (.var 4))
+      (.seq (.assign 7 (.var 2))
+        (.assign 5 (.op .add [.var 6, .var 7]))) => true
+  | _ => false
+
+#guard selectedBinaryAssignmentShape
+
+def twoRegisterAssignmentShape : Bool :=
+  match wordThreeToTwoReg
+      (.assign 5 (.op .add [.var 6, .var 7]) : WordProg Nat) with
+  | .seq (.move 0 [(5, 6)])
+      (.assign 5 (.op .add [.var 5, .var 7])) => true
+  | _ => false
+
+#guard twoRegisterAssignmentShape
+
+/-! Immediate-selected arithmetic is carried to Lab as the existing
+    const-plus-arithmetic fusion shape, including the non-in-place result
+    case used by Cake's `Binop ... (Imm ...)`. -/
+def immediateSelectionConfig : WordStackConfig :=
+  { locations := [(4, .register 1), (6, .register 0)]
+    scratch := 22
+    stackBase := 0
+    addressScratch := 12
+    specialScratch := 11
+    carryScratch := 10
+    abiBase := 1 }
+
+def immediateSelectionShape : Bool :=
+  match wordStackCompileExpNat immediateSelectionConfig 6
+      (.op .add [.var 4, .const 1]) with
+  | some (.seq (.arith .or 12 1 1)
+      (.seq (.const 22 1) (.arith .add 0 12 22))) => true
+  | _ => false
+
+#guard immediateSelectionShape
+
 /-! ### Cake ABI argument overflow
 
     The original `format_var`/`wMoveSingle` materializes arguments past the

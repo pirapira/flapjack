@@ -166,6 +166,44 @@ decreasing_by
 def wordRemoveDeadProgram (program : WordProg α) : WordProg α :=
   (wordDeadCode program []).1
 
+/-! Cake's two-register arithmetic pass turns a selected binary operation into
+    a destination/source move followed by an in-place operation.  The Word
+    carrier keeps the selected arithmetic as an assignment, so preserve that
+    move preference at the same post-copy boundary. -/
+def wordThreeToTwoReg : WordProg α → WordProg α
+  | .assign destination (.op operator [.var left, .var right]) =>
+      .seq (.move 0 [(destination, left)])
+        (.assign destination (.op operator [.var destination, .var right]))
+  | .seq first second =>
+      .seq (wordThreeToTwoReg first) (wordThreeToTwoReg second)
+  | .ite operator condition right thenBranch elseBranch =>
+      .ite operator condition right (wordThreeToTwoReg thenBranch)
+        (wordThreeToTwoReg elseBranch)
+  | .loop liveIn body liveOut =>
+      .loop liveIn (wordThreeToTwoReg body) liveOut
+  | .mustTerminate body => .mustTerminate (wordThreeToTwoReg body)
+  | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments none =>
+      .call (some (destinations, cutsets,
+        wordThreeToTwoReg returnCode, returnLabel, entryLabel))
+        target arguments none
+  | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments (some (exception, body, handlerLabel, handlerEntryLabel)) =>
+      .call (some (destinations, cutsets,
+        wordThreeToTwoReg returnCode, returnLabel, entryLabel))
+        target arguments
+        (some (exception, wordThreeToTwoReg body,
+          handlerLabel, handlerEntryLabel))
+  | .call none target arguments none =>
+      .call none target arguments none
+  | .call none target arguments (some (exception, body, handlerLabel, handlerEntryLabel)) =>
+      .call none target arguments
+        (some (exception, wordThreeToTwoReg body,
+          handlerLabel, handlerEntryLabel))
+  | program => program
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
 /-! The post-copy `word_unreach` boundary.  The public WordUnreach module
     depends on this file for its dead-code definitions, so keep this small
     local copy here to preserve the allocator pass order without introducing

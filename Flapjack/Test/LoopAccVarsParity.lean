@@ -28,6 +28,8 @@ def probeReturn : LoopProg Nat := .return [7, 8]
 def probeStore : LoopProg Nat := .store (.var 4) 7
 def probeLongDiv : LoopProg Nat := .arith (.longDiv 1 2 3 4 5)
 def probeCallNone : LoopProg Nat := .call none (some 3) [4, 5] none
+def probeIf : LoopProg Nat :=
+  .ite .less 8 (.reg 9) (.assign 11 (.const 1)) (.assign 12 (.const 2)) []
 
 #guard loopAccVars probeSkip [] == originalSkip
 #guard loopAccVars probeAssign [] == originalAssign
@@ -35,6 +37,7 @@ def probeCallNone : LoopProg Nat := .call none (some 3) [4, 5] none
 #guard loopAccVars probeStore [] == originalStore
 #guard loopAccVars probeLongDiv [] == originalLongDiv
 #guard loopAccVars probeCallNone [] == originalCallNone
+#guard loopAccVars probeIf [] == [11, 12]
 
 def check (name : String) (actual expected : List Nat) : IO Bool := do
   if actual == expected then
@@ -54,7 +57,9 @@ def runChecks : IO Bool := do
       (loopAccVars probeStore []) originalStore,
     check "acc_vars long division" (loopAccVars probeLongDiv []) originalLongDiv,
     check "acc_vars ignores call arguments"
-      (loopAccVars probeCallNone []) originalCallNone ].mapM id
+      (loopAccVars probeCallNone []) originalCallNone,
+    check "acc_vars ignores if condition operands"
+      (loopAccVars probeIf []) [11, 12] ].mapM id
   pure (results.all id)
 
 end Flapjack.Test.LoopAccVarsParity

@@ -208,7 +208,7 @@ def loopCompileExp [OfNat α 0] [OfNat α 1]
            .ite operator leftTemp (.reg rightTemp)
              (.assign leftTemp (.const (by exact 1)))
              (.assign leftTemp (.const (by exact 0)))
-             [leftTemp, rightTemp]],
+             (loopListInsert [leftTemp, rightTemp] rightResult.live)],
         expression := .var leftTemp, nextTemp := rightTemp + 1,
         live := leftTemp :: rightTemp :: rightResult.live }
   | .shift operator left right =>

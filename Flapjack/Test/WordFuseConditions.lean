@@ -56,19 +56,20 @@ def fusedProgramUsesDirectBranch : Bool :=
 #guard roundTripNeedsFusion
 #guard fusedProgramUsesDirectBranch
 
-/-- A materialisation whose branches write the comparison operand must not be
-tracked: rewriting the retest would then read the overwritten value.  This is
-the shape `CrepToLoop` produces when it reuses the condition variable as the
-destination of the 1/0 definition. -/
+/-- When the materialisation overwrites the comparison operand, the pass uses
+Cake's duplicate-if shape instead of retesting the overwritten value. -/
 def clobberingRoundTrip : WordProg Nat :=
   .seq (.ite .less 2 (.reg 3) (.assign 2 (.const 1)) (.assign 2 (.const 0)))
     (.seq (.assign 4 (.var 2))
       (.ite .notEqual 4 (.imm 0) (.assign 5 (.const 7)) .skip))
 
-def operandClobberIsRejected : Bool :=
-  wordProgHasNotEqualZeroTest (wordFuseConditions clobberingRoundTrip)
+def operandClobberIsFused : Bool :=
+  match wordFuseConditions clobberingRoundTrip with
+  | .ite .less 2 (.reg 3) _ _ =>
+      !wordProgHasNotEqualZeroTest (wordFuseConditions clobberingRoundTrip)
+  | _ => false
 
-#guard operandClobberIsRejected
+#guard operandClobberIsFused
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -76,8 +77,8 @@ def runChecks : IO Bool := do
         roundTripNeedsFusion),
       ("the fusion pass restores the Cake direct branch", 
         fusedProgramUsesDirectBranch),
-      ("a materialisation that overwrites its operand is not fused",
-        operandClobberIsRejected) ]
+      ("a clobbering materialisation uses Cake duplicate-if",
+        operandClobberIsFused) ]
   let mut ok := true
   for (name, result) in checks do
     if result then
@@ -88,3 +89,4 @@ def runChecks : IO Bool := do
   pure ok
 
 end Flapjack.Test.WordFuseConditions
+

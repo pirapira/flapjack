@@ -78,6 +78,84 @@ def wordBooleanDefinition? [BEq α] [OfNat α 0] [OfNat α 1] :
       else none
   | _ => none
 
+/-! Cake's `word_simp$simp_duplicate_if` duplicates a short straight-line
+    continuation after a 0/1 comparison materialisation.  This is the shape
+    emitted by `crep_to_loop` for `while`: the comparison writes its left
+    temporary to 1/0, a short sequence copies that result, and a following
+    `NotEqual ... 0` selects the loop body or break.  Duplicating only the
+    source's simple statements is safe and exposes the direct branch that
+    `word_to_stack` consumes. -/
+def wordConditionDefinition? [BEq α] [OfNat α 0] [OfNat α 1] :
+    WordProg α → Option (Cmp × Nat × WordRegImm α × WordProg α × WordProg α)
+  | .ite operator condition right thenBranch elseBranch =>
+      match wordBooleanDefinition? (.ite operator condition right thenBranch elseBranch) with
+      | some _ => some (operator, condition, right, thenBranch, elseBranch)
+      | none => none
+  | _ => none
+
+def wordConditionPrefixSafe : WordProg α → Bool
+  | .skip | .tick | .move _ _ | .assign _ _ => true
+  | _ => false
+
+def wordConditionHasAlias (condition test : Nat) : List (WordProg α) → Bool
+  | [] => condition == test
+  | statement :: statements =>
+      match statement with
+      | .assign name (.var source) =>
+          (name == test && source == condition) ||
+            wordConditionHasAlias condition test statements
+      | _ => wordConditionHasAlias condition test statements
+
+def wordConditionTest? (condition : Nat) (before : List (WordProg α)) :
+    List (WordProg α) → Option (List (WordProg α) × WordProg α × WordProg α ×
+      List (WordProg α))
+  | [] => none
+  | statement :: statements =>
+      match statement with
+      | .ite .notEqual test (.imm _) thenBranch elseBranch =>
+          if wordConditionHasAlias condition test before then
+            some (before, thenBranch, elseBranch, statements)
+          else none
+      | _ =>
+          if wordConditionPrefixSafe statement &&
+              !((wordProgWriteVars statement).contains condition) then
+            wordConditionTest? condition (before ++ [statement]) statements
+          else none
+
+def wordDuplicateConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
+    (fuel : Nat) (statements : List (WordProg α)) : List (WordProg α) :=
+  match fuel with
+  | 0 => statements
+  | fuel + 1 =>
+      match statements with
+      | [] => []
+      | statement :: rest =>
+          match wordConditionDefinition? statement with
+          | some (operator, condition, right, thenDefinition, elseDefinition) =>
+              match wordConditionTest? condition [] rest with
+              | some (before, thenBranch, elseBranch, remaining) =>
+                  let thenBody := wordListToProg
+                    (wordProgToList thenDefinition ++ before ++ [thenBranch])
+                  let elseBody := wordListToProg
+                    (wordProgToList elseDefinition ++ before ++ [elseBranch])
+                  .ite operator condition right thenBody elseBody ::
+                    wordDuplicateConditionsAux fuel remaining
+              | none =>
+                  statement :: wordDuplicateConditionsAux fuel rest
+          | none =>
+              match statement with
+              | .loop liveIn body liveOut =>
+                  let body' := wordListToProg
+                    (wordDuplicateConditionsAux fuel (wordProgToList body))
+                  .loop liveIn body' liveOut ::
+                    wordDuplicateConditionsAux fuel rest
+              | _ => statement :: wordDuplicateConditionsAux fuel rest
+
+def wordDuplicateConditions [BEq α] [OfNat α 0] [OfNat α 1]
+    (program : WordProg α) : WordProg α :=
+  wordListToProg
+    (wordDuplicateConditionsAux (wordProgFuel program + 1) (wordProgToList program))
+
 def wordFuseConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
       (fuel : Nat) (facts : List (WordConditionFact α))
       (statements : List (WordProg α)) : List (WordProg α) :=
@@ -152,7 +230,10 @@ conditional branches; if the bound is exhausted the program is returned
 unchanged, so the pass is always sound. -/
 def wordFuseConditions [BEq α] [OfNat α 0] [OfNat α 1]
     (program : WordProg α) : WordProg α :=
+  let duplicated := wordDuplicateConditions program
   wordListToProg
-    (wordFuseConditionsAux (wordProgFuel program + 1) [] (wordProgToList program))
+    (wordFuseConditionsAux (wordProgFuel duplicated + 1) []
+      (wordProgToList duplicated))
 
 end Flapjack.RiscV
+

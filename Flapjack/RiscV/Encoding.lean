@@ -159,14 +159,6 @@ def encodeInstruction [NeZero width] : Instruction width → BitVec 32
   | .loadWord destination address => encodeIValue 0x03 3 destination address 0
   | .storeWord source address =>
       encodeS (width := width) 3 source address (BitVec.ofNat width 0)
-  | .loadWordI destination base offset => encodeI 0x03 3 destination base offset
-  | .storeWordI source base offset => encodeS (width := width) 3 source base offset
-  | .loadByteI destination base offset => encodeI 0x03 4 destination base offset
-  | .storeByteI source base offset => encodeS (width := width) 0 source base offset
-  | .loadHalfI destination base offset => encodeI 0x03 5 destination base offset
-  | .storeHalfI source base offset => encodeS (width := width) 1 source base offset
-  | .load32I destination base offset => encodeI 0x03 6 destination base offset
-  | .store32I source base offset => encodeS (width := width) 2 source base offset
 
 def encodeWordBytes (value : BitVec 32) : List (BitVec 8) :=
   [ BitVec.ofNat 8 (value.toNat % 256)

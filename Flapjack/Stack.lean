@@ -45,7 +45,7 @@ inductive StackCallTarget where
 inductive StackProg (α : Type u) where
   | skip
   | const (destination value : Nat)
-  | inst (instruction : WordInst α)
+  | inst (instruction : WordInst)
   | shMem (operator : WordMemOp) (source address : Nat)
   | get (destination : Nat) (store : StackStore)
   | set (store : StackStore) (source : Nat)

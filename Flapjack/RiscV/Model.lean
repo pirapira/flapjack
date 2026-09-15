@@ -178,14 +178,6 @@ inductive Instruction (width : Nat) where
   | store32 (source address : Fin 32)
   | loadWord (destination address : Fin 32)
   | storeWord (source address : Fin 32)
-  | loadWordI (destination base : Fin 32) (offset : Word width)
-  | storeWordI (source base : Fin 32) (offset : Word width)
-  | loadByteI (destination base : Fin 32) (offset : Word width)
-  | storeByteI (source base : Fin 32) (offset : Word width)
-  | loadHalfI (destination base : Fin 32) (offset : Word width)
-  | storeHalfI (source base : Fin 32) (offset : Word width)
-  | load32I (destination base : Fin 32) (offset : Word width)
-  | store32I (source base : Fin 32) (offset : Word width)
   deriving DecidableEq, Repr
 
 def zeroState (width : Nat) [NeZero width] : State width :=
@@ -536,38 +528,6 @@ def execute (state : State width) : Instruction width → State width
       let address := readRegister state address
       writeWordValue { state with pc := nextPc state } address
         (readRegister state source)
-  | .loadWordI destination base offset =>
-      let address := readRegister state base + offset
-      writeRegister { state with pc := nextPc state } destination
-        (readWordValue state address)
-  | .storeWordI source base offset =>
-      let address := readRegister state base + offset
-      writeWordValue { state with pc := nextPc state } address
-        (readRegister state source)
-  | .loadByteI destination base offset =>
-      let address := readRegister state base + offset
-      writeRegister { state with pc := nextPc state } destination
-        (BitVec.ofNat width (readByte state address).toNat)
-  | .storeByteI source base offset =>
-      let address := readRegister state base + offset
-      writeByte { state with pc := nextPc state } address
-        (BitVec.ofNat 8 (readRegister state source).toNat)
-  | .loadHalfI destination base offset =>
-      let address := readRegister state base + offset
-      writeRegister { state with pc := nextPc state } destination
-        (readWord16 state address)
-  | .storeHalfI source base offset =>
-      let address := readRegister state base + offset
-      writeWord16 { state with pc := nextPc state } address
-        (readRegister state source)
-  | .load32I destination base offset =>
-      let address := readRegister state base + offset
-      writeRegister { state with pc := nextPc state } destination
-        (readWord32 state address)
-  | .store32I source base offset =>
-      let address := readRegister state base + offset
-      writeWord32 { state with pc := nextPc state } address
-        (readRegister state source)
 
 def accessAligned (access : AccessType) (address : Word width) (alignment : Nat) :
     Option ExceptionType :=
@@ -599,18 +559,6 @@ def executeTrap (state : State width) : Instruction width → Option ExceptionTy
       accessAligned .read (readRegister state address) (width / 8)
   | .storeWord _ address =>
       accessAligned .write (readRegister state address) (width / 8)
-  | .loadWordI _ base offset =>
-      accessAligned .read (readRegister state base + offset) (width / 8)
-  | .storeWordI _ base offset =>
-      accessAligned .write (readRegister state base + offset) (width / 8)
-  | .loadHalfI _ base offset =>
-      accessAligned .read (readRegister state base + offset) 2
-  | .storeHalfI _ base offset =>
-      accessAligned .write (readRegister state base + offset) 2
-  | .load32I _ base offset =>
-      accessAligned .read (readRegister state base + offset) 4
-  | .store32I _ base offset =>
-      accessAligned .write (readRegister state base + offset) 4
   | _ => none
 
 /-! An execution boundary that rejects instructions classified as trapping.

@@ -69,7 +69,7 @@ def wordHeuristicAddRhsRegs : List Nat → NatInfoMap WordHeuristicCounts →
   | name :: names, counts =>
       wordHeuristicAddRhsRegs names (wordHeuristicAddRhsReg name counts)
 
-def wordHeuristicInst {α : Type u} : WordInst α → NatInfoMap WordHeuristicCounts →
+def wordHeuristicInst : WordInst → NatInfoMap WordHeuristicCounts →
     NatInfoMap WordHeuristicCounts
   | .arith operation, counts =>
       match operation with
@@ -106,28 +106,6 @@ def wordHeuristicInst {α : Type u} : WordInst α → NatInfoMap WordHeuristicCo
           wordHeuristicAddLhsMem destination counts
       | .store | .store8 | .store16 | .store32 =>
           wordHeuristicAddRhsMem destination counts
-  | .const destination _, counts =>
-      wordHeuristicAddLhsReg destination counts
-  | .binop _ destination source right, counts =>
-      let counts := wordHeuristicAddLhsReg destination
-        (wordHeuristicAddRhsReg source counts)
-      match right with
-      | .reg name => wordHeuristicAddRhsReg name counts
-      | .imm _ => counts
-  | .shiftInst _ destination source amount, counts =>
-      let counts := wordHeuristicAddLhsReg destination
-        (wordHeuristicAddRhsReg source counts)
-      match amount with
-      | .reg name => wordHeuristicAddRhsReg name counts
-      | .imm _ => counts
-  | .memOffset operator destination base _, counts =>
-      match operator with
-      | .load | .load8 | .load16 | .load32 =>
-          wordHeuristicAddLhsMem destination
-            (wordHeuristicAddRhsReg base counts)
-      | .store | .store8 | .store16 | .store32 =>
-          wordHeuristicAddRhsMem destination
-            (wordHeuristicAddRhsReg base counts)
 
 def wordHeuristicMax (left right : WordHeuristicCounts) : WordHeuristicCounts :=
   { lhsConst := max left.lhsConst right.lhsConst

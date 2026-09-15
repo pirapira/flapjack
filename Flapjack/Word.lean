@@ -69,25 +69,16 @@ inductive WordMemOp where
   | store32
   deriving DecidableEq, Repr
 
-inductive WordInst (α : Type u) where
+inductive WordInst where
   | arith (operation : WordArith)
   | mem (operator : WordMemOp) (destination address : Nat)
-  /- The following forms mirror CakeML WordLang's instruction selection
-     output: `Const`, `Arith (Binop .. (Imm w))`, `Arith (Shift .. (Imm i))`
-     and `Mem .. (Addr r w)`.  They are produced by `wordInstSelect`
-     before SSA conversion, exactly like the original `inst_select`
-     pass. -/
-  | const (destination : Nat) (value : α)
-  | binop (operator : BinOp) (destination source : Nat) (right : WordRegImm α)
-  | shiftInst (operator : Shift) (destination source : Nat) (amount : WordRegImm α)
-  | memOffset (operator : WordMemOp) (destination base : Nat) (offset : α)
   deriving DecidableEq, Repr
 
 inductive WordProg (α : Type u) where
   | skip
   | move (priority : Nat) (moves : List (Nat × Nat))
   | assign (name : Nat) (value : WordExp α)
-  | inst (instruction : WordInst α)
+  | inst (instruction : WordInst)
   | get (destination : Nat) (store : WordStore α)
   | store (address : WordExp α) (value : Nat)
   | set (store : WordStore α) (value : WordExp α)

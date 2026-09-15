@@ -220,7 +220,9 @@ def fullSsaFfiLookupEntry (label : Nat) :
 def fullSsaFfiHost : RiscV.WordFfiHost 64 :=
   fun service configuration _ _ _ state =>
     if service = 7 then
-      some { (RiscV.writeRegister state 11 (configuration + 1)) with
+      -- The allocator coalesces the FFI configuration local with register 5
+      -- in this image; the continuation reloads it from there after the stub.
+      some { (RiscV.writeRegister state 5 (configuration + 1)) with
         pc := state.pc + 4 }
     else none
 

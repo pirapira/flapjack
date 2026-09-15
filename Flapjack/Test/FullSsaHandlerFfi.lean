@@ -342,9 +342,9 @@ theorem fullSsaCaughtHandlerFfi_source_loop_simulation :
 def fullSsaCaughtHandlerFfiHost : RiscV.WordFfiHost 64 :=
   fun service configuration _ _ _ state =>
     if service = 7 then
-      -- The full-SSA allocator assigns the caught-handler result to x21 in
-      -- this fixture; FFI results must be written to that allocated register.
-      some { (RiscV.writeRegister state 21 (configuration + 1)) with
+      -- The allocator coalesces the FFI configuration local with register 5
+      -- in this image; the continuation reloads it from there after the stub.
+      some { (RiscV.writeRegister state 5 (configuration + 1)) with
         pc := state.pc + 4 }
     else none
 

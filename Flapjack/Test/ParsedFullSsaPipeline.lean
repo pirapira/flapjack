@@ -188,7 +188,9 @@ def parsedConditionalWordResult : Option (List (RiscV.Word 64)) := do
     fixture pins the loop and word agreement on the real entry label after
     entry reordering: both compile `main` to label 2 and both agree on the
     conditional result.  Requiring the image and explicit value prevents the
-    regression from succeeding as `none = none`. -/
+    regression from succeeding as `none = none`. Before entry reordering these
+    lookups targeted the nonexistent label 3 and compared `none = none`
+    vacuously. -/
 #guard
   parsedConditionalLinked.isSome ∧
     parsedConditionalLoopResult = parsedConditionalWordResult ∧

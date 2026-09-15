@@ -134,12 +134,11 @@ def wordDeadCode : WordProg α → List Nat → WordProg α × List Nat
   | .shareInst operator name address, live =>
       match operator with
       | .load | .load8 | .load16 | .load32 =>
-          if name ∈ live then
-            (.shareInst operator name address,
-              wordDeadAddReads (wordDeadRemoveWrites live [name])
-                (wordExpReadVars address))
-          else
-            (.skip, live)
+          /- Cake deliberately retains ShareInst loads: even a dead load
+             emits the observable shared-memory event used by the FFI model. -/
+          (.shareInst operator name address,
+            wordDeadAddReads (wordDeadRemoveWrites live [name])
+              (wordExpReadVars address))
       | .store | .store8 | .store16 | .store32 =>
           (.shareInst operator name address,
             wordDeadAddReads live

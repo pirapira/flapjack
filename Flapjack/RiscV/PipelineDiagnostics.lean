@@ -5,6 +5,7 @@ import Flapjack.RiscV.Encoding
 import Flapjack.RiscV.LabDiagnostics
 import Flapjack.RiscV.WordDiagnostics
 import Flapjack.RiscV.CakeRegAlloc
+import Flapjack.RiscV.WordFuseConditions
 
 /-!
 # Checked pipeline Word-to-Stack diagnostics
@@ -105,8 +106,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
   | (label, parameters, body) :: functions =>
       let wordParameters := wordSsaAbiParameters parameters.length
       let unallocatedBody := wordProgDCE
-          (RiscV.wordFlattenProgramFrom
-            (LoopToWord.loopToWordCompFunc label parameters body))
+          (RiscV.wordFuseConditions
+            (RiscV.wordFlattenProgramFrom
+              (LoopToWord.loopToWordCompFunc label parameters body)))
       match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -170,10 +172,12 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
   | (label, parameters, body) :: functions =>
       let wordParameters := wordSsaAbiParameters parameters.length
       let unflattenedBody := wordProgDCE
-          (LoopToWord.loopToWordCompFunc label parameters body)
-      let unallocatedBody := wordProgDCE
-          (RiscV.wordFlattenProgramFrom
+          (RiscV.wordFuseConditions
             (LoopToWord.loopToWordCompFunc label parameters body))
+      let unallocatedBody := wordProgDCE
+          (RiscV.wordFuseConditions
+            (RiscV.wordFlattenProgramFrom
+              (LoopToWord.loopToWordCompFunc label parameters body)))
       match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)

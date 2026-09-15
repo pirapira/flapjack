@@ -34,7 +34,7 @@ def wordDeadMove (live : List Nat) (moves : List (Nat × Nat)) :
         (wordDeadRemoveWrites live (kept.map Prod.fst))
         (kept.map Prod.snd))
 
-def wordDeadInst {α : Type u} (live : List Nat) (instruction : WordInst α) :
+def wordDeadInst (live : List Nat) (instruction : WordInst) :
     WordProg α × List Nat :=
   let writes := wordInstWriteVars instruction
   let reads := wordInstReadVars instruction
@@ -44,11 +44,6 @@ def wordDeadInst {α : Type u} (live : List Nat) (instruction : WordInst α) :
   else
     match instruction with
     | .mem operator _ _ =>
-        match operator with
-        | .store | .store8 | .store16 | .store32 =>
-            (.inst instruction, wordDeadAddReads live reads)
-        | _ => (.skip, live)
-    | .memOffset operator _ _ _ =>
         match operator with
         | .store | .store8 | .store16 | .store32 =>
             (.inst instruction, wordDeadAddReads live reads)

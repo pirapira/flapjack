@@ -52,7 +52,7 @@ termination_by declarations => sizeOf declarations
 def compileProgToCrep [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     List (CompiledFunction α) :=
-  crepInlineTop (pipelineInlineNames declarations)
+  crepInlineTopRecursiveByNames (pipelineInlineNames declarations)
     (compileToCrep context declarations)
 
 def pipelineFindFunction (name : FunName) :
@@ -695,13 +695,16 @@ def panTargetDeclarationsWithDefaultMain [OfNat α 0] [OfNat α 1]
       { name := "main", inline := false, exported := false, params := [],
         body := .return (.const 0), returnShape := .one } :: declarations
 
-/-! Target entry point.  A program with a `main` takes the exact CakeML
-    `pan_to_target` wrapper path; a program without one is compiled as-is
-    (no synthesized or zero-returning `main`). -/
+/-! Target entry point.  `pan_to_target` first supplies a zero-returning
+    `main` when the source has no entry function, then takes the exact entry
+    wrapper path.  This matters even when the caller only asks for the
+    intermediate pipeline: the synthetic function changes declaration order,
+    labels, and the linked artifact. -/
 def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
     FlapjackPipelineResult α :=
+  let declarations := panTargetDeclarationsWithDefaultMain declarations
   match compileFlapjackEntry architecture bytesInWord fromNat "main" declarations with
   | some result => result
   | none => compileFlapjack architecture bytesInWord fromNat declarations

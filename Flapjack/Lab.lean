@@ -37,7 +37,7 @@ inductive LabJump where
   deriving DecidableEq, Repr
 
 inductive LabPlain (α : Type u) where
-  | word (instruction : WordInst α)
+  | word (instruction : WordInst)
   | const (destination value : Nat)
   | arith (operator : BinOp) (destination left right : Nat)
   /- The stack remover represents Cake's immediate stack-pointer update as a

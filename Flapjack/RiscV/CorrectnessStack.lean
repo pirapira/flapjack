@@ -22,7 +22,7 @@ theorem evalStackRemoveGet [NeZero width]
             BitVec.ofNat width
               (config.bytesInWord * stackStorePosition store)) =
         state.stores store) :
-    (evalWordStackMachine state (stackRemoveGet config none destination store)).map
+    (evalWordStackMachine state (stackRemoveGet config destination store)).map
         (fun final => final.registers destination) =
       some (state.stores store) := by
   cases store <;>
@@ -36,7 +36,7 @@ theorem evalStackRemoveSet [NeZero width]
     (hstore : store ≠ .currHeap)
     (haddress : config.addressScratch ≠ config.storeBase)
     (hsource : config.addressScratch ≠ source) :
-    (evalWordStackMachine state (stackRemoveSet config none store source)).map
+    (evalWordStackMachine state (stackRemoveSet config store source)).map
         (fun final =>
           final.memory
             (state.registers config.storeBase -
@@ -53,7 +53,7 @@ theorem evalStackRemoveGetCurrHeap [NeZero width]
     (config : StackRemoveConfig) (state : WordStackMachineState width)
     (destination : Nat) :
     (evalWordStackMachine state
-      (stackRemoveGet config none destination .currHeap)).map
+      (stackRemoveGet config destination .currHeap)).map
         (fun final => final.registers destination) =
       some (state.registers config.currHeap) := by
   by_cases hsame : destination = config.currHeap
@@ -66,7 +66,7 @@ theorem evalStackRemoveSetCurrHeap [NeZero width]
     (config : StackRemoveConfig) (state : WordStackMachineState width)
     (source : Nat) :
     (evalWordStackMachine state
-      (stackRemoveSet config none .currHeap source)).map
+      (stackRemoveSet config .currHeap source)).map
         (fun final => final.registers config.currHeap) =
       some (state.registers source) := by
   by_cases hsame : config.currHeap = source
@@ -91,19 +91,18 @@ theorem evalStackRemoveStackAlloc_small [NeZero width]
         BitVec.ofNat width (config.bytesInWord * words)) := by
   by_cases hzero : words = 0
   · subst words
-    simp [stackRemoveStackAlloc, stackRemoveStackDelta, hjump,
-      evalWordStackMachine]
+    simp [stackRemoveStackAlloc, evalWordStackMachine]
   · have horder : state.registers config.stackBase ≤
         state.registers config.stackPointer -
           BitVec.ofNat width (config.bytesInWord * words) := (BitVec.not_lt).mp hsafe
     by_cases hbasePointer : config.stackBase = config.stackPointer
     · simp [stackRemoveStackAlloc, stackRemoveStackDelta, hzero, hjump,
         stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
-        wordStackMachineWriteRegister, hwords, hbasePointer, horder,
-        hbase, Ne.symm hscratch]
+        wordStackMachineWriteRegister, hwords, hbasePointer,
+        Ne.symm hscratch]
     · simp [stackRemoveStackAlloc, stackRemoveStackDelta, hzero, hjump,
       stackRemoveJoin, evalWordStackMachine, wordStackMachineBinOp,
-      wordStackMachineWriteRegister, hwords, hsafe, horder, hbase,
+      wordStackMachineWriteRegister, hwords, hsafe, hbase,
       hbasePointer, Ne.symm hscratch]
 
 theorem evalStackRemoveStackFree_small [NeZero width]

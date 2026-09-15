@@ -248,7 +248,8 @@ def nextAtom : Nat → List Char → Posn → Option (Atom × Locs × List Char)
   | _ + 1, [], _ => none
   | fuel + 1, c :: cs, loc =>
       if c == '\n' then nextAtom fuel cs (nextLine loc)
-      else if c.isWhitespace then nextAtom fuel cs (nextLoc 1 loc)
+      -- CakeML `isSpace` (panLexerScript.sml:230) also skips \v (11) and \f (12).
+      else if c.isWhitespace || c == '\x0b' || c == '\x0c' then nextAtom fuel cs (nextLoc 1 loc)
       else if c.isDigit then
         let (n, cs') := readWhile Char.isDigit cs [c]
         some (.numberA (Int.ofNat (numFromDecString n)),

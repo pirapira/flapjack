@@ -111,6 +111,7 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       | .shift .ror _ _ _ => 5
       | .word (.arith (.longMul _ _ _ _)) => 2
       | .word (.arith (.addCarry _ _ _ _ _)) => 6
+      | .word (.arith (.cakeAddCarry _ _ _ _)) => 6
       | .const _ value => labConstInstructionCount value
       | .arithImm _ destination left immediate =>
           if destination = left && immediate = 0 then 0 else 1
@@ -126,7 +127,11 @@ def labLineInstructionCount : LabLine (Word width) → Nat
 def labFfiStubOffset [NeZero width] (context : WordFfiContext)
     (function : FunName) (position : Nat) : Option (Word width) := do
   let index ← lookupWordFfiIndex function context.services
-  let stubDistance := context.services.length + 2 - index
+  /- CakeML emits FFI blocks in reverse `ffi_names` order.  The target
+     assembler therefore addresses service index `i` at the fixed prefix
+     distance `(3 + i) * ffi_offset`: two runtime blocks (cake_clear and
+     cake_exit), followed by the reversed service table. -/
+  let stubDistance := 3 + index
   pure (0 - BitVec.ofNat width (position + stubDistance * 16))
 
 def labCollectLabels (_sectionId : Nat) (position : Nat) :
@@ -204,29 +209,6 @@ def labShiftInstructions [NeZero width] (operator : Shift)
 def labCompilePlain [NeZero width] :
     LabPlain (Word width) → Option (List (Instruction width))
   | .word (.arith operation) => wordArithToInstructions operation
-  | .word (.const destination value) =>
-      labCompilePlain (.const destination value.toNat)
-  | .word (.binop operator destination source (.imm value)) => do
-      let destination ← labRegisterOfNat (portToStack destination)
-      let source ← labRegisterOfNat (portToStack source)
-      match operator with
-      | .add => pure [.addi destination source value]
-      | .sub => pure [.addi destination source (0 - value)]
-      | .and => pure [.andi destination source value]
-      | .or => pure [.ori destination source value]
-      | .xor => pure [.xori destination source value]
-  | .word (.binop operator destination source (.reg name)) =>
-      (labBinOpInstruction operator destination source name).map List.singleton
-  | .word (.shiftInst operator destination source (.imm value)) => do
-      let destination ← labRegisterOfNat (portToStack destination)
-      let source ← labRegisterOfNat (portToStack source)
-      match operator with
-      | .lsl => pure [.slli destination source value]
-      | .lsr => pure [.srli destination source value]
-      | .asr => pure [.srai destination source value]
-      | .ror => none
-  | .word (.shiftInst operator destination source (.reg name)) =>
-      labShiftInstructions operator destination source name
   | .word instruction => (wordInstToInstruction instruction).map List.singleton
   | .const destination value => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
@@ -371,24 +353,8 @@ def labAsmNatToWord [NeZero width] : LabAsm Nat → LabAsm (Word width)
   | .install => .install
   | .halt => .halt
 
-def labRegImmNatToWord [NeZero width] : WordRegImm Nat → WordRegImm (Word width)
-  | .reg name => .reg name
-  | .imm value => .imm (BitVec.ofNat width value)
-
-def labWordInstNatToWord [NeZero width] : WordInst Nat → WordInst (Word width)
-  | .arith operation => .arith operation
-  | .mem operator destination address => .mem operator destination address
-  | .const destination value =>
-      .const destination (BitVec.ofNat width value)
-  | .binop operator destination source right =>
-      .binop operator destination source (labRegImmNatToWord right)
-  | .shiftInst operator destination source amount =>
-      .shiftInst operator destination source (labRegImmNatToWord amount)
-  | .memOffset operator destination base offset =>
-      .memOffset operator destination base (BitVec.ofNat width offset)
-
 def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
-  | .word instruction => .word (labWordInstNatToWord instruction)
+  | .word instruction => .word instruction
   | .const destination value => .const destination value
   | .arith operator destination left right =>
       .arith operator destination left right
@@ -686,7 +652,7 @@ def labFfiStubPrefix [NeZero width] (context : WordFfiContext) :
     List (Instruction width) :=
   if context.services.isEmpty then []
   else
-      context.services.flatMap (fun (_, service) => labFfiServiceStub service) ++
+      context.services.reverse.flatMap (fun (_, service) => labFfiServiceStub service) ++
         List.replicate 8 (.jal 0 0)
 
 /-! A linked FFI call is nested inside an ordinary Cake function call.  Its

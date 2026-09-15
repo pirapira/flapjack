@@ -78,7 +78,7 @@ def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
     (currentFunction : Nat) (parameters : List Nat) (program : WordProg α) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   RiscV.CakeRegAlloc.cakeAllocateWordFunction parameters program
-    currentFunction (wordAllocatableRegisters.length + 2)
+    currentFunction RiscV.CakeRegAlloc.cakeRiscVRegisterCount
 
 /-! Checked counterpart of the full-SSA spill pipeline.  The historical
 `Option` function intentionally keeps the old API, but it loses which Word
@@ -109,7 +109,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               (RiscV.wordProgMaxCallArguments renamedProgram - 12))
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
-              scratch := 31
+              scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               stackBase := 0
               addressScratch := 29
               abiBase := 10
@@ -118,14 +118,14 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               sectionId := label
               handlerLabel := label }
           let lower :=
-            if !RiscV.wordProgNeedsCakeFrame renamedProgram then
+            if frameSlots = 0 then
               RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves config
-                renamedParameters wordAllocatableRegisters.length config.scratch
+                renamedParameters RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
                 frameSlots (some 1)
                 (RiscV.wordStackInitialBitmaps false) renamedProgram
             else
               RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves config
-                renamedParameters wordAllocatableRegisters.length config.scratch
+                renamedParameters RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
                 frameSlots (some 1)
                 (RiscV.wordStackInitialBitmaps false) renamedProgram
           match lower with
@@ -181,14 +181,14 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
           let cakeFrameSlots :=
             if RiscV.wordProgHasBitmapSites renamedProgram then
               RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
-                wordAllocatableRegisters.length unflattenedBody
+                RiscV.CakeRegAlloc.cakeRiscVRegisterCount unflattenedBody
             else 0
           let frameSlots := max cakeFrameSlots
             (max (wordParameters.length - 12)
               (RiscV.wordProgMaxCallArguments renamedProgram - 12))
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
-              scratch := 31
+              scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               stackBase := 0
               addressScratch := 29
               abiBase := 10
@@ -199,14 +199,14 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
           let localState : RiscV.WordStackBitmapState :=
             { data := [], length := bitmaps.length }
           let lower :=
-            if !RiscV.wordProgNeedsCakeFrame renamedProgram then
+            if frameSlots = 0 then
               RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves config
-                renamedParameters wordAllocatableRegisters.length config.scratch
+                renamedParameters RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
                 frameSlots
                 (some 1) localState renamedProgram
             else
               RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves config
-                renamedParameters wordAllocatableRegisters.length config.scratch
+                renamedParameters RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
                 frameSlots
                 (some 1) localState renamedProgram
           match lower with
@@ -262,14 +262,14 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
           let cakeFrameSlots :=
             if RiscV.wordProgHasBitmapSites renamedProgram then
               RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
-                wordAllocatableRegisters.length unflattenedBody
+                RiscV.CakeRegAlloc.cakeRiscVRegisterCount unflattenedBody
             else 0
           let frameSlots := max cakeFrameSlots
             (max (wordParameters.length - 12)
               (RiscV.wordProgMaxCallArguments renamedProgram - 12))
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
-              scratch := 31
+              scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               stackBase := 0
               addressScratch := 29
               abiBase := 10
@@ -280,15 +280,15 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
           let localState : RiscV.WordStackBitmapState :=
             { data := [], length := bitmaps.length }
           let lower :=
-            if !RiscV.wordProgNeedsCakeFrame renamedProgram then
+            if frameSlots = 0 then
               RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMovesWithSources
                 config renamedParameters wordRiscVAbiSourceRegister
-                wordAllocatableRegisters.length config.scratch
+                RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
                 frameSlots (some 1) localState renamedProgram
             else
               RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMovesWithSources
                 config renamedParameters wordRiscVAbiSourceRegister
-                wordAllocatableRegisters.length config.scratch
+                RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
                 frameSlots (some 1) localState renamedProgram
           match lower with
           | none =>
@@ -569,7 +569,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
                       { services := services } removeConfig
                       { gcStubLocation := stackGcStubLocation, returnLabel := 0,
                         firstFreshLabel := stackFunctionFirstLabel }
-                      { } stackStoreConstsStubLocation wordAllocatableRegisters.length
+                      { } stackStoreConstsStubLocation RiscV.CakeRegAlloc.cakeRiscVRegisterCount
                       0 initialLabel
                       (functions.map (fun (label, _, body) => (label, body))) with
                   | .error error =>

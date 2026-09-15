@@ -293,15 +293,17 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
   match stackProgramsWithLongDivRuntime removeConfig programs with
   | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
   | some programs =>
-      compileLabProgramLinkedWithHaltChecked context
-        (((programs.map (fun (sectionId, program) =>
-          if sectionId = cakeLongDiv1Location ||
-              sectionId = cakeLongDivLocation then
-            labProgramToEntrySection sectionId 0 initialLabel
-              (stackRemoveComplete removeConfig program)
-          else
-            labProgramToEntrySection sectionId entryLabel initialLabel
-              (stackRemoveComplete removeConfig program))).map labSectionNatToWord))
+      match compileLabProgramLinkedWithFfiStubsAndHalt context
+          (((programs.map (fun (sectionId, program) =>
+            if sectionId = cakeLongDiv1Location ||
+                sectionId = cakeLongDivLocation then
+              labProgramToEntrySection sectionId 0 initialLabel
+                (stackRemoveComplete removeConfig program)
+            else
+              labProgramToEntrySection sectionId entryLabel initialLabel
+                (stackRemoveComplete removeConfig program))).map labSectionNatToWord)) with
+      | some sections => .ok sections
+      | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
 
 def compileStackProgramNatToRiscVChecked [NeZero width]
   (context : WordFfiContext) (config : StackRemoveConfig)

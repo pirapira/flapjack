@@ -3319,6 +3319,15 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .set store value =>
       (wordStackSetNat config (wordStoreToNat store) (wordExpToNat value)).map
         (fun code => (code, state))
+  | .seq (.assign firstDestination (.const firstValue))
+      (.seq (.assign secondDestination (.const secondValue)) rest) => do
+      let firstCode ← wordStackCompileExpToPhysicalNat config secondDestination
+        (wordExpToNat (.const secondValue))
+      let secondCode ← wordStackCompileExpToPhysicalNat config firstDestination
+        (wordExpToNat (.const firstValue))
+      let (restCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state rest
+      pure (.seq firstCode (.seq secondCode restCode), state)
   | .seq first second => do
       let (firstCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state first

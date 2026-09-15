@@ -70,12 +70,7 @@ def wordCseProg : WordCseState α → WordProg α → WordProg α × WordCseStat
       | none => (.assign destination (.lookup store),
           wordCseUpdate state store destination)
   | state, .assign destination (.const value) =>
-      match wordCseLookupConst state value with
-      | some source => (.move 0 [(destination, source)],
-          wordCseClearDestination state destination)
-      | none => (.assign destination (.const value),
-          wordCseRememberConst (wordCseClearDestination state destination)
-            value destination)
+      (.assign destination (.const value), wordCseClearDestination state destination)
   | state, .assign destination value =>
       (.assign destination value, wordCseClearDestination state destination)
   | state, .set store value =>

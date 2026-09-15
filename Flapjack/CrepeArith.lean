@@ -36,40 +36,41 @@ def crepDest2Exp [PanShiftWidth α] [BEq α] [OfNat α 0] [OfNat α 1]
 
 /-! Fixed-width executable port of CakeML's `crep_arith$mul_const`.
     Constants zero and one are handled directly; powers of two become a left
-    shift, while all other constants retain the original multiplication node. -/
-def crepMulConst [NeZero width]
-    (expression : CrepExp (RiscV.Word width))
-    (constant : RiscV.Word width) : CrepExp (RiscV.Word width) :=
+    shift, while all other constants retain the original multiplication node.
+    `fromNat` is the target word embedding (CakeML's `n2w`). -/
+def crepMulConst [BEq α] [OfNat α 0] [OfNat α 1] [AndOp α] [ShiftRight α]
+    [PanShiftWidth α] (fromNat : Nat → α)
+    (expression : CrepExp α) (constant : α) : CrepExp α :=
   if constant == 0 then .const 0
   else if constant == 1 then expression
   else match crepDest2Exp 0 constant with
     | none => .crepOp .mul [expression, .const constant]
-    | some exponent => .shift .lsl expression
-        (.const (BitVec.ofNat width exponent))
+    | some exponent => .shift .lsl expression (.const (fromNat exponent))
 
 /-! Fixed-width executable port of CakeML's `crep_arith$simp_exp`.
     The expression tree is simplified bottom-up.  Only binary multiplication
     receives arithmetic-specific treatment; all other constructors preserve
     their original shape after recursively simplifying their children. -/
-def crepSimpExp [NeZero width] : CrepExp (RiscV.Word width) →
-    CrepExp (RiscV.Word width)
-  | .load address => .load (crepSimpExp address)
-  | .load32 address => .load32 (crepSimpExp address)
-  | .loadByte address => .loadByte (crepSimpExp address)
-  | .op operator expressions => .op operator (expressions.map crepSimpExp)
+def crepSimpExp [BEq α] [OfNat α 0] [OfNat α 1] [Mul α] [AndOp α]
+    [ShiftRight α] [PanShiftWidth α] (fromNat : Nat → α) :
+    CrepExp α → CrepExp α
+  | .load address => .load (crepSimpExp fromNat address)
+  | .load32 address => .load32 (crepSimpExp fromNat address)
+  | .loadByte address => .loadByte (crepSimpExp fromNat address)
+  | .op operator expressions => .op operator (expressions.map (crepSimpExp fromNat))
   | .crepOp operator expressions =>
-      let expressions := expressions.map crepSimpExp
+      let expressions := expressions.map (crepSimpExp fromNat)
       match operator, expressions with
       | .mul, [.const left, .const right] => .const (left * right)
       | .mul, [.const constant, expression] =>
-          crepMulConst expression constant
+          crepMulConst fromNat expression constant
       | .mul, [expression, .const constant] =>
-          crepMulConst expression constant
+          crepMulConst fromNat expression constant
       | _, _ => .crepOp operator expressions
   | .cmp operator left right =>
-      .cmp operator (crepSimpExp left) (crepSimpExp right)
+      .cmp operator (crepSimpExp fromNat left) (crepSimpExp fromNat right)
   | .shift operator left right =>
-      .shift operator (crepSimpExp left) (crepSimpExp right)
+      .shift operator (crepSimpExp fromNat left) (crepSimpExp fromNat right)
   | expression => expression
 termination_by expression => sizeOf expression
 decreasing_by
@@ -78,29 +79,30 @@ decreasing_by
 /-! Fixed-width executable port of CakeML's `crep_arith$simp_prog`.
     Program nodes preserve their original sequencing and control structure;
     every embedded expression is simplified, including call handlers. -/
-def crepSimpProg [NeZero width] : CrepProg (RiscV.Word width) →
-    CrepProg (RiscV.Word width)
+def crepSimpProg [BEq α] [OfNat α 0] [OfNat α 1] [Mul α] [AndOp α]
+    [ShiftRight α] [PanShiftWidth α] (fromNat : Nat → α) :
+    CrepProg α → CrepProg α
   | .skip => .skip
   | .dec name value body =>
-      .dec name (crepSimpExp value) (crepSimpProg body)
-  | .assign name value => .assign name (crepSimpExp value)
+      .dec name (crepSimpExp fromNat value) (crepSimpProg fromNat body)
+  | .assign name value => .assign name (crepSimpExp fromNat value)
   | .primitive names operator arguments =>
       .primitive names operator arguments
   | .store address value =>
-      .store (crepSimpExp address) (crepSimpExp value)
+      .store (crepSimpExp fromNat address) (crepSimpExp fromNat value)
   | .store32 address value =>
-      .store32 (crepSimpExp address) (crepSimpExp value)
+      .store32 (crepSimpExp fromNat address) (crepSimpExp fromNat value)
   | .storeByte address value =>
-      .storeByte (crepSimpExp address) (crepSimpExp value)
+      .storeByte (crepSimpExp fromNat address) (crepSimpExp fromNat value)
   | .storeGlob address value =>
-      .storeGlob address (crepSimpExp value)
+      .storeGlob address (crepSimpExp fromNat value)
   | .seq first second =>
-      .seq (crepSimpProg first) (crepSimpProg second)
+      .seq (crepSimpProg fromNat first) (crepSimpProg fromNat second)
   | .ite condition thenBranch elseBranch =>
-      .ite (crepSimpExp condition) (crepSimpProg thenBranch)
-        (crepSimpProg elseBranch)
+      .ite (crepSimpExp fromNat condition) (crepSimpProg fromNat thenBranch)
+        (crepSimpProg fromNat elseBranch)
   | .while condition body =>
-      .while (crepSimpExp condition) (crepSimpProg body)
+      .while (crepSimpExp fromNat condition) (crepSimpProg fromNat body)
   | .break label => .break label
   | .continue label => .continue label
   | .call returnInfo name arguments =>
@@ -109,18 +111,29 @@ def crepSimpProg [NeZero width] : CrepProg (RiscV.Word width) →
         | none => none
         | some (names, none) => some (names, none)
         | some (names, some (handler, body)) =>
-            some (names, some (handler, crepSimpProg body))
-      .call returnInfo name (arguments.map crepSimpExp)
+            some (names, some (handler, crepSimpProg fromNat body))
+      .call returnInfo name (arguments.map (crepSimpExp fromNat))
   | .extCall function configuration configurationLength array arrayLength =>
       .extCall function configuration configurationLength array arrayLength
   | .raise exception => .raise exception
-  | .return values => .return (values.map crepSimpExp)
+  | .return values => .return (values.map (crepSimpExp fromNat))
   | .shMem operator name address =>
-      .shMem operator name (crepSimpExp address)
+      .shMem operator name (crepSimpExp fromNat address)
   | .tick => .tick
 termination_by program => sizeOf program
 decreasing_by
   all_goals first | sizeOf_list_dec | decreasing_trivial | simp_wf
+
+/-! `crep_arith$simp_prog` lifted over a compiled-function list, matching the
+    per-body application in CakeML's `crep_to_loop$compile_prog`
+    (`crep_to_loopScript.sml:264`). -/
+def crepSimpFunctions [BEq α] [OfNat α 0] [OfNat α 1] [Mul α] [AndOp α]
+    [ShiftRight α] [PanShiftWidth α] (fromNat : Nat → α) :
+    List (CompiledFunction α) → List (CompiledFunction α)
+  | [] => []
+  | function :: functions =>
+      { function with body := crepSimpProg fromNat function.body } ::
+        crepSimpFunctions fromNat functions
 
 def crepArithExp [Mul α] : CrepExp α → CrepExp α
   | .load address => .load (crepArithExp address)

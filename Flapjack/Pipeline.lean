@@ -622,6 +622,7 @@ structure FlapjackPipelineResult (α : Type u) where
   word : List (Nat × List Nat × WordProg α)
 
 def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [AndOp α] [ShiftRight α] [PanShiftWidth α]
     (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
     FlapjackPipelineResult α :=
@@ -631,7 +632,7 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
   let declarations := pipelinePrependInitializers globals.initializers globals.declarations
   let compiled := compileToCrepe crepeContext declarations
-  let crepe := crepArithFunctions
+  let crepe := crepSimpFunctions fromNat
     (crepInlineTopRecursiveByNames (pipelineInlineNames declarations) compiled)
   let loop := pipelineLoopFunctions architecture 1 crepe
   let word := pipelineWordFunctions loop
@@ -649,7 +650,8 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     function references, and emits a new public `main` whose body runs global
     initializers before a tail call to the renamed source entry. -/
 def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
-    [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
+    [Add α] [Mul α] [AndOp α] [ShiftRight α] [PanShiftWidth α]
+    (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (start : FunName) (declarations : List (Decl α)) :
     Option (FlapjackPipelineResult α) :=
   let declarations := panTargetMoveStartToFront start declarations
@@ -676,7 +678,7 @@ def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
       let globals := { globals with declarations := wrapper :: globals.declarations }
       let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
       let compiled := compileToCrepe crepeContext globals.declarations
-      let crepe := crepArithFunctions
+      let crepe := crepSimpFunctions fromNat
         (crepInlineTopRecursiveByNames (pipelineInlineNames globals.declarations) compiled)
       let loop := pipelineLoopFunctions architecture 1 crepe
       let word := pipelineWordFunctions loop
@@ -704,6 +706,7 @@ def panTargetDeclarationsWithDefaultMain [OfNat α 0] [OfNat α 1]
     intermediate pipeline: the synthetic function changes declaration order,
     labels, and the linked artifact. -/
 def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [AndOp α] [ShiftRight α] [PanShiftWidth α]
     (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
     FlapjackPipelineResult α :=
@@ -715,6 +718,7 @@ def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 /-! Executable port of `pan_to_word$compile_prog`: compose the existing
     Pancake passes, then expose the source-shaped `loop_to_word` result. -/
 def compilePanToWord [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [AndOp α] [ShiftRight α] [PanShiftWidth α]
     (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
     List (Nat × Nat × WordProg α) :=
@@ -1203,7 +1207,8 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked [NeZero width]
     removeConfig 0 initialLabel (functions.map (fun (label, _, body) => (label, body)))
 
 def compileFlapjackChecked [BEq String] [BEq α] [OfNat α 0] [OfNat α 1]
-    [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
+    [Add α] [Mul α] [AndOp α] [ShiftRight α] [PanShiftWidth α]
+    (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
     StaticResult (FlapjackPipelineResult α) :=
   staticBind (staticCheck declarations) (fun _ =>
@@ -1298,6 +1303,7 @@ def compileFlapjackRiscVChecked [NeZero width] [BEq (RiscV.Word width)]
     staticOk (compileFlapjackRiscV architecture bytesInWord fromNat declarations))
 
 theorem compileFlapjack_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [AndOp α] [ShiftRight α] [PanShiftWidth α]
     (architecture : RiscV.Architecture) (bytesInWord : α) (fromNat : Nat → α) :
     (compileFlapjack architecture bytesInWord fromNat []).simplified = [] := by
   simp [compileFlapjack, panSimpDecls, structCompileTop, structGetNames,

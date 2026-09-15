@@ -87,21 +87,15 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
         exact hfilter tail hheadNotTailDestination
       have hany : (head :: tail).any
           (fun move =>
-            (move.1 = .register config.scratch ||
-              move.1 = .register config.addressScratch) ||
-            (move.2 = .register config.scratch ||
-              move.2 = .register config.addressScratch)) = false := by
+            move.1 = .register config.scratch ||
+              move.1 = .register config.addressScratch) = false := by
         have hfalse : ∀ xs : List (WordLocation × WordLocation),
             (∀ move, move ∈ xs →
-              ((move.1 = .register config.scratch ||
-                move.1 = .register config.addressScratch) ||
-               (move.2 = .register config.scratch ||
-                move.2 = .register config.addressScratch)) = false) →
-            xs.any (fun move =>
               (move.1 = .register config.scratch ||
-                move.1 = .register config.addressScratch) ||
-              (move.2 = .register config.scratch ||
-                move.2 = .register config.addressScratch)) = false := by
+                move.1 = .register config.addressScratch) = false) →
+            xs.any (fun move =>
+              move.1 = .register config.scratch ||
+                move.1 = .register config.addressScratch) = false := by
           intro xs hxs
           induction xs with
           | nil => rfl

@@ -6,6 +6,9 @@ import Flapjack.RiscV.LabDiagnostics
 import Flapjack.RiscV.WordDiagnostics
 import Flapjack.RiscV.CakeRegAlloc
 import Flapjack.RiscV.WordFuseConditions
+import Flapjack.RiscV.WordDeadCode
+import Flapjack.RiscV.WordInstSelect
+import Flapjack.RiscV.WordUnreach
 
 /-!
 # Checked pipeline Word-to-Stack diagnostics
@@ -89,11 +92,12 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
   | [] => .ok []
   | (label, parameters, body) :: functions =>
       let wordParameters := wordSsaAbiParameters parameters.length
-      let unallocatedBody := wordProgDCE
+      let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
           (RiscV.wordFuseConditions
-            (RiscV.wordFlattenProgramFrom
-              (LoopToWord.loopToWordCompFunc label parameters body)))
-      match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
+            (RiscV.wordInstSelectProgramFrom
+              (RiscV.wordFlattenProgramFrom
+                (LoopToWord.loopToWordCompFunc label parameters body)))))
+      match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
@@ -158,11 +162,12 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
       let unflattenedBody := wordProgDCE
           (RiscV.wordFuseConditions
             (LoopToWord.loopToWordCompFunc label parameters body))
-      let unallocatedBody := wordProgDCE
+      let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
           (RiscV.wordFuseConditions
-            (RiscV.wordFlattenProgramFrom
-              (LoopToWord.loopToWordCompFunc label parameters body)))
-      match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
+            (RiscV.wordInstSelectProgramFrom
+              (RiscV.wordFlattenProgramFrom
+                (LoopToWord.loopToWordCompFunc label parameters body)))))
+      match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
@@ -228,6 +233,84 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
       | .ok (compiled, finalBitmaps, chunks) =>
           .ok (compiled,
             { data := chunks.reverse.flatten, length := finalBitmaps.length })
+
+/-! Source-shaped sibling of the checked bitmap pipeline.  Pancake's
+    `loop_to_word$compile_prog` has already assigned the dense Word names and
+    has retained the extra entry slot in the function arity.  Re-running
+    `loopToWordCompFunc` from the loop-facing pipeline loses that distinction,
+    so the source runtime path must allocate this Word program directly. -/
+def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedAux
+    [NeZero width] (bitmaps : RiscV.WordStackBitmapState)
+    (chunks : List (List Nat)) :
+    List (Nat × Nat × WordProg (RiscV.Word width)) →
+      Except PipelineRiscVLoweringError
+        (List (Nat × List Nat × StackProg Nat) ×
+          RiscV.WordStackBitmapState × List (List Nat))
+  | [] => .ok ([], bitmaps, chunks)
+  | (label, arity, body) :: functions =>
+      let wordParameters := wordSsaAbiParameters arity
+      let unflattenedBody := wordProgDCE
+        (RiscV.wordFuseConditions body)
+      let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
+        (RiscV.wordFuseConditions
+          (RiscV.wordInstSelectProgramFrom
+            (RiscV.wordFlattenProgramFrom body))))
+      match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
+          label wordParameters unallocatedBody with
+      | none => .error (.allocationFailure label)
+      | some (_, renamedParameters, renamedProgram, allocation) =>
+          let cakeFrameSlots :=
+            if RiscV.wordProgHasBitmapSites renamedProgram then
+              RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
+                wordAllocatableRegisters.length unflattenedBody
+            else 0
+          let frameSlots := max cakeFrameSlots
+            (max (wordParameters.length - 12)
+              (RiscV.wordProgMaxCallArguments renamedProgram - 12))
+          let config : RiscV.WordStackConfig :=
+            { locations := allocation.locations
+              scratch := 31
+              stackBase := 0
+              addressScratch := 29
+              abiBase := 10
+              abiStride := 1
+              abiFrameSlots := frameSlots
+              sectionId := label
+              handlerLabel := label }
+          let localState : RiscV.WordStackBitmapState :=
+            { data := [], length := bitmaps.length }
+          let lower :=
+            if !RiscV.wordProgNeedsCakeFrame renamedProgram then
+              RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves config
+                renamedParameters wordAllocatableRegisters.length config.scratch
+                frameSlots (some 1) localState renamedProgram
+            else
+              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves config
+                renamedParameters wordAllocatableRegisters.length config.scratch
+                frameSlots (some 1) localState renamedProgram
+          match lower with
+          | none =>
+              let path := (RiscV.wordProgFirstExpressionLoweringFailure config
+                (RiscV.wordProgToNat renamedProgram)).getD []
+              .error (.wordToStackFailure label path)
+          | some (stackBody, nextBitmaps) =>
+              match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedAux
+                  nextBitmaps (nextBitmaps.data :: chunks) functions with
+              | .error error => .error error
+              | .ok (rest, bitmaps, chunks) =>
+                  .ok ((label, wordParameters, stackBody) :: rest, bitmaps, chunks)
+
+def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked
+    [NeZero width] (bitmaps : RiscV.WordStackBitmapState)
+    (functions : List (Nat × Nat × WordProg (RiscV.Word width))) :
+    Except PipelineRiscVLoweringError
+      (List (Nat × List Nat × StackProg Nat) × RiscV.WordStackBitmapState) :=
+  match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedAux
+      bitmaps [bitmaps.data] functions with
+  | .error error => .error error
+  | .ok (compiled, finalBitmaps, chunks) =>
+      .ok (compiled,
+        { data := chunks.reverse.flatten, length := finalBitmaps.length })
 
 inductive SourceRiscVCompileError where
   | parse (errors : List Parser.ParseError)
@@ -462,15 +545,16 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
               start (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
           | some pipeline =>
+              let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
+              let sourceWords := pipelineWordCompileProg loop
               let discoveredNames :=
-                (pipeline.word.flatMap
-                  (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
+                (sourceWords.flatMap
+                  (fun entry : Nat × Nat × WordProg (RiscV.Word width) =>
                     RiscV.wordProgFfiNames entry.2.2)).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
-              let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
-              match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
-                  (RiscV.wordStackInitialBitmaps false) loop with
+              match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked
+                  (RiscV.wordStackInitialBitmaps false) sourceWords with
               | .error error =>
                   .error (sourceRiscVImageErrorOfLowering stackFunctionFirstLabel
                     pipeline.crepe error)

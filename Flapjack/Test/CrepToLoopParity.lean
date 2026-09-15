@@ -73,11 +73,52 @@ def handledCallCarriesRaiseHandler : Bool :=
 #guard handlerlessCallCarriesRaiseHandler
 #guard handledCallCarriesRaiseHandler
 
+/-- Context for the comparison-lowering characterization. Variable `5` is a
+    local that is live across the comparison (for example a value assigned
+    before a `while`). -/
+def comparisonContext : LoopContext Nat :=
+  { vars := [(1, 5)], functions := [], maxVar := 0, target := .rv64i }
+
+/-- `crep_to_loop$compile` on `Assign 1 (Cmp Less (Var 3) (Var 5))` with an
+    incoming live set containing `5`. The comparison case threads the incoming
+    live set into the materialising `ite`'s live field
+    (`loopListInsert [leftTemp, rightTemp] live`, `crep_to_loopScript.sml`), so a
+    value that is live across the comparison is retained by `loop_live`.
+    Dropping that set made `loopShrink` delete the pre-loop assignment and the
+    result variable read back the stale value (bead flapjack-8tb.1; original
+    CakeML keeps `ori a0,zero,7` and returns 7 for the minimal reproducer). -/
+def leanCompileComparisonKeepingLive : LoopProg Nat :=
+  compileCrepToLoop comparisonContext [5] (.assign 1 (.cmp .less (.var 3) (.var 5)))
+
+/-- All live sets attached to `ite` nodes in a loop program. -/
+def loopIteLives : LoopProg Nat → List (List Nat)
+  | .ite _ _ _ _ _ live => [live]
+  | .seq first second => loopIteLives first ++ loopIteLives second
+  | .loop _ body _ => loopIteLives body
+  | .call _ _ _ (some (_, handler, _, _)) => loopIteLives handler
+  | _ => []
+
+/-- The materialising comparison keeps the incoming live variable. -/
+def comparisonKeepsIncomingLive : Bool :=
+  (loopIteLives leanCompileComparisonKeepingLive).any (fun live => live.contains 5)
+
+/-- With no incoming live variable the comparison does not invent one. -/
+def comparisonWithoutLiveDropsIt : Bool :=
+  !((loopIteLives (compileCrepToLoop comparisonContext []
+        (.assign 1 (.cmp .less (.var 3) (.const 2))))).any (fun live => live.contains 5))
+
+#eval leanCompileComparisonKeepingLive
+#guard comparisonKeepsIncomingLive
+#guard comparisonWithoutLiveDropsIt
+
 def runChecks : IO Bool := do
-  let results := [handlerlessCallCarriesRaiseHandler, handledCallCarriesRaiseHandler]
+  let results := [handlerlessCallCarriesRaiseHandler, handledCallCarriesRaiseHandler,
+    comparisonKeepsIncomingLive, comparisonWithoutLiveDropsIt]
   let names := [
     "crep_to_loop default call handler",
-    "crep_to_loop explicit call handler"]
+    "crep_to_loop explicit call handler",
+    "crep_to_loop comparison keeps the incoming live set",
+    "crep_to_loop comparison without live does not invent one"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

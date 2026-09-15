@@ -24,7 +24,7 @@ inductive LabAsm (α : Type u) where
   | call (target : LabRef)
   | locValue (register : Nat) (target : LabRef)
   | linkValue (target : LabRef)
-  | return
+  | return (register : Nat)
   | callFfi (function : FunName)
   | heapAlloc (words : Nat)
   | install
@@ -151,8 +151,8 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
   | .tick => ⟨[.asm .tick [] 0], false, counter⟩
   | .raise register =>
       ⟨[.asm (.jumpReg register) [] 0], true, counter⟩
-  | .return _ =>
-      ⟨[.labAsm .return [] 0], true, counter⟩
+  | .return register =>
+      ⟨[.labAsm (.return register) [] 0], true, counter⟩
   | .break label =>
       ⟨[labJump sectionId (labFindLabel label breaks)], true, counter⟩
   | .continue label =>

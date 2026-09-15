@@ -271,6 +271,31 @@ def entryOrderExactParity : Bool :=
   entryOrderEmittedSections == flapjackEntryOrderSections &&
     flapjackEntryOrderSections == cakeEntryOrderSections
 
+/-! ## Cake return-register oracle (`flapjack-pxn.8.5.10.1.1`)
+
+The original Cake `callee_abi.pnk` artifact keeps the allocator-selected
+Word return register through `word_to_stack` and `stack_to_lab`: its `main`
+section ends in `jalr x0,a1,0` (`67 80 05 00`), rather than forcing the
+architectural link register.  This source-facing guard consumes the same
+production runtime-image path as `flapjack-compile --assembly` and pins that
+oracle byte at the end of the emitted `main` section.
+-/
+def calleeAbiSource : String :=
+  "fun 1 g(1 a, 1 b) { return a + b; }\n" ++
+  "fun 1 main() { var 1 t = g(5, 7); var 1 u = t + 1; return u; }"
+
+def calleeAbiMainReturnMatches : Bool :=
+  match compileRuntimeImage calleeAbiSource with
+  | some image =>
+      match emittedSections image with
+      | _ :: (_, _, mainBytes) :: _ =>
+          mainBytes.drop (mainBytes.length - 4) ==
+            [0x67, 0x80, 0x05, 0x00].map (BitVec.ofNat 8)
+      | _ => false
+  | none => false
+
+#guard calleeAbiMainReturnMatches
+
 
 /-- The `nested_expression` fixture source, taken from the original-side probe
 fact.  It is the GitHub issue #1015 reproducer whose right-nested sum needs

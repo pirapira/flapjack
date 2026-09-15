@@ -549,8 +549,11 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
           | some pipeline =>
               let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
               let sourceWords := pipelineWordCompileProg loop
+              let discoveryWords :=
+                sourceWords.map
+                  (fun (label, arity, body) => (label, arity, wordProgDCE body))
               let discoveredNames :=
-                (sourceWords.flatMap
+                (discoveryWords.flatMap
                   (fun entry : Nat × Nat × WordProg (RiscV.Word width) =>
                     RiscV.wordProgFfiNames entry.2.2)).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)

@@ -228,8 +228,7 @@ theorem evalWordStackMachine_wordAllocateGraphFunctionWithHeuristicsEntryToStack
     config parameters program fixedSources algorithm currentFunction colours stackStart
     registerCount bitmapRegister frameSlots storeConstsStub bitmapState
     ssaState renamedParameters allocation renamedProgram stackProgram finalState hbridge
-  simp only [wordToStackFunctionWithGraphAllocationAndLocationBitmaps,
-    wordToStackFunctionWithParametersAndLocationBitmaps] at hstack
+  simp only [wordToStackFunctionWithGraphAllocationAndLocationBitmaps] at hstack
   simp [hbody] at hstack
   have hjoin : stackProgram = body := by
     exact hstack.1.symm

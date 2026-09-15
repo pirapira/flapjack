@@ -88,8 +88,7 @@ theorem evalWordStackMachine_wordAllocateSsaFunctionWithEntryAndSpillToStack
     bitmapState ssaState renamedParameters renamedProgram allocation stackProgram
     finalState hbridge
   have hpair : (body, bodyState) = (stackProgram, finalState) := by
-    simp only [wordToStackFunctionWithSpillStateAndLocationBitmaps,
-      wordToStackFunctionWithParametersAndLocationBitmaps, hbody] at hstack
+    simp only [wordToStackFunctionWithSpillStateAndLocationBitmaps, hbody] at hstack
     simpa using hstack
   have hbodyEq : body = stackProgram := congrArg Prod.fst hpair
   have hsimulation :=
@@ -98,7 +97,6 @@ theorem evalWordStackMachine_wordAllocateSsaFunctionWithEntryAndSpillToStack
       storeConstsStub bitmapState bodyState renamedProgram body machineState
       final hbody hbodyEval
   rw [← hbodyEq]
-  simpa [wordToStackFunctionWithSpillStateAndLocationBitmaps,
-    wordToStackFunctionWithParametersAndLocationBitmaps, hbody] using hsimulation
+  simpa [wordToStackFunctionWithSpillStateAndLocationBitmaps, hbody] using hsimulation
 
 end Flapjack.RiscV

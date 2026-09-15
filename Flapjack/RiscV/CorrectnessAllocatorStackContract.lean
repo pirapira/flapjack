@@ -64,8 +64,7 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_contract
     config parameters program registerCount bitmapRegister frameSlots storeConstsStub
     bitmapState ssaState renamedParameters renamedProgram allocation stackProgram
     finalState hbridge
-  simp only [wordToStackFunctionWithSpillStateAndLocationBitmaps,
-    wordToStackFunctionWithParametersAndLocationBitmaps] at hstack
+  simp only [wordToStackFunctionWithSpillStateAndLocationBitmaps] at hstack
   simp [hbody] at hstack
   have hjoin : stackProgram = body := by
     exact hstack.1.symm

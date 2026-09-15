@@ -2445,8 +2445,22 @@ def wordPreferenceNeighboursIndexed (index : Std.HashMap Nat (List Nat))
   (index.get? name).getD []
 
 def wordLocationIndex : NatInfoMap WordLocation → Std.HashMap Nat WordLocation
-  | locations =>
-      locations.foldl (fun index entry => index.insert entry.1 entry.2) ∅
+  | [] => ∅
+  | (name, location) :: locations =>
+      (wordLocationIndex locations).insert name location
+
+theorem wordLocationIndex_get? (locations : NatInfoMap WordLocation)
+    (name : Nat) :
+    (wordLocationIndex locations).get? name = lookupNatInfo name locations := by
+  induction locations with
+  | nil => simp [wordLocationIndex, lookupNatInfo]
+  | cons head locations ih =>
+      rcases head with ⟨key, location⟩
+      rw [wordLocationIndex, Std.HashMap.get?_insert]
+      by_cases hkey : key = name
+      · simp [lookupNatInfo, hkey]
+      · simp [lookupNatInfo, hkey]
+        exact ih
 
 def wordUsedLocationRegistersIndexed (names : List Nat)
     (locations : Std.HashMap Nat WordLocation) : List Nat :=
@@ -2729,6 +2743,42 @@ def wordSpillAllocationRespectsClashes (edges : List (Nat × Nat))
       | some _, some _ => wordSpillAllocationRespectsClashes edges locations
       | _, _ => false
 
+/-! The list representation above is retained as the reference contract, but
+    the source-facing full-SSA allocator must not rescan its association list
+    for every clash edge.  Build the location index once and check every edge
+    through constant-amortized hash-map lookups. -/
+def wordSpillAllocationRespectsClashesIndexed
+    (edges : List (Nat × Nat))
+    (locations : Std.HashMap Nat WordLocation) : Bool :=
+  match edges with
+  | [] => true
+  | (left, right) :: edges =>
+      match locations.get? left, locations.get? right with
+      | some (.register leftRegister), some (.register rightRegister) =>
+          leftRegister != rightRegister &&
+            wordSpillAllocationRespectsClashesIndexed edges locations
+      | some _, some _ => wordSpillAllocationRespectsClashesIndexed edges locations
+      | _, _ => false
+
+def wordSpillAllocationRespectsClashesFast
+    (edges : List (Nat × Nat))
+    (locations : NatInfoMap WordLocation) : Bool :=
+  wordSpillAllocationRespectsClashesIndexed edges (wordLocationIndex locations)
+
+theorem wordSpillAllocationRespectsClashesFast_eq
+    (edges : List (Nat × Nat)) (locations : NatInfoMap WordLocation) :
+    wordSpillAllocationRespectsClashesFast edges locations =
+      wordSpillAllocationRespectsClashes edges locations := by
+  induction edges with
+  | nil => rfl
+  | cons edge edges ih =>
+      obtain ⟨left, right⟩ := edge
+      simp only [wordSpillAllocationRespectsClashesFast,
+        wordSpillAllocationRespectsClashesIndexed,
+        wordSpillAllocationRespectsClashes]
+      rw [wordLocationIndex_get?, wordLocationIndex_get?]
+      split <;> simp_all [wordSpillAllocationRespectsClashesFast]
+
 def wordAllocateVarsWithSpills (slots : List Nat)
     (edges : List (Nat × Nat)) : Option WordSpillState :=
   let state := wordGreedyAllocateWithSpills slots.eraseDups edges
@@ -2801,7 +2851,7 @@ def wordAllocateVarsWithFixedLocationsIndexed (slots : List Nat)
   let names := slots.eraseDups.filter (fun name => name ∉ fixedSources)
   let state := wordGreedyAllocateWithSpillsAndPreferencesFast names
     edges preferences initial
-  if wordSpillAllocationRespectsClashes edges state.locations then some state
+  if wordSpillAllocationRespectsClashesFast edges state.locations then some state
   else none
 
 def wordAllocateVarsWithFixedSources (slots : List Nat)
@@ -2847,7 +2897,7 @@ theorem wordAllocateVarsWithFixedSourcesFast_preserves_fixed_source
   let allocated := wordGreedyAllocateWithSpillsAndPreferencesFast names
     edges preferences initial
   have hstate' :
-      (if wordSpillAllocationRespectsClashes edges allocated.locations = true then
+      (if wordSpillAllocationRespectsClashesFast edges allocated.locations = true then
           some allocated else none) = some state := by
     simpa [wordAllocateVarsWithFixedSourcesFast,
       wordAllocateVarsWithFixedLocationsIndexed, initial, names, allocated] using hstate
@@ -2881,7 +2931,7 @@ theorem wordAllocateVarsWithFixedSourcesFast_maps_slots
   let allocated := wordGreedyAllocateWithSpillsAndPreferencesFast names
     edges preferences initial
   have hstate' :
-      (if wordSpillAllocationRespectsClashes edges allocated.locations = true then
+      (if wordSpillAllocationRespectsClashesFast edges allocated.locations = true then
           some allocated else none) = some state := by
     simpa [wordAllocateVarsWithFixedSourcesFast,
       wordAllocateVarsWithFixedLocationsIndexed, initial, names, allocated] using hstate
@@ -2921,6 +2971,7 @@ theorem wordAllocateVarsWithFixedSourcesFast_sound
   simp [wordAllocateVarsWithFixedSourcesFast,
     wordAllocateVarsWithFixedLocationsIndexed] at hstate
   rcases hstate with ⟨hcheck, heq⟩
+  rw [wordSpillAllocationRespectsClashesFast_eq] at hcheck
   simpa [heq] using hcheck
 
 theorem lookupNatInfo_wordFixedSourceLocations_mem

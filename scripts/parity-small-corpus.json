@@ -94,6 +94,12 @@
       "source_reference": "Multi-function callee argument/return ABI (GitHub issue #1024 / flapjack-pxn.8.5.10.1.1): the original CakeML passes value argument j in hardware riscv_names (j+1) with the incoming link in hardware 1, so the callee body is minimal (add a0,a1,a0; ret). Flapjack now emits the correct parallel entry moves but still keeps a redundant link-register move and does not coalesce parameters onto the ABI registers.",
       "cake_sha256": "aab59578a1ecf94382606f575f2fbeb2d97d6a873e30e506665ba59348f2bcd7",
       "tracked_beads": ["flapjack-pxn.8.5.10.1.1"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/relational_condition.pnk",
+      "source_reference": "Relational-condition lowering (GitHub issue #1027 / flapjack-pxn.8.5.14.11): the original CakeML emitter branches directly on the negated comparison against the argument register with the then-branch as the fall-through path (addi a1,x0,10; bge a0,a1,+12; addi a0,x0,1; ret; addi a0,x0,0; ret), so no boolean is materialized and no extra jump is emitted; the port currently negates and swaps branches in Lab.labFlatten with an extra unconditional jump.",
+      "cake_sha256": "824cf4a9a394bad0b27eea57244f11a52203123fa5587f63607cbd7e195d0fc5",
+      "tracked_beads": ["flapjack-pxn.8.5.14.11"]
     }
 
   ]

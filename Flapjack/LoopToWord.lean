@@ -64,15 +64,70 @@ theorem toNumSet_nodup (names : List Nat) : (toNumSet names).Nodup := by
   | cons name names ih =>
       exact loopInsert_nodup name (toNumSet names) ih
 
-/-! The list-backed `num_set` already stores keys rather than `(key, unit)`
-    pairs.  Therefore CakeML's `fromNumSet_def` (`MAP FST (toAList t)`) is the
-    identity on this representation; its observable contract is the same key
-    list up to the source sptree traversal order. -/
-def fromNumSet (set : List Nat) : List Nat := set
+/-! `sptree$toAList` is not insertion order.  Its `foldi` walks the binary
+    Patricia tree using `lrnext`; retaining that order is observable because
+    `loop_to_word$make_ctxt` assigns consecutive Word registers to
+    `fromNumSet (acc_vars ...)`. -/
+inductive NumSetTree where
+  | empty
+  | singleton
+  | branch (left right : NumSetTree)
+  | branchSingleton (left right : NumSetTree)
 
-theorem fromNumSet_toNumSet (names : List Nat) :
-    fromNumSet (toNumSet names) = toNumSet names := by
-  rfl
+def numSetLrnextFuel : Nat → Nat → Nat
+  | 0, _ => 1
+  | _fuel + 1, 0 => 1
+  | fuel + 1, value + 1 =>
+      2 * numSetLrnextFuel fuel (value / 2)
+
+def numSetLrnext (value : Nat) : Nat :=
+  numSetLrnextFuel (value + 1) value
+
+def numSetInsertFuel : Nat → Nat → NumSetTree → NumSetTree
+  | 0, _, tree => tree
+  | _fuel + 1, 0, .empty => .singleton
+  | _fuel + 1, 0, .singleton => .singleton
+  | _fuel + 1, 0, .branch left right => .branchSingleton left right
+  | _fuel + 1, 0, .branchSingleton left right => .branchSingleton left right
+  | fuel + 1, key + 1, .empty =>
+      if (key + 1) % 2 = 0 then
+        .branch (numSetInsertFuel fuel (((key + 1) - 1) / 2) .empty) .empty
+      else
+        .branch .empty (numSetInsertFuel fuel (((key + 1) - 1) / 2) .empty)
+  | fuel + 1, key + 1, .singleton =>
+      if (key + 1) % 2 = 0 then
+        .branchSingleton (numSetInsertFuel fuel (((key + 1) - 1) / 2) .empty) .empty
+      else
+        .branchSingleton .empty (numSetInsertFuel fuel (((key + 1) - 1) / 2) .empty)
+  | fuel + 1, key + 1, .branch left right =>
+      if (key + 1) % 2 = 0 then
+        .branch (numSetInsertFuel fuel (((key + 1) - 1) / 2) left) right
+      else
+        .branch left (numSetInsertFuel fuel (((key + 1) - 1) / 2) right)
+  | fuel + 1, key + 1, .branchSingleton left right =>
+      if (key + 1) % 2 = 0 then
+        .branchSingleton (numSetInsertFuel fuel (((key + 1) - 1) / 2) left) right
+      else
+        .branchSingleton left (numSetInsertFuel fuel (((key + 1) - 1) / 2) right)
+
+def numSetInsert (key : Nat) (tree : NumSetTree) : NumSetTree :=
+  numSetInsertFuel (key + 1) key tree
+
+def numSetToAList : NumSetTree → Nat → List Nat → List Nat
+  | .empty, _, accumulated => accumulated
+  | .singleton, index, accumulated => index :: accumulated
+  | .branch left right, index, accumulated =>
+      let increment := numSetLrnext index
+      numSetToAList right (index + increment)
+        (numSetToAList left (index + 2 * increment) accumulated)
+  | .branchSingleton left right, index, accumulated =>
+      let increment := numSetLrnext index
+      numSetToAList right (index + increment)
+        (index :: numSetToAList left (index + 2 * increment) accumulated)
+
+def fromNumSet (set : List Nat) : List Nat :=
+  let tree := (toNumSet set).foldr (fun key tree => numSetInsert key tree) .empty
+  numSetToAList tree 0 []
 
 /-! List-backed port of `mk_new_cutset_def` from
     `loop_to_wordScript.sml:51-53`.  The source always retains register zero

@@ -45,6 +45,7 @@ def originalToNumSetOrdered : List Nat := [3, 1, 2]
 def originalToNumSetDuplicate : List Nat := [3, 1, 2]
 def originalFromNumSetOrdered : List Nat := [3, 1, 2]
 def originalFromNumSetDuplicate : List Nat := [3, 1, 2]
+def originalFromNumSetHelloAccVars : List Nat := [7, 3, 1, 5, 4, 2, 6]
 def originalMkNewCutsetEmpty : List Nat := [0]
 def originalMkNewCutsetMapped : List Nat := [0, 6]
 def originalMkNewCutsetDuplicate : List Nat := [0, 6]
@@ -133,9 +134,8 @@ def sameWordCode : List (Nat × Nat × WordProg Nat) →
         sameWordProg leftBody rightBody && sameWordCode leftRest rightRest
   | _, _ => false
 
-/-! `toAList` exposes the source sptree's implementation-dependent traversal
-    order.  Compare the observable finite-set membership, not that traversal
-    order, against the checked-in HOL records. -/
+/-! The source `toAList` traversal order is observable because it feeds
+    `make_ctxt`; compare it directly against the checked-in HOL records. -/
 def sameNatSet (left right : List Nat) : Bool :=
   left.all (fun name => name ∈ right) && right.all (fun name => name ∈ left)
 
@@ -180,6 +180,10 @@ example : sameNatSet (fromNumSet (toNumSet [1, 2, 3]))
     originalFromNumSetOrdered := by decide
 example : sameNatSet (fromNumSet (toNumSet [3, 1, 3, 2]))
     originalFromNumSetDuplicate := by decide
+example : fromNumSet (toNumSet [1, 2, 3]) = originalFromNumSetOrdered := by decide
+example : fromNumSet (toNumSet [3, 1, 3, 2]) = originalFromNumSetDuplicate := by decide
+example : fromNumSet (toNumSet [1, 2, 5, 3, 5, 6, 7, 4]) =
+    originalFromNumSetHelloAccVars := by decide
 example : sameNatSet (mkNewCutset [(3, 6)] [])
     originalMkNewCutsetEmpty := by decide
 example : sameNatSet (mkNewCutset [(3, 6)] [1, 2, 3])

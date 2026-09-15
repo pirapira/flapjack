@@ -111,13 +111,12 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
-          /- Cake's call ABI reserves frame room for arguments past the
-             register window, so the frame must cover that demand as well as
-             the allocator spills. -/
-          let frameSlots :=
-            if allocation.nextSpill = 0 then 0
-            else max allocation.nextSpill
-              (RiscV.wordProgAbiFrameDemand 12 renamedProgram)
+          /- Cake reserves enough `f'` slots for both allocator spills and
+             arguments outside the physical ABI window, including nested
+             calls whose arity exceeds the formal-parameter count. -/
+          let frameSlots := max allocation.nextSpill
+            (max (wordParameters.length - 12)
+              (RiscV.wordProgMaxCallArguments renamedProgram - 12))
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := 31
@@ -130,12 +129,12 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               handlerLabel := label }
           let lower :=
             if !RiscV.wordProgNeedsCakeFrame renamedProgram then
-              RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+              RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves config
                 renamedParameters wordAllocatableRegisters.length config.scratch
                 frameSlots (some 1)
                 (RiscV.wordStackInitialBitmaps false) renamedProgram
             else
-              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
+              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves config
                 renamedParameters wordAllocatableRegisters.length config.scratch
                 frameSlots (some 1)
                 (RiscV.wordStackInitialBitmaps false) renamedProgram
@@ -151,13 +150,23 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
 
 /-! Checked bitmap-threaded sibling of the full-SSA spill pipeline.  The
     bitmap state is part of the runtime artifact, so keep it synchronized with
-    the same first-failing section diagnostics used by the byte pipeline. -/
-def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
-    [NeZero width] (bitmaps : RiscV.WordStackBitmapState) :
+    the same first-failing section diagnostics used by the byte pipeline.
+
+    The lowering only consults `length` while it is compiling a function: the
+    bitmap `data` field is used solely to append newly emitted chunks.  Keeping
+    the already-emitted global table in that field made every append copy the
+    whole table, which became quadratic on the large guest.  The auxiliary
+    worker therefore starts each function with an empty local data list but
+    the absolute bitmap length, and carries the local chunks separately.  The
+    wrapper materializes the same ordered table once at the end. -/
+def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
+    [NeZero width] (bitmaps : RiscV.WordStackBitmapState)
+    (chunks : List (List Nat)) :
     List (Nat × List Nat × LoopProg (RiscV.Word width)) →
       Except PipelineRiscVLoweringError
-        (List (Nat × List Nat × StackProg Nat) × RiscV.WordStackBitmapState)
-  | [] => .ok ([], bitmaps)
+        (List (Nat × List Nat × StackProg Nat) ×
+          RiscV.WordStackBitmapState × List (List Nat))
+  | [] => .ok ([], bitmaps, chunks)
   | (label, parameters, body) :: functions =>
       let wordParameters := wordSsaAbiParameters parameters.length
       let unflattenedBody := wordProgDCE
@@ -172,7 +181,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
           let frameSlots := max
             (RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
               wordAllocatableRegisters.length unflattenedBody)
-            (RiscV.wordProgAbiFrameDemand 12 renamedProgram)
+            (max (wordParameters.length - 12)
+              (RiscV.wordProgMaxCallArguments renamedProgram - 12))
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := 31
@@ -183,28 +193,43 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
               abiFrameSlots := frameSlots
               sectionId := label
               handlerLabel := label }
+          let localState : RiscV.WordStackBitmapState :=
+            { data := [], length := bitmaps.length }
           let lower :=
             if !RiscV.wordProgNeedsCakeFrame renamedProgram then
-              RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+              RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves config
                 renamedParameters wordAllocatableRegisters.length config.scratch
                 frameSlots
-                (some 1) bitmaps renamedProgram
+                (some 1) localState renamedProgram
             else
-              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
+              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves config
                 renamedParameters wordAllocatableRegisters.length config.scratch
                 frameSlots
-                (some 1) bitmaps renamedProgram
+                (some 1) localState renamedProgram
           match lower with
           | none =>
               let path := (RiscV.wordProgFirstExpressionLoweringFailure config
                 (RiscV.wordProgToNat renamedProgram)).getD []
               .error (.wordToStackFailure label path)
-          | some (stackBody, bitmaps) =>
-              match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
-                  bitmaps functions with
+          | some (stackBody, nextBitmaps) =>
+              match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
+                  nextBitmaps (nextBitmaps.data :: chunks) functions with
               | .error error => .error error
-              | .ok (rest, bitmaps) =>
-                  .ok ((label, wordParameters, stackBody) :: rest, bitmaps)
+              | .ok (rest, bitmaps, chunks) =>
+                  .ok ((label, wordParameters, stackBody) :: rest, bitmaps, chunks)
+
+def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
+    [NeZero width] (bitmaps : RiscV.WordStackBitmapState) :
+    List (Nat × List Nat × LoopProg (RiscV.Word width)) →
+      Except PipelineRiscVLoweringError
+        (List (Nat × List Nat × StackProg Nat) × RiscV.WordStackBitmapState)
+  | functions =>
+      match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
+          bitmaps [bitmaps.data] functions with
+      | .error error => .error error
+      | .ok (compiled, finalBitmaps, chunks) =>
+          .ok (compiled,
+            { data := chunks.reverse.flatten, length := finalBitmaps.length })
 
 inductive SourceRiscVCompileError where
   | parse (errors : List Parser.ParseError)

@@ -178,9 +178,19 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
-          let frameSlots := max
-            (RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
-              wordAllocatableRegisters.length unflattenedBody)
+          /- Cake's IRC frame occupancy only affects the state-threaded
+             lowering when the function can emit a bitmap entry.  Running the
+             complete Cake allocator for functions with no bitmap site was
+             both needlessly expensive and semantically inert.  Keep the
+             allocator-derived spill and nested-call bounds below for every
+             function, and run the exact Cake occupancy calculation only when
+             `wordProgHasBitmapSites` can observe it. -/
+          let cakeFrameSlots :=
+            if RiscV.wordProgHasBitmapSites renamedProgram then
+              RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
+                wordAllocatableRegisters.length unflattenedBody
+            else 0
+          let frameSlots := max cakeFrameSlots
             (max (wordParameters.length - 12)
               (RiscV.wordProgMaxCallArguments renamedProgram - 12))
           let config : RiscV.WordStackConfig :=

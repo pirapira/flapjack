@@ -209,9 +209,19 @@ def CakeRaState.empty (n : Nat) : CakeRaState :=
     moveRelated := [], dim := n, simpWl := [], spillWl := [], freezeWl := [],
     availMovesWl := [], unavailMovesWl := [], stack := [] }
 
-/-- Newest-wins functional update of a `NatInfoMap`. -/
+/- CakeML's allocator stores these fields in fixed-size arrays and every
+   `update_*` accessor performs an in-place `LUPDATE`.  The association-list
+   representation keeps the same newest-wins lookup convention, but must
+   replace the first binding for an existing key rather than consing a new
+   historical binding on every state transition.  Appending a missing key is
+   only a representation fallback: well-formed allocator fields are
+   dimensioned for every node, so the normal path remains bounded. -/
 def cakeMapUpdate {α : Type u} (m : NatInfoMap α) (i : Nat) (v : α) : NatInfoMap α :=
-  (i, v) :: m
+  match m with
+  | [] => [(i, v)]
+  | (j, w) :: entries =>
+      if i == j then (i, v) :: entries
+      else (j, w) :: cakeMapUpdate entries i v
 
 /-- First-match lookup in a `NatInfoMap` (newest binding wins). -/
 def cakeMapLookup {α : Type u} (m : NatInfoMap α) (i : Nat) : Option α :=

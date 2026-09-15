@@ -209,6 +209,29 @@ def labShiftInstructions [NeZero width] (operator : Shift)
 def labCompilePlain [NeZero width] :
     LabPlain (Word width) → Option (List (Instruction width))
   | .word (.arith operation) => wordArithToInstructions operation
+  | .word (.const destination value) =>
+      labCompilePlain (.const destination value.toNat)
+  | .word (.binop operator destination source (.imm value)) => do
+      let destination ← labRegisterOfNat (portToStack destination)
+      let source ← labRegisterOfNat (portToStack source)
+      match operator with
+      | .add => pure [.addi destination source value]
+      | .sub => pure [.addi destination source (0 - value)]
+      | .and => pure [.andi destination source value]
+      | .or => pure [.ori destination source value]
+      | .xor => pure [.xori destination source value]
+  | .word (.binop operator destination source (.reg name)) =>
+      (labBinOpInstruction operator destination source name).map List.singleton
+  | .word (.shiftInst operator destination source (.imm value)) => do
+      let destination ← labRegisterOfNat (portToStack destination)
+      let source ← labRegisterOfNat (portToStack source)
+      match operator with
+      | .lsl => pure [.slli destination source value]
+      | .lsr => pure [.srli destination source value]
+      | .asr => pure [.srai destination source value]
+      | .ror => none
+  | .word (.shiftInst operator destination source (.reg name)) =>
+      labShiftInstructions operator destination source name
   | .word instruction => (wordInstToInstruction instruction).map List.singleton
   | .const destination value => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
@@ -353,8 +376,24 @@ def labAsmNatToWord [NeZero width] : LabAsm Nat → LabAsm (Word width)
   | .install => .install
   | .halt => .halt
 
+def labRegImmNatToWord [NeZero width] : WordRegImm Nat → WordRegImm (Word width)
+  | .reg name => .reg name
+  | .imm value => .imm (BitVec.ofNat width value)
+
+def labWordInstNatToWord [NeZero width] : WordInst Nat → WordInst (Word width)
+  | .arith operation => .arith operation
+  | .mem operator destination address => .mem operator destination address
+  | .const destination value =>
+      .const destination (BitVec.ofNat width value)
+  | .binop operator destination source right =>
+      .binop operator destination source (labRegImmNatToWord right)
+  | .shiftInst operator destination source amount =>
+      .shiftInst operator destination source (labRegImmNatToWord amount)
+  | .memOffset operator destination base offset =>
+      .memOffset operator destination base (BitVec.ofNat width offset)
+
 def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
-  | .word instruction => .word instruction
+  | .word instruction => .word (labWordInstNatToWord instruction)
   | .const destination value => .const destination value
   | .arith operator destination left right =>
       .arith operator destination left right

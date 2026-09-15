@@ -17,7 +17,7 @@ inductive WordRiscVStraightLine : WordProg α → Prop where
       WordRiscVStraightLine (.move store moves)
   | assign (destination : Nat) (value : WordExp α) :
       WordRiscVStraightLine (.assign destination value)
-  | inst (instruction : WordInst) :
+  | inst (instruction : WordInst α) :
       WordRiscVStraightLine (.inst instruction)
   | store (address : WordExp α) (value : Nat) :
       WordRiscVStraightLine (.store address value)

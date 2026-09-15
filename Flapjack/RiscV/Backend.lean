@@ -201,7 +201,7 @@ def wordArithToInstructions [NeZero width] :
   | operation => (wordArithToInstruction operation).map (fun instruction => [instruction])
 
 def wordInstToInstruction [NeZero width] :
-    WordInst → Option (Instruction width)
+    WordInst (Word width) → Option (Instruction width)
   | .arith operation => wordArithToInstruction operation
   | .mem .load8 destination address => do
       let destination ← registerOfNat destination
@@ -235,6 +235,39 @@ def wordInstToInstruction [NeZero width] :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (.storeWord source address)
+  | .memOffset .load8 destination base offset => do
+      let destination ← registerOfNat destination
+      let base ← registerOfNat base
+      pure (.loadByteI destination base offset)
+  | .memOffset .store8 source base offset => do
+      let source ← registerOfNat source
+      let base ← registerOfNat base
+      pure (.storeByteI source base offset)
+  | .memOffset .load16 destination base offset => do
+      let destination ← registerOfNat destination
+      let base ← registerOfNat base
+      pure (.loadHalfI destination base offset)
+  | .memOffset .store16 source base offset => do
+      let source ← registerOfNat source
+      let base ← registerOfNat base
+      pure (.storeHalfI source base offset)
+  | .memOffset .load32 destination base offset => do
+      let destination ← registerOfNat destination
+      let base ← registerOfNat base
+      pure (.load32I destination base offset)
+  | .memOffset .store32 source base offset => do
+      let source ← registerOfNat source
+      let base ← registerOfNat base
+      pure (.store32I source base offset)
+  | .memOffset .load destination base offset => do
+      let destination ← registerOfNat destination
+      let base ← registerOfNat base
+      pure (.loadWordI destination base offset)
+  | .memOffset .store source base offset => do
+      let source ← registerOfNat source
+      let base ← registerOfNat base
+      pure (.storeWordI source base offset)
+  | .const _ _ | .binop _ _ _ _ | .shiftInst _ _ _ _ => none
 
 def executeInstructions [NeZero width] (state : State width) :
     List (Instruction width) → State width

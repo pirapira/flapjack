@@ -158,15 +158,11 @@ example :
     wordProgSpecialLocationsSafe, lookupNatInfo, List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop]
 
-example :
-    wordAllocateVarsWithSpillsAndPreferences [0, 4] [] [(4, 0)] =
-      some (⟨[(4, .register 2), (0, .register 2)], 0⟩ : WordSpillState) := by
-  native_decide
+#guard wordAllocateVarsWithSpillsAndPreferences [0, 4] [] [(4, 0)] =
+  some (⟨[(4, .register 2), (0, .register 2)], 0⟩ : WordSpillState)
 
-example :
-    wordAllocateVarsWithSpillsAndPreferences [0, 4] [(0, 4)] [(4, 0)] =
-      some (⟨[(4, .register 6), (0, .register 2)], 0⟩ : WordSpillState) := by
-  native_decide
+#guard wordAllocateVarsWithSpillsAndPreferences [0, 4] [(0, 4)] [(4, 0)] =
+  some (⟨[(4, .register 6), (0, .register 2)], 0⟩ : WordSpillState)
 
 example (slots : List Nat) (edges preferences : List (Nat × Nat))
     (state : WordSpillState)

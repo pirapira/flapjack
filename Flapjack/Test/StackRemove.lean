@@ -41,7 +41,8 @@ example :
 
 example :
     stackRemove stackRemoveTestConfig (.stackAlloc 2 : StackProg Nat) =
-      .seq (.const 31 16) (.arith .sub 20 20 31) := by
+      .seq (.seq (.const 31 16) (.arith .sub 20 20 31))
+        (.ite .lower 20 (.reg 21) (.seq (.const 10 2) (.halt 10)) .skip) := by
   simp [stackRemove, stackRemoveFuel, stackRemoveStackAlloc,
     stackRemoveStackDelta, stackRemoveJoin, stackRemoveTestConfig]
 
@@ -62,8 +63,10 @@ example :
 example :
     stackRemove stackRemoveTestConfig (.stackAlloc 256 : StackProg Nat) =
       .seq
-        (.seq (.const 31 2040) (.arith .sub 20 20 31))
-        (.seq (.const 31 8) (.arith .sub 20 20 31)) := by
+        (.seq
+          (.seq (.const 31 2040) (.arith .sub 20 20 31))
+          (.seq (.const 31 8) (.arith .sub 20 20 31)))
+        (.ite .lower 20 (.reg 21) (.seq (.const 10 2) (.halt 10)) .skip) := by
   simp [stackRemove, stackRemoveFuel, stackRemoveStackAlloc,
     stackRemoveStackDelta, stackRemoveJoin, stackRemoveTestConfig]
 

@@ -294,6 +294,7 @@ structure SourceRiscVImage (width : Nat) where
   warnings : List StatErr
 
 structure SourceRiscVRuntimeImage (width : Nat) where
+  crepe : List (CompiledFunction (RiscV.Word width))
   bitmaps : RiscV.WordStackBitmapState
   sections : List (RiscV.EncodedRiscVSection width)
   warnings : List StatErr
@@ -488,7 +489,8 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
                       .error (sourceRiscVImageErrorOfLowering stackFunctionFirstLabel
                         pipeline.crepe (.labToRiscV error))
                   | .ok sections =>
-                      .ok { bitmaps, sections := RiscV.encodeLinkedSections sections,
+                      .ok { crepe := pipeline.crepe, bitmaps,
+                            sections := RiscV.encodeLinkedSections sections,
                             warnings, ffiNames := discoveredNames }
 
 end Flapjack

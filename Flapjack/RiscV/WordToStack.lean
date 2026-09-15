@@ -178,13 +178,18 @@ def wordStackMoveFromScratch (config : WordStackConfig) (destination : Nat) :
       pure (.stackStore config.addressScratch (wordStackOffset config slot))
 
 /-! Compile a parallel move list.  A move whose source is not another pending
-    destination can be emitted immediately.  If the remaining graph is a
-    cycle, save one source in the reserved scratch register, solve the rest,
-    and restore that saved value into the postponed destination.  CakeML's
-    `parmove` uses the same temporary-register idea; the explicit `Nodup`
-    check is its windmill invariant at this boundary.  Stack-to-stack moves
-    use `scratch`, so cycle save/restore uses the independent address scratch.
-    The allocator reserves both registers for this purpose. -/
+    destination reads a value that no remaining move overwrites, so it is safe
+    to emit **last**; emitting it first would clobber a destination that an
+    earlier-listed move still has to read (e.g. `[a <- b, b <- c]` must emit
+    `a <- b` before `b <- c`).  This is the same scheduling the original
+    allocator's `parmove` performs (`compiler/backend/reg_alloc/parmoveScript.sml`).
+    If the remaining graph is a cycle, save one source in the reserved scratch
+    register, solve the rest, and restore that saved value into the postponed
+    destination.  CakeML's `parmove` uses the same temporary-register idea; the
+    explicit `Nodup` check is its windmill invariant at this boundary.
+    Stack-to-stack moves use `scratch`, so cycle save/restore uses the
+    independent address scratch.  The allocator reserves both registers for
+    this purpose. -/
 def wordStackParallelMoveAux (config : WordStackConfig) :
     Nat → List (Nat × Nat) → Option (StackProg α)
   | 0, _ => none
@@ -197,10 +202,10 @@ def wordStackParallelMoveAux (config : WordStackConfig) :
       else
         match wordMoveReady destinations moves with
         | some (destination, source) => do
-            let first ← wordStackMove config destination source
             let rest ← wordStackParallelMoveAux config fuel
               (wordMoveRemoveDestination destination moves)
-            pure (wordStackJoin first rest)
+            let last ← wordStackMove config destination source
+            pure (wordStackJoin rest last)
         | none =>
             match moves with
             | [] => some .skip

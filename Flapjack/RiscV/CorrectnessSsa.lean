@@ -363,7 +363,7 @@ theorem evalWordProg_ssaRename_load32_destination [NeZero width]
       hfreshNonzero] using hloadValue
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
-theorem wordSsaRenameProgram_locValue
+theorem wordSsaRenameProgram_locValue [OfNat α 0]
     (ssa : WordSsaState) (destination label : Nat) :
     wordSsaRenameProgram ssa (.locValue destination label : WordProg α) =
       ((wordSsaFresh ssa destination).1,
@@ -402,7 +402,7 @@ theorem evalWordProg_ssaRename_locValue_destination [NeZero width]
       hfreshNonzero, hzero']
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
-theorem wordSsaRenameProgram_assign_var
+theorem wordSsaRenameProgram_assign_var [OfNat α 0]
     (ssa : WordSsaState) (destination source : Nat) :
     wordSsaRenameProgram ssa
         (.assign destination (.var source) : WordProg α) =
@@ -494,7 +494,7 @@ theorem evalWordProg_ssaRename_assign_const_destination [NeZero width]
       hfreshNonzero, hzero']
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
-theorem wordSsaRenameProgram_assign_binary_var_var
+theorem wordSsaRenameProgram_assign_binary_var_var [OfNat α 0]
     (ssa : WordSsaState) (destination : Nat) (operator : BinOp)
     (left right : Nat) :
     wordSsaRenameProgram ssa
@@ -918,7 +918,7 @@ theorem evalWordProg_ssaRename_assign_shift_var_const_destination [NeZero width]
       · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
   | ror => exact (hoperator rfl).elim
 
-theorem wordSsaRenameProgram_assign_shift_var_var
+theorem wordSsaRenameProgram_assign_shift_var_var [OfNat α 0]
     (ssa : WordSsaState) (destination : Nat) (operator : Shift)
     (left right : Nat) :
     wordSsaRenameProgram ssa
@@ -1171,7 +1171,7 @@ theorem evalWordProg_ssaRename_assign_rotate_var_const_destination [NeZero width
   · simp [sourceCode, targetCode, executeInstructions, execute, writeRegister,
       hmemory, hdestinationNonzero, hfreshNonzero]
 
-theorem wordSsaRenameProgram_assign_rotate_var_var
+theorem wordSsaRenameProgram_assign_rotate_var_var [OfNat α 0]
     (ssa : WordSsaState) (destination left right : Nat) :
     wordSsaRenameProgram ssa
         (.assign destination (.shift .ror (.var left) (.var right)) :
@@ -1338,7 +1338,7 @@ theorem evalWordProg_ssaRename_assign_rotate_var_var_destination [NeZero width]
   · simp [sourceCode, targetCode, executeInstructions, execute, writeRegister,
       hmemory, hdestinationNonzero, hfreshNonzero]
 
-theorem wordSsaRenameProgram_store_var
+theorem wordSsaRenameProgram_store_var [OfNat α 0]
     (ssa : WordSsaState) (address value : Nat) :
     wordSsaRenameProgram ssa
         (.store (.var address) value : WordProg α) =
@@ -1383,7 +1383,7 @@ theorem evalWordProg_ssaRename_program_store_var [NeZero width]
   apply writeWordValue_memory_congr
   rfl
 
-theorem wordSsaRenameProgram_shareInst_load_var
+theorem wordSsaRenameProgram_shareInst_load_var [OfNat α 0]
     (ssa : WordSsaState) (destination address : Nat) :
     wordSsaRenameProgram ssa
         (.shareInst .load destination (.var address) : WordProg α) =
@@ -1441,7 +1441,7 @@ theorem evalWordProg_ssaRename_program_share_load [NeZero width]
       hfreshNonzero] using hloadValue
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
-theorem wordSsaRenameProgram_shareInst_load8_var
+theorem wordSsaRenameProgram_shareInst_load8_var [OfNat α 0]
     (ssa : WordSsaState) (destination address : Nat) :
     wordSsaRenameProgram ssa
         (.shareInst .load8 destination (.var address) : WordProg α) =
@@ -1501,7 +1501,7 @@ theorem evalWordProg_ssaRename_program_share_load8 [NeZero width]
       hfreshNonzero] using hloadValue
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
-theorem wordSsaRenameProgram_shareInst_load16_var
+theorem wordSsaRenameProgram_shareInst_load16_var [OfNat α 0]
     (ssa : WordSsaState) (destination address : Nat) :
     wordSsaRenameProgram ssa
         (.shareInst .load16 destination (.var address) : WordProg α) =
@@ -1559,7 +1559,7 @@ theorem evalWordProg_ssaRename_program_share_load16 [NeZero width]
       hfreshNonzero] using hloadValue
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
-theorem wordSsaRenameProgram_shareInst_load32_var
+theorem wordSsaRenameProgram_shareInst_load32_var [OfNat α 0]
     (ssa : WordSsaState) (destination address : Nat) :
     wordSsaRenameProgram ssa
         (.shareInst .load32 destination (.var address) : WordProg α) =
@@ -1617,7 +1617,7 @@ theorem evalWordProg_ssaRename_program_share_load32 [NeZero width]
       hfreshNonzero] using hloadValue
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
-theorem wordSsaRenameProgram_shareInst_store_var
+theorem wordSsaRenameProgram_shareInst_store_var [OfNat α 0]
     (ssa : WordSsaState) (value address : Nat) :
     wordSsaRenameProgram ssa
         (.shareInst .store value (.var address) : WordProg α) =
@@ -1663,7 +1663,7 @@ theorem evalWordProg_ssaRename_program_share_store [NeZero width]
   apply writeWordValue_memory_congr
   rfl
 
-theorem wordSsaRenameProgram_shareInst_store8_var
+theorem wordSsaRenameProgram_shareInst_store8_var [OfNat α 0]
     (ssa : WordSsaState) (value address : Nat) :
     wordSsaRenameProgram ssa
         (.shareInst .store8 value (.var address) : WordProg α) =
@@ -1709,7 +1709,7 @@ theorem evalWordProg_ssaRename_program_share_store8 [NeZero width]
   apply writeByte_memory_congr
   rfl
 
-theorem wordSsaRenameProgram_shareInst_store16_var
+theorem wordSsaRenameProgram_shareInst_store16_var [OfNat α 0]
     (ssa : WordSsaState) (value address : Nat) :
     wordSsaRenameProgram ssa
         (.shareInst .store16 value (.var address) : WordProg α) =
@@ -1755,7 +1755,7 @@ theorem evalWordProg_ssaRename_program_share_store16 [NeZero width]
   apply writeWord16_memory_congr
   rfl
 
-theorem wordSsaRenameProgram_shareInst_store32_var
+theorem wordSsaRenameProgram_shareInst_store32_var [OfNat α 0]
     (ssa : WordSsaState) (value address : Nat) :
     wordSsaRenameProgram ssa
         (.shareInst .store32 value (.var address) : WordProg α) =

@@ -41,6 +41,28 @@ example :
     wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaFreshList, wordSsaFresh]
 
+/- Cake's post-SSA dead-move pass removes an unused formal's entry copy. -/
+example :
+    wordSsaRenameFunctionWithEntryAndDeadMoves [0, 2, 4]
+        (.skip : WordProg Nat) =
+      ({ current := [(4, 13), (2, 9), (0, 5)], next := 17 },
+        [5, 9, 13], .skip) := by
+  simp [wordSsaRenameFunctionWithEntryAndDeadMoves,
+    wordSsaRenameFunctionWithEntry, wordSsaEntryMove,
+    wordSsaRenameFunction, wordSsaSetupParameters, wordSsaLimitVar,
+    wordListMaximum, wordProgVariables, wordProgReadVars, wordProgWriteVars,
+    wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaFreshList, wordSsaFresh]
+
+/- A formal used by the renamed body remains in the entry move. -/
+def liveEntryMovesRemain : Bool :=
+  match (wordSsaRenameFunctionWithEntryAndDeadMoves [0, 2]
+      (.return 0 [0, 2] : WordProg Nat)).2.2 with
+  | .seq (.move _ moves) _ => moves == [(5, 0), (9, 2)]
+  | _ => false
+
+#guard liveEntryMovesRemain
+
 example :
     wordFullSsaCcTrans 2
         (.return 0 [0, 2] : WordProg Nat) =
@@ -56,7 +78,7 @@ example :
       (.ffi "f" 1 2 3 4 ([5], [6]) : WordProg Nat) =
       ({ current := [(6, 26), (5, 22)], next := 30 },
         .seq (.move 0 [(12, 5), (16, 6)])
-          (.seq (.move 0 [(2, 1), (4, 2), (6, 3), (8, 4)])
+          (.seq (.move 1 [(2, 1), (4, 2), (6, 3), (8, 4)])
             (.seq (.ffi "f" 2 4 6 8 ([12], [16]))
               (.move 0 [(22, 12), (26, 16)])))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
@@ -81,10 +103,8 @@ example :
       (.skip : WordProg (RiscV.Word 64))).isSome := by
   decide +kernel
 
-example :
-    wordAllocateVarsWithFixedSources [2, 5] [] [] [2] =
-      some { locations := [(5, .register 7), (2, .register 2)], nextSpill := 0 } := by
-  rfl
+#guard wordAllocateVarsWithFixedSources [2, 5] [] [] [2] =
+  some { locations := [(5, .register 7), (2, .register 2)], nextSpill := 0 }
 
 example (state : WordSpillState)
     (hstate : wordAllocateVarsWithFixedSources [2, 5] [] [] [2] = some state) :

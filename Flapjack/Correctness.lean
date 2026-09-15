@@ -259,11 +259,11 @@ def pipelineCompareItePipeline : FlapjackRiscVResult 64 :=
 theorem pipelineCompareIteFunctions_shape :
     pipelineCompareItePipeline.functions =
       [(1, [2, 3], some (
-        [.addi 5 2 0, .addi 6 3 0,
-         .branchNe 5 6 (BitVec.ofNat 64 12),
-         .addi 5 0 1, .branchEq 0 0 (BitVec.ofNat 64 8),
-         .addi 5 0 0, .addi 0 0 0, .addi 7 5 0,
-         .branchEq 7 0 (BitVec.ofNat 64 12),
+        [.addi 6 2 0, .addi 7 3 0,
+         .branchNe 6 7 (BitVec.ofNat 64 12),
+         .addi 6 0 1, .branchEq 0 0 (BitVec.ofNat 64 8),
+         .addi 6 0 0, .addi 0 0 0, .addi 8 6 0,
+         .branchEq 8 0 (BitVec.ofNat 64 12),
          .addi 5 0 7, .branchEq 0 0 (BitVec.ofNat 64 8),
          .addi 5 0 8], [5]))] := by
   native_decide
@@ -271,11 +271,11 @@ theorem pipelineCompareIteFunctions_shape :
 theorem pipelineCompareIteLinkedFunctions_shape :
     pipelineCompareItePipeline.linkedFunctions =
       some [(1, 0, [2, 3],
-        [.addi 5 2 0, .addi 6 3 0,
-         .branchNe 5 6 (BitVec.ofNat 64 12),
-         .addi 5 0 1, .branchEq 0 0 (BitVec.ofNat 64 8),
-         .addi 5 0 0, .addi 0 0 0, .addi 7 5 0,
-         .branchEq 7 0 (BitVec.ofNat 64 12),
+        [.addi 6 2 0, .addi 7 3 0,
+         .branchNe 6 7 (BitVec.ofNat 64 12),
+         .addi 6 0 1, .branchEq 0 0 (BitVec.ofNat 64 8),
+         .addi 6 0 0, .addi 0 0 0, .addi 8 6 0,
+         .branchEq 8 0 (BitVec.ofNat 64 12),
          .addi 5 0 7, .branchEq 0 0 (BitVec.ofNat 64 8),
          .addi 5 0 8], [5])] := by
   change RiscV.linkRiscVFunctions 0 pipelineCompareItePipeline.functions = _
@@ -342,7 +342,7 @@ def pipelineCallPipeline : FlapjackRiscVResult 64 :=
 
 def pipelineCallImage : List (RiscV.Instruction 64) :=
   [.addi 4 2 0, .jalr 0 1 0,
-   .addi 3 0 0, .addi 4 0 (BitVec.ofNat 64 41),
+   .addi 4 0 (BitVec.ofNat 64 41),
    .addi 2 4 0, .addi 30 30 (0 - BitVec.ofNat 64 8),
    .storeWord 1 30, .addi 31 0 0, .jalr 1 31 0,
    .addi 3 4 0, .loadWord 1 30,

@@ -62,23 +62,17 @@ example [NeZero width] :
     (wordAllocateGraphFunctionWithStackOnlyPrefreezeRenamed [2]
       (.assign 3 (.var 2) : WordProg (RiscV.Word 64)) [] 13 14).isSome
 
+/- Cake's `word_to_stack` emits no parameter prelude: the incoming ABI
+   registers are copied by the SSA entry move, so a function with no body
+   lowers to that body alone. -/
 example :
     RiscV.wordToStackFunctionWithParameters
         { locations := [(0, .stack 0)], scratch := 31, stackBase := 10 }
         [0]
         ((.skip : WordProg (RiscV.Word 64))) =
-      some (.seq (.arith .or 31 2 2) (.stackStore 31 10) : StackProg Nat) := by
+      some (.skip : StackProg Nat) := by
   simp [RiscV.wordToStackFunctionWithParameters, RiscV.wordToStackProgWord,
-    RiscV.wordToStackProgNat, RiscV.wordStackMovesFromPhysical,
-    RiscV.wordStackPhysicalMovesFrom, RiscV.wordStackParallelLocationMove,
-    RiscV.wordStackParallelLocationMoveAux,
-    RiscV.wordStackLocationMoveDestinations,
-    RiscV.wordStackLocationMoveReady,
-    RiscV.wordStackLocationMoveRemoveDestination,
-    RiscV.wordStackLocationMove, 
-    RiscV.wordStackJoin, RiscV.wordStackLocation, RiscV.wordStackOffset,
-    lookupNatInfo,
-    RiscV.wordProgToNat]
+    RiscV.wordToStackProgNat, RiscV.wordProgToNat]
 
 #guard
     (pipelineWordFunctionsAllocatedWithSpills
@@ -115,7 +109,7 @@ example :
         stackBase := 21, wordShift := 3 }
       pipelineAllocatedMulDeclarations).map
         (fun sections => sections.map (fun (label, entry, _) => (label, entry))) =
-      some [(0, BitVec.ofNat 64 0), (1, BitVec.ofNat 64 76)]
+      some [(0, BitVec.ofNat 64 0), (1, BitVec.ofNat 64 40)]
 
 
 end Flapjack

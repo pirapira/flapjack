@@ -137,6 +137,10 @@ theorem wordMoveToInstructions_of_no_source_destination [NeZero width]
             (head.1 == 31 || head.2 == 31) = false := by
           simp [hheadValid.2.2.1, hheadValid.2.2.2]
         simp [hheadNoScratch, htailAny]
+      have hheadNe : head.1 ≠ head.2 := by
+        intro heq
+        apply hnoSource head (by simp)
+        simp [heq]
       have hheadCode :
           wordExpToInstructions (width := width) head.1 (.var head.2) =
             some (wordMoveInstructionList (width := width) head) := by
@@ -155,7 +159,7 @@ theorem wordMoveToInstructions_of_no_source_destination [NeZero width]
           wordExpToInstruction, registerOfNat, hheadValid.1, hheadValid.2.1]
       rw [wordMoveToInstructions, wordMoveToInstructionsAux]
       simp [wordMoveRegisterDestinations, hdestinations', hready', hany, hremoved,
-        hheadCodeAux, htailAux]
+        hheadCodeAux, htailAux, hheadNe]
 
 theorem executeWordMoves_preserve_read [NeZero width]
     (state : State width) (moves : List (Nat × Nat)) (other : Nat)

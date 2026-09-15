@@ -43,7 +43,7 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_witness
         lookupNatInfo name allocation.locations = some (.register name)) := by
   simp only [wordAllocateSsaFunctionWithEntryAndSpillToStack] at hbridge
   cases halloc :
-      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
         parameters program with
   | none => simp [halloc] at hbridge
   | some allocationResult =>
@@ -72,7 +72,7 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_witness
                           rcases hresult with
                             ⟨rfl, rfl, rfl, hallocEq, rfl, rfl⟩
                           have hwitness :=
-                            wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences_witness
+                            wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast_witness
                               parameters program allocationState allocationParameters
                               allocationProgram allocation' halloc
                           simpa [hallocEq] using hwitness

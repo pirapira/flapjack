@@ -175,7 +175,7 @@ theorem wordAllocateGraph_maps_clash_locations
   apply wordGraphLocations_lookup_of_fromNode
   simpa [wordInitRegAlloc, wordMkBijection] using hinverse
 
-theorem wordAllocateGraphFunctionWithEntryRenamed_maps_clash_names
+theorem wordAllocateGraphFunctionWithEntryRenamed_maps_clash_names [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)

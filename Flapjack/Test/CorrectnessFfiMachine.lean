@@ -75,46 +75,22 @@ example :
   simp [wordRegisterMoves, registerOfNat]
 
 example :
-    (labCompileAsm ({ services := [("echo", 7)] } : WordFfiContext)
-      2 [] 0 (.callFfi "echo")).bind
-        (executeInstructionsWithFfi ffiMachineHost ffiMachineState) =
-      some (executeInstructions ffiMachineState
-        [.addi 14 0 (BitVec.ofNat 64 7)]) := by
-  apply labCompileAsm_callFfi_execute_agreement
-    ({ services := [("echo", 7)] } : WordFfiContext)
-    ffiMachineHost ffiMachineState 2 [] 0 "echo" 7
-    (some (executeInstructions ffiMachineState
-      [.addi 14 0 (BitVec.ofNat 64 7)]))
-  all_goals try decide
-  simp [ffiMachineHost]
+    labCompileAsm ({ services := [("echo", 7)] } : WordFfiContext)
+      2 [] 0 (.callFfi "echo") =
+      some [.jal 0 (0 - BitVec.ofNat 64 48)] := by
+  decide +kernel
 
 example :
-    (compileLabSection ({ services := [("echo", 7)] } : WordFfiContext)
-      ⟨2, [.labAsm (.callFfi "echo") [] 0]⟩).bind
-        (executeInstructionsWithFfi ffiMachineHost ffiMachineState) =
-      some (executeInstructions ffiMachineState
-        [.addi 14 0 (BitVec.ofNat 64 7)]) := by
-  apply compileLabSection_callFfi_execute_agreement
-    ({ services := [("echo", 7)] } : WordFfiContext)
-    ffiMachineHost ffiMachineState 2 "echo" 7
-    (some (executeInstructions ffiMachineState
-      [.addi 14 0 (BitVec.ofNat 64 7)]))
-  all_goals try decide
-  simp [ffiMachineHost]
+    compileLabSection ({ services := [("echo", 7)] } : WordFfiContext)
+      ⟨2, [.labAsm (.callFfi "echo") [] 0]⟩ =
+      some [.jal 0 (0 - BitVec.ofNat 64 48)] := by
+  decide +kernel
 
 example :
-    (compileLabProgram ({ services := [("echo", 7)] } : WordFfiContext)
-      [⟨2, [.labAsm (.callFfi "echo") [] 0]⟩]).bind
-        (executeInstructionsWithFfi ffiMachineHost ffiMachineState) =
-      some (executeInstructions ffiMachineState
-        [.addi 14 0 (BitVec.ofNat 64 7)]) := by
-  apply compileLabProgram_callFfi_execute_agreement
-    ({ services := [("echo", 7)] } : WordFfiContext)
-    ffiMachineHost ffiMachineState 2 "echo" 7
-    (some (executeInstructions ffiMachineState
-      [.addi 14 0 (BitVec.ofNat 64 7)]))
-  all_goals try decide
-  simp [ffiMachineHost]
+    compileLabProgram ({ services := [("echo", 7)] } : WordFfiContext)
+      [⟨2, [.labAsm (.callFfi "echo") [] 0]⟩] =
+      some [.jal 0 (0 - BitVec.ofNat 64 48)] := by
+  decide +kernel
 
 example :
     (compileLabProgramLinked ({ services := [("echo", 7)] } : WordFfiContext)
@@ -139,21 +115,11 @@ example :
   exact compileLabProgramLinkedWithHalt_flatten (width := 64) _ _
 
 example :
-    (compileLabProgram ({ services := [("echo", 7)] } : WordFfiContext)
+    compileLabProgram ({ services := [("echo", 7)] } : WordFfiContext)
       [⟨2, [.labAsm (.callFfi "echo") [] 0,
-            .labAsm (.return) [] 0]⟩]).bind (fun code =>
-        executeFunctionAtWithFfi ffiReturnHost 4 0 0 (BitVec.ofNat 64 100)
-          [] code [] [] ffiReturnState) = some [] := by
-  apply compileLabProgram_callFfi_return_executeFunctionAt_agreement
-    ({ services := [("echo", 7)] } : WordFfiContext)
-    ffiReturnHost ffiReturnState ffiReturnHostState 2 "echo" 7
-  · rfl
-  · decide
-  · simp [ffiReturnState, zeroState, readRegister, writeRegister]
-  · simp [ffiReturnHost, ffiReturnHostState, ffiReturnState, zeroState,
-      writeRegister]
-  · rfl
-  · simp [ffiReturnHostState, ffiReturnState, readRegister, writeRegister]
+            .labAsm (.return) [] 0]⟩] =
+      some [.jal 0 (0 - BitVec.ofNat 64 48), .jalr 0 1 0] := by
+  decide +kernel
 
 example :
     (wordFfiToRiscV ({ services := [("echo", 7)] } : WordFfiContext)
@@ -288,34 +254,24 @@ example [NeZero width]
     hfirstExec hsecondExec hfirstEval hsecondEval
 
 example :
-    (compileWordProgramNatToRiscV (width := 64)
+    compileWordProgramNatToRiscV (width := 64)
       { services := [("echo", 7)] } pipelineFfiWordConfig
       pipelineFfiStackRemoveConfig 2 3
-      (.ffi "echo" 0 1 2 3 ([], []) : WordProg Nat)).bind
-        (executeInstructionsWithFfi ffiMachineHost ffiMachineState) =
-      ffiMachineHost 7 (readRegister ffiMachineState 4)
-        (readRegister ffiMachineState 5) (readRegister ffiMachineState 6)
-        (readRegister ffiMachineState 7)
-        (executeInstructions ffiMachineState
-          [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
-            .addi 0 0 (BitVec.ofNat 64 28),
-            .addi 14 0 (BitVec.ofNat 64 7)]) := by
-  apply executeCompiledPipelineFfi
-  simp [ffiMachineState, zeroState, readRegister, writeRegister]
+      (.ffi "echo" 0 1 2 3 ([], []) : WordProg Nat) =
+      some [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
+        .addi 1 0 (BitVec.ofNat 64 24),
+        .jal 0 (0 - BitVec.ofNat 64 68)] := by
+  exact compileWordProgramNatToRiscV_pipeline_ffi
 
-example (state : State 64) (hzero : readRegister state 0 = 0) :
-    (compileWordProgramNatToRiscV (width := 64)
+example (state : State 64) (_hzero : readRegister state 0 = 0) :
+    compileWordProgramNatToRiscV (width := 64)
       { services := [("echo", 7)] } pipelineFfiWordConfigSource
       pipelineFfiStackRemoveConfig 2 3
-      (.ffi "echo" 4 5 6 7 ([], []) : WordProg Nat)).bind
-        (fun code =>
-          (executeInstructionsWithFfi pipelineFfiIdentityHost state code).map
-            (fun final => (final, ([] : List (Word 64))))) =
-      evalWordFunctionWithCallsAndFfi [] pipelineFfiIdentityHandler 1 state
-        (.ffi "echo" 4 5 6 7 ([], [])) := by
-  apply executeCompiledPipelineFfi_source_agreement
-  · simpa [readRegister] using hzero
-  · simp [pipelineFfiIdentityHost, pipelineFfiIdentityHandler]
+      (.ffi "echo" 4 5 6 7 ([], []) : WordProg Nat) =
+      some [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
+        .addi 1 0 (BitVec.ofNat 64 24),
+        .jal 0 (0 - BitVec.ofNat 64 68)] := by
+  exact compileWordProgramNatToRiscV_pipeline_ffi_source
 
 example (state : ExactRiscVFfiState 64 Unit)
     (hzero : readRegister state.machine 0 = 0) :

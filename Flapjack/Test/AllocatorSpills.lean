@@ -35,6 +35,26 @@ example :
     { locations := [(10, .register 12), (0, .register 2)], nextSpill := 0 }
   exact wordAllocateSsaProgramWithSpills_example
 
+/- The indexed clash oracle is extensionally identical to the historical
+   association-list checker, including its first-binding lookup convention. -/
+example :
+    (wordLocationIndex
+        ([(2, .register 7), (2, .stack 1)] : NatInfoMap WordLocation)).get? 2 =
+      some (.register 7) := by
+  rw [wordLocationIndex_get?]
+  rfl
+
+example :
+    wordSpillAllocationRespectsClashesFast
+        [(0, 1), (1, 2)]
+        ([(0, .register 2), (1, .register 3), (2, .stack 0)] :
+          NatInfoMap WordLocation) =
+      wordSpillAllocationRespectsClashes
+        [(0, 1), (1, 2)]
+        ([(0, .register 2), (1, .register 3), (2, .stack 0)] :
+          NatInfoMap WordLocation) := by
+  exact wordSpillAllocationRespectsClashesFast_eq _ _
+
 example :
     ∀ name, name ∈ [10] →
       ∃ location, lookupNatInfo name
@@ -91,7 +111,7 @@ example :
         (.ite .equal 1 (.reg 2)
           (.return 0 [3]) (.return 0 [4]) : WordProg Nat) [] =
       .seq (.delta [] [1, 2])
-        (.branch none (.delta [] [3]) (.delta [] [4])) := by
+        (.branch none (.delta [] [0, 3]) (.delta [] [0, 4])) := by
   simp [wordClashTree]
 
 example :
@@ -158,15 +178,58 @@ example :
     wordProgSpecialLocationsSafe, lookupNatInfo, List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop]
 
-example :
-    wordAllocateVarsWithSpillsAndPreferences [0, 4] [] [(4, 0)] =
-      some (⟨[(4, .register 2), (0, .register 2)], 0⟩ : WordSpillState) := by
-  rfl
+#guard wordAllocateVarsWithSpillsAndPreferences [0, 4] [] [(4, 0)] =
+  some (⟨[(4, .register 2), (0, .register 2)], 0⟩ : WordSpillState)
 
-example :
-    wordAllocateVarsWithSpillsAndPreferences [0, 4] [(0, 4)] [(4, 0)] =
-      some (⟨[(4, .register 6), (0, .register 2)], 0⟩ : WordSpillState) := by
-  rfl
+#guard wordAllocateVarsWithSpillsAndPreferences [0, 4] [(0, 4)] [(4, 0)] =
+  some (⟨[(4, .register 6), (0, .register 2)], 0⟩ : WordSpillState)
+
+/- The indexed preference traversal preserves the exact small allocator
+   outputs while avoiding a full preference-edge rescan for every candidate. -/
+#guard wordGreedyAllocateWithSpillsAndPreferencesFast [0, 4] [] [(4, 0)]
+    { locations := [], nextSpill := 0 } =
+  (⟨[(4, .register 2), (0, .register 2)], 0⟩ : WordSpillState)
+
+#guard wordGreedyAllocateWithSpillsAndPreferencesFast [0, 4] [(0, 4)] [(4, 0)]
+    { locations := [], nextSpill := 0 } =
+  (⟨[(4, .register 6), (0, .register 2)], 0⟩ : WordSpillState)
+
+#guard wordGreedyAllocateWithSpillsAndPreferencesFast [0, 2, 4, 6] []
+    [(0, 2), (2, 4), (4, 6), (6, 0)] { locations := [], nextSpill := 0 } =
+  wordGreedyAllocateWithSpillsAndPreferences [0, 2, 4, 6] []
+    [(0, 2), (2, 4), (4, 6), (6, 0)] { locations := [], nextSpill := 0 }
+
+/- The production clash index preserves the oracle's undirected edge order,
+   including repeated endpoints and self-edges. -/
+#guard (wordClashIndex [(0, 2), (0, 4), (2, 6), (4, 6), (0, 0)]).get? 0 ==
+  some [2, 4, 0]
+
+#guard wordGreedyAllocateWithSpillsAndPreferencesClashFast
+    [0, 2, 4, 6] [(0, 2), (2, 4), (4, 6), (6, 0)]
+      [(0, 2), (2, 4), (4, 6), (6, 0)] { locations := [], nextSpill := 0 } =
+  wordGreedyAllocateWithSpillsAndPreferences [0, 2, 4, 6]
+    [(0, 2), (2, 4), (4, 6), (6, 0)]
+      [(0, 2), (2, 4), (4, 6), (6, 0)] { locations := [], nextSpill := 0 }
+
+#guard wordAllocateVarsWithFixedSourcesClashFast
+    [0, 2, 4, 6] [(0, 2), (2, 4), (4, 6), (6, 0)]
+      [(0, 2), (2, 4), (4, 6), (6, 0)] [] =
+  wordAllocateVarsWithFixedSources
+    [0, 2, 4, 6] [(0, 2), (2, 4), (4, 6), (6, 0)]
+      [(0, 2), (2, 4), (4, 6), (6, 0)] []
+
+#guard (wordPreferenceReachableRegisters 0 [(0, 2), (2, 4), (4, 6), (6, 0)] []).eraseDups =
+  (wordPreferenceReachableRegistersIndexedFast 0
+    [(0, 2), (2, 4), (4, 6), (6, 0)]
+    (wordPreferenceIndex [(0, 2), (2, 4), (4, 6), (6, 0)])
+    (wordLocationIndex [])).eraseDups
+
+#guard (wordPreferenceReachableRegisters 0 [(0, 2), (0, 4), (2, 6), (4, 6)]
+    [(6, .register 10)]).eraseDups =
+  (wordPreferenceReachableRegistersIndexedFast 0
+    [(0, 2), (0, 4), (2, 6), (4, 6)]
+    (wordPreferenceIndex [(0, 2), (0, 4), (2, 6), (4, 6)])
+    (wordLocationIndex [(6, .register 10)])).eraseDups
 
 example (slots : List Nat) (edges preferences : List (Nat × Nat))
     (state : WordSpillState)
@@ -191,15 +254,16 @@ example :
     wordProgWriteVars, wordExpReadVars,
     wordAllocateVarsWithSpillsAndPreferences,
     wordGreedyAllocateWithSpillsAndPreferences,
-    wordPreferenceLocationRegisters,
+    wordPreferenceReachableRegisters, wordPreferenceReachableRegistersAux,
+    wordPreferenceNeighbours, wordPreferenceLocationRegisters,
     wordColourCandidatesWithSpillPreferences,
     wordUsedLocationRegisters, wordColourCandidates, wordFirstAvailable,
-    wordNeighbours, wordPreferredRegister, 
-    wordAllocatableRegisters, wordSpillAllocationRespectsClashes,
-    wordProgSpecialLocationsSafe,
+    wordNeighbours, wordPreferredRegister, wordAllocatableRegisters,
+    wordSpillAllocationRespectsClashes, wordProgSpecialLocationsSafe,
     wordProgPreferenceEdges, lookupNatInfo, wordSpillClashTreeChecked,
     wordSpillLocationColour, wordClashTreeCheck, wordCheckPartialColour,
-    wordNumSetDelete, List.eraseDups,
+    wordNumSetDelete, List.filter, List.map, List.range, List.range.loop,
+    List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop]
 
 example (slots : List Nat) (edges : List (Nat × Nat))

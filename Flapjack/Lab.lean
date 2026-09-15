@@ -40,12 +40,23 @@ inductive LabPlain (α : Type u) where
   | word (instruction : WordInst)
   | const (destination value : Nat)
   | arith (operator : BinOp) (destination left right : Nat)
+  /- The stack remover represents Cake's immediate stack-pointer update as a
+     constant followed by a register arithmetic operation. -/
+  | arithImm (operator : BinOp) (destination left immediate : Nat)
   | shift (operator : Shift) (destination left right : Nat)
   | tick
   | jumpReg (register : Nat)
   | codeBufferWrite (address value : Nat)
   | dataBufferWrite (address value : Nat)
   | shareMem (operator : WordMemOp) (register address : Nat)
+  /- CakeML's stack remover emits a base+offset memory operand
+     (`Inst (Mem op r (Addr base offset))`) whenever the address is the store
+     base or stack pointer plus a static displacement.  The port reconstructs
+     that form during Lab flattening so the encoder can emit the architectural
+     offset load/store instead of materializing the address in a scratch
+     register. -/
+  | memOffset (memoryOperator : WordMemOp) (operator : BinOp)
+      (destination address : Nat) (offset : Nat)
   deriving Repr
 
 inductive LabLine (α : Type u) where
@@ -118,6 +129,16 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
   | .inst instruction => ⟨[.asm (.word instruction) [] 0], false, counter⟩
   | .shMem operator source address =>
       ⟨[.asm (.shareMem operator source address) [] 0], false, counter⟩
+  | .arith .or destination left right =>
+      /- `wMoveSingle` represents a physical register copy as `or r s s`.
+         Once allocation has made source and destination the same register,
+         CakeML's final Lab filtering removes this identity instruction.  Do
+         the same at the artifact boundary; retaining it would change section
+         sizes and can consume space needed by the following labels. -/
+      if destination = left && left = right then
+        ⟨[], false, counter⟩
+      else
+        ⟨[.asm (.arith .or destination left right) [] 0], false, counter⟩
   | .arith operator destination left right =>
       ⟨[.asm (.arith operator destination left right) [] 0], false, counter⟩
   | .shift operator destination left right =>
@@ -190,6 +211,70 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
             handlerResult.nextLabel + 1⟩
   | .call _ _ _ =>
       ⟨[], false, counter⟩
+  | .seq (.const scratch value)
+      (.arith operator destination left right) =>
+      let canFuse :=
+        scratch != destination && right == scratch && destination == left &&
+          match operator with
+          | .add => value < 2 ^ 11
+          | .sub => value ≤ 2 ^ 11
+          | .and | .or | .xor => false
+      if canFuse then
+        if destination = left && value = 0 then
+          /- Cake's final Lab filter drops an arithmetic identity.  Keeping
+             this out of the line stream is important because otherwise the
+             encoder emits `addi rd, rd, 0` and label positions drift. -/
+          ⟨[], false, counter⟩
+        else
+          ⟨[.asm (.arithImm operator destination left value) [] 0], false, counter⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks (.const scratch value)
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks
+            (.arith operator destination left right)
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
+  | .seq (.seq (.const scratch value) (.arith operator addressRegister base right))
+      (.inst (.mem memoryOperator destination address)) =>
+      /- Recover CakeML's `Addr base offset` memory operand: the stack remover
+         materializes `<const> ; <base ± value>` and then loads/stores through
+         the scratch register, which CakeML lower to a single offset access.
+         Fuse those three statements back into one Lab operation so the
+         encoder can emit the architectural base+immediate form. -/
+      let offsetOperator :=
+        match operator with
+        | .add => true
+        | .sub => true
+        | _ => false
+      let offsetFits :=
+        match operator with
+        | .add => decide (value < 2 ^ 11)
+        | .sub => decide (value ≤ 2 ^ 11)
+        | _ => false
+      let memorySupported :=
+        match memoryOperator with
+        | .load | .store => true
+        | _ => false
+      let canFuse :=
+        scratch == addressRegister && right == scratch && address == addressRegister &&
+          offsetOperator && offsetFits && memorySupported
+      if canFuse then
+        ⟨[.asm (.memOffset memoryOperator operator destination base value) [] 0],
+          false, counter⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks
+            (.seq (.const scratch value) (.arith operator addressRegister base right))
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks
+            (.inst (.mem memoryOperator destination address))
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
   | .seq first second =>
       let firstResult := labFlatten false sectionId counter continues breaks first
       let secondResult :=
@@ -206,7 +291,7 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         ⟨[], false, counter⟩
       else if labIsSkip thenBranch then
         let joinLabel := elseResult.nextLabel
-        ⟨[labJumpCmp operator condition right sectionId joinLabel] ++
+        ⟨[labJumpCmp (labNegateCmp operator) condition right sectionId joinLabel] ++
           elseResult.lines ++ [labLabel sectionId joinLabel],
           false, joinLabel + 1⟩
       else if labIsSkip elseBranch then
@@ -227,7 +312,7 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
       else
         let thenLabel := elseResult.nextLabel
         let joinLabel := thenLabel + 1
-        ⟨[labJumpCmp (labNegateCmp operator) condition right sectionId joinLabel] ++
+        ⟨[labJumpCmp (labNegateCmp operator) condition right sectionId thenLabel] ++
           elseResult.lines ++ [labJump sectionId joinLabel,
             labLabel sectionId thenLabel] ++ thenResult.lines ++
           [labLabel sectionId joinLabel],

@@ -182,7 +182,7 @@ theorem wordMkBijection_lookup_inverse (tree : WordClashTree) :
       lookupNatInfo node (wordMkBijection tree).fromNode = some source := by
   exact (wordMkBijection_wellFormed tree).1
 
-theorem wordAllocateGraphFunctionWithStackOnlyRenamed_maps_parameters
+theorem wordAllocateGraphFunctionWithStackOnlyRenamed_maps_parameters [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
@@ -205,7 +205,7 @@ theorem wordAllocateGraphFunctionWithStackOnlyRenamed_maps_parameters
   simpa [wordInitRegAlloc, wordMkBijection,
     wordAllocateGraphFunctionWithStackOnlyRenamed, wordClashTreeBijection] using hnode
 
-theorem wordAllocateGraphFunctionWithStackOnlyRenamed_sound
+theorem wordAllocateGraphFunctionWithStackOnlyRenamed_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
@@ -233,7 +233,7 @@ theorem wordAllocateGraphFunctionWithStackOnlyRenamed_sound
     the ordinary graph contract so downstream callers can use either function
     boundary without unfolding the allocator. -/
 
-theorem wordAllocateGraphFunctionWithEntryRenamed_sound
+theorem wordAllocateGraphFunctionWithEntryRenamed_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
@@ -259,7 +259,7 @@ theorem wordAllocateGraphFunctionWithEntryRenamed_sound
     (wordProgPreferenceEdges (wordSsaRenameFunctionWithEntry parameters program).2.snd)
     colours stackStart allocation' hgraph
 
-theorem wordAllocateGraphFunctionWithEntryRenamed_maps_parameters
+theorem wordAllocateGraphFunctionWithEntryRenamed_maps_parameters [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
@@ -288,7 +288,7 @@ theorem wordAllocateGraphFunctionWithEntryRenamed_maps_parameters
     checks directly from the exact result whose body they execute, without
     unfolding the allocator and re-proving the entry clash-tree equation. -/
 
-theorem wordAllocateGraphFunctionWithEntry_sound
+theorem wordAllocateGraphFunctionWithEntry_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
@@ -314,7 +314,7 @@ theorem wordAllocateGraphFunctionWithEntry_sound
     (wordProgPreferenceEdges (wordSsaRenameFunctionWithEntry parameters program).2.snd)
     colours stackStart allocation' hgraph
 
-theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_sound
+theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -344,7 +344,7 @@ theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_sound
     inner hinner
   exact ⟨hclash, hspecial, htreeChecked⟩
 
-theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_maps_variables
+theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_maps_variables [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -372,7 +372,7 @@ theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_maps_variab
   apply hslots name
   simp [hname]
 
-theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_sound
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -404,7 +404,7 @@ theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixe
   have hclash := wordSpillAllocationRespectsClashes_append_left _ _ _ hclashAll
   exact ⟨hclash, hspecial, htreeChecked⟩
 
-theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_maps_variables
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_maps_variables [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -425,7 +425,7 @@ theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixe
   apply hslots name
   simp [hname]
 
-theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences_sound
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -457,7 +457,7 @@ theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences_sou
     inner hinner
   exact ⟨hclash, hspecial, htreeChecked⟩
 
-theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences_maps_variables
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences_maps_variables [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -488,13 +488,225 @@ theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences_map
   apply hslots name
   simp [hname]
 
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast_sound [OfNat α 0]
+    (parameters : List Nat) (program : WordProg α)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (renamedProgram : WordProg α) (allocation : WordSpillState)
+    (halloc :
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast
+        parameters program =
+        some (state, renamedParameters, renamedProgram, allocation)) :
+    wordSpillAllocationRespectsClashes
+        (wordClashTreeAnalyze
+          (wordClashTree
+            (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
+          []).snd allocation.locations = true ∧
+      wordProgSpecialLocationsSafe allocation.locations
+        (wordSsaRenameFunctionWithEntry parameters program).2.snd = true ∧
+      wordSpillClashTreeChecked
+        (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
+        allocation.locations = true := by
+  simp [wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast]
+    at halloc
+  split at halloc <;> simp_all
+  rename_i x inner hinner
+  rcases halloc with ⟨⟨hspecial, htreeChecked⟩, hstate, hparameters,
+    hprogram, hallocation⟩
+  subst state
+  subst renamedParameters
+  subst renamedProgram
+  subst allocation
+  have hclashAll := wordAllocateVarsWithFixedSourcesFast_sound _ _ _ _ inner hinner
+  have hclash := wordSpillAllocationRespectsClashes_append_left _ _ _ hclashAll
+  exact ⟨hclash, hspecial, htreeChecked⟩
+
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast_maps_variables [OfNat α 0]
+    (parameters : List Nat) (program : WordProg α)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (renamedProgram : WordProg α) (allocation : WordSpillState)
+    (halloc :
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast
+        parameters program =
+        some (state, renamedParameters, renamedProgram, allocation)) :
+    ∀ name, name ∈ wordProgVariables renamedProgram →
+      ∃ location, lookupNatInfo name allocation.locations = some location := by
+  simp [wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast]
+    at halloc
+  split at halloc <;> simp_all
+  rcases halloc with ⟨_, rfl, rfl, rfl, rfl⟩
+  rename_i _ alloc _ hallocation
+  have hslots := wordAllocateVarsWithFixedSourcesFast_maps_slots
+    _ _ _ _ alloc hallocation
+  intro name hname
+  apply hslots name
+  simp [hname]
+
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast_preserves_parameters [OfNat α 0]
+    (parameters : List Nat) (program : WordProg α)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (renamedProgram : WordProg α) (allocation : WordSpillState)
+    (halloc :
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast
+        parameters program =
+        some (state, renamedParameters, renamedProgram, allocation)) :
+    ∀ name, name ∈ parameters →
+      lookupNatInfo name allocation.locations = some (.register name) := by
+  simp [wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast]
+    at halloc
+  split at halloc <;> simp_all
+  rcases halloc with ⟨_, rfl, rfl, rfl, rfl⟩
+  rename_i _ alloc _ hallocation
+  intro name hname
+  apply wordAllocateVarsWithFixedSourcesFast_preserves_fixed_source _ _ _ _ alloc
+    hallocation name
+  exact List.mem_append_left _ hname
+
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast_witness [OfNat α 0]
+    (parameters : List Nat) (program : WordProg α)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (renamedProgram : WordProg α) (allocation : WordSpillState)
+    (halloc :
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast
+        parameters program =
+        some (state, renamedParameters, renamedProgram, allocation)) :
+    wordSpillAllocationRespectsClashes
+        (wordClashTreeAnalyze
+          (wordClashTree
+            (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
+          []).snd allocation.locations = true ∧
+      wordProgSpecialLocationsSafe allocation.locations
+        (wordSsaRenameFunctionWithEntry parameters program).2.snd = true ∧
+      wordSpillClashTreeChecked
+        (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
+        allocation.locations = true ∧
+      (∀ name, name ∈ wordProgVariables renamedProgram →
+        ∃ location, lookupNatInfo name allocation.locations = some location) ∧
+      (∀ name, name ∈ parameters →
+        lookupNatInfo name allocation.locations = some (.register name)) := by
+  have hsound :=
+    wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast_sound
+      parameters program state renamedParameters renamedProgram allocation halloc
+  have hvariables :=
+    wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast_maps_variables
+      parameters program state renamedParameters renamedProgram allocation halloc
+  have hparameters :=
+    wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast_preserves_parameters
+      parameters program state renamedParameters renamedProgram allocation halloc
+  exact ⟨hsound.1, hsound.2.1, hsound.2.2, hvariables, hparameters⟩
+
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast_sound [OfNat α 0]
+    (parameters : List Nat) (program : WordProg α)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (renamedProgram : WordProg α) (allocation : WordSpillState)
+    (halloc :
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
+        parameters program =
+        some (state, renamedParameters, renamedProgram, allocation)) :
+    wordSpillAllocationRespectsClashes
+        (wordClashTreeAnalyze
+          (wordClashTree
+            (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
+          []).snd allocation.locations = true ∧
+      wordProgSpecialLocationsSafe allocation.locations
+        (wordSsaRenameFunctionWithEntry parameters program).2.snd = true ∧
+      wordSpillClashTreeChecked
+        (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
+        allocation.locations = true := by
+  simp [wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast]
+    at halloc
+  split at halloc <;> simp_all
+  rename_i x inner hinner
+  rcases halloc with ⟨⟨hspecial, htreeChecked⟩, hstate, hparameters,
+    hprogram, hallocation⟩
+  subst state
+  subst renamedParameters
+  subst renamedProgram
+  subst allocation
+  have hclashAll := wordAllocateVarsWithFixedSourcesClashFast_sound _ _ _ _ inner hinner
+  have hclash := wordSpillAllocationRespectsClashes_append_left _ _ _ hclashAll
+  exact ⟨hclash, hspecial, htreeChecked⟩
+
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast_maps_variables [OfNat α 0]
+    (parameters : List Nat) (program : WordProg α)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (renamedProgram : WordProg α) (allocation : WordSpillState)
+    (halloc :
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
+        parameters program =
+        some (state, renamedParameters, renamedProgram, allocation)) :
+    ∀ name, name ∈ wordProgVariables renamedProgram →
+      ∃ location, lookupNatInfo name allocation.locations = some location := by
+  simp [wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast]
+    at halloc
+  split at halloc <;> simp_all
+  rcases halloc with ⟨_, rfl, rfl, rfl, rfl⟩
+  rename_i _ alloc _ hallocation
+  have hslots := wordAllocateVarsWithFixedSourcesClashFast_maps_slots
+    _ _ _ _ alloc hallocation
+  intro name hname
+  apply hslots name
+  simp [hname]
+
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast_preserves_parameters [OfNat α 0]
+    (parameters : List Nat) (program : WordProg α)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (renamedProgram : WordProg α) (allocation : WordSpillState)
+    (halloc :
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
+        parameters program =
+        some (state, renamedParameters, renamedProgram, allocation)) :
+    ∀ name, name ∈ parameters →
+      lookupNatInfo name allocation.locations = some (.register name) := by
+  simp [wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast]
+    at halloc
+  split at halloc <;> simp_all
+  rcases halloc with ⟨_, rfl, rfl, rfl, rfl⟩
+  rename_i _ alloc _ hallocation
+  intro name hname
+  apply wordAllocateVarsWithFixedSourcesClashFast_preserves_fixed_source _ _ _ _ alloc
+    hallocation name
+  exact List.mem_append_left _ hname
+
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast_witness [OfNat α 0]
+    (parameters : List Nat) (program : WordProg α)
+    (state : WordSsaState) (renamedParameters : List Nat)
+    (renamedProgram : WordProg α) (allocation : WordSpillState)
+    (halloc :
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
+        parameters program =
+        some (state, renamedParameters, renamedProgram, allocation)) :
+    wordSpillAllocationRespectsClashes
+        (wordClashTreeAnalyze
+          (wordClashTree
+            (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
+          []).snd allocation.locations = true ∧
+      wordProgSpecialLocationsSafe allocation.locations
+        (wordSsaRenameFunctionWithEntry parameters program).2.snd = true ∧
+      wordSpillClashTreeChecked
+        (wordClashTree (wordSsaRenameFunctionWithEntry parameters program).2.snd [])
+        allocation.locations = true ∧
+      (∀ name, name ∈ wordProgVariables renamedProgram →
+        ∃ location, lookupNatInfo name allocation.locations = some location) ∧
+      (∀ name, name ∈ parameters →
+        lookupNatInfo name allocation.locations = some (.register name)) := by
+  have hsound :=
+    wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast_sound
+      parameters program state renamedParameters renamedProgram allocation halloc
+  have hvariables :=
+    wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast_maps_variables
+      parameters program state renamedParameters renamedProgram allocation halloc
+  have hparameters :=
+    wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast_preserves_parameters
+      parameters program state renamedParameters renamedProgram allocation halloc
+  exact ⟨hsound.1, hsound.2.1, hsound.2.2, hvariables, hparameters⟩
+
 /-!
 Package the entry-inclusive spill allocator's independent obligations into the
 single witness consumed by the location-aware Word-to-Stack boundary.  This
 keeps callers from unfolding the allocator merely to recover its safety,
 coverage, and ABI-entry facts.
 -/
-theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences_witness
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences_witness [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -956,8 +1168,7 @@ theorem wordMoveToInstructions_abi_singleton [NeZero width]
     (source : Nat) (hsource : source < 32) (hsourceScratch : source ≠ 31) :
     wordMoveToInstructions (width := width) [(2, source)] =
       if source = 2 then
-        some ([.addi 31 2 (0 : Word width), .addi 2 31 0] :
-          List (Instruction width))
+        some []
       else
         some ([.addi 2 ⟨source, hsource⟩ (0 : Word width)] :
           List (Instruction width)) := by
@@ -965,12 +1176,15 @@ theorem wordMoveToInstructions_abi_singleton [NeZero width]
   · subst source
     simp [wordMoveToInstructions, wordMoveToInstructionsAux,
       wordMoveRegisterDestinations, wordMoveRegisterReady,
-      wordMoveRegisterRemoveDestination, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat]
-  · simp [wordMoveToInstructions, wordMoveToInstructionsAux,
+      wordMoveRegisterRemoveDestination]
+  · have htwo' : ¬2 = source := by
+      intro h
+      exact htwo h.symm
+    simp [wordMoveToInstructions, wordMoveToInstructionsAux,
       wordMoveRegisterDestinations, wordMoveRegisterReady,
       wordMoveRegisterRemoveDestination, wordExpToInstructions,
-      wordExpToInstruction, registerOfNat, hsource, hsourceScratch, htwo]
+      wordExpToInstruction, registerOfNat, hsource, hsourceScratch, htwo,
+      htwo']
 
 theorem evalWordSsaRenameProgram_raise [NeZero width]
     (ssa : WordSsaState) (source target : State width)
@@ -999,7 +1213,7 @@ theorem evalWordSsaRenameProgram_raise [NeZero width]
   have hprogram :
       (wordSsaRenameProgram ssa
         (.raise exception : WordProg (Word width))).2 =
-        (.seq (.move 0 [(2, wordSsaRead ssa exception)]) (.raise 2) :
+        (.seq (.move 1 [(2, wordSsaRead ssa exception)]) (.raise 2) :
           WordProg (Word width)) := by
     simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
       wordSsaRead, wordSsaSeq]
@@ -1009,13 +1223,12 @@ theorem evalWordSsaRenameProgram_raise [NeZero width]
   by_cases htwo : wordSsaRead ssa exception = 2
   · have hmove' : wordMoveToInstructions (width := width)
         [(2, wordSsaRead ssa exception)] =
-        some ([.addi 31 2 (0 : Word width), .addi 2 31 0] :
-          List (Instruction width)) := by
+        some [] := by
       simpa [htwo] using hmove
     simp only [evalWordFunctionWithHandlersAndFfi, evalWordFunction]
     rw [hmove']
-    simp [registerOfNat, hsource, executeInstructions, execute, nextPc,
-      writeRegister, readRegister, wordControlResultException]
+    simp [registerOfNat, hsource, executeInstructions, readRegister,
+      wordControlResultException]
     simpa [readRegister, htwo] using hexceptionValue
   · have hmove' : wordMoveToInstructions (width := width)
         [(2, wordSsaRead ssa exception)] =
@@ -1068,13 +1281,12 @@ theorem evalWordSsaRenameProgram_return_singleton [NeZero width]
   by_cases htwo : wordSsaRead ssa value = 2
   · have hmove' : wordMoveToInstructions (width := width)
         [(2, wordSsaRead ssa value)] =
-        some ([.addi 31 2 (0 : Word width), .addi 2 31 0] :
-          List (Instruction width)) := by
+        some [] := by
       simpa [htwo] using hmove
     simp only [evalWordFunctionWithHandlersAndFfi, evalWordFunction]
     rw [hmove']
-    simp [registerOfNat, hsource, executeInstructions, execute, nextPc,
-      writeRegister, readRegister, wordControlResultValues]
+    simp [registerOfNat, hsource, executeInstructions, readRegister,
+      wordControlResultValues]
     simpa [readRegister, htwo] using hvalue
   · have hmove' : wordMoveToInstructions (width := width)
         [(2, wordSsaRead ssa value)] =

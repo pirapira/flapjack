@@ -1179,7 +1179,7 @@ theorem evalWordProg_moveOne_applyColour [NeZero width]
       wordMoveRegisterDestinations, wordMoveRegisterReady,
       wordMoveRegisterRemoveDestination, wordExpToInstructions,
       wordExpToInstruction, registerOfNat, hname, hsource, hname31, hsource31,
-      hne']
+      hne, hne']
   have htargetMove :
       evalWordProg target
           (wordApplyColour colour (.move 1 [(name, sourceName)])) =
@@ -1190,7 +1190,7 @@ theorem evalWordProg_moveOne_applyColour [NeZero width]
       wordMoveRegisterReady, wordMoveRegisterRemoveDestination,
       wordExpToInstructions, wordExpToInstruction, registerOfNat,
       valid name hname, valid sourceName hsource, hcolourName31,
-      hcolourSource31, hcolourNe']
+      hcolourSource31, hcolourNe, hcolourNe']
   rcases evalWordProg_assignVar_applyColour colour valid injective colourZero
       source target hrelation name sourceName hname hsource with
     ⟨source', target', hsource', htarget', hrelation'⟩
@@ -1243,6 +1243,10 @@ theorem evalWordProg_moveTwo_applyColour [NeZero width]
     hsourceTwoDestinationOne (injective heq)
   have hcolourSourceTwoDestinationTwo : colour sourceTwo ≠ colour destinationTwo := fun heq =>
     hsourceTwoDestinationTwo (injective heq)
+  have hcolourDestinationOneSourceOne : colour destinationOne ≠ colour sourceOne :=
+    Ne.symm hcolourSourceOneDestinationOne
+  have hcolourDestinationTwoSourceTwo : colour destinationTwo ≠ colour sourceTwo :=
+    Ne.symm hcolourSourceTwoDestinationTwo
   have executeInstructions_two (state : State width)
       (first second : Instruction width) :
       executeInstructions state [first, second] = execute (execute state first) second := by
@@ -1262,6 +1266,7 @@ theorem evalWordProg_moveTwo_applyColour [NeZero width]
       hdestinationTwo31, hsourceTwo31, hdestinations,
       hdestinationTwoOne, hsourceOneDestinationOne,
       hsourceOneDestinationTwo, hsourceTwoDestinationTwo,
+      hsourceOneDestinationOne', hsourceTwoDestinationTwo',
       executeInstructions_two]
   have htargetMove :
       evalWordProg target
@@ -1280,7 +1285,9 @@ theorem evalWordProg_moveTwo_applyColour [NeZero width]
       hcolourDestinationOne31, hcolourSourceOne31,
       hcolourDestinationTwo31, hcolourSourceTwo31, hcolourDestinations,
       hcolourDestinations', hcolourSourceOneDestinationOne,
-      hcolourSourceOneDestinationTwo, hcolourSourceTwoDestinationTwo,
+      hcolourSourceOneDestinationTwo,
+      hcolourSourceTwoDestinationTwo, hcolourDestinationOneSourceOne,
+      hcolourDestinationTwoSourceTwo,
       executeInstructions_two]
   rcases evalWordProg_moveOne_applyColour colour valid injective colourZero
       source target hrelation destinationOne sourceOne hdestinationOne hsourceOne

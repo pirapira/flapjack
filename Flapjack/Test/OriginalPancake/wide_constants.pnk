@@ -1,0 +1,4 @@
+fun 1 main() {
+  var x = 1073741832;
+  return x;
+}

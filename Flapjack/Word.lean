@@ -1,4 +1,5 @@
 import Flapjack.LoopAnalysis
+import Flapjack.NumSet
 
 /-!
 The Word intermediate language used by CakeML's backend. This first port
@@ -28,7 +29,7 @@ inductive WordStore (α : Type u) where
   | codeBufferEnd
   | bitmapBuffer
   | bitmapBufferEnd
-  deriving Repr
+  deriving DecidableEq, Repr
 
 inductive WordExp (α : Type u) where
   | const (value : α)
@@ -42,7 +43,7 @@ inductive WordExp (α : Type u) where
 inductive WordRegImm (α : Type u) where
   | imm (value : α)
   | reg (name : Nat)
-  deriving Repr
+  deriving DecidableEq, Repr
 
 inductive WordArith where
   | longMul (destinationLeft destinationRight sourceLeft sourceRight : Nat)
@@ -118,7 +119,7 @@ inductive WordProg (α : Type u) where
 
 structure WordContext where
   vars : NatInfoMap Nat
-  deriving Repr
+  deriving DecidableEq, Repr
 
 def wordFindVar (context : WordContext) (name : Nat) : Nat :=
   match lookupNatInfo name context.vars with
@@ -136,7 +137,12 @@ def wordToNumSet : List Nat → List Nat
   | name :: names => loopInsert name (wordToNumSet names)
 
 def wordMkNewCutset (context : WordContext) (live : List Nat) : List Nat :=
-  loopInsert 0 (wordToNumSet (wordMapVars context live))
+  /- This is CakeML's `mk_new_cutset_def`, not merely a list-set map:
+     `fromNumSet` exposes the source Patricia-tree traversal order before
+     context registers are mapped and rebuilt with `toNumSet`. -/
+  loopInsert 0
+    (Flapjack.NumSet.toSet
+      ((Flapjack.NumSet.fromList live).map (wordFindVar context)))
 
 def wordRegImm (context : WordContext) : RegImm α → WordRegImm α
   | .imm value => .imm value

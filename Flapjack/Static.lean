@@ -510,7 +510,19 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
   | .seq first second =>
       staticBind (checkProg context first) (fun firstResult =>
         if firstResult.exitsFunction then
-          (Except.ok firstResult, [.warning "statement after function exit is unreachable"])
+          -- CakeML `panStaticScript.sml:1451` always checks the second
+          -- statement; the unreachable tail only earns a warning, while
+          -- errors in it still reject the program.
+          match checkProg
+              { context with location := firstResult.currentLocation } second with
+          | (Except.error error, warnings) =>
+              (Except.error error,
+                .warning "statement after function exit is unreachable" :: warnings)
+          | (Except.ok secondInfo, warnings) =>
+              (Except.ok { secondInfo with
+                  exitsFunction := true
+                  exitsLoop := firstResult.exitsLoop || secondInfo.exitsLoop },
+                .warning "statement after function exit is unreachable" :: warnings)
         else staticBind (checkProg
           { context with location := firstResult.currentLocation } second) (fun secondResult =>
           staticOk secondResult))
@@ -547,9 +559,33 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               staticError (.shape "function argument shapes do not match")
             else
               match info with
-              | none => progOk .tailLast true false context.location
+              | none =>
+                  -- CakeML `panStaticScript.sml:1335`: a tail call requires the
+                  -- caller's and callee's return shapes to agree.
+                  match context.expectedReturn with
+                  | some callerReturn =>
+                      if !shapesSame callerReturn functionInfo.returnShape then
+                        staticError (.shape
+                          "tail call return shape does not match caller return shape")
+                      else progOk .tailLast true false context.location
+                  | none => progOk .tailLast true false context.location
               | some (destination, none) => checkCallDestination context returnShape destination
               | some (destination, some (exception, handlerVariable, handlerProgram)) =>
+                  match destination with
+                  | some (.global, _) =>
+                      -- CakeML `panStaticScript.sml:1256-1264`: a handled call
+                      -- assigning to a global only requires the handler variable
+                      -- to be a local; the exception need not be declared and
+                      -- the handler variable's shape is not checked.
+                      match lookupInfo handlerVariable context.locals with
+                      | none => staticError (.scope
+                          ("unknown exception handler variable: " ++ handlerVariable))
+                      | some handlerInfo =>
+                          let handlerContext := { context with locals :=
+                            (handlerVariable, handlerInfo) :: context.locals }
+                          staticBind (checkProg handlerContext handlerProgram) (fun _ =>
+                            checkCallDestination context returnShape destination)
+                  | _ =>
                   match lookupInfo exception context.exceptions,
                       lookupInfo handlerVariable context.locals with
                   | none, _ => staticError (.scope ("unknown exception: " ++ exception))
@@ -619,11 +655,15 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               progOk .retLast true false context.location
             else
               staticError (.shape "return expression has the wrong shape"))
-  | .shMemLoad _ _ name address =>
+  | .shMemLoad _ varKind name address =>
+      /- CakeML looks the destination up in locals only for `Local` and in
+         globals only for `Global` (`panStaticScript.sml:1642,1676`). -/
       let destinationIsWord : Option Bool :=
-        match lookupInfo name context.locals with
-        | some info => some (shapedBasedIsWord info.shapedBased)
-        | none =>
+        match varKind with
+        | .local =>
+            (lookupInfo name context.locals).map
+              (fun info => shapedBasedIsWord info.shapedBased)
+        | .global =>
             match lookupInfo name context.globals with
             | some info => (shapedBasedFromShape context.structs info.shape).map shapedBasedIsWord
             | none => none
@@ -702,7 +742,9 @@ def staticCheckNames [BEq String] (context : StructContext) :
       if (lookupInfo name context).isSome then
         staticError (.scope ("structure is redeclared: " ++ name))
       else
-        match firstRepeat (fields.map Prod.fst) with
+        -- CakeML sorts (`panStaticScript.sml:578-585`) so `first_repeat`
+        -- reports the lexicographically smallest duplicate.
+        match firstRepeat ((fields.map Prod.fst).mergeSort (· ≤ ·)) with
         | some field =>
             staticError (.scope ("structure field is redeclared: " ++ field))
         | none =>
@@ -730,7 +772,7 @@ def staticCheckFunctionHeader [BEq String] (context : StructContext)
       staticError (.shape "main function must return one word")
     else
       staticOk ()
-  else if (firstRepeat (declaration.params.map Prod.fst)).isSome then
+  else if (firstRepeat ((declaration.params.map Prod.fst).mergeSort (· ≤ ·))).isSome then
     staticError (.scope ("function parameter is redeclared: " ++ declaration.name))
   else if declaration.exported && declaration.params.length > 4 then
     staticError (.general ("exported function has more than four arguments: " ++
@@ -758,10 +800,11 @@ def staticCheckDecls [BEq String] (structs : StructContext) :
       if (lookupInfo exception context.exceptions).isSome then
         staticError (.scope ("exception is redeclared: " ++ exception))
       else
-        staticBind (checkShape structs shape) (fun _ =>
-          staticCheckDecls structs
-            { context with exceptions := (exception, shape) :: context.exceptions }
-            declarations)
+        /- CakeML only checks for redeclaration here; the exception shape
+           itself is not validated (`panStaticScript.sml:1858-1868`). -/
+        staticCheckDecls structs
+          { context with exceptions := (exception, shape) :: context.exceptions }
+          declarations
   | context, .decl shape name value :: declarations =>
       staticBind
         (if (lookupInfo name context.globals).isSome then

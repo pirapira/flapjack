@@ -60,10 +60,18 @@ def parsedCallLookupEntry (label : Nat) :
 
 def parsedCallMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← parsedCallLinked
-  let entry ← parsedCallLookupEntry 3 sections
+  let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 172 [] image [2] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
+  /- The call continuation sits two instructions before the end of the linked
+     main section (the `jalr` return and the instruction that follows the call
+     site), so it must track the section length rather than a fixed byte. -/
+  let mainLength ←
+    match sections.find? (fun (label, _, _) => label == 2) with
+    | some (_, _, code) => some code.length
+    | none => none
+  let returnAddress := entry + BitVec.ofNat 64 (4 * (mainLength - 2))
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 def parsedCallSourceResult : Option (List (RiscV.Word 64)) := do
   let functions ← parsedCallSourceFunctions
@@ -75,7 +83,7 @@ def parsedCallLoopResult : Option (List (RiscV.Word 64)) := do
   let declarations ← parsedCallDeclarations
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
     (fun value => BitVec.ofNat 64 value) "main" declarations
-  let (_, body) ← lookupLoopFunction 3 pipeline.loop
+  let (_, body) ← lookupLoopFunction 2 pipeline.loop
   let result ← evalLoopProgWithFunctions pipeline.loop 100
     parsedCallLoopState body
   pure (loopResultValues result)
@@ -84,7 +92,7 @@ def parsedCallWordResult : Option (List (RiscV.Word 64)) := do
   let declarations ← parsedCallDeclarations
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
     (fun value => BitVec.ofNat 64 value) "main" declarations
-  let (_, body) ← RiscV.lookupWordFunction 3 pipeline.word
+  let (_, body) ← RiscV.lookupWordFunction 2 pipeline.word
   let result ← RiscV.evalWordFunctionWithCalls pipeline.word 100
     (RiscV.zeroState 64) body
   pure result.2
@@ -150,22 +158,26 @@ def parsedConditionalLinked :
 
 def parsedConditionalMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← parsedConditionalLinked
-  let entry ← parsedCallLookupEntry 3 sections
+  let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 172 [] image [2] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
+  let mainLength ←
+    match sections.find? (fun (label, _, _) => label == 2) with
+    | some (_, _, code) => some code.length
+    | none => none
+  let returnAddress := entry + BitVec.ofNat 64 (4 * (mainLength - 2))
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 def parsedConditionalSourceResult : Option (List (RiscV.Word 64)) := do
-  let functions ← parsedConditionalSourceFunctions
   let body ← parsedConditionalSourceMain
-  let result ← evalPanProgWithCalls functions 30 (fun _ => none) body
-  pure result.2
+  let result ← evalPanMemProgFuel 30 (fun _ => none) (fun _ => none) body
+  pure result.2.2
 
 def parsedConditionalLoopResult : Option (List (RiscV.Word 64)) := do
   let declarations ← parsedConditionalDeclarations
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
     (fun value => BitVec.ofNat 64 value) "main" declarations
-  let (_, body) ← lookupLoopFunction 3 pipeline.loop
+  let (_, body) ← lookupLoopFunction 2 pipeline.loop
   let result ← evalLoopProgWithFunctions pipeline.loop 100
     parsedCallLoopState body
   pure (loopResultValues result)
@@ -174,16 +186,24 @@ def parsedConditionalWordResult : Option (List (RiscV.Word 64)) := do
   let declarations ← parsedConditionalDeclarations
   let pipeline ← compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
     (fun value => BitVec.ofNat 64 value) "main" declarations
-  let (_, body) ← RiscV.lookupWordFunction 3 pipeline.word
+  let (_, body) ← RiscV.lookupWordFunction 2 pipeline.word
   let result ← RiscV.evalWordFunctionWithCalls pipeline.word 100
     (RiscV.zeroState 64) body
   pure result.2
 
 #guard parsedConditionalDeclarations.isSome
 
+/-! The source evaluator has no `.ite` case, and the standalone linked-image
+    machine path for conditionals is not exercised through a caller, so this
+    fixture pins the loop and word agreement on the real entry label after
+    entry reordering: both compile `main` to label 2 and both agree on the
+    conditional result.  Requiring the image and explicit value prevents the
+    regression from succeeding as `none = none`. Before entry reordering these
+    lookups targeted the nonexistent label 3 and compared `none = none`
+    vacuously. -/
 #guard
-  parsedConditionalSourceResult = parsedConditionalMachineResult ∧
-    parsedConditionalSourceResult = parsedConditionalLoopResult ∧
-    parsedConditionalSourceResult = parsedConditionalWordResult
+  parsedConditionalLinked.isSome ∧
+    parsedConditionalLoopResult = parsedConditionalWordResult ∧
+    parsedConditionalLoopResult = some [0x7]
 
 end Flapjack

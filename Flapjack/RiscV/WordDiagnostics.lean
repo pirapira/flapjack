@@ -64,6 +64,53 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/- The bitmap-aware Cake frame path is required not only for foreign calls but
+   also for Word constructors that allocate or install constant data.  The
+   old selector looked only at FFI names, so an ordinary allocating function
+   was sent through the stateless lowering and failed with an empty path. -/
+def wordProgHasFrameOperations : WordProg α → Bool
+  | .seq first second =>
+      wordProgHasFrameOperations first || wordProgHasFrameOperations second
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordProgHasFrameOperations thenBranch || wordProgHasFrameOperations elseBranch
+  | .loop _ body _ | .mustTerminate body => wordProgHasFrameOperations body
+  | .call returns _ _ handler =>
+      (match returns with
+       | some (_, _, returnCode, _, _) => wordProgHasFrameOperations returnCode
+       | none => false) ||
+        (match handler with
+         | some (_, body, _, _) => wordProgHasFrameOperations body
+         | none => false)
+  | .alloc _ _ | .storeConsts _ _ _ _ _ => true
+  | _ => false
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+/- A returning call is itself a bitmap write site, even when its return
+   continuation contains no Alloc or StoreConsts node.  Keep this predicate
+   separate from `wordProgHasFrameOperations`: the latter selects the
+   state-threaded Cake frame wrapper, while this one only answers whether the
+   exact Cake IRC occupancy can be observed by the bitmap builder. -/
+def wordProgHasBitmapSites : WordProg α → Bool
+  | .seq first second =>
+      wordProgHasBitmapSites first || wordProgHasBitmapSites second
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordProgHasBitmapSites thenBranch || wordProgHasBitmapSites elseBranch
+  | .loop _ body _ | .mustTerminate body => wordProgHasBitmapSites body
+  | .call returns _ _ handler =>
+      (match returns with
+       | some (_, _, returnCode, _, _) => true || wordProgHasBitmapSites returnCode
+       | none => false) ||
+        (match handler with
+         | some (_, body, _, _) => wordProgHasBitmapSites body
+         | none => false)
+  | .alloc _ _ | .storeConsts _ _ _ _ _ | .ffi _ _ _ _ _ _ => true
+  | _ => false
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 /-- Collect the foreign-function names referenced by `ffi` nodes in a Word
     program.  The source-facing entrypoint uses this to register the services
     that an original Pancake program may call. -/
@@ -85,6 +132,36 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+def wordProgNeedsCakeFrame (program : WordProg α) : Bool :=
+  !(wordProgFfiNames program).isEmpty || wordProgHasFrameOperations program
+
+/-! Cake's `format_var`/`wMoveSingle` frame calculation is based on the
+    largest argument list in the whole Word program.  The caller subtracts the
+    physical ABI register window when turning this maximum into `f'` slots;
+    retaining the raw maximum here is important because a nested call may have
+    more arguments than the function's formal parameters. -/
+def wordProgMaxCallArguments : WordProg α → Nat
+  | .seq first second =>
+      max (wordProgMaxCallArguments first) (wordProgMaxCallArguments second)
+  | .ite _ _ _ thenBranch elseBranch =>
+      max (wordProgMaxCallArguments thenBranch) (wordProgMaxCallArguments elseBranch)
+  | .loop _ body _ | .mustTerminate body =>
+      wordProgMaxCallArguments body
+  | .call returns _ arguments handler =>
+      let returnCount :=
+        match returns with
+        | some (_, _, returnCode, _, _) => wordProgMaxCallArguments returnCode
+        | none => 0
+      let handlerCount :=
+        match handler with
+        | some (_, body, _, _) => wordProgMaxCallArguments body
+        | none => 0
+      max arguments.length (max returnCount handlerCount)
+  | _ => 0
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def wordToStackProgNatChecked [BEq Nat]
     (config : WordStackConfig) (program : WordProg Nat) :
     Except WordLoweringError (StackProg Nat) :=
@@ -94,6 +171,77 @@ def wordToStackProgNatChecked [BEq Nat]
       match wordProgFirstUnsupported program with
       | some (path, feature) => .error { path, feature }
       | none => .error { path := [], feature := .loweringFailure }
+
+/-! A state-independent locator for the common expression failure in the
+    bitmap-aware lowering path.  That API predates checked errors and returns
+    only `none`; this walk retains the sequence path for a failed nested
+    expression without changing executable lowering.  Stateful failures that
+    are not expression-related intentionally fall back to an empty path. -/
+def wordProgFirstExpressionLoweringFailure (config : WordStackConfig) :
+    WordProg Nat → Option (List Nat)
+  | .seq first second =>
+      match wordProgFirstExpressionLoweringFailure config first with
+      | some path => some (0 :: path)
+      | none =>
+          (wordProgFirstExpressionLoweringFailure config second).map
+            (fun path => 1 :: path)
+  | .ite _operator condition right thenBranch elseBranch =>
+      match wordStackConditionOperands config condition right with
+      | none => some []
+      | some _ =>
+          match wordProgFirstExpressionLoweringFailure config thenBranch with
+          | some path => some (0 :: path)
+          | none =>
+              (wordProgFirstExpressionLoweringFailure config elseBranch).map
+                (fun path => 1 :: path)
+  | .loop _ body _ | .mustTerminate body =>
+      (wordProgFirstExpressionLoweringFailure config body).map
+        (fun path => 0 :: path)
+  | .assign destination value =>
+      match wordStackCompileExpToPhysicalNat config destination value with
+      | some _ => none
+      | none => some []
+  | .store address value =>
+      let result := match address with
+        | .const _ | .var _ | .lookup _ =>
+            wordStackCompileStoreNat config address (.var value)
+        | _ => wordStackCompileStoreNatNested config address (.var value)
+      match result with
+      | some _ => none
+      | none => some []
+  | .set store value =>
+      match wordStackSetNat config store value with
+      | some _ => none
+      | none => some []
+  | .shareInst operator name address =>
+      match address with
+      | .var address =>
+          match (wordStackSharedMemoryInst config operator name address :
+              Option (StackProg Nat)) with
+          | some _ => none
+          | none => some []
+      | _ => some []
+  | .call returns _ _ handler =>
+      match returns with
+      | some (_, _, returnCode, _, _) =>
+          match wordProgFirstExpressionLoweringFailure config returnCode with
+          | some path => some (0 :: path)
+          | none =>
+              match handler with
+              | some (_, body, _, _) =>
+                  (wordProgFirstExpressionLoweringFailure config body).map
+                    (fun path => 1 :: path)
+              | none => none
+      | none =>
+          match handler with
+          | some (_, body, _, _) =>
+              (wordProgFirstExpressionLoweringFailure config body).map
+                (fun path => 1 :: path)
+          | none => none
+  | _ => none
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
 
 def wordToStackProgWordChecked [NeZero width]
     (config : WordStackConfig) (program : WordProg (Word width)) :

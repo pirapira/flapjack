@@ -80,6 +80,20 @@ example :
       some ([4, 24, 28], 3) := by
   decide +kernel
 
+def wordBitmapWordProgram : WordProg (Word 8) :=
+  .seq
+    (.assign 2 (.const (7 : Word 8)))
+    (.storeConsts 0 1 2 3 [(true, (7 : Word 8)), (false, (9 : Word 8))])
+
+example :
+    (wordToStackProgWordWithBitmaps wordBitmapTestConfig 1 30 3 none
+        (wordStackInitialBitmaps false) wordBitmapWordProgram).map
+        (fun result => (result.2.data, result.2.length)) =
+      (wordToStackProgNatWithBitmaps wordBitmapTestConfig 1 30 3 8 none
+        (wordStackInitialBitmaps false) (wordProgToNat wordBitmapWordProgram)).map
+        (fun result => (result.2.data, result.2.length)) := by
+  decide +kernel
+
 def wordBitmapBranchProgram : WordProg Nat :=
   .ite .equal 1 (.imm 0)
     (.alloc 0 ([], [2]))

@@ -1569,6 +1569,38 @@ theorem wordProgToRiscV_counted_sound_of_straightLine [NeZero width]
   rw [hsem]
   rfl
 
+/-! Compositional form: a compiled straight-line fragment can be executed
+    after an arbitrary already-executed machine prefix, and its result composes
+    with the prefix's code as a single instruction list.  Chaining this with
+    `wordProgToRiscV_sound_of_straightLine` composes the compiled fragments of
+    two straight-line Word programs. -/
+theorem wordProgToRiscV_sound_of_straightLine_after_prefix [NeZero width]
+    (state : State width) (prelude : List (Instruction width))
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordProgToRiscV program = some code) :
+    evalWordProg (executeInstructions state prelude) program =
+      some (executeInstructions state (prelude ++ code)) := by
+  rw [executeInstructions_append]
+  exact wordProgToRiscV_sound_of_straightLine (executeInstructions state prelude)
+    program hstraight code hcompile
+
+theorem wordProgToRiscV_counted_sound_of_straightLine_after_prefix [NeZero width]
+    (state : State width) (prelude : List (Instruction width))
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordProgToRiscV program = some code) :
+    some (executeInstructionsCounted (executeInstructions state prelude) code) =
+      (evalWordProg (executeInstructions state prelude) program).map
+        (fun final => (final, code.length)) := by
+  rw [executeInstructionsCounted_spec]
+  rw [wordProgToRiscV_sound_of_straightLine_after_prefix state prelude program
+    hstraight code hcompile]
+  rw [executeInstructions_append]
+  rfl
+
 theorem wordFunctionToRiscV_counted_sound_of_straightLine [NeZero width]
     (context : WordCallContext width) (state : State width)
     (program : WordProg (Word width))
@@ -1580,6 +1612,41 @@ theorem wordFunctionToRiscV_counted_sound_of_straightLine [NeZero width]
       some ((executeInstructionsCounted state code).1, []) := by
   have hsound := wordFunctionToRiscVWithCalls_sound_of_straightLine
     context state program hstraight code hcompile
+  rw [executeInstructionsCounted_spec]
+  exact hsound
+
+/-! Compositional form of the function-level contract: a compiled
+    straight-line function body can run after an arbitrary already-executed
+    machine prefix, with the prefix and the body's code composing as a single
+    instruction list. -/
+theorem wordFunctionToRiscV_sound_of_straightLine_after_prefix [NeZero width]
+    (context : WordCallContext width) (state : State width)
+    (prelude : List (Instruction width))
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCalls context program =
+      some (code, [])) :
+    evalWordFunction (executeInstructions state prelude) program =
+      some (executeInstructions state (prelude ++ code), []) := by
+  have hsound := wordFunctionToRiscVWithCalls_sound_of_straightLine context
+    (executeInstructions state prelude) program hstraight code hcompile
+  rw [hsound, executeInstructions_append]
+
+theorem wordFunctionToRiscV_counted_sound_of_straightLine_after_prefix
+    [NeZero width]
+    (context : WordCallContext width) (state : State width)
+    (prelude : List (Instruction width))
+    (program : WordProg (Word width))
+    (hstraight : WordRiscVStraightLine program)
+    (code : List (Instruction width))
+    (hcompile : wordFunctionToRiscVWithCalls context program =
+      some (code, [])) :
+    evalWordFunction (executeInstructions state prelude) program =
+      some ((executeInstructionsCounted (executeInstructions state prelude)
+        code).1, []) := by
+  have hsound := wordFunctionToRiscVWithCalls_sound_of_straightLine context
+    (executeInstructions state prelude) program hstraight code hcompile
   rw [executeInstructionsCounted_spec]
   exact hsound
 

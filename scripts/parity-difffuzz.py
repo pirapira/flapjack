@@ -29,7 +29,7 @@ registered in ``parity-difffuzz-gaps.json`` with an owning bead.
 
 Usage::
 
-    scripts/parity-difffuzz.py --smoke                  # deterministic smoke corpus
+    scripts/parity-difffuzz.py --smoke --exact         # deterministic exact corpus
     scripts/parity-difffuzz.py --seed 1 --count 400     # bounded campaign
     scripts/parity-difffuzz.py --mode mutate --seed 7 --count 200
     scripts/parity-difffuzz.py --replay FINDING_DIR
@@ -705,7 +705,11 @@ def run_campaign(args):
             continue
         comparison = compare_case(result)
         sigs = signatures_of(comparison)
-        unknown = [s for s in sigs if not is_known(s, gaps_signatures)]
+        # Exact source-to-RISC-V parity is the strict acceptance criterion.
+        # The historical bead-owned gap registry remains useful for tracking
+        # older campaigns, but it must not make a byte/layout mismatch pass an
+        # exact campaign.
+        unknown = sigs if args.exact else [s for s in sigs if not is_known(s, gaps_signatures)]
         origin = {"mode": mode, "seed": seed, "index": index,
                   "source_path": str(path)}
         if comparison["class"] == "both-rejected":
@@ -738,7 +742,8 @@ def run_campaign(args):
         if not args.quiet and args.verbose and sigs:
             print("case %s class=%s sigs=%s" % (case_id, comparison["class"], ",".join(sigs)))
 
-    print("cases=%d exact=%d known=%d both_rejected=%d gap=%d opposite=%d unknown=%d timeouts=%d" % (
+    print("mode=%s cases=%d exact=%d known=%d both_rejected=%d gap=%d opposite=%d unknown=%d timeouts=%d" % (
+        "exact" if args.exact else "gaps",
         len(cases), counters["both-accepted-exact"], counters["both-accepted-known"],
         counters["both-rejected"], counters["gap"], counters["opposite"],
         counters["unknown"], counters["timeouts"]))
@@ -752,6 +757,7 @@ def run_campaign(args):
     if args.out:
         report = {"cases": len(cases), "counters": counters,
                   "known": seen_known, "findings": findings,
+                  "comparison_mode": "exact" if args.exact else "gaps",
                   "tool_versions": provenance, "gaps_file": str(args.gaps)}
         (findings_root / "campaign.json").write_text(json.dumps(report, indent=2) + "\n")
     return 1 if counters["unknown"] else 0
@@ -830,6 +836,8 @@ def main(argv=None):
     parser.add_argument("--mode", choices=["generate", "mutate", "mixed"], default="generate")
     parser.add_argument("--smoke", action="store_true",
                         help="run the fixed deterministic smoke corpus")
+    parser.add_argument("--exact", action="store_true",
+                        help="require identical accepted artifacts; ignore bead-owned gaps")
     parser.add_argument("--cake", default=DEFAULT_CAKE)
     parser.add_argument("--flapjack", default=str(DEFAULT_FLAPJACK))
     parser.add_argument("--gaps", default=str(DEFAULT_GAPS))

@@ -131,7 +131,10 @@ theorem panValueCrepProgramCorrect_shMemStore_source_word
                     nestedDecs [context.maxVar + 1] [compiledValue]
                       (.shMem (storeMemOp size) (context.maxVar + 1)
                         compiledAddress) := by
-                simp [compileProg, hfirstAddress, hfirstValue, nestedDecs]
+                simp [compileProg,
+                  firstCompiledExpAnyShape_of_firstCompiledExp hfirstAddress,
+                  firstCompiledExpAnyShape_of_firstCompiledExp hfirstValue,
+                  nestedDecs]
               rw [hcompileProg] at hcrep
               have hcrepAddressAfter := hstable state baseAddress topAddress
                 (context.maxVar + 1) compiledAddress addressValue valueValue

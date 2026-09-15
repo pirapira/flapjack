@@ -18,6 +18,83 @@ silently emitted.
 
 namespace Flapjack.RiscV
 
+/-! CakeML's `riscv_ast (Inst (Const r i))` uses three exact constant
+    materialization cases.  Keep the arithmetic here in `Nat` so the same
+    instruction-selection function can also provide the instruction count
+    needed while resolving Lab labels.  The emitted immediates are still
+    width-indexed words at the final instruction boundary. -/
+
+def labConst32 {width : Nat} [NeZero width]
+    (destination : Fin 32) (value : Nat) :
+    List (Instruction width) :=
+  let low32 := value % 2 ^ 32
+  let high20 := low32 / 2 ^ 12
+  let low12 := low32 % 2 ^ 12
+  if low12 / 2 ^ 11 % 2 = 1 then
+    [.lui destination (BitVec.ofNat width ((2 ^ 20 - 1) - high20)),
+      .xori destination destination (BitVec.ofNat width low12)]
+  else
+    [.lui destination (BitVec.ofNat width high20),
+      .addi destination destination (BitVec.ofNat width low12)]
+
+def labConstInstructions {width : Nat} [NeZero width]
+    (destination zero temporary : Fin 32) (value : Nat) :
+    List (Instruction width) :=
+  if value < 2 ^ 11 then
+    [.ori destination zero (BitVec.ofNat width value)]
+  else
+    let modulus := 2 ^ width
+    let normalized := value % modulus
+    let low12 := normalized % 2 ^ 12
+    let fitsImm12 :=
+      normalized ==
+        (if low12 / 2 ^ 11 % 2 = 0 then
+          low12
+        else
+          (modulus - (2 ^ 12 - low12)) % modulus)
+    if fitsImm12 then
+      [.ori destination zero (BitVec.ofNat width low12)]
+    else
+      let low32 := normalized % 2 ^ 32
+      let high32 := normalized / 2 ^ 32 % 2 ^ 32
+      let low32Sign := low32 / 2 ^ 31 % 2 = 1
+      let fitsSigned32 :=
+        (high32 = 0 ∧ !low32Sign) ||
+          (high32 = 2 ^ 32 - 1 ∧ low32Sign)
+      if fitsSigned32 then
+        labConst32 destination low32
+      else if low32Sign then
+        labConst32 temporary low32 ++
+          labConst32 destination ((2 ^ 32 - 1) - high32) ++
+          [.slli destination destination (BitVec.ofNat width 32),
+            .xor destination destination temporary]
+      else
+        labConst32 temporary low32 ++
+          labConst32 destination high32 ++
+          [.slli destination destination (BitVec.ofNat width 32),
+            .or destination destination temporary]
+
+def labConstInstructionCount (value : Nat) : Nat :=
+  if value < 2 ^ 11 then 1
+  else
+    let normalized := value % 2 ^ 64
+    let low12 := normalized % 2 ^ 12
+    let fitsImm12 :=
+      normalized ==
+        (if low12 / 2 ^ 11 % 2 = 0 then
+          low12
+        else
+          (2 ^ 64 - (2 ^ 12 - low12)) % 2 ^ 64)
+    if fitsImm12 then 1
+    else
+      let low32 := normalized % 2 ^ 32
+      let high32 := normalized / 2 ^ 32 % 2 ^ 32
+      let low32Sign := low32 / 2 ^ 31 % 2 = 1
+      let fitsSigned32 :=
+        (high32 = 0 ∧ !low32Sign) ||
+          (high32 = 2 ^ 32 - 1 ∧ low32Sign)
+      if fitsSigned32 then 2 else 6
+
 def labConditionPreludeCount (operator : Cmp)
     (right : WordRegImm (Word width)) : Nat :=
   match right with
@@ -34,13 +111,28 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       | .shift .ror _ _ _ => 5
       | .word (.arith (.longMul _ _ _ _)) => 2
       | .word (.arith (.addCarry _ _ _ _ _)) => 6
+      | .word (.arith (.cakeAddCarry _ _ _ _)) => 6
+      | .const _ value => labConstInstructionCount value
+      | .arithImm _ destination left immediate =>
+          if destination = left && immediate = 0 then 0 else 1
+      | .tick => 0
       | _ => 1
   | .labAsm operation _ _ =>
       match operation with
       | .jump _ | .call _ | .locValue _ _ | .linkValue _ | .return | .install | .halt => 1
       | .jumpCmp operator _ right _ => 1 + labConditionPreludeCount operator right
-      | .callFfi _ => 2
+      | .callFfi _ => 1
       | .heapAlloc _ => 1
+
+def labFfiStubOffset [NeZero width] (context : WordFfiContext)
+    (function : FunName) (position : Nat) : Option (Word width) := do
+  let index ← lookupWordFfiIndex function context.services
+  /- CakeML emits FFI blocks in reverse `ffi_names` order.  The target
+     assembler therefore addresses service index `i` at the fixed prefix
+     distance `(3 + i) * ffi_offset`: two runtime blocks (cake_clear and
+     cake_exit), followed by the reversed service table. -/
+  let stubDistance := 3 + index
+  pure (0 - BitVec.ofNat width (position + stubDistance * 16))
 
 def labCollectLabels (_sectionId : Nat) (position : Nat) :
     List (LabLine (Word width)) → List (Nat × Nat)
@@ -121,24 +213,64 @@ def labCompilePlain [NeZero width] :
   | .const destination value => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let destination ← labRegisterOfNat (portToStack destination)
-      pure [.addi destination zero (BitVec.ofNat width value)]
+      if value < 2 ^ 11 then
+        pure [.ori destination zero (BitVec.ofNat width value)]
+      else
+        let temporary ← labRegisterOfNat (portToStack 31)
+        pure (labConstInstructions destination zero temporary value)
   | .arith operator destination left right =>
       (labBinOpInstruction operator destination left right).map List.singleton
+  | .arithImm operator destination left immediate => do
+      if destination == left && immediate == 0 then
+        pure []
+      else
+        let destination ← labRegisterOfNat (portToStack destination)
+        let left ← labRegisterOfNat (portToStack left)
+        match operator with
+        | .add => pure [.addi destination left (BitVec.ofNat width immediate)]
+        | .sub => pure [.addi destination left (0 - BitVec.ofNat width immediate)]
+        | .and | .or | .xor => none
   | .shift operator destination left right =>
       labShiftInstructions operator destination left right
-  | .tick => do
-      let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      pure [.addi zero zero zero]
+  | .tick =>
+      -- CakeML's lab_filter removes the `Inst Skip` generated for Tick
+      -- before assembling the final artifact.  Keeping this line at zero
+      -- width is important: subsequent local-label positions must not count
+      -- an instruction that is not emitted.
+      pure []
   | .jumpReg register => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let register ← labRegisterOfNat (portToStack register)
       pure [.jalr zero register zero]
   | .shareMem operator register address =>
       wordShareInstToInstructions operator register (.var address)
+  | .memOffset memoryOperator operator destination address offset => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      let immediate : Word width :=
+        match operator with
+        | .add => BitVec.ofNat width offset
+        | .sub => 0 - BitVec.ofNat width offset
+        | _ => 0
+      match memoryOperator with
+      | .load => pure [.loadWordOffset destination address immediate]
+      | .store => pure [.storeWordOffset destination address immediate]
+      | _ => none
   | .codeBufferWrite address value =>
       (wordInstToInstruction (.mem .store8 value address)).map List.singleton
   | .dataBufferWrite address value =>
       (wordInstToInstruction (.mem .store value address)).map List.singleton
+
+/-! StackLang's `LocValue` uses register 0 as the conventional link
+    register.  The port's ordinary register fields are hardware-numbered, so
+    this special carrier must be translated separately; sending port register
+    0 through `portToStack` would select the architectural zero register and
+    silently discard FFI/install return addresses. -/
+def labLocValueRegister (register : Nat) : Option (Fin 32) :=
+  if register = 0 then
+    labRegisterOfNat (portToStack portLinkRegister)
+  else
+    labRegisterOfNat (portToStack register)
 
 def labCompileAsm [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat) :
@@ -153,7 +285,7 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
       pure [.jal link (labOffset target position)]
   | .locValue register target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
+      let register ← labLocValueRegister register
       let target ← labResolveRef sectionId labels target
       pure [.addi register zero (BitVec.ofNat width target)]
   | .linkValue target => do
@@ -172,11 +304,15 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
       pure (prelude ++ [labBranch operator left right
         (labOffset target branchPosition)])
   | .callFfi function => do
-      let service ← lookupWordFfiService function context.services
-      pure [.addi 14 0 (BitVec.ofNat width service), .ecall]
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let offset ← labFfiStubOffset context function position
+      pure [.jal zero offset]
   | .install =>
       pure [.jal 0 (0 - BitVec.ofNat width (position + 2 * 16))]
-  | .heapAlloc _ | .halt => none
+  | .heapAlloc _ => none
+  | .halt => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      pure [.jal zero (0 - BitVec.ofNat width (position + 16))]
 
 def labCompileLines [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat) :
@@ -234,6 +370,8 @@ def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
   | .const destination value => .const destination value
   | .arith operator destination left right =>
       .arith operator destination left right
+  | .arithImm operator destination left immediate =>
+      .arithImm operator destination left immediate
   | .shift operator destination left right =>
       .shift operator destination left right
   | .tick => .tick
@@ -242,6 +380,8 @@ def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
   | .dataBufferWrite address value => .dataBufferWrite address value
   | .shareMem operator register address =>
       .shareMem operator register address
+  | .memOffset memoryOperator operator destination address offset =>
+      .memOffset memoryOperator operator destination address offset
 
 def labLineNatToWord [NeZero width] : LabLine Nat → LabLine (Word width)
   | .label sectionId label length => .label sectionId label length
@@ -297,7 +437,7 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
       pure [.jal link (labOffset target position)]
   | .locValue register target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
+      let register ← labLocValueRegister register
       let target ← labResolveProgramRef labels target
       pure [.addi register zero (BitVec.ofNat width target)]
   | .linkValue target => do
@@ -317,12 +457,15 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
         (labOffset target branchPosition)])
   | .callFfi function => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let service ← lookupWordFfiService function context.services
-      pure [.addi 14 zero (BitVec.ofNat width service), .ecall]
+      let offset ← labFfiStubOffset context function position
+      pure [.jal zero offset]
   | .install => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       pure [.jal zero (0 - BitVec.ofNat width (position + 2 * 16))]
-  | .heapAlloc _ | .halt => none
+  | .heapAlloc _ => none
+  | .halt => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      pure [.jal zero (0 - BitVec.ofNat width (position + 16))]
 
 def labCompileProgramLines [NeZero width] (context : WordFfiContext)
     (labels : List (Nat × Nat × Nat)) (position : Nat) :
@@ -394,7 +537,7 @@ def compileWordProgramToRiscV [NeZero width]
     this parallel path computes a halt PC immediately after the linked image,
     emits the jump, and appends a self-loop at that PC. -/
 def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
-    (labels : List (Nat × Nat × Nat)) (position haltPc : Nat) :
+    (labels : List (Nat × Nat × Nat)) (position _haltPc : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .jump target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
@@ -406,7 +549,7 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       pure [.jal link (labOffset target position)]
   | .locValue register target => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
+      let register ← labLocValueRegister register
       let target ← labResolveProgramRef labels target
       pure [.addi register zero (BitVec.ofNat width target)]
   | .linkValue target => do
@@ -426,11 +569,11 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
         (labOffset target branchPosition)])
   | .callFfi function => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let service ← lookupWordFfiService function context.services
-      pure [.addi 14 zero (BitVec.ofNat width service), .ecall]
+      let offset ← labFfiStubOffset context function position
+      pure [.jal zero offset]
   | .halt => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      pure [.jal zero (labOffset haltPc position)]
+      pure [.jal zero (0 - BitVec.ofNat width (position + 16))]
   | .install => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       pure [.jal zero (0 - BitVec.ofNat width (position + 2 * 16))]
@@ -507,6 +650,146 @@ def compileLabProgramLinked [NeZero width] (context : WordFfiContext)
     Option (List (Nat × Word width × List (Instruction width))) :=
   let labels := labCollectProgramLabels 0 program
   compileLabProgramLinkedAux context labels 0 program
+
+/-! Linked machine images retain CakeML's three-region FFI prefix.  The
+service blocks are emitted before `cake_clear` and `cake_exit`, each occupying
+one 16-byte block as required by `labFfiStubOffset`.  The executable model
+represents the external tail call by materializing the service number, taking
+the modeled ECALL, and returning through the continuation in x1; the two fixed
+runtime blocks are reserved as non-falling-through placeholders. -/
+def labFfiServiceStub [NeZero width] (service : Nat) :
+    List (Instruction width) :=
+  [.addi 14 0 (BitVec.ofNat width service), .ecall,
+   .jalr 0 31 0, .addi 0 0 0]
+
+def labFfiStubPrefix [NeZero width] (context : WordFfiContext) :
+    List (Instruction width) :=
+  if context.services.isEmpty then []
+  else
+      context.services.reverse.flatMap (fun (_, service) => labFfiServiceStub service) ++
+        List.replicate 8 (.jal 0 0)
+
+/-! A linked FFI call is nested inside an ordinary Cake function call.  Its
+    continuation must not overwrite the caller's `x1` link: the service stub
+    returns through the reserved scratch `x31`, while the ordinary function
+    return still uses `x1`.  Rebase only the linked FFI carrier here; the
+    generic Lab flattening contract retains the source `returnAddress` field. -/
+def labRebaseLinkedFfiReturnLines [NeZero width] :
+    List (LabLine (Word width)) → List (LabLine (Word width))
+  | .labAsm (.locValue _ target) bytes length ::
+      .labAsm (.callFfi function) callBytes callLength :: lines =>
+      .labAsm (.locValue 31 target) bytes length ::
+        .labAsm (.callFfi function) callBytes callLength ::
+          labRebaseLinkedFfiReturnLines lines
+  | line :: lines => line :: labRebaseLinkedFfiReturnLines lines
+  | [] => []
+
+def labCompileAsmProgramWithFfiBase [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position ffiBase : Nat) :
+    LabAsm (Word width) → Option (List (Instruction width))
+  | .callFfi function => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let offset ← labFfiStubOffset context function (position - ffiBase)
+      pure [.jal zero offset]
+  | operation => labCompileAsmProgram context labels position operation
+
+def labCompileProgramLinesWithFfiBase [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position ffiBase : Nat) :
+    List (LabLine (Word width)) → Option (List (Instruction width))
+  | [] => some []
+  | .label _ _ _ :: lines =>
+      labCompileProgramLinesWithFfiBase context labels position ffiBase lines
+  | .asm operation _ _ :: lines => do
+      let code ← labCompilePlain operation
+      let rest ← labCompileProgramLinesWithFfiBase context labels
+        (position + 4 * labLineInstructionCount (.asm operation [] 0)) ffiBase lines
+      pure (code ++ rest)
+  | .labAsm operation _ _ :: lines => do
+      let code ← labCompileAsmProgramWithFfiBase context labels position ffiBase operation
+      let rest ← labCompileProgramLinesWithFfiBase context labels
+        (position + 4 * labLineInstructionCount (.labAsm operation [] 0)) ffiBase lines
+      pure (code ++ rest)
+
+def compileLabProgramLinkedWithFfiStubsAux [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (base ffiBase : Nat) : LabProgram (Word width) →
+      Option (List (Nat × Word width × List (Instruction width)))
+  | [] => some []
+  | sectionData :: sections => do
+      let sectionData :=
+        { sectionData with lines := labRebaseLinkedFfiReturnLines sectionData.lines }
+      let code ← labCompileProgramLinesWithFfiBase context labels base ffiBase
+        sectionData.lines
+      let rest ← compileLabProgramLinkedWithFfiStubsAux context labels
+        (base + 4 * labSectionInstructionCount sectionData) ffiBase sections
+      pure ((sectionData.name, BitVec.ofNat width base, code) :: rest)
+
+def compileLabProgramLinkedWithFfiStubs [NeZero width]
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    Option (List (Nat × Word width × List (Instruction width))) :=
+  let stubCode := labFfiStubPrefix context
+  let prefixBytes := 4 * stubCode.length
+  let labels := labCollectProgramLabels prefixBytes program
+  match compileLabProgramLinkedWithFfiStubsAux context labels prefixBytes prefixBytes program with
+  | none => none
+  | some [] => some []
+  | some ((sectionId, _, code) :: sections) =>
+      some ((sectionId, 0, stubCode ++ code) :: sections)
+
+def labCompileAsmProgramWithFfiBaseAndHalt [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position ffiBase haltPc : Nat) :
+    LabAsm (Word width) → Option (List (Instruction width))
+  | .callFfi function => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let offset ← labFfiStubOffset context function (position - ffiBase)
+      pure [.jal zero offset]
+  | operation => labCompileAsmWithHalt context labels position haltPc operation
+
+def labCompileProgramLinesWithFfiBaseAndHalt [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position ffiBase haltPc : Nat) :
+    List (LabLine (Word width)) → Option (List (Instruction width))
+  | [] => some []
+  | .label _ _ _ :: lines =>
+      labCompileProgramLinesWithFfiBaseAndHalt context labels position ffiBase haltPc lines
+  | .asm operation _ _ :: lines => do
+      let code ← labCompilePlain operation
+      let rest ← labCompileProgramLinesWithFfiBaseAndHalt context labels
+        (position + 4 * labLineInstructionCount (.asm operation [] 0)) ffiBase haltPc lines
+      pure (code ++ rest)
+  | .labAsm operation _ _ :: lines => do
+      let code ← labCompileAsmProgramWithFfiBaseAndHalt context labels position ffiBase haltPc operation
+      let rest ← labCompileProgramLinesWithFfiBaseAndHalt context labels
+        (position + 4 * labLineInstructionCount (.labAsm operation [] 0)) ffiBase haltPc lines
+      pure (code ++ rest)
+
+def compileLabProgramLinkedWithFfiStubsAndHaltAux [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (base ffiBase haltPc : Nat) : LabProgram (Word width) →
+      Option (List (Nat × Word width × List (Instruction width)))
+  | [] => some []
+  | sectionData :: sections => do
+      let code ← labCompileProgramLinesWithFfiBaseAndHalt context labels base ffiBase haltPc
+        sectionData.lines
+      let rest ← compileLabProgramLinkedWithFfiStubsAndHaltAux context labels
+        (base + 4 * labSectionInstructionCount sectionData) ffiBase haltPc sections
+      pure ((sectionData.name, BitVec.ofNat width base, code) :: rest)
+
+def compileLabProgramLinkedWithFfiStubsAndHalt [NeZero width]
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    Option (List (Nat × Word width × List (Instruction width))) :=
+  let stubCode := labFfiStubPrefix context
+  let prefixBytes := 4 * stubCode.length
+  let labels := labCollectProgramLabels prefixBytes program
+  let haltPc := prefixBytes + 4 * labProgramInstructionCount program
+  match compileLabProgramLinkedWithFfiStubsAndHaltAux context labels prefixBytes prefixBytes haltPc program with
+  | none => none
+  | some [] => some []
+  | some ((sectionId, _, code) :: sections) =>
+      some ((sectionId, 0, stubCode ++ code) :: sections)
 
 def flattenLabProgramLinked :
     List (Nat × Word width × List (Instruction width)) → List (Instruction width)
@@ -732,7 +1015,7 @@ def compileStackProgramNatListLinkedToRiscV [NeZero width]
   match stackProgramsWithLongDivRuntime config programs with
   | none => none
   | some programs =>
-      compileLabProgramLinked context
+      compileLabProgramLinkedWithFfiStubs context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
               sectionId = cakeLongDivLocation then
@@ -760,7 +1043,7 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscV
   match stackProgramsWithLongDivRuntime removeConfig programs with
   | none => none
   | some programs =>
-      compileLabProgramLinkedWithHalt context
+      compileLabProgramLinkedWithFfiStubsAndHalt context
         (((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
               sectionId = cakeLongDivLocation then
@@ -780,23 +1063,23 @@ def compileStackProgramNatListLinkedWithRaiseStubToRiscV [NeZero width]
 
 theorem labLineInstructionCount_ffi :
     labLineInstructionCount
-        (.labAsm (.callFfi "sum") [] 0 : LabLine (Word width)) = 2 := by
+        (.labAsm (.callFfi "sum") [] 0 : LabLine (Word width)) = 1 := by
   rfl
 
 theorem compileLabSection_ffi [NeZero width] :
     compileLabSection { services := [("sum", 7)] }
       ⟨2, [
         .labAsm (.callFfi "sum") [] 0]⟩ =
-      some [.addi 14 0 (BitVec.ofNat width 7), .ecall] := by
+      some [.jal 0 (0 - BitVec.ofNat width 48)] := by
   simp [compileLabSection, labCompileLines,
-    labCompileAsm, lookupWordFfiService]
+    labCompileAsm, labFfiStubOffset, lookupWordFfiIndex]
 
 theorem compileLabProgram_cross_section_jump [NeZero width] :
     compileLabProgram (width := width) { services := [] }
       [⟨1, [.labAsm (.jump ⟨2, 0⟩) [] 0]⟩,
        ⟨2, [.label 2 0 0, .asm (.const 1 7) [] 0]⟩] =
       some [.jal 0 (BitVec.ofNat width 4),
-        .addi 1 0 (BitVec.ofNat width 7)] := by
+        .ori 1 0 (BitVec.ofNat width 7)] := by
   have hcount :
       labLineInstructionCount
           (.labAsm (.jump ⟨2, 0⟩) [] 0 : LabLine (Word width)) = 1 := by
@@ -804,7 +1087,8 @@ theorem compileLabProgram_cross_section_jump [NeZero width] :
   simp [compileLabProgram, labCollectProgramLabels,
     labCollectLabels, labSectionInstructionCount, labCompileProgramSections,
     labCompileProgramLines, labCompileAsmProgram,
-    labCompilePlain, labLookupProgramPosition, labResolveProgramRef,
+    labCompilePlain,
+    labLookupProgramPosition, labResolveProgramRef,
     labOffset, hcount]
 
 end Flapjack.RiscV

@@ -17,10 +17,11 @@ def compileRemoveConfig : StackRemoveConfig :=
     currHeap := 12
     scratch := 31
     addressScratch := 29
-    stackPointer := 20
+    stackPointer := 24
     bytesInWord := 8
-    stackBase := 21
-    wordShift := 3 }
+    stackBase := 25
+    wordShift := 3
+    jump := false }
 
 def hexDigit (value : Nat) : Char :=
   if value < 10 then
@@ -92,30 +93,17 @@ def compileMain (arguments : List String) : IO UInt32 := do
   let some (outputFormat, path) ← parseArguments arguments | return 0
   let source ← readSource path
   if outputFormat == .pancake then
-    match Flapjack.Parser.parseTopDecs (α := RiscV.Word 64)
-        (fun value => BitVec.ofInt 64 value) source with
-    | .error errors =>
-        IO.eprintln s!"flapjack-compile: {repr errors}"
+    match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+        (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
+        "main" source with
+    | .ok image =>
+        for warning in image.warnings do
+          IO.eprintln s!"warning: {repr warning}"
+        IO.print (RiscV.pancakeRuntimeAssembly image.crepe image)
+        return 0
+    | .error error =>
+        IO.eprintln s!"flapjack-compile: {repr error}"
         return 1
-    | .ok declarations =>
-        match compileFlapjackEntry (α := RiscV.Word 64) .rv64i
-            (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
-            "main" (panTargetDeclarationsWithDefaultMain declarations) with
-        | none =>
-            IO.eprintln "flapjack-compile: entry not found"
-            return 1
-        | some pipeline =>
-            match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
-                (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig
-                "main" source with
-            | .ok image =>
-                for warning in image.warnings do
-                  IO.eprintln s!"warning: {repr warning}"
-                IO.print (RiscV.pancakeRuntimeAssembly pipeline.crepe image)
-                return 0
-            | .error error =>
-                IO.eprintln s!"flapjack-compile: {repr error}"
-                return 1
   else if outputFormat == .sections then
     match compileFlapjackRiscVSourceImageChecked (width := 64) .rv64i
         (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] compileRemoveConfig

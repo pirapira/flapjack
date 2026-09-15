@@ -12,8 +12,8 @@ example [NeZero width]
     (ssaState : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg (Word width)) (allocation : WordSpillState)
     (stackProgram : StackProg Nat) (finalState : WordStackBitmapState)
-    (body moves : StackProg Nat)
-    (machineState middle final : WordStackMachineState width)
+    (body : StackProg Nat)
+    (machineState final : WordStackMachineState width)
     (bodyState : WordStackBitmapState)
     (hbridge : wordAllocateSsaFunctionWithEntryAndSpillToStack config parameters
       program registerCount bitmapRegister frameSlots storeConstsStub bitmapState =
@@ -23,17 +23,12 @@ example [NeZero width]
       { config with locations := allocation.locations }
       registerCount bitmapRegister frameSlots storeConstsStub bitmapState
       renamedProgram = some (body, bodyState))
-    (hmoves : wordStackMovesFromPhysical
-      { config with locations := allocation.locations } renamedParameters 2 =
-      some moves)
-    (hentry : evalWordStackMachine machineState moves = some middle)
-    (hbodyEval : evalWordStackMachine middle body = some final) :
+    (hbodyEval : evalWordStackMachine machineState body = some final) :
     evalWordStackMachine machineState stackProgram = some final := by
   have hcontract := wordAllocateSsaFunctionWithEntryAndSpillToStack_contract
     config parameters program registerCount bitmapRegister frameSlots storeConstsStub
     bitmapState ssaState renamedParameters renamedProgram allocation stackProgram
-    finalState body moves machineState middle final bodyState hbridge hbody hmoves
-    hentry hbodyEval
-  exact hcontract.2.2.2.2.2.2.2.2.2
+    finalState body machineState final bodyState hbridge hbody hbodyEval
+  exact hcontract.2.2.2.2.2.2.2.2
 
 end Flapjack.RiscV

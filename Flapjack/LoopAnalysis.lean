@@ -122,7 +122,10 @@ def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
       let rightLive := match right with
         | .reg name => [name]
         | .imm _ => []
-      (.ite operator condition right then' else' branchLive,
+      /- CakeML's `shrink` shrinks all cutsets, including the `If` one:
+         the emitted `If` carries `inter l l1`, not the original set
+         (`loop_liveScript.sml:75-80`). -/
+      (.ite operator condition right then' else' restricted,
         insertNatSorted condition
           (loopListInsert rightLive (thenLive ++ elseLive)))
   | .break label, _ => (.break label, [])
@@ -208,7 +211,10 @@ def loopShrink (contexts : List (List Nat × List Nat)) :
       let rightLive := match right with
         | .reg name => [name]
         | .imm _ => []
-      (.ite operator condition right then' else' branchLive,
+      /- CakeML's `shrink` shrinks all cutsets, including the `If` one:
+         the emitted `If` carries `inter l l1`, not the original set
+         (`loop_liveScript.sml:75-80`). -/
+      (.ite operator condition right then' else' restricted,
         insertNatSorted condition (loopListInsert rightLive (thenLive ++ elseLive)))
   | .mark body, live => loopShrink contexts body live
   | .break label, _ =>
@@ -406,9 +412,12 @@ def loopAccVars : LoopProg α → List Nat → List Nat
   | .break _, names => names
   | .continue _, names => names
   | .loop _ body _, names => loopAccVars body names
-  | .ite _ condition right thenBranch elseBranch _, names =>
-      let names := loopAccVars thenBranch (loopAccVars elseBranch names)
-      loopInsert condition (match right with | .reg value => value :: names | .imm _ => names)
+  | .ite _ _ _ thenBranch elseBranch _, names =>
+      /- `loopLang$acc_vars` intentionally records assigned variables only;
+         condition operands are reads and are not part of the dense
+         `loop_to_word` context.  In particular, do not include the
+         condition or register operand here (`loopLangScript.sml:123`). -/
+      loopAccVars thenBranch (loopAccVars elseBranch names)
   | .arith operation, names =>
       match operation with
       | .longMul left right _ _ => loopInsertAll [left, right] names

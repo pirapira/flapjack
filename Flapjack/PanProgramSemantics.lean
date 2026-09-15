@@ -71,9 +71,11 @@ def evalPanValueDeclarationsWithStructs
           (memoryAccess := memoryAccess)
       else none
   | .function declaration :: declarations, memoryAccess =>
-      if (declaration.params.map (fun parameter => parameter.1)).Nodup &&
-          declaration.params.all (fun parameter => isWfShape structs parameter.2) &&
-          isWfShape structs declaration.returnShape then
+      /- CakeML's `evaluate_decls` installs functions without a distinctness
+         check on parameter names; `ALL_DISTINCT` is only enforced per call
+         in `lookup_code` (`panSemScript.sml:827-831,461-463`). -/
+      if declaration.params.all (fun parameter => isWfShape structs parameter.2) &&
+        isWfShape structs declaration.returnShape then
         let state := { state with functions :=
           (declaration.name, declaration.params.map Prod.fst,
             declaration.body) :: state.functions }

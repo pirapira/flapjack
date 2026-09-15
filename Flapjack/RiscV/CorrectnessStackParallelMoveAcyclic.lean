@@ -19,6 +19,17 @@ def wordStackSequentialLocationMove (config : WordStackConfig) :
       let rest ← wordStackSequentialLocationMove config moves
       pure (wordStackJoin first rest)
 
+/-- The same move list emitted in the dependency order the scheduler uses:
+    each selected move is postponed until every move that overwrites one of its
+    sources has run. -/
+def wordStackReversedSequentialLocationMove (config : WordStackConfig) :
+    List (WordLocation × WordLocation) → Option (StackProg α)
+  | [] => some .skip
+  | (destination, source) :: moves => do
+      let rest ← wordStackReversedSequentialLocationMove config moves
+      let last ← wordStackLocationMove config destination source
+      pure (wordStackJoin rest last)
+
 theorem wordStackParallelLocationMove_acyclic_eq_sequential
     (config : WordStackConfig)
     (moves : List (WordLocation × WordLocation))
@@ -31,13 +42,13 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
       move.2 ≠ .register config.scratch ∧
       move.2 ≠ .register config.addressScratch) :
     wordStackParallelLocationMove (α := Nat) config moves =
-      wordStackSequentialLocationMove (α := Nat) config moves := by
+      wordStackReversedSequentialLocationMove (α := Nat) config moves := by
   induction moves with
   | nil =>
       simp only [wordStackParallelLocationMove,
         wordStackParallelLocationMoveAux]
       simp [wordStackLocationMoveDestinations,
-        wordStackSequentialLocationMove]
+        wordStackReversedSequentialLocationMove]
   | cons head tail ih =>
       have hdestinations' :
           (head.1 :: tail.map Prod.fst).Nodup := by
@@ -87,21 +98,15 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
         exact hfilter tail hheadNotTailDestination
       have hany : (head :: tail).any
           (fun move =>
-            (move.1 = .register config.scratch ||
-              move.1 = .register config.addressScratch) ||
-            (move.2 = .register config.scratch ||
-              move.2 = .register config.addressScratch)) = false := by
+            move.1 = .register config.scratch ||
+              move.1 = .register config.addressScratch) = false := by
         have hfalse : ∀ xs : List (WordLocation × WordLocation),
             (∀ move, move ∈ xs →
-              ((move.1 = .register config.scratch ||
-                move.1 = .register config.addressScratch) ||
-               (move.2 = .register config.scratch ||
-                move.2 = .register config.addressScratch)) = false) →
-            xs.any (fun move =>
               (move.1 = .register config.scratch ||
-                move.1 = .register config.addressScratch) ||
-              (move.2 = .register config.scratch ||
-                move.2 = .register config.addressScratch)) = false := by
+                move.1 = .register config.addressScratch) = false) →
+            xs.any (fun move =>
+              move.1 = .register config.scratch ||
+                move.1 = .register config.addressScratch) = false := by
           intro xs hxs
           induction xs with
           | nil => rfl
@@ -111,17 +116,16 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
         apply hfalse
         intro move hmove
         have hmoveReserved := hreserved move hmove
-        simp [hmoveReserved.1, hmoveReserved.2.1,
-          hmoveReserved.2.2.1, hmoveReserved.2.2.2]
+        simp [hmoveReserved.1, hmoveReserved.2.1]
       have htailResult := ih htailDestinations htailNoSource htailReserved
       have htailAux :
           wordStackParallelLocationMoveAux config (tail.length + 1) tail =
-            wordStackSequentialLocationMove (α := Nat) config tail := by
+            wordStackReversedSequentialLocationMove (α := Nat) config tail := by
         simpa [wordStackParallelLocationMove] using htailResult
       simp [wordStackParallelLocationMove,
         wordStackParallelLocationMoveAux,
         wordStackLocationMoveDestinations, hdestinations', hany,
-        hheadReady, hremoved, wordStackSequentialLocationMove,
+        hheadReady, hremoved, wordStackReversedSequentialLocationMove,
         htailAux]
 
 end Flapjack.RiscV

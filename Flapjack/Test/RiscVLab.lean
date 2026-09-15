@@ -19,13 +19,13 @@ example :
     compileLabSectionChecked (width := 64) { services := [] }
       ⟨8, [.asm (.tick : LabPlain (Word 64)) [] 0,
         .labAsm (.install : LabAsm (Word 64)) [] 0]⟩ =
-      .ok [.addi 0 0 0, .jal 0 (0 - BitVec.ofNat 64 36)] := by
+      .ok [.jal 0 (0 - BitVec.ofNat 64 32)] := by
   rfl
 
 example :
     compileLabSectionChecked (width := 64) { services := [] }
       ⟨9, [.labAsm (.halt : LabAsm (Word 64)) [] 0]⟩ =
-      .error { sectionId := 9, position := 0, feature := .halt } := by
+      .ok [.jal 0 (0 - BitVec.ofNat 64 16)] := by
   rfl
 
 def stackRemoveRiscVConfig : StackRemoveConfig :=
@@ -45,7 +45,7 @@ example :
     compileLabSection { services := [("sum", 7)] }
       ⟨2, [
         .labAsm (.callFfi "sum") [] 0]⟩ =
-      some [.addi 14 0 (BitVec.ofNat 64 7), .ecall] := by
+      some [.jal 0 (0 - BitVec.ofNat 64 48)] := by
   decide
 
 example :
@@ -62,7 +62,7 @@ example :
       [⟨1, [.labAsm (.jump ⟨2, 0⟩) [] 0]⟩,
        ⟨2, [.label 2 0 0, .asm (.const 1 7) [] 0]⟩] =
       some [.jal 0 (BitVec.ofNat 64 4),
-        .addi 1 0 (BitVec.ofNat 64 7)] := by
+        .ori 1 0 (BitVec.ofNat 64 7)] := by
   decide
 
 example :
@@ -71,14 +71,14 @@ example :
       [(1, (.call none (.label 2) none : StackProg Nat)),
        (2, .const 1 7)] =
       some [.jal 0 (BitVec.ofNat 64 4),
-        .addi 1 0 (BitVec.ofNat 64 7)] := by
+        .ori 1 0 (BitVec.ofNat 64 7)] := by
   decide +kernel
 
 example :
     compileStackProgramNatListLinkedToRiscV (width := 64) { services := [] }
       stackRemoveRiscVConfig 0 0
       [(1, (.const 1 7 : StackProg Nat))] =
-      some [(1, BitVec.ofNat 64 0, [.addi 1 0 (BitVec.ofNat 64 7)])] := by
+      some [(1, BitVec.ofNat 64 0, [.ori 1 0 (BitVec.ofNat 64 7)])] := by
   decide +kernel
 
 example :
@@ -86,6 +86,25 @@ example :
       ⟨3, [.asm (.arith .add 4 5 6) [] 0]⟩ =
       some [.add 4 5 6] := by
   decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arithImm .sub 20 20 16) [] 0]⟩ =
+      some [.addi 20 20 (0 - BitVec.ofNat 64 16)] := by
+  decide
+
+/- CakeML's final Lab filter removes arithmetic identities, including the
+   zero-immediate forms that can arise from a fused stack-pointer update. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arithImm .add 20 20 0) [] 0]⟩ =
+      some [] := by
+  decide
+
+example :
+    labLineInstructionCount
+        (.asm (.arithImm .sub 20 20 0) [] 0 : LabLine (Word 64)) = 0 := by
+  rfl
 
 example :
     compileLabSection (width := 64) { services := [] }
@@ -99,13 +118,61 @@ example :
       some [.storeWord 6 7] := by
   decide
 
+/-! CakeML's constant encoder uses LUI plus a signed low-immediate operation
+    once a constant no longer fits the 12-bit ORI case. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.const 1 0x40000008) [] 0]⟩ =
+      some [.lui 1 (BitVec.ofNat 64 0x40000),
+        .addi 1 1 (BitVec.ofNat 64 8)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.const 1 0x100000000) [] 0]⟩ =
+      some [.lui 31 0, .addi 31 31 0,
+        .lui 1 0, .addi 1 1 1,
+        .slli 1 1 (BitVec.ofNat 64 32), .or 1 1 31] := by
+  decide
+
+/-! These cases exercise the sign-aware branches of CakeML's `riscv_ast
+    (Const ...)`: a value with bit 31 set is still a positive RV64 value and
+    therefore needs the two-half XOR sequence, while all ones fits the signed
+    12-bit ORI case after sign extension. -/
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.const 1 0xa0010000) [] 0]⟩ =
+      some [.lui 31 (BitVec.ofNat 64 0xa0010), .addi 31 31 0,
+        .lui 1 0, .xori 1 1 (BitVec.ofNat 64 0xfff),
+        .slli 1 1 (BitVec.ofNat 64 32), .xor 1 1 31] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.const 1 0xffffffffffffffff) [] 0]⟩ =
+      some [.ori 1 0 (BitVec.ofNat 64 0xfff)] := by
+  decide
+
+example :
+    labLineInstructionCount
+        (.asm (.const 1 0x40000008) [] 0 : LabLine (Word 64)) = 2 := by
+  rfl
+
+example :
+    labLineInstructionCount
+        (.asm (.const 1 0x100000000) [] 0 : LabLine (Word 64)) = 6 := by
+  rfl
+
 def haltLabProgram : LabProgram (Word 64) :=
   [⟨1, [.labAsm (.halt : LabAsm (Word 64)) [] 0]⟩]
 
+-- `LabAsm.halt` lowers to a backward jump into the linked runtime halt
+-- region, which is not part of a bare program; the standalone model
+-- therefore never reaches the synthetic end-of-program halt.
 example :
     (executeLabProgramWithHalt 10 { services := [] } haltLabProgram
       (zeroState 64)).map (fun state => state.pc) =
-      some (BitVec.ofNat 64 4) := by
+      none := by
   decide
 
 example :
@@ -132,9 +199,7 @@ example :
       stackRemoveRiscVConfig 2 3
       (.get 4 .heapLength : StackProg (Word 64)) =
       some [
-        .addi 29 0 (BitVec.ofNat 64 24),
-        .sub 29 10 29,
-        .loadWord 4 29] := by
+        .loadWordOffset 4 10 (0 - BitVec.ofNat 64 24)] := by
   decide +kernel
 
 example :
@@ -161,14 +226,14 @@ example :
     compileWordProgramNatToRiscV (width := 64) { services := [] }
       wordStackRiscVConfig stackRemoveRiscVConfig 2 3
       (.assign 0 (.const 42) : WordProg Nat) =
-      some [.addi 4 0 (BitVec.ofNat 64 42)] := by
+      some [.ori 4 0 (BitVec.ofNat 64 42)] := by
   decide +kernel
 
 example :
     compileWordProgramToRiscV (width := 64) { services := [] }
       wordStackRiscVConfig stackRemoveRiscVConfig 2 3
       (.assign 0 (.const (BitVec.ofNat 64 42)) : WordProg (Word 64)) =
-      some [.addi 4 0 (BitVec.ofNat 64 42)] := by
+      some [.ori 4 0 (BitVec.ofNat 64 42)] := by
   decide +kernel
 
 example :
@@ -177,8 +242,8 @@ example :
       stackRemoveRiscVConfig 2 3
       (.ffi "echo" 0 1 2 3 ([], []) : WordProg Nat) =
       some [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
-        .addi 0 0 (BitVec.ofNat 64 28),
-        .addi 14 0 (BitVec.ofNat 64 7), .ecall] := by
+        .addi 1 0 (BitVec.ofNat 64 24),
+        .jal 0 (0 - BitVec.ofNat 64 68)] := by
   decide +kernel
 
 example :
@@ -196,5 +261,58 @@ example :
         .srl 4 5 6,
         .or 4 4 31] := by
   decide
+
+/-! GH #1093 (bead flapjack-lhj): end-to-end regression for the `labFlatten`
+   `ite` cases — a Stack-level conditional compiled all the way to RISC-V
+   must execute the then-branch when the condition holds and the
+   else-branch when it does not (previously the general case left the
+   then-branch dead, and the skip-then case ran the else-branch on a true
+   condition). -/
+
+/-- `if reg4 == 0 then reg1 := 1 else reg1 := 2`, compiled and executed. -/
+def labIteGeneralProgram : StackProg (Word 64) :=
+  .ite .equal 4 (.imm 0) (.const 1 1) (.const 1 2)
+
+def labIteGeneralCode : Option (List (Instruction 64)) :=
+  compileStackProgramToRiscV (width := 64) { services := [] }
+    stackRemoveRiscVConfig 2 3 labIteGeneralProgram
+
+-- Condition true: the then-branch runs.
+#guard
+    labIteGeneralCode.bind (fun code =>
+      (executeCode 30 (0 : Word 64) code
+        (writeRegister (zeroState 64) 4 0)).map
+          (fun state => readRegister state 1)) =
+      some (1 : Word 64)
+
+-- Condition false: the else-branch runs.
+#guard
+    labIteGeneralCode.bind (fun code =>
+      (executeCode 30 (0 : Word 64) code
+        (writeRegister (zeroState 64) 4 7)).map
+          (fun state => readRegister state 1)) =
+      some (2 : Word 64)
+
+/-- `if reg4 == 0 then skip else reg1 := 2`, compiled and executed. -/
+def labIteSkipThenCode : Option (List (Instruction 64)) :=
+  compileStackProgramToRiscV (width := 64) { services := [] }
+    stackRemoveRiscVConfig 2 3
+    (.ite .equal 4 (.imm 0) .skip (.const 1 2) : StackProg (Word 64))
+
+-- Condition true: the else-branch must NOT run (reg1 keeps its old value).
+#guard
+    labIteSkipThenCode.bind (fun code =>
+      (executeCode 30 (0 : Word 64) code
+        (writeRegister (writeRegister (zeroState 64) 4 0) 1 9)).map
+          (fun state => readRegister state 1)) =
+      some (9 : Word 64)
+
+-- Condition false: the else-branch runs.
+#guard
+    labIteSkipThenCode.bind (fun code =>
+      (executeCode 30 (0 : Word 64) code
+        (writeRegister (writeRegister (zeroState 64) 4 7) 1 9)).map
+          (fun state => readRegister state 1)) =
+      some (2 : Word 64)
 
 end Flapjack.RiscV

@@ -35,19 +35,14 @@ theorem evalWordStackMachine_wordToStackFunctionWithParameters
     [NeZero width]
     (config : WordStackConfig) (parameters : List Nat)
     (program : WordProg (Word width))
-    (body moves : StackProg Nat)
-    (state middle final : WordStackMachineState width)
+    (body : StackProg Nat)
+    (state final : WordStackMachineState width)
     (hbody :
       wordToStackProgWord config program = some body)
-    (hmoves :
-      wordStackMovesFromPhysical config parameters 2 = some moves)
-    (hentry : evalWordStackMachine state moves = some middle)
-    (hbodyEval : evalWordStackMachine middle body = some final) :
+    (hbodyEval : evalWordStackMachine state body = some final) :
     evalWordStackMachine state
       ((wordToStackFunctionWithParameters config parameters program).getD .skip) =
       some final := by
-  simpa [wordToStackFunctionWithParameters, hbody, hmoves] using
-    (evalWordStackMachine_wordStackJoin state middle final moves body
-      hentry hbodyEval)
+  simpa [wordToStackFunctionWithParameters, hbody] using hbodyEval
 
 end Flapjack.RiscV

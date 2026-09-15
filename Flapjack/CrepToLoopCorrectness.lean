@@ -1233,8 +1233,8 @@ theorem crepToLoop_ite_false_of_empty_prefix
       evalLoopProgWithCallsAndFfi, evalLoopProg,
       evalLoopCondition, loopStateOfCrepState, updateLoopLocal,
       hcode, hnext,
-      hloopValue']
-    exact hloopElse
+      hloopValue', _hlive]
+    simpa [loopStateOfCrepState] using hloopElse
 
 theorem crepToLoop_ite_true_of_empty_prefix
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -1287,8 +1287,8 @@ theorem crepToLoop_ite_true_of_empty_prefix
   · simp [loopCompileProg, loopNestedSeq,
       evalLoopProgWithCallsAndFfi, evalLoopProg,
       evalLoopCondition, loopStateOfCrepState, updateLoopLocal,
-      hcode, hnext, hone, hloopValue']
-    exact hloopThen
+      hcode, hnext, hone, hloopValue', _hlive]
+    simpa [loopStateOfCrepState] using hloopThen
 
 theorem crepToLoop_while_false_of_empty_prefix
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -1556,7 +1556,7 @@ theorem crepToLoop_dec_compose_of_empty_prefix
   simp [evalCrepFullProg, hvalue, hcrepBody, crepControlValues,
     restoreCrepResult, loopCompileProg, loopNestedSeq,
     evalLoopProgWithCallsAndFfi, evalLoopProg, loopStateOfCrepState,
-    hcode, hnext, hloopValue', hloopBody']
+    hcode, hnext, hloopValue', hloopBody', _hlive]
   exact hresult
 
 /-!
@@ -4617,7 +4617,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_equal_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
                           · simp [heq, updateLoopLocal] at hloop
                             cases hloop
                             simp [heq, crepToLoopControlRel, crepToLoopStateRel,
@@ -4625,7 +4626,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_equal_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
 
 theorem crepToLoop_assign_cmp_equal_vars_agreement
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -4661,18 +4663,20 @@ theorem crepToLoop_assign_cmp_equal_vars_agreement
   have hleftTemp' : left ≠ context.maxVar + 1 + 1 := by omega
   have hrightTemp : right ≠ context.maxVar + 1 := by omega
   have hrightTemp' : right ≠ context.maxVar + 1 + 1 := by omega
+  have htemp'' : name ≠ context.maxVar + 1 + 1 + 1 := by omega
+  have hleftTemp'' : left ≠ context.maxVar + 1 + 1 + 1 := by omega
+  have hrightTemp'' : right ≠ context.maxVar + 1 + 1 + 1 := by omega
   by_cases heq : (leftValue == rightValue) = true
-  · simp [evalCrepFullProg, evalCrepFullExp, evalPanCmp,
+  · simp_all [evalCrepFullProg, evalCrepFullExp, evalPanCmp,
       crepControlLocal, loopControlLocal, loopCompileProg,
       loopCompileExp, loopNestedSeq, evalLoopProgWithCallsAndFfi,
       evalLoopProg, evalLoopExp, evalLoopCondition, loopStateOfCrepState,
-      updateCrepLocal, updateLoopLocal, hleft, hright, heq, hrightTemp]
-  · simp [evalCrepFullProg, evalCrepFullExp, evalPanCmp,
+      updateCrepLocal, updateLoopLocal]
+  · simp_all [evalCrepFullProg, evalCrepFullExp, evalPanCmp,
       crepControlLocal, loopControlLocal, loopCompileProg,
       loopCompileExp, loopNestedSeq, evalLoopProgWithCallsAndFfi,
       evalLoopProg, evalLoopExp, evalLoopCondition, loopStateOfCrepState,
-      updateCrepLocal, updateLoopLocal, hleft, hright, heq, hrightTemp]
-
+      updateCrepLocal, updateLoopLocal]
 theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notEqual_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -4730,7 +4734,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notEqual_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
                           · simp_all [updateLoopLocal]
                             cases hloop
                             simp [crepToLoopControlRel, crepToLoopStateRel,
@@ -4738,7 +4743,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notEqual_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
 
 theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_lower_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -4797,7 +4803,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_lower_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
                           · simp_all [updateLoopLocal]
                             cases hloop
                             simp [crepToLoopControlRel, crepToLoopStateRel,
@@ -4805,7 +4812,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_lower_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
 
 theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_less_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -4864,7 +4872,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_less_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
                           · simp_all [updateLoopLocal]
                             cases hloop
                             simp [crepToLoopControlRel, crepToLoopStateRel,
@@ -4872,7 +4881,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_less_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
 
 theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notLower_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -4931,7 +4941,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notLower_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
                           · simp_all [updateLoopLocal]
                             cases hloop
                             simp [crepToLoopControlRel, crepToLoopStateRel,
@@ -4939,7 +4950,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notLower_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
 
 theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notLess_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -4998,7 +5010,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notLess_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
                           · simp_all [updateLoopLocal]
                             cases hloop
                             simp [crepToLoopControlRel, crepToLoopStateRel,
@@ -5006,7 +5019,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notLess_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
 
 theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_test_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -5065,7 +5079,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_test_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
                           · simp_all [updateLoopLocal]
                             cases hloop
                             simp [crepToLoopControlRel, crepToLoopStateRel,
@@ -5073,7 +5088,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_test_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
 
 theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notTest_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -5132,7 +5148,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notTest_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
                           · simp_all [updateLoopLocal]
                             cases hloop
                             simp [crepToLoopControlRel, crepToLoopStateRel,
@@ -5140,7 +5157,8 @@ theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notTest_const
                             intro current hcurrent
                             have htemp : current ≠ context.maxVar + 1 := by omega
                             have htemp' : current ≠ context.maxVar + 1 + 1 := by omega
-                            simp [htemp, htemp']
+                            have htemp'' : current ≠ context.maxVar + 1 + 1 + 1 := by omega
+                            simp [htemp', htemp'']
 
 theorem crepToLoopProgramCorrectWithPrimitive_assign_sub_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

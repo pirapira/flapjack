@@ -3,11 +3,14 @@ import Flapjack.Compile
 import Flapjack.CrepeInlinePass
 import Flapjack.CrepeArith
 import Flapjack.CrepToLoop
+import Flapjack.CrepToLoopOptimise
 import Flapjack.LoopToWord
 import Flapjack.Word
 import Flapjack.RiscV.Allocator
+import Flapjack.RiscV.WordExpressionFlatten
 import Flapjack.RiscV.RegAlloc
 import Flapjack.RiscV.WordToStack
+import Flapjack.RiscV.WordDiagnostics
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Loops
 import Flapjack.RiscV.Link
@@ -45,11 +48,12 @@ termination_by declarations => sizeOf declarations
     `cakeml/pancake/pan_to_crepScript.sml:393-398`.
 
     The source first builds the Crep table and then applies the inline pass to
-    exactly the names of declarations marked `inlinable`. -/
+    exactly the names of declarations marked `inlinable`; the callee body is
+    recursively inlined before being spliced in (`crep_inlineScript.sml:215`). -/
 def compileProgToCrep [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (declarations : List (Decl α)) :
     List (CompiledFunction α) :=
-  crepInlineTop (pipelineInlineNames declarations)
+  crepInlineTopRecursiveByNames (pipelineInlineNames declarations)
     (compileToCrep context declarations)
 
 def pipelineFindFunction (name : FunName) :
@@ -60,6 +64,21 @@ def pipelineFindFunction (name : FunName) :
       else pipelineFindFunction name declarations
   | _ :: declarations => pipelineFindFunction name declarations
 termination_by declarations => sizeOf declarations
+
+/-! `pan_to_target_all` first moves the requested entry declaration to the
+    front of the Pancake list (`pan_passesScript.sml:20-37`).  Keeping this
+    source-order operation explicit is important because the linked section
+    order is observable in the RISC-V artifact. -/
+def panTargetMoveStartToFront [BEq String]
+    (start : FunName) (declarations : List (Decl α)) : List (Decl α) :=
+  globalDeclsFilter (fun declaration =>
+      match declaration with
+      | .function function => function.name == start
+      | _ => false) declarations ++
+    globalDeclsFilter (fun declaration =>
+      match declaration with
+      | .function function => function.name != start
+      | _ => true) declarations
 
 def pipelineCrepeContext [BEq α] [Add α]
     (bytesInWord : α) (fromNat : Nat → α)
@@ -87,7 +106,7 @@ def pipelineLoopFunctionsAux [OfNat α 0] [OfNat α 1]
           functions := functionInfos
           maxVar := function.params.length
           target := architecture }
-      (label, function.params, loopCompileProg context [] function.body) ::
+      (label, function.params, oCompile context function.params function.body) ::
         pipelineLoopFunctionsAux architecture functionInfos (label + 1) functions
 
 def pipelineLoopFunctions [OfNat α 0] [OfNat α 1]
@@ -175,7 +194,7 @@ def pipelineWordFunctionsAllocatedWithSpills [NeZero width] :
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
       let unallocatedBody :=
-        loopToWordProg context body
+        RiscV.wordFlattenProgramFrom (loopToWordProg context body)
       let (_, renamedParameters, renamedBody, allocation) ←
         wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences
           wordParameters unallocatedBody
@@ -184,6 +203,8 @@ def pipelineWordFunctionsAllocatedWithSpills [NeZero width] :
           scratch := 31
           stackBase := 0
           addressScratch := 29
+          abiBase := 10
+          abiStride := 1
           sectionId := label
           handlerLabel := label }
       /- CakeML's spill path carries allocator-owned heap operations through
@@ -212,7 +233,7 @@ def pipelineWordFunctionAllocatedWithSpillsAndBitmaps [NeZero width]
     let context : WordContext :=
       { vars := slots.map (fun name => (name, name + 2)) }
     let wordParameters := parameters.map (fun name => name + 2)
-    let unallocatedBody := loopToWordProg context body
+    let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
     let (_, renamedParameters, renamedBody, allocation) ←
       wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences
         wordParameters unallocatedBody
@@ -221,6 +242,8 @@ def pipelineWordFunctionAllocatedWithSpillsAndBitmaps [NeZero width]
         scratch := 31
         stackBase := 0
         addressScratch := 29
+        abiBase := 10
+        abiStride := 1
         sectionId := label
         handlerLabel := label }
     let (stackBody, bitmaps) ←
@@ -289,21 +312,29 @@ def pipelineWordFunctionAllocatedWithSpillsAndFullSsaAndBitmaps [NeZero width]
     let context : WordContext :=
       { vars := slots.map (fun name => (name, name + 2)) }
     let wordParameters := parameters.map (fun name => name + 2)
-    let unallocatedBody := loopToWordProg context body
+    let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
     let (_, renamedParameters, renamedProgram, allocation) ←
-      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
         wordParameters unallocatedBody
     let config : RiscV.WordStackConfig :=
       { locations := allocation.locations
         scratch := 31
         stackBase := 0
         addressScratch := 29
+        abiBase := 10
+        abiStride := 1
         sectionId := label
         handlerLabel := label }
-    let (stackBody, bitmaps) ←
-      RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
-        renamedParameters wordAllocatableRegisters.length config.scratch
-        allocation.nextSpill (some 1) bitmaps renamedProgram
+    let lower :=
+      if !RiscV.wordProgNeedsCakeFrame renamedProgram then
+        RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+          renamedParameters wordAllocatableRegisters.length config.scratch
+          allocation.nextSpill (some 1) bitmaps renamedProgram
+      else
+        RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
+          renamedParameters wordAllocatableRegisters.length config.scratch
+          allocation.nextSpill (some 1) bitmaps renamedProgram
+    let (stackBody, bitmaps) ← lower
     pure ((label, wordParameters, stackBody), bitmaps)
 
 def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps [NeZero width]
@@ -380,7 +411,7 @@ def pipelineWordFunctionsAllocatedWithGraph [NeZero width] :
       let context : WordContext :=
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := loopToWordProg context body
+      let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
       let (_, renamedParameters, allocation, renamedBody) ←
         wordAllocateGraphFunctionWithStackOnlyPrefreezeRenamed wordParameters unallocatedBody
           [] 13 14
@@ -389,6 +420,8 @@ def pipelineWordFunctionsAllocatedWithGraph [NeZero width] :
           scratch := 31
           stackBase := 0
           addressScratch := 29
+          abiBase := 10
+          abiStride := 1
           sectionId := label
           handlerLabel := label }
       let stackBody ← RiscV.wordToStackFunctionWithParameters config
@@ -408,7 +441,7 @@ def pipelineWordFunctionsAllocatedWithGraphAndFullSsa [NeZero width] :
       let context : WordContext :=
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := loopToWordProg context body
+      let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
       let (_, renamedParameters, allocation, renamedProgram) ←
         wordAllocateGraphFunctionWithEntryPrefreezeRenamed wordParameters unallocatedBody
           wordParameters 13 14
@@ -417,6 +450,8 @@ def pipelineWordFunctionsAllocatedWithGraphAndFullSsa [NeZero width] :
           scratch := 31
           stackBase := 0
           addressScratch := 29
+          abiBase := 10
+          abiStride := 1
           sectionId := label
           handlerLabel := label }
       let stackBody ← RiscV.wordToStackFunctionWithParameters config
@@ -439,22 +474,31 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
       let context : WordContext :=
         { vars := slots.map (fun name => (name, name + 2)) }
       let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := loopToWordProg context body
+      let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
       let (_, renamedParameters, renamedProgram, allocation) ←
-        wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+        wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
           wordParameters unallocatedBody
       let config : RiscV.WordStackConfig :=
         { locations := allocation.locations
           scratch := 31
           stackBase := 0
           addressScratch := 29
+          abiBase := 10
+          abiStride := 1
           sectionId := label
           handlerLabel := label }
-      let (stackBody, _) ←
-        RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
-          renamedParameters wordAllocatableRegisters.length config.scratch
-          allocation.nextSpill (some 1)
-          (RiscV.wordStackInitialBitmaps false) renamedProgram
+      let lower :=
+        if !RiscV.wordProgNeedsCakeFrame renamedProgram then
+          RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+            renamedParameters wordAllocatableRegisters.length config.scratch
+            allocation.nextSpill (some 1)
+            (RiscV.wordStackInitialBitmaps false) renamedProgram
+        else
+          RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
+            renamedParameters wordAllocatableRegisters.length config.scratch
+            allocation.nextSpill (some 1)
+            (RiscV.wordStackInitialBitmaps false) renamedProgram
+      let (stackBody, _) ← lower
       let rest ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa functions
       pure ((label, wordParameters, stackBody) :: rest)
 
@@ -600,19 +644,23 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 /-! Exact `pan_to_target` entry preparation.  The ordinary pipeline above is
     retained for pass-local fixtures.  This entry-point form follows CakeML: it
-    finds the requested source function, gives it a fresh name, permutes all
+    moves the requested source function to the front of the program (the
+    SPLITP permutation above), finds it, gives it a fresh name, permutes all
     function references, and emits a new public `main` whose body runs global
     initializers before a tail call to the renamed source entry. -/
 def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
     [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (start : FunName) (declarations : List (Decl α)) :
     Option (FlapjackPipelineResult α) :=
+  let declarations := panTargetMoveStartToFront start declarations
   let simplified := panSimpDecls declarations
   let structured := structCompileTop simplified
   match pipelineFindFunction start structured with
   | none => none
   | some entry =>
-      let renamed := globalFreshName start (globalFunctionNames structured)
+      /- CakeML's `compile_top` always freshens the literal `main`, not the
+         `start` parameter (`pan_globalsScript.sml:224-226,242`). -/
+      let renamed := globalNewMainName structured
       let prepared := globalRenameDecls start renamed (globalResortDecls structured)
       let globals := globalCompileTop bytesInWord fromNat prepared
       let entryArguments := entry.params.map (fun parameter =>
@@ -650,13 +698,16 @@ def panTargetDeclarationsWithDefaultMain [OfNat α 0] [OfNat α 1]
       { name := "main", inline := false, exported := false, params := [],
         body := .return (.const 0), returnShape := .one } :: declarations
 
-/-! Target entry point.  A program with a `main` takes the exact CakeML
-    `pan_to_target` wrapper path; a program without one is compiled as-is
-    (no synthesized or zero-returning `main`). -/
+/-! Target entry point.  `pan_to_target` first supplies a zero-returning
+    `main` when the source has no entry function, then takes the exact entry
+    wrapper path.  This matters even when the caller only asks for the
+    intermediate pipeline: the synthetic function changes declaration order,
+    labels, and the linked artifact. -/
 def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
     FlapjackPipelineResult α :=
+  let declarations := panTargetDeclarationsWithDefaultMain declarations
   match compileFlapjackEntry architecture bytesInWord fromNat "main" declarations with
   | some result => result
   | none => compileFlapjack architecture bytesInWord fromNat declarations

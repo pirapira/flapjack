@@ -49,10 +49,10 @@ example :
         ((.call (some ([3, 4], ([2], []), .skip, 0, 0)) (some 7) [2, 5] none) : WordProg Nat) =
       ({ current := [(4, 216), (3, 212), (2, 208)], next := 220 },
         .seq (.move 0 [(202, 100)])
-          (.seq (.move 0 [(2, 100), (4, 5)])
+          (.seq (.move 1 [(2, 100), (4, 5)])
             (.call (some ([2, 4], ([202], []),
               .seq (.move 0 [(208, 202)])
-                (.move 0 [(212, 2), (216, 4)]), 0, 0))
+                (.move 1 [(212, 2), (216, 4)]), 0, 0))
               (some 7) [2, 4] none))) := by
   have hAbi : wordSsaCallAbiRegisters 1 2 = [2, 4] := by rfl
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
@@ -91,22 +91,22 @@ example :
           (some (3, .assign 4 (.var 1), 0, 0)) : WordProg Nat)) =
         ({ current := [(2, 232), (4, 228), (3, 224), (1, 208)], next := 236 },
         .seq (.move 0 [(202, 100)])
-          (.seq (.move 0 [(2, 100)])
+          (.seq (.move 1 [(2, 100)])
             (.call (some ([2], ([202], []),
               .seq
-                (.seq (.move 0 [(208, 202)]) (.move 0 [(212, 2)]))
+                (.seq (.move 0 [(208, 202)]) (.move 1 [(212, 2)]))
                 (.seq
-                  (.seq (.move 0 [(224, 0)]) (.move 0 [(228, 0)]))
+                  (.seq (.assign 224 (.const 0)) (.assign 228 (.const 0)))
                   (.move 1 [(232, 212)])), 0, 0))
               (some 7) [2]
               (some (2,
                 .seq
                   (.seq (.move 0 [(208, 202)])
-                    (.seq (.move 0 [(216, 2)])
+                    (.seq (.move 1 [(216, 2)])
                       (.assign 220 (.var 208))))
                   (.seq
                     (.seq (.move 1 [(224, 216)]) (.move 1 [(228, 220)]))
-                    (.move 0 [(232, 0)])), 0, 0))))) := by
+                    (.assign 232 (.const 0))), 0, 0))))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaListNextVarRenameMove, wordSsaCallAbiRegisters,
     wordSsaReadCutsets, wordSsaRestrict, wordSsaFreshList,
@@ -159,7 +159,7 @@ example :
         ({ current := [(3, 100)], next := 200 } : WordSsaState)
       ((.raise 3 : WordProg Nat)) =
       ({ current := [(3, 100)], next := 200 },
-        .seq (.move 0 [(2, 100)]) (.raise 2)) := by
+        .seq (.move 1 [(2, 100)]) (.raise 2)) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRead, wordSsaSeq, lookupNatInfo]
 
@@ -170,9 +170,9 @@ example :
       ((.install 1 2 3 4 ([1], [2]) : WordProg Nat)) =
       ({ current := [(2, 220), (1, 216), (202, 212)], next := 224 },
         .seq (.move 0 [(202, 100), (206, 104)])
-          (.seq (.move 0 [(2, 202), (4, 206)])
+          (.seq (.move 1 [(2, 202), (4, 206)])
             (.seq (.install 2 4 108 112 ([202], [206]))
-              (.seq (.move 0 [(212, 2)])
+              (.seq (.move 1 [(212, 2)])
                 (.move 0 [(216, 202), (220, 206)]))))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaListNextVarRenameMove, wordSsaReadCutsets, wordSsaRestrict,
@@ -185,9 +185,9 @@ example :
           WordSsaState)
       ((.storeConsts 1 2 3 4 [] : WordProg Nat)) =
       ({ current := [(3, 204), (4, 200), (1, 100), (2, 104)], next := 208 },
-        .seq (.move 0 [(4, 108), (6, 112)])
+        .seq (.move 1 [(4, 108), (6, 112)])
           (.seq (.storeConsts 0 2 4 6 [])
-            (.move 0 [(204, 4), (200, 6)]))) := by
+            (.move 1 [(204, 4), (200, 6)]))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaFresh, wordSsaRead, wordSsaSeq, lookupNatInfo]
 
@@ -196,7 +196,7 @@ example :
         ({ current := [], next := 10 } : WordSsaState)
       ((.loop [1] (.break 0) []) : WordProg Nat) =
       ({ current := [], next := 14 },
-        .seq (.seq (.move 0 [(10, 0)]) (.move 0 []))
+        .seq (.seq (.assign 10 (.const 0)) (.move 0 []))
           (.loop [10] (.break 0) [])) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaLoopSetup, wordSsaFakeMoves, wordSsaListNextVarRenameMove,
@@ -211,7 +211,7 @@ example :
       ((.alloc 3 ([1], []) : WordProg Nat)) =
       ({ current := [(1, 208)], next := 212 },
         .seq (.move 0 [(202, 100)])
-          (.seq (.move 0 [(2, 3)])
+          (.seq (.move 1 [(2, 3)])
             (.seq (.alloc 2 ([202], []))
               (.move 0 [(208, 202)])))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
@@ -252,7 +252,7 @@ example :
       ({ current := [(1, 14)], next := 18 },
         .ite .equal 0 (.reg 0)
           (.seq (.assign 10 (.var 0)) (.move 1 [(14, 10)]))
-          (.move 0 [(14, 0)])) := by
+          (.assign 14 (.const 0))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameExp, wordSsaRenameRegImm, wordSsaRead, wordSsaFresh,
     wordSsaKeys, wordSsaSeq, wordSsaFixInconsistencies,

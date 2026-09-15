@@ -67,7 +67,7 @@ theorem wordAllocateGraphForHeuristics_bijection
         cases heq
         rfl
 
-theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_parameters
+theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_parameters [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)
@@ -117,7 +117,7 @@ theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_parameters
   simpa [hstate, hparameters, hprogram, hbij, wordInitRegAlloc,
     wordMkBijection, wordClashTreeBijection] using hnode
 
-theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_locations
+theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_locations [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)
@@ -188,8 +188,8 @@ theorem evalWordStackMachine_wordAllocateGraphFunctionWithHeuristicsEntryToStack
     (allocation : WordGraphAllocation)
     (renamedProgram : WordProg (Word width)) (stackProgram : StackProg Nat)
     (finalState : WordStackBitmapState)
-    (body moves : StackProg Nat)
-    (machineState middle final : WordStackMachineState width)
+    (body : StackProg Nat)
+    (machineState final : WordStackMachineState width)
     (bodyState : WordStackBitmapState)
     (halloc : wordAllocateGraphFunctionWithHeuristicsEntryRenamed parameters program
       fixedSources algorithm currentFunction colours stackStart =
@@ -203,11 +203,7 @@ theorem evalWordStackMachine_wordAllocateGraphFunctionWithHeuristicsEntryToStack
       { config with locations := wordGraphLocations allocation colours stackStart }
       registerCount bitmapRegister frameSlots storeConstsStub bitmapState
       renamedProgram = some (body, bodyState))
-    (hmoves : wordStackMovesFromPhysical
-      { config with locations := wordGraphLocations allocation colours stackStart }
-      renamedParameters 2 = some moves)
-    (hentry : evalWordStackMachine machineState moves = some middle)
-    (hbodyEval : evalWordStackMachine middle body = some final) :
+    (hbodyEval : evalWordStackMachine machineState body = some final) :
     wordGraphTagsAreFixed allocation.graph = true ∧
     wordGraphColouringRespectsEdges allocation.graph = true ∧
       (wordClashTreeCheck (wordGraphColouringAt allocation.colouring)
@@ -221,10 +217,7 @@ theorem evalWordStackMachine_wordAllocateGraphFunctionWithHeuristicsEntryToStack
         { config with locations := wordGraphLocations allocation colours stackStart }
         registerCount bitmapRegister frameSlots storeConstsStub bitmapState
         renamedProgram = some (body, bodyState) ∧
-      wordStackMovesFromPhysical
-        { config with locations := wordGraphLocations allocation colours stackStart }
-        renamedParameters 2 = some moves ∧
-      stackProgram = wordStackJoin moves body ∧
+      stackProgram = body ∧
       evalWordStackMachine machineState stackProgram = some final := by
   have hcontract := wordAllocateGraphFunctionWithHeuristicsEntryToStack_contract
     config parameters program fixedSources algorithm currentFunction colours stackStart
@@ -235,18 +228,15 @@ theorem evalWordStackMachine_wordAllocateGraphFunctionWithHeuristicsEntryToStack
     config parameters program fixedSources algorithm currentFunction colours stackStart
     registerCount bitmapRegister frameSlots storeConstsStub bitmapState
     ssaState renamedParameters allocation renamedProgram stackProgram finalState hbridge
-  simp only [wordToStackFunctionWithGraphAllocationAndLocationBitmaps,
-    wordToStackFunctionWithParametersAndLocationBitmaps] at hstack
-  simp [hbody, hmoves] at hstack
-  have hjoin : stackProgram = wordStackJoin moves body := by
+  simp only [wordToStackFunctionWithGraphAllocationAndLocationBitmaps] at hstack
+  simp [hbody] at hstack
+  have hjoin : stackProgram = body := by
     exact hstack.1.symm
-  have heval := evalWordStackMachine_wordStackJoin machineState middle final
-    moves body hentry hbodyEval
   have hparameters :=
     wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_parameters
       parameters program fixedSources algorithm currentFunction colours stackStart
       ssaState renamedParameters allocation renamedProgram halloc
   exact ⟨hcontract.1, hcontract.2.1, hcontract.2.2.1, hparameters, hbody,
-    hmoves, hjoin, by simpa [hjoin] using heval⟩
+    hjoin, by simpa [hjoin] using hbodyEval⟩
 
 end Flapjack.RiscV

@@ -280,7 +280,7 @@ def wordMoveRegisterReady (destinations : List Nat) :
     List (Nat × Nat) → Option (Nat × Nat)
   | [] => none
   | move :: moves =>
-      if move.2 ∉ destinations then
+      if move.1 = move.2 ∨ move.2 ∉ destinations then
         some move
       else
         wordMoveRegisterReady destinations moves
@@ -301,10 +301,13 @@ def wordMoveToInstructionsAux [NeZero width] :
       else
         match wordMoveRegisterReady destinations moves with
         | some (destination, source) => do
-            let first ← wordExpToInstructions destination (.var source)
             let rest ← wordMoveToInstructionsAux fuel
               (wordMoveRegisterRemoveDestination destination moves)
-            pure (first ++ rest)
+            if destination = source then
+              pure rest
+            else
+              let first ← wordExpToInstructions destination (.var source)
+              pure (first ++ rest)
         | none =>
             match moves with
             | [] => some []
@@ -327,12 +330,12 @@ def wordMoveToInstructions [NeZero width] (moves : List (Nat × Nat)) :
   | .reg right =>
       let right ← registerOfNat right
       match operator with
-      | .test | .notTest => pure (condition, 0, [.and condition condition right])
+      | .test | .notTest => pure (31, 0, [.and 31 condition right])
       | _ => pure (condition, right, [])
   | .imm value =>
       if value == 0 then
         match operator with
-        | .test | .notTest => pure (condition, 0, [.and condition condition 0])
+        | .test | .notTest => pure (31, 0, [.and 31 condition 0])
         | _ => pure (condition, 0, [])
       else if condition == 31 then
         none
@@ -969,9 +972,9 @@ theorem compileWordAdd_zeroState [NeZero width] :
     evalWordProg (zeroState width)
         (.assign 1 (.const (7 : Word width))) =
       some (executeInstructions (zeroState width) [.addi 1 0 7]) := by
-  simp [evalWordProg, wordExpToInstructions, wordExpToInstruction, 
-    executeInstructions, registerOfNat,
-    execute, writeRegister, nextPc, zeroState, readRegister]
+  simp [evalWordProg, wordExpToInstructions, wordExpToInstruction,
+    executeInstructions, registerOfNat, execute, writeRegister, nextPc,
+    zeroState, readRegister]
 
 theorem compileWordLoadByte_sound [NeZero width] (state : State width) :
     evalWordProg state (.inst (.mem .load8 1 2)) =
@@ -1132,9 +1135,10 @@ theorem evalWordFunction_return_add [NeZero width] (state : State width) :
 theorem wordFunctionToRiscV_return_const [NeZero width] (value : Word width) :
     wordFunctionToRiscV
         ((.seq (.assign 1 (.const value)) (.return 0 [1])) :
-          WordProg (Word width)) =
+      WordProg (Word width)) =
       some ([.addi 1 0 value], [1]) := by
-  simp [wordFunctionToRiscV, wordExpToInstructions, wordExpToInstruction, registerOfNat]
+  simp [wordFunctionToRiscV, wordExpToInstructions, wordExpToInstruction,
+    registerOfNat]
 
 theorem evalWordFunction_return_const [NeZero width] (state : State width)
     (value : Word width) (_zero : ZeroRegister state) :

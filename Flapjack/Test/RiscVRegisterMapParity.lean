@@ -117,12 +117,29 @@ example : labRegisterOfNat (portToStack 31) = some 31 := by decide
 
 /-- The Lab boundary lowers a constant return to the original hardware zero
 operand and the original destination register, byte-for-byte. -/
-example (destination : Nat) (value : Nat) :
+example (destination value : Nat) (hvalue : value < 2 ^ 11) :
     (labCompilePlain (width := 64) (.const destination value)) =
       (labRegisterOfNat (portToStack destination)).map
-        (fun register => [.addi register 0 (BitVec.ofNat 64 value)]) := by
+        (fun register => [.ori register 0 (BitVec.ofNat 64 value)]) := by
   cases h : registerOfNat destination <;>
-    simp [labCompilePlain, labRegisterOfNat_portToStack_all, h]
+    simp [labCompilePlain, labRegisterOfNat_portToStack_all, h, hvalue]
+
+/- The source-facing stack/Lab boundary is where CakeML's target constant
+   expansion occurs.  Keep concrete wide cases here rather than in the
+   standalone Word-to-instruction fixture: small constants use ORI, while a
+   non-immediate 32-bit value uses the exact LUI/ADDI pair. -/
+example :
+    labCompilePlain (width := 64) (.const 3 0) =
+      some [.ori 3 0 (BitVec.ofNat 64 0)] := by decide
+
+example :
+    labCompilePlain (width := 64) (.const 4 41) =
+      some [.ori 4 0 (BitVec.ofNat 64 41)] := by decide
+
+example :
+    labCompilePlain (width := 64) (.const 5 0x12345678) =
+      some [.lui 5 (BitVec.ofNat 64 0x12345),
+        .addi 5 5 (BitVec.ofNat 64 0x678)] := by decide
 
 /-- The one-time Cake relabeling is a bijection on the 64-bit state space,
 packaging the injective and surjective boundary facts. -/

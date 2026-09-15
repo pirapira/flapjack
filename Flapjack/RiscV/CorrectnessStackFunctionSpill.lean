@@ -18,25 +18,20 @@ theorem evalWordStackMachine_wordToStackFunctionWithSpillStateAndLocationBitmaps
     (registerCount bitmapRegister frameSlots : Nat)
     (storeConstsStub : Option Nat) (bitmapState bitmapFinal : WordStackBitmapState)
     (program : WordProg (Word width))
-    (body moves : StackProg Nat)
-    (state middle final : WordStackMachineState width)
+    (body : StackProg Nat)
+    (state final : WordStackMachineState width)
     (hbody : wordToStackProgWordWithLocationBitmaps
       { config with locations := allocation.locations }
       registerCount bitmapRegister frameSlots storeConstsStub bitmapState program =
       some (body, bitmapFinal))
-    (hmoves : wordStackMovesFromPhysical
-      { config with locations := allocation.locations } parameters 2 = some moves)
-    (hentry : evalWordStackMachine state moves = some middle)
-    (hbodyEval : evalWordStackMachine middle body = some final) :
+    (hbodyEval : evalWordStackMachine state body = some final) :
     evalWordStackMachine state
       (((wordToStackFunctionWithSpillStateAndLocationBitmaps config parameters
         allocation registerCount bitmapRegister frameSlots storeConstsStub
         bitmapState program).map Prod.fst).getD .skip) =
       some final := by
   simpa [wordToStackFunctionWithSpillStateAndLocationBitmaps,
-    wordToStackFunctionWithParametersAndLocationBitmaps, hbody, hmoves] using
-    (evalWordStackMachine_wordStackJoin state middle final moves body
-      hentry hbodyEval)
+    wordToStackFunctionWithParametersAndLocationBitmaps, hbody] using hbodyEval
 
 theorem wordToStackFunctionWithSpillStateAndLocationBitmaps_preserves_bitmap_length
     [NeZero width]
@@ -50,8 +45,7 @@ theorem wordToStackFunctionWithSpillStateAndLocationBitmaps_preserves_bitmap_len
       allocation registerCount bitmapRegister frameSlots storeConstsStub bitmapState
       program = some (stackProgram, finalState)) :
     finalState.length = finalState.data.length := by
-  simp only [wordToStackFunctionWithSpillStateAndLocationBitmaps,
-    wordToStackFunctionWithParametersAndLocationBitmaps] at hresult
+  simp only [wordToStackFunctionWithSpillStateAndLocationBitmaps] at hresult
   cases hbody : wordToStackProgWordWithLocationBitmaps
       { config with locations := allocation.locations }
       registerCount bitmapRegister frameSlots storeConstsStub bitmapState program with
@@ -61,16 +55,9 @@ theorem wordToStackFunctionWithSpillStateAndLocationBitmaps_preserves_bitmap_len
   | some bodyResult =>
       cases bodyResult with
       | mk body bodyState =>
-          cases hmoves : wordStackMovesFromPhysical
-              { config with locations := allocation.locations } parameters 2 with
-          | none =>
-              rw [hbody, hmoves] at hresult
-              simp at hresult
-          | some moves =>
               have hpair :
-                  (wordStackJoin moves body, bodyState) =
-                    (stackProgram, finalState) := by
-                simpa [hbody, hmoves] using hresult
+                  (body, bodyState) = (stackProgram, finalState) := by
+                simpa [hbody] using hresult
               have hbitmap : bodyState = finalState :=
                 congrArg Prod.snd hpair
               have hinner :

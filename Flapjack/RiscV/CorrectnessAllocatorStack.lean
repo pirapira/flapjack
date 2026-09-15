@@ -31,7 +31,7 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_stack_result
       renamedProgram = some (stackProgram, finalState) := by
   simp only [wordAllocateSsaFunctionWithEntryAndSpillToStack] at hbridge
   cases halloc :
-      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
         parameters program with
   | none => simp [halloc] at hbridge
   | some allocationResult =>
@@ -70,8 +70,8 @@ theorem evalWordStackMachine_wordAllocateSsaFunctionWithEntryAndSpillToStack
     (ssaState : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg (Word width)) (allocation : WordSpillState)
     (stackProgram : StackProg Nat) (finalState : WordStackBitmapState)
-    (body moves : StackProg Nat)
-    (machineState middle final : WordStackMachineState width)
+    (body : StackProg Nat)
+    (machineState final : WordStackMachineState width)
     (bodyState : WordStackBitmapState)
     (hbridge : wordAllocateSsaFunctionWithEntryAndSpillToStack config parameters
       program registerCount bitmapRegister frameSlots storeConstsStub bitmapState =
@@ -81,21 +81,22 @@ theorem evalWordStackMachine_wordAllocateSsaFunctionWithEntryAndSpillToStack
       { config with locations := allocation.locations }
       registerCount bitmapRegister frameSlots storeConstsStub bitmapState
       renamedProgram = some (body, bodyState))
-    (hmoves : wordStackMovesFromPhysical
-      { config with locations := allocation.locations } renamedParameters 2 =
-      some moves)
-    (hentry : evalWordStackMachine machineState moves = some middle)
-    (hbodyEval : evalWordStackMachine middle body = some final) :
+    (hbodyEval : evalWordStackMachine machineState body = some final) :
     evalWordStackMachine machineState stackProgram = some final := by
   have hstack := wordAllocateSsaFunctionWithEntryAndSpillToStack_stack_result
     config parameters program registerCount bitmapRegister frameSlots storeConstsStub
     bitmapState ssaState renamedParameters renamedProgram allocation stackProgram
     finalState hbridge
+  have hpair : (body, bodyState) = (stackProgram, finalState) := by
+    simp only [wordToStackFunctionWithSpillStateAndLocationBitmaps, hbody] at hstack
+    simpa using hstack
+  have hbodyEq : body = stackProgram := congrArg Prod.fst hpair
   have hsimulation :=
     evalWordStackMachine_wordToStackFunctionWithSpillStateAndLocationBitmaps
       config renamedParameters allocation registerCount bitmapRegister frameSlots
-      storeConstsStub bitmapState bodyState renamedProgram body moves machineState
-      middle final hbody hmoves hentry hbodyEval
-  simpa [hstack] using hsimulation
+      storeConstsStub bitmapState bodyState renamedProgram body machineState
+      final hbody hbodyEval
+  rw [← hbodyEq]
+  simpa [wordToStackFunctionWithSpillStateAndLocationBitmaps, hbody] using hsimulation
 
 end Flapjack.RiscV

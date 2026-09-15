@@ -109,19 +109,20 @@ def cakeWordStackHelperConfig (program : WordProg Nat) : WordStackConfig :=
       (fun name => (name, .register (cakeWordStackHelperRegister name)))
     scratch := 31
     stackBase := 0
-    addressScratch := 29 }
+    addressScratch := 29
+    abiBase := 2 }
 
 def cakeLongDiv1StackEntryCode (config : WordStackConfig) (width : Nat) :
     Option (StackProg Nat) := do
   let body ← cakeLongDiv1StackCode config width
   let moves ← wordStackMovesFromPhysical config
-    [0, 2, 4, 6, 8, 10, 12] 2
+    [0, 2, 4, 6, 8, 10, 12] config.abiBase
   pure (wordStackJoin moves body)
 
 def cakeLongDivStackEntryCode (config : WordStackConfig) (width : Nat) :
     Option (StackProg Nat) := do
   let body ← cakeLongDivStackCode config width
-  let moves ← wordStackMovesFromPhysical config [0, 2, 4, 6] 2
+  let moves ← wordStackMovesFromPhysical config [0, 2, 4, 6] config.abiBase
   pure (wordStackJoin moves body)
 
 /-! Adapt the source helper's Loc convention to the normalized StackLang
@@ -129,9 +130,9 @@ def cakeLongDivStackEntryCode (config : WordStackConfig) (width : Nat) :
     divisor in x6, and observes quotient x0 and remainder x3. -/
 def cakeLongDivStackAdapter : StackProg Nat :=
   stackSeq [
-    .arith .or 8 6 6,
-    .arith .or 4 3 3,
-    .arith .or 6 0 0,
+    .arith .or (2 + 6) 6 6,
+    .arith .or (2 + 2) 3 3,
+    .arith .or (2 + 4) 0 0,
     .call (some
       (stackSeq [
         .arith .or 0 2 2,

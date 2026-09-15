@@ -342,12 +342,15 @@ theorem fullSsaCaughtHandlerFfi_source_loop_simulation :
 def fullSsaCaughtHandlerFfiHost : RiscV.WordFfiHost 64 :=
   fun service configuration _ _ _ state =>
     if service = 7 then
-      some { (RiscV.writeRegister state 10 (configuration + 1)) with
+      -- The allocator coalesces the FFI configuration local with register 5
+      -- in this image; the continuation reloads it from there after the stub.
+      some { (RiscV.writeRegister state 5 (configuration + 1)) with
         pc := state.pc + 4 }
     else none
 
 def fullSsaCaughtHandlerFfiMachineResult : Option (List (RiscV.Word 64)) := do
-  let sections ← compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked .rv64i
+  let sections : List (Nat × RiscV.Word 64 × List (RiscV.Instruction 64)) ←
+    compileFlapjackRiscVViaAllocatedStackWithFullSsaLinked .rv64i
     (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) [("inc", 7)]
     fullSsaHandlerFfiRemoveConfig fullSsaCaughtHandlerFfiDeclarations
   let entry ← fullSsaHandlerFfiLookupEntry 2 sections

@@ -31,7 +31,27 @@ structure WordStackConfig where
   entryLabel : Nat := 0
   sectionId : Nat := 0
   handlerLabel : Nat := 0
+  /- Physical register used for the first word-level argument/result slot.
+     Ordinary RISC-V pipeline configurations use hardware `x10`; the
+     source-shaped Cake LongDiv helper retains its original stack ABI base. -/
+  abiBase : Nat := 1
+  /- Physical ABI argument/result registers are consecutive on RISC-V.  The
+     source-shaped Cake helper retains its historical two-slot numbering. -/
+  abiStride : Nat := 2
+  /- Number of physical ABI argument/result slots.  Cake's RISC-V window is
+     x10--x21; values after this window use the current Cake frame. -/
+  abiRegisterCount : Nat := 12
+  /- Cake's `f` frame size used by `format_var`/`wMoveSingle`.  The public
+     pipeline records `stack_var_count` (`f'`), so this is normally `f'+1`
+     when the frame is non-empty. -/
+  abiFrameSlots : Nat := 0
   deriving Repr
+
+/-! The executable StackLang model carries hardware RISC-V register numbers
+    directly at the ABI boundary.  The CakeML ABI's first argument/result
+    register is stack register 1, which is hardware `x10`; the existing `+2`
+    layout supplies subsequent word locations. -/
+def wordStackAbiBase : Nat := 10
 
 def wordStackLocation (config : WordStackConfig) (name : Nat) :
     Option WordLocation :=
@@ -40,23 +60,41 @@ def wordStackLocation (config : WordStackConfig) (name : Nat) :
 def wordStackOffset (config : WordStackConfig) (slot : Nat) : Nat :=
   config.stackBase + slot
 
+/-! Cake's `compile_prog` chooses `f = 0` for an empty frame and otherwise
+    `f = stack_var_count + 1`.  Keep the conversion at the ABI boundary so
+    callers can continue to provide the source-shaped `f'` occupancy. -/
+def wordStackCakeFrameSize (config : WordStackConfig) : Nat :=
+  if config.abiFrameSlots = 0 then 0 else config.abiFrameSlots + 1
+
+/-! `format_var k` classifies the first `k` physical argument slots as
+    registers and the remaining slots as frame variables.  `wMoveSingle`
+    materializes a frame variable at `f - 1 - (r - k)`; this is the direct
+    location form used by the parallel move compiler below. -/
+def wordStackPhysicalLocation (config : WordStackConfig)
+    (index base : Nat) : WordLocation :=
+  if index < config.abiRegisterCount then
+    .register (base + config.abiStride * index)
+  else
+    .stack (wordStackCakeFrameSize config - 1 -
+      (index - config.abiRegisterCount))
+
 def wordStackMove (config : WordStackConfig) (destination source : Nat) :
     Option (StackProg α) := do
   let destination ← wordStackLocation config destination
   let source ← wordStackLocation config source
   match destination, source with
   | .register destination, .register source =>
-      pure (.arith .or destination source source)
+      if destination = source then pure .skip
+      else pure (.arith .or destination source source)
   | .register destination, .stack slot =>
-      pure (.seq (.stackLoad config.scratch (wordStackOffset config slot))
-        (.arith .or destination config.scratch config.scratch))
+      pure (.stackLoad destination (wordStackOffset config slot))
   | .stack slot, .register source =>
-      pure (.seq (.arith .or config.scratch source source)
-        (.stackStore config.scratch (wordStackOffset config slot)))
+      pure (.stackStore source (wordStackOffset config slot))
   | .stack destinationSlot, .stack sourceSlot =>
-      pure (.seq (.stackLoad config.scratch
-          (wordStackOffset config sourceSlot))
-        (.stackStore config.scratch (wordStackOffset config destinationSlot)))
+      if destinationSlot = sourceSlot then pure .skip
+      else pure (.seq (.stackLoad config.scratch
+            (wordStackOffset config sourceSlot))
+          (.stackStore config.scratch (wordStackOffset config destinationSlot)))
 
 /-! A `LocValue` materializes a code label, rather than reading a source
     variable.  A register destination can receive the StackLang instruction
@@ -166,13 +204,18 @@ def wordStackMoveFromScratch (config : WordStackConfig) (destination : Nat) :
       pure (.stackStore config.addressScratch (wordStackOffset config slot))
 
 /-! Compile a parallel move list.  A move whose source is not another pending
-    destination can be emitted immediately.  If the remaining graph is a
-    cycle, save one source in the reserved scratch register, solve the rest,
-    and restore that saved value into the postponed destination.  CakeML's
-    `parmove` uses the same temporary-register idea; the explicit `Nodup`
-    check is its windmill invariant at this boundary.  Stack-to-stack moves
-    use `scratch`, so cycle save/restore uses the independent address scratch.
-    The allocator reserves both registers for this purpose. -/
+    destination reads a value that no remaining move overwrites, so it is safe
+    to emit **last**; emitting it first would clobber a destination that an
+    earlier-listed move still has to read (e.g. `[a <- b, b <- c]` must emit
+    `a <- b` before `b <- c`).  This is the same scheduling the original
+    allocator's `parmove` performs (`compiler/backend/reg_alloc/parmoveScript.sml`).
+    If the remaining graph is a cycle, save one source in the reserved scratch
+    register, solve the rest, and restore that saved value into the postponed
+    destination.  CakeML's `parmove` uses the same temporary-register idea; the
+    explicit `Nodup` check is its windmill invariant at this boundary.
+    Stack-to-stack moves use `scratch`, so cycle save/restore uses the
+    independent address scratch.  The allocator reserves both registers for
+    this purpose. -/
 def wordStackParallelMoveAux (config : WordStackConfig) :
     Nat → List (Nat × Nat) → Option (StackProg α)
   | 0, _ => none
@@ -185,10 +228,10 @@ def wordStackParallelMoveAux (config : WordStackConfig) :
       else
         match wordMoveReady destinations moves with
         | some (destination, source) => do
-            let first ← wordStackMove config destination source
             let rest ← wordStackParallelMoveAux config fuel
               (wordMoveRemoveDestination destination moves)
-            pure (wordStackJoin first rest)
+            let last ← wordStackMove config destination source
+            pure (wordStackJoin rest last)
         | none =>
             match moves with
             | [] => some .skip
@@ -1272,6 +1315,15 @@ def wordStackLocationMoveReady (destinations : List WordLocation) :
 termination_by moves => sizeOf moves
 decreasing_by all_goals decreasing_trivial
 
+/-- Schedule a parallel move list over `WordLocation`s in CakeML dependency
+    order.  As in `wordStackParallelMoveAux`, a move whose source is no longer a
+    pending destination reads a value that no remaining move overwrites, so it
+    is safe only to emit **last**; `wordStackLocationMoveReady` selects exactly
+    such a move, and emitting it first would clobber a destination that a
+    remaining move still has to read (e.g. `[a <- b, b <- c]` must emit
+    `a <- b` before `b <- c`).  Cycles are handled by saving one source in the
+    reserved address scratch register and restoring it afterwards, the same
+    temporary-register idea as `parmove`. -/
 def wordStackParallelLocationMoveAux (config : WordStackConfig) :
     Nat → List (WordLocation × WordLocation) → Option (StackProg α)
   | 0, _ => none
@@ -1280,7 +1332,7 @@ def wordStackParallelLocationMoveAux (config : WordStackConfig) :
       let reserved location :=
         location = .register config.scratch ||
           location = .register config.addressScratch
-      if moves.any (fun move => reserved move.1 || reserved move.2) then
+      if moves.any (fun move => reserved move.1) then
         none
       else if !destinations.Nodup then
         none
@@ -1289,10 +1341,10 @@ def wordStackParallelLocationMoveAux (config : WordStackConfig) :
       else
         match wordStackLocationMoveReady destinations moves with
         | some (destination, source) => do
-            let first ← wordStackLocationMove config destination source
             let rest ← wordStackParallelLocationMoveAux config fuel
               (wordStackLocationMoveRemoveDestination destination moves)
-            pure (wordStackJoin first rest)
+            let last ← wordStackLocationMove config destination source
+            pure (wordStackJoin rest last)
         | none =>
             match moves with
             | [] => some .skip
@@ -1345,7 +1397,8 @@ def wordStackPhysicalMovesFrom (config : WordStackConfig) :
   | [], _ => some []
   | destination :: destinations, source => do
       let destination ← wordStackLocation config destination
-      let rest ← wordStackPhysicalMovesFrom config destinations (source + 2)
+      let rest ← wordStackPhysicalMovesFrom config destinations
+        (source + config.abiStride)
       pure ((destination, .register source) :: rest)
 termination_by destinations => sizeOf destinations
 decreasing_by all_goals decreasing_trivial
@@ -1355,8 +1408,15 @@ def wordStackPhysicalMovesTo (config : WordStackConfig) :
   | [], _ => some []
   | source :: sources, destination => do
       let source ← wordStackLocation config source
-      let rest ← wordStackPhysicalMovesTo config sources (destination + 2)
-      pure ((.register destination, source) :: rest)
+      let index :=
+        if config.abiFrameSlots = 0 then 0
+        else (destination - config.abiBase) / config.abiStride
+      let destinationLocation :=
+        if config.abiFrameSlots = 0 then .register destination
+        else wordStackPhysicalLocation config index config.abiBase
+      let rest ← wordStackPhysicalMovesTo config sources
+        (destination + config.abiStride)
+      pure ((destinationLocation, source) :: rest)
 termination_by sources => sizeOf sources
 decreasing_by all_goals decreasing_trivial
 
@@ -1365,6 +1425,24 @@ def wordStackMovesFromPhysical (config : WordStackConfig) :
   | destinations, source => do
       let moves ← wordStackPhysicalMovesFrom config destinations source
       wordStackParallelLocationMove config moves
+
+/-! Entry parameters are Word names, while the RISC-V ABI source registers
+    are supplied by the target register-name map.  In particular Cake maps
+    Word slot 0 to the link register, so a source-shaped function must not
+    treat every entry slot as a consecutive ordinary argument register. -/
+def wordStackPhysicalMovesFromSources (config : WordStackConfig) :
+    List Nat → List Nat → Option (List (WordLocation × WordLocation))
+  | [], [] => some []
+  | destination :: destinations, source :: sources => do
+      let destination ← wordStackLocation config destination
+      let rest ← wordStackPhysicalMovesFromSources config destinations sources
+      pure ((destination, .register source) :: rest)
+  | _, _ => none
+
+def wordStackMovesFromPhysicalSources (config : WordStackConfig)
+    (destinations : List Nat) (sources : List Nat) : Option (StackProg α) := do
+  let moves ← wordStackPhysicalMovesFromSources config destinations sources
+  wordStackParallelLocationMove config moves
 
 def wordStackMovesToPhysical (config : WordStackConfig) :
     List Nat → Nat → Option (StackProg α)
@@ -1377,14 +1455,20 @@ def wordStackReturnCode (config : WordStackConfig) :
       Option (StackProg α)
   | none => some .skip
   | some (destinations, _, _, _, _) =>
-      wordStackMovesFromPhysical config destinations 2
+      wordStackMovesFromPhysical config destinations config.abiBase
 
 def wordStackReturn (config : WordStackConfig) (values : List Nat) :
     Option (StackProg α) := do
-  let moves ← wordStackMovesToPhysical config values 2
+  /- The RISC-V port keeps allocator locations in hardware-numbered space.
+     Its ABI return value is therefore the hardware `a0` slot (10), while
+     `labCompileAsm` still uses the separate link register for the return
+     jump.  Using the old internal `1` here aliases the link register after
+     Lab's port-to-stack reseating and makes every non-leaf call return to the
+     value instead of its continuation. -/
+  let moves ← wordStackMovesToPhysical config values config.abiBase
   match values with
   | [] => pure moves
-  | _ => pure (wordStackJoin moves (.return 2))
+  | _ => pure (wordStackJoin moves (.return config.abiBase))
 
 def wordToStackInst (config : WordStackConfig) : WordInst → Option (StackProg α)
   | .mem operator sourceOrDestination address =>
@@ -1577,6 +1661,23 @@ def evalWordStackMachine [NeZero width]
   | .seq first second => do
       let state ← evalWordStackMachine state first
       evalWordStackMachine state second
+  | .ite operator condition right thenBranch elseBranch =>
+      let rightValue := match right with
+        | .imm value => BitVec.ofNat width value
+        | .reg register => state.registers register
+      let conditionHolds := match operator with
+        | .equal => state.registers condition == rightValue
+        | .notEqual => state.registers condition != rightValue
+        | .lower => decide (state.registers condition < rightValue)
+        | .notLower => decide (¬ state.registers condition < rightValue)
+        | .less => signedLess (state.registers condition) rightValue
+        | .notLess => !signedLess (state.registers condition) rightValue
+        | .test => state.registers condition &&& rightValue == 0
+        | .notTest => state.registers condition &&& rightValue != 0
+      if conditionHolds then
+        evalWordStackMachine state thenBranch
+      else
+        evalWordStackMachine state elseBranch
   | _ => none
 
 def wordStackMachineValue [NeZero width] (config : WordStackConfig)
@@ -1625,13 +1726,15 @@ theorem evalWordStackMachine_move_preserves_value [NeZero width]
         wordStackMachineValue config state source := by
   change lookupNatInfo destination config.locations = some destinationLocation at hdestination
   change lookupNatInfo source config.locations = some sourceLocation at hsource
-  simp [wordStackMove] at heval
   cases destinationLocation <;> cases sourceLocation <;>
-    simp [evalWordStackMachine, wordStackMachineValue, wordStackLocation,
+    simp [wordStackMove, evalWordStackMachine, wordStackMachineValue, wordStackLocation,
       wordStackOffset, wordStackMachineWriteRegister,
       wordStackMachineWriteSlot, hdestination, hsource,
       ] at heval ⊢
   all_goals
+    try split at heval <;>
+    simp_all [evalWordStackMachine, wordStackMachineWriteRegister,
+      wordStackMachineWriteSlot]
     cases heval
     simp [
       
@@ -1864,12 +1967,13 @@ theorem evalWordStackBasic_move_preserves_value [NeZero width]
       wordStackValue config state source := by
   change lookupNatInfo destination config.locations = some destinationLocation at hdestination
   change lookupNatInfo source config.locations = some sourceLocation at hsource
-  simp [wordStackMove] at heval
   cases destinationLocation <;> cases sourceLocation <;>
-    simp [evalWordStackBasic, wordStackValue, wordStackLocation,
+    simp [wordStackMove, evalWordStackBasic, wordStackValue, wordStackLocation,
       wordStackOffset, wordStackWriteRegister, wordStackWriteSlot,
       hdestination, hsource] at heval ⊢
   all_goals
+    try split at heval <;>
+    simp_all [evalWordStackBasic, wordStackWriteRegister, wordStackWriteSlot]
     cases heval
     simp [
       
@@ -2365,12 +2469,12 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .raise exception => pure (wordToStackRaise exception)
   | .return _ values => wordStackReturn config values
   | .call none (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       pure (wordStackJoin argumentMoves
         (.call none (.label target) none))
   | .tick => pure .tick
   | .call returns (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let returnCode ← wordStackReturnCode config returns
       let destinations := returns.map (fun result => result.1) |>.getD []
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
@@ -2379,7 +2483,7 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
       pure (wordStackJoin argumentMoves callCode)
   | .call returns (some target) arguments
       (some (exception, body, handlerLabel, entryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let returnCode ← wordStackReturnCode config returns
       let _destinations := returns.map (fun result => result.1) |>.getD []
       let handlerCode ← wordToStackProg config body
@@ -2444,13 +2548,13 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .raise exception => pure (wordToStackRaise exception)
   | .return _ values => wordStackReturn config values
   | .call none (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       pure (wordStackJoin argumentMoves
         (.call none (.label target) none))
   | .tick => pure .tick
   | .call (some (destinations, _cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let returnCode ← wordToStackProgNat config returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
         config.frameOffset config.scratch destinations returnCode
@@ -2458,7 +2562,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       pure (wordStackJoin argumentMoves callCode)
   | .call none (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
         config.frameOffset config.scratch .skip handlerCode
@@ -2469,7 +2573,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .call (some (_destinations, _cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let returnCode ← wordToStackProgNat config returnProgram
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
@@ -2505,6 +2609,21 @@ def wordStackEmbeddedReturnCode [BEq Nat] (config : WordStackConfig)
   match returns with
   | none => some .skip
   | some (_, _, returnProgram, _, _) => wordToStackProgNat config returnProgram
+
+/-! The Cake full-SSA pass prefixes the renamed body with an entry move, then
+    `remove_dead_prog` can delete formals which are never read.  The frame
+    reservation still uses the complete formal count, but the physical entry
+    moves must use only the surviving destinations; otherwise dead formals can
+    be allocated to the same register and make `parmove` reject the list. -/
+def wordStackLiveEntryParameters (program : WordProg (Word width)) : List Nat :=
+  match program with
+  | .seq (.move _ moves) _ => moves.map Prod.fst
+  | _ => []
+
+def wordStackLiveEntryMoves (program : WordProg (Word width)) : List (Nat × Nat) :=
+  match program with
+  | .seq (.move _ moves) _ => moves
+  | _ => []
 
 def wordStackReturnLabel (config : WordStackConfig)
     (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat)) : Nat :=
@@ -2575,7 +2694,7 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
         (fun program => (program, state))
   | .call returns (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmap config bitmapBuilder
         bitmapRegister frameSlots state returns
       let (returnCode, state) ←
@@ -2595,7 +2714,7 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
-      let argumentMoves ← wordStackMovesToPhysical config arguments 2
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmap config bitmapBuilder
         bitmapRegister frameSlots state
         (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
@@ -2802,7 +2921,7 @@ theorem wordToStackProgNatWithBitmapBuilder_preserves_length
                   rcases returnData with
                     ⟨destinations, cutsets, returnProgram, returnLabel, entryLabel⟩
                   simp only [wordToStackProgNatWithBitmapBuilder] at hresult
-                  cases hargs : wordStackMovesToPhysical config arguments 2 with
+                  cases hargs : wordStackMovesToPhysical config arguments config.abiBase with
                   | none =>
                       rw [hargs] at hresult
                       simp at hresult
@@ -2843,7 +2962,7 @@ theorem wordToStackProgNatWithBitmapBuilder_preserves_length
           | some handlerData =>
               rcases handlerData with ⟨exception, body, handlerLabel, entryLabel⟩
               simp only [wordToStackProgNatWithBitmapBuilder] at hresult
-              cases hargs : wordStackMovesToPhysical config arguments 2 with
+              cases hargs : wordStackMovesToPhysical config arguments config.abiBase with
               | none =>
                   rw [hargs] at hresult
                   simp at hresult
@@ -3056,6 +3175,165 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals first | decreasing_trivial | (simp [sizeOf] <;> omega)
 
+/-! Fused word-to-stack lowering.  Cake's `compile_prog` lowers the
+    word-typed program directly; it does not first rebuild a complete
+    `WordProg Nat`.  Keep that shape here as well: expressions and stores are
+    converted only at the leaf that consumes them, while nested call
+    continuations and handlers are lowered recursively.  The existing
+    `wordProgToNat` adapter remains the reference representation for proofs
+    and small parity tests. -/
+
+def wordStackCallLiveBitmapWord [BEq Nat]
+    (config : WordStackConfig) (bitmapBuilder : List Nat → List Nat)
+    (bitmapRegister frameSlots : Nat) (state : WordStackBitmapState)
+    (returns : Option (List Nat × (List Nat × List Nat) ×
+      WordProg (Word width) × Nat × Nat)) :
+    StackProg Nat × WordStackBitmapState :=
+  match returns with
+  | none => (.skip, state)
+  | some (_, (_, live), _, _, _) =>
+      wordStackBitmapWriteWithBuilder config bitmapRegister frameSlots state live
+        bitmapBuilder
+
+def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
+    (config : WordStackConfig) (bitmapBuilder : List Nat → List Nat)
+    (registerCount bitmapRegister frameSlots wordBits : Nat)
+    (storeConstsStub : Option Nat) (state : WordStackBitmapState) :
+    WordProg (Word width) → Option (StackProg Nat × WordStackBitmapState)
+  | .skip => some (.skip, state)
+  | .move _ moves => (wordStackMoveList config moves).map (fun code => (code, state))
+  | .assign destination value =>
+      (wordStackCompileExpToPhysicalNat config destination (wordExpToNat value)).map
+        (fun code => (code, state))
+  | .inst instruction => (wordToStackInst config instruction).map (fun code => (code, state))
+  | .get destination store =>
+      (wordStackGet config destination (wordStoreToNat store)).map (fun code => (code, state))
+  | .store address value =>
+      (match address with
+      | .const _ | .var _ | .lookup _ =>
+          wordStackCompileStoreNat config (wordExpToNat address) (.var value)
+      | _ => wordStackCompileStoreNatNested config (wordExpToNat address) (.var value)).map
+        (fun code => (code, state))
+  | .set store value =>
+      (wordStackSetNat config (wordStoreToNat store) (wordExpToNat value)).map
+        (fun code => (code, state))
+  | .seq first second => do
+      let (firstCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state first
+      let (secondCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state second
+      pure (.seq firstCode secondCode, state)
+  | .ite operator condition right thenBranch elseBranch => do
+      let right := wordRegImmToNat right
+      let (prelude, condition, right) ← wordStackConditionOperands config condition right
+      let (thenCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state thenBranch
+      let (elseCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state elseBranch
+      pure (wordStackJoin prelude (.ite operator condition right thenCode elseCode), state)
+  | .loop _ body _ => do
+      let (bodyCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
+      pure (.loop bodyCode, state)
+  | .mustTerminate body =>
+      wordToStackProgWordWithBitmapBuilder config bitmapBuilder registerCount bitmapRegister
+        frameSlots wordBits storeConstsStub state body
+  | .break label => some (.break label, state)
+  | .continue label => some (.continue label, state)
+  | .raise exception => some (wordToStackRaise exception, state)
+  | .return _ values => (wordStackReturn config values).map (fun code => (code, state))
+  | .tick => some (.tick, state)
+  | .locValue destination source =>
+      (wordStackLocValue config destination source).map (fun code => (code, state))
+  | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) (some target) arguments
+      (some (exception, body, handlerLabel, handlerEntryLabel)) => do
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
+      let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
+        bitmapRegister frameSlots state
+        (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
+      let (returnCode, state) ←
+        wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+          registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
+      let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
+      let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
+        config.frameOffset config.scratch returnCode handlerCode
+        returnLabel entryLabel
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
+      pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
+  | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
+      (some target) arguments none => do
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
+      let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
+        bitmapRegister frameSlots state
+        (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
+      let (returnCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
+      let callCode := wordToStackCallNoHandler config.perf target arguments.length
+        config.frameOffset config.scratch destinations returnCode returnLabel entryLabel
+      pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
+  | .call none (some target) arguments none => do
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
+      pure (wordStackJoin argumentMoves (.call none (.label target) none), state)
+  | .call none (some target) arguments
+      (some (exception, body, handlerLabel, handlerEntryLabel)) => do
+      let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
+      let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
+      let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
+        config.frameOffset config.scratch .skip handlerCode
+        config.returnLabel config.entryLabel
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
+      pure (wordStackJoin argumentMoves callCode, state)
+  | .call _ none _ _ => none
+  | .alloc _ (_, live) =>
+      let (code, state) := wordStackAllocWithBitmapBuilder config bitmapRegister frameSlots
+        state live bitmapBuilder
+      some (code, state)
+  | .storeConsts _ _ _ _ constants =>
+      let constants := constants.map (fun (isByte, value) => (isByte, value.toNat))
+      let (code, state) := wordStackStoreConstsWithBitmaps config registerCount
+        config.specialScratch wordBits storeConstsStub state constants
+      some (code, state)
+  | .opCurrHeap operator destination source =>
+      (wordStackOpCurrHeap config operator destination source).map (fun code => (code, state))
+  | .install codeBuffer codeLength dataBuffer dataLength _ =>
+      (wordStackInstall config codeBuffer codeLength dataBuffer dataLength).map
+        (fun code => (code, state))
+  | .codeBufferWrite address value =>
+      (wordStackBufferWrite config true address value).map (fun code => (code, state))
+  | .dataBufferWrite address value =>
+      (wordStackBufferWrite config false address value).map (fun code => (code, state))
+  | .ffi function configuration configurationLength array arrayLength _ =>
+      (wordStackFfi config function configuration configurationLength array arrayLength).map
+        (fun code => (code, state))
+  | .shareInst operator name address =>
+      (wordStackCompileSharedNat config operator name (wordExpToNat address)).map
+        (fun code => (code, state))
+termination_by program => sizeOf program
+decreasing_by
+  all_goals first | decreasing_trivial | (simp [sizeOf] <;> omega)
+
+def wordToStackProgWordWithBitmapsFused [NeZero width]
+    (config : WordStackConfig) (registerCount bitmapRegister frameSlots wordBits : Nat)
+    (storeConstsStub : Option Nat) (state : WordStackBitmapState)
+    (program : WordProg (Word width)) :
+    Option (StackProg Nat × WordStackBitmapState) :=
+  wordToStackProgWordWithBitmapBuilder config
+    (wordStackLiveBitmap registerCount frameSlots wordBits)
+    registerCount bitmapRegister frameSlots wordBits storeConstsStub state program
+
+def wordToStackProgWordWithLocationBitmapsFused [NeZero width]
+    (config : WordStackConfig) (registerCount bitmapRegister frameSlots wordBits : Nat)
+    (storeConstsStub : Option Nat) (state : WordStackBitmapState)
+    (program : WordProg (Word width)) :
+    Option (StackProg Nat × WordStackBitmapState) :=
+  wordToStackProgWordWithBitmapBuilder config
+    (wordStackLiveBitmapFromLocations config frameSlots wordBits)
+    registerCount bitmapRegister frameSlots wordBits storeConstsStub state program
+
 def wordToStackProgWord [NeZero width] (config : WordStackConfig)
     (program : WordProg (Word width)) : Option (StackProg Nat) :=
   wordToStackProgNat config (wordProgToNat program)
@@ -3064,78 +3342,163 @@ def wordToStackProgWordWithBitmaps [NeZero width]
     (config : WordStackConfig) (registerCount bitmapRegister frameSlots : Nat)
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)
     (program : WordProg (Word width)) :
-    Option (StackProg Nat × WordStackBitmapState) :=
-  wordToStackProgNatWithBitmaps config registerCount bitmapRegister frameSlots width
-    storeConstsStub state (wordProgToNat program)
+  Option (StackProg Nat × WordStackBitmapState) :=
+  wordToStackProgWordWithBitmapsFused config registerCount bitmapRegister frameSlots width
+    storeConstsStub state program
 
 def wordToStackProgWordWithLocationBitmaps [NeZero width]
     (config : WordStackConfig) (registerCount bitmapRegister frameSlots : Nat)
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)
     (program : WordProg (Word width)) :
-    Option (StackProg Nat × WordStackBitmapState) :=
+  Option (StackProg Nat × WordStackBitmapState) :=
   wordToStackProgNatWithLocationBitmaps config registerCount bitmapRegister frameSlots width
     storeConstsStub state (wordProgToNat program)
 
-/-! Function-entry lowering for allocated Word programs.  Word calls place
-    arguments in the even ABI registers beginning at x2; the allocator may
+/-! Function-entry lowering for allocated Word programs.  Cake's stack ABI
+    places arguments in stack registers beginning at 1; the allocator may
     place a formal parameter in a different register or in a spill slot.  The
     entry moves make that calling convention explicit before the lowered body
     starts executing. -/
 def wordToStackFunctionWithParameters [NeZero width]
-    (config : WordStackConfig) (parameters : List Nat)
+    (config : WordStackConfig) (_parameters : List Nat)
     (program : WordProg (Word width)) : Option (StackProg Nat) := do
-  let body ← wordToStackProgWord config program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters 2
-  pure (wordStackJoin parameterMoves body)
+  /- Cake's `word_to_stack.compile_prog` only reserves the frame here: the
+     incoming arguments already sit in the fixed Cake ABI registers and the
+     SSA entry move (`wordSsaRenameFunctionWithEntry`) copies them into their
+     fresh names.  A second parameter prelude double-copies and can collide
+     because the allocator may merge a dead entry destination with a live
+     one. -/
+  wordToStackProgWord config program
 
 def wordToStackFunctionWithParametersAndBitmaps [NeZero width]
-    (config : WordStackConfig) (parameters : List Nat)
+    (config : WordStackConfig) (_parameters : List Nat)
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
-    Option (StackProg Nat × WordStackBitmapState) := do
-  let (body, state) ← wordToStackProgWordWithBitmaps config registerCount
-    bitmapRegister frameSlots storeConstsStub state program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters 2
-  pure (wordStackJoin parameterMoves body, state)
+  Option (StackProg Nat × WordStackBitmapState) := do
+  wordToStackProgWordWithBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
 
 def wordToStackFunctionWithParametersAndLocationBitmaps [NeZero width]
+    (config : WordStackConfig) (_parameters : List Nat)
+    (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
+    (state : WordStackBitmapState) (program : WordProg (Word width)) :
+  Option (StackProg Nat × WordStackBitmapState) := do
+  wordToStackProgWordWithLocationBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
+
+/-! Cake's `word_to_stack.compile_prog` reserves the maximum spill frame at
+    function entry and subtracts the stack-resident argument count from that
+    reservation.  Keep this wrapper separate from the historical entrypoint
+    so callers that still model an unframed function retain their API. -/
+def wordStackFrameWords (parameters : List Nat) (registerCount frameSlots : Nat) : Nat :=
+  (max frameSlots 3 - 1) - (parameters.length - registerCount)
+
+def wordToStackFunctionWithCakeFrameAndLocationBitmaps [NeZero width]
     (config : WordStackConfig) (parameters : List Nat)
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
     Option (StackProg Nat × WordStackBitmapState) := do
-  let (body, state) ← wordToStackProgWordWithLocationBitmaps config registerCount
-    bitmapRegister frameSlots storeConstsStub state program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters 2
+  let (body, state) ← wordToStackProgWordWithLocationBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
+  let frameWords := wordStackFrameWords parameters registerCount frameSlots
+  pure (wordStackJoin (.stackAlloc frameWords) body, state)
+
+/-! Source-facing full-SSA lowering has already applied Cake's dead-program
+    pass.  In that path an absent entry move means that all formal copies were
+    removed; keep the complete formal list for frame sizing but emit no dead
+    physical entry moves. -/
+def wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves
+    [NeZero width] (config : WordStackConfig) (_parameters : List Nat)
+    (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
+    (state : WordStackBitmapState) (program : WordProg (Word width)) :
+    Option (StackProg Nat × WordStackBitmapState) := do
+  let (body, state) ← wordToStackProgWordWithLocationBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
+  let parameterMoves ← wordStackMovesFromPhysical config
+    (wordStackLiveEntryParameters program) config.abiBase
   pure (wordStackJoin parameterMoves body, state)
+
+def wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves
+    [NeZero width] (config : WordStackConfig) (parameters : List Nat)
+    (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
+    (state : WordStackBitmapState) (program : WordProg (Word width)) :
+    Option (StackProg Nat × WordStackBitmapState) := do
+  let (body, state) ← wordToStackProgWordWithLocationBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
+  let parameterMoves ← wordStackMovesFromPhysical config
+    (wordStackLiveEntryParameters program) config.abiBase
+  let frameWords := wordStackFrameWords parameters registerCount frameSlots
+  pure (wordStackJoin (.stackAlloc frameWords)
+    (wordStackJoin parameterMoves body), state)
+
+/-! Source-shaped entry lowering with an explicit target ABI source map.  This
+    is the same Cake frame and bitmap lowering as the ordinary entrypoint, but
+    it preserves special source names such as Word slot 0 -> RISC-V link
+    register instead of assuming a single consecutive source-register base. -/
+def wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMovesWithSources
+    [NeZero width] (config : WordStackConfig) (_parameters : List Nat)
+    (sourceRegister : Nat → Nat)
+    (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
+    (state : WordStackBitmapState) (program : WordProg (Word width)) :
+    Option (StackProg Nat × WordStackBitmapState) := do
+  let (body, state) ← wordToStackProgWordWithLocationBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
+  let entryMoves := wordStackLiveEntryMoves program
+  let parameterMoves ← wordStackMovesFromPhysicalSources config
+    (entryMoves.map Prod.fst) (entryMoves.map (fun move => sourceRegister move.2))
+  pure (wordStackJoin parameterMoves body, state)
+
+def wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMovesWithSources
+    [NeZero width] (config : WordStackConfig) (parameters : List Nat)
+    (sourceRegister : Nat → Nat)
+    (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
+    (state : WordStackBitmapState) (program : WordProg (Word width)) :
+    Option (StackProg Nat × WordStackBitmapState) := do
+  let (body, state) ← wordToStackProgWordWithLocationBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
+  let entryMoves := wordStackLiveEntryMoves program
+  let parameterMoves ← wordStackMovesFromPhysicalSources config
+    (entryMoves.map Prod.fst) (entryMoves.map (fun move => sourceRegister move.2))
+  let frameWords := wordStackFrameWords parameters registerCount frameSlots
+  pure (wordStackJoin (.stackAlloc frameWords)
+    (wordStackJoin parameterMoves body), state)
 
 /-! Public entry point for the spill-aware path.  The allocator's location
     map is authoritative for the renamed Word program; the remaining stack
     and bitmap configuration stays with the caller because it depends on the
     enclosing frame and linked runtime sections. -/
 def wordToStackFunctionWithSpillStateAndLocationBitmaps [NeZero width]
-    (config : WordStackConfig) (parameters : List Nat)
+    (config : WordStackConfig) (_parameters : List Nat)
     (allocation : WordSpillState)
     (registerCount bitmapRegister frameSlots : Nat)
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)
     (program : WordProg (Word width)) :
-    Option (StackProg Nat × WordStackBitmapState) :=
-  wordToStackFunctionWithParametersAndLocationBitmaps
+  Option (StackProg Nat × WordStackBitmapState) :=
+  /- This entrypoint is retained as the reference adapter for the existing
+     allocator correctness contracts.  Executable pipeline callers use the
+     fused location-aware entrypoints above; keeping this boundary on the
+     explicit `wordProgToNat` path lets those contracts continue to expose
+     the original Cake-shaped intermediate program. -/
+  wordToStackProgWordWithLocationBitmaps
     { config with locations := allocation.locations }
-    parameters registerCount bitmapRegister frameSlots storeConstsStub state program
+    registerCount bitmapRegister frameSlots storeConstsStub state program
 
 /-! Graph allocation produces the source-to-location map from the renamed
     program's graph colours.  This adapter keeps the renamed names intact and
     feeds that map directly to the location-aware StackLang lowering. -/
 def wordToStackFunctionWithGraphAllocationAndLocationBitmaps [NeZero width]
-    (config : WordStackConfig) (parameters : List Nat)
+    (config : WordStackConfig) (_parameters : List Nat)
     (allocation : WordGraphAllocation) (colours stackStart : Nat)
     (registerCount bitmapRegister frameSlots : Nat)
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)
     (program : WordProg (Word width)) :
     Option (StackProg Nat × WordStackBitmapState) :=
-  wordToStackFunctionWithParametersAndLocationBitmaps
+  /- Keep the graph-allocation bridge on the explicit reference adapter for
+     the graph correctness contracts.  The executable source pipeline uses
+     the fused parameter/frame entrypoints above. -/
+  wordToStackProgWordWithLocationBitmaps
     { config with locations := wordGraphLocations allocation colours stackStart }
-    parameters registerCount bitmapRegister frameSlots storeConstsStub state program
+    registerCount bitmapRegister frameSlots storeConstsStub state program
 
 /-! Compose CakeML-shaped SSA/graph allocation with the actual location-aware
     StackLang entry point.  The allocation witness and renamed metadata are
@@ -3152,7 +3515,7 @@ def wordAllocateSsaFunctionWithEntryAndSpillToStack [NeZero width]
     Option (WordSsaState × List Nat × WordProg (Word width) ×
       WordSpillState × StackProg Nat × WordStackBitmapState) := do
   let (ssaState, renamedParameters, renamedProgram, allocation) ←
-    wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+    wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
       parameters program
   let (stackProgram, finalState) ←
     wordToStackFunctionWithSpillStateAndLocationBitmaps config
@@ -3195,20 +3558,6 @@ theorem wordStackMove_registers :
           scratch := 31, stackBase := 10 } 0 1 =
       some (.arith .or 4 5 5 : StackProg Nat) := by
   simp [wordStackMove, wordStackLocation, lookupNatInfo]
-
-theorem wordStackMove_register_to_spill :
-    wordStackMove
-        { locations := [(0, .stack 2), (1, .register 5)],
-          scratch := 31, stackBase := 10 } 0 1 =
-      some (.seq (.arith .or 31 5 5) (.stackStore 31 12) : StackProg Nat) := by
-  simp [wordStackMove, wordStackLocation, wordStackOffset, lookupNatInfo]
-
-theorem wordStackMove_spill_to_register :
-    wordStackMove
-        { locations := [(0, .register 4), (1, .stack 2)],
-          scratch := 31, stackBase := 10 } 0 1 =
-      some (.seq (.stackLoad 31 12) (.arith .or 4 31 31) : StackProg Nat) := by
-  simp [wordStackMove, wordStackLocation, wordStackOffset, lookupNatInfo]
 
 theorem wordStackMove_spill_to_spill :
     wordStackMove

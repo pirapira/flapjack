@@ -276,6 +276,53 @@ def compileStackProgramNatListLinkedWithRaiseStubToRiscVChecked [NeZero width]
             labProgramToEntrySection sectionId entryLabel initialLabel
               (stackRemoveComplete config program))).map labSectionNatToWord))
 
+def compileStackProgramNatListWithRaiseStubToRiscVCakeChecked [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (entryLabel initialLabel : Nat)
+    (programs : List (Nat × StackProg Nat)) :
+    Except LabLoweringError (List (Instruction width)) :=
+  let config := cakeStackRemoveConfig config
+  let programs :=
+    (stackRaiseStubLocation, stackRaiseStub false config.addressScratch) :: programs
+  match stackProgramsWithLongDivRuntime config programs with
+  | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
+  | some programs =>
+      compileLabProgramChecked context
+        ((programs.map (fun (sectionId, program) =>
+          if sectionId = cakeLongDiv1Location ||
+              sectionId = cakeLongDivLocation then
+            labProgramToEntrySection sectionId 0 initialLabel
+              (stackMapRegisters riscvRegisterName
+                (stackRemoveComplete config program))
+          else
+            labProgramToEntrySection sectionId entryLabel initialLabel
+              (stackMapRegisters riscvRegisterName
+                (stackRemoveComplete config program)))).map labSectionNatToWord)
+
+def compileStackProgramNatListLinkedWithRaiseStubToRiscVCakeChecked [NeZero width]
+    (context : WordFfiContext) (config : StackRemoveConfig)
+    (entryLabel initialLabel : Nat)
+    (programs : List (Nat × StackProg Nat)) :
+    Except LabLoweringError
+      (List (Nat × Word width × List (Instruction width))) :=
+  let config := cakeStackRemoveConfig config
+  let programs :=
+    (stackRaiseStubLocation, stackRaiseStub false config.addressScratch) :: programs
+  match stackProgramsWithLongDivRuntime config programs with
+  | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
+  | some programs =>
+      compileLabProgramLinkedChecked context
+        ((programs.map (fun (sectionId, program) =>
+          if sectionId = cakeLongDiv1Location ||
+              sectionId = cakeLongDivLocation then
+            labProgramToEntrySection sectionId 0 initialLabel
+              (stackMapRegisters riscvRegisterName
+                (stackRemoveComplete config program))
+          else
+            labProgramToEntrySection sectionId entryLabel initialLabel
+              (stackMapRegisters riscvRegisterName
+                (stackRemoveComplete config program)))).map labSectionNatToWord)
+
 def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
     [NeZero width] (context : WordFfiContext) (removeConfig : StackRemoveConfig)
     (allocConfig : StackAllocConfig) (gcConfig : StackGcConfig)
@@ -300,6 +347,36 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
             else
               labProgramToEntrySection sectionId entryLabel initialLabel
                 (stackRemoveComplete removeConfig program))).map labSectionNatToWord)) with
+      | some sections => .ok sections
+      | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
+
+def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVCakeChecked
+    [NeZero width] (context : WordFfiContext) (removeConfig : StackRemoveConfig)
+    (allocConfig : StackAllocConfig) (gcConfig : StackGcConfig)
+    (storeConstsLocation registerCount : Nat)
+    (entryLabel initialLabel : Nat)
+    (programs : List (Nat × StackProg Nat)) :
+    Except LabLoweringError
+      (List (Nat × Word width × List (Instruction width))) :=
+  let removeConfig := cakeStackRemoveConfig removeConfig
+  let programs :=
+    (stackRaiseStubLocation, stackRaiseStub false removeConfig.addressScratch) ::
+      stackAllocCompileWithSimpleGcAndStoreConsts allocConfig gcConfig
+        storeConstsLocation registerCount programs
+  match stackProgramsWithLongDivRuntime removeConfig programs with
+  | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
+  | some programs =>
+      match compileLabProgramLinkedWithFfiStubsAndHalt context
+          (((programs.map (fun (sectionId, program) =>
+            if sectionId = cakeLongDiv1Location ||
+                sectionId = cakeLongDivLocation then
+              labProgramToEntrySection sectionId 0 initialLabel
+                (stackMapRegisters riscvRegisterName
+                  (stackRemoveComplete removeConfig program))
+            else
+              labProgramToEntrySection sectionId entryLabel initialLabel
+                (stackMapRegisters riscvRegisterName
+                  (stackRemoveComplete removeConfig program)))).map labSectionNatToWord)) with
       | some sections => .ok sections
       | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
 

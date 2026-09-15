@@ -178,6 +178,8 @@ inductive Instruction (width : Nat) where
   | store32 (source address : Fin 32)
   | loadWord (destination address : Fin 32)
   | storeWord (source address : Fin 32)
+  | loadWordOffset (destination address : Fin 32) (offset : Word width)
+  | storeWordOffset (source address : Fin 32) (offset : Word width)
   deriving DecidableEq, Repr
 
 def zeroState (width : Nat) [NeZero width] : State width :=
@@ -526,6 +528,14 @@ def execute (state : State width) : Instruction width → State width
         (readWordValue state address)
   | .storeWord source address =>
       let address := readRegister state address
+      writeWordValue { state with pc := nextPc state } address
+        (readRegister state source)
+  | .loadWordOffset destination address offset =>
+      let address := readRegister state address + offset
+      writeRegister { state with pc := nextPc state } destination
+        (readWordValue state address)
+  | .storeWordOffset source address offset =>
+      let address := readRegister state address + offset
       writeWordValue { state with pc := nextPc state } address
         (readRegister state source)
 

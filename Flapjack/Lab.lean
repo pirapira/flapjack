@@ -38,11 +38,14 @@ inductive LabJump where
 
 inductive LabPlain (α : Type u) where
   | word (instruction : WordInst)
+  | stackMem (operator : WordMemOp) (register base offset : Nat)
+  | stackMemSub (operator : WordMemOp) (register base offset : Nat)
   | const (destination value : Nat)
   | arith (operator : BinOp) (destination left right : Nat)
   /- The stack remover represents Cake's immediate stack-pointer update as a
      constant followed by a register arithmetic operation. -/
   | arithImm (operator : BinOp) (destination left immediate : Nat)
+  | shiftImm (operator : Shift) (destination left immediate : Nat)
   | shift (operator : Shift) (destination left right : Nat)
   | tick
   | jumpReg (register : Nat)
@@ -203,6 +206,14 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
             handlerResult.nextLabel + 1⟩
   | .call _ _ _ =>
       ⟨[], false, counter⟩
+  | .seq (.seq (.const addressScratch offset)
+      (.arith .add scratch base right))
+      (.inst (.mem operator register address)) =>
+      ⟨[.asm (.stackMem operator register base offset) [] 0], false, counter⟩
+  | .seq (.seq (.const addressScratch offset)
+      (.arith .sub scratch base right))
+      (.inst (.mem operator register address)) =>
+      ⟨[.asm (.stackMemSub operator register base offset) [] 0], false, counter⟩
   | .seq (.const scratch value)
       (.arith operator destination left right) =>
       let canFuse :=
@@ -225,6 +236,20 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         let secondResult :=
           labFlatten false sectionId firstResult.nextLabel continues breaks
             (.arith operator destination left right)
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
+  | .seq (.const scratch value)
+      (.shift operator destination left right) =>
+      if scratch != destination && right = scratch && destination = left then
+        ⟨[.asm (.shiftImm operator destination left value) [] 0], false, counter⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks (.const scratch value)
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks
+            (.shift operator destination left right)
         let separator :=
           if tail then [labLabel sectionId 1] else []
         ⟨firstResult.lines ++ separator ++ secondResult.lines,

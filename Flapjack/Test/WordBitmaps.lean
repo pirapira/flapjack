@@ -28,14 +28,14 @@ example :
   rfl
 
 example :
-    wordStackLiveBitmap 1 3 8 [2] = [28] := by
+    wordStackLiveBitmap 1 3 8 [2] = [6] := by
   rfl
 
 example :
     wordStackAllocWithBitmaps wordBitmapTestConfig 30 3
         (wordStackInitialBitmaps false) [2] 1 8 =
       (.seq (.seq (.const 30 2) (.stackStore 30 10)) (.alloc 1),
-        { data := [4, 28], length := 2 }) := by
+        { data := [4, 6], length := 2 }) := by
   rfl
 
 example :
@@ -55,7 +55,7 @@ example :
         (.seq
           (.seq (.seq (.const 30 2) (.stackStore 30 10)) (.alloc 1))
           (.seq (.const 28 2) (.storeConsts 1 2 none)),
-          { data := [4, 28, 5, 7, 9], length := 5 }) := by
+          { data := [4, 6, 5, 7, 9], length := 5 }) := by
   simp [wordToStackProgNatWithBitmaps, wordToStackProgNatWithBitmapBuilder,
     wordStackAllocWithBitmapBuilder,
     wordStackStoreConstsWithBitmaps, 
@@ -77,7 +77,7 @@ example :
       1 30 3 8 none
       (wordStackInitialBitmaps false) wordBitmapHandlerProgram).map
         (fun result => (result.2.data, result.2.length)) =
-      some ([4, 24, 28], 3) := by
+      some ([4, 4, 6], 3) := by
   decide +kernel
 
 def wordBitmapWordProgram : WordProg (Word 8) :=
@@ -105,7 +105,7 @@ example :
       1 30 3 8 none
       (wordStackInitialBitmaps false) wordBitmapBranchProgram).map
         (fun result => (result.2.data, result.2.length)) =
-      some ([4, 28, 5, 7, 9], 5) := by
+      some ([4, 6, 5, 7, 9], 5) := by
   decide +kernel
 
 example (compiled : StackProg Nat) (finalState : WordStackBitmapState)

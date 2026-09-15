@@ -2446,16 +2446,33 @@ def wordFixedSourceLocations : List Nat → NatInfoMap WordLocation
   | source :: sources =>
       (source, .register source) :: wordFixedSourceLocations sources
 
-def wordAllocateVarsWithFixedSources (slots : List Nat)
+@[simp] theorem wordFixedSourceLocations_map_fst (fixedSources : List Nat) :
+    (wordFixedSourceLocations fixedSources).map (fun entry => entry.1) =
+      fixedSources := by
+  induction fixedSources with
+  | nil => rfl
+  | cons source sources ih => simp [wordFixedSourceLocations, ih]
+
+/- A target may use a different physical register for a fixed source than its
+   Word-level name.  Keep that choice explicit at the allocation boundary so
+   the generic allocator and its historical fixed-source API remain reusable. -/
+def wordAllocateVarsWithFixedLocations (slots : List Nat)
     (edges preferences : List (Nat × Nat))
-    (fixedSources : List Nat) : Option WordSpillState :=
+    (fixedLocations : NatInfoMap WordLocation) : Option WordSpillState :=
+  let fixedSources := fixedLocations.map (fun entry => entry.1)
   let initial : WordSpillState :=
-    { locations := wordFixedSourceLocations fixedSources, nextSpill := 0 }
+    { locations := fixedLocations, nextSpill := 0 }
   let names := slots.eraseDups.filter (fun name => name ∉ fixedSources)
   let state := wordGreedyAllocateWithSpillsAndPreferences names
     edges preferences initial
   if wordSpillAllocationRespectsClashes edges state.locations then some state
   else none
+
+def wordAllocateVarsWithFixedSources (slots : List Nat)
+    (edges preferences : List (Nat × Nat))
+    (fixedSources : List Nat) : Option WordSpillState :=
+  wordAllocateVarsWithFixedLocations slots edges preferences
+    (wordFixedSourceLocations fixedSources)
 
 theorem lookupNatInfo_wordFixedSourceLocations_mem
     (fixedSources : List Nat) (name : Nat) (hname : name ∈ fixedSources) :
@@ -2708,7 +2725,8 @@ theorem wordAllocateVarsWithFixedSources_preserves_fixed_source
   have hstate' :
       (if wordSpillAllocationRespectsClashes edges allocated.locations = true then
           some allocated else none) = some state := by
-    simpa [wordAllocateVarsWithFixedSources, initial, names, allocated] using hstate
+    simpa [wordAllocateVarsWithFixedSources, wordAllocateVarsWithFixedLocations,
+      initial, names, allocated] using hstate
   split at hstate'
   · have heq : allocated = state := Option.some.inj hstate'
     subst state
@@ -2818,7 +2836,8 @@ theorem wordAllocateVarsWithFixedSources_maps_slots (slots : List Nat)
   have hstate' :
       (if wordSpillAllocationRespectsClashes edges allocated.locations = true then
           some allocated else none) = some state := by
-    simpa [wordAllocateVarsWithFixedSources, initial, names, allocated] using hstate
+    simpa [wordAllocateVarsWithFixedSources, wordAllocateVarsWithFixedLocations,
+      initial, names, allocated] using hstate
   split at hstate'
   · have heq : allocated = state := Option.some.inj hstate'
     subst state
@@ -3048,7 +3067,7 @@ theorem wordAllocateVarsWithFixedSources_sound (slots : List Nat)
     (hstate : wordAllocateVarsWithFixedSources slots edges preferences
       fixedSources = some state) :
     wordSpillAllocationRespectsClashes edges state.locations = true := by
-  simp [wordAllocateVarsWithFixedSources] at hstate
+  simp [wordAllocateVarsWithFixedSources, wordAllocateVarsWithFixedLocations] at hstate
   rcases hstate with ⟨hcheck, heq⟩
   simpa [heq] using hcheck
 

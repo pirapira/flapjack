@@ -112,6 +112,7 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       | .word (.arith (.longMul _ _ _ _)) => 2
       | .word (.arith (.addCarry _ _ _ _ _)) => 6
       | .const _ value => labConstInstructionCount value
+      | .tick => 0
       | _ => 1
   | .labAsm operation _ _ =>
       match operation with
@@ -214,9 +215,12 @@ def labCompilePlain [NeZero width] :
       (labBinOpInstruction operator destination left right).map List.singleton
   | .shift operator destination left right =>
       labShiftInstructions operator destination left right
-  | .tick => do
-      let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      pure [.addi zero zero zero]
+  | .tick =>
+      -- CakeML's lab_filter removes the `Inst Skip` generated for Tick
+      -- before assembling the final artifact.  Keeping this line at zero
+      -- width is important: subsequent local-label positions must not count
+      -- an instruction that is not emitted.
+      pure []
   | .jumpReg register => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       let register ← labRegisterOfNat (portToStack register)

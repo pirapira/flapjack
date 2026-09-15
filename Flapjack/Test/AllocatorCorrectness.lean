@@ -268,7 +268,7 @@ example :
       [2] (.skip : WordProg (RiscV.Word 64))).isSome := by
   decide +kernel
 
-example
+example [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -281,7 +281,7 @@ example
   exact wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences_maps_variables
     parameters program state renamedParameters renamedProgram allocation halloc
 
-example
+example [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -294,7 +294,7 @@ example
   exact wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_maps_variables
     parameters program state renamedParameters renamedProgram allocation halloc
 
-example
+example [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
@@ -309,7 +309,7 @@ example
     allocation renamedProgram halloc
   exact ⟨hsound.1, hsound.2.1⟩
 
-example
+example [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
@@ -324,7 +324,7 @@ example
     allocation colouredProgram halloc
   exact ⟨hsound.1, hsound.2.1⟩
 
-example
+example [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)

@@ -41,7 +41,7 @@ example :
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
       linearScanTargetRemoveConfig linearScanTargetDeclarations).isSome
 
-example
+example [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
@@ -54,7 +54,7 @@ example
     parameters program colours stackStart state renamedParameters allocation
     renamedProgram halloc
 
-example
+example [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (colours stackStart : Nat)
     (state : WordSsaState) (renamedParameters : List Nat)

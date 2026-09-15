@@ -69,7 +69,17 @@ example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
       [⟨29, [.asm (.word (.arith (.longDiv 0 3 3 0 6))) [] 0]⟩] =
         .error { sectionId := 29, position := 0, feature := .longDiv } := by
-  rfl
+  simp [RiscV.compileLabProgramChecked, RiscV.compileLabSectionChecked,
+    RiscV.labCompileProgramSectionsChecked, RiscV.labCompileProgramLinesChecked,
+    RiscV.labCompileLinesChecked, RiscV.labCompilePlain, RiscV.labCompileAsm,
+    RiscV.labCompileAsmChecked, RiscV.labCollectLabels,
+    RiscV.labCollectProgramLabels, RiscV.labLineInstructionCount,
+    RiscV.labCompileAsmProgramChecked, RiscV.labSectionInstructionCount,
+    RiscV.wordArithToInstructions, RiscV.labPlainLoweringError,
+    RiscV.wordArithToInstruction, RiscV.labPlainUnsupportedFeature,
+    RiscV.labCompileAsmProgram, RiscV.labLoweringError,
+    RiscV.labResolveProgramRef, RiscV.labOffset,
+    RiscV.labLookupProgramPosition]
 
 /-! CakeML's RISC-V target rejects a direct `LongDiv` instruction
     (`riscv_targetScript.sml:143`).  Software lowering must therefore happen
@@ -150,7 +160,17 @@ example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
       [⟨19, [.asm (.const 1 7) [] 0]⟩] =
         .ok [.ori 1 0 (BitVec.ofNat 64 7)] := by
-  rfl
+  simp [RiscV.compileLabProgramChecked, RiscV.compileLabSectionChecked,
+    RiscV.labCompileProgramSectionsChecked, RiscV.labCompileProgramLinesChecked,
+    RiscV.labCompileLinesChecked, RiscV.labCompilePlain, RiscV.labCompileAsm,
+    RiscV.labCompileAsmChecked, RiscV.labCollectLabels,
+    RiscV.labCollectProgramLabels, RiscV.labLineInstructionCount,
+    RiscV.labCompileAsmProgramChecked, RiscV.labSectionInstructionCount,
+    RiscV.wordArithToInstructions, RiscV.labPlainLoweringError,
+    RiscV.wordArithToInstruction, RiscV.labPlainUnsupportedFeature,
+    RiscV.labCompileAsmProgram, RiscV.labLoweringError,
+    RiscV.labResolveProgramRef, RiscV.labOffset,
+    RiscV.labLookupProgramPosition]
 
 example :
     RiscV.compileLabProgramChecked (width := 64) { services := [] }
@@ -158,7 +178,17 @@ example :
        ⟨2, [.label 2 0 0, .asm (.const 1 7) [] 0]⟩] =
         .ok [.jal 0 (BitVec.ofNat 64 4),
           .ori 1 0 (BitVec.ofNat 64 7)] := by
-  rfl
+  simp [RiscV.compileLabProgramChecked, RiscV.compileLabSectionChecked,
+    RiscV.labCompileProgramSectionsChecked, RiscV.labCompileProgramLinesChecked,
+    RiscV.labCompileLinesChecked, RiscV.labCompilePlain, RiscV.labCompileAsm,
+    RiscV.labCompileAsmChecked, RiscV.labCollectLabels,
+    RiscV.labCollectProgramLabels, RiscV.labLineInstructionCount,
+    RiscV.labCompileAsmProgramChecked, RiscV.labSectionInstructionCount,
+    RiscV.wordArithToInstructions, RiscV.labPlainLoweringError,
+    RiscV.wordArithToInstruction, RiscV.labPlainUnsupportedFeature,
+    RiscV.labCompileAsmProgram, RiscV.labLoweringError,
+    RiscV.labResolveProgramRef, RiscV.labOffset,
+    RiscV.labLookupProgramPosition]
 
 def checkedPipelineDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function

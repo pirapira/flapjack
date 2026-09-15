@@ -50,7 +50,7 @@ example :
       runtimeLinkGcConfig stackStoreConstsStubLocation
       wordAllocatableRegisters.length 0 0
       [(3, (.storeConsts 29 30 (some stackStoreConstsStubLocation) : StackProg Nat))]).isSome := by
-  decide +kernel
+  native_decide
 
 def runtimeLinkDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function

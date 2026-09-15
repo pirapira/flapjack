@@ -61,13 +61,13 @@ example :
     (compileStackProgramNatListWithStackAllocToRiscV (width := 64)
       { services := [] } stackAllocRemoveConfig stackAllocTestConfig 0 0
       [(1, (.alloc 1 : StackProg Nat))]).isSome := by
-  decide +kernel
+  native_decide
 
 example :
     (compileStackProgramNatListWithHaltToRiscV (width := 64)
       { services := [] } stackAllocRemoveConfig 0 0
       [(1, (.halt 1 : StackProg Nat))]).isSome := by
-  decide +kernel
+  native_decide
 
 def stackGcTestConfig : StackGcConfig :=
   { shiftLength := 11
@@ -94,7 +94,7 @@ example :
     (compileStackProgramNatListWithSimpleGcToRiscV (width := 64)
       { services := [] } stackAllocRemoveConfig stackAllocTestConfig
       stackGcTestConfig 0 0 [(1, (.alloc 1 : StackProg Nat))]).isSome := by
-  decide +kernel
+  native_decide
 
 def zeroStackMachineState : RiscV.WordStackMachineState 64 :=
   { registers := fun _ => 0
@@ -273,7 +273,7 @@ example :
       (stackAllocCompileWithSimpleGc stackAllocTestConfig stackGcTestConfig
         [(1, (.alloc 1 : StackProg Nat))])
       1 zeroStackMachineState).isSome := by
-  decide +kernel
+  native_decide
 
 example :
     stackGcSimpleZeroObservation
@@ -281,7 +281,7 @@ example :
         (stackAllocCompileWithSimpleGc stackAllocTestConfig stackGcTestConfig
           [(1, (.alloc 1 : StackProg Nat))])
         1 zeroStackMachineState) = true := by
-  decide +kernel
+  native_decide
 
 def oneWordObjectNatMemory : Nat → Nat :=
   fun address => if address = 0 then 3 else 0

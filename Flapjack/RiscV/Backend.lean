@@ -817,6 +817,38 @@ def evalWordFunction [NeZero width] (state : State width) :
         let register ← registerOfNat name
         pure (readRegister state register))
       pure (state, values)
+  | .inst (.memOffset .load destination base offset) => do
+      let destination ← registerOfNat destination
+      let base ← registerOfNat base
+      pure (execute state (.loadWordI destination base offset), [])
+  | .inst (.memOffset .load8 destination base offset) => do
+      let destination ← registerOfNat destination
+      let base ← registerOfNat base
+      pure (execute state (.loadByteI destination base offset), [])
+  | .inst (.memOffset .load16 destination base offset) => do
+      let destination ← registerOfNat destination
+      let base ← registerOfNat base
+      pure (execute state (.loadHalfI destination base offset), [])
+  | .inst (.memOffset .load32 destination base offset) => do
+      let destination ← registerOfNat destination
+      let base ← registerOfNat base
+      pure (execute state (.load32I destination base offset), [])
+  | .inst (.memOffset .store source base offset) => do
+      let source ← registerOfNat source
+      let base ← registerOfNat base
+      pure (execute state (.storeWordI source base offset), [])
+  | .inst (.memOffset .store8 source base offset) => do
+      let source ← registerOfNat source
+      let base ← registerOfNat base
+      pure (execute state (.storeByteI source base offset), [])
+  | .inst (.memOffset .store16 source base offset) => do
+      let source ← registerOfNat source
+      let base ← registerOfNat base
+      pure (execute state (.storeHalfI source base offset), [])
+  | .inst (.memOffset .store32 source base offset) => do
+      let source ← registerOfNat source
+      let base ← registerOfNat base
+      pure (execute state (.store32I source base offset), [])
   | _ => none
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
@@ -868,6 +900,39 @@ def evalWordProg [NeZero width] (state : State width) :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (execute state (.loadWord destination address))
+  | .inst (.const _ _) | .inst (.binop _ _ _ _) | .inst (.shiftInst _ _ _ _) => none
+  | .inst (.memOffset .load destination base offset) => do
+      let destination ← registerOfNat destination
+      let base ← registerOfNat base
+      pure (execute state (.loadWordI destination base offset))
+  | .inst (.memOffset .load8 destination base offset) => do
+      let destination ← registerOfNat destination
+      let base ← registerOfNat base
+      pure (execute state (.loadByteI destination base offset))
+  | .inst (.memOffset .load16 destination base offset) => do
+      let destination ← registerOfNat destination
+      let base ← registerOfNat base
+      pure (execute state (.loadHalfI destination base offset))
+  | .inst (.memOffset .load32 destination base offset) => do
+      let destination ← registerOfNat destination
+      let base ← registerOfNat base
+      pure (execute state (.load32I destination base offset))
+  | .inst (.memOffset .store source base offset) => do
+      let source ← registerOfNat source
+      let base ← registerOfNat base
+      pure (execute state (.storeWordI source base offset))
+  | .inst (.memOffset .store8 source base offset) => do
+      let source ← registerOfNat source
+      let base ← registerOfNat base
+      pure (execute state (.storeByteI source base offset))
+  | .inst (.memOffset .store16 source base offset) => do
+      let source ← registerOfNat source
+      let base ← registerOfNat base
+      pure (execute state (.storeHalfI source base offset))
+  | .inst (.memOffset .store32 source base offset) => do
+      let source ← registerOfNat source
+      let base ← registerOfNat base
+      pure (execute state (.store32I source base offset))
   | .shareInst operator name address =>
       evalWordShareInst state operator name address
   | .locValue destination source => do

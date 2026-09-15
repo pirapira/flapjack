@@ -80,6 +80,14 @@ def relabelInstruction : Instruction width → Instruction width
   | .store32 s a => .store32 (riscvForward s) (riscvForward a)
   | .loadWord d a => .loadWord (riscvForward d) (riscvForward a)
   | .storeWord s a => .storeWord (riscvForward s) (riscvForward a)
+  | .loadWordI d b o => .loadWordI (riscvForward d) (riscvForward b) o
+  | .storeWordI s b o => .storeWordI (riscvForward s) (riscvForward b) o
+  | .loadByteI d b o => .loadByteI (riscvForward d) (riscvForward b) o
+  | .storeByteI s b o => .storeByteI (riscvForward s) (riscvForward b) o
+  | .loadHalfI d b o => .loadHalfI (riscvForward d) (riscvForward b) o
+  | .storeHalfI s b o => .storeHalfI (riscvForward s) (riscvForward b) o
+  | .load32I d b o => .load32I (riscvForward d) (riscvForward b) o
+  | .store32I s b o => .store32I (riscvForward s) (riscvForward b) o
 
 /-- The destination registers written by an instruction (empty for pure reads,
 branches, stores and `ecall`). -/
@@ -100,6 +108,8 @@ def instructionWrites : Instruction width → List (Fin 32)
   | .loadByte d _ => [d] | .loadByteSigned d _ => [d]
   | .loadHalf d _ => [d] | .loadHalfSigned d _ => [d]
   | .load32 d _ => [d] | .loadWord d _ => [d]
+  | .loadWordI d _ _ => [d] | .loadByteI d _ _ => [d]
+  | .loadHalfI d _ _ => [d] | .load32I d _ _ => [d]
   | _ => []
 
 /-- The zero-image-aware internal write agrees with the hardware write whenever

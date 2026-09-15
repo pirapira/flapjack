@@ -13,7 +13,7 @@ example :
     stackRemove stackRemoveTestConfig (.get 4 .heapLength : StackProg Nat) =
       .seq (.seq (.const 29 24) (.arith .sub 29 10 29))
         (.inst (.mem .load 4 29)) := by
-  change stackRemoveFuel 1024 stackRemoveTestConfig
+  change stackRemoveFuel 1024 stackRemoveTestConfig none none none
       (.get 4 .heapLength : StackProg Nat) = _
   simp [stackRemoveFuel, stackRemoveGet, stackRemoveJoin,
     stackRemoveAddress, stackStorePosition, stackRemoveTestConfig]
@@ -22,7 +22,7 @@ example :
     stackRemove stackRemoveTestConfig (.set .globals 6 : StackProg Nat) =
       .seq (.seq (.const 29 64) (.arith .sub 29 10 29))
         (.inst (.mem .store 6 29)) := by
-  change stackRemoveFuel 1024 stackRemoveTestConfig
+  change stackRemoveFuel 1024 stackRemoveTestConfig none none none
       (.set .globals 6 : StackProg Nat) = _
   simp [stackRemoveFuel, stackRemoveSet, stackRemoveJoin,
     stackRemoveAddress, stackStorePosition, stackRemoveTestConfig]
@@ -158,7 +158,7 @@ example :
 example :
     stackRemove stackRemoveTestConfig
       (.storeConsts 6 7 none : StackProg Nat) =
-      stackRemoveStoreConsts stackRemoveTestConfig 6 7 none := by
+      stackRemoveStoreConsts stackRemoveTestConfig none none 6 7 none := by
   simp [stackRemove, stackRemoveFuel]
 
 example :
@@ -188,7 +188,7 @@ example :
           (.inst (.mem .load 4 29)))
         (.loop (.seq (.seq (.const 29 56) (.arith .sub 29 10 29))
           (.inst (.mem .store 6 29)))) := by
-  change stackRemoveFuel 1024 stackRemoveTestConfig
+  change stackRemoveFuel 1024 stackRemoveTestConfig none none none
       (.seq (.get 4 .heapLength)
         (.loop (.set .handler 6)) : StackProg Nat) = _
   simp [stackRemoveFuel, stackRemoveGet, stackRemoveJoin,

@@ -108,7 +108,7 @@ theorem compileLabProgram_cross_section_jump_execute :
           (executeCodeUntil 10 (0 : Word 64) (BitVec.ofNat 64 8) code
             (zeroState 64)).map (fun state => readRegister state 1)) =
       some (BitVec.ofNat 64 7) := by
-  decide
+  native_decide
 
 /-! Compose continuation materialization, a cross-section call jump, the
     callee return instruction, and the caller continuation into one executable
@@ -133,6 +133,6 @@ theorem compileLabProgram_call_return_execute :
           (executeCodeUntil 20 (0 : Word 64) (BitVec.ofNat 64 28) code
             (zeroState 64)).map (fun state => readRegister state 2)) =
       some (BitVec.ofNat 64 9) := by
-  decide
+  native_decide
 
 end Flapjack.RiscV

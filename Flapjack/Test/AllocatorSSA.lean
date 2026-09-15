@@ -6,7 +6,7 @@ namespace Flapjack
 open RiscV
 
 example :
-    wordSsaRenameLinear
+    wordSsaRenameLinear (α := Nat)
         { current := [(2, 100), (3, 101), (4, 102)], next := 200 }
         [.arith (.addCarry 0 1 2 3 4), .arith (.addCarry 5 6 0 1 2)] =
       ({ current := [(6, 212), (5, 208), (1, 204), (0, 200),
@@ -16,13 +16,13 @@ example :
   exact wordSsaRenameLinear_addCarry
 
 example :
-    wordInstForcedClashes
+    wordInstForcedClashes (α := Nat)
         (.arith (.longMul 0 1 2 3)) =
       [(0, 1), (0, 2), (0, 3)] := by
   rfl
 
 example :
-    wordInstForcedClashes
+    wordInstForcedClashes (α := Nat)
         (.arith (.addCarry 0 1 2 3 4)) =
       [(0, 1), (0, 2), (0, 3)] := by
   rfl
@@ -34,7 +34,7 @@ example :
   rfl
 
 example :
-    wordSsaRenameProgram
+    wordSsaRenameProgram (α := Nat)
         ({ current := [(2, 100)], next := 200 } : WordSsaState)
         ((.shareInst .load 1
           (.op .add [.var 2, .const (4 : Nat)])) : WordProg Nat) =
@@ -44,7 +44,7 @@ example :
     wordSsaRenameExp, wordSsaFresh, wordSsaRead, lookupNatInfo]
 
 example :
-    wordSsaRenameProgram
+    wordSsaRenameProgram (α := Nat)
         ({ current := [(2, 100)], next := 200 } : WordSsaState)
         ((.call (some ([3, 4], ([2], []), .skip, 0, 0)) (some 7) [2, 5] none) : WordProg Nat) =
       ({ current := [(4, 216), (3, 212), (2, 208)], next := 220 },
@@ -62,7 +62,7 @@ example :
     List.eraseDupsBy, List.eraseDupsBy.loop]
 
 example :
-    wordSsaRenameProgram
+    wordSsaRenameProgram (α := Nat)
         ({ current := [(2, 100)], next := 200 } : WordSsaState)
         ((.seq (.locValue 3 2) (.return 0 [3])) : WordProg Nat) =
         ({ current := [(3, 200), (2, 100)], next := 204 },
@@ -85,7 +85,7 @@ example :
   rfl
 
 example :
-    wordSsaRenameProgram
+    wordSsaRenameProgram (α := Nat)
         ({ current := [(1, 100)], next := 200 } : WordSsaState)
         ((.call (some ([2], ([1], []), .skip, 0, 0)) (some 7) [1]
           (some (3, .assign 4 (.var 1), 0, 0)) : WordProg Nat)) =
@@ -155,7 +155,7 @@ example :
     List.eraseDupsBy.loop]
 
 example :
-    wordSsaRenameProgram
+    wordSsaRenameProgram (α := Nat)
         ({ current := [(3, 100)], next := 200 } : WordSsaState)
       ((.raise 3 : WordProg Nat)) =
       ({ current := [(3, 100)], next := 200 },
@@ -164,7 +164,7 @@ example :
     wordSsaRead, wordSsaSeq, lookupNatInfo]
 
 example :
-    wordSsaRenameProgram
+    wordSsaRenameProgram (α := Nat)
         ({ current := [(1, 100), (2, 104), (3, 108), (4, 112)], next := 200 } :
           WordSsaState)
       ((.install 1 2 3 4 ([1], [2]) : WordProg Nat)) =
@@ -180,7 +180,7 @@ example :
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo]
 
 example :
-    wordSsaRenameProgram
+    wordSsaRenameProgram (α := Nat)
         ({ current := [(1, 100), (2, 104), (3, 108), (4, 112)], next := 200 } :
           WordSsaState)
       ((.storeConsts 1 2 3 4 [] : WordProg Nat)) =
@@ -192,7 +192,7 @@ example :
     wordSsaFresh, wordSsaRead, wordSsaSeq, lookupNatInfo]
 
 example :
-    wordSsaRenameProgram
+    wordSsaRenameProgram (α := Nat)
         ({ current := [], next := 10 } : WordSsaState)
       ((.loop [1] (.break 0) []) : WordProg Nat) =
       ({ current := [], next := 14 },
@@ -206,7 +206,7 @@ example :
     List.eraseDupsBy.loop]
 
 example :
-    wordSsaRenameProgram
+    wordSsaRenameProgram (α := Nat)
         ({ current := [(1, 100)], next := 200 } : WordSsaState)
       ((.alloc 3 ([1], []) : WordProg Nat)) =
       ({ current := [(1, 208)], next := 212 },
@@ -220,7 +220,7 @@ example :
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo]
 
 example :
-    wordSsaRenameProgram
+    wordSsaRenameProgram (α := Nat)
         ({ current := [(1, 100)], next := 200 } : WordSsaState)
         ((.move 7 [(2, 1), (3, 2)]) : WordProg Nat) =
         ({ current := [(3, 204), (2, 200), (1, 100)], next := 208 },
@@ -245,7 +245,7 @@ example :
   rfl
 
 example :
-    wordSsaRenameProgram
+    wordSsaRenameProgram (α := Nat)
         ({ current := [], next := 10 } : WordSsaState)
         ((.ite .equal 0 (.reg 0)
           (.assign 1 (.var 0)) .skip) : WordProg Nat) =

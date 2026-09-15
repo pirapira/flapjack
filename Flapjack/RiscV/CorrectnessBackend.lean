@@ -107,6 +107,29 @@ theorem wordProgToRiscV_sound_of_straightLine [NeZero width]
                   hd, ha] at h
               all_goals
                 simp [evalWordProg, executeInstructions, hd, ha, h]
+      | const _ _ | binop _ _ _ _ | shiftInst _ _ _ _ =>
+          simp [wordProgToRiscV, wordInstToInstruction] at hcompile
+      | memOffset operator destination base offset =>
+          have hcompile' : (wordInstToInstruction (width := width)
+            (.memOffset operator destination base offset)).map (fun instruction => [instruction]) =
+            some code := by
+            simpa only [wordProgToRiscV] using hcompile
+          cases h : wordInstToInstruction (width := width)
+              (.memOffset operator destination base offset) with
+          | none => rw [h] at hcompile'; cases hcompile'
+          | some instruction =>
+              have hcode : [instruction] = code := by
+                have hcompile'' : some [instruction] = some code := by
+                  simpa [h] using hcompile'
+                exact Option.some.inj hcompile''
+              subst code
+              cases operator <;>
+                cases hd : registerOfNat destination <;>
+                cases hb : registerOfNat base <;>
+                simp [wordInstToInstruction,
+                  hd, hb] at h
+              all_goals
+                simp [evalWordProg, executeInstructions, hd, hb, h]
   | store address value =>
       have hcompile' : wordStoreToInstructions (width := width) address value = some code := by
         simpa only [wordProgToRiscV] using hcompile
@@ -193,6 +216,22 @@ theorem wordFunctionToRiscVWithCalls_agrees_straightLine [NeZero width]
           cases h : wordInstToInstruction (width := width)
               (.mem operator destination address) <;>
             simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
+      | const destination value =>
+          cases h : wordInstToInstruction (width := width)
+              (.const destination value) <;>
+            simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
+      | binop operator destination source right =>
+          cases h : wordInstToInstruction (width := width)
+              (.binop operator destination source right) <;>
+            simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
+      | shiftInst operator destination source amount =>
+          cases h : wordInstToInstruction (width := width)
+              (.shiftInst operator destination source amount) <;>
+            simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
+      | memOffset operator destination base offset =>
+          cases h : wordInstToInstruction (width := width)
+              (.memOffset operator destination base offset) <;>
+            simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
   | store address value =>
       cases h : wordStoreToInstructions (width := width) address value <;>
         simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
@@ -230,6 +269,11 @@ theorem evalWordFunction_wordRiscVStraightLine_eq_evalWordProg [NeZero width]
       | arith operation =>
           simp [evalWordFunction, evalWordProg, Function.comp_def]
       | mem operator destination address =>
+          cases operator <;>
+            simp [evalWordFunction, evalWordProg, Function.comp_def]
+      | const _ _ | binop _ _ _ _ | shiftInst _ _ _ _ =>
+          simp [evalWordFunction, evalWordProg, Function.comp_def]
+      | memOffset operator _ _ _ =>
           cases operator <;>
             simp [evalWordFunction, evalWordProg, Function.comp_def]
   | store address value =>

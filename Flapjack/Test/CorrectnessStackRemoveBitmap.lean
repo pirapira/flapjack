@@ -12,7 +12,7 @@ example [NeZero width]
     (haddressDestination : address ≠ destination)
     (haddressAddressScratch : address ≠ config.addressScratch) :
     (evalWordStackMachine state
-      (stackRemoveBitmapLoad config destination address)).map
+      (stackRemoveBitmapLoad config none none destination address)).map
         (fun final => final.registers destination) =
       some (state.memory
         ((state.memory

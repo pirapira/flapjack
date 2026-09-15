@@ -56,7 +56,7 @@ theorem evalStackRemoveStackGetSize [NeZero width]
     (hbaseScratch : config.stackBase ≠ config.scratch)
     (_hbaseAddress : config.stackBase ≠ config.addressScratch) :
     (evalWordStackMachine state
-      (stackRemoveStackGetSize config register)).map
+      (stackRemoveStackGetSize config none register)).map
         (fun final => final.registers register) =
       some (BitVec.ushiftRight
         (state.registers config.stackPointer - state.registers config.stackBase)
@@ -83,7 +83,7 @@ theorem evalStackRemoveStackSetSize [NeZero width]
     (hbaseScratch : config.stackBase ≠ config.scratch)
     (hbaseAddress : config.stackBase ≠ config.addressScratch) :
     (evalWordStackMachine state
-      (stackRemoveStackSetSize config register)).map
+      (stackRemoveStackSetSize config none register)).map
         (fun final => final.registers config.stackPointer) =
       some (state.registers config.stackBase +
         BitVec.shiftLeft (state.registers register)

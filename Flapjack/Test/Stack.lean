@@ -33,7 +33,7 @@ example :
       (.return 0) (.raise 1) 20 21 30 31 =
       stackSeq [
         stackPushHandler false 30 31 9,
-        stackHandlerArgs false 3 6 9,
+        stackHandlerArgs false 0 6 9,
         (.call (some ((.return 0 : StackProg Nat), 0, 20, 21)) (.label 11)
           (some ((.raise 1 : StackProg Nat), 31, 30))
           : StackProg Nat)] := by

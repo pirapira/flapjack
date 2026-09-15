@@ -19,7 +19,7 @@ def stackGetCorrectnessState : WordStackMachineState 64 :=
 
 example :
     (evalWordStackMachine stackGetCorrectnessState
-      (stackRemoveGet stackGetCorrectnessConfig 4 .heapLength)).map
+      (stackRemoveGet stackGetCorrectnessConfig none 4 .heapLength)).map
         (fun final => final.registers 4) =
       some (BitVec.ofNat 64 77) := by
   apply evalStackRemoveGet
@@ -30,7 +30,7 @@ example :
 
 example :
     (evalWordStackMachine stackGetCorrectnessState
-      (stackRemoveSet stackGetCorrectnessConfig .heapLength 6)).map
+      (stackRemoveSet stackGetCorrectnessConfig none .heapLength 6)).map
         (fun final =>
           final.memory
             (stackGetCorrectnessState.registers 10 -
@@ -47,7 +47,7 @@ example :
 
 example :
     (evalWordStackMachine stackGetCorrectnessState
-      (stackRemoveSet stackGetCorrectnessConfig .currHeap 6)).map
+      (stackRemoveSet stackGetCorrectnessConfig none .currHeap 6)).map
         (fun final => final.registers 12) =
       some (BitVec.ofNat 64 55) := by
   simpa [stackGetCorrectnessConfig, stackGetCorrectnessState] using
@@ -69,7 +69,7 @@ example :
 
 example :
     (evalWordStackMachine stackGetCorrectnessState
-      (stackRemoveStackLoad stackGetCorrectnessConfig 6 2)).map
+      (stackRemoveStackLoad stackGetCorrectnessConfig none 6 2)).map
         (fun final => final.registers 6) =
       some (BitVec.ofNat 64 0) := by
   simpa [stackGetCorrectnessConfig, stackGetCorrectnessState] using
@@ -79,7 +79,7 @@ example :
 
 example :
     (evalWordStackMachine stackGetCorrectnessState
-      (stackRemoveStackStore stackGetCorrectnessConfig 6 2)).map
+      (stackRemoveStackStore stackGetCorrectnessConfig none 6 2)).map
         (fun final =>
           final.memory
             (stackGetCorrectnessState.registers 20 + BitVec.ofNat 64 16)) =

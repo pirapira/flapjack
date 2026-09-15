@@ -673,7 +673,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_raise_of_eval
       (stackPushHandler config.perf config.handlerLabel config.sectionId config.scratch) =
       some (.normal setupState))
     (hargs : evalStackProgFuelWithCodeAndFfi host (fuel + 2) code setupState
-      (stackHandlerArgs config.perf (argumentCount + 1) config.frameOffset
+      (stackHandlerArgs config.perf (argumentCount - 22) config.frameOffset
         config.scratch) = some (.normal calleeState))
     (callee : StackProg Nat) (value : Word width)
     (hcode : code target = some callee)
@@ -706,7 +706,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_raise_of_eval
   have hinner := evalStackProgFuelWithCodeAndFfi_seq_normal_result
     (host := host) (fuel := fuel + 2) (code := code) (state := setupState)
     (middle := calleeState)
-    (first := stackHandlerArgs config.perf (argumentCount + 1)
+    (first := stackHandlerArgs config.perf (argumentCount - 22)
       config.frameOffset config.scratch)
     (second :=
       (.call (some (stackPopHandler config.perf config.scratch returnCode, 0,
@@ -721,7 +721,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_raise_of_eval
       config.scratch)
     (second :=
       (stackSeq [
-        stackHandlerArgs config.perf (argumentCount + 1) config.frameOffset
+        stackHandlerArgs config.perf (argumentCount - 22) config.frameOffset
           config.scratch,
         (.call (some (stackPopHandler config.perf config.scratch returnCode, 0,
             config.returnLabel, config.entryLabel))
@@ -743,7 +743,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_return_of_eva
       (stackPushHandler config.perf config.handlerLabel config.sectionId
         config.scratch) = some (.normal setupState))
     (hargs : evalStackProgFuelWithCodeAndFfi host (fuel + 2) code setupState
-      (stackHandlerArgs config.perf (argumentCount + 1) config.frameOffset
+      (stackHandlerArgs config.perf (argumentCount - 22) config.frameOffset
         config.scratch) = some (.normal calleeState))
     (callee : StackProg Nat) (value : Word width)
     (hcode : code target = some callee)
@@ -774,7 +774,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_return_of_eva
   have hinner := evalStackProgFuelWithCodeAndFfi_seq_normal_result
     (host := host) (fuel := fuel + 2) (code := code) (state := setupState)
     (middle := calleeState)
-    (first := stackHandlerArgs config.perf (argumentCount + 1)
+    (first := stackHandlerArgs config.perf (argumentCount - 22)
       config.frameOffset config.scratch)
     (second :=
       (.call (some (stackPopHandler config.perf config.scratch returnCode, 0,
@@ -785,7 +785,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_return_of_eva
   have hinner' :
       evalStackProgFuelWithCodeAndFfi host (fuel + 3) code setupState
         (stackSeq [
-          stackHandlerArgs config.perf (argumentCount + 1) config.frameOffset
+          stackHandlerArgs config.perf (argumentCount - 22) config.frameOffset
             config.scratch,
           (.call (some (stackPopHandler config.perf config.scratch returnCode, 0,
               config.returnLabel, config.entryLabel))
@@ -800,7 +800,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_return_of_eva
         config.scratch)
     (second :=
       (stackSeq [
-        stackHandlerArgs config.perf (argumentCount + 1) config.frameOffset
+        stackHandlerArgs config.perf (argumentCount - 22) config.frameOffset
           config.scratch,
         (.call (some (stackPopHandler config.perf config.scratch returnCode, 0,
             config.returnLabel, config.entryLabel))
@@ -844,7 +844,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
       (stackPushHandler config.perf config.sectionId config.handlerLabel config.scratch) =
       some (.normal setupState))
     (hhandlerArgs : evalStackProgFuelWithCodeAndFfi host (fuel + 2) code setupState
-      (stackHandlerArgs config.perf (arguments.length + 1) config.frameOffset
+      (stackHandlerArgs config.perf (arguments.length - 22) config.frameOffset
         config.scratch) = some (.normal calleeState))
     (hcode : code target = some callee)
     (hcallee : evalStackProgFuelWithCodeAndFfi host (fuel + 1) code calleeState

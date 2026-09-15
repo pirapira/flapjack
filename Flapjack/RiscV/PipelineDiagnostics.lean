@@ -251,10 +251,11 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
       let wordParameters := wordSsaAbiParameters arity
       let unflattenedBody := wordProgDCE
         (RiscV.wordFuseConditions body)
-      let unallocatedBody := wordProgDCE
+      let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
         (RiscV.wordFuseConditions
-          (RiscV.wordFlattenProgramFrom body))
-      match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
+          (RiscV.wordInstSelectProgramFrom
+            (RiscV.wordFlattenProgramFrom body))))
+      match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>

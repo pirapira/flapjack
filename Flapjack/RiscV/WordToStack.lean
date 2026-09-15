@@ -3359,6 +3359,9 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       (wordStackLocValue config destination source).map (fun code => (code, state))
   | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
+      /- Returning calls carry only value arguments.  The source-shaped
+         `panToWordTailCall` adapter adds the link slot only to tail calls;
+         ordinary calls therefore begin at the value ABI base. -/
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
         bitmapRegister frameSlots state

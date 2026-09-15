@@ -1561,18 +1561,25 @@ def wordStackReturnCode (config : WordStackConfig) :
   | some (destinations, _, _, _, _) =>
       wordStackMovesFromPhysical config destinations config.abiBase
 
-def wordStackReturn (config : WordStackConfig) (values : List Nat) :
-    Option (StackProg α) := do
-  /- The RISC-V port keeps allocator locations in hardware-numbered space.
-     Its ABI return value is therefore the hardware `a0` slot (10), while
-     `labCompileAsm` still uses the separate link register for the return
-     jump.  Using the old internal `1` here aliases the link register after
-     Lab's port-to-stack reseating and makes every non-leaf call return to the
-     value instead of its continuation. -/
+/-! The `Return v1 vs` case in Cake's `comp` frees the part of the current
+    frame occupied by returned values which do not fit in the ABI result
+    registers.  Flapjack stores all returned values in one list (where Cake
+    stores `v1` separately from `vs`), so the corresponding count is
+    `f - (LENGTH values - k)`. -/
+def wordStackReturnFreeCount (config : WordStackConfig) (values : List Nat) : Nat :=
+  wordStackCakeFrameSize config - (values.length - config.abiRegisterCount)
+
+def wordStackReturn (config : WordStackConfig) (returnLabel : Nat)
+    (values : List Nat) : Option (StackProg α) := do
   let moves ← wordStackMovesToPhysical config values config.abiBase
+  let returnRegister := match wordStackLocation config returnLabel with
+    | some (.register register) => register
+    | _ => returnLabel
   match values with
   | [] => pure moves
-  | _ => pure (wordStackJoin moves (.return config.abiBase))
+  | _ => pure (wordStackJoin moves
+      (stackFreeIfNonzero (wordStackReturnFreeCount config values)
+        (.return returnRegister)))
 
 /-! The immediate instruction forms selected by `inst_select` carry virtual
     variable numbers like every other Word instruction.  Route their operands
@@ -2674,7 +2681,7 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .break label => pure (.break label)
   | .continue label => pure (.continue label)
   | .raise exception => pure (wordToStackRaise exception)
-  | .return _ values => wordStackReturn config values
+  | .return returnLabel values => wordStackReturn config returnLabel values
   | .call none (some target) arguments none => do
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       pure (wordStackJoin argumentMoves
@@ -2753,7 +2760,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .break label => pure (.break label)
   | .continue label => pure (.continue label)
   | .raise exception => pure (wordToStackRaise exception)
-  | .return _ values => wordStackReturn config values
+  | .return returnLabel values => wordStackReturn config returnLabel values
   | .call none (some target) arguments none => do
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       pure (wordStackJoin argumentMoves
@@ -3461,7 +3468,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .break label => some (.break label, state)
   | .continue label => some (.continue label, state)
   | .raise exception => some (wordToStackRaise exception, state)
-  | .return _ values => (wordStackReturn config values).map (fun code => (code, state))
+  | .return returnLabel values => (wordStackReturn config returnLabel values).map (fun code => (code, state))
   | .tick => some (.tick, state)
   | .locValue destination source =>
       (wordStackLocValue config destination source).map (fun code => (code, state))

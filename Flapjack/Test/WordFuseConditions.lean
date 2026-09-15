@@ -56,12 +56,28 @@ def fusedProgramUsesDirectBranch : Bool :=
 #guard roundTripNeedsFusion
 #guard fusedProgramUsesDirectBranch
 
+/-- A materialisation whose branches write the comparison operand must not be
+tracked: rewriting the retest would then read the overwritten value.  This is
+the shape `CrepToLoop` produces when it reuses the condition variable as the
+destination of the 1/0 definition. -/
+def clobberingRoundTrip : WordProg Nat :=
+  .seq (.ite .less 2 (.reg 3) (.assign 2 (.const 1)) (.assign 2 (.const 0)))
+    (.seq (.assign 4 (.var 2))
+      (.ite .notEqual 4 (.imm 0) (.assign 5 (.const 7)) .skip))
+
+def operandClobberIsRejected : Bool :=
+  wordProgHasNotEqualZeroTest (wordFuseConditions clobberingRoundTrip)
+
+#guard operandClobberIsRejected
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("the CrepToLoop round trip materialises then retests the condition",
         roundTripNeedsFusion),
       ("the fusion pass restores the Cake direct branch", 
-        fusedProgramUsesDirectBranch) ]
+        fusedProgramUsesDirectBranch),
+      ("a materialisation that overwrites its operand is not fused",
+        operandClobberIsRejected) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

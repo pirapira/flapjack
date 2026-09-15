@@ -81,8 +81,7 @@ def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
   let edges := edges ++ wordProgSpecialConflictEdges program
   let preferences := wordProgPreferenceEdges program
   let slots :=
-    renamedParameters ++ wordProgVariables program ++ liveIn ++
-      edges.flatMap (fun edge => [edge.1, edge.2])
+    renamedParameters ++ wordProgVariables program ++ liveIn
   match wordAllocateVarsWithFixedLocationsIndexed slots edges preferences
       (wordRiscVFixedSourceLocations (wordPhysicalFixedSources parameters program)) with
   | none => none

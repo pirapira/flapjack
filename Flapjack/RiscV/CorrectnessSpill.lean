@@ -191,21 +191,91 @@ theorem evalWordStackMachine_move_preserves_other_value [NeZero width]
     at hdestination
   change lookupNatInfo source config.locations = some sourceLocation at hsource
   change lookupNatInfo other config.locations = some otherLocation at hother
-  have heval' :
-      (wordStackLocationMove config destinationLocation sourceLocation).bind
-        (evalWordStackMachine state) = some final := by
-    simpa [wordStackMove, wordStackLocation, wordStackLocationMove,
-      hdestination, hsource] using heval
-  have hpreserved := evalWordStackMachine_locationMove_preserves_other_value
-    config state final destinationLocation sourceLocation otherLocation
-    hother_destination hother_scratch heval'
-  cases otherLocation with
-  | register otherRegister =>
-      simpa [wordStackMachineValue, wordStackLocation, wordStackOffset,
-        hother, wordStackLocationValue] using hpreserved
-  | stack otherSlot =>
-      simpa [wordStackMachineValue, wordStackLocation, wordStackOffset,
-        hother, wordStackLocationValue] using hpreserved
+  cases destinationLocation with
+  | register destinationRegister =>
+      cases sourceLocation with
+      | register sourceRegister =>
+          cases otherLocation with
+          | register otherRegister =>
+              by_cases hsame : destinationRegister = sourceRegister
+              · simp [wordStackMove, wordStackLocation, evalWordStackMachine,
+                  hdestination, hsource, hsame] at heval
+                cases heval
+                simp_all [wordStackMachineValue, wordStackLocation]
+              · simp [wordStackMove, wordStackLocation, evalWordStackMachine,
+                  hdestination, hsource, hsame] at heval
+                cases heval
+                simp_all [wordStackMachineValue, wordStackLocation,
+                  wordStackMachineWriteRegister]
+          | stack otherSlot =>
+              by_cases hsame : destinationRegister = sourceRegister
+              · simp [wordStackMove, wordStackLocation, evalWordStackMachine,
+                  hdestination, hsource, hsame] at heval
+                cases heval
+                simp_all [wordStackMachineValue, wordStackLocation,
+                  wordStackOffset]
+              · simp [wordStackMove, wordStackLocation, evalWordStackMachine,
+                  hdestination, hsource, hsame] at heval
+                cases heval
+                simp_all [wordStackMachineValue, wordStackLocation,
+                  wordStackMachineWriteRegister, wordStackOffset]
+      | stack sourceSlot =>
+          cases otherLocation with
+          | register otherRegister =>
+              simp [wordStackMove, wordStackLocation, evalWordStackMachine,
+                hdestination, hsource, wordStackOffset] at heval
+              cases heval
+              simp_all [wordStackMachineValue, wordStackLocation,
+                wordStackMachineWriteRegister]
+          | stack otherSlot =>
+              simp [wordStackMove, wordStackLocation, evalWordStackMachine,
+                hdestination, hsource, wordStackOffset] at heval
+              cases heval
+              simp_all [wordStackMachineValue, wordStackLocation,
+                wordStackMachineWriteRegister, wordStackOffset]
+  | stack destinationSlot =>
+      cases sourceLocation with
+      | register sourceRegister =>
+          cases otherLocation with
+          | register otherRegister =>
+              simp [wordStackMove, wordStackLocation, evalWordStackMachine,
+                wordStackMachineWriteSlot, hdestination, hsource,
+                wordStackOffset] at heval
+              cases heval
+              simp_all [wordStackMachineValue, wordStackLocation]
+          | stack otherSlot =>
+              simp [wordStackMove, wordStackLocation, evalWordStackMachine,
+                wordStackMachineWriteSlot, hdestination, hsource,
+                wordStackOffset] at heval
+              cases heval
+              simp_all [wordStackMachineValue, wordStackLocation,
+                wordStackOffset]
+      | stack sourceSlot =>
+          cases otherLocation with
+          | register otherRegister =>
+              by_cases hsame : destinationSlot = sourceSlot
+              · simp [wordStackMove, wordStackLocation, evalWordStackMachine,
+                  hdestination, hsource, hsame, wordStackOffset] at heval
+                cases heval
+                simp_all [wordStackMachineValue, wordStackLocation]
+              · simp [wordStackMove, wordStackLocation, evalWordStackMachine,
+                  hdestination, hsource, hsame, wordStackOffset] at heval
+                cases heval
+                simp_all [wordStackMachineValue, wordStackLocation,
+                  wordStackMachineWriteRegister, wordStackMachineWriteSlot]
+          | stack otherSlot =>
+              by_cases hsame : destinationSlot = sourceSlot
+              · simp [wordStackMove, wordStackLocation, evalWordStackMachine,
+                  hdestination, hsource, hsame, wordStackOffset] at heval
+                cases heval
+                simp_all [wordStackMachineValue, wordStackLocation,
+                  wordStackOffset]
+              · simp [wordStackMove, wordStackLocation, evalWordStackMachine,
+                  hdestination, hsource, hsame, wordStackOffset] at heval
+                cases heval
+                simp_all [wordStackMachineValue, wordStackLocation,
+                  wordStackMachineWriteRegister, wordStackMachineWriteSlot,
+                  wordStackOffset]
 
 theorem evalWordStackMachine_move_preserves_unrelated_values [NeZero width]
     (config : WordStackConfig) (state final : WordStackMachineState width)

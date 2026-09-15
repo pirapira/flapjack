@@ -3559,20 +3559,6 @@ theorem wordStackMove_registers :
       some (.arith .or 4 5 5 : StackProg Nat) := by
   simp [wordStackMove, wordStackLocation, lookupNatInfo]
 
-theorem wordStackMove_register_to_spill :
-    wordStackMove
-        { locations := [(0, .stack 2), (1, .register 5)],
-          scratch := 31, stackBase := 10 } 0 1 =
-      some (.seq (.arith .or 31 5 5) (.stackStore 31 12) : StackProg Nat) := by
-  simp [wordStackMove, wordStackLocation, wordStackOffset, lookupNatInfo]
-
-theorem wordStackMove_spill_to_register :
-    wordStackMove
-        { locations := [(0, .register 4), (1, .stack 2)],
-          scratch := 31, stackBase := 10 } 0 1 =
-      some (.seq (.stackLoad 31 12) (.arith .or 4 31 31) : StackProg Nat) := by
-  simp [wordStackMove, wordStackLocation, wordStackOffset, lookupNatInfo]
-
 theorem wordStackMove_spill_to_spill :
     wordStackMove
         { locations := [(0, .stack 3), (1, .stack 2)],

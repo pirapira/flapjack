@@ -1172,7 +1172,7 @@ theorem wordToStackProgNatWithBitmapBuilder_return
     (registerCount bitmapRegister frameSlots wordBits : Nat)
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)
     (label : Nat) (values : List Nat) (returnCode : StackProg Nat)
-    (hreturn : wordStackReturn config values = some returnCode) :
+    (hreturn : wordStackReturn config label values = some returnCode) :
     wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount
       bitmapRegister frameSlots wordBits storeConstsStub state
       (.return label values) = some (returnCode, state) := by
@@ -1193,7 +1193,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_retu
     (machineState : WordStackMachineState width)
     (label : Nat) (values : List Nat) (returnCode : StackProg Nat)
     (result : StackMachineControl width)
-    (hreturn : wordStackReturn config values = some returnCode)
+    (hreturn : wordStackReturn config label values = some returnCode)
     (heval : evalStackProgFuelWithCodeAndFfi host (fuel + 1) code machineState
       returnCode = some result) :
     (wordToStackProgNatWithBitmapBuilder config bitmapBuilder

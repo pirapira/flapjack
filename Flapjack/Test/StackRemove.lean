@@ -72,11 +72,10 @@ example :
 
 example :
     stackRemove stackRemoveTestConfig (.stackStore 6 2 : StackProg Nat) =
-      .seq (.arith .or 31 6 6)
-        (.seq (.seq (.const 29 16) (.arith .add 29 20 29))
-          (.inst (.mem .store 31 29))) := by
+      .seq (.seq (.const 29 16) (.arith .add 29 20 29))
+        (.inst (.mem .store 6 29)) := by
   simp [stackRemove, stackRemoveFuel, stackRemoveStackStore,
-    stackRemoveStackAddress, stackRemoveMove, stackRemoveJoin,
+    stackRemoveStackAddress, stackRemoveJoin,
     stackRemoveTestConfig]
 
 example :

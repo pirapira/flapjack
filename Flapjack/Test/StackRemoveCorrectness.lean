@@ -87,7 +87,6 @@ example :
   simpa [stackGetCorrectnessConfig, stackGetCorrectnessState] using
     (evalStackRemoveStackStore (width := 64) stackGetCorrectnessConfig
       stackGetCorrectnessState 6 2 (by simp [stackGetCorrectnessConfig])
-      (by simp [stackGetCorrectnessConfig])
       (by simp [stackGetCorrectnessConfig]))
 
 end Flapjack.RiscV

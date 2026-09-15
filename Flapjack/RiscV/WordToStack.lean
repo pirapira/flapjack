@@ -3454,7 +3454,7 @@ def wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves
     register instead of assuming a single consecutive source-register base. -/
 def wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMovesWithSources
     [NeZero width] (config : WordStackConfig) (_parameters : List Nat)
-    (sourceRegister : Nat → Nat)
+    (_sourceRegister : Nat → Nat)
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
     Option (StackProg Nat × WordStackBitmapState) := do
@@ -3464,7 +3464,7 @@ def wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMovesWithSources
 
 def wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMovesWithSources
     [NeZero width] (config : WordStackConfig) (parameters : List Nat)
-    (sourceRegister : Nat → Nat)
+    (_sourceRegister : Nat → Nat)
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
     Option (StackProg Nat × WordStackBitmapState) := do

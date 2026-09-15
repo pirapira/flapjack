@@ -142,7 +142,7 @@ example :
           labLabel 7 1],
         terminal := false,
         nextLabel := 2 } := by
-  simp [labFlatten, labLabel, labJumpCmp, labIsSkip, labNegateCmp]
+  simp [labFlatten, labLabel, labJumpCmp, labIsSkip]
 
 -- CakeML `p1 = Skip`, `p2 = Skip` case: no code at all.
 example :

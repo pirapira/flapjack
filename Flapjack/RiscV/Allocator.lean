@@ -2440,6 +2440,24 @@ def wordPreferenceIndex : List (Nat × Nat) → Std.HashMap Nat (List Nat)
   | preferences =>
       preferences.foldl (fun index edge => wordPreferenceIndexAdd index edge.1 edge.2) ∅
 
+/-! The clash graph is static for one SSA function as well.  Keep a separate
+    index name so the oracle list scan remains available for equivalence tests;
+    appending in edge order preserves `wordNeighbours`' exact traversal order. -/
+def wordClashIndexAdd (index : Std.HashMap Nat (List Nat))
+    (left right : Nat) : Std.HashMap Nat (List Nat) :=
+  let add := fun index source target =>
+    index.insert source ((index.get? source).getD [] ++ [target])
+  let index := add index left right
+  if left = right then index else add index right left
+
+def wordClashIndex : List (Nat × Nat) → Std.HashMap Nat (List Nat)
+  | edges =>
+      edges.foldl (fun index edge => wordClashIndexAdd index edge.1 edge.2) ∅
+
+def wordClashNeighboursIndexed (index : Std.HashMap Nat (List Nat))
+    (name : Nat) : List Nat :=
+  (index.get? name).getD []
+
 def wordPreferenceNeighboursIndexed (index : Std.HashMap Nat (List Nat))
     (name : Nat) : List Nat :=
   (index.get? name).getD []
@@ -2544,6 +2562,40 @@ def wordGreedyAllocateWithSpillsAndPreferencesFast (names : List Nat)
     (edges preferences : List (Nat × Nat)) (state : WordSpillState) : WordSpillState :=
   wordGreedyAllocateWithSpillsAndPreferencesIndexed names edges preferences
     (wordPreferenceIndex preferences) (wordLocationIndex state.locations) state
+
+/-! Production clash-indexed sibling.  The preference-indexed oracle above is
+    retained for direct proof and regression comparisons; this worker builds
+    both static adjacency tables once at the function boundary and carries
+    them through the recursive allocation work list. -/
+def wordGreedyAllocateWithSpillsAndPreferencesClashIndexed : List Nat →
+    List (Nat × Nat) → List (Nat × Nat) →
+      Std.HashMap Nat (List Nat) → Std.HashMap Nat (List Nat) →
+      Std.HashMap Nat WordLocation → WordSpillState → WordSpillState
+  | [], _, _, _, _, _, state => state
+  | name :: names, edges, preferences, clashIndex, preferenceIndex, locations, state =>
+      let forbidden :=
+        wordUsedLocationRegistersIndexed
+          (wordClashNeighboursIndexed clashIndex name) locations
+      let candidates := wordColourCandidatesWithSpillPreferencesIndexed name
+        preferences preferenceIndex locations
+      let available := wordFirstAvailable candidates forbidden
+      let state := match available with
+        | some register =>
+            { state with locations := (name, .register register) :: state.locations }
+        | none =>
+            { locations := (name, .stack state.nextSpill) :: state.locations,
+              nextSpill := state.nextSpill + 1 }
+      let locations := match available with
+        | some register => locations.insert name (.register register)
+        | none => locations.insert name (WordLocation.stack (state.nextSpill - 1))
+      wordGreedyAllocateWithSpillsAndPreferencesClashIndexed names edges preferences
+        clashIndex preferenceIndex locations state
+
+def wordGreedyAllocateWithSpillsAndPreferencesClashFast (names : List Nat)
+    (edges preferences : List (Nat × Nat)) (state : WordSpillState) : WordSpillState :=
+  wordGreedyAllocateWithSpillsAndPreferencesClashIndexed names edges preferences
+    (wordClashIndex edges) (wordPreferenceIndex preferences)
+    (wordLocationIndex state.locations) state
 
 theorem wordGreedyAllocateWithSpillsAndPreferencesIndexed_preserves_lookup
     (names : List Nat) (edges preferences : List (Nat × Nat))
@@ -2883,6 +2935,24 @@ def wordAllocateVarsWithFixedSourcesFast (slots : List Nat)
     (edges preferences : List (Nat × Nat))
     (fixedSources : List Nat) : Option WordSpillState :=
   wordAllocateVarsWithFixedLocationsIndexed slots edges preferences
+    (wordFixedSourceLocations fixedSources)
+
+def wordAllocateVarsWithFixedLocationsClashIndexed (slots : List Nat)
+    (edges preferences : List (Nat × Nat))
+    (fixedLocations : NatInfoMap WordLocation) : Option WordSpillState :=
+  let fixedSources := fixedLocations.map (fun entry => entry.1)
+  let initial : WordSpillState :=
+    { locations := fixedLocations, nextSpill := 0 }
+  let names := slots.eraseDups.filter (fun name => name ∉ fixedSources)
+  let state := wordGreedyAllocateWithSpillsAndPreferencesClashFast names
+    edges preferences initial
+  if wordSpillAllocationRespectsClashesFast edges state.locations then some state
+  else none
+
+def wordAllocateVarsWithFixedSourcesClashFast (slots : List Nat)
+    (edges preferences : List (Nat × Nat))
+    (fixedSources : List Nat) : Option WordSpillState :=
+  wordAllocateVarsWithFixedLocationsClashIndexed slots edges preferences
     (wordFixedSourceLocations fixedSources)
 
 theorem wordAllocateVarsWithFixedSourcesFast_preserves_fixed_source
@@ -3531,6 +3601,27 @@ def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFas
   let slots :=
     renamedParameters ++ wordProgVariables program ++ liveIn
   match wordAllocateVarsWithFixedSourcesFast slots
+      edges preferences (wordPhysicalFixedSources parameters program) with
+  | none => none
+  | some allocation =>
+      if wordProgSpecialLocationsSafe allocation.locations program = true &&
+          wordSpillClashTreeChecked tree allocation.locations then
+        some (state, renamedParameters, program, allocation)
+      else
+        none
+
+def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
+    (parameters : List Nat) (program : WordProg α) :
+    Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
+  let (state, renamedParameters, program) :=
+    wordSsaRenameFunctionWithEntry parameters program
+  let tree := wordClashTree program []
+  let (liveIn, edges) := wordClashTreeAnalyze tree []
+  let edges := edges ++ wordProgSpecialConflictEdges program
+  let preferences := wordProgPreferenceEdges program
+  let slots :=
+    renamedParameters ++ wordProgVariables program ++ liveIn
+  match wordAllocateVarsWithFixedSourcesClashFast slots
       edges preferences (wordPhysicalFixedSources parameters program) with
   | none => none
   | some allocation =>

@@ -3305,17 +3305,16 @@ def wordToStackProgWordWithBitmaps [NeZero width]
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)
     (program : WordProg (Word width)) :
   Option (StackProg Nat × WordStackBitmapState) :=
-  wordToStackProgNatWithBitmapBuilder config
-    (wordStackLiveBitmap registerCount frameSlots width)
-    registerCount bitmapRegister frameSlots width storeConstsStub state (wordProgToNat program)
+  wordToStackProgWordWithBitmapsFused config registerCount bitmapRegister frameSlots width
+    storeConstsStub state program
 
 def wordToStackProgWordWithLocationBitmaps [NeZero width]
     (config : WordStackConfig) (registerCount bitmapRegister frameSlots : Nat)
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)
     (program : WordProg (Word width)) :
   Option (StackProg Nat × WordStackBitmapState) :=
-  wordToStackProgNatWithLocationBitmaps config registerCount bitmapRegister frameSlots width
-    storeConstsStub state (wordProgToNat program)
+  wordToStackProgWordWithLocationBitmapsFused config registerCount bitmapRegister frameSlots width
+    storeConstsStub state program
 
 /-! Function-entry lowering for allocated Word programs.  Cake's stack ABI
     places arguments in stack registers beginning at 1; the allocator may
@@ -3446,7 +3445,7 @@ def wordAllocateSsaFunctionWithEntryAndSpillToStack [NeZero width]
     Option (WordSsaState × List Nat × WordProg (Word width) ×
       WordSpillState × StackProg Nat × WordStackBitmapState) := do
   let (ssaState, renamedParameters, renamedProgram, allocation) ←
-    wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast
+    wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
       parameters program
   let (stackProgram, finalState) ←
     wordToStackFunctionWithSpillStateAndLocationBitmaps config

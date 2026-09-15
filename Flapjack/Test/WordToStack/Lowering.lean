@@ -180,10 +180,11 @@ example :
     wordToStackProg
         { locations := [(0, .stack 2)], scratch := 31, stackBase := 10 }
         ((.return 0 [0]) : WordProg Nat) =
-      some (.seq (.seq (.stackLoad 31 12) (.arith .or 1 31 31)) (.return 1) :
-        StackProg Nat) := by
+      some (.seq (.stackLoad 1 12) (.return 0) : StackProg Nat) := by
   simp [wordToStackProg, wordStackReturn, wordStackMovesToPhysical,
-    wordStackPhysicalMovesTo, wordStackParallelLocationMove,
+    wordStackReturnFreeCount, wordStackCakeFrameSize, stackFreeIfNonzero,
+    wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
+    wordStackParallelLocationMove,
     wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
     wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
     wordStackLocationMove, wordStackLocation,
@@ -430,7 +431,8 @@ example :
         ((.call (some ([0], ([], []), .skip, 0, 0)) (some 7) [0] none) : WordProg Nat)).isSome =
       true := by
   simp [wordToStackProg, wordStackReturnCode, wordStackMovesToPhysical,
-    wordStackPhysicalMovesTo, wordStackMovesFromPhysical,
+    wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
+    wordStackMovesFromPhysical,
     wordStackPhysicalMovesFrom, wordStackParallelLocationMove,
     wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
     wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
@@ -454,7 +456,7 @@ example :
         ((.call none (some 7) [0] (some (1, .raise 0, 0, 0))) : WordProg Nat)).isSome =
       true := by
   simp [wordToStackProg, wordStackReturnCode, wordStackMovesToPhysical,
-    wordStackPhysicalMovesTo,
+    wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
     wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
     wordStackLocationMoveDestinations, wordStackLocationMoveReady,
     wordStackLocationMoveRemoveDestination, wordStackLocationMove,

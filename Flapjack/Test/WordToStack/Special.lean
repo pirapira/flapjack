@@ -10,8 +10,7 @@ example :
           scratch := 31, stackBase := 10 } (.longMul 0 1 2 3) =
       some (.inst (.arith (.longMul 4 5 6 7)) : StackProg Nat) := by
   simp [wordStackArithInst, wordSpecialArithLocationsSafe,
-    wordStackLongMulInst, wordStackLongMulLocationsSafe,
-    wordStackLongMulLocationSafe, 
+    wordStackLongMulInst,
     wordStackLocation, 
     lookupNatInfo]
 
@@ -22,8 +21,7 @@ example :
           scratch := 31, stackBase := 10 } (.longMul 0 1 2 3) =
       some (.inst (.arith (.longMul 4 4 3 5)) : StackProg Nat) := by
   simp [wordStackArithInst, wordSpecialArithLocationsSafe,
-    wordStackLongMulInst, wordStackLongMulLocationsSafe,
-    wordStackLongMulLocationSafe, wordStackLongMulAliasLocationsSafe,
+    wordStackLongMulInst, wordStackLongMulAliasLocationsSafe,
     wordStackLocation, lookupNatInfo]
 
 example :
@@ -33,7 +31,7 @@ example :
           scratch := 31, stackBase := 10 } (.addCarry 0 1 2 3 4) =
       some (.inst (.arith (.addCarry 4 5 6 7 8)) : StackProg Nat) := by
   simp [wordStackArithInst, wordSpecialArithLocationsSafe,
-    wordStackAddCarryInst, wordStackAddCarryLocationSafe,
+    wordStackAddCarryInst,
     
     wordStackLocation, lookupNatInfo]
 
@@ -44,7 +42,7 @@ example :
           scratch := 31, stackBase := 10 } (.cakeAddCarry 0 1 2 3) =
       some (.inst (.arith (.cakeAddCarry 4 6 7 8)) : StackProg Nat) := by
   simp [wordStackArithInst, wordSpecialArithLocationsSafe,
-    wordStackCakeAddCarryInst, wordStackAddCarryLocationSafe,
+    wordStackCakeAddCarryInst,
     wordStackLocation, lookupNatInfo]
 
 example :

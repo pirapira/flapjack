@@ -49,9 +49,7 @@ example :
   · simp [longMulRegisterConfig, wordStackLocation, lookupNatInfo]
   · decide
   · decide
-  · decide
   · simp [longMulRegisterConfig, longMulRegisterState, wordStackLongMulInst,
-      wordStackLongMulLocationsSafe, wordStackLongMulLocationSafe,
       wordStackLocation, lookupNatInfo, evalWordStackMachine,
       wordStackMachineWriteRegister]
 
@@ -95,8 +93,6 @@ example :
     (hsourceRight := by simp [longMulRegisterConfig, wordStackLocation, lookupNatInfo])
     (hspecial := by simp [longMulRegisterConfig, wordSpecialArithLocationsSafe,
       lookupNatInfo])
-    (hsafe := by simp [longMulRegisterConfig, wordStackLongMulLocationsSafe,
-      wordStackLongMulLocationSafe, wordStackLocation, lookupNatInfo])
     (hvalues := by
       intro name value location hvalue hlocation
       obtain ⟨rfl, rfl, rfl⟩ := hvalue_location name value location hvalue hlocation
@@ -113,7 +109,6 @@ example :
     (heval := by
       simp [longMulRegisterConfig, longMulRegisterState, wordToStackProg,
         wordToStackInst, wordStackArithInst, wordStackLongMulInst,
-        wordStackLongMulLocationsSafe, wordStackLongMulLocationSafe,
         wordSpecialArithLocationsSafe, wordStackLocation, lookupNatInfo,
         evalWordStackMachine, wordStackMachineWriteRegister])
 

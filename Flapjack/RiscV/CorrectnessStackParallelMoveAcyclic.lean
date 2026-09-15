@@ -96,17 +96,14 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
                 exact hxs other (by simp [hother])
               simp [hmove, ihxs htail]
         exact hfilter tail hheadNotTailDestination
-      have hany : (head :: tail).any
+      have hscratchBusy : (head :: tail).any
           (fun move =>
-            move.1 = .register config.scratch ||
-              move.1 = .register config.addressScratch) = false := by
+            move.1 = WordLocation.register config.scratch) = false := by
         have hfalse : ∀ xs : List (WordLocation × WordLocation),
             (∀ move, move ∈ xs →
-              (move.1 = .register config.scratch ||
-                move.1 = .register config.addressScratch) = false) →
+              (move.1 = WordLocation.register config.scratch) = false) →
             xs.any (fun move =>
-              move.1 = .register config.scratch ||
-                move.1 = .register config.addressScratch) = false := by
+              move.1 = WordLocation.register config.scratch) = false := by
           intro xs hxs
           induction xs with
           | nil => rfl
@@ -115,8 +112,24 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
                 ihxs (fun other hother => hxs other (by simp [hother]))]
         apply hfalse
         intro move hmove
-        have hmoveReserved := hreserved move hmove
-        simp [hmoveReserved.1, hmoveReserved.2.1]
+        simp [(hreserved move hmove).1]
+      have haddressScratchBusy : (head :: tail).any
+          (fun move =>
+            move.1 = WordLocation.register config.addressScratch) = false := by
+        have hfalse : ∀ xs : List (WordLocation × WordLocation),
+            (∀ move, move ∈ xs →
+              (move.1 = WordLocation.register config.addressScratch) = false) →
+            xs.any (fun move =>
+              move.1 = WordLocation.register config.addressScratch) = false := by
+          intro xs hxs
+          induction xs with
+          | nil => rfl
+          | cons move xs ihxs =>
+              simp [hxs move (by simp),
+                ihxs (fun other hother => hxs other (by simp [hother]))]
+        apply hfalse
+        intro move hmove
+        simp [(hreserved move hmove).2.1]
       have htailResult := ih htailDestinations htailNoSource htailReserved
       have htailAux :
           wordStackParallelLocationMoveAux config (tail.length + 1) tail =
@@ -124,8 +137,9 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
         simpa [wordStackParallelLocationMove] using htailResult
       simp [wordStackParallelLocationMove,
         wordStackParallelLocationMoveAux,
-        wordStackLocationMoveDestinations, hdestinations', hany,
-        hheadReady, hremoved, wordStackReversedSequentialLocationMove,
+        wordStackLocationMoveDestinations, hdestinations', hscratchBusy,
+        haddressScratchBusy, hheadReady, hremoved,
+        wordStackReversedSequentialLocationMove,
         htailAux]
 
 end Flapjack.RiscV

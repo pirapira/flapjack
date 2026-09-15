@@ -27,8 +27,6 @@ theorem evalWordStackMachine_direct_longMul_register_preserves_unrelated_values
     (hspecial : wordSpecialArithLocationsSafe
       (.longMul destinationLeft destinationRight sourceLeft sourceRight)
       config.locations = true)
-    (hsafe : wordStackLongMulLocationsSafe config
-      (.longMul destinationLeft destinationRight sourceLeft sourceRight) = true)
     (hvalues : wordStackMappedValues config values state)
     (hnoaliasLeft : ∀ name value location,
       name ≠ destinationLeft → name ≠ destinationRight → values name = some value →
@@ -54,7 +52,7 @@ theorem evalWordStackMachine_direct_longMul_register_preserves_unrelated_values
     config state final destinationLeft destinationRight sourceLeft sourceRight name
     destinationLeftRegister destinationRightRegister sourceLeftRegister
     sourceRightRegister location
-    hdestinationLeft hdestinationRight hsourceLeft hsourceRight hlocation hsafe
+    hdestinationLeft hdestinationRight hsourceLeft hsourceRight hlocation
     (hnoaliasLeft name value location hname hright hvalue hlocation)
     (hnoaliasRight name value location hname hright hvalue hlocation)
     heval'

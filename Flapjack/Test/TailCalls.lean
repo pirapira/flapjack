@@ -32,13 +32,22 @@ theorem tailCallArgumentMoves :
               move.2 = WordLocation.register 31 ||
               move.2 = WordLocation.register 29) = false := by
     decide
-  simp [wordStackMovesToPhysical, wordStackPhysicalMovesTo,
-    tailCallTestConfig, wordStackLocation, lookupNatInfo, hnodup,
-    wordStackLocationMove,
+  have hready :
+      (wordStackLocationMoveReady [WordLocation.register 1]
+        [(WordLocation.register 1, WordLocation.register 1)]).isNone = false := by
+    simp [wordStackLocationMoveReady]
+  have hmoves :
+      wordStackPhysicalMovesTo tailCallTestConfig [6]
+          tailCallTestConfig.abiBase =
+        some [(WordLocation.register 1, WordLocation.register 1)] := by
+    simp [wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
+      tailCallTestConfig, wordStackLocation, lookupNatInfo]
+  rw [wordStackMovesToPhysical, hmoves]
+  simp [tailCallTestConfig, hnodup, wordStackLocationMove,
     wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
-    wordStackLocationMoveDestinations,
-    wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
-    wordStackJoin]
+    wordStackLocationMoveDestinations, wordStackParallelLocationMove,
+    wordStackParallelLocationMoveAux, wordStackJoin, List.any_nil,
+    List.any_cons, List.filter_nil]
 
 example :
     wordToStackProg tailCallTestConfig

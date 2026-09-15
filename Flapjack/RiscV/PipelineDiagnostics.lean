@@ -121,10 +121,18 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               abiBase := 10
               sectionId := label
               handlerLabel := label }
-          match RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
-              renamedParameters wordAllocatableRegisters.length config.scratch
-              allocation.nextSpill (some 1)
-              (RiscV.wordStackInitialBitmaps false) renamedProgram with
+          let lower :=
+            if (RiscV.wordProgFfiNames renamedProgram).isEmpty then
+              RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+                renamedParameters wordAllocatableRegisters.length config.scratch
+                allocation.nextSpill (some 1)
+                (RiscV.wordStackInitialBitmaps false) renamedProgram
+            else
+              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
+                renamedParameters wordAllocatableRegisters.length config.scratch
+                allocation.nextSpill (some 1)
+                (RiscV.wordStackInitialBitmaps false) renamedProgram
+          match lower with
           | none =>
               let path := (RiscV.wordProgFirstExpressionLoweringFailure config
                 (RiscV.wordProgToNat renamedProgram)).getD []
@@ -160,9 +168,16 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
               abiBase := 10
               sectionId := label
               handlerLabel := label }
-          match RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
-              renamedParameters wordAllocatableRegisters.length config.scratch
-              (max allocation.nextSpill 1) (some 1) bitmaps renamedProgram with
+          let lower :=
+            if (RiscV.wordProgFfiNames renamedProgram).isEmpty then
+              RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+                renamedParameters wordAllocatableRegisters.length config.scratch
+                (max allocation.nextSpill 1) (some 1) bitmaps renamedProgram
+            else
+              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
+                renamedParameters wordAllocatableRegisters.length config.scratch
+                (max allocation.nextSpill 1) (some 1) bitmaps renamedProgram
+          match lower with
           | none =>
               let path := (RiscV.wordProgFirstExpressionLoweringFailure config
                 (RiscV.wordProgToNat renamedProgram)).getD []

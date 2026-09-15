@@ -9,6 +9,7 @@ import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.WordExpressionFlatten
 import Flapjack.RiscV.RegAlloc
 import Flapjack.RiscV.WordToStack
+import Flapjack.RiscV.WordDiagnostics
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Loops
 import Flapjack.RiscV.Link
@@ -319,10 +320,16 @@ def pipelineWordFunctionAllocatedWithSpillsAndFullSsaAndBitmaps [NeZero width]
         abiBase := 10
         sectionId := label
         handlerLabel := label }
-    let (stackBody, bitmaps) ←
-      RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
-        renamedParameters wordAllocatableRegisters.length config.scratch
-        allocation.nextSpill (some 1) bitmaps renamedProgram
+    let lower :=
+      if (RiscV.wordProgFfiNames renamedProgram).isEmpty then
+        RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+          renamedParameters wordAllocatableRegisters.length config.scratch
+          allocation.nextSpill (some 1) bitmaps renamedProgram
+      else
+        RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
+          renamedParameters wordAllocatableRegisters.length config.scratch
+          allocation.nextSpill (some 1) bitmaps renamedProgram
+    let (stackBody, bitmaps) ← lower
     pure ((label, wordParameters, stackBody), bitmaps)
 
 def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmaps [NeZero width]
@@ -472,11 +479,18 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
           abiBase := 10
           sectionId := label
           handlerLabel := label }
-      let (stackBody, _) ←
-        RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
-          renamedParameters wordAllocatableRegisters.length config.scratch
-          allocation.nextSpill (some 1)
-          (RiscV.wordStackInitialBitmaps false) renamedProgram
+      let lower :=
+        if (RiscV.wordProgFfiNames renamedProgram).isEmpty then
+          RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+            renamedParameters wordAllocatableRegisters.length config.scratch
+            allocation.nextSpill (some 1)
+            (RiscV.wordStackInitialBitmaps false) renamedProgram
+        else
+          RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
+            renamedParameters wordAllocatableRegisters.length config.scratch
+            allocation.nextSpill (some 1)
+            (RiscV.wordStackInitialBitmaps false) renamedProgram
+      let (stackBody, _) ← lower
       let rest ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa functions
       pure ((label, wordParameters, stackBody) :: rest)
 

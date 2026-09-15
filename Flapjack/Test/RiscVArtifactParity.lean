@@ -81,10 +81,11 @@ def artifactCompileConfig : StackRemoveConfig :=
     currHeap := 12
     scratch := 31
     addressScratch := 29
-    stackPointer := 20
+    stackPointer := 24
     bytesInWord := 8
-    stackBase := 21
-    wordShift := 3 }
+    stackBase := 25
+    wordShift := 3
+    jump := true }
 
 /-- The fixture source, taken from the original-side probe fact so the two
 comparisons cannot drift apart. -/
@@ -499,6 +500,15 @@ def ffiMinCallStubStructural : Bool :=
       | none => false
   | none => false
 
+def ffiMinFramePrefix : Bool :=
+  match compileRuntimeImage ffiMinSource with
+  | some image =>
+      match image.sections.find? (fun sec => sec.label == 4) with
+      | some sec =>
+          sec.bytes.take 4 == [0x13, 0x0c, 0x0c, 0xff].map (BitVec.ofNat 8)
+      | none => false
+  | none => false
+
 /-!
 ## Unreachable-code parity (dead FFI references)
 
@@ -609,6 +619,7 @@ def frameOccupancyP9GapTracked : Bool :=
 #guard ffiOrderStubsEmitted
 #guard ffiOrderFlipStubsEmitted
 #guard ffiMinCallStubStructural
+#guard ffiMinFramePrefix
 #guard deadFfiNamesDropped
 #guard deadFfiStubDropped
 #guard bitmapCallsWordsMatch

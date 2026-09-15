@@ -583,7 +583,10 @@ theorem wordToStackProgNatWithBitmapBuilder_call_no_handler_none
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)
     (target : Nat) (arguments : List Nat)
     (argumentMoves : StackProg Nat)
-    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves) :
+    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
+    (hfree : stackFreeIfNonzero (wordStackCallFreeCount config arguments.length)
+      (.call none (.label target) none : StackProg Nat) =
+        (.call none (.label target) none : StackProg Nat)) :
     wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount
       bitmapRegister frameSlots wordBits storeConstsStub state
       (.call none (some target) arguments none) =
@@ -591,7 +594,7 @@ theorem wordToStackProgNatWithBitmapBuilder_call_no_handler_none
         (.call none (.label target) none : StackProg Nat), state) := by
   simp only [wordToStackProgNatWithBitmapBuilder]
   rw [wordToStackProgNat]
-  simp [hargs]
+  simp [hargs, hfree]
 
 /-! The handler-call lowering equation composes with bounded StackLang
     execution.  Argument moves are kept as an explicit premise because their
@@ -1098,7 +1101,10 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
     (hmove : evalStackProgFuelWithCodeAndFfi host fuel code machineState
       argumentMoves = some (.normal middle))
     (hcall : evalStackProgFuelWithCodeAndFfi host fuel code middle
-      (.call none (.label target) none : StackProg Nat) = some result) :
+      (.call none (.label target) none : StackProg Nat) = some result)
+    (hfree : stackFreeIfNonzero (wordStackCallFreeCount config arguments.length)
+      (.call none (.label target) none : StackProg Nat) =
+        (.call none (.label target) none : StackProg Nat)) :
     (wordToStackProgNatWithBitmapBuilder config bitmapBuilder
       registerCount bitmapRegister frameSlots wordBits storeConstsStub bitmapState
       (.call none (some target) arguments none)).bind
@@ -1112,7 +1118,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
     (frameSlots := frameSlots) (wordBits := wordBits)
     (storeConstsStub := storeConstsStub) (state := bitmapState)
     (target := target) (arguments := arguments)
-    (argumentMoves := argumentMoves) (hargs := hargs)
+    (argumentMoves := argumentMoves) (hargs := hargs) (hfree := hfree)
   rw [hcompile]
   simp only [Option.bind_some]
   have hcallNe :

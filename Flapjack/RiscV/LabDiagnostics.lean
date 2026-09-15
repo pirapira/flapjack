@@ -45,7 +45,6 @@ def labCompileAsmChecked [NeZero width] (context : WordFfiContext)
     Except LabLoweringError (List (Instruction width)) :=
   match operation with
   | .heapAlloc _ => .error (labLoweringError sectionId position .heapAlloc)
-  | .halt => .error (labLoweringError sectionId position .halt)
   | operation =>
       match labCompileAsm context sectionId labels position operation with
       | some code => .ok code
@@ -87,7 +86,6 @@ def labCompileAsmProgramChecked [NeZero width] (context : WordFfiContext)
     Except LabLoweringError (List (Instruction width)) :=
   match operation with
   | .heapAlloc _ => .error (labLoweringError sectionId position .heapAlloc)
-  | .halt => .error (labLoweringError sectionId position .halt)
   | operation =>
       match labCompileAsmProgram context labels position operation with
       | some code => .ok code
@@ -232,6 +230,12 @@ def compileLabProgramLinkedWithHaltChecked [NeZero width]
   let haltPc := 4 * labProgramInstructionCount program
   labCompileProgramLinkedWithHaltAuxChecked context labels 0 haltPc program
 
+def compileLabProgramWithHaltChecked [NeZero width]
+    (context : WordFfiContext) (program : LabProgram (Word width)) :
+    Except LabLoweringError (List (Instruction width)) :=
+  (compileLabProgramLinkedWithHaltChecked context program).map
+    flattenLabProgramLinked
+
 def compileStackProgramNatListToRiscVChecked [NeZero width]
     (context : WordFfiContext) (config : StackRemoveConfig)
     (entryLabel initialLabel : Nat)
@@ -240,7 +244,7 @@ def compileStackProgramNatListToRiscVChecked [NeZero width]
   match stackProgramsWithLongDivRuntime config programs with
   | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
   | some programs =>
-      compileLabProgramChecked context
+      compileLabProgramWithHaltChecked context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
               sectionId = cakeLongDivLocation then

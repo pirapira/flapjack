@@ -3336,17 +3336,17 @@ def wordToStackFunctionWithParametersAndBitmaps [NeZero width]
     (config : WordStackConfig) (_parameters : List Nat)
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
-    Option (StackProg Nat × WordStackBitmapState) := do
-  wordToStackProgWordWithBitmaps config registerCount
-    bitmapRegister frameSlots storeConstsStub state program
+  Option (StackProg Nat × WordStackBitmapState) := do
+  wordToStackProgWordWithBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
 
 def wordToStackFunctionWithParametersAndLocationBitmaps [NeZero width]
     (config : WordStackConfig) (_parameters : List Nat)
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
-    Option (StackProg Nat × WordStackBitmapState) := do
-  wordToStackProgWordWithLocationBitmaps config registerCount
-    bitmapRegister frameSlots storeConstsStub state program
+  Option (StackProg Nat × WordStackBitmapState) := do
+  wordToStackProgWordWithLocationBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
 
 /-! Cake's `word_to_stack.compile_prog` reserves the maximum spill frame at
     function entry and subtracts the stack-resident argument count from that
@@ -3360,8 +3360,8 @@ def wordToStackFunctionWithCakeFrameAndLocationBitmaps [NeZero width]
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
     Option (StackProg Nat × WordStackBitmapState) := do
-  let (body, state) ← wordToStackProgWordWithLocationBitmaps config registerCount
-    bitmapRegister frameSlots storeConstsStub state program
+  let (body, state) ← wordToStackProgWordWithLocationBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
   let frameWords := wordStackFrameWords parameters registerCount frameSlots
   pure (wordStackJoin (.stackAlloc frameWords) body, state)
 
@@ -3374,8 +3374,8 @@ def wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
     Option (StackProg Nat × WordStackBitmapState) := do
-  let (body, state) ← wordToStackProgWordWithLocationBitmaps config registerCount
-    bitmapRegister frameSlots storeConstsStub state program
+  let (body, state) ← wordToStackProgWordWithLocationBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
   let parameterMoves ← wordStackMovesFromPhysical config
     (wordStackLiveEntryParameters program) config.abiBase
   pure (wordStackJoin parameterMoves body, state)
@@ -3385,8 +3385,8 @@ def wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
     Option (StackProg Nat × WordStackBitmapState) := do
-  let (body, state) ← wordToStackProgWordWithLocationBitmaps config registerCount
-    bitmapRegister frameSlots storeConstsStub state program
+  let (body, state) ← wordToStackProgWordWithLocationBitmapsFused config registerCount
+    bitmapRegister frameSlots width storeConstsStub state program
   let parameterMoves ← wordStackMovesFromPhysical config
     (wordStackLiveEntryParameters program) config.abiBase
   let frameWords := wordStackFrameWords parameters registerCount frameSlots
@@ -3398,29 +3398,37 @@ def wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves
     and bitmap configuration stays with the caller because it depends on the
     enclosing frame and linked runtime sections. -/
 def wordToStackFunctionWithSpillStateAndLocationBitmaps [NeZero width]
-    (config : WordStackConfig) (parameters : List Nat)
+    (config : WordStackConfig) (_parameters : List Nat)
     (allocation : WordSpillState)
     (registerCount bitmapRegister frameSlots : Nat)
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)
     (program : WordProg (Word width)) :
-    Option (StackProg Nat × WordStackBitmapState) :=
-  wordToStackFunctionWithParametersAndLocationBitmaps
+  Option (StackProg Nat × WordStackBitmapState) :=
+  /- This entrypoint is retained as the reference adapter for the existing
+     allocator correctness contracts.  Executable pipeline callers use the
+     fused location-aware entrypoints above; keeping this boundary on the
+     explicit `wordProgToNat` path lets those contracts continue to expose
+     the original Cake-shaped intermediate program. -/
+  wordToStackProgWordWithLocationBitmaps
     { config with locations := allocation.locations }
-    parameters registerCount bitmapRegister frameSlots storeConstsStub state program
+    registerCount bitmapRegister frameSlots storeConstsStub state program
 
 /-! Graph allocation produces the source-to-location map from the renamed
     program's graph colours.  This adapter keeps the renamed names intact and
     feeds that map directly to the location-aware StackLang lowering. -/
 def wordToStackFunctionWithGraphAllocationAndLocationBitmaps [NeZero width]
-    (config : WordStackConfig) (parameters : List Nat)
+    (config : WordStackConfig) (_parameters : List Nat)
     (allocation : WordGraphAllocation) (colours stackStart : Nat)
     (registerCount bitmapRegister frameSlots : Nat)
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)
     (program : WordProg (Word width)) :
     Option (StackProg Nat × WordStackBitmapState) :=
-  wordToStackFunctionWithParametersAndLocationBitmaps
+  /- Keep the graph-allocation bridge on the explicit reference adapter for
+     the graph correctness contracts.  The executable source pipeline uses
+     the fused parameter/frame entrypoints above. -/
+  wordToStackProgWordWithLocationBitmaps
     { config with locations := wordGraphLocations allocation colours stackStart }
-    parameters registerCount bitmapRegister frameSlots storeConstsStub state program
+    registerCount bitmapRegister frameSlots storeConstsStub state program
 
 /-! Compose CakeML-shaped SSA/graph allocation with the actual location-aware
     StackLang entry point.  The allocation witness and renamed metadata are

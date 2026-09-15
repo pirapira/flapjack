@@ -14,9 +14,9 @@ example [NeZero width] (config : WordStackConfig) (parameters : List Nat)
     (program : WordProg (Word width)) :
     wordToStackFunctionWithSpillStateAndLocationBitmaps config parameters
         allocation registerCount bitmapRegister frameSlots storeConstsStub state program =
-      wordToStackFunctionWithParametersAndLocationBitmaps
+      wordToStackProgWordWithLocationBitmaps
         { config with locations := allocation.locations }
-        parameters registerCount bitmapRegister frameSlots storeConstsStub state program := by
+        registerCount bitmapRegister frameSlots storeConstsStub state program := by
   rfl
 
 example [NeZero width] (config : WordStackConfig) (parameters : List Nat)
@@ -27,9 +27,9 @@ example [NeZero width] (config : WordStackConfig) (parameters : List Nat)
     wordToStackFunctionWithGraphAllocationAndLocationBitmaps config parameters
         allocation colours stackStart registerCount bitmapRegister frameSlots
         storeConstsStub state program =
-      wordToStackFunctionWithParametersAndLocationBitmaps
+      wordToStackProgWordWithLocationBitmaps
         { config with locations := wordGraphLocations allocation colours stackStart }
-        parameters registerCount bitmapRegister frameSlots storeConstsStub state program := by
+        registerCount bitmapRegister frameSlots storeConstsStub state program := by
   rfl
 
 /-! The full-SSA spill allocator also reaches the same location-aware entry. -/

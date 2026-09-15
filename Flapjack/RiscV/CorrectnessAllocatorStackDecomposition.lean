@@ -35,8 +35,7 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_decompose
     config parameters program registerCount bitmapRegister frameSlots storeConstsStub
     bitmapState ssaState renamedParameters renamedProgram allocation stackProgram
     finalState hbridge
-  simp only [wordToStackFunctionWithSpillStateAndLocationBitmaps,
-    wordToStackFunctionWithParametersAndLocationBitmaps] at hstack
+  simp only [wordToStackFunctionWithSpillStateAndLocationBitmaps] at hstack
   cases hbody : wordToStackProgWordWithLocationBitmaps
       { config with locations := allocation.locations }
       registerCount bitmapRegister frameSlots storeConstsStub bitmapState

@@ -88,6 +88,13 @@
       "source_reference": "Differential-fuzzing finding nomain-global (GitHub issue #962 smoke): the original CakeML pan_to_target synthesizes a main returning zero when the source has none, so a main-less program is accepted; Flapjack previously failed with 'entry not found'. Fixed by panTargetDeclarationsWithDefaultMain. Tracked by flapjack-pxn.8.5.14.3.",
       "cake_sha256": "991051465fe4220a390f5a4cb70ac821811c3381723e3306d41b97136d0be039",
       "tracked_beads": ["flapjack-pxn.8.5.14.3", "flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/callee_abi.pnk",
+      "source_reference": "Multi-function callee argument/return ABI (GitHub issue #1024 / flapjack-pxn.8.5.10.1.1): the original CakeML passes value argument j in hardware riscv_names (j+1) with the incoming link in hardware 1, so the callee body is minimal (add a0,a1,a0; ret). Flapjack now emits the correct parallel entry moves but still keeps a redundant link-register move and does not coalesce parameters onto the ABI registers.",
+      "cake_sha256": "aab59578a1ecf94382606f575f2fbeb2d97d6a873e30e506665ba59348f2bcd7",
+      "tracked_beads": ["flapjack-pxn.8.5.10.1.1"]
     }
+
   ]
 }

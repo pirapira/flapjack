@@ -3,6 +3,7 @@ import Flapjack.Compile
 import Flapjack.CrepeInlinePass
 import Flapjack.CrepeArith
 import Flapjack.CrepToLoop
+import Flapjack.CrepToLoopOptimise
 import Flapjack.LoopToWord
 import Flapjack.Word
 import Flapjack.RiscV.Allocator
@@ -104,7 +105,7 @@ def pipelineLoopFunctionsAux [OfNat α 0] [OfNat α 1]
           functions := functionInfos
           maxVar := function.params.length
           target := architecture }
-      (label, function.params, loopCompileProg context [] function.body) ::
+      (label, function.params, oCompile context function.params function.body) ::
         pipelineLoopFunctionsAux architecture functionInfos (label + 1) functions
 
 def pipelineLoopFunctions [OfNat α 0] [OfNat α 1]
@@ -636,7 +637,8 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 
 /-! Exact `pan_to_target` entry preparation.  The ordinary pipeline above is
     retained for pass-local fixtures.  This entry-point form follows CakeML: it
-    finds the requested source function, gives it a fresh name, permutes all
+    moves the requested source function to the front of the program (the
+    SPLITP permutation above), finds it, gives it a fresh name, permutes all
     function references, and emits a new public `main` whose body runs global
     initializers before a tail call to the renamed source entry. -/
 def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]

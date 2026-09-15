@@ -342,7 +342,7 @@ def pipelineCallPipeline : FlapjackRiscVResult 64 :=
 
 def pipelineCallImage : List (RiscV.Instruction 64) :=
   [.addi 4 2 0, .jalr 0 1 0,
-   .addi 3 0 0, .addi 4 0 (BitVec.ofNat 64 41),
+   .addi 4 0 (BitVec.ofNat 64 41),
    .addi 2 4 0, .addi 30 30 (0 - BitVec.ofNat 64 8),
    .storeWord 1 30, .addi 31 0 0, .jalr 1 31 0,
    .addi 3 4 0, .loadWord 1 30,

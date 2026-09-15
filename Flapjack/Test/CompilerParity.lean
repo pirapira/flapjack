@@ -665,12 +665,15 @@ def sharedMemoryArtifactMatchesGolden : Bool :=
       Flapjack.Test.SourceGlobalParity.sharedMemorySource with
   | some bytes => bytes == sharedMemoryArtifactGolden
   | none => false
-/-! Exact source-entry golden for the existing shadowing fixture.
+/-! Port-internal regression pin for the existing shadowing fixture.
 
-Refreshed after the allocator/parity merges changed the port's emitted layout for this
-fixture (it contains no FFI, so the dead-FFI name-discovery fix does not affect it); this
-is a port-side exact regression pin, while the CakeML comparison for the same source is
-pinned separately by the SourceGlobalParity cake goldens. -/
+This pins the bytes the port currently emits so that later edits cannot silently change
+this fixture's layout; it is NOT a claim of parity with the original CakeML artifact.
+Exact CakeML parity for the same source is still an open tracked gap
+(bead flapjack-pxn.8.5.10.2): the original emits generated_main 28 + main 4 + g 8 +
+f 144 = 184 bytes, while the port emits 336. The gap is asserted separately below
+(`shadowingArtifactGapTracked`) and tracked in scripts/parity-small-corpus.json.
+The Cake section goldens themselves stay pinned in SourceGlobalParity. -/
 def shadowingArtifactGolden : List (BitVec 8) :=
   [
     BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x3, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41,
@@ -720,6 +723,21 @@ def shadowingArtifactMatchesGolden : Bool :=
   match Flapjack.Test.SourceGlobalParity.compileSourceBytes
       Flapjack.Test.SourceGlobalParity.shadowingSource with
   | some bytes => bytes == shadowingArtifactGolden
+  | none => false
+
+/-- The original CakeML artifact for `shadowingSource`: generated_main 28 bytes,
+main 4 bytes, g 8 bytes and f 144 bytes (the Cake section goldens live in
+SourceGlobalParity). -/
+def cakeShadowTotalLength : Nat := 28 + 4 + 8 + 144
+
+/-- Tracked gap: the port's shadowing artifact is not yet byte-identical to the
+original CakeML artifact (port 336 bytes vs Cake 184). Recorded by bead
+flapjack-pxn.8.5.10.2 and in scripts/parity-small-corpus.json; this check can never
+accept the port output as matching the original. -/
+def shadowingArtifactGapTracked : Bool :=
+  match Flapjack.Test.SourceGlobalParity.compileSourceBytes
+      Flapjack.Test.SourceGlobalParity.shadowingSource with
+  | some bytes => bytes.length != cakeShadowTotalLength
   | none => false
 /-! Exact source-entry golden for the existing global shared-load fixture. -/
 def globalSharedLoadArtifactGolden : List (BitVec 8) :=
@@ -835,8 +853,10 @@ def main : IO Unit := do
       namedStructArtifactMatchesGolden,
     checkBool "Lean shared-memory exact source artifact bytes"
       sharedMemoryArtifactMatchesGolden,
-    checkBool "Lean shadowing exact source artifact bytes"
+    checkBool "Lean shadowing port regression bytes are pinned (Cake parity tracked separately)"
       shadowingArtifactMatchesGolden,
+    checkBool "Lean shadowing artifact still differs from the original Cake artifact (tracked gap)"
+      shadowingArtifactGapTracked,
     checkBool "Lean global shared-load exact source artifact bytes"
       globalSharedLoadArtifactMatchesGolden,
     checkBool "Lean source entry produces an artifact" minimalSourceArtifact,

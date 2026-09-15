@@ -65,4 +65,33 @@ def abiOverflowMoveConfig : WordStackConfig :=
   (wordStackMovesToPhysical (α := Nat) abiOverflowMoveConfig
     (List.range 25) 10).isSome
 
+def abiCallOverflow17Config : WordStackConfig :=
+  { locations := (List.range 17).map (fun name => (name, .register (2 + name)))
+    scratch := 31
+    stackBase := 0
+    addressScratch := 29
+    abiBase := 10
+    abiStride := 1
+    abiRegisterCount := 12
+    abiFrameSlots := 5 }
+
+#guard
+  wordStackPhysicalMovesTo abiCallOverflow17Config (List.range 17) 10 =
+    some ((List.range 17).map (fun index =>
+      (if index < 12 then .register (10 + index)
+       else .stack (5 - (index - 12)), .register (2 + index))))
+
+/- Cake's dead-program pass can remove every formal entry move.  Frame sizing
+   still uses the complete formal count, but physical entry moves use only the
+   surviving destinations; otherwise dead formals can alias and make parmove
+   reject the list. -/
+def deadEntryMoveProgram : WordProg (Word 64) :=
+  .seq (.move 1 [(41, 0), (45, 2)]) .skip
+
+#guard
+  wordStackLiveEntryParameters deadEntryMoveProgram = [41, 45]
+
+#guard
+  wordStackLiveEntryParameters (.skip : WordProg (Word 64)) = []
+
 end Flapjack

@@ -44,10 +44,8 @@ def callContext : LoopContext Nat :=
     The original always emits a default handler `rt2` for a call returning
     through an exception channel (`crep_to_loopScript.sml:193-206`); for
     `handler = NONE` that `rt2` binds the caught exception and immediately
-    re-raises it, which is observationally indistinguishable from the absent
-    handler.  The port currently omits the `rt2`, so this definition pins the
-    port's shape for the tracked artifact-parity gap (bead
-    flapjack-pxn.8.5.10.3). -/
+    re-raises it, which is observationally indistinguishable from an absent
+    source handler. -/
 def leanCompileCallNoHandler : LoopProg Nat :=
   compileCrepToLoop callContext [] (.call (some ([9], none)) "f" [.const 3])
 
@@ -57,10 +55,10 @@ def leanCompileCallWithHandler : LoopProg Nat :=
   compileCrepToLoop callContext []
     (.call (some ([9], some (7, .skip))) "f" [.const 3])
 
-/-- The port's handler-less call lowering still emits no `rt2`. -/
-def handlerlessCallOmitsRaiseHandler : Bool :=
+/-- A handler-less source call still carries Cake's default raise handler. -/
+def handlerlessCallCarriesRaiseHandler : Bool :=
   match leanCompileCallNoHandler with
-  | .seq _ (.call _ (some 3) _ none) => true
+  | .seq _ (.call _ (some 3) _ (some (5, .raise 5, .skip, []))) => true
   | _ => false
 
 /-- A call that names an exception handler does emit an `rt2`. -/
@@ -72,7 +70,7 @@ def handledCallCarriesRaiseHandler : Bool :=
 #eval leanCompileCallNoHandler
 #eval leanCompileCallWithHandler
 
-#guard handlerlessCallOmitsRaiseHandler
+#guard handlerlessCallCarriesRaiseHandler
 #guard handledCallCarriesRaiseHandler
 
 end Flapjack.Test.CrepToLoopParity

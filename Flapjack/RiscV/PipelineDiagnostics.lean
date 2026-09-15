@@ -449,7 +449,7 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
               let discoveredNames :=
                 (pipeline.word.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames entry.2.2)).eraseDups
+                    RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               let identityResult :
@@ -507,7 +507,7 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
               let discoveredNames :=
                 (pipeline.word.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames entry.2.2)).eraseDups
+                    RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked pipeline.loop with
@@ -552,7 +552,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
               let discoveredNames :=
                 (sourceWords.flatMap
                   (fun entry : Nat × Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames entry.2.2)).eraseDups
+                    RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked

@@ -663,10 +663,16 @@ def helloSource : String :=
     "}"
 
 /-- Original CakeML `cml_main` length for `hello.pnk` from the checked
-assembly oracle (CakeML emits 152 bytes; the port currently emits 224). -/
+assembly oracle (CakeML emits 152 bytes; the port currently emits 180 under artifactCompileConfig). -/
 def cakeHelloMainLength : Nat := 152
 
-def flapjackHelloMainLength : Nat := 224
+/-- Internal pin of the port's current `cml_main` length for `hello.pnk`
+(180 bytes under `artifactCompileConfig`, whose `stackPointer := 24`,
+`stackBase := 25`, `jump := true` differ from the CLI `compileRemoveConfig`;
+re-measured after the fused-lowering experiment was reverted in coordinator
+`c83a55ea`).  This is a port-side layout pin only; the CakeML comparison is
+enforced by `helloMainLengthGapTracked` and the corpus `cake_sha256`. -/
+def flapjackHelloMainLength : Nat := 180
 
 def helloRuntimeImage : Option (SourceRiscVRuntimeImage 64) :=
   compileRuntimeImage helloSource

@@ -665,7 +665,12 @@ def sharedMemoryArtifactMatchesGolden : Bool :=
       Flapjack.Test.SourceGlobalParity.sharedMemorySource with
   | some bytes => bytes == sharedMemoryArtifactGolden
   | none => false
-/-! Exact source-entry golden for the existing shadowing fixture. -/
+/-! Exact source-entry golden for the existing shadowing fixture.
+
+Refreshed after the allocator/parity merges changed the port's emitted layout for this
+fixture (it contains no FFI, so the dead-FFI name-discovery fix does not affect it); this
+is a port-side exact regression pin, while the CakeML comparison for the same source is
+pinned separately by the SourceGlobalParity cake goldens. -/
 def shadowingArtifactGolden : List (BitVec 8) :=
   [
     BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x3, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41,
@@ -686,29 +691,31 @@ def shadowingArtifactGolden : List (BitVec 8) :=
     BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x40, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x1,
     BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x61, BitVec.ofNat 8 0x90, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe0, BitVec.ofNat 8 0x31, BitVec.ofNat 8 0x0,
     BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0xa, BitVec.ofNat 8 0x8a, BitVec.ofNat 8 0xfe,
-    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0x10, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x0,
-    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x1,
-    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0xf, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x12, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x0,
-    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x1,
-    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x3, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41,
-    BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbf, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x1,
-    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x1,
-    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0x4a, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x8f, BitVec.ofNat 8 0x5f, BitVec.ofNat 8 0x41,
-    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x30, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xdf, BitVec.ofNat 8 0xdf, BitVec.ofNat 8 0x1,
-    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x3, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41,
-    BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0xa, BitVec.ofNat 8 0x8a, BitVec.ofNat 8 0xff,
+    BitVec.ofNat 8 0xe3, BitVec.ofNat 8 0x7e, BitVec.ofNat 8 0x5a, BitVec.ofNat 8 0xff, BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x65, BitVec.ofNat 8 0x20, BitVec.ofNat 8 0x0,
+    BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0xf0, BitVec.ofNat 8 0x9f, BitVec.ofNat 8 0xf5, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0x10, BitVec.ofNat 8 0x0,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x1,
+    BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0xf, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x14,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x1,
+    BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x3,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41, BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbf, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0x0,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x1,
+    BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0x4a, BitVec.ofNat 8 0x1,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x8f, BitVec.ofNat 8 0x5f, BitVec.ofNat 8 0x41, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x30, BitVec.ofNat 8 0x0,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xdf, BitVec.ofNat 8 0xdf, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x3,
+    BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41, BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x1,
+    BitVec.ofNat 8 0x13, BitVec.ofNat 8 0xa, BitVec.ofNat 8 0x8a, BitVec.ofNat 8 0xff, BitVec.ofNat 8 0xe3, BitVec.ofNat 8 0x7c, BitVec.ofNat 8 0x5a, BitVec.ofNat 8 0xf9,
+    BitVec.ofNat 8 0x13, BitVec.ofNat 8 0x65, BitVec.ofNat 8 0x20, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0xf0, BitVec.ofNat 8 0x5f, BitVec.ofNat 8 0xef,
     BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x1,
     BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbf, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x0,
     BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x1,
-    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0xc0, BitVec.ofNat 8 0x8, BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0xf0, BitVec.ofNat 8 0xdf, BitVec.ofNat 8 0xf7,
+    BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x12, BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0xf0, BitVec.ofNat 8 0x5f, BitVec.ofNat 8 0xf6,
     BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xda, BitVec.ofNat 8 0x1,
     BitVec.ofNat 8 0x83, BitVec.ofNat 8 0xbf, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6e, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x3,
     BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe, BitVec.ofNat 8 0xd5, BitVec.ofNat 8 0x41, BitVec.ofNat 8 0x23, BitVec.ofNat 8 0xb0, BitVec.ofNat 8 0xfe, BitVec.ofNat 8 0x1,
     BitVec.ofNat 8 0x13, BitVec.ofNat 8 0xa, BitVec.ofNat 8 0x8a, BitVec.ofNat 8 0x1, BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x0,
-    BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0xf0, BitVec.ofNat 8 0x9f, BitVec.ofNat 8 0xed, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x62, BitVec.ofNat 8 0x42, BitVec.ofNat 8 0x0,
+    BitVec.ofNat 8 0x6f, BitVec.ofNat 8 0xf0, BitVec.ofNat 8 0x1f, BitVec.ofNat 8 0xec, BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0x62, BitVec.ofNat 8 0x42, BitVec.ofNat 8 0x0,
     BitVec.ofNat 8 0xb3, BitVec.ofNat 8 0xe0, BitVec.ofNat 8 0x52, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x67, BitVec.ofNat 8 0x80, BitVec.ofNat 8 0x0, BitVec.ofNat 8 0x0
   ]
-
 def shadowingArtifactMatchesGolden : Bool :=
   match Flapjack.Test.SourceGlobalParity.compileSourceBytes
       Flapjack.Test.SourceGlobalParity.shadowingSource with

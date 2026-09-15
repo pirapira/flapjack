@@ -111,7 +111,7 @@ example :
         (.ite .equal 1 (.reg 2)
           (.return 0 [3]) (.return 0 [4]) : WordProg Nat) [] =
       .seq (.delta [] [1, 2])
-        (.branch none (.delta [] [3]) (.delta [] [4])) := by
+        (.branch none (.delta [] [0, 3]) (.delta [] [0, 4])) := by
   simp [wordClashTree]
 
 example :

@@ -547,7 +547,16 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
               staticError (.shape "function argument shapes do not match")
             else
               match info with
-              | none => progOk .tailLast true false context.location
+              | none =>
+                  -- CakeML `panStaticScript.sml:1335`: a tail call requires the
+                  -- caller's and callee's return shapes to agree.
+                  match context.expectedReturn with
+                  | some callerReturn =>
+                      if !shapesSame callerReturn functionInfo.returnShape then
+                        staticError (.shape
+                          "tail call return shape does not match caller return shape")
+                      else progOk .tailLast true false context.location
+                  | none => progOk .tailLast true false context.location
               | some (destination, none) => checkCallDestination context returnShape destination
               | some (destination, some (exception, handlerVariable, handlerProgram)) =>
                   match lookupInfo exception context.exceptions,
@@ -702,7 +711,9 @@ def staticCheckNames [BEq String] (context : StructContext) :
       if (lookupInfo name context).isSome then
         staticError (.scope ("structure is redeclared: " ++ name))
       else
-        match firstRepeat (fields.map Prod.fst) with
+        -- CakeML sorts (`panStaticScript.sml:578-585`) so `first_repeat`
+        -- reports the lexicographically smallest duplicate.
+        match firstRepeat ((fields.map Prod.fst).mergeSort (· ≤ ·)) with
         | some field =>
             staticError (.scope ("structure field is redeclared: " ++ field))
         | none =>
@@ -730,7 +741,7 @@ def staticCheckFunctionHeader [BEq String] (context : StructContext)
       staticError (.shape "main function must return one word")
     else
       staticOk ()
-  else if (firstRepeat (declaration.params.map Prod.fst)).isSome then
+  else if (firstRepeat ((declaration.params.map Prod.fst).mergeSort (· ≤ ·))).isSome then
     staticError (.scope ("function parameter is redeclared: " ++ declaration.name))
   else if declaration.exported && declaration.params.length > 4 then
     staticError (.general ("exported function has more than four arguments: " ++

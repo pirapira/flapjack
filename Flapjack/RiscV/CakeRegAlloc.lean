@@ -788,8 +788,10 @@ def cakeMovesToSp : List (Nat × (Nat × Nat)) →
     list by descending priority, then drop the priorities. -/
 def cakeResortMovesSp (table : NatInfoMap (List (Nat × Nat))) :
     NatInfoMap (List Nat) :=
+  -- `cakeQSort`, not a stable sort: the original's `sort_moves` flips
+  -- equal-priority entries (probes `sort_moves_probe.out`).
   table.map (fun entry =>
-    (entry.1, (entry.2.mergeSort (fun a b => a.1 > b.1)).map (·.2)))
+    (entry.1, (cakeQSort (fun a b => a.1 >= b.1) entry.2).map (·.2)))
 
 /-- `update_move` (`reg_allocScript.sml:1407-1414`). -/
 def cakeUpdateMove (spta : Nat → Nat) (move : Nat × (Nat × Nat)) :

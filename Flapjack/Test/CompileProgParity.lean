@@ -37,7 +37,7 @@ theorem compile_prog_inline_call_parity :
     crepInlineFunctionsRecursive, crepInlineActiveNames,
     crepInlineProgRecursive, crepInlineLookup, crepInlineCallBody,
     crepInlineTail, crepArgLoad, crepInlineTmpNames, crepUnreachElim,
-    nestedDecs, crepNestedSeq]
+    nestedDecs]
 
 def parityGuard : Bool :=
   match compileProgToCrep compileProgProbeContext compileProgProbeDecls with

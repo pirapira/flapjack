@@ -27,6 +27,11 @@ namespace Flapjack.RiscV.CakeRegAlloc
 open Flapjack.RiscV.CakeAlloc (mergeStackOnly mergeStackSets removeTempStack
   getForcedAddCarry getForcedLongMul)
 
+/-! RISC-V exposes 32 hardware registers, with five avoided by Cake's
+    backend configuration (`0, 2, 3, 4, 31`).  `word_alloc` therefore colours
+    against 22 usable registers, not the raw Word-name pool size. -/
+def cakeRiscVRegisterCount : Nat := 32 - (5 + 5)
+
 /-- `get_stack_only_aux` (`word_allocScript.sml:1741-1789`).
 
     Threads the temporary/forced-stack pair `(ts, fs)` backwards through
@@ -857,7 +862,10 @@ def cakeAssignAtempTag (k : Nat)
 def cakeAssignAtemps (k : Nat) (ls : List Nat)
     (prefs : CakeRaState → Nat → List Nat → Option Nat)
     (state : CakeRaState) : CakeRaState :=
-  let lsF := ls.filter (· < state.dim)
+  /- Cake's state-stack is consumed in the order in which entries were
+     pushed by the worklist traversal; the functional list stores that order
+     newest-first, so restore the traversal order before assigning colours. -/
+  let lsF := ls.reverse.filter (· < state.dim)
   let state := lsF.foldl (fun s n => cakeAssignAtempTag k prefs n s) state
   (List.range state.dim).foldl (fun s n => cakeAssignAtempTag k prefs n s) state
 

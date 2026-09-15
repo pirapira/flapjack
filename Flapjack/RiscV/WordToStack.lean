@@ -87,11 +87,9 @@ def wordStackMove (config : WordStackConfig) (destination source : Nat) :
       if destination = source then pure .skip
       else pure (.arith .or destination source source)
   | .register destination, .stack slot =>
-      pure (.seq (.stackLoad config.scratch (wordStackOffset config slot))
-        (.arith .or destination config.scratch config.scratch))
+      pure (.stackLoad destination (wordStackOffset config slot))
   | .stack slot, .register source =>
-      pure (.seq (.arith .or config.scratch source source)
-        (.stackStore config.scratch (wordStackOffset config slot)))
+      pure (.stackStore source (wordStackOffset config slot))
   | .stack destinationSlot, .stack sourceSlot =>
       if destinationSlot = sourceSlot then pure .skip
       else pure (.seq (.stackLoad config.scratch

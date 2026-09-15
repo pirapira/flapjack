@@ -97,7 +97,7 @@ def wordDeadCode : WordProg α → List Nat → WordProg α × List Nat
   | .continue label, live => (.continue label, live)
   | .raise exception, live => (.raise exception, exception :: live)
   | .return label values, live =>
-      (.return label values, wordDeadAddReads live values)
+      (.return label values, wordDeadAddReads (label :: live) values)
   | .tick, live => (.tick, live)
   | .locValue destination source, live =>
       if destination ∈ live then
@@ -105,6 +105,19 @@ def wordDeadCode : WordProg α → List Nat → WordProg α × List Nat
           wordDeadAddReads (wordDeadRemoveWrites live [destination]) [])
       else
         (.skip, live)
+  | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments handler, live =>
+      let (returnCode', _) := wordDeadCode returnCode live
+      let handler' := match handler with
+        | none => none
+        | some (exception, body, handlerLabel, handlerEntryLabel) =>
+            some (exception, (wordDeadCode body live).1,
+              handlerLabel, handlerEntryLabel)
+      (.call (some (destinations, cutsets, returnCode', returnLabel, entryLabel))
+          target arguments handler',
+        wordDeadAddReads live (wordProgReadVars
+          (.call (some (destinations, cutsets, returnCode', returnLabel, entryLabel))
+            target arguments handler')))
   | .call returns target arguments handler, live =>
       (.call returns target arguments handler,
         wordDeadAddReads live (wordProgReadVars
@@ -146,7 +159,9 @@ def wordDeadCode : WordProg α → List Nat → WordProg α × List Nat
             wordDeadAddReads live
               ([name] ++ wordExpReadVars address))
 termination_by program => sizeOf program
-decreasing_by all_goals decreasing_trivial
+decreasing_by
+  all_goals simp_wf
+  all_goals omega
 
 def wordRemoveDeadProgram (program : WordProg α) : WordProg α :=
   (wordDeadCode program []).1
@@ -176,23 +191,47 @@ def wordCopyUnreachSeq (first second : WordProg α) : WordProg α :=
   | .move firstPriority firstMoves, .move secondPriority secondMoves =>
       .move (max firstPriority secondPriority)
         (wordCopyUnreachMergeMoves firstMoves secondMoves)
+  | .move firstPriority firstMoves,
+      .seq (.move secondPriority secondMoves) rest =>
+      let merged := .move (max firstPriority secondPriority)
+        (wordCopyUnreachMergeMoves firstMoves secondMoves)
+      match rest with
+      | .skip => merged
+      | _ => .seq merged rest
   | _, .skip => first
   | _, _ => .seq first second
 
-def wordRemoveUnreachableAfterCopy : WordProg α → WordProg α
-  | .seq first second =>
-      wordCopyUnreachSeq (wordRemoveUnreachableAfterCopy first)
-        (wordRemoveUnreachableAfterCopy second)
+/-! `Seq_assoc_right` first flattens every sequence, including sequences
+    nested in call continuations.  Keeping the parts as a list makes that
+    association explicit and lets `wordCopyUnreachSeq` merge adjacent moves
+    after copy propagation, just as Cake's `dest_Seq_Move` does. -/
+def wordCopyUnreachParts : WordProg α → List (WordProg α)
+  | .seq first second => wordCopyUnreachParts first ++ wordCopyUnreachParts second
   | .ite operator condition right thenBranch elseBranch =>
-      .ite operator condition right
-        (wordRemoveUnreachableAfterCopy thenBranch)
-        (wordRemoveUnreachableAfterCopy elseBranch)
+      [.ite operator condition right
+        (wordCopyUnreachParts thenBranch |>.foldr wordCopyUnreachSeq .skip)
+        (wordCopyUnreachParts elseBranch |>.foldr wordCopyUnreachSeq .skip)]
   | .loop liveIn body liveOut =>
-      .loop liveIn (wordRemoveUnreachableAfterCopy body) liveOut
-  | .mustTerminate body => .mustTerminate (wordRemoveUnreachableAfterCopy body)
-  | program => program
+      [.loop liveIn (wordCopyUnreachParts body |>.foldr wordCopyUnreachSeq .skip) liveOut]
+  | .mustTerminate body =>
+      [.mustTerminate (wordCopyUnreachParts body |>.foldr wordCopyUnreachSeq .skip)]
+  | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
+      target arguments handler =>
+      let handler' := match handler with
+        | none => none
+        | some (exception, body, handlerLabel, handlerEntryLabel) =>
+            some (exception,
+              wordCopyUnreachParts body |>.foldr wordCopyUnreachSeq .skip,
+              handlerLabel, handlerEntryLabel)
+      [.call (some (destinations, cutsets,
+          wordCopyUnreachParts returnCode |>.foldr wordCopyUnreachSeq .skip,
+          returnLabel, entryLabel)) target arguments handler']
+  | program => [program]
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
+
+def wordRemoveUnreachableAfterCopy (program : WordProg α) : WordProg α :=
+  wordCopyUnreachParts program |>.foldr wordCopyUnreachSeq .skip
 
 end Flapjack.RiscV
 
@@ -223,12 +262,12 @@ def cakeAllocateWordFunctionAfterDead (currentFunction : Nat)
     costs.filterMap (fun entry =>
       (lookupNatInfo entry.1 bij.toAllocator).map
         (fun node => (node, entry.2))))
-  match cakeDoRegAlloc .irc scost (wordAllocatableRegisters.length + 2)
+  match cakeDoRegAlloc .irc scost cakeRiscVRegisterCount
       moves tree forced fs with
   | none => none
   | some colouring =>
       some (state, renamedParameters, ssaProgram,
-        cakeColourWordSpillState (wordAllocatableRegisters.length + 2)
+        cakeColourWordSpillState cakeRiscVRegisterCount
           parameters ssaProgram colouring)
 
 end Flapjack.RiscV.CakeRegAlloc

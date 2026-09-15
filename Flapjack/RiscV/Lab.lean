@@ -127,7 +127,11 @@ def labLineInstructionCount : LabLine (Word width) → Nat
 def labFfiStubOffset [NeZero width] (context : WordFfiContext)
     (function : FunName) (position : Nat) : Option (Word width) := do
   let index ← lookupWordFfiIndex function context.services
-  let stubDistance := context.services.length + 2 - index
+  /- CakeML emits FFI blocks in reverse `ffi_names` order.  The target
+     assembler therefore addresses service index `i` at the fixed prefix
+     distance `(3 + i) * ffi_offset`: two runtime blocks (cake_clear and
+     cake_exit), followed by the reversed service table. -/
+  let stubDistance := 3 + index
   pure (0 - BitVec.ofNat width (position + stubDistance * 16))
 
 def labCollectLabels (_sectionId : Nat) (position : Nat) :
@@ -648,7 +652,7 @@ def labFfiStubPrefix [NeZero width] (context : WordFfiContext) :
     List (Instruction width) :=
   if context.services.isEmpty then []
   else
-      context.services.flatMap (fun (_, service) => labFfiServiceStub service) ++
+      context.services.reverse.flatMap (fun (_, service) => labFfiServiceStub service) ++
         List.replicate 8 (.jal 0 0)
 
 /-! A linked FFI call is nested inside an ordinary Cake function call.  Its

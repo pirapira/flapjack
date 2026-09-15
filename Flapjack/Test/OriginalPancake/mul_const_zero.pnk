@@ -1,0 +1,6 @@
+fun scale(x) {
+  return x * 0;
+}
+fun main() {
+  return scale(5);
+}

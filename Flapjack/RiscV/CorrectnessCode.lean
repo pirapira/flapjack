@@ -80,9 +80,9 @@ theorem labCompileAsm_locValue_execute [NeZero width]
     (labCompileAsm context sectionId labels position
       (.locValue destination target)).bind
         (fun code => executeInstructions state code) =
-      some (execute state
-        (.addi register 0 (BitVec.ofNat width targetPosition))) := by
-  simp [labCompileAsm, hregister, htarget, executeInstructions]
+      some (executeInstructions state
+        (labLocValueInstructions register targetPosition position)) := by
+  simp [labCompileAsm, hregister, htarget]
 
 theorem labCompileAsm_linkValue_execute [NeZero width]
     (context : WordFfiContext)
@@ -92,9 +92,9 @@ theorem labCompileAsm_linkValue_execute [NeZero width]
     (labCompileAsm context sectionId labels position
       (.linkValue target)).bind
         (fun code => executeInstructions state code) =
-      some (execute state
-        (.addi 1 0 (BitVec.ofNat width targetPosition))) := by
-  simp [labCompileAsm, htarget, executeInstructions]
+      some (executeInstructions state
+        (labLocValueInstructions 1 targetPosition position)) := by
+  simp [labCompileAsm, htarget]
 
 /-! A cross-section jump is not merely assembled correctly: its resolved
     offset must take the machine to the target section.  This is the smallest
@@ -127,12 +127,12 @@ theorem compileLabProgram_call_return_execute :
        ⟨2, [
           .label 2 0 0,
           .asm (.const 2 7) [] 0,
-          .labAsm .return [] 0]⟩,
+          .labAsm (.return 0) [] 0]⟩,
        ⟨3, [.label 3 0 0]⟩]).bind
         (fun code =>
           (executeCodeUntil 20 (0 : Word 64) (BitVec.ofNat 64 28) code
             (zeroState 64)).map (fun state => readRegister state 2)) =
-      some (BitVec.ofNat 64 9) := by
+      some (BitVec.ofNat 64 7) := by
   decide
 
 end Flapjack.RiscV

@@ -131,6 +131,7 @@ import Flapjack.Test.CompileCrepOpParity
 import Flapjack.Test.CrepCompileExpParity
 import Flapjack.Test.CrepExitLoopParity
 import Flapjack.Test.CrepEvaluateParity
+import Flapjack.Test.CrepEvaluateGlobals
 import Flapjack.Test.CrepFixClockParity
 import Flapjack.Test.CrepEvalParity
 import Flapjack.Test.CrepShMemLoadParity
@@ -192,6 +193,7 @@ import Flapjack.Test.RiscVArtifactParity
 import Flapjack.Test.RiscVRegisterMapParity
 import Flapjack.Test.CakeAllocatorCore
 import Flapjack.Test.CakeFramePolicy
+import Flapjack.Test.WordStackCallParity
 import Flapjack.Test.CakeForcedParity
 import Flapjack.Test.CakeMkBijParity
 import Flapjack.Test.CakeSsaSetupParity
@@ -908,6 +910,7 @@ def main : IO Unit := do
     Flapjack.Test.PanSimpParity.runChecks,
     Flapjack.Test.CrepExitLoopParity.runChecks,
     Flapjack.Test.CrepEvaluateParity.runChecks,
+    Flapjack.Test.CrepEvaluateGlobals.runChecks,
     Flapjack.Test.CrepFixClockParity.runChecks,
     Flapjack.Test.CrepEvalParity.runChecks,
     Flapjack.Test.CrepShMemLoadParity.runChecks,
@@ -952,6 +955,7 @@ def main : IO Unit := do
     Flapjack.Test.RiscVRegisterMapParity.runChecks,
     Flapjack.Test.CakeAllocatorCore.runChecks,
     Flapjack.Test.CakeFramePolicy.runChecks,
+    Flapjack.Test.WordStackCallParity.runChecks,
     Flapjack.Test.CakeForcedParity.runChecks,
     Flapjack.Test.CakeMkBijParity.runChecks,
     Flapjack.Test.CakeSsaSetupParity.runChecks,

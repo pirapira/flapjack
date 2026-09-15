@@ -1,5 +1,6 @@
 import Flapjack.Test.RiscV
 import Flapjack.Pipeline
+import Flapjack.RiscV.Encoding
 
 namespace Flapjack
 
@@ -81,14 +82,21 @@ def pipelineNoMainTargetHasSyntheticMain : Bool :=
 
 /- The handler address is a cross-section address.  This checks the emitted
    setup code directly: the handler for `main` must not be encoded as a local
-   offset or as the exception-register number. -/
+   offset or as the exception-register number.
+
+   The constant is the byte address of the handler code in the emitted image.
+   It moved from 72 to 88 when the loop-to-word bridge was made faithful to
+   `loop_to_word$comp` (cakeml/pancake/loop_to_wordScript.sml:128-143):
+   handled calls now compile the normal-return body and the trailing `Tick`
+   instead of dropping them as `Skip`, adding four instructions (16 bytes)
+   before the handler section. -/
 def pipelineHandlerHasCrossSectionAddress : Bool :=
   match compileFlapjackRiscVViaStack (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value) []
       pipelineStackRemoveConfig pipelineHandlerDeclarations with
   | some instructions =>
       instructions.any (fun instruction =>
-        instruction == .addi 31 0 (BitVec.ofNat 64 148))
+        instruction == .addi 31 31 (BitVec.ofNat 64 88))
   | none => false
 
 #guard pipelineHandlerHasCrossSectionAddress
@@ -240,7 +248,7 @@ example :
     compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
     compileProg, crepInlineTopRecursiveByNames, crepInlineTopRecursive,
     crepInlineFunctionsRecursive, crepInlineActiveNames,
-    crepArithFunctions]
+    crepSimpFunctions]
 
 example [NeZero width] :
     pipelineRiscVFunctions
@@ -435,6 +443,13 @@ example [NeZero width] :
       some (.divU 1 2 3) := by
   exact RiscV.wordArithToInstruction_div
 
+/-! Cake's `riscv_ast` maps Word `Div` to the signed RV `DIV` encoding
+    (`funct3 = 100`), even though the abstract Word operation is unsigned. -/
+example :
+    RiscV.encodeInstruction (width := 64) (.divU 5 2 3) =
+      BitVec.ofNat 32 0x023142b3 := by
+  decide
+
 example (left right : RiscV.Word 64) :
     RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]
       [.add 5 2 3] [5] [left, right] (RiscV.zeroState 64) = some [left + right] := by
@@ -523,6 +538,55 @@ example :
         | .name name _ => name
         | .exnDecl exception _ => exception) =
       ["global", "main", "worker"] := by
+  decide +kernel
+
+/-! A program without `main` still gets the CakeML entry treatment
+    (`pan_passesScript.sml:23-44`): a zero-returning `main` is synthesized
+    first, and the entry wrapper runs the global initializers before the
+    tail call to the renamed entry, so exported functions never read
+    uninitialized global memory. -/
+
+def noMainGlobalFixture : List (Decl Nat) :=
+  [.decl .one "g" (.const 7),
+    .function
+      { name := "worker", inline := false, exported := true, params := [],
+        body := .return (.var .global "g"), returnShape := .one }]
+
+example :
+    (compileFlapjackTarget (α := Nat) .rv64i 1 id noMainGlobalFixture).simplified.map
+      (fun declaration =>
+        match declaration with
+        | .function function => function.name
+        | .decl _ name _ => name
+        | .name name _ => name
+        | .exnDecl exception _ => exception) =
+      ["main", "g", "worker"] := by
+  decide +kernel
+
+/-- Fingerprint of the synthesized `main` body: initializer stores followed
+    by the tail call to the renamed entry (`main = Seq (nested_seq decls)
+    (TailCall …)`), asserted decidably. -/
+def noMainEntrySteps : Option (List String) :=
+  (compileFlapjackTarget (α := Nat) .rv64i 1 id noMainGlobalFixture).globals.declarations.findSome?
+    (fun declaration =>
+      match declaration with
+      | .function function =>
+          if function.name = "main" then some function.body else none
+      | _ => none) |>.map
+    (fun body =>
+      (go body).flatten
+    )
+where
+  go : Prog Nat → List (List String)
+    | .seq first second => go first ++ go second
+    | .store _ _ => [["store"]]
+    | .store32 _ _ => [["store32"]]
+    | .storeByte _ _ => [["storeByte"]]
+    | .call info name _ => [["call " ++ name ++
+        (match info with | none => " tail" | some _ => " handled")]]
+    | _ => [[]]
+
+example : noMainEntrySteps = some ["store", "call main' tail"] := by
   decide +kernel
 
 end Flapjack

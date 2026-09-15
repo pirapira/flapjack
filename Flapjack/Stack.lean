@@ -85,6 +85,117 @@ inductive StackProg (α : Type u) where
   | halt (register : Nat)
   deriving Repr
 
+/-! Register relabeling is kept at the StackLang boundary so a source-shaped
+    Cake program can be converted to the port's hardware-numbered Lab input
+    without changing stores, offsets, labels, or constants. -/
+def stackMapWordArith (map : Nat → Nat) : WordArith → WordArith
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      .longMul (map destinationLeft) (map destinationRight)
+        (map sourceLeft) (map sourceRight)
+  | .longDiv destinationLeft destinationRight sourceLeft sourceRight quotient =>
+      .longDiv (map destinationLeft) (map destinationRight)
+        (map sourceLeft) (map sourceRight) (map quotient)
+  | .addCarry destination resultCarry sourceLeft sourceRight carryIn =>
+      .addCarry (map destination) (map resultCarry) (map sourceLeft)
+        (map sourceRight) (map carryIn)
+  | .cakeAddCarry destination sourceLeft sourceRight carry =>
+      .cakeAddCarry (map destination) (map sourceLeft) (map sourceRight)
+        (map carry)
+  | .div destination dividend divisor =>
+      .div (map destination) (map dividend) (map divisor)
+
+def stackMapWordInst (map : Nat → Nat) : WordInst → WordInst
+  | .arith operation => .arith (stackMapWordArith map operation)
+  | .mem operator destination address =>
+      .mem operator (map destination) (map address)
+
+def stackMapWordRegImm (map : Nat → Nat) : WordRegImm α → WordRegImm α
+  | .imm value => .imm value
+  | .reg register => .reg (map register)
+
+def stackMapCallTarget (map : Nat → Nat) : StackCallTarget → StackCallTarget
+  | .label label => .label label
+  | .register register => .register (map register)
+
+def stackMapDepth : StackProg α → Nat
+  | .call returnHandler _ handler =>
+      1 + max
+        (match returnHandler with
+        | none => 0
+        | some (program, _, _, _) => stackMapDepth program)
+        (match handler with
+        | none => 0
+        | some (program, _, _) => stackMapDepth program)
+  | .seq first second => 1 + max (stackMapDepth first) (stackMapDepth second)
+  | .ite _ _ _ thenBranch elseBranch =>
+      1 + max (stackMapDepth thenBranch) (stackMapDepth elseBranch)
+  | .loop body => 1 + stackMapDepth body
+  | _ => 1
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+def stackMapRegisters (map : Nat → Nat) : StackProg α → StackProg α
+  | .skip => .skip
+  | .const destination value => .const (map destination) value
+  | .inst instruction => .inst (stackMapWordInst map instruction)
+  | .shMem operator source address => .shMem operator (map source) (map address)
+  | .get destination store => .get (map destination) store
+  | .set store source => .set store (map source)
+  | .arith operator destination left right =>
+      .arith operator (map destination) (map left) (map right)
+  | .shift operator destination left right =>
+      .shift operator (map destination) (map left) (map right)
+  | .opCurrHeap operator destination source =>
+      .opCurrHeap operator (map destination) (map source)
+  | .call none target none => .call none (stackMapCallTarget map target) none
+  | .call none target (some (program, exceptionLabel, handlerLabel)) =>
+      .call none (stackMapCallTarget map target)
+        (some (stackMapRegisters map program, exceptionLabel, handlerLabel))
+  | .call (some (program, link, returnLabel, entryLabel)) target none =>
+      .call (some (stackMapRegisters map program, link, returnLabel, entryLabel))
+        (stackMapCallTarget map target) none
+  | .call (some (program, link, returnLabel, entryLabel)) target
+      (some (handlerProgram, exceptionLabel, handlerLabel)) =>
+      .call (some (stackMapRegisters map program, link, returnLabel, entryLabel))
+        (stackMapCallTarget map target)
+        (some (stackMapRegisters map handlerProgram, exceptionLabel, handlerLabel))
+  | .seq first second => .seq (stackMapRegisters map first) (stackMapRegisters map second)
+  | .ite operator condition right thenBranch elseBranch =>
+      .ite operator (map condition) (stackMapWordRegImm map right)
+        (stackMapRegisters map thenBranch) (stackMapRegisters map elseBranch)
+  | .loop body => .loop (stackMapRegisters map body)
+  | .jumpLower register target label => .jumpLower (map register) (map target) label
+  | .alloc words => .alloc words
+  | .storeConsts source bitmap stub => .storeConsts (map source) (map bitmap) (stub.map map)
+  | .codeBufferWrite address value => .codeBufferWrite (map address) (map value)
+  | .dataBufferWrite address value => .dataBufferWrite (map address) (map value)
+  | .raise exception => .raise (map exception)
+  | .return value => .return (map value)
+  | .break label => .break label
+  | .continue label => .continue label
+  | .ffi function configuration configurationLength array arrayLength returnAddress =>
+      .ffi function (map configuration) configurationLength (map array) arrayLength
+        (map returnAddress)
+  | .tick => .tick
+  | .locValue destination label entry => .locValue (map destination) label entry
+  | .install codeBuffer codeLength dataBuffer dataLength returnAddress =>
+      .install (map codeBuffer) codeLength (map dataBuffer) dataLength
+        (map returnAddress)
+  | .rawCall target => .rawCall (map target)
+  | .stackAlloc words => .stackAlloc words
+  | .stackFree words => .stackFree words
+  | .stackStore register offset => .stackStore (map register) offset
+  | .stackStoreAny register offsetRegister => .stackStoreAny (map register) (map offsetRegister)
+  | .stackLoad register offset => .stackLoad (map register) offset
+  | .stackLoadAny register offsetRegister => .stackLoadAny (map register) (map offsetRegister)
+  | .stackGetSize register => .stackGetSize (map register)
+  | .stackSetSize register => .stackSetSize (map register)
+  | .bitmapLoad destination address => .bitmapLoad (map destination) (map address)
+  | .halt register => .halt (map register)
+termination_by program => stackMapDepth program
+decreasing_by
+  all_goals simp [stackMapDepth] <;> omega
+
 def stackSeq : List (StackProg α) → StackProg α
   | [] => .skip
   | [program] => program
@@ -237,10 +348,29 @@ def wordToStackCallWithHandlerInSection (perf : Bool) (target : Nat)
   let returnCode := stackPopHandler perf scratch returnCode
   let callCode :=
     .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target)
-      (some (handlerCode, exceptionLabel, handlerLabel))
+      (some (handlerCode, exceptionLabel, handlerEntryLabel))
   stackSeq [
-    stackPushHandler perf handlerLabel handlerEntryLabel scratch,
+    stackPushHandler perf handlerEntryLabel handlerLabel scratch,
     stackHandlerArgs perf (argumentCount + 1) frameOffset scratch,
+    callCode
+  ]
+
+/-! Source-shaped variant of the handler call boundary.  Cake's argument count
+    includes the return destination, while only arguments beyond the Word
+    register window need a fresh stack frame. -/
+def wordToStackCallWithHandlerInSectionAtRegisterCount (perf : Bool) (target : Nat)
+    (argumentCount registerCount frameOffset scratch : Nat)
+    (returnCode handlerCode : StackProg α)
+    (returnLabel entryLabel handlerLabel handlerEntryLabel exceptionLabel : Nat) :
+    StackProg α :=
+  let returnCode := stackPopHandler perf scratch returnCode
+  let callCode :=
+    .call (some (returnCode, 0, returnLabel, entryLabel)) (.label target)
+      (some (handlerCode, exceptionLabel, handlerEntryLabel))
+  let stackArgumentCount := argumentCount + 1 - registerCount
+  stackSeq [
+    stackPushHandler perf handlerEntryLabel handlerLabel scratch,
+    stackHandlerArgs perf stackArgumentCount frameOffset scratch,
     callCode
   ]
 
@@ -253,6 +383,36 @@ def wordToStackCallWithHandler (perf : Bool) (target : Nat)
       (some (handlerCode, exceptionLabel, handlerLabel))
   stackSeq [
     stackPushHandler perf handlerLabel exceptionLabel scratch,
+    stackHandlerArgs perf (argumentCount + 1) frameOffset scratch,
+    callCode
+  ]
+
+/-! CakeML's `call_dest` accepts either a code label (`INL`) or a computed
+    register (`INR`, an indirect call).  These two carriers are the same as the
+    labelled versions above but keep the computed target instead of fixing a
+    label, which is how the original lowers an indirect call. -/
+def wordToStackCallNoHandlerTarget (_perf : Bool) (target : StackCallTarget)
+    (argumentCount frameOffset scratch : Nat)
+    (returnValues : List Nat) (returnCode : StackProg α)
+    (returnLabel entryLabel : Nat) : StackProg α :=
+  let callCode :=
+    .call (some (returnCode, 0, returnLabel, entryLabel)) target none
+  stackSeq [
+    stackArgs (argumentCount + 1) frameOffset scratch,
+    callCode,
+    .stackFree (returnValues.length)
+  ]
+
+def wordToStackCallWithHandlerInSectionTarget (perf : Bool) (target : StackCallTarget)
+    (argumentCount frameOffset scratch : Nat)
+    (returnCode handlerCode : StackProg α)
+    (returnLabel entryLabel handlerLabel handlerEntryLabel exceptionLabel : Nat) : StackProg α :=
+  let returnCode := stackPopHandler perf scratch returnCode
+  let callCode :=
+    .call (some (returnCode, 0, returnLabel, entryLabel)) target
+      (some (handlerCode, exceptionLabel, handlerLabel))
+  stackSeq [
+    stackPushHandler perf handlerLabel handlerEntryLabel scratch,
     stackHandlerArgs perf (argumentCount + 1) frameOffset scratch,
     callCode
   ]

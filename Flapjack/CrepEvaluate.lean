@@ -5,11 +5,14 @@ import Flapjack.CrepeSemantics
 
 Source reference: `cakeml/pancake/semantics/crepSemScript.sml:240-446`.
 
-`evalCrepFullProg` already carries the complete executable scalar Crepe
-evaluator.  This source-shaped entry point names that boundary explicitly:
-the finite fuel argument is the Lean termination budget, while the returned
-`CrepControlResult` carries the source state transitions and observable
-control/effect results.
+`evalCrepFullProgState` already carries the complete executable scalar Crepe
+evaluator with CakeML's state shape: globals are a separate map
+(`crepSemScript.sml:111` reads `s.globals` for `LoadGlob`, `:288-291` writes
+it for `StoreGlob`, and call entry carries the caller's globals), never
+aliased onto main memory.  This source-shaped entry point names that boundary
+explicitly: the finite fuel argument is the Lean termination budget, while the
+returned `CrepControlResult` carries the source state transitions and
+observable control/effect results.
 -/
 
 namespace Flapjack
@@ -23,10 +26,10 @@ def crepEvaluate
     (sharedMem : CrepSharedMemHandler α)
     (baseAddress topAddress : α) (fuel : Nat) (state : CrepState α)
     (program : CrepProg α) : Option (CrepControlResult α) :=
-  evalCrepFullProg functions primitive ffi sharedMem
+  evalCrepFullProgState functions primitive ffi sharedMem
     baseAddress topAddress fuel state program
 
-@[simp] theorem crepEvaluate_eq_evalCrepFullProg
+@[simp] theorem crepEvaluate_eq_evalCrepFullProgState
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α] [ShiftRight α]
     [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
@@ -37,7 +40,7 @@ def crepEvaluate
     (program : CrepProg α) :
     crepEvaluate functions primitive ffi sharedMem baseAddress topAddress
       fuel state program =
-      evalCrepFullProg functions primitive ffi sharedMem
+      evalCrepFullProgState functions primitive ffi sharedMem
         baseAddress topAddress fuel state program := by
   rfl
 

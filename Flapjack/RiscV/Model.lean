@@ -456,9 +456,9 @@ def execute (state : State width) : Instruction width → State width
   | .divU destination sourceLeft sourceRight =>
       let divisor := readRegister state sourceRight
       writeRegister { state with pc := nextPc state } destination
-        (if divisor == 0 then BitVec.ofNat width (2 ^ width - 1)
-        else BitVec.ofNat width
-          (readRegister state sourceLeft).toNat / divisor.toNat)
+        (if divisor == 0 then BitVec.allOnes width
+        else BitVec.ofInt width
+          ((readRegister state sourceLeft).toInt.ediv divisor.toInt))
   | .remU destination sourceLeft sourceRight =>
       let divisor := readRegister state sourceRight
       writeRegister { state with pc := nextPc state } destination
@@ -669,12 +669,12 @@ theorem execute_sltu (state : State width) (destination sourceLeft sourceRight :
 theorem execute_divU (state : State width) (destination sourceLeft sourceRight : Fin 32) :
     readRegister (execute state (.divU destination sourceLeft sourceRight)) destination =
       if destination = 0 then readRegister state destination
-      else if readRegister state sourceRight == 0 then BitVec.ofNat width (2 ^ width - 1)
-      else BitVec.ofNat width
-        ((readRegister state sourceLeft).toNat /
-          (readRegister state sourceRight).toNat) := by
+      else if readRegister state sourceRight == 0 then BitVec.allOnes width
+      else BitVec.ofInt width
+        ((readRegister state sourceLeft).toInt.ediv
+          (readRegister state sourceRight).toInt) := by
   by_cases h : destination = 0 <;>
-    simp [execute, writeRegister, readRegister, h, BitVec.udiv_def]
+    simp [execute, writeRegister, readRegister, h]
 
 theorem execute_remU (state : State width) (destination sourceLeft sourceRight : Fin 32) :
     readRegister (execute state (.remU destination sourceLeft sourceRight)) destination =

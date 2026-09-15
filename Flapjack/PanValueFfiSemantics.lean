@@ -51,9 +51,9 @@ def panValueFfiSharedLoad (context : PanValueFfiContext α)
   if !context.sharedDomain alignedAddress then none
   else
     match callFfi ffi (.sharedMem .mappedRead) [UInt8.ofNat width]
-        (context.wordToBytes alignedAddress false) with
+        (context.wordToBytes address false) with
     | .returned nextFfi bytes =>
-        some (.loaded nextFfi (context.wordOfBytes context.bigEndian bytes))
+        some (.loaded nextFfi (context.wordOfBytes false bytes))
     | .final event => some (.final ffi event)
 
 def panValueFfiSharedStore (context : PanValueFfiContext α)
@@ -65,10 +65,10 @@ def panValueFfiSharedStore (context : PanValueFfiContext α)
   else
     let payload :=
       if width = 0 then
-        context.wordToBytes value false ++ context.wordToBytes alignedAddress false
+        context.wordToBytes value false ++ context.wordToBytes address false
       else
         (context.wordToBytes value false).take width ++
-          context.wordToBytes alignedAddress false
+          context.wordToBytes address false
     match callFfi ffi (.sharedMem .mappedWrite) [UInt8.ofNat width] payload with
     | .returned nextFfi _ => some (.stored nextFfi)
     | .final event => some (.final ffi event)

@@ -489,8 +489,8 @@ theorem wordFunctionToRiscVWithCalls_div_result [NeZero width]
       ((.inst (.arith (.div 5 2 3))) : WordProg (Word width)) =
       some (code, [])) :
     readRegister (executeInstructions state code) 5 =
-      BitVec.ofNat width
-        ((readRegister state 2).toNat / (readRegister state 3).toNat) := by
+      BitVec.ofInt width
+        ((readRegister state 2).toInt.ediv (readRegister state 3).toInt) := by
   have hshape : wordFunctionToRiscVWithCalls context
       ((.inst (.arith (.div 5 2 3))) : WordProg (Word width)) =
       some ([.divU 5 2 3], []) := by

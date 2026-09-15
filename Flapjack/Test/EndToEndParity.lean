@@ -37,7 +37,7 @@ def machineResult : Option (List (RiscV.Word 64)) := do
   let sections ← linked
   let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [10] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
 
 /-! This value is transcribed from the original HOL probe output. It is not a
@@ -61,7 +61,7 @@ def addMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← addLinked
   let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [10] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
 
 def originalAddProbeResult : Option (List (RiscV.Word 64)) :=
@@ -92,7 +92,7 @@ def multiplicationMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← multiplicationLinked
   let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [10] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
 
 def multiplicationOriginalProbeResult : Option (List (RiscV.Word 64)) :=
@@ -121,7 +121,7 @@ def controlMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← controlLinked
   let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [10] []
     (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
 
 def controlOriginalProbeResult : Option (List (RiscV.Word 64)) :=
@@ -150,8 +150,13 @@ def callMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← callLinked
   let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 192 [] image [2] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 192)
+  let mainLength ←
+    match sections.find? (fun (label, _, _) => label == 2) with
+    | some (_, _, code) => some code.length
+    | none => none
+  let returnAddress := entry + BitVec.ofNat 64 (4 * (mainLength - 2))
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [10] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 def callOriginalProbeResult : Option (List (RiscV.Word 64)) :=
   some [BitVec.ofNat 64 7]
@@ -161,7 +166,13 @@ def callOriginalProbeResult : Option (List (RiscV.Word 64)) :=
 
 /-! The global fixture exercises declaration initialization followed by a
     global load in the entry function; its expected value comes from the
-    independent `global_g_7` panSem probe. -/
+    independent `global_g_7` panSem probe.  Section 1 is the generated
+    wrapper: it runs the global initializer and then tail-calls `main` with
+    Cake's `0::args` link convention
+    (cakeml/pancake/loop_to_wordScript.sml:131), whose lowering moves the
+    constant 0 into the link register.  The harness therefore uses return
+    address 0: `executeCodeUntil` stops when `pc` reaches it, right after
+    `main` returns through the zeroed link register. -/
 def globalSource : String :=
   "var 1 g = 7; fun 1 main() { return g; }"
 
@@ -179,8 +190,8 @@ def globalMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← globalLinked
   let entry ← parsedCallLookupEntry 1 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 6)
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 0 [] image [10] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 0)
 
 def globalOriginalProbeResult : Option (List (RiscV.Word 64)) :=
   some [BitVec.ofNat 64 7]
@@ -213,7 +224,7 @@ def memoryMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← memoryLinked
   let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [2] []
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry 6 [] image [10] []
     (RiscV.writeRegister memoryMachineState 1 6)
 
 def memoryOriginalProbeResult : Option (List (RiscV.Word 64)) :=

@@ -353,6 +353,56 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+/-! Stateful Loop-to-Word companion for the source-shaped compiler boundary.
+    Cake's `comp` threads `(function label, fresh local label)` through calls;
+    the return and handler labels are observable in the final RISC-V artifact.
+    The older stateless helper above remains available to the pass-local
+    semantics and uses the historical zero labels. -/
+def loopToWordProgWithLabels [OfNat α 1] (context : WordContext) :
+    (Nat × Nat) → LoopProg α → WordProg α × (Nat × Nat)
+  | labels, .seq first second =>
+      let (first, labels) := loopToWordProgWithLabels context labels first
+      let (second, labels) := loopToWordProgWithLabels context labels second
+      (.seq first second, labels)
+  | labels, .ite operator condition right thenBranch elseBranch _ =>
+      let (thenBranch, labels) := loopToWordProgWithLabels context labels thenBranch
+      let (elseBranch, labels) := loopToWordProgWithLabels context labels elseBranch
+      (.seq (.ite operator (wordFindVar context condition) (wordRegImm context right)
+        thenBranch elseBranch) .tick, labels)
+  | labels, .loop liveIn body liveOut =>
+      let (body, labels) := loopToWordProgWithLabels context labels body
+      (.seq .tick (.seq (.loop (wordMkNewCutset context liveIn) body
+        (wordMkNewCutset context liveOut)) .tick), labels)
+  | labels, .mark body =>
+      loopToWordProgWithLabels context labels body
+  | labels, .call none target arguments _ =>
+      /- Tail call: CakeML drops the handler and prepends register 0 (the
+         link slot) to the argument list (`loop_to_wordScript.sml:131`). -/
+      (.call none target (0 :: wordMapVars context arguments) none, labels)
+  | labels, .call (some (values, live)) target arguments none =>
+      let nextLabels := (labels.1, labels.2 + 1)
+      (.call (some (wordMapVars context values,
+          (wordMkNewCutset context live, []), .skip, labels.1, labels.2)) target
+        (wordMapVars context arguments) none, nextLabels)
+  | labels, .call (some (values, live)) target arguments
+      (some (exception, handlerBody, returnBody, _)) =>
+      let nextLabels := (labels.1, labels.2 + 1)
+      let (handlerBody, handlerLabels) :=
+        loopToWordProgWithLabels context nextLabels handlerBody
+      let (returnBody, handlerLabels) :=
+        loopToWordProgWithLabels context handlerLabels returnBody
+      let finalLabels := (handlerLabels.1, handlerLabels.2 + 1)
+      (.seq
+        (.call (some (wordMapVars context values,
+            (wordMkNewCutset context live, []), returnBody, labels.1, labels.2)) target
+          (wordMapVars context arguments)
+          (some (wordFindVar context exception, handlerBody,
+            handlerLabels.1, handlerLabels.2))) .tick, finalLabels)
+  | labels, program => (loopToWordProg context program, labels)
+  termination_by _ program => sizeOf program
+  decreasing_by
+    all_goals decreasing_trivial
+
 theorem loopToWordProg_skip [OfNat α 1] (context : WordContext) :
     loopToWordProg context (.skip : LoopProg α) = .skip := by
   simp [loopToWordProg]

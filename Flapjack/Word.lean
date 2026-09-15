@@ -28,7 +28,7 @@ inductive WordStore (α : Type u) where
   | codeBufferEnd
   | bitmapBuffer
   | bitmapBufferEnd
-  deriving Repr
+  deriving DecidableEq, Repr
 
 inductive WordExp (α : Type u) where
   | const (value : α)
@@ -42,7 +42,7 @@ inductive WordExp (α : Type u) where
 inductive WordRegImm (α : Type u) where
   | imm (value : α)
   | reg (name : Nat)
-  deriving Repr
+  deriving DecidableEq, Repr
 
 inductive WordArith where
   | longMul (destinationLeft destinationRight sourceLeft sourceRight : Nat)
@@ -118,7 +118,7 @@ inductive WordProg (α : Type u) where
 
 structure WordContext where
   vars : NatInfoMap Nat
-  deriving Repr
+  deriving DecidableEq, Repr
 
 def wordFindVar (context : WordContext) (name : Nat) : Nat :=
   match lookupNatInfo name context.vars with

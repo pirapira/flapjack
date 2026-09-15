@@ -74,8 +74,8 @@ example [NeZero width] (state : State width) :
 example [NeZero width] (state : State width)
     (hdivisor : readRegister state 3 ≠ 0) :
     readRegister (executeInstructions state [.divU 5 2 3]) 5 =
-      (BitVec.ofNat width
-        ((readRegister state 2).toNat / (readRegister state 3).toNat)) := by
+      (BitVec.ofInt width
+        ((readRegister state 2).toInt.ediv (readRegister state 3).toInt)) := by
   exact wordFunctionToRiscVWithCalls_div_result
     ({ targets := [] } : WordCallContext width) state _ hdivisor (by
       simp [wordFunctionToRiscVWithCalls, wordArithToInstructions,

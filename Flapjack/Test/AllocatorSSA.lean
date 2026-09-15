@@ -75,7 +75,7 @@ example :
 example :
     wordProgReadVars
         ((.call (some ([5], ([6], []), .skip, 0, 0)) (some 7) [8]
-          (some (9, .return 0 [10], 0, 0)) : WordProg Nat)) = [8, 6, 10] := by
+        (some (9, .return 0 [10], 0, 0)) : WordProg Nat)) = [8, 6, 0, 10] := by
   rfl
 
 example :

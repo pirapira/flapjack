@@ -123,17 +123,21 @@ def crepInlineProgRecursive [BEq FunName] [LawfulBEq FunName]
         match crepInlineLookup name inlineable with
         | none => .call none name arguments
         | some (argumentNames, body) =>
-            crepInlineCallBody none name arguments argumentNames
+            let (body', _) := crepUnreachElim
               (crepInlineProgRecursive inlineable (active.erase name) body)
+            crepInlineCallBody none name arguments argumentNames
+              body'
       else .call none name arguments
   | .call (some (returnNames, none)) name arguments =>
       if _hactive : name ∈ active then
         match crepInlineLookup name inlineable with
         | none => .call (some (returnNames, none)) name arguments
         | some (argumentNames, body) =>
+            let (body', _) := crepUnreachElim
+              (crepInlineProgRecursive inlineable (active.erase name) body)
             crepInlineCallBody (some (returnNames, none)) name arguments
               argumentNames
-              (crepInlineProgRecursive inlineable (active.erase name) body)
+              body'
       else .call (some (returnNames, none)) name arguments
   | .call (some (returnNames, some (handler, body))) name arguments =>
       .call (some (returnNames, some (handler,

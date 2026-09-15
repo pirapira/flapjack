@@ -89,6 +89,12 @@ example :
 
 example :
     compileLabSection (width := 64) { services := [] }
+      ⟨3, [.asm (.arithImm .sub 20 20 16) [] 0]⟩ =
+      some [.addi 20 20 (0 - BitVec.ofNat 64 16)] := by
+  decide
+
+example :
+    compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.codeBufferWrite 7 6) [] 0]⟩ =
       some [.storeByte 6 7] := by
   decide

@@ -22,6 +22,8 @@ structure StackRemoveConfig where
   bytesInWord : Nat
   stackBase : Nat
   wordShift : Nat
+  /- Cake's checked stack allocation emits JumpLower after allocation. -/
+  jump : Bool := false
   deriving Repr
 
 /- The order is the 1-based order of CakeML's `store_list`. -/
@@ -105,7 +107,11 @@ decreasing_by
   · apply Nat.sub_lt <;> omega
 
 def stackRemoveStackAlloc (config : StackRemoveConfig) (words : Nat) : StackProg α :=
-  stackRemoveStackDelta config .sub words
+  let delta := stackRemoveStackDelta config .sub words
+  if config.jump then
+    stackRemoveJoin delta (.jumpLower config.stackPointer config.stackBase 2)
+  else
+    delta
 
 def stackRemoveStackFree (config : StackRemoveConfig) (words : Nat) : StackProg α :=
   stackRemoveStackDelta config .add words

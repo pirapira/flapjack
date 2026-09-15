@@ -40,6 +40,9 @@ inductive LabPlain (α : Type u) where
   | word (instruction : WordInst)
   | const (destination value : Nat)
   | arith (operator : BinOp) (destination left right : Nat)
+  /- The stack remover represents Cake's immediate stack-pointer update as a
+     constant followed by a register arithmetic operation. -/
+  | arithImm (operator : BinOp) (destination left immediate : Nat)
   | shift (operator : Shift) (destination left right : Nat)
   | tick
   | jumpReg (register : Nat)
@@ -190,6 +193,26 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
             handlerResult.nextLabel + 1⟩
   | .call _ _ _ =>
       ⟨[], false, counter⟩
+  | .seq (.const scratch value)
+      (.arith operator destination left right) =>
+      let canFuse :=
+        right == scratch && destination == left &&
+          match operator with
+          | .add => value < 2 ^ 11
+          | .sub => value ≤ 2 ^ 11
+          | .and | .or | .xor => false
+      if canFuse then
+        ⟨[.asm (.arithImm operator destination left value) [] 0], false, counter⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks (.const scratch value)
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks
+            (.arith operator destination left right)
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
   | .seq first second =>
       let firstResult := labFlatten false sectionId counter continues breaks first
       let secondResult :=

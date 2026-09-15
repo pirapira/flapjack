@@ -112,6 +112,7 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       | .word (.arith (.longMul _ _ _ _)) => 2
       | .word (.arith (.addCarry _ _ _ _ _)) => 6
       | .const _ value => labConstInstructionCount value
+      | .arithImm _ _ _ _ => 1
       | .tick => 0
       | _ => 1
   | .labAsm operation _ _ =>
@@ -213,6 +214,13 @@ def labCompilePlain [NeZero width] :
         pure (labConstInstructions destination zero temporary value)
   | .arith operator destination left right =>
       (labBinOpInstruction operator destination left right).map List.singleton
+  | .arithImm operator destination left immediate => do
+      let destination ← labRegisterOfNat (portToStack destination)
+      let left ← labRegisterOfNat (portToStack left)
+      match operator with
+      | .add => pure [.addi destination left (BitVec.ofNat width immediate)]
+      | .sub => pure [.addi destination left (0 - BitVec.ofNat width immediate)]
+      | .and | .or | .xor => none
   | .shift operator destination left right =>
       labShiftInstructions operator destination left right
   | .tick =>
@@ -338,6 +346,8 @@ def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
   | .const destination value => .const destination value
   | .arith operator destination left right =>
       .arith operator destination left right
+  | .arithImm operator destination left immediate =>
+      .arithImm operator destination left immediate
   | .shift operator destination left right =>
       .shift operator destination left right
   | .tick => .tick

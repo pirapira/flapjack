@@ -105,8 +105,7 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
         apply hfalse
         intro move hmove
         have hmoveReserved := hreserved move hmove
-        simp [hmoveReserved.1, hmoveReserved.2.1,
-          hmoveReserved.2.2.1, hmoveReserved.2.2.2]
+        simp [hmoveReserved.1, hmoveReserved.2.1]
       have htailResult := ih htailDestinations htailNoSource htailReserved
       have htailAux :
           wordStackParallelLocationMoveAux config (tail.length + 1) tail =

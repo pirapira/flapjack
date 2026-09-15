@@ -1,0 +1,136 @@
+import Flapjack.RiscV.WordInstSelect
+
+/-!
+# Cake `pull_exp`/`flatten_exp` constant-placement oracle (GH #1024)
+
+Cake's instruction selection normalizes every assignment operand with
+
+```
+inst_select c temp (Assign v exp) =
+  (inst_select_exp c v temp o flatten_exp o pull_exp) exp
+```
+
+(`cakeml/compiler/backend/word_instScript.sml:383`).  The two passes interact:
+
+* `pull_ops` collects operands with `ls ++ acc`, which reverses their order.
+* `optimize_consts`/`reduce_const` fold constant operands into a single
+  constant and place it at the front of the collected list (and, when there
+  are no constants, they reverse the list).
+* `flatten_exp (Op op (x::xs)) = Op op [flatten_exp (Op op xs); flatten_exp x]`
+  is head-last, which reverses once more.
+
+The net effect, confirmed by the direct HOL evaluation in
+`scripts/hol-probes/word_inst_probe.out`, is that a plain operation keeps the
+reversed `pull_ops` order (`Op Add [Var 2; Var 4]` normalizes to
+`Op Add [Var 4; Var 2]`) while a constant operand ends up **last**
+(`Op Add [Var 7; Const 1w]` and `Op Add [Const 1w; Var 7]` both normalize to
+`Op Add [Var 7; Const 1w]`).  `inst_select_exp` only uses an immediate when the
+second operand is a constant, so this is exactly the `addi` shape.
+
+The port keeps Cake's constant-right `convert_sub` and head-first
+`wordInstFlattenExp`; the missing piece was Cake's constant placement, which
+`wordInstConstantsToEnd` now reproduces (constants last).  Folding *several*
+constants into one value (`optimize_consts` proper) is still a separate gap.
+
+This module pins the oracle values from `word_inst_probe.out` and checks that
+the port's normalizer reaches them.
+-/
+
+namespace Flapjack.Test.WordInstNormalizeParity
+
+open Flapjack Flapjack.RiscV
+
+/-- In-order atoms of an `Op Add` spine: `some name` for a variable, `none`
+for a constant. -/
+def addOperandAtoms : WordExp α → List (Option Nat)
+  | .op .add arguments => List.flatMap addOperandAtoms arguments
+  | .var name => [some name]
+  | .const _ => [none]
+  | _ => []
+
+/-- `word_inst_probe.out: norm_two_vars`. -/
+def cakeTwoVarAtoms : List (Option Nat) := [some 4, some 2]
+
+/-- `word_inst_probe.out: norm_t_plus_1` / `norm_1_plus_t`. -/
+def cakeVarConstAtoms : List (Option Nat) := [some 7, none]
+
+/-- `word_inst_probe.out: norm_nested_add`. -/
+def cakeNestedAtoms : List (Option Nat) := [some 2, some 1, none]
+
+/-- `word_inst_probe.out: norm_const_middle`. -/
+def cakeConstMiddleAtoms : List (Option Nat) := [some 3, some 1, none]
+
+/-- Does `expression` have the shape `Op Add [Var _, Const value]`? -/
+def addVarConstValueShape [BEq α] (value : α) : WordExp α → Bool
+  | .op .add args =>
+      match args with
+      | [a, b] =>
+          (match a with | .var _ => true | _ => false) &&
+          (match b with | .const other => other == value | _ => false)
+      | _ => false
+  | _ => false
+
+/-- The port reverses plain operand order exactly like `pull_ops` + flatten. -/
+def twoVarOrderMatches : Bool :=
+  addOperandAtoms
+      (wordInstNormalizeExp (α := Nat) (.op .add [.var 2, .var 4]))
+    == cakeTwoVarAtoms
+
+/-- A source constant-second `t + 1` keeps the constant second. -/
+def varConstOrderMatches : Bool :=
+  addOperandAtoms
+      (wordInstNormalizeExp (α := Nat) (.op .add [.var 7, .const 1]))
+    == cakeVarConstAtoms
+
+/-- A source constant-first `1 + t` also normalizes the constant second. -/
+def constFirstOrderMatches : Bool :=
+  addOperandAtoms
+      (wordInstNormalizeExp (α := Nat) (.op .add [.const 1, .var 7]))
+    == cakeVarConstAtoms
+
+/-- A nested addition keeps the constant last. -/
+def nestedOrderMatches : Bool :=
+  addOperandAtoms
+      (wordInstNormalizeExp (α := Nat)
+        (.op .add [.var 1, .op .add [.var 2, .const 3]]))
+    == cakeNestedAtoms
+
+/-- A constant in the middle is moved after the variables. -/
+def constMiddleOrderMatches : Bool :=
+  addOperandAtoms
+      (wordInstNormalizeExp (α := Nat)
+        (.op .add [.var 1, .const 5, .var 3]))
+    == cakeConstMiddleAtoms
+
+/-- `x - 8` is `x + (-8)` with the constant second, like Cake's `convert_sub`
+composed with the constant placement. -/
+def subtractionConstantSecond : Bool :=
+  addVarConstValueShape ((0 : BitVec 64) - 8)
+    (wordInstNormalizeExp (α := BitVec 64) (.op .sub [.var 7, .const 8]))
+
+#guard twoVarOrderMatches
+#guard varConstOrderMatches
+#guard constFirstOrderMatches
+#guard nestedOrderMatches
+#guard constMiddleOrderMatches
+#guard subtractionConstantSecond
+
+def runChecks : IO Bool := do
+  let checks : List (String × Bool) :=
+    [ ("the Cake normalization oracle keeps the reversed two-variable order", twoVarOrderMatches)
+    , ("a source t + 1 normalizes with the constant second like Cake", varConstOrderMatches)
+    , ("a source 1 + t also normalizes the constant second", constFirstOrderMatches)
+    , ("a nested addition keeps the constant last like Cake", nestedOrderMatches)
+    , ("a constant in the middle moves after the variables", constMiddleOrderMatches)
+    , ("x - 8 normalizes to x + (-8) with the constant second", subtractionConstantSecond)
+    ]
+  let mut ok := true
+  for (label, passed) in checks do
+    if passed then
+      IO.println s!"PASS {label}"
+    else
+      IO.println s!"FAIL {label}"
+      ok := false
+  pure ok
+
+end Flapjack.Test.WordInstNormalizeParity

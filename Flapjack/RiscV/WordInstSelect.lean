@@ -51,6 +51,29 @@ def wordInstPullOps (operator : BinOp) :
 termination_by expressions _ => sizeOf expressions
 decreasing_by all_goals decreasing_trivial
 
+def wordInstIsConstant : WordExp α → Bool
+  | .const _ => true
+  | _ => false
+
+/-! Cake's `optimize_consts` folds the constant operands of an associative
+    operation into a single constant and places it at the front of its
+    (already `pull_ops`-reversed) operand list, and `flatten_exp` then moves
+    that constant back to the last position.  The composition therefore keeps
+    the non-constant operands in the `pull_ops` order and puts the folded
+    constant at the end.  Flapjack represents the same normal form directly:
+    constants go last, which is what Cake's `inst_select_exp` immediate
+    (`Const` as the second operand) case expects.  Folding several constants
+    into one value is still a separate gap (`optimize_consts` proper); here
+    they are only moved, which is exact whenever an operation has one
+    constant operand - the case exercised by the parity corpus. -/
+def wordInstConstantsToEnd (expressions : List (WordExp α)) : List (WordExp α) :=
+  let constants := expressions.filter wordInstIsConstant
+  match constants with
+  | [] => expressions
+  | _ =>
+      expressions.filter (fun expression => !wordInstIsConstant expression)
+        ++ constants
+
 def wordInstConvertSub [Sub α] [OfNat α 0] : List (WordExp α) → WordExp α
   | [.const left, .const right] => .const (left - right)
   | [expression, .const value] => .op .add [expression, .const (0 - value)]
@@ -63,7 +86,7 @@ def wordInstPullExp [Sub α] [OfNat α 0] : WordExp α → WordExp α
       wordInstConvertSub (expressions.map wordInstPullExp)
   | .op operator expressions =>
       let expressions := expressions.map wordInstPullExp
-      .op operator (wordInstPullOps operator expressions [])
+      .op operator (wordInstConstantsToEnd (wordInstPullOps operator expressions []))
   | .load address => .load (wordInstPullExp address)
   | .shift operator left right =>
       .shift operator (wordInstPullExp left) (wordInstPullExp right)

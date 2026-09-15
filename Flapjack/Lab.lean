@@ -24,7 +24,7 @@ inductive LabAsm (α : Type u) where
   | call (target : LabRef)
   | locValue (register : Nat) (target : LabRef)
   | linkValue (target : LabRef)
-  | return (register : Nat)
+  | return
   | callFfi (function : FunName)
   | heapAlloc (words : Nat)
   | install
@@ -151,8 +151,8 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
   | .tick => ⟨[.asm .tick [] 0], false, counter⟩
   | .raise register =>
       ⟨[.asm (.jumpReg register) [] 0], true, counter⟩
-  | .return register =>
-      ⟨[.labAsm (.return register) [] 0], true, counter⟩
+  | .return _ =>
+      ⟨[.labAsm .return [] 0], true, counter⟩
   | .break label =>
       ⟨[labJump sectionId (labFindLabel label breaks)], true, counter⟩
   | .continue label =>
@@ -379,9 +379,33 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+ /-- `stack_alloc$next_lab` (`stack_allocScript.sml:649-662`): one plus the
+    largest label value referenced by the program, floored at the caller's
+    accumulator.  `stack_to_lab` seeds `flatten`'s fresh-label counter with
+    `next_lab p 2` so labels introduced while flattening control flow can
+    never collide with labels that already occur in the program. -/
+def labNextLab : StackProg α → Nat → Nat
+  | .seq first second, aux => labNextLab first (labNextLab second aux)
+  | .ite _ _ _ thenBranch elseBranch, aux =>
+      labNextLab thenBranch (labNextLab elseBranch aux)
+  | .loop body, aux => labNextLab body aux
+  | .call none _ none, aux => aux
+  | .call none _ (some (_, _, handlerLabel)), aux => max aux (handlerLabel + 2)
+  | .call (some (program, _, _, entryLabel)) _ none, aux =>
+      labNextLab program (max aux (entryLabel + 2))
+  | .call (some (program, _, _, entryLabel)) _
+      (some (handler, _, handlerLabel)), aux =>
+      labNextLab program
+        (labNextLab handler (max (max entryLabel handlerLabel + 2) aux))
+  | _, aux => aux
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def labProgramToSection (sectionId initialLabel : Nat) (program : StackProg α) :
-    LabSection α :=
-  let result := labFlatten true sectionId initialLabel [] [] program
+      LabSection α :=
+  let result := labFlatten true sectionId (max initialLabel (labNextLab program 2))
+    [] [] program
   let finalLabel := if labIsSequence program then result.nextLabel else 1
   ⟨sectionId, result.lines ++ [labLabel sectionId finalLabel]⟩
 

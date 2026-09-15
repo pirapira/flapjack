@@ -122,7 +122,7 @@ def labLineInstructionCount : LabLine (Word width) → Nat
       | _ => 1
   | .labAsm operation _ _ =>
       match operation with
-      | .jump _ | .call _ | .return _ | .install | .halt => 1
+      | .jump _ | .call _ | .return | .install | .halt => 1
       | .locValue _ _ | .linkValue _ => 2
       | .jumpCmp operator _ right _ => 1 + labConditionPreludeCount operator right
       | .callFfi _ => 1
@@ -329,10 +329,10 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
       let link ← labRegisterOfNat (portToStack portLinkRegister)
       let target ← labResolveRef sectionId labels target
       pure (labLocValueInstructions link target position)
-  | .return register => do
+  | .return => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
-      pure [.jalr zero register 0]
+      let link ← labRegisterOfNat (portToStack portLinkRegister)
+      pure [.jalr zero link 0]
   | .jumpCmp operator condition right target => do
       let (left, right, prelude) ← wordConditionOperands operator condition right
       let target ← labResolveRef sectionId labels target
@@ -395,7 +395,7 @@ def labAsmNatToWord [NeZero width] : LabAsm Nat → LabAsm (Word width)
   | .call target => .call target
   | .locValue register target => .locValue register target
   | .linkValue target => .linkValue target
-  | .return register => .return register
+  | .return => .return
   | .callFfi function => .callFfi function
   | .heapAlloc words => .heapAlloc words
   | .install => .install
@@ -485,10 +485,10 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
       let link ← labRegisterOfNat (portToStack portLinkRegister)
       let target ← labResolveProgramRef labels target
       pure (labLocValueInstructions link target position)
-  | .return register => do
+  | .return => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
-      pure [.jalr zero register 0]
+      let link ← labRegisterOfNat (portToStack portLinkRegister)
+      pure [.jalr zero link 0]
   | .jumpCmp operator condition right target => do
       let (left, right, prelude) ← wordConditionOperands operator condition right
       let target ← labResolveProgramRef labels target
@@ -595,10 +595,10 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       let link ← labRegisterOfNat (portToStack portLinkRegister)
       let target ← labResolveProgramRef labels target
       pure (labLocValueInstructions link target position)
-  | .return register => do
+  | .return => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let register ← labRegisterOfNat (portToStack register)
-      pure [.jalr zero register 0]
+      let link ← labRegisterOfNat (portToStack portLinkRegister)
+      pure [.jalr zero link 0]
   | .jumpCmp operator condition right target => do
       let (left, right, prelude) ← wordConditionOperands operator condition right
       let target ← labResolveProgramRef labels target

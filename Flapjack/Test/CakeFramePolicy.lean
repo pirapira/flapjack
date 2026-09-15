@@ -53,19 +53,15 @@ def bitmapEncodingExact : Bool :=
    `bitmap_slot2=12w`, and `bitmap_slots1_2=14w` exercise the
    location-derived `write_bitmap` mirror directly. -/
 def frameLocationConfig : WordStackConfig :=
-  { locations := [(1, .stack 2), (2, .stack 3)]
+  { locations := [(1, .stack 1), (2, .stack 2)]
     scratch := 31
     stackBase := 10
     specialScratch := 28 }
 
-/- The frame carries one more slot than the bitmap covers
-    (`f = stack_var_count + 1`), so the 4-slot frame of `writeBitmap`'s
-    `f' = 3` covers three membership bits and a variable stored at frame
-    address `slot` sets bit `slot - 1`. -/
 def locationBitmapExact : Bool :=
-  wordStackLiveBitmapFromLocations frameLocationConfig 4 64 [] == [8] &&
-    wordStackLiveBitmapFromLocations frameLocationConfig 4 64 [2] == [12] &&
-    wordStackLiveBitmapFromLocations frameLocationConfig 4 64 [1, 2] == [14]
+  wordStackLiveBitmapFromLocations frameLocationConfig 3 64 [] == [8] &&
+    wordStackLiveBitmapFromLocations frameLocationConfig 3 64 [2] == [12] &&
+    wordStackLiveBitmapFromLocations frameLocationConfig 3 64 [1, 2] == [14]
 
 #guard locationBitmapExact
 

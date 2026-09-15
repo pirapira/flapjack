@@ -533,17 +533,17 @@ theorem wordFunctionToRiscVWithCalls_div_result [NeZero width]
       ((.inst (.arith (.div 5 2 3))) : WordProg (Word width)) =
       some (code, [])) :
     readRegister (executeInstructions state code) 5 =
-      BitVec.ofNat width
-        ((readRegister state 2).toNat / (readRegister state 3).toNat) := by
+      BitVec.ofInt width
+        ((readRegister state 2).toInt.ediv (readRegister state 3).toInt) := by
   have hshape : wordFunctionToRiscVWithCalls context
       ((.inst (.arith (.div 5 2 3))) : WordProg (Word width)) =
-      some ([.divU 5 2 3], []) := by
+      some ([.div 5 2 3], []) := by
     simp [wordFunctionToRiscVWithCalls, wordArithToInstructions,
       wordArithToInstruction, registerOfNat]
-  have hcode : ([.divU 5 2 3] : List (Instruction width)) = code := by
+  have hcode : ([.div 5 2 3] : List (Instruction width)) = code := by
     exact congrArg Prod.fst (Option.some.inj (hshape.symm.trans hcompile))
   subst code
-  rw [executeInstructions_single, execute_divU]
+  rw [executeInstructions_single, execute_div]
   split <;> simp_all
 
 

@@ -434,7 +434,7 @@ example :
 
 example [NeZero width] :
     RiscV.wordArithToInstruction (width := width) (.div 1 2 3) =
-      some (.divU 1 2 3) := by
+      some (.div 1 2 3) := by
   exact RiscV.wordArithToInstruction_div
 
 example (left right : RiscV.Word 64) :

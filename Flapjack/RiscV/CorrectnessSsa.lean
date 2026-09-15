@@ -2424,16 +2424,16 @@ theorem evalWordProg_ssaRename_div_destination [NeZero width]
     have h := hregister divisor
     simpa [registerOfNat, hdivisor, hdivisorSsa] using h
   rw [wordSsaRenameInst_div]
-  refine ⟨execute source (.divU ⟨destination, hdestination⟩
+  refine ⟨execute source (.div ⟨destination, hdestination⟩
       ⟨dividend, hdividend⟩ ⟨divisor, hdivisor⟩),
-    execute target (.divU ⟨(wordSsaFresh ssa destination).2, hfresh⟩
+    execute target (.div ⟨(wordSsaFresh ssa destination).2, hfresh⟩
       ⟨wordSsaRead ssa dividend, hdividendSsa⟩
       ⟨wordSsaRead ssa divisor, hdivisorSsa⟩), ?_, ?_, ?_, ?_⟩
   · simp [evalWordProg, wordArithToInstructions, wordArithToInstruction,
       registerOfNat, hdestination, hdividend, hdivisor, executeInstructions]
   · simp [evalWordProg, wordArithToInstructions, wordArithToInstruction,
       registerOfNat, hfresh, hdividendSsa, hdivisorSsa, executeInstructions]
-  · rw [execute_divU, execute_divU]
+  · rw [execute_div, execute_div]
     simp [hdestinationNonzero, hfreshNonzero, hdividendValue, hdivisorValue]
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 

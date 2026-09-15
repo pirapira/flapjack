@@ -78,8 +78,8 @@ theorem wordAllocateLinearScanFunctionWithEntryToStack_contract
     (ssaState : WordSsaState) (renamedParameters : List Nat)
     (allocation : WordLinearScanState)
     (renamedProgram : WordProg (Word width)) (stackProgram : StackProg Nat)
-    (body moves : StackProg Nat)
-    (machineState middle final : WordStackMachineState width)
+    (body : StackProg Nat)
+    (machineState final : WordStackMachineState width)
     (hbridge : wordAllocateLinearScanFunctionWithEntryToStack config parameters
       program colours stackStart =
       some (ssaState, renamedParameters, allocation, renamedProgram,
@@ -87,11 +87,7 @@ theorem wordAllocateLinearScanFunctionWithEntryToStack_contract
     (hbody : wordToStackProgWord
       { config with locations := wordLinearScanLocations allocation }
       renamedProgram = some body)
-    (hmoves : wordStackMovesFromPhysical
-      { config with locations := wordLinearScanLocations allocation }
-      renamedParameters config.abiBase = some moves)
-    (hentry : evalWordStackMachine machineState moves = some middle)
-    (hbodyEval : evalWordStackMachine middle body = some final) :
+    (hbodyEval : evalWordStackMachine machineState body = some final) :
     wordLinearScanAllocationSafe
         (WordClashTree.seq
           (.set (wordSsaRenameFunctionWithEntry parameters program).2.fst)
@@ -105,10 +101,7 @@ theorem wordAllocateLinearScanFunctionWithEntryToStack_contract
       wordToStackProgWord
         { config with locations := wordLinearScanLocations allocation }
         renamedProgram = some body ∧
-      wordStackMovesFromPhysical
-        { config with locations := wordLinearScanLocations allocation }
-        renamedParameters config.abiBase = some moves ∧
-      stackProgram = wordStackJoin moves body ∧
+      stackProgram = body ∧
       evalWordStackMachine machineState stackProgram = some final := by
   have hsafe := wordAllocateLinearScanFunctionWithEntry_safe
     parameters program colours stackStart ssaState renamedParameters allocation
@@ -171,11 +164,9 @@ theorem wordAllocateLinearScanFunctionWithEntryToStack_contract
   have hstack := wordAllocateLinearScanFunctionWithEntryToStack_stack_result
     config parameters program colours stackStart ssaState renamedParameters
     allocation renamedProgram stackProgram hbridge
-  have hjoin : stackProgram = wordStackJoin moves body := by
-    simp [wordToStackFunctionWithParameters, hbody, hmoves] at hstack
+  have hjoin : stackProgram = body := by
+    simp [wordToStackFunctionWithParameters, hbody] at hstack
     exact hstack.symm
-  have heval := evalWordStackMachine_wordStackJoin machineState middle final
-    moves body hentry hbodyEval
-  exact ⟨hsafe, hparams, hbody, hmoves, hjoin, by simpa [hjoin] using heval⟩
+  exact ⟨hsafe, hparams, hbody, hjoin, by simpa [hjoin] using hbodyEval⟩
 
 end Flapjack.RiscV

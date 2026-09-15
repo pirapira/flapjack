@@ -91,6 +91,63 @@ def parallelLocationMoveKeepsLiveSource : Bool :=
 #guard parallelMoveKeepsLiveSource
 #guard parallelLocationMoveKeepsLiveSource
 
+/-! ### Cake ABI argument overflow
+
+    The original `format_var`/`wMoveSingle` materializes arguments past the
+    register window at the top of the frame, and sizes the frame with
+    `stack_var_count = MAX ((max_var DIV 2 + 1) - k) stack_arg_count`
+    (`word_to_stackScript.sml:586-592`), so the frame always has room for the
+    stack-passed arguments.  Without that room Flapjack's physical argument
+    destinations collide and the parallel move refuses to lower: the guest
+    `generic_create` calls a 17-argument function and reported
+    `wordToStackFailure 544 []` with `abiRegisterCount = 12`, i.e. five
+    stack-passed arguments needing `17 - 12 - 1 = 4` frame slots. -/
+
+def overflowArguments : List Nat :=
+  [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34]
+
+def overflowingCallProgram : WordProg Nat :=
+  .call none (some 7) overflowArguments none
+
+def overflowConfig : WordStackConfig :=
+  { locations := overflowArguments.zip
+      ((List.range overflowArguments.length).map
+        (fun index => WordLocation.register (index + 2)))
+    scratch := 31
+    stackBase := 0
+    addressScratch := 29
+    specialScratch := 28
+    carryScratch := 27
+    abiBase := 10
+    abiStride := 1
+    abiFrameSlots := 0 }
+
+def overflowDemandMatches : Bool :=
+  wordProgAbiFrameDemand 12 overflowingCallProgram == 4 &&
+    wordProgAbiFrameDemand 12 (.call none (some 7) [2, 4, 6] none : WordProg Nat) == 0
+
+def overflowLowersWithDemandFrame : Bool :=
+  let demand := wordProgAbiFrameDemand 12 overflowingCallProgram
+  match wordToStackProgNatWithLocationBitmaps
+      { overflowConfig with abiFrameSlots := demand }
+      25 31 demand 64 (some 1) (wordStackInitialBitmaps false)
+      overflowingCallProgram with
+  | some _ => true
+  | none => false
+
+def overflowRejectedWithTinyFrame : Bool :=
+  match wordToStackProgNatWithLocationBitmaps
+      { overflowConfig with abiFrameSlots := 1 }
+      25 31 1 64 (some 1) (wordStackInitialBitmaps false)
+      overflowingCallProgram with
+  | some _ => false
+  | none => true
+
+#guard overflowDemandMatches
+#guard overflowLowersWithDemandFrame
+#guard overflowRejectedWithTinyFrame
+
+
 def runChecks : IO Bool := do
   let checks := [
     ("the Cake ABI argument registers match riscv_names", abiArgumentRegistersMatch),
@@ -99,7 +156,12 @@ def runChecks : IO Bool := do
     ("parallel moves preserve a source that a later move reads",
       parallelMoveKeepsLiveSource),
     ("parallel location moves preserve a source that a later move reads",
-      parallelLocationMoveKeepsLiveSource)]
+      parallelLocationMoveKeepsLiveSource),
+    ("overflowing Cake ABI arguments reserve frame slots", overflowDemandMatches),
+    ("an overflowing call lowers once the frame demand is reserved",
+      overflowLowersWithDemandFrame),
+    ("an overflowing call is rejected without that frame room",
+      overflowRejectedWithTinyFrame)]
   let mut ok := true
   for (label, passed) in checks do
     if passed then

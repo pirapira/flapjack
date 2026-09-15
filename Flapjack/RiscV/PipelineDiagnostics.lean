@@ -111,7 +111,13 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
-          let frameSlots := allocation.nextSpill
+          /- Cake's call ABI reserves frame room for arguments past the
+             register window, so the frame must cover that demand as well as
+             the allocator spills. -/
+          let frameSlots :=
+            if allocation.nextSpill = 0 then 0
+            else max allocation.nextSpill
+              (RiscV.wordProgAbiFrameDemand 12 renamedProgram)
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := 31
@@ -163,8 +169,10 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
           wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
-          let frameSlots := RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
-            wordAllocatableRegisters.length unflattenedBody
+          let frameSlots := max
+            (RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
+              wordAllocatableRegisters.length unflattenedBody)
+            (RiscV.wordProgAbiFrameDemand 12 renamedProgram)
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := 31

@@ -3153,31 +3153,31 @@ def wordToStackProgWordWithLocationBitmaps [NeZero width]
     entry moves make that calling convention explicit before the lowered body
     starts executing. -/
 def wordToStackFunctionWithParameters [NeZero width]
-    (config : WordStackConfig) (parameters : List Nat)
+    (config : WordStackConfig) (_parameters : List Nat)
     (program : WordProg (Word width)) : Option (StackProg Nat) := do
-  let body ← wordToStackProgWord config program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters config.abiBase
-  pure (wordStackJoin parameterMoves body)
+  /- Cake's `word_to_stack.compile_prog` only reserves the frame here: the
+     incoming arguments already sit in the fixed Cake ABI registers and the
+     SSA entry move (`wordSsaRenameFunctionWithEntry`) copies them into their
+     fresh names.  A second parameter prelude double-copies and can collide
+     because the allocator may merge a dead entry destination with a live
+     one. -/
+  wordToStackProgWord config program
 
 def wordToStackFunctionWithParametersAndBitmaps [NeZero width]
-    (config : WordStackConfig) (parameters : List Nat)
+    (config : WordStackConfig) (_parameters : List Nat)
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
     Option (StackProg Nat × WordStackBitmapState) := do
-  let (body, state) ← wordToStackProgWordWithBitmaps config registerCount
+  wordToStackProgWordWithBitmaps config registerCount
     bitmapRegister frameSlots storeConstsStub state program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters config.abiBase
-  pure (wordStackJoin parameterMoves body, state)
 
 def wordToStackFunctionWithParametersAndLocationBitmaps [NeZero width]
-    (config : WordStackConfig) (parameters : List Nat)
+    (config : WordStackConfig) (_parameters : List Nat)
     (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
     (state : WordStackBitmapState) (program : WordProg (Word width)) :
     Option (StackProg Nat × WordStackBitmapState) := do
-  let (body, state) ← wordToStackProgWordWithLocationBitmaps config registerCount
+  wordToStackProgWordWithLocationBitmaps config registerCount
     bitmapRegister frameSlots storeConstsStub state program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters config.abiBase
-  pure (wordStackJoin parameterMoves body, state)
 
 /-! Cake's `word_to_stack.compile_prog` reserves the maximum spill frame at
     function entry and subtracts the stack-resident argument count from that
@@ -3193,10 +3193,8 @@ def wordToStackFunctionWithCakeFrameAndLocationBitmaps [NeZero width]
     Option (StackProg Nat × WordStackBitmapState) := do
   let (body, state) ← wordToStackProgWordWithLocationBitmaps config registerCount
     bitmapRegister frameSlots storeConstsStub state program
-  let parameterMoves ← wordStackMovesFromPhysical config parameters config.abiBase
   let frameWords := wordStackFrameWords parameters registerCount frameSlots
-  pure (wordStackJoin (.stackAlloc frameWords)
-    (wordStackJoin parameterMoves body), state)
+  pure (wordStackJoin (.stackAlloc frameWords) body, state)
 
 /-! Public entry point for the spill-aware path.  The allocator's location
     map is authoritative for the renamed Word program; the remaining stack

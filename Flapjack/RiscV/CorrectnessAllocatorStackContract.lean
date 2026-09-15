@@ -22,8 +22,8 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_contract
     (ssaState : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg (Word width)) (allocation : WordSpillState)
     (stackProgram : StackProg Nat) (finalState : WordStackBitmapState)
-    (body moves : StackProg Nat)
-    (machineState middle final : WordStackMachineState width)
+    (body : StackProg Nat)
+    (machineState final : WordStackMachineState width)
     (bodyState : WordStackBitmapState)
     (hbridge : wordAllocateSsaFunctionWithEntryAndSpillToStack config parameters
       program registerCount bitmapRegister frameSlots storeConstsStub bitmapState =
@@ -33,11 +33,7 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_contract
       { config with locations := allocation.locations }
       registerCount bitmapRegister frameSlots storeConstsStub bitmapState
       renamedProgram = some (body, bodyState))
-    (hmoves : wordStackMovesFromPhysical
-      { config with locations := allocation.locations } renamedParameters config.abiBase =
-      some moves)
-    (hentry : evalWordStackMachine machineState moves = some middle)
-    (hbodyEval : evalWordStackMachine middle body = some final) :
+    (hbodyEval : evalWordStackMachine machineState body = some final) :
     wordSpillAllocationRespectsClashes
         (wordClashTreeAnalyze
           (wordClashTree
@@ -57,10 +53,7 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_contract
         { config with locations := allocation.locations }
         registerCount bitmapRegister frameSlots storeConstsStub bitmapState
         renamedProgram = some (body, bodyState) ∧
-      wordStackMovesFromPhysical
-        { config with locations := allocation.locations } renamedParameters config.abiBase =
-        some moves ∧
-      stackProgram = wordStackJoin moves body ∧
+      stackProgram = body ∧
       bodyState = finalState ∧
       evalWordStackMachine machineState stackProgram = some final := by
   have hwitness := wordAllocateSsaFunctionWithEntryAndSpillToStack_witness
@@ -73,17 +66,16 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_contract
     finalState hbridge
   simp only [wordToStackFunctionWithSpillStateAndLocationBitmaps,
     wordToStackFunctionWithParametersAndLocationBitmaps] at hstack
-  simp [hbody, hmoves] at hstack
-  have hjoin : stackProgram = wordStackJoin moves body := by
+  simp [hbody] at hstack
+  have hjoin : stackProgram = body := by
     exact hstack.1.symm
   have hstate : bodyState = finalState := by
     exact hstack.2
   have heval := evalWordStackMachine_wordAllocateSsaFunctionWithEntryAndSpillToStack
     config parameters program registerCount bitmapRegister frameSlots storeConstsStub
     bitmapState ssaState renamedParameters renamedProgram allocation stackProgram
-    finalState body moves machineState middle final bodyState hbridge hbody hmoves
-    hentry hbodyEval
+    finalState body machineState final bodyState hbridge hbody hbodyEval
   exact ⟨hwitness.1, hwitness.2.1, hwitness.2.2.1, hwitness.2.2.2.1,
-    hwitness.2.2.2.2, hbody, hmoves, hjoin, hstate, heval⟩
+    hwitness.2.2.2.2, hbody, hjoin, hstate, heval⟩
 
 end Flapjack.RiscV

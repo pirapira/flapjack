@@ -150,8 +150,13 @@ def callMachineResult : Option (List (RiscV.Word 64)) := do
   let sections ← callLinked
   let entry ← parsedCallLookupEntry 2 sections
   let image := sections.flatMap (fun (_, _, code) => code)
-  RiscV.executeFunctionAtAfterEntry 4000 0 entry 192 [] image [2] []
-    (RiscV.writeRegister (RiscV.zeroState 64) 1 192)
+  let mainLength ←
+    match sections.find? (fun (label, _, _) => label == 2) with
+    | some (_, _, code) => some code.length
+    | none => none
+  let returnAddress := entry + BitVec.ofNat 64 (4 * (mainLength - 2))
+  RiscV.executeFunctionAtAfterEntry 4000 0 entry returnAddress [] image [2] []
+    (RiscV.writeRegister (RiscV.zeroState 64) 1 returnAddress)
 
 def callOriginalProbeResult : Option (List (RiscV.Word 64)) :=
   some [BitVec.ofNat 64 7]

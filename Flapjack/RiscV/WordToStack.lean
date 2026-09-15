@@ -2428,6 +2428,33 @@ def wordStackHandlerEntryLabel (config : WordStackConfig) : Nat → Nat
   | 0 => config.sectionId
   | entry + 1 => entry + 1
 
+/-! CakeML's `call_dest NONE args` takes the target of an indirect call from
+    the last argument.  `wReg2` leaves a register-resident target in its own
+    register and, for a stack-resident target, loads it into the register above
+    the ABI window.  The remaining arguments are the callee's formals; the
+    target slot is not part of the argument relocation.  This returns the
+    direct argument list, the stack-level target, and any target load that must
+    run after the argument moves. -/
+def wordStackIndirectCallNat (config : WordStackConfig) (arguments : List Nat) :
+    Option (List Nat × StackCallTarget × StackProg Nat) :=
+  match arguments.getLast? with
+  | none => some ([], .label stackRaiseStubLocation, .skip)
+  | some target =>
+      let direct := arguments.dropLast
+      match wordStackLocation config target with
+      | some (.register register) => some (direct, .register register, .skip)
+      | some (.stack slot) =>
+          some (direct, .register config.scratch,
+            .stackLoad config.scratch (wordStackOffset config slot))
+      | none => none
+
+/-- Cake's `stack_free` count for a call target: the frame size `f` minus the
+    number of stack-resident arguments.  A direct call passes its argument
+    count; an indirect call passes one fewer because its last argument is the
+    target. -/
+def wordStackCallFreeCount (config : WordStackConfig) (argumentCount : Nat) : Nat :=
+  wordStackCakeFrameSize config - (argumentCount - config.abiRegisterCount)
+
 def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]
     [ShiftRight α] [LT α] [DecidableRel (fun left right : α => left < right)] [PanCmp α]
@@ -2470,8 +2497,9 @@ def wordToStackProg [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   | .return _ values => wordStackReturn config values
   | .call none (some target) arguments none => do
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
-      pure (wordStackJoin argumentMoves
-        (.call none (.label target) none))
+      let callCode := .call none (.label target) none
+      let freeCount := wordStackCallFreeCount config arguments.length
+      pure (wordStackJoin argumentMoves (stackFreeIfNonzero freeCount callCode))
   | .tick => pure .tick
   | .call returns (some target) arguments none => do
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
@@ -2549,8 +2577,9 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .return _ values => wordStackReturn config values
   | .call none (some target) arguments none => do
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
-      pure (wordStackJoin argumentMoves
-        (.call none (.label target) none))
+      let callCode := .call none (.label target) none
+      let freeCount := wordStackCallFreeCount config arguments.length
+      pure (wordStackJoin argumentMoves (stackFreeIfNonzero freeCount callCode))
   | .tick => pure .tick
   | .call (some (destinations, _cutsets, returnProgram, returnLabel, entryLabel))
       (some target) arguments none => do
@@ -2582,7 +2611,46 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
       pure (wordStackJoin argumentMoves callCode)
-  | .call _ none _ _ => none
+  | .call none none arguments none => do
+      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
+      let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
+      let callCode := .call none target none
+      let freeCount := wordStackCallFreeCount config (arguments.length - 1)
+      pure (wordStackJoin argumentMoves
+        (wordStackJoin targetLoad (stackFreeIfNonzero freeCount callCode)))
+  | .call none none arguments
+      (some (exception, body, handlerLabel, handlerEntryLabel)) => do
+      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
+      let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
+      let handlerCode ← wordToStackProgNat config body
+      let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
+        (arguments.length - 1) config.frameOffset config.scratch .skip handlerCode
+        config.returnLabel config.entryLabel
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
+      pure (wordStackJoin argumentMoves (wordStackJoin targetLoad callCode))
+  | .call (some (_destinations, _cutsets, returnProgram, returnLabel, entryLabel))
+      none arguments none => do
+      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
+      let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
+      let returnCode ← wordToStackProgNat config returnProgram
+      let callCode := wordToStackCallNoHandlerTarget config.perf target
+        (arguments.length - 1) config.frameOffset config.scratch _destinations returnCode
+        returnLabel entryLabel
+      pure (wordStackJoin argumentMoves (wordStackJoin targetLoad callCode))
+  | .call (some (_destinations, _cutsets, returnProgram, returnLabel, entryLabel))
+      none arguments
+      (some (exception, body, handlerLabel, handlerEntryLabel)) => do
+      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
+      let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
+      let returnCode ← wordToStackProgNat config returnProgram
+      let handlerCode ← wordToStackProgNat config body
+      let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
+        (arguments.length - 1) config.frameOffset config.scratch returnCode handlerCode
+        returnLabel entryLabel
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
+      pure (wordStackJoin argumentMoves (wordStackJoin targetLoad callCode))
   | .opCurrHeap operator destination source =>
       wordStackOpCurrHeap config operator destination source
   | .install codeBuffer codeLength dataBuffer dataLength _ =>
@@ -3275,7 +3343,9 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .call none (some target) arguments none => do
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
-      pure (wordStackJoin argumentMoves (.call none (.label target) none), state)
+      let callCode := .call none (.label target) none
+      let freeCount := wordStackCallFreeCount config arguments.length
+      pure (wordStackJoin argumentMoves (stackFreeIfNonzero freeCount callCode), state)
   | .call none (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
@@ -3287,7 +3357,57 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
       pure (wordStackJoin argumentMoves callCode, state)
-  | .call _ none _ _ => none
+  | .call none none arguments none => do
+      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
+      let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
+      let callCode := .call none target none
+      let freeCount := wordStackCallFreeCount config (arguments.length - 1)
+      pure (wordStackJoin argumentMoves
+        (wordStackJoin targetLoad (stackFreeIfNonzero freeCount callCode)), state)
+  | .call none none arguments
+      (some (exception, body, handlerLabel, handlerEntryLabel)) => do
+      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
+      let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
+      let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
+      let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
+        (arguments.length - 1) config.frameOffset config.scratch .skip handlerCode
+        config.returnLabel config.entryLabel
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
+      pure (wordStackJoin argumentMoves (wordStackJoin targetLoad callCode), state)
+  | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) none
+      arguments none => do
+      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
+      let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
+      let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
+        bitmapRegister frameSlots state
+        (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
+      let (returnCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
+      let callCode := wordToStackCallNoHandlerTarget config.perf target
+        (arguments.length - 1) config.frameOffset config.scratch destinations returnCode
+        returnLabel entryLabel
+      pure (wordStackJoin argumentMoves
+        (wordStackJoin targetLoad (wordStackJoin liveCode callCode)), state)
+  | .call (some (destinations, cutsets, returnProgram, returnLabel, entryLabel)) none
+      arguments (some (exception, body, handlerLabel, handlerEntryLabel)) => do
+      let (direct, target, targetLoad) ← wordStackIndirectCallNat config arguments
+      let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
+      let (liveCode, state) := wordStackCallLiveBitmapWord config bitmapBuilder
+        bitmapRegister frameSlots state
+        (some (destinations, cutsets, returnProgram, returnLabel, entryLabel))
+      let (returnCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
+      let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+        registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
+      let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
+        (arguments.length - 1) config.frameOffset config.scratch returnCode handlerCode
+        returnLabel entryLabel
+        (wordStackHandlerLabel config handlerLabel)
+        (wordStackHandlerEntryLabel config handlerEntryLabel) exception
+      pure (wordStackJoin argumentMoves
+        (wordStackJoin targetLoad (wordStackJoin liveCode callCode)), state)
   | .alloc _ (_, live) =>
       let (code, state) := wordStackAllocWithBitmapBuilder config bitmapRegister frameSlots
         state live bitmapBuilder
@@ -3391,7 +3511,7 @@ def wordToStackFunctionWithParametersAndLocationBitmaps [NeZero width]
     reservation.  Keep this wrapper separate from the historical entrypoint
     so callers that still model an unframed function retain their API. -/
 def wordStackFrameWords (parameters : List Nat) (registerCount frameSlots : Nat) : Nat :=
-  (max frameSlots 3 - 1) - (parameters.length - registerCount)
+  (if frameSlots = 0 then 0 else frameSlots + 1) - (parameters.length - registerCount)
 
 def wordToStackFunctionWithCakeFrameAndLocationBitmaps [NeZero width]
     (config : WordStackConfig) (parameters : List Nat)

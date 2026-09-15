@@ -141,11 +141,12 @@ def decClockEmittedSections : List (Nat × Nat × List (BitVec 8)) :=
   | some image => emittedSections image
   | none => []
 
-/-- The runtime-image entry point accepts the fixture and exposes the five
-encoded sections and no static warnings. -/
+/-- The runtime-image entry point accepts the fixture and exposes the two
+source sections (the fixed Cake runtime is supplied separately by the
+Pancake-compatible formatter) and no static warnings. -/
 def artifactAccepted : Bool :=
   match compileRuntimeImage decClockSource with
-  | some image => image.sections.length == 5 && image.warnings.isEmpty
+  | some image => image.sections.length == 2 && image.warnings.isEmpty
   | none => false
 
 /-- The generated initializer section is byte-identical across the compilers. -/
@@ -263,7 +264,7 @@ Word-to-Stack lowering failed with `artifactFailure`; the original compiler
 flattens the expression through `crep_to_loop` and always accepted it. -/
 def nestedExpressionAccepted : Bool :=
   match compileRuntimeImage nestedExpressionSource with
-  | some image => image.sections.length == 5 && image.warnings.isEmpty
+  | some image => image.sections.length == 2 && image.warnings.isEmpty
   | none => false
 
 /-! The runtime-image guard above exercises the public source path.  Keep a

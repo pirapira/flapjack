@@ -28,12 +28,14 @@ def wordDeadSelectSeq (first second : WordProg α) : WordProg α :=
   | program, .skip => program
   | _, _ => .seq first second
 
-/-! Cake's `pull_exp` and `flatten_exp` are observable before the allocator:
+/-! Cake's `pull_exp` and `flatten_exp` are observable before the allocator.
     `pull_ops` accumulates operands on the left, and `flatten_exp` rebuilds an
-    n-ary operation as a right-associated binary tree.  In particular,
-    `Add [x, y]` becomes `Add [y, x]`.  Keeping these two small normalizers at
-    the instruction-selection boundary preserves the source operand order
-    that feeds Cake's move preferences and clash graph. -/
+    n-ary operation as a right-associated binary tree.  Subtraction is the
+    important exception: Cake handles it with `convert_sub` and never feeds
+    it through the associative operand collector.  In particular, applying
+    `pull_ops` to `Sub [x, y]` would incorrectly turn the expression into
+    `Sub [y, x]`.  Keeping these cases explicit preserves the source operand
+    order that feeds Cake's move preferences and clash graph. -/
 
 def wordInstPullOps (operator : BinOp) :
     List (WordExp α) → List (WordExp α) → List (WordExp α)
@@ -49,9 +51,16 @@ def wordInstPullOps (operator : BinOp) :
 termination_by expressions _ => sizeOf expressions
 decreasing_by all_goals decreasing_trivial
 
-def wordInstPullExp : WordExp α → WordExp α
+def wordInstConvertSub [Sub α] [Neg α] : List (WordExp α) → WordExp α
+  | [.const left, .const right] => .const (left - right)
+  | [expression, .const value] => .op .add [.const (-value), expression]
+  | expressions => .op .sub expressions
+
+def wordInstPullExp [Sub α] [Neg α] : WordExp α → WordExp α
   | .op operator [] => .op operator []
   | .op _ [expression] => wordInstPullExp expression
+  | .op .sub expressions =>
+      wordInstConvertSub (expressions.map wordInstPullExp)
   | .op operator expressions =>
       let expressions := expressions.map wordInstPullExp
       .op operator (wordInstPullOps operator expressions [])
@@ -76,10 +85,10 @@ def wordInstFlattenExp : WordExp α → WordExp α
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
-def wordInstNormalizeExp (expression : WordExp α) : WordExp α :=
+def wordInstNormalizeExp [Sub α] [Neg α] (expression : WordExp α) : WordExp α :=
   wordInstFlattenExp (wordInstPullExp expression)
 
-def wordInstSelectAtom (temp : Nat) : WordExp α → WordProg α × WordExp α
+def wordInstSelectAtom [Sub α] [Neg α] (temp : Nat) : WordExp α → WordProg α × WordExp α
   | .const value => (.assign temp (.const value), .var temp)
   | .var name => (.assign temp (.var name), .var temp)
   | .lookup store => (.assign temp (.lookup store), .var temp)
@@ -105,7 +114,7 @@ def wordInstSelectAtom (temp : Nat) : WordExp α → WordProg α × WordExp α
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgram (temp : Nat) : WordProg α → WordProg α
+def wordInstSelectProgram [Sub α] [Neg α] (temp : Nat) : WordProg α → WordProg α
   | .seq first second =>
       wordDeadSelectSeq (wordInstSelectProgram temp first)
         (wordInstSelectProgram temp second)
@@ -156,7 +165,7 @@ def wordInstSelectProgram (temp : Nat) : WordProg α → WordProg α
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgramFrom (program : WordProg α) : WordProg α :=
+def wordInstSelectProgramFrom [Sub α] [Neg α] (program : WordProg α) : WordProg α :=
   wordInstSelectProgram (wordInstSelectMaximum (wordProgVariables program) + 1) program
 
 end Flapjack.RiscV

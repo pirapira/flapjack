@@ -147,7 +147,7 @@ def stackRemoveStackStoreAny (config : StackRemoveConfig)
 
 def stackRemoveOpCurrHeap (config : StackRemoveConfig) (operator : BinOp)
     (destination source : Nat) : StackProg α :=
-  .arith operator destination source config.currHeap
+  .arith operator destination source (config.stackPointer + 2)
 
 def stackRemoveStackGetSize (config : StackRemoveConfig) (register : Nat) :
     StackProg α :=

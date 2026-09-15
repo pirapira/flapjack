@@ -88,7 +88,8 @@ decreasing_by all_goals decreasing_trivial
 def wordInstNormalizeExp [Sub α] [OfNat α 0] (expression : WordExp α) : WordExp α :=
   wordInstFlattenExp (wordInstPullExp expression)
 
-def wordInstSelectAtom [Sub α] [OfNat α 0] (temp : Nat) : WordExp α → WordProg α × WordExp α
+def wordInstSelectAtom [Sub α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
+    (temp : Nat) : WordExp α → WordProg α × WordExp α
   | .const value => (.assign temp (.const value), .var temp)
   | .var name => (.assign temp (.var name), .var temp)
   | .lookup store => (.assign temp (.lookup store), .var temp)
@@ -102,8 +103,25 @@ def wordInstSelectAtom [Sub α] [OfNat α 0] (temp : Nat) : WordExp α → WordP
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
       let code := wordDeadSelectSeq leftPrelude rightPrelude
-      (wordDeadSelectSeq code
-        (.assign temp (.op operator [.var temp, .var (temp + 1)])), .var temp)
+      let generic :=
+        (wordDeadSelectSeq code
+          (.assign temp (.op operator [.var temp, .var (temp + 1)])), .var temp)
+      match operator, left, right with
+      | .add, .lookup .currHeap,
+          .shift .lsl (.lookup .heapLength) (.const value) =>
+          if value = (1 : α) then
+            (.seq (.get temp .heapLength)
+              (.seq (.assign temp (.shift .lsl (.var temp) (.const (1 : α))))
+                (.opCurrHeap .add temp temp)), .var temp)
+          else generic
+      | .add, .shift .lsl (.lookup .heapLength) (.const value),
+          .lookup .currHeap =>
+          if value = (1 : α) then
+            (.seq (.get temp .heapLength)
+              (.seq (.assign temp (.shift .lsl (.var temp) (.const (1 : α))))
+                (.opCurrHeap .add temp temp)), .var temp)
+          else generic
+      | _, _, _ => generic
   | .shift operator left right =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
@@ -114,7 +132,8 @@ def wordInstSelectAtom [Sub α] [OfNat α 0] (temp : Nat) : WordExp α → WordP
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgram [Sub α] [OfNat α 0] (temp : Nat) : WordProg α → WordProg α
+def wordInstSelectProgram [Sub α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
+    (temp : Nat) : WordProg α → WordProg α
   | .seq first second =>
       wordDeadSelectSeq (wordInstSelectProgram temp first)
         (wordInstSelectProgram temp second)
@@ -125,6 +144,12 @@ def wordInstSelectProgram [Sub α] [OfNat α 0] (temp : Nat) : WordProg α → W
   | .assign destination value =>
       let value := wordInstNormalizeExp value
       match value with
+      | .load address =>
+          if wordExpIsAtom address then
+            .assign destination value
+          else
+            let (prelude, address) := wordInstSelectAtom temp address
+            wordDeadSelectSeq prelude (.assign destination (.load address))
       | .op operator [left, .const value] =>
           let (prelude, left) := wordInstSelectAtom temp left
           wordDeadSelectSeq prelude
@@ -165,7 +190,8 @@ def wordInstSelectProgram [Sub α] [OfNat α 0] (temp : Nat) : WordProg α → W
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgramFrom [Sub α] [OfNat α 0] (program : WordProg α) : WordProg α :=
+def wordInstSelectProgramFrom [Sub α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
+    (program : WordProg α) : WordProg α :=
   wordInstSelectProgram (wordInstSelectMaximum (wordProgVariables program) + 1) program
 
 end Flapjack.RiscV

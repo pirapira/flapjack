@@ -82,7 +82,7 @@ def parallelMoveKeepsLiveSource : Bool :=
 def parallelLocationMoveKeepsLiveSource : Bool :=
   match wordStackParallelLocationMove (α := Nat) parallelMoveConfig
       [(.register 3, .register 1), (.register 1, .register 2)] with
-  | some (.seq (.arith .or 3 1 1) (.arith .or 1 2 2)) => true
+  | some (.seq (.arith .or 1 2 2) (.arith .or 3 1 1)) => true
   | _ => false
 
 #guard abiArgumentRegistersMatch

@@ -17,3 +17,10 @@ jobs:
 
       - name: Check the build is warning-free
         run: ./scripts/check-warnings.sh
+
+      - name: Check exact Pancake RISC-V parity
+        run: |
+          lake build flapjack-compile
+          python3 scripts/parity-bytes.py \
+            --reference scripts/parity-goldens/wide_constants.cake.S \
+            Flapjack/Test/OriginalPancake/wide_constants.pnk

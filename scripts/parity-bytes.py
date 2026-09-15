@@ -32,6 +32,7 @@ environment variables.
 
 import argparse
 import os
+from pathlib import Path
 import re
 import subprocess
 import sys
@@ -163,9 +164,15 @@ def compare_section_maps(name, cake_sections, flap_sections, owner, quiet):
     return gaps
 
 
-def compare(path, cake, flapjack, quiet):
+def compare(path, cake, flapjack, quiet, reference=None):
     name = os.path.basename(path)
-    cake_sections = cake_assembly(path, cake)
+    if reference is None:
+        cake_sections = cake_assembly(path, cake)
+    else:
+        cake_sections = parse_assembly(reference.read_text(encoding="utf-8"))
+        if cake_sections is None:
+            print(f"{reference}: malformed reference artifact")
+            return 1
     if cake_sections is None:
         if not quiet:
             print(f"{name}: cake rejects (no comparison)")
@@ -232,6 +239,11 @@ def main(argv=None):
     parser.add_argument("--dir", help="directory of .pan programs")
     parser.add_argument("--cake", default=os.environ.get("CAKE", DEFAULT_CAKE))
     parser.add_argument("--flapjack", default=os.environ.get("FLAPJACK", DEFAULT_FLAPJACK))
+    parser.add_argument(
+        "--reference",
+        type=Path,
+        help="use a checked-in original Cake artifact instead of invoking cake",
+    )
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args(argv)
 
@@ -243,9 +255,12 @@ def main(argv=None):
     if not programs:
         parser.error("no programs given (pass files or --dir)")
 
+    if args.reference is not None and len(programs) != 1:
+        parser.error("--reference requires exactly one program")
+
     total_gaps = 0
     for path in programs:
-        total_gaps += compare(path, args.cake, args.flapjack, args.quiet)
+        total_gaps += compare(path, args.cake, args.flapjack, args.quiet, args.reference)
     if not args.quiet:
         print(f"programs={len(programs)} gaps={total_gaps}")
     return 1 if total_gaps else 0

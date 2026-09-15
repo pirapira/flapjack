@@ -115,6 +115,10 @@ def wordCopyProg : WordCopyState → WordProg α → WordProg α × WordCopyStat
       else
         let (moves, state) := wordCopyMoves state moves
         (.move priority moves, state)
+  | state, .assign destination (.var source) =>
+      let source := wordCopyLookup state source
+      (.assign destination (.var source),
+        wordCopySet (wordCopyRemove state destination) destination source)
   | state, .assign destination value =>
       (.assign destination (wordCopyExp state value), wordCopyRemove state destination)
   | state, .inst instruction =>

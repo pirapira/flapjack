@@ -223,10 +223,7 @@ decreasing_by all_goals decreasing_trivial
 def wordProgPrioritizedMoves : WordProg α → List WordMove
   | .move priority moves => moves.map (fun move =>
       { priority := priority, left := move.1, right := move.2 })
-  | .assign destination (.var source) =>
-      [{ priority := 0, left := destination, right := source }]
-  | .locValue destination source =>
-      [{ priority := 0, left := destination, right := source }]
+  | .assign _ _ | .locValue _ _ => []
   | .seq first second =>
       wordProgPrioritizedMoves first ++ wordProgPrioritizedMoves second
   | .ite _ _ _ thenBranch elseBranch =>

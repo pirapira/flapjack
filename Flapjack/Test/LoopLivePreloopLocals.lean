@@ -28,18 +28,17 @@ def loopLiveRun (source : String) (fuel : Nat) : Option (List Int) :=
           | _ => none
       | [] => none
 
-/-- The loop-exit live set must include `out`, keeping the pre-loop
-    assignment `out = 7`; before the fix the optimiser dropped it and the
-    program returned 0. -/
-example : loopLiveRun
-    "\n  fun 1 main () {\n    var 1 out = 7;\n    var 1 i = 0;\n    while i < 2 {\n      i = i + 1;\n    }\n    return out;\n  }\n" 200 =
-    some [7] := by
-  native_decide
+/- The loop-exit live set must include `out`, keeping the pre-loop assignment
+   `out = 7`; before the fix the optimiser dropped it and the program returned
+   0. This is an executable regression check. -/
+#guard (loopLiveRun
+    "\n  fun 1 main () {\n    var 1 out = 7;\n    var 1 i = 0;\n    while i < 2 {\n      i = i + 1;\n    }\n    return out;\n  }\n" 200 ==
+    some [7])
 
-/-- A wide constant survives the loop-live optimiser unchanged. -/
-example : loopLiveRun
-    "\n  fun 1 main () {\n    var 1 x = 1073741832;\n    return x;\n  }\n" 200 =
-    some [1073741832] := by
-  native_decide
+/- A wide constant survives the loop-live optimiser unchanged. This is an
+   executable regression check. -/
+#guard (loopLiveRun
+    "\n  fun 1 main () {\n    var 1 x = 1073741832;\n    return x;\n  }\n" 200 ==
+    some [1073741832])
 
 end Flapjack

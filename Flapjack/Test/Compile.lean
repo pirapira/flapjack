@@ -102,16 +102,17 @@ example :
 
 example :
     compileProg callContext (.call (some (none, none)) "f" []) =
-      .call (some ([2], none)) "f" [] := by
+      .dec 2 (.const 0) (.call (some ([2], none)) "f" []) := by
   simp [compileProg, compileArgs, functionReturnNames, allocatedNames, callContext,
-    crepContext, lookupInfo]
+    crepContext, lookupInfo, nestedDecs]
 
 example :
     compileProg callContext
       (.call (some (none, some ("E", "missing", .skip))) "f" []) =
-      .call (some ([2], some (9, .seq .skip .skip))) "f" [] := by
+      .dec 2 (.const 0)
+        (.call (some ([2], some (9, .seq .skip .skip))) "f" []) := by
   simp [compileProg, compileArgs, functionReturnNames, allocatedNames, compileProg,
-    callContext, crepContext, lookupInfo]
+    callContext, crepContext, lookupInfo, nestedDecs]
 
 example :
     compileProg callContext (.raise "E" (.const (α := Nat) 0)) =

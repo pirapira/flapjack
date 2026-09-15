@@ -46,6 +46,17 @@ def crepeHandlerCallStateResult : CrepControlResult (Word 64) :=
 def crepeHandlerCallResult : CrepControlResult (Word 64) :=
   .returned crepeHandlerCallReturnedState [BitVec.ofNat 64 7]
 
+/-- The caught-handler call leaves the zero-initialized return temporary
+    (local 2) in place until the wrapper's restore removes it. -/
+def crepeHandlerCallRaisedResult : CrepControlResult (Word 64) :=
+  .returned
+    { locals := updateCrepLocal
+        (fun x => if x = 2 then some (BitVec.ofNat 64 0) else none)
+        1 (BitVec.ofNat 64 7)
+      memory := updateMemory (fun _ => none)
+        (BitVec.ofNat 64 0) (BitVec.ofNat 64 7) }
+    [BitVec.ofNat 64 7]
+
 def crepeHandlerCallSourceFunctions :
     List (FunName × List VarName × Prog (Word 64)) :=
   [("raise", [], .raise "E" (.const (BitVec.ofNat 64 7)))]
@@ -59,10 +70,35 @@ def crepeHandlerCallSequence : Prog (Word 64) :=
 theorem crepe_handler_call_simulation_regression :
     evalCrepFullProg crepeHandlerCallFunctions
         (fun _ _ => none) (noCrepFfi (Word 64))
-        defaultCrepSharedMem 0 100 9 crepeHandlerCallCaller
+        defaultCrepSharedMem 0 100 10 crepeHandlerCallCaller
         (compileProg crepeHandlerCallContext crepeHandlerCallSource) =
       some crepeHandlerCallResult := by
-  apply compile_full_call_handler_simulation
+  have hexn : lookupInfo "exn" [("exn", (Shape.one, [1]))] =
+      some (Shape.one, [1]) := by
+    simp [lookupInfo]
+  have hcall : evalCrepFullCall crepeHandlerCallFunctions
+      (fun _ _ => none) (noCrepFfi (Word 64))
+      defaultCrepSharedMem 0 100 8
+      { locals := initializeCrepLocals crepeHandlerCallCaller.locals
+          (allocatedNames crepeHandlerCallContext Shape.one)
+        memory := crepeHandlerCallCaller.memory
+        globals := crepeHandlerCallCaller.globals }
+      (some (allocatedNames crepeHandlerCallContext Shape.one,
+        some (BitVec.ofNat 64 7,
+          .seq (assignRet (BitVec.ofNat 64 8) [1])
+            (compileProg crepeHandlerCallContext
+              (.return (.var .local "exn")))))) "raise" [] =
+    some crepeHandlerCallRaisedResult := by
+    simp [crepeHandlerCallContext, crepeHandlerCallFunctions,
+      crepeHandlerCallCaller,
+      crepeHandlerCallResult, crepeHandlerCallReturnedState,
+      evalCrepFullCall, evalCrepFullProg,
+      evalCrepFullExps, evalCrepFullExp, assignCrepValues, assignRet,
+      crepNestedSeq, loadGlobals, compileProg, compileExp,
+      updateCrepLocal, updateMemory, lookupCompiledFunction, hexn,
+      initializeCrepLocals, allocatedNames, Shape.shapeSize,
+      crepeHandlerCallRaisedResult]
+  have hsim := compile_full_call_handler_simulation
     (context := crepeHandlerCallContext)
     (functions := crepeHandlerCallFunctions)
     (primitive := fun _ _ => none)
@@ -74,21 +110,28 @@ theorem crepe_handler_call_simulation_regression :
     (exception := "E") (handlerVar := "exn")
     (exceptionCode := BitVec.ofNat 64 7)
     (handlerProgram := .return (.var .local "exn"))
-    (handlerNames := [1]) (result := crepeHandlerCallResult)
-  · simp [crepeHandlerCallContext, lookupInfo]
-  · simp [crepeHandlerCallContext, lookupInfo]
-  · simp [crepeHandlerCallContext, lookupInfo]
-  · simp [compileArgs]
-  · have hexn : lookupInfo "exn" [("exn", (Shape.one, [1]))] =
-        some (Shape.one, [1]) := by
-      simp [lookupInfo]
-    simp [crepeHandlerCallContext, crepeHandlerCallFunctions,
-      crepeHandlerCallCaller,
-      crepeHandlerCallResult, crepeHandlerCallReturnedState,
-      evalCrepFullCall, evalCrepFullProg,
-      evalCrepFullExps, evalCrepFullExp, assignCrepValues, assignRet,
-      crepNestedSeq, loadGlobals, compileProg, compileExp,
-      updateCrepLocal, updateMemory, lookupCompiledFunction, hexn]
+    (handlerNames := [1]) (result := crepeHandlerCallRaisedResult)
+    (hfunction := by simp [crepeHandlerCallContext, lookupInfo])
+    (hexception := by simp [crepeHandlerCallContext, lookupInfo])
+    (hhandler := by
+      refine ⟨Shape.one, ?_⟩
+      simp [crepeHandlerCallContext, lookupInfo])
+    (harguments := by simp [compileArgs])
+    (hcall := hcall)
+  have hrestore :
+      restoreCrepLocal
+        (updateCrepLocal
+          (fun x => if x = 2 then some (BitVec.ofNat 64 0) else none)
+          1 (BitVec.ofNat 64 7)) 2 none =
+      updateCrepLocal (fun _ => none) 1 (BitVec.ofNat 64 7) := by
+    funext current
+    by_cases hcurrent : current = 2 <;>
+      simp [restoreCrepLocal, updateCrepLocal, hcurrent]
+  simpa [restoreCrepResultList, restoreCrepResult, restoreCrepLocal,
+    crepeHandlerCallContext, crepeHandlerCallCaller,
+    crepeHandlerCallReturnedState, crepeHandlerCallRaisedResult,
+    crepeHandlerCallSource, crepeHandlerCallResult,
+    allocatedNames, updateCrepLocal, updateMemory, hrestore] using hsim
 
 theorem pan_value_caught_handler_equation_regression :
     evalPanValueCallWithPrimitiveCallsAndFfi
@@ -143,13 +186,14 @@ theorem crepe_handler_call_destination_compile_regression :
               (.return (.var .local "exn")))))) "raise" [] := by
   apply compileProg_call_handler_destination_of_compiled
     (context := crepeHandlerCallContext) (function := "raise")
-    (arguments := []) (destination := some (.local, "exn"))
-    (returnNames := [1]) (returnShape := .one)
+    (arguments := []) (kind := .local) (name := "exn")
+    (returnNames := [1])
     (exception := "E") (handlerVar := "exn")
     (exceptionCode := BitVec.ofNat 64 7)
     (handlerProgram := .return (.var .local "exn"))
     (handlerNames := [1]) (compiledArguments := [])
-  all_goals simp [crepeHandlerCallContext, lookupInfo, compileArgs]
+  all_goals simp [crepeHandlerCallContext, lookupInfo, compileArgs,
+    callDestinationNames, wrapRt]
 
 theorem crepe_handler_call_returned_relation_except_regression :
     panValueCrepControlRelExcept [] crepeHandlerCallContext
@@ -194,17 +238,16 @@ theorem crepe_handler_call_destination_simulation_regression :
     (baseAddress := 0) (topAddress := 100) (fuel := 8)
     (caller := crepeHandlerCallCaller) (function := "raise")
     (arguments := []) (compiledArguments := [])
-    (destination := some (.local, "exn"))
-    (returnNames := [1]) (returnShape := .one)
+    (kind := .local) (name := "exn")
+    (returnNames := [1])
     (exception := "E") (handlerVar := "exn")
     (exceptionCode := BitVec.ofNat 64 7)
     (handlerProgram := .return (.var .local "exn"))
     (handlerNames := [1]) (result := crepeHandlerCallResult)
   · simp [crepeHandlerCallContext, lookupInfo]
-  · simp [crepeHandlerCallContext, lookupInfo]
-  · simp [crepeHandlerCallContext, lookupInfo]
+  · refine ⟨Shape.one, ?_⟩; simp [crepeHandlerCallContext, lookupInfo]
   · simp [compileArgs]
-  · simp [crepeHandlerCallContext, lookupInfo]
+  · simp [crepeHandlerCallContext, lookupInfo, callDestinationNames, wrapRt]
   · have hexn : lookupInfo "exn" [("exn", (Shape.one, [1]))] =
         some (Shape.one, [1]) := by
       simp [lookupInfo]
@@ -318,11 +361,11 @@ theorem crepe_handler_call_destination_relation_regression :
 theorem crepe_handler_call_return_short_circuits_regression :
     evalCrepFullProg crepeHandlerCallFunctions
         (fun _ _ => none) (noCrepFfi (Word 64))
-        defaultCrepSharedMem 0 100 10 crepeHandlerCallCaller
+        defaultCrepSharedMem 0 100 11 crepeHandlerCallCaller
         (compileProg crepeHandlerCallContext crepeHandlerCallSequence) =
       some crepeHandlerCallResult ∧
     evalPanProgWithCallsAndFfi crepeHandlerCallSourceFunctions
-        (fun _ _ _ _ _ _ => none) 10 (fun _ => none)
+        (fun _ _ _ _ _ _ => none) 11 (fun _ => none)
         crepeHandlerCallSequence =
       some (.returned
         (updatePanLocal (fun _ => none) "exn" (BitVec.ofNat 64 7))
@@ -340,7 +383,7 @@ theorem crepe_handler_call_return_short_circuits_regression :
     (ffi := noCrepFfi (Word 64))
     (sharedMem := defaultCrepSharedMem)
     (sourceHandler := fun _ _ _ _ _ _ => none)
-    (baseAddress := 0) (topAddress := 100) (fuel := 8)
+    (baseAddress := 0) (topAddress := 100) (fuel := 9)
     (first := crepeHandlerCallSource)
     (compiledFirst := compileProg crepeHandlerCallContext crepeHandlerCallSource)
     (second := crepeHandlerCallContinuation)

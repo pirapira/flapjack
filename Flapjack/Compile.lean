@@ -30,6 +30,18 @@ def functionReturnNames (context : CompileContext α) (function : FunName) : Lis
   | some (_, shape) => allocatedNames context shape
   | none => []
 
+/- `wrap_rt`-based call-destination resolution (`pan_to_crepScript.sml:247`):
+    a call target survives only when the destination variable's shape is
+    preserved; globals and unknown locals degrade to a tail call. -/
+def callDestinationNames (context : CompileContext α) (kind : VarKind)
+    (name : VarName) : Option (List Nat) :=
+  match kind with
+  | .global => none
+  | .local =>
+      match lookupInfo name context.vars with
+      | none => none
+      | some info => (wrapRt (some info)).map Prod.snd
+
 def loadMemOp : OpSize → CrepMemOp
   | .op8 => .load8
   | .opW => .load
@@ -170,16 +182,6 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
       match info with
       | none => .call none function args
       | some (destination, handler) =>
-          let returnNames :=
-            match destination with
-            | none => functionReturnNames context function
-            | some (kind, name) =>
-                match kind with
-                | .local =>
-                    match lookupInfo name context.vars with
-                    | some (_, names) => names
-                    | none => []
-                | .global => []
           let compiledHandler :=
             match handler with
             | none => none
@@ -192,7 +194,26 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
                       | some (_, names) => assignRet context.bytesInWord names
                       | none => .skip
                     some (code, .seq handlerSetup (compileProg context handlerProgram))
-          .call (some (returnNames, compiledHandler)) function args
+          match destination with
+          | none =>
+              /- A standalone value-returning call declares its return
+                 temporaries up front (`pan_to_crepScript.sml:226-246`):
+                 `nested_decs rts (REPLICATE (LENGTH rts) (Const 0w))`
+                 around the call, with `rts` drawn from the callee's return
+                 shape and empty for an unknown callee. -/
+              let returnNames := functionReturnNames context function
+              nestedDecs returnNames (returnNames.map (fun _ => .const 0))
+                (.call (some (returnNames, compiledHandler)) function args)
+          | some (kind, name) =>
+              /- An assigned call keeps its destination only when `wrap_rt`
+                  preserves the variable's shape; otherwise the call degrades
+                  to a tail call, or to a handler-only call when the handler's
+                  exception is known (`pan_to_crepScript.sml:247-260`). -/
+              match callDestinationNames context kind name with
+              | none =>
+                  compiledHandler.elim (.call none function args)
+                    (fun handler => .call (some ([], some handler)) function args)
+              | some names => .call (some (names, compiledHandler)) function args
   | .decCall name shape function arguments body =>
       let names := allocatedNames context shape
       let nextContext := { context with
@@ -349,13 +370,15 @@ theorem compileProg_call_handler_of_compiled [BEq α] [OfNat α 0] [Add α]
     compileProg context
         (.call (some (none, some (exception, handlerVar, handlerProgram)))
           function arguments) =
-      .call (some (allocatedNames context returnShape,
-        some (exceptionCode,
-          .seq (assignRet context.bytesInWord handlerNames)
-            (compileProg context handlerProgram))))
-        function compiledArguments := by
+      nestedDecs (allocatedNames context returnShape)
+        ((allocatedNames context returnShape).map (fun _ => (.const 0 : CrepExp α)))
+        (.call (some (allocatedNames context returnShape,
+          some (exceptionCode,
+            .seq (assignRet context.bytesInWord handlerNames)
+              (compileProg context handlerProgram))))
+          function compiledArguments) := by
   rcases hhandler with ⟨shape, hhandler⟩
   simp [compileProg, hfunction, hexception, hhandler, harguments,
-    functionReturnNames, allocatedNames]
+    functionReturnNames, allocatedNames, nestedDecs]
 
 end Flapjack

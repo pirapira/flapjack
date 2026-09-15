@@ -521,25 +521,50 @@ theorem compile_full_call_handler_simulation
       lookupInfo handlerVar context.vars = some (shape, handlerNames))
     (harguments : compileArgs context arguments = compiledArguments)
     (hcall : evalCrepFullCall functions primitive ffi sharedMem
-      baseAddress topAddress fuel caller
+      baseAddress topAddress fuel
+      { caller with
+          locals := initializeCrepLocals caller.locals
+            (allocatedNames context returnShape) }
       (some (allocatedNames context returnShape,
         some (exceptionCode,
           .seq (assignRet context.bytesInWord handlerNames)
             (compileProg context handlerProgram)))) function compiledArguments =
       some result) :
     evalCrepFullProg functions primitive ffi sharedMem
-      baseAddress topAddress (fuel + 1) caller
+      baseAddress topAddress
+      (fuel + 1 + (allocatedNames context returnShape).length) caller
       (compileProg context
         (.call (some (none, some (exception, handlerVar, handlerProgram)))
-          function arguments)) = some result := by
+          function arguments)) =
+      some (restoreCrepResultList caller.locals
+        (allocatedNames context returnShape) result) := by
   rw [compileProg_call_handler_of_compiled context function arguments returnShape
     exception handlerVar exceptionCode handlerProgram handlerNames
     compiledArguments hfunction hexception hhandler harguments]
-  simpa [evalCrepFullProg] using hcall
+  have hbody :
+      evalCrepFullProg functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1)
+      { caller with
+          locals := initializeCrepLocals caller.locals
+            (allocatedNames context returnShape) }
+      (.call (some (allocatedNames context returnShape,
+          some (exceptionCode,
+            .seq (assignRet context.bytesInWord handlerNames)
+              (compileProg context handlerProgram))))
+        function compiledArguments) = some result := by
+    simpa [evalCrepFullProg] using hcall
+  exact evalCrepFullProg_nestedDecs_const_zero functions primitive ffi
+    sharedMem baseAddress topAddress (fuel + 1) caller
+    (allocatedNames context returnShape)
+    (.call (some (allocatedNames context returnShape,
+        some (exceptionCode,
+          .seq (assignRet context.bytesInWord handlerNames)
+            (compileProg context handlerProgram))))
+      function compiledArguments) result hbody
 
 /-! Destination-aware counterpart of the caught-handler call boundary.  The
-return slots are supplied explicitly because a destination may select a
-different flattened local shape from the callee's declared return shape. -/
+    return slots come from `wrap_rt` keeping the destination's flattened
+    shape (`pan_to_crepScript.sml:247-260`). -/
 theorem compile_full_call_handler_destination_simulation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]
@@ -549,30 +574,19 @@ theorem compile_full_call_handler_destination_simulation
     (functions : List (CompiledFunction α))
     (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
     (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress : α) (fuel : Nat) (caller : CrepState α)
-    (function : FunName) (arguments : List (Exp α))
-    (compiledArguments : List (CrepExp α))
-    (destination : Option (VarKind × VarName))
-    (returnNames : List Nat) (returnShape : Shape)
-    (exception handlerVar : VarName) (exceptionCode : α)
-    (handlerProgram : Prog α) (handlerNames : List Nat)
-    (result : CrepControlResult α)
-    (hfunction : lookupInfo function context.functions =
-      some ([], returnShape))
+    (baseAddress topAddress : α) (fuel : Nat)
+    (caller : CrepState α) (function : FunName)
+    (arguments : List (Exp α)) (compiledArguments : List (CrepExp α))
+    (kind : VarKind) (name : VarName)
+    (returnNames : List Nat)
+    (exception handlerVar : VarName)
+    (exceptionCode : α) (handlerProgram : Prog α)
+    (handlerNames : List Nat) (result : CrepControlResult α)
     (hexception : lookupInfo exception context.exceptions = some exceptionCode)
     (hhandler : ∃ shape,
       lookupInfo handlerVar context.vars = some (shape, handlerNames))
     (harguments : compileArgs context arguments = compiledArguments)
-    (hreturnNames :
-      (match destination with
-       | none => functionReturnNames context function
-       | some (kind, name) =>
-           match kind with
-           | .local =>
-               match lookupInfo name context.vars with
-               | some (_, names) => names
-               | none => []
-           | .global => []) = returnNames)
+    (hnames : callDestinationNames context kind name = some returnNames)
     (hcall : evalCrepFullCall functions primitive ffi sharedMem
       baseAddress topAddress fuel caller
       (some (returnNames,
@@ -583,13 +597,12 @@ theorem compile_full_call_handler_destination_simulation
     evalCrepFullProg functions primitive ffi sharedMem
       baseAddress topAddress (fuel + 1) caller
       (compileProg context
-        (.call (some (destination,
+        (.call (some (some (kind, name),
           some (exception, handlerVar, handlerProgram))) function arguments)) =
       some result := by
   rw [compileProg_call_handler_destination_of_compiled context function arguments
-    destination returnNames returnShape exception handlerVar exceptionCode
-    handlerProgram handlerNames compiledArguments hfunction hexception hhandler
-    harguments hreturnNames]
+    kind name returnNames exception handlerVar exceptionCode handlerProgram
+    handlerNames compiledArguments hexception hhandler harguments hnames]
   simpa [evalCrepFullProg] using hcall
 
 /-! Exception production is the other handler-facing lowering in `pan_to_crep`.

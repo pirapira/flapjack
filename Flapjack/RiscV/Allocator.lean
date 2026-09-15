@@ -1089,6 +1089,26 @@ def wordSsaRenameFunctionWithEntry (parameters : List Nat) (program : WordProg �
     wordSsaRenameFunction parameters program
   (state, renamedParameters, .seq (wordSsaEntryMove parameters renamedParameters) program)
 
+/-! CakeML applies `remove_dead_prog` immediately after `full_ssa_cc_trans`.
+    At this boundary the entry move is the only newly introduced sequence that
+    can be removed without changing the already-renamed body: a formal whose
+    fresh SSA name is never read has no observable copy.  Keep the raw
+    entry-aware API above for correctness clients, and expose this production
+    boundary separately so the old SSA shape remains available to proofs. -/
+def wordSsaRenameFunctionWithEntryAndDeadMoves (parameters : List Nat)
+    (program : WordProg α) :
+    WordSsaState × List Nat × WordProg α :=
+  let (state, renamedParameters, program) :=
+    wordSsaRenameFunctionWithEntry parameters program
+  match program with
+  | .seq (.move priority moves) body =>
+      let liveMoves := moves.filter (fun move => move.1 ∈ wordProgReadVars body)
+      if liveMoves.isEmpty then
+        (state, renamedParameters, body)
+      else
+        (state, renamedParameters, .seq (.move priority liveMoves) body)
+  | program => (state, renamedParameters, program)
+
 /-! CakeML's `full_ssa_cc_trans` is parameterised by the number of ABI
     arguments rather than by their source names.  Word functions use the even
     register names as their incoming ABI names, so expose that exact adapter

@@ -41,6 +41,28 @@ example :
     wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaFreshList, wordSsaFresh]
 
+/- Cake's post-SSA dead-move pass removes an unused formal's entry copy. -/
+example :
+    wordSsaRenameFunctionWithEntryAndDeadMoves [0, 2, 4]
+        (.skip : WordProg Nat) =
+      ({ current := [(4, 13), (2, 9), (0, 5)], next := 17 },
+        [5, 9, 13], .skip) := by
+  simp [wordSsaRenameFunctionWithEntryAndDeadMoves,
+    wordSsaRenameFunctionWithEntry, wordSsaEntryMove,
+    wordSsaRenameFunction, wordSsaSetupParameters, wordSsaLimitVar,
+    wordListMaximum, wordProgVariables, wordProgReadVars, wordProgWriteVars,
+    wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaFreshList, wordSsaFresh]
+
+/- A formal used by the renamed body remains in the entry move. -/
+def liveEntryMovesRemain : Bool :=
+  match (wordSsaRenameFunctionWithEntryAndDeadMoves [0, 2]
+      (.return 0 [0, 2] : WordProg Nat)).2.2 with
+  | .seq (.move _ moves) _ => moves == [(5, 0), (9, 2)]
+  | _ => false
+
+#guard liveEntryMovesRemain
+
 example :
     wordFullSsaCcTrans 2
         (.return 0 [0, 2] : WordProg Nat) =

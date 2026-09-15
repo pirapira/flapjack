@@ -74,7 +74,7 @@ def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
     (parameters : List Nat) (program : WordProg α) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, program) :=
-    wordSsaRenameFunctionWithEntry parameters program
+    wordSsaRenameFunctionWithEntryAndDeadMoves parameters program
   let tree := wordClashTree program []
   let (liveIn, edges) := wordClashTreeAnalyze tree []
   let edges := edges ++ wordProgSpecialConflictEdges program

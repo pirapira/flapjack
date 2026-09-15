@@ -158,6 +158,7 @@ inductive Instruction (width : Nat) where
   | lui (destination : Fin 32) (immediate : Word width)
   | auipc (destination : Fin 32) (immediate : Word width)
   | divU (destination sourceLeft sourceRight : Fin 32)
+  | div (destination sourceLeft sourceRight : Fin 32)
   | remU (destination sourceLeft sourceRight : Fin 32)
   | branchEq (sourceLeft sourceRight : Fin 32) (offset : Word width)
   | branchNe (sourceLeft sourceRight : Fin 32) (offset : Word width)
@@ -467,6 +468,12 @@ def execute (state : State width) : Instruction width → State width
         (if divisor == 0 then BitVec.ofNat width (2 ^ width - 1)
         else BitVec.ofNat width
           (readRegister state sourceLeft).toNat / divisor.toNat)
+  | .div destination sourceLeft sourceRight =>
+      let divisor := readRegister state sourceRight
+      writeRegister { state with pc := nextPc state } destination
+        (if divisor == 0 then BitVec.allOnes width
+        else BitVec.ofInt width
+          ((readRegister state sourceLeft).toInt.ediv divisor.toInt))
   | .remU destination sourceLeft sourceRight =>
       let divisor := readRegister state sourceRight
       writeRegister { state with pc := nextPc state } destination

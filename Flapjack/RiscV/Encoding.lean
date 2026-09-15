@@ -134,6 +134,8 @@ def encodeInstruction [NeZero width] : Instruction width → BitVec 32
   | .auipc destination immediate => encodeU 0x17 destination immediate
   | .divU destination sourceLeft sourceRight =>
       encodeR 0x33 5 1 destination sourceLeft sourceRight
+  | .div destination sourceLeft sourceRight =>
+      encodeR 0x33 4 1 destination sourceLeft sourceRight
   | .remU destination sourceLeft sourceRight =>
       encodeR 0x33 7 1 destination sourceLeft sourceRight
   | .branchEq sourceLeft sourceRight offset => encodeB 0 sourceLeft sourceRight offset

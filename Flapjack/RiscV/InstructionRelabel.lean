@@ -60,6 +60,7 @@ def relabelInstruction : Instruction width → Instruction width
   | .lui d i => .lui (riscvForward d) i
   | .auipc d i => .auipc (riscvForward d) i
   | .divU d l r => .divU (riscvForward d) (riscvForward l) (riscvForward r)
+  | .div d l r => .div (riscvForward d) (riscvForward l) (riscvForward r)
   | .remU d l r => .remU (riscvForward d) (riscvForward l) (riscvForward r)
   | .branchEq l r o => .branchEq (riscvForward l) (riscvForward r) o
   | .branchNe l r o => .branchNe (riscvForward l) (riscvForward r) o
@@ -105,7 +106,7 @@ def instructionWrites : Instruction width → List (Fin 32)
   | .slliW d _ _ => [d] | .srliW d _ _ => [d] | .sraiW d _ _ => [d]
   | .slt d _ _ => [d] | .slti d _ _ => [d] | .sltu d _ _ => [d] | .sltiu d _ _ => [d]
   | .lui d _ => [d] | .auipc d _ => [d]
-  | .divU d _ _ => [d] | .remU d _ _ => [d]
+  | .divU d _ _ => [d] | .div d _ _ => [d] | .remU d _ _ => [d]
   | .jal d _ => [d] | .jalr d _ _ => [d]
   | .loadByte d _ => [d] | .loadByteSigned d _ => [d]
   | .loadHalf d _ => [d] | .loadHalfSigned d _ => [d]

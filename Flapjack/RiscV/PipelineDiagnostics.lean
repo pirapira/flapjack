@@ -51,20 +51,17 @@ inductive PipelineRiscVLoweringError where
   | stackToRiscV
   deriving DecidableEq, Repr
 
-/-! Cake's Word names encode stack registers in pairs: word name `2` is stack
-    register `1`, which `riscv_names` emits as hardware `x10`.  The generic
-    allocator deliberately keeps its historical hardware-numbered fixed-source
-    API, so the source-facing RISC-V pipeline supplies this small target
-    adapter.  Names used directly by the FFI ABI (`10`--`13`) remain hardware
-    names; only the synthetic even ABI names introduced by full SSA are
-    translated. -/
-def wordRiscVAbiSourceRegister : Nat → Nat
-  | 0 => 1
-  | 2 => 10
-  | 4 => 11
-  | 6 => 12
-  | 8 => 13
-  | source => source
+/-! Cake renames every Lab register through `riscv_names`
+    (`riscv_stack_conf.reg_names` in
+    `cakeml/compiler/backend/riscv/riscv_configScript.sml`), and
+    `word_to_stack` numbers Lab registers by the physical half of the Word
+    variable, so the hardware register of an abstract Word name `n` is
+    `riscv_names (n / 2)`.  The map is the identity outside its recorded
+    entries, so translating every even name (the ABI argument names and the
+    ordinary names introduced by full SSA alike) is faithful; odd names are
+    not used as fixed sources. -/
+def wordRiscVAbiSourceRegister (source : Nat) : Nat :=
+  if source % 2 = 0 then RiscV.riscvRegisterName (source / 2) else source
 
 def wordRiscVFixedSourceLocations : List Nat → NatInfoMap WordLocation
   | [] => []
@@ -121,10 +118,18 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
               abiBase := 10
               sectionId := label
               handlerLabel := label }
-          match RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
-              renamedParameters wordAllocatableRegisters.length config.scratch
-              allocation.nextSpill (some 1)
-              (RiscV.wordStackInitialBitmaps false) renamedProgram with
+          let lower :=
+            if (RiscV.wordProgFfiNames renamedProgram).isEmpty then
+              RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+                renamedParameters wordAllocatableRegisters.length config.scratch
+                allocation.nextSpill (some 1)
+                (RiscV.wordStackInitialBitmaps false) renamedProgram
+            else
+              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
+                renamedParameters wordAllocatableRegisters.length config.scratch
+                allocation.nextSpill (some 1)
+                (RiscV.wordStackInitialBitmaps false) renamedProgram
+          match lower with
           | none =>
               let path := (RiscV.wordProgFirstExpressionLoweringFailure config
                 (RiscV.wordProgToNat renamedProgram)).getD []
@@ -160,9 +165,16 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsChecked
               abiBase := 10
               sectionId := label
               handlerLabel := label }
-          match RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
-              renamedParameters wordAllocatableRegisters.length config.scratch
-              (max allocation.nextSpill 1) (some 1) bitmaps renamedProgram with
+          let lower :=
+            if (RiscV.wordProgFfiNames renamedProgram).isEmpty then
+              RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
+                renamedParameters wordAllocatableRegisters.length config.scratch
+                (max allocation.nextSpill 1) (some 1) bitmaps renamedProgram
+            else
+              RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
+                renamedParameters wordAllocatableRegisters.length config.scratch
+                (max allocation.nextSpill 1) (some 1) bitmaps renamedProgram
+          match lower with
           | none =>
               let path := (RiscV.wordProgFirstExpressionLoweringFailure config
                 (RiscV.wordProgToNat renamedProgram)).getD []

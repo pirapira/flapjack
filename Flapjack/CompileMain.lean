@@ -17,10 +17,11 @@ def compileRemoveConfig : StackRemoveConfig :=
     currHeap := 12
     scratch := 31
     addressScratch := 29
-    stackPointer := 20
+    stackPointer := 24
     bytesInWord := 8
-    stackBase := 21
-    wordShift := 3 }
+    stackBase := 25
+    wordShift := 3
+    jump := true }
 
 def hexDigit (value : Nat) : Char :=
   if value < 10 then

@@ -108,7 +108,7 @@ decreasing_by
 
 def stackRemoveStackAlloc (config : StackRemoveConfig) (words : Nat) : StackProg α :=
   let delta := stackRemoveStackDelta config .sub words
-  if config.jump then
+  if config.jump && words ≠ 0 then
     stackRemoveJoin delta (.jumpLower config.stackPointer config.stackBase 2)
   else
     delta

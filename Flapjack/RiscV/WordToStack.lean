@@ -3129,6 +3129,25 @@ def wordToStackFunctionWithParametersAndLocationBitmaps [NeZero width]
   let parameterMoves ← wordStackMovesFromPhysical config parameters config.abiBase
   pure (wordStackJoin parameterMoves body, state)
 
+/-! Cake's `word_to_stack.compile_prog` reserves the maximum spill frame at
+    function entry and subtracts the stack-resident argument count from that
+    reservation.  Keep this wrapper separate from the historical entrypoint
+    so callers that still model an unframed function retain their API. -/
+def wordStackFrameWords (parameters : List Nat) (registerCount frameSlots : Nat) : Nat :=
+  (max frameSlots 3 - 1) - (parameters.length - registerCount)
+
+def wordToStackFunctionWithCakeFrameAndLocationBitmaps [NeZero width]
+    (config : WordStackConfig) (parameters : List Nat)
+    (registerCount bitmapRegister frameSlots : Nat) (storeConstsStub : Option Nat)
+    (state : WordStackBitmapState) (program : WordProg (Word width)) :
+    Option (StackProg Nat × WordStackBitmapState) := do
+  let (body, state) ← wordToStackProgWordWithLocationBitmaps config registerCount
+    bitmapRegister frameSlots storeConstsStub state program
+  let parameterMoves ← wordStackMovesFromPhysical config parameters config.abiBase
+  let frameWords := wordStackFrameWords parameters registerCount frameSlots
+  pure (wordStackJoin (.stackAlloc frameWords)
+    (wordStackJoin parameterMoves body), state)
+
 /-! Public entry point for the spill-aware path.  The allocator's location
     map is authoritative for the renamed Word program; the remaining stack
     and bitmap configuration stays with the caller because it depends on the

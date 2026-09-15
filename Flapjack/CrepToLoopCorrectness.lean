@@ -4677,7 +4677,6 @@ theorem crepToLoop_assign_cmp_equal_vars_agreement
       loopCompileExp, loopNestedSeq, evalLoopProgWithCallsAndFfi,
       evalLoopProg, evalLoopExp, evalLoopCondition, loopStateOfCrepState,
       updateCrepLocal, updateLoopLocal]
-
 theorem crepToLoopProgramCorrectWithPrimitive_assign_cmp_notEqual_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
     [Sub α] [AndOp α] [OrOp α] [HXor α α α]

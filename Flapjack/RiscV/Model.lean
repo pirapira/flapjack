@@ -186,6 +186,11 @@ inductive Instruction (width : Nat) where
   | storeHalfI (source base : Fin 32) (offset : Word width)
   | load32I (destination base : Fin 32) (offset : Word width)
   | store32I (source base : Fin 32) (offset : Word width)
+  /- CakeML's `Addr base offset` memory operand: the effective address is the
+     base register plus a byte offset encoded in the instruction immediate.
+     The stack remover emits this form directly, so the port must carry it. -/
+  | loadWordOffset (destination address : Fin 32) (offset : Word width)
+  | storeWordOffset (source address : Fin 32) (offset : Word width)
   deriving DecidableEq, Repr
 
 def zeroState (width : Nat) [NeZero width] : State width :=
@@ -568,6 +573,14 @@ def execute (state : State width) : Instruction width → State width
       let address := readRegister state base + offset
       writeWord32 { state with pc := nextPc state } address
         (readRegister state source)
+  | .loadWordOffset destination address offset =>
+      let address := readRegister state address + offset
+      writeRegister { state with pc := nextPc state } destination
+        (readWordValue state address)
+  | .storeWordOffset source address offset =>
+      let address := readRegister state address + offset
+      writeWordValue { state with pc := nextPc state } address
+        (readRegister state source)
 
 def accessAligned (access : AccessType) (address : Word width) (alignment : Nat) :
     Option ExceptionType :=
@@ -611,6 +624,10 @@ def executeTrap (state : State width) : Instruction width → Option ExceptionTy
       accessAligned .read (readRegister state base + offset) 4
   | .store32I _ base offset =>
       accessAligned .write (readRegister state base + offset) 4
+  | .loadWordOffset _ address offset =>
+      accessAligned .read (readRegister state address + offset) (width / 8)
+  | .storeWordOffset _ address offset =>
+      accessAligned .write (readRegister state address + offset) (width / 8)
   | _ => none
 
 /-! An execution boundary that rejects instructions classified as trapping.

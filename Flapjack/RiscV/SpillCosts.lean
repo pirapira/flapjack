@@ -158,7 +158,7 @@ theorem wordAllocateGraphForHeuristics_sound
         exact wordAllocateGraphWithPrefreezeMovesAndSpillCosts_sound
           tree forced fixedSources moves colourMoves colours stackStart costs allocation hgraph
 
-def wordAllocateGraphFunctionWithHeuristics (parameters : List Nat)
+def wordAllocateGraphFunctionWithHeuristics [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
@@ -182,7 +182,7 @@ def wordAllocateGraphFunctionWithHeuristics (parameters : List Nat)
     coloured result above is useful for the register-only semantic boundary,
     but replacing virtual names before consulting `wordGraphLocations` makes
     lookups fail (and can also accidentally hit another virtual name). -/
-def wordAllocateGraphFunctionWithHeuristicsRenamed (parameters : List Nat)
+def wordAllocateGraphFunctionWithHeuristicsRenamed [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
@@ -201,7 +201,7 @@ def wordAllocateGraphFunctionWithHeuristicsRenamed (parameters : List Nat)
     (fun allocation =>
       (state, renamedParameters, allocation, renamedProgram))
 
-theorem wordAllocateGraphFunctionWithHeuristics_sound
+theorem wordAllocateGraphFunctionWithHeuristics_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)
@@ -235,7 +235,7 @@ theorem wordAllocateGraphFunctionWithHeuristics_sound
     allocation hgraph
   exact hsound
 
-theorem wordAllocateGraphFunctionWithHeuristicsRenamed_sound
+theorem wordAllocateGraphFunctionWithHeuristicsRenamed_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)
@@ -275,7 +275,7 @@ theorem wordAllocateGraphFunctionWithHeuristicsRenamed_sound
 /-! Heuristic allocation over the complete CakeML-shaped SSA function.  The
     formal-entry move is part of the allocated program, so the graph and its
     preferences see the same boundary as the full-SSA spill pipeline. -/
-def wordAllocateGraphFunctionWithHeuristicsEntryRenamed (parameters : List Nat)
+def wordAllocateGraphFunctionWithHeuristicsEntryRenamed [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat) :
     Option (WordSsaState × List Nat × WordGraphAllocation × WordProg α) :=
@@ -293,7 +293,7 @@ def wordAllocateGraphFunctionWithHeuristicsEntryRenamed (parameters : List Nat)
     (fun allocation =>
       (state, renamedParameters, allocation, renamedProgram))
 
-theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_sound
+theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)

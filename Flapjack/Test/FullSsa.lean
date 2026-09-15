@@ -78,7 +78,7 @@ example :
       (.ffi "f" 1 2 3 4 ([5], [6]) : WordProg Nat) =
       ({ current := [(6, 26), (5, 22)], next := 30 },
         .seq (.move 0 [(12, 5), (16, 6)])
-          (.seq (.move 0 [(2, 1), (4, 2), (6, 3), (8, 4)])
+          (.seq (.move 1 [(2, 1), (4, 2), (6, 3), (8, 4)])
             (.seq (.ffi "f" 2 4 6 8 ([12], [16]))
               (.move 0 [(22, 12), (26, 16)])))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,

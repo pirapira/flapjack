@@ -109,13 +109,66 @@ inductive WordFlattenWorkInput (α : Type u) where
   | expression (value : WordExp α)
   | expressions (values : List (WordExp α))
 
+/-- Materialize every non-atom expression in `arguments` whose own lowering
+    budget reaches `threshold`, threading fresh names and emitted code.  Each
+    materialized child already satisfies the flattened-child invariant
+    (budget at most `wordFlattenBudgetLimit`), so every assignment emitted
+    here fits the three-entry reserved pool even when its destination is
+    spilled. -/
+def wordFlattenMaterializeArgs (threshold : Nat) (next : Nat) (code : WordProg α)
+    (arguments : List (WordExp α)) : WordProg α × List (WordExp α) × Nat :=
+  match arguments with
+  | [] => (code, [], next)
+  | argument :: rest =>
+      let (code, argument, next) :=
+        if !wordExpIsAtom argument && wordExpLoweringBudget argument ≥ threshold then
+          let fresh := wordFlattenFresh next argument code
+          (fresh.code, fresh.expression, fresh.next)
+        else (code, argument, next)
+      let (code, rest, next) := wordFlattenMaterializeArgs threshold next code rest
+      (code, argument :: rest, next)
+
+/-- Keep an over-budget node lowering-safe by materializing the children that
+    push it past the reserved pool, instead of wrapping the whole node.  The
+    earlier whole-node wrap emitted an assignment whose value kept the full
+    budget; that value still needed four pool entries and failed to lower
+    whenever the fresh temporary was spilled in a register-saturated function.
+    Cake's `crep_to_loop` materializes compound children bottom-up, so every
+    emitted Word assignment must fit the worst-case pool of three entries
+    (`wordFlattenBudgetLimit`): a binary/wide operator node needs one entry
+    plus its heaviest child, so children with budget three are materialized;
+    a `ror` node needs two, so children with budget two or more are.  After
+    this reduction the node itself stays inline and its budget is within the
+    limit. -/
 def wordFlattenNode (next : Nat) (flattened : WordExp α) (code : WordProg α) :
     WordFlattenExpResult α :=
   let budget := wordExpLoweringBudget flattened
-  if budget > wordFlattenBudgetLimit then
-    wordFlattenFresh next flattened code
-  else
+  if budget ≤ wordFlattenBudgetLimit then
     { code := code, expression := flattened, next, budget }
+  else
+    match flattened with
+    | .op operator arguments =>
+        let (code, arguments, next) := wordFlattenMaterializeArgs 3 next code arguments
+        let reduced := WordExp.op operator arguments
+        { code := code, expression := reduced, next,
+          budget := wordExpLoweringBudget reduced }
+    | .shift .ror left right =>
+        let (code, arguments, next) := wordFlattenMaterializeArgs 2 next code [left, right]
+        match arguments with
+        | [left, right] =>
+            let reduced := WordExp.shift Shift.ror left right
+            { code := code, expression := reduced, next,
+              budget := wordExpLoweringBudget reduced }
+        | _ => wordFlattenFresh next flattened code
+    | .shift operator left right =>
+        let (code, arguments, next) := wordFlattenMaterializeArgs 3 next code [left, right]
+        match arguments with
+        | [left, right] =>
+            let reduced := WordExp.shift operator left right
+            { code := code, expression := reduced, next,
+              budget := wordExpLoweringBudget reduced }
+        | _ => wordFlattenFresh next flattened code
+    | _ => wordFlattenFresh next flattened code
 
 def wordFlattenWork (next : Nat) : WordFlattenWorkInput α → WordFlattenWorkResult α
   | .expressions [] => .expressions .skip [] next 0

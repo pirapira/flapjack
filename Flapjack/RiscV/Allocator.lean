@@ -605,7 +605,7 @@ def wordSsaMergeMoves : List Nat → WordSsaState → WordSsaState → Nat →
 termination_by names => sizeOf names
 decreasing_by all_goals decreasing_trivial
 
-def wordSsaFakeInconsistencyMoves (preferred : Option Bool) :
+def wordSsaFakeInconsistencyMoves [OfNat α 0] (preferred : Option Bool) :
     List Nat → WordSsaState → WordSsaState → Nat →
       WordProg α × WordProg α × Nat × WordSsaState × WordSsaState
   | [], left, right, next => (.skip, .skip, next, left, right)
@@ -614,7 +614,7 @@ def wordSsaFakeInconsistencyMoves (preferred : Option Bool) :
         wordSsaFakeInconsistencyMoves preferred names left right next
       match lookupNatInfo name left.current, lookupNatInfo name right.current with
       | none, some rightName =>
-          (wordSsaSeq leftMoves (.move 0 [(next, 0)]),
+          (wordSsaSeq leftMoves (.assign next (.const 0)),
             wordSsaSeq rightMoves
               (.move (wordSsaBranchPriority preferred false) [(next, rightName)]),
             next + 4, wordSsaForceRename [(name, next)] left,
@@ -622,14 +622,14 @@ def wordSsaFakeInconsistencyMoves (preferred : Option Bool) :
       | some leftName, none =>
           (wordSsaSeq leftMoves
               (.move (wordSsaBranchPriority preferred true) [(next, leftName)]),
-            wordSsaSeq rightMoves (.move 0 [(next, 0)]),
+            wordSsaSeq rightMoves (.assign next (.const 0)),
             next + 4, wordSsaForceRename [(name, next)] left,
             wordSsaForceRename [(name, next)] right)
       | _, _ => (leftMoves, rightMoves, next, left, right)
 termination_by names => sizeOf names
 decreasing_by all_goals decreasing_trivial
 
-def wordSsaFixInconsistencies (preferred : Option Bool)
+def wordSsaFixInconsistencies [OfNat α 0] (preferred : Option Bool)
     (left right : WordSsaState) (next : Nat) :
     WordSsaState × WordProg α × WordProg α :=
   let names := (wordSsaKeys left ++ wordSsaKeys right).eraseDups
@@ -683,12 +683,12 @@ def wordSsaRefreshList (state : WordSsaState) : List Nat →
 termination_by names => sizeOf names
 decreasing_by all_goals decreasing_trivial
 
-def wordSsaFakeMoves : List Nat → WordProg α
+def wordSsaFakeMoves [OfNat α 0] : List Nat → WordProg α
   | [] => .skip
   | name :: names =>
-      wordSsaSeq (.move 0 [(name, 0)]) (wordSsaFakeMoves names)
+      wordSsaSeq (.assign name (.const 0)) (wordSsaFakeMoves names)
 
-def wordSsaLoopSetup (state : WordSsaState)
+def wordSsaLoopSetup [OfNat α 0] (state : WordSsaState)
     (liveIn liveOut : List Nat) : WordSsaState × WordProg α :=
   let names := (liveIn ++ liveOut).eraseDups
   let extend := names.filter (fun name =>
@@ -707,7 +707,7 @@ def wordSsaFindLoopFrame : Nat → List WordSsaLoopFrame →
   | 0, frame :: _ => some frame
   | label, _ :: frames => wordSsaFindLoopFrame (label - 1) frames
 
-def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
+def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
     (state : WordSsaState) : WordProg α → WordSsaState × WordProg α
     | .skip => (state, .skip)
     | .move priority moves =>
@@ -737,7 +737,7 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
           (.return (wordSsaRead state label) abiValues))
     | .raise exception =>
         let exception := wordSsaRead state exception
-        (state, wordSsaSeq (.move 0 [(2, exception)]) (.raise 2))
+        (state, wordSsaSeq (.move 1 [(2, exception)]) (.raise 2))
     | .tick => (state, .tick)
     | .break label =>
         match wordSsaFindLoopFrame label frames with
@@ -769,7 +769,7 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
         let (state, _, restoreMove) :=
           wordSsaListNextVarRenameMove cutState (stackNext + 2) names
         (state, wordSsaSeq stackMove
-          (wordSsaSeq (.move 0
+          (wordSsaSeq (.move 1
             [(2, configuration), (4, configurationLength),
              (6, array), (8, arrayLength)])
             (wordSsaSeq (.ffi function 2 4 6 8 stackLive) restoreMove)))
@@ -784,14 +784,14 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
     | .call none target arguments none =>
         let arguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 0 arguments.length
-        let moveArguments := .move 0 (abiArguments.zip arguments)
+        let moveArguments := .move 1 (abiArguments.zip arguments)
         (state, wordSsaSeq moveArguments
           (.call none target abiArguments none))
     | .call none target arguments
         (some (exception, body, handlerLabel, handlerEntryLabel)) =>
         let arguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 0 arguments.length
-        let moveArguments := .move 0 (abiArguments.zip arguments)
+        let moveArguments := .move 1 (abiArguments.zip arguments)
         (state, wordSsaSeq moveArguments
           (.call none target abiArguments
             (some (exception, body, handlerLabel, handlerEntryLabel))))
@@ -804,14 +804,14 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
         let cutState := wordSsaRestrict stackState names
         let arguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 1 arguments.length
-        let moveArguments := .move 0 (abiArguments.zip arguments)
+        let moveArguments := .move 1 (abiArguments.zip arguments)
         let (state, _, restoreMove) :=
           wordSsaListNextVarRenameMove cutState (stackNext + 2) names
         let (state, destinations) := wordSsaFreshList state destinations
         let (state, returnCode) :=
           wordSsaRenameProgramWithLoops frames state returnCode
         let abiReturns := wordSsaCallAbiRegisters 1 destinations.length
-        let returnMove := .move 0 (destinations.zip abiReturns)
+        let returnMove := .move 1 (destinations.zip abiReturns)
         let returnHandler := wordSsaSeq restoreMove
           (wordSsaSeq returnMove returnCode)
         (state, wordSsaSeq stackMove
@@ -827,7 +827,7 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
         let cutState := wordSsaRestrict stackState names
         let arguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 1 arguments.length
-        let moveArguments := .move 0 (abiArguments.zip arguments)
+        let moveArguments := .move 1 (abiArguments.zip arguments)
         let (restoreState, _, restoreMove) :=
           wordSsaListNextVarRenameMove cutState (stackNext + 2) names
         let (returnState, destinations) :=
@@ -835,7 +835,7 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
         let (returnState, returnCode) :=
           wordSsaRenameProgramWithLoops frames returnState returnCode
         let abiReturns := wordSsaCallAbiRegisters 1 destinations.length
-        let returnMove := .move 0 (destinations.zip abiReturns)
+        let returnMove := .move 1 (destinations.zip abiReturns)
         let returnHandler := wordSsaSeq restoreMove
           (wordSsaSeq returnMove returnCode)
         let exceptionSeed := { restoreState with next := returnState.next }
@@ -844,7 +844,7 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
         let (exceptionState, body) :=
           wordSsaRenameProgramWithLoops frames exceptionState body
         let exceptionHandler := wordSsaSeq restoreMove
-          (wordSsaSeq (.move 0 [(exceptionName, 2)]) body)
+          (wordSsaSeq (.move 1 [(exceptionName, 2)]) body)
         let preferred := match returnHandler, exceptionHandler with
           | .skip, _ => some true
           | _, .skip => some false
@@ -869,17 +869,17 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
         let (state, _, restoreMove) :=
           wordSsaListNextVarRenameMove cutState (stackNext + 2) names
         (state, wordSsaSeq stackMove
-          (wordSsaSeq (.move 0 [(2, destination)])
+          (wordSsaSeq (.move 1 [(2, destination)])
             (wordSsaSeq (.alloc 2 stackCutsets) restoreMove)))
     | .storeConsts _source _bitmap codeLength dataLength constants =>
         let codeLengthValue := wordSsaRead state codeLength
         let dataLengthValue := wordSsaRead state dataLength
         let (state, dataLength) := wordSsaFresh state dataLength
         let (state, codeLength) := wordSsaFresh state codeLength
-        (state, wordSsaSeq (.move 0
+        (state, wordSsaSeq (.move 1
             [(4, codeLengthValue), (6, dataLengthValue)])
           (wordSsaSeq (.storeConsts 0 2 4 6 constants)
-            (.move 0 [(codeLength, 4), (dataLength, 6)])))
+            (.move 1 [(codeLength, 4), (dataLength, 6)])))
     | .opCurrHeap operator destination source =>
         let source := wordSsaRead state source
         let (state, destination) := wordSsaFresh state destination
@@ -899,9 +899,9 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
         let (state, _, restoreMove) :=
           wordSsaListNextVarRenameMove pointerState pointerState.next names
         (state, wordSsaSeq stackMove
-          (wordSsaSeq (.move 0 [(2, codeBuffer), (4, codeLength)])
+          (wordSsaSeq (.move 1 [(2, codeBuffer), (4, codeLength)])
             (wordSsaSeq (.install 2 4 dataBuffer dataLength stackCutsets)
-              (wordSsaSeq (.move 0 [(pointer, 2)]) restoreMove))))
+              (wordSsaSeq (.move 1 [(pointer, 2)]) restoreMove))))
     | .codeBufferWrite address value =>
         (state, .codeBufferWrite (wordSsaRead state address)
           (wordSsaRead state value))
@@ -944,11 +944,11 @@ def wordSsaRenameProgramWithLoops (frames : List WordSsaLoopFrame)
   termination_by program => sizeOf program
   decreasing_by all_goals decreasing_trivial
 
-def wordSsaRenameProgram (state : WordSsaState) (program : WordProg α) :
+def wordSsaRenameProgram [OfNat α 0] (state : WordSsaState) (program : WordProg α) :
     WordSsaState × WordProg α :=
   wordSsaRenameProgramWithLoops [] state program
 
-theorem wordSsaRenameProgram_ite :
+theorem wordSsaRenameProgram_ite [OfNat α 0] :
     wordSsaRenameProgram ({ current := [], next := 10 } : WordSsaState)
         (.ite .equal 0 (.reg 0)
           (.assign 1 (.var 0)) (.assign 1 (.var 0)) : WordProg α) =
@@ -1116,7 +1116,7 @@ def wordSsaSetupParameters (parameters : List Nat) (program : WordProg α) :
   wordSsaFreshList
     { current := [], next := wordSsaLimitVar parameters program } parameters
 
-def wordSsaRenameFunction (parameters : List Nat) (program : WordProg α) :
+def wordSsaRenameFunction [OfNat α 0] (parameters : List Nat) (program : WordProg α) :
     WordSsaState × List Nat × WordProg α :=
   let (state, renamedParameters) := wordSsaSetupParameters parameters program
   let (state, program) := wordSsaRenameProgram state program
@@ -1131,7 +1131,7 @@ def wordSsaEntryMove (parameters renamedParameters : List Nat) :
     WordProg α :=
   .move 1 (renamedParameters.zip parameters)
 
-def wordSsaRenameFunctionWithEntry (parameters : List Nat) (program : WordProg α) :
+def wordSsaRenameFunctionWithEntry [OfNat α 0] (parameters : List Nat) (program : WordProg α) :
     WordSsaState × List Nat × WordProg α :=
   let (state, renamedParameters, program) :=
     wordSsaRenameFunction parameters program
@@ -1143,7 +1143,7 @@ def wordSsaRenameFunctionWithEntry (parameters : List Nat) (program : WordProg �
     fresh SSA name is never read has no observable copy.  Keep the raw
     entry-aware API above for correctness clients, and expose this production
     boundary separately so the old SSA shape remains available to proofs. -/
-def wordSsaRenameFunctionWithEntryAndDeadMoves (parameters : List Nat)
+def wordSsaRenameFunctionWithEntryAndDeadMoves [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) :
     WordSsaState × List Nat × WordProg α :=
   let (state, renamedParameters, program) :=
@@ -1166,11 +1166,11 @@ def wordSsaRenameFunctionWithEntryAndDeadMoves (parameters : List Nat)
 def wordSsaAbiParameters (count : Nat) : List Nat :=
   (List.range count).map (fun index => 2 * index)
 
-def wordFullSsaCcTrans (parameterCount : Nat) (program : WordProg α) :
+def wordFullSsaCcTrans [OfNat α 0] (parameterCount : Nat) (program : WordProg α) :
     WordSsaState × List Nat × WordProg α :=
   wordSsaRenameFunctionWithEntry (wordSsaAbiParameters parameterCount) program
 
-theorem wordFullSsaCcTrans_eq_named_entry
+theorem wordFullSsaCcTrans_eq_named_entry [OfNat α 0]
     (parameterCount : Nat) (program : WordProg α) :
     wordFullSsaCcTrans parameterCount program =
       wordSsaRenameFunctionWithEntry
@@ -1779,7 +1779,7 @@ def wordAllocateProgramWithPreferences (slots : List Nat)
     (slots ++ wordProgVariables program ++ liveIn) edges
     (wordProgPreferenceEdges program)
 
-def wordAllocateSsaProgram (state : WordSsaState) (program : WordProg α) :
+def wordAllocateSsaProgram [OfNat α 0] (state : WordSsaState) (program : WordProg α) :
     Option (WordSsaState × WordProg α × WordContext) :=
   let (state, program) := wordSsaRenameProgram state program
   let (liveIn, edges) := wordProgClashAnalysis program []
@@ -3763,7 +3763,7 @@ theorem wordAllocateVarsWithSpillsAndPreferences_maps_slots (slots : List Nat)
         edges preferences { locations := [], nextSpill := 0 })
   · contradiction
 
-def wordAllocateSsaProgramWithSpills (state : WordSsaState)
+def wordAllocateSsaProgramWithSpills [OfNat α 0] (state : WordSsaState)
     (program : WordProg α) :
     Option (WordSsaState × WordProg α × WordSpillState) :=
   let (state, program) := wordSsaRenameProgram state program
@@ -3781,7 +3781,7 @@ def wordAllocateSsaProgramWithSpills (state : WordSsaState)
     liveness analysis and the structural tree while the full colouring
     heuristic is being ported. -/
 
-def wordAllocateSsaProgramWithClashTreeWithSpills (state : WordSsaState)
+def wordAllocateSsaProgramWithClashTreeWithSpills [OfNat α 0] (state : WordSsaState)
     (program : WordProg α) :
     Option (WordSsaState × WordProg α × WordSpillState) :=
   let (state, program) := wordSsaRenameProgram state program
@@ -3796,7 +3796,7 @@ def wordAllocateSsaProgramWithClashTreeWithSpills (state : WordSsaState)
       else
         none
 
-def wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences
+def wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences [OfNat α 0]
     (state : WordSsaState) (program : WordProg α) :
     Option (WordSsaState × WordProg α × WordSpillState) :=
   let (state, program) := wordSsaRenameProgram state program
@@ -3813,7 +3813,7 @@ def wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences
       else
         none
 
-theorem wordAllocateSsaProgramWithSpills_maps_variables
+theorem wordAllocateSsaProgramWithSpills_maps_variables [OfNat α 0]
     (state : WordSsaState) (program : WordProg α)
     (renamedState : WordSsaState) (renamedProgram : WordProg α)
     (allocation : WordSpillState)
@@ -3839,7 +3839,7 @@ theorem wordAllocateSsaProgramWithSpills_maps_variables
     still occurs in the generated entry move and therefore must receive a
     location. -/
 
-def wordAllocateSsaFunctionWithSpills (parameters : List Nat)
+def wordAllocateSsaFunctionWithSpills [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, program) :=
@@ -3859,7 +3859,7 @@ def wordAllocateSsaFunctionWithSpills (parameters : List Nat)
     that the generated entry moves are valid even when a formal is otherwise
     unused. -/
 
-def wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences
+def wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences [OfNat α 0]
     (parameters : List Nat) (program : WordProg α) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, program) :=
@@ -3882,7 +3882,7 @@ def wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences
     parameter names are fixed to their architectural registers before the
     remaining SSA names are assigned registers or spill slots. -/
 
-def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
+def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed [OfNat α 0]
     (parameters : List Nat) (program : WordProg α) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, program) :=
@@ -3903,7 +3903,7 @@ def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed
       else
         none
 
-def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast
+def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast [OfNat α 0]
     (parameters : List Nat) (program : WordProg α) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, program) :=
@@ -3924,7 +3924,7 @@ def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFas
       else
         none
 
-def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
+def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast [OfNat α 0]
     (parameters : List Nat) (program : WordProg α) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, program) :=
@@ -3945,7 +3945,7 @@ def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedCla
       else
         none
 
-theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_preserves_parameters
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_preserves_parameters [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -3965,7 +3965,7 @@ theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixe
     hallocation name
   exact List.mem_append_left _ hname
 
-theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_maps_parameters
+theorem wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixed_maps_parameters [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -4001,7 +4001,7 @@ theorem wordAllocateVarsWithFixedSources_sound (slots : List Nat)
     parameter moves are present in the clash tree, preferences, and returned
     program. -/
 
-def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences
+def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences [OfNat α 0]
     (parameters : List Nat) (program : WordProg α) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, program) :=
@@ -4020,7 +4020,7 @@ def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferences
       else
         none
 
-theorem wordAllocateSsaFunctionWithSpills_maps_parameters
+theorem wordAllocateSsaFunctionWithSpills_maps_parameters [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -4043,7 +4043,7 @@ theorem wordAllocateSsaFunctionWithSpills_maps_parameters
   apply hslots name
   simp [hname]
 
-theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_maps_parameters
+theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_maps_parameters [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -4071,7 +4071,7 @@ theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_maps_parame
   apply hslots name
   simp [hname]
 
-theorem wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences_maps_variables
+theorem wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences_maps_variables [OfNat α 0]
     (state : WordSsaState) (program : WordProg α)
     (renamedState : WordSsaState) (renamedProgram : WordProg α)
     (allocation : WordSpillState)
@@ -4096,7 +4096,7 @@ theorem wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences_maps_variabl
   apply hslots name
   simp [hname]
 
-theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_safe
+theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_safe [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α) (allocation : WordSpillState)
@@ -4115,7 +4115,7 @@ theorem wordAllocateSsaFunctionWithClashTreeWithSpillsAndPreferences_safe
   subst allocation
   exact ⟨hsafe, htree⟩
 
-theorem wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences_safe
+theorem wordAllocateSsaProgramWithClashTreeWithSpillsAndPreferences_safe [OfNat α 0]
     (state : WordSsaState) (program : WordProg α)
     (renamedState : WordSsaState) (renamedProgram : WordProg α)
     (allocation : WordSpillState)
@@ -4149,7 +4149,7 @@ theorem wordAllocateVarsWithSpillsAndPreferences_sound (slots : List Nat)
   rcases hstate with ⟨hcheck, heq⟩
   simpa [heq] using hcheck
 
-theorem wordAllocateSsaProgramWithSpills_respects_clashes
+theorem wordAllocateSsaProgramWithSpills_respects_clashes [OfNat α 0]
     (state : WordSsaState) (program : WordProg α)
     (renamedState : WordSsaState) (renamedProgram : WordProg α)
     (allocation : WordSpillState)

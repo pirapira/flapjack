@@ -170,7 +170,7 @@ theorem fullSsaEntry_bitmap_simple_gc_source_machine_simulation :
 theorem fullSsaMain_compiled_execution :
     (do
       let image ← fullSsaMainImage
-      RiscV.executeFunctionAt 100 0 72 6 [] image [2] []
+      RiscV.executeFunctionAt 100 0 40 6 [] image [2] []
         (RiscV.writeRegister (RiscV.zeroState 64) 1 (BitVec.ofNat 64 6))) =
       some [BitVec.ofNat 64 7] := by
   native_decide
@@ -178,7 +178,7 @@ theorem fullSsaMain_compiled_execution :
 theorem fullSsaMain_graph_compiled_execution :
     (do
       let image ← fullSsaMainGraphImage
-      RiscV.executeFunctionAt 100 0 72 6 [] image [2] []
+      RiscV.executeFunctionAt 100 0 40 6 [] image [2] []
         (RiscV.writeRegister (RiscV.zeroState 64) 1 (BitVec.ofNat 64 6))) =
       some [BitVec.ofNat 64 7] := by
   native_decide

@@ -16,7 +16,7 @@ example :
     (wordAllocateFunctionWithOracle [2]
       (.assign 4 (.var 2) : WordProg Nat) 13 26 []).isSome = true
 
-example (parameters : List Nat) (program : WordProg α)
+example [OfNat α 0] (parameters : List Nat) (program : WordProg α)
     (colours stackStart : Nat) (oracle : NatInfoMap Nat)
     (state : WordSsaState) (renamedParameters : List Nat)
     (renamedProgram : WordProg α)

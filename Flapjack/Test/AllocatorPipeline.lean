@@ -109,7 +109,7 @@ example :
         stackBase := 21, wordShift := 3 }
       pipelineAllocatedMulDeclarations).map
         (fun sections => sections.map (fun (label, entry, _) => (label, entry))) =
-      some [(0, BitVec.ofNat 64 0), (1, BitVec.ofNat 64 72)]
+      some [(0, BitVec.ofNat 64 0), (1, BitVec.ofNat 64 40)]
 
 
 end Flapjack

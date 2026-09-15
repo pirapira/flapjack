@@ -35,7 +35,8 @@ theorem compile_prog_inline_call_parity :
     compileProg, compileExp, compileArgs,
     crepInlineTopRecursiveByNames, crepInlineTopRecursive,
     crepInlineFunctionsRecursive, crepInlineActiveNames,
-    crepInlineProgRecursive, crepInlineLookup, crepInlineCallBody,
+    crepInlineProgRecursive, crepInlineProg,
+    crepInlineRemove, crepInlineLookup, crepInlineCall, crepInlineCallBody,
     crepInlineTail, crepArgLoad, crepInlineTmpNames, crepUnreachElim,
     nestedDecs]
 

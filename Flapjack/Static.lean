@@ -510,7 +510,19 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
   | .seq first second =>
       staticBind (checkProg context first) (fun firstResult =>
         if firstResult.exitsFunction then
-          (Except.ok firstResult, [.warning "statement after function exit is unreachable"])
+          -- CakeML `panStaticScript.sml:1451` always checks the second
+          -- statement; the unreachable tail only earns a warning, while
+          -- errors in it still reject the program.
+          match checkProg
+              { context with location := firstResult.currentLocation } second with
+          | (Except.error error, warnings) =>
+              (Except.error error,
+                .warning "statement after function exit is unreachable" :: warnings)
+          | (Except.ok secondInfo, warnings) =>
+              (Except.ok { secondInfo with
+                  exitsFunction := true
+                  exitsLoop := firstResult.exitsLoop || secondInfo.exitsLoop },
+                .warning "statement after function exit is unreachable" :: warnings)
         else staticBind (checkProg
           { context with location := firstResult.currentLocation } second) (fun secondResult =>
           staticOk secondResult))
@@ -559,6 +571,21 @@ def checkProg [BEq String] (context : Context) : Prog α → StaticResult ProgRe
                   | none => progOk .tailLast true false context.location
               | some (destination, none) => checkCallDestination context returnShape destination
               | some (destination, some (exception, handlerVariable, handlerProgram)) =>
+                  match destination with
+                  | some (.global, _) =>
+                      -- CakeML `panStaticScript.sml:1256-1264`: a handled call
+                      -- assigning to a global only requires the handler variable
+                      -- to be a local; the exception need not be declared and
+                      -- the handler variable's shape is not checked.
+                      match lookupInfo handlerVariable context.locals with
+                      | none => staticError (.scope
+                          ("unknown exception handler variable: " ++ handlerVariable))
+                      | some handlerInfo =>
+                          let handlerContext := { context with locals :=
+                            (handlerVariable, handlerInfo) :: context.locals }
+                          staticBind (checkProg handlerContext handlerProgram) (fun _ =>
+                            checkCallDestination context returnShape destination)
+                  | _ =>
                   match lookupInfo exception context.exceptions,
                       lookupInfo handlerVariable context.locals with
                   | none, _ => staticError (.scope ("unknown exception: " ++ exception))

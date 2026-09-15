@@ -58,7 +58,7 @@ def wordOracleColouringOk (_colours stackStart : Nat)
       wordOracleStackSafe colour stackStart
         (wordClashTreeNames tree).eraseDups
 
-def wordAllocateFunctionWithOracle (parameters : List Nat)
+def wordAllocateFunctionWithOracle [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (colours stackStart : Nat)
     (oracle : NatInfoMap Nat) :
     Option (WordSsaState × List Nat × WordProg α) :=
@@ -79,7 +79,7 @@ theorem wordOracleColouringOk_rejects_forced_alias
       false := by
   simp [wordOracleColouringOk, wordOracleEdgesSafe]
 
-theorem wordAllocateFunctionWithOracle_sound
+theorem wordAllocateFunctionWithOracle_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (colours stackStart : Nat) (oracle : NatInfoMap Nat)
     (state : WordSsaState) (renamedParameters : List Nat)

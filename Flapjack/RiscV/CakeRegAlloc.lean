@@ -975,7 +975,7 @@ def cakeColourWordSpillState (k : Nat) (parameters : List Nat)
     entry moves and IRC coalescing in the returned Word program, while
     exposing the existing `WordSpillState` shape to the shared pipeline. -/
 
-def cakeAllocateWordFunction (parameters : List Nat) (program : WordProg α)
+def cakeAllocateWordFunction [OfNat α 0] (parameters : List Nat) (program : WordProg α)
     (currentFunction : Nat) (k : Nat) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, ssaProgram) :=

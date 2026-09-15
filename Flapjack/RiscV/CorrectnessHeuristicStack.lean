@@ -67,7 +67,7 @@ theorem wordAllocateGraphForHeuristics_bijection
         cases heq
         rfl
 
-theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_parameters
+theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_parameters [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)
@@ -117,7 +117,7 @@ theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_parameters
   simpa [hstate, hparameters, hprogram, hbij, wordInitRegAlloc,
     wordMkBijection, wordClashTreeBijection] using hnode
 
-theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_locations
+theorem wordAllocateGraphFunctionWithHeuristicsEntryRenamed_maps_locations [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)

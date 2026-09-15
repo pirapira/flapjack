@@ -242,7 +242,7 @@ open Flapjack.RiscV
 
 /-! The source-shaped allocator boundary: full SSA is performed first, then
 Cake's dead-program pass feeds the clash tree and IRC allocator. -/
-def cakeAllocateWordFunctionAfterDead (currentFunction : Nat)
+def cakeAllocateWordFunctionAfterDead [OfNat α 0] (currentFunction : Nat)
     (parameters : List Nat) (program : WordProg α) [BEq α] :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, ssaProgram) :=

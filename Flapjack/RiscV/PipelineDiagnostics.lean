@@ -74,7 +74,7 @@ def wordRiscVFixedSourceLocations : List Nat → NatInfoMap WordLocation
       (source, .register (wordRiscVAbiSourceRegister source)) ::
         wordRiscVFixedSourceLocations sources
 
-def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
+def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV [OfNat α 0]
     (currentFunction : Nat) (parameters : List Nat) (program : WordProg α) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   RiscV.CakeRegAlloc.cakeAllocateWordFunction parameters program

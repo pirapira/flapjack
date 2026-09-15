@@ -38,7 +38,7 @@ def wordFunctionAllocationResultIsSpill :
   | some (.spill _ _ _ _) => true
   | _ => false
 
-def wordAllocateFunctionWithOracleOrGraph (parameters : List Nat)
+def wordAllocateFunctionWithOracleOrGraph [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat)
     (colours stackStart : Nat) (oracle : NatInfoMap Nat) :
     Option (WordFunctionAllocationResult α) :=
@@ -63,7 +63,7 @@ allocator is preferred because it retains its explicit interference graph;
 the spill allocator remains available for programs whose graph colouring
 cannot produce a result.
 -/
-def wordAllocateFunctionWithOracleOrGraphOrSpill (parameters : List Nat)
+def wordAllocateFunctionWithOracleOrGraphOrSpill [OfNat α 0] (parameters : List Nat)
     (program : WordProg α) (fixedSources : List Nat)
     (colours stackStart : Nat) (oracle : NatInfoMap Nat) :
     Option (WordFunctionAllocationResult α) :=
@@ -77,7 +77,7 @@ def wordAllocateFunctionWithOracleOrGraphOrSpill (parameters : List Nat)
       | some (state, renamedParameters, renamedProgram, allocation) =>
           some (.spill state renamedParameters allocation renamedProgram)
 
-theorem wordAllocateFunctionWithOracleOrGraph_oracle_sound
+theorem wordAllocateFunctionWithOracleOrGraph_oracle_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (oracle : NatInfoMap Nat) (state : WordSsaState)
@@ -97,7 +97,7 @@ theorem wordAllocateFunctionWithOracleOrGraph_oracle_sound
   · cases hgraph : wordAllocateGraphFunctionWithStackOnlyRenamed parameters
       program fixedSources colours stackStart <;> simp [hgraph] at halloc
 
-theorem wordAllocateFunctionWithOracleOrGraph_graph_sound
+theorem wordAllocateFunctionWithOracleOrGraph_graph_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (oracle : NatInfoMap Nat) (state : WordSsaState)
@@ -133,7 +133,7 @@ theorem wordAllocateFunctionWithOracleOrGraph_graph_sound
                       parameters program fixedSources colours stackStart
                       graphState graphParameters graphAllocation graphProgram hgraph
 
-theorem wordAllocateFunctionWithOracleOrGraph_ne_spill
+theorem wordAllocateFunctionWithOracleOrGraph_ne_spill [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (oracle : NatInfoMap Nat) (state : WordSsaState)
@@ -149,7 +149,7 @@ theorem wordAllocateFunctionWithOracleOrGraph_ne_spill
   · cases hgraph : wordAllocateGraphFunctionWithStackOnlyRenamed parameters
       program fixedSources colours stackStart <;> simp [hgraph] at halloc
 
-theorem wordAllocateFunctionWithOracleOrGraphOrSpill_spill_sound
+theorem wordAllocateFunctionWithOracleOrGraphOrSpill_spill_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (oracle : NatInfoMap Nat) (state : WordSsaState)
@@ -203,7 +203,7 @@ theorem wordAllocateFunctionWithOracleOrGraphOrSpill_spill_sound
     successful result carries exactly the contract belonging to its chosen
     allocation strategy. -/
 
-theorem wordAllocateFunctionWithOracleOrGraphOrSpill_sound
+theorem wordAllocateFunctionWithOracleOrGraphOrSpill_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (oracle : NatInfoMap Nat) (result : WordFunctionAllocationResult α)
@@ -313,7 +313,7 @@ theorem wordAllocateFunctionWithOracleOrGraphOrSpill_sound
     generation, where callers should not have to know whether graph allocation
     or the spill fallback produced the result. -/
 
-theorem wordAllocateFunctionWithOracleOrGraphOrSpill_spill_maps_parameters
+theorem wordAllocateFunctionWithOracleOrGraphOrSpill_spill_maps_parameters [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (colours stackStart : Nat)
     (oracle : NatInfoMap Nat) (state : WordSsaState)

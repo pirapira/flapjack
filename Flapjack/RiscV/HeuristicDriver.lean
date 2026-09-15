@@ -29,7 +29,7 @@ inductive WordFunctionAllocationModeResult (α : Type) where
 /-! The source `select_reg_alloc` chooses linear scan for modes `4` and
 larger.  This driver keeps that choice visible in its result, while preserving
 the oracle-first and spill-fallback behavior of the existing entry point. -/
-def wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry
+def wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (algorithm currentFunction colours stackStart : Nat)
     (oracle : NatInfoMap Nat) :
@@ -60,7 +60,7 @@ def wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry
         | some (state, renamedParameters, renamedProgram, allocation) =>
             some (.spill state renamedParameters allocation renamedProgram)
 
-theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_linear_safe
+theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_linear_safe [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)
@@ -109,7 +109,7 @@ theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_linear_safe
           | some value => simp [hgraph, hspill] at halloc
       | some value => simp [hgraph] at halloc
 
-theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_oracle_sound
+theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_oracle_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)
@@ -141,7 +141,7 @@ theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_oracle_sound
           | none => simp [hgraph, hspill] at halloc
           | some value => simp [hgraph, hspill] at halloc
 
-theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_graph_sound
+theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_graph_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)
@@ -189,7 +189,7 @@ theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_graph_sound
                         colours stackStart graphState graphParameters
                         graphAllocation graphProgram hgraph
 
-theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_spill_sound
+theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_spill_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)
@@ -247,7 +247,7 @@ theorem wordAllocateFunctionWithOracleOrAllocationModeOrSpillEntry_spill_sound
                             hparameters⟩
 
 
-def wordAllocateFunctionWithOracleOrHeuristicOrSpill
+def wordAllocateFunctionWithOracleOrHeuristicOrSpill [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (algorithm currentFunction colours stackStart : Nat)
     (oracle : NatInfoMap Nat) :
@@ -284,7 +284,7 @@ def wordHeuristicDriverUsesSpill
     (result : Option (WordFunctionAllocationResult α)) : Bool :=
   wordFunctionAllocationResultIsSpill result
 
-theorem wordAllocateFunctionWithOracleOrHeuristicOrSpill_graph_sound
+theorem wordAllocateFunctionWithOracleOrHeuristicOrSpill_graph_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)
@@ -330,7 +330,7 @@ theorem wordAllocateFunctionWithOracleOrHeuristicOrSpill_graph_sound
 
 /-! Full-SSA version of the heuristic decision boundary.  The entry moves
     are included in the oracle check, graph allocation, and spill fallback. -/
-def wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry
+def wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat) (algorithm currentFunction colours stackStart : Nat)
     (oracle : NatInfoMap Nat) :
@@ -355,7 +355,7 @@ def wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry
         | some (state, renamedParameters, renamedProgram, allocation) =>
             some (.spill state renamedParameters allocation renamedProgram)
 
-theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_graph_sound
+theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_graph_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)
@@ -399,7 +399,7 @@ theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_graph_sound
                       colours stackStart graphState graphParameters
                       graphAllocation graphProgram hgraph
 
-theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_oracle_sound
+theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_oracle_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)
@@ -428,7 +428,7 @@ theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_oracle_sound
         | none => simp [hgraph, hspill] at halloc
         | some value => simp [hgraph, hspill] at halloc
 
-theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_spill_sound
+theorem wordAllocateFunctionWithOracleOrHeuristicOrSpillEntry_spill_sound [OfNat α 0]
     (parameters : List Nat) (program : WordProg α)
     (fixedSources : List Nat)
     (algorithm currentFunction colours stackStart : Nat)

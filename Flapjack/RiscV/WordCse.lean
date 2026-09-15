@@ -4,10 +4,10 @@ import Flapjack.Word
 # Small Word common-subexpression boundary
 
 Cake's `word_cse` records repeated `Get` reads and replaces a later read of
-the same store with a move.  This is the first stateful CSE fact needed by the
-RISC-V artifact path: repeated `CurrHeap` reads otherwise create an extra
-value and prevent the following `word_copy` pass from coalescing the source
-names.  Other CSE facts remain explicit future work.
+the same store with a move.  This boundary also carries the corresponding
+`HeapLength`, constant-shift, and current-heap operation facts needed by the
+reduced RISC-V artifact path.  The full selected-instruction fact table remains
+future work until `WordInst` is parameterized by Cake's value type.
 -/
 
 namespace Flapjack.RiscV
@@ -18,20 +18,69 @@ variable {α : Type u} [BEq α]
 
 structure WordCseState (α : Type u) [BEq α] where
   currHeap : Option Nat
+  heapLength : Option Nat
   constants : List (α × Nat)
+  aliases : List (Nat × Nat)
+  shifts : List (Shift × Nat × α × Nat)
+  currHeapOps : List (BinOp × Nat × Nat)
 
-def wordCseEmpty : WordCseState α := { currHeap := none, constants := [] }
+def wordCseEmpty : WordCseState α :=
+  { currHeap := none, heapLength := none, constants := [], aliases := []
+    shifts := [], currHeapOps := [] }
+
+def wordCseCanonical (state : WordCseState α) (name : Nat) : Nat :=
+  match state.aliases.find? (fun entry => entry.1 == name) with
+  | some entry => entry.2
+  | none => name
+
+def wordCseRememberAlias (state : WordCseState α)
+    (destination source : Nat) : WordCseState α :=
+  if destination == source then state
+  else
+    { state with aliases :=
+        (destination, wordCseCanonical state source) ::
+          state.aliases.filter (fun entry => entry.1 != destination) }
 
 def wordCseLookup (state : WordCseState α) (store : WordStore α) : Option Nat :=
   match store with
   | .currHeap => state.currHeap
+  | .heapLength => state.heapLength
   | _ => none
 
 def wordCseUpdate (state : WordCseState α) (store : WordStore α)
     (name : Nat) : WordCseState α :=
   match store with
   | .currHeap => { state with currHeap := some name }
+  | .heapLength => { state with heapLength := some name }
   | _ => state
+
+def wordCseLookupShift (state : WordCseState α) (operator : Shift)
+    (source : Nat) (amount : α) : Option Nat :=
+  state.shifts.find? (fun entry =>
+    decide (entry.1 = operator) && entry.2.1 == wordCseCanonical state source &&
+      entry.2.2.1 == amount) |>.map (fun entry => entry.2.2.2)
+
+def wordCseRememberShift (state : WordCseState α) (operator : Shift)
+    (source : Nat) (amount : α) (destination : Nat) : WordCseState α :=
+  { state with shifts :=
+      (operator, wordCseCanonical state source, amount, destination) ::
+        state.shifts.filter (fun entry =>
+          !(decide (entry.1 = operator) &&
+            entry.2.1 == wordCseCanonical state source && entry.2.2.1 == amount)) }
+
+def wordCseLookupCurrHeapOp (state : WordCseState α) (operator : BinOp)
+    (source : Nat) : Option Nat :=
+  state.currHeapOps.find? (fun entry =>
+    decide (entry.1 = operator) && entry.2.1 == wordCseCanonical state source)
+    |>.map (fun entry => entry.2.2)
+
+def wordCseRememberCurrHeapOp (state : WordCseState α) (operator : BinOp)
+    (source destination : Nat) : WordCseState α :=
+  { state with currHeapOps :=
+      (operator, wordCseCanonical state source, destination) ::
+        state.currHeapOps.filter (fun entry =>
+          !(decide (entry.1 = operator) &&
+            entry.2.1 == wordCseCanonical state source)) }
 
 def wordCseLookupConst (state : WordCseState α) (value : α) : Option Nat :=
   state.constants.find? (fun entry => entry.1 == value) |>.map Prod.snd
@@ -48,7 +97,12 @@ def wordCseClearDestination (state : WordCseState α) (name : Nat) :
 def wordCseClearStore (state : WordCseState α) (store : WordStore α) :
     WordCseState α :=
   match store with
-  | .currHeap => { state with currHeap := none }
+  | .currHeap =>
+      { currHeap := none, heapLength := none, constants := state.constants,
+        aliases := state.aliases, shifts := [], currHeapOps := [] }
+  | .heapLength =>
+      { currHeap := state.currHeap, heapLength := none, constants := state.constants,
+        aliases := state.aliases, shifts := [], currHeapOps := state.currHeapOps }
   | _ => state
 
 def wordCseProg : WordCseState α → WordProg α → WordProg α × WordCseState α
@@ -59,16 +113,30 @@ def wordCseProg : WordCseState α → WordProg α → WordProg α × WordCseStat
       (.seq first second, state)
   | state, .get destination store =>
       match wordCseLookup state store with
-      | some source => (.move 1 [(destination, source)],
-          wordCseUpdate state store destination)
+      | some source =>
+          let state := wordCseUpdate state store destination
+          (.move 1 [(destination, source)],
+            wordCseRememberAlias state destination source)
       | none => (.get destination store,
           wordCseUpdate state store destination)
   | state, .assign destination (.lookup store) =>
       match wordCseLookup state store with
-      | some source => (.move 1 [(destination, source)],
-          wordCseUpdate state store destination)
+      | some source =>
+          let state := wordCseUpdate state store destination
+          (.move 1 [(destination, source)],
+            wordCseRememberAlias state destination source)
       | none => (.assign destination (.lookup store),
           wordCseUpdate state store destination)
+  | state, .assign destination
+      (.shift operator (.var source) (.const amount)) =>
+      match wordCseLookupShift state operator source amount with
+      | some previous =>
+          let state := wordCseRememberShift state operator source amount destination
+          (.move 0 [(destination, wordCseCanonical state previous)],
+            wordCseRememberAlias state destination previous)
+      | none =>
+          (.assign destination (.shift operator (.var source) (.const amount)),
+            wordCseRememberShift state operator source amount destination)
   | state, .assign destination (.const value) =>
       match wordCseLookupConst state value with
       | some source => (.move 0 [(destination, source)],
@@ -80,6 +148,15 @@ def wordCseProg : WordCseState α → WordProg α → WordProg α × WordCseStat
       (.assign destination value, wordCseClearDestination state destination)
   | state, .set store value =>
       (.set store value, wordCseClearStore state store)
+  | state, .opCurrHeap operator destination source =>
+      match wordCseLookupCurrHeapOp state operator source with
+      | some previous =>
+          let state := wordCseRememberCurrHeapOp state operator source destination
+          (.move 0 [(destination, wordCseCanonical state previous)],
+            wordCseRememberAlias state destination previous)
+      | none =>
+          (.opCurrHeap operator destination source,
+            wordCseRememberCurrHeapOp state operator source destination)
   | state, .inst instruction => (.inst instruction, state)
   | _state, .call returns target arguments handler =>
       (.call returns target arguments handler, wordCseEmpty)
@@ -94,7 +171,8 @@ def wordCseProg : WordCseState α → WordProg α → WordProg α × WordCseStat
       let (elseBranch, elseState) := wordCseProg state elseBranch
       (.ite operator condition right thenBranch elseBranch,
         if thenState.currHeap = elseState.currHeap then
-          { currHeap := thenState.currHeap, constants := [] }
+          { currHeap := thenState.currHeap, heapLength := thenState.heapLength,
+            constants := [], aliases := [], shifts := [], currHeapOps := [] }
         else wordCseEmpty)
   | state, .shareInst operator name address =>
       (.shareInst operator name address, state)

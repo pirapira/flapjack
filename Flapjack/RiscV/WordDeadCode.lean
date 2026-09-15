@@ -55,103 +55,106 @@ def wordDeadInst {α : Type u} (live : List Nat) (instruction : WordInst α) :
         | _ => (.skip, live)
     | _ => (.skip, live)
 
-def wordDeadCode : WordProg α → List Nat → WordProg α × List Nat
-  | .skip, live => (.skip, live)
-  | .move _ moves, live => wordDeadMove live moves
-  | .assign destination value, live =>
+def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) →
+    WordProg α × List Nat
+  | .skip, live, _ => (.skip, live)
+  | .move _ moves, live, _ => wordDeadMove live moves
+  | .assign destination value, live, _ =>
       if destination ∈ live then
         (.assign destination value,
           wordDeadAddReads (wordDeadRemoveWrites live [destination])
             (wordExpReadVars value))
       else
         (.skip, live)
-  | .inst instruction, live => wordDeadInst live instruction
-  | .get destination store, live =>
+  | .inst instruction, live, _ => wordDeadInst live instruction
+  | .get destination store, live, _ =>
       if destination ∈ live then
         (.get destination store,
           wordDeadAddReads (wordDeadRemoveWrites live [destination]) [])
       else
         (.skip, live)
-  | .store address value, live =>
+  | .store address value, live, _ =>
       (.store address value,
         wordDeadAddReads live (wordExpReadVars address ++ [value]))
-  | .set store value, live =>
+  | .set store value, live, _ =>
       (.set store value, wordDeadAddReads live (wordExpReadVars value))
-  | .seq first second, live =>
-      let (second', live) := wordDeadCode second live
-      let (first', live) := wordDeadCode first live
+  | .seq first second, live, frames =>
+      let (second', live) := wordDeadCodeAux second live frames
+      let (first', live) := wordDeadCodeAux first live frames
       (match first', second' with
        | .skip, program => program
        | program, .skip => program
        | _, _ => .seq first' second', live)
-  | .ite operator condition right thenBranch elseBranch, live =>
-      let (then', thenLive) := wordDeadCode thenBranch live
-      let (else', elseLive) := wordDeadCode elseBranch live
+  | .ite operator condition right thenBranch elseBranch, live, frames =>
+      let (then', thenLive) := wordDeadCodeAux thenBranch live frames
+      let (else', elseLive) := wordDeadCodeAux elseBranch live frames
       let rightReads := match right with
         | .imm _ => []
         | .reg name => [name]
       (.ite operator condition right then' else',
         wordDeadAddReads (thenLive ++ elseLive) (condition :: rightReads))
-  | .loop liveIn body liveOut, _live =>
-      let (body', _) := wordDeadCode body liveIn
+  | .loop liveIn body liveOut, _live, frames =>
+      let (body', _) := wordDeadCodeAux body liveIn ((liveIn, liveOut) :: frames)
       (.loop liveIn body' liveOut, liveIn)
-  | .mustTerminate body, live =>
-      let (body', live) := wordDeadCode body live
+  | .mustTerminate body, live, frames =>
+      let (body', live) := wordDeadCodeAux body live frames
       (.mustTerminate body', live)
-  | .break label, live => (.break label, live)
-  | .continue label, live => (.continue label, live)
-  | .raise exception, live => (.raise exception, exception :: live)
-  | .return label values, live =>
+  | .break label, _live, frames =>
+      (.break label, (wordClashTreeFindLoopFrame label frames).map Prod.snd |>.getD [])
+  | .continue label, _live, frames =>
+      (.continue label, (wordClashTreeFindLoopFrame label frames).map Prod.fst |>.getD [])
+  | .raise exception, live, _ => (.raise exception, exception :: live)
+  | .return label values, live, _ =>
       (.return label values, wordDeadAddReads (label :: live) values)
-  | .tick, live => (.tick, live)
-  | .locValue destination source, live =>
+  | .tick, live, _ => (.tick, live)
+  | .locValue destination source, live, _ =>
       if destination ∈ live then
         (.locValue destination source,
           wordDeadAddReads (wordDeadRemoveWrites live [destination]) [])
       else
         (.skip, live)
   | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
-      target arguments handler, live =>
-      let (returnCode', _) := wordDeadCode returnCode live
+      target arguments handler, live, frames =>
+      let (returnCode', _) := wordDeadCodeAux returnCode live frames
       let handler' := match handler with
         | none => none
         | some (exception, body, handlerLabel, handlerEntryLabel) =>
-            some (exception, (wordDeadCode body live).1,
+            some (exception, (wordDeadCodeAux body live frames).1,
               handlerLabel, handlerEntryLabel)
       (.call (some (destinations, cutsets, returnCode', returnLabel, entryLabel))
           target arguments handler',
         wordDeadAddReads live (wordProgReadVars
           (.call (some (destinations, cutsets, returnCode', returnLabel, entryLabel))
             target arguments handler')))
-  | .call returns target arguments handler, live =>
+  | .call returns target arguments handler, live, _ =>
       (.call returns target arguments handler,
         wordDeadAddReads live (wordProgReadVars
           (.call returns target arguments handler)))
-  | .alloc destination cutsets, live =>
+  | .alloc destination cutsets, live, _ =>
       (.alloc destination cutsets,
         wordDeadAddReads (wordDeadRemoveWrites live [destination])
           (cutsets.1 ++ cutsets.2))
-  | .storeConsts source bitmap codeLength dataLength constants, live =>
+  | .storeConsts source bitmap codeLength dataLength constants, live, _ =>
       (.storeConsts source bitmap codeLength dataLength constants,
         wordDeadAddReads live [source, bitmap, codeLength, dataLength])
-  | .opCurrHeap operator destination source, live =>
+  | .opCurrHeap operator destination source, live, _ =>
       (.opCurrHeap operator destination source,
         wordDeadAddReads (wordDeadRemoveWrites live [destination]) [source])
-  | .install codeBuffer codeLength dataBuffer dataLength cutsets, live =>
+  | .install codeBuffer codeLength dataBuffer dataLength cutsets, live, _ =>
       (.install codeBuffer codeLength dataBuffer dataLength cutsets,
         wordDeadAddReads live
           ([codeBuffer, codeLength, dataBuffer, dataLength] ++
             cutsets.1 ++ cutsets.2))
-  | .codeBufferWrite address value, live =>
+  | .codeBufferWrite address value, live, _ =>
       (.codeBufferWrite address value, wordDeadAddReads live [address, value])
-  | .dataBufferWrite address value, live =>
+  | .dataBufferWrite address value, live, _ =>
       (.dataBufferWrite address value, wordDeadAddReads live [address, value])
-  | .ffi function configuration configurationLength array arrayLength liveSet, live =>
+  | .ffi function configuration configurationLength array arrayLength liveSet, live, _ =>
       (.ffi function configuration configurationLength array arrayLength liveSet,
         wordDeadAddReads live
           ([configuration, configurationLength, array, arrayLength] ++
             liveSet.1 ++ liveSet.2))
-  | .shareInst operator name address, live =>
+  | .shareInst operator name address, live, _ =>
       match operator with
       | .load | .load8 | .load16 | .load32 =>
           /- Cake deliberately retains ShareInst loads: even a dead load
@@ -167,6 +170,9 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals simp_wf
   all_goals omega
+
+def wordDeadCode : WordProg α → List Nat → WordProg α × List Nat
+  | program, live => wordDeadCodeAux program live []
 
 def wordRemoveDeadProgram (program : WordProg α) : WordProg α :=
   (wordDeadCode program []).1

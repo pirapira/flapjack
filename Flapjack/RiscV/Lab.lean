@@ -443,7 +443,10 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
   | .install => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
       pure [.jal zero (0 - BitVec.ofNat width (position + 2 * 16))]
-  | .heapAlloc _ | .halt => none
+  | .heapAlloc _ => none
+  | .halt => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      pure [.jal zero (0 - BitVec.ofNat width (position + 16))]
 
 def labCompileProgramLines [NeZero width] (context : WordFfiContext)
     (labels : List (Nat × Nat × Nat)) (position : Nat) :
@@ -993,7 +996,7 @@ def compileStackProgramNatListLinkedToRiscV [NeZero width]
   match stackProgramsWithLongDivRuntime config programs with
   | none => none
   | some programs =>
-      compileLabProgramLinkedWithFfiStubsAndHalt context
+      compileLabProgramLinkedWithFfiStubs context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
               sectionId = cakeLongDivLocation then

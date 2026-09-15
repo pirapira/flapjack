@@ -72,25 +72,10 @@ def wordRiscVFixedSourceLocations : List Nat → NatInfoMap WordLocation
         wordRiscVFixedSourceLocations sources
 
 def wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
-    (parameters : List Nat) (program : WordProg α) :
+    (currentFunction : Nat) (parameters : List Nat) (program : WordProg α) :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
-  let (state, renamedParameters, program) :=
-    wordSsaRenameFunctionWithEntryAndDeadMoves parameters program
-  let tree := wordClashTree program []
-  let (liveIn, edges) := wordClashTreeAnalyze tree []
-  let edges := edges ++ wordProgSpecialConflictEdges program
-  let preferences := wordProgPreferenceEdges program
-  let slots :=
-    renamedParameters ++ wordProgVariables program ++ liveIn
-  match wordAllocateVarsWithFixedLocationsIndexed slots edges preferences
-      (wordRiscVFixedSourceLocations (wordPhysicalFixedSources parameters program)) with
-  | none => none
-  | some allocation =>
-      if wordProgSpecialLocationsSafe allocation.locations program = true &&
-          wordSpillClashTreeChecked tree allocation.locations then
-        some (state, renamedParameters, program, allocation)
-      else
-        none
+  RiscV.CakeRegAlloc.cakeAllocateWordFunction parameters program
+    currentFunction (wordAllocatableRegisters.length + 2)
 
 /-! Checked counterpart of the full-SSA spill pipeline.  The historical
 `Option` function intentionally keeps the old API, but it loses which Word
@@ -109,7 +94,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
             (RiscV.wordFlattenProgramFrom
               (LoopToWord.loopToWordCompFunc label parameters body)))
       match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
-          wordParameters unallocatedBody with
+          label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
           /- Cake reserves enough `f'` slots for both allocator spills and
@@ -178,7 +163,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
             (RiscV.wordFlattenProgramFrom
               (LoopToWord.loopToWordCompFunc label parameters body)))
       match wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesRiscV
-          wordParameters unallocatedBody with
+          label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
           /- Cake's IRC frame occupancy only affects the state-threaded

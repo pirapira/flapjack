@@ -1,5 +1,6 @@
 import Flapjack.Test.RiscV
 import Flapjack.Pipeline
+import Flapjack.RiscV.Encoding
 
 namespace Flapjack
 
@@ -434,6 +435,13 @@ example [NeZero width] :
     RiscV.wordArithToInstruction (width := width) (.div 1 2 3) =
       some (.divU 1 2 3) := by
   exact RiscV.wordArithToInstruction_div
+
+/-! Cake's `riscv_ast` maps Word `Div` to the signed RV `DIV` encoding
+    (`funct3 = 100`), even though the abstract Word operation is unsigned. -/
+example :
+    RiscV.encodeInstruction (width := 64) (.divU 5 2 3) =
+      BitVec.ofNat 32 0x023142b3 := by
+  decide
 
 example (left right : RiscV.Word 64) :
     RiscV.executeFunction 10 (0 : RiscV.Word 64) [2, 3]

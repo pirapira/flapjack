@@ -31,7 +31,7 @@ theorem wordAllocateSsaFunctionWithEntryAndSpillToStack_stack_result
       renamedProgram = some (stackProgram, finalState) := by
   simp only [wordAllocateSsaFunctionWithEntryAndSpillToStack] at hbridge
   cases halloc :
-      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedFast
+      wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
         parameters program with
   | none => simp [halloc] at hbridge
   | some allocationResult =>

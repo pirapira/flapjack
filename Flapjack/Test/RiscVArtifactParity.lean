@@ -338,19 +338,20 @@ def nestedExpressionWordLoweringAccepted : Bool :=
   | some _ => true
   | none => false
 
-/-! The production allocator path now performs the same expression
-    materialization that Cake's `crep_to_loop` performs before allocation.
-    Keep a small structural oracle here so this does not silently become only
-    a larger temporary-register pool: the innermost over-budget child (the
-    four-add chain, budget three) is materialized into a fresh temporary, and
-    the shift then combines that temporary with the constant inline.  Every
-    emitted assignment value fits the three-entry reserved pool, so lowering
-    succeeds even when the fresh temporary is spilled. -/
+/-! The explicit temporary-pool adapter remains covered independently of the
+    source-facing selector boundary.  Keep a small structural oracle here so
+    this does not silently become only a larger temporary-register pool: the
+    innermost over-budget child (the four-add chain, budget three) is
+    materialized into a fresh temporary, and the shift then combines that
+    temporary with the constant inline. -/
 def flattenExpressionProbe : WordProg Nat :=
   .assign 0 nestedExpressionWord
 
+def flattenExpressionProbeMaterialized : WordProg Nat :=
+  (RiscV.wordFlattenProgram 9 flattenExpressionProbe).program
+
 def flattenExpressionProbeMatches : Bool :=
-  match RiscV.wordFlattenProgramFrom flattenExpressionProbe with
+  match flattenExpressionProbeMaterialized with
   | .seq (.assign 9 (.op .add [.var 0,
         .op .add [.var 1,
           .op .add [.var 2,
@@ -379,7 +380,7 @@ def flattenRorChainProbe : WordProg Nat :=
 /-! The inner rotate (budget two) is materialized because an outer `ror`
     needs two pool entries; the outer rotate then runs inline on atoms. -/
 def flattenRorChainProbeMatches : Bool :=
-  match RiscV.wordFlattenProgramFrom flattenRorChainProbe with
+  match (RiscV.wordFlattenProgram 5 flattenRorChainProbe).program with
   | .seq (.assign 5 (.shift .ror (.op .add [.var 1, .var 2]) (.const 3)))
       (.assign 0 (.shift .ror (.var 5) (.const 5))) => true
   | _ => false
@@ -399,7 +400,7 @@ def flattenSetProbe : WordProg Nat :=
   .set .currHeap (.op .add [.var 1, .var 2])
 
 def flattenSetProbeMatches : Bool :=
-  match RiscV.wordFlattenProgramFrom flattenSetProbe with
+  match (RiscV.wordFlattenProgram 5 flattenSetProbe).program with
   | .seq (.assign 5 (.op .add [.var 1, .var 2]))
       (.set .currHeap (.var 5)) => true
   | _ => false
@@ -429,14 +430,14 @@ def nestedExpressionSaturatedConfig : WordStackConfig :=
 /-- The flattened GH #1015 tree lowers with a saturated register file. -/
 def saturatedNestedExpressionLowers : Bool :=
   match RiscV.wordToStackProgNat nestedExpressionSaturatedConfig
-      (RiscV.wordFlattenProgramFrom flattenExpressionProbe) with
+      flattenExpressionProbeMaterialized with
   | some _ => true
   | none => false
 
 /-- The flattened rotate chain lowers with a saturated register file. -/
 def saturatedRorChainLowers : Bool :=
   match RiscV.wordToStackProgNat nestedExpressionSaturatedConfig
-      (RiscV.wordFlattenProgramFrom flattenRorChainProbe) with
+      ((RiscV.wordFlattenProgram 5 flattenRorChainProbe).program) with
   | some _ => true
   | none => false
 
@@ -447,7 +448,7 @@ def saturatedRorChainLowers : Bool :=
     `31`, shifted, and stored to the destination slot `1`. -/
 def saturatedNestedExpressionExact : Bool :=
   match RiscV.wordToStackProgNat nestedExpressionSaturatedConfig
-      (RiscV.wordFlattenProgramFrom flattenExpressionProbe) with
+      flattenExpressionProbeMaterialized with
   | some (.seq
       (.seq
         (.seq

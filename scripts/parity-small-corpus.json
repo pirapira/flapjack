@@ -196,6 +196,12 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/subtraction_order.pnk",
+      "source_reference": "Original Cake word_instScript.sml flatten_exp subtraction case: register and load operands of subtraction must retain source order; this fixture is a minimal source-to-RISC-V regression for that ordering.",
+      "cake_sha256": "d3d3eb877db53dd639f986cfe5a2dcd29da4a2e1c310898c60ae8fe2d01f915a",
+      "tracked_beads": []
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/collapse_branch.pnk",
       "source_reference": "Minimized RISC-V parity reproducer for Cake's word_inst$inst_select_exp shift-immediate and conditional lowering (word_instScript.sml:233-295).",
       "cake_sha256": "c3a0eedb8f0e90602a899d1659782251d2a87cf4dcb269687827d304404d1d33",

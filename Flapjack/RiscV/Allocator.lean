@@ -490,6 +490,14 @@ def wordSsaRenameInst (state : WordSsaState) :
     a property of the `WordInst` constructor. -/
 def wordSsaRenameInstProgram [OfNat α 0] (state : WordSsaState) :
     WordInst α → WordSsaState × WordProg α
+  | .arith (.shift operator destination sourceLeft (.reg sourceRight)) =>
+      let sourceLeft := wordSsaRead state sourceLeft
+      let sourceRight := wordSsaRead state sourceRight
+      let (state, freshDestination) := wordSsaFresh state destination
+      let moveIn : WordProg α := .move 1 [(8, sourceRight)]
+      let shift : WordProg α :=
+        .inst (.arith (.shift operator freshDestination sourceLeft (.reg 8)))
+      (state, .seq moveIn shift)
   | .arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) =>
       let sourceLeft := wordSsaRead state sourceLeft
       let sourceRight := wordSsaRead state sourceRight

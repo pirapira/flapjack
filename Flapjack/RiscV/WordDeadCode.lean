@@ -23,13 +23,18 @@ def wordDeadAddReads (live : List Nat) (reads : List Nat) : List Nat :=
 def wordDeadRemoveWrites (live : List Nat) (writes : List Nat) : List Nat :=
   live.filter (fun name => name ∉ writes)
 
-def wordDeadMove (live : List Nat) (moves : List (Nat × Nat)) :
+/-! Cake's `remove_dead (Move pri ls)` keeps the priority of the surviving
+    moves.  The priority orders the coalescing worklist (`sort_moves` sorts
+    descending and `do_coalesce` consumes the first compatible move), so the
+    `Move1` SSA entry/ABI shuffle must stay priority 1 for the parameters to
+    coalesce onto the ABI registers. -/
+def wordDeadMove (priority : Nat) (live : List Nat) (moves : List (Nat × Nat)) :
     WordProg α × List Nat :=
   let kept := moves.filter (fun move => move.1 ∈ live)
   if kept.isEmpty then
     (.skip, live)
   else
-    (.move 0 kept,
+    (.move priority kept,
       wordDeadAddReads
         (wordDeadRemoveWrites live (kept.map Prod.fst))
         (kept.map Prod.snd))
@@ -53,7 +58,7 @@ def wordDeadInst (live : List Nat) (instruction : WordInst) :
 def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) →
     WordProg α × List Nat
   | .skip, live, _ => (.skip, live)
-  | .move _ moves, live, _ => wordDeadMove live moves
+  | .move priority moves, live, _ => wordDeadMove priority live moves
   | .assign destination value, live, _ =>
       if destination ∈ live then
         (.assign destination value,

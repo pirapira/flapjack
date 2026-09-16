@@ -1,4 +1,5 @@
 import Flapjack.RiscV.CakeRegAlloc
+import Flapjack.RiscV.WordDeadCode
 
 /-!
 # Cake register-allocation stack-only analysis parity
@@ -382,6 +383,24 @@ def mapUpdateBoundedGuard : Bool :=
     cakeMapLookup updated 1 == some 1 &&
     inserted.length == 3 && cakeMapLookup inserted 2 == some 7
 
+/-- Cake's `remove_dead (Move pri ls)` keeps the surviving move priority
+    (`word_allocScript.sml:891-899`).  The priority orders the coalescing
+    worklist (`sort_moves` sorts descending, `do_coalesce` consumes the first
+    compatible move), so the `Move1` SSA entry/ABI shuffle must still be
+    priority 1 after the dead pass; rebuilding it as priority 0 let the
+    `callee_abi` entry copies survive. -/
+def deadMovePriorityGuard : Bool :=
+  match Flapjack.RiscV.wordDeadCode (.move 1 [(6, 2)] : WordProg Nat) [6] with
+  | (.move priority [(6, 2)], _) => priority == 1
+  | _ => false
+
+/-- The full dead-program pass keeps the priority of a live entry move. -/
+def deadProgramPriorityGuard : Bool :=
+  match Flapjack.RiscV.wordRemoveDeadProgram
+      (.seq (.move 1 [(6, 2)]) (.return 0 [6]) : WordProg Nat) with
+  | .seq (.move priority _) _ => priority == 1
+  | _ => false
+
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
     ifMergeAllocGuard && callMergeGuard && callTailGuard && assignLeafGuard &&
@@ -396,7 +415,8 @@ def parityGuard : Bool :=
     partOrderGuard && reviveOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     raMovesStempGuard && raMovesStempHiGuard && negFirstMatchProjectionGuard
-    && mapUpdateBoundedGuard
+    && mapUpdateBoundedGuard && deadMovePriorityGuard
+    && deadProgramPriorityGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to
@@ -419,7 +439,8 @@ def runChecks : IO Bool := do
     partOrderGuard,
     reviveOrderGuard, bgOkOrderGuard, qsortTiesTwoGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
-    raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard]
+    raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
+    deadMovePriorityGuard, deadProgramPriorityGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -437,7 +458,8 @@ def runChecks : IO Bool := do
     "sorting partition order", "revive moves order", "bg_ok order",
     "sort_moves tie two", "sort_moves tie three", "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
-    "neg_first_match_col projection", "Cake map updates stay bounded"]
+    "neg_first_match_col projection", "Cake map updates stay bounded",
+    "remove_dead keeps move priority", "remove_dead_prog keeps entry priority"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

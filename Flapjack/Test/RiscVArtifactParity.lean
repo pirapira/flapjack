@@ -770,18 +770,18 @@ def helloSource : String :=
 assembly oracle. -/
 def cakeHelloMainLength : Nat := 152
 
-/- Port-side layout pin for `hello.pnk`; it agrees with Cake's 152-byte
-`cml_main` section under `artifactCompileConfig`.  Instruction-level parity is
-checked separately by the differential corpus. -/
+/- Port-side layout pin for `hello.pnk`; Cake's oracle has a 152-byte `cml_main`
+section under `artifactCompileConfig`.  The port currently has a tracked
+source-to-RISC-V discrepancy here, so this remains diagnostic data rather than
+an asserted invariant. -/
 def flapjackHelloMainLength : Nat := 152
 
 def helloRuntimeImage : Option (SourceRiscVRuntimeImage 64) :=
   compileRuntimeImage helloSource
 
-/- The port lowers the whole `hello.pnk` runtime image with the same section
-layout as Cake: `cml_generated_main` at base 1000 with four bytes and
-`cml_main` at base 1004 with 152 bytes.  Instruction-level differences in the
-user section remain tracked by the differential corpus. -/
+/- The whole-artifact comparison for `hello.pnk` remains a tracked gap.  The
+predicate is retained to expose section-layout progress, while the
+differential corpus is the source of truth until this fixture is exact. -/
 def helloEmittedSectionsMatch : Bool :=
   match helloRuntimeImage with
   | some image =>
@@ -801,9 +801,10 @@ def helloMainLengthGapTracked : Bool :=
       | _ => false
   | none => false
 
-/- This whole-artifact assertion is the known `flapjack-8tb` gap.  Keep its
-   value visible during focused diagnostics, but do not make the aggregate
-   test fail while the differential corpus tracks the mismatch. -/
+/- `hello` remains a tracked end-to-end parity gap (`flapjack-8tb`).  Keep the
+   predicate above visible during focused diagnostics, but do not make this
+   known discrepancy a regression gate while the source-to-RISC-V pipeline is
+   being aligned. -/
 #eval helloEmittedSectionsMatch
 #guard nomainGlobalAccepted
 #guard nestedExpressionAccepted

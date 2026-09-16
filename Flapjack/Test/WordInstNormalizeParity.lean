@@ -248,11 +248,14 @@ def nestedLoadOffsetFallbackMatches : Bool :=
       (.assign 23 (.load (.op .add [.var 23, .const 8]))), .var 23) => true
   | _ => false
 
-/-- A non-displacement address expression uses Cake's ordinary target
-    selector. Thus the nested `base + 1` is selected with `addi`, followed by
-    the immediate shift, rather than being forced through the displacement
-    selector. -/
-def ordinaryAddressShiftUsesTargetImmediates : Bool :=
+/-- `inst_select_exp c tar temp (Load exp)` (`word_instScript.sml:234-245`)
+    splits on the address shape once and selects the remaining subexpressions
+    with the ordinary `asm_config`; it has no second, immediate-suppressing
+    configuration.  So an address that is not `base + constant` keeps Cake's
+    immediate arithmetic throughout: the left operand of a shift comes back in
+    a register and the shift itself uses its constant amount, rather than
+    materializing the amount into a second temporary. -/
+def addressShiftKeepsOrdinaryImmediates : Bool :=
   match wordInstSelectAddressAtom (α := Nat) 23
       (.shift .lsl (.op .add [.var 18, .const (Nat.succ 0)])
         (.const 63)) with
@@ -283,7 +286,7 @@ def ordinaryAddressShiftUsesTargetImmediates : Bool :=
 #guard loadSelectorMatches
 #guard nestedLoadSelectorMatches
 #guard nestedLoadOffsetFallbackMatches
-#guard ordinaryAddressShiftUsesTargetImmediates
+#guard addressShiftKeepsOrdinaryImmediates
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -307,7 +310,8 @@ def runChecks : IO Bool := do
     , ("a load materializes Cake's Mem instruction after its address move", loadSelectorMatches)
     , ("a nested load remains Cake's memory instruction", nestedLoadSelectorMatches)
     , ("a nested load preserves an unfused address expression", nestedLoadOffsetFallbackMatches)
-    , ("a non-displacement address shift uses Cake's target immediates", ordinaryAddressShiftUsesTargetImmediates)
+    , ("address selection keeps Cake's ordinary immediates in nested shifts",
+        addressShiftKeepsOrdinaryImmediates)
   ]
   let mut ok := true
   for (label, passed) in checks do

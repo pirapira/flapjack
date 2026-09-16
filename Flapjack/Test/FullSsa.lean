@@ -33,7 +33,8 @@ example :
         .seq (.move 1 [(0, 2), (4, 3)])
           (.seq (.inst (.arith (.longMul 6 0 0 4)))
             (.move 1 [(8, 0), (4, 6)]))) := by
-  rfl
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameInstProgram, wordSsaFresh, wordSsaRead, lookupNatInfo]
 
 example :
     wordSsaAbiParameters 3 = [0, 2, 4] := by

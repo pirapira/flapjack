@@ -111,5 +111,9 @@ example :
         (fun sections => sections.map (fun (label, entry, _) => (label, entry))) =
       some [(0, BitVec.ofNat 64 0), (1, BitVec.ofNat 64 40)]
 
+/-- A `Get` writes its destination, so the write-variable walk must report it.
+    Cake's `vars_of`/`max_var` include `Get` destinations, and the spill
+    allocator and condition folder rely on the same classification here. -/
+example : wordProgWriteVars (.get 5 .currHeap : WordProg Nat) = [5] := rfl
 
 end Flapjack

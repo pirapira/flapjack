@@ -316,6 +316,38 @@ def labIteSkipThenCode : Option (List (Instruction 64)) :=
           (fun state => readRegister state 1)) =
       some (2 : Word 64)
 
+/-! Cake's `Addr reg imm` for shared-memory operations (GH #1113 /
+    bead flapjack-anb): `word_to_stack$wShareInst` only ever sees
+    `Addr ad offset`, so an immediate store offset must collapse into a single
+    offset store (`sb rs, imm(rd)`) instead of materialising the address with a
+    separate `addi`.  This program is exactly the shape the Word-to-Stack
+    lowering emits for `!st8 out + 32, 1` (a `const` scratch plus an `arith`
+    staging pair in front of the `shMem`). -/
+def labSharedStoreOffsetProgram : StackProg (Word 64) :=
+  .seq (.seq (.const 2 32) (.arith .add 2 1 2)) (.shMem .store8 4 2)
+
+def labSharedStoreOffsetCode : Option (List (Instruction 64)) :=
+  compileStackProgramToRiscV (width := 64) { services := [] }
+    stackRemoveRiscVConfig 2 3 labSharedStoreOffsetProgram
+
+/-- The immediate offset survives as an offset store, not as a `addi`. -/
+def labSharedStoreOffsetFused : Bool :=
+  labSharedStoreOffsetCode.any (fun code =>
+    code.any (fun instruction =>
+      match instruction with
+      | .storeByteOffset _ _ offset => offset == (32 : Word 64)
+      | _ => false))
+
+#guard labSharedStoreOffsetFused
+
+-- reg1 holds the base and reg4 the byte: the store lands at base + 32.
+#guard
+    labSharedStoreOffsetCode.bind (fun code =>
+      (executeCode 30 (0 : Word 64) code
+        (writeRegister (writeRegister (zeroState 64) 1 100) 4 7)).map
+          (fun state => readByte state 132)) =
+      some (7 : Word 8)
+
 /-! GH #1053: the RISC-V target uses Cake's direct-JAL and inverted-branch
     fallbacks once a PC-relative target leaves the short encoding range. -/
 example :

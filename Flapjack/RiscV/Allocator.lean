@@ -1031,7 +1031,8 @@ def wordProgReadVars : WordProg α → List Nat
         wordExpReadVars address
 
 def wordProgWriteVars : WordProg α → List Nat
-  | .skip | .get _ _ | .store _ _ | .set _ _ | .break _ | .continue _ | .raise _
+  | .get destination _ => [destination]
+  | .skip | .store _ _ | .set _ _ | .break _ | .continue _ | .raise _
   | .return _ _ | .tick => []
   | .move _ moves => moves.map (fun move => move.1)
   | .assign name _ => [name]

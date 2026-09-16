@@ -359,7 +359,12 @@ def labCompilePlain [NeZero width] :
       match memoryOperator with
       | .load => pure [.loadWordOffset destination address immediate]
       | .store => pure [.storeWordOffset destination address immediate]
-      | _ => none
+      | .load8 => pure [.loadByteOffset destination address immediate]
+      | .store8 => pure [.storeByteOffset destination address immediate]
+      | .load16 => pure [.loadHalfOffset destination address immediate]
+      | .store16 => pure [.storeHalfOffset destination address immediate]
+      | .load32 => pure [.load32Offset destination address immediate]
+      | .store32 => pure [.store32Offset destination address immediate]
   | .codeBufferWrite address value =>
       (wordInstToInstruction (.mem .store8 value address)).map List.singleton
   | .dataBufferWrite address value =>

@@ -267,6 +267,15 @@ def reviveOrderGuard : Bool :=
   out.availMovesWl == [(2, (1, 1)), (1, (5, 9)), (1, (13, 5))] &&
     out.unavailMovesWl == [(1, (13, 17))]
 
+/- `moves_to_sp` processes the tail first, so partner lists retain source
+   order even though each insertion prepends. -/
+def movesToSpOrderGuard : Bool :=
+  let table := Flapjack.RiscV.CakeRegAlloc.cakeMovesToSp
+    [(1, (2, 5)), (2, (2, 7)), (3, (2, 11))] []
+  Flapjack.RiscV.CakeRegAlloc.cakeMapLookup table 2 ==
+      some [(1, 5), (2, 7), (3, 11)] &&
+    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup table 5 == some [(1, 2)]
+
 /-- `bg_ok` partitions `adjY` by `adjX` membership with the bucket-reversing
     `sorting$PARTITION`, then `st_ex_FILTER`s each case list. -/
 def bgOkOrderGuard : Bool :=
@@ -412,7 +421,7 @@ def parityGuard : Bool :=
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
-    partOrderGuard && reviveOrderGuard && bgOkOrderGuard &&
+    partOrderGuard && reviveOrderGuard && movesToSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     raMovesStempGuard && raMovesStempHiGuard && negFirstMatchProjectionGuard
     && mapUpdateBoundedGuard && deadMovePriorityGuard
@@ -438,6 +447,7 @@ def runChecks : IO Bool := do
     raStackOnlyGuard, raMovesCoalesceGuard, raMovesSelfFilteredGuard,
     partOrderGuard,
     reviveOrderGuard, bgOkOrderGuard, qsortTiesTwoGuard,
+    movesToSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
     deadMovePriorityGuard, deadProgramPriorityGuard]
@@ -455,7 +465,7 @@ def runChecks : IO Bool := do
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",
     "reg_alloc delta free", "reg_alloc stack only",
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
-    "sorting partition order", "revive moves order", "bg_ok order",
+    "sorting partition order", "revive moves order", "moves_to_sp order", "bg_ok order",
     "sort_moves tie two", "sort_moves tie three", "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
     "neg_first_match_col projection", "Cake map updates stay bounded",

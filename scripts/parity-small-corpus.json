@@ -212,6 +212,12 @@
       "source_reference": "Minimized RISC-V parity reproducer for Cake's word_inst$inst_select_exp shift-immediate and conditional lowering (word_instScript.sml:233-295).",
       "cake_sha256": "c3a0eedb8f0e90602a899d1659782251d2a87cf4dcb269687827d304404d1d33",
       "tracked_beads": ["flapjack-pxn.8.5.14.11.2"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/global_load_sharing.pnk",
+      "source_reference": "word_cse shares a repeated load through its loads_mem facts, keyed by loadToNumList over Addr n2 offset. WordInst.mem carries no offset, so instruction selection leaves such a load as .assign dest (.load (.op .add [.var n2, .const offset])) until wordToStack fuses it, and CSE passed that carrier through untouched - reading one global twice emitted the global-table load twice where Cake emits it once.",
+      "cake_sha256": "c85b91a76947ae307977782dcbfd5468f3c811d71b029747c76480b13c62a50f",
+      "tracked_beads": []
     }
   ]
 }

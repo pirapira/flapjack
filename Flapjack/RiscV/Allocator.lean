@@ -925,7 +925,12 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         let body := wordSsaSeq body backMoves
         let program := .loop (liveIn.map (wordSsaRead setupState)) body
           (liveOut.map (wordSsaRead setupState))
-        (exitState, wordSsaSeq setup program)
+        /- CakeML threads the loop body's fresh-name counter out of
+           `ssa_cc_trans (Loop ...)`, so code after the loop never reuses a
+           name that the body allocated.  Only `next` is taken from the body
+           state; `current` stays the exit restriction. -/
+        ({ exitState with next := bodyState.next },
+          wordSsaSeq setup program)
     | .mustTerminate body =>
         let (state, body) := wordSsaRenameProgramWithLoops frames state body
         (state, .mustTerminate body)

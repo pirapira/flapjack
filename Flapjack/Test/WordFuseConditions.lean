@@ -53,6 +53,23 @@ def roundTripNeedsFusion : Bool :=
 def fusedProgramUsesDirectBranch : Bool :=
   fusedProgramShapeMatches && !wordProgHasNotEqualZeroTest fusedProgram
 
+/-! The source pipeline can leave harmless `Skip` wrappers around the branch
+    definitions and between the copy and the test.  Cake's `Seq_assoc` removes
+    those wrappers before this rewrite; keep this shape covered as well. -/
+def roundTripWithSkips : WordProg Nat :=
+  .seq (.ite .less 1 (.reg 2)
+      (.seq (.assign 3 (.const 1)) .skip)
+      (.seq (.assign 3 (.const 0)) .skip))
+    (.seq .tick
+      (.seq (.assign 4 (.var 3))
+        (.seq .skip
+          (.ite .notEqual 4 (.imm 0) (.assign 5 (.const 7)) .skip))))
+
+def skippedRoundTripFuses : Bool :=
+  !wordProgHasNotEqualZeroTest (wordFuseConditions roundTripWithSkips)
+
+#guard skippedRoundTripFuses
+
 #guard roundTripNeedsFusion
 #guard fusedProgramUsesDirectBranch
 
@@ -77,6 +94,8 @@ def runChecks : IO Bool := do
         roundTripNeedsFusion),
       ("the fusion pass restores the Cake direct branch", 
         fusedProgramUsesDirectBranch),
+      ("fusion removes harmless source Seq/Skip wrappers",
+        skippedRoundTripFuses),
       ("a clobbering materialisation uses Cake duplicate-if",
         operandClobberIsFused) ]
   let mut ok := true
@@ -89,4 +108,3 @@ def runChecks : IO Bool := do
   pure ok
 
 end Flapjack.Test.WordFuseConditions
-

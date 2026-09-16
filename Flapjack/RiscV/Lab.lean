@@ -724,11 +724,15 @@ def labRebaseLinkedFfiReturnLines [NeZero width] :
 
 def labCompileAsmProgramWithFfiBase [NeZero width]
     (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
-    (position ffiBase : Nat) :
+    (position _ffiBase : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .callFfi function => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let offset ← labFfiStubOffset context function (position - ffiBase)
+      /- Cake computes FFI offsets from `cake_main`, whose position includes
+         the fixed runtime prefix.  Keep the linked absolute position here;
+         subtracting the prefix targets a synthetic stub instead of the
+         exported Cake FFI block. -/
+      let offset ← labFfiStubOffset context function position
       pure [.jal zero offset]
   | operation => labCompileAsmProgram context labels position operation
 
@@ -778,11 +782,11 @@ def compileLabProgramLinkedWithFfiStubs [NeZero width]
 
 def labCompileAsmProgramWithFfiBaseAndHalt [NeZero width]
     (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
-    (position ffiBase haltPc : Nat) :
+    (position _ffiBase haltPc : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
   | .callFfi function => do
       let zero ← labRegisterOfNat (portToStack portZeroRegister)
-      let offset ← labFfiStubOffset context function (position - ffiBase)
+      let offset ← labFfiStubOffset context function position
       pure [.jal zero offset]
   | operation => labCompileAsmWithHalt context labels position haltPc operation
 

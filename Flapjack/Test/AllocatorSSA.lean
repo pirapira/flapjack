@@ -226,7 +226,7 @@ example :
     wordSsaRenameProgram
         ({ current := [(1, 100)], next := 200 } : WordSsaState)
         ((.move 7 [(2, 1), (3, 2)]) : WordProg Nat) =
-        ({ current := [(3, 204), (2, 200), (1, 100)], next := 208 },
+        ({ current := [(1, 200), (3, 204), (2, 200)], next := 208 },
         .move 7 [(200, 100), (204, 2)]) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameMove, wordSsaFreshList, wordSsaFresh, wordSsaRead,
@@ -272,5 +272,18 @@ example :
   simp [wordSsaReconcileTo, NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert, NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList,
     List.filterMap, List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop,
     lookupNatInfo]
+
+/-- CakeML's `ssa_cc_trans (Move pri ls)` force-renames every move source that
+    is not itself one of the move destinations: `force = FILTER (λ(x,y). ¬ MEM x
+    ls_1) (ZIP(ls_2,ren_ls1))` with `ls_1` the destination list (`word_allocScript.sml:348-360`).
+    The filter must therefore test the SOURCE (`move.1.2`); testing the
+    destination made it vacuous and left `force_rename` dead code. -/
+example :
+    wordSsaRenameMove (α := Nat)
+        ({ current := [], next := 200 } : WordSsaState) 0 [(15, 4), (16, 12)] =
+      ({ current := [(12, 204), (4, 200), (16, 204), (15, 200)], next := 208 },
+        (.move 0 [(200, 4), (204, 12)] : WordProg Nat)) := by
+  simp [wordSsaRenameMove, wordSsaFreshList, wordSsaFresh, wordSsaRead,
+    wordSsaForceRename, lookupNatInfo]
 
 end Flapjack

@@ -34,6 +34,22 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-! Cake's `compile Dec` equation (`crep_to_loopScript.sml:167-175`) binds the
+    declaration to the fresh expression temporary, then inserts that temporary
+    into the continuation live set. -/
+def declarationContext : LoopContext Nat :=
+  { vars := [(1, 5)], functions := [], maxVar := 4, target := .rv64i }
+
+def declarationRenamingMatches : Bool :=
+  match compileCrepToLoop declarationContext []
+      (.dec 9 (.const 7) (.assign 9 (.var 9))) with
+  | .seq .skip
+      (.seq (.assign 5 (.const 7))
+        (.seq (.assign 5 (.var 5)) .skip)) => true
+  | _ => false
+
+#guard declarationRenamingMatches
+
 /-- Context used for the call-lowering characterization. Function `1` maps to
     loop label `3`, so the generated call targets `some 3`. -/
 def callContext : LoopContext Nat :=
@@ -142,7 +158,7 @@ def shMemDestinationMappingMatches : Bool :=
 
 def assignDestinationMappingMatches : Bool :=
   match compileCrepToLoop shMemContext [] (.assign 3 (.var 1)) with
-  | .seq .skip (.assign 8 (.var 0)) => true
+  | .seq (.assign 8 (.var 0)) .skip => true
   | _ => false
 
 #guard assignDestinationMappingMatches
@@ -186,13 +202,15 @@ def comparisonWithoutLiveDropsIt : Bool :=
 #guard comparisonWithoutLiveDropsIt
 
 def runChecks : IO Bool := do
-  let results := [handlerlessCallCarriesRaiseHandler, handledCallCarriesRaiseHandler,
+  let results := [declarationRenamingMatches,
+    handlerlessCallCarriesRaiseHandler, handledCallCarriesRaiseHandler,
     callReturnDestinationMappingMatches,
     callReturnSourceVariableMaps,
     shMemDestinationMappingMatches, assignDestinationMappingMatches,
     comparisonKeepsIncomingLive,
     comparisonWithoutLiveDropsIt]
   let names := [
+    "crep_to_loop declaration renaming and live seed",
     "crep_to_loop default call handler",
     "crep_to_loop explicit call handler",
     "crep_to_loop call return destination mapping",

@@ -7,22 +7,26 @@ namespace Flapjack
 example :
     wordClashTree
         (.call (some ([5], ([6], []), .skip, 0, 0)) (some 7) [8] none : WordProg Nat) [] =
-      .seq (.set [6, 8])
+      .seq (.set [8, 6])
         (.seq (.set [5, 6]) (.delta [] [])) := by
   simp [wordClashTree, wordClashTreeCallSet, wordClashTreeCallCutSet,
     List.eraseDups,
-    List.eraseDupsBy, List.eraseDupsBy.loop]
+    List.eraseDupsBy, List.eraseDupsBy.loop,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :
     wordClashTree
         (.call (some ([5], ([6], []), .skip, 0, 0)) (some 7) [8]
           (some (9, .return 0 [10], 0, 0)) : WordProg Nat) [] =
-      .branch (some [6, 8])
+      .branch (some [8, 6])
         (.seq (.set [5, 6]) (.delta [] []))
         (.seq (.set [9, 6]) (.delta [] [0, 10])) := by
   simp [wordClashTree, wordClashTreeCallSet,
     List.eraseDups,
-    List.eraseDupsBy, List.eraseDupsBy.loop]
+    List.eraseDupsBy, List.eraseDupsBy.loop,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 /- CakeML's return-free call equation ignores a carried handler when building
    this function's clash tree; the handler is entered by the callee's control
@@ -46,9 +50,11 @@ example :
 example :
     wordClashTree
         (.alloc 3 ([4], [5, 6]) : WordProg Nat) [] =
-      .seq (.delta [] [3]) (.set [4, 5, 6]) := by
+      .seq (.delta [] [3]) (.set [5, 4, 6]) := by
   simp [wordClashTree, wordClashTreeCallSet, List.eraseDups,
-    List.eraseDupsBy, List.eraseDupsBy.loop]
+    List.eraseDupsBy, List.eraseDupsBy.loop,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :
     wordClashTree
@@ -62,13 +68,17 @@ example :
       .seq (.delta [] [4, 3, 2, 1])
         (.seq (.set [5, 6]) (.delta [1] [])) := by
   simp [wordClashTree, wordClashTreeCallSet, List.eraseDups,
-    List.eraseDupsBy, List.eraseDupsBy.loop]
+    List.eraseDupsBy, List.eraseDupsBy.loop,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :
     wordClashTree
         (.ffi "f" 1 2 3 4 ([5], [6]) : WordProg Nat) [] =
       .seq (.delta [] [1, 2, 3, 4]) (.set [5, 6]) := by
   simp [wordClashTree, wordClashTreeCallSet, List.eraseDups,
-    List.eraseDupsBy, List.eraseDupsBy.loop]
+    List.eraseDupsBy, List.eraseDupsBy.loop,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 end Flapjack

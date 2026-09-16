@@ -59,7 +59,9 @@ example :
     wordSsaListNextVarRenameMove, hAbi,
     wordSsaFreshList, wordSsaFresh, wordSsaRead, lookupNatInfo,
     wordSsaReadCutsets, wordSsaRestrict, wordSsaSeq, List.eraseDups,
-    List.eraseDupsBy, List.eraseDupsBy.loop]
+    List.eraseDupsBy, List.eraseDupsBy.loop,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :
     wordSsaRenameProgram
@@ -179,7 +181,9 @@ example :
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaListNextVarRenameMove, wordSsaReadCutsets, wordSsaRestrict,
     wordSsaFreshList, wordSsaFresh, wordSsaRead, wordSsaSeq,
-    List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo]
+    List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :
     wordSsaRenameProgram
@@ -220,7 +224,9 @@ example :
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaListNextVarRenameMove, wordSsaReadCutsets, wordSsaRestrict,
     wordSsaFreshList, wordSsaFresh, wordSsaRead, wordSsaSeq,
-    List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo]
+    List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :
     wordSsaRenameProgram

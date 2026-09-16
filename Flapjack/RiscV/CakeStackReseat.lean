@@ -222,13 +222,15 @@ def reseatStackRemoveConfig (config : StackRemoveConfig) : StackRemoveConfig :=
       currHeap := portToStack config.currHeap
       addressScratch := portToStack config.addressScratch }
 
-/-! Cake's `stack_remove` uses the stack base (`k+1`) for its store array;
-    the port's historical config called the ABI `a0` register `storeBase`.
-    Normalize that one legacy field, and select Cake's abstract `a0` for the
-    allocation-failure halt carrier, before applying the register reseat. -/
+/-! Cake's `stack_remove` uses the stack base (`k+1`) for its store array and
+    keeps `CurrHeap` in `k+2` (see `stack_removeScript.sml:61-66,166`).  The
+    port's historical config stores hardware roles instead, so normalize the
+    legacy store-base/halt fields and derive the Cake current-heap register
+    from the stack pointer before applying the register reseat. -/
 def cakeStackRemoveConfig (config : StackRemoveConfig) : StackRemoveConfig :=
-  reseatStackRemoveConfig
+  let reseated := reseatStackRemoveConfig
     { config with storeBase := config.stackBase, haltRegister := cakeStoreBase }
+  { reseated with currHeap := config.stackPointer + 2 }
 
 @[simp] theorem portToStack_portStoreBase : portToStack 10 = cakeStoreBase := rfl
 

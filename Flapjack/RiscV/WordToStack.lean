@@ -302,18 +302,22 @@ def wordStackDivInst (config : WordStackConfig)
             (.inst (.arith (.div config.scratch config.scratch config.addressScratch)))
             (.stackStore config.scratch (wordStackOffset config destination)))))
 
+/-! Cake's `word_to_stack` never rejects an operand colour: spilled
+    operands stage through the two registers just past the colour range
+    (`wReg1`/`wReg2`, `word_to_stackScript.sml:28-56`) and those registers
+    are never coloured, so no exclusion check is needed at all.  The
+    residual check below only guards against a mis-configured pipeline that
+    would allocate variables onto the two staging registers. -/
 def wordStackLongMulLocationSafe (config : WordStackConfig) :
     WordLocation → Bool
   | .register register =>
-      register != config.scratch && register != config.addressScratch &&
-        register != config.specialScratch && register != config.carryScratch
+      register != config.scratch && register != config.addressScratch
   | .stack _ => true
 
 def wordStackAddCarryLocationSafe (config : WordStackConfig) :
     WordLocation → Bool
   | .register register =>
-      register != config.scratch && register != config.addressScratch &&
-        register != config.specialScratch && register != config.carryScratch
+      register != config.scratch && register != config.addressScratch
   | .stack _ => true
 
 def wordStackLongMulLocationsSafe (config : WordStackConfig)
@@ -371,57 +375,47 @@ def wordStackLongMulInst (config : WordStackConfig)
           pure (.inst (.arith (.longMul destinationLeft destinationRight
             sourceLeft sourceRight)))
       | _, _, _, _ =>
-          if wordStackLongMulLocationsSafe config operation then do
-            let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft config.scratch
-            let loadRight ← wordStackLongMulMoveToPhysical config sourceRight config.addressScratch
-            let writeLeft ← wordStackLongMulMoveFromPhysical config destinationLeft
-              config.specialScratch
-            let writeRight ← wordStackLongMulMoveFromPhysical config destinationRight config.scratch
-            pure (wordStackJoin loadLeft
-              (wordStackJoin loadRight
-                (wordStackJoin
-                  (.inst (.arith (.longMul config.specialScratch config.scratch
-                    config.scratch config.addressScratch)))
-                  (wordStackJoin writeLeft writeRight))))
-          else
-          match wordStackLocation config sourceLeft, wordStackLocation config sourceRight,
-            wordStackLocation config destinationLeft,
-            wordStackLocation config destinationRight with
-          | some leftLocation, some rightLocation, some destLocation, some destRightLocation =>
-              /- The allocator may colour an operand onto one of the staging
-                 registers, so the load order has to be chosen dynamically:
-                 the left load writes `scratch` and the right load writes
-                 `addressScratch`, so whichever source still lives in the
-                 register about to be written must be read first.  The result
-                 moves read `specialScratch` and `scratch`, so the write order
-                 is chosen the same way.  The two degenerate cases where
-                 neither order works keep failing explicitly. -/
-              if (leftLocation = .register config.addressScratch &&
-                    rightLocation = .register config.scratch) ||
-                  (destLocation = .register config.scratch &&
-                    destRightLocation = .register config.specialScratch) then
-                none
-              else do
-                let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft config.scratch
-                let loadRight ← wordStackLongMulMoveToPhysical config sourceRight config.addressScratch
-                let writeLeft ← wordStackLongMulMoveFromPhysical config destinationLeft
-                  config.specialScratch
-                let writeRight ← wordStackLongMulMoveFromPhysical config destinationRight
-                  config.scratch
-                let loads :=
-                  if leftLocation = .register config.addressScratch then
-                    wordStackJoin loadLeft loadRight
-                  else wordStackJoin loadRight loadLeft
-                let writes :=
-                  if destLocation = .register config.scratch then
-                    wordStackJoin writeRight writeLeft
-                  else wordStackJoin writeLeft writeRight
-                pure (wordStackJoin loads
+        match wordStackLocation config destinationLeft,
+          wordStackLocation config destinationRight,
+          wordStackLocation config sourceLeft,
+          wordStackLocation config sourceRight with
+        | some destLeftLocation, some destRightLocation,
+            some leftLocation, some rightLocation =>
+            /- Cake's `wInst` staging discipline (`word_to_stackScript.sml:28-56`):
+               a spilled source loads through the first register past the
+               colour range (`wReg1`, here `config.scratch`), a second spilled
+               source through the next one (`wReg2`, here
+               `config.addressScratch`), and a spilled destination is written
+               by letting the instruction overwrite that same register after
+               the reads (`wRegWrite1`), so no operand colour is ever rejected
+               and no load-order juggling is required. -/
+            let dLReg := match destLeftLocation with
+              | .register register => register
+              | _ => config.scratch
+            let dRReg := match destRightLocation with
+              | .register register => register
+              | _ => config.addressScratch
+            let sLReg := match leftLocation with
+              | .register register => register
+              | _ => config.scratch
+            let sRReg := match rightLocation with
+              | .register register => register
+              | _ => config.addressScratch
+            do
+              let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+                sLReg
+              let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+                sRReg
+              let writeLeft ← wordStackLongMulMoveFromPhysical config
+                destinationLeft dLReg
+              let writeRight ← wordStackLongMulMoveFromPhysical config
+                destinationRight dRReg
+              pure (wordStackJoin loadLeft
+                (wordStackJoin loadRight
                   (wordStackJoin
-                    (.inst (.arith (.longMul config.specialScratch config.scratch
-                      config.scratch config.addressScratch)))
-                    writes))
-          | _, _, _, _ => none
+                    (.inst (.arith (.longMul dLReg dRReg sLReg sRReg)))
+                    (wordStackJoin writeLeft writeRight))))
+        | _, _, _, _ => none
   | _ => none
 
 def wordStackAddCarryInst (config : WordStackConfig)
@@ -448,31 +442,81 @@ def wordStackAddCarryInst (config : WordStackConfig)
           some (.inst (.arith (.addCarry destination resultCarry sourceLeft
             sourceRight carryIn)))
       | _, _, _, _, _ =>
-          let safe name := match wordStackLocation config name with
-            | some location => wordStackAddCarryLocationSafe config location
-            | none => false
-          if safe destination && safe resultCarry && safe sourceLeft &&
-              safe sourceRight && safe carryIn then do
-            let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
-              config.addressScratch
-            let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
-              config.specialScratch
-            let loadCarry ← wordStackLongMulMoveToPhysical config carryIn
-              config.carryScratch
-            let writeDestination ← wordStackLongMulMoveFromPhysical config destination
-              config.carryScratch
-            let writeResultCarry ← wordStackLongMulMoveFromPhysical config resultCarry
-              config.addressScratch
-            pure (wordStackJoin loadLeft
-              (wordStackJoin loadRight
-                (wordStackJoin loadCarry
-                  (wordStackJoin
-                    (.inst (.arith (.addCarry config.carryScratch
-                      config.addressScratch config.addressScratch
-                      config.specialScratch config.carryScratch)))
-                    (wordStackJoin writeDestination writeResultCarry)))))
-          else
-            none
+        match wordStackLocation config destination,
+          wordStackLocation config resultCarry,
+          wordStackLocation config sourceLeft,
+          wordStackLocation config sourceRight,
+          wordStackLocation config carryIn with
+        | some destLocation, some rcLocation, some leftLocation,
+            some rightLocation, some carryLocation =>
+            /- Cake's staging discipline (`word_to_stackScript.sml:28-56`,
+               `:114-118`): spilled sources load through the two registers
+               just past the colour range, spilled destinations are written by
+               overwriting those registers after the reads, and the carry
+               input `n4` is passed straight through without staging.  A
+               register may be read as a source and then written as a
+               destination in the same instruction (`wRegWrite1`), so no
+               operand colour is ever rejected. -/
+            let dReg := match destLocation with
+              | .register register => register
+              | _ => config.scratch
+            let rcReg := match rcLocation with
+              | .register register => register
+              | _ => config.addressScratch
+            let sLReg := match leftLocation with
+              | .register register => register
+              | _ => config.scratch
+            let sRReg := match rightLocation with
+              | .register register => register
+              | _ => config.addressScratch
+            -- A spilled carry input borrows a staging register that no
+            -- other spilled source already occupies; with three spilled
+            -- sources there is none left, and the lowering fails
+            -- explicitly (Cake never stages `n4`, so it never faces this).
+            match carryLocation with
+            | .register carryIn =>
+                do
+                  let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+                    sLReg
+                  let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+                    sRReg
+                  let writeDestination ← wordStackLongMulMoveFromPhysical config
+                    destination dReg
+                  let writeResultCarry ← wordStackLongMulMoveFromPhysical config
+                    resultCarry rcReg
+                  pure (wordStackJoin loadLeft
+                    (wordStackJoin loadRight
+                      (wordStackJoin
+                        (.inst (.arith (.addCarry dReg rcReg sLReg sRReg
+                          carryIn)))
+                        (wordStackJoin writeDestination writeResultCarry))))
+            | _ =>
+                let carryReg :=
+                  if sLReg != config.scratch then config.scratch
+                  else if sRReg != config.addressScratch then config.addressScratch
+                  else config.scratch
+                if carryLocation == .register carryReg || (sLReg == config.scratch &&
+                    sRReg == config.addressScratch) then none
+                else
+                  do
+                    let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+                      sLReg
+                    let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+                      sRReg
+                    let loadCarry ← wordStackLongMulMoveToPhysical config carryIn
+                      carryReg
+                    let writeDestination ← wordStackLongMulMoveFromPhysical config
+                      destination dReg
+                    let writeResultCarry ← wordStackLongMulMoveFromPhysical config
+                      resultCarry rcReg
+                    pure (wordStackJoin loadLeft
+                      (wordStackJoin loadRight
+                        (wordStackJoin loadCarry
+                          (wordStackJoin
+                            (.inst (.arith (.addCarry dReg rcReg sLReg sRReg
+                              carryReg)))
+                            (wordStackJoin writeDestination writeResultCarry)))))
+        | _, _, _, _, _ => none
   | _ => none
 
 /-! Lower CakeML WordLang's four-register AddCarry without re-encoding it as
@@ -494,29 +538,76 @@ def wordStackCakeAddCarryInst (config : WordStackConfig)
           some (.inst (.arith (.cakeAddCarry destination sourceLeft
             sourceRight carry)))
       | _, _, _, _ =>
-          let safe name := match wordStackLocation config name with
-            | some location => wordStackAddCarryLocationSafe config location
-            | none => false
-          if safe destination && safe sourceLeft && safe sourceRight && safe carry then do
-            let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
-              config.addressScratch
-            let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
-              config.specialScratch
-            let loadCarry ← wordStackLongMulMoveToPhysical config carry
-              config.carryScratch
-            let writeDestination ← wordStackLongMulMoveFromPhysical config destination
-              config.scratch
-            let writeCarry ← wordStackLongMulMoveFromPhysical config carry
-              config.carryScratch
-            pure (wordStackJoin loadLeft
-              (wordStackJoin loadRight
-                (wordStackJoin loadCarry
-                  (wordStackJoin
-                    (.inst (.arith (.cakeAddCarry config.scratch
-                      config.addressScratch config.specialScratch config.carryScratch)))
-                    (wordStackJoin writeDestination writeCarry)))))
-          else
-            none
+        match wordStackLocation config destination,
+          wordStackLocation config sourceLeft,
+          wordStackLocation config sourceRight,
+          wordStackLocation config carry with
+        | some destLocation, some leftLocation, some rightLocation,
+            some carryLocation =>
+            /- Same `wReg1`/`wReg2`/`wRegWrite1` discipline as `AddCarry`
+               (`word_to_stackScript.sml:114-118`): the fourth register is
+               both carry input and output and is passed straight through
+               whenever it lives in a register.  A spilled carry stages into
+               a staging register that neither spilled source occupies and
+               that differs from the destination register (the instruction
+               writes both); when none is left the lowering fails
+               explicitly, matching Cake which never stages `n4`. -/
+            let dReg := match destLocation with
+              | .register register => register
+              | _ => config.scratch
+            let sLReg := match leftLocation with
+              | .register register => register
+              | _ => config.scratch
+            let sRReg := match rightLocation with
+              | .register register => register
+              | _ => config.addressScratch
+            match carryLocation with
+            | .register carryRegister =>
+                do
+                  let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+                    sLReg
+                  let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+                    sRReg
+                  let writeDestination ← wordStackLongMulMoveFromPhysical config
+                    destination dReg
+                  let writeCarry ← wordStackLongMulMoveFromPhysical config carry
+                    carryRegister
+                  pure (wordStackJoin loadLeft
+                    (wordStackJoin loadRight
+                      (wordStackJoin
+                        (.inst (.arith (.cakeAddCarry dReg sLReg sRReg
+                          carryRegister)))
+                        (wordStackJoin writeDestination writeCarry))))
+            | _ =>
+                let carryReg :=
+                  if sLReg != config.scratch && dReg != config.scratch then
+                    config.scratch
+                  else if sLReg != config.addressScratch &&
+                      dReg != config.addressScratch then
+                    config.addressScratch
+                  else config.scratch
+                if dReg == carryReg || sLReg == carryReg || sRReg == carryReg then
+                  none
+                else
+                  do
+                    let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+                      sLReg
+                    let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+                      sRReg
+                    let loadCarry ← wordStackLongMulMoveToPhysical config carry
+                      carryReg
+                    let writeDestination ← wordStackLongMulMoveFromPhysical config
+                      destination dReg
+                    let writeCarry ← wordStackLongMulMoveFromPhysical config carry
+                      carryReg
+                    pure (wordStackJoin loadLeft
+                      (wordStackJoin loadRight
+                        (wordStackJoin loadCarry
+                          (wordStackJoin
+                            (.inst (.arith (.cakeAddCarry dReg sLReg sRReg
+                              carryReg)))
+                            (wordStackJoin writeDestination writeCarry)))))
+        | _, _, _, _ => none
   | _ => none
 
 /-! CakeML's `LongDiv` uses a fixed four-register convention: the two-word

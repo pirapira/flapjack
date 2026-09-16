@@ -39,52 +39,53 @@ example :
       wordStackLocation, wordStackOffset, lookupNatInfo]
   · simp [addCarrySpillValues] at hvalue
 
-example :
-    wordStackMachineValue addCarrySpillConfig
-      (((wordStackAddCarryInst addCarrySpillConfig
-        (.addCarry 0 1 2 3 4)).bind
-        (evalWordStackMachine addCarrySpillState)).getD addCarrySpillState) 5 =
-      wordStackMachineValue addCarrySpillConfig addCarrySpillState 5 := by
-  apply evalWordStackMachine_addCarry_spilled_preserves_other_value
-    (config := addCarrySpillConfig) (state := addCarrySpillState)
-    (final := ((wordStackAddCarryInst addCarrySpillConfig
-      (.addCarry 0 1 2 3 4)).bind
-      (evalWordStackMachine addCarrySpillState)).getD addCarrySpillState)
-    (destination := 0) (resultCarry := 1) (sourceLeft := 2)
-    (sourceRight := 3) (carryIn := 4) (other := 5)
-    (destinationSlot := 2) (resultCarrySlot := 3)
-    (sourceLeftSlot := 4) (sourceRightSlot := 5)
-    (carryInSlot := 6) (otherLocation := .register 6)
-  · simp [addCarrySpillConfig, wordStackLocation, lookupNatInfo]
-  · simp [addCarrySpillConfig, wordStackLocation, lookupNatInfo]
-  · simp [addCarrySpillConfig, wordStackLocation, lookupNatInfo]
-  · simp [addCarrySpillConfig, wordStackLocation, lookupNatInfo]
-  · simp [addCarrySpillConfig, wordStackLocation, lookupNatInfo]
-  · simp [addCarrySpillConfig, wordStackLocation, lookupNatInfo]
-  · decide
-  · decide
-  · decide
-  · decide
-  · decide
-  · decide
-  · simp [addCarrySpillConfig, addCarrySpillState, wordStackAddCarryInst,
-      wordStackAddCarryLocationSafe, wordStackLongMulMoveToPhysical,
-      wordStackLongMulMoveFromPhysical, wordStackJoin, wordStackLocation,
-      wordStackOffset, evalWordStackMachine, wordStackMachineWriteRegister,
-      wordStackMachineWriteSlot, lookupNatInfo]
+/-! With the Cake staging discipline (`wReg1`/`wReg2`/`wRegWrite1`,
+    `word_to_stackScript.sml:28-56`) the three spilled sources of a fully
+    spilled five-register `AddCarry` have no staging register left, so the
+    lowering fails explicitly — Cake never stages the carry input `n4` and
+    therefore never faces this configuration. -/
 
 example :
-    let final := ((wordStackAddCarryInst addCarrySpillConfig
+    (wordStackAddCarryInst (α := Nat) addCarrySpillConfig
+      (.addCarry 0 1 2 3 4)) = none := by
+  simp [addCarrySpillConfig, wordStackAddCarryInst, wordStackLocation,
+    lookupNatInfo]
+
+def addCarryMixedConfig : WordStackConfig :=
+  { locations := [(0, .stack 2), (1, .stack 3), (2, .stack 4),
+      (3, .stack 5), (4, .register 5), (5, .register 6)]
+    scratch := 31
+    stackBase := 10
+    addressScratch := 29
+    specialScratch := 28
+    carryScratch := 27 }
+
+def addCarryMixedState : WordStackMachineState 8 :=
+  { registers := fun register =>
+      if register = 5 then BitVec.ofNat 8 1
+      else if register = 6 then BitVec.ofNat 8 23 else 0
+    stack := fun offset =>
+      if offset = 14 then BitVec.ofNat 8 255
+      else if offset = 15 then BitVec.ofNat 8 1 else 0
+    stores := fun _ => 0
+    memory := fun _ => 0
+    sharedMemory := fun _ => 0 }
+
+example :
+    let final := ((wordStackAddCarryInst addCarryMixedConfig
       (.addCarry 0 1 2 3 4)).bind
-      (evalWordStackMachine addCarrySpillState)).getD addCarrySpillState
-    wordStackMachineValue addCarrySpillConfig final 0 =
+      (evalWordStackMachine addCarryMixedState)).getD addCarryMixedState
+    wordStackMachineValue addCarryMixedConfig final 0 =
         some (BitVec.ofNat 8 1) ∧
-      wordStackMachineValue addCarrySpillConfig final 1 =
-        some (BitVec.ofNat 8 1) := by
-  simp [addCarrySpillConfig, addCarrySpillState, wordStackAddCarryInst,
-    wordStackAddCarryLocationSafe, wordStackLongMulMoveToPhysical,
-    wordStackLongMulMoveFromPhysical, wordStackJoin, wordStackLocation,
-    wordStackOffset, evalWordStackMachine, wordStackMachineWriteRegister,
+      wordStackMachineValue addCarryMixedConfig final 1 =
+        some (BitVec.ofNat 8 1) ∧
+      -- a register-resident bystander keeps its value
+      wordStackMachineValue addCarryMixedConfig final 5 =
+        some (BitVec.ofNat 8 23) := by
+  simp [addCarryMixedConfig, addCarryMixedState, wordStackAddCarryInst,
+    wordStackLongMulMoveToPhysical, wordStackLongMulMoveFromPhysical,
+    wordStackJoin, wordStackLocation, wordStackOffset,
+    evalWordStackMachine, wordStackMachineWriteRegister,
     wordStackMachineWriteSlot, wordStackMachineValue, lookupNatInfo]
 
 end Flapjack.RiscV

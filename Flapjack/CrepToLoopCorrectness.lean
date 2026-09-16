@@ -69,6 +69,7 @@ theorem crepRuntimeToLoop_loadGlob_const_agreement
     (fuel : Nat) (state : CrepRuntimeState α σ) (live : List Nat)
     (name : Nat) (address value : α)
     (hlocal : ∃ oldValue, state.locals name = some oldValue)
+    (loop_lookup : lookupNatInfo name context.vars = some name)
     (hglobal : state.globals address = some value) :
     (evalCrepRuntimeResult handler primitive (fuel + 1) state
       (.assign name (.loadGlob address))).map
@@ -83,7 +84,8 @@ theorem crepRuntimeToLoop_loadGlob_const_agreement
   simp [evalCrepRuntimeResult, evalCrepRuntimeProg, evalCrepRuntimeExp,
     loopStateOfCrepRuntimeState, loopCompileProg, loopCompileExp,
     loopNestedSeq, evalLoopProgWithCallsAndFfi, evalLoopProg,
-    evalLoopExp, loopResultState, updateCrepLocal, updateLoopLocal, hlocal, hglobal]
+    evalLoopExp, loopResultState, updateCrepLocal, updateLoopLocal, hlocal,
+    loop_lookup, hglobal]
 
 theorem crepFullStateToLoop_storeGlob_const_agreement
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]

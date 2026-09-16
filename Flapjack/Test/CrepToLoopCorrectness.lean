@@ -566,16 +566,17 @@ theorem crepRuntimeToLoop_loadGlob_regression :
     (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
       3 (loopStateOfCrepRuntimeState crepLoopRuntimeGlobalLoadState)
       (loopCompileProg
-        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+        ({ vars := [(5, 5)], functions := [], maxVar := 0, target := .rv64i } :
           LoopContext Nat)
         [] (.assign 5 (.loadGlob 200)))).map
         (fun result => (loopResultState result).locals 5) := by
   apply crepRuntimeToLoop_loadGlob_const_agreement
-    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+    ({ vars := [(5, 5)], functions := [], maxVar := 0, target := .rv64i } :
       LoopContext Nat)
     [] crepLoopRuntimeHandler (fun _ _ => none) 1
     crepLoopRuntimeGlobalLoadState [] 5 200 42
     ⟨0, by simp [crepLoopRuntimeGlobalLoadState, crepLoopRuntimeGlobalState]⟩
+    (by simp)
   simp [crepLoopRuntimeGlobalLoadState]
 
 theorem crepRuntimeToLoop_store_load_regression :

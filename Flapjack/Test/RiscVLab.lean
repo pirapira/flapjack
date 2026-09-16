@@ -351,4 +351,27 @@ example :
       some [.branchNe 4 5 (BitVec.ofNat 64 1000)] := by
   decide
 
+/-! GH #1050: `Loc`/`LinkValue` must use Cake's PC-relative AUIPC+ADDI
+    sequence, including the signed-low-immediate carry boundary. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4100)] 0
+      (.locValue 5 ⟨1, 0⟩) =
+      some [.auipc 5 (BitVec.ofNat 64 1),
+        .addi 5 5 (BitVec.ofNat 64 4)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 2048)] 0
+      (.locValue 5 ⟨1, 0⟩) =
+      some [.auipc 5 (BitVec.ofNat 64 1),
+        .addi 5 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 4
+      (.linkValue ⟨1, 0⟩) =
+      some [.auipc 1 (BitVec.ofNat 64 1),
+        .addi 1 1 (0 - BitVec.ofNat 64 4)] := by
+  decide
+
 end Flapjack.RiscV

@@ -208,6 +208,7 @@ import Flapjack.Test.WordFuseConditions
 import Flapjack.Test.RiscVAbiParity
 import Flapjack.Test.RiscVAbiAdapterParity
 import Flapjack.Test.LoopToWordBoundaryParity
+import Flapjack.Test.SptreeOrderParity
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -734,7 +735,8 @@ def main : IO Unit := do
     Flapjack.Test.WordFuseConditions.runChecks,
     Flapjack.Test.RiscVAbiParity.runChecks,
     Flapjack.Test.RiscVAbiAdapterParity.runChecks,
-    Flapjack.Test.LoopToWordBoundaryParity.runChecks
+    Flapjack.Test.LoopToWordBoundaryParity.runChecks,
+    Flapjack.Test.SptreeOrderParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

@@ -107,8 +107,8 @@ def selectedBinaryAssignment : WordProg Nat :=
 
 def selectedBinaryAssignmentShape : Bool :=
   match selectedBinaryAssignment with
-  | .seq (.assign 6 (.var 4))
-      (.seq (.assign 7 (.var 2))
+  | .seq (.move 0 [(6, 4)])
+      (.seq (.move 0 [(7, 2)])
         (.inst (.arith (.binOp .add 5 6 (.reg 7))))) => true
   | _ => false
 

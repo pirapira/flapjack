@@ -218,6 +218,12 @@
       "source_reference": "word_cse shares a repeated load through its loads_mem facts, keyed by loadToNumList over Addr n2 offset. WordInst.mem carries no offset, so instruction selection leaves such a load as .assign dest (.load (.op .add [.var n2, .const offset])) until wordToStack fuses it, and CSE passed that carrier through untouched - reading one global twice emitted the global-table load twice where Cake emits it once.",
       "cake_sha256": "c85b91a76947ae307977782dcbfd5468f3c811d71b029747c76480b13c62a50f",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/global_shifted_load_address.pnk",
+      "source_reference": "Cake word_instScript.sml:234-245 and 252-275: only the outer constant displacement of a load address is held for Word-to-Stack fusion; a global base plus a computed offset uses the ordinary target selector so nested add/sub/shift immediates are preserved.",
+      "cake_sha256": "7f030af4246a3b17ab6ee27d388c46a27ad20e63eb033f2335d60d587bbc6628",
+      "tracked_beads": []
     }
   ]
 }

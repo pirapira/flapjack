@@ -57,4 +57,11 @@ example :
       some (0 - BitVec.ofNat 64 96) := by
   decide
 
+/-! Cake's `riscv_ast` materializes ordinary immediate comparisons, including
+    zero, in the encoder temporary before emitting the branch. -/
+example :
+    labWordConditionOperands (width := 64) .notEqual 10 (.imm 0) =
+      some (10, 31, [.ori 31 0 (BitVec.ofNat 64 0)]) := by
+  decide
+
 end Flapjack.RiscV

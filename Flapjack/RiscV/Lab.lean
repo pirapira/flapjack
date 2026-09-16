@@ -101,7 +101,7 @@ def labConditionPreludeCount (operator : Cmp)
   | .reg _ => match operator with | .test | .notTest => 1 | _ => 0
   | .imm value =>
       if value == 0 then
-        match operator with | .test | .notTest => 1 | _ => 0
+        match operator with | .test | .notTest => 1 | _ => 1
       else 1
 
 def labLineInstructionCount : LabLine (Word width) → Nat
@@ -383,6 +383,27 @@ def labLocValueRegister (register : Nat) : Option (Fin 32) :=
   else
     labRegisterOfNat (portToStack register)
 
+/-! Cake's RISC-V encoder keeps an immediate comparison operand as an
+    explicit temporary, including the zero immediate.  The general evaluator
+    helper uses x0 for `Imm 0`, which is semantically equivalent but changes
+    the source-shaped artifact and the following label positions.  Preserve
+    Cake's `ORI temp, x0, 0` form at the Lab boundary; leave Test/NotTest on
+    the existing bit-test path. -/
+def labWordConditionOperands [NeZero width] (operator : Cmp) (condition : Nat)
+    (right : WordRegImm (Word width)) :
+    Option (Fin 32 × Fin 32 × List (Instruction width)) :=
+  match right with
+  | .imm value =>
+      if value == 0 then
+        match operator with
+        | .test | .notTest => wordConditionOperands operator condition right
+        | _ => do
+            let condition ← registerOfNat condition
+            pure (condition, 31, [.ori 31 0 (BitVec.ofNat width 0)])
+      else
+        wordConditionOperands operator condition right
+  | .reg _ => wordConditionOperands operator condition right
+
 def labCompileAsm [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
@@ -407,7 +428,7 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
       let register ← labLocValueRegister register
       pure [.jalr zero register 0]
   | .jumpCmp operator condition right target => do
-      let (left, right, prelude) ← wordConditionOperands operator condition right
+      let (left, right, prelude) ← labWordConditionOperands operator condition right
       let target ← labResolveRef sectionId labels target
       let branchPosition := position + 4 * prelude.length
       let branch ← labJumpCmpInstructions operator left right target branchPosition
@@ -621,7 +642,7 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
       let register ← labLocValueRegister register
       pure [.jalr zero register 0]
   | .jumpCmp operator condition right target => do
-      let (left, right, prelude) ← wordConditionOperands operator condition right
+      let (left, right, prelude) ← labWordConditionOperands operator condition right
       let target ← labResolveProgramRef labels target
       let branchPosition := position + 4 * prelude.length
       let branch ← labJumpCmpInstructions operator left right target branchPosition
@@ -788,7 +809,7 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       let register ← labLocValueRegister register
       pure [.jalr zero register 0]
   | .jumpCmp operator condition right target => do
-      let (left, right, prelude) ← wordConditionOperands operator condition right
+      let (left, right, prelude) ← labWordConditionOperands operator condition right
       let target ← labResolveProgramRef labels target
       let branchPosition := position + 4 * prelude.length
       let branch ← labJumpCmpInstructions operator left right target branchPosition

@@ -166,6 +166,19 @@ def immediateSelectionShape : Bool :=
   | _ => false
 
 #guard immediateSelectionShape
+
+/-! Cake keeps a `base + offset` address in expression form while selecting a
+    load/store address; Word-to-Stack then folds the offset into the memory
+    instruction.  This guard prevents the target-specific immediate selector
+    from changing that source-shaped address lowering. -/
+def selectedAddressExpressionShape : Bool :=
+  match wordInstSelectAddressAtom (α := Word 64) 3
+      (.op .add [.var 2, .const (8 : Word 64)]) with
+  | (.move 0 [(3, 2)], .op .add [.var 3, .const 8]) => true
+  | _ => false
+
+#guard selectedAddressExpressionShape
+
 /-! ## Polymorphic carrier and immediate alignment (bead `flapjack-pxn.9`)
 
 Cake's `asmScript.sml` defines
@@ -173,9 +186,8 @@ Cake's `asmScript.sml` defines
 `inst = Const reg ('a word) | Arith arith | Mem memop reg ('a addr)`, so the
 carrier keeps the immediate operand rather than specializing it to a host
 `Nat`.  These guards pin that an immediate-carrying arithmetic instruction and
-a constant instruction lower to the architectural immediate forms, and that the
-carrier reaches the stack level exactly like the expression assignment it
-replaces. -/
+a constant instruction lower to the architectural immediate forms, and that
+the stack lowering preserves the immediate operand and configured locations. -/
 
 def immediateCarrierInstruction : Bool :=
   match wordInstToInstruction (width := 64)
@@ -186,6 +198,19 @@ def immediateCarrierInstruction : Bool :=
 
 #guard immediateCarrierInstruction
 
+def rotateImmediateCarrierInstructions : Bool :=
+  match wordArithToInstructions (width := 64)
+      (.shift .ror 1 2 (.imm 5) : WordArith (Word 64)) with
+  | some [.srli temporary source amount,
+      .slli destination source' complement,
+      .or destination' destination'' temporary'] =>
+      temporary = 31 ∧ source = 2 ∧ amount = 5 ∧
+        destination = 1 ∧ source' = 2 ∧ complement = 59 ∧
+        destination' = 1 ∧ destination'' = 1 ∧ temporary' = 31
+  | _ => false
+
+#guard rotateImmediateCarrierInstructions
+
 def constantCarrierInstruction : Bool :=
   match wordInstToInstruction (width := 64)
       (.const 3 7 : WordInst (Word 64)) with
@@ -195,19 +220,16 @@ def constantCarrierInstruction : Bool :=
 
 #guard constantCarrierInstruction
 
-def immediateCarrierLoweringMatchesAssignment : Bool :=
+def immediateCarrierLoweringShape : Bool :=
   match
     wordToStackProgWordWithLocationBitmapsFused immediateSelectionConfig 22 0 1 64 none
       (wordStackInitialBitmaps false)
-      (.inst (.arith (.binOp .add 6 4 (.imm 1)) : WordInst (Word 64))),
-    wordToStackProgWordWithLocationBitmapsFused immediateSelectionConfig 22 0 1 64 none
-      (wordStackInitialBitmaps false)
-      (.assign 6 (.op .add [.var 4, .const 1]) : WordProg (Word 64)) with
-  | some (firstCode, _), some (secondCode, _) =>
-      reprStr firstCode == reprStr secondCode
-  | _, _ => false
+      (.inst (.arith (.binOp .add 6 4 (.imm 1)) : WordInst (Word 64))) with
+  | some (.inst (.arith (.binOp .add destination source (.imm value))), _) =>
+      destination = 0 ∧ source = 1 ∧ value = 1
+  | _ => false
 
-#guard immediateCarrierLoweringMatchesAssignment
+#guard immediateCarrierLoweringShape
 
 /-! The two-register compensation introduces `Move 0 [(destination, left)]`
     before an in-place immediate operation.  Cake instead keeps the operand in
@@ -249,6 +271,24 @@ def dropConstsReversesArguments : Bool :=
   | _ => false
 
 #guard dropConstsReversesArguments
+
+/-! ### Cake copy propagation representative
+
+    Cake's `set_eq` (`compiler/backend/word_copyScript.sml:204-225`) inserts the
+    move DESTINATION as the representative of the equivalence class, so
+    `copy_prop_inst (Mem Store r (Addr a w))` rewrites the address to the
+    destination.  Propagating in the other direction rewrote the destination
+    back to the source, which made the move dead and flipped the allocator's
+    colouring (`set_globals`). -/
+def copyPropagationWordProgram : WordProg (Word 64) :=
+  .seq (.move 0 [(37, 25)]) (.inst (.mem .store 33 37))
+
+def copyPropagationKeepsDestination : Bool :=
+  match RiscV.wordCopyProp copyPropagationWordProgram with
+  | .seq _ (.inst (.mem .store 33 address)) => address == 37
+  | _ => false
+
+#guard copyPropagationKeepsDestination
 
 /-! ### Cake ABI argument overflow
 
@@ -319,7 +359,9 @@ def runChecks : IO Bool := do
     ("an overflowing call lowers once the frame demand is reserved",
       overflowLowersWithDemandFrame),
     ("an overflowing call is rejected without that frame room",
-      overflowRejectedWithTinyFrame)]
+      overflowRejectedWithTinyFrame),
+    ("copy propagation keeps Cake's destination representative",
+      copyPropagationKeepsDestination)]
   let mut ok := true
   for (label, passed) in checks do
     if passed then

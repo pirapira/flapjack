@@ -45,4 +45,16 @@ example :
       some [.jal 0 (0 - BitVec.ofNat 64 144)] := by
   decide
 
+example :
+    labLinkedFfiStubOffset (width := 64)
+      { services := [("first", 7), ("second", 8)] } "first" 96 =
+      some (0 - BitVec.ofNat 64 80) := by
+  decide
+
+example :
+    labLinkedFfiStubOffset (width := 64)
+      { services := [("first", 7), ("second", 8)] } "second" 96 =
+      some (0 - BitVec.ofNat 64 96) := by
+  decide
+
 end Flapjack.RiscV

@@ -632,6 +632,34 @@ def wordStackLongDivInst {α : Type} (config : WordStackConfig)
             (.inst (.arith (.longDiv 0 3 3 0 config.scratch))))
   | _ => none
 
+/-- `wInst` keeps an immediate in the arithmetic instruction.  `wReg1` loads
+    the left operand through the allocator's first temporary when it is
+    spilled, while `wRegWrite1` writes the result through that same temporary
+    when the destination is spilled.  The builder argument lets the binary
+    operation and shift cases share this exact location plumbing. -/
+def wordStackImmediateArithInst {α : Type} (config : WordStackConfig)
+    (destination sourceLeft : Nat) (value : α)
+    (build : Nat → Nat → WordRegImm α → WordArith α) : Option (StackProg α) :=
+  match wordStackLocation config destination,
+    wordStackLocation config sourceLeft with
+  | some (.register destination), some (.register sourceLeft) =>
+      some (.inst (.arith (build destination sourceLeft (.imm value))))
+  | some (.stack destination), some (.register sourceLeft) =>
+      some (.seq
+        (.inst (.arith (build config.scratch sourceLeft (.imm value))))
+        (.stackStore config.scratch (wordStackOffset config destination)))
+  | some (.register destination), some (.stack sourceLeft) =>
+      some (.seq
+        (.stackLoad config.scratch (wordStackOffset config sourceLeft))
+        (.inst (.arith (build destination config.scratch (.imm value)))))
+  | some (.stack destination), some (.stack sourceLeft) =>
+      some (.seq
+        (.stackLoad config.scratch (wordStackOffset config sourceLeft))
+        (.seq
+          (.inst (.arith (build config.scratch config.scratch (.imm value))))
+          (.stackStore config.scratch (wordStackOffset config destination))))
+  | _, _ => none
+
 /-- `LongMul` may write its high and low words to the same location when only
     the low product is observed, exactly as the compiler emits for `a * b`.
     The shared special-location contract rejects that alias; this relaxed
@@ -677,9 +705,23 @@ def wordStackArithInst {α : Type} (config : WordStackConfig) (operation : WordA
           some (.register sourceRight) =>
         some (.arith operator destination sourceLeft sourceRight)
       | _, _, _ => none
-    | .binOp _ _ _ (.imm _) => none
-    | .shift _ _ _ (.reg _) => none
-    | .shift _ _ _ (.imm _) => none
+    | .binOp operator destination sourceLeft (.imm value) =>
+      wordStackImmediateArithInst config destination sourceLeft value
+        (fun destination sourceLeft sourceRight =>
+          .binOp operator destination sourceLeft sourceRight)
+    | .shift operator destination sourceLeft (.reg sourceRight) =>
+      match wordStackLocation config destination,
+          wordStackLocation config sourceLeft,
+          wordStackLocation config sourceRight with
+      | some (.register destination), some (.register sourceLeft),
+          some (.register sourceRight) =>
+          some (.inst (.arith (.shift operator destination sourceLeft
+            (.reg sourceRight))))
+      | _, _, _ => none
+    | .shift operator destination sourceLeft (.imm value) =>
+      wordStackImmediateArithInst config destination sourceLeft value
+        (fun destination sourceLeft sourceRight =>
+          .shift operator destination sourceLeft sourceRight)
   else if wordStackLongMulAliasLocationsSafe config operation then
     wordStackLongMulInst config operation
   else
@@ -3535,10 +3577,12 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
          assignment it replaces, so the emitted stack program is unchanged.
          A register immediate keeps the constant in the expression so the
          stack-to-Lab fusion still emits the architectural immediate. -/
-      (wordStackCompileExpToPhysicalNat config destination
-        (match wordRegImmToNat sourceRight with
-         | .reg register => (.op operator [.var sourceLeft, .var register] : WordExp Nat)
-         | .imm value => (.op operator [.var sourceLeft, .const value] : WordExp Nat))).map
+      (wordStackArithInst config
+        (wordArithToNat (.binOp operator destination sourceLeft sourceRight))).map
+        (fun code => (code, state))
+  | .inst (.arith (.shift operator destination sourceLeft sourceRight)) =>
+      (wordStackArithInst config
+        (wordArithToNat (.shift operator destination sourceLeft sourceRight))).map
         (fun code => (code, state))
   | .inst instruction =>
       (wordToStackInst config (wordInstToNat instruction)).map (fun code => (code, state))

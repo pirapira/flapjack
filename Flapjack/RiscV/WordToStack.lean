@@ -1171,6 +1171,15 @@ def wordStackWritePhysicalNat (config : WordStackConfig) (destination : Nat)
       pure (wordStackJoin (body config.scratch)
         (.stackStore config.scratch (wordStackOffset config slot)))
 
+def wordStackWritePhysical {α : Type} (config : WordStackConfig) (destination : Nat)
+    (body : Nat → StackProg α) : Option (StackProg α) := do
+  let location ← wordStackLocation config destination
+  match location with
+  | .register register => pure (body register)
+  | .stack slot =>
+      pure (wordStackJoin (body config.scratch)
+        (.stackStore config.scratch (wordStackOffset config slot)))
+
 def wordStackCompileBinaryNat (config : WordStackConfig) (destination : Nat)
     (operator : BinOp) (left right : WordExp Nat) : Option (StackProg Nat) := do
   let (leftPrelude, leftRegister) ←
@@ -1767,7 +1776,9 @@ def wordStackReturn {α : Type} (config : WordStackConfig) (returnLabel : Nat) (
           (.return returnRegister))))
 
 def wordToStackInst {α : Type} (config : WordStackConfig) : WordInst α → Option (StackProg α)
-  | .const destination value => some (.inst (.const destination value))
+  | .const destination value =>
+      wordStackWritePhysical config destination
+        (fun register => .inst (.const register value))
   | .mem operator sourceOrDestination address =>
       wordStackMemoryInst config operator sourceOrDestination address
   | .arith operation => wordStackArithInst config operation

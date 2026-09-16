@@ -388,6 +388,14 @@ def qsortDescGuard : Bool :=
       [(1, (13, 5)), (3, (5, 9)), (2, (7, 8))] ==
     [(3, (5, 9)), (2, (7, 8)), (1, (13, 5))]
 
+/-- `assign_Stemp_tag` uses Cake's non-strict bad-colour ordering; equal
+    colours therefore retain Cake's merge-sort tie order. -/
+def stempBadColourTieGuard : Bool :=
+  Flapjack.RiscV.CakeRegAlloc.cakeSort (fun a b => a <= b) [4, 4, 1, 4] ==
+    [1, 4, 4, 4]
+
+#guard stempBadColourTieGuard
+
 /-- A move onto a stack temp keeps the stack temp above the register
     count while the two alloc vars coalesce (probe `ra_moves_stemp`). -/
 def raMovesStempGuard : Bool :=
@@ -487,7 +495,8 @@ def parityGuard : Bool :=
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
     partOrderGuard && reviveOrderGuard && movesToSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
-    raMovesStempGuard && raMovesStempHiGuard && negFirstMatchProjectionGuard
+    stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
+    negFirstMatchProjectionGuard
     && mapUpdateBoundedGuard && deadMovePriorityGuard
     && deadProgramPriorityGuard && cakeBijSetPatriciaGuard
     && sortMovesTailSplitGuard

@@ -959,6 +959,21 @@ def wordStackGet {α : Type} (config : WordStackConfig) (destination : Nat)
       pure (wordStackJoin (.get config.scratch store)
         (.stackStore config.scratch (wordStackOffset config slot)))
 
+/-! Cake's `stackLang` store names include `Temp`, and the source-shaped
+    Word-to-Stack path compiles a `Get` against them.  The polymorphic
+    `wordStackGet` cannot carry an `α`-typed temporary index into `StackStore`,
+    so the concrete natural-number path uses this variant, exactly like
+    `wordStackStoreNameNat` does for `Set`. -/
+def wordStackGetNat (config : WordStackConfig) (destination : Nat)
+    (store : WordStore Nat) : Option (StackProg Nat) := do
+  let store ← wordStackStoreNameNat store
+  let location ← wordStackLocation config destination
+  match location with
+  | .register register => pure (.get register store)
+  | .stack slot =>
+      pure (wordStackJoin (.get config.scratch store)
+        (.stackStore config.scratch (wordStackOffset config slot)))
+
 def wordStackOpCurrHeap {α : Type} (config : WordStackConfig) (operator : BinOp)
     (destination source : Nat) : Option (StackProg α) := do
   let (prelude, sourceRegister) ←
@@ -3496,7 +3511,8 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .inst instruction =>
       (wordToStackInst config (wordInstToNat instruction)).map (fun code => (code, state))
   | .get destination store =>
-      (wordStackGet config destination (wordStoreToNat store)).map (fun code => (code, state))
+      (wordStackGetNat config destination (wordStoreToNat store)).map
+        (fun code => (code, state))
   | .store address value =>
       (match address with
       | .const _ | .var _ | .lookup _ =>

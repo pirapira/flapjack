@@ -306,6 +306,34 @@ def copyPropagationDropsRedundantGet : Bool :=
 #guard copyPropagationSharesStoredValues
 #guard copyPropagationDropsRedundantGet
 
+/-! Cake's `inst_select_exp (Lookup s) = Get tar s`, and `stackLang` store names
+    include `Temp`, so the concrete Word-to-Stack path must lower a `Get` from a
+    temporary store instead of rejecting it. -/
+
+def selectedLookupGet : Bool :=
+  match RiscV.wordInstSelectProgramFrom
+      (.assign 6 (.lookup .heapLength) : WordProg (Word 64)) with
+  | .get 6 .heapLength => true
+  | _ => false
+
+#guard selectedLookupGet
+
+def tempStoreGetConfig : WordStackConfig :=
+  { locations := [(5, .register 1)]
+    scratch := 22
+    stackBase := 0
+    addressScratch := 12
+    specialScratch := 11
+    carryScratch := 10
+    abiBase := 1 }
+
+def tempStoreGetLowers : Bool :=
+  match RiscV.wordStackGetNat tempStoreGetConfig 5 (.temp 3) with
+  | some (.get 1 (.temp 3)) => true
+  | _ => false
+
+#guard tempStoreGetLowers
+
 #guard copyPropagationKeepsDestination
 
 /-! ### Cake ABI argument overflow

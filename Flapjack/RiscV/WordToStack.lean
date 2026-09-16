@@ -704,11 +704,10 @@ def wordStackConditionOperands {α : Type} (config : WordStackConfig) (condition
   pure (wordStackJoin conditionPrelude rightPrelude,
     conditionRegister, rightOperand)
 
-/-! FFI arguments use the fixed RISC-V ABI registers x10--x13.  The source
-    locations are checked before emitting the copies so a later argument cannot
-    be destroyed by an earlier ABI move.  Allocator configurations that keep
-    an argument in one of those destination registers are rejected here; a
-    future parallel-move implementation can relax this contract. -/
+/-! The ordinary StackLang path names FFI arguments by hardware registers
+    x10--x13.  The source-shaped runtime adapter normalizes its exact
+    pre-Lab ABI-copy suffix separately, so this general lowering remains the
+    hardware-numbered implementation used by its existing contracts. -/
 
 def wordStackFfiRegisterSafe (register : Nat) : Bool :=
   register != 10 && register != 11 && register != 12 && register != 13
@@ -3645,7 +3644,7 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals first | decreasing_trivial | (simp [sizeOf] <;> omega)
 
-/-! Cake's full-SSA FFI block is preceded by a Move1 ABI shuffle.  The
+/-! Cake's full-SSA FFI block is preceded by a `Move1` ABI shuffle.  The
     source allocator's sequence traversal leaves the constant writes in the
     reverse order immediately before that shuffle; preserving this observable
     order is required for byte parity even though the values are independent.

@@ -48,23 +48,32 @@ theorem compile_full_pan_value_extCall_relation
         configuration' = some configurationValue)
     (hconfigurationLengthValue :
       evalCrepFullExp
-        (updateCrepLocal state.locals (context.maxVar + 1) configurationValue)
+        (updateCrepLocal state.locals
+          (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 1)
+          configurationValue)
         state.memory baseAddress topAddress
         configurationLength' = some configurationLengthValue)
     (harrayValue :
       evalCrepFullExp
         (updateCrepLocal
-          (updateCrepLocal state.locals (context.maxVar + 1) configurationValue)
-          (context.maxVar + 2) configurationLengthValue)
+          (updateCrepLocal state.locals
+            (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 1)
+            configurationValue)
+          (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 2)
+          configurationLengthValue)
         state.memory baseAddress topAddress
         array' = some arrayValue)
     (harrayLengthValue :
       evalCrepFullExp
         (updateCrepLocal
           (updateCrepLocal
-            (updateCrepLocal state.locals (context.maxVar + 1) configurationValue)
-            (context.maxVar + 2) configurationLengthValue)
-          (context.maxVar + 3) arrayValue)
+            (updateCrepLocal state.locals
+              (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 1)
+              configurationValue)
+            (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 2)
+            configurationLengthValue)
+          (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 3)
+          arrayValue)
         state.memory baseAddress topAddress
         arrayLength' = some arrayLengthValue)
     (hsource : sourceHandler function configurationValue configurationLengthValue
@@ -76,13 +85,18 @@ theorem compile_full_pan_value_extCall_relation
           updateCrepLocal
             (updateCrepLocal
               (updateCrepLocal
-                (updateCrepLocal state.locals (context.maxVar + 1)
+                (updateCrepLocal state.locals
+                  (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 1)
                   configurationValue)
-                (context.maxVar + 2) configurationLengthValue)
-              (context.maxVar + 3) arrayValue)
-            (context.maxVar + 4) arrayLengthValue }) = some state')
+                (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 2)
+                configurationLengthValue)
+              (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 3)
+              arrayValue)
+            (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 4)
+            arrayLengthValue }) = some state')
     (hrel : panValueCrepStateRel structs context sourceLocals' sourceGlobals
-      sourceMemory (restoreCrepFfiTemps state' state context.maxVar)) :
+      sourceMemory (restoreCrepFfiTemps state' state
+        (maxCrepExpVar [configuration', configurationLength', array', arrayLength']))) :
     evalPanValueProgWithPrimitiveCallsAndFfi primitive sourceHandler structs
       sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 1)
@@ -94,11 +108,13 @@ theorem compile_full_pan_value_extCall_relation
       (fuel + 5) state
       (compileProg context
         (.extCall function configuration configurationLength array arrayLength)) =
-      some (.normal (restoreCrepFfiTemps state' state context.maxVar)) ∧
+      some (.normal (restoreCrepFfiTemps state' state
+        (maxCrepExpVar [configuration', configurationLength', array', arrayLength']))) ∧
     panValueCrepControlRel structs context
       (fun _ _ _ => False)
       (.normal sourceLocals' sourceGlobals sourceMemory)
-      (.normal (restoreCrepFfiTemps state' state context.maxVar)) := by
+      (.normal (restoreCrepFfiTemps state' state
+        (maxCrepExpVar [configuration', configurationLength', array', arrayLength']))) := by
   have hresult := compile_full_pan_value_extCall_simulation
     context structs sourceFunctions functions sourceLocals sourceLocals' sourceGlobals sourceMemory
     state state' primitive crepPrimitive ffi sharedMem sourceHandler

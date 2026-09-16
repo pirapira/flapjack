@@ -73,15 +73,16 @@ theorem panValueCrepProgramCorrect_shMemStore_wordExp
       (state targetState : CrepState α) (_crepPrimitive : CrepPrimitiveHandler α)
       (_ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
       (_baseAddress _topAddress _bytesInWord addressValue valueValue : α),
-      sharedMem (storeMemOp size) (context.maxVar + 1) addressValue
+      (temporary : Nat) →
+      sharedMem (storeMemOp size) temporary addressValue
         { state with
-          locals := updateCrepLocal state.locals (context.maxVar + 1) valueValue } =
+          locals := updateCrepLocal state.locals temporary valueValue } =
         some targetState →
       panValueCrepStateRel structs context sourceLocals sourceGlobals
         (updatePanValueMemory sourceMemory addressValue (.word valueValue))
         { targetState with
           locals := restoreCrepLocal targetState.locals
-            (context.maxVar + 1) (state.locals (context.maxVar + 1)) }) :
+            temporary (state.locals temporary) }) :
     PanValueCrepProgramCorrect (.shMemStore size address value) := by
   have haddressToExp : (sourceWordExpOf address haddress).toExp = address :=
     sourceWordExpOf_toExp address haddress
@@ -152,15 +153,16 @@ theorem panValueCrepProgramStateCorrect_shMemStore_wordExp
       (state targetState : CrepState α) (_crepPrimitive : CrepPrimitiveHandler α)
       (_ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
       (_baseAddress _topAddress _bytesInWord addressValue valueValue : α),
-      sharedMem (storeMemOp size) (context.maxVar + 1) addressValue
+      (temporary : Nat) →
+      sharedMem (storeMemOp size) temporary addressValue
         { state with
-          locals := updateCrepLocal state.locals (context.maxVar + 1) valueValue } =
+          locals := updateCrepLocal state.locals temporary valueValue } =
         some targetState →
       panValueCrepStateRel structs context sourceLocals sourceGlobals
         (updatePanValueMemory sourceMemory addressValue (.word valueValue))
         { targetState with
           locals := restoreCrepLocal targetState.locals
-            (context.maxVar + 1) (state.locals (context.maxVar + 1)) }) :
+            temporary (state.locals temporary) }) :
     PanValueCrepProgramStateCorrect (.shMemStore size address value) := by
   have haddressToExp : (sourceWordExpOf address haddress).toExp = address :=
     sourceWordExpOf_toExp address haddress

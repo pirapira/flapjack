@@ -26,9 +26,9 @@ def declarationFfiCalleeBody : Prog (Word 64) :=
 
 def declarationFfiCompiledCalleeBody : CrepProg (Word 64) :=
   (.seq
-    (nestedDecs [2, 3, 4, 5]
+    (nestedDecs [1, 2, 3, 4]
       [.const (BitVec.ofNat 64 41), .const 0, .const 0, .const 0]
-      (.extCall "inc" 2 3 4 5))
+      (.extCall "inc" 1 2 3 4))
     (.return [.var 0]))
 
 def declarationFfiSourceFunctions :
@@ -218,7 +218,7 @@ theorem declaration_ffi_source_to_crep_relation :
         functionInfos, compileProg, compileExp, compileArgs, allocatedNames,
         declarationFfiCalleeBody, declarationFfiCompiledCalleeBody,
         firstCompiledExp, lookupInfo,
-        lookupCompiledFunction, nestedDecs]
+        lookupCompiledFunction, nestedDecs, maxCrepExpVar]
     · simp [assignCrepValues]
     · let calleeBase : CrepState (Word 64) :=
           { locals := updateCrepLocal (fun _ => none) 0
@@ -227,8 +227,8 @@ theorem declaration_ffi_source_to_crep_relation :
           { locals := updateCrepLocal
               (updateCrepLocal
                 (updateCrepLocal
-                  (updateCrepLocal calleeBase.locals 2
-                    (BitVec.ofNat 64 41)) 3 0) 4 0) 5 0,
+                  (updateCrepLocal calleeBase.locals 1
+                    (BitVec.ofNat 64 41)) 2 0) 3 0) 4 0,
             memory := fun _ => none }
       let ffiOutput : CrepState (Word 64) :=
           { locals := updateCrepLocal ffiInput.locals 0
@@ -246,11 +246,11 @@ theorem declaration_ffi_source_to_crep_relation :
             (compileToCrepe declarationFfiContext declarationFfiDeclarations)
             (fun _ _ => none) declarationFfiCrepHandler
             defaultCrepSharedMem 0 100 (13 + 1) ffiInput
-            (.extCall "inc" 2 3 4 5) =
+            (.extCall "inc" 1 2 3 4) =
           some (.normal ffiOutput) := by
         apply evalCrepFullProg_extCall
-          (configuration := 2) (configurationLength := 3)
-          (array := 4) (arrayLength := 5)
+          (configuration := 1) (configurationLength := 2)
+          (array := 3) (arrayLength := 4)
           (configurationValue := BitVec.ofNat 64 41)
           (configurationLengthValue := 0) (arrayValue := 0)
           (arrayLengthValue := 0)
@@ -264,20 +264,20 @@ theorem declaration_ffi_source_to_crep_relation :
             (compileToCrepe declarationFfiContext declarationFfiDeclarations)
             (fun _ _ => none) declarationFfiCrepHandler
             defaultCrepSharedMem 0 100 18 calleeBase
-            (nestedDecs [2, 3, 4, 5]
+            (nestedDecs [1, 2, 3, 4]
               [.const (BitVec.ofNat 64 41), .const 0, .const 0, .const 0]
-              (.extCall "inc" 2 3 4 5)) =
+              (.extCall "inc" 1 2 3 4)) =
           some (.normal calleeOutput) := by
         simp [nestedDecs, evalCrepFullProg, evalCrepFullExp,
           declarationFfiCrepHandler, restoreCrepResult,
           updateCrepLocal]
         apply crepState_eq
         · funext current
-          by_cases h0 : current = 0 <;> by_cases h2 : current = 2 <;>
-            by_cases h3 : current = 3 <;>
-            by_cases h4 : current = 4 <;> by_cases h5 : current = 5 <;>
+          by_cases h0 : current = 0 <;> by_cases h1 : current = 1 <;>
+            by_cases h2 : current = 2 <;>
+            by_cases h3 : current = 3 <;> by_cases h4 : current = 4 <;>
             all_goals simp [calleeOutput, calleeBase,
-              restoreCrepLocal, updateCrepLocal, h0, h2, h3, h4, h5]
+              restoreCrepLocal, updateCrepLocal, h0, h1, h2, h3, h4]
         · rfl
         · rfl
       have hnested' :
@@ -287,9 +287,9 @@ theorem declaration_ffi_source_to_crep_relation :
             defaultCrepSharedMem 0 100 18
             { locals := updateCrepLocal (fun _ => none) 0
                 (BitVec.ofNat 64 41), memory := declarationFfiInitialState.memory }
-            (nestedDecs [2, 3, 4, 5]
+            (nestedDecs [1, 2, 3, 4]
               [.const (BitVec.ofNat 64 41), .const 0, .const 0, .const 0]
-              (.extCall "inc" 2 3 4 5)) =
+              (.extCall "inc" 1 2 3 4)) =
           some (.normal calleeOutput) := by
         simpa [calleeBase, declarationFfiInitialState] using hnested
       simp only [declarationFfiCompiledCalleeBody, evalCrepFullProg]

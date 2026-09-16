@@ -15,9 +15,9 @@ def fullSsaHandlerFfiRemoveConfig : StackRemoveConfig :=
     returns the handler value through the linked RISC-V image. -/
 
 def fullSsaHandlerFfiCalleeBody : Prog (RiscV.Word 64) :=
-  .dec "ffiResult" .one (.const (BitVec.ofNat 64 0))
+  .dec "ffiResult" .one (.const (BitVec.ofNat 64 3))
     (.seq
-      (.extCall "inc" (.const (BitVec.ofNat 64 3))
+      (.extCall "inc" (.var .local "ffiResult")
         (.const (BitVec.ofNat 64 0)) (.const (BitVec.ofNat 64 0))
         (.const (BitVec.ofNat 64 0)))
       (.raise "E" (.var .local "ffiResult")))

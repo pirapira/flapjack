@@ -11,8 +11,9 @@ therefore not silently identified with a normal source result.
 
 namespace Flapjack
 
-def panValueCrepExtCallCorrect
-    (sourceHandler : PanValueFfiHandler α) (ffi : CrepFfiHandler α) : Prop :=
+def panValueCrepExtCallCorrectAt
+    (temporaryBase : Nat) (sourceHandler : PanValueFfiHandler α)
+    (ffi : CrepFfiHandler α) : Prop :=
   ∀ (context : CompileContext α) (structs : StructContext)
     (sourceLocals sourceLocals' sourceGlobals : VarName → Option (PanValue α))
     (sourceMemory : α → Option (PanValue α)) (state : CrepState α)
@@ -23,16 +24,20 @@ def panValueCrepExtCallCorrect
     ffi function configuration configurationLength array arrayLength
         ({ state with
           locals :=
-            updateCrepLocal
-              (updateCrepLocal
+              updateCrepLocal
                 (updateCrepLocal
-                  (updateCrepLocal state.locals (context.maxVar + 1) configuration)
-                  (context.maxVar + 2) configurationLength)
-                (context.maxVar + 3) array)
-              (context.maxVar + 4) arrayLength }) = some result →
+                  (updateCrepLocal
+                    (updateCrepLocal state.locals (temporaryBase + 1) configuration)
+                    (temporaryBase + 2) configurationLength)
+                  (temporaryBase + 3) array)
+                (temporaryBase + 4) arrayLength }) = some result →
     ∃ state', result = .returned state' ∧
       panValueCrepStateRel structs context sourceLocals' sourceGlobals
-        sourceMemory (restoreCrepFfiTemps state' state context.maxVar)
+        sourceMemory (restoreCrepFfiTemps state' state temporaryBase)
+
+def panValueCrepExtCallCorrect
+    (sourceHandler : PanValueFfiHandler α) (ffi : CrepFfiHandler α) : Prop :=
+  panValueCrepExtCallCorrectAt 0 sourceHandler ffi
 
 theorem panValueCrepProgramCorrect_extCall_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -72,13 +77,13 @@ theorem panValueCrepProgramCorrect_extCall_const
               compileProg context
                 (.extCall function (.const configuration)
                   (.const configurationLength) (.const array) (.const arrayLength)) =
-                .dec (context.maxVar + 1) (.const configuration)
-                  (.dec (context.maxVar + 2) (.const configurationLength)
-                    (.dec (context.maxVar + 3) (.const array)
-                      (.dec (context.maxVar + 4) (.const arrayLength)
-                        (.extCall function (context.maxVar + 1) (context.maxVar + 2)
-                          (context.maxVar + 3) (context.maxVar + 4))))) := by
-            simp [compileProg, firstCompiledExp, compileExp, nestedDecs]
+                .dec 1 (.const configuration)
+                  (.dec 2 (.const configurationLength)
+                    (.dec 3 (.const array)
+                      (.dec 4 (.const arrayLength)
+                        (.extCall function 1 2 3 4)))) := by
+            simp [compileProg, firstCompiledExp, compileExp, nestedDecs,
+              maxCrepExpVar]
           cases targetFuel with
           | zero =>
               rw [hcompile] at hcrep
@@ -125,15 +130,15 @@ theorem panValueCrepProgramCorrect_extCall_const
                             simp [evalCrepFullExp]
                           have hconfigurationLengthValue :
                               evalCrepFullExp
-                                (updateCrepLocal state.locals (context.maxVar + 1) configuration)
+                                (updateCrepLocal state.locals 1 configuration)
                                 state.memory baseAddress topAddress
                                 (.const configurationLength) = some configurationLength := by
                             simp [evalCrepFullExp]
                           have harrayValue :
                               evalCrepFullExp
                                 (updateCrepLocal
-                                  (updateCrepLocal state.locals (context.maxVar + 1) configuration)
-                                  (context.maxVar + 2) configurationLength)
+                                  (updateCrepLocal state.locals 1 configuration)
+                                  2 configurationLength)
                                 state.memory baseAddress topAddress
                                 (.const array) = some array := by
                             simp [evalCrepFullExp]
@@ -141,9 +146,9 @@ theorem panValueCrepProgramCorrect_extCall_const
                               evalCrepFullExp
                                 (updateCrepLocal
                                   (updateCrepLocal
-                                    (updateCrepLocal state.locals (context.maxVar + 1) configuration)
-                                    (context.maxVar + 2) configurationLength)
-                                  (context.maxVar + 3) array)
+                                    (updateCrepLocal state.locals 1 configuration)
+                                    2 configurationLength)
+                                  3 array)
                                 state.memory baseAddress topAddress
                                 (.const arrayLength) = some arrayLength := by
                             simp [evalCrepFullExp]
@@ -154,11 +159,11 @@ theorem panValueCrepProgramCorrect_extCall_const
                                   updateCrepLocal
                                     (updateCrepLocal
                                       (updateCrepLocal
-                                        (updateCrepLocal state.locals (context.maxVar + 1)
+                                        (updateCrepLocal state.locals 1
                                           configuration)
-                                        (context.maxVar + 2) configurationLength)
-                                      (context.maxVar + 3) array)
-                                    (context.maxVar + 4) arrayLength }) with
+                                        2 configurationLength)
+                                      3 array)
+                                    4 arrayLength }) with
                           | none =>
                               rw [compileProg_extCall_of_compiled context function
                                 (.const configuration) (.const configurationLength)
@@ -168,7 +173,8 @@ theorem panValueCrepProgramCorrect_extCall_const
                                 hconfiguration hconfigurationLength harray harrayLength] at hcrep
                               simp [nestedDecs, evalCrepFullProg, updateCrepLocal,
                                 hconfigurationValue, hconfigurationLengthValue,
-                                harrayValue, harrayLengthValue, hcall] at hcrep
+                                harrayValue, harrayLengthValue, hcall,
+                                maxCrepExpVar] at hcrep
                           | some result =>
                               obtain ⟨state', hreturned, hstate⟩ :=
                                 hffi sourceHandler ffi context structs sourceLocals
@@ -189,8 +195,16 @@ theorem panValueCrepProgramCorrect_extCall_const
                                 hconfiguration hconfigurationLength harray harrayLength
                                 (by simp [evalPanValueExps,
                                   evalPanValueExp.evalPanValueExps, evalPanValueExp])
-                                hconfigurationValue hconfigurationLengthValue harrayValue
-                                harrayLengthValue hsourceHandler hcall
+                                hconfigurationValue
+                                (by simpa [maxCrepExpVar, crepExpVars, List.foldl]
+                                  using hconfigurationLengthValue)
+                                (by simpa [maxCrepExpVar, crepExpVars, List.foldl]
+                                  using harrayValue)
+                                (by simpa [maxCrepExpVar, crepExpVars, List.foldl]
+                                  using harrayLengthValue)
+                                hsourceHandler
+                                (by simpa [maxCrepExpVar, crepExpVars, List.foldl]
+                                  using hcall)
                               have hcrep' :
                                   evalCrepFullProg functions crepPrimitive ffi sharedMem
                                     baseAddress topAddress (targetFuel + 5) state
@@ -202,7 +216,8 @@ theorem panValueCrepProgramCorrect_extCall_const
                               have hcrepEq := Option.some.inj
                                 (hsim.1.symm.trans hcrep')
                               cases hcrepEq
-                              simpa [panValueCrepControlRel] using hstate
+                              simpa [panValueCrepControlRel, maxCrepExpVar,
+                                crepExpVars, List.foldl] using hstate
 
 theorem panValueCrepProgramStateCorrect_extCall_const
     [BEq α] [LawfulBEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -242,13 +257,13 @@ theorem panValueCrepProgramStateCorrect_extCall_const
               compileProg context
                 (.extCall function (.const configuration)
                   (.const configurationLength) (.const array) (.const arrayLength)) =
-                .dec (context.maxVar + 1) (.const configuration)
-                  (.dec (context.maxVar + 2) (.const configurationLength)
-                    (.dec (context.maxVar + 3) (.const array)
-                      (.dec (context.maxVar + 4) (.const arrayLength)
-                        (.extCall function (context.maxVar + 1) (context.maxVar + 2)
-                          (context.maxVar + 3) (context.maxVar + 4))))) := by
-            simp [compileProg, firstCompiledExp, compileExp, nestedDecs]
+                .dec 1 (.const configuration)
+                  (.dec 2 (.const configurationLength)
+                    (.dec 3 (.const array)
+                      (.dec 4 (.const arrayLength)
+                        (.extCall function 1 2 3 4)))) := by
+            simp [compileProg, firstCompiledExp, compileExp, nestedDecs,
+              maxCrepExpVar]
           cases targetFuel with
           | zero =>
               rw [hcompile] at hcrep
@@ -282,7 +297,7 @@ theorem panValueCrepProgramStateCorrect_extCall_const
                                   evalCrepFullExpState
                                     { state with
                                       locals := updateCrepLocal state.locals
-                                        (context.maxVar + 1) configuration }
+                                        1 configuration }
                                     baseAddress topAddress (.const configurationLength) =
                                     some configurationLength := by
                                 simp [evalCrepFullExpState]
@@ -291,8 +306,8 @@ theorem panValueCrepProgramStateCorrect_extCall_const
                                     { state with
                                       locals := updateCrepLocal
                                         (updateCrepLocal state.locals
-                                          (context.maxVar + 1) configuration)
-                                        (context.maxVar + 2) configurationLength }
+                                          1 configuration)
+                                        2 configurationLength }
                                     baseAddress topAddress (.const array) = some array := by
                                 simp [evalCrepFullExpState]
                               have harrayLengthValue :
@@ -301,9 +316,9 @@ theorem panValueCrepProgramStateCorrect_extCall_const
                                       locals := updateCrepLocal
                                         (updateCrepLocal
                                           (updateCrepLocal state.locals
-                                            (context.maxVar + 1) configuration)
-                                          (context.maxVar + 2) configurationLength)
-                                        (context.maxVar + 3) array }
+                                            1 configuration)
+                                          2 configurationLength)
+                                        3 array }
                                     baseAddress topAddress (.const arrayLength) =
                                     some arrayLength := by
                                 simp [evalCrepFullExpState]
@@ -314,11 +329,11 @@ theorem panValueCrepProgramStateCorrect_extCall_const
                                       updateCrepLocal
                                         (updateCrepLocal
                                           (updateCrepLocal
-                                            (updateCrepLocal state.locals (context.maxVar + 1)
+                                            (updateCrepLocal state.locals 1
                                               configuration)
-                                            (context.maxVar + 2) configurationLength)
-                                          (context.maxVar + 3) array)
-                                        (context.maxVar + 4) arrayLength }) with
+                                            2 configurationLength)
+                                          3 array)
+                                        4 arrayLength }) with
                               | none =>
                                   rw [compileProg_extCall_of_compiled context function
                                     (.const configuration) (.const configurationLength)
@@ -331,7 +346,8 @@ theorem panValueCrepProgramStateCorrect_extCall_const
                                     (by simp [firstCompiledExp, compileExp])] at hcrep
                                   simp [nestedDecs, evalCrepFullProgState,
                                     evalCrepFullExpState, updateCrepLocal,
-                                    hconfigurationValue, hcall] at hcrep
+                                    hconfigurationValue, hcall,
+                                    maxCrepExpVar] at hcrep
                               | some result =>
                                   obtain ⟨state', hreturned, hstate⟩ :=
                                     hffi sourceHandler ffi context structs sourceLocals
@@ -347,7 +363,7 @@ theorem panValueCrepProgramStateCorrect_extCall_const
                                             (.const configurationLength) (.const array)
                                             (.const arrayLength))) =
                                       some (.normal
-                                        (restoreCrepFfiTemps state' state context.maxVar)) := by
+                                        (restoreCrepFfiTemps state' state 0)) := by
                                     rw [hcompile]
                                     simp [evalCrepFullProgState, evalCrepFullExpState,
                                       updateCrepLocal, hconfigurationValue,

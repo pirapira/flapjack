@@ -36,4 +36,34 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-! Cake's duplicate top-level declarations retain one initializer per
+    declaration, while the final `FLOOKUP` binding is the last declaration.
+    This is the source-level contract exercised by
+    `Flapjack/Test/OriginalPancake/dup_global.pnk`; the warning is handled by
+    the static checker, and this guard pins the address/layout semantics before
+    the later allocator boundary. -/
+def duplicateGlobalDecls : List (Decl Nat) :=
+  [.decl .one "g" (.const 7),
+   .decl .one "g" (.const 7),
+   .function
+     { name := "main"
+       inline := false
+       exported := false
+       params := []
+       body := .return (.var .global "g")
+       returnShape := .one }]
+
+def duplicateGlobalLayoutGuard : Bool :=
+  let compiled := globalCompileTop 8 id duplicateGlobalDecls
+  match compiled.initializers, compiled.declarations with
+  | [.store (.op .sub [.topAddr, .const 8]) (.const 7),
+     .store (.op .sub [.topAddr, .const 16]) (.const 7)],
+    [.function declaration] =>
+      match declaration.body with
+      | .return (.load .one (.op .sub [.topAddr, .const 16])) => true
+      | _ => false
+  | _, _ => false
+
+#guard duplicateGlobalLayoutGuard
+
 end Flapjack.Test.PanGlobalsCompileParity

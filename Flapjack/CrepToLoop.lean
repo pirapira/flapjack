@@ -360,12 +360,14 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
         -- the handler compilation all use the incoming live set.
         | some (returns, none) =>
             let exceptionName := context.maxVar + 1
-            .call (some (returns, live)) target argumentNames
+            .call (some (crepRtVars context.vars returns (context.maxVar + 1), live))
+              target argumentNames
               (some (exceptionName, .raise exceptionName, .skip, live))
         | some (returns, some (exception, handler)) =>
             let exceptionName := context.maxVar + 1
             let handlerCode := loopCompileProg context live handler
-            .call (some (returns, live)) target argumentNames
+            .call (some (crepRtVars context.vars returns (context.maxVar + 1), live))
+              target argumentNames
               (some (exceptionName,
                 .ite .notEqual exceptionName (.imm exception)
                   (.raise exceptionName) (.seq .tick handlerCode) live,

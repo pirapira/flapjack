@@ -162,7 +162,22 @@ def dumpPipeline (pipeline : FlapjackPipelineResult (RiscV.Word 64)) : IO Unit :
             (stackRemoveComplete (RiscV.cakeStackRemoveConfig removeConfig) body)))
       emit "stage=source_stack_removed" removed
 
-def dumpSource (source : String) : IO UInt32 := do
+/-! The complete dump is intentionally expensive on a large guest because it
+    renders every function at every boundary.  A label-filtered dump keeps the
+    same pass sequence for one function, which makes the first divergent
+    allocator state inspectable without forcing the whole diagnostic output. -/
+def dumpPipelineTarget (pipeline : FlapjackPipelineResult (RiscV.Word 64))
+    (target : Nat) : IO Unit := do
+  let sourceLoop := pipelineLoopFunctionsSource .rv64i stackFunctionFirstLabel
+    pipeline.crepe
+  let sourceWord := panToWordCompileProg sourceLoop
+  match sourceWord.find? (fun entry => entry.1 == target) with
+  | none => emit "stage=target_not_found" target
+  | some entry =>
+      emit "stage=target" target
+      dumpSourceWordPasses entry
+
+def dumpSource (source : String) (target : Option Nat := none) : IO UInt32 := do
   match Parser.parseTopDecs (BitVec.ofInt 64) source with
   | .error errors =>
       emit "stage=parse_error" errors
@@ -177,12 +192,16 @@ def dumpSource (source : String) : IO UInt32 := do
           IO.println "stage=compile_entry=none"
           return 1
       | some pipeline =>
-          dumpPipeline pipeline
+          match target with
+          | none => dumpPipeline pipeline
+          | some target => dumpPipelineTarget pipeline target
           return 0
 
 def usage : String :=
   "Usage: lake exe flapjack-debug [SOURCE.pnk]\n" ++
-  "Read Pancake source from SOURCE.pnk or stdin and print intermediate stages."
+  "       lake exe flapjack-debug --label LABEL [SOURCE.pnk]\n" ++
+  "Read Pancake source from SOURCE.pnk or stdin and print intermediate stages.\n" ++
+  "With --label, render only the selected source Word function."
 
 def main (arguments : List String) : IO UInt32 := do
   match arguments with
@@ -192,6 +211,21 @@ def main (arguments : List String) : IO UInt32 := do
   | ["--help"] | ["-h"] =>
       IO.println usage
       return 0
+  | ["--label", rawLabel] =>
+      match rawLabel.toNat? with
+      | none =>
+          IO.eprintln ("invalid numeric label: " ++ rawLabel)
+          return 2
+      | some label =>
+          let stdin ← IO.getStdin
+          dumpSource (← stdin.readToEnd) (some label)
+  | ["--label", rawLabel, path] =>
+      match rawLabel.toNat? with
+      | none =>
+          IO.eprintln ("invalid numeric label: " ++ rawLabel)
+          return 2
+      | some label =>
+          dumpSource (← IO.FS.readFile path) (some label)
   | [path] =>
       dumpSource (← IO.FS.readFile path)
   | _ =>

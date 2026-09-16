@@ -19,7 +19,7 @@ theorem evalWordStackMachine_direct_div_preserves_unrelated_values [NeZero width
       some destinationLocation)
     (hdividend : wordStackLocation config dividend = some dividendLocation)
     (hdivisor : wordStackLocation config divisor = some divisorLocation)
-    (hspecial : wordSpecialArithLocationsSafe
+    (hspecial : wordSpecialArithLocationsSafe (α := Nat)
       (.div destination dividend divisor) config.locations = true)
     (hvalues : wordStackMappedValues config values state)
     (hnoalias : ∀ name value location,

@@ -39,7 +39,7 @@ def wordDeadMove (priority : Nat) (live : List Nat) (moves : List (Nat × Nat)) 
         (wordDeadRemoveWrites live (kept.map Prod.fst))
         (kept.map Prod.snd))
 
-def wordDeadInst (live : List Nat) (instruction : WordInst) :
+def wordDeadInst {α : Type} (live : List Nat) (instruction : WordInst α) :
     WordProg α × List Nat :=
   let writes := wordInstWriteVars instruction
   let reads := wordInstReadVars instruction

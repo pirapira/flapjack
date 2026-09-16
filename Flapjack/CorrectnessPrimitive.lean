@@ -16,7 +16,7 @@ composed Loop/Word correctness proofs independent of the implementation
 details of the two evaluator wrappers.
 -/
 theorem evalWordFunction_arith_empty_to_evalWordProg [NeZero width]
-    (state : RiscV.State width) (operation : WordArith)
+    (state : RiscV.State width) (operation : WordArith (RiscV.Word width))
     (resultState : RiscV.State width)
     (hresult : RiscV.evalWordFunction state (.inst (.arith operation)) =
       some (resultState, [])) :

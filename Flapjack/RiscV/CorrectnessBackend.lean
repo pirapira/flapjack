@@ -17,7 +17,7 @@ inductive WordRiscVStraightLine : WordProg α → Prop where
       WordRiscVStraightLine (.move store moves)
   | assign (destination : Nat) (value : WordExp α) :
       WordRiscVStraightLine (.assign destination value)
-  | inst (instruction : WordInst) :
+  | inst (instruction : WordInst α) :
       WordRiscVStraightLine (.inst instruction)
   | store (address : WordExp α) (value : Nat) :
       WordRiscVStraightLine (.store address value)
@@ -84,6 +84,21 @@ theorem wordProgToRiscV_sound_of_straightLine [NeZero width]
           | some instructions =>
               have hcode : instructions = code :=
                 Option.some.inj (h.symm.trans hcompile')
+              subst code
+              simp [evalWordProg, h]
+      | const destination value =>
+          have hcompile' : (wordInstToInstruction (width := width)
+            (.const destination value)).map (fun instruction => [instruction]) =
+            some code := by
+            simpa only [wordProgToRiscV] using hcompile
+          cases h : wordInstToInstruction (width := width)
+              (.const destination value) with
+          | none => rw [h] at hcompile'; cases hcompile'
+          | some instruction =>
+              have hcode : [instruction] = code := by
+                have hcompile'' : some [instruction] = some code := by
+                  simpa [h] using hcompile'
+                exact Option.some.inj hcompile''
               subst code
               simp [evalWordProg, h]
       | mem operator destination address =>
@@ -189,6 +204,10 @@ theorem wordFunctionToRiscVWithCalls_agrees_straightLine [NeZero width]
       | arith operation =>
           cases h : wordArithToInstructions (width := width) operation <;>
             simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
+      | const destination value =>
+          cases h : wordInstToInstruction (width := width)
+              (.const destination value) <;>
+            simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
       | mem operator destination address =>
           cases h : wordInstToInstruction (width := width)
               (.mem operator destination address) <;>
@@ -228,6 +247,8 @@ theorem evalWordFunction_wordRiscVStraightLine_eq_evalWordProg [NeZero width]
   | inst instruction =>
       cases instruction with
       | arith operation =>
+          simp [evalWordFunction, evalWordProg, Function.comp_def]
+      | const destination value =>
           simp [evalWordFunction, evalWordProg, Function.comp_def]
       | mem operator destination address =>
           cases operator <;>

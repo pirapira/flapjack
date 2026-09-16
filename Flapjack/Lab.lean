@@ -37,7 +37,7 @@ inductive LabJump where
   deriving DecidableEq, Repr
 
 inductive LabPlain (α : Type u) where
-  | word (instruction : WordInst)
+  | word (instruction : WordInst α)
   | stackMem (operator : WordMemOp) (register base offset : Nat)
   | stackMemSub (operator : WordMemOp) (register base offset : Nat)
   | const (destination value : Nat)

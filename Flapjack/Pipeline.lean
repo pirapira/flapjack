@@ -490,8 +490,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
   | (label, parameters, body) :: functions => do
       let wordParameters := wordSsaAbiParameters parameters.length
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
-        (RiscV.wordFuseConditions
-          (RiscV.wordInstSelectProgramFrom
+        (RiscV.wordInstSelectProgramFrom
+          (RiscV.wordFuseConditionsAndFold
             (RiscV.wordConstFp
               (RiscV.wordFlattenProgramFrom
                 (LoopToWord.loopToWordCompFunc label parameters body))))))

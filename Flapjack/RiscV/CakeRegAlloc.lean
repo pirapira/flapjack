@@ -80,7 +80,7 @@ def cakeGetStackOnly {α : Type u} (program : WordProg α) : List Nat :=
 /-! RISC-V `get_forced` traversal.  The source adds hardware interference
     edges for the carry and long-multiply instructions, then walks sequence,
     branch, call-handler, and loop bodies in reverse continuation order. -/
-def cakeForcedArith : WordArith → List (Nat × Nat)
+def cakeForcedArith {α : Type u} : WordArith α → List (Nat × Nat)
   | .addCarry destination _ sourceLeft sourceRight _ =>
       getForcedAddCarry destination sourceLeft sourceRight
   | .cakeAddCarry destination sourceLeft sourceRight _ =>
@@ -643,8 +643,16 @@ def cakeDoCoalesce (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
 /-- `reset_move_related` (`reg_allocScript.sml:708-725`). -/
 def cakeResetMoveRelated (moves : List (Nat × (Nat × Nat)))
     (state : CakeRaState) : CakeRaState :=
-  let cleared := (List.range state.dim).foldl (fun m v =>
-    cakeMapUpdate m v false) state.moveRelated
+  /- `cakeMapUpdate` replaces the binding of an existing key in place, so
+     folding `false` over every dimension is observationally the fresh map
+     `(List.range dim).map (fun v => (v, false))`: every lookup of a node
+     key finds `false`, and node keys are all below `dim`.  Building the
+     map directly keeps the reset linear — the fold performed one linear
+     `cakeMapUpdate` per dimension, i.e. O(dim²) per call, which dominated
+     allocation on large functions (the reset runs on every prefreeze
+     step of the iterative coalescing loop). -/
+  let cleared : NatInfoMap Bool :=
+    (List.range state.dim).map (fun v => (v, false))
   let updated := moves.foldl (fun m move =>
       let mx := !cakeIsFixed state move.2.1
       let my := !cakeIsFixed state move.2.2
@@ -864,10 +872,9 @@ def cakeAssignAtempTag (k : Nat)
 def cakeAssignAtemps (k : Nat) (ls : List Nat)
     (prefs : CakeRaState → Nat → List Nat → Option Nat)
     (state : CakeRaState) : CakeRaState :=
-  /- Cake's state-stack is consumed in the order in which entries were
-     pushed by the worklist traversal; the functional list stores that order
-     newest-first, so restore the traversal order before assigning colours. -/
-  let lsF := ls.reverse.filter (· < state.dim)
+  /- Cake's `get_stack` returns the newest-first list built by `push_stack`,
+     and `st_ex_FOREACH` consumes that list in its stored order. -/
+  let lsF := ls.filter (· < state.dim)
   let state := lsF.foldl (fun s n => cakeAssignAtempTag k prefs n s) state
   (List.range state.dim).foldl (fun s n => cakeAssignAtempTag k prefs n s) state
 
@@ -942,14 +949,15 @@ def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (NatInfoMap Nat))
 
 /-! Convert Cake's `total_colour` result back into the location contract used
     by Word-to-Stack.  Cake colours are even Word names; their half is the
-    Cake stack-register number, which is translated to the target register at
-    the Lab boundary.  Colours outside the allocatable window are frame
-    variables numbered from the top of Cake's `f` frame. -/
+    abstract Cake stack-register number and must remain unchanged until the
+    Lab-to-RISC-V boundary applies `riscv_names`.  Colours outside the
+    allocatable window are frame variables numbered from the top of Cake's
+    `f` frame. -/
 
 def cakeColourLocation (k f colour : Nat) : WordLocation :=
   let stackRegister := colour / 2
   if stackRegister < k then
-    .register (riscvRegisterName stackRegister)
+    .register stackRegister
   else
     .stack (f - 1 - (stackRegister - k))
 

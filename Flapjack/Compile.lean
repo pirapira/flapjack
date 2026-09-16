@@ -25,6 +25,12 @@ def allocatedNames (context : CompileContext α) (shape : Shape) : List Nat :=
 def freshNames (context : CompileContext α) (count start : Nat) : List Nat :=
   (List.range count).map (fun offset => context.maxVar + start + offset)
 
+/-! Cake's ExtCall and ShMemStore lowerings choose their temporary base from
+    the largest variable occurring in the compiled expressions, rather than
+    from the context's cached `vmax` (`pan_to_crepScript.sml:278-305`). -/
+def maxCrepExpVar (expressions : List (CrepExp α)) : Nat :=
+  (expressions.flatMap crepExpVars).foldl max 0
+
 def functionReturnNames (context : CompileContext α) (function : FunName) : List Nat :=
   match lookupInfo function context.functions with
   | some (_, shape) => allocatedNames context shape
@@ -207,10 +213,12 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
           firstCompiledExp context array,
           firstCompiledExp context arrayLength with
       | some configuration, some configurationLength, some array, some arrayLength =>
-          let configurationName := context.maxVar + 1
-          let configurationLengthName := context.maxVar + 2
-          let arrayName := context.maxVar + 3
-          let arrayLengthName := context.maxVar + 4
+          let base := maxCrepExpVar
+            [configuration, configurationLength, array, arrayLength] + 1
+          let configurationName := base
+          let configurationLengthName := base + 1
+          let arrayName := base + 2
+          let arrayLengthName := base + 3
           let names := [configurationName, configurationLengthName, arrayName, arrayLengthName]
           nestedDecs names [configuration, configurationLength, array, arrayLength]
             (.extCall function configurationName configurationLengthName arrayName arrayLengthName)
@@ -237,7 +245,7 @@ def compileProg [BEq α] [OfNat α 0] [Add α]
   | .shMemStore size address value =>
       match firstCompiledExpAnyShape context address, firstCompiledExpAnyShape context value with
       | some address, some value =>
-          let temporary := context.maxVar + 1
+          let temporary := maxCrepExpVar [address] + 1
           nestedDecs [temporary] [value] (.shMem (storeMemOp size) temporary address)
       | _, _ => .skip
   | .tick => .tick
@@ -326,11 +334,16 @@ theorem compileProg_extCall_of_compiled [BEq α] [OfNat α 0] [Add α]
     (harrayLength : firstCompiledExp context arrayLength = some arrayLength') :
     compileProg context
         (.extCall function configuration configurationLength array arrayLength) =
-      nestedDecs [context.maxVar + 1, context.maxVar + 2,
-        context.maxVar + 3, context.maxVar + 4]
+      nestedDecs [maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 1,
+        maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 2,
+        maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 3,
+        maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 4]
         [configuration', configurationLength', array', arrayLength']
-        (.extCall function (context.maxVar + 1) (context.maxVar + 2)
-          (context.maxVar + 3) (context.maxVar + 4)) := by
+        (.extCall function
+          (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 1)
+          (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 2)
+          (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 3)
+          (maxCrepExpVar [configuration', configurationLength', array', arrayLength'] + 4)) := by
   simp [compileProg, hconfiguration, hconfigurationLength, harray, harrayLength,
     nestedDecs]
 

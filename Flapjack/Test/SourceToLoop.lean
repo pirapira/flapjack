@@ -13,7 +13,8 @@ def sourceToLoopCompileContext : CompileContext (RiscV.Word 64) :=
     bytesInWord := BitVec.ofNat 64 8 }
 
 def sourceToLoopLoopContext : LoopContext (RiscV.Word 64) :=
-  { vars := [], functions := [], maxVar := 0, target := .rv64i }
+  { vars := [(1, 1), (2, 2), (3, 3), (4, 4)], functions := [],
+    maxVar := 0, target := .rv64i }
 
 def sourceToLoopState : LoopState (RiscV.Word 64) :=
   { locals := fun _ => none
@@ -151,7 +152,8 @@ theorem sourceToLoop_local_assign_return_simulation :
   exact compilePanToLoop_local_assign_return_const_correct
     sourceToLoopLocalCompileContext sourceToLoopLoopContext []
     sourceToLoopState "x" 1 (BitVec.ofNat 64 42)
-    (by simp [sourceToLoopLocalCompileContext, lookupInfo])
+    (by simp [sourceToLoopLocalCompileContext, lookupInfo]) (by rfl)
+    (by simp [sourceToLoopLoopContext, lookupNatInfo]) (by rfl)
 
 theorem sourceToLoop_local_assign_return_executes :
     (evalLoopProg 30 sourceToLoopState
@@ -181,7 +183,7 @@ theorem sourceToLoop_local_return_simulation :
     sourceToLoopLocalCompileContext sourceToLoopLoopContext []
     sourceToLoopBoundLocalState sourceToLoopBoundLocalSource "x" 1
     (by simp [sourceToLoopLocalCompileContext, lookupInfo])
-    (by simp [sourceToLoopBoundLocalState, sourceToLoopBoundLocalSource])
+    (by simp [sourceToLoopBoundLocalState, sourceToLoopBoundLocalSource]) (by rfl) (by rfl)
 
 theorem sourceToLoop_local_return_executes :
     (evalLoopProg 16 sourceToLoopBoundLocalState

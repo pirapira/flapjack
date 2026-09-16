@@ -3,6 +3,25 @@ import Flapjack.Test.Calls
 namespace Flapjack
 
 open RiscV
+
+/-! Cake's `get_eids_from_decls` numbers only exception declarations; ordinary
+    functions and globals do not consume exception identifiers.  This matters
+    for the source entry wrapper, which precedes the declarations passed to the
+    Crepe context. -/
+def exceptionNumberingFixture : List (Decl Nat) :=
+  [.function
+      { name := "before", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+   .exnDecl "E" .one,
+   .function
+      { name := "between", inline := false, exported := false, params := [],
+        body := .skip, returnShape := .one },
+   .exnDecl "F" .one]
+
+#guard
+  pipelineExceptionCodes (fun value => value) 0 exceptionNumberingFixture ==
+    [("E", 0), ("F", 1)]
+
 #guard
     let result := compileFlapjackRiscV (width := 64) .rv64i
       (BitVec.ofNat 64 8) (fun value => BitVec.ofNat 64 value)
@@ -80,8 +99,7 @@ example :
     compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
     compileProg, crepInlineTopRecursiveByNames, crepInlineTopRecursive,
     crepInlineFunctionsRecursive, crepInlineActiveNames,
-    crepArithFunctions,
-    lookupInfo
+    crepSimpFunctions
     ]
 
 example :

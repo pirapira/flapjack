@@ -29,40 +29,49 @@ def sourceToCrepeFfiStructuredHandler :
 
 def sourceToCrepeFfiStructuredLocals :
     VarName → Option (PanValue (RiscV.Word 64)) :=
-  fun name => if name == "result" then some (.word 0) else none
+  fun name => if name == "result" then some (.word 41) else none
 
 def sourceToCrepeFfiStructuredAfter :
     VarName → Option (PanValue (RiscV.Word 64)) :=
   fun name => if name == "result" then
     some (.word (BitVec.ofNat 64 42)) else none
 
+def sourceToCrepeFfiFuel : Nat := 25
+
+def sourceToCrepeFfiTempBase : Nat :=
+  maxCrepExpVar ([.var 1, .const 0, .const 0, .const 0] :
+    List (CrepExp (RiscV.Word 64)))
+
 theorem sourceToCrepeFfi_nonempty_environment_relation :
     evalPanValueProgWithPrimitiveCallsAndFfi
       (fun _ _ => none) sourceToCrepeFfiStructuredHandler []
       sourceToCrepeFfiSourceFunctions
-      0 100 8 26 sourceToCrepeFfiStructuredLocals
+      0 100 8 (sourceToCrepeFfiFuel + 1) sourceToCrepeFfiStructuredLocals
       (fun _ => none) (fun _ => none)
       sourceToCrepeFfiProgram =
       some (.normal sourceToCrepeFfiStructuredAfter
         (fun _ => none) (fun _ => none)) ∧
     evalCrepFullProg sourceToCrepeFfiFunctions
       (fun _ _ => none) sourceToCrepeFfiHandler sourceToCrepeFfiSharedMem
-      0 100 30 sourceToCrepeFfiState
+      0 100 (sourceToCrepeFfiFuel + 5) sourceToCrepeFfiState
       (compileProg sourceToCrepeFfiContext sourceToCrepeFfiProgram) =
       some (.normal
         (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
-          sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar)) ∧
+          sourceToCrepeFfiState
+          sourceToCrepeFfiTempBase)) ∧
     panValueCrepControlRel [] sourceToCrepeFfiContext
       (fun _ _ _ => False)
       (.normal sourceToCrepeFfiStructuredAfter
         (fun _ => none) (fun _ => none))
-      (.normal
-        (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
-          sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar)) := by
+        (.normal
+          (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
+            sourceToCrepeFfiState
+            sourceToCrepeFfiTempBase)) := by
   have hrel : panValueCrepStateRel [] sourceToCrepeFfiContext
       sourceToCrepeFfiStructuredAfter (fun _ => none) (fun _ => none)
       (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
-        sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar) := by
+        sourceToCrepeFfiState
+        sourceToCrepeFfiTempBase) := by
     refine ⟨rfl, ?_, ?_⟩
     · intro name value shape slots hvalue hlookup
       simp [sourceToCrepeFfiStructuredAfter] at hvalue
@@ -76,12 +85,12 @@ theorem sourceToCrepeFfi_nonempty_environment_relation :
           ⟨hlookup''.1.symm, hlookup''.2.symm⟩
         rcases hlookup' with ⟨rfl, rfl⟩
         subst value
-        simp [sourceToCrepeFfiContext,
-          panValueShape, panShapeMatches, readCrepLocals,
+        simp [panValueShape, panShapeMatches, readCrepLocals,
           panValueFlatWords, panValueFlatWordsFuel,
           restoreCrepFfiTemps, sourceToCrepeFfiTargetAfter,
           sourceToCrepeFfiTargetAfterTemps, sourceToCrepeFfiState,
-          updateCrepLocal, restoreCrepLocal]
+          updateCrepLocal, restoreCrepLocal, sourceToCrepeFfiTempBase,
+          maxCrepExpVar, crepExpVars, List.foldl]
       · have hvalue' : name == "result" := by simpa using hvalue.1
         exact False.elim (hname hvalue')
     · funext address
@@ -103,18 +112,18 @@ theorem sourceToCrepeFfi_nonempty_environment_relation :
     (sharedMem := sourceToCrepeFfiSharedMem)
     (sourceHandler := sourceToCrepeFfiStructuredHandler)
     (baseAddress := 0) (topAddress := 100) (bytesInWord := 8)
-    (fuel := 25) (function := "inc")
-    (configuration := .const (BitVec.ofNat 64 41))
+    (fuel := sourceToCrepeFfiFuel) (function := "inc")
+    (configuration := .var .local "result")
     (configurationLength := .const 0) (array := .const 0)
     (arrayLength := .const 0)
-    (configuration' := .const (BitVec.ofNat 64 41))
+    (configuration' := .var 1)
     (configurationLength' := .const 0) (array' := .const 0)
     (arrayLength' := .const 0)
     (configurationValue := BitVec.ofNat 64 41)
     (configurationLengthValue := 0) (arrayValue := 0)
     (arrayLengthValue := 0)
     (hconfiguration := by
-      simp [sourceToCrepeFfiContext, firstCompiledExp, compileExp])
+      simp [sourceToCrepeFfiContext, firstCompiledExp, compileExp, lookupInfo])
     (hconfigurationLength := by
       simp [sourceToCrepeFfiContext, firstCompiledExp, compileExp])
     (harray := by
@@ -122,10 +131,9 @@ theorem sourceToCrepeFfi_nonempty_environment_relation :
     (harrayLength := by
       simp [sourceToCrepeFfiContext, firstCompiledExp, compileExp])
     (hsourceValues := by
-      simpa [evalPanValueExps] using
-        (evalPanValueExp_const_words_list [] sourceToCrepeFfiStructuredLocals
-          (fun _ => none) (fun _ => none) 0 100 8
-          [BitVec.ofNat 64 41, 0, 0, 0]))
+      simp [evalPanValueExps, evalPanValueExp,
+        evalPanValueExp.evalPanValueExps,
+        sourceToCrepeFfiStructuredLocals])
     (hconfigurationValue := by
       simp [sourceToCrepeFfiState, evalCrepFullExp])
     (hconfigurationLengthValue := by
@@ -148,8 +156,9 @@ theorem sourceToCrepeFfi_nonempty_environment_relation :
       simpa using congrArg some hafter)
     (hffi := by
       simp [sourceToCrepeFfiHandler, sourceToCrepeFfiState,
-        sourceToCrepeFfiContext, sourceToCrepeFfiTargetAfterTemps,
-        sourceToCrepeFfiTargetAfter])
+        sourceToCrepeFfiTargetAfterTemps,
+        sourceToCrepeFfiTargetAfter, maxCrepExpVar, crepExpVars,
+        List.foldl])
     hrel
 
 end Flapjack

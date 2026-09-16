@@ -164,9 +164,9 @@ example : loopLocalsMappedToRiscV ({ vars := [] } : WordContext)
       lookupNatInfo, RiscV.execute, RiscV.writeRegister, RiscV.nextPc]
 
 def sourceFfiIdBody : Prog (Word 64) :=
-  .dec "result" .one (.const 0)
+  .dec "result" .one (.const 41)
     (.seq
-      (.extCall "inc" (.var .local "x") (.const 0)
+      (.extCall "inc" (.var .local "result") (.const 0)
         (.const 0) (.const 0))
       (.return (.var .local "result")))
 

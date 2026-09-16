@@ -729,7 +729,10 @@ theorem compilePanToLoop_local_assign_return_const_correct
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (live : List Nat) (state : LoopState α) (name : VarName) (slot : Nat)
     (value : α)
-    (lookup : lookupInfo name compileContext.vars = some (.one, [slot])) :
+    (lookup : lookupInfo name compileContext.vars = some (.one, [slot]))
+    (slot_agrees : findLoopVar loopContext slot = slot)
+    (loop_lookup : lookupNatInfo slot loopContext.vars = some slot)
+    (maxVar_agrees : loopContext.maxVar = compileContext.maxVar) :
     (evalLoopProg 30 state
       (loopCompileProg loopContext live
         (compileProg compileContext
@@ -741,8 +744,10 @@ theorem compilePanToLoop_local_assign_return_const_correct
   simp [compileProg, compileExp, crepNestedSeq, loopCompileProg, loopCompileExp,
     loopCompileExp.loopCompileExps, loopCompileExps, loopNestedSeq,
     loopTempNames, loopAssignTemps, evalLoopProg, evalLoopExp,
-    loopReadLocals, updateLoopLocal, updatePanLocal, loopResultValues,
-    evalPanStateProg, evalPanExp, lookup, distinctLists]
+    loopReadLocals, updatePanLocal, loop_lookup,
+    evalPanStateProg, evalPanExp, lookup, distinctLists,
+    slot_agrees, maxVar_agrees]
+  simp [updateLoopLocal, loopResultValues]
 
 /-!
 Returning an existing source local requires an explicit state relation: the
@@ -757,7 +762,9 @@ theorem compilePanToLoop_local_return_correct
     (live : List Nat) (state : LoopState α) (locals : VarName → Option α)
     (name : VarName) (slot : Nat)
     (lookup : lookupInfo name compileContext.vars = some (.one, [slot]))
-    (environment_agrees : state.locals slot = locals name) :
+    (environment_agrees : state.locals slot = locals name)
+    (slot_agrees : findLoopVar loopContext slot = slot)
+    (maxVar_agrees : loopContext.maxVar = compileContext.maxVar) :
     (evalLoopProg 16 state
       (loopCompileProg loopContext live
         (compileProg compileContext (.return (.var .local name))))).map
@@ -768,7 +775,7 @@ theorem compilePanToLoop_local_return_correct
     loopCompileExp.loopCompileExps, loopCompileExps, loopNestedSeq,
     loopTempNames, loopAssignTemps, evalLoopProg, evalLoopExp,
     loopReadLocals, evalPanStateProg,
-    evalPanExp, lookup, environment_agrees]
+    evalPanExp, lookup, environment_agrees, slot_agrees, maxVar_agrees]
   cases h : locals name <;>
     simp [updateLoopLocal] <;> rfl
 
@@ -805,7 +812,7 @@ theorem compilePanToLoop_dec_return_const_correct
               (.seq (.return [loopContext.maxVar + 1 + 1]) .skip))) := by
     simp [loopCompileProg, loopCompileExp, loopCompileExps,
       loopCompileExp.loopCompileExps, loopNestedSeq, loopTempNames,
-      loopAssignTemps, maxVar_agrees]
+      loopAssignTemps, maxVar_agrees, findLoopVar, lookupNatInfo]
   simp [compileProg, compileExp, allocatedNames, nestedDecs, hcompiled,
     evalLoopProg, evalLoopExp,
     loopReadLocals, updateLoopLocal, updatePanLocal, loopResultValues,
@@ -847,7 +854,7 @@ theorem compilePanToLoop_dec_return_add_const_correct
               (.seq (.return [loopContext.maxVar + 1 + 1]) .skip))) := by
     simp [loopCompileProg, loopCompileExp, loopCompileExps,
       loopCompileExp.loopCompileExps, loopNestedSeq, loopTempNames,
-      loopAssignTemps, maxVar_agrees]
+      loopAssignTemps, maxVar_agrees, findLoopVar, lookupNatInfo]
   simp [compileProg, compileExp, compileExp.compileExpList, cexpHeads,
     allocatedNames, nestedDecs, hcompiled,
     evalLoopProg, evalLoopExp, evalLoopBinOp,
@@ -1281,7 +1288,7 @@ theorem loopToWord_const_assign_register_agreement [NeZero width]
         | .normal state => state.locals 1
         | _ => none) =
       (RiscV.evalWordProg state
-        (loopToWordProg ({ vars := [] } : WordContext)
+        (loopToWordProg ({ vars := [(1, 1)] } : WordContext)
           (.assign 1 (.const value)))).map
         (fun state => RiscV.readRegister state 1) := by
   have hzero : state.registers 0 = (0 : RiscV.Word width) := by
@@ -1301,7 +1308,7 @@ theorem loopToWord_add_assign_register_agreement [NeZero width]
         | .normal state => state.locals 1
         | _ => none) =
       (RiscV.evalWordProg state
-        (loopToWordProg ({ vars := [] } : WordContext)
+        (loopToWordProg ({ vars := [(1, 1), (2, 2), (3, 3)] } : WordContext)
           (.assign 1 (.op .add [.var 2, .var 3])))).map
         (fun state => RiscV.readRegister state 1) := by
   have hzero : state.registers 0 = (0 : RiscV.Word width) := by
@@ -1322,7 +1329,7 @@ theorem loopToWord_longMul_register_agreement [NeZero width]
         | .normal state => state.locals 1
         | _ => none) =
       (RiscV.evalWordProg state
-        (loopToWordProg ({ vars := [] } : WordContext)
+        (loopToWordProg ({ vars := [(1, 1), (2, 2), (3, 3)] } : WordContext)
           (.arith (.longMul 1 1 2 3)))).map
         (fun state => RiscV.readRegister state 1) := by
   simp [evalLoopProg, loopRegisterState, loopToWordProg, wordArith,
@@ -3380,6 +3387,13 @@ theorem loopToWord_div_assign_preserves_mapped_locals [NeZero width]
     (hdividend : loopState.locals dividend = some dividendValue)
     (hdivisor : loopState.locals divisor = some divisorValue)
     (hdivisor_nonzero : divisorValue ≠ 0)
+    -- The RISC-V DIV instruction Cake emits (`riscv_targetScript.sml`)
+    -- is signed, while the loop semantics `Word (w2 / q)` is unsigned
+    -- (`loopSemScript.sml:115`).  The two agree on the non-negative
+    -- fragment, which is where this simulation lemma applies.
+    (hsigned_matches_unsigned :
+      BitVec.ofInt width (dividendValue.toInt.ediv divisorValue.toInt) =
+        dividendValue / divisorValue)
     (hdestination :
       RiscV.registerOfNat (wordFindVar context destination) =
         some destinationRegister)
@@ -3443,10 +3457,10 @@ theorem loopToWord_div_assign_preserves_mapped_locals [NeZero width]
     have hdivisor_value' :
         state.registers divisorRegister = divisorValue := by
       exact hdivisor_value
-    simp [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
-      hdestination_nonzero, 
-      hdividend_value', hdivisor_value', 
-      BitVec.udiv_def]
+    simp only [RiscV.execute, RiscV.writeRegister, RiscV.readRegister,
+      hdestination_nonzero, hdividend_value', hdivisor_value']
+    rw [← hsigned_matches_unsigned]
+    simp
     intro hzero
     exact (hdivisor_nonzero hzero).elim
   · have hcurrent' : loopState.locals name = some current := by

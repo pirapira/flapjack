@@ -143,7 +143,7 @@ def wordLocValueToInstructions [NeZero width] (destination label : Nat) :
   pure [.addi destination 0 (BitVec.ofNat width label)]
 
 def wordArithToInstruction [NeZero width] :
-    WordArith → Option (Instruction width)
+    WordArith (Word width) → Option (Instruction width)
   | .longMul _destinationLeft _destinationRight _sourceLeft _sourceRight =>
       none
   | .longDiv _ _ _ _ _ => none
@@ -154,9 +154,45 @@ def wordArithToInstruction [NeZero width] :
       let dividend ← registerOfNat dividend
       let divisor ← registerOfNat divisor
       pure (.divU destination dividend divisor)
+  | .binOp operator destination sourceLeft sourceRight => do
+      let destination ← registerOfNat destination
+      let sourceLeft ← registerOfNat sourceLeft
+      match sourceRight with
+      | .reg sourceRight => do
+          let sourceRight ← registerOfNat sourceRight
+          pure (match operator with
+            | .add => .add destination sourceLeft sourceRight
+            | .sub => .sub destination sourceLeft sourceRight
+            | .and => .and destination sourceLeft sourceRight
+            | .or => .or destination sourceLeft sourceRight
+            | .xor => .xor destination sourceLeft sourceRight)
+      | .imm value =>
+          pure (match operator with
+            | .add => .addi destination sourceLeft value
+            | .sub => .addi destination sourceLeft (0 - value)
+            | .and => .andi destination sourceLeft value
+            | .or => .ori destination sourceLeft value
+            | .xor => .xori destination sourceLeft value)
+  | .shift operator destination sourceLeft sourceRight => do
+      let destination ← registerOfNat destination
+      let sourceLeft ← registerOfNat sourceLeft
+      match sourceRight with
+      | .reg sourceRight => do
+          let sourceRight ← registerOfNat sourceRight
+          match operator with
+          | .lsl => pure (.sll destination sourceLeft sourceRight)
+          | .lsr => pure (.srl destination sourceLeft sourceRight)
+          | .asr => pure (.sra destination sourceLeft sourceRight)
+          | .ror => none
+      | .imm value =>
+          match operator with
+          | .lsl => pure (.slli destination sourceLeft value)
+          | .lsr => pure (.srli destination sourceLeft value)
+          | .asr => pure (.srai destination sourceLeft value)
+          | .ror => none
 
 def wordArithToInstructions [NeZero width] :
-    WordArith → Option (List (Instruction width))
+    WordArith (Word width) → Option (List (Instruction width))
   | .longMul destinationLeft destinationRight sourceLeft sourceRight => do
       if destinationLeft = sourceLeft || destinationLeft = sourceRight then
         none
@@ -198,10 +234,45 @@ def wordArithToInstructions [NeZero width] :
           .add destination destination 31,
           .sltu 31 destination 31,
           .or carry carry 31]
+  | .shift .ror destination sourceLeft (.imm amount) => do
+      /- Cake's `riscv_ast` expands an immediate rotate-right with the
+         reserved temporary register: `srli tmp,left,n; slli dst,left,w-n;
+         or dst,dst,tmp`.  The expression encoder already used this shape,
+         but the polymorphic `WordArith` carrier path used to fall through to
+         the single-instruction encoder and reject ROR. -/
+      if destination = 31 || sourceLeft = 31 then
+        none
+      else
+        let destination ← registerOfNat destination
+        let sourceLeft ← registerOfNat sourceLeft
+        let amount := shiftAmount amount
+        pure [
+          .srli 31 sourceLeft amount,
+          .slli destination sourceLeft
+            (BitVec.ofNat width ((width - amount) % width)),
+          .or destination destination 31]
+  | .shift .ror destination sourceLeft (.reg sourceRight) => do
+      /- Variable rotates use the same reserved temporary and the word-sized
+         complement that Cake emits before its variable shifts. -/
+      if destination = 31 || sourceLeft = 31 || sourceRight = 31 then
+        none
+      else
+        let destination ← registerOfNat destination
+        let sourceLeft ← registerOfNat sourceLeft
+        let sourceRight ← registerOfNat sourceRight
+        pure [
+          .ori 31 0 (BitVec.ofNat width width),
+          .sub 31 31 sourceRight,
+          .sll 31 sourceLeft 31,
+          .srl destination sourceLeft sourceRight,
+          .or destination destination 31]
   | operation => (wordArithToInstruction operation).map (fun instruction => [instruction])
 
 def wordInstToInstruction [NeZero width] :
-    WordInst → Option (Instruction width)
+    WordInst (Word width) → Option (Instruction width)
+  | .const destination value => do
+      let destination ← registerOfNat destination
+      pure (.addi destination 0 value)
   | .arith operation => wordArithToInstruction operation
   | .mem .load8 destination address => do
       let destination ← registerOfNat destination
@@ -505,6 +576,12 @@ theorem executeFunction_add_general (left right : Word 64) :
   simp [executeFunction, executeCode, execute, writeRegister, readRegister,
     nextPc, zeroState]
 
+theorem executeFunction_add_destination_general (left right : Word 64) :
+    executeFunction 10 (0 : Word 64) [2, 3] [.add 4 2 3] [4] [left, right]
+      (zeroState 64) = some [left + right] := by
+  simp [executeFunction, executeCode, execute, writeRegister, readRegister,
+    nextPc, zeroState]
+
 theorem executeFunction_storeLoad :
     executeFunction 20 (0 : Word 64) []
       [.addi 1 0 100, .addi 2 0 42, .storeWord 2 1, .loadWord 3 1]
@@ -723,6 +800,10 @@ def evalWordFunction [NeZero width] (state : State width) :
       let instructions ← wordExpToInstructions name value
       pure (executeInstructions state instructions, [])
   | .tick => pure (execute state (.addi 0 0 0), [])
+  | .inst (.const destination value) => do
+      let instructions ← (wordInstToInstruction (width := width)
+        (.const destination value)).map (fun instruction => [instruction])
+      pure (executeInstructions state instructions, [])
   | .inst (.arith operation) => do
       let instructions ← wordArithToInstructions operation
       pure (executeInstructions state instructions, [])
@@ -798,6 +879,10 @@ def evalWordProg [NeZero width] (state : State width) :
       let instructions ← wordExpToInstructions name value
       pure (executeInstructions state instructions)
   | .tick => pure (execute state (.addi 0 0 0))
+  | .inst (.const destination value) => do
+      let instructions ← (wordInstToInstruction (width := width)
+        (.const destination value)).map (fun instruction => [instruction])
+      pure (executeInstructions state instructions)
   | .inst (.arith operation) => do
       let instructions ← wordArithToInstructions operation
       pure (executeInstructions state instructions)

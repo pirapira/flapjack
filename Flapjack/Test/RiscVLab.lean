@@ -242,8 +242,9 @@ example :
       stackRemoveRiscVConfig 2 3
       (.ffi "echo" 0 1 2 3 ([], []) : WordProg Nat) =
       some [.or 10 4 4, .or 11 5 5, .or 12 6 6, .or 13 7 7,
-        .addi 1 0 (BitVec.ofNat 64 24),
-        .jal 0 (0 - BitVec.ofNat 64 68)] := by
+        .auipc 1 (BitVec.ofNat 64 0),
+        .addi 1 1 (BitVec.ofNat 64 12),
+        .jal 0 (0 - BitVec.ofNat 64 72)] := by
   decide +kernel
 
 example :
@@ -314,5 +315,63 @@ def labIteSkipThenCode : Option (List (Instruction 64)) :=
         (writeRegister (writeRegister (zeroState 64) 4 7) 1 9)).map
           (fun state => readRegister state 1)) =
       some (2 : Word 64)
+
+/-! GH #1053: the RISC-V target uses Cake's direct-JAL and inverted-branch
+    fallbacks once a PC-relative target leaves the short encoding range. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4)] 0
+      (.jump ⟨1, 0⟩) =
+      some [.jal 0 (BitVec.ofNat 64 4)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 2 ^ 20)] 0
+      (.jump ⟨1, 0⟩) =
+      some [.auipc 31 (BitVec.ofNat 64 256),
+        .jalr 0 31 (BitVec.ofNat 64 0)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 2 ^ 20)] 0
+      (.call ⟨1, 0⟩) =
+      some [.auipc 31 (BitVec.ofNat 64 256),
+        .jalr 1 31 (BitVec.ofNat 64 0)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 5000)] 0
+      (.jumpCmp .equal 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchEq 4 5 (BitVec.ofNat 64 8),
+        .jal 0 (BitVec.ofNat 64 4996)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 1000)] 0
+      (.jumpCmp .equal 4 (.reg 5) ⟨1, 0⟩) =
+      some [.branchNe 4 5 (BitVec.ofNat 64 1000)] := by
+  decide
+
+/-! GH #1050: `Loc`/`LinkValue` must use Cake's PC-relative AUIPC+ADDI
+    sequence, including the signed-low-immediate carry boundary. -/
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4100)] 0
+      (.locValue 5 ⟨1, 0⟩) =
+      some [.auipc 5 (BitVec.ofNat 64 1),
+        .addi 5 5 (BitVec.ofNat 64 4)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 2048)] 0
+      (.locValue 5 ⟨1, 0⟩) =
+      some [.auipc 5 (BitVec.ofNat 64 1),
+        .addi 5 5 (0 - BitVec.ofNat 64 2048)] := by
+  decide
+
+example :
+    labCompileAsm (width := 64) { services := [] } 1 [(0, 4096)] 4
+      (.linkValue ⟨1, 0⟩) =
+      some [.auipc 1 (BitVec.ofNat 64 1),
+        .addi 1 1 (0 - BitVec.ofNat 64 4)] := by
+  decide
 
 end Flapjack.RiscV

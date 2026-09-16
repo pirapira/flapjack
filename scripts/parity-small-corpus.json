@@ -55,9 +55,9 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/shadowing.pnk",
-      "source_reference": "Original Pancake redeclaration warning behavior; Cake accepts two local declarations of x in f and emits distinct cml_generated_main/cml_main/cml_g/cml_f sections.",
+      "source_reference": "Local shadowing regression (`var 1 x = 0; var 1 x = g();`) reproduced from Flapjack.Test.SourceGlobalParity.shadowingSource. The original CakeML accepts it with a redeclaration warning and emits cml_generated_main 28 bytes, cml_main 4, cml_g 8, cml_f 144; the port expands the global-initializer address inline (heapLength shift and subtract) so generated_main is 48 bytes and every later section base shifts by 20, and cml_f additionally differs in allocator move and register choice. Tracked by flapjack-pxn.8.5.10.2 (global-initializer generated entry bytes) together with flapjack-8tb.",
       "cake_sha256": "b7343fcd21e99f4cae4cc800a922325bca143f9624b8b007f2c357cfdd787e60",
-      "tracked_beads": ["flapjack-pxn.8.5.12.12"]
+      "tracked_beads": ["flapjack-pxn.8.5.12.12", "flapjack-pxn.8.5.10.2", "flapjack-8tb"]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_expression.pnk",
@@ -109,7 +109,7 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/hello.pnk",
-      "source_reference": "hello.pnk whole-artifact parity (GitHub issue #1022 / bead flapjack-8tb): runtime sections cml__Init_0..cml__StoreConsts_5 and cml_generated_main_6 are byte-identical between the original and the port, and only cml_main differs (Cake 152 bytes versus Flapjack 224 bytes). The port now preserves the comparison's incoming loop live set, but still differs in allocator/instruction selection; it keeps the incoming link-register copy and uncoalesced parallel-move copies, uses a direct JumpLower to the halt section for the frame-overflow check instead of the original inline halt form, and materialises the result through a shared return variable.",
+      "source_reference": "hello.pnk whole-artifact parity (GitHub issue #1022 / bead flapjack-8tb): runtime sections cml__Init_0..cml__StoreConsts_5 and cml_generated_main_6 are byte-identical between the original and the port, and only cml_main differs (Cake 152 bytes versus Flapjack 180 bytes). The port now preserves the comparison's incoming loop live set, but still differs in allocator/instruction selection; it keeps the incoming link-register copy and uncoalesced parallel-move copies, uses a direct JumpLower to the halt section for the frame-overflow check instead of the original inline halt form, and materialises the result through a shared return variable.",
       "cake_sha256": "72e2d0d849bfcb8d5070a06c35d148d81c032982cd0ca5ce6e12bd91843dc270",
       "tracked_beads": ["flapjack-8tb"]
     },
@@ -118,6 +118,24 @@
       "source_reference": "Pre-loop local retention through a while loop (bead flapjack-8tb.1): `var out = 7;` assigned before `while i < 2 { i = i + 1; }` and read by `return out` must keep the assignment. The original CakeML emits the constant and returns it (cml_main = 00706513 00006593 00206613 00c5d663 00158593 ff5ff06f 0080006f fedff06f 00008067, 36 bytes); the port previously dropped the assignment (ori a0,zero,0). The comparison lowering now threads the incoming loop live set through `loopCompileExp` (crep_to_loopScript.sml comparison case; f93a590f), so the assignment survives.",
       "cake_sha256": "bd52adc8d9c0548532985d1907f4097e8fcf79ba6b3db8f7aea509a911b75f4b",
       "tracked_beads": ["flapjack-8tb.1"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/mul_const_zero.pnk",
+      "source_reference": "cakeml/pancake/crep_arithScript.sml:50-56 (mul_const_def): x * 0 folds to Const 0 on a non-constant parameter.",
+      "cake_sha256": "9ab626097aa89a6352f2a51b52cab0a881163278df1a28edf89ee5da982aa4ce",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/mul_const_one.pnk",
+      "source_reference": "cakeml/pancake/crep_arithScript.sml:50-56 (mul_const_def): x * 1 folds to x on a non-constant parameter.",
+      "cake_sha256": "70bdad49df6cf2e71630b62309d972233cd23867b10a41e5296a248a1239200c",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/mul_const_pow2.pnk",
+      "source_reference": "cakeml/pancake/crep_arithScript.sml:50-56 (mul_const_def): x * 8 becomes Shift Lsl x (Const 3) on a non-constant parameter.",
+      "cake_sha256": "073d50b2801126783668b513e792e25705d2672a11155ce859ce5c4030c62138",
+      "tracked_beads": []
     }
 
   ]

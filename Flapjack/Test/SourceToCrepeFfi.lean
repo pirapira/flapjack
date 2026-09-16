@@ -16,11 +16,11 @@ def sourceToCrepeFfiContext : CompileContext (RiscV.Word 64) :=
     maxVar := 1, bytesInWord := BitVec.ofNat 64 8 }
 
 def sourceToCrepeFfiProgram : Prog (RiscV.Word 64) :=
-  .extCall "inc" (.const (BitVec.ofNat 64 41)) (.const 0)
+  .extCall "inc" (.var .local "result") (.const 0)
     (.const 0) (.const 0)
 
 def sourceToCrepeFfiState : CrepState (RiscV.Word 64) :=
-  { locals := fun name => if name = 1 then some (BitVec.ofNat 64 0) else none
+  { locals := fun name => if name = 1 then some (BitVec.ofNat 64 41) else none
     memory := fun _ => none }
 
 def sourceToCrepeFfiPrimitive : CrepPrimitiveHandler (RiscV.Word 64) :=
@@ -44,7 +44,7 @@ def sourceToCrepeFfiSourceHandler : PanFfiHandler (RiscV.Word 64) :=
     else none
 
 def sourceToCrepeFfiSourceLocals : VarName → Option (RiscV.Word 64) :=
-  fun name => if name == "result" then some 0 else none
+  fun name => if name == "result" then some 41 else none
 
 #guard
     (evalCrepFullProg [] sourceToCrepeFfiPrimitive sourceToCrepeFfiHandler

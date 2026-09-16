@@ -1609,13 +1609,13 @@ theorem compile_full_pan_value_shMemStore_word_correct
     (hcompiledAddress : firstCompiledExpAnyShape context sourceAddress = some compiledAddress)
     (hcompiledValue : firstCompiledExpAnyShape context sourceValue = some compiledValue)
     (hcrepAddress : evalCrepFullExp
-      (updateCrepLocal state.locals (context.maxVar + 1) value) state.memory
+      (updateCrepLocal state.locals (maxCrepExpVar [compiledAddress] + 1) value) state.memory
       baseAddress topAddress compiledAddress = some address)
     (hcrepValue : evalCrepFullExp state.locals state.memory
       baseAddress topAddress compiledValue = some value)
-    (hsharedMem : sharedMem (storeMemOp size) (context.maxVar + 1) address
+    (hsharedMem : sharedMem (storeMemOp size) (maxCrepExpVar [compiledAddress] + 1) address
       { state with
-        locals := updateCrepLocal state.locals (context.maxVar + 1) value } =
+        locals := updateCrepLocal state.locals (maxCrepExpVar [compiledAddress] + 1) value } =
       some targetState) :
     evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
@@ -1628,9 +1628,10 @@ theorem compile_full_pan_value_shMemStore_word_correct
       baseAddress topAddress (fuel + 2) state
       (compileProg context (.shMemStore size sourceAddress sourceValue)) =
       some (.normal
-        { targetState with
+          { targetState with
           locals := restoreCrepLocal targetState.locals
-            (context.maxVar + 1) (state.locals (context.maxVar + 1)) }) := by
+            (maxCrepExpVar [compiledAddress] + 1)
+            (state.locals (maxCrepExpVar [compiledAddress] + 1)) }) := by
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress, hvalue,
       updatePanValueMemory]
@@ -1666,13 +1667,14 @@ theorem compile_full_pan_value_shMemStore_word_state_correct
     (hcompiledAddress : firstCompiledExpAnyShape context sourceAddress = some compiledAddress)
     (hcompiledValue : firstCompiledExpAnyShape context sourceValue = some compiledValue)
     (hcrepAddress : evalCrepFullExpState
-      { state with locals := updateCrepLocal state.locals (context.maxVar + 1) value }
+      { state with
+          locals := updateCrepLocal state.locals (maxCrepExpVar [compiledAddress] + 1) value }
       baseAddress topAddress compiledAddress = some address)
     (hcrepValue : evalCrepFullExpState state baseAddress topAddress compiledValue =
       some value)
-    (hsharedMem : sharedMem (storeMemOp size) (context.maxVar + 1) address
+    (hsharedMem : sharedMem (storeMemOp size) (maxCrepExpVar [compiledAddress] + 1) address
       { state with
-        locals := updateCrepLocal state.locals (context.maxVar + 1) value } =
+        locals := updateCrepLocal state.locals (maxCrepExpVar [compiledAddress] + 1) value } =
       some targetState) :
     evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
@@ -1685,9 +1687,10 @@ theorem compile_full_pan_value_shMemStore_word_state_correct
       baseAddress topAddress (fuel + 2) state
       (compileProg context (.shMemStore size sourceAddress sourceValue)) =
       some (.normal
-        { targetState with
+          { targetState with
           locals := restoreCrepLocal targetState.locals
-            (context.maxVar + 1) (state.locals (context.maxVar + 1)) }) := by
+            (maxCrepExpVar [compiledAddress] + 1)
+            (state.locals (maxCrepExpVar [compiledAddress] + 1)) }) := by
   constructor
   · simp [evalPanValueProgWithPrimitiveCallsAndFfi, haddress, hvalue,
       updatePanValueMemory]

@@ -8,6 +8,7 @@ import Flapjack.RiscV.CakeRegAlloc
 import Flapjack.RiscV.WordFuseConditions
 import Flapjack.RiscV.WordDeadCode
 import Flapjack.RiscV.WordInstSelect
+import Flapjack.RiscV.WordSimp
 import Flapjack.RiscV.WordUnreach
 
 /-!
@@ -43,6 +44,42 @@ def pipelineWordFunctionsToStackChecked [NeZero width] :
           match pipelineWordFunctionsToStackChecked functions with
           | .error error => .error error
           | .ok rest => .ok ((label, parameters, stackBody) :: rest)
+
+end Flapjack.RiscV
+
+namespace Flapjack.RiscV
+
+/-! In Cake's source-shaped FFI path, `word_to_stack` passes the abstract
+    argument registers directly to `FFI`; `riscv_names` performs the final
+    hardware-register naming later.  The general port path materializes those
+    arguments into 10--13 first.  The source runtime path removes exactly that
+    materialization before the Lab register map, while retaining all other
+    moves (in particular stack-resident arguments). -/
+def stackCakeFfiAbiTail : StackProg Nat → Option (StackProg Nat)
+  | .seq (.arith .or configuration configurationSource configurationSourceRight)
+      (.seq (.arith .or configurationLength configurationLengthSource configurationLengthSourceRight)
+        (.seq (.arith .or array arraySource arraySourceRight)
+          (.seq (.arith .or arrayLength arrayLengthSource arrayLengthSourceRight)
+            (.ffi function 10 11 12 13 returnAddress)))) =>
+      if configuration = 10 && configurationLength = 11 &&
+          array = 12 && arrayLength = 13 &&
+          configurationSource = configurationSourceRight &&
+          configurationLengthSource = configurationLengthSourceRight &&
+          arraySource = arraySourceRight &&
+          arrayLengthSource = arrayLengthSourceRight then
+        some (.ffi function configurationSource configurationLengthSource
+          arraySource arrayLengthSource returnAddress)
+      else none
+  | _ => none
+
+def stackNormalizeCakeFfi : StackProg Nat → StackProg Nat
+  | .seq first second =>
+      match stackCakeFfiAbiTail (.seq first second) with
+      | some normalized => normalized
+      | none => .seq (stackNormalizeCakeFfi first) (stackNormalizeCakeFfi second)
+  | program => program
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
 
 end Flapjack.RiscV
 
@@ -95,8 +132,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
           (RiscV.wordFuseConditions
             (RiscV.wordInstSelectProgramFrom
-              (RiscV.wordFlattenProgramFrom
-                (LoopToWord.loopToWordCompFunc label parameters body)))))
+              (RiscV.wordConstFp
+                (RiscV.wordFlattenProgramFrom
+                  (LoopToWord.loopToWordCompFunc label parameters body))))))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -107,12 +145,14 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
           let frameSlots := max allocation.nextSpill
             (max (wordParameters.length - 12)
               (RiscV.wordProgMaxCallArguments renamedProgram - 12))
+          -- x23 stays clear of every Cake colour (x29 is colour 12 and can
+          -- hold a call argument), so the parallel-move source check never trips.
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               stackBase := 0
-              addressScratch := 29
-              abiBase := 10
+              addressScratch := 23
+              abiBase := 1
               abiStride := 1
               abiFrameSlots := frameSlots
               sectionId := label
@@ -165,8 +205,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
           (RiscV.wordFuseConditions
             (RiscV.wordInstSelectProgramFrom
-              (RiscV.wordFlattenProgramFrom
-                (LoopToWord.loopToWordCompFunc label parameters body)))))
+              (RiscV.wordConstFp
+                (RiscV.wordFlattenProgramFrom
+                  (LoopToWord.loopToWordCompFunc label parameters body))))))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -186,12 +227,14 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
           let frameSlots := max cakeFrameSlots
             (max (wordParameters.length - 12)
               (RiscV.wordProgMaxCallArguments renamedProgram - 12))
+          -- x23 stays clear of every Cake colour (x29 is colour 12 and can
+          -- hold a call argument), so the parallel-move source check never trips.
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               stackBase := 0
-              addressScratch := 29
-              abiBase := 10
+              addressScratch := 23
+              abiBase := 1
               abiStride := 1
               abiFrameSlots := frameSlots
               sectionId := label
@@ -254,11 +297,13 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
         (RiscV.wordFuseConditions
           (RiscV.wordInstSelectProgramFrom
-            (RiscV.wordFlattenProgramFrom body))))
+            (RiscV.wordConstFp
+              (RiscV.wordFlattenProgramFrom body)))))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
+          let renamedProgram := RiscV.wordProgReverseFfiConstSetup renamedProgram
           let cakeFrameSlots :=
             if RiscV.wordProgHasBitmapSites renamedProgram then
               RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
@@ -267,13 +312,18 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
           let frameSlots := max cakeFrameSlots
             (max (wordParameters.length - 12)
               (RiscV.wordProgMaxCallArguments renamedProgram - 12))
+          -- x23 stays clear of every Cake colour (x29 is colour 12 and can
+          -- hold a call argument), so the parallel-move source check never trips.
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               stackBase := 0
-              addressScratch := 29
-              abiBase := 10
+              addressScratch := 23
+              specialScratch := RiscV.cakeSpecialScratch
+              carryScratch := RiscV.cakeCarryScratch
+              abiBase := 1
               abiStride := 1
+              callAbiBase := 0
               abiFrameSlots := frameSlots
               sectionId := label
               handlerLabel := label }
@@ -296,6 +346,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
                 (RiscV.wordProgToNat renamedProgram)).getD []
               .error (.wordToStackFailure label path)
           | some (stackBody, nextBitmaps) =>
+              let stackBody := RiscV.stackNormalizeCakeFfi stackBody
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedAux
                   nextBitmaps (nextBitmaps.data :: chunks) functions with
               | .error error => .error error
@@ -449,7 +500,7 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
               let discoveredNames :=
                 (pipeline.word.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames entry.2.2)).eraseDups
+                    RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               let identityResult :
@@ -471,7 +522,7 @@ def compileFlapjackRiscVSourceBytesChecked [NeZero width]
                       .error (sourceRiscVCompileErrorOfLowering 1 pipeline.crepe error)
                   | .ok functions =>
                       let initialLabel := fullSsaInitialLabLabel functions
-                      match RiscV.compileStackProgramNatListWithRaiseStubToRiscVChecked
+                      match RiscV.compileStackProgramNatListWithRaiseStubToRiscVCakeChecked
                           (width := width)
                           { services := services } removeConfig 0 initialLabel
                           (functions.map (fun (label, _, body) => (label, body))) with
@@ -507,7 +558,7 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
               let discoveredNames :=
                 (pipeline.word.flatMap
                   (fun entry : Nat × List Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames entry.2.2)).eraseDups
+                    RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked pipeline.loop with
@@ -515,7 +566,7 @@ def compileFlapjackRiscVSourceImageChecked [NeZero width]
                   .error (sourceRiscVImageErrorOfLowering 1 pipeline.crepe error)
               | .ok functions =>
                   let initialLabel := fullSsaInitialLabLabel functions
-                  match RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscVChecked
+                  match RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscVCakeChecked
                       (width := width) { services := services } removeConfig 0 initialLabel
                       (functions.map (fun (label, _, body) => (label, body))) with
                   | .error error =>
@@ -547,15 +598,16 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
               start (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
           | some pipeline =>
-              let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
-              let sourceWords := pipelineWordCompileProg loop
+              let loop := pipelineLoopFunctionsSource architecture stackFunctionFirstLabel
+                pipeline.crepe
+              let sourceWords := panToWordCompileProg loop
               let discoveryWords :=
                 sourceWords.map
                   (fun (label, arity, body) => (label, arity, wordProgDCE body))
               let discoveredNames :=
                 (discoveryWords.flatMap
                   (fun entry : Nat × Nat × WordProg (RiscV.Word width) =>
-                    RiscV.wordProgFfiNames entry.2.2)).eraseDups
+                    RiscV.wordProgFfiNames (RiscV.wordRemoveUnreachable (wordProgDCE entry.2.2)))).eraseDups
               let discoveredServices := discoveredNames.zip (List.range discoveredNames.length)
               let services := services ++ discoveredServices
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked
@@ -565,7 +617,7 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
                     pipeline.crepe error)
               | .ok (functions, bitmaps) =>
                   let initialLabel := fullSsaInitialLabLabel functions
-                  match RiscV.compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVChecked
+                  match RiscV.compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVCakeChecked
                       { services := services } removeConfig
                       { gcStubLocation := stackGcStubLocation, returnLabel := 0,
                         firstFreshLabel := stackFunctionFirstLabel }

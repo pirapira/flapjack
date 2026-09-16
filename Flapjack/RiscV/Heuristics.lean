@@ -69,7 +69,7 @@ def wordHeuristicAddRhsRegs : List Nat → NatInfoMap WordHeuristicCounts →
   | name :: names, counts =>
       wordHeuristicAddRhsRegs names (wordHeuristicAddRhsReg name counts)
 
-def wordHeuristicInst : WordInst → NatInfoMap WordHeuristicCounts →
+def wordHeuristicInst {α : Type} : WordInst α → NatInfoMap WordHeuristicCounts →
     NatInfoMap WordHeuristicCounts
   | .arith operation, counts =>
       match operation with
@@ -100,6 +100,22 @@ def wordHeuristicInst : WordInst → NatInfoMap WordHeuristicCounts →
           wordHeuristicAddLhsReg destination
             (wordHeuristicAddRhsReg divisor
               (wordHeuristicAddRhsReg dividend counts))
+      | .binOp _ destination sourceLeft sourceRight =>
+          let addRight :=
+            match sourceRight with
+            | .reg register => wordHeuristicAddRhsReg register
+            | .imm _ => id
+          addRight (wordHeuristicAddLhsReg destination
+            (wordHeuristicAddRhsReg sourceLeft counts))
+      | .shift _ destination sourceLeft sourceRight =>
+          let addRight :=
+            match sourceRight with
+            | .reg register => wordHeuristicAddRhsReg register
+            | .imm _ => id
+          addRight (wordHeuristicAddLhsReg destination
+            (wordHeuristicAddRhsReg sourceLeft counts))
+  | .const destination _, counts =>
+      wordHeuristicAddLhsConst destination counts
   | .mem operator destination _, counts =>
       match operator with
       | .load | .load8 | .load16 | .load32 =>
@@ -201,10 +217,7 @@ decreasing_by all_goals decreasing_trivial
 def wordProgPrioritizedMoves : WordProg α → List WordMove
   | .move priority moves => moves.map (fun move =>
       { priority := priority, left := move.1, right := move.2 })
-  | .assign destination (.var source) =>
-      [{ priority := 0, left := destination, right := source }]
-  | .locValue destination source =>
-      [{ priority := 0, left := destination, right := source }]
+  | .assign _ _ | .locValue _ _ => []
   | .seq first second =>
       wordProgPrioritizedMoves first ++ wordProgPrioritizedMoves second
   | .ite _ _ _ thenBranch elseBranch =>

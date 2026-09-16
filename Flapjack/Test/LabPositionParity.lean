@@ -40,7 +40,21 @@ example :
     labCompileAsmProgramWithFfiBaseAndHalt (width := 64)
       { services := [("first", 7), ("second", 8)] } [] 96 64 999
       (.callFfi "first") =
-      some [.jal 0 (0 - BitVec.ofNat 64 80)] := by
+      /- Cake addresses the exported FFI block from the linked absolute
+         position; `ffiBase` is retained only for the legacy API shape. -/
+      some [.jal 0 (0 - BitVec.ofNat 64 144)] := by
+  decide
+
+example :
+    labLinkedFfiStubOffset (width := 64)
+      { services := [("first", 7), ("second", 8)] } "first" 96 =
+      some (0 - BitVec.ofNat 64 80) := by
+  decide
+
+example :
+    labLinkedFfiStubOffset (width := 64)
+      { services := [("first", 7), ("second", 8)] } "second" 96 =
+      some (0 - BitVec.ofNat 64 96) := by
   decide
 
 end Flapjack.RiscV

@@ -61,6 +61,23 @@ def handlerlessCallCarriesRaiseHandler : Bool :=
   | .seq _ (.call _ (some 3) _ (some (5, .raise 5, .skip, []))) => true
   | _ => false
 
+/-! Cake's `rt_vars` maps call return source variables through `ctxt.vars`,
+with the documented impossible-case fallback `ctxt.vmax + 1`.  The source
+return slot `9` is absent from this probe context, so the HOL equation
+requires the fallback destination `6`, not the source slot itself. -/
+def callReturnDestinationMappingMatches : Bool :=
+  match leanCompileCallNoHandler with
+  | .seq _ (.call (some ([6], [])) (some 3) _ _) => true
+  | _ => false
+
+def leanCompileCallMappedReturn : LoopProg Nat :=
+  compileCrepToLoop callContext [] (.call (some ([1], none)) "f" [.const 3])
+
+def callReturnSourceVariableMaps : Bool :=
+  match leanCompileCallMappedReturn with
+  | .seq _ (.call (some ([5], [])) (some 3) _ _) => true
+  | _ => false
+
 /-- A call that names an exception handler does emit an `rt2`. -/
 def handledCallCarriesRaiseHandler : Bool :=
   match leanCompileCallWithHandler with
@@ -71,7 +88,64 @@ def handledCallCarriesRaiseHandler : Bool :=
 #eval leanCompileCallWithHandler
 
 #guard handlerlessCallCarriesRaiseHandler
+#guard callReturnDestinationMappingMatches
+#guard callReturnSourceVariableMaps
 #guard handledCallCarriesRaiseHandler
+
+/-! Cake's `crep_to_loop$compile` resolves all four ExtCall operands through
+`ctxt.vars` (`crep_to_loopScript.sml:198-213`).  Keep both sides of that
+oracle explicit: a complete context emits the mapped FFI payload, while a
+missing lookup emits `Skip` rather than leaking an unresolved source slot. -/
+def ffiContext : LoopContext Nat :=
+  { vars := [(10, 41), (11, 42), (12, 43), (13, 44)],
+    functions := [], maxVar := 20, target := .rv64i }
+
+def ffiContextMapped : LoopProg Nat :=
+  compileCrepToLoop ffiContext [7]
+    (.extCall "halt" 10 11 12 13)
+
+def ffiContextMappingMatches : Bool :=
+  match ffiContextMapped with
+  | .ffi function configuration configurationLength array arrayLength live =>
+      function == "halt" && configuration == 41 &&
+        configurationLength == 42 && array == 43 && arrayLength == 44 &&
+        live == [7]
+  | _ => false
+
+def ffiContextMissing : LoopContext Nat :=
+  { ffiContext with vars := [(10, 41), (11, 42), (12, 43)] }
+
+def ffiMissingLookupSkips : Bool :=
+  match compileCrepToLoop ffiContextMissing [7]
+      (.extCall "halt" 10 11 12 13) with
+  | .skip => true
+  | _ => false
+
+#guard ffiContextMappingMatches
+#guard ffiMissingLookupSkips
+
+/-! Cake resolves a shared-memory destination through `find_var` too
+(`crep_to_loopScript.sml:214`); retaining the raw source slot changes the
+post-loop store in the hello oracle. -/
+def shMemContext : LoopContext Nat :=
+  { vars := [(3, 8)], functions := [], maxVar := 0, target := .rv64i }
+
+def leanCompileShMemMapped : LoopProg Nat :=
+  compileCrepToLoop shMemContext [] (.shMem .store 3 (.var 1))
+
+def shMemDestinationMappingMatches : Bool :=
+  match leanCompileShMemMapped with
+  | .seq .skip (.shMem .store 8 (.var 1)) => true
+  | _ => false
+
+#guard shMemDestinationMappingMatches
+
+def assignDestinationMappingMatches : Bool :=
+  match compileCrepToLoop shMemContext [] (.assign 3 (.var 1)) with
+  | .seq .skip (.assign 8 (.var 1)) => true
+  | _ => false
+
+#guard assignDestinationMappingMatches
 
 /-- Context for the comparison-lowering characterization. Variable `5` is a
     local that is live across the comparison (for example a value assigned
@@ -113,10 +187,18 @@ def comparisonWithoutLiveDropsIt : Bool :=
 
 def runChecks : IO Bool := do
   let results := [handlerlessCallCarriesRaiseHandler, handledCallCarriesRaiseHandler,
-    comparisonKeepsIncomingLive, comparisonWithoutLiveDropsIt]
+    callReturnDestinationMappingMatches,
+    callReturnSourceVariableMaps,
+    shMemDestinationMappingMatches, assignDestinationMappingMatches,
+    comparisonKeepsIncomingLive,
+    comparisonWithoutLiveDropsIt]
   let names := [
     "crep_to_loop default call handler",
     "crep_to_loop explicit call handler",
+    "crep_to_loop call return destination mapping",
+    "crep_to_loop call return source variable mapping",
+    "crep_to_loop shared-memory destination mapping",
+    "crep_to_loop assignment destination mapping",
     "crep_to_loop comparison keeps the incoming live set",
     "crep_to_loop comparison without live does not invent one"]
   let mut all := true

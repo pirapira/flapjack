@@ -24,7 +24,7 @@ inductive LabAsm (α : Type u) where
   | call (target : LabRef)
   | locValue (register : Nat) (target : LabRef)
   | linkValue (target : LabRef)
-  | return
+  | return (register : Nat)
   | callFfi (function : FunName)
   | heapAlloc (words : Nat)
   | install
@@ -37,12 +37,15 @@ inductive LabJump where
   deriving DecidableEq, Repr
 
 inductive LabPlain (α : Type u) where
-  | word (instruction : WordInst)
+  | word (instruction : WordInst α)
+  | stackMem (operator : WordMemOp) (register base offset : Nat)
+  | stackMemSub (operator : WordMemOp) (register base offset : Nat)
   | const (destination value : Nat)
   | arith (operator : BinOp) (destination left right : Nat)
   /- The stack remover represents Cake's immediate stack-pointer update as a
      constant followed by a register arithmetic operation. -/
   | arithImm (operator : BinOp) (destination left immediate : Nat)
+  | shiftImm (operator : Shift) (destination left immediate : Nat)
   | shift (operator : Shift) (destination left right : Nat)
   | tick
   | jumpReg (register : Nat)
@@ -148,8 +151,8 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
   | .tick => ⟨[.asm .tick [] 0], false, counter⟩
   | .raise register =>
       ⟨[.asm (.jumpReg register) [] 0], true, counter⟩
-  | .return _ =>
-      ⟨[.labAsm .return [] 0], true, counter⟩
+  | .return register =>
+      ⟨[.labAsm (.return register) [] 0], true, counter⟩
   | .break label =>
       ⟨[labJump sectionId (labFindLabel label breaks)], true, counter⟩
   | .continue label =>
@@ -211,55 +214,28 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
             handlerResult.nextLabel + 1⟩
   | .call _ _ _ =>
       ⟨[], false, counter⟩
-  | .seq (.const scratch value)
-      (.arith operator destination left right) =>
-      let canFuse :=
-        scratch != destination && right == scratch && destination == left &&
-          match operator with
-          | .add => value < 2 ^ 11
-          | .sub => value ≤ 2 ^ 11
-          | .and | .or | .xor => false
-      if canFuse then
-        if destination = left && value = 0 then
-          /- Cake's final Lab filter drops an arithmetic identity.  Keeping
-             this out of the line stream is important because otherwise the
-             encoder emits `addi rd, rd, 0` and label positions drift. -/
-          ⟨[], false, counter⟩
-        else
-          ⟨[.asm (.arithImm operator destination left value) [] 0], false, counter⟩
-      else
-        let firstResult :=
-          labFlatten false sectionId counter continues breaks (.const scratch value)
-        let secondResult :=
-          labFlatten false sectionId firstResult.nextLabel continues breaks
-            (.arith operator destination left right)
-        let separator :=
-          if tail then [labLabel sectionId 1] else []
-        ⟨firstResult.lines ++ separator ++ secondResult.lines,
-          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
   | .seq (.seq (.const scratch value) (.arith operator addressRegister base right))
       (.inst (.mem memoryOperator destination address)) =>
-      /- Recover CakeML's `Addr base offset` memory operand: the stack remover
-         materializes `<const> ; <base ± value>` and then loads/stores through
-         the scratch register, which CakeML lower to a single offset access.
-         Fuse those three statements back into one Lab operation so the
-         encoder can emit the architectural base+immediate form. -/
+      /- Recover a static address displacement before the more general
+         const/arithmetic cases consume the prefix.  Negative Word64
+         displacements are represented by their two's-complement Nat value. -/
       let offsetOperator :=
         match operator with
-        | .add => true
-        | .sub => true
+        | .add | .sub => true
         | _ => false
       let offsetFits :=
         match operator with
-        | .add => decide (value < 2 ^ 11)
-        | .sub => decide (value ≤ 2 ^ 11)
+        | .add =>
+            value < 2 ^ 11 ||
+              (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64)
+        | .sub => value ≤ 2 ^ 11
         | _ => false
       let memorySupported :=
         match memoryOperator with
         | .load | .store => true
         | _ => false
       let canFuse :=
-        scratch == addressRegister && right == scratch && address == addressRegister &&
+        right == scratch && address == addressRegister &&
           offsetOperator && offsetFits && memorySupported
       if canFuse then
         ⟨[.asm (.memOffset memoryOperator operator destination base value) [] 0],
@@ -271,6 +247,113 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         let secondResult :=
           labFlatten false sectionId firstResult.nextLabel continues breaks
             (.inst (.mem memoryOperator destination address))
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
+  | .seq (.seq (.const scratch value) (.arith operator addressRegister base right))
+      (.shMem memoryOperator source address) =>
+      /- `ShareInst` uses the same RISC-V load/store encoding as a regular
+         memory instruction.  Preserve Cake's static `Addr base offset` form
+         here too; otherwise the shared-store address is needlessly
+         materialised in a temporary before the byte/word store. -/
+      let offsetOperator :=
+        match operator with
+        | .add | .sub => true
+        | _ => false
+      let offsetFits :=
+        match operator with
+        | .add =>
+            value < 2 ^ 11 ||
+              (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64)
+        | .sub => value ≤ 2 ^ 11
+        | _ => false
+      let canFuse :=
+        right == scratch && address == addressRegister && offsetOperator && offsetFits &&
+          memoryOperator == .store
+      if canFuse then
+        ⟨[.asm (.memOffset memoryOperator operator source base value) [] 0],
+          false, counter⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks
+            (.seq (.const scratch value) (.arith operator addressRegister base right))
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks
+            (.shMem memoryOperator source address)
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
+  | .seq (.const scratch value)
+      (.seq (.arith operator destination left right) rest) =>
+      let canFuseAliasedAdd :=
+        scratch = destination && left = destination && operator = .add
+      if canFuseAliasedAdd then
+        let restResult :=
+          labFlatten false sectionId counter continues breaks rest
+        let arithmetic :=
+          if value = 0 then
+            []
+          else
+            [.asm (.arithImm .add destination right value) [] 0]
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨arithmetic ++ separator ++ restResult.lines,
+          restResult.terminal, restResult.nextLabel⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks
+            (.seq (.const scratch value) (.arith operator destination left right))
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks rest
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
+  | .seq (.const scratch value)
+      (.arith operator destination left right) =>
+      let canFuse :=
+        scratch != destination && right == scratch &&
+          match operator with
+          | .add =>
+              value < 2 ^ 11 ||
+                (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64)
+          | .sub => value ≤ 2 ^ 11
+          | .and | .or | .xor => false
+      let canFuseAliasedAdd :=
+        scratch = destination && left = destination && operator = .add
+      if canFuse || canFuseAliasedAdd then
+        if destination = left && value = 0 then
+          /- Cake's final Lab filter drops an arithmetic identity.  Keeping
+             this out of the line stream is important because otherwise the
+             encoder emits `addi rd, rd, 0` and label positions drift. -/
+          ⟨[], false, counter⟩
+        else
+          if canFuseAliasedAdd then
+            ⟨[.asm (.arithImm .add destination right value) [] 0], false, counter⟩
+          else
+            ⟨[.asm (.arithImm operator destination left value) [] 0], false, counter⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks (.const scratch value)
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks
+            (.arith operator destination left right)
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
+  | .seq (.const scratch value)
+      (.shift operator destination left right) =>
+      if scratch != destination && right = scratch && destination = left then
+        ⟨[.asm (.shiftImm operator destination left value) [] 0], false, counter⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks (.const scratch value)
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks
+            (.shift operator destination left right)
         let separator :=
           if tail then [labLabel sectionId 1] else []
         ⟨firstResult.lines ++ separator ++ secondResult.lines,
@@ -330,9 +413,33 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals decreasing_trivial
 
+ /-- `stack_alloc$next_lab` (`stack_allocScript.sml:649-662`): one plus the
+    largest label value referenced by the program, floored at the caller's
+    accumulator.  `stack_to_lab` seeds `flatten`'s fresh-label counter with
+    `next_lab p 2` so labels introduced while flattening control flow can
+    never collide with labels that already occur in the program. -/
+def labNextLab : StackProg α → Nat → Nat
+  | .seq first second, aux => labNextLab first (labNextLab second aux)
+  | .ite _ _ _ thenBranch elseBranch, aux =>
+      labNextLab thenBranch (labNextLab elseBranch aux)
+  | .loop body, aux => labNextLab body aux
+  | .call none _ none, aux => aux
+  | .call none _ (some (_, _, handlerLabel)), aux => max aux (handlerLabel + 2)
+  | .call (some (program, _, _, entryLabel)) _ none, aux =>
+      labNextLab program (max aux (entryLabel + 2))
+  | .call (some (program, _, _, entryLabel)) _
+      (some (handler, _, handlerLabel)), aux =>
+      labNextLab program
+        (labNextLab handler (max (max entryLabel handlerLabel + 2) aux))
+  | _, aux => aux
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 def labProgramToSection (sectionId initialLabel : Nat) (program : StackProg α) :
-    LabSection α :=
-  let result := labFlatten true sectionId initialLabel [] [] program
+      LabSection α :=
+  let result := labFlatten true sectionId (max initialLabel (labNextLab program 2))
+    [] [] program
   let finalLabel := if labIsSequence program then result.nextLabel else 1
   ⟨sectionId, result.lines ++ [labLabel sectionId finalLabel]⟩
 

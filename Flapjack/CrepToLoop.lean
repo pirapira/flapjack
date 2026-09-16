@@ -28,7 +28,7 @@ structure LoopContext (α : Type u) where
 def findLoopVar (context : LoopContext α) (name : Nat) : Nat :=
   match lookupNatInfo name context.vars with
   | some value => value
-  | none => 0
+  | none => name
 
 /-! Source-named port of `crep_to_loop$find_var` (`find_var_def`,
     `crep_to_loopScript.sml:20`). -/
@@ -154,7 +154,8 @@ def loopCompileExp [OfNat α 0] [OfNat α 1]
     (context : LoopContext α) (tmp : Nat) (live : List Nat) :
     CrepExp α → LoopCompileExpResult α
   | .const value => { code := [], expression := .const value, nextTemp := tmp, live := live }
-  | .var name => { code := [], expression := .var name, nextTemp := tmp, live := live }
+  | .var name =>
+      { code := [], expression := .var (findLoopVar context name), nextTemp := tmp, live := live }
   | .load address =>
       let result := loopCompileExp context tmp live address
       { result with expression := .load result.expression }
@@ -282,11 +283,18 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
         vars := (name, result.nextTemp) :: context.vars
         maxVar := result.nextTemp }
       .seq (loopNestedSeq result.code)
-        (.seq (.assign name result.expression)
-          (loopCompileProg nextContext (result.nextTemp :: result.live) body))
+        /- Cake's `Dec` assigns the freshly allocated temporary `tmp` and
+           extends the context with `v |-> tmp`; using the source binder here
+           leaves the Word stage with a different variable identity. -/
+        (.seq (.assign result.nextTemp result.expression)
+          (loopCompileProg nextContext
+            (insertNatSorted result.nextTemp result.live) body))
   | .assign name value =>
       let result := loopCompileExp context (context.maxVar + 1) live value
-      .seq (loopNestedSeq result.code) (.assign name result.expression)
+      match lookupNatInfo name context.vars with
+      | some mappedName =>
+          .seq (loopNestedSeq result.code) (.assign mappedName result.expression)
+      | none => .skip
   | .primitive names operator arguments => .primitive names operator arguments
   | .store address value =>
       let addressResult := loopCompileExp context (context.maxVar + 1) live address
@@ -319,21 +327,25 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
   | .seq first second => .seq (loopCompileProg context live first)
       (loopCompileProg context live second)
   | .ite condition thenBranch elseBranch =>
+      -- `crep_to_loopScript.sml:176-181`: both branches and the cutset use
+      -- the incoming live set; the condition's own live result is dropped.
       let result := loopCompileExp context (context.maxVar + 1) live condition
       .seq (loopNestedSeq result.code)
         (.seq (.assign result.nextTemp result.expression)
             (.ite .notEqual result.nextTemp (.imm (by exact 0))
-            (loopCompileProg context result.live thenBranch)
-            (loopCompileProg context result.live elseBranch) result.live))
+            (loopCompileProg context live thenBranch)
+            (loopCompileProg context live elseBranch) live))
   | .while condition body =>
+      -- `crep_to_loopScript.sml:182-188`: the loop entry and exit live sets,
+      -- the body, and the inner cutset all use the incoming live set.
       let result := loopCompileExp context (context.maxVar + 1) live condition
-      .loop result.live
+      .loop live
         (loopNestedSeq (result.code ++
           [.assign result.nextTemp result.expression,
            .ite .notEqual result.nextTemp (.imm (by exact 0))
-              (.seq (loopCompileProg context result.live body) (.continue 0))
-              (.break 0) result.live]))
-        result.live
+              (.seq (loopCompileProg context live body) (.continue 0))
+              (.break 0) live]))
+        live
   | .break label => .break label
   | .continue label => .continue label
   | .call returnInfo function arguments =>
@@ -344,21 +356,31 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
         | none => some 0
       let call := match returnInfo with
         | none => .call none target argumentNames none
+        -- `crep_to_loopScript.sml:189-207`: the call and handler cutsets and
+        -- the handler compilation all use the incoming live set.
         | some (returns, none) =>
             let exceptionName := context.maxVar + 1
-            .call (some (returns, result.live)) target argumentNames
-              (some (exceptionName, .raise exceptionName, .skip, result.live))
+            .call (some (crepRtVars context.vars returns (context.maxVar + 1), live))
+              target argumentNames
+              (some (exceptionName, .raise exceptionName, .skip, live))
         | some (returns, some (exception, handler)) =>
             let exceptionName := context.maxVar + 1
-            let handlerCode := loopCompileProg context result.live handler
-            .call (some (returns, result.live)) target argumentNames
+            let handlerCode := loopCompileProg context live handler
+            .call (some (crepRtVars context.vars returns (context.maxVar + 1), live))
+              target argumentNames
               (some (exceptionName,
                 .ite .notEqual exceptionName (.imm exception)
-                  (.raise exceptionName) (.seq .tick handlerCode) result.live,
-                .skip, result.live))
+                  (.raise exceptionName) (.seq .tick handlerCode) live,
+                .skip, live))
       .seq (loopNestedSeq (result.code ++ loopAssignTemps argumentNames result.expressions)) call
   | .extCall function configuration configurationLength array arrayLength =>
-      .ffi function configuration configurationLength array arrayLength live
+      match lookupNatInfo configuration context.vars,
+          lookupNatInfo configurationLength context.vars,
+          lookupNatInfo array context.vars,
+          lookupNatInfo arrayLength context.vars with
+      | some configuration, some configurationLength, some array, some arrayLength =>
+          .ffi function configuration configurationLength array arrayLength live
+      | _, _, _, _ => .skip
   | .raise exception =>
       let exceptionName := context.maxVar + 1
       .seq (.assign exceptionName (.const exception)) (.raise exceptionName)
@@ -369,7 +391,8 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
         (result.code ++ loopAssignTemps names result.expressions ++ [.return names])
   | .shMem operator name address =>
       let result := loopCompileExp context (context.maxVar + 1) live address
-      .seq (loopNestedSeq result.code) (.shMem operator name result.expression)
+      .seq (loopNestedSeq result.code)
+        (.shMem operator (findLoopVar context name) result.expression)
   | .tick => .tick
 termination_by program => sizeOf program
 
@@ -388,11 +411,18 @@ theorem loopCompileProg_skip [OfNat α 0] [OfNat α 1]
 
 theorem loopCompileProg_extCall [OfNat α 0] [OfNat α 1]
     (context : LoopContext α) (live : List Nat) (function : FunName)
-    (configuration configurationLength array arrayLength : Nat) :
+    (configuration configurationLength array arrayLength : Nat)
+    (configuration' configurationLength' array' arrayLength' : Nat)
+    (hconfiguration : lookupNatInfo configuration context.vars = some configuration')
+    (hconfigurationLength :
+      lookupNatInfo configurationLength context.vars = some configurationLength')
+    (harray : lookupNatInfo array context.vars = some array')
+    (harrayLength :
+      lookupNatInfo arrayLength context.vars = some arrayLength') :
     loopCompileProg context live
         (.extCall function configuration configurationLength array arrayLength) =
-      .ffi function configuration configurationLength array arrayLength live := by
-  simp [loopCompileProg]
+      .ffi function configuration' configurationLength' array' arrayLength' live := by
+  simp [loopCompileProg, hconfiguration, hconfigurationLength, harray, harrayLength]
 
 theorem loopCompileProg_seq [OfNat α 0] [OfNat α 1]
     (context : LoopContext α) (live : List Nat) (first second : CrepProg α) :

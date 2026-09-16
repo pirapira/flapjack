@@ -280,6 +280,7 @@ example :
         (hdividend := by decide)
         (hdivisor := by decide)
         (hdivisor_nonzero := by decide)
+        (hsigned_matches_unsigned := by decide)
         (hdestination := by decide)
         (hdestination_nonzero := by decide)
         (hnoalias := primitiveMapped_longMul_noalias)

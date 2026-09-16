@@ -1,0 +1,58 @@
+pull_two_vars=Op Add [Var 2; Var 4]
+pull_t_plus_1=Op Add [Const 1w; Var 7]
+flat_two_vars=Op Add [Var 4; Var 2]
+flat_pulled_two_vars=Op Add [Var 4; Var 2]
+norm_two_vars=Op Add [Var 4; Var 2]
+norm_t_plus_1=Op Add [Var 7; Const 1w]
+norm_1_plus_t=Op Add [Var 7; Const 1w]
+norm_x_minus_8=Op Add [Var 7; Const 0xFFFFFFFFFFFFFFF8w]
+norm_nested_add=Op Add [Op Add [Var 2; Var 1]; Const 3w]
+norm_nested_add_consts=Const 0w
+inst_assign_two_vars=Seq (Move 0 [(6,4)])
+  (Seq (Move 0 [(7,2)]) (Inst (Arith (Binop Add 5 6 (Reg 7)))))
+inst_assign_t_plus_1=if ARB (INL Add) 1w then
+  Seq (Move 0 [(6,2)]) (Inst (Arith (Binop Add 5 6 (Imm 1w))))
+else if ARB (INL Sub) 0xFFFFFFFFFFFFFFFFw then
+  Seq (Move 0 [(6,2)])
+    (Inst (Arith (Binop Sub 5 6 (Imm 0xFFFFFFFFFFFFFFFFw))))
+else
+  Seq (Move 0 [(6,2)])
+    (Seq (Inst (Const 7 1w)) (Inst (Arith (Binop Add 5 6 (Reg 7)))))
+convert_sub_const=Op Sub [Op Sub [Var 7; Const 8w]]
+optimize_consts_two_consts=Op Add [Const 3w; Var 3]
+optimize_consts_zero_add=Var 3
+reduce_const_add_zero_tail=Var 3
+pullops_two_vars=[Var 4; Var 2]
+pullops_three_vars=[Var 3; Var 2; Var 1]
+pull_three_vars=Op Add [Var 1; Var 2; Var 3]
+pull_four_vars=Op Add [Var 1; Var 2; Var 3; Var 4]
+pull_const_middle=Op Add [Const 5w; Var 1; Var 3]
+norm_const_middle=Op Add [Op Add [Var 3; Var 1]; Const 5w]
+inst_assign_const_middle=if ARB (INL Add) 5w then
+  Seq
+    (Seq (Move 0 [(6,3)])
+       (Seq (Move 0 [(7,1)]) (Inst (Arith (Binop Add 6 6 (Reg 7))))))
+    (Inst (Arith (Binop Add 5 6 (Imm 5w))))
+else if ARB (INL Sub) 0xFFFFFFFFFFFFFFFBw then
+  Seq
+    (Seq (Move 0 [(6,3)])
+       (Seq (Move 0 [(7,1)]) (Inst (Arith (Binop Add 6 6 (Reg 7))))))
+    (Inst (Arith (Binop Sub 5 6 (Imm 0xFFFFFFFFFFFFFFFBw))))
+else
+  Seq
+    (Seq (Move 0 [(6,3)])
+       (Seq (Move 0 [(7,1)]) (Inst (Arith (Binop Add 6 6 (Reg 7))))))
+    (Seq (Inst (Const 7 5w)) (Inst (Arith (Binop Add 5 6 (Reg 7)))))
+opt_two_vars_rev=Op Add [Var 2; Var 4]
+opt_three_vars_rev=Op Add [Var 1; Var 2; Var 3]
+pull_two_vars_again=Op Add [Var 2; Var 4]
+optimize_consts_or_zero=Var 3
+optimize_consts_xor_zero=Var 3
+optimize_consts_and_zero=Const 0w
+optimize_consts_or_two=Op Or [Const 3w; Var 3]
+optimize_consts_and_two=Op And [Const 1w; Var 3]
+pull_or_zero=Var 3
+norm_or_zero=Var 3
+norm_and_zero=Const 0w
+op_consts_or=Const 0w
+op_consts_and=Const 0xFFFFFFFFFFFFFFFFw

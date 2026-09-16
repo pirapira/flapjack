@@ -21,7 +21,8 @@ theorem panValueCrepProgramCorrect_extCall_wordExp
     (harray : wordExp array)
     (harrayLength : wordExp arrayLength)
     (hffi : ∀ (sourceHandler : PanValueFfiHandler α)
-      (ffi : CrepFfiHandler α), panValueCrepExtCallCorrect sourceHandler ffi)
+      (ffi : CrepFfiHandler α) (temporaryBase : Nat),
+      panValueCrepExtCallCorrectAt temporaryBase sourceHandler ffi)
     (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
       context.bytesInWord = bytesInWord)
     (hlookup : ∀ (context : CompileContext α)
@@ -32,8 +33,7 @@ theorem panValueCrepProgramCorrect_extCall_wordExp
     (hfresh : ∀ (context : CompileContext α) (expression : SourceWordExp α)
       (compiled : CrepExp α),
       compileExp context expression.toExp = ([compiled], .one) →
-      ∀ temporary, context.maxVar < temporary →
-        temporary ∉ crepExpVars compiled) :
+      ∀ temporary, temporary ∉ crepExpVars compiled) :
     PanValueCrepProgramCorrect
       (.extCall function configuration configurationLength array arrayLength) := by
   have hconfigurationToExp :
@@ -69,7 +69,8 @@ theorem panValueCrepProgramStateCorrect_extCall_wordExp
     (harray : wordExp array)
     (harrayLength : wordExp arrayLength)
     (hffi : ∀ (sourceHandler : PanValueFfiHandler α)
-      (ffi : CrepFfiHandler α), panValueCrepExtCallCorrect sourceHandler ffi)
+      (ffi : CrepFfiHandler α) (temporaryBase : Nat),
+      panValueCrepExtCallCorrectAt temporaryBase sourceHandler ffi)
     (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
       context.bytesInWord = bytesInWord)
     (hlookup : ∀ (context : CompileContext α)
@@ -80,8 +81,7 @@ theorem panValueCrepProgramStateCorrect_extCall_wordExp
     (hfresh : ∀ (context : CompileContext α) (expression : SourceWordExp α)
       (compiled : CrepExp α),
       compileExp context expression.toExp = ([compiled], .one) →
-      ∀ temporary, context.maxVar < temporary →
-        temporary ∉ crepExpVars compiled) :
+      ∀ temporary, temporary ∉ crepExpVars compiled) :
     PanValueCrepProgramStateCorrect
       (.extCall function configuration configurationLength array arrayLength) := by
   have hconfigurationToExp :

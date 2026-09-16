@@ -31,7 +31,9 @@ theorem sourceToCrepeFfi_simulation_theorem :
       sourceToCrepeFfiSharedMem 0 100 30 sourceToCrepeFfiState
       (compileProg sourceToCrepeFfiContext sourceToCrepeFfiProgram) =
         some (.normal (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
-          sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar)) ∧
+          sourceToCrepeFfiState
+          (maxCrepExpVar [.var 1, .const (BitVec.ofNat 64 0),
+            .const (BitVec.ofNat 64 0), .const (BitVec.ofNat 64 0)]))) ∧
       evalPanFfiProg sourceToCrepeFfiSourceHandler
         sourceToCrepeFfiSourceLocals sourceToCrepeFfiProgram =
         some sourceToCrepeFfiSourceAfter := by
@@ -48,11 +50,11 @@ theorem sourceToCrepeFfi_simulation_theorem :
     (sourceHandler := sourceToCrepeFfiSourceHandler)
     (baseAddress := 0) (topAddress := 100) (fuel := 25)
     (function := "inc")
-    (configuration := .const (BitVec.ofNat 64 41))
+    (configuration := .var .local "result")
     (configurationLength := .const (BitVec.ofNat 64 0))
     (array := .const (BitVec.ofNat 64 0))
     (arrayLength := .const (BitVec.ofNat 64 0))
-    (configuration' := .const (BitVec.ofNat 64 41))
+    (configuration' := .var 1)
     (configurationLength' := .const (BitVec.ofNat 64 0))
     (array' := .const (BitVec.ofNat 64 0))
     (arrayLength' := .const (BitVec.ofNat 64 0))
@@ -61,7 +63,7 @@ theorem sourceToCrepeFfi_simulation_theorem :
     (arrayValue := BitVec.ofNat 64 0)
     (arrayLengthValue := BitVec.ofNat 64 0)
     (hconfiguration := by simp [sourceToCrepeFfiContext, firstCompiledExp,
-      compileExp])
+      compileExp, lookupInfo])
     (hconfigurationLength := by simp [sourceToCrepeFfiContext, firstCompiledExp,
       compileExp])
     (harray := by simp [sourceToCrepeFfiContext, firstCompiledExp, compileExp])
@@ -75,13 +77,13 @@ theorem sourceToCrepeFfi_simulation_theorem :
       simp [sourceToCrepeFfiState, evalCrepFullExp])
     (hsource := by
       simp [sourceToCrepeFfiSourceAfter, sourceToCrepeFfiSourceHandler,
-        evalPanExtCall, evalPanExp])
+        sourceToCrepeFfiSourceLocals, evalPanExtCall, evalPanExp])
     (hffi := by
       simp [sourceToCrepeFfiHandler, sourceToCrepeFfiState,
-        sourceToCrepeFfiContext, sourceToCrepeFfiTargetAfterTemps,
-        sourceToCrepeFfiTargetAfter])
+        sourceToCrepeFfiTargetAfterTemps,
+        sourceToCrepeFfiTargetAfter, maxCrepExpVar, crepExpVars])
   have hprogram : sourceToCrepeFfiProgram =
-      (.extCall "inc" (.const (BitVec.ofNat 64 41))
+      (.extCall "inc" (.var .local "result")
         (.const (BitVec.ofNat 64 0)) (.const (BitVec.ofNat 64 0))
         (.const (BitVec.ofNat 64 0))) := by
     simp [sourceToCrepeFfiProgram]
@@ -105,7 +107,9 @@ theorem sourceToCrepeFfi_sequence_simulation :
       (compileProg sourceToCrepeFfiContext sourceToCrepeFfiSequence) =
         some (.returned
           (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
-            sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar)
+            sourceToCrepeFfiState
+            (maxCrepExpVar [.var 1, .const (BitVec.ofNat 64 0),
+              .const (BitVec.ofNat 64 0), .const (BitVec.ofNat 64 0)]))
           [BitVec.ofNat 64 42]) ∧
       evalPanProgWithCallsAndFfi [] sourceToCrepeFfiSourceHandler 31
         sourceToCrepeFfiSourceLocals sourceToCrepeFfiSequence =
@@ -117,7 +121,9 @@ theorem sourceToCrepeFfi_sequence_simulation :
     (sourceLocals' := sourceToCrepeFfiSourceAfter)
     (state := sourceToCrepeFfiState)
     (state' := restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
-      sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar)
+      sourceToCrepeFfiState
+      (maxCrepExpVar [.var 1, .const (BitVec.ofNat 64 0),
+        .const (BitVec.ofNat 64 0), .const (BitVec.ofNat 64 0)]))
     (primitive := sourceToCrepeFfiPrimitive)
     (ffi := sourceToCrepeFfiHandler)
     (sharedMem := sourceToCrepeFfiSharedMem)
@@ -132,14 +138,16 @@ theorem sourceToCrepeFfi_sequence_simulation :
       [BitVec.ofNat 64 42])
     (crepResult := .returned
       (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
-        sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar)
+        sourceToCrepeFfiState
+        (maxCrepExpVar [.var 1, .const (BitVec.ofNat 64 0),
+          .const (BitVec.ofNat 64 0), .const (BitVec.ofNat 64 0)]))
       [BitVec.ofNat 64 42])
     (hfirstCompile := rfl) (hsecondCompile := rfl)
     (hfirstCrep := hfirst.1)
     (hfirstSource := by
       have hfirst' : evalPanExtCall sourceToCrepeFfiSourceHandler
           sourceToCrepeFfiSourceLocals "inc"
-          (.const (BitVec.ofNat 64 41)) (.const 0) (.const 0) (.const 0) =
+        (.var .local "result") (.const 0) (.const 0) (.const 0) =
           some sourceToCrepeFfiSourceAfter := by
         simpa [sourceToCrepeFfiProgram, evalPanFfiProg] using hfirst.2
       simp only [sourceToCrepeFfiProgram, evalPanProgWithCallsAndFfi]
@@ -155,10 +163,12 @@ theorem sourceToCrepeFfi_sequence_simulation :
           compileProg, compileExp, lookupInfo]
       have hlocal :
           (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
-            sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar).locals 1 =
+            sourceToCrepeFfiState
+            (maxCrepExpVar [.var 1, .const (BitVec.ofNat 64 0),
+              .const (BitVec.ofNat 64 0), .const (BitVec.ofNat 64 0)])).locals 1 =
             some (BitVec.ofNat 64 42) := by
-        rw [hmax]
-        simp [restoreCrepFfiTemps, sourceToCrepeFfiTargetAfter,
+        simp [maxCrepExpVar, crepExpVars, List.foldl, restoreCrepFfiTemps,
+          sourceToCrepeFfiTargetAfter,
           sourceToCrepeFfiTargetAfterTemps, sourceToCrepeFfiState,
           updateCrepLocal, restoreCrepLocal]
       rw [hcompiled]

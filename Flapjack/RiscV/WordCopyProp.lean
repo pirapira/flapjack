@@ -32,10 +32,24 @@ def wordCopyIsAlloc (name : Nat) : Bool := name % 4 == 1
 def wordCopyRemove (state : WordCopyState) (name : Nat) : WordCopyState :=
   if (lookupNatInfo name state.aliases).isSome then wordCopyEmpty else state
 
+/-! `set_eq` (`word_copyScript.sml:204-225`).  Cake's equivalence class is
+    represented by the *destination* of the copy: `set_eq cs x y` inserts `x`
+    (the destination) as the class of `y` (the source) and makes `x` the
+    representative, so later uses of the *source* become `x` while uses of `x`
+    stay.  The RISC-V oracle (`copy_prop_prog (Seq (Move 0 [(37,25)])
+    (Inst (Mem Store 33 (Addr 37 0)))) empty_eq`) keeps `Addr 37` and rewrites
+    a later `25` to `37`, which is what the allocator then coalesces. -/
 def wordCopySet (state : WordCopyState) (destination source : Nat) : WordCopyState :=
   if wordCopyIsAlloc destination && wordCopyIsAlloc source then
-    { aliases := wordCopyUpdate state.aliases destination
-        (wordCopyLookup state source) }
+    /- `wordCopyRemove` has already dropped the state when `destination` had a
+       class, so `destination` is its own representative here. -/
+    let sourceClass := wordCopyLookup state source
+    let others := state.aliases.filter (fun entry =>
+      entry.1 != destination && entry.1 != source)
+    { aliases := (destination, destination) ::
+        (source, destination) ::
+        others.map (fun entry =>
+          if entry.2 == sourceClass then (entry.1, destination) else entry) }
   else state
 
 def wordCopyExp (state : WordCopyState) : WordExp α → WordExp α
@@ -53,7 +67,8 @@ def wordCopyRegImm (state : WordCopyState) : WordRegImm α → WordRegImm α
   | .imm value => .imm value
   | .reg name => .reg (wordCopyLookup state name)
 
-def wordCopyInst (state : WordCopyState) : WordInst → WordInst × WordCopyState
+def wordCopyInst {α : Type} (state : WordCopyState) :
+    WordInst α → WordInst α × WordCopyState
   | .arith operation =>
       match operation with
       | .longMul left right sourceLeft sourceRight =>
@@ -75,6 +90,28 @@ def wordCopyInst (state : WordCopyState) : WordInst → WordInst × WordCopyStat
       | .div destination dividend divisor =>
           (.arith (.div destination (wordCopyLookup state dividend)
             (wordCopyLookup state divisor)), wordCopyRemove state destination)
+      | .binOp operator destination sourceLeft sourceRight =>
+          let sourceLeft := wordCopyLookup state sourceLeft
+          let sourceRight' := wordCopyRegImm state sourceRight
+          let sourceRight :=
+            match sourceRight' with
+            | .reg register =>
+                if register = destination then sourceRight else sourceRight'
+            | .imm _ => sourceRight'
+          (.arith (.binOp operator destination sourceLeft sourceRight),
+            wordCopyRemove state destination)
+      | .shift operator destination sourceLeft sourceRight =>
+          let sourceLeft := wordCopyLookup state sourceLeft
+          let sourceRight' := wordCopyRegImm state sourceRight
+          let sourceRight :=
+            match sourceRight' with
+            | .reg register =>
+                if register = destination then sourceRight else sourceRight'
+            | .imm _ => sourceRight'
+          (.arith (.shift operator destination sourceLeft sourceRight),
+            wordCopyRemove state destination)
+  | .const destination value =>
+      (.const destination value, wordCopyRemove state destination)
   | .mem operator destination address =>
       match operator with
       | .load | .load8 | .load16 | .load32 =>

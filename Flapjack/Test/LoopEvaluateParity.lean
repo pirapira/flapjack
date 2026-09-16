@@ -287,8 +287,11 @@ def tailCallNoResult : Bool :=
 
 /-! `loopSemScript.sml:278-360` uses `fromAList (ZIP (params,args))` for
     `find_code`, so repeated parameters are first-occurrence-wins.  Its
-    returning call branch restores `s.locals` (the caller locals) before
-    setting return values, rather than retaining the liveness-cut locals. -/
+    returning call branch restores `s.locals` where `s` is the state
+    rebound by `cut_res live (NONE,s)` — the liveness-cut caller locals —
+    before setting return values (`loopSemScript.sml:402-420`).  With an
+    empty cut-set the caller frame is empty apart from the return value,
+    so local `8` does not survive the call. -/
 def callResultState : LoopMachineState LoopWordLoc :=
   { (emptyState 5) with
       locals := fun name =>
@@ -306,7 +309,7 @@ def observeCallResult (step : LoopMachineStep) :
 def callResultFirstWinsAndRestoresCaller : Bool :=
   observeCallResult (evaluateLoop 12 hooks
     (.call (some ([5], [])) (some 1) [1, 2] none) callResultState) ==
-    (none, some (.word 7), some (.word 99), 4)
+    (none, some (.word 7), none, 4)
 
 #guard sequenceReturn
 #guard skip

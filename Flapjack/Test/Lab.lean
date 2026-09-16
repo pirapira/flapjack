@@ -36,9 +36,9 @@ example :
       ⟨2, [
         .asm .tick [] 0,
         .label 2 1 0,
-        .labAsm .return [] 0,
+        .labAsm (.return 4) [] 0,
         .label 2 3 0]⟩ := by
-  simp [labProgramToSection, labFlatten, labIsSequence, labLabel]
+  simp [labProgramToSection, labFlatten, labIsSequence, labLabel, labNextLab]
 
 example :
     labFlatten false 2 3 [] []
@@ -69,7 +69,7 @@ example :
     stackRemoveComplete, stackRemoveFuel, stackProgDepth, stackRemoveGet,
     stackRemoveAddress,
     stackRemoveJoin, stackStorePosition, labFlatten, labLabel,
-    labIsSequence, labStackRemoveConfig]
+    labIsSequence, labNextLab, labStackRemoveConfig]
 
 /-! GH #1027 (bead flapjack-pxn.8.5.14.11): for a relational condition whose
    branches are terminal, `labFlatten` already emits the compact
@@ -83,9 +83,9 @@ example :
       (.ite .less 1 (.imm 10) (.return 2) (.return 3) : StackProg Nat) =
       { lines := [
           labJumpCmp .less 1 (.imm 10) 7 1,
-          .labAsm .return [] 0,
+        .labAsm (.return 2) [] 0,
           labLabel 7 1,
-          .labAsm .return [] 0],
+          .labAsm (.return 3) [] 0],
         terminal := true,
         nextLabel := 2 } := by
   simp [labFlatten, labLabel, labJumpCmp, labIsSkip]

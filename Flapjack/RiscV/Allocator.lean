@@ -221,9 +221,8 @@ instruction fragment.  The analysis walks backwards, keeping values live
 after each instruction and adding an edge from every written variable to the
 values that remain live. -/
 
-def wordInstReadVars : WordInst → List Nat
-  | .arith operation =>
-      match operation with
+def wordArithReadVars {α : Type u} (operation : WordArith α) : List Nat :=
+  match operation with
       | .longMul _ _ sourceLeft sourceRight => [sourceLeft, sourceRight]
       | .longDiv _ _ sourceLeft sourceRight quotient =>
           [sourceLeft, sourceRight, quotient]
@@ -232,12 +231,24 @@ def wordInstReadVars : WordInst → List Nat
       | .cakeAddCarry _ sourceLeft sourceRight carry =>
           [sourceLeft, sourceRight, carry]
       | .div _ dividend divisor => [dividend, divisor]
+      | .binOp _ _ sourceLeft sourceRight =>
+          sourceLeft :: (match sourceRight with
+            | .reg register => [register]
+            | .imm _ => [])
+      | .shift _ _ sourceLeft sourceRight =>
+          sourceLeft :: (match sourceRight with
+            | .reg register => [register]
+            | .imm _ => [])
+
+def wordInstReadVars {α : Type u} : WordInst α → List Nat
+  | .arith operation => wordArithReadVars operation
+  | .const _ _ => []
   | .mem operator destination address =>
       match operator with
       | .load | .load8 | .load16 | .load32 => [address]
       | .store | .store8 | .store16 | .store32 => [destination, address]
 
-def wordInstWriteVars : WordInst → List Nat
+def wordInstWriteVars {α : Type u} : WordInst α → List Nat
   | .arith operation =>
       match operation with
       | .longMul destinationLeft destinationRight _ _ =>
@@ -249,12 +260,15 @@ def wordInstWriteVars : WordInst → List Nat
       | .cakeAddCarry destination _ _ carry =>
           [destination, carry]
       | .div destination _ _ => [destination]
+      | .binOp _ destination _ _ => [destination]
+      | .shift _ destination _ _ => [destination]
+  | .const destination _ => [destination]
   | .mem operator destination _ =>
       match operator with
       | .load | .load8 | .load16 | .load32 => [destination]
       | .store | .store8 | .store16 | .store32 => []
 
-def wordInstVars (instruction : WordInst) : List Nat :=
+def wordInstVars {α : Type u} (instruction : WordInst α) : List Nat :=
   wordInstReadVars instruction ++ wordInstWriteVars instruction
 
 /-! RISC-V has additional forced clashes for multi-result arithmetic.  The
@@ -264,7 +278,7 @@ def wordInstVars (instruction : WordInst) : List Nat :=
     destinations must also remain distinct.  These edges are part of the
     allocator contract, rather than an instruction-selection afterthought. -/
 
-def wordInstForcedClashes : WordInst → List (Nat × Nat)
+def wordInstForcedClashes {α : Type u} : WordInst α → List (Nat × Nat)
   | .arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) =>
       [(destinationLeft, destinationRight),
         (destinationLeft, sourceLeft), (destinationLeft, sourceRight)]
@@ -286,17 +300,17 @@ def wordPairwiseClashes : List Nat → List (Nat × Nat)
       (names.map (fun other => (name, other))) ++
         wordPairwiseClashes names
 
-def wordInstLiveBefore (instruction : WordInst) (liveAfter : List Nat) : List Nat :=
+def wordInstLiveBefore {α : Type u} (instruction : WordInst α) (liveAfter : List Nat) : List Nat :=
   wordInstReadVars instruction ++
     liveAfter.filter (fun name => name ∉ wordInstWriteVars instruction)
 
-def wordInstClashes (instruction : WordInst) (liveAfter : List Nat) :
+def wordInstClashes {α : Type u} (instruction : WordInst α) (liveAfter : List Nat) :
     List (Nat × Nat) :=
   wordInstForcedClashes instruction ++
     wordPairwiseClashes (wordInstWriteVars instruction) ++
     wordClashPairs (wordInstWriteVars instruction) liveAfter
 
-def wordLinearClashAnalysis : List WordInst → List Nat →
+def wordLinearClashAnalysis : List (WordInst α) → List Nat →
     List Nat × List (Nat × Nat)
   | [], liveOut => (liveOut, [])
   | instruction :: instructions, liveOut =>
@@ -304,10 +318,10 @@ def wordLinearClashAnalysis : List WordInst → List Nat →
       (wordInstLiveBefore instruction liveAfter,
         wordInstClashes instruction liveAfter ++ edges)
 
-def wordLinearVariables (instructions : List WordInst) : List Nat :=
+def wordLinearVariables {α : Type u} (instructions : List (WordInst α)) : List Nat :=
   instructions.flatMap wordInstVars
 
-def wordAllocateLinearInstructions (instructions : List WordInst) :
+def wordAllocateLinearInstructions {α : Type u} (instructions : List (WordInst α)) :
     Option WordContext :=
   let (liveIn, edges) := wordLinearClashAnalysis instructions []
   wordAllocateContextWithClashes
@@ -401,7 +415,8 @@ def wordSsaRenameMove (state : WordSsaState) (priority : Nat)
   (wordSsaForceRename force state, .move priority (destinations.zip sources))
 
 
-def wordSsaRenameInst (state : WordSsaState) : WordInst → WordSsaState × WordInst
+def wordSsaRenameInst (state : WordSsaState) :
+    WordInst α → WordSsaState × WordInst α
   | .arith operation =>
       match operation with
       | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
@@ -440,6 +455,23 @@ def wordSsaRenameInst (state : WordSsaState) : WordInst → WordSsaState × Word
           let divisor := wordSsaRead state divisor
           let (state, freshDestination) := wordSsaFresh state destination
           (state, .arith (.div freshDestination dividend divisor))
+      | .binOp operator destination sourceLeft sourceRight =>
+          let sourceLeft := wordSsaRead state sourceLeft
+          let sourceRight := match sourceRight with
+            | .reg register => .reg (wordSsaRead state register)
+            | .imm value => .imm value
+          let (state, freshDestination) := wordSsaFresh state destination
+          (state, .arith (.binOp operator freshDestination sourceLeft sourceRight))
+      | .shift operator destination sourceLeft sourceRight =>
+          let sourceLeft := wordSsaRead state sourceLeft
+          let sourceRight := match sourceRight with
+            | .reg register => .reg (wordSsaRead state register)
+            | .imm value => .imm value
+          let (state, freshDestination) := wordSsaFresh state destination
+          (state, .arith (.shift operator freshDestination sourceLeft sourceRight))
+  | .const destination value =>
+      let (state, freshDestination) := wordSsaFresh state destination
+      (state, .const freshDestination value)
   | .mem operator destination address =>
       let address := wordSsaRead state address
       match operator with
@@ -449,16 +481,17 @@ def wordSsaRenameInst (state : WordSsaState) : WordInst → WordSsaState × Word
       | .store | .store8 | .store16 | .store32 =>
           (state, .mem operator (wordSsaRead state destination) address)
 
-def wordSsaRenameLinear (state : WordSsaState) : List WordInst →
-    WordSsaState × List WordInst
+def wordSsaRenameLinear (state : WordSsaState) : List (WordInst α) →
+    WordSsaState × List (WordInst α)
   | [] => (state, [])
   | instruction :: instructions =>
       let (state, instruction) := wordSsaRenameInst state instruction
       let (state, instructions) := wordSsaRenameLinear state instructions
       (state, instruction :: instructions)
 
-def wordAllocateSsaLinear (state : WordSsaState) (instructions : List WordInst) :
-    Option (WordSsaState × List WordInst × WordContext) :=
+def wordAllocateSsaLinear {α : Type u} (state : WordSsaState)
+    (instructions : List (WordInst α)) :
+    Option (WordSsaState × List (WordInst α) × WordContext) :=
   let (state, instructions) := wordSsaRenameLinear state instructions
   (wordAllocateLinearInstructions instructions).map
     (fun context => (state, instructions, context))
@@ -494,6 +527,21 @@ def wordSsaSeq (first second : WordProg α) : WordProg α :=
 
 def wordSsaKeys (state : WordSsaState) : List Nat :=
   state.current.map (fun entry => entry.1)
+
+/-- Insertion into a sorted variable list (structural, so `simp` unfolds
+    it on concrete lists).  CakeML enumerates `num_set` unions via
+    `MAP FST (toAList …)`, i.e. ascending key order; the port keeps
+    variables in association lists, so it sorts explicitly wherever the
+    original enumerates a tree. -/
+def wordSsaInsertSorted (name : Nat) : List Nat → List Nat
+  | [] => [name]
+  | x :: xs => if name ≤ x then name :: x :: xs
+    else x :: wordSsaInsertSorted name xs
+
+/-- Ascending variable order matching CakeML's `toAList` enumeration. -/
+def wordSsaSortNames : List Nat → List Nat
+  | [] => []
+  | x :: xs => wordSsaInsertSorted x (wordSsaSortNames xs)
 
 def wordSsaBranchNames (base left right : WordSsaState) : List Nat :=
   (wordSsaKeys base ++ wordSsaKeys left ++ wordSsaKeys right).eraseDups
@@ -584,7 +632,7 @@ decreasing_by all_goals decreasing_trivial
 def wordSsaFixInconsistencies [OfNat α 0] (preferred : Option Bool)
     (left right : WordSsaState) (next : Nat) :
     WordSsaState × WordProg α × WordProg α :=
-  let names := (wordSsaKeys left ++ wordSsaKeys right).eraseDups
+  let names := wordSsaSortNames ((wordSsaKeys left ++ wordSsaKeys right).eraseDups)
   let (mergeLeft, mergeRight, next, left, right) :=
     wordSsaMergeMoves names left right next
   let (fakeLeft, fakeRight, next, left, _right) :=
@@ -603,21 +651,22 @@ structure WordSsaLoopFrame where
 def wordSsaRestrict (state : WordSsaState) (names : List Nat) : WordSsaState :=
   { state with current := state.current.filter (fun entry => entry.1 ∈ names) }
 
-def wordSsaReconcileTo (source target : WordSsaState) : List Nat →
-    WordProg α
+/-- `ssa_reconcile` (`word_allocScript.sml:318-330`): one parallel
+    `Move 1` over the ascending variable list.  Variables missing from the
+    source contribute no move; variables missing from the target fall back
+    to register `0` (CakeML's `option_lookup`). -/
+def wordSsaReconcileTo (source target : WordSsaState) (names : List Nat) :
+    WordProg α :=
+  let moves := (wordSsaSortNames names.eraseDups).filterMap (fun name =>
+    match lookupNatInfo name source.current with
+      | none => none
+      | some sourceName =>
+          let targetName := (lookupNatInfo name target.current).getD 0
+          if targetName = sourceName then none
+          else some (targetName, sourceName))
+  match moves with
   | [] => .skip
-  | name :: names =>
-      let move := match lookupNatInfo name source.current,
-          lookupNatInfo name target.current with
-        | some sourceName, some targetName =>
-            if sourceName = targetName then
-              (.skip : WordProg α)
-            else
-              .move 1 [(targetName, sourceName)]
-        | _, _ => .skip
-      wordSsaSeq move (wordSsaReconcileTo source target names)
-termination_by names => sizeOf names
-decreasing_by all_goals decreasing_trivial
+  | _ => .move 1 moves
 
 def wordSsaRefreshList (state : WordSsaState) : List Nat →
     WordSsaState × WordProg α
@@ -642,7 +691,7 @@ def wordSsaFakeMoves [OfNat α 0] : List Nat → WordProg α
 
 def wordSsaLoopSetup [OfNat α 0] (state : WordSsaState)
     (liveIn liveOut : List Nat) : WordSsaState × WordProg α :=
-  let names := (liveIn ++ liveOut).eraseDups
+  let names := wordSsaSortNames ((liveIn ++ liveOut).eraseDups)
   let extend := names.filter (fun name =>
     (lookupNatInfo name state.current).isNone)
   let refresh := names.filter (fun name =>
@@ -734,9 +783,21 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         | .store | .store8 | .store16 | .store32 =>
             (state, .shareInst operator (wordSsaRead state name) address)
     | .call none target arguments none =>
-        let arguments := arguments.map (wordSsaRead state)
+        let renamedArguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 0 arguments.length
-        let moveArguments := .move 1 (abiArguments.zip arguments)
+        /- CakeML emits `Move1 (ZIP (conv_args, names))` here.  The leading
+           `loop_to_word` tail-call dummy register `0` is coalesced away by
+           the original allocator and is not consumed when binding the
+           callee parameters. -/
+        let allPairs := abiArguments.zip (arguments.zip renamedArguments)
+        let pairs := match allPairs with
+          | (_, original, _) :: rest =>
+              if original = 0 then rest else allPairs
+          | [] => []
+        let moveArguments :=
+          match pairs with
+          | [] => .skip
+          | _ => .move 1 (pairs.map (fun (abi, _, renamed) => (abi, renamed)))
         (state, wordSsaSeq moveArguments
           (.call none target abiArguments none))
     | .call none target arguments
@@ -914,6 +975,7 @@ theorem wordSsaRenameProgram_ite [OfNat α 0] :
     wordSsaFixInconsistencies, wordSsaPriorityMove,
     wordSsaBranchPriority, wordSsaMergeMoves,
     wordSsaFakeInconsistencyMoves, wordSsaForceRename,
+    wordSsaSortNames, wordSsaInsertSorted,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop,
     lookupNatInfo]
 
@@ -946,7 +1008,7 @@ def wordProgReadVars : WordProg α → List Nat
   | .mustTerminate body => wordProgReadVars body
   | .break _ | .continue _ => []
   | .raise exception => [exception]
-  | .return _ values => values
+  | .return label values => label :: values
   | .tick => []
   | .locValue _ _label => []
   | .call returns _ arguments handler =>
@@ -1217,7 +1279,7 @@ def wordClashTreeFindLoopFrame : Nat → List (List Nat × List Nat) →
   | 0, frame :: _ => some frame
   | label, _ :: frames => wordClashTreeFindLoopFrame (label - 1) frames
 
-def wordClashTreeDeltaInst : WordInst → WordClashTree
+def wordClashTreeDeltaInst {α : Type u} : WordInst α → WordClashTree
   | .arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) =>
       .delta [destinationLeft, destinationRight] [sourceRight, sourceLeft]
   | .arith (.longDiv destinationLeft destinationRight sourceLeft sourceRight quotient) =>
@@ -1228,6 +1290,17 @@ def wordClashTreeDeltaInst : WordInst → WordClashTree
       .delta [destination, carry] [carry, sourceRight, sourceLeft]
   | .arith (.div destination dividend divisor) =>
       .delta [destination] [divisor, dividend]
+  | .arith (.binOp _ destination sourceLeft sourceRight) =>
+      .delta [destination]
+        (sourceLeft :: match sourceRight with
+          | .reg register => [register]
+          | .imm _ => [])
+  | .arith (.shift _ destination sourceLeft sourceRight) =>
+      .delta [destination]
+        (sourceLeft :: match sourceRight with
+          | .reg register => [register]
+          | .imm _ => [])
+  | .const destination _ => .delta [destination] []
   | .mem .load destination address
   | .mem .load8 destination address
   | .mem .load16 destination address
@@ -1752,7 +1825,7 @@ def wordApplyColourRegImm (colour : Nat → Nat) : WordRegImm α → WordRegImm 
   | .imm value => .imm value
   | .reg name => .reg (colour name)
 
-def wordApplyColourArith (colour : Nat → Nat) : WordArith → WordArith
+def wordApplyColourArith (colour : Nat → Nat) : WordArith α → WordArith α
   | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
       .longMul (colour destinationLeft) (colour destinationRight)
         (colour sourceLeft) (colour sourceRight)
@@ -1767,8 +1840,15 @@ def wordApplyColourArith (colour : Nat → Nat) : WordArith → WordArith
         (colour sourceRight) (colour carry)
   | .div destination dividend divisor =>
       .div (colour destination) (colour dividend) (colour divisor)
+  | .binOp operator destination sourceLeft sourceRight =>
+      .binOp operator (colour destination) (colour sourceLeft)
+        (wordApplyColourRegImm colour sourceRight)
+  | .shift operator destination sourceLeft sourceRight =>
+      .shift operator (colour destination) (colour sourceLeft)
+        (wordApplyColourRegImm colour sourceRight)
 
-def wordApplyColourInst (colour : Nat → Nat) : WordInst → WordInst
+def wordApplyColourInst (colour : Nat → Nat) : WordInst α → WordInst α
+  | .const destination value => .const (colour destination) value
   | .arith operation => .arith (wordApplyColourArith colour operation)
   | .mem operator destination address =>
       .mem operator (colour destination) (colour address)
@@ -2114,17 +2194,18 @@ theorem wordProgClashAnalysis_ite :
     List.eraseDupsBy.loop]
 
 theorem wordLinearClashAnalysis_empty (liveOut : List Nat) :
-    wordLinearClashAnalysis [] liveOut = (liveOut, []) := by
+    wordLinearClashAnalysis (α := Nat) [] liveOut = (liveOut, []) := by
   rfl
 
 theorem wordInstVars_addCarry :
-    wordInstVars (.arith (.addCarry 1 2 3 4 5)) = [3, 4, 5, 1, 2] := by
+    wordInstVars (α := Nat) (.arith (.addCarry 1 2 3 4 5)) = [3, 4, 5, 1, 2] := by
   rfl
 
 theorem wordSsaRenameLinear_addCarry :
-    wordSsaRenameLinear
+    wordSsaRenameLinear (α := Nat)
         { current := [(2, 100), (3, 101), (4, 102)], next := 200 }
-        [.arith (.addCarry 0 1 2 3 4), .arith (.addCarry 5 6 0 1 2)] =
+        ([.arith (.addCarry 0 1 2 3 4), .arith (.addCarry 5 6 0 1 2)] :
+          List (WordInst Nat)) =
       ({ current := [(6, 212), (5, 208), (1, 204), (0, 200),
           (2, 100), (3, 101), (4, 102)], next := 216 },
         [.arith (.addCarry 200 204 100 101 102),
@@ -2132,8 +2213,9 @@ theorem wordSsaRenameLinear_addCarry :
   rfl
 
 theorem wordAllocateLinearInstructions_example :
-    wordAllocateLinearInstructions
-      [.arith (.addCarry 0 1 2 3 4), .arith (.addCarry 5 6 0 1 2)] =
+    wordAllocateLinearInstructions (α := Nat)
+      ([.arith (.addCarry 0 1 2 3 4), .arith (.addCarry 5 6 0 1 2)] :
+        List (WordInst Nat)) =
       some { vars := [(6, 8), (5, 7), (1, 3), (0, 2), (4, 6), (3, 5), (2, 4)] } := by
   rfl
 
@@ -2235,7 +2317,7 @@ def wordSpillClashTreeChecked (tree : WordClashTree)
     next to allocation so unsupported layouts cannot silently reach instruction
     selection. -/
 
-def wordSpecialArithLocationsSafe (operation : WordArith)
+def wordSpecialArithLocationsSafe {α : Type u} (operation : WordArith α)
     (locations : NatInfoMap WordLocation) : Bool :=
   match operation with
   | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
@@ -2279,7 +2361,7 @@ def wordSpecialArithLocationsSafe (operation : WordArith)
                   sourceLeft != 31 && sourceRight != 31 && carry != 31
             | _, _, _, _ => true
       | _, _, _, _ => false
-  | .longDiv _ _ _ _ _ | .div _ _ _ => true
+  | .longDiv _ _ _ _ _ | .div _ _ _ | .binOp _ _ _ _ | .shift _ _ _ _ => true
 
 def wordProgSpecialLocationsSafe (locations : NatInfoMap WordLocation) :
     WordProg α → Bool
@@ -2287,7 +2369,7 @@ def wordProgSpecialLocationsSafe (locations : NatInfoMap WordLocation) :
   | .move _ _ | .assign _ _ | .get _ _ | .store _ _ | .set _ _ | .break _ | .continue _ |
       .raise _ | .return _ _ | .tick | .locValue _ _ | .ffi _ _ _ _ _ _ => true
   | .inst (.arith operation) => wordSpecialArithLocationsSafe operation locations
-  | .inst (.mem _ _ _) => true
+  | .inst (.const _ _) | .inst (.mem _ _ _) => true
   | .seq first second =>
       wordProgSpecialLocationsSafe locations first &&
         wordProgSpecialLocationsSafe locations second
@@ -2321,7 +2403,7 @@ decreasing_by all_goals decreasing_trivial
     remaining `x31` exclusions in `wordSpecialArithLocationsSafe` cannot arise
     in this source path: allocation uses registers 2..26 and physical fixed
     sources are even names, so neither yields register 31. -/
-def wordArithSpecialConflictEdges (operation : WordArith) : List (Nat × Nat) :=
+def wordArithSpecialConflictEdges {α : Type u} (operation : WordArith α) : List (Nat × Nat) :=
   let distinct (edge : Nat × Nat) : Bool := edge.1 != edge.2
   match operation with
   | .longMul destinationLeft destinationRight sourceLeft sourceRight =>

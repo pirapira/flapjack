@@ -8,9 +8,15 @@ import Flapjack.LoopToWord
 import Flapjack.Word
 import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.WordExpressionFlatten
+import Flapjack.RiscV.WordSimp
 import Flapjack.RiscV.RegAlloc
 import Flapjack.RiscV.WordToStack
 import Flapjack.RiscV.WordDiagnostics
+import Flapjack.RiscV.CakeRegAlloc
+import Flapjack.RiscV.WordDeadCode
+import Flapjack.RiscV.WordFuseConditions
+import Flapjack.RiscV.WordInstSelect
+import Flapjack.RiscV.WordUnreach
 import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Loops
 import Flapjack.RiscV.Link
@@ -33,7 +39,7 @@ def pipelineExceptionCodes (fromNat : Nat → α) : Nat → List (Decl α) → I
   | _, [] => []
   | index, .exnDecl exception _ :: declarations =>
       (exception, fromNat index) :: pipelineExceptionCodes fromNat (index + 1) declarations
-  | index, _ :: declarations => pipelineExceptionCodes fromNat (index + 1) declarations
+  | index, _ :: declarations => pipelineExceptionCodes fromNat index declarations
 
 def pipelineInlineNames : List (Decl α) → List FunName
   | [] => []
@@ -116,6 +122,32 @@ def pipelineLoopFunctions [OfNat α 0] [OfNat α 1]
   pipelineLoopFunctionsAux architecture (pipelineFunctionInfos firstLabel functions)
     firstLabel functions
 
+/-! Source-facing counterpart of `crep_to_loop$compile_prog`.  The historical
+    `pipelineLoopFunctions` above is retained for the earlier correctness
+    witnesses whose register numbering is part of their checked shape.  The
+    Pancake source pipeline uses `comp_func`, whose context sets
+    `vmax = LENGTH params - 1`; this separate entry point keeps that rule
+    explicit without changing the legacy API. -/
+def pipelineLoopFunctionsSourceAux [OfNat α 0] [OfNat α 1]
+    (architecture : RiscV.Architecture) (functionInfos : InfoMap (Nat × Nat)) :
+    Nat → List (CompiledFunction α) → List (Nat × List Nat × LoopProg α)
+  | _, [] => []
+  | label, function :: functions =>
+      let context : LoopContext α :=
+        { vars := []
+          functions := functionInfos
+          maxVar := function.params.length - 1
+          target := architecture }
+      (label, function.params, oCompile context function.params function.body) ::
+        pipelineLoopFunctionsSourceAux architecture functionInfos (label + 1) functions
+
+def pipelineLoopFunctionsSource [OfNat α 0] [OfNat α 1]
+    (architecture : RiscV.Architecture) (firstLabel : Nat)
+    (functions : List (CompiledFunction α)) :
+    List (Nat × List Nat × LoopProg α) :=
+  pipelineLoopFunctionsSourceAux architecture (pipelineFunctionInfos firstLabel functions)
+    firstLabel functions
+
 def pipelineWordFunctions [OfNat α 1]
     (functions : List (Nat × List Nat × LoopProg α)) :
     List (Nat × List Nat × WordProg α) :=
@@ -135,24 +167,10 @@ def pipelineWordCompileProg [OfNat α 1]
     List (Nat × Nat × WordProg α) :=
   LoopToWord.loopToWordCompileProg functions
 
-/-! The source `crep_to_loop` compiler folds a tail call into the generated
-    sequence and `loop_to_word$comp` prepends the entry slot.  The general
-    allocator-facing Loop bridge predates that source-shaped contract, so this
-    small adapter restores it only at the `pan_to_word` boundary. -/
-def panToWordTailCall : WordProg α → WordProg α
-  | .seq .skip (.seq .skip (.call none target arguments none)) =>
-      .seq .skip (.seq (.call none target (0 :: arguments) none) .skip)
-  | .seq first second =>
-      .seq (panToWordTailCall first) (panToWordTailCall second)
-  | .call none target arguments none =>
-      .call none target (0 :: arguments) none
-  | program => program
-
 def panToWordCompileProg [OfNat α 1]
     (functions : List (Nat × List Nat × LoopProg α)) :
     List (Nat × Nat × WordProg α) :=
-  (pipelineWordCompileProg functions).map
-    (fun (label, arity, body) => (label, arity, panToWordTailCall body))
+  pipelineWordCompileProg functions
 
 /-! StackLang view of the register-coloured Word pipeline.  This is the
     executable bridge used by the RISC-V-only backend path below; functions
@@ -470,34 +488,39 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
       Option (List (Nat × List Nat × StackProg Nat))
   | [] => some []
   | (label, parameters, body) :: functions => do
-      let slots := loopAccVars body parameters
-      let context : WordContext :=
-        { vars := slots.map (fun name => (name, name + 2)) }
-      let wordParameters := parameters.map (fun name => name + 2)
-      let unallocatedBody := RiscV.wordFlattenProgramFrom (loopToWordProg context body)
+      let wordParameters := wordSsaAbiParameters parameters.length
+      let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
+        (RiscV.wordFuseConditions
+          (RiscV.wordInstSelectProgramFrom
+            (RiscV.wordConstFp
+              (RiscV.wordFlattenProgramFrom
+                (LoopToWord.loopToWordCompFunc label parameters body))))))
       let (_, renamedParameters, renamedProgram, allocation) ←
-        wordAllocateSsaFunctionWithEntryAndClashTreeWithSpillsAndPreferencesFixedClashFast
-          wordParameters unallocatedBody
+        RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead label wordParameters
+          unallocatedBody
+      let frameSlots := max allocation.nextSpill
+        (max (wordParameters.length - RiscV.CakeRegAlloc.cakeRiscVRegisterCount)
+          (RiscV.wordProgMaxCallArguments renamedProgram -
+            RiscV.CakeRegAlloc.cakeRiscVRegisterCount))
       let config : RiscV.WordStackConfig :=
         { locations := allocation.locations
-          scratch := 31
+          scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
           stackBase := 0
           addressScratch := 29
-          abiBase := 10
+          abiBase := 1
           abiStride := 1
+          abiFrameSlots := frameSlots
           sectionId := label
           handlerLabel := label }
       let lower :=
-        if !RiscV.wordProgNeedsCakeFrame renamedProgram then
-          RiscV.wordToStackFunctionWithParametersAndLocationBitmaps config
-            renamedParameters wordAllocatableRegisters.length config.scratch
-            allocation.nextSpill (some 1)
-            (RiscV.wordStackInitialBitmaps false) renamedProgram
+        if frameSlots = 0 then
+          RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMoves config
+            renamedParameters RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
+            frameSlots (some 1) (RiscV.wordStackInitialBitmaps false) renamedProgram
         else
-          RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmaps config
-            renamedParameters wordAllocatableRegisters.length config.scratch
-            allocation.nextSpill (some 1)
-            (RiscV.wordStackInitialBitmaps false) renamedProgram
+          RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMoves config
+            renamedParameters RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
+            frameSlots (some 1) (RiscV.wordStackInitialBitmaps false) renamedProgram
       let (stackBody, _) ← lower
       let rest ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa functions
       pure ((label, wordParameters, stackBody) :: rest)
@@ -622,6 +645,7 @@ structure FlapjackPipelineResult (α : Type u) where
   word : List (Nat × List Nat × WordProg α)
 
 def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [AndOp α] [ShiftRight α] [PanShiftWidth α]
     (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
     FlapjackPipelineResult α :=
@@ -631,7 +655,7 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
   let declarations := pipelinePrependInitializers globals.initializers globals.declarations
   let compiled := compileToCrepe crepeContext declarations
-  let crepe := crepArithFunctions
+  let crepe := crepSimpFunctions fromNat
     (crepInlineTopRecursiveByNames (pipelineInlineNames declarations) compiled)
   let loop := pipelineLoopFunctions architecture 1 crepe
   let word := pipelineWordFunctions loop
@@ -649,7 +673,8 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     function references, and emits a new public `main` whose body runs global
     initializers before a tail call to the renamed source entry. -/
 def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
-    [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
+    [Add α] [Mul α] [AndOp α] [ShiftRight α] [PanShiftWidth α]
+    (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (start : FunName) (declarations : List (Decl α)) :
     Option (FlapjackPipelineResult α) :=
   let declarations := panTargetMoveStartToFront start declarations
@@ -676,7 +701,7 @@ def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
       let globals := { globals with declarations := wrapper :: globals.declarations }
       let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
       let compiled := compileToCrepe crepeContext globals.declarations
-      let crepe := crepArithFunctions
+      let crepe := crepSimpFunctions fromNat
         (crepInlineTopRecursiveByNames (pipelineInlineNames globals.declarations) compiled)
       let loop := pipelineLoopFunctions architecture 1 crepe
       let word := pipelineWordFunctions loop
@@ -704,6 +729,7 @@ def panTargetDeclarationsWithDefaultMain [OfNat α 0] [OfNat α 1]
     intermediate pipeline: the synthetic function changes declaration order,
     labels, and the linked artifact. -/
 def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [AndOp α] [ShiftRight α] [PanShiftWidth α]
     (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
     FlapjackPipelineResult α :=
@@ -715,6 +741,7 @@ def compileFlapjackTarget [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
 /-! Executable port of `pan_to_word$compile_prog`: compose the existing
     Pancake passes, then expose the source-shaped `loop_to_word` result. -/
 def compilePanToWord [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [AndOp α] [ShiftRight α] [PanShiftWidth α]
     (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
     List (Nat × Nat × WordProg α) :=
@@ -1199,11 +1226,12 @@ def compileFlapjackRiscVViaAllocatedStackWithFullSsaEntryLinked [NeZero width]
   let pipeline ← compileFlapjackEntry architecture bytesInWord fromNat start declarations
   let functions ← pipelineWordFunctionsAllocatedWithSpillsAndFullSsa pipeline.loop
   let initialLabel := fullSsaInitialLabLabel functions
-  RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscV { services := services }
+  RiscV.compileStackProgramNatListLinkedWithRaiseStubToRiscVCake { services := services }
     removeConfig 0 initialLabel (functions.map (fun (label, _, body) => (label, body)))
 
 def compileFlapjackChecked [BEq String] [BEq α] [OfNat α 0] [OfNat α 1]
-    [Add α] [Mul α] (architecture : RiscV.Architecture) (bytesInWord : α)
+    [Add α] [Mul α] [AndOp α] [ShiftRight α] [PanShiftWidth α]
+    (architecture : RiscV.Architecture) (bytesInWord : α)
     (fromNat : Nat → α) (declarations : List (Decl α)) :
     StaticResult (FlapjackPipelineResult α) :=
   staticBind (staticCheck declarations) (fun _ =>
@@ -1298,6 +1326,7 @@ def compileFlapjackRiscVChecked [NeZero width] [BEq (RiscV.Word width)]
     staticOk (compileFlapjackRiscV architecture bytesInWord fromNat declarations))
 
 theorem compileFlapjack_skip [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
+    [AndOp α] [ShiftRight α] [PanShiftWidth α]
     (architecture : RiscV.Architecture) (bytesInWord : α) (fromNat : Nat → α) :
     (compileFlapjack architecture bytesInWord fromNat []).simplified = [] := by
   simp [compileFlapjack, panSimpDecls, structCompileTop, structGetNames,

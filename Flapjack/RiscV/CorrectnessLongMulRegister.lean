@@ -23,8 +23,6 @@ theorem evalWordStackMachine_longMul_register_preserves_other_value [NeZero widt
     (hsourceRight : wordStackLocation config sourceRight =
       some (.register sourceRightRegister))
     (hother : wordStackLocation config other = some otherLocation)
-    (hsafe : wordStackLongMulLocationsSafe config
-      (.longMul destinationLeft destinationRight sourceLeft sourceRight) = true)
     (hother_destinationLeft : otherLocation ≠ .register destinationLeftRegister)
     (hother_destinationRight : otherLocation ≠ .register destinationRightRegister)
     (heval : (wordStackLongMulInst config
@@ -41,7 +39,7 @@ theorem evalWordStackMachine_longMul_register_preserves_other_value [NeZero widt
   change lookupNatInfo sourceRight config.locations =
       some (.register sourceRightRegister) at hsourceRight
   change lookupNatInfo other config.locations = some otherLocation at hother
-  simp [wordStackLongMulInst, hsafe, wordStackLocation, hdestinationLeft,
+  simp [wordStackLongMulInst, wordStackLocation, hdestinationLeft,
     hdestinationRight, hsourceLeft, hsourceRight] at heval
   cases heval
   cases otherLocation <;>

@@ -64,16 +64,13 @@ theorem evalWordStackMachine_locationMove_preserves_value [NeZero width]
             simp [wordStackLocationValue]
       | stack source =>
           simp [wordStackLocationMove, evalWordStackMachine,
-            wordStackMachineWriteRegister,
-            wordStackMachineBinOp] at heval
+            wordStackMachineWriteRegister] at heval
           cases heval
           simp [wordStackLocationValue, wordStackOffset]
   | stack destination =>
       cases source with
       | register source =>
-          simp [wordStackLocationMove, evalWordStackMachine,
-            wordStackMachineWriteRegister,
-            wordStackMachineBinOp] at heval
+          simp [wordStackLocationMove, evalWordStackMachine] at heval
           cases heval
           simp [wordStackLocationValue, wordStackOffset,
             wordStackMachineWriteSlot]
@@ -125,12 +122,12 @@ theorem evalWordStackMachine_locationMove_preserves_other_value [NeZero width]
           cases other with
           | register other =>
               simp [wordStackLocationMove, evalWordStackMachine,
-                wordStackMachineWriteRegister, wordStackMachineBinOp] at heval
+                wordStackMachineWriteRegister] at heval
               cases heval
               simp_all [wordStackLocationValue]
           | stack other =>
               simp [wordStackLocationMove, evalWordStackMachine,
-                wordStackMachineWriteRegister, wordStackMachineBinOp] at heval
+                wordStackMachineWriteRegister] at heval
               cases heval
               simp [wordStackLocationValue, wordStackOffset]
   | stack destination =>
@@ -139,14 +136,12 @@ theorem evalWordStackMachine_locationMove_preserves_other_value [NeZero width]
           cases other with
           | register other =>
               simp [wordStackLocationMove, evalWordStackMachine,
-                wordStackMachineWriteRegister, wordStackMachineWriteSlot,
-                wordStackMachineBinOp] at heval
+                wordStackMachineWriteSlot] at heval
               cases heval
               simp_all [wordStackLocationValue]
           | stack other =>
               simp [wordStackLocationMove, evalWordStackMachine,
-                wordStackMachineWriteRegister, wordStackMachineWriteSlot,
-                wordStackMachineBinOp] at heval
+                wordStackMachineWriteSlot] at heval
               cases heval
               simp_all [wordStackLocationValue, wordStackOffset]
       | stack source =>

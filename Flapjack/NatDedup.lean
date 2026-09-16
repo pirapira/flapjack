@@ -27,4 +27,10 @@ def natEraseDupsAux (seen : Std.TreeSet Nat) : List Nat → List Nat
 def natEraseDups (names : List Nat) : List Nat :=
   natEraseDupsAux ∅ names
 
+/-- The elements of a name list as a set, for membership tests that would
+    otherwise rescan the list.  Callers keep their lists; only the predicate
+    changes, so the values they compute are unchanged. -/
+def natSetOfList (names : List Nat) : Std.TreeSet Nat :=
+  names.foldl (fun seen name => seen.insert name) ∅
+
 end Flapjack

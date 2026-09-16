@@ -17,6 +17,13 @@ open Flapjack Flapjack.RiscV
 def emit [Repr α] (label : String) (value : α) : IO Unit :=
   IO.println (label ++ "=" ++ repr value)
 
+def clashTreeSets : WordClashTree → List (List Nat)
+  | .delta _ _ => []
+  | .set names => [names]
+  | .branch live thenBranch elseBranch =>
+      (live.toList ++ clashTreeSets thenBranch ++ clashTreeSets elseBranch)
+  | .seq first second => clashTreeSets first ++ clashTreeSets second
+
 /-! Keep the complete Word-to-Word pass chain visible in diagnostics.  The
     source probe already exposes the front-end and selected program; these
     labels make a final-byte discrepancy attributable to SSA, a cleanup pass,
@@ -75,10 +82,12 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   emit "stage=source_word_heuristics" (moves, spillCosts)
   emit "stage=source_word_allocator_inputs"
     (tree, forced, RiscV.CakeRegAlloc.cakeGetStackOnly dead, bij)
+  emit "stage=source_word_allocator_sets" (clashTreeSets tree)
   let (allocationFuel, state1) :=
     RiscV.CakeRegAlloc.cakeInitAlloc1Heu movesF k state0
   let state2 := RiscV.CakeRegAlloc.cakeRptDoStep scost k allocationFuel state1
-  let moveTable := RiscV.CakeRegAlloc.cakeMovesToSp moves0 []
+  let moveTable := RiscV.CakeRegAlloc.cakeMovesToSp moves0
+    (RiscV.CakeRegAlloc.CakeNodeMap.ofSize bij.nextNode)
   let state3 := RiscV.CakeRegAlloc.cakeAssignAtemps k state2.stack
     (fun state node colours =>
       RiscV.CakeRegAlloc.cakeBiasedPref state
@@ -131,9 +140,44 @@ def dumpPipeline (pipeline : FlapjackPipelineResult (RiscV.Word 64)) : IO Unit :
   match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked
       (RiscV.wordStackInitialBitmaps false) sourceWord with
   | .error error => emit "stage=source_word_allocated_error" error
-  | .ok (functions, _) => emit "stage=source_word_allocated" functions
+  | .ok (functions, _) =>
+      emit "stage=source_word_allocated" functions
+      /- The source-facing compiler enters the Cake-shaped stack-removal
+         path after this boundary.  Keep the post-removal form in the probe
+         as well: a final byte mismatch that is absent here belongs to Lab or
+         target encoding, while one already present here belongs to the
+         allocator/StackRemove boundary. -/
+      let removeConfig : StackRemoveConfig :=
+        { storeBase := 10
+          currHeap := 12
+          scratch := 31
+          addressScratch := 29
+          stackPointer := 24
+          bytesInWord := 8
+          stackBase := 25
+          wordShift := 3 }
+      let removed := functions.map (fun (label, parameters, body) =>
+        (label, parameters,
+          stackMapRegisters RiscV.riscvRegisterName
+            (stackRemoveComplete (RiscV.cakeStackRemoveConfig removeConfig) body)))
+      emit "stage=source_stack_removed" removed
 
-def dumpSource (source : String) : IO UInt32 := do
+/-! The complete dump is intentionally expensive on a large guest because it
+    renders every function at every boundary.  A label-filtered dump keeps the
+    same pass sequence for one function, which makes the first divergent
+    allocator state inspectable without forcing the whole diagnostic output. -/
+def dumpPipelineTarget (pipeline : FlapjackPipelineResult (RiscV.Word 64))
+    (target : Nat) : IO Unit := do
+  let sourceLoop := pipelineLoopFunctionsSource .rv64i stackFunctionFirstLabel
+    pipeline.crepe
+  let sourceWord := panToWordCompileProg sourceLoop
+  match sourceWord.find? (fun entry => entry.1 == target) with
+  | none => emit "stage=target_not_found" target
+  | some entry =>
+      emit "stage=target" target
+      dumpSourceWordPasses entry
+
+def dumpSource (source : String) (target : Option Nat := none) : IO UInt32 := do
   match Parser.parseTopDecs (BitVec.ofInt 64) source with
   | .error errors =>
       emit "stage=parse_error" errors
@@ -148,12 +192,16 @@ def dumpSource (source : String) : IO UInt32 := do
           IO.println "stage=compile_entry=none"
           return 1
       | some pipeline =>
-          dumpPipeline pipeline
+          match target with
+          | none => dumpPipeline pipeline
+          | some target => dumpPipelineTarget pipeline target
           return 0
 
 def usage : String :=
   "Usage: lake exe flapjack-debug [SOURCE.pnk]\n" ++
-  "Read Pancake source from SOURCE.pnk or stdin and print intermediate stages."
+  "       lake exe flapjack-debug --label LABEL [SOURCE.pnk]\n" ++
+  "Read Pancake source from SOURCE.pnk or stdin and print intermediate stages.\n" ++
+  "With --label, render only the selected source Word function."
 
 def main (arguments : List String) : IO UInt32 := do
   match arguments with
@@ -163,6 +211,21 @@ def main (arguments : List String) : IO UInt32 := do
   | ["--help"] | ["-h"] =>
       IO.println usage
       return 0
+  | ["--label", rawLabel] =>
+      match rawLabel.toNat? with
+      | none =>
+          IO.eprintln ("invalid numeric label: " ++ rawLabel)
+          return 2
+      | some label =>
+          let stdin ← IO.getStdin
+          dumpSource (← stdin.readToEnd) (some label)
+  | ["--label", rawLabel, path] =>
+      match rawLabel.toNat? with
+      | none =>
+          IO.eprintln ("invalid numeric label: " ++ rawLabel)
+          return 2
+      | some label =>
+          dumpSource (← IO.FS.readFile path) (some label)
   | [path] =>
       dumpSource (← IO.FS.readFile path)
   | _ =>

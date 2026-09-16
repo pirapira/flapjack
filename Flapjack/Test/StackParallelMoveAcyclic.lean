@@ -13,7 +13,7 @@ def acyclicParallelConfig : WordStackConfig :=
 example :
     wordStackParallelLocationMove (α := Nat) acyclicParallelConfig
       [(.register 5, .register 2), (.stack 1, .register 4)] =
-      wordStackReversedSequentialLocationMove (α := Nat) acyclicParallelConfig
+      wordStackSequentialLocationMove (α := Nat) acyclicParallelConfig
         [(.register 5, .register 2), (.stack 1, .register 4)] := by
   apply wordStackParallelLocationMove_acyclic_eq_sequential
   · simp
@@ -32,9 +32,8 @@ example :
     · subst move
       simp [acyclicParallelConfig]
 
-/-- The dependency chain `{r3 <- r1, r1 <- r2}` is scheduled in CakeML
-    `parmove` order: the ready move `r1 <- r2` runs first, the postponed
-    `r3 <- r1` last, so `r3` receives the original `r1`. -/
+/-- The dependency chain `{r3 <- r1, r1 <- r2}` preserves the original `r1`
+    by emitting `r3 <- r1` before the move that overwrites `r1`. -/
 example :
     wordStackParallelLocationMove (α := Nat) acyclicParallelConfig
       [(.register 3, .register 1), (.register 1, .register 2)] =

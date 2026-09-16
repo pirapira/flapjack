@@ -181,7 +181,9 @@
       "path": "Flapjack/Test/OriginalPancake/f00028_allocator.pnk",
       "source_reference": "Minimized differential-fuzz reproducer f00028: exercises Cake Patricia ordering, SSA cutsets, allocator colouring, and physical parallel moves.",
       "cake_sha256": "60c124426815c469e11d6eba53bffda35c2f166ce78a0446c9457d07e14295cf",
-      "tracked_beads": ["flapjack-8tb.4"]
+      "tracked_beads": [
+        "flapjack-8tb.4"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/parameter_reassignment.pnk",
@@ -199,7 +201,15 @@
       "path": "Flapjack/Test/OriginalPancake/collapse_branch.pnk",
       "source_reference": "Minimized RISC-V parity reproducer for Cake's word_inst$inst_select_exp shift-immediate and conditional lowering (word_instScript.sml:233-295).",
       "cake_sha256": "c3a0eedb8f0e90602a899d1659782251d2a87cf4dcb269687827d304404d1d33",
-      "tracked_beads": ["flapjack-pxn.8.5.14.11.2"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.11.2"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/subtract_operand_order.pnk",
+      "source_reference": "flatten_exp matches Op Sub before the clause that rewrites Op op (x::xs) to Op op [.. xs; x] (word_instScript.sml), because that rewrite is only sound for the commutative operators. Covers a - b, b - a, a subtraction of two loads, and a left-nested chain.",
+      "cake_sha256": "f4f975311de583fe87e4fb2693c797aff8d61eb4d767d8cbd7ea45b22c286b84",
+      "tracked_beads": []
     }
   ]
 }

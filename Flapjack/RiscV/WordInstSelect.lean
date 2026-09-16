@@ -168,6 +168,14 @@ termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
 def wordInstFlattenExp : WordExp α → WordExp α
+  /- `flatten_exp` (`word_instScript.sml`) matches `Op Sub exps` before every
+     other `Op` clause and maps over the operands, keeping their order.  The
+     clause below it rewrites `Op op (x::xs)` to `Op op [.. xs; x]`, which is
+     only sound for the commutative operators; applying it to `Sub` turns
+     `a - b` into `b - a`.  Without this clause `fun 1 ab(1 a, 1 b) { return
+     a - b; }` compiled to `sub a0, a1, a0` where Cake emits
+     `sub a0, a0, a1`. -/
+  | .op .sub expressions => .op .sub (expressions.map wordInstFlattenExp)
   | .op operator [] => .op operator []
   | .op _ [expression] => wordInstFlattenExp expression
   | .op operator (expression :: expressions) =>

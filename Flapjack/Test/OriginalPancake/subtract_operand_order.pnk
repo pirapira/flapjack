@@ -1,0 +1,12 @@
+fun 1 ab(1 a, 1 b) { return a - b; }
+fun 1 ba(1 a, 1 b) { return b - a; }
+fun 1 diffload(1 p) { return (lds 1 (p + 8)) - (lds 1 (p + 16)); }
+fun 1 chain(1 a, 1 b, 1 c) { return a - b - c; }
+fun 1 main() {
+  var 1 r = ab(70, 3);
+  var 1 s = ba(70, 3);
+  var 1 t = diffload(1000);
+  var 1 u = chain(70, 3, 5);
+  @halt(@base, 0, @base, 0);
+  return r + s + t + u;
+}

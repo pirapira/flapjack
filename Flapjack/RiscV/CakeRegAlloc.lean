@@ -907,15 +907,15 @@ def cakeMovesToSp : List (Nat × (Nat × Nat)) →
     NatInfoMap (List (Nat × Nat)) → NatInfoMap (List (Nat × Nat))
   | [], table => table
   | (p, (x, y)) :: rest, table =>
-      /- `moves_to_sp` recurses over the tail before inserting the current
-         move.  Since `pri_move_insert` prepends, this preserves the order of
-         the source move list in each partner list.  The y endpoint is
-         inserted first by `undir_move_insert`, followed by x. -/
-      let table := cakeMovesToSp rest table
+      /- `moves_to_sp` inserts the current move before recursing into the
+         tail.  Since `pri_move_insert` prepends, this reverses the source
+         order in each partner list.  The y endpoint is inserted first by
+         `undir_move_insert`, followed by x. -/
       let table := cakeMapUpdate table y
         ((p, x) :: (cakeMapLookup table y).getD [])
-      cakeMapUpdate table x
+      let table := cakeMapUpdate table x
         ((p, y) :: (cakeMapLookup table x).getD [])
+      cakeMovesToSp rest table
 
 /-- `resort_moves` (`reg_allocScript.sml:1347-1350`): sort each partner
     list by descending priority, then drop the priorities. -/

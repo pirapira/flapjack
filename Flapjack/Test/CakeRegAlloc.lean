@@ -267,13 +267,13 @@ def reviveOrderGuard : Bool :=
   out.availMovesWl == [(2, (1, 1)), (1, (5, 9)), (1, (13, 5))] &&
     out.unavailMovesWl == [(1, (13, 17))]
 
-/- `moves_to_sp` processes the tail first, so partner lists retain source
-   order even though each insertion prepends. -/
+/- `moves_to_sp` inserts before recursing, so partner lists reverse source
+   order because each insertion prepends. -/
 def movesToSpOrderGuard : Bool :=
   let table := Flapjack.RiscV.CakeRegAlloc.cakeMovesToSp
     [(1, (2, 5)), (2, (2, 7)), (3, (2, 11))] []
   Flapjack.RiscV.CakeRegAlloc.cakeMapLookup table 2 ==
-      some [(1, 5), (2, 7), (3, 11)] &&
+      some [(3, 11), (2, 7), (1, 5)] &&
     Flapjack.RiscV.CakeRegAlloc.cakeMapLookup table 5 == some [(1, 2)]
 
 /-- `bg_ok` partitions `adjY` by `adjX` membership with the bucket-reversing

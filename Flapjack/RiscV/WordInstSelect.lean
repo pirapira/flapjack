@@ -31,8 +31,17 @@ class WordInstSelectImmediate (α : Type u) where
   shiftImmediate : α → WordShiftImmediate
 
 instance : WordInstSelectImmediate Nat where
-  validBinOpImmediate _ _ := false
-  shiftImmediate _ := .unsupported
+  /- The source-facing pipeline carries RV64 words as `Nat` after the
+     word-to-stack boundary.  This is not an unbounded integer target: the
+     values are the bit patterns of 64-bit words, so use the same signed
+     12-bit immediate test as the concrete `BitVec 64` instance. -/
+  validBinOpImmediate operator value :=
+    match operator with
+    | .sub => value < 2 ^ 11
+    | .add | .and | .or | .xor =>
+        value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
+  shiftImmediate value :=
+    if value < 64 then .valid value else .outOfRange
 
 instance : WordInstSelectImmediate (BitVec width) where
   validBinOpImmediate operator value :=
@@ -168,17 +177,12 @@ termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
 def wordInstFlattenExp : WordExp α → WordExp α
-  /- `flatten_exp` (`word_instScript.sml`) matches `Op Sub exps` before every
-     other `Op` clause and maps over the operands, keeping their order.  The
-     clause below it rewrites `Op op (x::xs)` to `Op op [.. xs; x]`, which is
-     only sound for the commutative operators; applying it to `Sub` turns
-     `a - b` into `b - a`.  Without this clause `fun 1 ab(1 a, 1 b) { return
-     a - b; }` compiled to `sub a0, a1, a0` where Cake emits
-     `sub a0, a0, a1`.  Matching Cake's clause order matters beyond the
-     two-operand case: a one-element `Op Sub [e]` has to stay
-     `Op Sub [flatten_exp e]` rather than collapse through the `Op _ [x]`
-     clause. -/
-  | .op .sub expressions => .op .sub (expressions.map wordInstFlattenExp)
+  | .op .sub expressions =>
+      -- Cake's `flatten_exp` preserves subtraction operands; the generic
+      -- n-ary case below rebuilds an associative operation as
+      -- `[flatten(rest), flatten(head)]`, which is valid for associative
+      -- operators but reverses `Sub [left, right]`.
+      .op .sub (expressions.map wordInstFlattenExp)
   | .op operator [] => .op operator []
   | .op _ [expression] => wordInstFlattenExp expression
   | .op operator (expression :: expressions) =>
@@ -286,29 +290,12 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
               (.inst (.arith (.shift operator temp left (.imm value)))), .var temp)
       | _, .outOfRange =>
           (.inst (.const temp 0), .var temp)
-      | selectedLeft, _ =>
-          /- `wordInstSelectAtom` does not always leave the whole left operand
-             in `temp`: with binary-operation immediates disabled -- which is
-             how addresses are selected -- `base + c` comes back as the
-             expression `.op .add [.var temp, .const c]`, with only `base` in
-             `temp`.  Shifting `.var temp` therefore dropped the `+ c`, and
-             `lds 1 (1000 + (k - 1) * 8)` was compiled as if it were
-             `lds 1 (1000 + k * 8)`.  Shift what the selector returned.
-
-             Cake reaches this shape differently: `inst_select_exp c tar temp
-             (Shift sh exp n)` (`word_instScript.sml`) selects `exp` into
-             `temp` with the ordinary configuration and then shifts that
-             register by the immediate, so it emits one fewer instruction
-             here.  Materialising `selectedLeft` into `temp` to match makes
-             `wordToStack` reject the result on the guest's
-             `bls_g2_msm_discount`, so the expression carrier stays and the
-             remaining instruction-count difference is left alone. -/
+      | _, _ =>
           let rightPrelude : WordProg α :=
             .inst (.const (temp + 1) value)
           let code := wordDeadSelectSeq leftPrelude rightPrelude
           (wordDeadSelectSeq code
             (.assign temp (.shift operator selectedLeft (.var (temp + 1)))), .var temp)
-
   | .shift operator left right =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
@@ -335,7 +322,18 @@ def wordInstSelectAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [O
          but nested shifts follow the target configuration just as in Cake's
          inst_select_exp. -/
       shiftImmediate := addressImmediate.shiftImmediate }
-  wordInstSelectAtom temp expression
+  /- Cake suppresses the immediate only for the outer address displacement;
+     selectors for the base expression still use the ordinary target
+     configuration.  This distinction is observable for
+     `base + ((k - 1) << 3)`: the subtraction and shift must remain `addi` and
+     `slli`, while a final `base + constant` must remain available for the
+     memory-offset fusion in Word-to-Stack. -/
+  match expression with
+  | .op .add [left, .const value] =>
+      letI : WordInstSelectImmediate α := addressImmediate
+      let (prelude, selectedLeft) := wordInstSelectAtom temp left
+      (prelude, .op .add [selectedLeft, .const value])
+  | _ => wordInstSelectAtom temp expression
 
 def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]

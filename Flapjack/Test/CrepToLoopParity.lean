@@ -135,14 +135,14 @@ def leanCompileShMemMapped : LoopProg Nat :=
 
 def shMemDestinationMappingMatches : Bool :=
   match leanCompileShMemMapped with
-  | .seq .skip (.shMem .store 8 (.var 1)) => true
+  | .seq .skip (.shMem .store 8 (.var 0)) => true
   | _ => false
 
 #guard shMemDestinationMappingMatches
 
 def assignDestinationMappingMatches : Bool :=
   match compileCrepToLoop shMemContext [] (.assign 3 (.var 1)) with
-  | .seq .skip (.assign 8 (.var 1)) => true
+  | .seq .skip (.assign 8 (.var 0)) => true
   | _ => false
 
 #guard assignDestinationMappingMatches

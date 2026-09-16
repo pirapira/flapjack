@@ -28,7 +28,7 @@ structure LoopContext (α : Type u) where
 def findLoopVar (context : LoopContext α) (name : Nat) : Nat :=
   match lookupNatInfo name context.vars with
   | some value => value
-  | none => name
+  | none => 0
 
 /-! Source-named port of `crep_to_loop$find_var` (`find_var_def`,
     `crep_to_loopScript.sml:20`). -/

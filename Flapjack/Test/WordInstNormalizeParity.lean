@@ -248,16 +248,17 @@ def nestedLoadOffsetFallbackMatches : Bool :=
       (.assign 23 (.load (.op .add [.var 23, .const 8]))), .var 23) => true
   | _ => false
 
-/-- When a constant shift amount is outside the target immediate range, Cake
-    still shifts the selected left expression.  In particular, selecting
-    `(k - 1) * 8` must not discard the subtraction and shift the old temporary
-    containing only `k`. -/
-def nonImmediateShiftKeepsSelectedLeft : Bool :=
+/-- A non-displacement address expression uses Cake's ordinary target
+    selector. Thus the nested `base + 1` is selected with `addi`, followed by
+    the immediate shift, rather than being forced through the displacement
+    selector. -/
+def ordinaryAddressShiftUsesTargetImmediates : Bool :=
   match wordInstSelectAddressAtom (α := Nat) 23
       (.shift .lsl (.op .add [.var 18, .const (Nat.succ 0)])
         (.const 63)) with
-  | (.seq (.seq (.move 0 [(23, 18)]) (.inst (.const 24 63)))
-      (.assign 23 (.shift .lsl (.op .add [.var 23, .const 1]) (.var 24))),
+  | (.seq (.seq (.move 0 [(23, 18)])
+      (.inst (.arith (.binOp .add 23 23 (.imm 1)))))
+      (.inst (.arith (.shift .lsl 23 23 (.imm 63)))),
       .var 23) => true
   | _ => false
 
@@ -282,7 +283,7 @@ def nonImmediateShiftKeepsSelectedLeft : Bool :=
 #guard loadSelectorMatches
 #guard nestedLoadSelectorMatches
 #guard nestedLoadOffsetFallbackMatches
-#guard nonImmediateShiftKeepsSelectedLeft
+#guard ordinaryAddressShiftUsesTargetImmediates
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -306,7 +307,7 @@ def runChecks : IO Bool := do
     , ("a load materializes Cake's Mem instruction after its address move", loadSelectorMatches)
     , ("a nested load remains Cake's memory instruction", nestedLoadSelectorMatches)
     , ("a nested load preserves an unfused address expression", nestedLoadOffsetFallbackMatches)
-    , ("a non-immediate shift keeps Cake's selected left expression", nonImmediateShiftKeepsSelectedLeft)
+    , ("a non-displacement address shift uses Cake's target immediates", ordinaryAddressShiftUsesTargetImmediates)
   ]
   let mut ok := true
   for (label, passed) in checks do

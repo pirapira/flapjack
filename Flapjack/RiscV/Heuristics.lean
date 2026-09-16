@@ -1,5 +1,6 @@
 import Std.Data.TreeMap
 import Std.Data.TreeSet
+import Flapjack.NatDedup
 import Flapjack.RiscV.RegAlloc
 
 /-!
@@ -301,25 +302,13 @@ def addRhsMem (name : Nat) (counts : WordHeuristicCountMap) :
 
 end WordHeuristicCountMap
 
-/-- `List.eraseDups` with logarithmic membership; keeps the first occurrence
-    of every key in its original position, as `List.eraseDups` does. -/
-def wordHeuristicEraseDupsAux (seen : Std.TreeSet Nat) :
-    List Nat → List Nat
-  | [] => []
-  | name :: names =>
-      if seen.contains name then wordHeuristicEraseDupsAux seen names
-      else name :: wordHeuristicEraseDupsAux (seen.insert name) names
-
-def wordHeuristicEraseDups (names : List Nat) : List Nat :=
-  wordHeuristicEraseDupsAux ∅ names
-
 /-- `wordHeuristicMaxAll`.  The reference folds `wordHeuristicUpdate` over the
     deduplicated key list starting from the empty map, and every update
     prepends, so the result is that key list reversed.  Inserting in the same
     order here gives ascending stamps, and `toNatInfoMap` reverses them. -/
 def WordHeuristicCountMap.maxAll (left right : WordHeuristicCountMap) :
     WordHeuristicCountMap :=
-  (wordHeuristicEraseDups (left.keys ++ right.keys)).foldl
+  (natEraseDups (left.keys ++ right.keys)).foldl
     (fun result name =>
       let leftValue := (left.lookup name).getD wordHeuristicZero
       let rightValue := (right.lookup name).getD wordHeuristicZero

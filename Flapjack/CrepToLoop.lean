@@ -282,7 +282,10 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
         vars := (name, result.nextTemp) :: context.vars
         maxVar := result.nextTemp }
       .seq (loopNestedSeq result.code)
-        (.seq (.assign name result.expression)
+        /- Cake's `Dec` assigns the freshly allocated temporary `tmp` and
+           extends the context with `v |-> tmp`; using the source binder here
+           leaves the Word stage with a different variable identity. -/
+        (.seq (.assign result.nextTemp result.expression)
           (loopCompileProg nextContext (result.nextTemp :: result.live) body))
   | .assign name value =>
       let result := loopCompileExp context (context.maxVar + 1) live value

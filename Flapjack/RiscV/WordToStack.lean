@@ -689,11 +689,10 @@ def wordStackConditionOperands (config : WordStackConfig) (condition : Nat)
   pure (wordStackJoin conditionPrelude rightPrelude,
     conditionRegister, rightOperand)
 
-/-! FFI arguments use the fixed RISC-V ABI registers x10--x13.  The source
-    locations are checked before emitting the copies so a later argument cannot
-    be destroyed by an earlier ABI move.  Allocator configurations that keep
-    an argument in one of those destination registers are rejected here; a
-    future parallel-move implementation can relax this contract. -/
+/-! The ordinary StackLang path names FFI arguments by hardware registers
+    x10--x13.  The source-shaped runtime adapter normalizes its exact
+    pre-Lab ABI-copy suffix separately, so this general lowering remains the
+    hardware-numbered implementation used by its existing contracts. -/
 
 def wordStackFfiRegisterSafe (register : Nat) : Bool :=
   register != 10 && register != 11 && register != 12 && register != 13
@@ -3547,6 +3546,43 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
 termination_by program => sizeOf program
 decreasing_by
   all_goals first | decreasing_trivial | (simp [sizeOf] <;> omega)
+
+/-! Cake's full-SSA FFI block is preceded by a `Move1` ABI shuffle.  The
+    source allocator's sequence traversal leaves the constant writes in the
+    reverse order immediately before that shuffle; preserving this observable
+    order is required for byte parity even though the values are independent.
+    Restrict the rewrite to the source-shaped pre-FFI pattern and leave the
+    ordinary hardware-numbered path untouched. -/
+def wordProgSeqItems : WordProg α → List (WordProg α)
+  | .seq first second => wordProgSeqItems first ++ wordProgSeqItems second
+  | program => [program]
+
+def wordProgSeqBuild : List (WordProg α) → WordProg α
+  | [] => .skip
+  | program :: programs =>
+      programs.foldl (fun current next => .seq current next) program
+
+def wordProgIsFfi : WordProg α → Bool
+  | .ffi _ _ _ _ _ _ => true
+  | _ => false
+
+def wordProgIsConstAssign : WordProg α → Bool
+  | .assign _ (.const _) => true
+  | _ => false
+
+def wordProgReverseFfiConstSetup (program : WordProg α) : WordProg α :=
+  let items := wordProgSeqItems program
+  let (pre, suffix) := items.span (fun item => !wordProgIsFfi item)
+  match suffix, pre.reverse with
+  | .ffi function configuration configurationLength array arrayLength live :: rest,
+      .move priority moves :: beforeMoveRev =>
+      let (constantsRev, remainderRev) :=
+        beforeMoveRev.span wordProgIsConstAssign
+      let reordered := remainderRev.reverse ++ constantsRev ++
+        [.move priority moves]
+      wordProgSeqBuild (reordered ++
+        [.ffi function configuration configurationLength array arrayLength live] ++ rest)
+  | _, _ => program
 
 def wordToStackProgWordWithBitmapsFused [NeZero width]
     (config : WordStackConfig) (registerCount bitmapRegister frameSlots wordBits : Nat)

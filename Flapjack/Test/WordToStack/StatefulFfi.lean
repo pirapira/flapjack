@@ -14,6 +14,23 @@ def statefulFfiBitmaps : WordStackBitmapState :=
   { data := [4, 12]
     length := 2 }
 
+/-! Source-shaped Cake FFI uses stack ABI registers 1--4.  The Lab boundary
+    maps those once to hardware x10--x13; using the historical 10--13 names
+    here would instead map the suffix onto Cake's scratch registers. -/
+def cakeFfiAbiShape : Bool :=
+  match wordStackFfiCake (α := Nat)
+      { locations := [(0, .register 1), (1, .register 2),
+          (2, .register 3), (3, .register 4)]
+        scratch := 31
+        stackBase := 0
+        abiBase := 1
+        abiStride := 1 }
+      "halt" 0 1 2 3 with
+  | some (.ffi "halt" 1 2 3 4 0) => true
+  | _ => false
+
+#guard cakeFfiAbiShape
+
 example :
     wordToStackProgNatWithBitmapBuilder statefulFfiConfig (fun live => live)
       2 26 4 64 none statefulFfiBitmaps

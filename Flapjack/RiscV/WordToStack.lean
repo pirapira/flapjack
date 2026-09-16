@@ -1756,6 +1756,25 @@ def wordStackMovesToPhysical {α : Type} (config : WordStackConfig) :
       let moves ← wordStackPhysicalMovesTo config sources destination
       wordStackParallelLocationMove config moves
 
+/-! In the source-shaped Cake pipeline the four FFI arguments are the first
+    four *stack* ABI registers (1--4), not the port's hardware-numbered 10--13
+    registers.  The latter is intentionally retained by `wordStackFfi` for
+    the historical hardware-numbered path; this variant lets the Cake Lab
+    boundary apply `riscv_names` exactly once. -/
+def wordStackFfiCake {α : Type} (config : WordStackConfig) (function : FunName)
+    (configuration configurationLength array arrayLength : Nat) :
+    Option (StackProg α) := do
+  let moves ← wordStackPhysicalMovesTo config
+    [configuration, configurationLength, array, arrayLength] config.abiBase
+  let prelude ← wordStackParallelLocationMove config moves
+  let configurationRegister := config.abiBase
+  let configurationLengthRegister := config.abiBase + 1
+  let arrayRegister := config.abiBase + 2
+  let arrayLengthRegister := config.abiBase + 3
+  pure (wordStackJoin prelude
+    (.ffi function configurationRegister configurationLengthRegister
+      arrayRegister arrayLengthRegister 0))
+
 def wordStackReturnStackSuffix (config : WordStackConfig) (values : List Nat) : List Nat :=
   values.drop config.abiRegisterCount
 
@@ -3828,7 +3847,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .dataBufferWrite address value =>
       (wordStackBufferWrite config false address value).map (fun code => (code, state))
   | .ffi function configuration configurationLength array arrayLength _ =>
-      (wordStackFfi config function configuration configurationLength array arrayLength).map
+      (wordStackFfiCake config function configuration configurationLength array arrayLength).map
         (fun code => (code, state))
   | .shareInst operator name address =>
       (wordStackCompileSharedNat config operator name (wordExpToNat address)).map

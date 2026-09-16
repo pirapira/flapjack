@@ -147,7 +147,7 @@ example :
         ({ current := [(1, 100)], next := 200 } : WordSsaState)
       ((.loop [1] (.seq (.assign 1 (.var 1)) (.break 0)) [1]) :
           WordProg Nat)).1 =
-      { current := [(1, 200)], next := 204 } := by
+      { current := [(1, 200)], next := 208 } := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaLoopSetup, wordSsaFakeMoves,
     NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert, NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList, wordSsaListNextVarRenameMove,

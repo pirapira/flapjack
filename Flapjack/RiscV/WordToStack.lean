@@ -1050,6 +1050,21 @@ def wordStackGet {α : Type} (config : WordStackConfig) (destination : Nat)
       pure (wordStackJoin (.get config.scratch store)
         (.stackStore config.scratch (wordStackOffset config slot)))
 
+/-! Cake's `stackLang` store names include `Temp`, and the source-shaped
+    Word-to-Stack path compiles a `Get` against them.  The polymorphic
+    `wordStackGet` cannot carry an `α`-typed temporary index into `StackStore`,
+    so the concrete natural-number path uses this variant, exactly like
+    `wordStackStoreNameNat` does for `Set`. -/
+def wordStackGetNat (config : WordStackConfig) (destination : Nat)
+    (store : WordStore Nat) : Option (StackProg Nat) := do
+  let store ← wordStackStoreNameNat store
+  let location ← wordStackLocation config destination
+  match location with
+  | .register register => pure (.get register store)
+  | .stack slot =>
+      pure (wordStackJoin (.get config.scratch store)
+        (.stackStore config.scratch (wordStackOffset config slot)))
+
 def wordStackOpCurrHeap {α : Type} (config : WordStackConfig) (operator : BinOp)
     (destination source : Nat) : Option (StackProg α) := do
   let (prelude, sourceRegister) ←
@@ -3587,7 +3602,8 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .inst instruction =>
       (wordToStackInst config (wordInstToNat instruction)).map (fun code => (code, state))
   | .get destination store =>
-      (wordStackGet config destination (wordStoreToNat store)).map (fun code => (code, state))
+      (wordStackGetNat config destination (wordStoreToNat store)).map
+        (fun code => (code, state))
   | .store address value =>
       (match address with
       | .const _ | .var _ | .lookup _ =>
@@ -3779,12 +3795,10 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals first | decreasing_trivial | (simp [sizeOf] <;> omega)
 
-/-! Cake's full-SSA FFI block is preceded by a `Move1` ABI shuffle.  The
-    source allocator's sequence traversal leaves the constant writes in the
-    reverse order immediately before that shuffle; preserving this observable
-    order is required for byte parity even though the values are independent.
-    Restrict the rewrite to the source-shaped pre-FFI pattern and leave the
-    ordinary hardware-numbered path untouched. -/
+/-! Small structural helpers used by the direct `const_fp` oracle test.  The
+    production pipeline deliberately does not apply the old post-allocation
+    FFI reorder; retaining the helpers keeps the test focused on the original
+    Cake `drop_consts` order without reintroducing that non-Cake rewrite. -/
 def wordProgSeqItems : WordProg α → List (WordProg α)
   | .seq first second => wordProgSeqItems first ++ wordProgSeqItems second
   | program => [program]

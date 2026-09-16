@@ -189,7 +189,7 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
     (temp : Nat) : WordExp α → WordProg α × WordExp α
   | .const value => (.assign temp (.const value), .var temp)
   | .var name => (.move 0 [(temp, name)], .var temp)
-  | .lookup store => (.assign temp (.lookup store), .var temp)
+  | .lookup store => (.get temp store, .var temp)
   | .load address =>
       let (prelude, address) := wordInstSelectAtom temp address
       (wordDeadSelectSeq prelude (.assign temp (.load address)), .var temp)
@@ -282,6 +282,7 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
   | .assign destination value =>
       let value := wordInstNormalizeExp value
       match value with
+      | .lookup store => .get destination store
       | .load address =>
           if wordExpIsAtom address then
             .assign destination value

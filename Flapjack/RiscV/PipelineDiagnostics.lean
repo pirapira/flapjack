@@ -303,7 +303,6 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
-          let renamedProgram := RiscV.wordProgReverseFfiConstSetup renamedProgram
           let cakeFrameSlots :=
             if RiscV.wordProgHasBitmapSites renamedProgram then
               RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters

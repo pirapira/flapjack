@@ -215,6 +215,24 @@ def loadSelectorMatches : Bool :=
   | .seq (.move 0 [(23, 18)]) (.inst (.mem .load 14 23)) => true
   | _ => false
 
+/-- Cake's expression selector emits the same memory instruction for a load
+    nested inside another expression; it must not leave an `Assign (Load ..)`
+    for the later passes to rediscover. -/
+def nestedLoadSelectorMatches : Bool :=
+  match wordInstSelectAtom (α := Nat) 23 (.load (.var 18)) with
+  | (.seq (.move 0 [(23, 18)]) (.inst (.mem .load 23 23)), .var 23) => true
+  | _ => false
+
+/-- The address-selector fallback remains an expression when an offset is not
+    yet materialized.  The nested-load case must retain that address rather
+    than incorrectly loading from the base temporary alone. -/
+def nestedLoadOffsetFallbackMatches : Bool :=
+  match wordInstSelectAtom (α := Nat) 23
+      (.load (.op .add [.var 18, .const 8])) with
+  | (.seq (.move 0 [(23, 18)])
+      (.assign 23 (.load (.op .add [.var 23, .const 8]))), .var 23) => true
+  | _ => false
+
 #guard twoVarOrderMatches
 #guard varConstOrderMatches
 #guard constFirstOrderMatches
@@ -232,6 +250,8 @@ def loadSelectorMatches : Bool :=
 #guard variableShiftSelectorMatches
 #guard constantSelectorMatches
 #guard loadSelectorMatches
+#guard nestedLoadSelectorMatches
+#guard nestedLoadOffsetFallbackMatches
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -251,6 +271,8 @@ def runChecks : IO Bool := do
     , ("a variable shift uses Cake's two operand moves and register shift", variableShiftSelectorMatches)
     , ("a constant assignment becomes Cake's Const instruction", constantSelectorMatches)
     , ("a load becomes Cake's memory instruction after its address move", loadSelectorMatches)
+    , ("a nested load remains Cake's memory instruction", nestedLoadSelectorMatches)
+    , ("a nested load preserves an unfused address expression", nestedLoadOffsetFallbackMatches)
   ]
   let mut ok := true
   for (label, passed) in checks do

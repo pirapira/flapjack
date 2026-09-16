@@ -251,10 +251,6 @@ def wordStackParallelMove {α : Type} (config : WordStackConfig)
   let moves := moves.filter (fun move => move.1 != move.2)
   wordStackParallelMoveAux config (moves.length + 1) moves
 
-def wordStackMoveList {α : Type} (config : WordStackConfig) :
-    List (Nat × Nat) → Option (StackProg α) :=
-  wordStackParallelMove config
-
 def wordStackDivInst {α : Type} (config : WordStackConfig)
     (destination dividend divisor : Nat) : Option (StackProg α) := do
   let destination ← wordStackLocation config destination
@@ -1537,6 +1533,23 @@ def wordStackLocationMove {α : Type} (config : WordStackConfig)
             (wordStackOffset config sourceSlot))
           (.stackStore config.scratch (wordStackOffset config destinationSlot)))
 
+/-! Allocator-generated move lists are expressed in renamed Word variables, but
+    Cake's `parmove` schedules the corresponding physical locations.  Looking
+    only at variable names misses aliases introduced by register allocation
+    (for example, a destination named `165` can occupy the same register as
+    the source named `2`). -/
+def wordStackLocationMovesFromNames
+    (config : WordStackConfig) :
+    List (Nat × Nat) → Option (List (WordLocation × WordLocation))
+  | [] => some []
+  | (destination, source) :: moves => do
+      let destination ← wordStackLocation config destination
+      let source ← wordStackLocation config source
+      let rest ← wordStackLocationMovesFromNames config moves
+      pure ((destination, source) :: rest)
+termination_by moves => sizeOf moves
+decreasing_by all_goals decreasing_trivial
+
 def wordStackLocationMoveToScratch {α : Type} (config : WordStackConfig)
     (source : WordLocation) : Option (StackProg α) :=
   match source with
@@ -1567,31 +1580,30 @@ def wordStackLocationMoveRemoveDestination (destination : WordLocation) :
     List (WordLocation × WordLocation) → List (WordLocation × WordLocation) :=
   List.filter (fun move => move.1 != destination)
 
-def wordStackLocationMoveReady (destinations : List WordLocation) :
+def wordStackLocationMoveReady (sources : List WordLocation) :
     List (WordLocation × WordLocation) → Option (WordLocation × WordLocation)
   | [] => none
   | move :: moves =>
-      if move.1 = move.2 || move.2 ∉ destinations then
+      if move.1 = move.2 || move.1 ∉ sources then
         some move
       else
-        wordStackLocationMoveReady destinations moves
+        wordStackLocationMoveReady sources moves
 termination_by moves => sizeOf moves
 decreasing_by all_goals decreasing_trivial
 
-/-- Schedule a parallel move list over `WordLocation`s in CakeML dependency
-    order.  As in `wordStackParallelMoveAux`, a move whose source is no longer a
-    pending destination reads a value that no remaining move overwrites, so it
-    is safe only to emit **last**; `wordStackLocationMoveReady` selects exactly
-    such a move, and emitting it first would clobber a destination that a
-    remaining move still has to read (e.g. `[a <- b, b <- c]` must emit
-    `a <- b` before `b <- c`).  Cycles are handled by saving one source in the
-    reserved address scratch register and restoring it afterwards, the same
-    temporary-register idea as `parmove`. -/
+/-! Schedule a parallel move list over `WordLocation`s in the same order as
+    CakeML's `parmove`.  A move whose destination is not a pending source
+    cannot clobber a value needed by a remaining move, so it is safe to emit
+    first; `wordStackLocationMoveReady` selects exactly such a move (e.g.
+    `[a <- b, b <- c]` emits `a <- b` before `b <- c`).  Cycles are handled by
+    saving one source in the reserved address scratch register and restoring
+    it afterwards, the same temporary-register idea as `parmove`. -/
 def wordStackParallelLocationMoveAux {α : Type} (config : WordStackConfig) :
     Nat → List (WordLocation × WordLocation) → Option (StackProg α)
   | 0, _ => none
   | fuel + 1, moves =>
       let destinations := wordStackLocationMoveDestinations moves
+      let sources := moves.map (fun move => move.2)
       -- A reserved register may be a move destination as long as the
       -- scheduling below never has to borrow it as a temporary.  After the
       -- Cake-style single-instruction moves only a stack-to-stack move borrows
@@ -1609,19 +1621,19 @@ def wordStackParallelLocationMoveAux {α : Type} (config : WordStackConfig) :
         moves.any (fun (move : WordLocation × WordLocation) =>
           move.1 = WordLocation.register config.addressScratch)
       if (moves.any stackToStack && scratchBusy) ||
-          (addressScratchBusy && (wordStackLocationMoveReady destinations moves).isNone) then
+          (addressScratchBusy && (wordStackLocationMoveReady sources moves).isNone) then
         none
       else if !destinations.Nodup then
         none
       else if moves.isEmpty then
         some .skip
       else
-        match wordStackLocationMoveReady destinations moves with
+        match wordStackLocationMoveReady sources moves with
         | some (destination, source) => do
+            let last ← wordStackLocationMove config destination source
             let rest ← wordStackParallelLocationMoveAux config fuel
               (wordStackLocationMoveRemoveDestination destination moves)
-            let last ← wordStackLocationMove config destination source
-            pure (wordStackJoin rest last)
+            pure (wordStackJoin last rest)
         | none =>
             match moves with
             | [] => some .skip
@@ -1636,6 +1648,12 @@ def wordStackParallelLocationMoveAux {α : Type} (config : WordStackConfig) :
 def wordStackParallelLocationMove {α : Type} (config : WordStackConfig)
     (moves : List (WordLocation × WordLocation)) : Option (StackProg α) :=
   wordStackParallelLocationMoveAux config (moves.length + 1) moves
+
+def wordStackMoveList {α : Type} (config : WordStackConfig) :
+    List (Nat × Nat) → Option (StackProg α) :=
+  fun moves => do
+    let moves ← wordStackLocationMovesFromNames config moves
+    wordStackParallelLocationMove config moves
 
 /-- Materialize the four FFI arguments into the fixed RISC-V ABI registers
     x10--x13.  When the sources already avoid those registers we keep the

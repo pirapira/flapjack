@@ -42,13 +42,13 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
       move.2 ≠ .register config.scratch ∧
       move.2 ≠ .register config.addressScratch) :
     wordStackParallelLocationMove (α := Nat) config moves =
-      wordStackReversedSequentialLocationMove (α := Nat) config moves := by
+      wordStackSequentialLocationMove (α := Nat) config moves := by
   induction moves with
   | nil =>
       simp only [wordStackParallelLocationMove,
         wordStackParallelLocationMoveAux]
       simp [wordStackLocationMoveDestinations,
-        wordStackReversedSequentialLocationMove]
+        wordStackSequentialLocationMove]
   | cons head tail ih =>
       have hdestinations' :
           (head.1 :: tail.map Prod.fst).Nodup := by
@@ -67,12 +67,20 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
           move.2 ≠ .register config.addressScratch := by
         intro move hmove
         exact hreserved move (by simp [hmove])
-      have hheadNoSource : head.2 ∉ head.1 :: tail.map Prod.fst := by
-        simpa only [List.map_cons] using hnoSource head (by simp)
+      have hheadNotSource : head.1 ∉ head.2 :: tail.map Prod.snd := by
+        intro hsource
+        rcases List.mem_cons.mp hsource with hsame | hsource
+        · apply hnoSource head (by simp)
+          rw [← hsame]
+          simp
+        · rcases List.mem_map.mp hsource with ⟨move, hmove, hsame⟩
+          apply hnoSource move (by simp [hmove])
+          rw [hsame]
+          simp
       have hheadReady :
-          wordStackLocationMoveReady (head.1 :: tail.map Prod.fst)
+          wordStackLocationMoveReady (head.2 :: tail.map Prod.snd)
               (head :: tail) = some head := by
-        simp [wordStackLocationMoveReady, hheadNoSource]
+        simp [wordStackLocationMoveReady, hheadNotSource]
       have hheadNotTailDestination : ∀ move, move ∈ tail →
           move.1 ≠ head.1 := by
         intro move hmove heq
@@ -133,13 +141,13 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
       have htailResult := ih htailDestinations htailNoSource htailReserved
       have htailAux :
           wordStackParallelLocationMoveAux config (tail.length + 1) tail =
-            wordStackReversedSequentialLocationMove (α := Nat) config tail := by
+            wordStackSequentialLocationMove (α := Nat) config tail := by
         simpa [wordStackParallelLocationMove] using htailResult
       simp [wordStackParallelLocationMove,
         wordStackParallelLocationMoveAux,
         wordStackLocationMoveDestinations, hdestinations', hscratchBusy,
         haddressScratchBusy, hheadReady, hremoved,
-        wordStackReversedSequentialLocationMove,
+        wordStackSequentialLocationMove,
         htailAux]
 
 end Flapjack.RiscV

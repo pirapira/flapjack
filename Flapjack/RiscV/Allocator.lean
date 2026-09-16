@@ -347,8 +347,13 @@ def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
 
 def wordSsaReadCutsets (state : WordSsaState)
     (cutsets : List Nat × List Nat) : List Nat × List Nat :=
-  (NumSet.fromList cutsets.1 |>.map (wordSsaRead state),
-    NumSet.fromList cutsets.2 |>.map (wordSsaRead state))
+  /- Cake's `apply_nummaps_key` maps the keys of the source sptree and then
+     rebuilds the sptree.  Rebuilding after the rename is observable through
+     `toAList`: the Patricia traversal order can change when a key changes.
+     Mapping an already enumerated list (the old port) preserved the wrong
+     order and made FFI/call cutsets diverge from Cake after SSA. -/
+  (NumSet.fromList ((NumSet.fromList cutsets.1).map (wordSsaRead state)),
+    NumSet.fromList ((NumSet.fromList cutsets.2).map (wordSsaRead state)))
 
 def wordSsaFresh (state : WordSsaState) (name : Nat) : WordSsaState × Nat :=
   ({ current := (name, state.next) ::

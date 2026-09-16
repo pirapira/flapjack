@@ -1,0 +1,28 @@
+
+---------------------------------------------------------------------
+     HOL4 [Trindemossen 2 (stdknl, built Fri Sep 04 08:35:26 2026)]
+
+     For introductory HOL help, type: help "hol";
+     To exit type <Control>-D
+---------------------------------------------------------------------
+** Load path (see loadPath variable) now contains 360 entries
+** after consulting Holmakefiles and any holproject.toml
+
+[In non-standard heap: /home/zksecurity/flapjack3/cakeml/misc/cakeml-heap]
+> val it = (): unit
+val it = (): unit
+val it = (): unit
+val pe = fn: string -> term -> unit
+alist_0_4_6_12=[0; 4; 12; 6]
+
+val it = (): unit
+alist_0_4_8_12_16=[0; 16; 8; 4; 12]
+
+val it = (): unit
+alist_1_2_3_4_5=[3; 1; 5; 4; 2]
+
+val it = (): unit
+alist_range13=[7; 3; 11; 1; 9; 5; 0; 8; 4; 12; 2; 10; 6]
+
+val it = (): unit
+> 

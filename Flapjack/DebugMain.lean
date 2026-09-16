@@ -78,7 +78,8 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   let (allocationFuel, state1) :=
     RiscV.CakeRegAlloc.cakeInitAlloc1Heu movesF k state0
   let state2 := RiscV.CakeRegAlloc.cakeRptDoStep scost k allocationFuel state1
-  let moveTable := RiscV.CakeRegAlloc.cakeMovesToSp moves0 []
+  let moveTable := RiscV.CakeRegAlloc.cakeMovesToSp moves0
+    (RiscV.CakeRegAlloc.CakeNodeMap.ofSize bij.nextNode)
   let state3 := RiscV.CakeRegAlloc.cakeAssignAtemps k state2.stack
     (fun state node colours =>
       RiscV.CakeRegAlloc.cakeBiasedPref state

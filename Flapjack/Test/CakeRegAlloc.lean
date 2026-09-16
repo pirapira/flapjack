@@ -183,11 +183,11 @@ physical 2 -> Fixed 1. -/
 def graphTagsGuard : Bool :=
   let tags := Flapjack.RiscV.CakeRegAlloc.cakeMkTags 3 [(0, 9), (1, 13), (2, 2)]
     [13]
-  Flapjack.RiscV.CakeRegAlloc.cakeMapLookup tags 0 ==
+  tags.get 0 ==
       some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.aTemp &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup tags 1 ==
+    tags.get 1 ==
       some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.sTemp &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup tags 2 ==
+    tags.get 2 ==
       some (Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.fixed 1)
 
 /-- `init_ra_state` combines the pieces: clique edge plus tags plus dim. -/
@@ -271,10 +271,11 @@ def reviveOrderGuard : Bool :=
    order even though each insertion prepends. -/
 def movesToSpOrderGuard : Bool :=
   let table := Flapjack.RiscV.CakeRegAlloc.cakeMovesToSp
-    [(1, (2, 5)), (2, (2, 7)), (3, (2, 11))] []
-  Flapjack.RiscV.CakeRegAlloc.cakeMapLookup table 2 ==
+    [(1, (2, 5)), (2, (2, 7)), (3, (2, 11))]
+    (Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofSize 12)
+  table.get 2 ==
       some [(1, 5), (2, 7), (3, 11)] &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup table 5 == some [(1, 2)]
+    table.get 5 == some [(1, 2)]
 
 /-- `bg_ok` partitions `adjY` by `adjX` membership with the bucket-reversing
     `sorting$PARTITION`, then `st_ex_FILTER`s each case list. -/

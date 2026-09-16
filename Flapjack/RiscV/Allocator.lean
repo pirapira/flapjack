@@ -411,7 +411,7 @@ def wordSsaRenameMove (state : WordSsaState) (priority : Nat)
   let sources := moves.map (fun move => wordSsaRead state move.2)
   let (state, destinations) := wordSsaFreshList state destinations
   let force := (moves.zip destinations).filter (fun move =>
-    move.1.1 ∉ moves.map (fun candidate => candidate.1)) |>.map
+    move.1.2 ∉ moves.map (fun candidate => candidate.1)) |>.map
       (fun move => (move.1.2, move.2))
   (wordSsaForceRename force state, .move priority (destinations.zip sources))
 

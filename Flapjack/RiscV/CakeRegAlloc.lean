@@ -543,6 +543,28 @@ private def cakeSnapGet (arr : Array (Option α)) (overflow : NatInfoMap α)
 private def cakeSnapOverflow (m : NatInfoMap α) (dim : Nat) : NatInfoMap α :=
   m.filter (fun entry => dim ≤ entry.1)
 
+/-- Rebuild a map from its original key order, taking updated values from
+    the snapshot arrays: first bindings pick up the array value, later
+    duplicates and out-of-range keys keep their entries — element for
+    element the list the in-place `cakeMapUpdate` fold produces, given
+    every updated key already binds in the original map. -/
+private def cakeSnapRebuild (orig : NatInfoMap α) (dim : Nat)
+    (values : Array (Option α)) (overflow : NatInfoMap α) : NatInfoMap α :=
+  let rec go (l : List (Nat × α)) (seen : Array Bool)
+      (acc : List (Nat × α)) : List (Nat × α) :=
+    match l with
+    | [] => acc.reverse
+    | (key, value) :: rest =>
+        if seen.getD key false then
+          go rest seen ((key, value) :: acc)
+        else
+          let updated : α :=
+            match cakeSnapGet values overflow key with
+            | some v => v
+            | none => value
+          go rest (seen.setIfInBounds key true) ((key, updated) :: acc)
+  go orig (Array.replicate dim false) []
+
 /-- `revive_moves` (`reg_allocScript.sml:363-375`). -/
 def cakeReviveMoves (vs : List Nat) (state : CakeRaState) : CakeRaState :=
   let nbs := vs.map (fun v => cakeAdjSub state.adjLists v)
@@ -604,9 +626,54 @@ def cakeDoSimplify (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
   match state.simpWl with
   | [] => (false, state)
   | _ =>
-      let state := state.simpWl.foldl (fun s x => cakeDecDegree x s) state
-      let state := state.simpWl.foldl (fun s x => cakePushStack x s) state
-      (true, cakeUnspill k { state with simpWl := [] })
+      /- `dec_degree` folds a linear `cakeMapUpdate` per neighbour and
+         `push_stack` two per node; with batches of thousands of nodes the
+         simplify step became quadratic on the guest workload.  Batch both
+         folds on array snapshots: each neighbour occurrence decrements the
+         same slot it would have decremented in the map, and the rebuild
+         keeps every key's position, so the result is element for element
+         the reference fold (`reg_allocScript.sml:256-307`); keys missing
+         from the original maps cannot arise, because the state
+         initialises degrees and move-related flags for every node. -/
+      let dim := state.dim
+      let deg := cakeSnapArray state.degrees dim
+      let degOverflow := cakeSnapOverflow state.degrees dim
+      let adj := cakeSnapArray state.adjLists dim
+      let adjOverflow := cakeSnapOverflow state.adjLists dim
+      let mr := cakeSnapArray state.moveRelated dim
+      let mrOverflow := cakeSnapOverflow state.moveRelated dim
+      let decNeighbor (pair : Array (Option Nat) × NatInfoMap Nat) (v : Nat) :
+          Array (Option Nat) × NatInfoMap Nat :=
+        let (d, ov) := pair
+        if v < d.size then
+          (d.setIfInBounds v (some ((d.getD v none).getD 0 - 1)), ov)
+        else
+          (d, cakeMapUpdate ov v ((cakeSnapGet d ov v).getD 0 - 1))
+      let decNode (pair : Array (Option Nat) × NatInfoMap Nat) (x : Nat) :
+          Array (Option Nat) × NatInfoMap Nat :=
+        ((cakeSnapGet adj adjOverflow x).getD []).foldl decNeighbor pair
+      let (deg1, degOverflow1) :=
+        state.simpWl.foldl decNode (deg, degOverflow)
+      let pushDegrees (pair : Array (Option Nat) × NatInfoMap Nat) (x : Nat) :
+          Array (Option Nat) × NatInfoMap Nat :=
+        let (d, ov) := pair
+        if x < d.size then (d.setIfInBounds x (some 0), ov)
+        else (d, cakeMapUpdate ov x 0)
+      let pushFlags (pair : Array (Option Bool) × NatInfoMap Bool) (x : Nat) :
+          Array (Option Bool) × NatInfoMap Bool :=
+        let (m, ov) := pair
+        if x < m.size then (m.setIfInBounds x (some false), ov)
+        else (m, cakeMapUpdate ov x false)
+      let (deg2, degOverflow2) :=
+        state.simpWl.foldl pushDegrees (deg1, degOverflow1)
+      let (mr2, mrOverflow2) :=
+        state.simpWl.foldl pushFlags (mr, mrOverflow)
+      let state' :=
+        { state with
+          degrees := cakeSnapRebuild state.degrees dim deg2 degOverflow2,
+          moveRelated := cakeSnapRebuild state.moveRelated dim mr2 mrOverflow2,
+          stack := state.simpWl.reverse ++ state.stack }
+      (true, cakeUnspill k { state' with simpWl := [] })
 
 /-- `inc_deg` (`reg_allocScript.sml:424-429`). -/
 def cakeIncDeg (n d : Nat) (state : CakeRaState) : CakeRaState :=
@@ -704,20 +771,6 @@ def cakeRespill (k x : Nat) (state : CakeRaState) : CakeRaState :=
     { state with freezeWl := state.freezeWl.filter (· ≠ x) }
   else state
 
-/-- `do_coalesce` (`reg_allocScript.sml:676-698`). -/
-def cakeDoCoalesce (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
-  let (ores, unavail, state) :=
-    cakeStExFirst cakeConsistencyOk (fun s x y => cakeBgOk k x y s)
-      state state.availMovesWl []
-  let state := cakeAddUnavailMovesWl unavail state
-  match ores with
-  | none => (false, { state with availMovesWl := [] })
-  | some ((x, y), (case1, case2), ms) =>
-      let state := cakeDoCoalesceReal x y case1 case2
-        { state with availMovesWl := ms }
-      let state := cakeUnspill k state
-      (true, cakeRespill k x state)
-
 /-- `reset_move_related` (`reg_allocScript.sml:708-725`). -/
 def cakeResetMoveRelated (moves : List (Nat × (Nat × Nat)))
     (state : CakeRaState) : CakeRaState :=
@@ -755,6 +808,125 @@ private def cakeConsistencyOkSnap (adj : Array (Option (List Nat)))
     (cakeIsFixedSnap tags tagsOv x || (cakeSnapGet mr mrOv x).getD false) &&
     (cakeIsFixedSnap tags tagsOv y || (cakeSnapGet mr mrOv y).getD false) &&
     !(cakeIsFixedSnap tags tagsOv x && cakeIsFixedSnap tags tagsOv y)
+
+/-- `st_ex_FIRST` over snapshot arrays.  The scan threads no state: the
+    only state effect of the reference `cakeCoalesceParent` is path
+    compression, and every later reader chases to the same root with or
+    without the compressed links, so the roots returned here are exactly
+    the reference ones.  The George test and the consistency predicate run
+    on dim-sized snapshots, one linear build per `do_coalesce` call. -/
+private def cakeCoalesceParentSnap (par : Array (Option Nat))
+    (parOv : NatInfoMap Nat) (tags : Array (Option CakeNodeTag))
+    (tagsOv : NatInfoMap CakeNodeTag) (x : Nat) : Nat :=
+  let rec chase (cur : Nat) : Nat :=
+    let xt := (cakeSnapGet par parOv cur).getD cur
+    if cakeIsFixedSnap tags tagsOv xt then xt
+    else if cur <= xt then cur
+    else chase xt
+  chase x
+termination_by x => x
+decreasing_by all_goals omega
+
+private def cakeConsideredVarSnap (tags : Array (Option CakeNodeTag))
+    (tagsOv : NatInfoMap CakeNodeTag) (k v : Nat) : Bool :=
+  ((cakeSnapGet tags tagsOv v).getD .aTemp == .aTemp) ||
+    (match (cakeSnapGet tags tagsOv v).getD .aTemp with
+     | .fixed n => n < k
+     | _ => false)
+
+private def cakeIsFixedKSnap (tags : Array (Option CakeNodeTag))
+    (tagsOv : NatInfoMap CakeNodeTag) (k x : Nat) : Bool :=
+  match (cakeSnapGet tags tagsOv x).getD .aTemp with
+  | .fixed n => n < k
+  | _ => false
+
+private def cakeDegOrInfSnap (tags : Array (Option CakeNodeTag))
+    (tagsOv : NatInfoMap CakeNodeTag) (deg : Array (Option Nat))
+    (degOv : NatInfoMap Nat) (k x : Nat) : Nat :=
+  if cakeIsFixedKSnap tags tagsOv k x then k
+  else (cakeSnapGet deg degOv x).getD 0
+
+/-- `bg_ok` over snapshot arrays: identical partitions and counts with
+    O(1) lookups. -/
+private def cakeBgOkSnap (adj : Array (Option (List Nat)))
+    (adjOv : NatInfoMap (List Nat)) (tags : Array (Option CakeNodeTag))
+    (tagsOv : NatInfoMap CakeNodeTag) (deg : Array (Option Nat))
+    (degOv : NatInfoMap Nat) (k x y : Nat) : Option (List Nat × List Nat) :=
+  let adjX := (cakeSnapGet adj adjOv x).getD []
+  let adjY := (cakeSnapGet adj adjOv y).getD []
+  let (case1, case2) := partitionReversed (fun v => adjX.contains v) adjY
+  let case1 := filterReversed
+    (fun v => cakeConsideredVarSnap tags tagsOv k v) case1
+  let case2 := filterReversed
+    (fun v => cakeConsideredVarSnap tags tagsOv k v) case2
+  let case2degs := case2.map (fun v => cakeDegOrInfSnap tags tagsOv deg degOv k v)
+  if !case2degs.any (fun d => d >= k) then
+    some (case1, case2)
+  else
+    let case3 := filterReversed (fun v => cakeConsideredVarSnap tags tagsOv k v)
+      (adjX.filter (fun v => !adjY.contains v))
+    let c1 := (case1.map (fun v =>
+      cakeDegOrInfSnap tags tagsOv deg degOv (k + 1) v)).countP
+      (fun d => d - 1 >= k)
+    let c2 := case2degs.countP (fun d => d >= k)
+    let c3 := (case3.map (fun v =>
+      cakeDegOrInfSnap tags tagsOv deg degOv k v)).countP
+      (fun d => d >= k)
+    if c1 + c2 + c3 < k then some (case1, case2) else none
+
+private def cakeStExFirstSnap (dim : Nat)
+    (par : Array (Option Nat)) (parOv : NatInfoMap Nat)
+    (adj : Array (Option (List Nat))) (adjOv : NatInfoMap (List Nat))
+    (tags : Array (Option CakeNodeTag)) (tagsOv : NatInfoMap CakeNodeTag)
+    (mr : Array (Option Bool)) (mrOv : NatInfoMap Bool)
+    (deg : Array (Option Nat)) (degOv : NatInfoMap Nat) (k : Nat) :
+    List (Nat × (Nat × Nat)) → List (Nat × (Nat × Nat)) →
+    (Option ((Nat × Nat) × (List Nat × List Nat) × List (Nat × (Nat × Nat))) ×
+      List (Nat × (Nat × Nat)))
+  | [], unavail => (none, unavail)
+  | (p, (u, v)) :: ms, unavail =>
+      let x := cakeCoalesceParentSnap par parOv tags tagsOv u
+      let y := cakeCoalesceParentSnap par parOv tags tagsOv v
+      if !cakeConsistencyOkSnap adj adjOv tags tagsOv mr mrOv x y then
+        cakeStExFirstSnap dim par parOv adj adjOv tags tagsOv mr mrOv deg degOv
+          k ms unavail
+      else
+        let (cx, cy) :=
+          if cakeIsFixedSnap tags tagsOv y then (y, x)
+          else if cakeIsFixedSnap tags tagsOv x then (x, y)
+          else if x < y then (x, y) else (y, x)
+        match cakeBgOkSnap adj adjOv tags tagsOv deg degOv k cx cy with
+        | none => cakeStExFirstSnap dim par parOv adj adjOv tags tagsOv mr mrOv
+            deg degOv k ms ((p, (cx, cy)) :: unavail)
+        | some pr => (some ((cx, cy), pr, ms), unavail)
+termination_by ms _ => sizeOf ms
+decreasing_by all_goals decreasing_trivial
+
+/-- `do_coalesce` (`reg_allocScript.sml:676-698`). -/
+def cakeDoCoalesce (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
+  let dim := state.dim
+  let par := cakeSnapArray state.coalesced dim
+  let parOv := cakeSnapOverflow state.coalesced dim
+  let adj := cakeSnapArray state.adjLists dim
+  let adjOv := cakeSnapOverflow state.adjLists dim
+  let tags := cakeSnapArray state.nodeTag dim
+  let tagsOv := cakeSnapOverflow state.nodeTag dim
+  let mr := cakeSnapArray state.moveRelated dim
+  let mrOv := cakeSnapOverflow state.moveRelated dim
+  let deg := cakeSnapArray state.degrees dim
+  let degOv := cakeSnapOverflow state.degrees dim
+  let (ores, unavail) :=
+    cakeStExFirstSnap dim par parOv adj adjOv tags tagsOv mr mrOv deg degOv k
+      state.availMovesWl []
+  let state := cakeAddUnavailMovesWl unavail state
+  match ores with
+  | none => (false, { state with availMovesWl := [] })
+  | some ((x, y), (case1, case2), ms) =>
+      let state := cakeDoCoalesceReal x y case1 case2
+        { state with availMovesWl := ms }
+      let state := cakeUnspill k state
+      (true, cakeRespill k x state)
+
 
 /-- `do_prefreeze` (`reg_allocScript.sml:727-747`).  The filters read the
     same maps through dim-sized snapshots (one linear build) instead of one

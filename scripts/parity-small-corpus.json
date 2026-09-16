@@ -230,6 +230,12 @@
       "tracked_beads": [
         "flapjack-cey"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/global_load_sharing.pnk",
+      "source_reference": "word_cse shares a repeated load through its loads_mem facts, keyed by loadToNumList over Addr n2 offset. WordInst.mem carries no offset, so instruction selection leaves such a load as .assign dest (.load (.op .add [.var n2, .const offset])) until wordToStack fuses it, and CSE passed that carrier through untouched - reading one global twice emitted the global-table load twice where Cake emits it once.",
+      "cake_sha256": "c85b91a76947ae307977782dcbfd5468f3c811d71b029747c76480b13c62a50f",
+      "tracked_beads": []
     }
   ]
 }

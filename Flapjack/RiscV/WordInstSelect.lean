@@ -257,6 +257,18 @@ termination_by expression => sizeOf expression
 decreasing_by
   all_goals first | decreasing_trivial | (simp [sizeOf] <;> omega)
 
+/-! Address expressions are selected by Cake's generic `inst_select_exp` path.
+    In particular, a base-plus-offset address must remain an expression so the
+    later Word-to-Stack pass can fuse the offset into the memory instruction.
+    Immediate arithmetic is still selected for ordinary assignments, but must
+    not change this address shape. -/
+def wordInstSelectAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
+    (temp : Nat) (expression : WordExp α) : WordProg α × WordExp α :=
+  letI : WordInstSelectImmediate α :=
+    { validBinOpImmediate := fun _ _ => false
+      shiftImmediate := fun _ => .unsupported }
+  wordInstSelectAtom temp expression
+
 def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]
     (temp : Nat) : WordProg α → WordProg α
@@ -265,7 +277,7 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
         (wordInstSelectProgram temp second)
   | .shareInst operator name address =>
       let (prelude, address) :=
-        wordInstSelectAtom temp (wordInstNormalizeExp address)
+        wordInstSelectAddressAtom temp (wordInstNormalizeExp address)
       wordDeadSelectSeq prelude (.shareInst operator name address)
   | .assign destination value =>
       let value := wordInstNormalizeExp value
@@ -274,7 +286,7 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
           if wordExpIsAtom address then
             .assign destination value
           else
-            let (prelude, address) := wordInstSelectAtom temp address
+            let (prelude, address) := wordInstSelectAddressAtom temp address
             wordDeadSelectSeq prelude (.assign destination (.load address))
       | .op operator [left, .const value] =>
           let (prelude, left) := wordInstSelectAtom temp left
@@ -324,7 +336,7 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
       | value => .assign destination value
   | .store address value =>
       let (prelude, address) :=
-        wordInstSelectAtom temp (wordInstNormalizeExp address)
+        wordInstSelectAddressAtom temp (wordInstNormalizeExp address)
       match address with
       | .var address =>
           /- Cake's selected Store is an actual WordLang Mem instruction

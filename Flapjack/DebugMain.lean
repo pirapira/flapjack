@@ -27,8 +27,11 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   let constFp := RiscV.wordConstFp flattened
   let fused := RiscV.wordFuseConditionsAndFold constFp
   let selected := RiscV.wordInstSelectProgramFrom fused
-  let dce := wordProgDCE selected
-  let unallocated := RiscV.wordRemoveUnreachable dce
+  /- Keep these labels for probe compatibility, but do not run the legacy
+     front-end DCE/unreachable helper here.  Cake keeps these tails through
+     full SSA; `word_unreach` runs later, after cleanup and allocation. -/
+  let dce := selected
+  let unallocated := selected
   let (_ssaState, renamedParameters, ssaProgram) :=
     wordFullSsaCcTrans arity unallocated
   let deadAfterSsa := RiscV.wordRemoveDeadProgram ssaProgram

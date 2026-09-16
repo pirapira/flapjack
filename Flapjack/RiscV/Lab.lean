@@ -109,6 +109,8 @@ def labLineInstructionCount : LabLine (Word width) → Nat
   | .asm operation _ _ =>
       match operation with
       | .shift .ror _ _ _ => 5
+      | .word (.arith (.shift .ror _ _ (.imm _))) => 3
+      | .word (.arith (.shift .ror _ _ (.reg _))) => 5
       | .word (.arith (.longMul _ _ _ _)) => 2
       | .word (.arith (.addCarry _ _ _ _ _)) => 6
       | .word (.arith (.cakeAddCarry _ _ _ _)) => 6

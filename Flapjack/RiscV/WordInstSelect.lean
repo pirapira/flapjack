@@ -191,8 +191,22 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
   | .var name => (.move 0 [(temp, name)], .var temp)
   | .lookup store => (.get temp store, .var temp)
   | .load address =>
-      let (prelude, _) := wordInstSelectAtom temp address
-      (wordDeadSelectSeq prelude (.inst (.mem .load temp temp)), .var temp)
+      let (prelude, selectedAddress) := wordInstSelectAtom temp address
+      match selectedAddress with
+      | .var address =>
+          /- Cake's `inst_select_exp` lowers every expression-level load to a
+             genuine `Mem Load` instruction.  Keeping this as an `Assign`
+             leaves the load invisible to `word_cse`, so repeated loads cannot
+             share the first result and the final code grows relative to Cake.
+             The selected address is normally the returned temporary, just as
+             in Cake's `Addr temp 0w` case. -/
+          (wordDeadSelectSeq prelude (.inst (.mem .load temp address)), .var temp)
+      | _ =>
+          /- Address selectors intentionally retain an unfused base-plus-
+             offset expression for the later Word-to-Stack offset handling.
+             Preserve that fallback instead of pretending that `temp` holds
+             the complete address. -/
+          (wordDeadSelectSeq prelude (.assign temp (.load selectedAddress)), .var temp)
   | .op .add [left, .const value] =>
       let (prelude, selectedLeft) := wordInstSelectAtom temp left
       match selectedLeft with

@@ -284,11 +284,8 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
       match value with
       | .lookup store => .get destination store
       | .load address =>
-          if wordExpIsAtom address then
-            .assign destination value
-          else
-            let (prelude, address) := wordInstSelectAddressAtom temp address
-            wordDeadSelectSeq prelude (.assign destination (.load address))
+          let (prelude, address) := wordInstSelectAddressAtom temp address
+          wordDeadSelectSeq prelude (.assign destination (.load address))
       | .op operator [left, .const value] =>
           let (prelude, left) := wordInstSelectAtom temp left
           match left with

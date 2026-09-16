@@ -10,8 +10,8 @@ module performs the collapse at the Word boundary: it tracks which variables
 provably hold the 0/1 result of a comparison and, when such a variable is
 tested against zero and is dead afterwards, replaces the test with the
 original comparison.  The rewrite is semantics preserving because the tracked
-variable is dead; it is intended to run before `wordProgDCE`, which then
-removes the now unused copy and definition.
+  variable is dead; the later Cake-style dead-code cleanup removes the now
+  unused copy and definition after full SSA has assigned names consistently.
 -/
 
 namespace Flapjack.RiscV
@@ -164,7 +164,8 @@ def wordConditionTest? (condition : Nat) (before : List (WordProg α)) :
           else none
 
 def wordDuplicateConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
-    (fuel : Nat) (statements : List (WordProg α)) : List (WordProg α) :=
+    (fuel : Nat) (normalize : WordProg α → WordProg α)
+    (statements : List (WordProg α)) : List (WordProg α) :=
   match fuel with
   | 0 => statements
   | fuel + 1 =>
@@ -175,29 +176,39 @@ def wordDuplicateConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
           | some (operator, condition, right, thenDefinition, elseDefinition) =>
               match wordConditionTest? condition [] rest with
               | some (before, thenBranch, elseBranch, remaining) =>
-                  let thenBody := wordListToProg
-                    (wordDuplicateConditionsAux fuel
-                      (wordProgToList thenDefinition ++ before ++ [thenBranch]))
-                  let elseBody := wordListToProg
-                    (wordDuplicateConditionsAux fuel
-                      (wordProgToList elseDefinition ++ before ++ [elseBranch]))
+                  let thenBody := normalize (wordListToProg
+                    (wordDuplicateConditionsAux fuel normalize
+                      (wordProgToList thenDefinition ++ before ++
+                        wordProgToList thenBranch)))
+                  let elseBody := normalize (wordListToProg
+                    (wordDuplicateConditionsAux fuel normalize
+                      (wordProgToList elseDefinition ++ before ++
+                        wordProgToList elseBranch)))
                   .ite operator condition right thenBody elseBody ::
-                    wordDuplicateConditionsAux fuel remaining
+                    wordDuplicateConditionsAux fuel normalize remaining
               | none =>
-                  statement :: wordDuplicateConditionsAux fuel rest
+                  statement :: wordDuplicateConditionsAux fuel normalize rest
           | none =>
               match statement with
               | .loop liveIn body liveOut =>
                   let body' := wordListToProg
-                    (wordDuplicateConditionsAux fuel (wordProgToList body))
+                    (wordDuplicateConditionsAux fuel normalize (wordProgToList body))
                   .loop liveIn body' liveOut ::
-                    wordDuplicateConditionsAux fuel rest
-              | _ => statement :: wordDuplicateConditionsAux fuel rest
+                    wordDuplicateConditionsAux fuel normalize rest
+              | _ => statement :: wordDuplicateConditionsAux fuel normalize rest
 
 def wordDuplicateConditions [BEq α] [OfNat α 0] [OfNat α 1]
     (program : WordProg α) : WordProg α :=
   wordListToProg
-    (wordDuplicateConditionsAux (wordProgFuel program + 1) (wordProgToList program))
+    (wordDuplicateConditionsAux (wordProgFuel program + 1) id (wordProgToList program))
+
+def wordDuplicateConditionsWithFold [Add α] [Sub α] [AndOp α] [OrOp α]
+    [HXor α α α] [Complement α] [DecidableEq α] [WordSimpShift α]
+    [BEq α] [OfNat α 0] [OfNat α 1]
+    (program : WordProg α) : WordProg α :=
+  wordListToProg
+    (wordDuplicateConditionsAux (wordProgFuel program + 1) wordConstFp
+      (wordProgToList program))
 
 def wordFuseConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
       (fuel : Nat) (facts : List (WordConditionFact α))
@@ -282,15 +293,71 @@ def wordFuseConditions [BEq α] [OfNat α 0] [OfNat α 1]
     (wordFuseConditionsAux (wordProgFuel duplicated + 1) []
       (wordProgToList duplicated))
 
+def wordFuseConditionsWithFold [Add α] [Sub α] [AndOp α] [OrOp α]
+    [HXor α α α] [Complement α] [DecidableEq α] [WordSimpShift α]
+    [BEq α] [OfNat α 0] [OfNat α 1]
+    (program : WordProg α) : WordProg α :=
+  let duplicated := wordDuplicateConditionsWithFold program
+  wordListToProg
+    (wordFuseConditionsAux (wordProgFuel duplicated + 1) []
+      (wordProgToList duplicated))
+
+/-! Cake's `word_simp$push_out_if` moves a terminating branch out of an
+    `If`.  This is observable in the backend because the conditional then has
+    one empty branch, changing the branch layout and avoiding an unnecessary
+    jump over the terminating code.  The Boolean result records whether the
+    transformed program is known to terminate normally at this point. -/
+def wordPushOutIfAux : WordProg α → WordProg α × Bool
+  | .mustTerminate body =>
+      let (body', terminates) := wordPushOutIfAux body
+      (.mustTerminate body', terminates)
+  | .return label values =>
+      (.return label values, true)
+  | .raise exception =>
+      (.raise exception, true)
+  | .call none target arguments handler =>
+      (.call none target arguments handler, true)
+  | .ite operator condition right thenBranch elseBranch =>
+      let (thenBranch', thenTerminates) := wordPushOutIfAux thenBranch
+      let (elseBranch', elseTerminates) := wordPushOutIfAux elseBranch
+      match thenTerminates, elseTerminates with
+      | true, true =>
+          (.ite operator condition right thenBranch' elseBranch', true)
+      | false, true =>
+          (.seq (.ite operator condition right .skip elseBranch') thenBranch', false)
+      | true, false =>
+          (.seq (.ite operator condition right thenBranch' .skip) elseBranch', false)
+      | false, false =>
+          (.ite operator condition right thenBranch' elseBranch', false)
+  | .seq first second =>
+      let (first', firstTerminates) := wordPushOutIfAux first
+      if firstTerminates then
+        (.seq first' second, true)
+      else
+        let (second', secondTerminates) := wordPushOutIfAux second
+        (.seq first' second', secondTerminates)
+  | .loop liveIn body liveOut =>
+      let (body', _) := wordPushOutIfAux body
+      (.loop liveIn body' liveOut, false)
+  | program =>
+      (program, false)
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
+def wordPushOutIf (program : WordProg α) : WordProg α :=
+  (wordPushOutIfAux program).1
+
 /-! The caller has already run Cake's program-level `const_fp`.  The remaining
     `simp_duplicate_if`/condition-fusion step is local to the duplicated
-    branches; applying `const_fp` to the whole result again changes temporary
-    numbering and the eventual RISC-V byte order.  Keep this wrapper as the
-    source pipeline's post-`const_fp` composition before instruction
-    selection. -/
+    branches, followed by Cake's terminating-branch hoisting.  Applying
+    `const_fp` to the whole result again changes temporary numbering and the
+    eventual RISC-V byte order.  Keep this wrapper as the source pipeline's
+    post-`const_fp` composition before instruction selection. -/
 def wordFuseConditionsAndFold [Add α] [Sub α] [AndOp α] [OrOp α]
     [HXor α α α] [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α]
+    [WordSimpShift α]
     (program : WordProg α) : WordProg α :=
-  wordFuseConditions program
+  wordPushOutIf (wordFuseConditionsWithFold program)
 
 end Flapjack.RiscV

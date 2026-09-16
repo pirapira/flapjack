@@ -70,6 +70,14 @@ def skippedRoundTripFuses : Bool :=
 
 #guard skippedRoundTripFuses
 
+def terminatingElseIsPushedOut : Bool :=
+  match wordPushOutIf
+      (.ite .less 1 (.reg 2) (.assign 3 (.var 4)) (.raise 0) : WordProg Nat) with
+  | .seq (.ite .less 1 (.reg 2) .skip (.raise 0)) (.assign 3 (.var 4)) => true
+  | _ => false
+
+#guard terminatingElseIsPushedOut
+
 #guard roundTripNeedsFusion
 #guard fusedProgramUsesDirectBranch
 
@@ -96,6 +104,8 @@ def runChecks : IO Bool := do
         fusedProgramUsesDirectBranch),
       ("fusion removes harmless source Seq/Skip wrappers",
         skippedRoundTripFuses),
+      ("Cake terminating conditional branches are pushed out",
+        terminatingElseIsPushedOut),
       ("a clobbering materialisation uses Cake duplicate-if",
         operandClobberIsFused) ]
   let mut ok := true

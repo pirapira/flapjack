@@ -95,6 +95,20 @@ def nestedOrderMatches : Bool :=
         (.op .add [.var 1, .op .add [.var 2, .const 3]]))
     == cakeNestedAtoms
 
+/-- `word_inst_probe.out: norm_nested_fixture`: the five-load nested add
+    used by the exact nested-expression corpus fixture. -/
+def cakeNestedFixtureAtoms : List (Option Nat) :=
+  [some 4, some 2, some 10, some 12, some 6]
+
+def nestedFixtureOrderMatches : Bool :=
+  addOperandAtoms
+      (wordInstNormalizeExp (α := Nat)
+        (.op .add [.var 6,
+          .op .add [.var 4,
+            .op .add [.var 12,
+              .op .add [.var 2, .var 10]]]]))
+    == cakeNestedFixtureAtoms
+
 /-- A constant in the middle is moved after the variables. -/
 def constMiddleOrderMatches : Bool :=
   addOperandAtoms
@@ -155,6 +169,7 @@ def andZeroConstantCollapses : Bool :=
 #guard varConstOrderMatches
 #guard constFirstOrderMatches
 #guard nestedOrderMatches
+#guard nestedFixtureOrderMatches
 #guard constMiddleOrderMatches
 #guard foldTwoConstantsMatches
 #guard zeroConstantDropped

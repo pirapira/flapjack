@@ -29,8 +29,9 @@ def wordDeadSelectSeq (first second : WordProg α) : WordProg α :=
   | _, _ => .seq first second
 
 /-! Cake's `pull_exp` and `flatten_exp` are observable before the allocator.
-    `pull_ops` accumulates operands on the left, and `flatten_exp` rebuilds an
-    n-ary operation as a right-associated binary tree.  Subtraction is the
+    `pull_ops` accumulates operands on the left, `optimize_consts` reverses the
+    partitioned lists, and `flatten_exp` rebuilds an n-ary operation as a
+    head-last binary tree.  Subtraction is the
     important exception: Cake handles it with `convert_sub` and never feeds
     it through the associative operand collector.  In particular, applying
     `pull_ops` to `Sub [x, y]` would incorrectly turn the expression into
@@ -59,7 +60,7 @@ def wordInstIsConstant : WordExp α → Bool
     operation into a single constant and places it at the front of its
     (already `pull_ops`-reversed) operand list, and `flatten_exp` then moves
     that constant back to the last position.  The composition therefore keeps
-    the non-constant operands in the `pull_ops` order and puts the folded
+    the non-constant operands in the partition order and puts the folded
     constant at the end.  Flapjack represents the same normal form directly:
     constants go last, which is what Cake's `inst_select_exp` immediate
     (`Const` as the second operand) case expects.  `reduce_const` drops the
@@ -79,7 +80,7 @@ def wordInstConstantsToEnd [Add α] [DecidableEq α] [OfNat α 0]
   let constants := expressions.filterMap wordInstConstantValue
   let others := expressions.filter (fun expression => !wordInstIsConstant expression)
   match constants with
-  | [] => expressions
+  | [] => expressions.reverse
   | _ =>
       match operator with
       | .add =>
@@ -91,9 +92,9 @@ def wordInstConstantsToEnd [Add α] [DecidableEq α] [OfNat α 0]
             match others with
             | [] => [.const 0]
             | [single] => [single]
-            | _ => others
+            | _ => others.reverse
           else
-            others ++ [.const folded]
+            [.const folded] ++ others.reverse
       | .or | .xor =>
           -- `reduce_const` drops a zero fold for `Or`/`Xor` exactly as for
           -- `Add`; only the all-zero fold is decidable without the operator.
@@ -101,21 +102,21 @@ def wordInstConstantsToEnd [Add α] [DecidableEq α] [OfNat α 0]
             match others with
             | [] => [.const 0]
             | [single] => [single]
-            | _ => others
+            | _ => others.reverse
           else
-            others ++ constants.map (fun value => .const value)
+            constants.map (fun value => .const value) ++ others.reverse
       | .and =>
           -- `reduce_const And 0w rest = Const 0w` collapses the whole
           -- expression; a non-zero fold keeps the constant last.
           if constants.all (fun value => value = 0) then
             [.const 0]
           else
-            others ++ constants.map (fun value => .const value)
-      | _ => others ++ constants.map (fun value => .const value)
+            constants.map (fun value => .const value) ++ others.reverse
+      | _ => constants.map (fun value => .const value) ++ others.reverse
 
 def wordInstConvertSub [Sub α] [OfNat α 0] : List (WordExp α) → WordExp α
   | [.const left, .const right] => .const (left - right)
-  | [expression, .const value] => .op .add [expression, .const (0 - value)]
+  | [expression, .const value] => .op .add [.const (0 - value), expression]
   | expressions => .op .sub expressions
 
 def wordInstPullExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] : WordExp α → WordExp α
@@ -138,8 +139,8 @@ def wordInstFlattenExp : WordExp α → WordExp α
   | .op _ [expression] => wordInstFlattenExp expression
   | .op operator (expression :: expressions) =>
       .op operator
-        [ wordInstFlattenExp expression
-        , wordInstFlattenExp (.op operator expressions) ]
+        [ wordInstFlattenExp (.op operator expressions)
+        , wordInstFlattenExp expression ]
   | .load address => .load (wordInstFlattenExp address)
   | .shift operator left right =>
       .shift operator (wordInstFlattenExp left) (wordInstFlattenExp right)
@@ -192,7 +193,8 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
         (.assign temp (.shift operator (.var temp) (.var (temp + 1)))), .var temp)
   | expression => (.assign temp expression, .var temp)
 termination_by expression => sizeOf expression
-decreasing_by all_goals decreasing_trivial
+decreasing_by
+  all_goals first | decreasing_trivial | (simp [sizeOf] <;> omega)
 
 def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
     (temp : Nat) : WordProg α → WordProg α

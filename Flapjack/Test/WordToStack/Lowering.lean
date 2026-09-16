@@ -13,6 +13,16 @@ example :
       some (.arith .or 4 5 5 : StackProg Nat) := by
   exact wordStackMove_registers
 
+/- SSA-selected constants still carry virtual destinations.  Lower the
+   destination through the allocator location table before Lab sees them. -/
+example :
+    wordToStackInst
+        { locations := [(293, .register 5)], scratch := 31, stackBase := 10 }
+        (.const 293 0 : WordInst Nat) =
+      some (.inst (.const 5 0) : StackProg Nat) := by
+  simp [wordToStackInst, wordStackWritePhysical, wordStackLocation,
+    lookupNatInfo]
+
 /- Cake's move normalizer drops a move whose source and destination are the
    same physical location.  Keep that no-op elimination explicit at the
    virtual Word-to-Stack boundary as well. -/

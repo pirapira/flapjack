@@ -256,6 +256,12 @@ def ofSize {α : Type u} (n : Nat) : CakeNodeMap α :=
 def ofNatInfoMap {α : Type u} (n : Nat) (m : NatInfoMap α) : CakeNodeMap α :=
   m.foldr (fun entry acc => acc.set entry.1 entry.2) (ofSize n)
 
+/-- Rebuild every entry with `f`, leaving the indexing alone. -/
+def mapValues {α : Type u} {β : Type v} (f : α → β) (m : CakeNodeMap α) :
+    CakeNodeMap β :=
+  { slots := m.slots.map (fun entry => entry.map f)
+    outside := m.outside.map (fun entry => (entry.1, f entry.2)) }
+
 /-- The field read back as an association list, ascending by node, for
     diagnostics.  Every key keeps the value `get` returns for it. -/
 def toNatInfoMap {α : Type u} (m : CakeNodeMap α) : NatInfoMap α :=
@@ -394,14 +400,19 @@ def cakeExtendGraph (ta : Nat → Nat) : List (Nat × Nat) →
     original looks up `fa` through `sp_default`, so an unmapped node falls
     back to variable `0`, i.e. `Fixed 0`. -/
 def cakeMkTags (n : Nat) (fromAllocator : NatInfoMap Nat) (fs : List Nat) :
-    NatInfoMap CakeNodeTag :=
+    CakeNodeMap CakeNodeTag :=
+  /- `fs` is `get_stack_only`'s output, an sptree upstream
+     (`reg_allocScript.sml:1159-1176`), and this asks it for membership once
+     per node; as a list that was a rescan per node.  Build the membership
+     side once.  The tags themselves are unchanged. -/
+  let stackOnly := Flapjack.natSetOfList fs
   (List.range n).foldl (fun tags i =>
       let v := CakeAlloc.spDefault fromAllocator i
       match v % 4 with
-      | 1 => cakeMapUpdate tags i (if fs.contains v then .sTemp else .aTemp)
-      | 3 => cakeMapUpdate tags i .sTemp
-      | _ => cakeMapUpdate tags i (.fixed (v / 2)))
-    []
+      | 1 => tags.set i (if stackOnly.contains v then .sTemp else .aTemp)
+      | 3 => tags.set i .sTemp
+      | _ => tags.set i (.fixed (v / 2)))
+    (CakeNodeMap.ofSize n)
 
 /-- `init_ra_state` (`reg_allocScript.sml:1241-1250`): the initial allocator
     state for a clash tree. -/
@@ -414,7 +425,7 @@ def cakeInitRaState (tree : WordClashTree) (forced : List (Nat × Nat))
   let tags := cakeMkTags bij.nextNode bij.fromAllocator fs
   { (CakeRaState.empty bij.nextNode) with
     adjLists := adj,
-    nodeTag := CakeNodeMap.ofNatInfoMap bij.nextNode tags }
+    nodeTag := tags }
 
 /-- `is_Fixed` (`reg_allocScript.sml:449-454`): a physical node. -/
 def cakeIsFixed (state : CakeRaState) (x : Nat) : Bool :=
@@ -456,30 +467,68 @@ def partitionReversed {α : Type u} (p : α → Bool) (l : List α) : List α ×
   let (tt, ff) := l.partition p
   (tt.reverse, ff.reverse)
 
-/-! `sort` (`Portable.sml:348-361`) is a pairwise bottom-up merge sort. The
-    source starts with singleton runs and repeatedly merges the first two
-    runs; its strict comparator selects the right run first on ties. -/
-def cakeMergeRuns {α : Type u} (ord : α → α → Bool) : List α → List α → List α
-  | [], right => right
-  | left, [] => left
-  | leftHead :: leftTail, rightHead :: rightTail =>
-      if ord leftHead rightHead then
-        leftHead :: cakeMergeRuns ord leftTail (rightHead :: rightTail)
+/-! `sort` (`Portable.sml:348-361`) is Cake's tail-recursive merge sort.
+    `mergesortN_tail` recursively splits at `DIV2`, toggles `negate` at each
+    split, and uses an accumulator merge.  Keeping the split and toggle
+    explicit is important: with a strict relation, equal-priority entries
+    intentionally change order according to the recursion depth. -/
+def cakeSort2Tail {α : Type u} (negate : Bool) (ord : α → α → Bool)
+    (x y : α) : List α :=
+  if ord x y != negate then [x, y] else [y, x]
+
+def cakeSort3Tail {α : Type u} (negate : Bool) (ord : α → α → Bool)
+    (x y z : α) : List α :=
+  if ord x y != negate then
+    if ord y z != negate then [x, y, z]
+    else if ord x z != negate then [x, z, y]
+    else [z, x, y]
+  else if ord y z != negate then
+    if ord x z != negate then [y, x, z]
+    else [y, z, x]
+  else [z, y, x]
+
+def cakeMergeTail {α : Type u} (negate : Bool) (ord : α → α → Bool) :
+    List α → List α → List α → List α
+  | [], [], acc => acc
+  | left, [], acc => left.reverse ++ acc
+  | [], right, acc => right.reverse ++ acc
+  | leftHead :: leftTail, rightHead :: rightTail, acc =>
+      if ord leftHead rightHead != negate then
+        cakeMergeTail negate ord leftTail (rightHead :: rightTail)
+          (leftHead :: acc)
       else
-        rightHead :: cakeMergeRuns ord (leftHead :: leftTail) rightTail
-  termination_by left right => left.length + right.length
+        cakeMergeTail negate ord (leftHead :: leftTail) rightTail
+          (rightHead :: acc)
+  termination_by left right _acc => left.length + right.length
   decreasing_by all_goals simp +arith
 
-def cakeSortRuns {α : Type u} (ord : α → α → Bool) : List (List α) → List (List α)
-  | [] => []
-  | [run] => [run]
-  | left :: right :: rest =>
-      cakeSortRuns ord (cakeMergeRuns ord left right :: rest)
-  termination_by runs => runs.length
-  decreasing_by simp_wf
+def cakeSortN {α : Type u} (negate : Bool) (ord : α → α → Bool) :
+    Nat → List α → List α
+  | 0, _ => []
+  | 1, [] => []
+  | 1, x :: _ => [x]
+  | 2, [] => []
+  | 2, [x] => [x]
+  | 2, x :: y :: _ => cakeSort2Tail negate ord x y
+  | 3, [] => []
+  | 3, [x] => [x]
+  | 3, [x, y] => cakeSort2Tail negate ord x y
+  | 3, x :: y :: z :: _ => cakeSort3Tail negate ord x y z
+  | n + 4, items =>
+      let len1 := (n + 4) / 2
+      let nextNegate := !negate
+      cakeMergeTail nextNegate ord
+        (cakeSortN nextNegate ord ((n + 4) / 2) items)
+        (cakeSortN nextNegate ord (n + 4 - len1) (items.drop len1)) []
+  termination_by n _items => n
+  decreasing_by
+    all_goals
+      have hn : 0 < n + 4 := by omega
+      have hdiv : (n + 4) / 2 < n + 4 := Nat.div_lt_self hn (by decide)
+      omega
 
 def cakeSort {α : Type u} (ord : α → α → Bool) (items : List α) : List α :=
-  (cakeSortRuns ord (items.map (fun item => [item]))).flatten
+  cakeSortN false ord items.length items
 
 /-! `sort_moves` (`reg_allocScript.sml:343-346`) uses Cake's generic `sort`
     with a strict priority comparison. -/
@@ -866,27 +915,25 @@ decreasing_by all_goals omega
 /-- `moves_to_sp` (`reg_allocScript.sml:1326-1345`): the move-partner
     table consulted by the biased colour preferences. -/
 def cakeMovesToSp : List (Nat × (Nat × Nat)) →
-    NatInfoMap (List (Nat × Nat)) → NatInfoMap (List (Nat × Nat))
+    CakeNodeMap (List (Nat × Nat)) → CakeNodeMap (List (Nat × Nat))
   | [], table => table
   | (p, (x, y)) :: rest, table =>
       /- `moves_to_sp` inserts the current move before recursing into the
          tail.  Since `pri_move_insert` prepends, this reverses the source
-         move order in each partner list.  The y endpoint is inserted first
-         by `undir_move_insert`, followed by x. -/
-      let table := cakeMapUpdate table y
-        ((p, x) :: (cakeMapLookup table y).getD [])
-      let table := cakeMapUpdate table x
-        ((p, y) :: (cakeMapLookup table x).getD [])
+         order in each partner list.  The y endpoint is inserted first by
+         `undir_move_insert`, followed by x. -/
+      let table := table.set y ((p, x) :: (table.get y).getD [])
+      let table := table.set x ((p, y) :: (table.get x).getD [])
       cakeMovesToSp rest table
 
 /-- `resort_moves` (`reg_allocScript.sml:1347-1350`): sort each partner
     list by descending priority, then drop the priorities. -/
-def cakeResortMovesSp (table : NatInfoMap (List (Nat × Nat))) :
-    NatInfoMap (List Nat) :=
+def cakeResortMovesSp (table : CakeNodeMap (List (Nat × Nat))) :
+    CakeNodeMap (List Nat) :=
   -- Cake's pairwise merge sort is intentionally not stable: `sort_moves`
   -- selects the right run first for equal priorities.
-  table.map (fun entry =>
-    (entry.1, (cakeSort (fun a b => a.1 > b.1) entry.2).map (·.2)))
+  table.mapValues (fun partners =>
+    (cakeSort (fun a b => a.1 > b.1) partners).map (·.2))
 
 /-- `update_move` (`reg_allocScript.sml:1407-1414`). -/
 def cakeUpdateMove (spta : Nat → Nat) (move : Nat × (Nat × Nat)) :
@@ -897,11 +944,11 @@ def cakeUpdateMove (spta : Nat → Nat) (move : Nat × (Nat × Nat)) :
   if spx <= spy then (p, (spx, spy)) else (p, (spy, spx))
 
 /-- `biased_pref` (`reg_allocScript.sml:1380-1395`). -/
-def cakeBiasedPref (state : CakeRaState) (mtable : NatInfoMap (List Nat))
+def cakeBiasedPref (state : CakeRaState) (mtable : CakeNodeMap (List Nat))
     (n : Nat) (ks : List Nat) : Option Nat :=
   if n < state.dim then
     let v := cakeCoalesceRoot state n
-    let vs := (cakeMapLookup mtable n).getD []
+    let vs := (mtable.get n).getD []
     cakeFirstMatchCol state ks (v :: vs)
   else none
 
@@ -927,9 +974,9 @@ def cakeNegFirstMatchCol (state : CakeRaState) (k : Nat) (bads : List Nat) :
 
 /-- `neg_biased_pref` (`reg_allocScript.sml:1438-1450`). -/
 def cakeNegBiasedPref (state : CakeRaState) (k : Nat)
-    (mtable : NatInfoMap (List Nat)) (n : Nat) (bads : List Nat) : Option Nat :=
+    (mtable : CakeNodeMap (List Nat)) (n : Nat) (bads : List Nat) : Option Nat :=
   if n < state.dim then
-    match cakeMapLookup mtable n with
+    match mtable.get n with
     | none => none
     | some vs => cakeNegFirstMatchCol state k bads vs
   else none
@@ -1029,7 +1076,7 @@ def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
   let (l, s0) := cakeInitAlloc1Heu selMoves k state
   let s1 := cakeRptDoStep scost k l s0
   let ls := s1.stack
-  let mvs := cakeResortMovesSp (cakeMovesToSp moves0 [])
+  let mvs := cakeResortMovesSp (cakeMovesToSp moves0 (CakeNodeMap.ofSize bij.nextNode))
   let state := cakeAssignAtemps k ls (fun s n ks => cakeBiasedPref s mvs n ks) s1
   let state := cakeAssignStemps k (fun s n bads => cakeNegBiasedPref s k mvs n bads) state
   some (cakeExtractColor state bij.toAllocator)

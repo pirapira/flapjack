@@ -43,10 +43,7 @@ stack slots fall outside the frame that is allocated for them, which
 def cakeWordFrameSlots [NeZero width] (allocation : WordSpillState)
     (wordParameters : List Nat)
     (renamedProgram : WordProg (RiscV.Word width)) : Nat :=
-  let cakeFrameSlots :=
-    if RiscV.wordProgHasBitmapSites renamedProgram then
-      allocation.nextSpill
-    else 0
+  let cakeFrameSlots := allocation.nextSpill
   max cakeFrameSlots
     (max (wordParameters.length - 12)
       (RiscV.wordProgMaxCallArguments renamedProgram - 12))

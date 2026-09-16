@@ -347,8 +347,13 @@ def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
 
 def wordSsaReadCutsets (state : WordSsaState)
     (cutsets : List Nat × List Nat) : List Nat × List Nat :=
-  (NumSet.fromList cutsets.1 |>.map (wordSsaRead state),
-    NumSet.fromList cutsets.2 |>.map (wordSsaRead state))
+  /- Cake's `apply_nummaps_key` maps the keys of the source sptree and then
+     rebuilds the sptree.  Rebuilding after the rename is observable through
+     `toAList`: the Patricia traversal order can change when a key changes.
+     Mapping an already enumerated list (the old port) preserved the wrong
+     order and made FFI/call cutsets diverge from Cake after SSA. -/
+  (NumSet.fromList ((NumSet.fromList cutsets.1).map (wordSsaRead state)),
+    NumSet.fromList ((NumSet.fromList cutsets.2).map (wordSsaRead state)))
 
 def wordSsaFresh (state : WordSsaState) (name : Nat) : WordSsaState × Nat :=
   ({ current := (name, state.next) ::
@@ -741,6 +746,20 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         let value := wordSsaRenameExp state value
         let (state, freshName) := wordSsaFresh state name
         (state, .assign freshName value)
+    | .inst (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight)) =>
+        /- `ssa_cc_trans_inst` in Cake's `word_allocScript.sml` materialises
+           LongMul through its fixed architectural operands.  Keep the
+           allocator-coloured names only at the move boundaries: the
+           instruction itself is always `LongMul 6 0 0 4`, and its two results
+           are refreshed in the original order. -/
+        let sourceLeft := wordSsaRead state sourceLeft
+        let sourceRight := wordSsaRead state sourceRight
+        let movIn := .move 1 [(0, sourceLeft), (4, sourceRight)]
+        let (state, freshLeft) := wordSsaFresh state destinationLeft
+        let (state, freshRight) := wordSsaFresh state destinationRight
+        let movOut := .move 1 [(freshRight, 0), (freshLeft, 6)]
+        (state, wordSsaSeq movIn
+          (wordSsaSeq (.inst (.arith (.longMul 6 0 0 4))) movOut))
     | .inst instruction =>
         wordSsaRenameInstProgram state instruction
     | .get destination store =>

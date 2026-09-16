@@ -450,7 +450,7 @@ def labProgramToEntrySection (sectionId entryLabel initialLabel : Nat)
     (program : StackProg α) : LabSection α :=
   let sectionData := labProgramToSection sectionId initialLabel program
   { sectionData with
-    lines := labLabel sectionId entryLabel :: sectionData.lines }
+    lines := labLabel sectionId 0 :: labLabel sectionId entryLabel :: sectionData.lines }
 
 /- The backend-facing composition applies the stack-removal pass before
    flattening.  Keeping this as a separate entry point preserves the raw

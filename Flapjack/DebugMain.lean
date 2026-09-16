@@ -17,6 +17,13 @@ open Flapjack Flapjack.RiscV
 def emit [Repr α] (label : String) (value : α) : IO Unit :=
   IO.println (label ++ "=" ++ repr value)
 
+def clashTreeSets : WordClashTree → List (List Nat)
+  | .delta _ _ => []
+  | .set names => [names]
+  | .branch live thenBranch elseBranch =>
+      (live.toList ++ clashTreeSets thenBranch ++ clashTreeSets elseBranch)
+  | .seq first second => clashTreeSets first ++ clashTreeSets second
+
 /-! Keep the complete Word-to-Word pass chain visible in diagnostics.  The
     source probe already exposes the front-end and selected program; these
     labels make a final-byte discrepancy attributable to SSA, a cleanup pass,
@@ -75,10 +82,12 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   emit "stage=source_word_heuristics" (moves, spillCosts)
   emit "stage=source_word_allocator_inputs"
     (tree, forced, RiscV.CakeRegAlloc.cakeGetStackOnly dead, bij)
+  emit "stage=source_word_allocator_sets" (clashTreeSets tree)
   let (allocationFuel, state1) :=
     RiscV.CakeRegAlloc.cakeInitAlloc1Heu movesF k state0
   let state2 := RiscV.CakeRegAlloc.cakeRptDoStep scost k allocationFuel state1
-  let moveTable := RiscV.CakeRegAlloc.cakeMovesToSp moves0 []
+  let moveTable := RiscV.CakeRegAlloc.cakeMovesToSp moves0
+    (RiscV.CakeRegAlloc.CakeNodeMap.ofSize bij.nextNode)
   let state3 := RiscV.CakeRegAlloc.cakeAssignAtemps k state2.stack
     (fun state node colours =>
       RiscV.CakeRegAlloc.cakeBiasedPref state
@@ -131,7 +140,27 @@ def dumpPipeline (pipeline : FlapjackPipelineResult (RiscV.Word 64)) : IO Unit :
   match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked
       (RiscV.wordStackInitialBitmaps false) sourceWord with
   | .error error => emit "stage=source_word_allocated_error" error
-  | .ok (functions, _) => emit "stage=source_word_allocated" functions
+  | .ok (functions, _) =>
+      emit "stage=source_word_allocated" functions
+      /- The source-facing compiler enters the Cake-shaped stack-removal
+         path after this boundary.  Keep the post-removal form in the probe
+         as well: a final byte mismatch that is absent here belongs to Lab or
+         target encoding, while one already present here belongs to the
+         allocator/StackRemove boundary. -/
+      let removeConfig : StackRemoveConfig :=
+        { storeBase := 10
+          currHeap := 12
+          scratch := 31
+          addressScratch := 29
+          stackPointer := 24
+          bytesInWord := 8
+          stackBase := 25
+          wordShift := 3 }
+      let removed := functions.map (fun (label, parameters, body) =>
+        (label, parameters,
+          stackMapRegisters RiscV.riscvRegisterName
+            (stackRemoveComplete (RiscV.cakeStackRemoveConfig removeConfig) body)))
+      emit "stage=source_stack_removed" removed
 
 def dumpSource (source : String) : IO UInt32 := do
   match Parser.parseTopDecs (BitVec.ofInt 64) source with

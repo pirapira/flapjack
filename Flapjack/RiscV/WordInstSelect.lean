@@ -316,12 +316,6 @@ def wordInstSelectAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [O
     [WordInstSelectImmediate α]
     (temp : Nat) (expression : WordExp α) : WordProg α × WordExp α :=
   let addressImmediate : WordInstSelectImmediate α := inferInstance
-  letI : WordInstSelectImmediate α :=
-    { validBinOpImmediate := fun _ _ => false
-      /- Address arithmetic must remain available for Addr-offset fusion,
-         but nested shifts follow the target configuration just as in Cake's
-         inst_select_exp. -/
-      shiftImmediate := addressImmediate.shiftImmediate }
   /- Cake suppresses the immediate only for the outer address displacement;
      selectors for the base expression still use the ordinary target
      configuration.  This distinction is observable for
@@ -333,7 +327,14 @@ def wordInstSelectAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [O
       letI : WordInstSelectImmediate α := addressImmediate
       let (prelude, selectedLeft) := wordInstSelectAtom temp left
       (prelude, .op .add [selectedLeft, .const value])
-  | _ => wordInstSelectAtom temp expression
+  | _ =>
+      /- For an address without a final constant displacement, Cake calls
+         `inst_select_exp` with the ordinary target configuration.  In
+         particular, a global base plus a computed offset must still select
+         nested `addi`/`slli` instructions; suppressing immediates here
+         materialises those operations and changes the final artifact. -/
+      letI : WordInstSelectImmediate α := addressImmediate
+      wordInstSelectAtom temp expression
 
 def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]

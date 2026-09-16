@@ -1,4 +1,5 @@
 dec_renaming=Seq Skip (Seq (Assign 5 (Const 7w)) (Seq (Assign 5 (Var 5)) Skip))
+shmem_nested_seq=Seq (ShMem Store 8 (Var 0)) Skip
 cut_set_const_args=Seq (Assign 11 (Const 1w))
   (Seq (Assign 12 (Const 2w))
      (Seq

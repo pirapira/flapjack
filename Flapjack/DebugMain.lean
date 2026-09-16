@@ -171,10 +171,11 @@ def dumpPipelineTarget (pipeline : FlapjackPipelineResult (RiscV.Word 64))
   let sourceLoop := pipelineLoopFunctionsSource .rv64i stackFunctionFirstLabel
     pipeline.crepe
   let sourceWord := panToWordCompileProg sourceLoop
-  match sourceWord.find? (fun entry => entry.1 == target) with
+  match pipeline.crepe.zip sourceWord |>.find?
+      (fun pair => pair.2.1 == target) with
   | none => emit "stage=target_not_found" target
-  | some entry =>
-      emit "stage=target" target
+  | some (function, entry) =>
+      emit "stage=target" (target, function.name, function.params, entry.2)
       dumpSourceWordPasses entry
 
 def dumpSource (source : String) (target : Option Nat := none) : IO UInt32 := do

@@ -246,6 +246,24 @@ def dropConstsReversesArguments : Bool :=
 
 #guard dropConstsReversesArguments
 
+/-! ### Cake copy propagation representative
+
+    Cake's `set_eq` (`compiler/backend/word_copyScript.sml:204-225`) inserts the
+    move DESTINATION as the representative of the equivalence class, so
+    `copy_prop_inst (Mem Store r (Addr a w))` rewrites the address to the
+    destination.  Propagating in the other direction rewrote the destination
+    back to the source, which made the move dead and flipped the allocator's
+    colouring (`set_globals`). -/
+def copyPropagationWordProgram : WordProg (Word 64) :=
+  .seq (.move 0 [(37, 25)]) (.inst (.mem .store 33 37))
+
+def copyPropagationKeepsDestination : Bool :=
+  match RiscV.wordCopyProp copyPropagationWordProgram with
+  | .seq _ (.inst (.mem .store 33 address)) => address == 37
+  | _ => false
+
+#guard copyPropagationKeepsDestination
+
 /-! ### Cake ABI argument overflow
 
     The original `format_var`/`wMoveSingle` materializes arguments past the
@@ -315,7 +333,9 @@ def runChecks : IO Bool := do
     ("an overflowing call lowers once the frame demand is reserved",
       overflowLowersWithDemandFrame),
     ("an overflowing call is rejected without that frame room",
-      overflowRejectedWithTinyFrame)]
+      overflowRejectedWithTinyFrame),
+    ("copy propagation keeps Cake's destination representative",
+      copyPropagationKeepsDestination)]
   let mut ok := true
   for (label, passed) in checks do
     if passed then

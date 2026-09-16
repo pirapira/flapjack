@@ -42,6 +42,10 @@ def dumpPipeline (pipeline : FlapjackPipelineResult (RiscV.Word 64)) : IO Unit :
       RiscV.wordInstSelectProgramFrom
         (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body))))
   emit "stage=source_word_inst_select" sourceSelected
+  match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked
+      (RiscV.wordStackInitialBitmaps false) sourceWord with
+  | .error error => emit "stage=source_word_allocated_error" error
+  | .ok (functions, _) => emit "stage=source_word_allocated" functions
 
 def dumpSource (source : String) : IO UInt32 := do
   match Parser.parseTopDecs (BitVec.ofInt 64) source with

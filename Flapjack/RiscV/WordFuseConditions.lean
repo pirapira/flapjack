@@ -1,4 +1,5 @@
 import Flapjack.RiscV.Allocator
+import Flapjack.RiscV.WordSimp
 
 /-!
 `Flapjack.CrepToLoop` lowers a control-flow condition by materializing the
@@ -256,5 +257,15 @@ def wordFuseConditions [BEq α] [OfNat α 0] [OfNat α 1]
   wordListToProg
     (wordFuseConditionsAux (wordProgFuel duplicated + 1) []
       (wordProgToList duplicated))
+
+/-! Cake's `word_simp$compile_exp` re-runs `const_fp` on the branches it
+    builds while collapsing a comparison round trip, so the flag copies become
+    constants and the flag definition is left as the only use.  This wrapper is
+    the pass composition the source pipeline applies before instruction
+    selection. -/
+def wordFuseConditionsAndFold [Add α] [Sub α] [AndOp α] [OrOp α]
+    [HXor α α α] [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α]
+    (program : WordProg α) : WordProg α :=
+  wordConstFp (wordFuseConditions program)
 
 end Flapjack.RiscV

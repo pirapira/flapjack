@@ -168,14 +168,14 @@ termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
 def wordInstFlattenExp : WordExp α → WordExp α
-  | .op operator [] => .op operator []
-  | .op _ [expression] => wordInstFlattenExp expression
   | .op .sub expressions =>
       -- Cake's `flatten_exp` preserves subtraction operands; the generic
       -- n-ary case below rebuilds an associative operation as
       -- `[flatten(rest), flatten(head)]`, which is valid for associative
       -- operators but reverses `Sub [left, right]`.
       .op .sub (expressions.map wordInstFlattenExp)
+  | .op operator [] => .op operator []
+  | .op _ [expression] => wordInstFlattenExp expression
   | .op operator (expression :: expressions) =>
       .op operator
         [ wordInstFlattenExp (.op operator expressions)

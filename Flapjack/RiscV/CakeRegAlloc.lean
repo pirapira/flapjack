@@ -380,30 +380,36 @@ def partitionReversed {α : Type u} (p : α → Bool) (l : List α) : List α ×
   let (tt, ff) := l.partition p
   (tt.reverse, ff.reverse)
 
-/-- `QSORT` (`sortingScript.sml:747-752`) as observed on the original's
-    `sort_moves` outputs: an element goes to the left bucket when it does
-    not sort strictly after the pivot, and the partition buckets are
-    prepended and therefore reversed.  The fuel is the input length, which
-    bounds the recursion depth because each partition is strictly shorter
-    than its input. -/
-def cakeQSortAux {α : Type u} (ord : α → α → Bool) : Nat → List α → List α
-  | _, [] => []
-  | fuel + 1, h :: t =>
-      let (l1, l2) := partitionReversed (fun y => ord y h) t
-      cakeQSortAux ord fuel l1 ++ [h] ++ cakeQSortAux ord fuel l2
-  | 0, _ :: _ => []
+/-! `sort` (`Portable.sml:348-361`) is a pairwise bottom-up merge sort. The
+    source starts with singleton runs and repeatedly merges the first two
+    runs; its strict comparator selects the right run first on ties. -/
+def cakeMergeRuns {α : Type u} (ord : α → α → Bool) : List α → List α → List α
+  | [], right => right
+  | left, [] => left
+  | leftHead :: leftTail, rightHead :: rightTail =>
+      if ord leftHead rightHead then
+        leftHead :: cakeMergeRuns ord leftTail (rightHead :: rightTail)
+      else
+        rightHead :: cakeMergeRuns ord (leftHead :: leftTail) rightTail
+  termination_by left right => left.length + right.length
+  decreasing_by all_goals simp +arith
 
-def cakeQSort {α : Type u} (ord : α → α → Bool) (moves : List α) : List α :=
-  cakeQSortAux ord (moves.length + 1) moves
+def cakeSortRuns {α : Type u} (ord : α → α → Bool) : List (List α) → List (List α)
+  | [] => []
+  | [run] => [run]
+  | left :: right :: rest =>
+      cakeSortRuns ord (cakeMergeRuns ord left right :: rest)
+  termination_by runs => runs.length
+  decreasing_by simp_wf
 
-/-- `sort_moves` (`reg_allocScript.sml:343-346`): the original sorts with
-    `QSORT`; probed on the original, an equal-priority move lands before the
-    pivot and the partition buckets reverse, so equal priorities flip
-    relative to the input order (probes `sort_moves_probe.out`
-    `sm_ties_two`/`sm_ties_three`). -/
+def cakeSort {α : Type u} (ord : α → α → Bool) (items : List α) : List α :=
+  (cakeSortRuns ord (items.map (fun item => [item]))).flatten
+
+/-! `sort_moves` (`reg_allocScript.sml:343-346`) uses Cake's generic `sort`
+    with a strict priority comparison. -/
 def cakeSortMoves (moves : List (Nat × (Nat × Nat))) :
     List (Nat × (Nat × Nat)) :=
-  cakeQSort (fun a b => a.1 >= b.1) moves
+  cakeSort (fun a b => a.1 > b.1) moves
 
 /-- `move_related_sub`: a node flagged by `reset_move_related`. -/
 def cakeMoveRelatedSub (state : CakeRaState) (v : Nat) : Bool :=
@@ -801,10 +807,10 @@ def cakeMovesToSp : List (Nat × (Nat × Nat)) →
     list by descending priority, then drop the priorities. -/
 def cakeResortMovesSp (table : NatInfoMap (List (Nat × Nat))) :
     NatInfoMap (List Nat) :=
-  -- `cakeQSort`, not a stable sort: the original's `sort_moves` flips
-  -- equal-priority entries (probes `sort_moves_probe.out`).
+  -- Cake's pairwise merge sort is intentionally not stable: `sort_moves`
+  -- selects the right run first for equal priorities.
   table.map (fun entry =>
-    (entry.1, (cakeQSort (fun a b => a.1 >= b.1) entry.2).map (·.2)))
+    (entry.1, (cakeSort (fun a b => a.1 > b.1) entry.2).map (·.2)))
 
 /-- `update_move` (`reg_allocScript.sml:1407-1414`). -/
 def cakeUpdateMove (spta : Nat → Nat) (move : Nat × (Nat × Nat)) :

@@ -20,20 +20,28 @@ theorem evalLoopCompiledExtCall
     (context : LoopContext α) (functions : List (Nat × List Nat × LoopProg α))
     (ffiHandler : FunName → α → α → α → α → LoopState α → Option (LoopState α))
     (fuel : Nat) (state : LoopState α) (live : List Nat) (function : FunName)
-    (configuration configurationLength array arrayLength : Nat) :
+    (configuration configurationLength array arrayLength : Nat)
+    (configuration' configurationLength' array' arrayLength' : Nat)
+    (hconfiguration : lookupNatInfo configuration context.vars = some configuration')
+    (hconfigurationLength :
+      lookupNatInfo configurationLength context.vars = some configurationLength')
+    (harray : lookupNatInfo array context.vars = some array')
+    (harrayLength : lookupNatInfo arrayLength context.vars = some arrayLength') :
     evalLoopProgWithCallsAndFfi functions ffiHandler (fuel + 1) state
         (loopCompileProg context live
           (.extCall function configuration configurationLength array arrayLength)) =
       (do
-        let configuration ← state.locals configuration
-        let configurationLength ← state.locals configurationLength
-        let array ← state.locals array
-        let arrayLength ← state.locals arrayLength
+        let configuration ← state.locals configuration'
+        let configurationLength ← state.locals configurationLength'
+        let array ← state.locals array'
+        let arrayLength ← state.locals arrayLength'
         let state ← ffiHandler function configuration configurationLength array arrayLength state
         pure (.normal state)) := by
-  rw [loopCompileProg_extCall]
+  rw [loopCompileProg_extCall context live function configuration
+    configurationLength array arrayLength configuration' configurationLength' array'
+    arrayLength' hconfiguration hconfigurationLength harray harrayLength]
   exact evalLoopProgWithCallsAndFfi_ffi functions ffiHandler fuel state function
-    configuration configurationLength array arrayLength live
+    configuration' configurationLength' array' arrayLength' live
 
 theorem compilePanToLoop_extCall_const_noop_correct
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α] [Div α]
@@ -79,7 +87,7 @@ theorem compilePanToLoop_extCall_const_noop_correct
     loopCompileExp, loopNestedSeq,
     evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
     updateLoopLocal, evalPanProgWithCallsAndFfi, evalPanExtCall,
-    evalPanExp, loopResultValues, maxVar_agrees, base]
+    evalPanExp, loopResultValues, lookupNatInfo, maxVar_agrees, base]
 
 /-!
 The no-op theorem above is useful for a closed regression, but it hides the
@@ -164,6 +172,7 @@ theorem compilePanToLoop_extCall_const_success_projection
     loopCompileExp, loopNestedSeq,
     evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
     updateLoopLocal, evalPanProgWithCallsAndFfi, evalPanExtCall,
-    evalPanExp, hsourceSome, maxVar_agrees, hnextState', loopResultValues, base]
+    evalPanExp, hsourceSome, lookupNatInfo, maxVar_agrees, hnextState',
+    loopResultValues, base]
 
 end Flapjack

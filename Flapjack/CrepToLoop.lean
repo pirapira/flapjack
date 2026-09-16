@@ -287,7 +287,8 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
            extends the context with `v |-> tmp`; using the source binder here
            leaves the Word stage with a different variable identity. -/
         (.seq (.assign result.nextTemp result.expression)
-          (loopCompileProg nextContext (result.nextTemp :: result.live) body))
+          (loopCompileProg nextContext
+            (insertNatSorted result.nextTemp result.live) body))
   | .assign name value =>
       let result := loopCompileExp context (context.maxVar + 1) live value
       .seq (loopNestedSeq result.code) (.assign name result.expression)
@@ -368,7 +369,13 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
                 .skip, live))
       .seq (loopNestedSeq (result.code ++ loopAssignTemps argumentNames result.expressions)) call
   | .extCall function configuration configurationLength array arrayLength =>
-      .ffi function configuration configurationLength array arrayLength live
+      match lookupNatInfo configuration context.vars,
+          lookupNatInfo configurationLength context.vars,
+          lookupNatInfo array context.vars,
+          lookupNatInfo arrayLength context.vars with
+      | some configuration, some configurationLength, some array, some arrayLength =>
+          .ffi function configuration configurationLength array arrayLength live
+      | _, _, _, _ => .skip
   | .raise exception =>
       let exceptionName := context.maxVar + 1
       .seq (.assign exceptionName (.const exception)) (.raise exceptionName)
@@ -398,11 +405,18 @@ theorem loopCompileProg_skip [OfNat α 0] [OfNat α 1]
 
 theorem loopCompileProg_extCall [OfNat α 0] [OfNat α 1]
     (context : LoopContext α) (live : List Nat) (function : FunName)
-    (configuration configurationLength array arrayLength : Nat) :
+    (configuration configurationLength array arrayLength : Nat)
+    (configuration' configurationLength' array' arrayLength' : Nat)
+    (hconfiguration : lookupNatInfo configuration context.vars = some configuration')
+    (hconfigurationLength :
+      lookupNatInfo configurationLength context.vars = some configurationLength')
+    (harray : lookupNatInfo array context.vars = some array')
+    (harrayLength :
+      lookupNatInfo arrayLength context.vars = some arrayLength') :
     loopCompileProg context live
         (.extCall function configuration configurationLength array arrayLength) =
-      .ffi function configuration configurationLength array arrayLength live := by
-  simp [loopCompileProg]
+      .ffi function configuration' configurationLength' array' arrayLength' live := by
+  simp [loopCompileProg, hconfiguration, hconfigurationLength, harray, harrayLength]
 
 theorem loopCompileProg_seq [OfNat α 0] [OfNat α 1]
     (context : LoopContext α) (live : List Nat) (first second : CrepProg α) :

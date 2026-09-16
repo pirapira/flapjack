@@ -73,6 +73,38 @@ def handledCallCarriesRaiseHandler : Bool :=
 #guard handlerlessCallCarriesRaiseHandler
 #guard handledCallCarriesRaiseHandler
 
+/-! Cake's `crep_to_loop$compile` resolves all four ExtCall operands through
+`ctxt.vars` (`crep_to_loopScript.sml:198-213`).  Keep both sides of that
+oracle explicit: a complete context emits the mapped FFI payload, while a
+missing lookup emits `Skip` rather than leaking an unresolved source slot. -/
+def ffiContext : LoopContext Nat :=
+  { vars := [(10, 41), (11, 42), (12, 43), (13, 44)],
+    functions := [], maxVar := 20, target := .rv64i }
+
+def ffiContextMapped : LoopProg Nat :=
+  compileCrepToLoop ffiContext [7]
+    (.extCall "halt" 10 11 12 13)
+
+def ffiContextMappingMatches : Bool :=
+  match ffiContextMapped with
+  | .ffi function configuration configurationLength array arrayLength live =>
+      function == "halt" && configuration == 41 &&
+        configurationLength == 42 && array == 43 && arrayLength == 44 &&
+        live == [7]
+  | _ => false
+
+def ffiContextMissing : LoopContext Nat :=
+  { ffiContext with vars := [(10, 41), (11, 42), (12, 43)] }
+
+def ffiMissingLookupSkips : Bool :=
+  match compileCrepToLoop ffiContextMissing [7]
+      (.extCall "halt" 10 11 12 13) with
+  | .skip => true
+  | _ => false
+
+#guard ffiContextMappingMatches
+#guard ffiMissingLookupSkips
+
 /-- Context for the comparison-lowering characterization. Variable `5` is a
     local that is live across the comparison (for example a value assigned
     before a `while`). -/

@@ -1018,8 +1018,8 @@ def cakeAssignStempTag (k : Nat)
     (state : CakeRaState) : CakeRaState :=
   match state.nodeTag.get n with
   | some .sTemp =>
-      let bads := (cakeAdjSub state.adjLists n).map (fun v => cakeTagCol state v)
-        |>.mergeSort (fun a b => a < b)
+      let bads := cakeSort (fun a b => a <= b)
+        ((cakeAdjSub state.adjLists n).map (fun v => cakeTagCol state v))
       match prefs state n bads with
       | none =>
           { state with

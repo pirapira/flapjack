@@ -129,8 +129,8 @@ theorem panValueCrepProgramCorrect_shMemStore_source_word
               have hcompileProg :
                   compileProg context
                       (.shMemStore size address.toExp value.toExp) =
-                    nestedDecs [maxCrepExpVar [compiledValue] + 1] [compiledValue]
-                      (.shMem (storeMemOp size) (maxCrepExpVar [compiledValue] + 1)
+                    nestedDecs [maxCrepExpVar [compiledAddress] + 1] [compiledValue]
+                      (.shMem (storeMemOp size) (maxCrepExpVar [compiledAddress] + 1)
                         compiledAddress) := by
                 simp [compileProg,
                   firstCompiledExpAnyShape_of_firstCompiledExp hfirstAddress,
@@ -138,7 +138,7 @@ theorem panValueCrepProgramCorrect_shMemStore_source_word
                   nestedDecs]
               rw [hcompileProg] at hcrep
               have hcrepAddressAfter := hstable state baseAddress topAddress
-                (maxCrepExpVar [compiledValue] + 1)
+                (maxCrepExpVar [compiledAddress] + 1)
                 compiledAddress addressValue valueValue
                 hcrepAddress
               cases targetFuel with
@@ -150,10 +150,10 @@ theorem panValueCrepProgramCorrect_shMemStore_source_word
                       simp [nestedDecs, evalCrepFullProg] at hcrep
                   | succ targetFuel =>
                       cases hshared : sharedMem (storeMemOp size)
-                          (maxCrepExpVar [compiledValue] + 1) addressValue
+                          (maxCrepExpVar [compiledAddress] + 1) addressValue
                           { state with
                             locals := updateCrepLocal state.locals
-                              (maxCrepExpVar [compiledValue] + 1) valueValue } with
+                              (maxCrepExpVar [compiledAddress] + 1) valueValue } with
                       | none =>
                           simp [nestedDecs, evalCrepFullProg, hcrepValue,
                             hcrepAddressAfter, hshared] at hcrep
@@ -162,7 +162,7 @@ theorem panValueCrepProgramCorrect_shMemStore_source_word
                             sourceLocals sourceGlobals sourceMemory state targetState
                             crepPrimitive ffi sharedMem baseAddress topAddress
                             bytesInWord addressValue valueValue
-                            (maxCrepExpVar [compiledValue] + 1) hshared
+                            (maxCrepExpVar [compiledAddress] + 1) hshared
                           have hresult :=
                             compile_full_pan_value_shMemStore_word_relation
                               context structs sourceFunctions functions sourceLocals

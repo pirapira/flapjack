@@ -110,15 +110,15 @@ example :
    an immediate amount and five for a register amount.  These counts are also
    used to place cross-section labels in the linked artifact. -/
 example :
-    labLineInstructionCount
+    (labLineInstructionCount
         (.asm (.word (.arith (.shift .ror 10 1
-          (.imm (BitVec.ofNat 64 2)))) [] 0 : LabLine (Word 64)) = 3 := by
+          (.imm (BitVec.ofNat 64 2))))) [] 0 : LabLine (Word 64))) = 3 := by
   rfl
 
 example :
-    labLineInstructionCount
+    (labLineInstructionCount
         (.asm (.word (.arith (.shift .ror 10 1
-          (.reg 2)))) [] 0 : LabLine (Word 64)) = 5 := by
+          (.reg 2)))) [] 0 : LabLine (Word 64))) = 5 := by
   rfl
 
 example :

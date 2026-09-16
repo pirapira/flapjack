@@ -3,6 +3,34 @@ import Flapjack.RiscV.Backend
 import Flapjack.RiscV.Correctness
 
 namespace Flapjack.RiscV
+
+/- Cake's wInst stages a spilled binary destination through the first
+   temporary while retaining register-resident operands.  This is the small
+   regression that used to make the fn87 source-to-RISC-V pipeline fail. -/
+example :
+    wordStackArithInst
+        { locations := [(0, .stack 2), (1, .register 5), (2, .register 6)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        (.binOp .or 0 1 (.reg 2)) =
+      some (.seq (.arith .or 31 5 6) (.stackStore 31 12) : StackProg Nat) := by
+  simp [wordStackArithInst, wordSpecialArithLocationsSafe,
+    wordStackLongMulMoveToPhysical, wordStackLongMulMoveFromPhysical,
+    wordStackJoin, wordStackLocation, wordStackOffset, lookupNatInfo]
+
+/- A spilled left register operand is loaded before the register-operand
+   arithmetic and the result is written back using Cake's wRegWrite1. -/
+example :
+    wordStackArithInst
+        { locations := [(0, .stack 2), (1, .stack 3), (2, .register 6)],
+          scratch := 31, stackBase := 10, addressScratch := 29 }
+        (.shift .lsl 0 1 (.reg 2)) =
+      some (.seq (.stackLoad 31 13)
+        (.seq (.inst (.arith (.shift .lsl 31 31 (.reg 6))))
+          (.stackStore 31 12)) : StackProg Nat) := by
+  simp [wordStackArithInst, wordSpecialArithLocationsSafe,
+    wordStackLongMulMoveToPhysical, wordStackLongMulMoveFromPhysical,
+    wordStackJoin, wordStackLocation, wordStackOffset, lookupNatInfo]
+
 example :
     wordStackArithInst
         { locations := [(0, .register 4), (1, .register 5),

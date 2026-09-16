@@ -26,12 +26,21 @@ val ctxt_dec =
   ``<| vars := (FEMPTY |+ (1,5)); funcs := FEMPTY;
       vmax := 4; target := RISC_V |>``;
 
+val ctxt_shmem =
+  ``<| vars := (FEMPTY |+ (3,8)); funcs := FEMPTY;
+      vmax := 0; target := RISC_V |>``;
+
 (* Dec must rename the bound source variable to the fresh temporary used by
    the expression compiler and retain that mapping in the continuation. *)
 val _ = print_eval "dec_renaming"
   ``crep_to_loop$compile ^ctxt_dec (insert 5 () LN)
       (crepLang$Dec 9 (crepLang$Const (7w : 8 word))
          (crepLang$Assign 9 (crepLang$Var 9)))``;
+
+(* A shared-memory operation also uses nested_seq over its generated list. *)
+val _ = print_eval "shmem_nested_seq"
+  ``crep_to_loop$compile ^ctxt_shmem LN
+      (crepLang$ShMem Store 3 (crepLang$Var 1))``;
 
 (* Incoming statement-region live set {5}.  The Call cutset must be built
    from this ORIGINAL live set; argument-expression temps are excluded. *)

@@ -151,7 +151,7 @@ def leanCompileShMemMapped : LoopProg Nat :=
 
 def shMemDestinationMappingMatches : Bool :=
   match leanCompileShMemMapped with
-  | .seq .skip (.shMem .store 8 (.var 0)) => true
+  | .seq (.shMem .store 8 (.var 0)) .skip => true
   | _ => false
 
 #guard shMemDestinationMappingMatches

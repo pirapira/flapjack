@@ -448,11 +448,39 @@ def wordStackAddCarryInst {α : Type} (config : WordStackConfig)
           some (.inst (.arith (.addCarry destination resultCarry sourceLeft
             sourceRight carryIn)))
       | _, _, _, _, _ =>
-          let safe name := match wordStackLocation config name with
-            | some location => wordStackAddCarryLocationSafe config location
+          /- The staged sequence below reads the three sources into
+             `addressScratch`, `specialScratch` and `carryScratch` in that
+             order, runs the instruction, then writes `destination` out of
+             `carryScratch` and `resultCarry` out of `addressScratch`.  An
+             operand that the allocator happened to colour with one of those
+             registers is only a problem when the register is overwritten
+             before that operand is read, so the guard states exactly that:
+             `sourceRight` and `carryIn` must survive the earlier loads, and
+             `destination` must not be `addressScratch`, which
+             `writeResultCarry` still has to read.  `sourceLeft` is read
+             first and `resultCarry` is written last, so neither constrains
+             anything, and `config.scratch` is not touched here at all.
+
+             The previous guard refused whenever any operand sat in any of
+             the four scratch registers.  That rejected `bls_fp_mul` in the
+             stateless-pancaketh guest, where the allocator colours
+             `sourceRight` with `carryScratch` and only `carryIn` is on the
+             frame -- a sequence that is perfectly well defined, because
+             `sourceRight` is read into `specialScratch` before
+             `carryScratch` is written.  Widening the guard leaves the
+             emitted code untouched for every program the old one accepted;
+             it only stops refusing ones it need not have. -/
+          let locationOf name := wordStackLocation config name
+          let notRegister name register := match locationOf name with
+            | some (.register operand) => operand != register
+            | some (.stack _) => true
             | none => false
-          if safe destination && safe resultCarry && safe sourceLeft &&
-              safe sourceRight && safe carryIn then do
+          let known name := (locationOf name).isSome
+          if known sourceLeft && known resultCarry &&
+              notRegister sourceRight config.addressScratch &&
+              notRegister carryIn config.addressScratch &&
+              notRegister carryIn config.specialScratch &&
+              notRegister destination config.addressScratch then do
             let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
               config.addressScratch
             let loadRight ← wordStackLongMulMoveToPhysical config sourceRight

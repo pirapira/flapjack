@@ -71,12 +71,12 @@ def pipelineAddLinkedFunctions := pipelineAddPipeline.linkedFunctions
 
 theorem pipelineAddFunctions_shape :
     pipelineAddFunctions =
-      [(1, [2, 3], some ([.add 5 2 3], [5]))] := by
+      [(1, [2, 3], some ([.add 4 2 3], [4]))] := by
   native_decide
 
 theorem pipelineAddLinkedFunctions_shape :
     pipelineAddLinkedFunctions =
-      some [(1, 0, [2, 3], [.add 5 2 3], [5])] := by
+      some [(1, 0, [2, 3], [.add 4 2 3], [4])] := by
   change RiscV.linkRiscVFunctions 0 pipelineAddFunctions = _
   rw [pipelineAddFunctions_shape]
   rfl
@@ -105,7 +105,7 @@ theorem compiledPipelineAdd_correct (left right : RiscV.Word 64) :
       evalPanProg (pipelineAddLocals left right) (pipelineAddSource left right) := by
   simp [compiledPipelineAddRun, pipelineAddLinkedFunctions_shape,
     pipelineAddSource, pipelineAddLocals, evalPanProg, evalPanExp]
-  exact RiscV.executeFunction_add_general left right
+  exact RiscV.executeFunction_add_destination_general left right
 
 def pipelineMulDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function
@@ -259,25 +259,25 @@ def pipelineCompareItePipeline : FlapjackRiscVResult 64 :=
 theorem pipelineCompareIteFunctions_shape :
     pipelineCompareItePipeline.functions =
       [(1, [2, 3], some (
-        [.addi 6 2 0, .addi 7 3 0,
-         .branchNe 6 7 (BitVec.ofNat 64 12),
-         .addi 6 0 1, .branchEq 0 0 (BitVec.ofNat 64 8),
-         .addi 6 0 0, .addi 0 0 0, .addi 8 6 0,
-         .branchEq 8 0 (BitVec.ofNat 64 12),
-         .addi 5 0 7, .branchEq 0 0 (BitVec.ofNat 64 8),
-         .addi 5 0 8], [5]))] := by
+        [.addi 5 2 0, .addi 6 3 0,
+         .branchNe 5 6 (BitVec.ofNat 64 12),
+         .addi 5 0 1, .branchEq 0 0 (BitVec.ofNat 64 8),
+         .addi 5 0 0, .addi 0 0 0, .addi 7 5 0,
+         .branchEq 7 0 (BitVec.ofNat 64 12),
+         .addi 4 0 7, .branchEq 0 0 (BitVec.ofNat 64 8),
+         .addi 4 0 8], [4]))] := by
   native_decide
 
 theorem pipelineCompareIteLinkedFunctions_shape :
     pipelineCompareItePipeline.linkedFunctions =
       some [(1, 0, [2, 3],
-        [.addi 6 2 0, .addi 7 3 0,
-         .branchNe 6 7 (BitVec.ofNat 64 12),
-         .addi 6 0 1, .branchEq 0 0 (BitVec.ofNat 64 8),
-         .addi 6 0 0, .addi 0 0 0, .addi 8 6 0,
-         .branchEq 8 0 (BitVec.ofNat 64 12),
-         .addi 5 0 7, .branchEq 0 0 (BitVec.ofNat 64 8),
-         .addi 5 0 8], [5])] := by
+        [.addi 5 2 0, .addi 6 3 0,
+         .branchNe 5 6 (BitVec.ofNat 64 12),
+         .addi 5 0 1, .branchEq 0 0 (BitVec.ofNat 64 8),
+         .addi 5 0 0, .addi 0 0 0, .addi 7 5 0,
+         .branchEq 7 0 (BitVec.ofNat 64 12),
+         .addi 4 0 7, .branchEq 0 0 (BitVec.ofNat 64 8),
+         .addi 4 0 8], [4])] := by
   change RiscV.linkRiscVFunctions 0 pipelineCompareItePipeline.functions = _
   rw [pipelineCompareIteFunctions_shape]
   rfl
@@ -341,11 +341,11 @@ def pipelineCallPipeline : FlapjackRiscVResult 64 :=
     pipelineCallPipeline.callLinkedFunctions.isSome
 
 def pipelineCallImage : List (RiscV.Instruction 64) :=
-  [.addi 4 2 0, .jalr 0 1 0,
+  [.addi 3 2 0, .jalr 0 1 0,
    .addi 4 0 (BitVec.ofNat 64 41),
    .addi 2 4 0, .addi 30 30 (0 - BitVec.ofNat 64 8),
    .storeWord 1 30, .addi 31 0 0, .jalr 1 31 0,
-   .addi 3 4 0, .loadWord 1 30,
+   .addi 3 3 0, .loadWord 1 30,
    .addi 30 30 (BitVec.ofNat 64 8), .addi 4 3 0,
    .jalr 0 1 0]
 

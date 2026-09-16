@@ -228,7 +228,10 @@ example :
 def sourceFfiHost : WordFfiHost 64 :=
   fun service configuration _ _ _ state =>
     if service = 7 then
-      some { (writeRegister state 4 (configuration + 1)) with pc := state.pc + 4 }
+      /- The temporary-base shift moved the `result` variable's register
+         from 4 to 3, so the host writes the incremented configuration back
+         into register 3. -/
+      some { (writeRegister state 3 (configuration + 1)) with pc := state.pc + 4 }
     else none
 
 def sourceFfiImage : Option (Word 64 × List (Instruction 64)) := do

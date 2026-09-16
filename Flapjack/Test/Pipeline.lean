@@ -329,9 +329,11 @@ example :
       result.functions.all (fun (_, parameters, artifact) =>
         parameters = [2, 3] && match artifact with
         | some (code, returns) =>
-            returns = [5] && match code with
+            /- The Crepe-to-Loop temporary base moved the result
+               destination from 5 to 4. -/
+            returns = [4] && match code with
             | [.add destination left right] =>
-                destination = 5 && left = 2 && right = 3
+                destination = 4 && left = 2 && right = 3
             | _ => false
         | none => false)
 

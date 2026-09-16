@@ -42,6 +42,19 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   emit "stage=source_word_two_reg" two
   emit "stage=source_word_unreach" unreach
   emit "stage=source_word_dead" dead
+  let tree := wordClashTree dead []
+  let forced := RiscV.CakeRegAlloc.cakeGetForced dead
+  let (wordMoves, spillCosts) := wordGetHeuristics 3 label dead
+  let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
+  let bij := RiscV.CakeRegAlloc.cakeMkBij tree
+  let scost := spillCosts.map (fun costs =>
+    costs.filterMap (fun entry =>
+      (lookupNatInfo entry.1 bij.toAllocator).map
+        (fun node => (node, entry.2))))
+  emit "stage=source_word_colour"
+    (RiscV.CakeRegAlloc.cakeDoRegAlloc .irc scost
+      RiscV.CakeRegAlloc.cakeRiscVRegisterCount moves tree forced
+      (RiscV.CakeRegAlloc.cakeGetStackOnly dead))
   match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead label
       (wordSsaAbiParameters arity) selected with
   | none => emit "stage=source_word_allocator" "none"

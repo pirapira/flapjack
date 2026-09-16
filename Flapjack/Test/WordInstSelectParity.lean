@@ -12,13 +12,13 @@ def cakeLoadVarAddress : WordProg (BitVec 64) :=
 
 def cakeLoadConstShape : Bool :=
   match cakeLoadConstAddress with
-  | .seq (.assign 7 (.const value))
-      (.assign 2 (.load (.var 7))) => value == BitVec.ofNat 64 0x3f4
+  | .seq (.inst (.const 7 value))
+      (.inst (.mem .load 2 7)) => value == BitVec.ofNat 64 0x3f4
   | _ => false
 
 def cakeLoadVarShape : Bool :=
   match cakeLoadVarAddress with
-  | .seq (.move 0 [(7, 13)]) (.assign 2 (.load (.var 7))) => true
+  | .seq (.move 0 [(7, 13)]) (.inst (.mem .load 2 7)) => true
   | _ => false
 
 #guard cakeLoadConstShape

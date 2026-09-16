@@ -607,15 +607,15 @@ def wordSsaFakeInconsistencyMoves [OfNat α 0] (preferred : Option Bool) :
         wordSsaFakeInconsistencyMoves preferred names left right next
       match lookupNatInfo name left.current, lookupNatInfo name right.current with
       | none, some rightName =>
-          (wordSsaSeq leftMoves (.assign next (.const 0)),
+          (wordSsaSeq leftMoves (.inst (.const next 0)),
             wordSsaSeq rightMoves
               (.move (wordSsaBranchPriority preferred false) [(next, rightName)]),
             next + 4, wordSsaForceRename [(name, next)] left,
             wordSsaForceRename [(name, next)] right)
       | some leftName, none =>
-          (wordSsaSeq leftMoves
+            (wordSsaSeq leftMoves
               (.move (wordSsaBranchPriority preferred true) [(next, leftName)]),
-            wordSsaSeq rightMoves (.assign next (.const 0)),
+            wordSsaSeq rightMoves (.inst (.const next 0)),
             next + 4, wordSsaForceRename [(name, next)] left,
             wordSsaForceRename [(name, next)] right)
       | _, _ => (leftMoves, rightMoves, next, left, right)
@@ -680,7 +680,7 @@ decreasing_by all_goals decreasing_trivial
 def wordSsaFakeMoves [OfNat α 0] : List Nat → WordProg α
   | [] => .skip
   | name :: names =>
-      wordSsaSeq (.assign name (.const 0)) (wordSsaFakeMoves names)
+      wordSsaSeq (.inst (.const name 0)) (wordSsaFakeMoves names)
 
 def wordSsaLoopSetup [OfNat α 0] (state : WordSsaState)
     (liveIn liveOut : List Nat) : WordSsaState × WordProg α :=

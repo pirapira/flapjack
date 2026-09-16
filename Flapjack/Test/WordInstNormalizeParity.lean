@@ -175,6 +175,28 @@ def nestedSelectorBoundaryMatches : Bool :=
   | .assign 20 (.shift .lsl (.op .add [.var 6, .var 4]) (.const 1)) => true
   | _ => false
 
+/- Cake's `inst_select_exp (Shift _ exp (Var n))` materializes both operands
+   and emits an arithmetic shift with the second temporary as a register. -/
+def variableShiftSelectorMatches : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 14 (.shift .asr (.var 18) (.var 22))) with
+  | .seq (.move 0 [(23, 18)])
+      (.seq (.move 0 [(24, 22)])
+        (.inst (.arith (.shift .asr 14 23 (.reg 24))))) => true
+  | _ => false
+
+def constantSelectorMatches : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 18 (.const 7)) with
+  | .inst (.const 18 7) => true
+  | _ => false
+
+def loadSelectorMatches : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 14 (.load (.var 18))) with
+  | .seq (.move 0 [(23, 18)]) (.inst (.mem .load 14 23)) => true
+  | _ => false
+
 #guard twoVarOrderMatches
 #guard varConstOrderMatches
 #guard constFirstOrderMatches
@@ -189,6 +211,9 @@ def nestedSelectorBoundaryMatches : Bool :=
 #guard xorZeroConstantDropped
 #guard andZeroConstantCollapses
 #guard nestedSelectorBoundaryMatches
+#guard variableShiftSelectorMatches
+#guard constantSelectorMatches
+#guard loadSelectorMatches
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -205,6 +230,9 @@ def runChecks : IO Bool := do
     , ("the Xor zero identity is dropped like Cake reduce_const", xorZeroConstantDropped)
     , ("the And zero fold collapses to the constant like Cake reduce_const", andZeroConstantCollapses)
     , ("the source selector boundary preserves Cake's nested expression shape", nestedSelectorBoundaryMatches)
+    , ("a variable shift uses Cake's two operand moves and register shift", variableShiftSelectorMatches)
+    , ("a constant assignment becomes Cake's Const instruction", constantSelectorMatches)
+    , ("a load materializes Cake's Mem instruction after its address move", loadSelectorMatches)
   ]
   let mut ok := true
   for (label, passed) in checks do

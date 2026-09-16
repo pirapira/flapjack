@@ -54,14 +54,27 @@ def wordSimpFoldOp [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
   | .sub, [left, right] => some (left - right)
   | _, _ => none
 
-/-! `const_fp_exp` (`word_simpScript.sml:140-215`).  The `Shift` case of the
-    original folds logical shifts with `word_sh`, which needs the target word
-    width (`n >= dimindex (:'a)`), so Flapjack keeps the substituted operands
-    instead of folding.  That only affects whether a shift is remembered as a
-    constant; the argument constant shuffle this pass exists for is
-    unaffected. -/
+class WordSimpShift (α : Type u) where
+  eval : Shift → α → α → Option α
+
+instance (priority := 10) defaultWordSimpShift : WordSimpShift α where
+  eval _ _ _ := none
+
+instance (priority := 100) bitVecWordSimpShift [NeZero width] :
+    WordSimpShift (BitVec width) where
+  eval operator left right :=
+    if right.toNat < width then
+      match operator with
+      | .lsl => some (left <<< right.toNat)
+      | .lsr => some (left >>> right.toNat)
+      | .asr => some (BitVec.sshiftRight left right.toNat)
+      | .ror => some (BitVec.rotateRight left right.toNat)
+    else none
+
+/-! `const_fp_exp` (`word_simpScript.sml:140-215`). -/
 def wordSimpConstExp [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [Complement α] [OfNat α 0] (constants : NatInfoMap α) : WordExp α → WordExp α
+    [Complement α] [OfNat α 0] [WordSimpShift α]
+    (constants : NatInfoMap α) : WordExp α → WordExp α
   | .var name =>
       match lookupNatInfo name constants with
       | some value => .const value
@@ -75,7 +88,14 @@ def wordSimpConstExp [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
           | none => .op operator (values.map (fun value => .const value))
       | none => .op operator folded
   | .shift operator left right =>
-      .shift operator (wordSimpConstExp constants left) (wordSimpConstExp constants right)
+      let left := wordSimpConstExp constants left
+      let right := wordSimpConstExp constants right
+      match left, right with
+      | .const left, .const right =>
+          match WordSimpShift.eval operator left right with
+          | some value => .const value
+          | none => .shift operator (.const left) (.const right)
+      | _, _ => .shift operator left right
   | .load address => .load (wordSimpConstExp constants address)
   | expression => expression
 termination_by expression => sizeOf expression
@@ -152,7 +172,7 @@ def wordSimpDropConsts (constants : NatInfoMap α) : List Nat → WordProg α
     has no word comparison; `wordFuseConditions` folds the decidable
     duplicates later.  Every other case follows the original. -/
 def wordConstFpLoop [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α] :
+    [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α] [WordSimpShift α] :
     WordProg α → NatInfoMap α → WordProg α × NatInfoMap α
   | .skip, constants => (.skip, constants)
   | .move priority moves, constants =>
@@ -237,7 +257,7 @@ decreasing_by all_goals decreasing_trivial
 
 /-- `const_fp` (`word_simpScript.sml:342-344`). -/
 def wordConstFp [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α]
+    [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α] [WordSimpShift α]
     (program : WordProg α) : WordProg α :=
   (wordConstFpLoop program []).1
 

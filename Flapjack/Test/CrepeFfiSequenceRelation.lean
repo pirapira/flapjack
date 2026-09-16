@@ -32,7 +32,7 @@ theorem sourceToCrepeFfi_sequence_relation :
         sourceToCrepeFfiStructuredSequence) =
       some (.returned
         (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
-          sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar)
+          sourceToCrepeFfiState sourceToCrepeFfiTempBase)
         [BitVec.ofNat 64 42]) ∧
     panValueCrepControlRel [] sourceToCrepeFfiContext
       (fun _ _ _ => False)
@@ -40,12 +40,12 @@ theorem sourceToCrepeFfi_sequence_relation :
         [.word (BitVec.ofNat 64 42)])
       (.returned
         (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
-          sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar)
+          sourceToCrepeFfiState sourceToCrepeFfiTempBase)
         [BitVec.ofNat 64 42]) := by
   have hfirst := sourceToCrepeFfi_nonempty_environment_relation
   let targetAfter :=
     restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
-      sourceToCrepeFfiState sourceToCrepeFfiContext.maxVar
+      sourceToCrepeFfiState sourceToCrepeFfiTempBase
   have hsourceSecond :
       evalPanValueProgWithPrimitiveCallsAndFfi
         (fun _ _ => none) sourceToCrepeFfiStructuredHandler [] 
@@ -68,15 +68,16 @@ theorem sourceToCrepeFfi_sequence_relation :
       sourceToCrepeFfiState, sourceToCrepeFfiHandler,
       targetAfter,
       sourceToCrepeFfiTargetAfter, sourceToCrepeFfiTargetAfterTemps,
-      restoreCrepFfiTemps, compileProg, firstCompiledExp, compileExp,
-      nestedDecs, evalCrepFullProgState, evalCrepFullExpState,
+      restoreCrepFfiTemps, sourceToCrepeFfiTempBase, maxCrepExpVar,
+      crepExpVars, List.foldl, compileProg, firstCompiledExp, compileExp,
+      lookupInfo, nestedDecs, evalCrepFullProgState, evalCrepFullExpState,
       updateCrepLocal, restoreCrepResult]
   have htargetLocal : targetAfter.locals 1 =
       some (BitVec.ofNat 64 42) := by
     simp [targetAfter, restoreCrepFfiTemps, sourceToCrepeFfiTargetAfter,
       sourceToCrepeFfiTargetAfterTemps, sourceToCrepeFfiState,
+      sourceToCrepeFfiTempBase, maxCrepExpVar, crepExpVars, List.foldl,
       updateCrepLocal, restoreCrepLocal]
-    decide
   have hcompileSecond :
       compileProg sourceToCrepeFfiContext
         sourceToCrepeFfiStructuredContinuation = .return [.var 1] := by

@@ -11,7 +11,8 @@ theorem panValueCrepProgramStateCorrect_extCall_source_word
     (function : FunName)
     (configuration configurationLength array arrayLength : SourceWordExp α)
     (hffi : ∀ (sourceHandler : PanValueFfiHandler α)
-      (ffi : CrepFfiHandler α), panValueCrepExtCallCorrect sourceHandler ffi)
+      (ffi : CrepFfiHandler α) (temporaryBase : Nat),
+      panValueCrepExtCallCorrectAt temporaryBase sourceHandler ffi)
     (hbytesInWord : ∀ (context : CompileContext α) (bytesInWord : α),
       context.bytesInWord = bytesInWord)
     (hlookup : ∀ (context : CompileContext α)
@@ -22,8 +23,7 @@ theorem panValueCrepProgramStateCorrect_extCall_source_word
     (hfresh : ∀ (context : CompileContext α) (expression : SourceWordExp α)
       (compiled : CrepExp α),
       compileExp context expression.toExp = ([compiled], .one) →
-      ∀ temporary, context.maxVar < temporary →
-        temporary ∉ crepExpVars compiled) :
+      ∀ temporary, temporary ∉ crepExpVars compiled) :
     PanValueCrepProgramStateCorrect
       (.extCall function configuration.toExp configurationLength.toExp
         array.toExp arrayLength.toExp) := by
@@ -131,17 +131,20 @@ theorem panValueCrepProgramStateCorrect_extCall_source_word
       have hfirstArrayLength :
           firstCompiledExp context arrayLength.toExp = some arrayLengthCompiled := by
         simp [firstCompiledExp, hcompileArrayLength]
+      let temporaryBase : Nat := maxCrepExpVar
+        [configurationCompiled, configurationLengthCompiled,
+          arrayCompiled, arrayLengthCompiled]
       have hcompile :
           compileProg context
               (.extCall function configuration.toExp configurationLength.toExp
                 array.toExp arrayLength.toExp) =
-            .dec (context.maxVar + 1) configurationCompiled
-              (.dec (context.maxVar + 2) configurationLengthCompiled
-                (.dec (context.maxVar + 3) arrayCompiled
-                  (.dec (context.maxVar + 4) arrayLengthCompiled
-                    (.extCall function (context.maxVar + 1) (context.maxVar + 2)
-                      (context.maxVar + 3) (context.maxVar + 4))))) := by
-        simpa [nestedDecs] using
+            .dec (temporaryBase + 1) configurationCompiled
+              (.dec (temporaryBase + 2) configurationLengthCompiled
+                (.dec (temporaryBase + 3) arrayCompiled
+                  (.dec (temporaryBase + 4) arrayLengthCompiled
+                    (.extCall function (temporaryBase + 1) (temporaryBase + 2)
+                      (temporaryBase + 3) (temporaryBase + 4))))) := by
+        simpa [temporaryBase, nestedDecs] using
           (compileProg_extCall_of_compiled context function configuration.toExp
             configurationLength.toExp array.toExp arrayLength.toExp
             configurationCompiled configurationLengthCompiled arrayCompiled
@@ -174,59 +177,58 @@ theorem panValueCrepProgramStateCorrect_extCall_source_word
                       | succ targetFuel =>
                           have hconfigurationLengthFresh := hfresh context
                             configurationLength configurationLengthCompiled
-                            hcompileConfigurationLength (context.maxVar + 1)
-                            (by omega)
+                            hcompileConfigurationLength (temporaryBase + 1)
                           have harrayFresh := hfresh context array arrayCompiled
-                            hcompileArray (context.maxVar + 1) (by omega)
+                            hcompileArray (temporaryBase + 1)
                           have harrayFresh' := hfresh context array arrayCompiled
-                            hcompileArray (context.maxVar + 2) (by omega)
+                            hcompileArray (temporaryBase + 2)
                           have harrayLengthFresh := hfresh context arrayLength
                             arrayLengthCompiled hcompileArrayLength
-                            (context.maxVar + 1) (by omega)
+                            (temporaryBase + 1)
                           have harrayLengthFresh' := hfresh context arrayLength
                             arrayLengthCompiled hcompileArrayLength
-                            (context.maxVar + 2) (by omega)
+                            (temporaryBase + 2)
                           have harrayLengthFresh'' := hfresh context arrayLength
                             arrayLengthCompiled hcompileArrayLength
-                            (context.maxVar + 3) (by omega)
+                            (temporaryBase + 3)
                           have hconfigurationLengthEval' :=
                             evalCrepFullExp_update_of_not_mem state.locals state.memory
                               baseAddress topAddress configurationLengthCompiled
-                              (context.maxVar + 1) configurationLengthValue
+                              (temporaryBase + 1) configurationLengthValue
                               configurationValue hconfigurationLengthFresh
                               hconfigurationLengthEval
                           have harrayEval' :=
                             evalCrepFullExp_update_of_not_mem state.locals state.memory
                               baseAddress topAddress arrayCompiled
-                              (context.maxVar + 1) arrayValue configurationValue
+                              (temporaryBase + 1) arrayValue configurationValue
                               harrayFresh harrayEval
                           have harrayEval'' :=
                             evalCrepFullExp_update_of_not_mem
-                              (updateCrepLocal state.locals (context.maxVar + 1)
+                              (updateCrepLocal state.locals (temporaryBase + 1)
                                 configurationValue) state.memory
                               baseAddress topAddress arrayCompiled
-                              (context.maxVar + 2) arrayValue configurationLengthValue
+                              (temporaryBase + 2) arrayValue configurationLengthValue
                               harrayFresh' harrayEval'
                           have harrayLengthEval' :=
                             evalCrepFullExp_update_of_not_mem state.locals state.memory
                               baseAddress topAddress arrayLengthCompiled
-                              (context.maxVar + 1) arrayLengthValue configurationValue
+                              (temporaryBase + 1) arrayLengthValue configurationValue
                               harrayLengthFresh harrayLengthEval
                           have harrayLengthEval'' :=
                             evalCrepFullExp_update_of_not_mem
-                              (updateCrepLocal state.locals (context.maxVar + 1)
+                              (updateCrepLocal state.locals (temporaryBase + 1)
                                 configurationValue) state.memory
                               baseAddress topAddress arrayLengthCompiled
-                              (context.maxVar + 2) arrayLengthValue configurationLengthValue
+                              (temporaryBase + 2) arrayLengthValue configurationLengthValue
                               harrayLengthFresh' harrayLengthEval'
                           have harrayLengthEval''' :=
                             evalCrepFullExp_update_of_not_mem
                               (updateCrepLocal
-                                (updateCrepLocal state.locals (context.maxVar + 1)
+                                (updateCrepLocal state.locals (temporaryBase + 1)
                                   configurationValue)
-                                (context.maxVar + 2) configurationLengthValue) state.memory
+                                (temporaryBase + 2) configurationLengthValue) state.memory
                               baseAddress topAddress arrayLengthCompiled
-                              (context.maxVar + 3) arrayLengthValue arrayValue
+                              (temporaryBase + 3) arrayLengthValue arrayValue
                               harrayLengthFresh'' harrayLengthEval''
                           have hconfigurationEvalState := hstateExpFromLegacy
                             configuration configurationValue configurationCompiled state
@@ -234,7 +236,7 @@ theorem panValueCrepProgramStateCorrect_extCall_source_word
                           let stateAfterConfiguration : CrepState α :=
                             { state with
                               locals := updateCrepLocal state.locals
-                                (context.maxVar + 1) configurationValue }
+                                (temporaryBase + 1) configurationValue }
                           have hconfigurationLengthEvalState := hstateExpFromLegacy
                             configurationLength configurationLengthValue
                             configurationLengthCompiled stateAfterConfiguration
@@ -243,14 +245,14 @@ theorem panValueCrepProgramStateCorrect_extCall_source_word
                           let stateAfterConfigurationLength : CrepState α :=
                             { stateAfterConfiguration with
                               locals := updateCrepLocal stateAfterConfiguration.locals
-                                (context.maxVar + 2) configurationLengthValue }
+                                (temporaryBase + 2) configurationLengthValue }
                           have harrayEvalState := hstateExpFromLegacy array arrayValue
                             arrayCompiled stateAfterConfigurationLength harraySource
                             hcompileArray harrayEval''
                           let stateAfterArray : CrepState α :=
                             { stateAfterConfigurationLength with
                               locals := updateCrepLocal stateAfterConfigurationLength.locals
-                                (context.maxVar + 3) arrayValue }
+                                (temporaryBase + 3) arrayValue }
                           have harrayLengthEvalState := hstateExpFromLegacy
                             arrayLength arrayLengthValue arrayLengthCompiled stateAfterArray
                             harrayLengthSource hcompileArrayLength harrayLengthEval'''
@@ -264,11 +266,11 @@ theorem panValueCrepProgramStateCorrect_extCall_source_word
                             updateCrepLocal
                               (updateCrepLocal
                                 (updateCrepLocal
-                                  (updateCrepLocal state.locals (context.maxVar + 1)
+                                  (updateCrepLocal state.locals (temporaryBase + 1)
                                     configurationValue)
-                                  (context.maxVar + 2) configurationLengthValue)
-                                (context.maxVar + 3) arrayValue)
-                              (context.maxVar + 4) arrayLengthValue
+                                  (temporaryBase + 2) configurationLengthValue)
+                                (temporaryBase + 3) arrayValue)
+                              (temporaryBase + 4) arrayLengthValue
                           let callState : CrepState α := { state with locals := callLocals }
                           cases hcall : ffi function configurationValue
                               configurationLengthValue arrayValue arrayLengthValue callState with
@@ -282,14 +284,15 @@ theorem panValueCrepProgramStateCorrect_extCall_source_word
                               simp [nestedDecs, evalCrepFullProgState, updateCrepLocal,
                                 callState, callLocals,
                                 hconfigurationEvalState, hconfigurationLengthEvalState,
-                                harrayEvalState, harrayLengthEvalState, hcall] at hcrep
+                                harrayEvalState, harrayLengthEvalState, hcall,
+                                temporaryBase] at hcrep
                           | some result =>
                               obtain ⟨state', hreturned, hstate⟩ :=
-                                hffi sourceHandler ffi context structs sourceLocals
+                                (hffi sourceHandler ffi temporaryBase) context structs sourceLocals
                                   sourceLocals' sourceGlobals sourceMemory state function
                                   configurationValue configurationLengthValue arrayValue
                                   arrayLengthValue result hsourceHandler
-                                  (by simpa [callState, callLocals] using hcall)
+                                  (by simpa [callState, callLocals, temporaryBase] using hcall)
                               cases hreturned
                               have htargetExpected :
                                   evalCrepFullProgState functions crepPrimitive ffi sharedMem
@@ -299,7 +302,7 @@ theorem panValueCrepProgramStateCorrect_extCall_source_word
                                         configurationLength.toExp array.toExp
                                         arrayLength.toExp)) =
                                   some (.normal
-                                    (restoreCrepFfiTemps state' state context.maxVar)) := by
+                                    (restoreCrepFfiTemps state' state temporaryBase)) := by
                                 rw [hcompile]
                                 simp [evalCrepFullProgState, updateCrepLocal,
                                   callState, callLocals, hconfigurationEvalState,
@@ -317,6 +320,6 @@ theorem panValueCrepProgramStateCorrect_extCall_source_word
                               have hcrepEq := Option.some.inj
                                 (htargetExpected.symm.trans hcrep')
                               cases hcrepEq
-                              simpa [panValueCrepControlRel] using hstate
+                              simpa [panValueCrepControlRel, temporaryBase] using hstate
 
 end Flapjack

@@ -75,12 +75,13 @@ fixtures for return, addition, multiplication, conditionals, function calls,
 global initialization, ordinary memory loads, and a deterministic FFI service
 boundary. They deliberately do not rely only on a Flapjack correctness
 theorem: distinct compilers can satisfy the same source theorem while emitting
-different code. Exact artifact parity for the source corpus remains open
-follow-up work. These
+different code. The checked-in 22-fixture source corpus is currently
+byte-exact; broader accepted-program coverage and differential-fuzz findings
+remain open follow-up work. These
 fixtures are stable seeds for differential fuzzing against `cake`; a source
 accepted by CakeML but not executable by Flapjack is a P1 compiler-parity bug.
 
-For the external five-program artifact corpus, run
+For the checked-in source-to-RISC-V artifact corpus, run
 `scripts/parity-small-corpus.py`. It invokes both `cake` and
 `flapjack-compile --assembly`, checks the pinned Cake output hashes, compares
 runtime/entry/user sections without hiding byte differences, and succeeds only

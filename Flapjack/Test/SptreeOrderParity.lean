@@ -36,7 +36,42 @@ def wordSsaReconcileOrderGuard : Bool :=
 
 #guard wordSsaReconcileOrderGuard
 
-def parityGuard : Bool := sptreeOrderGuard && wordSsaReconcileOrderGuard
+/-- `fix_inconsistencies` consumes the same Cake tree order.  Its recursive
+    fake-move pass emits the corresponding sequence in reverse recursion order;
+    pin that observable order as well as the merged SSA names. -/
+def wordSsaFixInconsistenciesOrderGuard : Bool :=
+  match wordSsaFixInconsistencies (α := Nat) none
+      ({ current := [(0, 21), (4, 41), (6, 33), (12, 37)], next := 200 } :
+        WordSsaState)
+      ({ current := [], next := 200 } : WordSsaState) 200 with
+  | (state, leftMoves, rightMoves) =>
+      state.current == [(0, 212), (4, 208), (12, 204), (6, 200)] &&
+        state.next == 216 &&
+        wordProgReadVars leftMoves == [33, 37, 41, 21] &&
+        wordProgWriteVars leftMoves == [200, 204, 208, 212] &&
+        wordProgReadVars rightMoves == [] &&
+        wordProgWriteVars rightMoves == [200, 204, 208, 212]
+
+#guard wordSsaFixInconsistenciesOrderGuard
+
+/-- `loop_setup` refreshes names in the Patricia-tree order rather than the
+    source list order.  This set makes the non-ascending `[0,4,12,6]` order
+    visible in the generated refresh move and resulting SSA map. -/
+def wordSsaLoopSetupOrderGuard : Bool :=
+  match wordSsaLoopSetup (α := Nat)
+      ({ current := [(0, 21), (4, 41), (6, 33), (12, 37)], next := 200 } :
+        WordSsaState) [0, 4] [6, 12] with
+  | (state, .move 0 moves) =>
+      state.current == [(6, 212), (12, 208), (4, 204), (0, 200)] &&
+        state.next == 216 &&
+        moves == [(200, 21), (204, 41), (208, 37), (212, 33)]
+  | _ => false
+
+#guard wordSsaLoopSetupOrderGuard
+
+def parityGuard : Bool :=
+  sptreeOrderGuard && wordSsaReconcileOrderGuard &&
+    wordSsaFixInconsistenciesOrderGuard && wordSsaLoopSetupOrderGuard
 
 #guard parityGuard
 

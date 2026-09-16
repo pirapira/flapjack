@@ -191,7 +191,21 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
   | .var name => (.move 0 [(temp, name)], .var temp)
   | .lookup store => (.get temp store, .var temp)
   | .load address =>
-      let (prelude, selectedAddress) := wordInstSelectAtom temp address
+      /- `inst_select_exp c tar temp (Load exp)` (`word_instScript.sml:234-245`)
+         checks the address for `Op Add [exp'; Const w]` and keeps `w` in the
+         `Addr temp w` it emits.  Selecting the address with the ordinary atom
+         selector folds that `w` into an `addi` instead, which costs an extra
+         instruction and loses the offset the Word-to-Stack pass would have
+         fused: `calculate_total_blob_gas` in the stateless-pancaketh guest
+         came out as `addi a0, a0, 264; ld a0, 0(a0)` where Cake emits
+         `ld a0, 264(a0)`.  The statement-level load at
+         `wordInstSelectProgram` already selects its address this way; do the
+         same here so an expression-level load agrees with it. -/
+      let (prelude, selectedAddress) :=
+        letI : WordInstSelectImmediate α :=
+          { validBinOpImmediate := fun _ _ => false
+            shiftImmediate := fun _ => .unsupported }
+        wordInstSelectAtom temp address
       match selectedAddress with
       | .var address =>
           /- Cake's `inst_select_exp` lowers every expression-level load to a

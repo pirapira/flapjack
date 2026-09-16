@@ -136,6 +136,12 @@
       "source_reference": "cakeml/pancake/crep_arithScript.sml:50-56 (mul_const_def): x * 8 becomes Shift Lsl x (Const 3) on a non-constant parameter.",
       "cake_sha256": "073d50b2801126783668b513e792e25705d2672a11155ce859ce5c4030c62138",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00028_allocator.pnk",
+      "source_reference": "Minimized differential-fuzz reproducer f00028: exercises Cake Patricia ordering, SSA cutsets, allocator colouring, and physical parallel moves.",
+      "cake_sha256": "60c124426815c469e11d6eba53bffda35c2f166ce78a0446c9457d07e14295cf",
+      "tracked_beads": ["flapjack-8tb.4"]
     }
 
   ]

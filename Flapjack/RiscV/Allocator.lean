@@ -1113,6 +1113,98 @@ def wordProgWriteVars : WordProg α → List Nat
 def wordProgVariables (program : WordProg α) : List Nat :=
   wordProgReadVars program ++ wordProgWriteVars program
 
+/-! CakeML's `wordLang$max_var` is not the same scan as the allocator's
+    read/write inventory.  In particular, `max_var (Call NONE ... h)` uses
+    only the argument list and deliberately does not descend into `h`.
+    Keep this source-faithful maximum separate: the allocator still needs the
+    complete handler inventory for clashes and liveness, while full SSA and
+    word-to-stack frame sizing consume Cake's `max_var` result. -/
+
+def wordExpCakeMaxVar : WordExp α → Nat
+  | .const _ | .lookup _ => 0
+  | .var name => name
+  | .load address => wordExpCakeMaxVar address
+  | .op _ arguments =>
+      arguments.foldl (fun maximum argument => max maximum (wordExpCakeMaxVar argument)) 0
+  | .shift _ left right =>
+      max (wordExpCakeMaxVar left) (wordExpCakeMaxVar right)
+
+def wordArithCakeMaxVar : WordArith α → Nat
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      max destinationLeft (max destinationRight (max sourceLeft sourceRight))
+  | .longDiv destinationLeft destinationRight sourceLeft sourceRight quotient =>
+      max destinationLeft (max destinationRight
+        (max sourceLeft (max sourceRight quotient)))
+  | .addCarry destination resultCarry sourceLeft sourceRight carryIn =>
+      max destination (max resultCarry (max sourceLeft (max sourceRight carryIn)))
+  | .cakeAddCarry destination sourceLeft sourceRight carry =>
+      max destination (max sourceLeft (max sourceRight carry))
+  | .div destination dividend divisor =>
+      max destination (max dividend divisor)
+  | .binOp _ destination sourceLeft sourceRight
+  | .shift _ destination sourceLeft sourceRight =>
+      max destination (max sourceLeft (match sourceRight with
+        | .imm _ => 0
+        | .reg name => name))
+
+def wordInstCakeMaxVar : WordInst α → Nat
+  | .const destination _ => destination
+  | .arith operation => wordArithCakeMaxVar operation
+  | .mem _ destination address => max destination address
+
+def wordCutsetsCakeMaxVar (cutsets : List Nat × List Nat) : Nat :=
+  max (cutsets.1.foldl max 0) (cutsets.2.foldl max 0)
+
+def wordProgCakeMaxVar : WordProg α → Nat
+  | .skip | .tick => 0
+  | .move _ moves =>
+      moves.foldl (fun maximum move => max maximum (max move.1 move.2)) 0
+  | .assign name value => max name (wordExpCakeMaxVar value)
+  | .inst instruction => wordInstCakeMaxVar instruction
+  | .get destination _ => destination
+  | .store address value => max value (wordExpCakeMaxVar address)
+  | .set _ value => wordExpCakeMaxVar value
+  | .seq first second => max (wordProgCakeMaxVar first) (wordProgCakeMaxVar second)
+  | .ite _ condition right thenBranch elseBranch =>
+      max condition (max (match right with
+        | .imm _ => 0
+        | .reg name => name)
+        (max (wordProgCakeMaxVar thenBranch) (wordProgCakeMaxVar elseBranch)))
+  | .loop liveIn body liveOut =>
+      max (liveIn.foldl max 0)
+        (max (wordProgCakeMaxVar body) (liveOut.foldl max 0))
+  | .mustTerminate body => wordProgCakeMaxVar body
+  | .break label | .continue label | .raise label | .locValue label _ => label
+  | .return label values => values.foldl max label
+  | .call returns _ arguments handler =>
+      let argumentMax := arguments.foldl max 0
+      match returns with
+      | none => argumentMax
+      | some (values, cutsets, returnCode, _, _) =>
+          let returnMax := max (values.foldl max 0)
+            (max (wordCutsetsCakeMaxVar cutsets) (wordProgCakeMaxVar returnCode))
+          match handler with
+          | none => max argumentMax returnMax
+          | some (exception, body, _, _) =>
+              max argumentMax (max returnMax
+                (max exception (wordProgCakeMaxVar body)))
+  | .alloc destination cutsets => max destination (wordCutsetsCakeMaxVar cutsets)
+  | .storeConsts source bitmap codeLength dataLength _ =>
+      max source (max bitmap (max codeLength dataLength))
+  | .opCurrHeap _ destination source => max destination source
+  | .install codeBuffer codeLength dataBuffer dataLength cutsets =>
+      max codeBuffer (max codeLength (max dataBuffer
+        (max dataLength (wordCutsetsCakeMaxVar cutsets))))
+  | .codeBufferWrite address value | .dataBufferWrite address value =>
+      max address value
+  | .ffi _ configuration configurationLength array arrayLength live =>
+      max configuration (max configurationLength (max array
+        (max arrayLength (wordCutsetsCakeMaxVar live))))
+  | .shareInst _ name address => max name (wordExpCakeMaxVar address)
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 /-! Physical Word names denote architectural registers directly.  They can
     occur in the body independently of the formal-parameter list, notably as
     the ABI operands of an FFI instruction, so the spill allocator must keep
@@ -1164,7 +1256,7 @@ decreasing_by all_goals decreasing_trivial
     Formals are the even architectural names and may be unused by the body;
     including them here would change `full_ssa_cc_trans`'s fresh-name stream. -/
 def wordSsaLimitVar (_parameters : List Nat) (program : WordProg α) : Nat :=
-  let maximum := wordListMaximum (wordProgVariables program)
+  let maximum := wordProgCakeMaxVar program
   maximum + (4 - maximum % 4) + 1
 
 def wordSsaSetupParameters (parameters : List Nat) (program : WordProg α) :

@@ -84,6 +84,15 @@ def spillOnlyFrameOccupancy : Bool :=
 
 #guard spillOnlyFrameOccupancy
 
+/-- Cake's `max_var` ignores a handler on a no-return call.  This is distinct
+    from the allocator inventory, which must retain the handler for liveness. -/
+def cakeMaxVarNoReturnHandler : Bool :=
+  wordProgCakeMaxVar
+      (.call none none [2]
+        (some (54, (.assign 54 (.var 54) : WordProg Nat), 0, 0)) : WordProg Nat) == 2
+
+#guard cakeMaxVarNoReturnHandler
+
 def spillingWordFunctions : Option (List (Nat × Nat × WordProg (RiscV.Word 64))) :=
   match parseTopDecs (BitVec.ofInt 64) spillingSource with
   | .error _ => none

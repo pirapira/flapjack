@@ -1099,7 +1099,7 @@ def cakeColourFrameSlots (k : Nat) (parameters : List Nat)
     (program : WordProg α) (colouring : NatInfoMap Nat) : Nat × Nat :=
   let colour := CakeAlloc.totalColour colouring
   let coloured := wordApplyColour colour program
-  let maxVar := (wordProgVariables coloured).foldl max 0
+  let maxVar := wordProgCakeMaxVar coloured
   let stackArgs := parameters.length - k
   let f' := max ((maxVar / 2 + 1) - k) stackArgs
   (f', if f' = 0 then 0 else f' + 1)
@@ -1202,7 +1202,7 @@ def cakeWordStackVarCount [OfNat α 0] [OfNat α 1]
   | some colouring =>
       let colour := CakeAlloc.totalColour colouring
       let coloured := wordApplyColour colour ssaProgram
-      let maxVar := (wordProgVariables coloured).foldl max 0
+      let maxVar := wordProgCakeMaxVar coloured
       let stackArgs := parameters.length - k
       max ((maxVar / 2 + 1) - k) stackArgs
 

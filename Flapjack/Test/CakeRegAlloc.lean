@@ -345,6 +345,24 @@ def qsortTiesThreeGuard : Bool :=
       [(3, (1, 2)), (1, (9, 9)), (3, (7, 8))] ==
     [(3, (7, 8)), (3, (1, 2)), (1, (9, 9))]
 
+/-! Cake's pairwise merge sort reverses a long run of equal priorities. -/
+def sortMovesLongTieGuard : Bool :=
+  Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
+      [(12, (133, 173)), (12, (129, 133)), (12, (117, 149)),
+       (12, (113, 117)), (12, (105, 121)), (12, (101, 157)),
+       (12, (97, 101)), (12, (89, 105)), (12, (85, 141)),
+       (12, (81, 85)), (12, (73, 89)), (12, (69, 165)),
+       (12, (65, 69)), (12, (57, 73)), (12, (53, 137)),
+       (12, (49, 53)), (12, (45, 57)), (12, (41, 45)),
+       (12, (2, 185)), (22, (0, 37))] ==
+      [(22, (0, 37)), (12, (2, 185)), (12, (41, 45)),
+       (12, (45, 57)), (12, (49, 53)), (12, (53, 137)),
+       (12, (57, 73)), (12, (65, 69)), (12, (69, 165)),
+       (12, (73, 89)), (12, (81, 85)), (12, (85, 141)),
+       (12, (89, 105)), (12, (97, 101)), (12, (101, 157)),
+       (12, (105, 121)), (12, (113, 117)), (12, (117, 149)),
+       (12, (129, 133)), (12, (133, 173))]
+
 /-- Strictly descending priorities sort descending (probe `sm_desc`). -/
 def qsortDescGuard : Bool :=
   Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
@@ -466,7 +484,8 @@ def runChecks : IO Bool := do
     "reg_alloc delta free", "reg_alloc stack only",
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
     "sorting partition order", "revive moves order", "moves_to_sp order", "bg_ok order",
-    "sort_moves tie two", "sort_moves tie three", "sort_moves descending",
+    "sort_moves tie two", "sort_moves tie three", "sort_moves long tie",
+    "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
     "neg_first_match_col projection", "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority"]

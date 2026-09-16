@@ -731,6 +731,7 @@ theorem compilePanToLoop_local_assign_return_const_correct
     (value : α)
     (lookup : lookupInfo name compileContext.vars = some (.one, [slot]))
     (slot_agrees : findLoopVar loopContext slot = slot)
+    (loop_lookup : lookupNatInfo slot loopContext.vars = some slot)
     (maxVar_agrees : loopContext.maxVar = compileContext.maxVar) :
     (evalLoopProg 30 state
       (loopCompileProg loopContext live
@@ -743,10 +744,10 @@ theorem compilePanToLoop_local_assign_return_const_correct
   simp [compileProg, compileExp, crepNestedSeq, loopCompileProg, loopCompileExp,
     loopCompileExp.loopCompileExps, loopCompileExps, loopNestedSeq,
     loopTempNames, loopAssignTemps, evalLoopProg, evalLoopExp,
-    loopReadLocals, updateLoopLocal, updatePanLocal,
+    loopReadLocals, updatePanLocal, loop_lookup,
     evalPanStateProg, evalPanExp, lookup, distinctLists,
     slot_agrees, maxVar_agrees]
-  simp [loopResultValues]
+  simp [updateLoopLocal, loopResultValues]
 
 /-!
 Returning an existing source local requires an explicit state relation: the

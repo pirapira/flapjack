@@ -285,7 +285,10 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
       | .lookup store => .get destination store
       | .load address =>
           let (prelude, address) := wordInstSelectAddressAtom temp address
-          wordDeadSelectSeq prelude (.assign destination (.load address))
+          match address with
+          | .var address =>
+              wordDeadSelectSeq prelude (.inst (.mem .load destination address))
+          | _ => wordDeadSelectSeq prelude (.assign destination (.load address))
       | .op operator [left, .const value] =>
           let (prelude, left) := wordInstSelectAtom temp left
           match left with

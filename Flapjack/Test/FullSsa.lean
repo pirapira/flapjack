@@ -23,6 +23,18 @@ example :
       .move 1 [(5, 2), (9, 3)] := by
   rfl
 
+/- CakeML's `ssa_cc_trans_inst` uses the fixed RISC-V `LongMul` protocol:
+   operands enter registers 0 and 4, the multiply writes 6 and 0, and the
+   two fresh SSA results leave through the explicit result move. -/
+example :
+    wordSsaRenameProgram ({ current := [], next := 4 } : WordSsaState)
+        (.inst (.arith (.longMul 1 2 2 3)) : WordProg Nat) =
+      ({ current := [(2, 8), (1, 4)], next := 12 },
+        .seq (.move 1 [(0, 2), (4, 3)])
+          (.seq (.inst (.arith (.longMul 6 0 0 4)))
+            (.move 1 [(8, 0), (4, 6)]))) := by
+  rfl
+
 example :
     wordSsaAbiParameters 3 = [0, 2, 4] := by
   rfl

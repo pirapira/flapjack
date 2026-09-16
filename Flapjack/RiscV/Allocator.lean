@@ -483,6 +483,29 @@ def wordSsaRenameInst (state : WordSsaState) :
       | .store | .store8 | .store16 | .store32 =>
           (state, .mem operator (wordSsaRead state destination) address)
 
+/-! CakeML's SSA pass gives `LongMul` its fixed RISC-V register protocol.
+    The instruction itself writes `(6, 0)` and the surrounding moves preserve
+    the source program's two fresh SSA results.  Keep this as a program-level
+    helper because the ABI moves are part of the translated instruction, not
+    a property of the `WordInst` constructor. -/
+def wordSsaRenameInstProgram [OfNat α 0] (state : WordSsaState) :
+    WordInst α → WordSsaState × WordProg α
+  | .arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) =>
+      let sourceLeft := wordSsaRead state sourceLeft
+      let sourceRight := wordSsaRead state sourceRight
+      let moveIn : WordProg α :=
+        .move 1 [(0, sourceLeft), (4, sourceRight)]
+      let (state, freshLeft) := wordSsaFresh state destinationLeft
+      let (state, freshRight) := wordSsaFresh state destinationRight
+      let multiply : WordProg α :=
+        .inst (.arith (.longMul 6 0 0 4))
+      let moveOut : WordProg α :=
+        .move 1 [(freshRight, 0), (freshLeft, 6)]
+      (state, .seq moveIn (.seq multiply moveOut))
+  | instruction =>
+      let (state, instruction) := wordSsaRenameInst state instruction
+      (state, .inst instruction)
+
 def wordSsaRenameLinear (state : WordSsaState) : List (WordInst α) →
     WordSsaState × List (WordInst α)
   | [] => (state, [])
@@ -725,8 +748,7 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         (state, wordSsaSeq movIn
           (wordSsaSeq (.inst (.arith (.longMul 6 0 0 4))) movOut))
     | .inst instruction =>
-        let (state, instruction) := wordSsaRenameInst state instruction
-        (state, .inst instruction)
+        wordSsaRenameInstProgram state instruction
     | .get destination store =>
         let (state, destination) := wordSsaFresh state destination
         (state, .get destination store)

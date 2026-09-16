@@ -460,6 +460,10 @@ def cakeBijSetPatriciaGuard : Bool :=
     lookupNatInfo 6 bij.toAllocator == some 3
 
 #guard cakeBijSetPatriciaGuard
+def applyColourSetPatriciaGuard : Bool :=
+  wordApplyColourNumSet id [0, 4, 6, 12] == [0, 4, 12, 6]
+
+#guard applyColourSetPatriciaGuard
 #guard sortMovesTailSplitGuard
 
 def parityGuard : Bool :=

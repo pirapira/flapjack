@@ -1991,7 +1991,7 @@ def wordApplyColourInst (colour : Nat → Nat) : WordInst α → WordInst α
     `apply_nummap_key` rebuilds those sets through `fromAList`, so the result is
     canonical (sorted and duplicate-free), rather than a plain mapped list. -/
 def wordApplyColourNumSet (colour : Nat → Nat) (names : List Nat) : List Nat :=
-  (names.map colour).eraseDups.mergeSort (fun left right => left < right)
+  NumSet.fromList (names.map colour)
 
 def wordApplyColour (colour : Nat → Nat) : WordProg α → WordProg α
   | .skip => .skip

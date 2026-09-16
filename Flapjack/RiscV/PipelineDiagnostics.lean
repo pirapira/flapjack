@@ -47,9 +47,7 @@ def pipelineWordFunctionsToStackChecked [NeZero width] :
 
 end Flapjack.RiscV
 
-namespace Flapjack
-
-namespace RiscV
+namespace Flapjack.RiscV
 
 /-! In Cake's source-shaped FFI path, `word_to_stack` passes the abstract
     argument registers directly to `FFI`; `riscv_names` performs the final
@@ -83,7 +81,9 @@ def stackNormalizeCakeFfi : StackProg Nat → StackProg Nat
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-end RiscV
+end Flapjack.RiscV
+
+namespace Flapjack
 
 inductive PipelineRiscVLoweringError where
   | wordToStack (error : RiscV.PipelineWordLoweringError)

@@ -39,7 +39,7 @@ def pipelineExceptionCodes (fromNat : Nat → α) : Nat → List (Decl α) → I
   | _, [] => []
   | index, .exnDecl exception _ :: declarations =>
       (exception, fromNat index) :: pipelineExceptionCodes fromNat (index + 1) declarations
-  | index, _ :: declarations => pipelineExceptionCodes fromNat (index + 1) declarations
+  | index, _ :: declarations => pipelineExceptionCodes fromNat index declarations
 
 def pipelineInlineNames : List (Decl α) → List FunName
   | [] => []

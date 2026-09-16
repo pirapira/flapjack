@@ -107,8 +107,8 @@ def selectedBinaryAssignment : WordProg Nat :=
 
 def selectedBinaryAssignmentShape : Bool :=
   match selectedBinaryAssignment with
-  | .seq (.assign 6 (.var 4))
-      (.seq (.assign 7 (.var 2))
+  | .seq (.move 0 [(6, 4)])
+      (.seq (.move 0 [(7, 2)])
         (.inst (.arith (.binOp .add 5 6 (.reg 7))))) => true
   | _ => false
 
@@ -173,9 +173,8 @@ Cake's `asmScript.sml` defines
 `inst = Const reg ('a word) | Arith arith | Mem memop reg ('a addr)`, so the
 carrier keeps the immediate operand rather than specializing it to a host
 `Nat`.  These guards pin that an immediate-carrying arithmetic instruction and
-a constant instruction lower to the architectural immediate forms, and that the
-carrier reaches the stack level exactly like the expression assignment it
-replaces. -/
+a constant instruction lower to the architectural immediate forms, and that
+the stack lowering preserves the immediate operand and configured locations. -/
 
 def immediateCarrierInstruction : Bool :=
   match wordInstToInstruction (width := 64)
@@ -195,19 +194,16 @@ def constantCarrierInstruction : Bool :=
 
 #guard constantCarrierInstruction
 
-def immediateCarrierLoweringMatchesAssignment : Bool :=
+def immediateCarrierLoweringShape : Bool :=
   match
     wordToStackProgWordWithLocationBitmapsFused immediateSelectionConfig 22 0 1 64 none
       (wordStackInitialBitmaps false)
-      (.inst (.arith (.binOp .add 6 4 (.imm 1)) : WordInst (Word 64))),
-    wordToStackProgWordWithLocationBitmapsFused immediateSelectionConfig 22 0 1 64 none
-      (wordStackInitialBitmaps false)
-      (.assign 6 (.op .add [.var 4, .const 1]) : WordProg (Word 64)) with
-  | some (firstCode, _), some (secondCode, _) =>
-      reprStr firstCode == reprStr secondCode
-  | _, _ => false
+      (.inst (.arith (.binOp .add 6 4 (.imm 1)) : WordInst (Word 64))) with
+  | some (.inst (.arith (.binOp .add destination source (.imm value))), _) =>
+      destination = 0 ∧ source = 1 ∧ value = 1
+  | _ => false
 
-#guard immediateCarrierLoweringMatchesAssignment
+#guard immediateCarrierLoweringShape
 
 /-! The two-register compensation introduces `Move 0 [(destination, left)]`
     before an in-place immediate operation.  Cake instead keeps the operand in

@@ -154,7 +154,7 @@ machine once the worklist slices land. -/
 private def graphAdj (tree : Flapjack.WordClashTree) (node : Nat) : List Nat :=
   let bij := Flapjack.RiscV.CakeRegAlloc.cakeMkBij tree
   let ta := Flapjack.RiscV.CakeAlloc.spDefault bij.toAllocator
-  let (adj, _) := Flapjack.RiscV.CakeRegAlloc.cakeMkGraph ta tree [] []
+  let (adj, _) := Flapjack.RiscV.CakeRegAlloc.cakeMkGraph ta tree [] {}
   Flapjack.RiscV.CakeRegAlloc.cakeAdjSub adj node
 
 /-- Disjoint write and read sets never clash: no edges at all. -/
@@ -174,7 +174,7 @@ def graphSetCliqueGuard : Bool :=
 def graphForcedEdgeGuard : Bool :=
   let bij := Flapjack.RiscV.CakeRegAlloc.cakeMkBij (.delta [1] [3])
   let ta := Flapjack.RiscV.CakeAlloc.spDefault bij.toAllocator
-  let adj := Flapjack.RiscV.CakeRegAlloc.cakeExtendGraph ta [(1, 3)] []
+  let adj := Flapjack.RiscV.CakeRegAlloc.cakeExtendGraph ta [(1, 3)] {}
   Flapjack.RiscV.CakeRegAlloc.cakeAdjSub adj 0 == [1] &&
     Flapjack.RiscV.CakeRegAlloc.cakeAdjSub adj 1 == [0]
 
@@ -195,9 +195,9 @@ def graphInitGuard : Bool :=
   let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 3] []) [] []
   Flapjack.RiscV.CakeRegAlloc.cakeAdjSub state.adjLists 0 == [1] &&
     Flapjack.RiscV.CakeRegAlloc.cakeAdjSub state.adjLists 1 == [0] &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup state.nodeTag 0 ==
+    state.nodeTag.get 0 ==
       some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.aTemp &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup state.nodeTag 1 ==
+    state.nodeTag.get 1 ==
       some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.sTemp &&
     state.dim == 2
 
@@ -208,10 +208,10 @@ def heuDeltaGuard : Bool :=
   let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 3] []) [] []
   let (count, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu [] 4 state
   count == 1 &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 0 == some 0 &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 1 == some 1 &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.coalesced 0 == some 0 &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.coalesced 1 == some 1 &&
+    after.degrees.get 0 == some 0 &&
+    after.degrees.get 1 == some 1 &&
+    after.coalesced.get 0 == some 0 &&
+    after.coalesced.get 1 == some 1 &&
     after.simpWl == [0] && after.freezeWl == [] && after.spillWl == []
 
 /-- `init_alloc1_heu` sorts the move worklist by descending priority and
@@ -222,8 +222,8 @@ def heuMovesGuard : Bool :=
   let moves := [(1, (0, 1)), (3, (0, 1))]
   let (_, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu moves 4 state
   after.availMovesWl == [(3, (0, 1)), (1, (0, 1))] &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.moveRelated 0 == some true &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.moveRelated 1 == some true &&
+    after.moveRelated.get 0 == some true &&
+    after.moveRelated.get 1 == some true &&
     after.freezeWl == [0] && after.simpWl == [] && after.spillWl == []
 
 /-- `init_alloc1_heu` sends a clique of five allocation temps (degree 4)
@@ -242,7 +242,7 @@ def heuFixedDegreeGuard : Bool :=
   let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 2] [2, 1]) [] []
   let (count, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu [] 4 state
   count == 1 &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 1 == some 1 &&
+    after.degrees.get 1 == some 1 &&
     after.simpWl == [1] && after.spillWl == []
 
 /-- Normalise a colouring to the ascending original-variable order that the
@@ -260,7 +260,7 @@ def partOrderGuard : Bool :=
 def reviveOrderGuard : Bool :=
   let base : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
     { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 4 with
-      adjLists := [(9, [5])],
+      adjLists := Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap 4 [(9, [5])],
       unavailMovesWl := [(1, (5, 9)), (1, (13, 5)), (1, (13, 17))],
       availMovesWl := [(2, (1, 1))] }
   let out := Flapjack.RiscV.CakeRegAlloc.cakeReviveMoves [9] base
@@ -281,8 +281,10 @@ def movesToSpOrderGuard : Bool :=
 def bgOkOrderGuard : Bool :=
   let base : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
     { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 4 with
-      adjLists := [(0, [1]), (1, [3, 0]), (2, [3]), (3, [2, 1, 0])],
-      nodeTag := (List.range 4).map (fun i => (i, .aTemp)) }
+      adjLists := Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap 4
+        [(0, [1]), (1, [3, 0]), (2, [3]), (3, [2, 1, 0])],
+      nodeTag := Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap 4
+        ((List.range 4).map (fun i => (i, .aTemp))) }
   Flapjack.RiscV.CakeRegAlloc.cakeBgOk 3 0 3 base == some ([1], [2, 0])
 
 /-- `reg_alloc` on a single write/read pair colours the write with the
@@ -389,7 +391,8 @@ def raMovesStempHiGuard : Bool :=
 def negFirstMatchProjectionGuard : Bool :=
   let state : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
     { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 7 with
-      nodeTag := [(4, .fixed 6), (5, .aTemp), (6, .fixed 2)] }
+      nodeTag := Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap 7
+        [(4, .fixed 6), (5, .aTemp), (6, .fixed 2)] }
   Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [2] [4, 5, 6] ==
       some 6 &&
     Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [6] [6] ==

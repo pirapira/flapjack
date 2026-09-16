@@ -1,4 +1,5 @@
 import Flapjack.Word
+import Flapjack.NumSet
 import Std.Data.HashMap
 
 /-!
@@ -528,20 +529,11 @@ def wordSsaSeq (first second : WordProg α) : WordProg α :=
 def wordSsaKeys (state : WordSsaState) : List Nat :=
   state.current.map (fun entry => entry.1)
 
-/-- Insertion into a sorted variable list (structural, so `simp` unfolds
-    it on concrete lists).  CakeML enumerates `num_set` unions via
-    `MAP FST (toAList …)`, i.e. ascending key order; the port keeps
-    variables in association lists, so it sorts explicitly wherever the
-    original enumerates a tree. -/
-def wordSsaInsertSorted (name : Nat) : List Nat → List Nat
-  | [] => [name]
-  | x :: xs => if name ≤ x then name :: x :: xs
-    else x :: wordSsaInsertSorted name xs
-
-/-- Ascending variable order matching CakeML's `toAList` enumeration. -/
-def wordSsaSortNames : List Nat → List Nat
-  | [] => []
-  | x :: xs => wordSsaInsertSorted x (wordSsaSortNames xs)
+/-! CakeML enumerates `num_set`/`num_map` keys with
+    `MAP FST (toAList ...)`, whose order is the Patricia-tree traversal
+    (NOT ascending).  `Flapjack.NumSet.fromList` reconstructs that traversal,
+    so every port boundary that corresponds to a `toAList` enumeration must
+    order its names through it. -/
 
 def wordSsaBranchNames (base left right : WordSsaState) : List Nat :=
   (wordSsaKeys base ++ wordSsaKeys left ++ wordSsaKeys right).eraseDups
@@ -632,7 +624,7 @@ decreasing_by all_goals decreasing_trivial
 def wordSsaFixInconsistencies [OfNat α 0] (preferred : Option Bool)
     (left right : WordSsaState) (next : Nat) :
     WordSsaState × WordProg α × WordProg α :=
-  let names := wordSsaSortNames ((wordSsaKeys left ++ wordSsaKeys right).eraseDups)
+  let names := NumSet.fromList ((wordSsaKeys left ++ wordSsaKeys right).eraseDups)
   let (mergeLeft, mergeRight, next, left, right) :=
     wordSsaMergeMoves names left right next
   let (fakeLeft, fakeRight, next, left, _right) :=
@@ -652,12 +644,12 @@ def wordSsaRestrict (state : WordSsaState) (names : List Nat) : WordSsaState :=
   { state with current := state.current.filter (fun entry => entry.1 ∈ names) }
 
 /-- `ssa_reconcile` (`word_allocScript.sml:318-330`): one parallel
-    `Move 1` over the ascending variable list.  Variables missing from the
+    `Move 1` over CakeML's `MAP FST (toAList ns)` variable order.  Variables missing from the
     source contribute no move; variables missing from the target fall back
     to register `0` (CakeML's `option_lookup`). -/
 def wordSsaReconcileTo (source target : WordSsaState) (names : List Nat) :
     WordProg α :=
-  let moves := (wordSsaSortNames names.eraseDups).filterMap (fun name =>
+  let moves := (NumSet.fromList names.eraseDups).filterMap (fun name =>
     match lookupNatInfo name source.current with
       | none => none
       | some sourceName =>
@@ -691,7 +683,7 @@ def wordSsaFakeMoves [OfNat α 0] : List Nat → WordProg α
 
 def wordSsaLoopSetup [OfNat α 0] (state : WordSsaState)
     (liveIn liveOut : List Nat) : WordSsaState × WordProg α :=
-  let names := wordSsaSortNames ((liveIn ++ liveOut).eraseDups)
+  let names := NumSet.fromList ((liveIn ++ liveOut).eraseDups)
   let extend := names.filter (fun name =>
     (lookupNatInfo name state.current).isNone)
   let refresh := names.filter (fun name =>
@@ -975,7 +967,8 @@ theorem wordSsaRenameProgram_ite [OfNat α 0] :
     wordSsaFixInconsistencies, wordSsaPriorityMove,
     wordSsaBranchPriority, wordSsaMergeMoves,
     wordSsaFakeInconsistencyMoves, wordSsaForceRename,
-    wordSsaSortNames, wordSsaInsertSorted,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop,
     lookupNatInfo]
 

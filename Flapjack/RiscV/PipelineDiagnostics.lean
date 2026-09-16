@@ -107,11 +107,13 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
           let frameSlots := max allocation.nextSpill
             (max (wordParameters.length - 12)
               (RiscV.wordProgMaxCallArguments renamedProgram - 12))
+          -- x23 stays clear of every Cake colour (x29 is colour 12 and can
+          -- hold a call argument), so the parallel-move source check never trips.
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               stackBase := 0
-              addressScratch := 29
+              addressScratch := 23
               abiBase := 10
               abiStride := 1
               abiFrameSlots := frameSlots
@@ -186,11 +188,13 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
           let frameSlots := max cakeFrameSlots
             (max (wordParameters.length - 12)
               (RiscV.wordProgMaxCallArguments renamedProgram - 12))
+          -- x23 stays clear of every Cake colour (x29 is colour 12 and can
+          -- hold a call argument), so the parallel-move source check never trips.
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               stackBase := 0
-              addressScratch := 29
+              addressScratch := 23
               abiBase := 10
               abiStride := 1
               abiFrameSlots := frameSlots
@@ -267,11 +271,13 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
           let frameSlots := max cakeFrameSlots
             (max (wordParameters.length - 12)
               (RiscV.wordProgMaxCallArguments renamedProgram - 12))
+          -- x23 stays clear of every Cake colour (x29 is colour 12 and can
+          -- hold a call argument), so the parallel-move source check never trips.
           let config : RiscV.WordStackConfig :=
             { locations := allocation.locations
               scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               stackBase := 0
-              addressScratch := 29
+              addressScratch := 23
               abiBase := 10
               abiStride := 1
               abiFrameSlots := frameSlots

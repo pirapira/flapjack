@@ -1,0 +1,16 @@
+var 1 table = 0;
+fun 1 global_shift(1 k) { return lds 1 (table + (k - 1) * 8); }
+fun 1 global_offset(1 k) { return lds 1 (table + 24); }
+fun 1 nested_global_shift(1 k) { return lds 1 (lds 1 (table + 8) + (k - 1) * 8); }
+fun 1 nested_global_offset(1 k) { return lds 1 (lds 1 (table + 8) + 16); }
+fun 1 inner_global_shift(1 k) { return lds 1 (lds 1 (table + (k - 1) * 8) + 8); }
+fun 1 main() {
+  table = 2097152;
+  var 1 a = global_shift(4);
+  var 1 b = global_offset(4);
+  var 1 c = nested_global_shift(4);
+  var 1 d = nested_global_offset(4);
+  var 1 e = inner_global_shift(4);
+  @halt(@base, 0, @base, 0);
+  return a + b + c + d + e;
+}

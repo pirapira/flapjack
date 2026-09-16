@@ -228,6 +228,12 @@
       "source_reference": "inst_select_exp c tar temp (Shift sh exp n) (word_instScript.sml) shifts the operand it selected, so a shift's left operand must not be discarded. With binary-operation immediates disabled for address selection that operand comes back as an expression, and ignoring it dropped the constant: lds 1 (1000 + (k - 1) * 8) compiled as lds 1 (1000 + k * 8). shifted_value is exact; shifted_offset and nested_shift now compute the right value but still cost two extra instructions, tracked by flapjack-cey.",
       "cake_sha256": "7a3640a67c0bf27ddd40c3e14501ca1288d53a3a99a7ad45ca4ccab2809fc80a",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/global_base_shift_address.pnk",
+      "source_reference": "inst_select_exp c tar temp (Load exp) (word_instScript.sml:234-245) splits on the address shape -- Op Add [exp'; Const w] keeps w for the Addr temp w displacement and selects only exp' -- and both recursive calls use the ordinary asm_config. Flapjack instead reconfigured the target with validBinOpImmediate := fun _ _ => false for the whole address, which also reached nested subexpressions: in lds 1 (table + (k - 1) * 8) the inner k - 1 came back as an expression rather than a register, so the Shift case could not use its immediate and materialized the shift amount into a second register. Cake emits addi/slli; Flapjack emitted ori/or/addi/sll. A global base is what exposes this, because a constant base normalizes to Op Add [shift; Const] and takes the displacement branch.",
+      "cake_sha256": "1fb77c6e45299403b7c0b5755dd356c218bad3c6c2748094291c3b1dd248100e",
+      "tracked_beads": []
     }
   ]
 }

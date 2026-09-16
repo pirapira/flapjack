@@ -248,16 +248,20 @@ def nestedLoadOffsetFallbackMatches : Bool :=
       (.assign 23 (.load (.op .add [.var 23, .const 8]))), .var 23) => true
   | _ => false
 
-/-- When a constant shift amount is outside the target immediate range, Cake
-    still shifts the selected left expression.  In particular, selecting
-    `(k - 1) * 8` must not discard the subtraction and shift the old temporary
-    containing only `k`. -/
-def nonImmediateShiftKeepsSelectedLeft : Bool :=
+/-- `inst_select_exp c tar temp (Load exp)` (`word_instScript.sml:234-245`)
+    splits on the address shape once and selects the remaining subexpressions
+    with the ordinary `asm_config`; it has no second, immediate-suppressing
+    configuration.  So an address that is not `base + constant` keeps Cake's
+    immediate arithmetic throughout: the left operand of a shift comes back in
+    a register and the shift itself uses its constant amount, rather than
+    materializing the amount into a second temporary. -/
+def addressShiftKeepsOrdinaryImmediates : Bool :=
   match wordInstSelectAddressAtom (α := Nat) 23
       (.shift .lsl (.op .add [.var 18, .const (Nat.succ 0)])
         (.const 63)) with
-  | (.seq (.seq (.move 0 [(23, 18)]) (.inst (.const 24 63)))
-      (.assign 23 (.shift .lsl (.op .add [.var 23, .const 1]) (.var 24))),
+  | (.seq (.seq (.move 0 [(23, 18)])
+      (.inst (.arith (.binOp .add 23 23 (.imm 1)))))
+      (.inst (.arith (.shift .lsl 23 23 (.imm 63)))),
       .var 23) => true
   | _ => false
 
@@ -282,7 +286,7 @@ def nonImmediateShiftKeepsSelectedLeft : Bool :=
 #guard loadSelectorMatches
 #guard nestedLoadSelectorMatches
 #guard nestedLoadOffsetFallbackMatches
-#guard nonImmediateShiftKeepsSelectedLeft
+#guard addressShiftKeepsOrdinaryImmediates
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -306,7 +310,8 @@ def runChecks : IO Bool := do
     , ("a load materializes Cake's Mem instruction after its address move", loadSelectorMatches)
     , ("a nested load remains Cake's memory instruction", nestedLoadSelectorMatches)
     , ("a nested load preserves an unfused address expression", nestedLoadOffsetFallbackMatches)
-    , ("a non-immediate shift keeps Cake's selected left expression", nonImmediateShiftKeepsSelectedLeft)
+    , ("address selection keeps Cake's ordinary immediates in nested shifts",
+        addressShiftKeepsOrdinaryImmediates)
   ]
   let mut ok := true
   for (label, passed) in checks do

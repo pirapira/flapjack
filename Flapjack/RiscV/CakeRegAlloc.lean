@@ -643,8 +643,16 @@ def cakeDoCoalesce (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
 /-- `reset_move_related` (`reg_allocScript.sml:708-725`). -/
 def cakeResetMoveRelated (moves : List (Nat × (Nat × Nat)))
     (state : CakeRaState) : CakeRaState :=
-  let cleared := (List.range state.dim).foldl (fun m v =>
-    cakeMapUpdate m v false) state.moveRelated
+  /- `cakeMapUpdate` replaces the binding of an existing key in place, so
+     folding `false` over every dimension is observationally the fresh map
+     `(List.range dim).map (fun v => (v, false))`: every lookup of a node
+     key finds `false`, and node keys are all below `dim`.  Building the
+     map directly keeps the reset linear — the fold performed one linear
+     `cakeMapUpdate` per dimension, i.e. O(dim²) per call, which dominated
+     allocation on large functions (the reset runs on every prefreeze
+     step of the iterative coalescing loop). -/
+  let cleared : NatInfoMap Bool :=
+    (List.range state.dim).map (fun v => (v, false))
   let updated := moves.foldl (fun m move =>
       let mx := !cakeIsFixed state move.2.1
       let my := !cakeIsFixed state move.2.2

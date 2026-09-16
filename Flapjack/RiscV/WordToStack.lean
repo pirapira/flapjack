@@ -3704,6 +3704,41 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals first | decreasing_trivial | (simp [sizeOf] <;> omega)
 
+/-! Small structural helpers used by the direct `const_fp` oracle test.  The
+    production pipeline deliberately does not apply the old post-allocation
+    FFI reorder; retaining the helpers keeps the test focused on the original
+    Cake `drop_consts` order without reintroducing that non-Cake rewrite. -/
+def wordProgSeqItems : WordProg α → List (WordProg α)
+  | .seq first second => wordProgSeqItems first ++ wordProgSeqItems second
+  | program => [program]
+
+def wordProgSeqBuild : List (WordProg α) → WordProg α
+  | [] => .skip
+  | program :: programs =>
+      programs.foldl (fun current next => .seq current next) program
+
+def wordProgIsFfi : WordProg α → Bool
+  | .ffi _ _ _ _ _ _ => true
+  | _ => false
+
+def wordProgIsConstAssign : WordProg α → Bool
+  | .assign _ (.const _) => true
+  | _ => false
+
+def wordProgReverseFfiConstSetup (program : WordProg α) : WordProg α :=
+  let items := wordProgSeqItems program
+  let (pre, suffix) := items.span (fun item => !wordProgIsFfi item)
+  match suffix, pre.reverse with
+  | .ffi function configuration configurationLength array arrayLength live :: rest,
+      .move priority moves :: beforeMoveRev =>
+      let (constantsRev, remainderRev) :=
+        beforeMoveRev.span wordProgIsConstAssign
+      let reordered := remainderRev.reverse ++ constantsRev ++
+        [.move priority moves]
+      wordProgSeqBuild (reordered ++
+        [.ffi function configuration configurationLength array arrayLength live] ++ rest)
+  | _, _ => program
+
 def wordToStackProgWordWithBitmapsFused [NeZero width]
     (config : WordStackConfig) (registerCount bitmapRegister frameSlots wordBits : Nat)
     (storeConstsStub : Option Nat) (state : WordStackBitmapState)

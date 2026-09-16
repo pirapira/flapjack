@@ -864,10 +864,9 @@ def cakeAssignAtempTag (k : Nat)
 def cakeAssignAtemps (k : Nat) (ls : List Nat)
     (prefs : CakeRaState → Nat → List Nat → Option Nat)
     (state : CakeRaState) : CakeRaState :=
-  /- Cake's state-stack is consumed in the order in which entries were
-     pushed by the worklist traversal; the functional list stores that order
-     newest-first, so restore the traversal order before assigning colours. -/
-  let lsF := ls.reverse.filter (· < state.dim)
+  /- Cake's `get_stack` returns the newest-first list built by `push_stack`,
+     and `st_ex_FOREACH` consumes that list in its stored order. -/
+  let lsF := ls.filter (· < state.dim)
   let state := lsF.foldl (fun s n => cakeAssignAtempTag k prefs n s) state
   (List.range state.dim).foldl (fun s n => cakeAssignAtempTag k prefs n s) state
 

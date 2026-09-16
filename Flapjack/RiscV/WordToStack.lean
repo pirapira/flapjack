@@ -3403,15 +3403,6 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .set store value =>
       (wordStackSetNat config (wordStoreToNat store) (wordExpToNat value)).map
         (fun code => (code, state))
-  | .seq (.assign firstDestination (.const firstValue))
-      (.seq (.assign secondDestination (.const secondValue)) rest) => do
-      let firstCode ← wordStackCompileExpToPhysicalNat config secondDestination
-        (wordExpToNat (.const secondValue))
-      let secondCode ← wordStackCompileExpToPhysicalNat config firstDestination
-        (wordExpToNat (.const firstValue))
-      let (restCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
-        registerCount bitmapRegister frameSlots wordBits storeConstsStub state rest
-      pure (.seq firstCode (.seq secondCode restCode), state)
   | .seq first second => do
       let (firstCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state first
@@ -3567,6 +3558,43 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
 termination_by program => sizeOf program
 decreasing_by
   all_goals first | decreasing_trivial | (simp [sizeOf] <;> omega)
+
+/-! Cake's full-SSA FFI block is preceded by a Move1 ABI shuffle.  The
+    source allocator's sequence traversal leaves the constant writes in the
+    reverse order immediately before that shuffle; preserving this observable
+    order is required for byte parity even though the values are independent.
+    Restrict the rewrite to the source-shaped pre-FFI pattern and leave the
+    ordinary hardware-numbered path untouched. -/
+def wordProgSeqItems : WordProg α → List (WordProg α)
+  | .seq first second => wordProgSeqItems first ++ wordProgSeqItems second
+  | program => [program]
+
+def wordProgSeqBuild : List (WordProg α) → WordProg α
+  | [] => .skip
+  | program :: programs =>
+      programs.foldl (fun current next => .seq current next) program
+
+def wordProgIsFfi : WordProg α → Bool
+  | .ffi _ _ _ _ _ _ => true
+  | _ => false
+
+def wordProgIsConstAssign : WordProg α → Bool
+  | .assign _ (.const _) => true
+  | _ => false
+
+def wordProgReverseFfiConstSetup (program : WordProg α) : WordProg α :=
+  let items := wordProgSeqItems program
+  let (pre, suffix) := items.span (fun item => !wordProgIsFfi item)
+  match suffix, pre.reverse with
+  | .ffi function configuration configurationLength array arrayLength live :: rest,
+      .move priority moves :: beforeMoveRev =>
+      let (constantsRev, remainderRev) :=
+        beforeMoveRev.span wordProgIsConstAssign
+      let reordered := remainderRev.reverse ++ constantsRev ++
+        [.move priority moves]
+      wordProgSeqBuild (reordered ++
+        [.ffi function configuration configurationLength array arrayLength live] ++ rest)
+  | _, _ => program
 
 def wordToStackProgWordWithBitmapsFused [NeZero width]
     (config : WordStackConfig) (registerCount bitmapRegister frameSlots wordBits : Nat)

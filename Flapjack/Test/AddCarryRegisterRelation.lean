@@ -51,11 +51,11 @@ example :
   · simp [addCarryRegisterConfig, wordStackLocation, lookupNatInfo]
   · simp [addCarryRegisterConfig, wordStackLocation, lookupNatInfo]
   · simp [addCarryRegisterConfig, wordStackAddCarryInst,
-      wordStackAddCarryLocationSafe, wordStackLocation, lookupNatInfo]
+      wordStackLocation, lookupNatInfo]
   · decide
   · decide
   · simp [addCarryRegisterConfig, addCarryRegisterState, wordStackAddCarryInst,
-      wordStackAddCarryLocationSafe, wordStackLocation, lookupNatInfo,
+      wordStackLocation, lookupNatInfo,
       evalWordStackMachine, wordStackMachineWriteRegister]
 
 example :
@@ -100,7 +100,7 @@ example :
     (hspecial := by simp [addCarryRegisterConfig, wordSpecialArithLocationsSafe,
       lookupNatInfo])
     (hsafe := by simp [addCarryRegisterConfig, wordStackAddCarryInst,
-      wordStackAddCarryLocationSafe, wordStackLocation, lookupNatInfo])
+      wordStackLocation, lookupNatInfo])
     (hvalues := by
       intro name value location hvalue hlocation
       obtain ⟨rfl, rfl, rfl⟩ := hvalue_location name value location hvalue hlocation
@@ -117,7 +117,7 @@ example :
     (heval := by
       simp [addCarryRegisterConfig, addCarryRegisterState, wordToStackProg,
         wordToStackInst, wordStackArithInst, wordStackAddCarryInst,
-        wordStackAddCarryLocationSafe, wordSpecialArithLocationsSafe,
+        wordSpecialArithLocationsSafe,
         wordStackLocation, lookupNatInfo, evalWordStackMachine,
         wordStackMachineWriteRegister])
 

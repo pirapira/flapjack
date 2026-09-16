@@ -41,8 +41,7 @@ example :
 example :
     wordProgPrioritizedMoves
         (.seq (.move 7 [(1, 2)]) (.assign 3 (.var 4)) : WordProg Nat) =
-      [{ priority := 7, left := 1, right := 2 },
-       { priority := 0, left := 3, right := 4 }] := by
+      [{ priority := 7, left := 1, right := 2 }] := by
   decide +kernel
 
 def preferenceReturnCode : WordProg Nat :=

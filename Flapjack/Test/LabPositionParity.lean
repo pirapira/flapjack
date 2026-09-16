@@ -40,7 +40,7 @@ example :
     labCompileAsmProgramWithFfiBaseAndHalt (width := 64)
       { services := [("first", 7), ("second", 8)] } [] 96 64 999
       (.callFfi "first") =
-      some [.jal 0 (0 - BitVec.ofNat 64 80)] := by
+      some [.jal 0 (0 - BitVec.ofNat 64 144)] := by
   decide
 
 end Flapjack.RiscV

@@ -1233,7 +1233,7 @@ theorem crepToLoop_ite_false_of_empty_prefix
       evalLoopProgWithCallsAndFfi, evalLoopProg,
       evalLoopCondition, loopStateOfCrepState, updateLoopLocal,
       hcode, hnext,
-      hloopValue', _hlive]
+      hloopValue']
     simpa [loopStateOfCrepState] using hloopElse
 
 theorem crepToLoop_ite_true_of_empty_prefix
@@ -1287,7 +1287,7 @@ theorem crepToLoop_ite_true_of_empty_prefix
   · simp [loopCompileProg, loopNestedSeq,
       evalLoopProgWithCallsAndFfi, evalLoopProg,
       evalLoopCondition, loopStateOfCrepState, updateLoopLocal,
-      hcode, hnext, hone, hloopValue', _hlive]
+      hcode, hnext, hone, hloopValue']
     simpa [loopStateOfCrepState] using hloopThen
 
 theorem crepToLoop_while_false_of_empty_prefix

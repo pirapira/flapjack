@@ -48,6 +48,42 @@ end Flapjack.RiscV
 
 namespace Flapjack
 
+namespace RiscV
+
+/-! In Cake's source-shaped FFI path, `word_to_stack` passes the abstract
+    argument registers directly to `FFI`; `riscv_names` performs the final
+    hardware-register naming later.  The general port path materializes those
+    arguments into 10--13 first.  The source runtime path removes exactly that
+    materialization before the Lab register map, while retaining all other
+    moves (in particular stack-resident arguments). -/
+def stackCakeFfiAbiTail : StackProg Nat → Option (StackProg Nat)
+  | .seq (.arith .or configuration configurationSource configurationSourceRight)
+      (.seq (.arith .or configurationLength configurationLengthSource configurationLengthSourceRight)
+        (.seq (.arith .or array arraySource arraySourceRight)
+          (.seq (.arith .or arrayLength arrayLengthSource arrayLengthSourceRight)
+            (.ffi function 10 11 12 13 returnAddress)))) =>
+      if configuration = 10 && configurationLength = 11 &&
+          array = 12 && arrayLength = 13 &&
+          configurationSource = configurationSourceRight &&
+          configurationLengthSource = configurationLengthSourceRight &&
+          arraySource = arraySourceRight &&
+          arrayLengthSource = arrayLengthSourceRight then
+        some (.ffi function configurationSource configurationLengthSource
+          arraySource arrayLengthSource returnAddress)
+      else none
+  | _ => none
+
+def stackNormalizeCakeFfi : StackProg Nat → StackProg Nat
+  | .seq first second =>
+      match stackCakeFfiAbiTail (.seq first second) with
+      | some normalized => normalized
+      | none => .seq (stackNormalizeCakeFfi first) (stackNormalizeCakeFfi second)
+  | program => program
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
+end RiscV
+
 inductive PipelineRiscVLoweringError where
   | wordToStack (error : RiscV.PipelineWordLoweringError)
   | allocationFailure (sectionId : Nat)
@@ -259,6 +295,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
+          let renamedProgram := RiscV.wordProgReverseFfiConstSetup renamedProgram
           let cakeFrameSlots :=
             if RiscV.wordProgHasBitmapSites renamedProgram then
               RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
@@ -299,6 +336,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
                 (RiscV.wordProgToNat renamedProgram)).getD []
               .error (.wordToStackFailure label path)
           | some (stackBody, nextBitmaps) =>
+              let stackBody := RiscV.stackNormalizeCakeFfi stackBody
               match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedAux
                   nextBitmaps (nextBitmaps.data :: chunks) functions with
               | .error error => .error error

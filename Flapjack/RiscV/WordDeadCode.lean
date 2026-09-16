@@ -177,6 +177,9 @@ def wordRemoveDeadProgram (program : WordProg α) : WordProg α :=
     carrier keeps the selected arithmetic as an assignment, so preserve that
     move preference at the same post-copy boundary. -/
 def wordThreeToTwoReg : WordProg α → WordProg α
+  | .assign destination (.op operator [.var left, .const value]) =>
+      .seq (.move 0 [(destination, left)])
+        (.assign destination (.op operator [.var destination, .const value]))
   | .assign destination (.op operator [.var left, .var right]) =>
       .seq (.move 0 [(destination, left)])
         (.assign destination (.op operator [.var destination, .var right]))
@@ -294,6 +297,7 @@ def cakeAllocateWordFunctionAfterDead [OfNat α 0] (currentFunction : Nat)
   let ssaProgram := wordRemoveDeadProgram ssaProgram
   let ssaProgram := wordCseProp ssaProgram
   let ssaProgram := wordCopyProp ssaProgram
+  let ssaProgram := wordThreeToTwoReg ssaProgram
   let ssaProgram := wordRemoveUnreachableAfterCopy ssaProgram
   let ssaProgram := wordRemoveDeadProgram ssaProgram
   let tree := wordClashTree ssaProgram []

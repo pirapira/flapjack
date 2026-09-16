@@ -282,7 +282,10 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
         vars := (name, result.nextTemp) :: context.vars
         maxVar := result.nextTemp }
       .seq (loopNestedSeq result.code)
-        (.seq (.assign name result.expression)
+        /- Cake's `Dec` assigns the freshly allocated temporary `tmp` and
+           extends the context with `v |-> tmp`; using the source binder here
+           leaves the Word stage with a different variable identity. -/
+        (.seq (.assign result.nextTemp result.expression)
           (loopCompileProg nextContext (result.nextTemp :: result.live) body))
   | .assign name value =>
       let result := loopCompileExp context (context.maxVar + 1) live value
@@ -319,21 +322,25 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
   | .seq first second => .seq (loopCompileProg context live first)
       (loopCompileProg context live second)
   | .ite condition thenBranch elseBranch =>
+      -- `crep_to_loopScript.sml:176-181`: both branches and the cutset use
+      -- the incoming live set; the condition's own live result is dropped.
       let result := loopCompileExp context (context.maxVar + 1) live condition
       .seq (loopNestedSeq result.code)
         (.seq (.assign result.nextTemp result.expression)
             (.ite .notEqual result.nextTemp (.imm (by exact 0))
-            (loopCompileProg context result.live thenBranch)
-            (loopCompileProg context result.live elseBranch) result.live))
+            (loopCompileProg context live thenBranch)
+            (loopCompileProg context live elseBranch) live))
   | .while condition body =>
+      -- `crep_to_loopScript.sml:182-188`: the loop entry and exit live sets,
+      -- the body, and the inner cutset all use the incoming live set.
       let result := loopCompileExp context (context.maxVar + 1) live condition
-      .loop result.live
+      .loop live
         (loopNestedSeq (result.code ++
           [.assign result.nextTemp result.expression,
            .ite .notEqual result.nextTemp (.imm (by exact 0))
-              (.seq (loopCompileProg context result.live body) (.continue 0))
-              (.break 0) result.live]))
-        result.live
+              (.seq (loopCompileProg context live body) (.continue 0))
+              (.break 0) live]))
+        live
   | .break label => .break label
   | .continue label => .continue label
   | .call returnInfo function arguments =>
@@ -344,18 +351,20 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
         | none => some 0
       let call := match returnInfo with
         | none => .call none target argumentNames none
+        -- `crep_to_loopScript.sml:189-207`: the call and handler cutsets and
+        -- the handler compilation all use the incoming live set.
         | some (returns, none) =>
             let exceptionName := context.maxVar + 1
-            .call (some (returns, result.live)) target argumentNames
-              (some (exceptionName, .raise exceptionName, .skip, result.live))
+            .call (some (returns, live)) target argumentNames
+              (some (exceptionName, .raise exceptionName, .skip, live))
         | some (returns, some (exception, handler)) =>
             let exceptionName := context.maxVar + 1
-            let handlerCode := loopCompileProg context result.live handler
-            .call (some (returns, result.live)) target argumentNames
+            let handlerCode := loopCompileProg context live handler
+            .call (some (returns, live)) target argumentNames
               (some (exceptionName,
                 .ite .notEqual exceptionName (.imm exception)
-                  (.raise exceptionName) (.seq .tick handlerCode) result.live,
-                .skip, result.live))
+                  (.raise exceptionName) (.seq .tick handlerCode) live,
+                .skip, live))
       .seq (loopNestedSeq (result.code ++ loopAssignTemps argumentNames result.expressions)) call
   | .extCall function configuration configurationLength array arrayLength =>
       .ffi function configuration configurationLength array arrayLength live

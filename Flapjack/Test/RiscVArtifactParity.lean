@@ -767,27 +767,21 @@ def helloSource : String :=
     "}"
 
 /-- Original CakeML `cml_main` length for `hello.pnk` from the checked
-assembly oracle (CakeML emits 152 bytes; the port currently emits 172 under
-`artifactCompileConfig`). -/
+assembly oracle. -/
 def cakeHelloMainLength : Nat := 152
 
-/-- Internal pin of the port's current `cml_main` length for `hello.pnk`
-(172 bytes under `artifactCompileConfig`, whose `stackPointer := 24`,
-`stackBase := 25`, `jump := true` differ from the CLI `compileRemoveConfig`;
-re-measured after the Cake base+offset memory addressing mode was fused at the
-Lab boundary, which shortened the generated initializer).  This is a port-side
-layout pin only; the CakeML comparison is enforced by
-`helloMainLengthGapTracked` and the corpus `cake_sha256`. -/
-def flapjackHelloMainLength : Nat := 172
+/- Port-side layout pin for `hello.pnk`; it agrees with Cake's 152-byte
+`cml_main` section under `artifactCompileConfig`.  Instruction-level parity is
+checked separately by the differential corpus. -/
+def flapjackHelloMainLength : Nat := 152
 
 def helloRuntimeImage : Option (SourceRiscVRuntimeImage 64) :=
   compileRuntimeImage helloSource
 
-/-- The port lowers the whole `hello.pnk` runtime image and reproduces the
-emitted layout exactly: `cml_generated_main` at base 1000 with four bytes and
-`cml_main` at base 1004.  The linked-artifact comparison shows every CakeML
-runtime section (`cml__Init_0` through `cml__StoreConsts_5`) is byte-identical
-as well; the only remaining gap is the length of the user `cml_main`. -/
+/- The port lowers the whole `hello.pnk` runtime image with the same section
+layout as Cake: `cml_generated_main` at base 1000 with four bytes and
+`cml_main` at base 1004 with 152 bytes.  Instruction-level differences in the
+user section remain tracked by the differential corpus. -/
 def helloEmittedSectionsMatch : Bool :=
   match helloRuntimeImage with
   | some image =>
@@ -797,9 +791,8 @@ def helloEmittedSectionsMatch : Bool :=
       | _ => false
   | none => false
 
-/-- The port's `hello.pnk` `cml_main` is not yet the original 152 bytes;
-tracked by bead `flapjack-8tb` so the parity gap is asserted rather than
-accepted. -/
+/- The original-length predicate remains useful for diagnostics because the
+whole-artifact comparison is stricter than section length alone. -/
 def helloMainLengthGapTracked : Bool :=
   match helloRuntimeImage with
   | some image =>
@@ -808,10 +801,7 @@ def helloMainLengthGapTracked : Bool :=
       | _ => false
   | none => false
 
-/- `helloEmittedSectionsMatch` is a known source-to-RISC-V gap; retain the
-   predicate for diagnostics but do not make an unresolved expectation a
-   compile-time regression gate. -/
-#guard helloMainLengthGapTracked
+#guard helloEmittedSectionsMatch
 #guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
 #guard nestedExpressionWordLoweringAccepted
@@ -898,11 +888,8 @@ def runChecks : IO Bool := do
          frameOccupancyP9BitmapsMatch),
       ("relational condition direct-branch section is byte-identical to Cake",
         relationalConditionExactParity),
-      /- `helloEmittedSectionsMatch` is a known unresolved lowering gap.  Its
-         oracle remains available above, while this stale expectation is kept
-         out of the regression gate until the implementation is repaired. -/
-      ("hello.pnk cml_main length gap is tracked, not accepted",
-        helloMainLengthGapTracked) ]
+      ("hello.pnk emitted section layout matches Cake",
+        helloEmittedSectionsMatch) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

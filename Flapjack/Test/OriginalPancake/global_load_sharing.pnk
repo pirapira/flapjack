@@ -1,0 +1,10 @@
+var 1 ev = 0;
+fun 1 read_twice() { return (lds 1 (ev + 0)) + (lds 1 (ev + 8)); }
+fun 1 store_read(1 n) { st ev + 0, (lds 1 (ev + 0)) + n; return 0; }
+fun 1 main() {
+  ev = 2097152;
+  var 1 a = read_twice();
+  var 1 b = store_read(5);
+  @halt(@base, 0, @base, 0);
+  return a + b;
+}

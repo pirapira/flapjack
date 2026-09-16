@@ -249,10 +249,21 @@ def wordCseMemOpToNum : WordMemOp → Nat
   | .store16 => 24
   | .store32 => 45
 
-/-- Cake's `loadToNumList`.  The port's memory carriers have no immediate
-    address offset, so the offset component is `0`. -/
+/-- Cake's `loadToNumList`.  `WordInst.mem` has no immediate address offset,
+    so the offset component is `0` there. -/
 def wordCseLoadToNumList (operator : WordMemOp) (address : Nat) : List Nat :=
   [wordCseMemOpToNum operator, address + 100, 0]
+
+/-- `loadToNumList` for the expression carrier.  Cake's `Addr n2 offset`
+    carries the offset into the hash; `WordInst.mem` cannot, so a load with a
+    non-zero offset is held as `.assign dest (.load (.op .add [.var n2,
+    .const offset]))` until `wordToStack` fuses it.  Hashing that carrier the
+    same way lets `word_cse` see those loads, which is how Cake shares a
+    repeated global read.  A zero offset hashes to the same key as the
+    instruction form, which is correct: they denote the same load. -/
+def wordCseLoadOffsetToNumList [WordCseHash α] (operator : WordMemOp)
+    (address : Nat) (offset : α) : List Nat :=
+  [wordCseMemOpToNum operator, address + 100, WordCseHash.hash offset]
 
 /-- Cake's `instToNumList`.  The `Const` hash deliberately omits the
     destination so that two constants with the same value share a key. -/
@@ -494,7 +505,23 @@ def wordCseProg [WordCseHash α] : WordCseKnowledge → WordProg α → WordProg
         (fun data register => wordCseRecordInst data register [48, source])
   | data, .store address value =>
       (.store address value, { data with loadsMem := ∅ })
-  | data, .assign name value => (.assign name value, data)
+  | data, .assign name value =>
+      /- Instruction selection leaves a load whose address does not fit
+         `WordInst.mem` as this carrier.  `word_cse` used to pass it through
+         untouched, so a repeated load was never shared: reading one global
+         twice emitted the global-table load twice where Cake emits it once.
+         Treat the carrier exactly as the `.mem` load case does. -/
+      match value with
+      | .load (.op .add [.var address, .const offset]) =>
+          let data := wordCseInvalidate data name
+          if name % 2 == 0 || address % 2 == 0 || address = name then
+            (.assign name value, data)
+          else
+            let canonicalAddress := wordCseCanonicalRegs' name data address
+            wordCseAddToLoad (wordCseRegisterRead data canonicalAddress) name
+              (wordCseLoadOffsetToNumList .load canonicalAddress offset)
+              (.assign name value)
+      | _ => (.assign name value, data)
   | data, .raise exception => (.raise exception, data)
   | data, .return label values => (.return label values, data)
   | data, .tick => (.tick, data)

@@ -40,15 +40,16 @@ theorem panValueCrepProgramCorrect_shMemStore_source_word
       (state targetState : CrepState α) (_crepPrimitive : CrepPrimitiveHandler α)
       (_ffi : CrepFfiHandler α) (sharedMem : CrepSharedMemHandler α)
       (_baseAddress _topAddress _bytesInWord addressValue valueValue : α),
-      sharedMem (storeMemOp size) (context.maxVar + 1) addressValue
+      (temporary : Nat) →
+      sharedMem (storeMemOp size) temporary addressValue
         { state with
-          locals := updateCrepLocal state.locals (context.maxVar + 1) valueValue } =
+          locals := updateCrepLocal state.locals temporary valueValue } =
         some targetState →
       panValueCrepStateRel structs context sourceLocals sourceGlobals
         (updatePanValueMemory sourceMemory addressValue (.word valueValue))
         { targetState with
           locals := restoreCrepLocal targetState.locals
-            (context.maxVar + 1) (state.locals (context.maxVar + 1)) }) :
+            temporary (state.locals temporary) }) :
     PanValueCrepProgramCorrect
       (.shMemStore size address.toExp value.toExp) := by
   intro context structs sourceFunctions functions sourceLocals sourceGlobals
@@ -128,8 +129,8 @@ theorem panValueCrepProgramCorrect_shMemStore_source_word
               have hcompileProg :
                   compileProg context
                       (.shMemStore size address.toExp value.toExp) =
-                    nestedDecs [context.maxVar + 1] [compiledValue]
-                      (.shMem (storeMemOp size) (context.maxVar + 1)
+                    nestedDecs [maxCrepExpVar [compiledValue] + 1] [compiledValue]
+                      (.shMem (storeMemOp size) (maxCrepExpVar [compiledValue] + 1)
                         compiledAddress) := by
                 simp [compileProg,
                   firstCompiledExpAnyShape_of_firstCompiledExp hfirstAddress,
@@ -137,7 +138,8 @@ theorem panValueCrepProgramCorrect_shMemStore_source_word
                   nestedDecs]
               rw [hcompileProg] at hcrep
               have hcrepAddressAfter := hstable state baseAddress topAddress
-                (context.maxVar + 1) compiledAddress addressValue valueValue
+                (maxCrepExpVar [compiledValue] + 1)
+                compiledAddress addressValue valueValue
                 hcrepAddress
               cases targetFuel with
               | zero =>
@@ -148,10 +150,10 @@ theorem panValueCrepProgramCorrect_shMemStore_source_word
                       simp [nestedDecs, evalCrepFullProg] at hcrep
                   | succ targetFuel =>
                       cases hshared : sharedMem (storeMemOp size)
-                          (context.maxVar + 1) addressValue
+                          (maxCrepExpVar [compiledValue] + 1) addressValue
                           { state with
                             locals := updateCrepLocal state.locals
-                              (context.maxVar + 1) valueValue } with
+                              (maxCrepExpVar [compiledValue] + 1) valueValue } with
                       | none =>
                           simp [nestedDecs, evalCrepFullProg, hcrepValue,
                             hcrepAddressAfter, hshared] at hcrep
@@ -159,7 +161,8 @@ theorem panValueCrepProgramCorrect_shMemStore_source_word
                           have htargetRel := hsharedRel context structs
                             sourceLocals sourceGlobals sourceMemory state targetState
                             crepPrimitive ffi sharedMem baseAddress topAddress
-                            bytesInWord addressValue valueValue hshared
+                            bytesInWord addressValue valueValue
+                            (maxCrepExpVar [compiledValue] + 1) hshared
                           have hresult :=
                             compile_full_pan_value_shMemStore_word_relation
                               context structs sourceFunctions functions sourceLocals

@@ -133,7 +133,7 @@ example :
         (.dec 2 (.const 2)
           (.dec 3 (.const 3)
             (.dec 4 (.const 4) (.extCall "ffi" 1 2 3 4)))) := by
-  simp [compileProg, firstCompiledExp, compileExp, nestedDecs,
+  simp [compileProg, firstCompiledExp, compileExp, maxCrepExpVar, nestedDecs,
     assignmentContext]
 
 example :
@@ -147,8 +147,28 @@ example :
     compileProg assignmentContext
       (.shMemStore .op8 (.const 10) (.const 7)) =
       .dec 1 (.const 7) (.shMem .store8 1 (.const 10)) := by
-  simp [compileProg, firstCompiledExpAnyShape, compileExp, storeMemOp, nestedDecs,
+  simp [compileProg, firstCompiledExpAnyShape, compileExp, maxCrepExpVar,
+    storeMemOp, nestedDecs,
     assignmentContext]
+
+/-! Cake's ExtCall/ShMemStore temporary base is the maximum variable in the
+    compiled expressions, even when a stale context `vmax` is lower. -/
+def highVariableContext : CompileContext Nat :=
+  { assignmentContext with vars := [("x", (.one, [7]))], maxVar := 0 }
+
+#guard
+  match compileProg highVariableContext
+      (.extCall "ffi" (.var .local "x") (.var .local "x")
+        (.var .local "x") (.var .local "x")) with
+  | .dec 8 (.var 7) (.dec 9 (.var 7) (.dec 10 (.var 7)
+      (.dec 11 (.var 7) (.extCall "ffi" 8 9 10 11)))) => true
+  | _ => false
+
+#guard
+  match compileProg highVariableContext
+      (.shMemStore .op8 (.const 10) (.var .local "x")) with
+  | .dec 8 (.var 7) (.shMem .store8 8 (.const 10)) => true
+  | _ => false
 
 def crepAddCarryHandler : CrepPrimitiveHandler Nat
   | .addCarry, [left, right, carry] => some [left + right + carry, 0]

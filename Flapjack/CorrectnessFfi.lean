@@ -43,7 +43,9 @@ theorem compilePanToLoop_extCall_const_noop_correct
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (state : LoopState α) (locals : VarName → Option α)
     (function : FunName) (configuration configurationLength array arrayLength : α)
-    (maxVar_agrees : loopContext.maxVar = compileContext.maxVar) :
+    (maxVar_agrees : loopContext.maxVar =
+      maxCrepExpVar [.const configuration, .const configurationLength,
+        .const array, .const arrayLength]) :
     (evalLoopProgWithCallsAndFfi []
       (fun _ _ _ _ _ state => some state) 40 state
       (loopCompileProg loopContext []
@@ -51,7 +53,7 @@ theorem compilePanToLoop_extCall_const_noop_correct
           (.extCall function (.const configuration)
             (.const configurationLength) (.const array) (.const arrayLength))))).map
         loopResultValues =
-      (evalPanProgWithCallsAndFfi []
+    (evalPanProgWithCallsAndFfi []
         (fun _ _ _ _ _ locals => some locals) 20 locals
         (.extCall function (.const configuration)
           (.const configurationLength) (.const array) (.const arrayLength))).map
@@ -60,24 +62,24 @@ theorem compilePanToLoop_extCall_const_noop_correct
           | .normal _ => []
           | .returned _ values => values
           | .raised _ _ _ => []) := by
+  let base : Nat :=
+    maxCrepExpVar [.const configuration, .const configurationLength,
+      .const array, .const arrayLength] + 1
   have hcompile :
       compileProg compileContext
           (.extCall function (.const configuration)
             (.const configurationLength) (.const array) (.const arrayLength)) =
-        nestedDecs [compileContext.maxVar + 1, compileContext.maxVar + 2,
-          compileContext.maxVar + 3, compileContext.maxVar + 4]
+        nestedDecs [base, base + 1, base + 2, base + 3]
           [.const configuration, .const configurationLength,
             .const array, .const arrayLength]
-          (.extCall function (compileContext.maxVar + 1)
-            (compileContext.maxVar + 2) (compileContext.maxVar + 3)
-            (compileContext.maxVar + 4)) := by
-    simp [compileProg, firstCompiledExp, compileExp, nestedDecs]
+          (.extCall function base (base + 1) (base + 2) (base + 3)) := by
+    simp [base, compileProg, firstCompiledExp, compileExp, nestedDecs]
   rw [hcompile]
   simp [nestedDecs, loopCompileProg,
     loopCompileExp, loopNestedSeq,
     evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
     updateLoopLocal, evalPanProgWithCallsAndFfi, evalPanExtCall,
-    evalPanExp, loopResultValues, maxVar_agrees]
+    evalPanExp, loopResultValues, maxVar_agrees, base]
 
 /-!
 The no-op theorem above is useful for a closed regression, but it hides the
@@ -106,14 +108,16 @@ theorem compilePanToLoop_extCall_const_success_projection
       ∃ nextLocals,
         sourceHandler function configuration configurationLength array arrayLength
           handlerLocals = some nextLocals)
-    (maxVar_agrees : loopContext.maxVar = compileContext.maxVar) :
+    (maxVar_agrees : loopContext.maxVar =
+      maxCrepExpVar [.const configuration, .const configurationLength,
+        .const array, .const arrayLength]) :
     (evalLoopProgWithCallsAndFfi [] loopHandler 40 state
       (loopCompileProg loopContext []
         (compileProg compileContext
           (.extCall function (.const configuration)
             (.const configurationLength) (.const array) (.const arrayLength))))).map
         loopResultValues =
-      (evalPanProgWithCallsAndFfi [] sourceHandler 20 locals
+    (evalPanProgWithCallsAndFfi [] sourceHandler 20 locals
         (.extCall function (.const configuration)
           (.const configurationLength) (.const array) (.const arrayLength))).map
         (fun result =>
@@ -132,32 +136,34 @@ theorem compilePanToLoop_extCall_const_success_projection
             | .raised _ _ _ => []) = some [] := by
     rcases sourceHandler_succeeds handlerLocals with ⟨nextLocals, hnextLocals⟩
     simp [hnextLocals]
+  let base : Nat :=
+    maxCrepExpVar [.const configuration, .const configurationLength,
+      .const array, .const arrayLength] + 1
   have hcompile :
       compileProg compileContext
           (.extCall function (.const configuration)
             (.const configurationLength) (.const array) (.const arrayLength)) =
-        nestedDecs [compileContext.maxVar + 1, compileContext.maxVar + 2,
-          compileContext.maxVar + 3, compileContext.maxVar + 4]
+        nestedDecs [base, base + 1, base + 2, base + 3]
           [.const configuration, .const configurationLength,
             .const array, .const arrayLength]
-          (.extCall function (compileContext.maxVar + 1)
-            (compileContext.maxVar + 2) (compileContext.maxVar + 3)
-            (compileContext.maxVar + 4)) := by
-    simp [compileProg, firstCompiledExp, compileExp, nestedDecs]
+          (.extCall function base (base + 1) (base + 2) (base + 3)) := by
+    simp [base, compileProg, firstCompiledExp, compileExp, nestedDecs]
   rw [hcompile]
   obtain ⟨nextState, hnextState⟩ := loopHandler_succeeds ({
     locals :=
       updateLoopLocal
         (updateLoopLocal
-          (updateLoopLocal (updateLoopLocal state.locals (compileContext.maxVar + 1) configuration)
-            (compileContext.maxVar + 1 + 1) configurationLength)
-          (compileContext.maxVar + 1 + 1 + 1) array)
-        (compileContext.maxVar + 1 + 1 + 1 + 1) arrayLength,
+          (updateLoopLocal (updateLoopLocal state.locals (loopContext.maxVar + 1) configuration)
+            (loopContext.maxVar + 1 + 1) configurationLength)
+          (loopContext.maxVar + 1 + 1 + 1) array)
+        (loopContext.maxVar + 1 + 1 + 1 + 1) arrayLength,
     globals := state.globals, memory := state.memory } : LoopState α)
+  have hnextState' := hnextState
+  simp [maxVar_agrees] at hnextState'
   simp [nestedDecs, loopCompileProg,
     loopCompileExp, loopNestedSeq,
     evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
     updateLoopLocal, evalPanProgWithCallsAndFfi, evalPanExtCall,
-    evalPanExp, hsourceSome, maxVar_agrees, hnextState, loopResultValues]
+    evalPanExp, hsourceSome, maxVar_agrees, hnextState', loopResultValues, base]
 
 end Flapjack

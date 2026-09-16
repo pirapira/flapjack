@@ -28,6 +28,20 @@ def dumpPipeline (pipeline : FlapjackPipelineResult (RiscV.Word 64)) : IO Unit :
   let selected := pipeline.word.map (fun (label, parameters, body) =>
     (label, parameters, RiscV.wordInstSelectProgramFrom body))
   emit "stage=word_inst_select" selected
+  /- The runtime-image CLI follows the source-shaped `pan_to_word` path below,
+     rather than the historical `pipeline.word` helper above.  Dump its
+     boundaries too so source-to-RISC-V discrepancies can be localized against
+     Cake's `loop_to_word` probe. -/
+  let sourceLoop := pipelineLoopFunctionsSource .rv64i stackFunctionFirstLabel
+    pipeline.crepe
+  let sourceWord := panToWordCompileProg sourceLoop
+  emit "stage=source_loop" sourceLoop
+  emit "stage=source_word" sourceWord
+  let sourceSelected := sourceWord.map (fun (label, arity, body) =>
+    (label, arity,
+      RiscV.wordInstSelectProgramFrom
+        (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body))))
+  emit "stage=source_word_inst_select" sourceSelected
 
 def dumpSource (source : String) : IO UInt32 := do
   match Parser.parseTopDecs (BitVec.ofInt 64) source with

@@ -95,8 +95,8 @@ uppercase 16-byte `.byte` lines and four-space `makesym` syntax.  Thus a code
 byte mismatch cannot hide a serialization mismatch, and a serialization match
 does not claim ABI/code-byte parity.
 
-At the time of writing (integration head `d778e24`), all 87 original-Pancake
-accepted programs in the 244-program corpus have at least one code section
+The following is a historical audit at integration head `d778e24`: all 87
+original-Pancake accepted programs in the 244-program corpus had at least one code section
 whose bytes differ from Flapjack's (`programs=244 gaps=264`, no matches).
 The remaining differences are tracked by:
 

@@ -456,30 +456,68 @@ def partitionReversed {α : Type u} (p : α → Bool) (l : List α) : List α ×
   let (tt, ff) := l.partition p
   (tt.reverse, ff.reverse)
 
-/-! `sort` (`Portable.sml:348-361`) is a pairwise bottom-up merge sort. The
-    source starts with singleton runs and repeatedly merges the first two
-    runs; its strict comparator selects the right run first on ties. -/
-def cakeMergeRuns {α : Type u} (ord : α → α → Bool) : List α → List α → List α
-  | [], right => right
-  | left, [] => left
-  | leftHead :: leftTail, rightHead :: rightTail =>
-      if ord leftHead rightHead then
-        leftHead :: cakeMergeRuns ord leftTail (rightHead :: rightTail)
+/-! `sort` (`Portable.sml:348-361`) is Cake's tail-recursive merge sort.
+    `mergesortN_tail` recursively splits at `DIV2`, toggles `negate` at each
+    split, and uses an accumulator merge.  Keeping the split and toggle
+    explicit is important: with a strict relation, equal-priority entries
+    intentionally change order according to the recursion depth. -/
+def cakeSort2Tail {α : Type u} (negate : Bool) (ord : α → α → Bool)
+    (x y : α) : List α :=
+  if ord x y != negate then [x, y] else [y, x]
+
+def cakeSort3Tail {α : Type u} (negate : Bool) (ord : α → α → Bool)
+    (x y z : α) : List α :=
+  if ord x y != negate then
+    if ord y z != negate then [x, y, z]
+    else if ord x z != negate then [x, z, y]
+    else [z, x, y]
+  else if ord y z != negate then
+    if ord x z != negate then [y, x, z]
+    else [y, z, x]
+  else [z, y, x]
+
+def cakeMergeTail {α : Type u} (negate : Bool) (ord : α → α → Bool) :
+    List α → List α → List α → List α
+  | [], [], acc => acc
+  | left, [], acc => left.reverse ++ acc
+  | [], right, acc => right.reverse ++ acc
+  | leftHead :: leftTail, rightHead :: rightTail, acc =>
+      if ord leftHead rightHead != negate then
+        cakeMergeTail negate ord leftTail (rightHead :: rightTail)
+          (leftHead :: acc)
       else
-        rightHead :: cakeMergeRuns ord (leftHead :: leftTail) rightTail
-  termination_by left right => left.length + right.length
+        cakeMergeTail negate ord (leftHead :: leftTail) rightTail
+          (rightHead :: acc)
+  termination_by left right _acc => left.length + right.length
   decreasing_by all_goals simp +arith
 
-def cakeSortRuns {α : Type u} (ord : α → α → Bool) : List (List α) → List (List α)
-  | [] => []
-  | [run] => [run]
-  | left :: right :: rest =>
-      cakeSortRuns ord (cakeMergeRuns ord left right :: rest)
-  termination_by runs => runs.length
-  decreasing_by simp_wf
+def cakeSortN {α : Type u} (negate : Bool) (ord : α → α → Bool) :
+    Nat → List α → List α
+  | 0, _ => []
+  | 1, [] => []
+  | 1, x :: _ => [x]
+  | 2, [] => []
+  | 2, [x] => [x]
+  | 2, x :: y :: _ => cakeSort2Tail negate ord x y
+  | 3, [] => []
+  | 3, [x] => [x]
+  | 3, [x, y] => cakeSort2Tail negate ord x y
+  | 3, x :: y :: z :: _ => cakeSort3Tail negate ord x y z
+  | n + 4, items =>
+      let len1 := (n + 4) / 2
+      let nextNegate := !negate
+      cakeMergeTail nextNegate ord
+        (cakeSortN nextNegate ord ((n + 4) / 2) items)
+        (cakeSortN nextNegate ord (n + 4 - len1) (items.drop len1)) []
+  termination_by n _items => n
+  decreasing_by
+    all_goals
+      have hn : 0 < n + 4 := by omega
+      have hdiv : (n + 4) / 2 < n + 4 := Nat.div_lt_self hn (by decide)
+      omega
 
 def cakeSort {α : Type u} (ord : α → α → Bool) (items : List α) : List α :=
-  (cakeSortRuns ord (items.map (fun item => [item]))).flatten
+  cakeSortN false ord items.length items
 
 /-! `sort_moves` (`reg_allocScript.sml:343-346`) uses Cake's generic `sort`
     with a strict priority comparison. -/
@@ -869,15 +907,15 @@ def cakeMovesToSp : List (Nat × (Nat × Nat)) →
     NatInfoMap (List (Nat × Nat)) → NatInfoMap (List (Nat × Nat))
   | [], table => table
   | (p, (x, y)) :: rest, table =>
-      /- `moves_to_sp` recurses over the tail before inserting the current
-         move.  Since `pri_move_insert` prepends, this preserves the order of
-         the source move list in each partner list.  The y endpoint is
-         inserted first by `undir_move_insert`, followed by x. -/
-      let table := cakeMovesToSp rest table
+      /- `moves_to_sp` inserts the current move before recursing into the
+         tail.  Since `pri_move_insert` prepends, this reverses the source
+         order in each partner list.  The y endpoint is inserted first by
+         `undir_move_insert`, followed by x. -/
       let table := cakeMapUpdate table y
         ((p, x) :: (cakeMapLookup table y).getD [])
-      cakeMapUpdate table x
+      let table := cakeMapUpdate table x
         ((p, y) :: (cakeMapLookup table x).getD [])
+      cakeMovesToSp rest table
 
 /-- `resort_moves` (`reg_allocScript.sml:1347-1350`): sort each partner
     list by descending priority, then drop the priorities. -/

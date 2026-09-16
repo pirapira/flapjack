@@ -741,6 +741,20 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         let value := wordSsaRenameExp state value
         let (state, freshName) := wordSsaFresh state name
         (state, .assign freshName value)
+    | .inst (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight)) =>
+        /- `ssa_cc_trans_inst` in Cake's `word_allocScript.sml` materialises
+           LongMul through its fixed architectural operands.  Keep the
+           allocator-coloured names only at the move boundaries: the
+           instruction itself is always `LongMul 6 0 0 4`, and its two results
+           are refreshed in the original order. -/
+        let sourceLeft := wordSsaRead state sourceLeft
+        let sourceRight := wordSsaRead state sourceRight
+        let movIn := .move 1 [(0, sourceLeft), (4, sourceRight)]
+        let (state, freshLeft) := wordSsaFresh state destinationLeft
+        let (state, freshRight) := wordSsaFresh state destinationRight
+        let movOut := .move 1 [(freshRight, 0), (freshLeft, 6)]
+        (state, wordSsaSeq movIn
+          (wordSsaSeq (.inst (.arith (.longMul 6 0 0 4))) movOut))
     | .inst instruction =>
         wordSsaRenameInstProgram state instruction
     | .get destination store =>

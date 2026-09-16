@@ -75,6 +75,15 @@ def frameContains (label arity : Nat) (body : WordProg (RiscV.Word 64)) : Bool :
       let (maxSlot, usesFrame) := maxAssignedSlot allocation.locations
       !usesFrame || maxSlot < frame
 
+/-- Cake reserves allocator spill occupancy even when the body has no bitmap
+    site (the source `compile_prog` formula has no bitmap-site condition). -/
+def spillOnlyFrameOccupancy : Bool :=
+  cakeWordFrameSlots
+      ({ locations := [], nextSpill := 3 } : WordSpillState)
+      [] (WordProg.skip : WordProg (RiscV.Word 64)) == 3
+
+#guard spillOnlyFrameOccupancy
+
 def spillingWordFunctions : Option (List (Nat × Nat × WordProg (RiscV.Word 64))) :=
   match parseTopDecs (BitVec.ofInt 64) spillingSource with
   | .error _ => none
@@ -127,6 +136,8 @@ def runChecks : IO Bool := do
         fixtureReachesBackEnd),
       ("the frame-containment fixture still spills to the frame",
         fixtureUsesFrame),
+      ("bitmap-free allocator spills retain Cake frame occupancy",
+        spillOnlyFrameOccupancy),
       ("allocator frame slots stay inside the frame word_to_stack allocates",
         frameContainmentExact) ]
   let mut ok := true

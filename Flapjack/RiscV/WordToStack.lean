@@ -1171,6 +1171,15 @@ def wordStackWritePhysicalNat (config : WordStackConfig) (destination : Nat)
       pure (wordStackJoin (body config.scratch)
         (.stackStore config.scratch (wordStackOffset config slot)))
 
+def wordStackWritePhysical {α : Type} (config : WordStackConfig) (destination : Nat)
+    (body : Nat → StackProg α) : Option (StackProg α) := do
+  let location ← wordStackLocation config destination
+  match location with
+  | .register register => pure (body register)
+  | .stack slot =>
+      pure (wordStackJoin (body config.scratch)
+        (.stackStore config.scratch (wordStackOffset config slot)))
+
 def wordStackCompileBinaryNat (config : WordStackConfig) (destination : Nat)
     (operator : BinOp) (left right : WordExp Nat) : Option (StackProg Nat) := do
   let (leftPrelude, leftRegister) ←
@@ -1767,7 +1776,9 @@ def wordStackReturn {α : Type} (config : WordStackConfig) (returnLabel : Nat) (
           (.return returnRegister))))
 
 def wordToStackInst {α : Type} (config : WordStackConfig) : WordInst α → Option (StackProg α)
-  | .const destination value => some (.inst (.const destination value))
+  | .const destination value =>
+      wordStackWritePhysical config destination
+        (fun register => .inst (.const register value))
   | .mem operator sourceOrDestination address =>
       wordStackMemoryInst config operator sourceOrDestination address
   | .arith operation => wordStackArithInst config operation
@@ -3060,7 +3071,7 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
       wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount bitmapRegister frameSlots
         wordBits storeConstsStub state body
   | .assign destination value =>
-      (wordStackCompileExpToPhysicalNat config destination value).map
+      (wordStackCompileExpNat config destination value).map
         (fun program => (program, state))
   | .call returns (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
@@ -3590,7 +3601,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .skip => some (.skip, state)
   | .move _ moves => (wordStackMoveList config moves).map (fun code => (code, state))
   | .assign destination value =>
-      (wordStackCompileExpToPhysicalNat config destination (wordExpToNat value)).map
+      (wordStackCompileExpNat config destination (wordExpToNat value)).map
         (fun code => (code, state))
   | .inst (.const destination value) =>
       (wordStackCompileExpToPhysicalNat config destination

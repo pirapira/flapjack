@@ -267,13 +267,13 @@ def reviveOrderGuard : Bool :=
   out.availMovesWl == [(2, (1, 1)), (1, (5, 9)), (1, (13, 5))] &&
     out.unavailMovesWl == [(1, (13, 17))]
 
-/- `moves_to_sp` processes the tail first, so partner lists retain source
-   order even though each insertion prepends. -/
+/- `moves_to_sp` inserts before recursing, so partner lists reverse source
+   order because each insertion prepends. -/
 def movesToSpOrderGuard : Bool :=
   let table := Flapjack.RiscV.CakeRegAlloc.cakeMovesToSp
     [(1, (2, 5)), (2, (2, 7)), (3, (2, 11))] []
   Flapjack.RiscV.CakeRegAlloc.cakeMapLookup table 2 ==
-      some [(1, 5), (2, 7), (3, 11)] &&
+      some [(3, 11), (2, 7), (1, 5)] &&
     Flapjack.RiscV.CakeRegAlloc.cakeMapLookup table 5 == some [(1, 2)]
 
 /-- `bg_ok` partitions `adjY` by `adjX` membership with the bucket-reversing
@@ -346,6 +346,22 @@ def qsortTiesThreeGuard : Bool :=
   Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
       [(3, (1, 2)), (1, (9, 9)), (3, (7, 8))] ==
     [(3, (7, 8)), (3, (1, 2)), (1, (9, 9))]
+
+/-! The tail merge split changes equal-priority order at the first
+    non-trivial recursion sizes; these are direct `reg_alloc$sort_moves`
+    oracle cases for lengths four through six. -/
+def sortMovesTailSplitGuard : Bool :=
+  Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
+      [(7, (1, 2)), (7, (3, 4)), (7, (5, 6)), (7, (7, 8))] ==
+      [(7, (7, 8)), (7, (5, 6)), (7, (3, 4)), (7, (1, 2))] &&
+  Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
+      [(7, (1, 2)), (7, (3, 4)), (7, (5, 6)), (7, (7, 8)), (7, (9, 10))] ==
+      [(7, (9, 10)), (7, (7, 8)), (7, (5, 6)), (7, (3, 4)), (7, (1, 2))] &&
+  Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
+      [(7, (1, 2)), (7, (3, 4)), (7, (5, 6)), (7, (7, 8)), (7, (9, 10)),
+       (7, (11, 12))] ==
+      [(7, (11, 12)), (7, (9, 10)), (7, (7, 8)), (7, (5, 6)), (7, (3, 4)),
+       (7, (1, 2))]
 
 /-! Cake's pairwise merge sort reverses a long run of equal priorities. -/
 def sortMovesLongTieGuard : Bool :=
@@ -443,6 +459,7 @@ def cakeBijSetPatriciaGuard : Bool :=
     lookupNatInfo 6 bij.toAllocator == some 3
 
 #guard cakeBijSetPatriciaGuard
+#guard sortMovesTailSplitGuard
 
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
@@ -460,6 +477,7 @@ def parityGuard : Bool :=
     raMovesStempGuard && raMovesStempHiGuard && negFirstMatchProjectionGuard
     && mapUpdateBoundedGuard && deadMovePriorityGuard
     && deadProgramPriorityGuard && cakeBijSetPatriciaGuard
+    && sortMovesTailSplitGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to
@@ -484,7 +502,7 @@ def runChecks : IO Bool := do
     movesToSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
-    deadMovePriorityGuard, deadProgramPriorityGuard]
+    deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -505,7 +523,7 @@ def runChecks : IO Bool := do
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
     "neg_first_match_col projection", "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
-    "mk_bij uses Cake Patricia Set order"]
+    "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

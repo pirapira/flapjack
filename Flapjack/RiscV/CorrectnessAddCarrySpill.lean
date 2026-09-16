@@ -44,7 +44,7 @@ theorem evalWordStackMachine_addCarry_spilled_preserves_other_value [NeZero widt
   change lookupNatInfo carryIn config.locations = some (.stack carryInSlot) at hcarryIn
   change lookupNatInfo other config.locations = some otherLocation at hother
   cases otherLocation <;>
-    simp [wordStackAddCarryInst, wordStackAddCarryLocationSafe,
+    simp [wordStackAddCarryInst,
       wordStackLongMulMoveToPhysical, wordStackLongMulMoveFromPhysical,
       wordStackJoin, wordStackLocation, wordStackOffset,
       evalWordStackMachine, hdestination, hresultCarry, hsourceLeft,

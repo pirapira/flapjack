@@ -3704,12 +3704,10 @@ termination_by program => sizeOf program
 decreasing_by
   all_goals first | decreasing_trivial | (simp [sizeOf] <;> omega)
 
-/-! Cake's full-SSA FFI block is preceded by a `Move1` ABI shuffle.  The
-    source allocator's sequence traversal leaves the constant writes in the
-    reverse order immediately before that shuffle; preserving this observable
-    order is required for byte parity even though the values are independent.
-    Restrict the rewrite to the source-shaped pre-FFI pattern and leave the
-    ordinary hardware-numbered path untouched. -/
+/-! Small structural helpers used by the direct `const_fp` oracle test.  The
+    production pipeline deliberately does not apply the old post-allocation
+    FFI reorder; retaining the helpers keeps the test focused on the original
+    Cake `drop_consts` order without reintroducing that non-Cake rewrite. -/
 def wordProgSeqItems : WordProg α → List (WordProg α)
   | .seq first second => wordProgSeqItems first ++ wordProgSeqItems second
   | program => [program]

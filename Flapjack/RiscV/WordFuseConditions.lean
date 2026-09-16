@@ -258,14 +258,15 @@ def wordFuseConditions [BEq α] [OfNat α 0] [OfNat α 1]
     (wordFuseConditionsAux (wordProgFuel duplicated + 1) []
       (wordProgToList duplicated))
 
-/-! Cake's `word_simp$compile_exp` re-runs `const_fp` on the branches it
-    builds while collapsing a comparison round trip, so the flag copies become
-    constants and the flag definition is left as the only use.  This wrapper is
-    the pass composition the source pipeline applies before instruction
+/-! The caller has already run Cake's program-level `const_fp`.  The remaining
+    `simp_duplicate_if`/condition-fusion step is local to the duplicated
+    branches; applying `const_fp` to the whole result again changes temporary
+    numbering and the eventual RISC-V byte order.  Keep this wrapper as the
+    source pipeline's post-`const_fp` composition before instruction
     selection. -/
 def wordFuseConditionsAndFold [Add α] [Sub α] [AndOp α] [OrOp α]
     [HXor α α α] [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α]
     (program : WordProg α) : WordProg α :=
-  wordConstFp (wordFuseConditions program)
+  wordFuseConditions program
 
 end Flapjack.RiscV

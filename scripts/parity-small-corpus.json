@@ -142,6 +142,12 @@
       "source_reference": "Minimized differential-fuzz reproducer f00028: exercises Cake Patricia ordering, SSA cutsets, allocator colouring, and physical parallel moves.",
       "cake_sha256": "60c124426815c469e11d6eba53bffda35c2f166ce78a0446c9457d07e14295cf",
       "tracked_beads": ["flapjack-8tb.4"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/parameter_reassignment.pnk",
+      "source_reference": "cakeml/pancake/crep_to_loopScript.sml:158-162,236-241 (parameter vmap and reassignment); guards that assignments to a function parameter survive crep-to-loop lowering and live optimization.",
+      "cake_sha256": "909228ec2ae5e41bdd400877abe193562e27d16e9c58fbec5585dbb409539087",
+      "tracked_beads": []
     }
 
   ]

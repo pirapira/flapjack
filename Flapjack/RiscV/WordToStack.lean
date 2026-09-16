@@ -606,19 +606,52 @@ def wordStackArithInst {α : Type} (config : WordStackConfig) (operation : WordA
       /- Cake's `inst_select` emits a binary operation whose operands are
          register numbers, so the StackLang form is the direct
          register-operand arithmetic instruction whenever all three word
-         locations are already registers. -/
+         locations are already registers.  Otherwise Cake's `wInst` staging
+         applies (`word_to_stackScript.sml:28-56`): a spilled source loads
+         through the first register past the colour range (`wReg1`, here
+         `config.scratch`), a second spilled source through the next one
+         (`wReg2`, here `config.addressScratch`), and a spilled destination
+         is written by overwriting that same register after the reads
+         (`wRegWrite1`).  A register may be read as a source and then
+         written as the destination, so no operand colour is rejected. -/
       match wordStackLocation config destination,
           wordStackLocation config sourceLeft,
           wordStackLocation config sourceRight with
       | some (.register destination), some (.register sourceLeft),
           some (.register sourceRight) =>
         some (.arith operator destination sourceLeft sourceRight)
-      | _, _, _ => none
+      | _, _, _ =>
+        match wordStackLocation config destination,
+            wordStackLocation config sourceLeft,
+            wordStackLocation config sourceRight with
+        | some destLocation, some leftLocation, some rightLocation =>
+          let dReg := match destLocation with
+            | .register register => register
+            | _ => config.scratch
+          let sLReg := match leftLocation with
+            | .register register => register
+            | _ => config.scratch
+          let sRReg := match rightLocation with
+            | .register register => register
+            | _ => config.addressScratch
+          do
+            let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+              sLReg
+            let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+              sRReg
+            let writeDest ← wordStackLongMulMoveFromPhysical config destination
+              dReg
+            pure (wordStackJoin loadLeft
+              (wordStackJoin loadRight
+                (wordStackJoin (.arith operator dReg sLReg sRReg) writeDest)))
+        | _, _, _ => none
     | .binOp operator destination sourceLeft (.imm value) =>
       wordStackImmediateArithInst config destination sourceLeft value
         (fun destination sourceLeft sourceRight =>
           .binOp operator destination sourceLeft sourceRight)
     | .shift operator destination sourceLeft (.reg sourceRight) =>
+      /- Same `wReg1`/`wReg2`/`wRegWrite1` staging as the `.binOp` register
+         operand above (`word_to_stackScript.sml:28-56`). -/
       match wordStackLocation config destination,
           wordStackLocation config sourceLeft,
           wordStackLocation config sourceRight with
@@ -626,7 +659,33 @@ def wordStackArithInst {α : Type} (config : WordStackConfig) (operation : WordA
           some (.register sourceRight) =>
           some (.inst (.arith (.shift operator destination sourceLeft
             (.reg sourceRight))))
-      | _, _, _ => none
+      | _, _, _ =>
+        match wordStackLocation config destination,
+            wordStackLocation config sourceLeft,
+            wordStackLocation config sourceRight with
+        | some destLocation, some leftLocation, some rightLocation =>
+          let dReg := match destLocation with
+            | .register register => register
+            | _ => config.scratch
+          let sLReg := match leftLocation with
+            | .register register => register
+            | _ => config.scratch
+          let sRReg := match rightLocation with
+            | .register register => register
+            | _ => config.addressScratch
+          do
+            let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+              sLReg
+            let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+              sRReg
+            let writeDest ← wordStackLongMulMoveFromPhysical config destination
+              dReg
+            pure (wordStackJoin loadLeft
+              (wordStackJoin loadRight
+                (wordStackJoin
+                  (.inst (.arith (.shift operator dReg sLReg (.reg sRReg))))
+                  writeDest)))
+        | _, _, _ => none
     | .shift operator destination sourceLeft (.imm value) =>
       wordStackImmediateArithInst config destination sourceLeft value
         (fun destination sourceLeft sourceRight =>

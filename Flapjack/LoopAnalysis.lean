@@ -224,7 +224,7 @@ def loopShrink (contexts : List (List Nat × List Nat)) :
   | .loop liveIn body liveOut, live =>
       let loopLiveOut := loopIntersectSorted liveOut live
       let bodyEntryLive := loopListInsert liveIn loopLiveOut
-      match loopShrinkFixed contexts liveIn body loopLiveOut 64 [] with
+      match loopShrinkFixed contexts liveIn body loopLiveOut bodyEntryLive 64 [] with
       | some result => result
       | none =>
           let (body', _) := loopShrink ((liveIn, loopLiveOut) :: contexts)
@@ -253,20 +253,20 @@ def loopShrink (contexts : List (List Nat × List Nat)) :
 termination_by program => (sizeOf program, 0)
 
 def loopShrinkFixed (contexts : List (List Nat × List Nat))
-    (liveIn : List Nat) (body : LoopProg α) (loopLiveOut : List Nat) :
+    (liveIn : List Nat) (body : LoopProg α) (loopLiveOut bodyEntryLive : List Nat) :
     Nat → List Nat → Option (LoopProg α × List Nat)
   | 0, _ => none
   | fuel + 1, previous =>
       let (body', bodyLive) := loopShrink
-        ((loopIntersectSorted liveIn previous, loopLiveOut) :: contexts)
-        body loopLiveOut
+        ((loopIntersectSorted liveIn previous, bodyEntryLive) :: contexts)
+        body bodyEntryLive
       let current := loopIntersectSorted liveIn bodyLive
       if current = previous then
         some (.loop current body' loopLiveOut, current)
       else if current.length ≤ previous.length then
         none
       else
-        loopShrinkFixed contexts liveIn body loopLiveOut fuel current
+        loopShrinkFixed contexts liveIn body loopLiveOut bodyEntryLive fuel current
   termination_by fuel _ => (sizeOf body, fuel)
 end
 

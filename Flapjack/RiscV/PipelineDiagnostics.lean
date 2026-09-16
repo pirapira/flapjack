@@ -152,12 +152,15 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
   | [] => .ok []
   | (label, parameters, body) :: functions =>
       let wordParameters := wordSsaAbiParameters parameters.length
-      let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
-          (RiscV.wordInstSelectProgramFrom
-            (RiscV.wordFuseConditionsAndFold
-              (RiscV.wordConstFp
-                (RiscV.wordFlattenProgramFrom
-                  (LoopToWord.loopToWordCompFunc label parameters body))))))
+      /- Keep the selected program intact until full SSA, matching Cake's
+         `word_to_word` order.  `word_unreach` runs after SSA and cleanup;
+         doing it here changes the fresh-name bound used by SSA. -/
+      let unallocatedBody :=
+        RiscV.wordInstSelectProgramFrom
+          (RiscV.wordFuseConditionsAndFold
+            (RiscV.wordConstFp
+              (RiscV.wordFlattenProgramFrom
+                (LoopToWord.loopToWordCompFunc label parameters body))))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -222,12 +225,12 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
   | [] => .ok ([], bitmaps, chunks)
   | (label, parameters, body) :: functions =>
       let wordParameters := wordSsaAbiParameters parameters.length
-      let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
-          (RiscV.wordInstSelectProgramFrom
+      let unallocatedBody :=
+          RiscV.wordInstSelectProgramFrom
             (RiscV.wordFuseConditionsAndFold
               (RiscV.wordConstFp
                 (RiscV.wordFlattenProgramFrom
-                  (LoopToWord.loopToWordCompFunc label parameters body))))))
+                  (LoopToWord.loopToWordCompFunc label parameters body))))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -299,11 +302,11 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
   | [] => .ok ([], bitmaps, chunks)
   | (label, arity, body) :: functions =>
       let wordParameters := wordSsaAbiParameters arity
-      let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
-        (RiscV.wordInstSelectProgramFrom
+      let unallocatedBody :=
+        RiscV.wordInstSelectProgramFrom
           (RiscV.wordFuseConditionsAndFold
             (RiscV.wordConstFp
-              (RiscV.wordFlattenProgramFrom body)))))
+              (RiscV.wordFlattenProgramFrom body)))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)

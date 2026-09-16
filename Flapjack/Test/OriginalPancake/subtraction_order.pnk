@@ -1,8 +1,0 @@
-fun 1 diff(1 a, 1 b) { return a - b; }
-fun 1 diffload(1 p) { return (lds 1 (p + 8)) - (lds 1 (p + 16)); }
-fun 1 main() {
-  var 1 r = diff(70, 3);
-  var 1 s = diffload(1000);
-  @halt(@base, 0, @base, 0);
-  return r + s;
-}

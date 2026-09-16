@@ -47,10 +47,37 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   let (wordMoves, spillCosts) := wordGetHeuristics 3 label dead
   let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
   let bij := RiscV.CakeRegAlloc.cakeMkBij tree
+  let k := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
+  let state0 := RiscV.CakeRegAlloc.cakeInitRaState tree forced
+    (RiscV.CakeRegAlloc.cakeGetStackOnly dead)
+  let spta := fun name =>
+    (lookupNatInfo name bij.toAllocator).getD 0
+  let moves0 := moves.map (RiscV.CakeRegAlloc.cakeUpdateMove spta)
+  let movesF := RiscV.CakeRegAlloc.filterReversed
+    (fun move => RiscV.CakeRegAlloc.cakeFullConsistencyOk state0 k
+      move.2.1 move.2.2) moves0
   let scost := spillCosts.map (fun costs =>
-    costs.filterMap (fun entry =>
-      (lookupNatInfo entry.1 bij.toAllocator).map
-        (fun node => (node, entry.2))))
+      costs.filterMap (fun entry =>
+        (lookupNatInfo entry.1 bij.toAllocator).map
+          (fun node => (node, entry.2))))
+  emit "stage=source_word_heuristics" (moves, spillCosts)
+  emit "stage=source_word_allocator_inputs"
+    (tree, forced, RiscV.CakeRegAlloc.cakeGetStackOnly dead, bij)
+  let (allocationFuel, state1) :=
+    RiscV.CakeRegAlloc.cakeInitAlloc1Heu movesF k state0
+  let state2 := RiscV.CakeRegAlloc.cakeRptDoStep scost k allocationFuel state1
+  let moveTable := RiscV.CakeRegAlloc.cakeMovesToSp moves0 []
+  let state3 := RiscV.CakeRegAlloc.cakeAssignAtemps k state2.stack
+    (fun state node colours =>
+      RiscV.CakeRegAlloc.cakeBiasedPref state
+        (RiscV.CakeRegAlloc.cakeResortMovesSp moveTable) node colours) state2
+  let state4 := RiscV.CakeRegAlloc.cakeAssignStemps k
+    (fun state node bads =>
+      RiscV.CakeRegAlloc.cakeNegBiasedPref state k
+        (RiscV.CakeRegAlloc.cakeResortMovesSp moveTable) node bads) state3
+  emit "stage=source_word_allocator_trace"
+    (allocationFuel, state1.simpWl, state1.freezeWl, state1.spillWl,
+      state2.stack, state2.coalesced, state3.nodeTag, state4.nodeTag)
   emit "stage=source_word_colour"
     (RiscV.CakeRegAlloc.cakeDoRegAlloc .irc scost
       RiscV.CakeRegAlloc.cakeRiscVRegisterCount moves tree forced

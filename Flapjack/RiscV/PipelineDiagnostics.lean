@@ -594,7 +594,8 @@ def compileFlapjackRiscVSourceRuntimeImageChecked [NeZero width]
               start (panTargetDeclarationsWithDefaultMain declarations) with
           | none => .error .entryNotFound
           | some pipeline =>
-              let loop := pipelineLoopFunctions architecture stackFunctionFirstLabel pipeline.crepe
+              let loop := pipelineLoopFunctionsSource architecture stackFunctionFirstLabel
+                pipeline.crepe
               let sourceWords := panToWordCompileProg loop
               let discoveryWords :=
                 sourceWords.map

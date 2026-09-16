@@ -109,11 +109,7 @@ def pipelineLoopFunctionsAux [OfNat α 0] [OfNat α 1]
       let context : LoopContext α :=
         { vars := []
           functions := functionInfos
-          /- `crep_to_loop$comp_func` starts its temporary counter at
-             `vmax + 1`, with `vmax = LENGTH params - 1`.  The compiled
-             parameter names are already the dense `0 .. LENGTH params - 1`
-             sequence, so this is the direct source-shaped context. -/
-          maxVar := function.params.length - 1
+          maxVar := function.params.length
           target := architecture }
       (label, function.params, oCompile context function.params function.body) ::
         pipelineLoopFunctionsAux architecture functionInfos (label + 1) functions
@@ -123,6 +119,32 @@ def pipelineLoopFunctions [OfNat α 0] [OfNat α 1]
     (functions : List (CompiledFunction α)) :
     List (Nat × List Nat × LoopProg α) :=
   pipelineLoopFunctionsAux architecture (pipelineFunctionInfos firstLabel functions)
+    firstLabel functions
+
+/-! Source-facing counterpart of `crep_to_loop$compile_prog`.  The historical
+    `pipelineLoopFunctions` above is retained for the earlier correctness
+    witnesses whose register numbering is part of their checked shape.  The
+    Pancake source pipeline uses `comp_func`, whose context sets
+    `vmax = LENGTH params - 1`; this separate entry point keeps that rule
+    explicit without changing the legacy API. -/
+def pipelineLoopFunctionsSourceAux [OfNat α 0] [OfNat α 1]
+    (architecture : RiscV.Architecture) (functionInfos : InfoMap (Nat × Nat)) :
+    Nat → List (CompiledFunction α) → List (Nat × List Nat × LoopProg α)
+  | _, [] => []
+  | label, function :: functions =>
+      let context : LoopContext α :=
+        { vars := []
+          functions := functionInfos
+          maxVar := function.params.length - 1
+          target := architecture }
+      (label, function.params, oCompile context function.params function.body) ::
+        pipelineLoopFunctionsSourceAux architecture functionInfos (label + 1) functions
+
+def pipelineLoopFunctionsSource [OfNat α 0] [OfNat α 1]
+    (architecture : RiscV.Architecture) (firstLabel : Nat)
+    (functions : List (CompiledFunction α)) :
+    List (Nat × List Nat × LoopProg α) :=
+  pipelineLoopFunctionsSourceAux architecture (pipelineFunctionInfos firstLabel functions)
     firstLabel functions
 
 def pipelineWordFunctions [OfNat α 1]

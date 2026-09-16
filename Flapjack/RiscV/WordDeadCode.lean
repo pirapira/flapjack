@@ -1,3 +1,4 @@
+import Flapjack.NatDedup
 import Flapjack.RiscV.CakeRegAlloc
 import Flapjack.RiscV.WordCse
 import Flapjack.RiscV.WordCopyProp
@@ -17,8 +18,12 @@ namespace Flapjack.RiscV
 
 open Flapjack
 
+/-- `(live ++ reads).eraseDups`.  The live set is as long as the function, and
+    this runs once per statement, so the quadratic `List.eraseDups` made a
+    single dead-code pass cubic in function size; `natEraseDups` returns the
+    same list. -/
 def wordDeadAddReads (live : List Nat) (reads : List Nat) : List Nat :=
-  (live ++ reads).eraseDups
+  natEraseDups (live ++ reads)
 
 def wordDeadRemoveWrites (live : List Nat) (writes : List Nat) : List Nat :=
   live.filter (fun name => name ∉ writes)

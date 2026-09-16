@@ -77,15 +77,16 @@ def heuristicParityPrograms : List (Nat × WordProg Nat) :=
 #guard heuristicParityPrograms.all
   (fun entry => heuristicParitySpillCosts entry.1 entry.2)
 
-/-! `wordHeuristicEraseDups` must agree with `List.eraseDups`, which is what
-    fixes the key order of the merge. -/
+/-! `natEraseDups` must agree with `List.eraseDups`, which is what fixes the
+    key order of the merge and, in `Flapjack/RiscV/WordDeadCode.lean`, the
+    live-set order. -/
 def heuristicEraseDupsCases : List (List Nat) :=
   [[], [7], [7, 7], [3, 1, 3, 4, 1, 5, 4], [1, 2, 3, 4, 5],
    [5, 4, 3, 2, 1], [9, 9, 9, 9], [0, 1, 0, 2, 0, 3, 1, 2, 3],
    List.range 40 ++ List.range 40, (List.range 40).reverse ++ List.range 20]
 
 #guard heuristicEraseDupsCases.all
-  (fun names => names.eraseDups == wordHeuristicEraseDups names)
+  (fun names => names.eraseDups == natEraseDups names)
 
 /-! The merged map's order is the deduplicated key list reversed; pin it
     directly so a change in either implementation is visible here. -/

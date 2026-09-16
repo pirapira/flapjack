@@ -1174,7 +1174,8 @@ def wordProgCakeMaxVar : WordProg α → Nat
       max (liveIn.foldl max 0)
         (max (wordProgCakeMaxVar body) (liveOut.foldl max 0))
   | .mustTerminate body => wordProgCakeMaxVar body
-  | .break label | .continue label | .raise label | .locValue label _ => label
+  | .break _ | .continue _ => 0
+  | .raise label | .locValue label _ => label
   | .return label values => values.foldl max label
   | .call returns _ arguments handler =>
       let argumentMax := arguments.foldl max 0
@@ -1991,7 +1992,7 @@ def wordApplyColourInst (colour : Nat → Nat) : WordInst α → WordInst α
     `apply_nummap_key` rebuilds those sets through `fromAList`, so the result is
     canonical (sorted and duplicate-free), rather than a plain mapped list. -/
 def wordApplyColourNumSet (colour : Nat → Nat) (names : List Nat) : List Nat :=
-  (names.map colour).eraseDups.mergeSort (fun left right => left < right)
+  NumSet.fromList (names.map colour)
 
 def wordApplyColour (colour : Nat → Nat) : WordProg α → WordProg α
   | .skip => .skip

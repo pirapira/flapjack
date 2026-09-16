@@ -460,6 +460,18 @@ def cakeBijSetPatriciaGuard : Bool :=
     lookupNatInfo 6 bij.toAllocator == some 3
 
 #guard cakeBijSetPatriciaGuard
+def applyColourSetPatriciaGuard : Bool :=
+  wordApplyColourNumSet id [0, 4, 6, 12] == [0, 4, 12, 6]
+
+#guard applyColourSetPatriciaGuard
+
+/- Cake's `max_var` ignores control-flow labels on Break and Continue; they
+   are labels, not Word register names and must not enlarge the stack frame. -/
+def maxVarControlLabelGuard : Bool :=
+  wordProgCakeMaxVar
+      (.seq (.break 999) (.continue 888) : WordProg Nat) == 0
+
+#guard maxVarControlLabelGuard
 #guard sortMovesTailSplitGuard
 
 def parityGuard : Bool :=

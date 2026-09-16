@@ -194,6 +194,12 @@
       "source_reference": "Minimized from the stateless-pancaketh guest's calculate_total_blob_gas: an expression-level load whose address is base plus a constant must keep the constant in the Addr offset (word_instScript.sml:234-245), with the in-range and negative boundaries beside it.",
       "cake_sha256": "cea72fb1938fff2d1554a1f993be9b10ff232ae437afe9ee89e8c9bca69e94c6",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/collapse_branch.pnk",
+      "source_reference": "Minimized RISC-V parity reproducer for Cake's word_inst$inst_select_exp shift-immediate and conditional lowering (word_instScript.sml:233-295).",
+      "cake_sha256": "c3a0eedb8f0e90602a899d1659782251d2a87cf4dcb269687827d304404d1d33",
+      "tracked_beads": ["flapjack-pxn.8.5.14.11.2"]
     }
   ]
 }

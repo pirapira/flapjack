@@ -1497,9 +1497,11 @@ termination_by destinations => sizeOf destinations
 decreasing_by all_goals decreasing_trivial
 
 /-! Argument moves start at the ABI base the caller supplied, so the
-    overflow index must be counted from that same base.  Counting from
-    `config.abiBase` instead collapsed the first arguments onto one
-    destination whenever a call used a different base. -/
+    overflow index must be counted from that same base.  The stride is
+    carried by the index (`wMoveSingle`'s `f - 1 - (r - k)` numbering is
+    consecutive for RISC-V), so the recursion deliberately keeps the base
+    fixed: advancing it as well double-counted the stride and put the
+    second argument one register too high. -/
 def wordStackPhysicalMovesToIndexed (config : WordStackConfig) :
     Nat → List Nat → Nat → Option (List (WordLocation × WordLocation))
   | _, [], _ => some []
@@ -1510,8 +1512,8 @@ def wordStackPhysicalMovesToIndexed (config : WordStackConfig) :
           .register (base + config.abiStride * index)
         else
           wordStackPhysicalLocation config index base
-      let rest ← wordStackPhysicalMovesToIndexed config (index + 1) sources
-        base
+<<<<<<< HEAD
+      let rest ← wordStackPhysicalMovesToIndexed config (index + 1) sources base
       pure ((destinationLocation, source) :: rest)
 termination_by _ sources _ => sizeOf sources
 decreasing_by all_goals decreasing_trivial

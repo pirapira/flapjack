@@ -388,6 +388,14 @@ def qsortDescGuard : Bool :=
       [(1, (13, 5)), (3, (5, 9)), (2, (7, 8))] ==
     [(3, (5, 9)), (2, (7, 8)), (1, (13, 5))]
 
+/-- `assign_Stemp_tag` uses Cake's non-strict bad-colour ordering; equal
+    colours therefore retain Cake's merge-sort tie order. -/
+def stempBadColourTieGuard : Bool :=
+  Flapjack.RiscV.CakeRegAlloc.cakeSort (fun a b => a <= b) [4, 4, 1, 4] ==
+    [1, 4, 4, 4]
+
+#guard stempBadColourTieGuard
+
 /-- A move onto a stack temp keeps the stack temp above the register
     count while the two alloc vars coalesce (probe `ra_moves_stemp`). -/
 def raMovesStempGuard : Bool :=
@@ -460,6 +468,18 @@ def cakeBijSetPatriciaGuard : Bool :=
     lookupNatInfo 6 bij.toAllocator == some 3
 
 #guard cakeBijSetPatriciaGuard
+def applyColourSetPatriciaGuard : Bool :=
+  wordApplyColourNumSet id [0, 4, 6, 12] == [0, 4, 12, 6]
+
+#guard applyColourSetPatriciaGuard
+
+/- Cake's `max_var` ignores control-flow labels on Break and Continue; they
+   are labels, not Word register names and must not enlarge the stack frame. -/
+def maxVarControlLabelGuard : Bool :=
+  wordProgCakeMaxVar
+      (.seq (.break 999) (.continue 888) : WordProg Nat) == 0
+
+#guard maxVarControlLabelGuard
 #guard sortMovesTailSplitGuard
 
 def parityGuard : Bool :=
@@ -475,7 +495,8 @@ def parityGuard : Bool :=
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
     partOrderGuard && reviveOrderGuard && movesToSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
-    raMovesStempGuard && raMovesStempHiGuard && negFirstMatchProjectionGuard
+    stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
+    negFirstMatchProjectionGuard
     && mapUpdateBoundedGuard && deadMovePriorityGuard
     && deadProgramPriorityGuard && cakeBijSetPatriciaGuard
     && sortMovesTailSplitGuard

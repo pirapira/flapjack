@@ -28,7 +28,7 @@ structure LoopContext (α : Type u) where
 def findLoopVar (context : LoopContext α) (name : Nat) : Nat :=
   match lookupNatInfo name context.vars with
   | some value => value
-  | none => name
+  | none => 0
 
 /-! Source-named port of `crep_to_loop$find_var` (`find_var_def`,
     `crep_to_loopScript.sml:20`). -/
@@ -293,7 +293,7 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
       let result := loopCompileExp context (context.maxVar + 1) live value
       match lookupNatInfo name context.vars with
       | some mappedName =>
-          .seq (loopNestedSeq result.code) (.assign mappedName result.expression)
+          loopNestedSeq (result.code ++ [.assign mappedName result.expression])
       | none => .skip
   | .primitive names operator arguments => .primitive names operator arguments
   | .store address value =>
@@ -391,8 +391,8 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
         (result.code ++ loopAssignTemps names result.expressions ++ [.return names])
   | .shMem operator name address =>
       let result := loopCompileExp context (context.maxVar + 1) live address
-      .seq (loopNestedSeq result.code)
-        (.shMem operator (findLoopVar context name) result.expression)
+      loopNestedSeq (result.code ++
+        [.shMem operator (findLoopVar context name) result.expression])
   | .tick => .tick
 termination_by program => sizeOf program
 

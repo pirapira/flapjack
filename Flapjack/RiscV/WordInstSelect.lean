@@ -31,8 +31,17 @@ class WordInstSelectImmediate (α : Type u) where
   shiftImmediate : α → WordShiftImmediate
 
 instance : WordInstSelectImmediate Nat where
-  validBinOpImmediate _ _ := false
-  shiftImmediate _ := .unsupported
+  /- The source-facing pipeline carries RV64 words as `Nat` after the
+     word-to-stack boundary.  This is not an unbounded integer target: the
+     values are the bit patterns of 64-bit words, so use the same signed
+     12-bit immediate test as the concrete `BitVec 64` instance. -/
+  validBinOpImmediate operator value :=
+    match operator with
+    | .sub => value < 2 ^ 11
+    | .add | .and | .or | .xor =>
+        value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
+  shiftImmediate value :=
+    if value < 64 then .valid value else .outOfRange
 
 instance : WordInstSelectImmediate (BitVec width) where
   validBinOpImmediate operator value :=
@@ -168,6 +177,12 @@ termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
 def wordInstFlattenExp : WordExp α → WordExp α
+  | .op .sub expressions =>
+      -- Cake's `flatten_exp` preserves subtraction operands; the generic
+      -- n-ary case below rebuilds an associative operation as
+      -- `[flatten(rest), flatten(head)]`, which is valid for associative
+      -- operators but reverses `Sub [left, right]`.
+      .op .sub (expressions.map wordInstFlattenExp)
   | .op operator [] => .op operator []
   | .op _ [expression] => wordInstFlattenExp expression
   | .op operator (expression :: expressions) =>
@@ -184,29 +199,43 @@ decreasing_by all_goals decreasing_trivial
 def wordInstNormalizeExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] (expression : WordExp α) : WordExp α :=
   wordInstFlattenExp (wordInstPullExp expression)
 
+/-- Shared tail of `inst_select_exp`'s `Load` case: the selected address is
+    normally the returned temporary, matching Cake's `Addr temp 0w`, and Cake
+    lowers every expression-level load to a genuine `Mem Load` instruction.
+    Keeping it as an `Assign` would leave the load invisible to `word_cse`, so
+    repeated loads could not share the first result.  An address that stayed an
+    unfused base-plus-offset expression is preserved for the later
+    Word-to-Stack offset handling instead of pretending that `temp` holds the
+    complete address. -/
+def wordInstSelectLoadTail (temp : Nat) (prelude : WordProg α)
+    (selectedAddress : WordExp α) : WordProg α × WordExp α :=
+  match selectedAddress with
+  | .var address =>
+      (wordDeadSelectSeq prelude (.inst (.mem .load temp address)), .var temp)
+  | _ => (wordDeadSelectSeq prelude (.assign temp (.load selectedAddress)), .var temp)
+
 def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]
     (temp : Nat) : WordExp α → WordProg α × WordExp α
   | .const value => (.inst (.const temp value), .var temp)
   | .var name => (.move 0 [(temp, name)], .var temp)
   | .lookup store => (.get temp store, .var temp)
+  | .load (.op .add [base, .const value]) =>
+      /- `inst_select_exp c tar temp (Load exp)` (`word_instScript.sml:234-245`)
+         checks the address for `Op Add [exp'; Const w]` and keeps `w` in the
+         `Addr temp w` it emits, selecting only `exp'`.  Folding that `w` into
+         an `addi` instead costs an extra instruction and loses the offset the
+         Word-to-Stack pass would have fused: `calculate_total_blob_gas` in the
+         stateless-pancaketh guest came out as `addi a0, a0, 264; ld a0, 0(a0)`
+         where Cake emits `ld a0, 264(a0)`.  Note that Cake splits on the
+         address shape and still selects `exp'` with the ordinary target
+         configuration; suppressing immediates for the whole address would also
+         reach nested subexpressions, where Cake selects `addi`/`slli`. -/
+      let (prelude, selectedBase) := wordInstSelectAtom temp base
+      wordInstSelectLoadTail temp prelude (.op .add [selectedBase, .const value])
   | .load address =>
       let (prelude, selectedAddress) := wordInstSelectAtom temp address
-      match selectedAddress with
-      | .var address =>
-          /- Cake's `inst_select_exp` lowers every expression-level load to a
-             genuine `Mem Load` instruction.  Keeping this as an `Assign`
-             leaves the load invisible to `word_cse`, so repeated loads cannot
-             share the first result and the final code grows relative to Cake.
-             The selected address is normally the returned temporary, just as
-             in Cake's `Addr temp 0w` case. -/
-          (wordDeadSelectSeq prelude (.inst (.mem .load temp address)), .var temp)
-      | _ =>
-          /- Address selectors intentionally retain an unfused base-plus-
-             offset expression for the later Word-to-Stack offset handling.
-             Preserve that fallback instead of pretending that `temp` holds
-             the complete address. -/
-          (wordDeadSelectSeq prelude (.assign temp (.load selectedAddress)), .var temp)
+      wordInstSelectLoadTail temp prelude selectedAddress
   | .op .add [left, .const value] =>
       let (prelude, selectedLeft) := wordInstSelectAtom temp left
       match selectedLeft with
@@ -259,7 +288,7 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
             .inst (.const (temp + 1) value)
           let code := wordDeadSelectSeq leftPrelude rightPrelude
           (wordDeadSelectSeq code
-            (.assign temp (.shift operator (.var temp) (.var (temp + 1)))), .var temp)
+            (.assign temp (.shift operator selectedLeft (.var (temp + 1)))), .var temp)
   | .shift operator left right =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
@@ -277,11 +306,21 @@ decreasing_by
     Immediate arithmetic is still selected for ordinary assignments, but must
     not change this address shape. -/
 def wordInstSelectAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
+    [WordInstSelectImmediate α]
     (temp : Nat) (expression : WordExp α) : WordProg α × WordExp α :=
-  letI : WordInstSelectImmediate α :=
-    { validBinOpImmediate := fun _ _ => false
-      shiftImmediate := fun _ => .unsupported }
-  wordInstSelectAtom temp expression
+  /- `inst_select_exp c tar temp (Load exp)` (`word_instScript.sml:234-245`)
+     splits on the address shape once: an `Op Add [exp'; Const w]` keeps `w`
+     for the `Addr temp w` it emits and selects only `exp'`, and every other
+     address is selected whole.  Both recursive calls use the ordinary target
+     configuration -- Cake has no second, immediate-suppressing config.  The
+     distinction is observable for `base + ((k - 1) << 3)`: the subtraction
+     and shift must stay `addi`/`slli`, while a final `base + constant` must
+     stay an expression for the memory-offset fusion in Word-to-Stack. -/
+  match expression with
+  | .op .add [left, .const value] =>
+      let (prelude, selectedLeft) := wordInstSelectAtom temp left
+      (prelude, .op .add [selectedLeft, .const value])
+  | _ => wordInstSelectAtom temp expression
 
 def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]

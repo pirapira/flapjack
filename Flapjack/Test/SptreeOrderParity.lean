@@ -69,9 +69,23 @@ def wordSsaLoopSetupOrderGuard : Bool :=
 
 #guard wordSsaLoopSetupOrderGuard
 
+def wordSsaFfiOrderGuard : Bool :=
+  let state : WordSsaState :=
+    { current := [(0, 129), (8, 185), (4, 133), (12, 213),
+        (18, 137), (26, 209), (22, 141)], next := 237 }
+  match (wordSsaRenameProgram state
+      (.ffi "foo" 2 4 6 8 ([0, 4, 8, 12, 18, 22, 26], []) : WordProg Nat)).2 with
+  | .seq (.move 0 moves) _ =>
+      moves == [(239, 129), (243, 185), (247, 133), (251, 213),
+        (255, 137), (259, 209), (263, 141)]
+  | _ => false
+
+#guard wordSsaFfiOrderGuard
+
 def parityGuard : Bool :=
   sptreeOrderGuard && wordSsaReconcileOrderGuard &&
-    wordSsaFixInconsistenciesOrderGuard && wordSsaLoopSetupOrderGuard
+    wordSsaFixInconsistenciesOrderGuard && wordSsaLoopSetupOrderGuard &&
+    wordSsaFfiOrderGuard
 
 #guard parityGuard
 

@@ -27,6 +27,18 @@ example :
     wordSsaAbiParameters 3 = [0, 2, 4] := by
   rfl
 
+/- Cake's `ssa_cc_trans_inst` routes LongMul through its fixed architectural
+   operands and explicitly copies both results back to fresh SSA names. -/
+example :
+    wordSsaRenameProgram ({ current := [], next := 10 } : WordSsaState)
+        (.inst (.arith (.longMul 1 2 3 4)) : WordProg Nat) =
+      ({ current := [(2, 14), (1, 10)], next := 18 },
+        .seq (.move 1 [(0, 3), (4, 4)])
+            (.seq (.inst (.arith (.longMul 6 0 0 4)))
+            (.move 1 [(14, 0), (10, 6)]))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRead, wordSsaFresh, wordSsaSeq, lookupNatInfo]
+
 /- CakeML's fresh-name limit scans the body only, so unused ABI formals do not
    move the full-SSA name stream. -/
 example :

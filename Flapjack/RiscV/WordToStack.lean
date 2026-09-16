@@ -3071,7 +3071,7 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
       wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount bitmapRegister frameSlots
         wordBits storeConstsStub state body
   | .assign destination value =>
-      (wordStackCompileExpToPhysicalNat config destination value).map
+      (wordStackCompileExpNat config destination value).map
         (fun program => (program, state))
   | .call returns (some target) arguments
       (some (exception, body, handlerLabel, handlerEntryLabel)) => do
@@ -3601,7 +3601,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .skip => some (.skip, state)
   | .move _ moves => (wordStackMoveList config moves).map (fun code => (code, state))
   | .assign destination value =>
-      (wordStackCompileExpToPhysicalNat config destination (wordExpToNat value)).map
+      (wordStackCompileExpNat config destination (wordExpToNat value)).map
         (fun code => (code, state))
   | .inst (.const destination value) =>
       (wordStackCompileExpToPhysicalNat config destination

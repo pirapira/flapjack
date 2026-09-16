@@ -196,6 +196,7 @@ import Flapjack.Test.CakeFramePolicy
 import Flapjack.Test.CakeFrameContainment
 import Flapjack.Test.WordStackCallParity
 import Flapjack.Test.WordInstNormalizeParity
+import Flapjack.Test.WordInstSelectParity
 import Flapjack.Test.CakeForcedParity
 import Flapjack.Test.CakeMkBijParity
 import Flapjack.Test.CakeSsaSetupParity

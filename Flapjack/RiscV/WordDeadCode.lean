@@ -28,6 +28,9 @@ def wordDeadAddReads (live : List Nat) (reads : List Nat) : List Nat :=
 def wordDeadRemoveWrites (live : List Nat) (writes : List Nat) : List Nat :=
   live.filter (fun name => name ∉ writes)
 
+def wordDeadCallLive (cutsets : List Nat × List Nat) (arguments : List Nat) : List Nat :=
+  wordDeadAddReads [] (cutsets.1 ++ cutsets.2 ++ arguments)
+
 /-! Cake's `remove_dead (Move pri ls)` keeps the priority of the surviving
     moves.  The priority orders the coalescing worklist (`sort_moves` sorts
     descending and `do_coalesce` consumes the first compatible move), so the
@@ -128,9 +131,7 @@ def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) �
               handlerLabel, handlerEntryLabel)
       (.call (some (destinations, cutsets, returnCode', returnLabel, entryLabel))
           target arguments handler',
-        wordDeadAddReads live (wordProgReadVars
-          (.call (some (destinations, cutsets, returnCode', returnLabel, entryLabel))
-            target arguments handler')))
+        wordDeadCallLive cutsets arguments)
   | .call returns target arguments handler, live, _ =>
       (.call returns target arguments handler,
         wordDeadAddReads live (wordProgReadVars

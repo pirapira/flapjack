@@ -99,20 +99,20 @@ theorem compile_full_pan_value_shMemStore_word_relation
     (hcompiledValue : firstCompiledExp context sourceValue =
       some compiledValue)
     (hcrepAddress : evalCrepFullExp
-      (updateCrepLocal state.locals (maxCrepExpVar [compiledValue] + 1) value) state.memory
+      (updateCrepLocal state.locals (maxCrepExpVar [compiledAddress] + 1) value) state.memory
       baseAddress topAddress compiledAddress = some address)
     (hcrepValue : evalCrepFullExp state.locals state.memory
       baseAddress topAddress compiledValue = some value)
-    (hsharedMem : sharedMem (storeMemOp size) (maxCrepExpVar [compiledValue] + 1) address
+    (hsharedMem : sharedMem (storeMemOp size) (maxCrepExpVar [compiledAddress] + 1) address
       { state with
-        locals := updateCrepLocal state.locals (maxCrepExpVar [compiledValue] + 1) value } =
+        locals := updateCrepLocal state.locals (maxCrepExpVar [compiledAddress] + 1) value } =
       some targetState)
     (htargetRel : panValueCrepStateRel structs context sourceLocals sourceGlobals
       (updatePanValueMemory sourceMemory address (.word value))
       { targetState with
         locals := restoreCrepLocal targetState.locals
-          (maxCrepExpVar [compiledValue] + 1)
-          (state.locals (maxCrepExpVar [compiledValue] + 1)) }) :
+          (maxCrepExpVar [compiledAddress] + 1)
+          (state.locals (maxCrepExpVar [compiledAddress] + 1)) }) :
     evalPanValueProgWithPrimitiveCallsAndFfi
       primitive sourceHandler structs sourceFunctions
       baseAddress topAddress bytesInWord (fuel + 2)
@@ -126,16 +126,16 @@ theorem compile_full_pan_value_shMemStore_word_relation
       some (.normal
         { targetState with
           locals := restoreCrepLocal targetState.locals
-            (maxCrepExpVar [compiledValue] + 1)
-            (state.locals (maxCrepExpVar [compiledValue] + 1)) }) ∧
+            (maxCrepExpVar [compiledAddress] + 1)
+            (state.locals (maxCrepExpVar [compiledAddress] + 1)) }) ∧
     panValueCrepControlRel structs context exceptionRel
       (.normal sourceLocals sourceGlobals
         (updatePanValueMemory sourceMemory address (.word value)))
       (.normal
         { targetState with
           locals := restoreCrepLocal targetState.locals
-            (maxCrepExpVar [compiledValue] + 1)
-            (state.locals (maxCrepExpVar [compiledValue] + 1)) }) := by
+            (maxCrepExpVar [compiledAddress] + 1)
+            (state.locals (maxCrepExpVar [compiledAddress] + 1)) }) := by
   have hsteps := compile_full_pan_value_shMemStore_word_correct
     context structs sourceFunctions functions sourceLocals sourceGlobals
     sourceMemory state targetState primitive sourceHandler crepPrimitive ffi

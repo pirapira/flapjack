@@ -13,7 +13,8 @@ def sourceToLoopCompileContext : CompileContext (RiscV.Word 64) :=
     bytesInWord := BitVec.ofNat 64 8 }
 
 def sourceToLoopLoopContext : LoopContext (RiscV.Word 64) :=
-  { vars := [(1, 1)], functions := [], maxVar := 0, target := .rv64i }
+  { vars := [(1, 1), (2, 2), (3, 3), (4, 4)], functions := [],
+    maxVar := 0, target := .rv64i }
 
 def sourceToLoopState : LoopState (RiscV.Word 64) :=
   { locals := fun _ => none

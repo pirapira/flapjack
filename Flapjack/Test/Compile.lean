@@ -167,7 +167,7 @@ def highVariableContext : CompileContext Nat :=
 #guard
   match compileProg highVariableContext
       (.shMemStore .op8 (.const 10) (.var .local "x")) with
-  | .dec 8 (.var 7) (.shMem .store8 8 (.const 10)) => true
+  | .dec 1 (.var 7) (.shMem .store8 1 (.const 10)) => true
   | _ => false
 
 def crepAddCarryHandler : CrepPrimitiveHandler Nat

@@ -253,7 +253,8 @@ def loopShrink (contexts : List (List Nat × List Nat)) :
 termination_by program => (sizeOf program, 0)
 
 def loopShrinkFixed (contexts : List (List Nat × List Nat))
-    (liveIn : List Nat) (body : LoopProg α) (loopLiveOut bodyEntryLive : List Nat) :
+    (liveIn : List Nat) (body : LoopProg α)
+    (loopLiveOut bodyEntryLive : List Nat) :
     Nat → List Nat → Option (LoopProg α × List Nat)
   | 0, _ => none
   | fuel + 1, previous =>

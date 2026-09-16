@@ -80,7 +80,7 @@ def cakeGetStackOnly {α : Type u} (program : WordProg α) : List Nat :=
 /-! RISC-V `get_forced` traversal.  The source adds hardware interference
     edges for the carry and long-multiply instructions, then walks sequence,
     branch, call-handler, and loop bodies in reverse continuation order. -/
-def cakeForcedArith : WordArith → List (Nat × Nat)
+def cakeForcedArith {α : Type u} : WordArith α → List (Nat × Nat)
   | .addCarry destination _ sourceLeft sourceRight _ =>
       getForcedAddCarry destination sourceLeft sourceRight
   | .cakeAddCarry destination sourceLeft sourceRight _ =>

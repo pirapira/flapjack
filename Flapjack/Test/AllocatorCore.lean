@@ -49,11 +49,11 @@ example (slots : List Nat) (edges preferences : List (Nat × Nat))
     colouring hcolouring
 
 example :
-    wordInstVars (.arith (.addCarry 1 2 3 4 5)) = [3, 4, 5, 1, 2] := by
+    wordInstVars (α := Nat) (.arith (.addCarry 1 2 3 4 5)) = [3, 4, 5, 1, 2] := by
   exact wordInstVars_addCarry
 
 example :
-    wordAllocateLinearInstructions
+    wordAllocateLinearInstructions (α := Nat)
       [.arith (.addCarry 0 1 2 3 4), .arith (.addCarry 5 6 0 1 2)] =
       some { vars := [(6, 8), (5, 7), (1, 3), (0, 2), (4, 6), (3, 5), (2, 4)] } := by
   exact wordAllocateLinearInstructions_example

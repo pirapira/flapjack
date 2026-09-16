@@ -24,7 +24,7 @@ theorem evalWordStackMachine_direct_longMul_spilled_preserves_unrelated_values
       some (.stack sourceLeftSlot))
     (hsourceRight : wordStackLocation config sourceRight =
       some (.stack sourceRightSlot))
-    (hspecial : wordSpecialArithLocationsSafe
+    (hspecial : wordSpecialArithLocationsSafe (α := Nat)
       (.longMul destinationLeft destinationRight sourceLeft sourceRight)
       config.locations = true)
     (hreserved : config.scratch ≠ config.addressScratch)

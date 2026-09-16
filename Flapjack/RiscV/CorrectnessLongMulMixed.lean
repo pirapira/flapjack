@@ -24,7 +24,7 @@ theorem evalWordStackMachine_longMul_stackDest_preserves_other_value [NeZero wid
     (hsourceRight : wordStackLocation config sourceRight =
       some sourceRightLocation)
     (hother : wordStackLocation config other = some otherLocation)
-    (hsafe : wordStackLongMulLocationsSafe config
+    (hsafe : wordStackLongMulLocationsSafe (α := Nat) config
       (.longMul destinationLeft destinationRight sourceLeft sourceRight) = true)
     (hreserved : config.scratch ≠ config.addressScratch)
     (hother_destinationLeft : otherLocation ≠ .stack destinationLeftSlot)

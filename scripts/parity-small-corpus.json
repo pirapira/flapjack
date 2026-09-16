@@ -216,6 +216,14 @@
       "source_reference": "flatten_exp matches Op Sub before the clause that rewrites Op op (x::xs) to Op op [.. xs; x] (word_instScript.sml), because that rewrite is only sound for the commutative operators. Covers a - b, b - a, a subtraction of two loads, and a left-nested chain.",
       "cake_sha256": "f4f975311de583fe87e4fb2693c797aff8d61eb4d767d8cbd7ea45b22c286b84",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/address_shift_operand.pnk",
+      "source_reference": "inst_select_exp c tar temp (Shift sh exp n) (word_instScript.sml) shifts the operand it selected, so a shift's left operand must not be discarded. With binary-operation immediates disabled for address selection that operand comes back as an expression, and ignoring it dropped the constant: lds 1 (1000 + (k - 1) * 8) compiled as lds 1 (1000 + k * 8). shifted_value is exact; shifted_offset and nested_shift now compute the right value but still cost two extra instructions, tracked by flapjack-cey.",
+      "cake_sha256": "7a3640a67c0bf27ddd40c3e14501ca1288d53a3a99a7ad45ca4ccab2809fc80a",
+      "tracked_beads": [
+        "flapjack-cey"
+      ]
     }
   ]
 }

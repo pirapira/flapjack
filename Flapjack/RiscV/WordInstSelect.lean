@@ -286,12 +286,29 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
               (.inst (.arith (.shift operator temp left (.imm value)))), .var temp)
       | _, .outOfRange =>
           (.inst (.const temp 0), .var temp)
-      | _, _ =>
+      | selectedLeft, _ =>
+          /- `wordInstSelectAtom` does not always leave the whole left operand
+             in `temp`: with binary-operation immediates disabled -- which is
+             how addresses are selected -- `base + c` comes back as the
+             expression `.op .add [.var temp, .const c]`, with only `base` in
+             `temp`.  Shifting `.var temp` therefore dropped the `+ c`, and
+             `lds 1 (1000 + (k - 1) * 8)` was compiled as if it were
+             `lds 1 (1000 + k * 8)`.  Shift what the selector returned.
+
+             Cake reaches this shape differently: `inst_select_exp c tar temp
+             (Shift sh exp n)` (`word_instScript.sml`) selects `exp` into
+             `temp` with the ordinary configuration and then shifts that
+             register by the immediate, so it emits one fewer instruction
+             here.  Materialising `selectedLeft` into `temp` to match makes
+             `wordToStack` reject the result on the guest's
+             `bls_g2_msm_discount`, so the expression carrier stays and the
+             remaining instruction-count difference is left alone. -/
           let rightPrelude : WordProg α :=
             .inst (.const (temp + 1) value)
           let code := wordDeadSelectSeq leftPrelude rightPrelude
           (wordDeadSelectSeq code
-            (.assign temp (.shift operator (.var temp) (.var (temp + 1)))), .var temp)
+            (.assign temp (.shift operator selectedLeft (.var (temp + 1)))), .var temp)
+
   | .shift operator left right =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right

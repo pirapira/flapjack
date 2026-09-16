@@ -232,8 +232,8 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         | _ => false
       let memorySupported :=
         match memoryOperator with
-        | .load | .store => true
-        | _ => false
+        | .load | .load8 | .load16 | .load32
+        | .store | .store8 | .store16 | .store32 => true
       let canFuse :=
         right == scratch && address == addressRegister &&
           offsetOperator && offsetFits && memorySupported
@@ -269,8 +269,7 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         | .sub => value ≤ 2 ^ 11
         | _ => false
       let canFuse :=
-        right == scratch && address == addressRegister && offsetOperator && offsetFits &&
-          memoryOperator == .store
+        right == scratch && address == addressRegister && offsetOperator && offsetFits
       if canFuse then
         ⟨[.asm (.memOffset memoryOperator operator source base value) [] 0],
           false, counter⟩

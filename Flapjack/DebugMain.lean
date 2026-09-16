@@ -24,7 +24,8 @@ def emit [Repr α] (label : String) (value : α) : IO Unit :=
 def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO Unit := do
   let (label, arity, body) := entry
   let selected := RiscV.wordInstSelectProgramFrom
-    (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body))
+    (RiscV.wordFuseConditionsAndFold
+      (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body)))
   let (_ssaState, renamedParameters, ssaProgram) :=
     wordFullSsaCcTrans arity selected
   let deadAfterSsa := RiscV.wordRemoveDeadProgram ssaProgram
@@ -41,6 +42,19 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   emit "stage=source_word_two_reg" two
   emit "stage=source_word_unreach" unreach
   emit "stage=source_word_dead" dead
+  let tree := wordClashTree dead []
+  let forced := RiscV.CakeRegAlloc.cakeGetForced dead
+  let (wordMoves, spillCosts) := wordGetHeuristics 3 label dead
+  let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
+  let bij := RiscV.CakeRegAlloc.cakeMkBij tree
+  let scost := spillCosts.map (fun costs =>
+    costs.filterMap (fun entry =>
+      (lookupNatInfo entry.1 bij.toAllocator).map
+        (fun node => (node, entry.2))))
+  emit "stage=source_word_colour"
+    (RiscV.CakeRegAlloc.cakeDoRegAlloc .irc scost
+      RiscV.CakeRegAlloc.cakeRiscVRegisterCount moves tree forced
+      (RiscV.CakeRegAlloc.cakeGetStackOnly dead))
   match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead label
       (wordSsaAbiParameters arity) selected with
   | none => emit "stage=source_word_allocator" "none"
@@ -72,7 +86,8 @@ def dumpPipeline (pipeline : FlapjackPipelineResult (RiscV.Word 64)) : IO Unit :
   let sourceSelected := sourceWord.map (fun (label, arity, body) =>
     (label, arity,
       RiscV.wordInstSelectProgramFrom
-        (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body))))
+        (RiscV.wordFuseConditionsAndFold
+          (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body)))))
   emit "stage=source_word_inst_select" sourceSelected
   match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked
       (RiscV.wordStackInitialBitmaps false) sourceWord with

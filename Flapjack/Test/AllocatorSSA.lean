@@ -28,6 +28,16 @@ example :
   rfl
 
 example :
+    wordSsaRenameProgram
+        ({ current := [(10, 6)], next := 100 } : WordSsaState)
+        ((.inst (.arith (.shift .asr 20 6 (.reg 10)))) : WordProg Nat) =
+        ({ current := [(20, 100), (10, 6)], next := 104 },
+        .seq (.move 1 [(8, 6)])
+          (.inst (.arith (.shift .asr 100 6 (.reg 8))))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameInstProgram, wordSsaFresh, wordSsaRead, lookupNatInfo]
+
+example :
     wordProgAtomicClashes
         ((.inst (.arith (.longMul 0 1 2 3))) : WordProg Nat) [] =
       [(0, 1), (0, 2), (0, 3)] := by

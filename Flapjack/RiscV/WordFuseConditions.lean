@@ -70,6 +70,21 @@ def wordProgToList : WordProg α → List (WordProg α)
   | .seq first second => wordProgToList first ++ wordProgToList second
   | other => [other]
 
+/-! `word_simp` starts with Cake's `Seq_assoc`, which removes `Skip` at
+    sequence boundaries before inspecting a materialized condition.  The
+    source lowering can retain the same harmless wrappers inside an `Ite`
+    branch, so normalize the sequence spine when recognizing such branches.
+    This intentionally does not rewrite any other instruction. -/
+def wordProgStripSeqSkips : WordProg α → WordProg α
+  | .seq first second =>
+      let first := wordProgStripSeqSkips first
+      let second := wordProgStripSeqSkips second
+      match first, second with
+      | .skip, second => second
+      | first, .skip => first
+      | first, second => .seq first second
+  | program => program
+
 /-- Rebuild a right-nested sequence from a statement list. -/
 def wordListToProg : List (WordProg α) → WordProg α
   | [] => .skip
@@ -87,11 +102,16 @@ def wordProgFuel : WordProg α → Nat
 result of a comparison in `t`. -/
 def wordBooleanDefinition? [BEq α] [OfNat α 0] [OfNat α 1] :
     WordProg α → Option Nat
-  | .ite _ _ _ (.assign thenName (.const thenValue))
-      (.assign elseName (.const elseValue)) =>
-      if thenName == elseName && thenValue == (1 : α) && elseValue == (0 : α) then
-        some thenName
-      else none
+  | .ite _ _ _ thenBranch elseBranch =>
+      let thenBranch := wordProgStripSeqSkips thenBranch
+      let elseBranch := wordProgStripSeqSkips elseBranch
+      match thenBranch, elseBranch with
+      | .assign thenName (.const thenValue),
+          .assign elseName (.const elseValue) =>
+          if thenName == elseName && thenValue == (1 : α) && elseValue == (0 : α) then
+            some thenName
+          else none
+      | _, _ => none
   | _ => none
 
 /-! Cake's `word_simp$simp_duplicate_if` duplicates a short straight-line
@@ -104,6 +124,8 @@ def wordBooleanDefinition? [BEq α] [OfNat α 0] [OfNat α 1] :
 def wordConditionDefinition? [BEq α] [OfNat α 0] [OfNat α 1] :
     WordProg α → Option (Cmp × Nat × WordRegImm α × WordProg α × WordProg α)
   | .ite operator condition right thenBranch elseBranch =>
+      let thenBranch := wordProgStripSeqSkips thenBranch
+      let elseBranch := wordProgStripSeqSkips elseBranch
       match wordBooleanDefinition? (.ite operator condition right thenBranch elseBranch) with
       | some _ => some (operator, condition, right, thenBranch, elseBranch)
       | none => none
@@ -154,9 +176,11 @@ def wordDuplicateConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
               match wordConditionTest? condition [] rest with
               | some (before, thenBranch, elseBranch, remaining) =>
                   let thenBody := wordListToProg
-                    (wordProgToList thenDefinition ++ before ++ [thenBranch])
+                    (wordDuplicateConditionsAux fuel
+                      (wordProgToList thenDefinition ++ before ++ [thenBranch]))
                   let elseBody := wordListToProg
-                    (wordProgToList elseDefinition ++ before ++ [elseBranch])
+                    (wordDuplicateConditionsAux fuel
+                      (wordProgToList elseDefinition ++ before ++ [elseBranch]))
                   .ite operator condition right thenBody elseBody ::
                     wordDuplicateConditionsAux fuel remaining
               | none =>

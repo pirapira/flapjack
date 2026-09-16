@@ -1,4 +1,5 @@
 import Flapjack.RiscV.WordInstSelect
+import Flapjack.RiscV.WordCse
 
 /-!
 # Cake `pull_exp`/`flatten_exp` constant-placement oracle (GH #1024)
@@ -39,6 +40,23 @@ the port's normalizer reaches them.
 namespace Flapjack.Test.WordInstNormalizeParity
 
 open Flapjack Flapjack.RiscV
+
+/-! Cake's load CSE canonicalizes the address used for the fact-table key, but
+    retains the address register in the emitted memory instruction.  This
+    matters when the address register was explicitly materialized: replacing
+    it by its canonical predecessor changes the final branch layout even
+    though the load is semantically equivalent. -/
+
+def cseLoadAddressProgram : WordProg Nat :=
+  .seq (.move 1 [(13, 15)])
+    (.inst (.mem .load 17 13))
+
+def cseLoadAddressPreservesEmission : Bool :=
+  match wordCseProp cseLoadAddressProgram with
+  | .seq (.move 1 [(13, 15)]) (.inst (.mem .load 17 13)) => true
+  | _ => false
+
+#guard cseLoadAddressPreservesEmission
 
 /-- In-order atoms of an `Op Add` spine: `some name` for a variable, `none`
 for a constant. -/

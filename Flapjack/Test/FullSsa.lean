@@ -34,7 +34,8 @@ example :
         (.seq (.inst (.arith (.longMul 6 0 0 4)))
             (.move 1 [(8, 0), (4, 6)]))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
-    wordSsaRead, wordSsaFresh, wordSsaSeq, lookupNatInfo]
+    wordSsaRenameInstProgram, wordSsaRead, wordSsaFresh, wordSsaSeq,
+    lookupNatInfo]
 
 example :
     wordSsaAbiParameters 3 = [0, 2, 4] := by

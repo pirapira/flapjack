@@ -270,7 +270,7 @@ def runChecks : IO Bool := do
     , ("the source selector boundary preserves Cake's nested expression shape", nestedSelectorBoundaryMatches)
     , ("a variable shift uses Cake's two operand moves and register shift", variableShiftSelectorMatches)
     , ("a constant assignment becomes Cake's Const instruction", constantSelectorMatches)
-    , ("a load becomes Cake's memory instruction after its address move", loadSelectorMatches)
+    , ("a load materializes Cake's Mem instruction after its address move", loadSelectorMatches)
     , ("a nested load remains Cake's memory instruction", nestedLoadSelectorMatches)
     , ("a nested load preserves an unfused address expression", nestedLoadOffsetFallbackMatches)
   ]

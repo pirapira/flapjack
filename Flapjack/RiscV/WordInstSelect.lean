@@ -190,7 +190,7 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
   | .const value => (.inst (.const temp value), .var temp)
   | .var name => (.move 0 [(temp, name)], .var temp)
   | .lookup store => (.get temp store, .var temp)
-    | .load address =>
+  | .load address =>
       let (prelude, selectedAddress) := wordInstSelectAtom temp address
       match selectedAddress with
       | .var address =>

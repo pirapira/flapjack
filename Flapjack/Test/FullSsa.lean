@@ -14,7 +14,7 @@ example :
   have hAbi : wordSsaCallAbiRegisters 1 2 = [2, 4] := by rfl
   simp [wordSsaRenameFunctionWithEntry, wordSsaEntryMove,
     wordSsaRenameFunction, wordSsaSetupParameters, wordSsaLimitVar,
-    wordListMaximum, wordProgVariables, wordProgReadVars, wordProgWriteVars,
+    wordProgCakeMaxVar,
     wordSsaRenameProgram, wordSsaRenameProgramWithLoops, wordSsaRead,
     wordSsaFreshList, wordSsaFresh, wordSsaSeq, hAbi, lookupNatInfo]
 
@@ -34,7 +34,7 @@ example :
         (.seq (.inst (.arith (.longMul 6 0 0 4)))
             (.move 1 [(8, 0), (4, 6)]))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
-    wordSsaRenameInstProgram, wordSsaRead, wordSsaFresh, wordSsaSeq,
+    wordSsaRead, wordSsaFresh, wordSsaSeq,
     lookupNatInfo]
 
 example :
@@ -63,7 +63,7 @@ example :
         .seq (.move 1 [(5, 0), (9, 2), (13, 4)]) .skip) := by
   simp [wordSsaRenameFunctionWithEntry, wordSsaEntryMove,
     wordSsaRenameFunction, wordSsaSetupParameters, wordSsaLimitVar,
-    wordListMaximum, wordProgVariables, wordProgReadVars, wordProgWriteVars,
+    wordProgCakeMaxVar,
     wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaFreshList, wordSsaFresh]
 
@@ -76,7 +76,7 @@ example :
   simp [wordSsaRenameFunctionWithEntryAndDeadMoves,
     wordSsaRenameFunctionWithEntry, wordSsaEntryMove,
     wordSsaRenameFunction, wordSsaSetupParameters, wordSsaLimitVar,
-    wordListMaximum, wordProgVariables, wordProgReadVars, wordProgWriteVars,
+    wordProgCakeMaxVar, wordProgReadVars,
     wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaFreshList, wordSsaFresh]
 

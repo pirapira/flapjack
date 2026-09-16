@@ -1684,7 +1684,10 @@ def wordStackFfi {α : Type} (config : WordStackConfig) (function : FunName)
         (.register 11, configurationLengthLocation),
         (.register 12, arrayLocation),
         (.register 13, arrayLengthLocation) ]
-    let prelude ← wordStackParallelLocationMove config moves
+    -- Cake's `parmove` materializes this independent ABI suffix in reverse
+    -- order (`REVERSE (pmov ...)`).  Keep that observable order here while
+    -- the scheduler itself continues to consume destination/source pairs.
+    let prelude ← wordStackParallelLocationMove config moves.reverse
     pure (.seq prelude (.ffi function 10 11 12 13 0))
 
 def wordStackPhysicalMovesFrom (config : WordStackConfig) :

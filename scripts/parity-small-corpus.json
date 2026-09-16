@@ -224,6 +224,12 @@
       "source_reference": "Cake word_instScript.sml:234-245 and 252-275: only the outer constant displacement of a load address is held for Word-to-Stack fusion; a global base plus a computed offset uses the ordinary target selector so nested add/sub/shift immediates are preserved.",
       "cake_sha256": "7f030af4246a3b17ab6ee27d388c46a27ad20e63eb033f2335d60d587bbc6628",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/global_base_shift_address.pnk",
+      "source_reference": "inst_select_exp c tar temp (Load exp) (word_instScript.sml:234-245) splits on the address shape -- Op Add [exp'; Const w] keeps w for the Addr temp w displacement and selects only exp' -- and both recursive calls use the ordinary asm_config. Flapjack instead reconfigured the target with validBinOpImmediate := fun _ _ => false for the whole address, which also reached nested subexpressions: in lds 1 (table + (k - 1) * 8) the inner k - 1 came back as an expression rather than a register, so the Shift case could not use its immediate and materialized the shift amount into a second register. Cake emits addi/slli; Flapjack emitted ori/or/addi/sll. A global base is what exposes this, because a constant base normalizes to Op Add [shift; Const] and takes the displacement branch.",
+      "cake_sha256": "1fb77c6e45299403b7c0b5755dd356c218bad3c6c2748094291c3b1dd248100e",
+      "tracked_beads": []
     }
   ]
 }

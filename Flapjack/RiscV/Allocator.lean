@@ -232,6 +232,7 @@ def wordInstReadVars : WordInst → List Nat
       | .cakeAddCarry _ sourceLeft sourceRight carry =>
           [sourceLeft, sourceRight, carry]
       | .div _ dividend divisor => [dividend, divisor]
+      | .binOp _ _ sourceLeft sourceRight => [sourceLeft, sourceRight]
   | .mem operator destination address =>
       match operator with
       | .load | .load8 | .load16 | .load32 => [address]
@@ -249,6 +250,7 @@ def wordInstWriteVars : WordInst → List Nat
       | .cakeAddCarry destination _ _ carry =>
           [destination, carry]
       | .div destination _ _ => [destination]
+      | .binOp _ destination _ _ => [destination]
   | .mem operator destination _ =>
       match operator with
       | .load | .load8 | .load16 | .load32 => [destination]
@@ -440,6 +442,11 @@ def wordSsaRenameInst (state : WordSsaState) : WordInst → WordSsaState × Word
           let divisor := wordSsaRead state divisor
           let (state, freshDestination) := wordSsaFresh state destination
           (state, .arith (.div freshDestination dividend divisor))
+      | .binOp operator destination sourceLeft sourceRight =>
+          let sourceLeft := wordSsaRead state sourceLeft
+          let sourceRight := wordSsaRead state sourceRight
+          let (state, freshDestination) := wordSsaFresh state destination
+          (state, .arith (.binOp operator freshDestination sourceLeft sourceRight))
   | .mem operator destination address =>
       let address := wordSsaRead state address
       match operator with
@@ -1257,6 +1264,8 @@ def wordClashTreeDeltaInst : WordInst → WordClashTree
       .delta [destination, carry] [carry, sourceRight, sourceLeft]
   | .arith (.div destination dividend divisor) =>
       .delta [destination] [divisor, dividend]
+  | .arith (.binOp _ destination sourceLeft sourceRight) =>
+      .delta [destination] [sourceRight, sourceLeft]
   | .mem .load destination address
   | .mem .load8 destination address
   | .mem .load16 destination address
@@ -1796,6 +1805,8 @@ def wordApplyColourArith (colour : Nat → Nat) : WordArith → WordArith
         (colour sourceRight) (colour carry)
   | .div destination dividend divisor =>
       .div (colour destination) (colour dividend) (colour divisor)
+  | .binOp operator destination sourceLeft sourceRight =>
+      .binOp operator (colour destination) (colour sourceLeft) (colour sourceRight)
 
 def wordApplyColourInst (colour : Nat → Nat) : WordInst → WordInst
   | .arith operation => .arith (wordApplyColourArith colour operation)
@@ -2308,7 +2319,7 @@ def wordSpecialArithLocationsSafe (operation : WordArith)
                   sourceLeft != 31 && sourceRight != 31 && carry != 31
             | _, _, _, _ => true
       | _, _, _, _ => false
-  | .longDiv _ _ _ _ _ | .div _ _ _ => true
+  | .longDiv _ _ _ _ _ | .div _ _ _ | .binOp _ _ _ _ => true
 
 def wordProgSpecialLocationsSafe (locations : NatInfoMap WordLocation) :
     WordProg α → Bool

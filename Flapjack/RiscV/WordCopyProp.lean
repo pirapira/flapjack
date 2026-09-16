@@ -75,6 +75,13 @@ def wordCopyInst (state : WordCopyState) : WordInst → WordInst × WordCopyStat
       | .div destination dividend divisor =>
           (.arith (.div destination (wordCopyLookup state dividend)
             (wordCopyLookup state divisor)), wordCopyRemove state destination)
+      | .binOp operator destination sourceLeft sourceRight =>
+          let sourceLeft := wordCopyLookup state sourceLeft
+          let sourceRight' := wordCopyLookup state sourceRight
+          let sourceRight :=
+            if sourceRight' = destination then sourceRight else sourceRight'
+          (.arith (.binOp operator destination sourceLeft sourceRight),
+            wordCopyRemove state destination)
   | .mem operator destination address =>
       match operator with
       | .load | .load8 | .load16 | .load32 =>

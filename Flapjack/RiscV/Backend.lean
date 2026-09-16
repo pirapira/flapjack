@@ -154,6 +154,16 @@ def wordArithToInstruction [NeZero width] :
       let dividend ← registerOfNat dividend
       let divisor ← registerOfNat divisor
       pure (.divU destination dividend divisor)
+  | .binOp operator destination sourceLeft sourceRight => do
+      let destination ← registerOfNat destination
+      let sourceLeft ← registerOfNat sourceLeft
+      let sourceRight ← registerOfNat sourceRight
+      pure (match operator with
+        | .add => .add destination sourceLeft sourceRight
+        | .sub => .sub destination sourceLeft sourceRight
+        | .and => .and destination sourceLeft sourceRight
+        | .or => .or destination sourceLeft sourceRight
+        | .xor => .xor destination sourceLeft sourceRight)
 
 def wordArithToInstructions [NeZero width] :
     WordArith → Option (List (Instruction width))

@@ -219,9 +219,20 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
       | .op operator [left, right] =>
           let (leftPrelude, left) := wordInstSelectAtom temp left
           let (rightPrelude, right) := wordInstSelectAtom (temp + 1) right
+          /- Cake's `inst_select_exp` emits an operation whose operands are the
+             register numbers the materialising preludes wrote, not rewritable
+             expressions.  Keeping that carrier is what stops expression-level
+             passes (copy propagation in particular) from folding the operand
+             copies away; the allocation outcome is observable in the final
+             bytes.  The immediates keep the expression form so that the
+             instruction selector's constant folding is untouched. -/
+          let body :=
+            match left, right with
+            | .var left, .var right =>
+                .inst (.arith (.binOp operator destination left right))
+            | _, _ => .assign destination (.op operator [left, right])
           wordDeadSelectSeq leftPrelude
-            (wordDeadSelectSeq rightPrelude
-              (.assign destination (.op operator [left, right])))
+            (wordDeadSelectSeq rightPrelude body)
       | value => .assign destination value
   | .ite operator condition right thenBranch elseBranch =>
       .ite operator condition right

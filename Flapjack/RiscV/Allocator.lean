@@ -1174,7 +1174,8 @@ def wordProgCakeMaxVar : WordProg α → Nat
       max (liveIn.foldl max 0)
         (max (wordProgCakeMaxVar body) (liveOut.foldl max 0))
   | .mustTerminate body => wordProgCakeMaxVar body
-  | .break label | .continue label | .raise label | .locValue label _ => label
+  | .break _ | .continue _ => 0
+  | .raise label | .locValue label _ => label
   | .return label values => values.foldl max label
   | .call returns _ arguments handler =>
       let argumentMax := arguments.foldl max 0

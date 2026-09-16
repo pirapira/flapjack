@@ -22,6 +22,17 @@ val ctxt =
   ``<| vars := (FEMPTY |+ (1,5)); funcs := FEMPTY |+ («f»,(64,0));
       vmax := 10; target := RISC_V |>``;
 
+val ctxt_dec =
+  ``<| vars := (FEMPTY |+ (1,5)); funcs := FEMPTY;
+      vmax := 4; target := RISC_V |>``;
+
+(* Dec must rename the bound source variable to the fresh temporary used by
+   the expression compiler and retain that mapping in the continuation. *)
+val _ = print_eval "dec_renaming"
+  ``crep_to_loop$compile ^ctxt_dec (insert 5 () LN)
+      (crepLang$Dec 9 (crepLang$Const (7w : 8 word))
+         (crepLang$Assign 9 (crepLang$Var 9)))``;
+
 (* Incoming statement-region live set {5}.  The Call cutset must be built
    from this ORIGINAL live set; argument-expression temps are excluded. *)
 val _ = print_eval "cut_set_const_args"

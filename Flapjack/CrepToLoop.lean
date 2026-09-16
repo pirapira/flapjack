@@ -293,7 +293,7 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
       let result := loopCompileExp context (context.maxVar + 1) live value
       match lookupNatInfo name context.vars with
       | some mappedName =>
-          .seq (loopNestedSeq result.code) (.assign mappedName result.expression)
+          loopNestedSeq (result.code ++ [.assign mappedName result.expression])
       | none => .skip
   | .primitive names operator arguments => .primitive names operator arguments
   | .store address value =>

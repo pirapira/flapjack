@@ -166,6 +166,19 @@ def immediateSelectionShape : Bool :=
   | _ => false
 
 #guard immediateSelectionShape
+
+/-! Cake keeps a `base + offset` address in expression form while selecting a
+    load/store address; Word-to-Stack then folds the offset into the memory
+    instruction.  This guard prevents the target-specific immediate selector
+    from changing that source-shaped address lowering. -/
+def selectedAddressExpressionShape : Bool :=
+  match wordInstSelectAddressAtom (α := Word 64) 3
+      (.op .add [.var 2, .const (8 : Word 64)]) with
+  | (.move 0 [(3, 2)], .op .add [.var 3, .const 8]) => true
+  | _ => false
+
+#guard selectedAddressExpressionShape
+
 /-! ## Polymorphic carrier and immediate alignment (bead `flapjack-pxn.9`)
 
 Cake's `asmScript.sml` defines
@@ -184,6 +197,19 @@ def immediateCarrierInstruction : Bool :=
   | _ => false
 
 #guard immediateCarrierInstruction
+
+def rotateImmediateCarrierInstructions : Bool :=
+  match wordArithToInstructions (width := 64)
+      (.shift .ror 1 2 (.imm 5) : WordArith (Word 64)) with
+  | some [.srli temporary source amount,
+      .slli destination source' complement,
+      .or destination' destination'' temporary'] =>
+      temporary = 31 ∧ source = 2 ∧ amount = 5 ∧
+        destination = 1 ∧ source' = 2 ∧ complement = 59 ∧
+        destination' = 1 ∧ destination'' = 1 ∧ temporary' = 31
+  | _ => false
+
+#guard rotateImmediateCarrierInstructions
 
 def constantCarrierInstruction : Bool :=
   match wordInstToInstruction (width := 64)

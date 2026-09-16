@@ -15,20 +15,6 @@ namespace Flapjack
 
 open RiscV
 
-theorem sourceToLoop_identity_call_simulation (value : Word 64) :
-    (do
-      let functions := pipelineLoopFunctions .rv64i 1
-        (compileToCrepe identityCallCompileContext
-          (identityCallDeclarations value))
-      let (_, main) ← lookupLoopFunction 2 functions
-      let result ← evalLoopProgWithFunctions functions 60
-        identityCallLoopState main
-      pure (loopResultValues result)) =
-      (evalPanProgWithCalls identityCallSourceFunctions 20
-        (fun _ => none) (identityCallSourceMain value)).map
-        (fun result => result.2) := by
-  exact compilePanToLoop_identity_call_correct value
-
 #guard
     (do
       let (_, main) ← lookupLoopFunction 2 pipelineCallPipeline.pipeline.loop

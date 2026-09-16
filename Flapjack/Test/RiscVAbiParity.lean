@@ -186,6 +186,27 @@ def immediateCompensationShape : Bool :=
 
 #guard immediateCompensationShape
 
+/-! ### Cake constant propagation before calls
+
+    Cake's `word_simp$const_fp` re-materialises the arguments of a call with
+    `SmartSeq (drop_consts cs args) (Call ...)` and `drop_consts` recurses on
+    the TAIL before emitting the head assignment, so the emitted constant
+    writes appear in reverse argument order
+    (`compiler/backend/word_simpScript.sml:270-308`).  SSA and `remove_dead`
+    later delete the superseded earlier copies, which is why Cake's RISC-V
+    output carries the second argument's constant first.  This is the
+    `callee_abi` ordering defect. -/
+def dropConstsWordProgram : WordProg (Word 64) :=
+  .seq (.assign 6 (.const 5))
+    (.seq (.assign 2 (.const 7)) (.call none (some 5) [6, 2] none))
+
+def dropConstsReversesArguments : Bool :=
+  match (RiscV.wordProgSeqItems (RiscV.wordConstFp dropConstsWordProgram)).reverse with
+  | .call _ _ [6, 2] _ :: .assign 6 (.const 5) :: .assign 2 (.const 7) :: _ => true
+  | _ => false
+
+#guard dropConstsReversesArguments
+
 /-! ### Cake ABI argument overflow
 
     The original `format_var`/`wMoveSingle` materializes arguments past the

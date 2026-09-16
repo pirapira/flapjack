@@ -8,6 +8,7 @@ import Flapjack.RiscV.CakeRegAlloc
 import Flapjack.RiscV.WordFuseConditions
 import Flapjack.RiscV.WordDeadCode
 import Flapjack.RiscV.WordInstSelect
+import Flapjack.RiscV.WordSimp
 import Flapjack.RiscV.WordUnreach
 
 /-!
@@ -131,8 +132,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
           (RiscV.wordFuseConditions
             (RiscV.wordInstSelectProgramFrom
-              (RiscV.wordFlattenProgramFrom
-                (LoopToWord.loopToWordCompFunc label parameters body)))))
+              (RiscV.wordConstFp
+                (RiscV.wordFlattenProgramFrom
+                  (LoopToWord.loopToWordCompFunc label parameters body))))))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -203,8 +205,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
           (RiscV.wordFuseConditions
             (RiscV.wordInstSelectProgramFrom
-              (RiscV.wordFlattenProgramFrom
-                (LoopToWord.loopToWordCompFunc label parameters body)))))
+              (RiscV.wordConstFp
+                (RiscV.wordFlattenProgramFrom
+                  (LoopToWord.loopToWordCompFunc label parameters body))))))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
@@ -294,7 +297,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
         (RiscV.wordFuseConditions
           (RiscV.wordInstSelectProgramFrom
-            (RiscV.wordFlattenProgramFrom body))))
+            (RiscV.wordConstFp
+              (RiscV.wordFlattenProgramFrom body)))))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)

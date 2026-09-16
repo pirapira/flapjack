@@ -8,6 +8,7 @@ import Flapjack.LoopToWord
 import Flapjack.Word
 import Flapjack.RiscV.Allocator
 import Flapjack.RiscV.WordExpressionFlatten
+import Flapjack.RiscV.WordSimp
 import Flapjack.RiscV.RegAlloc
 import Flapjack.RiscV.WordToStack
 import Flapjack.RiscV.WordDiagnostics
@@ -491,8 +492,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
         (RiscV.wordFuseConditions
           (RiscV.wordInstSelectProgramFrom
-            (RiscV.wordFlattenProgramFrom
-              (LoopToWord.loopToWordCompFunc label parameters body)))))
+            (RiscV.wordConstFp
+              (RiscV.wordFlattenProgramFrom
+                (LoopToWord.loopToWordCompFunc label parameters body))))))
       let (_, renamedParameters, renamedProgram, allocation) ←
         RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead label wordParameters
           unallocatedBody

@@ -235,6 +235,18 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
             (wordDeadSelectSeq rightPrelude body)
       | .var source => .move 0 [(destination, source)]
       | value => .assign destination value
+  | .store address value =>
+      let (prelude, address) :=
+        wordInstSelectAtom temp (wordInstNormalizeExp address)
+      match address with
+      | .var address =>
+          /- Cake's selected Store is an actual WordLang Mem instruction
+             addressed through the fresh temporary.  Keeping it as a
+             structured WordProg.store lets copy propagation rewrite the
+             address expression away, which changes the allocator-visible
+             move shape. -/
+          wordDeadSelectSeq prelude (.inst (.mem .store value address))
+      | _ => wordDeadSelectSeq prelude (.store address value)
   | .ite operator condition right thenBranch elseBranch =>
       .ite operator condition right
         (wordInstSelectProgram temp thenBranch)

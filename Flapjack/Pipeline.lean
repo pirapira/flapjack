@@ -489,12 +489,16 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
   | [] => some []
   | (label, parameters, body) :: functions => do
       let wordParameters := wordSsaAbiParameters parameters.length
-      let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
-        (RiscV.wordInstSelectProgramFrom
+      /- Cake's `word_to_word` pipeline keeps the selected Word program intact
+         through full SSA.  In particular, `word_unreach` runs after SSA and
+         the cleanup/CSE passes; removing an unreachable tail here changes
+         `max_var`, and therefore the fresh SSA names and final RISC-V bytes. -/
+      let unallocatedBody :=
+        RiscV.wordInstSelectProgramFrom
           (RiscV.wordFuseConditionsAndFold
             (RiscV.wordConstFp
               (RiscV.wordFlattenProgramFrom
-                (LoopToWord.loopToWordCompFunc label parameters body))))))
+                (LoopToWord.loopToWordCompFunc label parameters body))))
       let (_, renamedParameters, renamedProgram, allocation) ←
         RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead label wordParameters
           unallocatedBody

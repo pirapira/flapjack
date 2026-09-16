@@ -27,8 +27,13 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   let constFp := RiscV.wordConstFp flattened
   let fused := RiscV.wordFuseConditionsAndFold constFp
   let selected := RiscV.wordInstSelectProgramFrom fused
+  /- Keep these labels for probe compatibility, but do not run the legacy
+     front-end DCE/unreachable helper here.  Cake keeps these tails through
+     full SSA; `word_unreach` runs later, after cleanup and allocation. -/
+  let dce := selected
+  let unallocated := selected
   let (_ssaState, renamedParameters, ssaProgram) :=
-    wordFullSsaCcTrans arity selected
+    wordFullSsaCcTrans arity unallocated
   let deadAfterSsa := RiscV.wordRemoveDeadProgram ssaProgram
   let cse := RiscV.wordCseProp deadAfterSsa
   let copy := RiscV.wordCopyProp cse
@@ -39,6 +44,8 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   emit "stage=source_word_const_fp" constFp
   emit "stage=source_word_fused" fused
   emit "stage=source_word_selected_passes" (label, arity, selected)
+  emit "stage=source_word_dce" dce
+  emit "stage=source_word_unallocated" unallocated
   emit "stage=source_word_ssa" (label, arity, renamedParameters, ssaProgram)
   emit "stage=source_word_dead_ssa" deadAfterSsa
   emit "stage=source_word_cse" cse
@@ -61,9 +68,10 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
     (fun move => RiscV.CakeRegAlloc.cakeFullConsistencyOk state0 k
       move.2.1 move.2.2) moves0
   let scost := spillCosts.map (fun costs =>
-      costs.filterMap (fun entry =>
+    RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap bij.nextNode
+      (costs.filterMap (fun entry =>
         (lookupNatInfo entry.1 bij.toAllocator).map
-          (fun node => (node, entry.2))))
+          (fun node => (node, entry.2)))))
   emit "stage=source_word_heuristics" (moves, spillCosts)
   emit "stage=source_word_allocator_inputs"
     (tree, forced, RiscV.CakeRegAlloc.cakeGetStackOnly dead, bij)
@@ -87,7 +95,7 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
       RiscV.CakeRegAlloc.cakeRiscVRegisterCount moves tree forced
       (RiscV.CakeRegAlloc.cakeGetStackOnly dead))
   match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead label
-      (wordSsaAbiParameters arity) selected with
+      (wordSsaAbiParameters arity) unallocated with
   | none => emit "stage=source_word_allocator" "none"
   | some (_, parameters, program, allocation) =>
       emit "stage=source_word_allocator" (parameters, program, allocation)

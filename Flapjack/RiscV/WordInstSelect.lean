@@ -14,6 +14,39 @@ namespace Flapjack.RiscV
 
 open Flapjack
 
+/-! The source selector is shared by the Nat-facing probes and by the
+    concrete RISC-V `Word width` pipeline.  The latter must make the same
+    target-dependent immediate decisions as Cake's `asm_config.valid_imm` and
+    must distinguish an out-of-range constant shift from a selector that has
+    no width information. -/
+
+inductive WordShiftImmediate where
+  | unsupported
+  | valid (amount : Nat)
+  | outOfRange
+  deriving DecidableEq, Repr
+
+class WordInstSelectImmediate (α : Type u) where
+  validBinOpImmediate : BinOp → α → Bool
+  shiftImmediate : α → WordShiftImmediate
+
+instance : WordInstSelectImmediate Nat where
+  validBinOpImmediate _ _ := false
+  shiftImmediate _ := .unsupported
+
+instance : WordInstSelectImmediate (BitVec width) where
+  validBinOpImmediate operator value :=
+    let n := value.toNat
+    match operator with
+    | .sub => n < 2 ^ 11
+    | .add | .and | .or | .xor =>
+        n < 2 ^ 11 || n ≥ 2 ^ width - 2 ^ 11
+  shiftImmediate value :=
+    if value.toNat < width then
+      .valid value.toNat
+    else
+      .outOfRange
+
 def wordInstSelectMaximum : List Nat → Nat
   | [] => 0
   | value :: values => max value (wordInstSelectMaximum values)
@@ -151,7 +184,8 @@ decreasing_by all_goals decreasing_trivial
 def wordInstNormalizeExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] (expression : WordExp α) : WordExp α :=
   wordInstFlattenExp (wordInstPullExp expression)
 
-def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
+def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
+    [WordInstSelectImmediate α]
     (temp : Nat) : WordExp α → WordProg α × WordExp α
   | .const value => (.assign temp (.const value), .var temp)
   | .var name => (.move 0 [(temp, name)], .var temp)
@@ -161,7 +195,17 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
       (wordDeadSelectSeq prelude (.assign temp (.load address)), .var temp)
   | .op .add [left, .const value] =>
       let (prelude, selectedLeft) := wordInstSelectAtom temp left
-      (prelude, .op .add [selectedLeft, .const value])
+      match selectedLeft with
+      | .var left =>
+          if WordInstSelectImmediate.validBinOpImmediate .add value then
+            (wordDeadSelectSeq prelude
+              (.inst (.arith (.binOp .add temp left (.imm value)))), .var temp)
+          else if WordInstSelectImmediate.validBinOpImmediate .sub (0 - value) then
+            (wordDeadSelectSeq prelude
+              (.inst (.arith (.binOp .sub temp left (.imm (0 - value))))), .var temp)
+          else
+            (prelude, .op .add [selectedLeft, .const value])
+      | _ => (prelude, .op .add [selectedLeft, .const value])
   | .op operator [left, right] =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
@@ -174,17 +218,34 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
           .shift .lsl (.lookup .heapLength) (.const value) =>
           if value = (1 : α) then
             (.seq (.get temp .heapLength)
-              (.seq (.assign temp (.shift .lsl (.var temp) (.const (1 : α))))
+              (.seq (.inst (.arith (.shift .lsl temp temp (.imm (1 : α)))))
                 (.opCurrHeap .add temp temp)), .var temp)
           else generic
       | .add, .shift .lsl (.lookup .heapLength) (.const value),
           .lookup .currHeap =>
           if value = (1 : α) then
             (.seq (.get temp .heapLength)
-              (.seq (.assign temp (.shift .lsl (.var temp) (.const (1 : α))))
+              (.seq (.inst (.arith (.shift .lsl temp temp (.imm (1 : α)))))
                 (.opCurrHeap .add temp temp)), .var temp)
           else generic
       | _, _, _ => generic
+  | .shift operator left (.const value) =>
+      let (leftPrelude, selectedLeft) := wordInstSelectAtom temp left
+      match selectedLeft, WordInstSelectImmediate.shiftImmediate value with
+      | .var left, .valid amount =>
+          if amount = 0 then
+            (leftPrelude, .var temp)
+          else
+            (wordDeadSelectSeq leftPrelude
+              (.inst (.arith (.shift operator temp left (.imm value)))), .var temp)
+      | _, .outOfRange =>
+          (.inst (.const temp 0), .var temp)
+      | _, _ =>
+          let rightPrelude : WordProg α :=
+            .assign (temp + 1) (.const value)
+          let code := wordDeadSelectSeq leftPrelude rightPrelude
+          (wordDeadSelectSeq code
+            (.assign temp (.shift operator (.var temp) (.var (temp + 1)))), .var temp)
   | .shift operator left right =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
@@ -196,7 +257,8 @@ termination_by expression => sizeOf expression
 decreasing_by
   all_goals first | decreasing_trivial | (simp [sizeOf] <;> omega)
 
-def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
+def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
+    [WordInstSelectImmediate α]
     (temp : Nat) : WordProg α → WordProg α
   | .seq first second =>
       wordDeadSelectSeq (wordInstSelectProgram temp first)
@@ -216,8 +278,31 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
             wordDeadSelectSeq prelude (.assign destination (.load address))
       | .op operator [left, .const value] =>
           let (prelude, left) := wordInstSelectAtom temp left
-          wordDeadSelectSeq prelude
-            (.assign destination (.op operator [left, .const value]))
+          match left with
+          | .var left =>
+              if WordInstSelectImmediate.validBinOpImmediate operator value then
+                wordDeadSelectSeq prelude
+                  (.inst (.arith (.binOp operator destination left (.imm value))))
+              else if operator = .add &&
+                  WordInstSelectImmediate.validBinOpImmediate .sub (0 - value) then
+                wordDeadSelectSeq prelude
+                  (.inst (.arith (.binOp .sub destination left (.imm (0 - value)))))
+              else
+                wordDeadSelectSeq prelude
+                  (.assign destination (.op operator [.var left, .const value]))
+          | _ => wordDeadSelectSeq prelude
+              (.assign destination (.op operator [left, .const value]))
+      | .shift operator left (.const value) =>
+          let (prelude, left) := wordInstSelectAtom temp left
+          match left, WordInstSelectImmediate.shiftImmediate value with
+          | .var left, .valid amount =>
+              if amount = 0 then
+                wordDeadSelectSeq prelude (.move 0 [(destination, left)])
+              else
+                wordDeadSelectSeq prelude
+                  (.inst (.arith (.shift operator destination left (.imm value))))
+          | _, .outOfRange => .inst (.const destination 0)
+          | _, _ => .assign destination (.shift operator left (.const value))
       | .op operator [left, right] =>
           let (leftPrelude, left) := wordInstSelectAtom temp left
           let (rightPrelude, right) := wordInstSelectAtom (temp + 1) right
@@ -278,7 +363,8 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgramFrom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
+def wordInstSelectProgramFrom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
+    [WordInstSelectImmediate α]
     (program : WordProg α) : WordProg α :=
   wordInstSelectProgram (wordInstSelectMaximum (wordProgVariables program) + 1) program
 

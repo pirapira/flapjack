@@ -17,6 +17,36 @@ open Flapjack Flapjack.RiscV
 def emit [Repr α] (label : String) (value : α) : IO Unit :=
   IO.println (label ++ "=" ++ repr value)
 
+/-! Keep the complete Word-to-Word pass chain visible in diagnostics.  The
+    source probe already exposes the front-end and selected program; these
+    labels make a final-byte discrepancy attributable to SSA, a cleanup pass,
+    or the allocator without requiring a second ad-hoc executable. -/
+def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO Unit := do
+  let (label, arity, body) := entry
+  let selected := RiscV.wordInstSelectProgramFrom
+    (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body))
+  let (_ssaState, renamedParameters, ssaProgram) :=
+    wordFullSsaCcTrans arity selected
+  let deadAfterSsa := RiscV.wordRemoveDeadProgram ssaProgram
+  let cse := RiscV.wordCseProp deadAfterSsa
+  let copy := RiscV.wordCopyProp cse
+  let two := RiscV.wordThreeToTwoReg copy
+  let unreach := RiscV.wordRemoveUnreachableAfterCopy two
+  let dead := RiscV.wordRemoveDeadProgram unreach
+  emit "stage=source_word_selected_passes" (label, arity, selected)
+  emit "stage=source_word_ssa" (label, arity, renamedParameters, ssaProgram)
+  emit "stage=source_word_dead_ssa" deadAfterSsa
+  emit "stage=source_word_cse" cse
+  emit "stage=source_word_copy" copy
+  emit "stage=source_word_two_reg" two
+  emit "stage=source_word_unreach" unreach
+  emit "stage=source_word_dead" dead
+  match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead label
+      (wordSsaAbiParameters arity) selected with
+  | none => emit "stage=source_word_allocator" "none"
+  | some (_, parameters, program, allocation) =>
+      emit "stage=source_word_allocator" (parameters, program, allocation)
+
 def dumpPipeline (pipeline : FlapjackPipelineResult (RiscV.Word 64)) : IO Unit := do
   emit "stage=simplified" pipeline.simplified
   emit "stage=structured" pipeline.structured
@@ -37,6 +67,8 @@ def dumpPipeline (pipeline : FlapjackPipelineResult (RiscV.Word 64)) : IO Unit :
   let sourceWord := panToWordCompileProg sourceLoop
   emit "stage=source_loop" sourceLoop
   emit "stage=source_word" sourceWord
+  for entry in sourceWord do
+    dumpSourceWordPasses entry
   let sourceSelected := sourceWord.map (fun (label, arity, body) =>
     (label, arity,
       RiscV.wordInstSelectProgramFrom

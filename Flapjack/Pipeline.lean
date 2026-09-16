@@ -507,9 +507,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsa [NeZero width] :
         RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead label wordParameters
           unallocatedBody
       let frameSlots := max allocation.nextSpill
-        (max (wordParameters.length - RiscV.CakeRegAlloc.cakeRiscVRegisterCount)
-          (RiscV.wordProgMaxCallArguments renamedProgram -
-            RiscV.CakeRegAlloc.cakeRiscVRegisterCount))
+        (wordParameters.length - RiscV.CakeRegAlloc.cakeRiscVRegisterCount)
       let config : RiscV.WordStackConfig :=
         { locations := allocation.locations
           scratch := RiscV.CakeRegAlloc.cakeRiscVRegisterCount

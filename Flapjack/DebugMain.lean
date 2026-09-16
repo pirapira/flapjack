@@ -61,9 +61,10 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
     (fun move => RiscV.CakeRegAlloc.cakeFullConsistencyOk state0 k
       move.2.1 move.2.2) moves0
   let scost := spillCosts.map (fun costs =>
-      costs.filterMap (fun entry =>
+    RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap bij.nextNode
+      (costs.filterMap (fun entry =>
         (lookupNatInfo entry.1 bij.toAllocator).map
-          (fun node => (node, entry.2))))
+          (fun node => (node, entry.2)))))
   emit "stage=source_word_heuristics" (moves, spillCosts)
   emit "stage=source_word_allocator_inputs"
     (tree, forced, RiscV.CakeRegAlloc.cakeGetStackOnly dead, bij)

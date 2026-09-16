@@ -768,13 +768,13 @@ def cakeDoFreeze (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
 def cakeSafeDiv (x v : Nat) : Nat := if v = 0 then 0 else x / v
 
 /-- `st_ex_list_MIN_cost` (`reg_allocScript.sml:773-790`). -/
-def cakeStExListMinCost (degrees : CakeNodeMap Nat) (scost : NatInfoMap Nat) :
+def cakeStExListMinCost (degrees : CakeNodeMap Nat) (scost : CakeNodeMap Nat) :
     List Nat → Nat → Nat → Nat → List Nat → Nat × List Nat
   | [], _, k, _, acc => (k, acc)
   | x :: xs, d, k, v, acc =>
       if x < d then
         let xv := (degrees.get x).getD 0
-        let cost := cakeSafeDiv ((cakeMapLookup scost x).getD 0) xv
+        let cost := cakeSafeDiv ((scost.get x).getD 0) xv
         if v > cost then
           cakeStExListMinCost degrees scost xs d x cost (k :: acc)
         else cakeStExListMinCost degrees scost xs d k v (x :: acc)
@@ -796,7 +796,7 @@ termination_by l _ _ _ _ => sizeOf l
 decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
 /-- `do_spill` (`reg_allocScript.sml:810-830`). -/
-def cakeDoSpill (scost : Option (NatInfoMap Nat)) (k : Nat)
+def cakeDoSpill (scost : Option (CakeNodeMap Nat)) (k : Nat)
     (state : CakeRaState) : Bool × CakeRaState :=
   match state.spillWl with
   | [] => (false, state)
@@ -806,13 +806,13 @@ def cakeDoSpill (scost : Option (NatInfoMap Nat)) (k : Nat)
         | none => cakeStExListMaxDeg state.degrees xs state.dim x xv []
         | some sc =>
             cakeStExListMinCost state.degrees sc xs state.dim x
-              (cakeSafeDiv ((cakeMapLookup sc x).getD 0) xv) []
+              (cakeSafeDiv ((sc.get x).getD 0) xv) []
       let state := cakePushStack y (cakeDecDegree y state)
       (true, cakeUnspill k { state with spillWl := ys })
 
 /-- `do_step` (`reg_allocScript.sml:832-857`): the first successful
     transition wins. -/
-def cakeDoStep (scost : Option (NatInfoMap Nat)) (k : Nat)
+def cakeDoStep (scost : Option (CakeNodeMap Nat)) (k : Nat)
     (state : CakeRaState) : Bool × CakeRaState :=
   let (b1, s1) := cakeDoSimplify k state
   if b1 then (true, s1)
@@ -827,7 +827,7 @@ def cakeDoStep (scost : Option (NatInfoMap Nat)) (k : Nat)
         if b4 then (true, s4) else cakeDoSpill scost k state
 
 /-- `rpt_do_step` (`reg_allocScript.sml:860-868`). -/
-def cakeRptDoStep (scost : Option (NatInfoMap Nat)) (k : Nat) :
+def cakeRptDoStep (scost : Option (CakeNodeMap Nat)) (k : Nat) :
     Nat → CakeRaState → CakeRaState
   | 0, state => state
   | fuel + 1, state =>
@@ -1015,7 +1015,7 @@ inductive CakeAlgorithm : Type
 /-- `do_reg_alloc` (`reg_allocScript.sml:1452-1470`): the complete IRC
     colouring pipeline over a clash tree, producing the var → colour
     table. -/
-def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (NatInfoMap Nat))
+def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
     (k : Nat) (moves : List (Nat × (Nat × Nat))) (tree : WordClashTree)
     (forced : List (Nat × Nat)) (fs : List Nat) : Option (NatInfoMap Nat) :=
   let bij := cakeMkBij tree
@@ -1081,10 +1081,17 @@ def cakeAllocateWordFunction [OfNat α 0] (parameters : List Nat) (program : Wor
   let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
   let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
   let bij := cakeMkBij tree
+  /- `lookup_any x scost 0` in `st_ex_list_MIN_cost`
+     (`reg_allocScript.sml:773-790`) reads an sptree, so the original's spill
+     scan is logarithmic per node.  Read the costs into the same node-indexed
+     field the rest of the allocator state uses; `cakeMapLookup` returns the
+     first binding for a key and `ofNatInfoMap` keeps that, so the values are
+     unchanged. -/
   let scost := spillCosts.map (fun costs =>
-    costs.filterMap (fun entry =>
-      (lookupNatInfo entry.1 bij.toAllocator).map
-        (fun node => (node, entry.2))))
+    CakeNodeMap.ofNatInfoMap bij.nextNode
+      (costs.filterMap (fun entry =>
+        (lookupNatInfo entry.1 bij.toAllocator).map
+          (fun node => (node, entry.2)))))
   match cakeDoRegAlloc .irc scost k moves tree forced fs with
   | none => none
   | some colouring =>
@@ -1132,10 +1139,17 @@ def cakeWordStackVarCount [OfNat α 0] [OfNat α 1]
   let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
   let moves := wordMoves.map (fun m => (m.priority, (m.left, m.right)))
   let bij := cakeMkBij tree
+  /- `lookup_any x scost 0` in `st_ex_list_MIN_cost`
+     (`reg_allocScript.sml:773-790`) reads an sptree, so the original's spill
+     scan is logarithmic per node.  Read the costs into the same node-indexed
+     field the rest of the allocator state uses; `cakeMapLookup` returns the
+     first binding for a key and `ofNatInfoMap` keeps that, so the values are
+     unchanged. -/
   let scost := spillCosts.map (fun costs =>
-    costs.filterMap (fun entry =>
-      (lookupNatInfo entry.1 bij.toAllocator).map
-        (fun node => (node, entry.2))))
+    CakeNodeMap.ofNatInfoMap bij.nextNode
+      (costs.filterMap (fun entry =>
+        (lookupNatInfo entry.1 bij.toAllocator).map
+          (fun node => (node, entry.2)))))
   match cakeDoRegAlloc .irc scost k moves tree forced fs with
   | none => 0
   | some colouring =>

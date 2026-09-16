@@ -45,7 +45,7 @@ inductive StackCallTarget where
 inductive StackProg (α : Type u) where
   | skip
   | const (destination value : Nat)
-  | inst (instruction : WordInst)
+  | inst (instruction : WordInst α)
   | shMem (operator : WordMemOp) (source address : Nat)
   | get (destination : Nat) (store : StackStore)
   | set (store : StackStore) (source : Nat)
@@ -88,7 +88,11 @@ inductive StackProg (α : Type u) where
 /-! Register relabeling is kept at the StackLang boundary so a source-shaped
     Cake program can be converted to the port's hardware-numbered Lab input
     without changing stores, offsets, labels, or constants. -/
-def stackMapWordArith (map : Nat → Nat) : WordArith → WordArith
+def stackMapWordRegImm (map : Nat → Nat) : WordRegImm α → WordRegImm α
+  | .imm value => .imm value
+  | .reg register => .reg (map register)
+
+def stackMapWordArith (map : Nat → Nat) : WordArith α → WordArith α
   | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
       .longMul (map destinationLeft) (map destinationRight)
         (map sourceLeft) (map sourceRight)
@@ -104,16 +108,17 @@ def stackMapWordArith (map : Nat → Nat) : WordArith → WordArith
   | .div destination dividend divisor =>
       .div (map destination) (map dividend) (map divisor)
   | .binOp operator destination sourceLeft sourceRight =>
-      .binOp operator (map destination) (map sourceLeft) (map sourceRight)
+      .binOp operator (map destination) (map sourceLeft)
+        (stackMapWordRegImm map sourceRight)
+  | .shift operator destination sourceLeft sourceRight =>
+      .shift operator (map destination) (map sourceLeft)
+        (stackMapWordRegImm map sourceRight)
 
-def stackMapWordInst (map : Nat → Nat) : WordInst → WordInst
+def stackMapWordInst (map : Nat → Nat) : WordInst α → WordInst α
+  | .const destination value => .const (map destination) value
   | .arith operation => .arith (stackMapWordArith map operation)
   | .mem operator destination address =>
       .mem operator (map destination) (map address)
-
-def stackMapWordRegImm (map : Nat → Nat) : WordRegImm α → WordRegImm α
-  | .imm value => .imm value
-  | .reg register => .reg (map register)
 
 def stackMapCallTarget (map : Nat → Nat) : StackCallTarget → StackCallTarget
   | .label label => .label label

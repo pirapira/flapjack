@@ -22,10 +22,10 @@ theorem evalWordStackMachine_direct_longMul_stackDest_preserves_unrelated_values
       some (.stack destinationRightSlot))
     (hsourceLeft : wordStackLocation config sourceLeft = some sourceLeftLocation)
     (hsourceRight : wordStackLocation config sourceRight = some sourceRightLocation)
-    (hspecial : wordSpecialArithLocationsSafe
+    (hspecial : wordSpecialArithLocationsSafe (α := Nat)
       (.longMul destinationLeft destinationRight sourceLeft sourceRight)
       config.locations = true)
-    (hsafe : wordStackLongMulLocationsSafe config
+    (hsafe : wordStackLongMulLocationsSafe (α := Nat) config
       (.longMul destinationLeft destinationRight sourceLeft sourceRight) = true)
     (hreserved : config.scratch ≠ config.addressScratch)
     (hvalues : wordStackMappedValues config values state)

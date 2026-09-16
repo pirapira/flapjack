@@ -13,9 +13,9 @@ namespace Flapjack.RiscV
 
 open Flapjack
 
-theorem wordSsaRenameInst_store
+theorem wordSsaRenameInst_store {width : Nat}
     (ssa : WordSsaState) (source address : Nat) :
-    wordSsaRenameInst ssa (.mem .store source address : WordInst) =
+    wordSsaRenameInst ssa (.mem .store source address : WordInst (Word width)) =
       (ssa, .mem .store (wordSsaRead ssa source) (wordSsaRead ssa address)) := by
   rfl
 
@@ -45,9 +45,9 @@ theorem wordSsaRead_fresh_of_ne (state : WordSsaState) (name other : Nat)
     simp [lookupNatInfo, Ne.symm hneq]
   rw [hhead, hlookup state.current]
 
-theorem wordSsaRenameInst_load
+theorem wordSsaRenameInst_load {width : Nat}
     (ssa : WordSsaState) (destination address : Nat) :
-    wordSsaRenameInst ssa (.mem .load destination address : WordInst) =
+    wordSsaRenameInst ssa (.mem .load destination address : WordInst (Word width)) =
       ((wordSsaFresh ssa destination).1,
         .mem .load (wordSsaFresh ssa destination).2
           (wordSsaRead ssa address)) := by
@@ -90,7 +90,7 @@ theorem evalWordProg_ssaRename_store [NeZero width]
         (fun state => state.memory) =
       (evalWordProg target
         (.inst (wordSsaRenameInst ssa
-          (.mem .store sourceName address : WordInst)).2)).map
+          (.mem .store sourceName address : WordInst (Word width))).2)).map
         (fun state => state.memory) := by
   have hsourceValue :
       readRegister source ⟨sourceName, hsource⟩ =
@@ -149,7 +149,7 @@ theorem evalWordProg_ssaRename_store_family [NeZero width]
         (fun state => state.memory) =
       (evalWordProg target
         (.inst (wordSsaRenameInst ssa
-          (.mem operator sourceName address : WordInst)).2)).map
+          (.mem operator sourceName address : WordInst (Word width))).2)).map
         (fun state => state.memory) := by
   have hsourceValue :
       readRegister source ⟨sourceName, hsource⟩ =
@@ -197,7 +197,7 @@ theorem evalWordProg_ssaRename_load_destination [NeZero width]
       evalWordProg source (.inst (.mem .load destination address)) = some source' ∧
       evalWordProg target
           (.inst (wordSsaRenameInst ssa
-            (.mem .load destination address : WordInst)).2) = some target' ∧
+            (.mem .load destination address : WordInst (Word width))).2) = some target' ∧
       readRegister source' ⟨destination, hdestination⟩ =
         readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
       source'.memory = target'.memory := by
@@ -243,7 +243,7 @@ theorem evalWordProg_ssaRename_load8_destination [NeZero width]
       evalWordProg source (.inst (.mem .load8 destination address)) = some source' ∧
       evalWordProg target
           (.inst (wordSsaRenameInst ssa
-            (.mem .load8 destination address : WordInst)).2) = some target' ∧
+            (.mem .load8 destination address : WordInst (Word width))).2) = some target' ∧
       readRegister source' ⟨destination, hdestination⟩ =
         readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
       source'.memory = target'.memory := by
@@ -291,7 +291,7 @@ theorem evalWordProg_ssaRename_load16_destination [NeZero width]
       evalWordProg source (.inst (.mem .load16 destination address)) = some source' ∧
       evalWordProg target
           (.inst (wordSsaRenameInst ssa
-            (.mem .load16 destination address : WordInst)).2) = some target' ∧
+            (.mem .load16 destination address : WordInst (Word width))).2) = some target' ∧
       readRegister source' ⟨destination, hdestination⟩ =
         readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
       source'.memory = target'.memory := by
@@ -337,7 +337,7 @@ theorem evalWordProg_ssaRename_load32_destination [NeZero width]
       evalWordProg source (.inst (.mem .load32 destination address)) = some source' ∧
       evalWordProg target
           (.inst (wordSsaRenameInst ssa
-            (.mem .load32 destination address : WordInst)).2) = some target' ∧
+            (.mem .load32 destination address : WordInst (Word width))).2) = some target' ∧
       readRegister source' ⟨destination, hdestination⟩ =
         readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
       source'.memory = target'.memory := by
@@ -2377,9 +2377,9 @@ theorem evalWordProg_ssaRename_program_share_store32_const [NeZero width]
   apply writeWord32_memory_congr
   rfl
 
-theorem wordSsaRenameInst_div
+theorem wordSsaRenameInst_div {width : Nat}
     (ssa : WordSsaState) (destination dividend divisor : Nat) :
-    wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst) =
+    wordSsaRenameInst ssa (.arith (.div destination dividend divisor) : WordInst (Word width)) =
       ((wordSsaFresh ssa destination).1,
         .arith (.div (wordSsaFresh ssa destination).2
           (wordSsaRead ssa dividend) (wordSsaRead ssa divisor))) := by
@@ -2408,7 +2408,7 @@ theorem evalWordProg_ssaRename_div_destination [NeZero width]
           some source' ∧
       evalWordProg target
           (.inst (wordSsaRenameInst ssa
-            (.arith (.div destination dividend divisor) : WordInst)).2) =
+            (.arith (.div destination dividend divisor) : WordInst (Word width))).2) =
           some target' ∧
       readRegister source' ⟨destination, hdestination⟩ =
         readRegister target' ⟨(wordSsaFresh ssa destination).2, hfresh⟩ ∧
@@ -2437,10 +2437,10 @@ theorem evalWordProg_ssaRename_div_destination [NeZero width]
     simp [hdestinationNonzero, hfreshNonzero, hdividendValue, hdivisorValue]
   · simp [execute, writeRegister, hmemory, hdestinationNonzero, hfreshNonzero]
 
-theorem wordSsaRenameInst_longMul
+theorem wordSsaRenameInst_longMul {width : Nat}
     (ssa : WordSsaState) (destinationLeft destinationRight sourceLeft sourceRight : Nat) :
     wordSsaRenameInst ssa
-        (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) : WordInst) =
+        (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) : WordInst (Word width)) =
       (let sourceLeft := wordSsaRead ssa sourceLeft
        let sourceRight := wordSsaRead ssa sourceRight
        let (ssa, freshLeft) := wordSsaFresh ssa destinationLeft
@@ -2484,7 +2484,7 @@ theorem evalWordProg_ssaRename_longMul_destinations [NeZero width]
           some source' ∧
       evalWordProg target
           (.inst (wordSsaRenameInst ssa
-            (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) : WordInst)).2) =
+            (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) : WordInst (Word width))).2) =
           some target' ∧
       readRegister source' ⟨destinationLeft, hdestinationLeft⟩ =
         readRegister target' ⟨freshLeft, hfreshLeftBound⟩ ∧
@@ -2695,7 +2695,7 @@ theorem evalWordProg_ssaRename_addCarry_destinations [NeZero width]
       evalWordProg target
           (.inst (wordSsaRenameInst ssa
             (.arith (.addCarry destination resultCarry
-              sourceLeft sourceRight carryIn) : WordInst)).2) = some target' ∧
+              sourceLeft sourceRight carryIn) : WordInst (Word width))).2) = some target' ∧
       readRegister source' ⟨destination, hdestination⟩ =
         readRegister target' ⟨freshDestination, hfreshDestinationBound⟩ ∧
       readRegister source' ⟨resultCarry, hresultCarry⟩ =

@@ -102,14 +102,14 @@ def parallelLocationMoveKeepsLiveSource : Bool :=
     `callee_abi` fixture used to emit `add a1,a1,a0; or a0,a1,a1` instead of
     the original `add a0,a1,a0`). -/
 def selectedBinaryAssignment : WordProg Nat :=
-  wordInstSelectProgramFrom
+  wordInstSelectProgramFrom (α := Nat)
     (.assign 5 (.op .add [.var 2, .var 4]))
 
 def selectedBinaryAssignmentShape : Bool :=
   match selectedBinaryAssignment with
-  | .seq (.assign 6 (.var 4))
-      (.seq (.assign 7 (.var 2))
-        (.inst (.arith (.binOp .add 5 6 7)))) => true
+  | .seq (.move 0 [(6, 4)])
+      (.seq (.move 0 [(7, 2)])
+        (.inst (.arith (.binOp .add 5 6 (.reg 7))))) => true
   | _ => false
 
 #guard selectedBinaryAssignmentShape
@@ -128,13 +128,14 @@ def selectedBinaryGroundConfig : WordStackConfig :=
 def selectedBinaryCarrierLowering : Bool :=
   match
     wordToStackProgNat selectedBinaryGroundConfig
-      (.inst (.arith (.binOp .add 5 6 7))),
+      (.inst (.arith (.binOp .add 5 6 (.reg 7))) : WordProg Nat),
     wordToStackProgNat selectedBinaryGroundConfig
       (.assign 5 (.op .add [.var 6, .var 7])) with
   | some (.arith .add 0 1 2), some (.arith .add 0 1 2) => true
   | _, _ => false
 
 #guard selectedBinaryCarrierLowering
+
 
 def twoRegisterAssignmentShape : Bool :=
   match wordThreeToTwoReg
@@ -165,6 +166,48 @@ def immediateSelectionShape : Bool :=
   | _ => false
 
 #guard immediateSelectionShape
+/-! ## Polymorphic carrier and immediate alignment (bead `flapjack-pxn.9`)
+
+Cake's `asmScript.sml` defines
+`reg_imm = Reg reg | Imm ('a imm)` and
+`inst = Const reg ('a word) | Arith arith | Mem memop reg ('a addr)`, so the
+carrier keeps the immediate operand rather than specializing it to a host
+`Nat`.  These guards pin that an immediate-carrying arithmetic instruction and
+a constant instruction lower to the architectural immediate forms, and that the
+carrier reaches the stack level exactly like the expression assignment it
+replaces. -/
+
+def immediateCarrierInstruction : Bool :=
+  match wordInstToInstruction (width := 64)
+      (.arith (.binOp .add 1 2 (.imm 5)) : WordInst (Word 64)) with
+  | some (.addi destination source immediate) =>
+      destination = 1 ∧ source = 2 ∧ immediate = 5
+  | _ => false
+
+#guard immediateCarrierInstruction
+
+def constantCarrierInstruction : Bool :=
+  match wordInstToInstruction (width := 64)
+      (.const 3 7 : WordInst (Word 64)) with
+  | some (.addi destination source immediate) =>
+      destination = 3 ∧ source = 0 ∧ immediate = 7
+  | _ => false
+
+#guard constantCarrierInstruction
+
+def immediateCarrierLoweringMatchesAssignment : Bool :=
+  match
+    wordToStackProgWordWithLocationBitmapsFused immediateSelectionConfig 22 0 1 64 none
+      (wordStackInitialBitmaps false)
+      (.inst (.arith (.binOp .add 6 4 (.imm 1)) : WordInst (Word 64))),
+    wordToStackProgWordWithLocationBitmapsFused immediateSelectionConfig 22 0 1 64 none
+      (wordStackInitialBitmaps false)
+      (.assign 6 (.op .add [.var 4, .const 1]) : WordProg (Word 64)) with
+  | some (firstCode, _), some (secondCode, _) =>
+      reprStr firstCode == reprStr secondCode
+  | _, _ => false
+
+#guard immediateCarrierLoweringMatchesAssignment
 
 /-! The two-register compensation introduces `Move 0 [(destination, left)]`
     before an in-place immediate operation.  Cake instead keeps the operand in

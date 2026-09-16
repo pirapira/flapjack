@@ -37,7 +37,7 @@ inductive LabJump where
   deriving DecidableEq, Repr
 
 inductive LabPlain (α : Type u) where
-  | word (instruction : WordInst)
+  | word (instruction : WordInst α)
   | stackMem (operator : WordMemOp) (register base offset : Nat)
   | stackMemSub (operator : WordMemOp) (register base offset : Nat)
   | const (destination value : Nat)
@@ -247,6 +247,40 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         let secondResult :=
           labFlatten false sectionId firstResult.nextLabel continues breaks
             (.inst (.mem memoryOperator destination address))
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
+  | .seq (.seq (.const scratch value) (.arith operator addressRegister base right))
+      (.shMem memoryOperator source address) =>
+      /- `ShareInst` uses the same RISC-V load/store encoding as a regular
+         memory instruction.  Preserve Cake's static `Addr base offset` form
+         here too; otherwise the shared-store address is needlessly
+         materialised in a temporary before the byte/word store. -/
+      let offsetOperator :=
+        match operator with
+        | .add | .sub => true
+        | _ => false
+      let offsetFits :=
+        match operator with
+        | .add =>
+            value < 2 ^ 11 ||
+              (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64)
+        | .sub => value ≤ 2 ^ 11
+        | _ => false
+      let canFuse :=
+        right == scratch && address == addressRegister && offsetOperator && offsetFits &&
+          memoryOperator == .store
+      if canFuse then
+        ⟨[.asm (.memOffset memoryOperator operator source base value) [] 0],
+          false, counter⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks
+            (.seq (.const scratch value) (.arith operator addressRegister base right))
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks
+            (.shMem memoryOperator source address)
         let separator :=
           if tail then [labLabel sectionId 1] else []
         ⟨firstResult.lines ++ separator ++ secondResult.lines,

@@ -21,7 +21,7 @@ theorem evalWordStackMachine_direct_addCarry_spilled_preserves_unrelated_values
     (hsourceLeft : wordStackLocation config sourceLeft = some (.stack sourceLeftSlot))
     (hsourceRight : wordStackLocation config sourceRight = some (.stack sourceRightSlot))
     (hcarryIn : wordStackLocation config carryIn = some (.stack carryInSlot))
-    (hspecial : wordSpecialArithLocationsSafe
+    (hspecial : wordSpecialArithLocationsSafe (α := Nat)
       (.addCarry destination resultCarry sourceLeft sourceRight carryIn)
       config.locations = true)
     (hvalues : wordStackMappedValues config values state)

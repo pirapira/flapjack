@@ -64,4 +64,41 @@ def pancakePrologueMatches : Bool :=
 
 #guard pancakePrologueMatches
 
+/-! CakeML's `code_buffer_def` and `preamble` (`cakeml/compiler/backend/exportScript.sml`
+    lines 68-69 and 88-100) fix the runtime buffers at `DATA_BUFFER_SIZE` 65536 and
+    `CODE_BUFFER_SIZE` 5242880 and lay the code buffer out as
+    `.space CODE_BUFFER_SIZE` / `.p2align 12` / `.space 4096`.  The guest's generated
+    code is under a megabyte, far below both constants, so there is no 4 MB output
+    truncation in this pipeline; these checks pin the port to the reference frame. -/
+
+def cakeBufferDefines : List String :=
+  ["#define DATA_BUFFER_SIZE    65536", "#define CODE_BUFFER_SIZE  5242880"]
+
+def pancakeBufferDefinesMatch : Bool :=
+  cakeBufferDefines.all (fun line => pancakePrologue.contains line)
+
+#guard pancakeBufferDefinesMatch
+
+def codeBufferExpected : List String :=
+  ["     .globl cdecl(cake_codebuffer_begin)",
+   "cdecl(cake_codebuffer_begin):",
+   "#if defined(EVAL)",
+   "     .space CODE_BUFFER_SIZE",
+   "#endif",
+   "     .p2align 12",
+   "     .globl cdecl(cake_codebuffer_end)",
+   "cdecl(cake_codebuffer_end):",
+   "     .space 4096"]
+
+def dropUntil (needle : String) : List String → List String
+  | [] => []
+  | line :: lines => if line == needle then line :: lines else dropUntil needle lines
+
+def pancakeCodeBufferMatches : Bool :=
+  (dropUntil "     .globl cdecl(cake_codebuffer_begin)"
+      (pancakeAssembly [] [] |>.splitOn "\n")).take codeBufferExpected.length ==
+    codeBufferExpected
+
+#guard pancakeCodeBufferMatches
+
 end Flapjack.Test.ArtifactFormat

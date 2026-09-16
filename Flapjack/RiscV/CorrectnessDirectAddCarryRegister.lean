@@ -25,7 +25,7 @@ theorem evalWordStackMachine_direct_addCarry_register_preserves_unrelated_values
       some (.register sourceRightRegister))
     (hcarryIn : wordStackLocation config carryIn =
       some (.register carryInRegister))
-    (hspecial : wordSpecialArithLocationsSafe
+    (hspecial : wordSpecialArithLocationsSafe (α := Nat)
       (.addCarry destination resultCarry sourceLeft sourceRight carryIn)
       config.locations = true)
     (hsafe : wordStackAddCarryInst (α := Nat) config

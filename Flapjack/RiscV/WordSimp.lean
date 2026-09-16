@@ -113,7 +113,8 @@ def wordSimpMoveConstants [DecidableEq α] (moves : List (Nat × Nat))
     | none => wordSimpMapDelete current move.1) constants
 
 /-! `const_fp_inst_cs` (`word_simpScript.sml:229-249`). -/
-def wordSimpInstConstants (constants : NatInfoMap α) : WordInst → NatInfoMap α
+def wordSimpInstConstants {α : Type} (constants : NatInfoMap α) :
+    WordInst α → NatInfoMap α
   | .arith (.binOp _ destination _ _) => wordSimpMapDelete constants destination
   | .arith (.addCarry destination _ _ _ carryIn) =>
       wordSimpMapDelete (wordSimpMapDelete constants carryIn) destination
@@ -124,6 +125,9 @@ def wordSimpInstConstants (constants : NatInfoMap α) : WordInst → NatInfoMap 
   | .arith (.longDiv destinationLeft destinationRight _ _ _) =>
       wordSimpMapDelete (wordSimpMapDelete constants destinationLeft) destinationRight
   | .arith (.div destination _ _) => wordSimpMapDelete constants destination
+  | .arith (.shift _ destination _ _) =>
+      wordSimpMapDelete constants destination
+  | .const destination _ => wordSimpMapDelete constants destination
   | .mem _ destination _ => wordSimpMapDelete constants destination
 
 /-! `get_var_imm_cs` (`word_simpScript.sml:251-253`). -/

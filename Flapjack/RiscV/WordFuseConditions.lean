@@ -49,6 +49,21 @@ def wordConditionFactInvalidate (facts : List (WordConditionFact α))
        | .imm _ => true
        | .reg register => !(written.contains register)))
 
+/-- Transfer comparison facts across Cake's parallel `Move` carrier.  All
+destinations are invalidated before looking up sources, while the lookups use
+the pre-move fact set; this preserves the source semantics for a parallel
+move whose source is also a destination. -/
+def wordConditionFactMove [BEq α] (facts : List (WordConditionFact α))
+    (moves : List (Nat × Nat)) : List (WordConditionFact α) :=
+  let destinations := moves.map Prod.fst
+  let remaining := wordConditionFactInvalidate facts destinations
+  moves.foldl
+    (fun current (destination, source) =>
+      match wordConditionFactLookup remaining source with
+      | some fact => wordConditionFactSet current destination (some fact)
+      | none => wordConditionFactSet current destination none)
+    remaining
+
 /-- Split a program into its top-level statements. -/
 def wordProgToList : WordProg α → List (WordProg α)
   | .seq first second => wordProgToList first ++ wordProgToList second
@@ -103,6 +118,9 @@ def wordConditionHasAlias (condition test : Nat) : List (WordProg α) → Bool
       match statement with
       | .assign name (.var source) =>
           (name == test && source == condition) ||
+            wordConditionHasAlias condition test statements
+      | .move _ moves =>
+          moves.any (fun move => move.1 == test && move.2 == condition) ||
             wordConditionHasAlias condition test statements
       | _ => wordConditionHasAlias condition test statements
 
@@ -196,6 +214,10 @@ def wordFuseConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
                 | none => facts'
               .assign name (.var source) ::
                 wordFuseConditionsAux fuel facts'' rest
+          | .move priority moves =>
+              let facts' := wordConditionFactMove facts moves
+              .move priority moves ::
+                wordFuseConditionsAux fuel facts' rest
           | .ite operator condition right thenBranch elseBranch =>
               let then' := wordListToProg
                 (wordFuseConditionsAux fuel facts (wordProgToList thenBranch))
@@ -236,4 +258,3 @@ def wordFuseConditions [BEq α] [OfNat α 0] [OfNat α 1]
       (wordProgToList duplicated))
 
 end Flapjack.RiscV
-

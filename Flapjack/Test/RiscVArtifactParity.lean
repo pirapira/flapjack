@@ -801,6 +801,16 @@ def helloMainLengthGapTracked : Bool :=
       | _ => false
   | none => false
 
+/- Cake's `ShareInst Store (Op Add [base; Const offset])` reaches the final
+   RISC-V emitter as one base+offset memory instruction.  Keep a direct Lab
+   regression guard for the source-shaped lowering used by `hello`. -/
+def sharedWordStoreOffsetPeephole : Bool :=
+  match labFlatten false 4 0 [] []
+      ((.seq (.seq (.const 31 40) (.arith .add 29 12 31))
+        (.shMem .store 10 29)) : StackProg Nat) with
+  | ⟨[.asm (.memOffset .store .add 10 12 40) [] 0], false, 0⟩ => true
+  | _ => false
+
 /- `hello` remains a tracked end-to-end parity gap (`flapjack-8tb`).  Keep the
    predicate above visible during focused diagnostics, but do not make this
    known discrepancy a regression gate while the source-to-RISC-V pipeline is
@@ -822,6 +832,7 @@ def helloMainLengthGapTracked : Bool :=
 #guard frameOccupancyP1BitmapsMatch
 #guard frameOccupancyP9BitmapsMatch
 #guard relationalConditionExactParity
+#guard sharedWordStoreOffsetPeephole
 #guard artifactAccepted
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches

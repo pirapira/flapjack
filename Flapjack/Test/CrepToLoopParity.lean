@@ -105,6 +105,29 @@ def ffiMissingLookupSkips : Bool :=
 #guard ffiContextMappingMatches
 #guard ffiMissingLookupSkips
 
+/-! Cake resolves a shared-memory destination through `find_var` too
+(`crep_to_loopScript.sml:214`); retaining the raw source slot changes the
+post-loop store in the hello oracle. -/
+def shMemContext : LoopContext Nat :=
+  { vars := [(3, 8)], functions := [], maxVar := 0, target := .rv64i }
+
+def leanCompileShMemMapped : LoopProg Nat :=
+  compileCrepToLoop shMemContext [] (.shMem .store 3 (.var 1))
+
+def shMemDestinationMappingMatches : Bool :=
+  match leanCompileShMemMapped with
+  | .seq .skip (.shMem .store 8 (.var 1)) => true
+  | _ => false
+
+#guard shMemDestinationMappingMatches
+
+def assignDestinationMappingMatches : Bool :=
+  match compileCrepToLoop shMemContext [] (.assign 3 (.var 1)) with
+  | .seq .skip (.assign 8 (.var 1)) => true
+  | _ => false
+
+#guard assignDestinationMappingMatches
+
 /-- Context for the comparison-lowering characterization. Variable `5` is a
     local that is live across the comparison (for example a value assigned
     before a `while`). -/
@@ -145,10 +168,14 @@ def comparisonWithoutLiveDropsIt : Bool :=
 
 def runChecks : IO Bool := do
   let results := [handlerlessCallCarriesRaiseHandler, handledCallCarriesRaiseHandler,
-    comparisonKeepsIncomingLive, comparisonWithoutLiveDropsIt]
+    shMemDestinationMappingMatches, assignDestinationMappingMatches,
+    comparisonKeepsIncomingLive,
+    comparisonWithoutLiveDropsIt]
   let names := [
     "crep_to_loop default call handler",
     "crep_to_loop explicit call handler",
+    "crep_to_loop shared-memory destination mapping",
+    "crep_to_loop assignment destination mapping",
     "crep_to_loop comparison keeps the incoming live set",
     "crep_to_loop comparison without live does not invent one"]
   let mut all := true

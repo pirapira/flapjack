@@ -152,7 +152,8 @@ theorem sourceToLoop_local_assign_return_simulation :
   exact compilePanToLoop_local_assign_return_const_correct
     sourceToLoopLocalCompileContext sourceToLoopLoopContext []
     sourceToLoopState "x" 1 (BitVec.ofNat 64 42)
-    (by simp [sourceToLoopLocalCompileContext, lookupInfo]) (by rfl) (by rfl)
+    (by simp [sourceToLoopLocalCompileContext, lookupInfo]) (by rfl)
+    (by simp [sourceToLoopLoopContext, lookupNatInfo]) (by rfl)
 
 theorem sourceToLoop_local_assign_return_executes :
     (evalLoopProg 30 sourceToLoopState

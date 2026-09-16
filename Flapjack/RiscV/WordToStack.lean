@@ -1698,6 +1698,9 @@ def wordStackMovesToPhysical {α : Type} (config : WordStackConfig) :
       let moves ← wordStackPhysicalMovesTo config sources destination
       wordStackParallelLocationMove config moves
 
+def wordStackReturnStackSuffix (config : WordStackConfig) (values : List Nat) : List Nat :=
+  values.drop config.abiRegisterCount
+
 def wordStackReturnCode {α : Type} (config : WordStackConfig) :
     Option (List Nat × (List Nat × List Nat) × WordProg α × Nat × Nat) →
       Option (StackProg α)
@@ -2772,7 +2775,8 @@ def wordToStackProg {α : Type} [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul
       let returnCode ← wordStackReturnCode config returns
       let destinations := returns.map (fun result => result.1) |>.getD []
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
-        config.frameOffset config.scratch destinations returnCode
+        config.frameOffset config.scratch (wordStackReturnStackSuffix config destinations)
+        returnCode
         config.returnLabel config.entryLabel
       pure (wordStackJoin argumentMoves callCode)
   | .call returns (some target) arguments
@@ -2852,7 +2856,8 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let returnCode ← wordToStackProgNat config returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
-        config.frameOffset config.scratch destinations returnCode
+        config.frameOffset config.scratch (wordStackReturnStackSuffix config destinations)
+        returnCode
         returnLabel entryLabel
       pure (wordStackJoin argumentMoves callCode)
   | .call none (some target) arguments
@@ -2901,7 +2906,8 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
       let returnCode ← wordToStackProgNat config returnProgram
       let callCode := wordToStackCallNoHandlerTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch _destinations returnCode
+        (arguments.length - 1) config.frameOffset config.scratch
+        (wordStackReturnStackSuffix config _destinations) returnCode
         returnLabel entryLabel
       pure (wordStackJoin argumentMoves (wordStackJoin targetLoad callCode))
   | .call (some (_destinations, _cutsets, returnProgram, returnLabel, entryLabel))
@@ -3055,7 +3061,8 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
       let (returnCode, state) ← wordToStackProgNatWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
-        config.frameOffset config.scratch destinations returnCode
+        config.frameOffset config.scratch (wordStackReturnStackSuffix config destinations)
+        returnCode
         returnLabel entryLabel
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .alloc _ (_, live) =>
@@ -3666,7 +3673,8 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let (returnCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
-        config.frameOffset config.scratch destinations returnCode returnLabel entryLabel
+        config.frameOffset config.scratch (wordStackReturnStackSuffix config destinations)
+        returnCode returnLabel entryLabel
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
   | .call none (some target) arguments none => do
       let argumentMoves ← wordStackMovesToPhysical config arguments config.callAbiBase
@@ -3713,7 +3721,8 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let (returnCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
       let callCode := wordToStackCallNoHandlerTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch destinations returnCode
+        (arguments.length - 1) config.frameOffset config.scratch
+        (wordStackReturnStackSuffix config destinations) returnCode
         returnLabel entryLabel
       pure (wordStackJoin argumentMoves
         (wordStackJoin targetLoad (wordStackJoin liveCode callCode)), state)

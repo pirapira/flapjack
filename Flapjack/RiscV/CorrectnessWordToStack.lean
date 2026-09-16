@@ -556,7 +556,8 @@ theorem wordToStackProgNatWithBitmapBuilder_call_no_handler
           (wordStackJoin liveCode
             (wordToStackCallNoHandler config.perf target arguments.length
               config.frameOffset config.scratch
-              (returns.map (fun result => result.1) |>.getD []) returnCode
+              (wordStackReturnStackSuffix config
+                (returns.map (fun result => result.1) |>.getD [])) returnCode
               (wordStackReturnLabel config returns) (wordStackEntryLabel config returns))),
         returnState) := by
   cases returns with
@@ -1038,7 +1039,8 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
     (hcall : evalStackProgFuelWithCodeAndFfi host fuel code middle
       (wordToStackCallNoHandler config.perf target arguments.length
         config.frameOffset config.scratch
-        (returns.map (fun item => item.1) |>.getD []) returnCode
+        (wordStackReturnStackSuffix config
+          (returns.map (fun item => item.1) |>.getD [])) returnCode
         (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)) = some result) :
     (wordToStackProgNatWithBitmapBuilder config bitmapBuilder
       registerCount bitmapRegister frameSlots wordBits storeConstsStub bitmapState
@@ -1062,7 +1064,8 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
       some (wordStackJoin argumentMoves
         (wordToStackCallNoHandler config.perf target arguments.length
           config.frameOffset config.scratch
-          (returns.map (fun item => item.1) |>.getD []) returnCode
+          (wordStackReturnStackSuffix config
+            (returns.map (fun item => item.1) |>.getD [])) returnCode
           (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)), bitmapState) := by
     simpa [wordStackJoin] using hcompile
   rw [hcompile']
@@ -1070,7 +1073,8 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
   have hcallNe :
       wordToStackCallNoHandler config.perf target arguments.length
         config.frameOffset config.scratch
-        (returns.map (fun item => item.1) |>.getD []) returnCode
+        (wordStackReturnStackSuffix config
+          (returns.map (fun item => item.1) |>.getD [])) returnCode
         (wordStackReturnLabel config returns) (wordStackEntryLabel config returns) ≠
         (.skip : StackProg Nat) := by
     simp [wordToStackCallNoHandler, stackSeq, stackArgs, stackMove]
@@ -1080,7 +1084,8 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
     (middle := middle) (first := argumentMoves)
     (second := wordToStackCallNoHandler config.perf target arguments.length
       config.frameOffset config.scratch
-      (returns.map (fun item => item.1) |>.getD []) returnCode
+      (wordStackReturnStackSuffix config
+        (returns.map (fun item => item.1) |>.getD [])) returnCode
       (wordStackReturnLabel config returns) (wordStackEntryLabel config returns))
     (result := some result) hmove hcall
   simp [hseq]

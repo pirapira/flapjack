@@ -198,6 +198,19 @@ def immediateCarrierInstruction : Bool :=
 
 #guard immediateCarrierInstruction
 
+def rotateImmediateCarrierInstructions : Bool :=
+  match wordArithToInstructions (width := 64)
+      (.shift .ror 1 2 (.imm 5) : WordArith (Word 64)) with
+  | some [.srli temporary source amount,
+      .slli destination source' complement,
+      .or destination' destination'' temporary'] =>
+      temporary = 31 ∧ source = 2 ∧ amount = 5 ∧
+        destination = 1 ∧ source' = 2 ∧ complement = 59 ∧
+        destination' = 1 ∧ destination'' = 1 ∧ temporary' = 31
+  | _ => false
+
+#guard rotateImmediateCarrierInstructions
+
 def constantCarrierInstruction : Bool :=
   match wordInstToInstruction (width := 64)
       (.const 3 7 : WordInst (Word 64)) with

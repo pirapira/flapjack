@@ -1565,17 +1565,27 @@ def wordStackReturnCode (config : WordStackConfig) :
 def wordStackReturnFreeCount (config : WordStackConfig) (values : List Nat) : Nat :=
   wordStackCakeFrameSize config - (values.length - config.abiRegisterCount)
 
+/-! Cake's `wReg1` emits a `StackLoad` when the return address has been
+    spilled to the frame, jumping through the spare register afterwards.  The
+    register-bearing return therefore loads a frame-allocated link value back
+    before the jump, and falls back to the link register when the return
+    variable has no location at all (matching the hardcoded `ret` of the
+    earlier port). -/
 def wordStackReturn (config : WordStackConfig) (returnLabel : Nat) (values : List Nat) :
     Option (StackProg α) := do
   let moves ← wordStackMovesToPhysical config values config.abiBase
-  let returnRegister := match wordStackLocation config returnLabel with
-    | some (.register register) => register
-    | _ => returnLabel
+  let (loads, returnRegister) ← match wordStackLocation config returnLabel with
+    | some (.register register) => pure ((.skip : StackProg α), register)
+    | some (.stack slot) =>
+        pure ((.stackLoad config.scratch (wordStackOffset config slot)),
+          config.scratch)
+    | none => pure ((.skip : StackProg α), 0)
   match values with
   | [] => pure moves
   | _ => pure (wordStackJoin moves
-      (stackFreeIfNonzero (wordStackReturnFreeCount config values)
-        (.return returnRegister)))
+      (wordStackJoin loads
+        (stackFreeIfNonzero (wordStackReturnFreeCount config values)
+          (.return returnRegister))))
 
 def wordToStackInst (config : WordStackConfig) : WordInst → Option (StackProg α)
   | .mem operator sourceOrDestination address =>

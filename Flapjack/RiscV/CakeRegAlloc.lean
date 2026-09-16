@@ -636,9 +636,11 @@ decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 /-- `revive_moves` (`reg_allocScript.sml:363-375`). -/
 def cakeReviveMoves (vs : List Nat) (state : CakeRaState) : CakeRaState :=
   let nbs := vs.map (fun v => cakeAdjSub state.adjLists v)
-  let (revived, unavail) := partitionReversed (fun m =>
+  /- `revive_moves` uses ordinary HOL `PARTITION`, not the state-execution
+     helper `st_ex_PARTITION`; its two buckets therefore preserve source
+     order before `sort_moves` is applied. -/
+  let (revived, unavail) := state.unavailMovesWl.partition (fun m =>
       nbs.any (cakeSortedMem m.2.1) || nbs.any (cakeSortedMem m.2.2))
-    state.unavailMovesWl
   { state with
     availMovesWl := cakeSMerge (cakeSortMoves revived) state.availMovesWl,
     unavailMovesWl := unavail }

@@ -255,8 +255,8 @@ def sortColouring (colours : Flapjack.NatInfoMap Nat) :
 def partOrderGuard : Bool :=
   partitionReversed (fun x => x % 2 == 0) [0, 1, 2] == ([2, 0], [1])
 
-/-- `revive_moves` partitions the unavailable-move worklist with the
-    bucket-reversing `sorting$PARTITION`. -/
+/-- `revive_moves` uses stable HOL `PARTITION`; `sort_moves` then applies
+    Cake's equal-priority order to the preserved revived bucket. -/
 def reviveOrderGuard : Bool :=
   let base : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
     { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 4 with
@@ -264,11 +264,9 @@ def reviveOrderGuard : Bool :=
       unavailMovesWl := [(1, (5, 9)), (1, (13, 5)), (1, (13, 17))],
       availMovesWl := [(2, (1, 1))] }
   let out := Flapjack.RiscV.CakeRegAlloc.cakeReviveMoves [9] base
-  out.availMovesWl == [(2, (1, 1)), (1, (5, 9)), (1, (13, 5))] &&
+  out.availMovesWl == [(2, (1, 1)), (1, (13, 5)), (1, (5, 9))] &&
     out.unavailMovesWl == [(1, (13, 17))]
 
-/- `moves_to_sp` inserts before recursing, so partner lists reverse source
-   order because each insertion prepends. -/
 def movesToSpOrderGuard : Bool :=
   let table := Flapjack.RiscV.CakeRegAlloc.cakeMovesToSp
     [(1, (2, 5)), (2, (2, 7)), (3, (2, 11))]
@@ -276,6 +274,8 @@ def movesToSpOrderGuard : Bool :=
   table.get 2 ==
       some [(3, 11), (2, 7), (1, 5)] &&
     table.get 5 == some [(1, 2)]
+
+#guard reviveOrderGuard
 
 /-- `bg_ok` partitions `adjY` by `adjX` membership with the bucket-reversing
     `sorting$PARTITION`, then `st_ex_FILTER`s each case list. -/
@@ -539,7 +539,7 @@ def runChecks : IO Bool := do
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",
     "reg_alloc delta free", "reg_alloc stack only",
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
-    "sorting partition order", "revive moves order", "moves_to_sp order", "bg_ok order",
+    "sorting partition order", "revive moves stable partition", "moves_to_sp order", "bg_ok order",
     "sort_moves tie two", "sort_moves tie three", "sort_moves long tie",
     "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",

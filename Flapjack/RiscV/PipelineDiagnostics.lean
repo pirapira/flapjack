@@ -130,8 +130,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
   | (label, parameters, body) :: functions =>
       let wordParameters := wordSsaAbiParameters parameters.length
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
-          (RiscV.wordFuseConditions
-            (RiscV.wordInstSelectProgramFrom
+          (RiscV.wordInstSelectProgramFrom
+            (RiscV.wordFuseConditionsAndFold
               (RiscV.wordConstFp
                 (RiscV.wordFlattenProgramFrom
                   (LoopToWord.loopToWordCompFunc label parameters body))))))
@@ -203,8 +203,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
           (RiscV.wordFuseConditions
             (LoopToWord.loopToWordCompFunc label parameters body))
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
-          (RiscV.wordFuseConditions
-            (RiscV.wordInstSelectProgramFrom
+          (RiscV.wordInstSelectProgramFrom
+            (RiscV.wordFuseConditionsAndFold
               (RiscV.wordConstFp
                 (RiscV.wordFlattenProgramFrom
                   (LoopToWord.loopToWordCompFunc label parameters body))))))
@@ -295,8 +295,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
       let unflattenedBody := wordProgDCE
         (RiscV.wordFuseConditions body)
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
-        (RiscV.wordFuseConditions
-          (RiscV.wordInstSelectProgramFrom
+        (RiscV.wordInstSelectProgramFrom
+          (RiscV.wordFuseConditionsAndFold
             (RiscV.wordConstFp
               (RiscV.wordFlattenProgramFrom body)))))
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead

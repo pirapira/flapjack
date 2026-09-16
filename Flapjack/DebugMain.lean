@@ -24,7 +24,8 @@ def emit [Repr α] (label : String) (value : α) : IO Unit :=
 def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO Unit := do
   let (label, arity, body) := entry
   let selected := RiscV.wordInstSelectProgramFrom
-    (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body))
+    (RiscV.wordFuseConditionsAndFold
+      (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body)))
   let (_ssaState, renamedParameters, ssaProgram) :=
     wordFullSsaCcTrans arity selected
   let deadAfterSsa := RiscV.wordRemoveDeadProgram ssaProgram
@@ -72,7 +73,8 @@ def dumpPipeline (pipeline : FlapjackPipelineResult (RiscV.Word 64)) : IO Unit :
   let sourceSelected := sourceWord.map (fun (label, arity, body) =>
     (label, arity,
       RiscV.wordInstSelectProgramFrom
-        (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body))))
+        (RiscV.wordFuseConditionsAndFold
+          (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body)))))
   emit "stage=source_word_inst_select" sourceSelected
   match pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordChecked
       (RiscV.wordStackInitialBitmaps false) sourceWord with

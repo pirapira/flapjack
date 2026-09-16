@@ -800,7 +800,7 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         let (state, destination) := wordSsaFresh state destination
         (state, .locValue destination label)
     | .ffi function configuration configurationLength array arrayLength live =>
-        let names := (live.1 ++ live.2).eraseDups
+        let names := NumSet.fromList ((live.1 ++ live.2).eraseDups)
         let (stackState, stackNext, stackMove) :=
           wordSsaListNextVarRenameMove state (state.next + 2) names
         let stackLive := wordSsaReadCutsets stackState live

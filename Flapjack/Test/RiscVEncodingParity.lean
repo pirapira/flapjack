@@ -15,21 +15,22 @@ example : encodeInstruction (width := 64) (.remU 1 2 3) =
   decide
 
 /-! The reduced Word CSE boundary must preserve Cake's repeated
-    HeapLength/Shift/CurrHeap facts as moves.  This is the shape emitted by
-    duplicate global initializers before the selected-instruction refactor. -/
+    HeapLength/Shift/CurrHeap facts as moves.  This is the instruction shape
+    produced by duplicate global initializers after `inst_select` has turned
+    the shift into an `Inst (Arith (Shift ...))`; Cake's `word_cse` shares the
+    second shift and heap-base computation through the instruction fact
+    table. -/
 def cseDuplicateGlobalPrelude : WordProg (Word 64) :=
   .seq (.get 13 (.heapLength : WordStore (Word 64)))
-    (.seq (.assign 17
-      (.shift .lsl (.var 13) (.const (1 : Word 64))))
+    (.seq (.inst (.arith (.shift .lsl 17 13 (.imm (1 : Word 64)))))
       (.seq (.opCurrHeap .add 21 17)
         (.seq (.get 37 (.heapLength : WordStore (Word 64)))
-          (.seq (.assign 41
-            (.shift .lsl (.var 37) (.const (1 : Word 64))))
+          (.seq (.inst (.arith (.shift .lsl 41 37 (.imm (1 : Word 64)))))
             (.opCurrHeap .add 45 41)))))
 
 #guard (match wordCseProp cseDuplicateGlobalPrelude with
   | .seq (.get 13 .heapLength)
-      (.seq (.assign 17 _)
+      (.seq (.inst (.arith (.shift .lsl 17 13 _)))
         (.seq (.opCurrHeap .add 21 17)
           (.seq (.move 1 [(37, 13)])
             (.seq (.move 0 [(41, 17)])

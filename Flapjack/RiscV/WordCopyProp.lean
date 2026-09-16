@@ -1,4 +1,5 @@
 import Flapjack.RiscV.Allocator
+import Flapjack.RiscV.WordCse
 
 /-!
 # Cake-shaped Word copy propagation
@@ -17,9 +18,15 @@ open Flapjack
 
 structure WordCopyState where
   aliases : NatInfoMap Nat
+  /- `store_to_eq` (`word_copyScript.sml:40`): the equivalence class known to
+     hold the value a store currently contains.  Cake keeps an internal class
+     number here and resolves it through `from_eq`; the flattened port
+     representation already stores the visible representative, so this map
+     holds that representative directly. -/
+  storeToEq : NatInfoMap Nat
   deriving Repr
 
-def wordCopyEmpty : WordCopyState := { aliases := [] }
+def wordCopyEmpty : WordCopyState := { aliases := [], storeToEq := [] }
 
 def wordCopyLookup (state : WordCopyState) (name : Nat) : Nat :=
   (lookupNatInfo name state.aliases).getD name
@@ -46,11 +53,41 @@ def wordCopySet (state : WordCopyState) (destination source : Nat) : WordCopySta
     let sourceClass := wordCopyLookup state source
     let others := state.aliases.filter (fun entry =>
       entry.1 != destination && entry.1 != source)
-    { aliases := (destination, destination) ::
+    { state with
+      aliases := (destination, destination) ::
         (source, destination) ::
         others.map (fun entry =>
           if entry.2 == sourceClass then (entry.1, destination) else entry) }
   else state
+
+/- `lookup_store_eq` (`word_copyScript.sml:252-260`).  Cake resolves the
+    recorded internal class through `from_eq` and reports nothing when that
+    class no longer exists; the port's representative is live exactly when the
+    alias map still carries it. -/
+def wordCopyLookupStoreEq (state : WordCopyState) (store : Nat) : Option Nat :=
+  match lookupNatInfo store state.storeToEq with
+  | none => none
+  | some representative =>
+      if (lookupNatInfo representative state.aliases).isSome then
+        some representative
+      else none
+
+/-! `set_store_eq` (`word_copyScript.sml:233-250`).  The SSA invariant makes
+    the source an allocatable name, so a name without a class gets its own
+    singleton class and a name with one reuses it. -/
+def wordCopySetStoreEq (state : WordCopyState) (store name : Nat) : WordCopyState :=
+  if wordCopyIsAlloc name then
+    match lookupNatInfo name state.aliases with
+    | some representative =>
+        { state with
+          storeToEq := (store, representative) ::
+            state.storeToEq.filter (fun entry => entry.1 != store) }
+    | none =>
+        { aliases := (name, name) ::
+            state.aliases.filter (fun entry => entry.1 != name),
+          storeToEq := (store, name) ::
+            state.storeToEq.filter (fun entry => entry.1 != store) }
+  else wordCopyEmpty
 
 def wordCopyExp (state : WordCopyState) : WordExp α → WordExp α
   | .const value => .const value
@@ -123,7 +160,9 @@ def wordCopyInst {α : Type} (state : WordCopyState) :
 
 def wordCopyMerge (left right : WordCopyState) : WordCopyState :=
   { aliases := left.aliases.filter (fun entry =>
-      lookupNatInfo entry.1 right.aliases == some entry.2) }
+      lookupNatInfo entry.1 right.aliases == some entry.2),
+    storeToEq := left.storeToEq.filter (fun entry =>
+      lookupNatInfo entry.1 right.storeToEq == some entry.2) }
 
 def wordCopyMoves : WordCopyState → List (Nat × Nat) →
     List (Nat × Nat) × WordCopyState
@@ -142,7 +181,8 @@ def wordCopyShareExp (state : WordCopyState) : WordExp α → WordExp α
       .op .add [.var (wordCopyLookup state name), .const value]
   | expression => expression
 
-def wordCopyProg : WordCopyState → WordProg α → WordProg α × WordCopyState
+def wordCopyProg [WordCseHash α] :
+    WordCopyState → WordProg α → WordProg α × WordCopyState
   | state, .skip => (.skip, state)
   | state, .move priority moves =>
       let destinations := moves.map Prod.fst
@@ -162,11 +202,28 @@ def wordCopyProg : WordCopyState → WordProg α → WordProg α × WordCopyStat
       let (instruction, state) := wordCopyInst state instruction
       (.inst instruction, state)
   | state, .get destination store =>
-      (.get destination store, wordCopyRemove state destination)
+      /- `copy_prop_prog (Get n name)` (`word_copyScript.sml:338-346`): a
+         known stored value becomes a copy or the instruction disappears, and
+         otherwise the read records itself as the store's current value. -/
+      match wordCopyLookupStoreEq state (wordCseStoreCode store) with
+      | none =>
+          (.get destination store,
+            wordCopySetStoreEq (wordCopyRemove state destination)
+              (wordCseStoreCode store) destination)
+      | some value =>
+          if value == destination then (.skip, state)
+          else
+            let (moves, state) := wordCopyMoves state [(destination, value)]
+            (.move 0 moves, state)
   | state, .store address value =>
       (.store (wordCopyExp state address) (wordCopyLookup state value), state)
   | state, .set store value =>
-      (.set store (wordCopyExp state value), wordCopyEmpty)
+      /- `copy_prop_prog (Set name exp)` (`word_copyScript.sml:332-337`). -/
+      match value with
+      | .var name =>
+          (.set store (.var (wordCopyLookup state name)),
+            wordCopySetStoreEq state (wordCseStoreCode store) name)
+      | _ => (.set store (wordCopyExp state value), wordCopyEmpty)
   | state, .seq first second =>
       let (first, state) := wordCopyProg state first
       let (second, state) := wordCopyProg state second
@@ -205,7 +262,7 @@ def wordCopyProg : WordCopyState → WordProg α → WordProg α × WordCopyStat
 termination_by _ program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-def wordCopyProp (program : WordProg α) : WordProg α :=
+def wordCopyProp [WordCseHash α] (program : WordProg α) : WordProg α :=
   (wordCopyProg wordCopyEmpty program).1
 
 end Flapjack.RiscV

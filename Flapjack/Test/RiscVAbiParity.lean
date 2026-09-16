@@ -288,6 +288,24 @@ def copyPropagationKeepsDestination : Bool :=
   | .seq _ (.inst (.mem .store 33 address)) => address == 37
   | _ => false
 
+/-! `Set name (Var n)` records what the store holds and `Get m name` uses it
+    (Cake `word_copyScript.sml:233-346`). -/
+
+def copyPropagationSharesStoredValues : Bool :=
+  match RiscV.wordCopyProp
+      (.seq (.set .currHeap (.var 5)) (.get 9 .currHeap) : WordProg (Word 64)) with
+  | .seq (.set .currHeap (.var 5)) (.move 0 [(9, 5)]) => true
+  | _ => false
+
+def copyPropagationDropsRedundantGet : Bool :=
+  match RiscV.wordCopyProp
+      (.seq (.set .currHeap (.var 5)) (.get 5 .currHeap) : WordProg (Word 64)) with
+  | .seq (.set .currHeap (.var 5)) .skip => true
+  | _ => false
+
+#guard copyPropagationSharesStoredValues
+#guard copyPropagationDropsRedundantGet
+
 #guard copyPropagationKeepsDestination
 
 /-! ### Cake ABI argument overflow
@@ -361,7 +379,9 @@ def runChecks : IO Bool := do
     ("an overflowing call is rejected without that frame room",
       overflowRejectedWithTinyFrame),
     ("copy propagation keeps Cake's destination representative",
-      copyPropagationKeepsDestination)]
+      copyPropagationKeepsDestination),
+    ("copy propagation shares a stored value", copyPropagationSharesStoredValues),
+    ("copy propagation drops a redundant Get", copyPropagationDropsRedundantGet)]
   let mut ok := true
   for (label, passed) in checks do
     if passed then

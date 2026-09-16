@@ -55,31 +55,31 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/shadowing.pnk",
-      "source_reference": "Local shadowing regression (`var 1 x = 0; var 1 x = g();`) reproduced from Flapjack.Test.SourceGlobalParity.shadowingSource. The original CakeML accepts it with a redeclaration warning and emits cml_generated_main 28 bytes, cml_main 4, cml_g 8, cml_f 144; the port expands the global-initializer address inline (heapLength shift and subtract) so generated_main is 48 bytes and every later section base shifts by 20, and cml_f additionally differs in allocator move and register choice. Tracked by flapjack-pxn.8.5.10.2 (global-initializer generated entry bytes) together with flapjack-8tb.",
+      "source_reference": "Local shadowing regression (`var 1 x = 0; var 1 x = g();`) reproduced from Flapjack.Test.SourceGlobalParity.shadowingSource. The current coordinator output is byte-exact with CakeML; retain this fixture as a regression while broader global-initializer and shadowing coverage remains tracked by flapjack-pxn.8.5.10.2 and flapjack-8tb.",
       "cake_sha256": "b7343fcd21e99f4cae4cc800a922325bca143f9624b8b007f2c357cfdd787e60",
       "tracked_beads": ["flapjack-pxn.8.5.12.12", "flapjack-pxn.8.5.10.2", "flapjack-8tb"]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_expression.pnk",
-      "source_reference": "GitHub issue #1015 nested-expression reproducer; the original accepts because crep_to_loop flattens nested Word expressions into Loop temporaries, while the port's Word-to-Stack lowering exhausted its fixed four-register temporary pool before the pool-expansion fix recorded by flapjack-pxn.2.5. The residual byte/layout difference is the remaining tracked gap.",
+      "source_reference": "GitHub issue #1015 nested-expression reproducer; the original accepts because crep_to_loop flattens nested Word expressions into Loop temporaries. The port now uses the expanded temporary pool and emits byte-exact output for this fixture; retain it as a regression for flapjack-pxn.2.5.",
       "cake_sha256": "11ad4d103897fbc551a4540c06a720b7e517f920d805034cee217e5044bb4b29",
       "tracked_beads": ["flapjack-pxn.2.5"]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_expression_deep.pnk",
-      "source_reference": "Deepened GitHub issue #1015 variant (one extra addition level, six live nested temporaries); the original accepts, and after the pool-expansion fix flapjack-pxn.2.5 the port accepts too. Recorded to show the fix generalizes past the four-register reserved pool.",
+      "source_reference": "Deepened GitHub issue #1015 variant (one extra addition level, six live nested temporaries); the original and port now emit byte-exact output after the pool-expansion fix flapjack-pxn.2.5. Retained to show the fix generalizes past the four-register reserved pool.",
       "cake_sha256": "5822698630fdc38fcc3061902f3fdaee3b36b3d8b1cdcfc5fdc7b948261e9f36",
       "tracked_beads": ["flapjack-pxn.2.5"]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_expression_sub.pnk",
-      "source_reference": "GitHub issue #1015 previously-failing left-associative subtraction chain (five nested binary nodes); the original accepts and the port accepts after the flapjack-pxn.2.5 pool-expansion fix, extending coverage of the temporary-pool floor beyond the addition variants.",
+      "source_reference": "GitHub issue #1015 previously-failing left-associative subtraction chain (five nested binary nodes); the original and port now emit byte-exact output after the flapjack-pxn.2.5 pool-expansion fix, extending coverage of the temporary-pool floor beyond the addition variants.",
       "cake_sha256": "30de68e8017f5e36baefc5f0aee2d4797eed4434e41f3f5abd12562a288c99f3",
       "tracked_beads": ["flapjack-pxn.2.5"]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/wide_constants.pnk",
-      "source_reference": "GitHub issue #1020 reproducer: CakeML riscv_ast Const lowering for 0x40000008 uses LUI+ADDI; the port now materializes all bits but still has an allocator-induced result-register copy.",
+      "source_reference": "GitHub issue #1020 reproducer: CakeML riscv_ast Const lowering for 0x40000008 uses LUI+ADDI; the port now materializes all bits and this checked fixture is byte-exact. Broader constant/allocator coverage remains tracked by the listed beads.",
       "cake_sha256": "0e44aff3f32b030f11d33c4519139a56c0d53f771f68e8ec2e8197031451419e",
       "tracked_beads": ["flapjack-pxn.8.5.14.6", "flapjack-pxn.8.5.14.6.1", "flapjack-pxn.8.5.10.1"]
     },
@@ -97,19 +97,19 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/callee_abi.pnk",
-      "source_reference": "Multi-function callee argument/return ABI (GitHub issue #1024 / flapjack-pxn.8.5.10.1.1): the original CakeML passes value argument j in hardware riscv_names (j+1) with the incoming link in hardware 1, so the callee body is minimal (add a0,a1,a0; ret). Flapjack now emits the correct parallel entry moves but still keeps a redundant link-register move and does not coalesce parameters onto the ABI registers.",
+      "source_reference": "Multi-function callee argument/return ABI (GitHub issue #1024 / flapjack-pxn.8.5.10.1.1): this checked callee_abi fixture is now byte-exact with CakeML, including the ABI entry and return shape. Broader generated multi-function cases remain tracked by flapjack-8tb.4.",
       "cake_sha256": "aab59578a1ecf94382606f575f2fbeb2d97d6a873e30e506665ba59348f2bcd7",
       "tracked_beads": ["flapjack-pxn.8.5.10.1.1"]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/relational_condition.pnk",
-      "source_reference": "Relational-condition lowering (GitHub issue #1027 / flapjack-pxn.8.5.14.11): the original CakeML emitter branches directly on the negated comparison against the argument register with the then-branch as the fall-through path (addi a1,x0,10; bge a0,a1,+12; addi a0,x0,1; ret; addi a0,x0,0; ret), so no boolean is materialized and no extra jump is emitted; the port currently negates and swaps branches in Lab.labFlatten with an extra unconditional jump.",
+      "source_reference": "Relational-condition lowering (GitHub issue #1027 / flapjack-pxn.8.5.14.11): the checked fixture now emits byte-exact direct branches matching CakeML. Broader condition and long-range branch coverage remains tracked by the listed bead.",
       "cake_sha256": "824cf4a9a394bad0b27eea57244f11a52203123fa5587f63607cbd7e195d0fc5",
       "tracked_beads": ["flapjack-pxn.8.5.14.11"]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/hello.pnk",
-      "source_reference": "hello.pnk whole-artifact parity (GitHub issue #1022 / bead flapjack-8tb): runtime sections cml__Init_0..cml__StoreConsts_5 and cml_generated_main_6 are byte-identical between the original and the port, and only cml_main differs (Cake 152 bytes versus Flapjack 180 bytes). The port now preserves the comparison's incoming loop live set, but still differs in allocator/instruction selection; it keeps the incoming link-register copy and uncoalesced parallel-move copies, uses a direct JumpLower to the halt section for the frame-overflow check instead of the original inline halt form, and materialises the result through a shared return variable.",
+      "source_reference": "hello.pnk whole-artifact parity (GitHub issue #1022 / bead flapjack-8tb): the checked fixture now has byte-identical Cake and Flapjack output, including cml_main, after the Cake FFI setup-order fix. Retain it as the primary exact-output regression while broader accepted-program parity remains tracked by flapjack-8tb and child beads.",
       "cake_sha256": "72e2d0d849bfcb8d5070a06c35d148d81c032982cd0ca5ce6e12bd91843dc270",
       "tracked_beads": ["flapjack-8tb"]
     },

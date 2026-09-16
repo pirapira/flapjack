@@ -82,11 +82,23 @@ def wordCoalesceMoveCost (spillCosts : NatInfoMap Nat)
     left := move.left
     right := move.right }
 
+/-- `wordHeuristicSpillCosts` over the tree-backed counter state.  The reference
+    definition above stays as the specification; this is what the pipeline
+    runs, because the association-list state makes the reference cubic in
+    function size.  `Flapjack/Test/HeuristicsFastParity.lean` pins the two together,
+    including the order of the returned list. -/
+def wordHeuristicSpillCostsFast (currentFunction : Nat) (program : WordProg α) :
+    NatInfoMap Nat :=
+  let result := wordHeuristicFast currentFunction program ({}, {})
+  let calls := result.2.seen
+  result.1.toNatInfoMap.map (fun entry =>
+    (entry.1, wordGetSpillCost entry.2 (!calls.contains entry.1)))
+
 def wordGetHeuristics (algorithm currentFunction : Nat) (program : WordProg α) :
     List WordMove × Option (NatInfoMap Nat) :=
   let moves := wordProgPrioritizedMoves program
   if algorithm % 2 = 1 then
-    let spillCosts := wordHeuristicSpillCosts currentFunction program
+    let spillCosts := wordHeuristicSpillCostsFast currentFunction program
     (wordCanonicalizeMoves moves |>.map (wordCoalesceMoveCost spillCosts),
       some spillCosts)
   else

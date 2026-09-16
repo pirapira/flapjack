@@ -13,6 +13,7 @@ import Flapjack.Test.StepCorrectness
 import Flapjack.Test.OracleAllocator
 import Flapjack.Test.AllocatorDriver
 import Flapjack.Test.Heuristics
+import Flapjack.Test.HeuristicsFastParity
 import Flapjack.Test.SpillCosts
 import Flapjack.Test.HeuristicDriver
 import Flapjack.Test.HeuristicPipeline

@@ -347,7 +347,8 @@ def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
 
 def wordSsaReadCutsets (state : WordSsaState)
     (cutsets : List Nat × List Nat) : List Nat × List Nat :=
-  (cutsets.1.map (wordSsaRead state), cutsets.2.map (wordSsaRead state))
+  (NumSet.fromList cutsets.1 |>.map (wordSsaRead state),
+    NumSet.fromList cutsets.2 |>.map (wordSsaRead state))
 
 def wordSsaFresh (state : WordSsaState) (name : Nat) : WordSsaState × Nat :=
   ({ current := (name, state.next) ::
@@ -802,7 +803,7 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
             (some (exception, body, handlerLabel, handlerEntryLabel))))
     | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
         target arguments none =>
-        let names := (cutsets.1 ++ cutsets.2).eraseDups
+        let names := NumSet.fromList ((cutsets.1 ++ cutsets.2).eraseDups)
         let (stackState, stackNext, stackMove) :=
           wordSsaListNextVarRenameMove state (state.next + 2) names
         let stackCutsets := wordSsaReadCutsets stackState cutsets
@@ -825,7 +826,7 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
               returnLabel, entryLabel)) target abiArguments none)))
     | .call (some (destinations, cutsets, returnCode, returnLabel, entryLabel))
         target arguments (some (exception, body, handlerLabel, handlerEntryLabel)) =>
-        let names := (cutsets.1 ++ cutsets.2).eraseDups
+        let names := NumSet.fromList ((cutsets.1 ++ cutsets.2).eraseDups)
         let (stackState, stackNext, stackMove) :=
           wordSsaListNextVarRenameMove state (state.next + 2) names
         let stackCutsets := wordSsaReadCutsets stackState cutsets
@@ -865,7 +866,7 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
               returnLabel, entryLabel)) target abiArguments
               (some (2, exceptionHandler, handlerLabel, handlerEntryLabel)))))
     | .alloc destination cutsets =>
-        let names := (cutsets.1 ++ cutsets.2).eraseDups
+        let names := NumSet.fromList ((cutsets.1 ++ cutsets.2).eraseDups)
         let (stackState, stackNext, stackMove) :=
           wordSsaListNextVarRenameMove state (state.next + 2) names
         let stackCutsets := wordSsaReadCutsets stackState cutsets
@@ -890,7 +891,7 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         let (state, destination) := wordSsaFresh state destination
         (state, .opCurrHeap operator destination source)
     | .install codeBuffer codeLength dataBuffer dataLength cutsets =>
-        let names := (cutsets.1 ++ cutsets.2).eraseDups
+        let names := NumSet.fromList ((cutsets.1 ++ cutsets.2).eraseDups)
         let (stackState, stackNext, stackMove) :=
           wordSsaListNextVarRenameMove state (state.next + 2) names
         let stackCutsets := wordSsaReadCutsets stackState cutsets
@@ -1332,7 +1333,7 @@ def wordClashTreeCallCutSet (returns : Option
   | some (_, cutsets, _, _, _) => cutsets.1 ++ cutsets.2
 
 def wordClashTreeCallSet (left right : List Nat) : List Nat :=
-  (left ++ right).eraseDups
+  NumSet.fromList ((left ++ right).eraseDups)
 
 /-! The allocator models a call as a cut-set boundary.  The exact return
     continuation and exceptional handler are included in the recursive clash

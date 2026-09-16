@@ -42,7 +42,8 @@ theorem compilePanToLoop_extCall_const_noop_correct
     [DecidableRel (fun left right : α => left < right)] [PanCmp α]
     (compileContext : CompileContext α) (loopContext : LoopContext α)
     (state : LoopState α) (locals : VarName → Option α)
-    (function : FunName) (configuration configurationLength array arrayLength : α) :
+    (function : FunName) (configuration configurationLength array arrayLength : α)
+    (maxVar_agrees : loopContext.maxVar = compileContext.maxVar) :
     (evalLoopProgWithCallsAndFfi []
       (fun _ _ _ _ _ state => some state) 40 state
       (loopCompileProg loopContext []
@@ -76,7 +77,7 @@ theorem compilePanToLoop_extCall_const_noop_correct
     loopCompileExp, loopNestedSeq,
     evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
     updateLoopLocal, evalPanProgWithCallsAndFfi, evalPanExtCall,
-    evalPanExp, loopResultValues]
+    evalPanExp, loopResultValues, maxVar_agrees]
 
 /-!
 The no-op theorem above is useful for a closed regression, but it hides the
@@ -104,7 +105,8 @@ theorem compilePanToLoop_extCall_const_success_projection
     (sourceHandler_succeeds : ∀ handlerLocals,
       ∃ nextLocals,
         sourceHandler function configuration configurationLength array arrayLength
-          handlerLocals = some nextLocals) :
+          handlerLocals = some nextLocals)
+    (maxVar_agrees : loopContext.maxVar = compileContext.maxVar) :
     (evalLoopProgWithCallsAndFfi [] loopHandler 40 state
       (loopCompileProg loopContext []
         (compileProg compileContext
@@ -119,13 +121,6 @@ theorem compilePanToLoop_extCall_const_success_projection
           | .normal _ => []
           | .returned _ values => values
           | .raised _ _ _ => []) := by
-  have hloopSome (handlerState : LoopState α) :
-      ((loopHandler function configuration configurationLength array arrayLength
-        handlerState).bind (fun nextState =>
-          some (LoopResult.normal nextState))).map
-          loopResultValues = some [] := by
-    rcases loopHandler_succeeds handlerState with ⟨nextState, hnextState⟩
-    simp [hnextState, loopResultValues]
   have hsourceSome (handlerLocals : VarName → Option α) :
       ((sourceHandler function configuration configurationLength array arrayLength
         handlerLocals).bind (fun nextLocals =>
@@ -150,10 +145,19 @@ theorem compilePanToLoop_extCall_const_success_projection
             (compileContext.maxVar + 4)) := by
     simp [compileProg, firstCompiledExp, compileExp, nestedDecs]
   rw [hcompile]
+  obtain ⟨nextState, hnextState⟩ := loopHandler_succeeds ({
+    locals :=
+      updateLoopLocal
+        (updateLoopLocal
+          (updateLoopLocal (updateLoopLocal state.locals (compileContext.maxVar + 1) configuration)
+            (compileContext.maxVar + 1 + 1) configurationLength)
+          (compileContext.maxVar + 1 + 1 + 1) array)
+        (compileContext.maxVar + 1 + 1 + 1 + 1) arrayLength,
+    globals := state.globals, memory := state.memory } : LoopState α)
   simp [nestedDecs, loopCompileProg,
     loopCompileExp, loopNestedSeq,
     evalLoopProgWithCallsAndFfi, evalLoopProg, evalLoopExp,
     updateLoopLocal, evalPanProgWithCallsAndFfi, evalPanExtCall,
-    evalPanExp, hloopSome, hsourceSome]
+    evalPanExp, hsourceSome, maxVar_agrees, hnextState, loopResultValues]
 
 end Flapjack

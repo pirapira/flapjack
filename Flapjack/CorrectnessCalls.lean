@@ -75,7 +75,7 @@ theorem compilePanToLoop_identity_call_correct
     loopAssignValues, updateLoopLocal, loopResultValues,
     evalPanProgWithCalls, evalPanCallWithCalls, evalPanExps, evalPanExp,
     bindPanParameters, lookupPanFunction, lookupLoopFunction, lookupInfo,
-    updatePanLocal]
+    findLoopVar, lookupNatInfo, updatePanLocal]
 
 def raiseHandlerDeclarations [OfNat α 0] [OfNat α 1]
     (_exceptionCode value : α) : List (Decl α) :=
@@ -166,6 +166,6 @@ theorem compilePanToLoop_raise_handler_correct
     loopAssignValues, updateLoopLocal, updateLoopGlobal, loopResultValues,
     evalPanProgWithHandlers, evalPanCallWithHandlers, evalPanExps,
     evalPanExp, bindPanParameters, lookupPanFunction, lookupLoopFunction,
-    lookupInfo, updatePanLocal, evalLoopCondition]
+    lookupInfo, findLoopVar, lookupNatInfo, updatePanLocal, evalLoopCondition]
 
 end Flapjack

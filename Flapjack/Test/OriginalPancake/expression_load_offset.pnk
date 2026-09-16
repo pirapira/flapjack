@@ -1,0 +1,12 @@
+fun 1 calculate_total_blob_gas(1 tx) {
+  return 131072 * (lds 1 (tx + 264));
+}
+fun 1 offset_in_range(1 t) { return (lds 1 (t + 2040)); }
+fun 1 offset_negative(1 t) { return (lds 1 (t + 0 - 2048)); }
+fun 1 main() {
+  var 1 a = calculate_total_blob_gas(1000);
+  var 1 b = offset_in_range(1000);
+  var 1 c = offset_negative(4096);
+  @halt(@base, 0, @base, 0);
+  return a + b + c;
+}

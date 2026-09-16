@@ -9,7 +9,10 @@
       "path": "Flapjack/Test/OriginalPancake/empty_locals.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:71 (empty_locals_def)",
       "cake_sha256": "e661960e2ea04f6c804fa9487b600bb0289929ba6c76e0dd10f243263cfdd870",
-      "tracked_beads": ["flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1",
+        "flapjack-pxn.8.5.10.3"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/dec_clock.pnk",
@@ -27,25 +30,34 @@
       "path": "Flapjack/Test/OriginalPancake/crep_op.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:85-88 (crep_op_def)",
       "cake_sha256": "5e1162c5f80779f9ac072963aac2d3fbbae54d565f05c46a91e4028405dbb57f",
-      "tracked_beads": ["flapjack-pxn.8.5.10.1"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/set_globals.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:61-63 (set_globals_def)",
       "cake_sha256": "1281f0d8cd5e1a22486f15baa4a4526e000645f2abec8fb6893e64603b606ac9",
-      "tracked_beads": ["flapjack-pxn.8.5.10.2"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.2"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/set_var.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:55-57 (set_var_def)",
       "cake_sha256": "14ee212eefbbc8ba96af33c6372dcde8bc6b2c4babe72779e3124f2df1cd21b1",
-      "tracked_beads": ["flapjack-pxn.8.5.10.1"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/bitmap_calls.pnk",
       "source_reference": "synthetic regression extracted from the original Pancake call/bitmap corpus",
       "cake_sha256": "eaffdb7dd3840571e776be1d3661fd2fc8de56d6cafe34ce5c4fb588e74b79f8",
-      "tracked_beads": ["flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1",
+        "flapjack-pxn.8.5.10.3"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/entry_order.pnk",
@@ -57,67 +69,95 @@
       "path": "Flapjack/Test/OriginalPancake/shadowing.pnk",
       "source_reference": "Local shadowing regression (`var 1 x = 0; var 1 x = g();`) reproduced from Flapjack.Test.SourceGlobalParity.shadowingSource. The current coordinator output is byte-exact with CakeML; retain this fixture as a regression while broader global-initializer and shadowing coverage remains tracked by flapjack-pxn.8.5.10.2 and flapjack-8tb.",
       "cake_sha256": "b7343fcd21e99f4cae4cc800a922325bca143f9624b8b007f2c357cfdd787e60",
-      "tracked_beads": ["flapjack-pxn.8.5.12.12", "flapjack-pxn.8.5.10.2", "flapjack-8tb"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.12.12",
+        "flapjack-pxn.8.5.10.2",
+        "flapjack-8tb"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_expression.pnk",
       "source_reference": "GitHub issue #1015 nested-expression reproducer; the original accepts because crep_to_loop flattens nested Word expressions into Loop temporaries. The port now uses the expanded temporary pool and emits byte-exact output for this fixture; retain it as a regression for flapjack-pxn.2.5.",
       "cake_sha256": "11ad4d103897fbc551a4540c06a720b7e517f920d805034cee217e5044bb4b29",
-      "tracked_beads": ["flapjack-pxn.2.5"]
+      "tracked_beads": [
+        "flapjack-pxn.2.5"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_expression_deep.pnk",
       "source_reference": "Deepened GitHub issue #1015 variant (one extra addition level, six live nested temporaries); the original and port now emit byte-exact output after the pool-expansion fix flapjack-pxn.2.5. Retained to show the fix generalizes past the four-register reserved pool.",
       "cake_sha256": "5822698630fdc38fcc3061902f3fdaee3b36b3d8b1cdcfc5fdc7b948261e9f36",
-      "tracked_beads": ["flapjack-pxn.2.5"]
+      "tracked_beads": [
+        "flapjack-pxn.2.5"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_expression_sub.pnk",
       "source_reference": "GitHub issue #1015 previously-failing left-associative subtraction chain (five nested binary nodes); the original and port now emit byte-exact output after the flapjack-pxn.2.5 pool-expansion fix, extending coverage of the temporary-pool floor beyond the addition variants.",
       "cake_sha256": "30de68e8017f5e36baefc5f0aee2d4797eed4434e41f3f5abd12562a288c99f3",
-      "tracked_beads": ["flapjack-pxn.2.5"]
+      "tracked_beads": [
+        "flapjack-pxn.2.5"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/wide_constants.pnk",
       "source_reference": "GitHub issue #1020 reproducer: CakeML riscv_ast Const lowering for 0x40000008 uses LUI+ADDI; the port now materializes all bits and this checked fixture is byte-exact. Broader constant/allocator coverage remains tracked by the listed beads.",
       "cake_sha256": "0e44aff3f32b030f11d33c4519139a56c0d53f771f68e8ec2e8197031451419e",
-      "tracked_beads": ["flapjack-pxn.8.5.14.6", "flapjack-pxn.8.5.14.6.1", "flapjack-pxn.8.5.10.1"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.6",
+        "flapjack-pxn.8.5.14.6.1",
+        "flapjack-pxn.8.5.10.1"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/dup_global.pnk",
       "source_reference": "Differential-fuzzing finding dup-global (GitHub issue #962 smoke): CakeML accepts a duplicate top-level global with the warning 'variable g is redeclared in top-level declaration' and keeps the later declaration; Flapjack previously rejected it in staticCheckDecls. Tracked by flapjack-pxn.8.5.14.4.",
       "cake_sha256": "a79e87b5048cf7c9f2e5e8c830062424e3231cb92b69519995fe54ffac4d3680",
-      "tracked_beads": ["flapjack-pxn.8.5.14.4"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.4"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nomain_global.pnk",
       "source_reference": "Differential-fuzzing finding nomain-global (GitHub issue #962 smoke): the original CakeML pan_to_target synthesizes a main returning zero when the source has none, so a main-less program is accepted; Flapjack previously failed with 'entry not found'. Fixed by panTargetDeclarationsWithDefaultMain. Tracked by flapjack-pxn.8.5.14.3.",
       "cake_sha256": "991051465fe4220a390f5a4cb70ac821811c3381723e3306d41b97136d0be039",
-      "tracked_beads": ["flapjack-pxn.8.5.14.3", "flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.3",
+        "flapjack-pxn.8.5.10.1",
+        "flapjack-pxn.8.5.10.3"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/callee_abi.pnk",
       "source_reference": "Multi-function callee argument/return ABI (GitHub issue #1024 / flapjack-pxn.8.5.10.1.1): this checked callee_abi fixture is now byte-exact with CakeML, including the ABI entry and return shape. Broader generated multi-function cases remain tracked by flapjack-8tb.4.",
       "cake_sha256": "aab59578a1ecf94382606f575f2fbeb2d97d6a873e30e506665ba59348f2bcd7",
-      "tracked_beads": ["flapjack-pxn.8.5.10.1.1"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1.1"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/relational_condition.pnk",
       "source_reference": "Relational-condition lowering (GitHub issue #1027 / flapjack-pxn.8.5.14.11): the checked fixture now emits byte-exact direct branches matching CakeML. Broader condition and long-range branch coverage remains tracked by the listed bead.",
       "cake_sha256": "824cf4a9a394bad0b27eea57244f11a52203123fa5587f63607cbd7e195d0fc5",
-      "tracked_beads": ["flapjack-pxn.8.5.14.11"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.11"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/hello.pnk",
       "source_reference": "hello.pnk whole-artifact parity (GitHub issue #1022 / bead flapjack-8tb): the checked fixture now has byte-identical Cake and Flapjack output, including cml_main, after the Cake FFI setup-order fix. Retain it as the primary exact-output regression while broader accepted-program parity remains tracked by flapjack-8tb and child beads.",
       "cake_sha256": "72e2d0d849bfcb8d5070a06c35d148d81c032982cd0ca5ce6e12bd91843dc270",
-      "tracked_beads": ["flapjack-8tb"]
+      "tracked_beads": [
+        "flapjack-8tb"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/loop_local.pnk",
       "source_reference": "Pre-loop local retention through a while loop (bead flapjack-8tb.1): `var out = 7;` assigned before `while i < 2 { i = i + 1; }` and read by `return out` must keep the assignment. The original CakeML emits the constant and returns it (cml_main = 00706513 00006593 00206613 00c5d663 00158593 ff5ff06f 0080006f fedff06f 00008067, 36 bytes); the port previously dropped the assignment (ori a0,zero,0). The comparison lowering now threads the incoming loop live set through `loopCompileExp` (crep_to_loopScript.sml comparison case; f93a590f), so the assignment survives.",
       "cake_sha256": "bd52adc8d9c0548532985d1907f4097e8fcf79ba6b3db8f7aea509a911b75f4b",
-      "tracked_beads": ["flapjack-8tb.1"]
+      "tracked_beads": [
+        "flapjack-8tb.1"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/mul_const_zero.pnk",
@@ -141,8 +181,15 @@
       "path": "Flapjack/Test/OriginalPancake/f00028_allocator.pnk",
       "source_reference": "Minimized differential-fuzz reproducer f00028: exercises Cake Patricia ordering, SSA cutsets, allocator colouring, and physical parallel moves.",
       "cake_sha256": "60c124426815c469e11d6eba53bffda35c2f166ce78a0446c9457d07e14295cf",
-      "tracked_beads": ["flapjack-8tb.4"]
+      "tracked_beads": [
+        "flapjack-8tb.4"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/expression_load_offset.pnk",
+      "source_reference": "Minimized from the stateless-pancaketh guest's calculate_total_blob_gas: an expression-level load whose address is base plus a constant must keep the constant in the Addr offset (word_instScript.sml:234-245), with the in-range and negative boundaries beside it.",
+      "cake_sha256": "cea72fb1938fff2d1554a1f993be9b10ff232ae437afe9ee89e8c9bca69e94c6",
+      "tracked_beads": []
     }
-
   ]
 }

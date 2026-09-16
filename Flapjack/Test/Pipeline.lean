@@ -329,8 +329,6 @@ example :
       result.functions.all (fun (_, parameters, artifact) =>
         parameters = [2, 3] && match artifact with
         | some (code, returns) =>
-            /- The two-register immediate change moved the result
-               destination from 4 to 5. -/
             returns = [5] && match code with
             | [.add destination left right] =>
                 destination = 5 && left = 2 && right = 3

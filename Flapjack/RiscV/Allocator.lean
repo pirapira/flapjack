@@ -483,6 +483,37 @@ def wordSsaRenameInst (state : WordSsaState) :
       | .store | .store8 | .store16 | .store32 =>
           (state, .mem operator (wordSsaRead state destination) address)
 
+/-! CakeML's SSA pass gives `LongMul` its fixed RISC-V register protocol.
+    The instruction itself writes `(6, 0)` and the surrounding moves preserve
+    the source program's two fresh SSA results.  Keep this as a program-level
+    helper because the ABI moves are part of the translated instruction, not
+    a property of the `WordInst` constructor. -/
+def wordSsaRenameInstProgram [OfNat α 0] (state : WordSsaState) :
+    WordInst α → WordSsaState × WordProg α
+  | .arith (.shift operator destination sourceLeft (.reg sourceRight)) =>
+      let sourceLeft := wordSsaRead state sourceLeft
+      let sourceRight := wordSsaRead state sourceRight
+      let (state, freshDestination) := wordSsaFresh state destination
+      let moveIn : WordProg α := .move 1 [(8, sourceRight)]
+      let shift : WordProg α :=
+        .inst (.arith (.shift operator freshDestination sourceLeft (.reg 8)))
+      (state, .seq moveIn shift)
+  | .arith (.longMul destinationLeft destinationRight sourceLeft sourceRight) =>
+      let sourceLeft := wordSsaRead state sourceLeft
+      let sourceRight := wordSsaRead state sourceRight
+      let moveIn : WordProg α :=
+        .move 1 [(0, sourceLeft), (4, sourceRight)]
+      let (state, freshLeft) := wordSsaFresh state destinationLeft
+      let (state, freshRight) := wordSsaFresh state destinationRight
+      let multiply : WordProg α :=
+        .inst (.arith (.longMul 6 0 0 4))
+      let moveOut : WordProg α :=
+        .move 1 [(freshRight, 0), (freshLeft, 6)]
+      (state, .seq moveIn (.seq multiply moveOut))
+  | instruction =>
+      let (state, instruction) := wordSsaRenameInst state instruction
+      (state, .inst instruction)
+
 def wordSsaRenameLinear (state : WordSsaState) : List (WordInst α) →
     WordSsaState × List (WordInst α)
   | [] => (state, [])
@@ -607,15 +638,15 @@ def wordSsaFakeInconsistencyMoves [OfNat α 0] (preferred : Option Bool) :
         wordSsaFakeInconsistencyMoves preferred names left right next
       match lookupNatInfo name left.current, lookupNatInfo name right.current with
       | none, some rightName =>
-          (wordSsaSeq leftMoves (.assign next (.const 0)),
+          (wordSsaSeq leftMoves (.inst (.const next 0)),
             wordSsaSeq rightMoves
               (.move (wordSsaBranchPriority preferred false) [(next, rightName)]),
             next + 4, wordSsaForceRename [(name, next)] left,
             wordSsaForceRename [(name, next)] right)
       | some leftName, none =>
-          (wordSsaSeq leftMoves
+            (wordSsaSeq leftMoves
               (.move (wordSsaBranchPriority preferred true) [(next, leftName)]),
-            wordSsaSeq rightMoves (.assign next (.const 0)),
+            wordSsaSeq rightMoves (.inst (.const next 0)),
             next + 4, wordSsaForceRename [(name, next)] left,
             wordSsaForceRename [(name, next)] right)
       | _, _ => (leftMoves, rightMoves, next, left, right)
@@ -680,7 +711,7 @@ decreasing_by all_goals decreasing_trivial
 def wordSsaFakeMoves [OfNat α 0] : List Nat → WordProg α
   | [] => .skip
   | name :: names =>
-      wordSsaSeq (.assign name (.const 0)) (wordSsaFakeMoves names)
+      wordSsaSeq (.inst (.const name 0)) (wordSsaFakeMoves names)
 
 def wordSsaLoopSetup [OfNat α 0] (state : WordSsaState)
     (liveIn liveOut : List Nat) : WordSsaState × WordProg α :=
@@ -711,8 +742,7 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         let (state, freshName) := wordSsaFresh state name
         (state, .assign freshName value)
     | .inst instruction =>
-        let (state, instruction) := wordSsaRenameInst state instruction
-        (state, .inst instruction)
+        wordSsaRenameInstProgram state instruction
     | .get destination store =>
         let (state, destination) := wordSsaFresh state destination
         (state, .get destination store)
@@ -778,26 +808,19 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
     | .call none target arguments none =>
         let renamedArguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 0 arguments.length
-        /- CakeML emits `Move1 (ZIP (conv_args, names))` here.  The leading
-           `loop_to_word` tail-call dummy register `0` is coalesced away by
-           the original allocator and is not consumed when binding the
-           callee parameters. -/
-        let allPairs := abiArguments.zip (arguments.zip renamedArguments)
-        let pairs := match allPairs with
-          | (_, original, _) :: rest =>
-              if original = 0 then rest else allPairs
-          | [] => []
         let moveArguments :=
-          match pairs with
+          match abiArguments.zip renamedArguments with
           | [] => .skip
-          | _ => .move 1 (pairs.map (fun (abi, _, renamed) => (abi, renamed)))
+          | pairs => .move 1 pairs
         (state, wordSsaSeq moveArguments
           (.call none target abiArguments none))
     | .call none target arguments
         (some (exception, body, handlerLabel, handlerEntryLabel)) =>
         let arguments := arguments.map (wordSsaRead state)
         let abiArguments := wordSsaCallAbiRegisters 0 arguments.length
-        let moveArguments := .move 1 (abiArguments.zip arguments)
+        let moveArguments := match abiArguments.zip arguments with
+          | [] => .skip
+          | pairs => .move 1 pairs
         (state, wordSsaSeq moveArguments
           (.call none target abiArguments
             (some (exception, body, handlerLabel, handlerEntryLabel))))

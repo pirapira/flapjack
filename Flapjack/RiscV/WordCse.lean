@@ -381,9 +381,12 @@ def wordCseInst [WordCseHash α] (data : WordCseKnowledge) : WordInst α → Wor
         if destination % 2 == 0 || address % 2 == 0 || address = destination then
           (.inst (.mem operator destination address), data)
         else
-          let address := wordCseCanonicalRegs' destination data address
-          wordCseAddToLoad (wordCseRegisterRead data address) destination
-            (wordCseLoadToNumList operator address)
+          let canonicalAddress := wordCseCanonicalRegs' destination data address
+          /- `canonicalAddress` is used only for the load fact.  Cake keeps
+             the original address in the emitted instruction, preserving any
+             explicit materialisation that preceded it. -/
+          wordCseAddToLoad (wordCseRegisterRead data canonicalAddress) destination
+            (wordCseLoadToNumList operator canonicalAddress)
             (.inst (.mem operator destination address))
 
 /-- Cake's `bm_inter_eq`/`inter_eq`, first-order equality intersection. -/

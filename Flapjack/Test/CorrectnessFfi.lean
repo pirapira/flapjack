@@ -228,9 +228,6 @@ example :
 def sourceFfiHost : WordFfiHost 64 :=
   fun service configuration _ _ _ state =>
     if service = 7 then
-      /- The two-register immediate change moved the `result` variable's
-         home register from 3 to 4, so the host writes the incremented
-         configuration back into register 4. -/
       some { (writeRegister state 4 (configuration + 1)) with pc := state.pc + 4 }
     else none
 

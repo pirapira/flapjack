@@ -105,7 +105,7 @@ theorem compiledPipelineAdd_correct (left right : RiscV.Word 64) :
       evalPanProg (pipelineAddLocals left right) (pipelineAddSource left right) := by
   simp [compiledPipelineAddRun, pipelineAddLinkedFunctions_shape,
     pipelineAddSource, pipelineAddLocals, evalPanProg, evalPanExp]
-  exact RiscV.executeFunction_add_destination_5 left right
+  exact RiscV.executeFunction_add_general left right
 
 def pipelineMulDeclarations : List (Decl (RiscV.Word 64)) :=
   [.function

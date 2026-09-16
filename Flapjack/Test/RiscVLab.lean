@@ -106,6 +106,21 @@ example :
         (.asm (.arithImm .sub 20 20 0) [] 0 : LabLine (Word 64)) = 0 := by
   rfl
 
+/- Cake's Word arithmetic rotate expansion occupies three instructions for
+   an immediate amount and five for a register amount.  These counts are also
+   used to place cross-section labels in the linked artifact. -/
+example :
+    (labLineInstructionCount
+        (.asm (.word (.arith (.shift .ror 10 1
+          (.imm (BitVec.ofNat 64 2))))) [] 0 : LabLine (Word 64))) = 3 := by
+  rfl
+
+example :
+    (labLineInstructionCount
+        (.asm (.word (.arith (.shift .ror 10 1
+          (.reg 2)))) [] 0 : LabLine (Word 64))) = 5 := by
+  rfl
+
 example :
     compileLabSection (width := 64) { services := [] }
       ⟨3, [.asm (.codeBufferWrite 7 6) [] 0]⟩ =

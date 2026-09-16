@@ -35,10 +35,6 @@ def sourceToLoopFfiHandler : FunName → Word 64 → Word 64 → Word 64 → Wor
     LoopState (Word 64) → Option (LoopState (Word 64)) :=
   fun function configuration _ _ _ state =>
     if function == "inc" then
-      /- The two-register immediate change shifted the `result` variable's
-         loop slot from 1 to 2; the compiled code stages the FFI
-         configuration into a fresh temporary and refreshes it from this
-         slot after the call. -/
       some { state with
         locals := updateLoopLocal state.locals 2 (configuration + 1) }
     else none

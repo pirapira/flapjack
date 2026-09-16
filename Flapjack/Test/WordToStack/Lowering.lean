@@ -66,8 +66,8 @@ example :
         ((.inst (.arith (.longMul 0 1 2 3))) : WordProg Nat) =
       some (.seq (.stackLoad 31 14)
         (.seq (.stackLoad 29 15)
-          (.seq (.inst (.arith (.longMul 31 29 31 29)))
-            (.seq (.stackStore 31 12) (.stackStore 29 13)))) : StackProg Nat) := by
+          (.seq (.inst (.arith (.longMul 28 31 31 29)))
+            (.seq (.stackStore 28 12) (.stackStore 31 13)))) : StackProg Nat) := by
   simp [wordToStackProg, wordToStackInst, wordStackArithInst,
     wordStackLongMulInst, wordStackLongMulLocationsSafe,
     wordStackLongMulLocationSafe, wordStackLongMulMoveToPhysical,
@@ -126,17 +126,18 @@ example [NeZero width] (state : State width)
 example :
     let config : WordStackConfig :=
       { locations := [(0, .stack 2), (1, .stack 3),
-          (2, .stack 4), (3, .stack 5), (4, .register 5)],
+          (2, .stack 4), (3, .stack 5), (4, .stack 6)],
         scratch := 31, stackBase := 10, addressScratch := 29,
         specialScratch := 28, carryScratch := 27 }
     wordToStackProg config
       ((.inst (.arith (.addCarry 0 1 2 3 4))) : WordProg Nat) =
-      some (.seq (.stackLoad 31 14)
-        (.seq (.stackLoad 29 15)
-          (.seq (.inst (.arith (.addCarry 31 29 31 29 5)))
-            (.seq (.stackStore 31 12) (.stackStore 29 13)))) : StackProg Nat) := by
+      some (.seq (.stackLoad 29 14)
+        (.seq (.stackLoad 28 15)
+          (.seq (.stackLoad 27 16)
+              (.seq (.inst (.arith (.addCarry 27 29 29 28 27)))
+              (.seq (.stackStore 27 12) (.stackStore 29 13))))) : StackProg Nat) := by
   simp [wordToStackProg, wordToStackInst, wordStackArithInst,
-    wordStackAddCarryInst, wordStackAddCarryLocationSafe,
+    wordStackAddCarryInst,
     wordStackLongMulMoveToPhysical, wordStackLongMulMoveFromPhysical,
     wordStackJoin, wordStackLocation, wordStackOffset,
     wordSpecialArithLocationsSafe, lookupNatInfo]
@@ -144,15 +145,15 @@ example :
 example :
     let config : WordStackConfig :=
       { locations := [(0, .stack 2), (1, .stack 3),
-          (2, .stack 4), (3, .stack 5), (4, .register 5)],
+          (2, .stack 4), (3, .stack 5), (4, .stack 6)],
         scratch := 31, stackBase := 10, addressScratch := 29,
         specialScratch := 28, carryScratch := 27 }
     let state : WordStackMachineState 8 :=
-      { registers := fun register =>
-          if register = 5 then BitVec.ofNat 8 1 else 0,
+      { registers := fun _ => 0,
         stack := fun offset =>
           if offset = 14 then BitVec.ofNat 8 255
-          else if offset = 15 then BitVec.ofNat 8 1 else 0,
+          else if offset = 15 then BitVec.ofNat 8 1
+          else if offset = 16 then BitVec.ofNat 8 1 else 0,
         stores := fun _ => 0,
         memory := fun _ => 0,
         sharedMemory := fun _ => 0 }

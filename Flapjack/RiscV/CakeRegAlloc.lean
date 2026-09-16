@@ -198,28 +198,6 @@ inductive CakeNodeTag
   | aTemp | sTemp | fixed (register : Nat)
   deriving Repr, BEq
 
-/-- The IRC allocator state (`ra_state`), represented functionally. -/
-structure CakeRaState where
-  adjLists : NatInfoMap (List Nat)
-  nodeTag : NatInfoMap CakeNodeTag
-  degrees : NatInfoMap Nat
-  coalesced : NatInfoMap Nat
-  moveRelated : NatInfoMap Bool
-  dim : Nat
-  simpWl : List Nat
-  spillWl : List Nat
-  freezeWl : List Nat
-  availMovesWl : List (Nat × (Nat × Nat))
-  unavailMovesWl : List (Nat × (Nat × Nat))
-  stack : List Nat
-  deriving Repr
-
-/-- The empty allocator state for `n` nodes. -/
-def CakeRaState.empty (n : Nat) : CakeRaState :=
-  { adjLists := [], nodeTag := [], degrees := [], coalesced := [],
-    moveRelated := [], dim := n, simpWl := [], spillWl := [], freezeWl := [],
-    availMovesWl := [], unavailMovesWl := [], stack := [] }
-
 /- CakeML's allocator stores these fields in fixed-size arrays and every
    `update_*` accessor performs an in-place `LUPDATE`.  The association-list
    representation keeps the same newest-wins lookup convention, but must
@@ -238,6 +216,78 @@ def cakeMapUpdate {α : Type u} (m : NatInfoMap α) (i : Nat) (v : α) : NatInfo
 def cakeMapLookup {α : Type u} (m : NatInfoMap α) (i : Nat) : Option α :=
   Flapjack.lookupNatInfo i m
 
+/-! ### Node-indexed allocator fields
+
+`reg_allocScript.sml:61-78` declares `adj_ls`, `node_tag`, `degrees`,
+`coalesced` and `move_related` as arrays indexed by node id, reached through
+`sub`/`update` in the allocator's state monad.  Holding them as association
+lists made every degree read and every edge insertion a linear scan, so a
+single `do_spill` over a 6361-node worklist cost 6361 scans of a 6361-entry
+list, and the real guest's largest function did not finish in 90 minutes.
+
+`CakeNodeMap` is the array representation.  `slots` holds one entry per node,
+`none` where the list version had no binding yet; `outside` keeps the keys at
+or above the dimension, which the list version reached by appending.  `get`
+and `set` therefore agree with `cakeMapLookup` and `cakeMapUpdate` on every
+key, so nothing observable changes. -/
+structure CakeNodeMap (α : Type u) where
+  slots : Array (Option α) := #[]
+  outside : NatInfoMap α := []
+  deriving Repr
+
+namespace CakeNodeMap
+
+/-- `sub` (`reg_allocScript.sml` array accessors). -/
+def get {α : Type u} (m : CakeNodeMap α) (i : Nat) : Option α :=
+  if h : i < m.slots.size then m.slots[i] else cakeMapLookup m.outside i
+
+/-- `update`. -/
+def set {α : Type u} (m : CakeNodeMap α) (i : Nat) (v : α) : CakeNodeMap α :=
+  if i < m.slots.size then { m with slots := m.slots.set! i (some v) }
+  else { m with outside := cakeMapUpdate m.outside i v }
+
+/-- An `n`-node field with no bindings yet, matching the empty list. -/
+def ofSize {α : Type u} (n : Nat) : CakeNodeMap α :=
+  { slots := Array.replicate n none }
+
+/-- The association list read as a node-indexed field.  `cakeMapLookup`
+    returns the *first* binding for a key, so the earlier entries must win;
+    folding from the right lets them overwrite the later ones. -/
+def ofNatInfoMap {α : Type u} (n : Nat) (m : NatInfoMap α) : CakeNodeMap α :=
+  m.foldr (fun entry acc => acc.set entry.1 entry.2) (ofSize n)
+
+/-- The field read back as an association list, ascending by node, for
+    diagnostics.  Every key keeps the value `get` returns for it. -/
+def toNatInfoMap {α : Type u} (m : CakeNodeMap α) : NatInfoMap α :=
+  (List.range m.slots.size).filterMap
+    (fun i => (m.get i).map (fun v => (i, v))) ++ m.outside
+
+end CakeNodeMap
+
+/-- The IRC allocator state (`ra_state`), represented functionally. -/
+structure CakeRaState where
+  adjLists : CakeNodeMap (List Nat)
+  nodeTag : CakeNodeMap CakeNodeTag
+  degrees : CakeNodeMap Nat
+  coalesced : CakeNodeMap Nat
+  moveRelated : CakeNodeMap Bool
+  dim : Nat
+  simpWl : List Nat
+  spillWl : List Nat
+  freezeWl : List Nat
+  availMovesWl : List (Nat × (Nat × Nat))
+  unavailMovesWl : List (Nat × (Nat × Nat))
+  stack : List Nat
+  deriving Repr
+
+/-- The empty allocator state for `n` nodes. -/
+def CakeRaState.empty (n : Nat) : CakeRaState :=
+  { adjLists := CakeNodeMap.ofSize n, nodeTag := CakeNodeMap.ofSize n,
+    degrees := CakeNodeMap.ofSize n, coalesced := CakeNodeMap.ofSize n,
+    moveRelated := CakeNodeMap.ofSize n, dim := n,
+    simpWl := [], spillWl := [], freezeWl := [],
+    availMovesWl := [], unavailMovesWl := [], stack := [] }
+
 /-- `sorted_insert` (`reg_allocScript.sml:184-189`): insert into a
     descending adjacency list, skipping duplicates. -/
 def cakeSortedInsert (x : Nat) : List Nat → List Nat
@@ -247,33 +297,53 @@ def cakeSortedInsert (x : Nat) : List Nat → List Nat
       else if x > y then x :: y :: ys
       else y :: cakeSortedInsert x ys
 
+/-- `sorted_mem` (`reg_allocScript.sml:193-198`): membership in a descending
+    adjacency list, stopping as soon as the list passes the sought key.  The
+    adjacency lists are kept descending by `cakeSortedInsert`, so on them this
+    agrees with `List.contains`; it is what the original computes, and the
+    early exit is why the original's coalescing scans stay cheap. -/
+def cakeSortedMem (x : Nat) : List Nat → Bool
+  | [] => false
+  | y :: ys =>
+      if x = y then true
+      else if x > y then false
+      else cakeSortedMem x ys
+
 /-- Adjacency list of node `i` (`adj_ls_sub`). -/
-def cakeAdjSub (adj : NatInfoMap (List Nat)) (i : Nat) : List Nat :=
+def cakeAdjSub (adj : CakeNodeMap (List Nat)) (i : Nat) : List Nat :=
+  (adj.get i).getD []
+
+/-- `adj_ls_sub` on the association-list form still used while the graph is
+    being built, before it is read into the node-indexed field. -/
+def cakeAdjSubList (adj : NatInfoMap (List Nat)) (i : Nat) : List Nat :=
   (cakeMapLookup adj i).getD []
 
 /-- `insert_edge` (`reg_allocScript.sml:201-212`): undirected edge into the
-    adjacency representation. -/
-def cakeInsertEdge (x y : Nat) (adj : NatInfoMap (List Nat)) :
-    NatInfoMap (List Nat) :=
-  let adjX := cakeMapUpdate adj x (cakeSortedInsert y (cakeAdjSub adj x))
-  cakeMapUpdate adjX y (cakeSortedInsert x (cakeAdjSub adj y))
+    adjacency representation.  Both neighbour lists are read before either
+    slot is written, so the array is not aliased across the update and the
+    write stays in place. -/
+def cakeInsertEdge (x y : Nat) (adj : CakeNodeMap (List Nat)) :
+    CakeNodeMap (List Nat) :=
+  let adjX := cakeAdjSub adj x
+  let adjY := cakeAdjSub adj y
+  (adj.set x (cakeSortedInsert y adjX)).set y (cakeSortedInsert x adjY)
 
 /-- `list_insert_edge` (`reg_allocScript.sml:214-221`). -/
-def cakeListInsertEdge (x : Nat) : List Nat → NatInfoMap (List Nat) →
-    NatInfoMap (List Nat)
+def cakeListInsertEdge (x : Nat) : List Nat → CakeNodeMap (List Nat) →
+    CakeNodeMap (List Nat)
   | [], adj => adj
   | y :: ys, adj => cakeListInsertEdge x ys (cakeInsertEdge x y adj)
 
 /-- `clique_insert_edge` (`reg_allocScript.sml:223-232`). -/
-def cakeCliqueInsertEdge : List Nat → NatInfoMap (List Nat) →
-    NatInfoMap (List Nat)
+def cakeCliqueInsertEdge : List Nat → CakeNodeMap (List Nat) →
+    CakeNodeMap (List Nat)
   | [], adj => adj
   | x :: xs, adj => cakeCliqueInsertEdge xs (cakeListInsertEdge x xs adj)
 
 /-- `extend_clique` (`reg_allocScript.sml:235-249`): extend an existing
     clique with new members, returning the extended live list. -/
-def cakeExtendClique : List Nat → List Nat → NatInfoMap (List Nat) →
-    NatInfoMap (List Nat) × List Nat
+def cakeExtendClique : List Nat → List Nat → CakeNodeMap (List Nat) →
+    CakeNodeMap (List Nat) × List Nat
   | [], cli, adj => (adj, cli)
   | x :: xs, cli, adj =>
       if cli.contains x then cakeExtendClique xs cli adj
@@ -287,7 +357,7 @@ decreasing_by all_goals decreasing_trivial
     The `Set` case walks the original sptree keys in ascending order, so the
     fixed clash-tree set is sorted at this boundary like in `cakeMkBijAux`. -/
 def cakeMkGraph (ta : Nat → Nat) : WordClashTree → List Nat →
-    NatInfoMap (List Nat) → NatInfoMap (List Nat) × List Nat
+    CakeNodeMap (List Nat) → CakeNodeMap (List Nat) × List Nat
   | .delta writes reads, liveout, adj =>
       let wta := writes.map ta
       let rta := reads.map ta
@@ -312,7 +382,7 @@ decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
 /-- `extend_graph` (`reg_allocScript.sml:1224-1230`): add the forced edges. -/
 def cakeExtendGraph (ta : Nat → Nat) : List (Nat × Nat) →
-    NatInfoMap (List Nat) → NatInfoMap (List Nat)
+    CakeNodeMap (List Nat) → CakeNodeMap (List Nat)
   | [], adj => adj
   | (x, y) :: rest, adj =>
       cakeExtendGraph ta rest (cakeInsertEdge (ta x) (ta y) adj)
@@ -339,41 +409,42 @@ def cakeInitRaState (tree : WordClashTree) (forced : List (Nat × Nat))
     (fs : List Nat) : CakeRaState :=
   let bij := cakeMkBij tree
   let ta := CakeAlloc.spDefault bij.toAllocator
-  let (adj, _) := cakeMkGraph ta tree [] []
+  let (adj, _) := cakeMkGraph ta tree [] (CakeNodeMap.ofSize bij.nextNode)
   let adj := cakeExtendGraph ta forced adj
   let tags := cakeMkTags bij.nextNode bij.fromAllocator fs
   { (CakeRaState.empty bij.nextNode) with
-    adjLists := adj, nodeTag := tags }
+    adjLists := adj,
+    nodeTag := CakeNodeMap.ofNatInfoMap bij.nextNode tags }
 
 /-- `is_Fixed` (`reg_allocScript.sml:449-454`): a physical node. -/
 def cakeIsFixed (state : CakeRaState) (x : Nat) : Bool :=
-  match (cakeMapLookup state.nodeTag x).getD .aTemp with
+  match (state.nodeTag.get x).getD .aTemp with
   | .fixed _ => true
   | _ => false
 
 /-- `is_Fixed_k` (`reg_allocScript.sml:501-506`): a physical node within the
     allocatable window `k`. -/
 def cakeIsFixedK (state : CakeRaState) (k : Nat) (x : Nat) : Bool :=
-  match (cakeMapLookup state.nodeTag x).getD .aTemp with
+  match (state.nodeTag.get x).getD .aTemp with
   | .fixed n => n < k
   | _ => false
 
 /-- `considered_var` (`reg_allocScript.sml:507-512`): allocation temps and
     low physical registers count towards degrees. -/
 def cakeConsideredVar (state : CakeRaState) (k : Nat) (v : Nat) : Bool :=
-  ((cakeMapLookup state.nodeTag v).getD .aTemp == .aTemp) || cakeIsFixedK state k v
+  ((state.nodeTag.get v).getD .aTemp == .aTemp) || cakeIsFixedK state k v
 
 /-- `is_not_coalesced` (`reg_allocScript.sml:320-327`): the node is its own
     coalescing parent. -/
 def cakeIsNotCoalesced (state : CakeRaState) (v : Nat) : Bool :=
-  (cakeMapLookup state.coalesced v).getD v == v
+  (state.coalesced.get v).getD v == v
 
 /-- `split_degree` (`reg_allocScript.sml:330-340`): low-degree (relative to
     `k`) uncoalesced allocation nodes; nodes at or above the dimension stay
     on the worklist side. -/
 def cakeSplitDegree (state : CakeRaState) (d k v : Nat) : Bool :=
   if v < d then
-    ((cakeMapLookup state.degrees v).getD 0 < k) && cakeIsNotCoalesced state v
+    ((state.degrees.get v).getD 0 < k) && cakeIsNotCoalesced state v
   else true
 
 /-- `st_ex_filter`/`st_ex_partition` accumulate by prepending, so the
@@ -418,7 +489,7 @@ def cakeSortMoves (moves : List (Nat × (Nat × Nat))) :
 
 /-- `move_related_sub`: a node flagged by `reset_move_related`. -/
 def cakeMoveRelatedSub (state : CakeRaState) (v : Nat) : Bool :=
-  (cakeMapLookup state.moveRelated v).getD false
+  (state.moveRelated.get v).getD false
 
 /-- `init_alloc1_heu` (`reg_allocScript.sml:1262-1286`): degrees count only
     considered neighbours, every node becomes its own coalescing parent, the
@@ -430,23 +501,23 @@ def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
   let dim := state.dim
   let ds := List.range dim
   let allocs := filterReversed (fun i =>
-    (cakeMapLookup state.nodeTag i).getD .aTemp == .aTemp) ds
+    (state.nodeTag.get i).getD .aTemp == .aTemp) ds
   let withDegrees :=
     ds.foldl (fun st i =>
-        let neighbours := (cakeMapLookup st.adjLists i).getD []
+        let neighbours := (st.adjLists.get i).getD []
         let fills := neighbours.filter (cakeConsideredVar st k)
-        { st with degrees := cakeMapUpdate st.degrees i fills.length })
+        { st with degrees := st.degrees.set i fills.length })
       state
   let withCoalesced :=
     ds.foldl (fun st i =>
-        { st with coalesced := cakeMapUpdate st.coalesced i (0 + i) })
+        { st with coalesced := st.coalesced.set i (0 + i) })
       withDegrees
   let withMoves :=
     { withCoalesced with
       availMovesWl := cakeSortMoves moves }
   let cleared :=
     ds.foldl (fun st i =>
-        { st with moveRelated := cakeMapUpdate st.moveRelated i false })
+        { st with moveRelated := st.moveRelated.set i false })
       withMoves
   let withRelated :=
     moves.foldl (fun st move =>
@@ -454,8 +525,8 @@ def cakeInitAlloc1Heu (moves : List (Nat × (Nat × Nat))) (k : Nat)
         let y := move.2.2
         let fixedX := cakeIsFixed st x
         let fixedY := cakeIsFixed st y
-        let st := { st with moveRelated := cakeMapUpdate st.moveRelated x (!fixedX) }
-        { st with moveRelated := cakeMapUpdate st.moveRelated y (!fixedY) })
+        let st := { st with moveRelated := st.moveRelated.set x (!fixedX) }
+        { st with moveRelated := st.moveRelated.set y (!fixedY) })
       cleared
   let (ltk, gtk) := partitionReversed (fun v => cakeSplitDegree withRelated dim k v) allocs
   let (ltkfreeze, ltksimp) := partitionReversed (fun v => cakeMoveRelatedSub withRelated v) ltk
@@ -472,8 +543,8 @@ arrays; this port threads `CakeRaState` functionally. -/
 /-- `dec_deg` (`reg_allocScript.sml:256-272`): decrement one adjacent
     node's degree. -/
 def cakeDecDeg (v : Nat) (state : CakeRaState) : CakeRaState :=
-  let d := (cakeMapLookup state.degrees v).getD 0
-  { state with degrees := cakeMapUpdate state.degrees v (d - 1) }
+  let d := (state.degrees.get v).getD 0
+  { state with degrees := state.degrees.set v (d - 1) }
 
 /-- `dec_degree`: decrement the degrees of all nodes adjacent to `x`. -/
 def cakeDecDegree (x : Nat) (state : CakeRaState) : CakeRaState :=
@@ -482,8 +553,8 @@ def cakeDecDegree (x : Nat) (state : CakeRaState) : CakeRaState :=
 /-- `push_stack` (`reg_allocScript.sml:300-307`). -/
 def cakePushStack (x : Nat) (state : CakeRaState) : CakeRaState :=
   { state with
-    degrees := cakeMapUpdate state.degrees x 0,
-    moveRelated := cakeMapUpdate state.moveRelated x false,
+    degrees := state.degrees.set x 0,
+    moveRelated := state.moveRelated.set x false,
     stack := x :: state.stack }
 
 /-- `add_simp_wl` / `add_spill_wl` / `add_freeze_wl`. -/
@@ -513,121 +584,21 @@ def cakeSMerge : List (Nat × (Nat × Nat)) → List (Nat × (Nat × Nat)) →
 termination_by ms1 ms2 => sizeOf ms1 + sizeOf ms2
 decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
-
-/-! ### Array snapshots for the `assign_Atemps` pass
-
-`assign_Atemps` folds the tag decision over up to `2 × dim` nodes and each
-step performs linear `cakeMapLookup`/`cakeMapUpdate` scans, one per fixed
-neighbour inside `remove_colours` and the biased-preference scans; on the
-guest workload (dim ≈ 5 000 with dense clash lists) that made the pass
-quadratic.  During the pass only `nodeTag` is written — and only in place,
-because a tag is updated exactly when its key already holds `.aTemp`, so
-`cakeMapUpdate` replaces the first binding instead of appending — while
-`adjLists`, `coalesced` and the move table stay constant.  The pass below
-therefore snapshots those maps into dim-sized arrays (first binding wins,
-exactly `cakeMapLookup`), folds on the arrays, and rebuilds the node-tag
-list position for position: first bindings take the updated value, later
-duplicates and out-of-range keys keep their entries, so the rebuilt list is
-element for element the one the reference fold produces.  The union-find
-root chase omits the (observationally transparent) path compression of
-`cakeCoalesceRoot`; root values are unchanged. -/
-
-private def cakeSnapArray (m : NatInfoMap α) (dim : Nat) : Array (Option α) :=
-  let rec go (l : List (Nat × α)) (acc : Array (Option α)) : Array (Option α) :=
-    match l with
-    | [] => acc
-    | (key, value) :: rest =>
-        match acc.getD key none with
-        | none => go rest (acc.setIfInBounds key (some value))
-        | some _ => go rest acc
-  go m (Array.replicate dim none)
-
-/-- The snapshot arrays are `dim`-sized and hold the first binding of every
-    key below `dim` (exactly `cakeMapLookup`'s winner); the overflow keeps
-    the larger keys in their original order. -/
-private def cakeSnapGet (arr : Array (Option α)) (overflow : NatInfoMap α)
-    (key : Nat) : Option α :=
-  match arr.getD key none with
-  | some v => some v
-  | none => cakeMapLookup overflow key
-
-private def cakeSnapOverflow (m : NatInfoMap α) (dim : Nat) : NatInfoMap α :=
-  m.filter (fun entry => dim ≤ entry.1)
-
-/-- Rebuild a map from its original key order, taking updated values from
-    the snapshot arrays: first bindings pick up the array value, later
-    duplicates and out-of-range keys keep their entries — element for
-    element the list the in-place `cakeMapUpdate` fold produces, given
-    every updated key already binds in the original map. -/
-private def cakeSnapRebuild (orig : NatInfoMap α) (dim : Nat)
-    (values : Array (Option α)) (overflow : NatInfoMap α) : NatInfoMap α :=
-  let rec go (l : List (Nat × α)) (seen : Array Bool)
-      (acc : List (Nat × α)) : List (Nat × α) :=
-    match l with
-    | [] => acc.reverse
-    | (key, value) :: rest =>
-        if seen.getD key false then
-          go rest seen ((key, value) :: acc)
-        else
-          let updated : α :=
-            match cakeSnapGet values overflow key with
-            | some v => v
-            | none => value
-          go rest (seen.setIfInBounds key true) ((key, updated) :: acc)
-  go orig (Array.replicate dim false) []
-
 /-- `revive_moves` (`reg_allocScript.sml:363-375`). -/
 def cakeReviveMoves (vs : List Nat) (state : CakeRaState) : CakeRaState :=
   let nbs := vs.map (fun v => cakeAdjSub state.adjLists v)
   let (revived, unavail) := partitionReversed (fun m =>
-      nbs.any (fun nb => nb.contains m.2.1 || nb.contains m.2.2))
+      nbs.any (cakeSortedMem m.2.1) || nbs.any (cakeSortedMem m.2.2))
     state.unavailMovesWl
   { state with
     availMovesWl := cakeSMerge (cakeSortMoves revived) state.availMovesWl,
     unavailMovesWl := unavail }
 
-/-- `split_degree`/`is_not_coalesced`/`move_related_sub` evaluated on
-    snapshot arrays: `cakeSnapGet` returns exactly `cakeMapLookup`'s first
-    binding, so every predicate computes the same `Bool` as the reference
-    definitions and the worklist partitions are element for element
-    identical. -/
-private def cakeSplitDegreeSnap (deg : Array (Option Nat))
-    (coal : Array (Option Nat)) (degOv coalOv : NatInfoMap Nat)
-    (d k v : Nat) : Bool :=
-  if v < d then
-    ((cakeSnapGet deg degOv v).getD 0 < k) &&
-      (cakeSnapGet coal coalOv v).getD v == v
-  else true
-
-private def cakeMoveRelatedSnap (mr : Array (Option Bool))
-    (mrOv : NatInfoMap Bool) (v : Nat) : Bool :=
-  (cakeSnapGet mr mrOv v).getD false
-
-/-- `unspill` (`reg_allocScript.sml:378-391`).  The maps never change
-    inside, so they are snapshotted once and the worklist partitions run on
-    O(1) array lookups instead of one linear map scan per element; the
-    partition results (and their reversed orders) are unchanged. -/
+/-- `unspill` (`reg_allocScript.sml:378-391`). -/
 def cakeUnspill (k : Nat) (state : CakeRaState) : CakeRaState :=
-  let dim := state.dim
-  let deg := cakeSnapArray state.degrees dim
-  let degOv := cakeSnapOverflow state.degrees dim
-  let coal := cakeSnapArray state.coalesced dim
-  let coalOv := cakeSnapOverflow state.coalesced dim
-  let adj := cakeSnapArray state.adjLists dim
-  let adjOv := cakeSnapOverflow state.adjLists dim
-  let mr := cakeSnapArray state.moveRelated dim
-  let mrOv := cakeSnapOverflow state.moveRelated dim
-  let (ltk, gtk) := partitionReversed
-    (fun v => cakeSplitDegreeSnap deg coal degOv coalOv dim k v) state.spillWl
-  let nbs := ltk.map (fun v => (cakeSnapGet adj adjOv v).getD [])
-  let (revived, unavail) := partitionReversed (fun m =>
-      nbs.any (fun nb => nb.contains m.2.1 || nb.contains m.2.2))
-    state.unavailMovesWl
-  let state := { state with
-    availMovesWl := cakeSMerge (cakeSortMoves revived) state.availMovesWl,
-    unavailMovesWl := unavail }
-  let (freeze, simp) := partitionReversed
-    (fun v => cakeMoveRelatedSnap mr mrOv v) ltk
+  let (ltk, gtk) := partitionReversed (fun v => cakeSplitDegree state state.dim k v) state.spillWl
+  let state := cakeReviveMoves ltk state
+  let (freeze, simp) := partitionReversed (fun v => cakeMoveRelatedSub state v) ltk
   let state := { state with spillWl := gtk }
   let state := cakeAddSimpWl simp state
   cakeAddFreezeWl freeze state
@@ -637,70 +608,25 @@ def cakeDoSimplify (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
   match state.simpWl with
   | [] => (false, state)
   | _ =>
-      /- `dec_degree` folds a linear `cakeMapUpdate` per neighbour and
-         `push_stack` two per node; with batches of thousands of nodes the
-         simplify step became quadratic on the guest workload.  Batch both
-         folds on array snapshots: each neighbour occurrence decrements the
-         same slot it would have decremented in the map, and the rebuild
-         keeps every key's position, so the result is element for element
-         the reference fold (`reg_allocScript.sml:256-307`); keys missing
-         from the original maps cannot arise, because the state
-         initialises degrees and move-related flags for every node. -/
-      let dim := state.dim
-      let deg := cakeSnapArray state.degrees dim
-      let degOverflow := cakeSnapOverflow state.degrees dim
-      let adj := cakeSnapArray state.adjLists dim
-      let adjOverflow := cakeSnapOverflow state.adjLists dim
-      let mr := cakeSnapArray state.moveRelated dim
-      let mrOverflow := cakeSnapOverflow state.moveRelated dim
-      let decNeighbor (pair : Array (Option Nat) × NatInfoMap Nat) (v : Nat) :
-          Array (Option Nat) × NatInfoMap Nat :=
-        let (d, ov) := pair
-        if v < d.size then
-          (d.setIfInBounds v (some ((d.getD v none).getD 0 - 1)), ov)
-        else
-          (d, cakeMapUpdate ov v ((cakeSnapGet d ov v).getD 0 - 1))
-      let decNode (pair : Array (Option Nat) × NatInfoMap Nat) (x : Nat) :
-          Array (Option Nat) × NatInfoMap Nat :=
-        ((cakeSnapGet adj adjOverflow x).getD []).foldl decNeighbor pair
-      let (deg1, degOverflow1) :=
-        state.simpWl.foldl decNode (deg, degOverflow)
-      let pushDegrees (pair : Array (Option Nat) × NatInfoMap Nat) (x : Nat) :
-          Array (Option Nat) × NatInfoMap Nat :=
-        let (d, ov) := pair
-        if x < d.size then (d.setIfInBounds x (some 0), ov)
-        else (d, cakeMapUpdate ov x 0)
-      let pushFlags (pair : Array (Option Bool) × NatInfoMap Bool) (x : Nat) :
-          Array (Option Bool) × NatInfoMap Bool :=
-        let (m, ov) := pair
-        if x < m.size then (m.setIfInBounds x (some false), ov)
-        else (m, cakeMapUpdate ov x false)
-      let (deg2, degOverflow2) :=
-        state.simpWl.foldl pushDegrees (deg1, degOverflow1)
-      let (mr2, mrOverflow2) :=
-        state.simpWl.foldl pushFlags (mr, mrOverflow)
-      let state' :=
-        { state with
-          degrees := cakeSnapRebuild state.degrees dim deg2 degOverflow2,
-          moveRelated := cakeSnapRebuild state.moveRelated dim mr2 mrOverflow2,
-          stack := state.simpWl.reverse ++ state.stack }
-      (true, cakeUnspill k { state' with simpWl := [] })
+      let state := state.simpWl.foldl (fun s x => cakeDecDegree x s) state
+      let state := state.simpWl.foldl (fun s x => cakePushStack x s) state
+      (true, cakeUnspill k { state with simpWl := [] })
 
 /-- `inc_deg` (`reg_allocScript.sml:424-429`). -/
 def cakeIncDeg (n d : Nat) (state : CakeRaState) : CakeRaState :=
-  let old := (cakeMapLookup state.degrees n).getD 0
-  { state with degrees := cakeMapUpdate state.degrees n (old + d) }
+  let old := (state.degrees.get n).getD 0
+  { state with degrees := state.degrees.set n (old + d) }
 
 /-- `deg_or_inf` (`reg_allocScript.sml:524-531`). -/
 def cakeDegOrInf (state : CakeRaState) (k x : Nat) : Nat :=
-  if cakeIsFixedK state k x then k else (cakeMapLookup state.degrees x).getD 0
+  if cakeIsFixedK state k x then k else (state.degrees.get x).getD 0
 
 /-- `bg_ok` (`reg_allocScript.sml:533-562`): the George coalescing test,
     returning the (case1, case2) adjacency splits on success. -/
 def cakeBgOk (k x y : Nat) (state : CakeRaState) : Option (List Nat × List Nat) :=
   let adjX := cakeAdjSub state.adjLists x
   let adjY := cakeAdjSub state.adjLists y
-  let (case1, case2) := partitionReversed (fun v => adjX.contains v) adjY
+  let (case1, case2) := partitionReversed (fun v => cakeSortedMem v adjX) adjY
   let case1 := filterReversed (fun v => cakeConsideredVar state k v) case1
   let case2 := filterReversed (fun v => cakeConsideredVar state k v) case2
   let case2degs := case2.map (fun v => cakeDegOrInf state k v)
@@ -708,7 +634,7 @@ def cakeBgOk (k x y : Nat) (state : CakeRaState) : Option (List Nat × List Nat)
     some (case1, case2)
   else
     let case3 := filterReversed (fun v => cakeConsideredVar state k v)
-      (adjX.filter (fun v => !adjY.contains v))
+      (adjX.filter (fun v => !cakeSortedMem v adjY))
     let c1 := (case1.map (fun v => cakeDegOrInf state (k + 1) v)).countP
       (fun d => d - 1 >= k)
     let c2 := case2degs.countP (fun d => d >= k)
@@ -718,15 +644,15 @@ def cakeBgOk (k x y : Nat) (state : CakeRaState) : Option (List Nat × List Nat)
 
 /-- `consistency_ok` (`reg_allocScript.sml:568-586`). -/
 def cakeConsistencyOk (state : CakeRaState) (x y : Nat) : Bool :=
-  x != y && !(cakeAdjSub state.adjLists y).contains x &&
-    (cakeIsFixed state x || (cakeMapLookup state.moveRelated x).getD false) &&
-    (cakeIsFixed state y || (cakeMapLookup state.moveRelated y).getD false) &&
+  x != y && !cakeSortedMem x (cakeAdjSub state.adjLists y) &&
+    (cakeIsFixed state x || (state.moveRelated.get x).getD false) &&
+    (cakeIsFixed state y || (state.moveRelated.get y).getD false) &&
     !(cakeIsFixed state x && cakeIsFixed state y)
 
 /-- `do_coalesce_real` (`reg_allocScript.sml:458-471`). -/
 def cakeDoCoalesceReal (x y : Nat) (case1 case2 : List Nat)
     (state : CakeRaState) : CakeRaState :=
-  let state := { state with coalesced := cakeMapUpdate state.coalesced y x }
+  let state := { state with coalesced := state.coalesced.set y x }
   let state := if !cakeIsFixed state x then
     cakeIncDeg x case2.length state else state
   let state := { state with
@@ -738,12 +664,12 @@ def cakeDoCoalesceReal (x y : Nat) (case1 case2 : List Nat)
     compression. -/
 def cakeCoalesceParent : Nat → CakeRaState → Nat × CakeRaState
   | x, state =>
-      let xt := (cakeMapLookup state.coalesced x).getD x
+      let xt := (state.coalesced.get x).getD x
       if cakeIsFixed state xt then (xt, state)
       else if _h : x <= xt then (x, state)
       else
         let (anc, state) := cakeCoalesceParent xt state
-        (anc, { state with coalesced := cakeMapUpdate state.coalesced x anc })
+        (anc, { state with coalesced := state.coalesced.set x anc })
 termination_by x _ => x
 decreasing_by all_goals omega
 
@@ -776,11 +702,25 @@ decreasing_by all_goals decreasing_trivial
 
 /-- `respill` (`reg_allocScript.sml:659-674`). -/
 def cakeRespill (k x : Nat) (state : CakeRaState) : CakeRaState :=
-  if (cakeMapLookup state.degrees x).getD 0 < k then state
+  if (state.degrees.get x).getD 0 < k then state
   else if state.freezeWl.contains x then
     let state := cakeAddSpillWl [x] state
     { state with freezeWl := state.freezeWl.filter (· ≠ x) }
   else state
+
+/-- `do_coalesce` (`reg_allocScript.sml:676-698`). -/
+def cakeDoCoalesce (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
+  let (ores, unavail, state) :=
+    cakeStExFirst cakeConsistencyOk (fun s x y => cakeBgOk k x y s)
+      state state.availMovesWl []
+  let state := cakeAddUnavailMovesWl unavail state
+  match ores with
+  | none => (false, { state with availMovesWl := [] })
+  | some ((x, y), (case1, case2), ms) =>
+      let state := cakeDoCoalesceReal x y case1 case2
+        { state with availMovesWl := ms }
+      let state := cakeUnspill k state
+      (true, cakeRespill k x state)
 
 /-- `reset_move_related` (`reg_allocScript.sml:708-725`). -/
 def cakeResetMoveRelated (moves : List (Nat × (Nat × Nat)))
@@ -792,191 +732,26 @@ def cakeResetMoveRelated (moves : List (Nat × (Nat × Nat)))
      map directly keeps the reset linear — the fold performed one linear
      `cakeMapUpdate` per dimension, i.e. O(dim²) per call, which dominated
      allocation on large functions (the reset runs on every prefreeze
-     step of the iterative coalescing loop).  The per-move updates write
-     into a dim-sized array (last write wins, as in the fold) and the map
-     is materialized position for position; keys at or above `dim` (none
-     in practice, node keys are below `dim`) replay the reference fold
-     exactly, appending in move order. -/
-  let dim := state.dim
-  let vals : Array Bool := moves.foldl (fun a move =>
+     step of the iterative coalescing loop). -/
+  let cleared : CakeNodeMap Bool :=
+    { slots := Array.replicate state.dim (some false) }
+  let updated := moves.foldl (fun m move =>
       let mx := !cakeIsFixed state move.2.1
       let my := !cakeIsFixed state move.2.2
-      let a := if move.2.1 < dim then a.setIfInBounds move.2.1 mx else a
-      if move.2.2 < dim then a.setIfInBounds move.2.2 my else a)
-    (Array.replicate dim false)
-  let updated : NatInfoMap Bool :=
-    (List.range dim).map (fun v => (v, vals.getD v false))
-  let updated := moves.foldl (fun m move =>
-      if move.2.1 < dim && move.2.2 < dim then m
-      else
-        let mx := !cakeIsFixed state move.2.1
-        let my := !cakeIsFixed state move.2.2
-        cakeMapUpdate (cakeMapUpdate m move.2.1 mx) move.2.2 my)
-    updated
+      (m.set move.2.1 mx).set move.2.2 my)
+    cleared
   { state with moveRelated := updated }
 
-/-- `consistency_ok` on snapshot arrays: `cakeSnapGet` reproduces
-    `cakeMapLookup` exactly, and `is_Fixed` reads the node-tag map, so the
-    predicate returns the same `Bool` as the reference definition. -/
-private def cakeIsFixedSnap (tags : Array (Option CakeNodeTag))
-    (tagsOv : NatInfoMap CakeNodeTag) (x : Nat) : Bool :=
-  match (cakeSnapGet tags tagsOv x).getD .aTemp with
-  | .fixed _ => true
-  | _ => false
-
-private def cakeConsistencyOkSnap (adj : Array (Option (List Nat)))
-    (adjOv : NatInfoMap (List Nat)) (tags : Array (Option CakeNodeTag))
-    (tagsOv : NatInfoMap CakeNodeTag) (mr : Array (Option Bool))
-    (mrOv : NatInfoMap Bool) (x y : Nat) : Bool :=
-  x != y && !((cakeSnapGet adj adjOv y).getD []).contains x &&
-    (cakeIsFixedSnap tags tagsOv x || (cakeSnapGet mr mrOv x).getD false) &&
-    (cakeIsFixedSnap tags tagsOv y || (cakeSnapGet mr mrOv y).getD false) &&
-    !(cakeIsFixedSnap tags tagsOv x && cakeIsFixedSnap tags tagsOv y)
-
-/-- `st_ex_FIRST` over snapshot arrays.  The scan threads no state: the
-    only state effect of the reference `cakeCoalesceParent` is path
-    compression, and every later reader chases to the same root with or
-    without the compressed links, so the roots returned here are exactly
-    the reference ones.  The George test and the consistency predicate run
-    on dim-sized snapshots, one linear build per `do_coalesce` call. -/
-private def cakeCoalesceParentSnap (par : Array (Option Nat))
-    (parOv : NatInfoMap Nat) (tags : Array (Option CakeNodeTag))
-    (tagsOv : NatInfoMap CakeNodeTag) (x : Nat) : Nat :=
-  let rec chase (cur : Nat) : Nat :=
-    let xt := (cakeSnapGet par parOv cur).getD cur
-    if cakeIsFixedSnap tags tagsOv xt then xt
-    else if cur <= xt then cur
-    else chase xt
-  chase x
-termination_by x => x
-decreasing_by all_goals omega
-
-private def cakeConsideredVarSnap (tags : Array (Option CakeNodeTag))
-    (tagsOv : NatInfoMap CakeNodeTag) (k v : Nat) : Bool :=
-  ((cakeSnapGet tags tagsOv v).getD .aTemp == .aTemp) ||
-    (match (cakeSnapGet tags tagsOv v).getD .aTemp with
-     | .fixed n => n < k
-     | _ => false)
-
-private def cakeIsFixedKSnap (tags : Array (Option CakeNodeTag))
-    (tagsOv : NatInfoMap CakeNodeTag) (k x : Nat) : Bool :=
-  match (cakeSnapGet tags tagsOv x).getD .aTemp with
-  | .fixed n => n < k
-  | _ => false
-
-private def cakeDegOrInfSnap (tags : Array (Option CakeNodeTag))
-    (tagsOv : NatInfoMap CakeNodeTag) (deg : Array (Option Nat))
-    (degOv : NatInfoMap Nat) (k x : Nat) : Nat :=
-  if cakeIsFixedKSnap tags tagsOv k x then k
-  else (cakeSnapGet deg degOv x).getD 0
-
-/-- `bg_ok` over snapshot arrays: identical partitions and counts with
-    O(1) lookups. -/
-private def cakeBgOkSnap (adj : Array (Option (List Nat)))
-    (adjOv : NatInfoMap (List Nat)) (tags : Array (Option CakeNodeTag))
-    (tagsOv : NatInfoMap CakeNodeTag) (deg : Array (Option Nat))
-    (degOv : NatInfoMap Nat) (k x y : Nat) : Option (List Nat × List Nat) :=
-  let adjX := (cakeSnapGet adj adjOv x).getD []
-  let adjY := (cakeSnapGet adj adjOv y).getD []
-  let (case1, case2) := partitionReversed (fun v => adjX.contains v) adjY
-  let case1 := filterReversed
-    (fun v => cakeConsideredVarSnap tags tagsOv k v) case1
-  let case2 := filterReversed
-    (fun v => cakeConsideredVarSnap tags tagsOv k v) case2
-  let case2degs := case2.map (fun v => cakeDegOrInfSnap tags tagsOv deg degOv k v)
-  if !case2degs.any (fun d => d >= k) then
-    some (case1, case2)
-  else
-    let case3 := filterReversed (fun v => cakeConsideredVarSnap tags tagsOv k v)
-      (adjX.filter (fun v => !adjY.contains v))
-    let c1 := (case1.map (fun v =>
-      cakeDegOrInfSnap tags tagsOv deg degOv (k + 1) v)).countP
-      (fun d => d - 1 >= k)
-    let c2 := case2degs.countP (fun d => d >= k)
-    let c3 := (case3.map (fun v =>
-      cakeDegOrInfSnap tags tagsOv deg degOv k v)).countP
-      (fun d => d >= k)
-    if c1 + c2 + c3 < k then some (case1, case2) else none
-
-private def cakeStExFirstSnap (dim : Nat)
-    (par : Array (Option Nat)) (parOv : NatInfoMap Nat)
-    (adj : Array (Option (List Nat))) (adjOv : NatInfoMap (List Nat))
-    (tags : Array (Option CakeNodeTag)) (tagsOv : NatInfoMap CakeNodeTag)
-    (mr : Array (Option Bool)) (mrOv : NatInfoMap Bool)
-    (deg : Array (Option Nat)) (degOv : NatInfoMap Nat) (k : Nat) :
-    List (Nat × (Nat × Nat)) → List (Nat × (Nat × Nat)) →
-    (Option ((Nat × Nat) × (List Nat × List Nat) × List (Nat × (Nat × Nat))) ×
-      List (Nat × (Nat × Nat)))
-  | [], unavail => (none, unavail)
-  | (p, (u, v)) :: ms, unavail =>
-      let x := cakeCoalesceParentSnap par parOv tags tagsOv u
-      let y := cakeCoalesceParentSnap par parOv tags tagsOv v
-      if !cakeConsistencyOkSnap adj adjOv tags tagsOv mr mrOv x y then
-        cakeStExFirstSnap dim par parOv adj adjOv tags tagsOv mr mrOv deg degOv
-          k ms unavail
-      else
-        let (cx, cy) :=
-          if cakeIsFixedSnap tags tagsOv y then (y, x)
-          else if cakeIsFixedSnap tags tagsOv x then (x, y)
-          else if x < y then (x, y) else (y, x)
-        match cakeBgOkSnap adj adjOv tags tagsOv deg degOv k cx cy with
-        | none => cakeStExFirstSnap dim par parOv adj adjOv tags tagsOv mr mrOv
-            deg degOv k ms ((p, (cx, cy)) :: unavail)
-        | some pr => (some ((cx, cy), pr, ms), unavail)
-termination_by ms _ => sizeOf ms
-decreasing_by all_goals decreasing_trivial
-
-/-- `do_coalesce` (`reg_allocScript.sml:676-698`). -/
-def cakeDoCoalesce (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
-  let dim := state.dim
-  let par := cakeSnapArray state.coalesced dim
-  let parOv := cakeSnapOverflow state.coalesced dim
-  let adj := cakeSnapArray state.adjLists dim
-  let adjOv := cakeSnapOverflow state.adjLists dim
-  let tags := cakeSnapArray state.nodeTag dim
-  let tagsOv := cakeSnapOverflow state.nodeTag dim
-  let mr := cakeSnapArray state.moveRelated dim
-  let mrOv := cakeSnapOverflow state.moveRelated dim
-  let deg := cakeSnapArray state.degrees dim
-  let degOv := cakeSnapOverflow state.degrees dim
-  let (ores, unavail) :=
-    cakeStExFirstSnap dim par parOv adj adjOv tags tagsOv mr mrOv deg degOv k
-      state.availMovesWl []
-  let state := cakeAddUnavailMovesWl unavail state
-  match ores with
-  | none => (false, { state with availMovesWl := [] })
-  | some ((x, y), (case1, case2), ms) =>
-      let state := cakeDoCoalesceReal x y case1 case2
-        { state with availMovesWl := ms }
-      let state := cakeUnspill k state
-      (true, cakeRespill k x state)
-
-
-/-- `do_prefreeze` (`reg_allocScript.sml:727-747`).  The filters read the
-    same maps through dim-sized snapshots (one linear build) instead of one
-    map scan per worklist element; the filter and partition results, and
-    their reversed orders, are unchanged. -/
+/-- `do_prefreeze` (`reg_allocScript.sml:727-747`). -/
 def cakeDoPrefreeze (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
-  let dim := state.dim
-  let coal := cakeSnapArray state.coalesced dim
-  let coalOv := cakeSnapOverflow state.coalesced dim
-  let tags := cakeSnapArray state.nodeTag dim
-  let tagsOv := cakeSnapOverflow state.nodeTag dim
-  let mr := cakeSnapArray state.moveRelated dim
-  let mrOv := cakeSnapOverflow state.moveRelated dim
-  let adj := cakeSnapArray state.adjLists dim
-  let adjOv := cakeSnapOverflow state.adjLists dim
-  let notCoalesced (x : Nat) : Bool := (cakeSnapGet coal coalOv x).getD x == x
-  let fwl := filterReversed notCoalesced state.freezeWl
+  let fwl := filterReversed (fun x => cakeIsNotCoalesced state x) state.freezeWl
   let state := { state with
-    spillWl := filterReversed notCoalesced state.spillWl }
+    spillWl := filterReversed (fun x => cakeIsNotCoalesced state x) state.spillWl }
   let uam := filterReversed
-    (fun m => cakeConsistencyOkSnap adj adjOv tags tagsOv mr mrOv m.2.1 m.2.2)
-    state.unavailMovesWl
+    (fun m => cakeConsistencyOk state m.2.1 m.2.2) state.unavailMovesWl
   let state := cakeResetMoveRelated uam state
   let state := { state with unavailMovesWl := uam }
-  let (freeze, simp) := partitionReversed
-    (fun v => cakeMoveRelatedSnap mr mrOv v) fwl
+  let (freeze, simp) := partitionReversed (fun v => cakeMoveRelatedSub state v) fwl
   let state := cakeAddSimpWl simp state
   let state := { state with freezeWl := freeze }
   cakeDoSimplify k state
@@ -993,13 +768,13 @@ def cakeDoFreeze (k : Nat) (state : CakeRaState) : Bool × CakeRaState :=
 def cakeSafeDiv (x v : Nat) : Nat := if v = 0 then 0 else x / v
 
 /-- `st_ex_list_MIN_cost` (`reg_allocScript.sml:773-790`). -/
-def cakeStExListMinCost (degrees : NatInfoMap Nat) (scost : NatInfoMap Nat) :
+def cakeStExListMinCost (degrees : CakeNodeMap Nat) (scost : CakeNodeMap Nat) :
     List Nat → Nat → Nat → Nat → List Nat → Nat × List Nat
   | [], _, k, _, acc => (k, acc)
   | x :: xs, d, k, v, acc =>
       if x < d then
-        let xv := (cakeMapLookup degrees x).getD 0
-        let cost := cakeSafeDiv ((cakeMapLookup scost x).getD 0) xv
+        let xv := (degrees.get x).getD 0
+        let cost := cakeSafeDiv ((scost.get x).getD 0) xv
         if v > cost then
           cakeStExListMinCost degrees scost xs d x cost (k :: acc)
         else cakeStExListMinCost degrees scost xs d k v (x :: acc)
@@ -1008,79 +783,36 @@ termination_by l _ _ _ _ => sizeOf l
 decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
 /-- `st_ex_list_MAX_deg` (`reg_allocScript.sml:792-808`). -/
-def cakeStExListMaxDeg (degrees : NatInfoMap Nat) :
+def cakeStExListMaxDeg (degrees : CakeNodeMap Nat) :
     List Nat → Nat → Nat → Nat → List Nat → Nat × List Nat
   | [], _, k, _, acc => (k, acc)
   | x :: xs, d, k, v, acc =>
       if x < d then
-        let xv := (cakeMapLookup degrees x).getD 0
+        let xv := (degrees.get x).getD 0
         if v < xv then cakeStExListMaxDeg degrees xs d x xv (k :: acc)
         else cakeStExListMaxDeg degrees xs d k v (x :: acc)
       else cakeStExListMaxDeg degrees xs d k v acc
 termination_by l _ _ _ _ => sizeOf l
 decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
-/-- `st_ex_list_MIN_cost` over snapshot arrays: `cakeSnapGet` reproduces
-    `cakeMapLookup` exactly (first binding, overflow keys in order), and
-    the `x < d` guard keeps every looked-up key below `dim`, so the scan
-    picks the same winner and keeps the same worklist order as the
-    reference definition. -/
-private def cakeStExListMinCostSnap (deg : Array (Option Nat))
-    (degOv : NatInfoMap Nat) (sc : Array (Option Nat))
-    (scOv : NatInfoMap Nat) :
-    List Nat → Nat → Nat → Nat → List Nat → Nat × List Nat
-  | [], _, k, _, acc => (k, acc)
-  | x :: xs, d, k, v, acc =>
-      if x < d then
-        let xv := (cakeSnapGet deg degOv x).getD 0
-        let cost := cakeSafeDiv ((cakeSnapGet sc scOv x).getD 0) xv
-        if v > cost then
-          cakeStExListMinCostSnap deg degOv sc scOv xs d x cost (k :: acc)
-        else cakeStExListMinCostSnap deg degOv sc scOv xs d k v (x :: acc)
-      else cakeStExListMinCostSnap deg degOv sc scOv xs d k v acc
-termination_by l _ _ _ _ => sizeOf l
-decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
-
-/-- `st_ex_list_MAX_deg` over snapshot arrays, same argument as
-    `cakeStExListMinCostSnap`. -/
-private def cakeStExListMaxDegSnap (deg : Array (Option Nat))
-    (degOv : NatInfoMap Nat) :
-    List Nat → Nat → Nat → Nat → List Nat → Nat × List Nat
-  | [], _, k, _, acc => (k, acc)
-  | x :: xs, d, k, v, acc =>
-      if x < d then
-        let xv := (cakeSnapGet deg degOv x).getD 0
-        if v < xv then cakeStExListMaxDegSnap deg degOv xs d x xv (k :: acc)
-        else cakeStExListMaxDegSnap deg degOv xs d k v (x :: acc)
-      else cakeStExListMaxDegSnap deg degOv xs d k v acc
-termination_by l _ _ _ _ => sizeOf l
-decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
-
-/-- `do_spill` (`reg_allocScript.sml:810-830`).  The worklist scan reads
-    `degrees` (and `scost`, when present) through dim-sized snapshots built
-    once per call instead of one assoc-list lookup per candidate. -/
-def cakeDoSpill (scost : Option (NatInfoMap Nat)) (k : Nat)
+/-- `do_spill` (`reg_allocScript.sml:810-830`). -/
+def cakeDoSpill (scost : Option (CakeNodeMap Nat)) (k : Nat)
     (state : CakeRaState) : Bool × CakeRaState :=
   match state.spillWl with
   | [] => (false, state)
   | x :: xs =>
-      let dim := state.dim
-      let deg := cakeSnapArray state.degrees dim
-      let degOv := cakeSnapOverflow state.degrees dim
-      let xv := (cakeSnapGet deg degOv x).getD 0
+      let xv := (state.degrees.get x).getD 0
       let (y, ys) := match scost with
-        | none => cakeStExListMaxDegSnap deg degOv xs dim x xv []
+        | none => cakeStExListMaxDeg state.degrees xs state.dim x xv []
         | some sc =>
-            let scArr := cakeSnapArray sc dim
-            let scOv := cakeSnapOverflow sc dim
-            cakeStExListMinCostSnap deg degOv scArr scOv xs dim x
-              (cakeSafeDiv ((cakeSnapGet scArr scOv x).getD 0) xv) []
+            cakeStExListMinCost state.degrees sc xs state.dim x
+              (cakeSafeDiv ((sc.get x).getD 0) xv) []
       let state := cakePushStack y (cakeDecDegree y state)
       (true, cakeUnspill k { state with spillWl := ys })
 
 /-- `do_step` (`reg_allocScript.sml:832-857`): the first successful
     transition wins. -/
-def cakeDoStep (scost : Option (NatInfoMap Nat)) (k : Nat)
+def cakeDoStep (scost : Option (CakeNodeMap Nat)) (k : Nat)
     (state : CakeRaState) : Bool × CakeRaState :=
   let (b1, s1) := cakeDoSimplify k state
   if b1 then (true, s1)
@@ -1095,7 +827,7 @@ def cakeDoStep (scost : Option (NatInfoMap Nat)) (k : Nat)
         if b4 then (true, s4) else cakeDoSpill scost k state
 
 /-- `rpt_do_step` (`reg_allocScript.sml:860-868`). -/
-def cakeRptDoStep (scost : Option (NatInfoMap Nat)) (k : Nat) :
+def cakeRptDoStep (scost : Option (CakeNodeMap Nat)) (k : Nat) :
     Nat → CakeRaState → CakeRaState
   | 0, state => state
   | fuel + 1, state =>
@@ -1108,30 +840,15 @@ def cakeRptDoStep (scost : Option (NatInfoMap Nat)) (k : Nat) :
 def cakeRemoveColours (state : CakeRaState) : List Nat → List Nat → List Nat
   | [], ks => ks
   | v :: vs, ks =>
-      match cakeMapLookup state.nodeTag v with
+      match state.nodeTag.get v with
       | some (.fixed c) => cakeRemoveColours state vs (ks.filter (· ≠ c))
       | _ => cakeRemoveColours state vs ks
-
-/-- `assign_Atemp_tag` (`reg_allocScript.sml:903-927`). -/
-def cakeAssignAtempTag (k : Nat)
-    (prefs : CakeRaState → Nat → List Nat → Option Nat) (n : Nat)
-    (state : CakeRaState) : CakeRaState :=
-  match cakeMapLookup state.nodeTag n with
-  | some .aTemp =>
-      let ks' := cakeRemoveColours state (cakeAdjSub state.adjLists n) (List.range k)
-      match ks' with
-      | [] => { state with nodeTag := cakeMapUpdate state.nodeTag n .sTemp }
-      | c :: _ =>
-          match prefs state n ks' with
-          | none => { state with nodeTag := cakeMapUpdate state.nodeTag n (.fixed c) }
-          | some y => { state with nodeTag := cakeMapUpdate state.nodeTag n (.fixed y) }
-  | _ => state
 
 /-- `first_match_col` (`reg_allocScript.sml:994-1004`). -/
 def cakeFirstMatchCol (state : CakeRaState) (ks : List Nat) : List Nat → Option Nat
   | [] => none
   | v :: vs =>
-      match cakeMapLookup state.nodeTag v with
+      match state.nodeTag.get v with
       | some (.fixed m) => if ks.contains m then some m else cakeFirstMatchCol state ks vs
       | _ => cakeFirstMatchCol state ks vs
 
@@ -1139,7 +856,7 @@ def cakeFirstMatchCol (state : CakeRaState) (ks : List Nat) : List Nat → Optio
     traversal without path compression. -/
 def cakeCoalesceRoot : CakeRaState → Nat → Nat
   | state, x =>
-      let xt := (cakeMapLookup state.coalesced x).getD x
+      let xt := (state.coalesced.get x).getD x
       if cakeIsFixed state xt then xt
       else if _h : x <= xt then x
       else cakeCoalesceRoot state xt
@@ -1201,7 +918,7 @@ def cakeNegFirstMatchCol (state : CakeRaState) (k : Nat) (bads : List Nat) :
     List Nat → Option Nat
   | [] => none
   | m :: ms =>
-      match cakeMapLookup state.nodeTag m with
+      match state.nodeTag.get m with
       | some (.fixed c) =>
           if bads.contains c || c < k then cakeNegFirstMatchCol state k bads ms
           else some c
@@ -1219,134 +936,49 @@ def cakeNegBiasedPref (state : CakeRaState) (k : Nat)
 
 /-- `tag_col` (`reg_allocScript.sml:941-944`). -/
 def cakeTagCol (state : CakeRaState) (v : Nat) : Nat :=
-  match cakeMapLookup state.nodeTag v with
+  match state.nodeTag.get v with
   | some (.fixed m) => m
   | _ => 0
 
-private partial def cakeCoalesceRootSnap (par : Array (Option Nat))
-    (overflow : NatInfoMap Nat) (x : Nat) : Nat :=
-  let rec chase (cur : Nat) : Nat :=
-    match cakeSnapGet par overflow cur with
-    | some parent => if parent == cur then cur else chase parent
-    | none => cur
-  chase x
+/-- `assign_Atemp_tag` (`reg_allocScript.sml:903-927`). -/
+def cakeAssignAtempTag (k : Nat)
+    (prefs : CakeRaState → Nat → List Nat → Option Nat) (n : Nat)
+    (state : CakeRaState) : CakeRaState :=
+  match state.nodeTag.get n with
+  | some .aTemp =>
+      let ks' := cakeRemoveColours state (cakeAdjSub state.adjLists n) (List.range k)
+      match ks' with
+      | [] => { state with nodeTag := state.nodeTag.set n .sTemp }
+      | c :: _ =>
+          match prefs state n ks' with
+          | none => { state with nodeTag := state.nodeTag.set n (.fixed c) }
+          | some y => { state with nodeTag := state.nodeTag.set n (.fixed y) }
+  | _ => state
 
-/- `remove_colours` over the array snapshot of the node tags: collect the
-    fixed neighbours' colours in a `k`-sized mark table instead of filtering
-    the candidate list once per neighbour.  The result is the same ascending
-    list — `List.range k` filtered by the marks, exactly as the repeated
-    `ks.filter` of the reference leaves it. -/
-private def cakeRemoveColoursSnap (tags : Array (Option CakeNodeTag))
-    (tagOverflow : NatInfoMap CakeNodeTag) (neighbours : List Nat) (k : Nat) :
-    List Nat :=
-  let used := neighbours.foldl (fun acc v =>
-      match cakeSnapGet tags tagOverflow v with
-      | some (.fixed c) => if c < k then acc.setIfInBounds c true else acc
-      | _ => acc) (Array.replicate k false)
-  (List.range k).filter (fun c => !used.getD c false)
-
-/- `first_match_col` over the array snapshot of the node tags. -/
-private def cakeFirstMatchColSnap (tags : Array (Option CakeNodeTag))
-    (tagOverflow : NatInfoMap CakeNodeTag) (ks : List Nat) :
-    List Nat → Option Nat
-  | [] => none
-  | v :: vs =>
-      match cakeSnapGet tags tagOverflow v with
-      | some (.fixed m) =>
-          if ks.contains m then some m
-          else cakeFirstMatchColSnap tags tagOverflow ks vs
-      | _ => cakeFirstMatchColSnap tags tagOverflow ks vs
-
-/- `biased_pref` over the array snapshots of `coalesced`, the move table and
-   the node tags. -/
-private def cakeBiasedPrefSnap (tags : Array (Option CakeNodeTag))
-    (par : Array (Option Nat)) (mtable : Array (Option (List Nat)))
-    (parOverflow : NatInfoMap Nat) (mtableOverflow : NatInfoMap (List Nat))
-    (tagOverflow : NatInfoMap CakeNodeTag)
-    (n : Nat) (ks : List Nat) : Option Nat :=
-  if n < mtable.size then
-    let v := cakeCoalesceRootSnap par parOverflow n
-    let vs := cakeSnapGet mtable mtableOverflow n |>.getD []
-    cakeFirstMatchColSnap tags tagOverflow ks (v :: vs)
-  else
-    cakeFirstMatchColSnap tags tagOverflow ks []
-  -- out-of-dimension nodes have no move partners; the original returns
-  -- `none` because `n < state.dim` fails, and the empty scan is `none`
-
-/- Rebuild the node-tag list from the snapshot: first bindings take the
-   array value, later duplicates and out-of-range keys keep their entries
-   (matching `cakeMapUpdate`'s replace-first discipline — this pass never
-   appends). -/
-private def cakeRebuildTags (orig : NatInfoMap CakeNodeTag) (dim : Nat)
-    (tags : Array (Option CakeNodeTag)) (tagOverflow : NatInfoMap CakeNodeTag) :
-    NatInfoMap CakeNodeTag :=
-  let rec go (l : List (Nat × CakeNodeTag)) (seen : Array Bool)
-      (acc : List (Nat × CakeNodeTag)) : List (Nat × CakeNodeTag) :=
-    match l with
-    | [] => acc.reverse
-    | (key, value) :: rest =>
-        if seen.getD key false then
-          go rest seen ((key, value) :: acc)
-        else
-          let updated : CakeNodeTag :=
-            match cakeSnapGet tags tagOverflow key with
-            | some v => v
-            | none => value
-          go rest (seen.setIfInBounds key true) ((key, updated) :: acc)
-  go orig (Array.replicate dim false) []
-
-/-- `assign_Atemps` (`reg_allocScript.sml:923-938`) on array snapshots; the
-    decisions and resulting map are exactly those of folding
-    `cakeAssignAtempTag` with `biased_pref` (see the snapshot section
-    above).  Cake's `get_stack` list is consumed in its stored order,
-    followed by every dimension index. -/
-def cakeAssignAtempsFast (k : Nat) (ls : List Nat)
-    (mvs : NatInfoMap (List Nat)) (state : CakeRaState) : CakeRaState :=
-  let dim := state.dim
-  let tags := cakeSnapArray state.nodeTag dim
-  let adj := cakeSnapArray state.adjLists dim
-  let par := cakeSnapArray state.coalesced dim
-  let mtable := cakeSnapArray mvs dim
-  let tagOverflow := cakeSnapOverflow state.nodeTag dim
-  let parOverflow := cakeSnapOverflow state.coalesced dim
-  let mtableOverflow := cakeSnapOverflow mvs dim
-  let adjOverflow := cakeSnapOverflow state.adjLists dim
-  let candidates := ls.filter (· < dim) ++ List.range dim
-  let (finalTags, finalOverflow) :=
-    candidates.foldl (fun (tags, tagOverflow) n =>
-      match cakeSnapGet tags tagOverflow n with
-      | some .aTemp =>
-          let neighbours := (cakeSnapGet adj adjOverflow n).getD []
-          let ks' := cakeRemoveColoursSnap tags tagOverflow
-            neighbours k
-          let apply (value : CakeNodeTag) : Array (Option CakeNodeTag) × NatInfoMap CakeNodeTag :=
-            if n < dim then (tags.setIfInBounds n value, tagOverflow)
-            else (tags, cakeMapUpdate tagOverflow n value)
-          match ks' with
-          | [] => apply .sTemp
-          | c :: _ =>
-              match cakeBiasedPrefSnap tags par mtable parOverflow mtableOverflow
-                  tagOverflow n ks' with
-              | some p => apply (.fixed p)
-              | none => apply (.fixed c)
-      | _ => (tags, tagOverflow)) (tags, tagOverflow)
-  { state with
-      nodeTag := cakeRebuildTags state.nodeTag dim finalTags finalOverflow }
+/-- `assign_Atemps` (`reg_allocScript.sml:923-938`). -/
+def cakeAssignAtemps (k : Nat) (ls : List Nat)
+    (prefs : CakeRaState → Nat → List Nat → Option Nat)
+    (state : CakeRaState) : CakeRaState :=
+  /- Cake's `get_stack` returns the newest-first list built by `push_stack`,
+     and `st_ex_FOREACH` consumes that list in its stored order. -/
+  let lsF := ls.filter (· < state.dim)
+  let state := lsF.foldl (fun s n => cakeAssignAtempTag k prefs n s) state
+  (List.range state.dim).foldl (fun s n => cakeAssignAtempTag k prefs n s) state
 
 /-- `assign_Stemp_tag` (`reg_allocScript.sml:962-982`). -/
 def cakeAssignStempTag (k : Nat)
     (prefs : CakeRaState → Nat → List Nat → Option Nat) (n : Nat)
     (state : CakeRaState) : CakeRaState :=
-  match cakeMapLookup state.nodeTag n with
+  match state.nodeTag.get n with
   | some .sTemp =>
       let bads := (cakeAdjSub state.adjLists n).map (fun v => cakeTagCol state v)
         |>.mergeSort (fun a b => a < b)
       match prefs state n bads with
       | none =>
           { state with
-            nodeTag := cakeMapUpdate state.nodeTag n (.fixed (cakeUnboundColour k bads)) }
+            nodeTag := state.nodeTag.set n (.fixed (cakeUnboundColour k bads)) }
       | some y =>
-          { state with nodeTag := cakeMapUpdate state.nodeTag n (.fixed y) }
+          { state with nodeTag := state.nodeTag.set n (.fixed y) }
   | _ => state
 
 /-- `assign_Stemps` (`reg_allocScript.sml:984-990`). -/
@@ -1364,13 +996,13 @@ def cakeExtractColor (state : CakeRaState) (toAllocator : NatInfoMap Nat) :
 
 /-- `full_consistency_ok` (`reg_allocScript.sml:1385+`). -/
 def cakeTagIsAtemp (state : CakeRaState) (x : Nat) : Bool :=
-  match cakeMapLookup state.nodeTag x with
+  match state.nodeTag.get x with
   | some .aTemp => true
   | _ => false
 
 def cakeFullConsistencyOk (state : CakeRaState) (k : Nat) (x y : Nat) : Bool :=
   x != y && x < state.dim && y < state.dim &&
-    !(cakeAdjSub state.adjLists y).contains x &&
+    !cakeSortedMem x (cakeAdjSub state.adjLists y) &&
     (cakeIsFixedK state k x || cakeTagIsAtemp state x) &&
     (cakeIsFixedK state k y || cakeTagIsAtemp state y) &&
     !(cakeIsFixedK state k x && cakeIsFixedK state k y)
@@ -1383,7 +1015,7 @@ inductive CakeAlgorithm : Type
 /-- `do_reg_alloc` (`reg_allocScript.sml:1452-1470`): the complete IRC
     colouring pipeline over a clash tree, producing the var → colour
     table. -/
-def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (NatInfoMap Nat))
+def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
     (k : Nat) (moves : List (Nat × (Nat × Nat))) (tree : WordClashTree)
     (forced : List (Nat × Nat)) (fs : List Nat) : Option (NatInfoMap Nat) :=
   let bij := cakeMkBij tree
@@ -1398,7 +1030,7 @@ def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (NatInfoMap Nat))
   let s1 := cakeRptDoStep scost k l s0
   let ls := s1.stack
   let mvs := cakeResortMovesSp (cakeMovesToSp moves0 [])
-  let state := cakeAssignAtempsFast k ls mvs s1
+  let state := cakeAssignAtemps k ls (fun s n ks => cakeBiasedPref s mvs n ks) s1
   let state := cakeAssignStemps k (fun s n bads => cakeNegBiasedPref s k mvs n bads) state
   some (cakeExtractColor state bij.toAllocator)
 
@@ -1449,10 +1081,17 @@ def cakeAllocateWordFunction [OfNat α 0] (parameters : List Nat) (program : Wor
   let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
   let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
   let bij := cakeMkBij tree
+  /- `lookup_any x scost 0` in `st_ex_list_MIN_cost`
+     (`reg_allocScript.sml:773-790`) reads an sptree, so the original's spill
+     scan is logarithmic per node.  Read the costs into the same node-indexed
+     field the rest of the allocator state uses; `cakeMapLookup` returns the
+     first binding for a key and `ofNatInfoMap` keeps that, so the values are
+     unchanged. -/
   let scost := spillCosts.map (fun costs =>
-    costs.filterMap (fun entry =>
-      (lookupNatInfo entry.1 bij.toAllocator).map
-        (fun node => (node, entry.2))))
+    CakeNodeMap.ofNatInfoMap bij.nextNode
+      (costs.filterMap (fun entry =>
+        (lookupNatInfo entry.1 bij.toAllocator).map
+          (fun node => (node, entry.2)))))
   match cakeDoRegAlloc .irc scost k moves tree forced fs with
   | none => none
   | some colouring =>
@@ -1500,10 +1139,17 @@ def cakeWordStackVarCount [OfNat α 0] [OfNat α 1]
   let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
   let moves := wordMoves.map (fun m => (m.priority, (m.left, m.right)))
   let bij := cakeMkBij tree
+  /- `lookup_any x scost 0` in `st_ex_list_MIN_cost`
+     (`reg_allocScript.sml:773-790`) reads an sptree, so the original's spill
+     scan is logarithmic per node.  Read the costs into the same node-indexed
+     field the rest of the allocator state uses; `cakeMapLookup` returns the
+     first binding for a key and `ofNatInfoMap` keeps that, so the values are
+     unchanged. -/
   let scost := spillCosts.map (fun costs =>
-    costs.filterMap (fun entry =>
-      (lookupNatInfo entry.1 bij.toAllocator).map
-        (fun node => (node, entry.2))))
+    CakeNodeMap.ofNatInfoMap bij.nextNode
+      (costs.filterMap (fun entry =>
+        (lookupNatInfo entry.1 bij.toAllocator).map
+          (fun node => (node, entry.2)))))
   match cakeDoRegAlloc .irc scost k moves tree forced fs with
   | none => 0
   | some colouring =>

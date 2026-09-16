@@ -277,8 +277,7 @@ def movesToSpOrderGuard : Bool :=
 
 #guard reviveOrderGuard
 
-/-- `bg_ok` partitions `adjY` by `adjX` membership with the bucket-reversing
-    `sorting$PARTITION`, then `st_ex_FILTER`s each case list. -/
+/-- `bg_ok` uses stable HOL `PARTITION`, then `st_ex_FILTER`s each case list. -/
 def bgOkOrderGuard : Bool :=
   let base : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
     { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 4 with
@@ -286,7 +285,7 @@ def bgOkOrderGuard : Bool :=
         [(0, [1]), (1, [3, 0]), (2, [3]), (3, [2, 1, 0])],
       nodeTag := Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap 4
         ((List.range 4).map (fun i => (i, .aTemp))) }
-  Flapjack.RiscV.CakeRegAlloc.cakeBgOk 3 0 3 base == some ([1], [2, 0])
+  Flapjack.RiscV.CakeRegAlloc.cakeBgOk 3 0 3 base == some ([1], [0, 2])
 
 /-- `reg_alloc` on a single write/read pair colours the write with the
     first free register and the unconnected stack temp with `k`. -/

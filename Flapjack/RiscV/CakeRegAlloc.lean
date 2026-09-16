@@ -677,7 +677,9 @@ def cakeDegOrInf (state : CakeRaState) (k x : Nat) : Nat :=
 def cakeBgOk (k x y : Nat) (state : CakeRaState) : Option (List Nat × List Nat) :=
   let adjX := cakeAdjSub state.adjLists x
   let adjY := cakeAdjSub state.adjLists y
-  let (case1, case2) := partitionReversed (fun v => cakeSortedMem v adjX) adjY
+  /- `bg_ok` starts with ordinary HOL `PARTITION`; only the subsequent
+     `st_ex_FILTER` calls reverse their result buckets. -/
+  let (case1, case2) := adjY.partition (fun v => cakeSortedMem v adjX)
   let case1 := filterReversed (fun v => cakeConsideredVar state k v) case1
   let case2 := filterReversed (fun v => cakeConsideredVar state k v) case2
   let case2degs := case2.map (fun v => cakeDegOrInf state k v)

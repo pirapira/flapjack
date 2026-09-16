@@ -23,9 +23,10 @@ def emit [Repr α] (label : String) (value : α) : IO Unit :=
     or the allocator without requiring a second ad-hoc executable. -/
 def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO Unit := do
   let (label, arity, body) := entry
-  let selected := RiscV.wordInstSelectProgramFrom
-    (RiscV.wordFuseConditionsAndFold
-      (RiscV.wordConstFp (RiscV.wordFlattenProgramFrom body)))
+  let flattened := RiscV.wordFlattenProgramFrom body
+  let constFp := RiscV.wordConstFp flattened
+  let fused := RiscV.wordFuseConditionsAndFold constFp
+  let selected := RiscV.wordInstSelectProgramFrom fused
   let (_ssaState, renamedParameters, ssaProgram) :=
     wordFullSsaCcTrans arity selected
   let deadAfterSsa := RiscV.wordRemoveDeadProgram ssaProgram
@@ -34,6 +35,9 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   let two := RiscV.wordThreeToTwoReg copy
   let unreach := RiscV.wordRemoveUnreachableAfterCopy two
   let dead := RiscV.wordRemoveDeadProgram unreach
+  emit "stage=source_word_flattened" flattened
+  emit "stage=source_word_const_fp" constFp
+  emit "stage=source_word_fused" fused
   emit "stage=source_word_selected_passes" (label, arity, selected)
   emit "stage=source_word_ssa" (label, arity, renamedParameters, ssaProgram)
   emit "stage=source_word_dead_ssa" deadAfterSsa

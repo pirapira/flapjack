@@ -53,7 +53,8 @@ def wordCopyRegImm (state : WordCopyState) : WordRegImm α → WordRegImm α
   | .imm value => .imm value
   | .reg name => .reg (wordCopyLookup state name)
 
-def wordCopyInst (state : WordCopyState) : WordInst → WordInst × WordCopyState
+def wordCopyInst {α : Type} (state : WordCopyState) :
+    WordInst α → WordInst α × WordCopyState
   | .arith operation =>
       match operation with
       | .longMul left right sourceLeft sourceRight =>
@@ -77,11 +78,26 @@ def wordCopyInst (state : WordCopyState) : WordInst → WordInst × WordCopyStat
             (wordCopyLookup state divisor)), wordCopyRemove state destination)
       | .binOp operator destination sourceLeft sourceRight =>
           let sourceLeft := wordCopyLookup state sourceLeft
-          let sourceRight' := wordCopyLookup state sourceRight
+          let sourceRight' := wordCopyRegImm state sourceRight
           let sourceRight :=
-            if sourceRight' = destination then sourceRight else sourceRight'
+            match sourceRight' with
+            | .reg register =>
+                if register = destination then sourceRight else sourceRight'
+            | .imm _ => sourceRight'
           (.arith (.binOp operator destination sourceLeft sourceRight),
             wordCopyRemove state destination)
+      | .shift operator destination sourceLeft sourceRight =>
+          let sourceLeft := wordCopyLookup state sourceLeft
+          let sourceRight' := wordCopyRegImm state sourceRight
+          let sourceRight :=
+            match sourceRight' with
+            | .reg register =>
+                if register = destination then sourceRight else sourceRight'
+            | .imm _ => sourceRight'
+          (.arith (.shift operator destination sourceLeft sourceRight),
+            wordCopyRemove state destination)
+  | .const destination value =>
+      (.const destination value, wordCopyRemove state destination)
   | .mem operator destination address =>
       match operator with
       | .load | .load8 | .load16 | .load32 =>

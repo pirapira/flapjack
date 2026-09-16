@@ -485,8 +485,33 @@ def labAsmNatToWord [NeZero width] : LabAsm Nat → LabAsm (Word width)
   | .install => .install
   | .halt => .halt
 
+def labWordRegImmToWord [NeZero width] : WordRegImm Nat → WordRegImm (Word width)
+  | .reg register => .reg register
+  | .imm value => .imm (BitVec.ofNat width value)
+
+def labWordArithToWord [NeZero width] : WordArith Nat → WordArith (Word width)
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      .longMul destinationLeft destinationRight sourceLeft sourceRight
+  | .longDiv destinationLeft destinationRight sourceLeft sourceRight quotient =>
+      .longDiv destinationLeft destinationRight sourceLeft sourceRight quotient
+  | .addCarry destination resultCarry sourceLeft sourceRight carryIn =>
+      .addCarry destination resultCarry sourceLeft sourceRight carryIn
+  | .cakeAddCarry destination sourceLeft sourceRight carry =>
+      .cakeAddCarry destination sourceLeft sourceRight carry
+  | .div destination dividend divisor =>
+      .div destination dividend divisor
+  | .binOp operator destination sourceLeft sourceRight =>
+      .binOp operator destination sourceLeft (labWordRegImmToWord sourceRight)
+  | .shift operator destination sourceLeft sourceRight =>
+      .shift operator destination sourceLeft (labWordRegImmToWord sourceRight)
+
+def labWordInstToWord [NeZero width] : WordInst Nat → WordInst (Word width)
+  | .const destination value => .const destination (BitVec.ofNat width value)
+  | .arith operation => .arith (labWordArithToWord operation)
+  | .mem operator destination address => .mem operator destination address
+
 def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
-  | .word instruction => .word instruction
+  | .word instruction => .word (labWordInstToWord instruction)
   | .stackMem operator register base offset =>
       .stackMem operator register base offset
   | .stackMemSub operator register base offset =>

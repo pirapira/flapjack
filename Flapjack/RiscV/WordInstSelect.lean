@@ -229,7 +229,7 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
           let body :=
             match left, right with
             | .var left, .var right =>
-                .inst (.arith (.binOp operator destination left right))
+                .inst (.arith (.binOp operator destination left (.reg right)))
             | _, _ => .assign destination (.op operator [left, right])
           wordDeadSelectSeq leftPrelude
             (wordDeadSelectSeq rightPrelude body)

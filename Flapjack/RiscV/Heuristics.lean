@@ -69,7 +69,7 @@ def wordHeuristicAddRhsRegs : List Nat → NatInfoMap WordHeuristicCounts →
   | name :: names, counts =>
       wordHeuristicAddRhsRegs names (wordHeuristicAddRhsReg name counts)
 
-def wordHeuristicInst : WordInst → NatInfoMap WordHeuristicCounts →
+def wordHeuristicInst {α : Type} : WordInst α → NatInfoMap WordHeuristicCounts →
     NatInfoMap WordHeuristicCounts
   | .arith operation, counts =>
       match operation with
@@ -101,9 +101,21 @@ def wordHeuristicInst : WordInst → NatInfoMap WordHeuristicCounts →
             (wordHeuristicAddRhsReg divisor
               (wordHeuristicAddRhsReg dividend counts))
       | .binOp _ destination sourceLeft sourceRight =>
-          wordHeuristicAddLhsReg destination
-            (wordHeuristicAddRhsReg sourceRight
-              (wordHeuristicAddRhsReg sourceLeft counts))
+          let addRight :=
+            match sourceRight with
+            | .reg register => wordHeuristicAddRhsReg register
+            | .imm _ => id
+          addRight (wordHeuristicAddLhsReg destination
+            (wordHeuristicAddRhsReg sourceLeft counts))
+      | .shift _ destination sourceLeft sourceRight =>
+          let addRight :=
+            match sourceRight with
+            | .reg register => wordHeuristicAddRhsReg register
+            | .imm _ => id
+          addRight (wordHeuristicAddLhsReg destination
+            (wordHeuristicAddRhsReg sourceLeft counts))
+  | .const destination _, counts =>
+      wordHeuristicAddLhsConst destination counts
   | .mem operator destination _, counts =>
       match operator with
       | .load | .load8 | .load16 | .load32 =>

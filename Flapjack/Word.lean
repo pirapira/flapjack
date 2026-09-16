@@ -45,7 +45,18 @@ inductive WordRegImm (α : Type u) where
   | reg (name : Nat)
   deriving DecidableEq, Repr
 
-inductive WordArith where
+/-! CakeML parameterises the assembly-level instruction carriers over the
+    machine word: `asm$reg_imm = Reg reg | Imm ('a imm)` with
+    `Type imm = ``:'a word`` and
+    `arith = Binop binop reg reg ('a reg_imm)
+           | Shift shift reg reg ('a reg_imm)
+           | Div reg reg reg | LongMul ... | LongDiv ... | AddCarry ...`.
+    `WordArith` therefore carries the value type so that an immediate
+    operand is represented by the immediate itself instead of by a
+    register holding a constant.  The port does not produce Cake's
+    `AddOverflow`/`SubOverflow` operations, so those carriers are not
+    introduced here (they are the only omission). -/
+inductive WordArith (α : Type u) where
   | longMul (destinationLeft destinationRight sourceLeft sourceRight : Nat)
   | longDiv (destinationLeft destinationRight sourceLeft sourceRight quotient : Nat)
   | addCarry (destination resultCarry sourceLeft sourceRight carryIn : Nat)
@@ -58,12 +69,18 @@ inductive WordArith where
   | div (destination dividend divisor : Nat)
   /- CakeML's `inst_select` materialises the operands of an ordinary binary
      operation through fresh temporaries and then emits
-     `Inst (Arith (Binop op tar temp (Reg (temp+1))))`, i.e. the operands are
-     register *numbers*, not rewritable expressions.  Keeping this carrier is
-     what stops expression-level passes such as copy propagation from folding
-     the operand copies away, which is observable in the register allocator's
+     `Inst (Arith (Binop op tar temp (Reg (temp+1))))`; when the right
+     operand is a constant it emits `Imm w` instead.  Keeping the operand as
+     a `WordRegImm` (register or immediate) rather than an expression stops
+     expression-level passes such as copy propagation from folding the
+     operand copies away, which is observable in the register allocator's
      coalescing decisions. -/
-  | binOp (operator : BinOp) (destination sourceLeft sourceRight : Nat)
+  | binOp (operator : BinOp) (destination sourceLeft : Nat)
+      (sourceRight : WordRegImm α)
+  /- CakeML's `Shift shift reg reg ('a reg_imm)`; the shift amount is either
+     a register or an immediate word. -/
+  | shift (operator : Shift) (destination sourceLeft : Nat)
+      (sourceRight : WordRegImm α)
   deriving DecidableEq, Repr
 
 inductive WordMemOp where
@@ -77,8 +94,14 @@ inductive WordMemOp where
   | store32
   deriving DecidableEq, Repr
 
-inductive WordInst where
-  | arith (operation : WordArith)
+/-! CakeML's `inst = Const reg ('a word) | Arith arith | Mem memop reg ('a addr)`.
+    The port keeps `const` and the two operand-carrying arithmetic forms so
+    that immediate-valued instructions have a faithful representation; the
+    floating-point and remaining `memop`/`addr` rows are outside the ported
+    RISC-V scope. -/
+inductive WordInst (α : Type u) where
+  | const (destination : Nat) (value : α)
+  | arith (operation : WordArith α)
   | mem (operator : WordMemOp) (destination address : Nat)
   deriving DecidableEq, Repr
 
@@ -86,7 +109,7 @@ inductive WordProg (α : Type u) where
   | skip
   | move (priority : Nat) (moves : List (Nat × Nat))
   | assign (name : Nat) (value : WordExp α)
-  | inst (instruction : WordInst)
+  | inst (instruction : WordInst α)
   | get (destination : Nat) (store : WordStore α)
   | store (address : WordExp α) (value : Nat)
   | set (store : WordStore α) (value : WordExp α)
@@ -156,7 +179,7 @@ def wordRegImm (context : WordContext) : RegImm α → WordRegImm α
   | .imm value => .imm value
   | .reg name => .reg (wordFindVar context name)
 
-def wordArith (context : WordContext) : LoopArith → WordArith
+def wordArith (context : WordContext) : LoopArith → WordArith α
   | .longMul left right sourceLeft sourceRight =>
       .longMul (wordFindVar context left) (wordFindVar context right)
         (wordFindVar context sourceLeft) (wordFindVar context sourceRight)

@@ -113,7 +113,7 @@ example :
       evalWordProg (zeroState 32)
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
-            (.arith (.div 1 2 3) : WordInst)).2) = some target' ∧
+            (.arith (.div 1 2 3) : WordInst (Word 32))).2) = some target' ∧
       readRegister source' ⟨1, by decide⟩ =
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
@@ -130,7 +130,7 @@ example :
       evalWordProg (zeroState 32)
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
-            (.arith (.longMul 1 2 2 3) : WordInst)).2) = some target' ∧
+            (.arith (.longMul 1 2 2 3) : WordInst (Word 32))).2) = some target' ∧
       readRegister source' ⟨1, by decide⟩ =
         readRegister target' ⟨4, by decide⟩ ∧
       readRegister source' ⟨2, by decide⟩ =
@@ -158,7 +158,7 @@ example :
       evalWordProg (zeroState 32)
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
-            (.arith (.addCarry 1 2 6 7 9) : WordInst)).2) = some target' ∧
+            (.arith (.addCarry 1 2 6 7 9) : WordInst (Word 32))).2) = some target' ∧
       readRegister source' ⟨1, by decide⟩ =
         readRegister target' ⟨4, by decide⟩ ∧
       readRegister source' ⟨2, by decide⟩ =
@@ -185,7 +185,7 @@ example :
       evalWordProg (zeroState 32)
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
-            (.mem .load8 1 2 : WordInst)).2) = some target' ∧
+            (.mem .load8 1 2 : WordInst (Word 32))).2) = some target' ∧
       readRegister source' ⟨1, by decide⟩ =
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
@@ -201,7 +201,7 @@ example :
       evalWordProg (zeroState 32)
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
-            (.mem .load16 1 2 : WordInst)).2) = some target' ∧
+            (.mem .load16 1 2 : WordInst (Word 32))).2) = some target' ∧
       readRegister source' ⟨1, by decide⟩ =
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by
@@ -217,7 +217,7 @@ example :
       evalWordProg (zeroState 32)
           (.inst (wordSsaRenameInst
             ({ current := [], next := 4 } : WordSsaState)
-            (.mem .load32 1 2 : WordInst)).2) = some target' ∧
+            (.mem .load32 1 2 : WordInst (Word 32))).2) = some target' ∧
       readRegister source' ⟨1, by decide⟩ =
         readRegister target' ⟨4, by decide⟩ ∧
       source'.memory = target'.memory := by

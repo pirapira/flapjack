@@ -6,7 +6,7 @@ namespace Flapjack
 open RiscV
 
 example :
-    wordSsaRenameLinear
+    wordSsaRenameLinear (α := Nat)
         { current := [(2, 100), (3, 101), (4, 102)], next := 200 }
         [.arith (.addCarry 0 1 2 3 4), .arith (.addCarry 5 6 0 1 2)] =
       ({ current := [(6, 212), (5, 208), (1, 204), (0, 200),
@@ -16,13 +16,13 @@ example :
   exact wordSsaRenameLinear_addCarry
 
 example :
-    wordInstForcedClashes
+    wordInstForcedClashes (α := Nat)
         (.arith (.longMul 0 1 2 3)) =
       [(0, 1), (0, 2), (0, 3)] := by
   rfl
 
 example :
-    wordInstForcedClashes
+    wordInstForcedClashes (α := Nat)
         (.arith (.addCarry 0 1 2 3 4)) =
       [(0, 1), (0, 2), (0, 3)] := by
   rfl

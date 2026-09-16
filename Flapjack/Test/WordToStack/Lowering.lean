@@ -137,7 +137,7 @@ example :
               (.seq (.inst (.arith (.addCarry 27 29 29 28 27)))
               (.seq (.stackStore 27 12) (.stackStore 29 13))))) : StackProg Nat) := by
   simp [wordToStackProg, wordToStackInst, wordStackArithInst,
-    wordStackAddCarryInst, wordStackAddCarryLocationSafe,
+    wordStackAddCarryInst,
     wordStackLongMulMoveToPhysical, wordStackLongMulMoveFromPhysical,
     wordStackJoin, wordStackLocation, wordStackOffset,
     wordSpecialArithLocationsSafe, lookupNatInfo]

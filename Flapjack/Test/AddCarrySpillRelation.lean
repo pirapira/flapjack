@@ -68,7 +68,7 @@ example :
   · decide
   · decide
   · simp [addCarrySpillConfig, addCarrySpillState, wordStackAddCarryInst,
-      wordStackAddCarryLocationSafe, wordStackLongMulMoveToPhysical,
+ wordStackLongMulMoveToPhysical,
       wordStackLongMulMoveFromPhysical, wordStackJoin, wordStackLocation,
       wordStackOffset, evalWordStackMachine, wordStackMachineWriteRegister,
       wordStackMachineWriteSlot, lookupNatInfo]
@@ -82,7 +82,7 @@ example :
       wordStackMachineValue addCarrySpillConfig final 1 =
         some (BitVec.ofNat 8 1) := by
   simp [addCarrySpillConfig, addCarrySpillState, wordStackAddCarryInst,
-    wordStackAddCarryLocationSafe, wordStackLongMulMoveToPhysical,
+     wordStackLongMulMoveToPhysical,
     wordStackLongMulMoveFromPhysical, wordStackJoin, wordStackLocation,
     wordStackOffset, evalWordStackMachine, wordStackMachineWriteRegister,
     wordStackMachineWriteSlot, wordStackMachineValue, lookupNatInfo]

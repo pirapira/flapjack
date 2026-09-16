@@ -792,14 +792,27 @@ def cakeResetMoveRelated (moves : List (Nat × (Nat × Nat)))
      map directly keeps the reset linear — the fold performed one linear
      `cakeMapUpdate` per dimension, i.e. O(dim²) per call, which dominated
      allocation on large functions (the reset runs on every prefreeze
-     step of the iterative coalescing loop). -/
-  let cleared : NatInfoMap Bool :=
-    (List.range state.dim).map (fun v => (v, false))
-  let updated := moves.foldl (fun m move =>
+     step of the iterative coalescing loop).  The per-move updates write
+     into a dim-sized array (last write wins, as in the fold) and the map
+     is materialized position for position; keys at or above `dim` (none
+     in practice, node keys are below `dim`) replay the reference fold
+     exactly, appending in move order. -/
+  let dim := state.dim
+  let vals : Array Bool := moves.foldl (fun a move =>
       let mx := !cakeIsFixed state move.2.1
       let my := !cakeIsFixed state move.2.2
-      cakeMapUpdate (cakeMapUpdate m move.2.1 mx) move.2.2 my)
-    cleared
+      let a := if move.2.1 < dim then a.setIfInBounds move.2.1 mx else a
+      if move.2.2 < dim then a.setIfInBounds move.2.2 my else a)
+    (Array.replicate dim false)
+  let updated : NatInfoMap Bool :=
+    (List.range dim).map (fun v => (v, vals.getD v false))
+  let updated := moves.foldl (fun m move =>
+      if move.2.1 < dim && move.2.2 < dim then m
+      else
+        let mx := !cakeIsFixed state move.2.1
+        let my := !cakeIsFixed state move.2.2
+        cakeMapUpdate (cakeMapUpdate m move.2.1 mx) move.2.2 my)
+    updated
   { state with moveRelated := updated }
 
 /-- `consistency_ok` on snapshot arrays: `cakeSnapGet` reproduces
@@ -1007,18 +1020,61 @@ def cakeStExListMaxDeg (degrees : NatInfoMap Nat) :
 termination_by l _ _ _ _ => sizeOf l
 decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 
-/-- `do_spill` (`reg_allocScript.sml:810-830`). -/
+/-- `st_ex_list_MIN_cost` over snapshot arrays: `cakeSnapGet` reproduces
+    `cakeMapLookup` exactly (first binding, overflow keys in order), and
+    the `x < d` guard keeps every looked-up key below `dim`, so the scan
+    picks the same winner and keeps the same worklist order as the
+    reference definition. -/
+private def cakeStExListMinCostSnap (deg : Array (Option Nat))
+    (degOv : NatInfoMap Nat) (sc : Array (Option Nat))
+    (scOv : NatInfoMap Nat) :
+    List Nat → Nat → Nat → Nat → List Nat → Nat × List Nat
+  | [], _, k, _, acc => (k, acc)
+  | x :: xs, d, k, v, acc =>
+      if x < d then
+        let xv := (cakeSnapGet deg degOv x).getD 0
+        let cost := cakeSafeDiv ((cakeSnapGet sc scOv x).getD 0) xv
+        if v > cost then
+          cakeStExListMinCostSnap deg degOv sc scOv xs d x cost (k :: acc)
+        else cakeStExListMinCostSnap deg degOv sc scOv xs d k v (x :: acc)
+      else cakeStExListMinCostSnap deg degOv sc scOv xs d k v acc
+termination_by l _ _ _ _ => sizeOf l
+decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-- `st_ex_list_MAX_deg` over snapshot arrays, same argument as
+    `cakeStExListMinCostSnap`. -/
+private def cakeStExListMaxDegSnap (deg : Array (Option Nat))
+    (degOv : NatInfoMap Nat) :
+    List Nat → Nat → Nat → Nat → List Nat → Nat × List Nat
+  | [], _, k, _, acc => (k, acc)
+  | x :: xs, d, k, v, acc =>
+      if x < d then
+        let xv := (cakeSnapGet deg degOv x).getD 0
+        if v < xv then cakeStExListMaxDegSnap deg degOv xs d x xv (k :: acc)
+        else cakeStExListMaxDegSnap deg degOv xs d k v (x :: acc)
+      else cakeStExListMaxDegSnap deg degOv xs d k v acc
+termination_by l _ _ _ _ => sizeOf l
+decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
+
+/-- `do_spill` (`reg_allocScript.sml:810-830`).  The worklist scan reads
+    `degrees` (and `scost`, when present) through dim-sized snapshots built
+    once per call instead of one assoc-list lookup per candidate. -/
 def cakeDoSpill (scost : Option (NatInfoMap Nat)) (k : Nat)
     (state : CakeRaState) : Bool × CakeRaState :=
   match state.spillWl with
   | [] => (false, state)
   | x :: xs =>
-      let xv := (cakeMapLookup state.degrees x).getD 0
+      let dim := state.dim
+      let deg := cakeSnapArray state.degrees dim
+      let degOv := cakeSnapOverflow state.degrees dim
+      let xv := (cakeSnapGet deg degOv x).getD 0
       let (y, ys) := match scost with
-        | none => cakeStExListMaxDeg state.degrees xs state.dim x xv []
+        | none => cakeStExListMaxDegSnap deg degOv xs dim x xv []
         | some sc =>
-            cakeStExListMinCost state.degrees sc xs state.dim x
-              (cakeSafeDiv ((cakeMapLookup sc x).getD 0) xv) []
+            let scArr := cakeSnapArray sc dim
+            let scOv := cakeSnapOverflow sc dim
+            cakeStExListMinCostSnap deg degOv scArr scOv xs dim x
+              (cakeSafeDiv ((cakeSnapGet scArr scOv x).getD 0) xv) []
       let state := cakePushStack y (cakeDecDegree y state)
       (true, cakeUnspill k { state with spillWl := ys })
 

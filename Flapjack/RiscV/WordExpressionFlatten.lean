@@ -13,17 +13,14 @@ to evaluate those trees directly with four reserved registers, which made
 the result depend on accidental dead registers and rejected large real
 functions such as `op_extcodecopy`.
 
-This pass restores the source shape at the Word-to-Stack temporary boundary.
-The Word-to-Stack expression compiler draws its intermediate results from a
-pool that starts with the reserved scratch registers and continues with
-allocator registers that hold no variable; each nested node consumes pool
-entries, and `ror` nodes consume two.  A plain depth bound does not model
-that consumption, so register-pressure-heavy functions (for example
-`ripemd160_block`) still failed lowering on trees the depth bound kept.
-Expressions whose pool consumption exceeds the reserved-pool size are
-materialized in fresh names, with fresh names using the same `+4` stream as
-the SSA allocator.  The generated assignments are then ordinary Word
-instructions and therefore participate in the existing clash/spill analysis.
+The source-facing boundary now preserves the Word expression shape exactly as
+Cake does.  The helper definitions below remain available for explicit
+temporary-pool adapters, but `wordFlattenProgramFrom` is intentionally the
+identity used by the production source pipeline.
+The explicit helper below still models the Word-to-Stack expression compiler's
+temporary pool: nested nodes consume reserved registers and `ror` nodes
+consume two.  Callers that deliberately need a pool-safe materialisation can
+use those helpers; the source-facing adapter does not apply them implicitly.
 -/
 
 structure WordFlattenExpResult (α : Type u) where
@@ -322,11 +319,15 @@ decreasing_by
   all_goals decreasing_trivial
 
 def wordFlattenProgramFrom (program : WordProg α) : WordProg α :=
-  (wordFlattenProgram (wordSsaLimitVar [] program) program).program
+  /- Cake's word_to_word pipeline passes the word_simp result directly to
+     inst_select; expression materialisation belongs to loop_to_word, not to
+     this boundary.  Keeping this adapter identity preserves Cake's
+     max_var+1 selector temporary and avoids introducing a non-Cake fresh
+     assignment before SSA. -/
+  program
 
 theorem wordFlattenProgramFrom_skip :
     wordFlattenProgramFrom (.skip : WordProg α) = .skip := by
-  simp [wordFlattenProgramFrom, wordSsaLimitVar, wordProgVariables,
-    wordFlattenProgram]
+  rfl
 
 end Flapjack.RiscV

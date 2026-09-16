@@ -92,7 +92,15 @@ def parallelLocationMoveKeepsLiveSource : Bool :=
 #guard parallelLocationMoveKeepsLiveSource
 
 /-! Cake's `inst_select_exp` materializes the two operands in successive
-    temporaries before the selected binary assignment reaches SSA. -/
+    temporaries and then emits an arithmetic instruction whose operands are
+    those temporaries as register numbers
+    (`word_instScript.sml:269-279`:
+    `Seq p1 (Seq p2 (Inst (Arith (Binop op tar temp (Reg (temp+1))))))`).
+    Keeping the operands as registers rather than as rewritable expressions is
+    what stops `copy_prop` from folding the operand copies away, which is
+    observable in the register allocator's coalescing decisions (the
+    `callee_abi` fixture used to emit `add a1,a1,a0; or a0,a1,a1` instead of
+    the original `add a0,a1,a0`). -/
 def selectedBinaryAssignment : WordProg Nat :=
   wordInstSelectProgramFrom
     (.assign 5 (.op .add [.var 2, .var 4]))
@@ -101,10 +109,32 @@ def selectedBinaryAssignmentShape : Bool :=
   match selectedBinaryAssignment with
   | .seq (.assign 6 (.var 4))
       (.seq (.assign 7 (.var 2))
-        (.assign 5 (.op .add [.var 6, .var 7]))) => true
+        (.inst (.arith (.binOp .add 5 6 7)))) => true
   | _ => false
 
 #guard selectedBinaryAssignmentShape
+
+/-! The register-operand carrier lowers exactly like the expression assignment
+    it replaces, so the emitted stack program does not change. -/
+def selectedBinaryGroundConfig : WordStackConfig :=
+  { locations := [(5, .register 0), (6, .register 1), (7, .register 2)]
+    scratch := 22
+    stackBase := 0
+    addressScratch := 12
+    specialScratch := 11
+    carryScratch := 10
+    abiBase := 1 }
+
+def selectedBinaryCarrierLowering : Bool :=
+  match
+    wordToStackProgNat selectedBinaryGroundConfig
+      (.inst (.arith (.binOp .add 5 6 7))),
+    wordToStackProgNat selectedBinaryGroundConfig
+      (.assign 5 (.op .add [.var 6, .var 7])) with
+  | some (.arith .add 0 1 2), some (.arith .add 0 1 2) => true
+  | _, _ => false
+
+#guard selectedBinaryCarrierLowering
 
 def twoRegisterAssignmentShape : Bool :=
   match wordThreeToTwoReg

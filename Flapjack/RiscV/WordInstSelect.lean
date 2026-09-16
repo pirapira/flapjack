@@ -174,16 +174,13 @@ def wordInstFlattenExp : WordExp α → WordExp α
      only sound for the commutative operators; applying it to `Sub` turns
      `a - b` into `b - a`.  Without this clause `fun 1 ab(1 a, 1 b) { return
      a - b; }` compiled to `sub a0, a1, a0` where Cake emits
-     `sub a0, a0, a1`. -/
+     `sub a0, a0, a1`.  Matching Cake's clause order matters beyond the
+     two-operand case: a one-element `Op Sub [e]` has to stay
+     `Op Sub [flatten_exp e]` rather than collapse through the `Op _ [x]`
+     clause. -/
   | .op .sub expressions => .op .sub (expressions.map wordInstFlattenExp)
   | .op operator [] => .op operator []
   | .op _ [expression] => wordInstFlattenExp expression
-  | .op .sub expressions =>
-      -- Cake's `flatten_exp` preserves subtraction operands; the generic
-      -- n-ary case below rebuilds an associative operation as
-      -- `[flatten(rest), flatten(head)]`, which is valid for associative
-      -- operators but reverses `Sub [left, right]`.
-      .op .sub (expressions.map wordInstFlattenExp)
   | .op operator (expression :: expressions) =>
       .op operator
         [ wordInstFlattenExp (.op operator expressions)

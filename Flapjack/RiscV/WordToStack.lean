@@ -1114,11 +1114,28 @@ def wordStackCompileExpToRegisterNat (config : WordStackConfig)
       pure (.seq address (.inst (.mem .load target target)))
   | .op operator [left, right] => do
       if wordStackExpressionIsAtom left && wordStackExpressionIsAtom right then
-        let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
-        let rightTemporary := available.head?.getD config.addressScratch
-        let (rightPrelude, rightRegister) ← wordStackAtomNat config rightTemporary right
-        pure (wordStackJoin leftPrelude
-          (wordStackJoin rightPrelude (.arith operator target leftRegister rightRegister)))
+        match right with
+        | .const value =>
+            /- Cake's `inst_select_exp` folds a valid immediate into the
+               instruction (`Binop op tar temp (Imm w)`) instead of writing a
+               constant register into the destination first, so keep the left
+               operand in its own register and let the constant register fuse
+               into the immediate in the Stack-to-Lab lowering. -/
+            let leftTemporary := available.head?.getD config.addressScratch
+            let (leftPrelude, leftRegister) ←
+              wordStackAtomNat config leftTemporary left
+            let constantRegister :=
+              (available.filter (fun register => register != leftRegister)).head?.getD
+                config.addressScratch
+            pure (wordStackJoin leftPrelude
+              (wordStackJoin (.const constantRegister value)
+                (.arith operator target leftRegister constantRegister)))
+        | _ =>
+            let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
+            let rightTemporary := available.head?.getD config.addressScratch
+            let (rightPrelude, rightRegister) ← wordStackAtomNat config rightTemporary right
+            pure (wordStackJoin leftPrelude
+              (wordStackJoin rightPrelude (.arith operator target leftRegister rightRegister)))
       else
         let rightTarget ← available.head?
         let remaining := available.tail
@@ -3420,12 +3437,38 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .set store value =>
       (wordStackSetNat config (wordStoreToNat store) (wordExpToNat value)).map
         (fun code => (code, state))
-  | .seq first second => do
-      let (firstCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
-        registerCount bitmapRegister frameSlots wordBits storeConstsStub state first
-      let (secondCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
-        registerCount bitmapRegister frameSlots wordBits storeConstsStub state second
-      pure (.seq firstCode secondCode, state)
+  | .seq first second =>
+      let peephole : Option (StackProg Nat × WordStackBitmapState) :=
+        match first, second with
+        | .move 0 [(destination, source)],
+            .seq (.assign name (.op operator [.var left, .const value])) rest =>
+            if name = destination && left = destination then
+              /- Two-register compensation reads its own destination.  Cake
+                 keeps the operand in the temporary that `inst_select` moved
+                 it into, so the instruction reads that register while
+                 writing the destination (`Binop op tar temp (Imm w)`).
+                 Re-reading the move's source keeps that operand register and
+                 lets the constant fuse into the immediate instead of copying
+                 into the destination first. -/
+              match wordStackCompileExpToPhysicalNat config destination
+                  (wordExpToNat (.op operator [.var source, .const value])) with
+              | none => none
+              | some immediateCode => do
+                  let (restCode, state) ← wordToStackProgWordWithBitmapBuilder
+                    config bitmapBuilder registerCount bitmapRegister frameSlots
+                    wordBits storeConstsStub state rest
+                  pure (.seq immediateCode restCode, state)
+            else
+              none
+        | _, _ => none
+      match peephole with
+      | some result => some result
+      | none => do
+        let (firstCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+          registerCount bitmapRegister frameSlots wordBits storeConstsStub state first
+        let (secondCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
+          registerCount bitmapRegister frameSlots wordBits storeConstsStub state second
+        pure (.seq firstCode secondCode, state)
   | .ite operator condition right thenBranch elseBranch => do
       let right := wordRegImmToNat right
       let (prelude, condition, right) ← wordStackConditionOperands config condition right

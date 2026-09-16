@@ -166,6 +166,26 @@ def immediateSelectionShape : Bool :=
 
 #guard immediateSelectionShape
 
+/-! The two-register compensation introduces `Move 0 [(destination, left)]`
+    before an in-place immediate operation.  Cake instead keeps the operand in
+    the temporary chosen by `inst_select` and reads it while writing the
+    destination (`Binop op tar temp (Imm w)`), so the lowering must re-read the
+    move's source instead of copying it into the destination first.  This is
+    what removed the leftover `or a0,ra,ra` in the `callee_abi` fixture. -/
+def immediateCompensationWordProgram : WordProg (Word 64) :=
+  .seq (.move 0 [(6, 4)])
+    (.seq (.assign 6 (.op .add [.var 6, .const 1])) .skip)
+
+def immediateCompensationShape : Bool :=
+  match wordToStackProgWordWithLocationBitmapsFused immediateSelectionConfig
+      22 0 1 64 none (wordStackInitialBitmaps false)
+      immediateCompensationWordProgram with
+  | some (.seq (.seq (.const constant value) (.arith .add destination left right)) _, _) =>
+      constant != destination && left != destination && right == constant && value == 1
+  | _ => false
+
+#guard immediateCompensationShape
+
 /-! ### Cake ABI argument overflow
 
     The original `format_var`/`wMoveSingle` materializes arguments past the

@@ -31,9 +31,10 @@ example :
         (.inst (.arith (.longMul 1 2 2 3)) : WordProg Nat) =
       ({ current := [(2, 8), (1, 4)], next := 12 },
         .seq (.move 1 [(0, 2), (4, 3)])
-          (.seq (.inst (.arith (.longMul 6 0 0 4)))
+        (.seq (.inst (.arith (.longMul 6 0 0 4)))
             (.move 1 [(8, 0), (4, 6)]))) := by
-  rfl
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRead, wordSsaFresh, wordSsaSeq, lookupNatInfo]
 
 example :
     wordSsaAbiParameters 3 = [0, 2, 4] := by

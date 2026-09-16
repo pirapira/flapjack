@@ -1512,7 +1512,6 @@ def wordStackPhysicalMovesToIndexed (config : WordStackConfig) :
           .register (base + config.abiStride * index)
         else
           wordStackPhysicalLocation config index base
-<<<<<<< HEAD
       let rest ← wordStackPhysicalMovesToIndexed config (index + 1) sources base
       pure ((destinationLocation, source) :: rest)
 termination_by _ sources _ => sizeOf sources

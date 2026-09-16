@@ -138,6 +138,21 @@ def labFfiStubOffset [NeZero width] (context : WordFfiContext)
   let stubDistance := 3 + index
   pure (0 - BitVec.ofNat width (position + stubDistance * 16))
 
+/-! In the compact linked image the FFI blocks are physically prepended to the
+    first returned section, so their target addresses are nonnegative offsets
+    from the beginning of that flattened image.  The assembly-facing helper
+    above instead addresses Cake's runtime blocks immediately before
+    `cake_main`; keeping the two layouts separate avoids sending a compact
+    machine probe to a negative wrapped PC. -/
+def labLinkedFfiStubOffset [NeZero width] (context : WordFfiContext)
+    (function : FunName) (position : Nat) : Option (Word width) := do
+  let index ← lookupWordFfiIndex function context.services
+  let target := (context.services.length - index - 1) * 16
+  pure (if target >= position then
+    BitVec.ofNat width (target - position)
+  else
+    0 - BitVec.ofNat width (position - target))
+
 def labCollectLabels (_sectionId : Nat) (position : Nat) :
     List (LabLine (Word width)) → List (Nat × Nat)
   | [] => []
@@ -921,6 +936,34 @@ def labCompileProgramLinesWithFfiBase [NeZero width]
         (position + 4 * labLineInstructionCount (.labAsm operation [] 0)) ffiBase lines
       pure (code ++ rest)
 
+def labCompileAsmProgramWithLinkedFfiBase [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position _ffiBase : Nat) :
+    LabAsm (Word width) → Option (List (Instruction width))
+  | .callFfi function => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let offset ← labLinkedFfiStubOffset context function position
+      pure [.jal zero offset]
+  | operation => labCompileAsmProgram context labels position operation
+
+def labCompileProgramLinesWithLinkedFfiBase [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position ffiBase : Nat) :
+    List (LabLine (Word width)) → Option (List (Instruction width))
+  | [] => some []
+  | .label _ _ _ :: lines =>
+      labCompileProgramLinesWithLinkedFfiBase context labels position ffiBase lines
+  | .asm operation _ _ :: lines => do
+      let code ← labCompilePlain operation
+      let rest ← labCompileProgramLinesWithLinkedFfiBase context labels
+        (position + 4 * code.length) ffiBase lines
+      pure (code ++ rest)
+  | .labAsm operation _ _ :: lines => do
+      let code ← labCompileAsmProgramWithLinkedFfiBase context labels position ffiBase operation
+      let rest ← labCompileProgramLinesWithLinkedFfiBase context labels
+        (position + 4 * code.length) ffiBase lines
+      pure (code ++ rest)
+
 def compileLabProgramLinkedWithFfiStubsAux [NeZero width]
     (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
     (base ffiBase : Nat) : LabProgram (Word width) →
@@ -929,7 +972,7 @@ def compileLabProgramLinkedWithFfiStubsAux [NeZero width]
   | sectionData :: sections => do
       let sectionData :=
         { sectionData with lines := labRebaseLinkedFfiReturnLines sectionData.lines }
-      let code ← labCompileProgramLinesWithFfiBase context labels base ffiBase
+      let code ← labCompileProgramLinesWithLinkedFfiBase context labels base ffiBase
         sectionData.lines
       let rest ← compileLabProgramLinkedWithFfiStubsAux context labels
         (base + 4 * labSectionInstructionCount sectionData) ffiBase sections
@@ -975,6 +1018,33 @@ def labCompileProgramLinesWithFfiBaseAndHalt [NeZero width]
         (position + 4 * labLineInstructionCount (.labAsm operation [] 0)) ffiBase haltPc lines
       pure (code ++ rest)
 
+def labCompileAsmProgramWithLinkedFfiBaseAndHalt [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position _ffiBase haltPc : Nat) :
+    LabAsm (Word width) → Option (List (Instruction width))
+  | .callFfi function => do
+      let zero ← labRegisterOfNat (portToStack portZeroRegister)
+      let offset ← labLinkedFfiStubOffset context function position
+      pure [.jal zero offset]
+  | operation => labCompileAsmWithHalt context labels position haltPc operation
+
+def labCompileProgramLinesWithLinkedFfiBaseAndHalt [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (position ffiBase haltPc : Nat) :
+    List (LabLine (Word width)) → Option (List (Instruction width))
+  | [] => some []
+  | .label _ _ _ :: lines =>
+      labCompileProgramLinesWithLinkedFfiBaseAndHalt context labels position ffiBase haltPc lines
+  | .asm operation _ _ :: lines => do
+      let code ← labCompilePlain operation
+      let rest ← labCompileProgramLinesWithLinkedFfiBaseAndHalt context labels
+        (position + 4 * code.length) ffiBase haltPc lines
+      pure (code ++ rest)
+  | .labAsm operation _ _ :: lines => do
+      let code ← labCompileAsmProgramWithLinkedFfiBaseAndHalt context labels position ffiBase haltPc operation
+      let rest ← labCompileProgramLinesWithLinkedFfiBaseAndHalt context labels
+        (position + 4 * code.length) ffiBase haltPc lines
+      pure (code ++ rest)
 def compileLabProgramLinkedWithFfiStubsAndHaltAux [NeZero width]
     (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
     (base ffiBase haltPc : Nat) : LabProgram (Word width) →
@@ -987,6 +1057,18 @@ def compileLabProgramLinkedWithFfiStubsAndHaltAux [NeZero width]
         (base + 4 * labSectionInstructionCount sectionData) ffiBase haltPc sections
       pure ((sectionData.name, BitVec.ofNat width base, code) :: rest)
 
+def compileLabProgramLinkedWithFfiStubsAndHaltCompactAux [NeZero width]
+    (context : WordFfiContext) (labels : List (Nat × Nat × Nat))
+    (base ffiBase haltPc : Nat) : LabProgram (Word width) →
+      Option (List (Nat × Word width × List (Instruction width)))
+  | [] => some []
+  | sectionData :: sections => do
+      let code ← labCompileProgramLinesWithLinkedFfiBaseAndHalt context labels base ffiBase haltPc
+        sectionData.lines
+      let rest ← compileLabProgramLinkedWithFfiStubsAndHaltCompactAux context labels
+        (base + 4 * labSectionInstructionCount sectionData) ffiBase haltPc sections
+      pure ((sectionData.name, BitVec.ofNat width base, code) :: rest)
+
 def compileLabProgramLinkedWithFfiStubsAndHalt [NeZero width]
     (context : WordFfiContext) (program : LabProgram (Word width)) :
     Option (List (Nat × Word width × List (Instruction width))) :=
@@ -994,7 +1076,7 @@ def compileLabProgramLinkedWithFfiStubsAndHalt [NeZero width]
   let prefixBytes := 4 * stubCode.length
   let labels := labCollectProgramLabels prefixBytes program
   let haltPc := prefixBytes + 4 * labProgramInstructionCount program
-  match compileLabProgramLinkedWithFfiStubsAndHaltAux context labels prefixBytes prefixBytes haltPc program with
+  match compileLabProgramLinkedWithFfiStubsAndHaltCompactAux context labels prefixBytes prefixBytes haltPc program with
   | none => none
   | some [] => some []
   | some ((sectionId, _, code) :: sections) =>

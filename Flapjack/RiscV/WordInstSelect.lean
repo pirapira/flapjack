@@ -202,9 +202,16 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
          `wordInstSelectProgram` already selects its address this way; do the
          same here so an expression-level load agrees with it. -/
       let (prelude, selectedAddress) :=
+        let addressImmediate : WordInstSelectImmediate α := inferInstance
         letI : WordInstSelectImmediate α :=
           { validBinOpImmediate := fun _ _ => false
-            shiftImmediate := fun _ => .unsupported }
+            /- Cake's address path suppresses arithmetic immediates so that
+               Addr offsets remain visible to Word-to-Stack, but its nested
+               Shift case still sees the ordinary target configuration.  In
+               particular, flatten_exp deliberately leaves a shift amount
+               Const untouched, so (i * 8) must become slli rather than a
+               materialized shift-register pair. -/
+            shiftImmediate := addressImmediate.shiftImmediate }
         wordInstSelectAtom temp address
       match selectedAddress with
       | .var address =>
@@ -291,10 +298,15 @@ decreasing_by
     Immediate arithmetic is still selected for ordinary assignments, but must
     not change this address shape. -/
 def wordInstSelectAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
+    [WordInstSelectImmediate α]
     (temp : Nat) (expression : WordExp α) : WordProg α × WordExp α :=
+  let addressImmediate : WordInstSelectImmediate α := inferInstance
   letI : WordInstSelectImmediate α :=
     { validBinOpImmediate := fun _ _ => false
-      shiftImmediate := fun _ => .unsupported }
+      /- Address arithmetic must remain available for Addr-offset fusion,
+         but nested shifts follow the target configuration just as in Cake's
+         inst_select_exp. -/
+      shiftImmediate := addressImmediate.shiftImmediate }
   wordInstSelectAtom temp expression
 
 def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]

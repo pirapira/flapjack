@@ -31,7 +31,8 @@ def varsOfExp (expression : LoopExp α) (live : List Nat) : List Nat :=
 def deleteNatSorted (name : Nat) : List Nat → List Nat
   | [] => []
   | head :: tail =>
-      if name == head then tail else head :: deleteNatSorted name tail
+      if name == head then deleteNatSorted name tail
+      else head :: deleteNatSorted name tail
 
 /-! Source-shaped port of `loop_live$arith_vars`
     (`cakeml/pancake/loop_liveScript.sml:50`). -/

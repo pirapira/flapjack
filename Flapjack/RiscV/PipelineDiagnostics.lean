@@ -29,24 +29,19 @@ structure PipelineWordLoweringError where
   deriving DecidableEq, Repr
 
 /-- Cake's `stack_var_count` for one lowered function
-(`word_to_stackScript.sml:586-593`), widened by Flapjack's argument-passing
-occupancy.
+(`word_to_stackScript.sml:586-593`).
 
 `compile_prog` takes `max_var prog DIV 2 + 1 - reg_count` of the program it is
 about to lower, which is the output of `word_alloc`;
 `cakeAllocateWordFunctionAfterDead` has already computed exactly that and
-returns it as `allocation.nextSpill`.  Deriving the count instead from a second
-allocation of a differently prepared program has no counterpart upstream and
-can come out either high or low; when it comes out low the allocator's own
-stack slots fall outside the frame that is allocated for them, which
-`Flapjack/Test/CakeFrameContainment.lean` pins. -/
+returns it as `allocation.nextSpill`.  The original `compile_prog` separately
+accounts for the function's formal stack-argument area, not nested call
+argument lists, so no additional call-arity term belongs here. -/
 def cakeWordFrameSlots [NeZero width] (allocation : WordSpillState)
     (wordParameters : List Nat)
-    (renamedProgram : WordProg (RiscV.Word width)) : Nat :=
+    (_renamedProgram : WordProg (RiscV.Word width)) : Nat :=
   let cakeFrameSlots := allocation.nextSpill
-  max cakeFrameSlots
-    (max (wordParameters.length - 12)
-      (RiscV.wordProgMaxCallArguments renamedProgram - 12))
+  max cakeFrameSlots (wordParameters.length - 12)
 
 def pipelineWordFunctionsToStackChecked [NeZero width] :
     List (Nat × List Nat × WordProg (Word width)) →
@@ -162,12 +157,10 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
-          /- Cake reserves enough `f'` slots for both allocator spills and
-             arguments outside the physical ABI window, including nested
-             calls whose arity exceeds the formal-parameter count. -/
+          /- Cake reserves allocator spills and the function's formal
+             arguments outside the physical ABI window. -/
           let frameSlots := max allocation.nextSpill
-            (max (wordParameters.length - 12)
-              (RiscV.wordProgMaxCallArguments renamedProgram - 12))
+            (wordParameters.length - 12)
           -- x23 stays clear of every Cake colour (x29 is colour 12 and can
           -- hold a call argument), so the parallel-move source check never trips.
           let config : RiscV.WordStackConfig :=

@@ -56,6 +56,14 @@ inductive WordArith where
      different operation. -/
   | cakeAddCarry (destination sourceLeft sourceRight carry : Nat)
   | div (destination dividend divisor : Nat)
+  /- CakeML's `inst_select` materialises the operands of an ordinary binary
+     operation through fresh temporaries and then emits
+     `Inst (Arith (Binop op tar temp (Reg (temp+1))))`, i.e. the operands are
+     register *numbers*, not rewritable expressions.  Keeping this carrier is
+     what stops expression-level passes such as copy propagation from folding
+     the operand copies away, which is observable in the register allocator's
+     coalescing decisions. -/
+  | binOp (operator : BinOp) (destination sourceLeft sourceRight : Nat)
   deriving DecidableEq, Repr
 
 inductive WordMemOp where

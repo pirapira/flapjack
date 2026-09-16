@@ -100,6 +100,10 @@ def wordHeuristicInst : WordInst → NatInfoMap WordHeuristicCounts →
           wordHeuristicAddLhsReg destination
             (wordHeuristicAddRhsReg divisor
               (wordHeuristicAddRhsReg dividend counts))
+      | .binOp _ destination sourceLeft sourceRight =>
+          wordHeuristicAddLhsReg destination
+            (wordHeuristicAddRhsReg sourceRight
+              (wordHeuristicAddRhsReg sourceLeft counts))
   | .mem operator destination _, counts =>
       match operator with
       | .load | .load8 | .load16 | .load32 =>

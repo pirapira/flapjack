@@ -574,6 +574,18 @@ def wordStackArithInst (config : WordStackConfig) (operation : WordArith) :
     | .div destination dividend divisor =>
       wordStackDivInst config destination dividend divisor
     | .longDiv _ _ _ _ _ => wordStackLongDivInst config operation
+    | .binOp operator destination sourceLeft sourceRight =>
+      /- Cake's `inst_select` emits a binary operation whose operands are
+         register numbers, so the StackLang form is the direct
+         register-operand arithmetic instruction whenever all three word
+         locations are already registers. -/
+      match wordStackLocation config destination,
+          wordStackLocation config sourceLeft,
+          wordStackLocation config sourceRight with
+      | some (.register destination), some (.register sourceLeft),
+          some (.register sourceRight) =>
+        some (.arith operator destination sourceLeft sourceRight)
+      | _, _, _ => none
   else if wordStackLongMulAliasLocationsSafe config operation then
     wordStackLongMulInst config operation
   else
@@ -3390,6 +3402,12 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .move _ moves => (wordStackMoveList config moves).map (fun code => (code, state))
   | .assign destination value =>
       (wordStackCompileExpToPhysicalNat config destination (wordExpToNat value)).map
+        (fun code => (code, state))
+  | .inst (.arith (.binOp operator destination sourceLeft sourceRight)) =>
+      /- The register-operand carrier lowers exactly like the expression
+         assignment it replaces, so the emitted stack program is unchanged. -/
+      (wordStackCompileExpToPhysicalNat config destination
+        (.op operator [.var sourceLeft, .var sourceRight])).map
         (fun code => (code, state))
   | .inst instruction => (wordToStackInst config instruction).map (fun code => (code, state))
   | .get destination store =>

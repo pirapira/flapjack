@@ -103,6 +103,8 @@ def stackMapWordArith (map : Nat → Nat) : WordArith → WordArith
         (map carry)
   | .div destination dividend divisor =>
       .div (map destination) (map dividend) (map divisor)
+  | .binOp operator destination sourceLeft sourceRight =>
+      .binOp operator (map destination) (map sourceLeft) (map sourceRight)
 
 def stackMapWordInst (map : Nat → Nat) : WordInst → WordInst
   | .arith operation => .arith (stackMapWordArith map operation)

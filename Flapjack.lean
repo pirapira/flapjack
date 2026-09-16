@@ -354,6 +354,7 @@ import Flapjack.RiscV.CorrectnessExactFfi
 import Flapjack.RiscV.Link
 import Flapjack.WordSemantics
 import Flapjack.Loop
+import Flapjack.NatDedup
 import Flapjack.CrepToLoop
 import Flapjack.CrepToLoopOptimise
 import Flapjack.LoopAnalysis

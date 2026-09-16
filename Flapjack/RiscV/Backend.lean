@@ -234,6 +234,38 @@ def wordArithToInstructions [NeZero width] :
           .add destination destination 31,
           .sltu 31 destination 31,
           .or carry carry 31]
+  | .shift .ror destination sourceLeft (.imm amount) => do
+      /- Cake's `riscv_ast` expands an immediate rotate-right with the
+         reserved temporary register: `srli tmp,left,n; slli dst,left,w-n;
+         or dst,dst,tmp`.  The expression encoder already used this shape,
+         but the polymorphic `WordArith` carrier path used to fall through to
+         the single-instruction encoder and reject ROR. -/
+      if destination = 31 || sourceLeft = 31 then
+        none
+      else
+        let destination ← registerOfNat destination
+        let sourceLeft ← registerOfNat sourceLeft
+        let amount := shiftAmount amount
+        pure [
+          .srli 31 sourceLeft amount,
+          .slli destination sourceLeft
+            (BitVec.ofNat width ((width - amount) % width)),
+          .or destination destination 31]
+  | .shift .ror destination sourceLeft (.reg sourceRight) => do
+      /- Variable rotates use the same reserved temporary and the word-sized
+         complement that Cake emits before its variable shifts. -/
+      if destination = 31 || sourceLeft = 31 || sourceRight = 31 then
+        none
+      else
+        let destination ← registerOfNat destination
+        let sourceLeft ← registerOfNat sourceLeft
+        let sourceRight ← registerOfNat sourceRight
+        pure [
+          .ori 31 0 (BitVec.ofNat width width),
+          .sub 31 31 sourceRight,
+          .sll 31 sourceLeft 31,
+          .srl destination sourceLeft sourceRight,
+          .or destination destination 31]
   | operation => (wordArithToInstruction operation).map (fun instruction => [instruction])
 
 def wordInstToInstruction [NeZero width] :

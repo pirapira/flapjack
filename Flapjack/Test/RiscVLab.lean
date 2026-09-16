@@ -112,7 +112,7 @@ example :
 example :
     labLineInstructionCount
         (.asm (.word (.arith (.shift .ror 10 1
-          (.imm (BitVec.ofNat 64 2)))) [] 0 : LabLine (Word 64)) = 3 := by
+          (.imm (BitVec.ofNat 64 2))))) [] 0 : LabLine (Word 64)) = 3 := by
   rfl
 
 example :

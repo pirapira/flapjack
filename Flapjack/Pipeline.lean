@@ -109,7 +109,11 @@ def pipelineLoopFunctionsAux [OfNat α 0] [OfNat α 1]
       let context : LoopContext α :=
         { vars := []
           functions := functionInfos
-          maxVar := function.params.length
+          /- `crep_to_loop$comp_func` starts its temporary counter at
+             `vmax + 1`, with `vmax = LENGTH params - 1`.  The compiled
+             parameter names are already the dense `0 .. LENGTH params - 1`
+             sequence, so this is the direct source-shaped context. -/
+          maxVar := function.params.length - 1
           target := architecture }
       (label, function.params, oCompile context function.params function.body) ::
         pipelineLoopFunctionsAux architecture functionInfos (label + 1) functions

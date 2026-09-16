@@ -31,6 +31,29 @@ def structFindFieldIndex [BEq String] (field : FieldName) :
       if candidate == field then some 0
       else (structFindFieldIndex field fields).map (· + 1)
 
+def structCompileShapeDepth : Shape → Nat
+  | .one => 1
+  | .comb shapes => 1 + structCompileShapeDepths shapes
+  | .named _ => 1
+where
+  structCompileShapeDepths : List Shape → Nat
+    | [] => 0
+    | shape :: shapes => structCompileShapeDepth shape + structCompileShapeDepths shapes
+
+def structCompileContextFuel : StructContext → Nat
+  | [] => 0
+  | (_, info) :: context =>
+      1 + structCompileFieldFuel info.fields + structCompileContextFuel context
+where
+  structCompileFieldFuel : List (FieldName × Shape) → Nat
+    | [] => 0
+    | (_, shape) :: fields => structCompileShapeDepth shape + structCompileFieldFuel fields
+
+/-! Cake's `compile_shape` recursively expands every child and searches only
+    the suffix after a named declaration.  The executable wrapper retains the
+    same recursive equations while deriving fuel from the complete syntax,
+    including nested field shapes; unlike the old word-count fuel it cannot
+    truncate a valid nested shape. -/
 def structCompileShapeFuel : Nat → StructContext → Shape → Shape
   | 0, _, _ => .one
   | _fuel + 1, _context, .one => .one
@@ -43,7 +66,9 @@ def structCompileShapeFuel : Nat → StructContext → Shape → Shape
       | none => .one
 
 def structCompileShape (context : StructContext) (shape : Shape) : Shape :=
-  structCompileShapeFuel (context.length + Shape.shapeSize shape + 1) context shape
+  structCompileShapeFuel
+    (structCompileContextFuel context + structCompileShapeDepth shape + 1)
+    context shape
 
 def structOldExpShape (context : StructPassContext) : Exp α → Shape
   | .var kind name =>

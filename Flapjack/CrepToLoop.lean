@@ -28,7 +28,7 @@ structure LoopContext (α : Type u) where
 def findLoopVar (context : LoopContext α) (name : Nat) : Nat :=
   match lookupNatInfo name context.vars with
   | some value => value
-  | none => 0
+  | none => name
 
 /-! Source-named port of `crep_to_loop$find_var` (`find_var_def`,
     `crep_to_loopScript.sml:20`). -/
@@ -154,7 +154,8 @@ def loopCompileExp [OfNat α 0] [OfNat α 1]
     (context : LoopContext α) (tmp : Nat) (live : List Nat) :
     CrepExp α → LoopCompileExpResult α
   | .const value => { code := [], expression := .const value, nextTemp := tmp, live := live }
-  | .var name => { code := [], expression := .var name, nextTemp := tmp, live := live }
+  | .var name =>
+      { code := [], expression := .var (findLoopVar context name), nextTemp := tmp, live := live }
   | .load address =>
       let result := loopCompileExp context tmp live address
       { result with expression := .load result.expression }

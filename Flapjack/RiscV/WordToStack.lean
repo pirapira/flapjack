@@ -2857,6 +2857,8 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
   | .move _ moves => wordStackMoveList config moves
   | .assign destination value => wordStackCompileExpNat config destination value
   | .locValue destination source => wordStackLocValue config destination source
+  | .inst (.const destination value) =>
+      wordStackCompileExpToPhysicalNat config destination (.const value)
   | .inst instruction => wordToStackInst config instruction
   | .get destination store => wordStackGet config destination store
   | .store address value =>
@@ -3601,6 +3603,9 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .assign destination value =>
       (wordStackCompileExpToPhysicalNat config destination (wordExpToNat value)).map
         (fun code => (code, state))
+  | .inst (.const destination value) =>
+      (wordStackCompileExpToPhysicalNat config destination
+        (.const value.toNat)).map (fun program => (program, state))
   | .inst (.arith (.binOp operator destination sourceLeft sourceRight)) =>
       /- The register-operand carrier lowers exactly like the expression
          assignment it replaces, so the emitted stack program is unchanged.

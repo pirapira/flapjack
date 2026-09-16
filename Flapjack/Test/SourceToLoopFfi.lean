@@ -53,7 +53,11 @@ theorem sourceToLoop_compiled_ffi_equation :
           array arrayLength sourceToLoopFfiState
         pure (.normal state)) := by
   exact evalLoopCompiledExtCall sourceToLoopLoopContext [] sourceToLoopFfiHandler 0
-    sourceToLoopFfiState [7] "inc" 1 2 3 4
+    sourceToLoopFfiState [7] "inc" 1 2 3 4 1 2 3 4
+    (by simp [sourceToLoopLoopContext, lookupNatInfo])
+    (by simp [sourceToLoopLoopContext, lookupNatInfo])
+    (by simp [sourceToLoopLoopContext, lookupNatInfo])
+    (by simp [sourceToLoopLoopContext, lookupNatInfo])
 
 #guard
     (evalLoopProgWithCallsAndFfi [] successfulLoopFfiHandler 40

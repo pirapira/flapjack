@@ -57,16 +57,17 @@ theorem peerCrepRuntimeToLoop_loadGlob_regression :
     (evalLoopProgWithCallsAndFfi [] (fun _ _ _ _ _ loopState => some loopState)
       3 (loopStateOfCrepRuntimeStateForGlobals globalLoadRuntimeState)
       (loopCompileProg
-        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+        ({ vars := [(5, 5)], functions := [], maxVar := 0, target := .rv64i } :
           LoopContext Nat)
         [] (.assign 5 (.loadGlob 200)))).map
         (fun result => (loopResultState result).locals 5) := by
   exact crepRuntimeToLoop_loadGlob_assign_agreement
-    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+      ({ vars := [(5, 5)], functions := [], maxVar := 0, target := .rv64i } :
       LoopContext Nat)
     [] globalLoadRuntimeHandler (fun _ _ => none) 1
     globalLoadRuntimeState [] 5 200 42
     ⟨0, by simp [globalLoadRuntimeState]⟩
+    (by simp [lookupNatInfo])
     (by simp [globalLoadRuntimeState])
 
 theorem peerCrepRuntimeToLoop_loadGlob_failure_regression :
@@ -79,16 +80,17 @@ theorem peerCrepRuntimeToLoop_loadGlob_failure_regression :
       (loopStateOfCrepRuntimeStateForGlobals
         { globalLoadRuntimeState with globals := fun _ => none })
       (loopCompileProg
-        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+        ({ vars := [(5, 5)], functions := [], maxVar := 0, target := .rv64i } :
           LoopContext Nat)
         [] (.assign 5 (.loadGlob 200)))).map
         (fun result => (loopResultState result).locals 5) := by
   exact crepRuntimeToLoop_loadGlob_assign_failure_agreement
-    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+    ({ vars := [(5, 5)], functions := [], maxVar := 0, target := .rv64i } :
       LoopContext Nat)
     [] globalLoadRuntimeHandler (fun _ _ => none) 1
     { globalLoadRuntimeState with globals := fun _ => none } [] 5 200
     ⟨0, by simp [globalLoadRuntimeState]⟩
+    (by simp [lookupNatInfo])
 
 theorem peerCrepRuntimeToLoop_storeGlob_loadGlob_sequence_regression :
     (evalCrepRuntimeResult globalLoadRuntimeHandler (fun _ _ => none) 3
@@ -100,16 +102,17 @@ theorem peerCrepRuntimeToLoop_storeGlob_loadGlob_sequence_regression :
       (loopStateOfCrepRuntimeStateForGlobals
         { globalLoadRuntimeState with globals := fun _ => none })
       (loopCompileProg
-        ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+        ({ vars := [(5, 5)], functions := [], maxVar := 0, target := .rv64i } :
           LoopContext Nat)
         [] (.seq (.storeGlob 200 (.const 42)) (.assign 5 (.loadGlob 200))))).map
         (fun result => (loopResultState result).globals 200) := by
   exact crepRuntimeToLoop_storeGlob_loadGlob_sequence_agreement
-    ({ vars := [], functions := [], maxVar := 0, target := .rv64i } :
+    ({ vars := [(5, 5)], functions := [], maxVar := 0, target := .rv64i } :
       LoopContext Nat)
     [] globalLoadRuntimeHandler (fun _ _ => none) 1
     { globalLoadRuntimeState with globals := fun _ => none } 5 200 42
     ⟨0, by simp [globalLoadRuntimeState]⟩
+    (by simp [lookupNatInfo])
 
 theorem peerCrepRuntimeToLoop_storeGlob_state_regression :
     ∃ sourceTarget loopTarget,

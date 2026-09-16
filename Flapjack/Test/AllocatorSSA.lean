@@ -98,8 +98,8 @@ example :
               .seq
                 (.seq (.move 0 [(208, 202)]) (.move 1 [(212, 2)]))
                 (.seq
-                  (.seq (.move 1 [(224, 212)]) (.assign 228 (.const 0)))
-                  (.assign 232 (.const 0))), 0, 0))
+                  (.seq (.move 1 [(224, 212)]) (.inst (.const 228 0)))
+                  (.inst (.const 232 0))), 0, 0))
               (some 7) [2]
               (some (2,
                 .seq
@@ -107,7 +107,7 @@ example :
                     (.seq (.move 1 [(216, 2)])
                       (.assign 220 (.var 208))))
                   (.seq
-                    (.seq (.assign 224 (.const 0)) (.move 1 [(228, 220)]))
+                    (.seq (.inst (.const 224 0)) (.move 1 [(228, 220)]))
                     (.move 1 [(232, 216)])), 0, 0))))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaListNextVarRenameMove, wordSsaCallAbiRegisters,
@@ -202,7 +202,7 @@ example :
         ({ current := [], next := 10 } : WordSsaState)
       ((.loop [1] (.break 0) []) : WordProg Nat) =
       ({ current := [], next := 14 },
-        .seq (.seq (.assign 10 (.const 0)) (.move 0 []))
+        .seq (.seq (.inst (.const 10 0)) (.move 0 []))
           (.loop [10] (.break 0) [])) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaLoopSetup, wordSsaFakeMoves,
@@ -261,7 +261,7 @@ example :
       ({ current := [(1, 14)], next := 18 },
         .ite .equal 0 (.reg 0)
           (.seq (.assign 10 (.var 0)) (.move 1 [(14, 10)]))
-          (.assign 14 (.const 0))) := by
+          (.inst (.const 14 0))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameExp, wordSsaRenameRegImm, wordSsaRead, wordSsaFresh,
     wordSsaKeys, wordSsaSeq, wordSsaFixInconsistencies,

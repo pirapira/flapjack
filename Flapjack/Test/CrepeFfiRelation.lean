@@ -36,6 +36,8 @@ def sourceToCrepeFfiStructuredAfter :
   fun name => if name == "result" then
     some (.word (BitVec.ofNat 64 42)) else none
 
+def sourceToCrepeFfiFuel : Nat := 25
+
 def sourceToCrepeFfiTempBase : Nat :=
   maxCrepExpVar ([.var 1, .const 0, .const 0, .const 0] :
     List (CrepExp (RiscV.Word 64)))
@@ -44,14 +46,14 @@ theorem sourceToCrepeFfi_nonempty_environment_relation :
     evalPanValueProgWithPrimitiveCallsAndFfi
       (fun _ _ => none) sourceToCrepeFfiStructuredHandler []
       sourceToCrepeFfiSourceFunctions
-      0 100 8 26 sourceToCrepeFfiStructuredLocals
+      0 100 8 (sourceToCrepeFfiFuel + 1) sourceToCrepeFfiStructuredLocals
       (fun _ => none) (fun _ => none)
       sourceToCrepeFfiProgram =
       some (.normal sourceToCrepeFfiStructuredAfter
         (fun _ => none) (fun _ => none)) ∧
     evalCrepFullProg sourceToCrepeFfiFunctions
       (fun _ _ => none) sourceToCrepeFfiHandler sourceToCrepeFfiSharedMem
-      0 100 30 sourceToCrepeFfiState
+      0 100 (sourceToCrepeFfiFuel + 5) sourceToCrepeFfiState
       (compileProg sourceToCrepeFfiContext sourceToCrepeFfiProgram) =
       some (.normal
         (restoreCrepFfiTemps sourceToCrepeFfiTargetAfter
@@ -110,7 +112,7 @@ theorem sourceToCrepeFfi_nonempty_environment_relation :
     (sharedMem := sourceToCrepeFfiSharedMem)
     (sourceHandler := sourceToCrepeFfiStructuredHandler)
     (baseAddress := 0) (topAddress := 100) (bytesInWord := 8)
-    (fuel := 25) (function := "inc")
+    (fuel := sourceToCrepeFfiFuel) (function := "inc")
     (configuration := .var .local "result")
     (configurationLength := .const 0) (array := .const 0)
     (arrayLength := .const 0)

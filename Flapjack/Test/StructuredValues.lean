@@ -7,6 +7,16 @@ open RiscV
 def structuredValueTestContext : StructContext :=
   [("Pair", { fields := [("left", .one), ("right", .one)], size := 2 })]
 
+def deepNestedShape : Nat → Shape
+  | 0 => .one
+  | depth + 1 => .comb [deepNestedShape depth]
+
+/-! Cake's structural `compile_shape` preserves arbitrarily nested `Comb`s;
+    the former flat-fuel implementation truncated this at shallow depths. -/
+#guard
+  Shape.shapeToString (structCompileShape [] (deepNestedShape 8)) ==
+    Shape.shapeToString (deepNestedShape 8)
+
 def flatPairDomain : PanMemoryDomain Nat :=
   fun address => address == 10 || address == 11
 

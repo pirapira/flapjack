@@ -1,4 +1,5 @@
 import Flapjack.RiscV.WordInstSelect
+import Flapjack.RiscV.WordCse
 
 /-!
 # Cake `pull_exp`/`flatten_exp` constant-placement oracle (GH #1024)
@@ -39,6 +40,23 @@ the port's normalizer reaches them.
 namespace Flapjack.Test.WordInstNormalizeParity
 
 open Flapjack Flapjack.RiscV
+
+/-! Cake's load CSE canonicalizes the address used for the fact-table key, but
+    retains the address register in the emitted memory instruction.  This
+    matters when the address register was explicitly materialized: replacing
+    it by its canonical predecessor changes the final branch layout even
+    though the load is semantically equivalent. -/
+
+def cseLoadAddressProgram : WordProg Nat :=
+  .seq (.move 1 [(13, 15)])
+    (.inst (.mem .load 17 13))
+
+def cseLoadAddressPreservesEmission : Bool :=
+  match wordCseProp cseLoadAddressProgram with
+  | .seq (.move 1 [(13, 15)]) (.inst (.mem .load 17 13)) => true
+  | _ => false
+
+#guard cseLoadAddressPreservesEmission
 
 /-- In-order atoms of an `Op Add` spine: `some name` for a variable, `none`
 for a constant. -/
@@ -165,6 +183,56 @@ def andZeroConstantCollapses : Bool :=
   | .const value => value == 0
   | _ => false
 
+/-! Cake's `word_to_word$compile_single` passes the normalized Word program
+    directly to `inst_select`; the source-facing flatten adapter must not
+    insert a fresh assignment before this nested shift. -/
+def nestedSelectorBoundaryMatches : Bool :=
+  let program : WordProg Nat :=
+    .assign 20 (.shift .lsl (.op .add [.var 6, .var 4]) (.const 1))
+  match wordFlattenProgramFrom program with
+  | .assign 20 (.shift .lsl (.op .add [.var 6, .var 4]) (.const 1)) => true
+  | _ => false
+
+/- Cake's `inst_select_exp (Shift _ exp (Var n))` materializes both operands
+   and emits an arithmetic shift with the second temporary as a register. -/
+def variableShiftSelectorMatches : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 14 (.shift .asr (.var 18) (.var 22))) with
+  | .seq (.move 0 [(23, 18)])
+      (.seq (.move 0 [(24, 22)])
+        (.inst (.arith (.shift .asr 14 23 (.reg 24))))) => true
+  | _ => false
+
+def constantSelectorMatches : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 18 (.const 7)) with
+  | .inst (.const 18 7) => true
+  | _ => false
+
+def loadSelectorMatches : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 14 (.load (.var 18))) with
+  | .seq (.move 0 [(23, 18)]) (.inst (.mem .load 14 23)) => true
+  | _ => false
+
+/-- Cake's expression selector emits the same memory instruction for a load
+    nested inside another expression; it must not leave an `Assign (Load ..)`
+    for the later passes to rediscover. -/
+def nestedLoadSelectorMatches : Bool :=
+  match wordInstSelectAtom (α := Nat) 23 (.load (.var 18)) with
+  | (.seq (.move 0 [(23, 18)]) (.inst (.mem .load 23 23)), .var 23) => true
+  | _ => false
+
+/-- The address-selector fallback remains an expression when an offset is not
+    yet materialized.  The nested-load case must retain that address rather
+    than incorrectly loading from the base temporary alone. -/
+def nestedLoadOffsetFallbackMatches : Bool :=
+  match wordInstSelectAtom (α := Nat) 23
+      (.load (.op .add [.var 18, .const 8])) with
+  | (.seq (.move 0 [(23, 18)])
+      (.assign 23 (.load (.op .add [.var 23, .const 8]))), .var 23) => true
+  | _ => false
+
 #guard twoVarOrderMatches
 #guard varConstOrderMatches
 #guard constFirstOrderMatches
@@ -178,6 +246,12 @@ def andZeroConstantCollapses : Bool :=
 #guard orZeroConstantDropped
 #guard xorZeroConstantDropped
 #guard andZeroConstantCollapses
+#guard nestedSelectorBoundaryMatches
+#guard variableShiftSelectorMatches
+#guard constantSelectorMatches
+#guard loadSelectorMatches
+#guard nestedLoadSelectorMatches
+#guard nestedLoadOffsetFallbackMatches
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -193,7 +267,13 @@ def runChecks : IO Bool := do
     , ("the Or zero identity is dropped like Cake reduce_const", orZeroConstantDropped)
     , ("the Xor zero identity is dropped like Cake reduce_const", xorZeroConstantDropped)
     , ("the And zero fold collapses to the constant like Cake reduce_const", andZeroConstantCollapses)
-    ]
+    , ("the source selector boundary preserves Cake's nested expression shape", nestedSelectorBoundaryMatches)
+    , ("a variable shift uses Cake's two operand moves and register shift", variableShiftSelectorMatches)
+    , ("a constant assignment becomes Cake's Const instruction", constantSelectorMatches)
+    , ("a load materializes Cake's Mem instruction after its address move", loadSelectorMatches)
+    , ("a nested load remains Cake's memory instruction", nestedLoadSelectorMatches)
+    , ("a nested load preserves an unfused address expression", nestedLoadOffsetFallbackMatches)
+  ]
   let mut ok := true
   for (label, passed) in checks do
     if passed then

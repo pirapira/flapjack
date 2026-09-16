@@ -288,6 +288,52 @@ def copyPropagationKeepsDestination : Bool :=
   | .seq _ (.inst (.mem .store 33 address)) => address == 37
   | _ => false
 
+/-! `Set name (Var n)` records what the store holds and `Get m name` uses it
+    (Cake `word_copyScript.sml:233-346`). -/
+
+def copyPropagationSharesStoredValues : Bool :=
+  match RiscV.wordCopyProp
+      (.seq (.set .currHeap (.var 5)) (.get 9 .currHeap) : WordProg (Word 64)) with
+  | .seq (.set .currHeap (.var 5)) (.move 0 [(9, 5)]) => true
+  | _ => false
+
+def copyPropagationDropsRedundantGet : Bool :=
+  match RiscV.wordCopyProp
+      (.seq (.set .currHeap (.var 5)) (.get 5 .currHeap) : WordProg (Word 64)) with
+  | .seq (.set .currHeap (.var 5)) .skip => true
+  | _ => false
+
+#guard copyPropagationSharesStoredValues
+#guard copyPropagationDropsRedundantGet
+
+/-! Cake's `inst_select_exp (Lookup s) = Get tar s`, and `stackLang` store names
+    include `Temp`, so the concrete Word-to-Stack path must lower a `Get` from a
+    temporary store instead of rejecting it. -/
+
+def selectedLookupGet : Bool :=
+  match RiscV.wordInstSelectProgramFrom
+      (.assign 6 (.lookup .heapLength) : WordProg (Word 64)) with
+  | .get 6 .heapLength => true
+  | _ => false
+
+#guard selectedLookupGet
+
+def tempStoreGetConfig : WordStackConfig :=
+  { locations := [(5, .register 1)]
+    scratch := 22
+    stackBase := 0
+    addressScratch := 12
+    specialScratch := 11
+    carryScratch := 10
+    abiBase := 1 }
+
+def tempStoreGetLowers : Bool :=
+  match RiscV.wordStackGetNat tempStoreGetConfig 5 (.temp 3) with
+  | some (.get 1 (.temp 3)) => true
+  | _ => false
+
+#guard tempStoreGetLowers
+
 #guard copyPropagationKeepsDestination
 
 /-! ### Cake ABI argument overflow
@@ -361,7 +407,9 @@ def runChecks : IO Bool := do
     ("an overflowing call is rejected without that frame room",
       overflowRejectedWithTinyFrame),
     ("copy propagation keeps Cake's destination representative",
-      copyPropagationKeepsDestination)]
+      copyPropagationKeepsDestination),
+    ("copy propagation shares a stored value", copyPropagationSharesStoredValues),
+    ("copy propagation drops a redundant Get", copyPropagationDropsRedundantGet)]
   let mut ok := true
   for (label, passed) in checks do
     if passed then

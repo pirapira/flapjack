@@ -10,9 +10,11 @@ example :
           scratch := 31, stackBase := 10 } [(0, 1), (1, 0)] =
       some (.seq (.arith .or 29 5 5)
         (.seq (.arith .or 5 4 4) (.arith .or 4 29 29)) : StackProg Nat) := by
-  simp [wordStackMoveList, wordStackParallelMove, wordStackParallelMoveAux,
-    wordMoveDestinations, wordMoveReady, wordMoveRemoveDestination,
-    wordStackMoveToScratch, wordStackMoveFromScratch, wordStackMove,
+  simp [wordStackMoveList, wordStackLocationMovesFromNames,
+    wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
+    wordStackLocationMoveDestinations, wordStackLocationMoveReady,
+    wordStackLocationMoveRemoveDestination, wordStackLocationMoveToScratch,
+    wordStackLocationMoveFromScratch, wordStackLocationMove,
     wordStackLocation, wordStackOffset, wordStackJoin, lookupNatInfo]
 
 example :

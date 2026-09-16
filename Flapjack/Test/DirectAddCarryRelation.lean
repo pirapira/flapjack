@@ -114,7 +114,7 @@ example :
             StackProg Nat) := by
       simp [addCarrySpillConfig, wordToStackProg, wordToStackInst,
         wordStackArithInst, wordStackAddCarryInst,
-        wordStackAddCarryLocationSafe, wordStackLongMulMoveToPhysical,
+   wordStackLongMulMoveToPhysical,
         wordStackLongMulMoveFromPhysical, wordStackJoin, wordStackLocation,
         wordStackOffset, wordSpecialArithLocationsSafe, lookupNatInfo]
     simp only [addCarrySpillConfig] at hcompiled ⊢

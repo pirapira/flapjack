@@ -14,7 +14,7 @@ example :
   have hAbi : wordSsaCallAbiRegisters 1 2 = [2, 4] := by rfl
   simp [wordSsaRenameFunctionWithEntry, wordSsaEntryMove,
     wordSsaRenameFunction, wordSsaSetupParameters, wordSsaLimitVar,
-    wordListMaximum, wordProgVariables, wordProgReadVars, wordProgWriteVars,
+    wordProgCakeMaxVar,
     wordSsaRenameProgram, wordSsaRenameProgramWithLoops, wordSsaRead,
     wordSsaFreshList, wordSsaFresh, wordSsaSeq, hAbi, lookupNatInfo]
 
@@ -23,9 +23,35 @@ example :
       .move 1 [(5, 2), (9, 3)] := by
   rfl
 
+/- CakeML's `ssa_cc_trans_inst` uses the fixed RISC-V `LongMul` protocol:
+   operands enter registers 0 and 4, the multiply writes 6 and 0, and the
+   two fresh SSA results leave through the explicit result move. -/
+example :
+    wordSsaRenameProgram ({ current := [], next := 4 } : WordSsaState)
+        (.inst (.arith (.longMul 1 2 2 3)) : WordProg Nat) =
+      ({ current := [(2, 8), (1, 4)], next := 12 },
+        .seq (.move 1 [(0, 2), (4, 3)])
+        (.seq (.inst (.arith (.longMul 6 0 0 4)))
+            (.move 1 [(8, 0), (4, 6)]))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRead, wordSsaFresh, wordSsaSeq,
+    lookupNatInfo]
+
 example :
     wordSsaAbiParameters 3 = [0, 2, 4] := by
   rfl
+
+/- Cake's `ssa_cc_trans_inst` routes LongMul through its fixed architectural
+   operands and explicitly copies both results back to fresh SSA names. -/
+example :
+    wordSsaRenameProgram ({ current := [], next := 10 } : WordSsaState)
+        (.inst (.arith (.longMul 1 2 3 4)) : WordProg Nat) =
+      ({ current := [(2, 14), (1, 10)], next := 18 },
+        .seq (.move 1 [(0, 3), (4, 4)])
+            (.seq (.inst (.arith (.longMul 6 0 0 4)))
+            (.move 1 [(14, 0), (10, 6)]))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRead, wordSsaFresh, wordSsaSeq, lookupNatInfo]
 
 /- CakeML's fresh-name limit scans the body only, so unused ABI formals do not
    move the full-SSA name stream. -/
@@ -37,7 +63,7 @@ example :
         .seq (.move 1 [(5, 0), (9, 2), (13, 4)]) .skip) := by
   simp [wordSsaRenameFunctionWithEntry, wordSsaEntryMove,
     wordSsaRenameFunction, wordSsaSetupParameters, wordSsaLimitVar,
-    wordListMaximum, wordProgVariables, wordProgReadVars, wordProgWriteVars,
+    wordProgCakeMaxVar,
     wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaFreshList, wordSsaFresh]
 
@@ -50,7 +76,7 @@ example :
   simp [wordSsaRenameFunctionWithEntryAndDeadMoves,
     wordSsaRenameFunctionWithEntry, wordSsaEntryMove,
     wordSsaRenameFunction, wordSsaSetupParameters, wordSsaLimitVar,
-    wordListMaximum, wordProgVariables, wordProgReadVars, wordProgWriteVars,
+    wordProgCakeMaxVar, wordProgReadVars,
     wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaFreshList, wordSsaFresh]
 
@@ -84,7 +110,9 @@ example :
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaListNextVarRenameMove, wordSsaReadCutsets, wordSsaFreshList,
     wordSsaFresh, wordSsaRead, wordSsaRestrict, wordSsaSeq, List.eraseDups,
-    List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo]
+    List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 /- The entry-aware graph boundary accepts an unused ABI formal and returns a
    coloured program containing its setup move. -/

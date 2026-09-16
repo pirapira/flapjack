@@ -187,12 +187,26 @@ def wordInstNormalizeExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] (expres
 def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]
     (temp : Nat) : WordExp α → WordProg α × WordExp α
-  | .const value => (.assign temp (.const value), .var temp)
+  | .const value => (.inst (.const temp value), .var temp)
   | .var name => (.move 0 [(temp, name)], .var temp)
-  | .lookup store => (.assign temp (.lookup store), .var temp)
+  | .lookup store => (.get temp store, .var temp)
   | .load address =>
-      let (prelude, address) := wordInstSelectAtom temp address
-      (wordDeadSelectSeq prelude (.assign temp (.load address)), .var temp)
+      let (prelude, selectedAddress) := wordInstSelectAtom temp address
+      match selectedAddress with
+      | .var address =>
+          /- Cake's `inst_select_exp` lowers every expression-level load to a
+             genuine `Mem Load` instruction.  Keeping this as an `Assign`
+             leaves the load invisible to `word_cse`, so repeated loads cannot
+             share the first result and the final code grows relative to Cake.
+             The selected address is normally the returned temporary, just as
+             in Cake's `Addr temp 0w` case. -/
+          (wordDeadSelectSeq prelude (.inst (.mem .load temp address)), .var temp)
+      | _ =>
+          /- Address selectors intentionally retain an unfused base-plus-
+             offset expression for the later Word-to-Stack offset handling.
+             Preserve that fallback instead of pretending that `temp` holds
+             the complete address. -/
+          (wordDeadSelectSeq prelude (.assign temp (.load selectedAddress)), .var temp)
   | .op .add [left, .const value] =>
       let (prelude, selectedLeft) := wordInstSelectAtom temp left
       match selectedLeft with
@@ -242,7 +256,7 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
           (.inst (.const temp 0), .var temp)
       | _, _ =>
           let rightPrelude : WordProg α :=
-            .assign (temp + 1) (.const value)
+            .inst (.const (temp + 1) value)
           let code := wordDeadSelectSeq leftPrelude rightPrelude
           (wordDeadSelectSeq code
             (.assign temp (.shift operator (.var temp) (.var (temp + 1)))), .var temp)
@@ -251,7 +265,7 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
       let code := wordDeadSelectSeq leftPrelude rightPrelude
       (wordDeadSelectSeq code
-        (.assign temp (.shift operator (.var temp) (.var (temp + 1)))), .var temp)
+        (.inst (.arith (.shift operator temp temp (.reg (temp + 1))))), .var temp)
   | expression => (.assign temp expression, .var temp)
 termination_by expression => sizeOf expression
 decreasing_by
@@ -282,12 +296,13 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
   | .assign destination value =>
       let value := wordInstNormalizeExp value
       match value with
+      | .lookup store => .get destination store
       | .load address =>
-          if wordExpIsAtom address then
-            .assign destination value
-          else
-            let (prelude, address) := wordInstSelectAddressAtom temp address
-            wordDeadSelectSeq prelude (.assign destination (.load address))
+          let (prelude, address) := wordInstSelectAddressAtom temp address
+          match address with
+          | .var address =>
+              wordDeadSelectSeq prelude (.inst (.mem .load destination address))
+          | _ => wordDeadSelectSeq prelude (.assign destination (.load address))
       | .op operator [left, .const value] =>
           let (prelude, left) := wordInstSelectAtom temp left
           match left with
@@ -315,6 +330,17 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
                   (.inst (.arith (.shift operator destination left (.imm value))))
           | _, .outOfRange => .inst (.const destination 0)
           | _, _ => .assign destination (.shift operator left (.const value))
+      | .shift operator left right =>
+          let (leftPrelude, left) := wordInstSelectAtom temp left
+          let (rightPrelude, right) := wordInstSelectAtom (temp + 1) right
+          let body :=
+            match left, right with
+            | .var left, .var right =>
+                .inst (.arith (.shift operator destination left (.reg right)))
+            | _, _ => .assign destination (.shift operator left right)
+          wordDeadSelectSeq leftPrelude
+            (wordDeadSelectSeq rightPrelude body)
+      | .const value => .inst (.const destination value)
       | .op operator [left, right] =>
           let (leftPrelude, left) := wordInstSelectAtom temp left
           let (rightPrelude, right) := wordInstSelectAtom (temp + 1) right

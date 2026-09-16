@@ -38,10 +38,20 @@ def sectionSymbolName (crepe : List (CompiledFunction (RiscV.Word 64)))
     | some function => s!"cml_{sanitizeSymbolName function.name}_{label + 5}"
     | none => s!"cml_section_{label + 5}"
 
+/-- Sixteen bytes per `.byte` line.  Indexing each line as
+    `values.drop (line * 16)` walked the byte list again for every line, which
+    is quadratic in the image: the real guest emits about 78000 lines from
+    1.25 MB of code and spent 31 s here.  Walking the list once emits exactly
+    the same lines. -/
+def assemblyByteLinesAux : Nat → List (BitVec 8) → List String
+  | 0, _ => []
+  | _ + 1, [] => []
+  | fuel + 1, values =>
+      ("\t.byte " ++ String.intercalate "," ((values.take 16).map hexByteUpper))
+        :: assemblyByteLinesAux fuel (values.drop 16)
+
 def assemblyByteLines (values : List (BitVec 8)) : List String :=
-  (List.range ((values.length + 15) / 16)).map (fun line =>
-    let chunk := (values.drop (line * 16)).take 16
-    "\t.byte " ++ String.intercalate "," (chunk.map hexByteUpper))
+  assemblyByteLinesAux ((values.length + 15) / 16) values
 
 def assemblySymbolLines (crepe : List (CompiledFunction (RiscV.Word 64))) :
     Nat → List (RiscV.EncodedRiscVSection 64) → List String

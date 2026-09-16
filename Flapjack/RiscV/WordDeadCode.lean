@@ -1,3 +1,4 @@
+import Flapjack.NatDedup
 import Flapjack.RiscV.CakeRegAlloc
 import Flapjack.RiscV.WordCse
 import Flapjack.RiscV.WordCopyProp
@@ -17,8 +18,12 @@ namespace Flapjack.RiscV
 
 open Flapjack
 
+/-- `(live ++ reads).eraseDups`.  The live set is as long as the function, and
+    this runs once per statement, so the quadratic `List.eraseDups` made a
+    single dead-code pass cubic in function size; `natEraseDups` returns the
+    same list. -/
 def wordDeadAddReads (live : List Nat) (reads : List Nat) : List Nat :=
-  (live ++ reads).eraseDups
+  natEraseDups (live ++ reads)
 
 def wordDeadRemoveWrites (live : List Nat) (writes : List Nat) : List Nat :=
   live.filter (fun name => name ∉ writes)
@@ -294,7 +299,7 @@ open Flapjack.RiscV
 
 /-! The source-shaped allocator boundary: full SSA is performed first, then
 Cake's dead-program pass feeds the clash tree and IRC allocator. -/
-def cakeAllocateWordFunctionAfterDead [OfNat α 0] (currentFunction : Nat)
+def cakeAllocateWordFunctionAfterDead [OfNat α 0] [WordCseHash α] (currentFunction : Nat)
     (parameters : List Nat) (program : WordProg α) [BEq α] :
     Option (WordSsaState × List Nat × WordProg α × WordSpillState) :=
   let (state, renamedParameters, ssaProgram) :=
@@ -311,10 +316,16 @@ def cakeAllocateWordFunctionAfterDead [OfNat α 0] (currentFunction : Nat)
   let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
   let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
   let bij := cakeMkBij tree
+  /- `lookup_any x scost 0` in `st_ex_list_MIN_cost`
+     (`reg_allocScript.sml:773-790`) reads an sptree; read the costs into the
+     same node-indexed field the allocator state uses so the spill scan is
+     not a linear lookup per node.  `ofNatInfoMap` keeps the first binding for
+     a key, which is what `cakeMapLookup` returned. -/
   let scost := spillCosts.map (fun costs =>
-    costs.filterMap (fun entry =>
-      (lookupNatInfo entry.1 bij.toAllocator).map
-        (fun node => (node, entry.2))))
+    CakeNodeMap.ofNatInfoMap bij.nextNode
+      (costs.filterMap (fun entry =>
+        (lookupNatInfo entry.1 bij.toAllocator).map
+          (fun node => (node, entry.2)))))
   match cakeDoRegAlloc .irc scost cakeRiscVRegisterCount
       moves tree forced fs with
   | none => none

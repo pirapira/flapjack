@@ -47,7 +47,7 @@ example :
          { priority := 3, left := 1, right := 0 }] =
       [{ count := 2, maxPriority := 9, left := 2, right := 7 },
        { count := 1, maxPriority := 3, left := 0, right := 1 }] := by
-  decide
+  decide +kernel
 
 example :
     (wordGetHeuristics 1 7 (.move 9 [(1, 2)] : WordProg Nat)).1 =

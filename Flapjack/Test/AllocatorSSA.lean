@@ -28,6 +28,16 @@ example :
   rfl
 
 example :
+    wordSsaRenameProgram
+        ({ current := [(10, 6)], next := 100 } : WordSsaState)
+        ((.inst (.arith (.shift .asr 20 6 (.reg 10)))) : WordProg Nat) =
+        ({ current := [(20, 100), (10, 6)], next := 104 },
+        .seq (.move 1 [(8, 6)])
+          (.inst (.arith (.shift .asr 100 6 (.reg 8))))) := by
+  simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
+    wordSsaRenameInstProgram, wordSsaFresh, wordSsaRead, lookupNatInfo]
+
+example :
     wordProgAtomicClashes
         ((.inst (.arith (.longMul 0 1 2 3))) : WordProg Nat) [] =
       [(0, 1), (0, 2), (0, 3)] := by
@@ -59,7 +69,9 @@ example :
     wordSsaListNextVarRenameMove, hAbi,
     wordSsaFreshList, wordSsaFresh, wordSsaRead, lookupNatInfo,
     wordSsaReadCutsets, wordSsaRestrict, wordSsaSeq, List.eraseDups,
-    List.eraseDupsBy, List.eraseDupsBy.loop]
+    List.eraseDupsBy, List.eraseDupsBy.loop,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :
     wordSsaRenameProgram
@@ -89,15 +101,15 @@ example :
         ({ current := [(1, 100)], next := 200 } : WordSsaState)
         ((.call (some ([2], ([1], []), .skip, 0, 0)) (some 7) [1]
           (some (3, .assign 4 (.var 1), 0, 0)) : WordProg Nat)) =
-        ({ current := [(2, 232), (3, 228), (4, 224), (1, 208)], next := 236 },
+        ({ current := [(3, 232), (4, 228), (2, 224), (1, 208)], next := 236 },
         .seq (.move 0 [(202, 100)])
           (.seq (.move 1 [(2, 100)])
             (.call (some ([2], ([202], []),
               .seq
                 (.seq (.move 0 [(208, 202)]) (.move 1 [(212, 2)]))
                 (.seq
-                  (.seq (.assign 224 (.const 0)) (.assign 228 (.const 0)))
-                  (.move 1 [(232, 212)])), 0, 0))
+                  (.seq (.move 1 [(224, 212)]) (.inst (.const 228 0)))
+                  (.inst (.const 232 0))), 0, 0))
               (some 7) [2]
               (some (2,
                 .seq
@@ -105,15 +117,15 @@ example :
                     (.seq (.move 1 [(216, 2)])
                       (.assign 220 (.var 208))))
                   (.seq
-                    (.seq (.move 1 [(224, 220)]) (.move 1 [(228, 216)]))
-                    (.assign 232 (.const 0))), 0, 0))))) := by
+                    (.seq (.inst (.const 224 0)) (.move 1 [(228, 220)]))
+                    (.move 1 [(232, 216)])), 0, 0))))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaListNextVarRenameMove, wordSsaCallAbiRegisters,
     wordSsaReadCutsets, wordSsaRestrict, wordSsaFreshList,
     wordSsaFresh, wordSsaRenameExp, wordSsaRead, wordSsaKeys,
     wordSsaFixInconsistencies, wordSsaPriorityMove, wordSsaBranchPriority,
     wordSsaMergeMoves, wordSsaFakeInconsistencyMoves, wordSsaForceRename,
-    wordSsaSortNames, wordSsaInsertSorted,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert, NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList,
     wordSsaSeq, lookupNatInfo,
     List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop]
 
@@ -147,10 +159,10 @@ example :
         ({ current := [(1, 100)], next := 200 } : WordSsaState)
       ((.loop [1] (.seq (.assign 1 (.var 1)) (.break 0)) [1]) :
           WordProg Nat)).1 =
-      { current := [(1, 200)], next := 204 } := by
+      { current := [(1, 200)], next := 208 } := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaLoopSetup, wordSsaFakeMoves,
-    wordSsaSortNames, wordSsaInsertSorted, wordSsaListNextVarRenameMove,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert, NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList, wordSsaListNextVarRenameMove,
     wordSsaFreshList, wordSsaRestrict, wordSsaFresh,
     wordSsaFindLoopFrame, wordSsaReconcileTo, wordSsaRead,
     wordSsaSeq, lookupNatInfo, List.eraseDups, List.eraseDupsBy,
@@ -179,7 +191,9 @@ example :
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaListNextVarRenameMove, wordSsaReadCutsets, wordSsaRestrict,
     wordSsaFreshList, wordSsaFresh, wordSsaRead, wordSsaSeq,
-    List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo]
+    List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :
     wordSsaRenameProgram
@@ -198,11 +212,11 @@ example :
         ({ current := [], next := 10 } : WordSsaState)
       ((.loop [1] (.break 0) []) : WordProg Nat) =
       ({ current := [], next := 14 },
-        .seq (.seq (.assign 10 (.const 0)) (.move 0 []))
+        .seq (.seq (.inst (.const 10 0)) (.move 0 []))
           (.loop [10] (.break 0) [])) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaLoopSetup, wordSsaFakeMoves,
-    wordSsaSortNames, wordSsaInsertSorted, wordSsaListNextVarRenameMove,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert, NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList, wordSsaListNextVarRenameMove,
     wordSsaFreshList, wordSsaRestrict, wordSsaFresh,
     wordSsaFindLoopFrame, wordSsaReconcileTo, wordSsaRead,
     wordSsaSeq, lookupNatInfo, List.eraseDups, List.eraseDupsBy,
@@ -220,13 +234,15 @@ example :
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaListNextVarRenameMove, wordSsaReadCutsets, wordSsaRestrict,
     wordSsaFreshList, wordSsaFresh, wordSsaRead, wordSsaSeq,
-    List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo]
+    List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert,
+    NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList]
 
 example :
     wordSsaRenameProgram
         ({ current := [(1, 100)], next := 200 } : WordSsaState)
         ((.move 7 [(2, 1), (3, 2)]) : WordProg Nat) =
-        ({ current := [(3, 204), (2, 200), (1, 100)], next := 208 },
+        ({ current := [(1, 200), (3, 204), (2, 200)], next := 208 },
         .move 7 [(200, 100), (204, 2)]) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameMove, wordSsaFreshList, wordSsaFresh, wordSsaRead,
@@ -255,13 +271,13 @@ example :
       ({ current := [(1, 14)], next := 18 },
         .ite .equal 0 (.reg 0)
           (.seq (.assign 10 (.var 0)) (.move 1 [(14, 10)]))
-          (.assign 14 (.const 0))) := by
+          (.inst (.const 14 0))) := by
   simp [wordSsaRenameProgram, wordSsaRenameProgramWithLoops,
     wordSsaRenameExp, wordSsaRenameRegImm, wordSsaRead, wordSsaFresh,
     wordSsaKeys, wordSsaSeq, wordSsaFixInconsistencies,
     wordSsaPriorityMove, wordSsaBranchPriority, wordSsaMergeMoves,
     wordSsaFakeInconsistencyMoves, wordSsaForceRename,
-    wordSsaSortNames, wordSsaInsertSorted, List.eraseDups,
+    NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert, NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList, List.eraseDups,
     List.eraseDupsBy, List.eraseDupsBy.loop, lookupNatInfo]
 
 example :
@@ -269,8 +285,21 @@ example :
         ({ current := [(1, 10)], next := 14 } : WordSsaState)
         ({ current := [(1, 14)], next := 18 } : WordSsaState) [1, 2] =
       (.move 1 [(14, 10)] : WordProg Nat) := by
-  simp [wordSsaReconcileTo, wordSsaSortNames, wordSsaInsertSorted,
+  simp [wordSsaReconcileTo, NumSet.fromList, NumSet.toAList, NumSet.toSet, NumSet.insert, NumSet.insertFuel, NumSet.lrnext, NumSet.lrnextFuel, NumSet.insertList,
     List.filterMap, List.eraseDups, List.eraseDupsBy, List.eraseDupsBy.loop,
     lookupNatInfo]
+
+/-- CakeML's `ssa_cc_trans (Move pri ls)` force-renames every move source that
+    is not itself one of the move destinations: `force = FILTER (λ(x,y). ¬ MEM x
+    ls_1) (ZIP(ls_2,ren_ls1))` with `ls_1` the destination list (`word_allocScript.sml:348-360`).
+    The filter must therefore test the SOURCE (`move.1.2`); testing the
+    destination made it vacuous and left `force_rename` dead code. -/
+example :
+    wordSsaRenameMove (α := Nat)
+        ({ current := [], next := 200 } : WordSsaState) 0 [(15, 4), (16, 12)] =
+      ({ current := [(12, 204), (4, 200), (16, 204), (15, 200)], next := 208 },
+        (.move 0 [(200, 4), (204, 12)] : WordProg Nat)) := by
+  simp [wordSsaRenameMove, wordSsaFreshList, wordSsaFresh, wordSsaRead,
+    wordSsaForceRename, lookupNatInfo]
 
 end Flapjack

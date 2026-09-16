@@ -12,7 +12,8 @@ def returnHandlerConversionProgram : WordProg (Word 64) :=
 def returnHandlerCodeConfig : WordStackConfig :=
   { locations := [(7, .register 5)]
     scratch := 31
-    stackBase := 10 }
+    stackBase := 10
+    abiRegisterCount := 12 }
 
 def returnHandlerNatProgram : WordProg Nat :=
   .assign 7 (.const 9)
@@ -39,7 +40,7 @@ example :
     wordToStackProgNat returnHandlerCodeConfig
       (.call (some ([7], ([], []), returnHandlerNatProgram, 12, 13))
         (some 3) [] none) =
-      some (wordToStackCallNoHandler false 3 0 0 31 [7]
+      some (wordToStackCallNoHandler false 3 0 0 31 []
         (.const 5 9) 12 13) := by
   simp [wordToStackProgNat,
     wordStackCompileExpNat, wordStackWritePhysicalNat,
@@ -48,6 +49,7 @@ example :
     wordStackParallelLocationMove,
     wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
     wordStackLocationMoveRemoveDestination, wordStackLocationMove,
+    wordStackReturnStackSuffix,
     wordStackJoin,
     returnHandlerCodeConfig, returnHandlerNatProgram]
 

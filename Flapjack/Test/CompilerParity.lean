@@ -193,8 +193,11 @@ import Flapjack.Test.RiscVArtifactParity
 import Flapjack.Test.RiscVRegisterMapParity
 import Flapjack.Test.CakeAllocatorCore
 import Flapjack.Test.CakeFramePolicy
+import Flapjack.Test.CakeFrameContainment
 import Flapjack.Test.WordStackCallParity
 import Flapjack.Test.WordInstNormalizeParity
+import Flapjack.Test.WordInstSelectParity
+import Flapjack.Test.CakeTailCallSsaParity
 import Flapjack.Test.CakeForcedParity
 import Flapjack.Test.CakeMkBijParity
 import Flapjack.Test.CakeSsaSetupParity
@@ -208,6 +211,7 @@ import Flapjack.Test.WordFuseConditions
 import Flapjack.Test.RiscVAbiParity
 import Flapjack.Test.RiscVAbiAdapterParity
 import Flapjack.Test.LoopToWordBoundaryParity
+import Flapjack.Test.SptreeOrderParity
 
 /-!
 # Pancake/RISC-V compiler parity tests
@@ -722,6 +726,7 @@ def main : IO Unit := do
     Flapjack.Test.RiscVRegisterMapParity.runChecks,
     Flapjack.Test.CakeAllocatorCore.runChecks,
     Flapjack.Test.CakeFramePolicy.runChecks,
+    Flapjack.Test.CakeFrameContainment.runChecks,
     Flapjack.Test.WordStackCallParity.runChecks,
     Flapjack.Test.WordInstNormalizeParity.runChecks,
     Flapjack.Test.CakeForcedParity.runChecks,
@@ -734,7 +739,8 @@ def main : IO Unit := do
     Flapjack.Test.WordFuseConditions.runChecks,
     Flapjack.Test.RiscVAbiParity.runChecks,
     Flapjack.Test.RiscVAbiAdapterParity.runChecks,
-    Flapjack.Test.LoopToWordBoundaryParity.runChecks
+    Flapjack.Test.LoopToWordBoundaryParity.runChecks,
+    Flapjack.Test.SptreeOrderParity.runChecks
     ].mapM id
   unless results.all id do
     IO.Process.exit 1

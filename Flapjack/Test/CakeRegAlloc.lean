@@ -154,7 +154,7 @@ machine once the worklist slices land. -/
 private def graphAdj (tree : Flapjack.WordClashTree) (node : Nat) : List Nat :=
   let bij := Flapjack.RiscV.CakeRegAlloc.cakeMkBij tree
   let ta := Flapjack.RiscV.CakeAlloc.spDefault bij.toAllocator
-  let (adj, _) := Flapjack.RiscV.CakeRegAlloc.cakeMkGraph ta tree [] []
+  let (adj, _) := Flapjack.RiscV.CakeRegAlloc.cakeMkGraph ta tree [] {}
   Flapjack.RiscV.CakeRegAlloc.cakeAdjSub adj node
 
 /-- Disjoint write and read sets never clash: no edges at all. -/
@@ -174,7 +174,7 @@ def graphSetCliqueGuard : Bool :=
 def graphForcedEdgeGuard : Bool :=
   let bij := Flapjack.RiscV.CakeRegAlloc.cakeMkBij (.delta [1] [3])
   let ta := Flapjack.RiscV.CakeAlloc.spDefault bij.toAllocator
-  let adj := Flapjack.RiscV.CakeRegAlloc.cakeExtendGraph ta [(1, 3)] []
+  let adj := Flapjack.RiscV.CakeRegAlloc.cakeExtendGraph ta [(1, 3)] {}
   Flapjack.RiscV.CakeRegAlloc.cakeAdjSub adj 0 == [1] &&
     Flapjack.RiscV.CakeRegAlloc.cakeAdjSub adj 1 == [0]
 
@@ -183,11 +183,11 @@ physical 2 -> Fixed 1. -/
 def graphTagsGuard : Bool :=
   let tags := Flapjack.RiscV.CakeRegAlloc.cakeMkTags 3 [(0, 9), (1, 13), (2, 2)]
     [13]
-  Flapjack.RiscV.CakeRegAlloc.cakeMapLookup tags 0 ==
+  tags.get 0 ==
       some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.aTemp &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup tags 1 ==
+    tags.get 1 ==
       some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.sTemp &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup tags 2 ==
+    tags.get 2 ==
       some (Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.fixed 1)
 
 /-- `init_ra_state` combines the pieces: clique edge plus tags plus dim. -/
@@ -195,9 +195,9 @@ def graphInitGuard : Bool :=
   let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 3] []) [] []
   Flapjack.RiscV.CakeRegAlloc.cakeAdjSub state.adjLists 0 == [1] &&
     Flapjack.RiscV.CakeRegAlloc.cakeAdjSub state.adjLists 1 == [0] &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup state.nodeTag 0 ==
+    state.nodeTag.get 0 ==
       some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.aTemp &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup state.nodeTag 1 ==
+    state.nodeTag.get 1 ==
       some Flapjack.RiscV.CakeRegAlloc.CakeNodeTag.sTemp &&
     state.dim == 2
 
@@ -208,10 +208,10 @@ def heuDeltaGuard : Bool :=
   let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 3] []) [] []
   let (count, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu [] 4 state
   count == 1 &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 0 == some 0 &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 1 == some 1 &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.coalesced 0 == some 0 &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.coalesced 1 == some 1 &&
+    after.degrees.get 0 == some 0 &&
+    after.degrees.get 1 == some 1 &&
+    after.coalesced.get 0 == some 0 &&
+    after.coalesced.get 1 == some 1 &&
     after.simpWl == [0] && after.freezeWl == [] && after.spillWl == []
 
 /-- `init_alloc1_heu` sorts the move worklist by descending priority and
@@ -222,8 +222,8 @@ def heuMovesGuard : Bool :=
   let moves := [(1, (0, 1)), (3, (0, 1))]
   let (_, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu moves 4 state
   after.availMovesWl == [(3, (0, 1)), (1, (0, 1))] &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.moveRelated 0 == some true &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.moveRelated 1 == some true &&
+    after.moveRelated.get 0 == some true &&
+    after.moveRelated.get 1 == some true &&
     after.freezeWl == [0] && after.simpWl == [] && after.spillWl == []
 
 /-- `init_alloc1_heu` sends a clique of five allocation temps (degree 4)
@@ -242,7 +242,7 @@ def heuFixedDegreeGuard : Bool :=
   let state := Flapjack.RiscV.CakeRegAlloc.cakeInitRaState (.delta [1, 2] [2, 1]) [] []
   let (count, after) := Flapjack.RiscV.CakeRegAlloc.cakeInitAlloc1Heu [] 4 state
   count == 1 &&
-    Flapjack.RiscV.CakeRegAlloc.cakeMapLookup after.degrees 1 == some 1 &&
+    after.degrees.get 1 == some 1 &&
     after.simpWl == [1] && after.spillWl == []
 
 /-- Normalise a colouring to the ascending original-variable order that the
@@ -260,20 +260,32 @@ def partOrderGuard : Bool :=
 def reviveOrderGuard : Bool :=
   let base : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
     { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 4 with
-      adjLists := [(9, [5])],
+      adjLists := Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap 4 [(9, [5])],
       unavailMovesWl := [(1, (5, 9)), (1, (13, 5)), (1, (13, 17))],
       availMovesWl := [(2, (1, 1))] }
   let out := Flapjack.RiscV.CakeRegAlloc.cakeReviveMoves [9] base
   out.availMovesWl == [(2, (1, 1)), (1, (5, 9)), (1, (13, 5))] &&
     out.unavailMovesWl == [(1, (13, 17))]
 
+/- `moves_to_sp` inserts before recursing, so partner lists reverse source
+   order because each insertion prepends. -/
+def movesToSpOrderGuard : Bool :=
+  let table := Flapjack.RiscV.CakeRegAlloc.cakeMovesToSp
+    [(1, (2, 5)), (2, (2, 7)), (3, (2, 11))]
+      (Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofSize 12)
+  table.get 2 ==
+      some [(3, 11), (2, 7), (1, 5)] &&
+    table.get 5 == some [(1, 2)]
+
 /-- `bg_ok` partitions `adjY` by `adjX` membership with the bucket-reversing
     `sorting$PARTITION`, then `st_ex_FILTER`s each case list. -/
 def bgOkOrderGuard : Bool :=
   let base : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
     { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 4 with
-      adjLists := [(0, [1]), (1, [3, 0]), (2, [3]), (3, [2, 1, 0])],
-      nodeTag := (List.range 4).map (fun i => (i, .aTemp)) }
+      adjLists := Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap 4
+        [(0, [1]), (1, [3, 0]), (2, [3]), (3, [2, 1, 0])],
+      nodeTag := Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap 4
+        ((List.range 4).map (fun i => (i, .aTemp))) }
   Flapjack.RiscV.CakeRegAlloc.cakeBgOk 3 0 3 base == some ([1], [2, 0])
 
 /-- `reg_alloc` on a single write/read pair colours the write with the
@@ -336,6 +348,40 @@ def qsortTiesThreeGuard : Bool :=
       [(3, (1, 2)), (1, (9, 9)), (3, (7, 8))] ==
     [(3, (7, 8)), (3, (1, 2)), (1, (9, 9))]
 
+/-! The tail merge split changes equal-priority order at the first
+    non-trivial recursion sizes; these are direct `reg_alloc$sort_moves`
+    oracle cases for lengths four through six. -/
+def sortMovesTailSplitGuard : Bool :=
+  Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
+      [(7, (1, 2)), (7, (3, 4)), (7, (5, 6)), (7, (7, 8))] ==
+      [(7, (7, 8)), (7, (5, 6)), (7, (3, 4)), (7, (1, 2))] &&
+  Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
+      [(7, (1, 2)), (7, (3, 4)), (7, (5, 6)), (7, (7, 8)), (7, (9, 10))] ==
+      [(7, (9, 10)), (7, (7, 8)), (7, (5, 6)), (7, (3, 4)), (7, (1, 2))] &&
+  Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
+      [(7, (1, 2)), (7, (3, 4)), (7, (5, 6)), (7, (7, 8)), (7, (9, 10)),
+       (7, (11, 12))] ==
+      [(7, (11, 12)), (7, (9, 10)), (7, (7, 8)), (7, (5, 6)), (7, (3, 4)),
+       (7, (1, 2))]
+
+/-! Cake's pairwise merge sort reverses a long run of equal priorities. -/
+def sortMovesLongTieGuard : Bool :=
+  Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
+      [(12, (133, 173)), (12, (129, 133)), (12, (117, 149)),
+       (12, (113, 117)), (12, (105, 121)), (12, (101, 157)),
+       (12, (97, 101)), (12, (89, 105)), (12, (85, 141)),
+       (12, (81, 85)), (12, (73, 89)), (12, (69, 165)),
+       (12, (65, 69)), (12, (57, 73)), (12, (53, 137)),
+       (12, (49, 53)), (12, (45, 57)), (12, (41, 45)),
+       (12, (2, 185)), (22, (0, 37))] ==
+      [(22, (0, 37)), (12, (2, 185)), (12, (41, 45)),
+       (12, (45, 57)), (12, (49, 53)), (12, (53, 137)),
+       (12, (57, 73)), (12, (65, 69)), (12, (69, 165)),
+       (12, (73, 89)), (12, (81, 85)), (12, (85, 141)),
+       (12, (89, 105)), (12, (97, 101)), (12, (101, 157)),
+       (12, (105, 121)), (12, (113, 117)), (12, (117, 149)),
+       (12, (129, 133)), (12, (133, 173))]
+
 /-- Strictly descending priorities sort descending (probe `sm_desc`). -/
 def qsortDescGuard : Bool :=
   Flapjack.RiscV.CakeRegAlloc.cakeSortMoves
@@ -362,7 +408,8 @@ def raMovesStempHiGuard : Bool :=
 def negFirstMatchProjectionGuard : Bool :=
   let state : Flapjack.RiscV.CakeRegAlloc.CakeRaState :=
     { Flapjack.RiscV.CakeRegAlloc.CakeRaState.empty 7 with
-      nodeTag := [(4, .fixed 6), (5, .aTemp), (6, .fixed 2)] }
+      nodeTag := Flapjack.RiscV.CakeRegAlloc.CakeNodeMap.ofNatInfoMap 7
+        [(4, .fixed 6), (5, .aTemp), (6, .fixed 2)] }
   Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [2] [4, 5, 6] ==
       some 6 &&
     Flapjack.RiscV.CakeRegAlloc.cakeNegFirstMatchCol state 3 [6] [6] ==
@@ -401,6 +448,20 @@ def deadProgramPriorityGuard : Bool :=
   | .seq (.move priority _) _ => priority == 1
   | _ => false
 
+/- Cake's mk_bij_aux enumerates a Set through the Patricia-tree toAList,
+   whose order is not ascending.  This fixture is the checked HOL order
+   [0, 4, 12, 6] and guards the allocator node numbering that feeds
+   register-colour tie breaks. -/
+def cakeBijSetPatriciaGuard : Bool :=
+  let bij := cakeMkBij (.set [0, 4, 6, 12])
+  lookupNatInfo 0 bij.toAllocator == some 0 &&
+    lookupNatInfo 4 bij.toAllocator == some 1 &&
+    lookupNatInfo 12 bij.toAllocator == some 2 &&
+    lookupNatInfo 6 bij.toAllocator == some 3
+
+#guard cakeBijSetPatriciaGuard
+#guard sortMovesTailSplitGuard
+
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
     ifMergeAllocGuard && callMergeGuard && callTailGuard && assignLeafGuard &&
@@ -412,11 +473,12 @@ def parityGuard : Bool :=
     heuSpillGuard && heuFixedDegreeGuard && raDeltaPairGuard &&
     raDeltaFreeGuard && raDeltaTriangleGuard && raStackOnlyGuard &&
     raMovesCoalesceGuard && raMovesSelfFilteredGuard && raForcedEdgeGuard &&
-    partOrderGuard && reviveOrderGuard && bgOkOrderGuard &&
+    partOrderGuard && reviveOrderGuard && movesToSpOrderGuard && bgOkOrderGuard &&
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     raMovesStempGuard && raMovesStempHiGuard && negFirstMatchProjectionGuard
     && mapUpdateBoundedGuard && deadMovePriorityGuard
-    && deadProgramPriorityGuard
+    && deadProgramPriorityGuard && cakeBijSetPatriciaGuard
+    && sortMovesTailSplitGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to
@@ -438,9 +500,10 @@ def runChecks : IO Bool := do
     raStackOnlyGuard, raMovesCoalesceGuard, raMovesSelfFilteredGuard,
     partOrderGuard,
     reviveOrderGuard, bgOkOrderGuard, qsortTiesTwoGuard,
+    movesToSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
-    deadMovePriorityGuard, deadProgramPriorityGuard]
+    deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -455,11 +518,13 @@ def runChecks : IO Bool := do
     "init_alloc1_heu fixed degree", "reg_alloc delta pair",
     "reg_alloc delta free", "reg_alloc stack only",
     "reg_alloc moves coalesce", "reg_alloc moves self filtered",
-    "sorting partition order", "revive moves order", "bg_ok order",
-    "sort_moves tie two", "sort_moves tie three", "sort_moves descending",
+    "sorting partition order", "revive moves order", "moves_to_sp order", "bg_ok order",
+    "sort_moves tie two", "sort_moves tie three", "sort_moves long tie",
+    "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
     "neg_first_match_col projection", "Cake map updates stay bounded",
-    "remove_dead keeps move priority", "remove_dead_prog keeps entry priority"]
+    "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
+    "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

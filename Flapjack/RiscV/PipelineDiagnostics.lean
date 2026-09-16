@@ -28,6 +28,29 @@ structure PipelineWordLoweringError where
   feature : WordUnsupportedFeature
   deriving DecidableEq, Repr
 
+/-- Cake's `stack_var_count` for one lowered function
+(`word_to_stackScript.sml:586-593`), widened by Flapjack's argument-passing
+occupancy.
+
+`compile_prog` takes `max_var prog DIV 2 + 1 - reg_count` of the program it is
+about to lower, which is the output of `word_alloc`;
+`cakeAllocateWordFunctionAfterDead` has already computed exactly that and
+returns it as `allocation.nextSpill`.  Deriving the count instead from a second
+allocation of a differently prepared program has no counterpart upstream and
+can come out either high or low; when it comes out low the allocator's own
+stack slots fall outside the frame that is allocated for them, which
+`Flapjack/Test/CakeFrameContainment.lean` pins. -/
+def cakeWordFrameSlots [NeZero width] (allocation : WordSpillState)
+    (wordParameters : List Nat)
+    (renamedProgram : WordProg (RiscV.Word width)) : Nat :=
+  let cakeFrameSlots :=
+    if RiscV.wordProgHasBitmapSites renamedProgram then
+      allocation.nextSpill
+    else 0
+  max cakeFrameSlots
+    (max (wordParameters.length - 12)
+      (RiscV.wordProgMaxCallArguments renamedProgram - 12))
+
 def pipelineWordFunctionsToStackChecked [NeZero width] :
     List (Nat × List Nat × WordProg (Word width)) →
       Except PipelineWordLoweringError
@@ -199,9 +222,6 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
   | [] => .ok ([], bitmaps, chunks)
   | (label, parameters, body) :: functions =>
       let wordParameters := wordSsaAbiParameters parameters.length
-      let unflattenedBody := wordProgDCE
-          (RiscV.wordFuseConditions
-            (LoopToWord.loopToWordCompFunc label parameters body))
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
           (RiscV.wordInstSelectProgramFrom
             (RiscV.wordFuseConditionsAndFold
@@ -212,21 +232,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsCheckedAux
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
-          /- Cake's IRC frame occupancy only affects the state-threaded
-             lowering when the function can emit a bitmap entry.  Running the
-             complete Cake allocator for functions with no bitmap site was
-             both needlessly expensive and semantically inert.  Keep the
-             allocator-derived spill and nested-call bounds below for every
-             function, and run the exact Cake occupancy calculation only when
-             `wordProgHasBitmapSites` can observe it. -/
-          let cakeFrameSlots :=
-            if RiscV.wordProgHasBitmapSites renamedProgram then
-              RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
-                RiscV.CakeRegAlloc.cakeRiscVRegisterCount unflattenedBody
-            else 0
-          let frameSlots := max cakeFrameSlots
-            (max (wordParameters.length - 12)
-              (RiscV.wordProgMaxCallArguments renamedProgram - 12))
+          let frameSlots :=
+            RiscV.cakeWordFrameSlots allocation wordParameters renamedProgram
           -- x23 stays clear of every Cake colour (x29 is colour 12 and can
           -- hold a call argument), so the parallel-move source check never trips.
           let config : RiscV.WordStackConfig :=
@@ -292,8 +299,6 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
   | [] => .ok ([], bitmaps, chunks)
   | (label, arity, body) :: functions =>
       let wordParameters := wordSsaAbiParameters arity
-      let unflattenedBody := wordProgDCE
-        (RiscV.wordFuseConditions body)
       let unallocatedBody := RiscV.wordRemoveUnreachable (wordProgDCE
         (RiscV.wordInstSelectProgramFrom
           (RiscV.wordFuseConditionsAndFold
@@ -303,14 +308,8 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
       | some (_, renamedParameters, renamedProgram, allocation) =>
-          let cakeFrameSlots :=
-            if RiscV.wordProgHasBitmapSites renamedProgram then
-              RiscV.CakeRegAlloc.cakeWordStackVarCount label wordParameters
-                RiscV.CakeRegAlloc.cakeRiscVRegisterCount unflattenedBody
-            else 0
-          let frameSlots := max cakeFrameSlots
-            (max (wordParameters.length - 12)
-              (RiscV.wordProgMaxCallArguments renamedProgram - 12))
+          let frameSlots :=
+            RiscV.cakeWordFrameSlots allocation wordParameters renamedProgram
           -- x23 stays clear of every Cake colour (x29 is colour 12 and can
           -- hold a call argument), so the parallel-move source check never trips.
           let config : RiscV.WordStackConfig :=

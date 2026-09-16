@@ -802,8 +802,10 @@ def helloMainLengthGapTracked : Bool :=
   | none => false
 
 /- `hello` remains a tracked end-to-end parity gap (`flapjack-8tb`).  Keep the
-   predicate above as diagnostic data, but do not make this known discrepancy
-   a regression gate while the source-to-RISC-V pipeline is being aligned. -/
+   predicate above visible during focused diagnostics, but do not make this
+   known discrepancy a regression gate while the source-to-RISC-V pipeline is
+   being aligned. -/
+#eval helloEmittedSectionsMatch
 #guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
 #guard nestedExpressionWordLoweringAccepted

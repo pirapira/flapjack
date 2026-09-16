@@ -153,21 +153,21 @@ def wordInstNormalizeExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] (expres
 def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1] [DecidableEq α]
     (temp : Nat) : WordExp α → WordProg α × WordExp α
   | .const value => (.assign temp (.const value), .var temp)
-  | .var name => (.assign temp (.var name), .var temp)
+  | .var name => (.move 0 [(temp, name)], .var temp)
   | .lookup store => (.assign temp (.lookup store), .var temp)
   | .load address =>
       let (prelude, address) := wordInstSelectAtom temp address
       (wordDeadSelectSeq prelude (.assign temp (.load address)), .var temp)
   | .op .add [left, .const value] =>
-      let (prelude, left) := wordInstSelectAtom temp left
-      (prelude, .op .add [left, .const value])
+      let (prelude, selectedLeft) := wordInstSelectAtom temp left
+      (prelude, .op .add [selectedLeft, .const value])
   | .op operator [left, right] =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
       let code := wordDeadSelectSeq leftPrelude rightPrelude
       let generic :=
         (wordDeadSelectSeq code
-          (.assign temp (.op operator [.var temp, .var (temp + 1)])), .var temp)
+          (.inst (.arith (.binOp operator temp temp (.reg (temp + 1))))), .var temp)
       match operator, left, right with
       | .add, .lookup .currHeap,
           .shift .lsl (.lookup .heapLength) (.const value) =>
@@ -233,6 +233,7 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
             | _, _ => .assign destination (.op operator [left, right])
           wordDeadSelectSeq leftPrelude
             (wordDeadSelectSeq rightPrelude body)
+      | .var source => .move 0 [(destination, source)]
       | value => .assign destination value
   | .ite operator condition right thenBranch elseBranch =>
       .ite operator condition right

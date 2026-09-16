@@ -202,6 +202,12 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/shifted_load_address.pnk",
+      "source_reference": "Original Cake word_instScript.sml shift-immediate case (lines 276-291): a non-constant left expression under a constant shift must preserve both the add-immediate subtraction and the shift-immediate when selecting an RV64 source address.",
+      "cake_sha256": "abee99e9bc9e967e0d1a5816fb5092cc9a51695ea75062e1401e5fdfe1515762",
+      "tracked_beads": []
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/collapse_branch.pnk",
       "source_reference": "Minimized RISC-V parity reproducer for Cake's word_inst$inst_select_exp shift-immediate and conditional lowering (word_instScript.sml:233-295).",
       "cake_sha256": "c3a0eedb8f0e90602a899d1659782251d2a87cf4dcb269687827d304404d1d33",

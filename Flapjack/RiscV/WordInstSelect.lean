@@ -31,8 +31,17 @@ class WordInstSelectImmediate (α : Type u) where
   shiftImmediate : α → WordShiftImmediate
 
 instance : WordInstSelectImmediate Nat where
-  validBinOpImmediate _ _ := false
-  shiftImmediate _ := .unsupported
+  /- The source-facing pipeline carries RV64 words as `Nat` after the
+     word-to-stack boundary.  This is not an unbounded integer target: the
+     values are the bit patterns of 64-bit words, so use the same signed
+     12-bit immediate test as the concrete `BitVec 64` instance. -/
+  validBinOpImmediate operator value :=
+    match operator with
+    | .sub => value < 2 ^ 11
+    | .add | .and | .or | .xor =>
+        value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
+  shiftImmediate value :=
+    if value < 64 then .valid value else .outOfRange
 
 instance : WordInstSelectImmediate (BitVec width) where
   validBinOpImmediate operator value :=
@@ -286,7 +295,7 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
             .inst (.const (temp + 1) value)
           let code := wordDeadSelectSeq leftPrelude rightPrelude
           (wordDeadSelectSeq code
-            (.assign temp (.shift operator (.var temp) (.var (temp + 1)))), .var temp)
+            (.assign temp (.shift operator selectedLeft (.var (temp + 1)))), .var temp)
   | .shift operator left right =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
@@ -313,7 +322,18 @@ def wordInstSelectAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [O
          but nested shifts follow the target configuration just as in Cake's
          inst_select_exp. -/
       shiftImmediate := addressImmediate.shiftImmediate }
-  wordInstSelectAtom temp expression
+  /- Cake suppresses the immediate only for the outer address displacement;
+     selectors for the base expression still use the ordinary target
+     configuration.  This distinction is observable for
+     `base + ((k - 1) << 3)`: the subtraction and shift must remain `addi` and
+     `slli`, while a final `base + constant` must remain available for the
+     memory-offset fusion in Word-to-Stack. -/
+  match expression with
+  | .op .add [left, .const value] =>
+      letI : WordInstSelectImmediate α := addressImmediate
+      let (prelude, selectedLeft) := wordInstSelectAtom temp left
+      (prelude, .op .add [selectedLeft, .const value])
+  | _ => wordInstSelectAtom temp expression
 
 def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]

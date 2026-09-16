@@ -165,6 +165,16 @@ def andZeroConstantCollapses : Bool :=
   | .const value => value == 0
   | _ => false
 
+/-! Cake's `word_to_word$compile_single` passes the normalized Word program
+    directly to `inst_select`; the source-facing flatten adapter must not
+    insert a fresh assignment before this nested shift. -/
+def nestedSelectorBoundaryMatches : Bool :=
+  let program : WordProg Nat :=
+    .assign 20 (.shift .lsl (.op .add [.var 6, .var 4]) (.const 1))
+  match wordFlattenProgramFrom program with
+  | .assign 20 (.shift .lsl (.op .add [.var 6, .var 4]) (.const 1)) => true
+  | _ => false
+
 #guard twoVarOrderMatches
 #guard varConstOrderMatches
 #guard constFirstOrderMatches
@@ -178,6 +188,7 @@ def andZeroConstantCollapses : Bool :=
 #guard orZeroConstantDropped
 #guard xorZeroConstantDropped
 #guard andZeroConstantCollapses
+#guard nestedSelectorBoundaryMatches
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -193,7 +204,8 @@ def runChecks : IO Bool := do
     , ("the Or zero identity is dropped like Cake reduce_const", orZeroConstantDropped)
     , ("the Xor zero identity is dropped like Cake reduce_const", xorZeroConstantDropped)
     , ("the And zero fold collapses to the constant like Cake reduce_const", andZeroConstantCollapses)
-    ]
+    , ("the source selector boundary preserves Cake's nested expression shape", nestedSelectorBoundaryMatches)
+  ]
   let mut ok := true
   for (label, passed) in checks do
     if passed then

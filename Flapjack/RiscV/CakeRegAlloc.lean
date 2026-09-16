@@ -156,13 +156,18 @@ def cakeMkBijAux : WordClashTree → CakeNodeBijection → CakeNodeBijection
   | .delta writes reads, bijection =>
       cakeListRemap writes (cakeListRemap reads bijection)
   | .set names, bijection =>
-      cakeListRemap (names.mergeSort (fun a b => a < b)) bijection
+      /- A Cake `Set` is a Patricia-tree `num_set`, not an ordered list.
+         `mk_bij_aux` enumerates it with `MAP FST (toAList t)`, whose order
+         is the mixed Patricia traversal reconstructed by `NumSet.fromList`.
+         Sorting here changes allocator node numbering and therefore can
+         change otherwise valid register-colour tie breaks. -/
+      cakeListRemap (NumSet.fromList names) bijection
   | .branch live thenBranch elseBranch, bijection =>
       let mapped := cakeMkBijAux elseBranch (cakeMkBijAux thenBranch bijection)
       match live with
       | none => mapped
       | some names =>
-          cakeListRemap (names.mergeSort (fun a b => a < b)) mapped
+          cakeListRemap (NumSet.fromList names) mapped
   | .seq first second, bijection => cakeMkBijAux first (cakeMkBijAux second bijection)
 
 /-- `mk_bij` (`reg_allocScript.sml:1119-1127`): the node bijection for a
@@ -289,7 +294,7 @@ def cakeMkGraph (ta : Nat → Nat) : WordClashTree → List Nat →
       let (adj1, live) := cakeExtendClique wta liveout adj
       cakeExtendClique rta (live.filter (fun x => !wta.contains x)) adj1
   | .set names, _liveout, adj =>
-      let live := (names.mergeSort (fun a b => a < b)).map ta
+      let live := (NumSet.fromList names).map ta
       (cakeCliqueInsertEdge live adj, live)
   | .branch topt t1 t2, liveout, adj =>
       let (adj1, t1Live) := cakeMkGraph ta t1 liveout adj
@@ -297,7 +302,7 @@ def cakeMkGraph (ta : Nat → Nat) : WordClashTree → List Nat →
       match topt with
       | none => cakeExtendClique t1Live t2Live adj2
       | some t =>
-          let live := (t.mergeSort (fun a b => a < b)).map ta
+          let live := (NumSet.fromList t).map ta
           (cakeCliqueInsertEdge live adj2, live)
   | .seq t1 t2, liveout, adj =>
       let (adj1, live) := cakeMkGraph ta t2 liveout adj

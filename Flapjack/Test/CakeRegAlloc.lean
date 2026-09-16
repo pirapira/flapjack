@@ -428,6 +428,19 @@ def deadProgramPriorityGuard : Bool :=
   | .seq (.move priority _) _ => priority == 1
   | _ => false
 
+/- Cake's mk_bij_aux enumerates a Set through the Patricia-tree toAList,
+   whose order is not ascending.  This fixture is the checked HOL order
+   [0, 4, 12, 6] and guards the allocator node numbering that feeds
+   register-colour tie breaks. -/
+def cakeBijSetPatriciaGuard : Bool :=
+  let bij := cakeMkBij (.set [0, 4, 6, 12])
+  lookupNatInfo 0 bij.toAllocator == some 0 &&
+    lookupNatInfo 4 bij.toAllocator == some 1 &&
+    lookupNatInfo 12 bij.toAllocator == some 2 &&
+    lookupNatInfo 6 bij.toAllocator == some 3
+
+#guard cakeBijSetPatriciaGuard
+
 def parityGuard : Bool :=
   moveChainGuard && moveFromRegGuard && seqMovesGuard && ifMergeGuard &&
     ifMergeAllocGuard && callMergeGuard && callTailGuard && assignLeafGuard &&
@@ -443,7 +456,7 @@ def parityGuard : Bool :=
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     raMovesStempGuard && raMovesStempHiGuard && negFirstMatchProjectionGuard
     && mapUpdateBoundedGuard && deadMovePriorityGuard
-    && deadProgramPriorityGuard
+    && deadProgramPriorityGuard && cakeBijSetPatriciaGuard
 
 /- The aggregate guard is intentionally disabled while the allocator port is
    being aligned with CakeML.  Individual oracle cases remain available to
@@ -488,7 +501,8 @@ def runChecks : IO Bool := do
     "sort_moves descending",
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
     "neg_first_match_col projection", "Cake map updates stay bounded",
-    "remove_dead keeps move priority", "remove_dead_prog keeps entry priority"]
+    "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
+    "mk_bij uses Cake Patricia Set order"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

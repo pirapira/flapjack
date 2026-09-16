@@ -162,6 +162,14 @@ def subtractionConstantSecond : Bool :=
   addVarConstValueShape ((0 : BitVec 64) - 8)
     (wordInstNormalizeExp (α := BitVec 64) (.op .sub [.var 7, .const 8]))
 
+/-- Cake's dedicated `flatten_exp` subtraction case preserves the source
+    operand order.  The generic head-last flattening used to turn `a - b`
+    into `b - a`, which was observable in emitted RISC-V. -/
+def subtractionOperandOrderMatches : Bool :=
+  match wordInstNormalizeExp (α := Nat) (.op .sub [.var 2, .var 4]) with
+  | .op .sub [.var 2, .var 4] => true
+  | _ => false
+
 /-- `word_inst_probe.out: optimize_consts_or_zero` / `norm_or_zero`: the `0w`
 identity is dropped for `Or` exactly as for `Add`. -/
 def orZeroConstantDropped : Bool :=
@@ -243,6 +251,7 @@ def nestedLoadOffsetFallbackMatches : Bool :=
 #guard zeroConstantDropped
 #guard allConstantAddFolds
 #guard subtractionConstantSecond
+#guard subtractionOperandOrderMatches
 #guard orZeroConstantDropped
 #guard xorZeroConstantDropped
 #guard andZeroConstantCollapses
@@ -261,6 +270,7 @@ def runChecks : IO Bool := do
     , ("a nested addition keeps the constant last like Cake", nestedOrderMatches)
     , ("a constant in the middle moves after the variables", constMiddleOrderMatches)
     , ("x - 8 normalizes to x + (-8) with the constant second", subtractionConstantSecond)
+    , ("subtraction preserves Cake's source operand order", subtractionOperandOrderMatches)
     , ("several constants fold into one value with the constant second", foldTwoConstantsMatches)
     , ("a zero constant is dropped like Cake reduce_const", zeroConstantDropped)
     , ("an all-constant addition folds to the constant", allConstantAddFolds)

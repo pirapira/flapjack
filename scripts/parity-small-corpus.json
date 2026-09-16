@@ -198,6 +198,12 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/subtract_operand_order.pnk",
+      "source_reference": "Original Cake word_instScript.sml flatten_exp subtraction case: the dedicated Sub clause preserves operand order before the generic head-last rewrite. Covers a-b, b-a, subtraction of two loads, and a left-nested chain.",
+      "cake_sha256": "f4f975311de583fe87e4fb2693c797aff8d61eb4d767d8cbd7ea45b22c286b84",
+      "tracked_beads": []
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/collapse_branch.pnk",
       "source_reference": "Minimized RISC-V parity reproducer for Cake's word_inst$inst_select_exp shift-immediate and conditional lowering (word_instScript.sml:233-295).",
       "cake_sha256": "c3a0eedb8f0e90602a899d1659782251d2a87cf4dcb269687827d304404d1d33",

@@ -48,6 +48,12 @@ def removeConfig : Flapjack.StackRemoveConfig :=
 #guard riscvRegisterName (reseatStackRemoveConfig removeConfig).currHeap == 12
 #guard riscvRegisterName (reseatStackRemoveConfig removeConfig).addressScratch == 29
 
+/-! `stack_remove` does not use the legacy `currHeap` field: its source
+    convention is the register immediately above the stack/store-base pair,
+    `k + 2`. -/
+#guard (cakeStackRemoveConfig removeConfig).storeBase == 21
+#guard (cakeStackRemoveConfig removeConfig).currHeap == 22
+
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
     [ ("port zero role reseats to CakeML zero register 27",
@@ -73,7 +79,13 @@ def runChecks : IO Bool := do
       ("reseated stack-remove roles invert through riscv_names",
         riscvRegisterName (reseatStackRemoveConfig removeConfig).storeBase == 10 &&
           riscvRegisterName (reseatStackRemoveConfig removeConfig).currHeap == 12 &&
-          riscvRegisterName (reseatStackRemoveConfig removeConfig).addressScratch == 29) ]
+          riscvRegisterName (reseatStackRemoveConfig removeConfig).addressScratch == 29),
+      ("Cake stack-remove current heap is stack pointer plus two",
+        (cakeStackRemoveConfig removeConfig).currHeap ==
+          removeConfig.stackPointer + 2),
+      ("Cake stack-remove store base is stack pointer plus one",
+        (cakeStackRemoveConfig removeConfig).storeBase ==
+          removeConfig.stackPointer + 1) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

@@ -556,6 +556,14 @@
       "tracked_beads": [
         "flapjack-pxn.1.3.98"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_immediate_carrier.pnk",
+      "source_reference": "Reduced AST-to-RISC-V carrier witness for flapjack-pxn.9: nested valid logical immediates remain Cake WordInst arithmetic carriers through Word-to-Stack.",
+      "cake_sha256": "1225202afdacdb58a8dbb56de9a0078ce373d6a2761e47fbc50ac1c8ed1fabd9",
+      "tracked_beads": [
+        "flapjack-pxn.9"
+      ]
     }
   ]
 }

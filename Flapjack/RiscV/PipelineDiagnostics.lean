@@ -314,6 +314,11 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
               carryScratch := RiscV.cakeCarryScratch
               abiBase := 1
               abiStride := 1
+              /- Cake's word_to_stack k is the 22-register window from
+                 riscv_target.reg_count - (5 + LENGTH avoid_regs), not the
+                 12 hardware argument registers.  The latter is only the
+                 historical hardware-numbered helper default. -/
+              abiRegisterCount := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               callAbiBase := 0
               abiFrameSlots := frameSlots
               sectionId := label

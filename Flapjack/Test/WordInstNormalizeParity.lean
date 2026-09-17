@@ -242,6 +242,12 @@ def variableShiftSelectorMatches : Bool :=
         (.inst (.arith (.shift .asr 14 23 (.reg 24))))) => true
   | _ => false
 
+def zeroShiftSelectorRetainsSelfMove : Bool :=
+  match wordInstSelectAtom (α := Nat) 23
+      (.shift .lsr (.var 14) (.const 0)) with
+  | (.seq (.move 0 [(23, 14)]) (.move 0 [(23, 23)]), .var 23) => true
+  | _ => false
+
 def constantSelectorMatches : Bool :=
   match wordInstSelectProgram (α := Nat) 23
       (.assign 18 (.const 7)) with
@@ -310,6 +316,7 @@ def nestedAndWideConstantMaterializes : Bool :=
 
 #guard nestedAndImmediateMatches
 #guard nestedAndWideConstantMaterializes
+#guard zeroShiftSelectorRetainsSelfMove
 
 #guard twoVarOrderMatches
 #guard varConstOrderMatches

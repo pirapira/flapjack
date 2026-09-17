@@ -315,7 +315,8 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
       match selectedLeft, WordInstSelectImmediate.shiftImmediate value with
       | .var left, .valid amount =>
           if amount = 0 then
-            (leftPrelude, .var temp)
+            (wordDeadSelectSeq leftPrelude
+              (.move 0 [(temp, left)]), .var temp)
           else
             (wordDeadSelectSeq leftPrelude
               (.inst (.arith (.shift operator temp left (.imm value)))), .var temp)

@@ -493,6 +493,15 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.10.1"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00356_zero_shift_self_move.pnk",
+      "source_reference": "Rebuilt differential-fuzz witness f00356: Cake's word_inst selector preserves the zero-shift self-move emitted by inst_select_exp, which changes allocator liveness and register colours in the surrounding loop/call frame.",
+      "cake_sha256": "7c7bb1966579fbcc7674f6b72e50763202e95fb5ab7ca012fcf8fe72aa477be2",
+      "tracked_beads": [
+        "flapjack-8tb.4",
+        "flapjack-6zt"
+      ]
     }
   ]
 }

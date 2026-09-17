@@ -483,6 +483,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.10.1"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00325_zero_shift_self_move.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness: Cake's word_inst keeps the self-copy emitted by a zero shift even when the selector temporary is also the shift target; dropping it shifts the subsequent SSA names and main instructions.",
+      "cake_sha256": "4e75debf6843a5b0ad4308f2261f7879401b1118731da23b737ff75ef9ee5f13",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1"
+      ]
     }
   ]
 }

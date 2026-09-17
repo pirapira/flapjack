@@ -1,0 +1,18 @@
+fun 1 sub1(1 a) { return a - 1; }
+struct S { 1 f1, 1 f2 }
+fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }
+fun 1 main() {
+  var 1 x = 0;
+  var 1 y215 = sub1(0);
+  var 1 y477 = ((y215 >>> 0) + 1);
+  var S s175 = mks(0, 0);
+  if (x > 0) {
+    if (y215 > 0) {
+    } else {
+    }
+  } else {
+    while (x > 0) {
+    }
+  }
+  return s175.f2;
+}

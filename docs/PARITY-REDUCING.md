@@ -40,7 +40,7 @@ a checked-in fixture only after review, through the normal route in
 
 | predicate | holds when |
 | --- | --- |
-| `signature` (default) | both compilers accept and the set of differing user-section names is exactly the seed's set |
+| `signature` (default) | both compilers accept and the set of differing runtime/user section names is exactly the seed's set |
 | `mismatch` | both accept and the artifacts differ in any way |
 | `section` | both accept and the section named by `--section` still differs |
 | `flapjack-reject` | Cake accepts, Flapjack rejects |
@@ -57,7 +57,9 @@ program.
 `section` exists for inputs that differ in many places at once. The stateless
 guest differs in 676 sections, so requiring all of them to survive prevents any
 reduction at all; `--predicate section --section digits_len` reduces towards one
-function's discrepancy instead.
+user-function discrepancy instead. Runtime helpers use the comparator's
+`runtime:` prefix, for example
+`--section runtime:_mpt_delete_node_body`.
 
 Large inputs also need a larger `--timeout`: the default 30 s is below what
 `flapjack-compile` takes on the guest, and a timed-out probe is reported as a

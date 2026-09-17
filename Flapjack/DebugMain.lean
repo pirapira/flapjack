@@ -195,16 +195,17 @@ def dumpSource (source : String) (target : Option Nat := none) : IO UInt32 := do
       emit "stage=parsed" declarations
       let checked := staticCheck declarations
       emit "stage=static_check" checked
-      match compileFlapjackEntry .rv64i (BitVec.ofNat 64 8)
-          (fun value => BitVec.ofNat 64 value) "main" declarations with
-      | none =>
-          IO.println "stage=compile_entry=none"
-          return 1
-      | some pipeline =>
-          match target with
-          | none => dumpPipeline pipeline
-          | some target => dumpPipelineTarget pipeline target
-          return 0
+      /- Minimized differential witnesses often have no `main`: the reducer is
+         allowed to remove declarations that are irrelevant to the selected
+         runtime section.  Use the target-facing entry point here, just as the
+         artifact compiler does, so those witnesses still get a complete
+         diagnostic dump with Pancake's synthetic `main = return 0` fallback. -/
+      let pipeline := compileFlapjackTarget .rv64i (BitVec.ofNat 64 8)
+        (fun value => BitVec.ofNat 64 value) declarations
+      match target with
+      | none => dumpPipeline pipeline
+      | some target => dumpPipelineTarget pipeline target
+      return 0
 
 def usage : String :=
   "Usage: lake exe flapjack-debug [SOURCE.pnk]\n" ++

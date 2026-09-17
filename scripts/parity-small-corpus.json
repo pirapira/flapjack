@@ -181,7 +181,9 @@
       "path": "Flapjack/Test/OriginalPancake/f00028_allocator.pnk",
       "source_reference": "Minimized differential-fuzz reproducer f00028: exercises Cake Patricia ordering, SSA cutsets, allocator colouring, and physical parallel moves.",
       "cake_sha256": "60c124426815c469e11d6eba53bffda35c2f166ce78a0446c9457d07e14295cf",
-      "tracked_beads": ["flapjack-8tb.4"]
+      "tracked_beads": [
+        "flapjack-8tb.4"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/parameter_reassignment.pnk",
@@ -211,7 +213,9 @@
       "path": "Flapjack/Test/OriginalPancake/collapse_branch.pnk",
       "source_reference": "Minimized RISC-V parity reproducer for Cake's word_inst$inst_select_exp shift-immediate and conditional lowering (word_instScript.sml:233-295).",
       "cake_sha256": "c3a0eedb8f0e90602a899d1659782251d2a87cf4dcb269687827d304404d1d33",
-      "tracked_beads": ["flapjack-pxn.8.5.14.11.2"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.11.2"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/global_load_sharing.pnk",
@@ -223,6 +227,12 @@
       "path": "Flapjack/Test/OriginalPancake/global_shifted_load_address.pnk",
       "source_reference": "Cake word_instScript.sml:234-245 and 252-275: only the outer constant displacement of a load address is held for Word-to-Stack fusion; a global base plus a computed offset uses the ordinary target selector so nested add/sub/shift immediates are preserved.",
       "cake_sha256": "7f030af4246a3b17ab6ee27d388c46a27ad20e63eb033f2335d60d587bbc6628",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/address_shift_operand.pnk",
+      "source_reference": "inst_select_exp c tar temp (Shift sh exp n) (word_instScript.sml) shifts the operand it selected, so a shift's left operand must not be discarded. With binary-operation immediates disabled for address selection that operand comes back as an expression, and ignoring it dropped the constant: lds 1 (1000 + (k - 1) * 8) compiled as lds 1 (1000 + k * 8). shifted_value is exact; shifted_offset and nested_shift now compute the right value but still cost two extra instructions, tracked by flapjack-cey.",
+      "cake_sha256": "7a3640a67c0bf27ddd40c3e14501ca1288d53a3a99a7ad45ca4ccab2809fc80a",
       "tracked_beads": []
     },
     {

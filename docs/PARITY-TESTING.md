@@ -132,6 +132,22 @@ Minimized, replayable reproducers for the found mismatches are preserved under
 (one directory per owning bead). Do not put unbounded fuzzing into CI; the
 smoke corpus is the small deterministic check.
 
+## Reducing a discrepancy
+
+A discrepancy found on a large input is usually unreadable. Shrink it first
+with the delta-debugging reducer described in
+[`PARITY-REDUCING.md`](PARITY-REDUCING.md):
+
+```sh
+lake build flapjack-compile
+python3 scripts/parity-reduce.py CASE.pnk --out /tmp/reduction
+```
+
+It preserves the discrepancy the seed exhibits, writes the minimized source and
+a `replay.sh` that doubles as a regression check, and reimplements no part of
+the oracle. Keep reductions of large inputs outside the repository until they
+are reviewed as fixtures.
+
 ## Debugging a discrepancy
 
 Use [`scripts/parity-debug.py`](../scripts/parity-debug.py) for a single

@@ -5,6 +5,17 @@ import Flapjack.RiscV.ParallelMoveCorrectness
 namespace Flapjack.RiscV
 
 example :
+    wordStackCakeParallelOptionOrder
+      [(.register 0, .register 5),
+       (.register 2, .register 7),
+       (.register 1, .register 0)] =
+      some [(some (.register 1), some (.register 0)),
+        (some (.register 0), some (.register 5)),
+        (some (.register 2), some (.register 7))] := by
+  simp [wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
+    wordStackCakeSplitSource, wordStackCakeInitLast]
+
+example :
     wordStackMoveList
         { locations := [(0, .register 4), (1, .register 5)],
           scratch := 31, stackBase := 10 } [(0, 1), (1, 0)] =
@@ -12,9 +23,9 @@ example :
         (.seq (.arith .or 5 4 4) (.arith .or 4 29 29)) : StackProg Nat) := by
   simp [wordStackMoveList, wordStackLocationMovesFromNames,
     wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
+    wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
+    wordStackCakeSplitSource, wordStackCakeInitLast, wordStackCakeOptionMoveList,
     wordStackLocationMoveDestinations,
-    wordStackLocationMoveChain, wordStackLocationMoveBySource,
-    wordStackLocationMoveRemovePair,
     wordStackLocationMoveRemoveDestination, wordStackLocationMoveToScratch,
     wordStackLocationMoveFromScratch, wordStackLocationMove,
     wordStackLocation, wordStackOffset, wordStackJoin, lookupNatInfo]
@@ -28,12 +39,11 @@ example :
         [(.register 0, .register 5), (.register 2, .register 7),
          (.register 7, .register 7), (.register 5, .register 5),
          (.register 1, .register 0)] =
-      some (.seq (.seq (.arith .or 1 0 0) (.arith .or 0 5 5))
-        (.arith .or 2 7 7) : StackProg Nat) := by
-  simp [wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
-    wordStackLocationMoveDestinations, wordStackLocationMoveChain,
-    wordStackLocationMoveBySource, wordStackLocationMoveRemovePair,
-    wordStackLocationMoveRemoveDestination,
+      some (.seq (.arith .or 1 0 0)
+        (.seq (.arith .or 0 5 5) (.arith .or 2 7 7)) : StackProg Nat) := by
+  simp [wordStackParallelLocationMove,
+    wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
+    wordStackCakeSplitSource, wordStackCakeInitLast, wordStackCakeOptionMoveList,
     wordStackLocationMove, wordStackJoin]
 
 example :

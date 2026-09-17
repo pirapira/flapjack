@@ -1591,6 +1591,97 @@ def wordStackLocationMoveReady (sources : List WordLocation) :
 termination_by moves => sizeOf moves
 decreasing_by all_goals decreasing_trivial
 
+def wordStackCakeSplitSource (source : Option WordLocation) :
+    List (Option WordLocation × Option WordLocation) →
+      Option (List (Option WordLocation × Option WordLocation) ×
+        (Option WordLocation × Option WordLocation) ×
+        List (Option WordLocation × Option WordLocation))
+  | [] => none
+  | move :: moves =>
+      if move.2 = source then
+        some ([], move, moves)
+      else
+        match wordStackCakeSplitSource source moves with
+        | none => none
+        | some (pre, matched, suffix) =>
+            some (move :: pre, matched, suffix)
+termination_by moves => sizeOf moves
+decreasing_by all_goals decreasing_trivial
+
+def wordStackCakeInitLast {α : Type} : List α → Option (List α × α)
+  | [] => none
+  | [value] => some ([], value)
+  | value :: values =>
+      match wordStackCakeInitLast values with
+      | none => none
+      | some (init, last) => some (value :: init, last)
+termination_by values => sizeOf values
+decreasing_by all_goals decreasing_trivial
+
+/-! Exact Cake `pmov` state transition, including the optional scratch moves
+    used for cycles. -/
+def wordStackCakeParallelOptionOrderAux :
+    Nat → List (Option WordLocation × Option WordLocation) →
+      List (Option WordLocation × Option WordLocation) →
+      List (Option WordLocation × Option WordLocation) →
+      Option (List (Option WordLocation × Option WordLocation))
+  | 0, _, _, _ => none
+  | fuel + 1, moves, [], output =>
+      match moves with
+      | [] => some output.reverse
+      | move :: rest =>
+          if move.2 = move.1 then
+            wordStackCakeParallelOptionOrderAux fuel rest [] output
+          else
+            wordStackCakeParallelOptionOrderAux fuel rest [move] output
+  | fuel + 1, moves, (destination, source) :: active, output =>
+      match wordStackCakeSplitSource destination moves with
+      | some (pre, matched, suffix) =>
+          wordStackCakeParallelOptionOrderAux fuel (pre ++ suffix)
+            (matched :: (destination, source) :: active) output
+      | none =>
+          match active with
+          | [] =>
+              wordStackCakeParallelOptionOrderAux fuel moves []
+                ((destination, source) :: output)
+          | _ =>
+              match wordStackCakeInitLast active with
+              | none => none
+              | some (init, (lastDestination, lastSource)) =>
+                  if lastSource = destination then
+                    wordStackCakeParallelOptionOrderAux fuel moves
+                      (init ++ [(lastDestination, none)])
+                      ((destination, source) :: (none, destination) :: output)
+                  else
+                    wordStackCakeParallelOptionOrderAux fuel moves active
+                      ((destination, source) :: output)
+termination_by fuel _ _ _ => fuel
+
+def wordStackCakeParallelOptionOrder
+    (moves : List (WordLocation × WordLocation)) :
+    Option (List (Option WordLocation × Option WordLocation)) :=
+  wordStackCakeParallelOptionOrderAux (3 * moves.length + 1)
+    (moves.map (fun move => (some move.1, some move.2))) [] []
+
+def wordStackCakeOptionMoveList {α : Type} (config : WordStackConfig) :
+    List (Option WordLocation × Option WordLocation) → Option (StackProg α)
+  | [] => some .skip
+  | (none, some source) :: moves => do
+      let first ← wordStackLocationMoveToScratch config source
+      let rest ← wordStackCakeOptionMoveList config moves
+      pure (wordStackJoin first rest)
+  | (some destination, some source) :: moves => do
+      let first ← wordStackLocationMove config destination source
+      let rest ← wordStackCakeOptionMoveList config moves
+      pure (wordStackJoin first rest)
+  | (some destination, none) :: moves => do
+      let first ← wordStackLocationMoveFromScratch config destination
+      let rest ← wordStackCakeOptionMoveList config moves
+      pure (wordStackJoin first rest)
+  | (none, none) :: _ => none
+termination_by moves => sizeOf moves
+decreasing_by all_goals decreasing_trivial
+
 def wordStackLocationMoveBySource (source : WordLocation) :
     List (WordLocation × WordLocation) → Option (WordLocation × WordLocation)
   | [] => none
@@ -1626,11 +1717,13 @@ def wordStackLocationMoveChain :
 termination_by fuel => fuel
 decreasing_by all_goals simp_wf
 
-/-! Schedule a parallel move list over `WordLocation`s in CakeML's `parmove`
-    order.  For an acyclic dependency chain, Cake follows the first pending
-    destination through its source-dependent moves and emits that chain in
-    reverse.  Independent moves are then processed in their original order.
-    Cycles use the existing reserved-scratch fallback. -/
+/-! Schedule a parallel move list over `WordLocation`s in the same order as
+    CakeML's `parmove`.  A move whose destination is not a pending source
+    cannot clobber a value needed by a remaining move, so it is safe to emit
+    first; `wordStackLocationMoveReady` selects exactly such a move (e.g.
+    `[a <- b, b <- c]` emits `a <- b` before `b <- c`).  Cycles are handled by
+    saving one source in the reserved address scratch register and restoring
+    it afterwards, the same temporary-register idea as `parmove`. -/
 def wordStackParallelLocationMoveAux {α : Type} (config : WordStackConfig) :
     Nat → List (WordLocation × WordLocation) → Option (StackProg α)
   | 0, _ => none
@@ -1703,7 +1796,13 @@ def wordStackParallelLocationMoveAux {α : Type} (config : WordStackConfig) :
 
 def wordStackParallelLocationMove {α : Type} (config : WordStackConfig)
     (moves : List (WordLocation × WordLocation)) : Option (StackProg α) :=
-  wordStackParallelLocationMoveAux config (moves.length + 1) moves
+  let moves := moves.filter (fun move => move.1 != move.2)
+  if moves.any (fun move => move.2 ∈ moves.map Prod.fst) then
+    match wordStackCakeParallelOptionOrder moves with
+    | some ordered => wordStackCakeOptionMoveList config ordered
+    | none => wordStackParallelLocationMoveAux config (moves.length + 1) moves
+  else
+    wordStackParallelLocationMoveAux config (moves.length + 1) moves
 
 def wordStackMoveList {α : Type} (config : WordStackConfig) :
     List (Nat × Nat) → Option (StackProg α) :=
@@ -1768,13 +1867,17 @@ def wordStackPhysicalMovesToIndexed (config : WordStackConfig) :
   | _, [], _ => some []
   | index, source :: sources, base => do
       let source ← wordStackLocation config source
-      let destinationLocation :=
-        if config.abiFrameSlots = 0 then
-          .register (base + config.abiStride * index)
-        else
-          wordStackPhysicalLocation config index base
-      let rest ← wordStackPhysicalMovesToIndexed config (index + 1) sources base
-      pure ((destinationLocation, source) :: rest)
+      if config.abiFrameSlots ≠ 0 && index ≥ config.abiRegisterCount &&
+          index - config.abiRegisterCount ≥ wordStackCakeFrameSize config then
+        none
+      else
+        let destinationLocation :=
+          if config.abiFrameSlots = 0 then
+            .register (base + config.abiStride * index)
+          else
+            wordStackPhysicalLocation config index base
+        let rest ← wordStackPhysicalMovesToIndexed config (index + 1) sources base
+        pure ((destinationLocation, source) :: rest)
   termination_by _ sources _ => sizeOf sources
   decreasing_by all_goals decreasing_trivial
 

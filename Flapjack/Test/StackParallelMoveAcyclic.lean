@@ -38,9 +38,10 @@ example :
     wordStackParallelLocationMove (α := Nat) acyclicParallelConfig
       [(.register 3, .register 1), (.register 1, .register 2)] =
       some (.seq (.arith .or 3 1 1) (.arith .or 1 2 2)) := by
-  simp [wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
-    wordStackLocationMoveDestinations,
-    wordStackLocationMoveRemoveDestination, wordStackLocationMove,
+  simp [wordStackParallelLocationMove,
+    wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
+    wordStackCakeSplitSource, wordStackCakeOptionMoveList,
+    wordStackLocationMove,
     wordStackJoin, acyclicParallelConfig]
 
 /-- A two-cycle still goes through the reserved address-scratch register and
@@ -50,9 +51,9 @@ example :
       [(.register 1, .register 2), (.register 2, .register 1)] =
       some (.seq (.arith .or 30 2 2)
         (.seq (.arith .or 2 1 1) (.arith .or 1 30 30))) := by
-  simp [wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
-    wordStackLocationMoveDestinations, wordStackLocationMoveChain,
-    wordStackLocationMoveBySource, wordStackLocationMoveRemovePair,
+  simp [wordStackParallelLocationMove,
+    wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
+    wordStackCakeSplitSource, wordStackCakeInitLast, wordStackCakeOptionMoveList,
     wordStackLocationMoveToScratch,
     wordStackLocationMoveFromScratch, wordStackLocationMove,
     wordStackJoin, acyclicParallelConfig]

@@ -29,16 +29,18 @@ theorem wordStackParallelLocationMove_singleton
             simp [wordStackParallelLocationMove,
               wordStackParallelLocationMoveAux,
               wordStackLocationMoveDestinations,
-              wordStackLocationMoveRemoveDestination, wordStackLocationMove,
-              wordStackJoin,
-              hdestinationScratch, hdestinationAddressScratch]
-          · simp [wordStackParallelLocationMove,
+              wordStackLocationMove]
+          · have hsourceDestination : ¬source = destination := by
+              intro h
+              exact hsame h.symm
+            simp [wordStackParallelLocationMove,
               wordStackParallelLocationMoveAux,
               wordStackLocationMoveDestinations,
               wordStackLocationMoveRemoveDestination, wordStackLocationMove,
               wordStackJoin,
-              hsame, hdestinationScratch,
+              hsame, hsourceDestination, hdestinationScratch,
               hdestinationAddressScratch]
+
       | stack source =>
           simp [wordStackParallelLocationMove,
             wordStackParallelLocationMoveAux,
@@ -61,15 +63,16 @@ theorem wordStackParallelLocationMove_singleton
             simp [wordStackParallelLocationMove,
               wordStackParallelLocationMoveAux,
               wordStackLocationMoveDestinations,
-              wordStackLocationMoveRemoveDestination, wordStackLocationMove,
-              wordStackJoin,
-              hdestinationScratch, hdestinationAddressScratch]
-          · simp [wordStackParallelLocationMove,
+              wordStackLocationMove]
+          · have hsourceDestination : ¬source = destination := by
+              intro h
+              exact hsame h.symm
+            simp [wordStackParallelLocationMove,
               wordStackParallelLocationMoveAux,
               wordStackLocationMoveDestinations,
               wordStackLocationMoveRemoveDestination, wordStackLocationMove,
               wordStackJoin,
-              hsame, hdestinationScratch,
+              hsame, hsourceDestination, hdestinationScratch,
               hdestinationAddressScratch]
 
 theorem evalWordStackMachine_parallelLocationMove_singleton_preserves_value

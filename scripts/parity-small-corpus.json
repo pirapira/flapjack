@@ -572,6 +572,14 @@
       "tracked_beads": [
         "flapjack-pxn.9"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_register_carrier.pnk",
+      "source_reference": "Reduced AST-to-RISC-V carrier witness for flapjack-pxn.9: a register-operand binary WordInst remains a generic StackLang instruction through Word-to-Stack.",
+      "cake_sha256": "0780052035fa8a392dfff9628017c06655c7a8ced08a8f723a68988e145c8b8f",
+      "tracked_beads": [
+        "flapjack-pxn.9"
+      ]
     }
   ]
 }

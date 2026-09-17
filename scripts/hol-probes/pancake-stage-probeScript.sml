@@ -64,8 +64,13 @@ val _ =
       NONE => ()
     | SOME _ =>
         let
+          val allocator_target =
+            case OS.Process.getEnv "PANCAKE_ALLOCATOR_FUNCTION" of
+                SOME name => name
+              | NONE => "_collapse_branch"
           val selected_word = list_mk_comb (``FILTER``,
-            [``(λ(name,params,prog). name = «_collapse_branch»)``, word])
+            [mk_comb (``(λwanted. λ(name,params,prog). name = wanted)``,
+              stringSyntax.fromMLstring allocator_target), word])
           val internal = eval_term "stage=word_internal_all"
             (list_mk_comb (``backend_passes$word_internal_all``,
               [``riscv_target$riscv_config``, ``[]``, ``LN``, selected_word]))
@@ -77,5 +82,6 @@ val _ =
                 (name, word_alloc$get_heuristics 3 0 prog,
                  word_alloc$get_stack_only prog))``, selected])
         in
+          ignore (eval_term "stage=cake_word_allocator_input" selected);
           ignore (eval_term "stage=cake_word_heuristics" input_term)
         end

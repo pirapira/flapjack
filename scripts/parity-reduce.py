@@ -463,22 +463,38 @@ set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 source_file="${{1:-$here/case.min.pnk}}"
 exec python3 {repo}/scripts/parity-reduce.py "$source_file" \\
-  --predicate {predicate} \\
-  --expect-sections {sections} \\
+  --predicate {predicate}{extra} \\
   --check-only \\
+  --timeout {timeout} \\
   --cake "${{CAKE:-{cake}}}" \\
   --flapjack "${{FLAPJACK:-{flapjack}}}"
 """
 
+#: Above this many differing sections the seed's set is not worth pinning into
+#: the replay command; the predicate alone already says what has to hold.
+REPLAY_EXPECT_LIMIT = 8
 
-def write_outputs(out, text, report, cake, flapjack, predicate_name, sections):
+
+def replay_extra(predicate_name, sections, section):
+    """The predicate-specific flags a replay command needs."""
+    if predicate_name == "section":
+        return " \\\n  --section %s" % section
+    if predicate_name in ("signature", "mismatch") and \
+            len(sections) <= REPLAY_EXPECT_LIMIT:
+        return " \\\n  --expect-sections %s" % (",".join(sections) or "-")
+    return ""
+
+
+def write_outputs(out, text, report, cake, flapjack, predicate_name, sections,
+                  section, timeout):
     out.mkdir(parents=True, exist_ok=True)
     (out / "case.min.pnk").write_text(text)
     (out / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     replay = out / "replay.sh"
     replay.write_text(REPLAY_TEMPLATE.format(
-        cake=cake, flapjack=flapjack, repo=REPO_ROOT,
-        predicate=predicate_name, sections=",".join(sections) or "(none)"))
+        cake=cake, flapjack=flapjack, repo=REPO_ROOT, timeout=timeout,
+        predicate=predicate_name,
+        extra=replay_extra(predicate_name, sections, section)))
     replay.chmod(0o755)
     return replay
 
@@ -584,7 +600,8 @@ def main(argv=None):
     }
     out = Path(args.out)
     replay = write_outputs(out, reduced, report, args.cake, args.flapjack,
-                           args.predicate, seed_sections)
+                           args.predicate, seed_sections, args.section,
+                           args.timeout)
     shutil.rmtree(workdir, ignore_errors=True)
 
     print("reduced %d -> %d bytes (%d -> %d lines) in %d oracle calls, %.1fs" % (

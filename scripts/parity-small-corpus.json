@@ -475,6 +475,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.10.1"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00091_nested_and_constants.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness: Cake's word_inst folds the all-constant expression 1 & 1 before combining it with the shifted load; retaining duplicate constant materialization shifts the add1/mks section bases by four bytes.",
+      "cake_sha256": "a8408a520d22b8d1a3cc63c4044bdf5e43eaab85e2d8b905d3512e33f6ed46b4",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1"
+      ]
     }
   ]
 }

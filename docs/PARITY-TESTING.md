@@ -172,6 +172,9 @@ The same command also captures intermediate values from both implementations:
 `flapjack-stages.txt` comes from `lake exe flapjack-debug`, while
 `cake-stages.txt` comes from the original HOL definitions through
 [`scripts/hol-probes/pancake-stage-probeScript.sml`](../scripts/hol-probes/pancake-stage-probeScript.sml).
+When `--minimize` is supplied, both stage dumps are run on the resulting
+`case.min.pnk`, not the original large input; `comparison.json` records that
+stage source explicitly.
 The stage sequence is the original `pan_simp`, `pan_structs`, `pan_globals`,
 `pan_to_crep`, `crep_to_loop`, and `loop_to_word` boundary. Compare matching
 stage records first; the first divergence identifies the pass that should be
@@ -182,6 +185,10 @@ For allocator discrepancies, set `PANCAKE_ALLOCATOR_PROBE=1` when running the
 HOL probe. Set `PANCAKE_ALLOCATOR_LABEL=66` (or another numeric Word label)
 to inspect that function's original post-cleanup allocator input, heuristics,
 and stack-only set without rendering allocator data for the whole program.
+For any intermediate-stage investigation, also set `PANCAKE_STAGE_LABEL=258`
+(the numeric function label of interest). This filters the original
+`crep_to_loop` result before `loop_to_word`, avoiding multi-gigabyte dumps for
+large guests; it can be combined with the allocator probe.
 
 For a larger campaign, preserve the complete finding directory produced by
 `parity-difffuzz.py --out ... --minimize` and then run `parity-debug.py` on its

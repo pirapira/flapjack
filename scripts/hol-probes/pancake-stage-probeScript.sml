@@ -52,8 +52,35 @@ val crep = eval_term "stage=pan_to_crep"
   (mk_comb (``pan_to_crep$compile_prog``, globals));
 val loop = eval_term "stage=crep_to_loop"
   (list_mk_comb (``crep_to_loop$compile_prog``, [``RISC_V``, crep]));
+
+(* A full guest can contain thousands of functions.  Keep an optional
+   label-focused path for diagnostics: filtering before loop_to_word avoids
+   rendering a multi-gigabyte intermediate term when one section is under
+   investigation.  The predicate is intentionally based only on FST so it
+   works for both the loop and word tuple element types. *)
+fun filter_label list_tm =
+  case OS.Process.getEnv "PANCAKE_STAGE_LABEL" of
+      NONE => list_tm
+    | SOME label =>
+        let
+          val numeral = numSyntax.mk_numeral (Arbnum.fromString label)
+          val pred0 = subst [``(0:num)`` |-> numeral]
+            ``(λ(item:num # 'a). FST item = 0)``
+          val filter_type = type_of ``FILTER``
+          val (_, filter_rest) = dom_rng filter_type
+          val (filter_list_type, _) = dom_rng filter_rest
+          val filter_inst = Term.inst
+            (match_type filter_list_type (type_of list_tm)) ``FILTER``
+          val (filter_pred_type, _) = dom_rng (type_of filter_inst)
+          val pred = Term.inst
+            (match_type (type_of pred0) filter_pred_type) pred0
+        in
+          mk_comb (mk_comb (filter_inst, pred), list_tm)
+        end;
+
+val loop_for_word = filter_label loop;
 val word = eval_term "stage=loop_to_word"
-  (mk_comb (``loop_to_word$compile``, loop));
+  (mk_comb (``loop_to_word$compile``, loop_for_word));
 
 (* Optional focused probe for comparing the inputs to word_alloc.  The
    complete word program above is useful for ordinary stage debugging, but

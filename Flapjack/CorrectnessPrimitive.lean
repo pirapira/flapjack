@@ -161,14 +161,18 @@ theorem crepToLoop_primitive_agreement
     (primitive : CrepPrimitiveHandler α) (context : LoopContext α)
     (live : List Nat) (locals : Nat → Option α)
     (destinations : List Nat) (operator : PrimOp) (arguments : List Nat) :
+    lookupLoopVars context destinations = some destinations →
+    lookupLoopVars context arguments = some arguments →
     (evalCrepStateProgWithPrimitive primitive locals
       (.primitive destinations operator arguments)).map id =
       (evalLoopProgWithPrimitive primitive 1 (loopStateOfCrepLocals locals)
         (loopCompileProg context live
           (.primitive destinations operator arguments))).map
-        (fun result =>
+    (fun result =>
           ((loopResultState result).locals, loopResultValues result)) := by
+  intro hdestinations harguments
   have hread : arguments.mapM locals = loopReadLocals locals arguments := by
+    clear hdestinations harguments
     induction arguments with
     | nil => rfl
     | cons argument arguments ih =>
@@ -180,7 +184,8 @@ theorem crepToLoop_primitive_agreement
       have hargs' :
           loopReadLocals (loopStateOfCrepLocals locals).locals arguments = none := by
         simpa [loopStateOfCrepLocals] using hargs
-      simp [hargs', loopCompileProg, evalLoopProgWithPrimitive]
+      simp [hargs', hdestinations, harguments, loopCompileProg,
+        evalLoopProgWithPrimitive]
   | some values =>
       cases hprimitive : primitive operator values with
       | none =>
@@ -188,7 +193,7 @@ theorem crepToLoop_primitive_agreement
               loopReadLocals (loopStateOfCrepLocals locals).locals arguments =
                 some values := by
             simpa [loopStateOfCrepLocals] using hargs
-          simp [hargs', hprimitive, loopCompileProg,
+          simp [hargs', hprimitive, hdestinations, harguments, loopCompileProg,
             evalLoopProgWithPrimitive]
       | some result =>
           have hargs' :
@@ -210,14 +215,14 @@ theorem crepToLoop_primitive_agreement
                       updateLoopLocal base name value by rfl]
                     exact ih _
           by_cases hlength : destinations.length = result.length
-          · simp [hargs, hprimitive, hlength, loopCompileProg,
-              evalLoopProgWithPrimitive, assignCrepValues, loopAssignValues,
-              loopStateOfCrepLocals, loopResultState, loopResultValues, hfold,
-              ]
-          · simp [hargs, hprimitive, hlength, loopCompileProg,
-              evalLoopProgWithPrimitive, assignCrepValues, loopAssignValues,
-              loopStateOfCrepLocals, loopResultState, loopResultValues, hfold,
-              ]
+          · simp [hargs, hprimitive, hlength, hdestinations, harguments,
+              loopCompileProg, evalLoopProgWithPrimitive, assignCrepValues,
+              loopAssignValues, loopStateOfCrepLocals, loopResultState,
+              loopResultValues, hfold]
+          · simp [hargs, hprimitive, hlength, hdestinations, harguments,
+              loopCompileProg, evalLoopProgWithPrimitive, assignCrepValues,
+              loopAssignValues, loopStateOfCrepLocals, loopResultState,
+              loopResultValues, hfold]
 
 theorem addCarry_preserves_mapped_locals [NeZero width]
     (context : WordContext) (locals : Nat → Option (RiscV.Word width))

@@ -1,0 +1,39 @@
+fun 1 break_then_more(1 n) {
+  var 1 i = 0;
+  while i <+ n { if i != 0 { break; } i = 3; }
+  return 1;
+}
+fun 1 return_then_more(1 p, 1 n) {
+  var 1 i = 0;
+  while i <+ n {
+    if (ld8 (p + i)) != 0 { return 0; }
+    i = i + 1;
+  }
+  return 1;
+}
+fun 1 nested_loop(1 n) {
+  var 1 i = 0;
+  var 1 j = 0;
+  while i <+ n {
+    while j <+ n { if j != 0 { break; } j = j + 1; }
+    i = i + 1;
+  }
+  return j;
+}
+fun 1 call_return_condition(1 n) {
+  var 1 i = 0;
+  while i <+ n {
+    var 1 k = break_then_more(i);
+    if k != 0 { break; }
+    i = i + 1;
+  }
+  return i;
+}
+fun 1 main() {
+  var 1 a = break_then_more(4);
+  var 1 b = return_then_more(1000, 4);
+  var 1 c = nested_loop(4);
+  var 1 d = call_return_condition(4);
+  @halt(@base, 0, @base, 0);
+  return a + b + c + d;
+}

@@ -63,6 +63,14 @@ def heuristicParitySpillCosts (currentFunction : Nat) (program : WordProg Nat) :
   wordHeuristicSpillCostsFast currentFunction program ==
     wordHeuristicSpillCosts currentFunction program
 
+/- Cake's move case updates all RHS registers before all LHS registers.  The
+   order is observable because each update moves its key to the front. -/
+def heuristicMoveUpdateOrderGuard : Bool :=
+  (wordHeuristic 7 (.move 1 [(1, 2), (3, 4)] : WordProg Nat) ([], [])).1.map
+      Prod.fst == [1, 3, 2, 4]
+
+#guard heuristicMoveUpdateOrderGuard
+
 def heuristicParityPrograms : List (Nat × WordProg Nat) :=
   [(7, heuristicParityStraightLine), (7, heuristicParityMerge),
    (7, heuristicParityCall), (3, heuristicParityCall),

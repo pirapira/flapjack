@@ -248,6 +248,10 @@ def wordInstReadVars {α : Type u} : WordInst α → List Nat
       match operator with
       | .load | .load8 | .load16 | .load32 => [address]
       | .store | .store8 | .store16 | .store32 => [destination, address]
+  | .memOffset operator destination address _ =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => [address]
+      | .store | .store8 | .store16 | .store32 => [destination, address]
 
 def wordInstWriteVars {α : Type u} : WordInst α → List Nat
   | .arith operation =>
@@ -265,6 +269,10 @@ def wordInstWriteVars {α : Type u} : WordInst α → List Nat
       | .shift _ destination _ _ => [destination]
   | .const destination _ => [destination]
   | .mem operator destination _ =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => [destination]
+      | .store | .store8 | .store16 | .store32 => []
+  | .memOffset operator destination _ _ =>
       match operator with
       | .load | .load8 | .load16 | .load32 => [destination]
       | .store | .store8 | .store16 | .store32 => []
@@ -347,8 +355,13 @@ def wordSsaRead (state : WordSsaState) (name : Nat) : Nat :=
 
 def wordSsaReadCutsets (state : WordSsaState)
     (cutsets : List Nat × List Nat) : List Nat × List Nat :=
-  (NumSet.fromList cutsets.1 |>.map (wordSsaRead state),
-    NumSet.fromList cutsets.2 |>.map (wordSsaRead state))
+  /- Cake's `apply_nummaps_key` maps the keys of the source sptree and then
+     rebuilds the sptree.  Rebuilding after the rename is observable through
+     `toAList`: the Patricia traversal order can change when a key changes.
+     Mapping an already enumerated list (the old port) preserved the wrong
+     order and made FFI/call cutsets diverge from Cake after SSA. -/
+  (NumSet.fromList ((NumSet.fromList cutsets.1).map (wordSsaRead state)),
+    NumSet.fromList ((NumSet.fromList cutsets.2).map (wordSsaRead state)))
 
 def wordSsaFresh (state : WordSsaState) (name : Nat) : WordSsaState × Nat :=
   ({ current := (name, state.next) ::
@@ -447,7 +460,6 @@ def wordSsaRenameInst (state : WordSsaState) :
       | .cakeAddCarry destination sourceLeft sourceRight carry =>
           let sourceLeft := wordSsaRead state sourceLeft
           let sourceRight := wordSsaRead state sourceRight
-          let carry := wordSsaRead state carry
           let (state, freshDestination) := wordSsaFresh state destination
           let (state, freshCarry) := wordSsaFresh state carry
           (state, .arith (.cakeAddCarry freshDestination sourceLeft
@@ -482,6 +494,14 @@ def wordSsaRenameInst (state : WordSsaState) :
           (state, .mem operator freshDestination address)
       | .store | .store8 | .store16 | .store32 =>
           (state, .mem operator (wordSsaRead state destination) address)
+  | .memOffset operator destination address offset =>
+      let address := wordSsaRead state address
+      match operator with
+      | .load | .load8 | .load16 | .load32 =>
+          let (state, freshDestination) := wordSsaFresh state destination
+          (state, .memOffset operator freshDestination address offset)
+      | .store | .store8 | .store16 | .store32 =>
+          (state, .memOffset operator (wordSsaRead state destination) address offset)
 
 /-! CakeML's SSA pass gives `LongMul` its fixed RISC-V register protocol.
     The instruction itself writes `(6, 0)` and the surrounding moves preserve
@@ -741,6 +761,35 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         let value := wordSsaRenameExp state value
         let (state, freshName) := wordSsaFresh state name
         (state, .assign freshName value)
+    | .inst (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight)) =>
+        /- `ssa_cc_trans_inst` in Cake's `word_allocScript.sml` materialises
+           LongMul through its fixed architectural operands.  Keep the
+           allocator-coloured names only at the move boundaries: the
+           instruction itself is always `LongMul 6 0 0 4`, and its two results
+           are refreshed in the original order. -/
+        let sourceLeft := wordSsaRead state sourceLeft
+        let sourceRight := wordSsaRead state sourceRight
+        let movIn := .move 1 [(0, sourceLeft), (4, sourceRight)]
+        let (state, freshLeft) := wordSsaFresh state destinationLeft
+        let (state, freshRight) := wordSsaFresh state destinationRight
+        let movOut := .move 1 [(freshRight, 0), (freshLeft, 6)]
+        (state, wordSsaSeq movIn
+          (wordSsaSeq (.inst (.arith (.longMul 6 0 0 4))) movOut))
+    | .inst (.arith (.cakeAddCarry destination sourceLeft sourceRight carry)) =>
+        /- Cake's `ssa_cc_trans_inst` uses fixed carry register 0 for
+           AddCarry.  The move-in/move-out is semantically observable to the
+           dead pass: it keeps the source-shaped carry protocol and prevents
+           an otherwise dead first AddCarry from being discarded. -/
+        let sourceLeft := wordSsaRead state sourceLeft
+        let sourceRight := wordSsaRead state sourceRight
+        let carryValue := wordSsaRead state carry
+        let moveIn : WordProg α := .move 1 [(0, carryValue)]
+        let (state, freshDestination) := wordSsaFresh state destination
+        let (state, freshCarry) := wordSsaFresh state carry
+        let addCarry : WordProg α :=
+          .inst (.arith (.cakeAddCarry freshDestination sourceLeft sourceRight 0))
+        let moveOut : WordProg α := .move 1 [(freshCarry, 0)]
+        (state, wordSsaSeq moveIn (wordSsaSeq addCarry moveOut))
     | .inst instruction =>
         wordSsaRenameInstProgram state instruction
     | .get destination store =>
@@ -781,7 +830,7 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         let (state, destination) := wordSsaFresh state destination
         (state, .locValue destination label)
     | .ffi function configuration configurationLength array arrayLength live =>
-        let names := (live.1 ++ live.2).eraseDups
+        let names := NumSet.fromList ((live.1 ++ live.2).eraseDups)
         let (stackState, stackNext, stackMove) :=
           wordSsaListNextVarRenameMove state (state.next + 2) names
         let stackLive := wordSsaReadCutsets stackState live
@@ -947,8 +996,13 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
           wordSsaRenameProgramWithLoops (frame :: frames) entryState body
         let backMoves := wordSsaReconcileTo bodyState setupState liveIn.eraseDups
         let body := wordSsaSeq body backMoves
-        let program := .loop (liveIn.map (wordSsaRead setupState)) body
-          (liveOut.map (wordSsaRead setupState))
+        /- `apply_nummap_key` rebuilds the Cake num_map, so its `toAList`
+           order is the Patricia-tree order of the renamed keys rather than
+           the incoming list order.  This order reaches the clash tree and is
+           observable in exact RISC-V allocation. -/
+        let ssaLiveIn := NumSet.fromList (liveIn.map (wordSsaRead setupState))
+        let ssaLiveOut := NumSet.fromList (liveOut.map (wordSsaRead setupState))
+        let program := .loop ssaLiveIn body ssaLiveOut
         /- CakeML threads the loop body's fresh-name counter out of
            `ssa_cc_trans (Loop ...)`, so code after the loop never reuses a
            name that the body allocated.  Only `next` is taken from the body
@@ -1094,6 +1148,100 @@ def wordProgWriteVars : WordProg α → List Nat
 def wordProgVariables (program : WordProg α) : List Nat :=
   wordProgReadVars program ++ wordProgWriteVars program
 
+/-! CakeML's `wordLang$max_var` is not the same scan as the allocator's
+    read/write inventory.  In particular, `max_var (Call NONE ... h)` uses
+    only the argument list and deliberately does not descend into `h`.
+    Keep this source-faithful maximum separate: the allocator still needs the
+    complete handler inventory for clashes and liveness, while full SSA and
+    word-to-stack frame sizing consume Cake's `max_var` result. -/
+
+def wordExpCakeMaxVar : WordExp α → Nat
+  | .const _ | .lookup _ => 0
+  | .var name => name
+  | .load address => wordExpCakeMaxVar address
+  | .op _ arguments =>
+      arguments.foldl (fun maximum argument => max maximum (wordExpCakeMaxVar argument)) 0
+  | .shift _ left right =>
+      max (wordExpCakeMaxVar left) (wordExpCakeMaxVar right)
+
+def wordArithCakeMaxVar : WordArith α → Nat
+  | .longMul destinationLeft destinationRight sourceLeft sourceRight =>
+      max destinationLeft (max destinationRight (max sourceLeft sourceRight))
+  | .longDiv destinationLeft destinationRight sourceLeft sourceRight quotient =>
+      max destinationLeft (max destinationRight
+        (max sourceLeft (max sourceRight quotient)))
+  | .addCarry destination resultCarry sourceLeft sourceRight carryIn =>
+      max destination (max resultCarry (max sourceLeft (max sourceRight carryIn)))
+  | .cakeAddCarry destination sourceLeft sourceRight carry =>
+      max destination (max sourceLeft (max sourceRight carry))
+  | .div destination dividend divisor =>
+      max destination (max dividend divisor)
+  | .binOp _ destination sourceLeft sourceRight
+  | .shift _ destination sourceLeft sourceRight =>
+      max destination (max sourceLeft (match sourceRight with
+        | .imm _ => 0
+        | .reg name => name))
+
+def wordInstCakeMaxVar : WordInst α → Nat
+  | .const destination _ => destination
+  | .arith operation => wordArithCakeMaxVar operation
+  | .mem _ destination address => max destination address
+  | .memOffset _ destination address _ => max destination address
+
+def wordCutsetsCakeMaxVar (cutsets : List Nat × List Nat) : Nat :=
+  max (cutsets.1.foldl max 0) (cutsets.2.foldl max 0)
+
+def wordProgCakeMaxVar : WordProg α → Nat
+  | .skip | .tick => 0
+  | .move _ moves =>
+      moves.foldl (fun maximum move => max maximum (max move.1 move.2)) 0
+  | .assign name value => max name (wordExpCakeMaxVar value)
+  | .inst instruction => wordInstCakeMaxVar instruction
+  | .get destination _ => destination
+  | .store address value => max value (wordExpCakeMaxVar address)
+  | .set _ value => wordExpCakeMaxVar value
+  | .seq first second => max (wordProgCakeMaxVar first) (wordProgCakeMaxVar second)
+  | .ite _ condition right thenBranch elseBranch =>
+      max condition (max (match right with
+        | .imm _ => 0
+        | .reg name => name)
+        (max (wordProgCakeMaxVar thenBranch) (wordProgCakeMaxVar elseBranch)))
+  | .loop liveIn body liveOut =>
+      max (liveIn.foldl max 0)
+        (max (wordProgCakeMaxVar body) (liveOut.foldl max 0))
+  | .mustTerminate body => wordProgCakeMaxVar body
+  | .break _ | .continue _ => 0
+  | .raise label | .locValue label _ => label
+  | .return label values => values.foldl max label
+  | .call returns _ arguments handler =>
+      let argumentMax := arguments.foldl max 0
+      match returns with
+      | none => argumentMax
+      | some (values, cutsets, returnCode, _, _) =>
+          let returnMax := max (values.foldl max 0)
+            (max (wordCutsetsCakeMaxVar cutsets) (wordProgCakeMaxVar returnCode))
+          match handler with
+          | none => max argumentMax returnMax
+          | some (exception, body, _, _) =>
+              max argumentMax (max returnMax
+                (max exception (wordProgCakeMaxVar body)))
+  | .alloc destination cutsets => max destination (wordCutsetsCakeMaxVar cutsets)
+  | .storeConsts source bitmap codeLength dataLength _ =>
+      max source (max bitmap (max codeLength dataLength))
+  | .opCurrHeap _ destination source => max destination source
+  | .install codeBuffer codeLength dataBuffer dataLength cutsets =>
+      max codeBuffer (max codeLength (max dataBuffer
+        (max dataLength (wordCutsetsCakeMaxVar cutsets))))
+  | .codeBufferWrite address value | .dataBufferWrite address value =>
+      max address value
+  | .ffi _ configuration configurationLength array arrayLength live =>
+      max configuration (max configurationLength (max array
+        (max arrayLength (wordCutsetsCakeMaxVar live))))
+  | .shareInst _ name address => max name (wordExpCakeMaxVar address)
+termination_by program => sizeOf program
+decreasing_by
+  all_goals decreasing_trivial
+
 /-! Physical Word names denote architectural registers directly.  They can
     occur in the body independently of the formal-parameter list, notably as
     the ABI operands of an FFI instruction, so the spill allocator must keep
@@ -1145,7 +1293,7 @@ decreasing_by all_goals decreasing_trivial
     Formals are the even architectural names and may be unused by the body;
     including them here would change `full_ssa_cc_trans`'s fresh-name stream. -/
 def wordSsaLimitVar (_parameters : List Nat) (program : WordProg α) : Nat :=
-  let maximum := wordListMaximum (wordProgVariables program)
+  let maximum := wordProgCakeMaxVar program
   maximum + (4 - maximum % 4) + 1
 
 def wordSsaSetupParameters (parameters : List Nat) (program : WordProg α) :
@@ -1333,6 +1481,16 @@ def wordClashTreeDeltaInst {α : Type u} : WordInst α → WordClashTree
   | .mem .store8 source address
   | .mem .store16 source address
   | .mem .store32 source address =>
+      .delta [] [source, address]
+  | .memOffset .load destination address _
+  | .memOffset .load8 destination address _
+  | .memOffset .load16 destination address _
+  | .memOffset .load32 destination address _ =>
+      .delta [destination] [address]
+  | .memOffset .store source address _
+  | .memOffset .store8 source address _
+  | .memOffset .store16 source address _
+  | .memOffset .store32 source address _ =>
       .delta [] [source, address]
 
 def wordClashTreeCallReads (returns : Option
@@ -1875,12 +2033,14 @@ def wordApplyColourInst (colour : Nat → Nat) : WordInst α → WordInst α
   | .arith operation => .arith (wordApplyColourArith colour operation)
   | .mem operator destination address =>
       .mem operator (colour destination) (colour address)
+  | .memOffset operator destination address offset =>
+      .memOffset operator (colour destination) (colour address) offset
 
 /-! Cake's `num_set` fields are represented by lists in Flapjack.  The source
     `apply_nummap_key` rebuilds those sets through `fromAList`, so the result is
     canonical (sorted and duplicate-free), rather than a plain mapped list. -/
 def wordApplyColourNumSet (colour : Nat → Nat) (names : List Nat) : List Nat :=
-  (names.map colour).eraseDups.mergeSort (fun left right => left < right)
+  NumSet.fromList (names.map colour)
 
 def wordApplyColour (colour : Nat → Nat) : WordProg α → WordProg α
   | .skip => .skip
@@ -2392,7 +2552,7 @@ def wordProgSpecialLocationsSafe (locations : NatInfoMap WordLocation) :
   | .move _ _ | .assign _ _ | .get _ _ | .store _ _ | .set _ _ | .break _ | .continue _ |
       .raise _ | .return _ _ | .tick | .locValue _ _ | .ffi _ _ _ _ _ _ => true
   | .inst (.arith operation) => wordSpecialArithLocationsSafe operation locations
-  | .inst (.const _ _) | .inst (.mem _ _ _) => true
+  | .inst (.const _ _) | .inst (.mem _ _ _) | .inst (.memOffset _ _ _ _) => true
   | .seq first second =>
       wordProgSpecialLocationsSafe locations first &&
         wordProgSpecialLocationsSafe locations second

@@ -103,6 +103,10 @@ inductive WordInst (α : Type u) where
   | const (destination : Nat) (value : α)
   | arith (operation : WordArith α)
   | mem (operator : WordMemOp) (destination address : Nat)
+  /- Cake's `Mem` also carries an `Addr base offset`.  Keep the offset on the
+     selected instruction so SSA/allocation see the same instruction shape as
+     Cake; the backend lowers it to the target's offset memory instruction. -/
+  | memOffset (operator : WordMemOp) (destination address : Nat) (offset : α)
   deriving DecidableEq, Repr
 
 inductive WordProg (α : Type u) where
@@ -168,9 +172,8 @@ def wordToNumSet : List Nat → List Nat
   | name :: names => loopInsert name (wordToNumSet names)
 
 def wordMkNewCutset (context : WordContext) (live : List Nat) : List Nat :=
-  /- This is CakeML's `mk_new_cutset_def`, not merely a list-set map:
-     `fromNumSet` exposes the source Patricia-tree traversal order before
-     context registers are mapped and rebuilt with `toNumSet`. -/
+  /- `mk_new_cutset_def` retains the source `fromNumSet` order while mapping
+     the keys, then inserts register zero with the same list-set operation. -/
   loopInsert 0
     (Flapjack.NumSet.toSet
       ((Flapjack.NumSet.fromList live).map (wordFindVar context)))
@@ -313,15 +316,16 @@ def loopToWordProg [OfNat α 1] (context : WordContext) :
       | some value => .assign (wordFindVar context name) value
       | none => .skip
   | .primitive [result, resultCarry] .addCarry [left, right, carryIn] =>
-      /- Keep the carry input explicit at this boundary.  CakeML's
-         loop_to_word pass lowers this to virtual scratch registers 1 and 3,
-         but Flapjack has not yet ported the subsequent word allocator.  The
-         RISC-V instruction selector can lower this five-register Word
-         operation directly using its architectural x31 scratch, preserving
-         the x1 link register for call-aware code. -/
-      .inst (.arith (.addCarry (wordFindVar context result)
-        (wordFindVar context resultCarry) (wordFindVar context left)
-        (wordFindVar context right) (wordFindVar context carryIn)))
+      /- CakeML's `loop_to_word` uses the four-register WordLang AddCarry:
+         copy the carry input into scratch register 1, run AddCarry with
+         result scratch 3, then copy the carry and result to their source
+         destinations.  Keep this source-shaped sequence here; the backend
+         already has the matching `cakeAddCarry` carrier. -/
+      .seq (.assign 1 (.var (wordFindVar context carryIn)))
+        (.seq (.inst (.arith (.cakeAddCarry 3
+            (wordFindVar context left) (wordFindVar context right) 1)))
+          (.seq (.assign (wordFindVar context resultCarry) (.var 1))
+            (.assign (wordFindVar context result) (.var 3))))
   | .primitive _ _ _ => .skip
   | .arith operation => .inst (.arith (wordArith context operation))
   | .store address value =>

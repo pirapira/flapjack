@@ -119,6 +119,8 @@ def stackMapWordInst (map : Nat → Nat) : WordInst α → WordInst α
   | .arith operation => .arith (stackMapWordArith map operation)
   | .mem operator destination address =>
       .mem operator (map destination) (map address)
+  | .memOffset operator destination address offset =>
+      .memOffset operator (map destination) (map address) offset
 
 def stackMapCallTarget (map : Nat → Nat) : StackCallTarget → StackCallTarget
   | .label label => .label label
@@ -188,7 +190,7 @@ def stackMapRegisters (map : Nat → Nat) : StackProg α → StackProg α
   | .install codeBuffer codeLength dataBuffer dataLength returnAddress =>
       .install (map codeBuffer) codeLength (map dataBuffer) dataLength
         (map returnAddress)
-  | .rawCall target => .rawCall (map target)
+  | .rawCall target => .rawCall target
   | .stackAlloc words => .stackAlloc words
   | .stackFree words => .stackFree words
   | .stackStore register offset => .stackStore (map register) offset

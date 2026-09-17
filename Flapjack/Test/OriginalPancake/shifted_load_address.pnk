@@ -1,0 +1,10 @@
+fun 1 f(1 k) { return lds 1 (1000 + (k - 1) * 8); }
+fun 1 g(1 k) { return (k - 1) * 8; }
+fun 1 h(1 k) { return k * 8; }
+fun 1 main() {
+  var 1 a = f(4);
+  var 1 b = g(4);
+  var 1 c = h(4);
+  @halt(@base, 0, @base, 0);
+  return a + b + c;
+}

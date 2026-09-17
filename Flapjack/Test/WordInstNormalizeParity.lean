@@ -162,6 +162,21 @@ def subtractionConstantSecond : Bool :=
   addVarConstValueShape ((0 : BitVec 64) - 8)
     (wordInstNormalizeExp (α := BitVec 64) (.op .sub [.var 7, .const 8]))
 
+/-- Cake's dedicated `flatten_exp` subtraction case preserves the source
+    operand order.  The generic head-last flattening used to turn `a - b`
+    into `b - a`, which was observable in emitted RISC-V. -/
+def subtractionOperandOrderMatches : Bool :=
+  match wordInstNormalizeExp (α := Nat) (.op .sub [.var 2, .var 4]) with
+  | .op .sub [.var 2, .var 4] => true
+  | _ => false
+
+/-- Cake matches the dedicated subtraction clause before its singleton
+    fallback, so even a unary subtraction node is preserved. -/
+def subtractionSingletonPreserved : Bool :=
+  match wordInstFlattenExp (α := Nat) (.op .sub [.var 2]) with
+  | .op .sub [.var 2] => true
+  | _ => false
+
 /-- `word_inst_probe.out: optimize_consts_or_zero` / `norm_or_zero`: the `0w`
 identity is dropped for `Or` exactly as for `Add`. -/
 def orZeroConstantDropped : Bool :=
@@ -233,6 +248,45 @@ def nestedLoadOffsetFallbackMatches : Bool :=
       (.assign 23 (.load (.op .add [.var 23, .const 8]))), .var 23) => true
   | _ => false
 
+/-- `inst_select_exp c tar temp (Load exp)` (`word_instScript.sml:234-245`)
+    splits on the address shape once and selects the remaining subexpressions
+    with the ordinary `asm_config`; it has no second, immediate-suppressing
+    configuration.  So an address that is not `base + constant` keeps Cake's
+    immediate arithmetic throughout: the left operand of a shift comes back in
+    a register and the shift itself uses its constant amount, rather than
+    materializing the amount into a second temporary. -/
+def addressShiftKeepsOrdinaryImmediates : Bool :=
+  match wordInstSelectAddressAtom (α := Nat) 23
+      (.shift .lsl (.op .add [.var 18, .const (Nat.succ 0)])
+        (.const 63)) with
+  | (.seq (.seq (.move 0 [(23, 18)])
+      (.inst (.arith (.binOp .add 23 23 (.imm 1)))))
+      (.inst (.arith (.shift .lsl 23 23 (.imm 63)))),
+      .var 23) => true
+  | _ => false
+
+/-- `inst_select_exp c tar temp (Op op [e1; Const w])`
+    (`word_instScript.sml:252-275`) tests `c.valid_imm (INL op) w` for every
+    operator, not only `Add`, so a nested `x && 1w` is one `andi`. -/
+def nestedAndImmediateMatches : Bool :=
+  match wordInstSelectAtom (α := Nat) 23 (.op .and [.var 18, .const 1]) with
+  | (.seq (.move 0 [(23, 18)])
+      (.inst (.arith (.binOp .and 23 23 (.imm 1)))), .var 23) => true
+  | _ => false
+
+/-- When the constant is not a valid immediate, Cake materializes it into
+    `temp + 1` and uses a register operand.  Leaving it as an unfused
+    expression instead would make an enclosing `Shift` miss its own immediate.
+    `2 ^ 60` is outside the signed 12-bit window in both directions. -/
+def nestedAndWideConstantMaterializes : Bool :=
+  match wordInstSelectAtom (α := Nat) 23 (.op .and [.var 18, .const (2 ^ 60)]) with
+  | (.seq (.seq (.move 0 [(23, 18)]) (.inst (.const 24 c)))
+      (.inst (.arith (.binOp .and 23 23 (.reg 24)))), .var 23) => c == 2 ^ 60
+  | _ => false
+
+#guard nestedAndImmediateMatches
+#guard nestedAndWideConstantMaterializes
+
 #guard twoVarOrderMatches
 #guard varConstOrderMatches
 #guard constFirstOrderMatches
@@ -243,6 +297,8 @@ def nestedLoadOffsetFallbackMatches : Bool :=
 #guard zeroConstantDropped
 #guard allConstantAddFolds
 #guard subtractionConstantSecond
+#guard subtractionOperandOrderMatches
+#guard subtractionSingletonPreserved
 #guard orZeroConstantDropped
 #guard xorZeroConstantDropped
 #guard andZeroConstantCollapses
@@ -252,6 +308,7 @@ def nestedLoadOffsetFallbackMatches : Bool :=
 #guard loadSelectorMatches
 #guard nestedLoadSelectorMatches
 #guard nestedLoadOffsetFallbackMatches
+#guard addressShiftKeepsOrdinaryImmediates
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=
@@ -261,6 +318,8 @@ def runChecks : IO Bool := do
     , ("a nested addition keeps the constant last like Cake", nestedOrderMatches)
     , ("a constant in the middle moves after the variables", constMiddleOrderMatches)
     , ("x - 8 normalizes to x + (-8) with the constant second", subtractionConstantSecond)
+    , ("subtraction preserves Cake's source operand order", subtractionOperandOrderMatches)
+    , ("the dedicated subtraction clause preserves a singleton node", subtractionSingletonPreserved)
     , ("several constants fold into one value with the constant second", foldTwoConstantsMatches)
     , ("a zero constant is dropped like Cake reduce_const", zeroConstantDropped)
     , ("an all-constant addition folds to the constant", allConstantAddFolds)
@@ -270,9 +329,15 @@ def runChecks : IO Bool := do
     , ("the source selector boundary preserves Cake's nested expression shape", nestedSelectorBoundaryMatches)
     , ("a variable shift uses Cake's two operand moves and register shift", variableShiftSelectorMatches)
     , ("a constant assignment becomes Cake's Const instruction", constantSelectorMatches)
-    , ("a load becomes Cake's memory instruction after its address move", loadSelectorMatches)
+    , ("a load materializes Cake's Mem instruction after its address move", loadSelectorMatches)
     , ("a nested load remains Cake's memory instruction", nestedLoadSelectorMatches)
     , ("a nested load preserves an unfused address expression", nestedLoadOffsetFallbackMatches)
+    , ("address selection keeps Cake's ordinary immediates in nested shifts",
+        addressShiftKeepsOrdinaryImmediates)
+    , ("a nested And with a valid immediate becomes Cake's andi",
+        nestedAndImmediateMatches)
+    , ("a nested And with a wide constant materializes it like Cake",
+        nestedAndWideConstantMaterializes)
   ]
   let mut ok := true
   for (label, passed) in checks do

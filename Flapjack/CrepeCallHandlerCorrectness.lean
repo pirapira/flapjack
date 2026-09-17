@@ -76,47 +76,57 @@ theorem evalPanValueCall_caught_handler_of_eval
     equation keeps the destination's flattened return slots explicit so the
     caught-call proof can be used for assignment-producing calls as well. -/
 
-theorem compileProg_call_handler_destination_of_compiled
-    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+/-! The destination-carrying equation splits by what `wrap_rt` does with
+    the destination: the kept case keeps the flattened slots, and the
+    degraded case (`wrap_rt` drops the shape, unknown or global
+    destination) keeps only the handler, matching
+    `pan_to_crepScript.sml:247-260`. -/
+
+theorem compileProg_call_handler_destination_of_compiled [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
     (context : CompileContext α) (function : FunName)
-    (arguments : List (Exp α))
-    (destination : Option (VarKind × VarName))
-    (returnNames : List Nat) (returnShape : Shape)
+    (arguments : List (Exp α)) (kind : VarKind) (name : VarName)
+    (returnNames : List Nat)
     (exception : ExceptionId) (handlerVar : VarName)
     (exceptionCode : α) (handlerProgram : Prog α)
     (handlerNames : List Nat) (compiledArguments : List (CrepExp α))
-    (hfunction : lookupInfo function context.functions =
-      some ([], returnShape))
     (hexception : lookupInfo exception context.exceptions =
       some exceptionCode)
     (hhandler : ∃ shape,
       lookupInfo handlerVar context.vars = some (shape, handlerNames))
     (harguments : compileArgs context arguments = compiledArguments)
-    (hreturnNames :
-      (match destination with
-       | none => functionReturnNames context function
-       | some (kind, name) =>
-           match kind with
-           | .local =>
-               match lookupInfo name context.vars with
-               | some (_, names) => names
-               | none => []
-           | .global => []) = returnNames) :
+    (hnames : callDestinationNames context kind name = some returnNames) :
     compileProg context
-        (.call (some (destination,
+        (.call (some (some (kind, name),
           some (exception, handlerVar, handlerProgram))) function arguments) =
       .call (some (returnNames,
         some (exceptionCode,
           .seq (assignRet context.bytesInWord handlerNames)
             (compileProg context handlerProgram)))) function compiledArguments := by
-  have hfunctionReturnNames : functionReturnNames context function =
-      allocatedNames context returnShape := by
-    simp [functionReturnNames, hfunction]
-  rw [hfunctionReturnNames] at hreturnNames
   rcases hhandler with ⟨shape, hhandler⟩
-  simp [compileProg, hfunction, hexception, hhandler, harguments,
-    functionReturnNames, allocatedNames] <;>
-    exact hreturnNames
+  simp [compileProg, hexception, hhandler, harguments, hnames]
+
+theorem compileProg_call_handler_degraded_destination_of_compiled
+    [BEq α] [OfNat α 0] [OfNat α 1] [Add α]
+    (context : CompileContext α) (function : FunName)
+    (arguments : List (Exp α)) (kind : VarKind) (name : VarName)
+    (exception : ExceptionId) (handlerVar : VarName)
+    (exceptionCode : α) (handlerProgram : Prog α)
+    (handlerNames : List Nat) (compiledArguments : List (CrepExp α))
+    (hexception : lookupInfo exception context.exceptions =
+      some exceptionCode)
+    (hhandler : ∃ shape,
+      lookupInfo handlerVar context.vars = some (shape, handlerNames))
+    (harguments : compileArgs context arguments = compiledArguments)
+    (hnames : callDestinationNames context kind name = none) :
+    compileProg context
+        (.call (some (some (kind, name),
+          some (exception, handlerVar, handlerProgram))) function arguments) =
+      .call (some ([],
+        some (exceptionCode,
+          .seq (assignRet context.bytesInWord handlerNames)
+            (compileProg context handlerProgram)))) function compiledArguments := by
+  rcases hhandler with ⟨shape, hhandler⟩
+  simp [compileProg, hexception, hhandler, harguments, hnames]
 
 /-! Stateful counterparts of the caught-handler call equations.  The
     compatibility evaluator above intentionally remains available for older
@@ -145,21 +155,46 @@ theorem compile_full_call_handler_state_simulation
       lookupInfo handlerVar context.vars = some (shape, handlerNames))
     (harguments : compileArgs context arguments = compiledArguments)
     (hcall : evalCrepFullCallState functions primitive ffi sharedMem
-      baseAddress topAddress fuel caller
+      baseAddress topAddress fuel
+      { caller with
+          locals := initializeCrepLocals caller.locals
+            (allocatedNames context returnShape) }
       (some (allocatedNames context returnShape,
         some (exceptionCode,
           .seq (assignRet context.bytesInWord handlerNames)
             (compileProg context handlerProgram)))) function compiledArguments =
       some result) :
     evalCrepFullProgState functions primitive ffi sharedMem
-      baseAddress topAddress (fuel + 1) caller
+      baseAddress topAddress
+      (fuel + 1 + (allocatedNames context returnShape).length) caller
       (compileProg context
         (.call (some (none, some (exception, handlerVar, handlerProgram)))
-          function arguments)) = some result := by
+          function arguments)) =
+      some (restoreCrepResultList caller.locals
+        (allocatedNames context returnShape) result) := by
   rw [compileProg_call_handler_of_compiled context function arguments returnShape
     exception handlerVar exceptionCode handlerProgram handlerNames
     compiledArguments hfunction hexception hhandler harguments]
-  simpa [evalCrepFullProgState] using hcall
+  have hbody :
+      evalCrepFullProgState functions primitive ffi sharedMem
+      baseAddress topAddress (fuel + 1)
+      { caller with
+          locals := initializeCrepLocals caller.locals
+            (allocatedNames context returnShape) }
+      (.call (some (allocatedNames context returnShape,
+          some (exceptionCode,
+            .seq (assignRet context.bytesInWord handlerNames)
+              (compileProg context handlerProgram))))
+        function compiledArguments) = some result := by
+    simpa [evalCrepFullProgState] using hcall
+  exact evalCrepFullProgState_nestedDecs_const_zero functions primitive ffi
+    sharedMem baseAddress topAddress (fuel + 1) caller
+    (allocatedNames context returnShape)
+    (.call (some (allocatedNames context returnShape,
+        some (exceptionCode,
+          .seq (assignRet context.bytesInWord handlerNames)
+            (compileProg context handlerProgram))))
+      function compiledArguments) result hbody
 
 theorem compile_full_call_handler_state_destination_simulation
     [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
@@ -170,30 +205,19 @@ theorem compile_full_call_handler_state_destination_simulation
     (functions : List (CompiledFunction α))
     (primitive : CrepPrimitiveHandler α) (ffi : CrepFfiHandler α)
     (sharedMem : CrepSharedMemHandler α)
-    (baseAddress topAddress : α) (fuel : Nat) (caller : CrepState α)
-    (function : FunName) (arguments : List (Exp α))
-    (compiledArguments : List (CrepExp α))
-    (destination : Option (VarKind × VarName))
-    (returnNames : List Nat) (returnShape : Shape)
-    (exception handlerVar : VarName) (exceptionCode : α)
-    (handlerProgram : Prog α) (handlerNames : List Nat)
-    (result : CrepControlResult α)
-    (hfunction : lookupInfo function context.functions =
-      some ([], returnShape))
+    (baseAddress topAddress : α) (fuel : Nat)
+    (caller : CrepState α) (function : FunName)
+    (arguments : List (Exp α)) (compiledArguments : List (CrepExp α))
+    (kind : VarKind) (name : VarName)
+    (returnNames : List Nat)
+    (exception handlerVar : VarName)
+    (exceptionCode : α) (handlerProgram : Prog α)
+    (handlerNames : List Nat) (result : CrepControlResult α)
     (hexception : lookupInfo exception context.exceptions = some exceptionCode)
     (hhandler : ∃ shape,
       lookupInfo handlerVar context.vars = some (shape, handlerNames))
     (harguments : compileArgs context arguments = compiledArguments)
-    (hreturnNames :
-      (match destination with
-       | none => functionReturnNames context function
-       | some (kind, name) =>
-           match kind with
-           | .local =>
-               match lookupInfo name context.vars with
-               | some (_, names) => names
-               | none => []
-           | .global => []) = returnNames)
+    (hnames : callDestinationNames context kind name = some returnNames)
     (hcall : evalCrepFullCallState functions primitive ffi sharedMem
       baseAddress topAddress fuel caller
       (some (returnNames,
@@ -204,12 +228,11 @@ theorem compile_full_call_handler_state_destination_simulation
     evalCrepFullProgState functions primitive ffi sharedMem
       baseAddress topAddress (fuel + 1) caller
       (compileProg context
-        (.call (some (destination,
+        (.call (some (some (kind, name),
           some (exception, handlerVar, handlerProgram))) function arguments)) =
       some result := by
   rw [compileProg_call_handler_destination_of_compiled context function arguments
-    destination returnNames returnShape exception handlerVar exceptionCode
-    handlerProgram handlerNames compiledArguments hfunction hexception hhandler
-    harguments hreturnNames]
+    kind name returnNames exception handlerVar exceptionCode handlerProgram
+    handlerNames compiledArguments hexception hhandler harguments hnames]
   simpa [evalCrepFullProgState] using hcall
 end Flapjack

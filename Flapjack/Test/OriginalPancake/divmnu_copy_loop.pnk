@@ -1,0 +1,60 @@
+var 1 u256_ws = 0;
+fun 1 nlz32(1 x) {
+  return 0;
+}
+fun {1,1} div64by32(1 hi, 1 lo, 1 d) {
+  var q = 0;
+  var r = hi;
+  var i = 0;
+  while i > 0 {
+    if r >=+ d {
+    }
+  }
+  return <q, r>;
+}
+fun 1 divmnu(1 q, 1 r, 1 u, 1 m, 1 v, 1 n) {
+  var i = 0;
+  var j = 0;
+  if n == 1 {
+    while j >+ 0 {
+    }
+  }
+  var un = u256_ws + 0;
+  var vn = u256_ws + 0;
+  var s = nlz32(lds 1 (v + 0 * 8));
+  while i >+ 0 {
+  }
+  var vtop = lds 1 (vn + 0 * 8);
+  while j >+ 0 {
+    var ujn = lds 1 (un + 0 * 8);
+    var ujn1 = lds 1 (un + 0 * 8);
+    var qhat = 0;
+    var rhat = 0;
+    if ujn >=+ vtop {
+    } else {
+    }
+    var again = 1;
+    while again == 1 {
+    }
+    var k = 0;
+    while i <+ n {
+      var p = qhat * 0;
+      var t = 0 - k - 0;
+      k = 0 - 0;
+    }
+    var tt = ujn - k;
+    if tt < 0 {
+    } else {
+      st un + 0 * 8, tt;
+    }
+  }
+  while j <+ m {
+  }
+  while i <+ n {
+  }
+  return 0;
+}
+
+fun 1 main() {
+  return 0;
+}

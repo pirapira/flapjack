@@ -17,6 +17,7 @@ Usage::
 
     scripts/parity-fuzz.py --seed 1 --count 400
     scripts/parity-fuzz.py --seed 1 --count 400 --compare-artifacts
+    scripts/parity-fuzz.py --seed 1 --count 400 --include-globals
 
 The CakeML ``cake`` binary is taken from ``$CAKE`` and otherwise defaults to
 ``~/pancake-lean/cakeml/developers/bin/cake``.  ``flapjack-compile`` defaults to
@@ -50,11 +51,13 @@ FIXED = (
 
 class Gen:
     max_extra_words = 6
+    include_globals = False
 
     def __init__(self):
         self.words = []
         self.structs = []
         self.pairs = []
+        self.globals = []
 
     def word(self):
         return random.choice(self.words) if self.words else "x"
@@ -91,6 +94,8 @@ class Gen:
         return self.expr(1)
 
     def addr(self, depth=0):
+        if self.globals and random.random() < 0.25:
+            return "%s + %s" % (random.choice(self.globals), random.choice(["0", "8", "16"]))
         if depth > 2 or random.random() < 0.5:
             return random.choice(["0", "1000", "1008", "1016", "1024", "1000 + 12", "1000 + 24"])
         return "(%s + %s)" % (self.addr(depth + 1), random.choice(["4", "8", "12", "16", "1000"]))
@@ -135,6 +140,10 @@ class Gen:
 
     def program(self):
         self.words = ["x"]
+        global_declarations = ""
+        if Gen.include_globals and random.random() < 0.5:
+            self.globals = ["ev"]
+            global_declarations = "var 1 ev = 0;\n"
         body = ["  var 1 x = %s;" % random.choice(CONSTS)]
         for _ in range(random.randint(0, Gen.max_extra_words)):
             name = "y%d" % random.randint(0, 999)
@@ -154,7 +163,7 @@ class Gen:
         for _ in range(random.randint(1, Gen.max_extra_words)):
             body.append(self.stmt(2))
         body.append("  return %s;" % self.top_expr())
-        return FIXED + "fun 1 main() {\n" + "\n".join(body) + "\n}\n"
+        return FIXED + global_declarations + "fun 1 main() {\n" + "\n".join(body) + "\n}\n"
 
 
 def main(argv=None):
@@ -170,6 +179,11 @@ def main(argv=None):
         action="store_true",
         help="for programs accepted by both compilers, compare exact RISC-V sections and bytes",
     )
+    parser.add_argument(
+        "--include-globals",
+        action="store_true",
+        help="include global-based addresses in generated loads and stores",
+    )
     parser.add_argument("--extra-locals", type=int, default=6, help="upper bound on extra random locals per program (register pressure)")
     args = parser.parse_args(argv)
 
@@ -180,6 +194,7 @@ def main(argv=None):
 
     random.seed(args.seed)
     Gen.max_extra_words = args.extra_locals
+    Gen.include_globals = args.include_globals
     scratch_root = "/var/tmp" if os.path.isdir("/var/tmp") else None
     out_dir = args.out or tempfile.mkdtemp(prefix="flapjack-parity-fuzz-", dir=scratch_root)
     os.makedirs(out_dir, exist_ok=True)

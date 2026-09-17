@@ -132,16 +132,6 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
   | .inst instruction => ⟨[.asm (.word instruction) [] 0], false, counter⟩
   | .shMem operator source address =>
       ⟨[.asm (.shareMem operator source address) [] 0], false, counter⟩
-  | .arith .or destination left right =>
-      /- `wMoveSingle` represents a physical register copy as `or r s s`.
-         Once allocation has made source and destination the same register,
-         CakeML's final Lab filtering removes this identity instruction.  Do
-         the same at the artifact boundary; retaining it would change section
-         sizes and can consume space needed by the following labels. -/
-      if destination = left && left = right then
-        ⟨[], false, counter⟩
-      else
-        ⟨[.asm (.arith .or destination left right) [] 0], false, counter⟩
   | .arith operator destination left right =>
       ⟨[.asm (.arith operator destination left right) [] 0], false, counter⟩
   | .shift operator destination left right =>
@@ -157,8 +147,9 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
       ⟨[labJump sectionId (labFindLabel label breaks)], true, counter⟩
   | .continue label =>
       ⟨[labJump sectionId (labFindLabel label continues)], true, counter⟩
-  | .rawCall _target =>
-      ⟨[.labAsm (.jump ⟨sectionId, 1⟩) [] 0], true, counter⟩
+  | .rawCall target =>
+      let entryLabel := if target == stackRaiseStubLocation then 0 else 1
+      ⟨[.labAsm (.jump ⟨target, entryLabel⟩) [] 0], true, counter⟩
   | .jumpLower register target label =>
       ⟨[labJumpCmp .lower register (.reg target) label 0], false, counter⟩
   | .install _ _ _ _ returnAddress =>
@@ -180,6 +171,43 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
       ⟨[.labAsm (.locValue register ⟨entry, label⟩) [] 0], false, counter⟩
   | .halt _register =>
       ⟨[.labAsm .halt [] 0], true, counter⟩
+  | .seq (.seq (.const scratch value) (.arith operator addressRegister base right))
+      (.seq (.arith .or copyDestination copySource copySource')
+        (.inst (.mem memoryOperator storedValue address))) =>
+      /- A source-shaped store may copy a register-resident value into the
+         value scratch after computing a static address.  Cake keeps the
+         original value register in its Addr-form memory instruction; remove
+         only this self-copy when it cannot alias the address scratch. -/
+      let offsetOperator :=
+        match operator with
+        | .add | .sub => true
+        | _ => false
+      let offsetFits :=
+        match operator with
+        | .add =>
+            value < 2 ^ 11 ||
+              (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64)
+        | .sub => value ≤ 2 ^ 11
+        | _ => false
+      let canFuse :=
+        right == scratch && addressRegister != copySource &&
+          copyDestination == scratch && copySource == copySource' &&
+          storedValue == scratch && offsetOperator && offsetFits
+      if canFuse then
+        ⟨[.asm (.memOffset memoryOperator operator copySource base value) [] 0],
+          false, counter⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks
+            (.seq (.const scratch value) (.arith operator addressRegister base right))
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks
+            (.seq (.arith .or copyDestination copySource copySource')
+              (.inst (.mem memoryOperator storedValue address)))
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
   | .get _ _ | .set _ _ | .opCurrHeap _ _ _
     | .storeConsts _ _ _ | .stackAlloc _ | .stackFree _ | .stackStore _ _
     | .stackStoreAny _ _
@@ -450,7 +478,7 @@ def labProgramToEntrySection (sectionId entryLabel initialLabel : Nat)
     (program : StackProg α) : LabSection α :=
   let sectionData := labProgramToSection sectionId initialLabel program
   { sectionData with
-    lines := labLabel sectionId entryLabel :: sectionData.lines }
+    lines := labLabel sectionId 0 :: labLabel sectionId entryLabel :: sectionData.lines }
 
 /- The backend-facing composition applies the stack-removal pass before
    flattening.  Keeping this as a separate entry point preserves the raw

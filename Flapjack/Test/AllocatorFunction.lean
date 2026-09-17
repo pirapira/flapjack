@@ -13,7 +13,7 @@ example :
           (.return 0 [2, 4])) := by
   have hAbi : wordSsaCallAbiRegisters 1 2 = [2, 4] := by rfl
   simp [wordSsaRenameFunction, wordSsaSetupParameters, wordSsaLimitVar,
-    wordListMaximum, wordProgVariables, wordProgReadVars, wordProgWriteVars,
+    wordProgCakeMaxVar,
     wordSsaRenameProgram, wordSsaRenameProgramWithLoops, wordSsaRead,
     wordSsaFreshList, wordSsaFresh, wordSsaSeq, hAbi, lookupNatInfo]
 

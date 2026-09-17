@@ -314,7 +314,7 @@ theorem evalWordStackMachine_parallelLocationMove_acyclic_preserves_other_value
       wordStackLocationValue config state other := by
   rw [wordStackParallelLocationMove_acyclic_eq_sequential config moves
     hdestinations hnoSource hreserved] at heval
-  exact evalWordStackMachine_reversedSequentialLocationMove_preserves_other_value
+  exact evalWordStackMachine_sequentialLocationMove_preserves_other_value
     config state final moves other hdestinations hreserved hotherDestination
     hotherScratch heval
 
@@ -441,7 +441,7 @@ theorem evalWordStackMachine_parallelLocationMove_acyclic_preserves_move_value
       wordStackLocationValue config state target.2 := by
   rw [wordStackParallelLocationMove_acyclic_eq_sequential config moves
     hdestinations hnoSource hreserved] at heval
-  exact evalWordStackMachine_reversedSequentialLocationMove_preserves_move_value
+  exact evalWordStackMachine_sequentialLocationMove_preserves_move_value
     config state final moves target hdestinations hnoSource hreserved htarget heval
 
 /-! The location-level frame theorem lifts directly to the allocator's
@@ -488,7 +488,7 @@ theorem evalWordStackMachine_parallelLocationMove_acyclic_preserves_mapped_value
         simpa [wordStackMachineValue, wordStackLocation,
           wordStackLocationValue, hlocation] using hstateValue
   have hpreserved :=
-    evalWordStackMachine_reversedSequentialLocationMove_preserves_other_value
+    evalWordStackMachine_sequentialLocationMove_preserves_other_value
       config state final moves location hdestinations hreserved
       (houtside name value location hvalue hlocation)
       (hnotScratch name value location hvalue hlocation) heval

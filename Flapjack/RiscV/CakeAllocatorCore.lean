@@ -1,4 +1,5 @@
 import Flapjack.RiscV.RegisterMap
+import Flapjack.NatDedup
 
 /-!
 # CakeML IRC allocator core for frame occupancy (analysis slice)
@@ -89,15 +90,27 @@ def insertSet (a : Nat) (s : List Nat) : List Nat :=
 /-- Delete from a membership set (`sptree$delete`). -/
 def deleteSet (a : Nat) (s : List Nat) : List Nat := s.erase a
 
+/-! Upstream these three are `sptree$union`, `sptree$inter` and
+`sptree$difference` on a `num_set`, so each costs a tree merge.  Written over
+lists with `List.contains` they are `O(|s| * |t|)`, and `get_stack_only` runs
+them at every branch: on the guest's move-heavy functions the stack-only scan
+alone took 1.4 seconds.  Building the membership side as a set once leaves
+each result list exactly as it was -- only the predicate changes. -/
+
 /-- Union of membership sets (`sptree$union`). -/
 def unionSet (s t : List Nat) : List Nat :=
-  s ++ t.filter (fun a => !s.contains a)
+  let members := natSetOfList s
+  s ++ t.filter (fun a => !members.contains a)
 
 /-- Intersection of membership sets (`sptree$inter`). -/
-def interSet (s t : List Nat) : List Nat := s.filter (fun a => t.contains a)
+def interSet (s t : List Nat) : List Nat :=
+  let members := natSetOfList t
+  s.filter (fun a => members.contains a)
 
 /-- Difference of membership sets (`sptree$difference`). -/
-def diffSet (s t : List Nat) : List Nat := s.filter (fun a => !t.contains a)
+def diffSet (s t : List Nat) : List Nat :=
+  let members := natSetOfList t
+  s.filter (fun a => !members.contains a)
 
 /-! ## Stack-only propagation
 

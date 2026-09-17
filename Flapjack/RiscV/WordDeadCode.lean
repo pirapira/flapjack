@@ -28,6 +28,9 @@ def wordDeadAddReads (live : List Nat) (reads : List Nat) : List Nat :=
 def wordDeadRemoveWrites (live : List Nat) (writes : List Nat) : List Nat :=
   live.filter (fun name => name ∉ writes)
 
+def wordDeadCallLive (cutsets : List Nat × List Nat) (arguments : List Nat) : List Nat :=
+  wordDeadAddReads [] (cutsets.1 ++ cutsets.2 ++ arguments)
+
 /-! Cake's `remove_dead (Move pri ls)` keeps the priority of the surviving
     moves.  The priority orders the coalescing worklist (`sort_moves` sorts
     descending and `do_coalesce` consumes the first compatible move), so the
@@ -128,9 +131,7 @@ def wordDeadCodeAux : WordProg α → List Nat → List (List Nat × List Nat) �
               handlerLabel, handlerEntryLabel)
       (.call (some (destinations, cutsets, returnCode', returnLabel, entryLabel))
           target arguments handler',
-        wordDeadAddReads live (wordProgReadVars
-          (.call (some (destinations, cutsets, returnCode', returnLabel, entryLabel))
-            target arguments handler')))
+        wordDeadCallLive cutsets arguments)
   | .call returns target arguments handler, live, _ =>
       (.call returns target arguments handler,
         wordDeadAddReads live (wordProgReadVars
@@ -316,16 +317,10 @@ def cakeAllocateWordFunctionAfterDead [OfNat α 0] [WordCseHash α] (currentFunc
   let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
   let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
   let bij := cakeMkBij tree
-  /- `lookup_any x scost 0` in `st_ex_list_MIN_cost`
-     (`reg_allocScript.sml:773-790`) reads an sptree; read the costs into the
-     same node-indexed field the allocator state uses so the spill scan is
-     not a linear lookup per node.  `ofNatInfoMap` keeps the first binding for
-     a key, which is what `cakeMapLookup` returned. -/
-  let scost := spillCosts.map (fun costs =>
-    CakeNodeMap.ofNatInfoMap bij.nextNode
-      (costs.filterMap (fun entry =>
-        (lookupNatInfo entry.1 bij.toAllocator).map
-          (fun node => (node, entry.2)))))
+  /- `word_alloc` passes this source-keyed sptree directly to `reg_alloc`.
+     Keep those keys intact; `CakeNodeMap` stores keys outside the allocator
+     array when necessary, matching `lookup_any` in `st_ex_list_MIN_cost`. -/
+  let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
   match cakeDoRegAlloc .irc scost cakeRiscVRegisterCount
       moves tree forced fs with
   | none => none

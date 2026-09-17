@@ -9,7 +9,10 @@
       "path": "Flapjack/Test/OriginalPancake/empty_locals.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:71 (empty_locals_def)",
       "cake_sha256": "e661960e2ea04f6c804fa9487b600bb0289929ba6c76e0dd10f243263cfdd870",
-      "tracked_beads": ["flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1",
+        "flapjack-pxn.8.5.10.3"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/dec_clock.pnk",
@@ -27,25 +30,34 @@
       "path": "Flapjack/Test/OriginalPancake/crep_op.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:85-88 (crep_op_def)",
       "cake_sha256": "5e1162c5f80779f9ac072963aac2d3fbbae54d565f05c46a91e4028405dbb57f",
-      "tracked_beads": ["flapjack-pxn.8.5.10.1"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/set_globals.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:61-63 (set_globals_def)",
       "cake_sha256": "1281f0d8cd5e1a22486f15baa4a4526e000645f2abec8fb6893e64603b606ac9",
-      "tracked_beads": ["flapjack-pxn.8.5.10.2"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.2"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/set_var.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:55-57 (set_var_def)",
       "cake_sha256": "14ee212eefbbc8ba96af33c6372dcde8bc6b2c4babe72779e3124f2df1cd21b1",
-      "tracked_beads": ["flapjack-pxn.8.5.10.1"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/bitmap_calls.pnk",
       "source_reference": "synthetic regression extracted from the original Pancake call/bitmap corpus",
       "cake_sha256": "eaffdb7dd3840571e776be1d3661fd2fc8de56d6cafe34ce5c4fb588e74b79f8",
-      "tracked_beads": ["flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1",
+        "flapjack-pxn.8.5.10.3"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/entry_order.pnk",
@@ -57,67 +69,101 @@
       "path": "Flapjack/Test/OriginalPancake/shadowing.pnk",
       "source_reference": "Local shadowing regression (`var 1 x = 0; var 1 x = g();`) reproduced from Flapjack.Test.SourceGlobalParity.shadowingSource. The current coordinator output is byte-exact with CakeML; retain this fixture as a regression while broader global-initializer and shadowing coverage remains tracked by flapjack-pxn.8.5.10.2 and flapjack-8tb.",
       "cake_sha256": "b7343fcd21e99f4cae4cc800a922325bca143f9624b8b007f2c357cfdd787e60",
-      "tracked_beads": ["flapjack-pxn.8.5.12.12", "flapjack-pxn.8.5.10.2", "flapjack-8tb"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.12.12",
+        "flapjack-pxn.8.5.10.2",
+        "flapjack-8tb"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_expression.pnk",
       "source_reference": "GitHub issue #1015 nested-expression reproducer; the original accepts because crep_to_loop flattens nested Word expressions into Loop temporaries. The port now uses the expanded temporary pool and emits byte-exact output for this fixture; retain it as a regression for flapjack-pxn.2.5.",
       "cake_sha256": "11ad4d103897fbc551a4540c06a720b7e517f920d805034cee217e5044bb4b29",
-      "tracked_beads": ["flapjack-pxn.2.5"]
+      "tracked_beads": [
+        "flapjack-pxn.2.5"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_expression_deep.pnk",
       "source_reference": "Deepened GitHub issue #1015 variant (one extra addition level, six live nested temporaries); the original and port now emit byte-exact output after the pool-expansion fix flapjack-pxn.2.5. Retained to show the fix generalizes past the four-register reserved pool.",
       "cake_sha256": "5822698630fdc38fcc3061902f3fdaee3b36b3d8b1cdcfc5fdc7b948261e9f36",
-      "tracked_beads": ["flapjack-pxn.2.5"]
+      "tracked_beads": [
+        "flapjack-pxn.2.5"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_expression_sub.pnk",
       "source_reference": "GitHub issue #1015 previously-failing left-associative subtraction chain (five nested binary nodes); the original and port now emit byte-exact output after the flapjack-pxn.2.5 pool-expansion fix, extending coverage of the temporary-pool floor beyond the addition variants.",
       "cake_sha256": "30de68e8017f5e36baefc5f0aee2d4797eed4434e41f3f5abd12562a288c99f3",
-      "tracked_beads": ["flapjack-pxn.2.5"]
+      "tracked_beads": [
+        "flapjack-pxn.2.5"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/wide_constants.pnk",
       "source_reference": "GitHub issue #1020 reproducer: CakeML riscv_ast Const lowering for 0x40000008 uses LUI+ADDI; the port now materializes all bits and this checked fixture is byte-exact. Broader constant/allocator coverage remains tracked by the listed beads.",
       "cake_sha256": "0e44aff3f32b030f11d33c4519139a56c0d53f771f68e8ec2e8197031451419e",
-      "tracked_beads": ["flapjack-pxn.8.5.14.6", "flapjack-pxn.8.5.14.6.1", "flapjack-pxn.8.5.10.1"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.6",
+        "flapjack-pxn.8.5.14.6.1",
+        "flapjack-pxn.8.5.10.1"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/dup_global.pnk",
       "source_reference": "Differential-fuzzing finding dup-global (GitHub issue #962 smoke): CakeML accepts a duplicate top-level global with the warning 'variable g is redeclared in top-level declaration' and keeps the later declaration; Flapjack previously rejected it in staticCheckDecls. Tracked by flapjack-pxn.8.5.14.4.",
       "cake_sha256": "a79e87b5048cf7c9f2e5e8c830062424e3231cb92b69519995fe54ffac4d3680",
-      "tracked_beads": ["flapjack-pxn.8.5.14.4"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.4"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nomain_global.pnk",
       "source_reference": "Differential-fuzzing finding nomain-global (GitHub issue #962 smoke): the original CakeML pan_to_target synthesizes a main returning zero when the source has none, so a main-less program is accepted; Flapjack previously failed with 'entry not found'. Fixed by panTargetDeclarationsWithDefaultMain. Tracked by flapjack-pxn.8.5.14.3.",
       "cake_sha256": "991051465fe4220a390f5a4cb70ac821811c3381723e3306d41b97136d0be039",
-      "tracked_beads": ["flapjack-pxn.8.5.14.3", "flapjack-pxn.8.5.10.1", "flapjack-pxn.8.5.10.3"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.3",
+        "flapjack-pxn.8.5.10.1",
+        "flapjack-pxn.8.5.10.3"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/callee_abi.pnk",
       "source_reference": "Multi-function callee argument/return ABI (GitHub issue #1024 / flapjack-pxn.8.5.10.1.1): this checked callee_abi fixture is now byte-exact with CakeML, including the ABI entry and return shape. Broader generated multi-function cases remain tracked by flapjack-8tb.4.",
       "cake_sha256": "aab59578a1ecf94382606f575f2fbeb2d97d6a873e30e506665ba59348f2bcd7",
-      "tracked_beads": ["flapjack-pxn.8.5.10.1.1"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1.1"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/relational_condition.pnk",
       "source_reference": "Relational-condition lowering (GitHub issue #1027 / flapjack-pxn.8.5.14.11): the checked fixture now emits byte-exact direct branches matching CakeML. Broader condition and long-range branch coverage remains tracked by the listed bead.",
       "cake_sha256": "824cf4a9a394bad0b27eea57244f11a52203123fa5587f63607cbd7e195d0fc5",
-      "tracked_beads": ["flapjack-pxn.8.5.14.11"]
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.11"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/hello.pnk",
       "source_reference": "hello.pnk whole-artifact parity (GitHub issue #1022 / bead flapjack-8tb): the checked fixture now has byte-identical Cake and Flapjack output, including cml_main, after the Cake FFI setup-order fix. Retain it as the primary exact-output regression while broader accepted-program parity remains tracked by flapjack-8tb and child beads.",
       "cake_sha256": "72e2d0d849bfcb8d5070a06c35d148d81c032982cd0ca5ce6e12bd91843dc270",
-      "tracked_beads": ["flapjack-8tb"]
+      "tracked_beads": [
+        "flapjack-8tb"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/ffi_runtime_image.pnk",
+      "source_reference": "Minimized FFI runtime-image parity witness: Cake's reversed internal ffi_names list and source-order exported stubs must agree with every multi-FFI jal relocation.",
+      "cake_sha256": "f6b049c7f654ddb5887b2d33a625785430e37dfa9c96340216d7bbd14dad67f1",
+      "tracked_beads": []
     },
     {
       "path": "Flapjack/Test/OriginalPancake/loop_local.pnk",
       "source_reference": "Pre-loop local retention through a while loop (bead flapjack-8tb.1): `var out = 7;` assigned before `while i < 2 { i = i + 1; }` and read by `return out` must keep the assignment. The original CakeML emits the constant and returns it (cml_main = 00706513 00006593 00206613 00c5d663 00158593 ff5ff06f 0080006f fedff06f 00008067, 36 bytes); the port previously dropped the assignment (ori a0,zero,0). The comparison lowering now threads the incoming loop live set through `loopCompileExp` (crep_to_loopScript.sml comparison case; f93a590f), so the assignment survives.",
       "cake_sha256": "bd52adc8d9c0548532985d1907f4097e8fcf79ba6b3db8f7aea509a911b75f4b",
-      "tracked_beads": ["flapjack-8tb.1"]
+      "tracked_beads": [
+        "flapjack-8tb.1"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/mul_const_zero.pnk",
@@ -136,7 +182,210 @@
       "source_reference": "cakeml/pancake/crep_arithScript.sml:50-56 (mul_const_def): x * 8 becomes Shift Lsl x (Const 3) on a non-constant parameter.",
       "cake_sha256": "073d50b2801126783668b513e792e25705d2672a11155ce859ce5c4030c62138",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00028_allocator.pnk",
+      "source_reference": "Minimized differential-fuzz reproducer f00028: exercises Cake Patricia ordering, SSA cutsets, allocator colouring, and physical parallel moves.",
+      "cake_sha256": "60c124426815c469e11d6eba53bffda35c2f166ce78a0446c9457d07e14295cf",
+      "tracked_beads": [
+        "flapjack-8tb.4"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/mul64x64_allocator.pnk",
+      "source_reference": "Synthetic 64-bit multiply lowering regression: Cake's allocator and physical parallel-move cycle ordering for four partial products and carry reconstruction.",
+      "cake_sha256": "23a1f68beea44883ccd860d4b463973715f9aa98daf3a9280eb35904dc97918a",
+      "tracked_beads": [
+        "flapjack-8tb.4"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/secp_accel_init_block.pnk",
+      "source_reference": "Minimized from the full guest's secp_accel_init_block: Cake preserves static base-plus-offset stores and register-resident struct words through word_to_stack and Lab.",
+      "cake_sha256": "2cdf414cfa245f284a23ad93df8be7909c5a083c3fb4b924db9b9162766d34af",
+      "tracked_beads": [
+        "flapjack-8tb.4.6"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/secp_accel_modmul.pnk",
+      "source_reference": "Minimized from the full guest's secp_accel_modmul_at/p/n: Cake preserves static base-plus-offset stores of register-resident words through word_to_stack and Lab.",
+      "cake_sha256": "0202f629f67e9babefe74eaa717a9378aeeda8d71473537f833a31aee24aa66b",
+      "tracked_beads": [
+        "flapjack-8tb.4.6"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/parameter_reassignment.pnk",
+      "source_reference": "cakeml/pancake/crep_to_loopScript.sml:158-162,236-241 (parameter vmap and reassignment); guards that assignments to a function parameter survive crep-to-loop lowering and live optimization.",
+      "cake_sha256": "909228ec2ae5e41bdd400877abe193562e27d16e9c58fbec5585dbb409539087",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/expression_load_offset.pnk",
+      "source_reference": "Minimized from the stateless-pancaketh guest's calculate_total_blob_gas: an expression-level load whose address is base plus a constant must keep the constant in the Addr offset (word_instScript.sml:234-245), with the in-range and negative boundaries beside it.",
+      "cake_sha256": "cea72fb1938fff2d1554a1f993be9b10ff232ae437afe9ee89e8c9bca69e94c6",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/subtract_operand_order.pnk",
+      "source_reference": "Original Cake word_instScript.sml flatten_exp subtraction case: the dedicated Sub clause preserves operand order before the generic head-last rewrite. Covers a-b, b-a, subtraction of two loads, and a left-nested chain.",
+      "cake_sha256": "f4f975311de583fe87e4fb2693c797aff8d61eb4d767d8cbd7ea45b22c286b84",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/shifted_load_address.pnk",
+      "source_reference": "Original Cake word_instScript.sml shift-immediate case (lines 276-291): a non-constant left expression under a constant shift must preserve both the add-immediate subtraction and the shift-immediate when selecting an RV64 source address.",
+      "cake_sha256": "abee99e9bc9e967e0d1a5816fb5092cc9a51695ea75062e1401e5fdfe1515762",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/collapse_branch.pnk",
+      "source_reference": "Minimized RISC-V parity reproducer for Cake's word_inst$inst_select_exp shift-immediate and conditional lowering (word_instScript.sml:233-295).",
+      "cake_sha256": "c3a0eedb8f0e90602a899d1659782251d2a87cf4dcb269687827d304404d1d33",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.11.2"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/collapse_branch_full.pnk",
+      "source_reference": "Minimized full source-to-RISC-V reproducer for Cake stack_rawcall cross-function tail lowering; RawCall must retain its callee section and enter at label 1.",
+      "cake_sha256": "30cd79da9679efb5515da0132ec35abd0314c8674353e9bee7bce052342f28e7",
+      "tracked_beads": [
+        "flapjack-8tb.4.9"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/global_load_sharing.pnk",
+      "source_reference": "word_cse shares a repeated load through its loads_mem facts, keyed by loadToNumList over Addr n2 offset. WordInst.mem carries no offset, so instruction selection leaves such a load as .assign dest (.load (.op .add [.var n2, .const offset])) until wordToStack fuses it, and CSE passed that carrier through untouched - reading one global twice emitted the global-table load twice where Cake emits it once.",
+      "cake_sha256": "c85b91a76947ae307977782dcbfd5468f3c811d71b029747c76480b13c62a50f",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/global_shifted_load_address.pnk",
+      "source_reference": "Cake word_instScript.sml:234-245 and 252-275: only the outer constant displacement of a load address is held for Word-to-Stack fusion; a global base plus a computed offset uses the ordinary target selector so nested add/sub/shift immediates are preserved.",
+      "cake_sha256": "7f030af4246a3b17ab6ee27d388c46a27ad20e63eb033f2335d60d587bbc6628",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/address_shift_operand.pnk",
+      "source_reference": "inst_select_exp c tar temp (Shift sh exp n) (word_instScript.sml) shifts the operand it selected, so a shift's left operand must not be discarded. With binary-operation immediates disabled for address selection that operand comes back as an expression, and ignoring it dropped the constant: lds 1 (1000 + (k - 1) * 8) compiled as lds 1 (1000 + k * 8). shifted_value is exact; shifted_offset and nested_shift now compute the right value but still cost two extra instructions, tracked by flapjack-cey.",
+      "cake_sha256": "7a3640a67c0bf27ddd40c3e14501ca1288d53a3a99a7ad45ca4ccab2809fc80a",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/global_base_shift_address.pnk",
+      "source_reference": "inst_select_exp c tar temp (Load exp) (word_instScript.sml:234-245) splits on the address shape -- Op Add [exp'; Const w] keeps w for the Addr temp w displacement and selects only exp' -- and both recursive calls use the ordinary asm_config. Flapjack instead reconfigured the target with validBinOpImmediate := fun _ _ => false for the whole address, which also reached nested subexpressions: in lds 1 (table + (k - 1) * 8) the inner k - 1 came back as an expression rather than a register, so the Shift case could not use its immediate and materialized the shift amount into a second register. Cake emits addi/slli; Flapjack emitted ori/or/addi/sll. A global base is what exposes this, because a constant base normalizes to Op Add [shift; Const] and takes the displacement branch.",
+      "cake_sha256": "1fb77c6e45299403b7c0b5755dd356c218bad3c6c2748094291c3b1dd248100e",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/dec_temporary_cutset.pnk",
+      "source_reference": "crep_to_loop$compile (Dec v e prog) (crep_to_loopScript.sml:409-415) extends the *incoming* live set for the body: fl = insert tmp () l, not the l' that compile_exp returned. compile_exp inserts its own temporaries (LoadByte, Load32, Cmp, Crepop) so that the code it emits can name them, but they are dead once the declared variable holds the value. Flapjack threaded the returned set instead, so every cutset inside a Dec body carried the initializer's temporaries: the Call cutset, the enclosing Loop entry set, and every If cutset. loop_live$shrink only intersects cutsets and a Loop whose Break restores the loop's entry set never shrinks below it, so the extra names survived to word_alloc and each one took a frame slot -- the cake_bitmaps frame word came out one to four powers of two too large, and the SSA copies of one value were given two different stack slots (a stack-to-stack move Cake does not emit). The four functions cover the four temporary-inserting compile_exp forms; main pins the whole-file layout.",
+      "cake_sha256": "67e6c2ab94341a7caeeb2fcdf4193115aca4c228592907a25bb024b88fcbdf41",
+      "tracked_beads": [
+        "flapjack-8tb.4.8"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_binop_immediate.pnk",
+      "source_reference": "inst_select_exp c tar temp (Op op [e1; Const w]) (word_instScript.sml:252-275) tests c.valid_imm (INL op) w for every operator; only the Sub retry with -w is Add-specific, and the remaining case materializes w into temp+1. Flapjack's expression-level selector tested the immediate for Add alone, so a nested x && 1w emitted ori t, x0, 1; and d, x, t where Cake emits andi d, x, 1 - one instruction more per occurrence. bit_test, or_immediate and xor_immediate cover the immediate path for And/Or/Xor; sub_immediate covers the Add/Sub retry; wide_mask and wide_or pin the no-immediate path, where the constant must still be materialized into temp+1 rather than left as an unfused expression - leaving it there makes the enclosing Shift miss its own immediate and cost two more instructions (guest bswap64, rmd_f).",
+      "cake_sha256": "1978fe507ca3dc7780fea4d42541eb6baaad3d2f91e713cb89ee5c280d24bb02",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/loop_body_condition_fuse.pnk",
+      "source_reference": "word_simp$simp_duplicate_if (word_simpScript.sml:432-454) is structurally recursive and descends into Loop bodies, MustTerminate bodies and both sub-programs of a Call. Flapjack's executable version is fuel-driven and its wordProgFuel measure counted only Seq and If, so a whole while body was budgeted as one node and the recursion ran out of fuel part-way down it. A materialised comparison nested inside a loop body then kept its 0/1 round trip - bne; t := 0; jal; t := 1; beq t, 0 - where Cake folds the comparison straight into the branch: five instructions more per occurrence. break_then_more is the minimal shape (a comparison whose If is followed by further statements inside the loop); return_then_more is the guest's is_zero_bytes; nested_loop needs two levels of Loop descent; call_return_condition needs the Call return-program descent.",
+      "cake_sha256": "391ccced1dbd1cf6d4a70968404e6a81e31a589f32385eb9b0771b2868eeeaa2",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/process_message_empty_catch.pnk",
+      "source_reference": "Reduced from the full guest process_message discrepancy: Cake's word_simp$simp_duplicate_if must recurse through a conditional branch and exception-handler Call before word_to_stack, eliminating the clobbering 0/1 comparison round trip.",
+      "cake_sha256": "a397ae67860df485ecf2195e5f1baee53b8695aef922ff244fd8834c17a12641",
+      "tracked_beads": [
+        "flapjack-8tb.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/process_message_negative_offset.pnk",
+      "source_reference": "Minimized process_message exception/global-spill oracle from the full-guest first-divergence reduction; guards Cake's negative Addr-offset instruction carrier through SSA, allocation, and Lab.",
+      "cake_sha256": "132beb4da1fae37a29415f7a38c71eef675d2fb6766ace599bcf58f6756791f2",
+      "tracked_beads": [
+        "flapjack-8tb.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/fp_pow4_copy_loop.pnk",
+      "source_reference": "Cake word_copyScript.sml:377-380: copy_prop_prog resets the incoming equivalence state after a Loop. This isolates the fp_pow4 table/loop and call-result pressure that previously emitted a 20-byte surplus.",
+      "cake_sha256": "b4e2f41c484dc86b90a267cd0980789a024e0836cfc19a29b923a196453c75b2",
+      "tracked_beads": [
+        "flapjack-8tb.4.6"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/u256_add_carry.pnk",
+      "source_reference": "minimized source-to-RISC-V differential for CakeML AddCarry ABI temporary numbering (cml_u256_add_carry_57)",
+      "cake_sha256": "f117eaaae17df78521dd9f33f09e10042b09c94dda367d8dd8b0ed47f44a545d",
+      "tracked_beads": [
+        "flapjack-8tb.4.7"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/u256_mul_full.pnk",
+      "source_reference": "Minimized from stateless-pancaketh guest/src/lib/u256.pnk:168-286; exercises 16 mul64x64 calls and 29 Cake four-register AddCarry operations under allocator pressure.",
+      "cake_sha256": "d0d0e0cd32f85d749a52f22744a4ef7c2fcbc3be6e92b15c9ff067185851f95d",
+      "tracked_beads": [
+        "flapjack-8tb.4.7"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/divmnu_copy_loop.pnk",
+      "source_reference": "Minimized full-guest divmnu witness; word_copy must reset copy state after Loop and resolve old members through Cake's class representative.",
+      "cake_sha256": "76d372a0ccac7e59715ec940f16d8f4e89ce676601b1c691f4546d8a2b38cb49",
+      "tracked_beads": [
+        "flapjack-8tb.4.6"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/gh1025_frame_bitmap.pnk",
+      "source_reference": "GH #1025 differential-fuzz seed 11, f00010: loop/handler liveness must preserve Cake's five live frame words and bitmap vector [4,32,32,32,32,32]",
+      "cake_sha256": "fee86f26b1438aa0586d1762200594116555eb70e27e4c8c041dad5cf3723c99",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.4.1"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/gh1025_frame_bitmap_f00000.pnk",
+      "source_reference": "GH #1025 differential-fuzz f00000 seed 1: Cake's nine call continuations require bitmap vector [4,8,8,8,8,8,8,8,8]",
+      "cake_sha256": "186e9c7b7f76c25201a0cbd91eb82a375d7ef0735d643c884bd191e473ada086",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.14.1.4.1"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/many_word_parameters.pnk",
+      "source_reference": "Reduced from the full stateless guest (15840 lines -> 3) by scripts/parity-reduce.py. Cake's word_to_stack$compile_prog computes stack_arg_count = arg_count - reg_count (word_to_stackScript.sml:587-593) with the reg_count word_to_stack$compile computes once for the whole program (line 605): asm_conf.reg_count - (5 + LENGTH asm_conf.avoid_regs), which for RISC-V is cakeRiscVRegisterCount = 22. PipelineDiagnostics used a literal 12, so every function with twelve or more word parameters reserved a frame Cake does not: eleven_words was exact while twelve_words and twelve_scalars each gained an addi sp, a stack-overflow check and a matching addi around a body that is one ori. Struct-vs-scalar is irrelevant; only the total word count matters, which is why the fixture pins eleven words, twelve words as two structs, and twelve scalars.",
+      "cake_sha256": "3227f03a0c73a19747b0ba3b0c6731e4f98b97250860f9386108c878a6c99e35",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/wide_call_arguments.pnk",
+      "source_reference": "Reduced from the stateless guest's fp2_eq. Cake puts call argument i in colour i+1 (colour 0 is the link register) and every colour below k is a machine register, with k = asm_conf.reg_count - (5 + LENGTH asm_conf.avoid_regs) = 22 on RISC-V (word_to_stackScript.sml:605); the window in argument-index space is therefore k-1 = 21. WordStackConfig.abiRegisterCount defaulted to 12, the x10--x21 span, so a call with twelve or more word arguments was treated as having stack-resident arguments Cake keeps in registers: twelve_caller emitted an extra st x29, 24(x24) and freed three frame words where Cake frees four, and at fourteen or more arguments wordStackPhysicalMovesToIndexed returned none and the whole compile failed. ten_caller pins the arity just below the old threshold; twelve_caller pins the shape that used to differ.",
+      "cake_sha256": "4a764aa63931c5370ee06f957c7c45c3ad6264881e1a935657fb1157aee369fc",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/spilled_load_offset.pnk",
+      "source_reference": "Reduced from the stateless guest's g1_double by scripts/parity-reduce.py. Cake's word_to_stack keeps Addr base offset through a load exactly as it does through a store, and the Lab pass recognises the const/arith/memory triple for loads as well as stores, emitting memOffset. wordStackCompileLoadNatNested had no Addr base offset case: it always materialised the whole address into addressScratch, so a load whose destination is spilled came out as addi x23, base, off; ld scratch, 0(x23); sd scratch, slot(x24) against Cake's ld scratch, off(base); sd scratch, slot(x24). Only the spilled destination was affected, because a register destination fuses through the statement-level path; register_load pins that half as exact, spilled_load the half that differed. Guest sections g1_double, swu_g1, ecp_add and g1_add were this shape.",
+      "cake_sha256": "136627fe4ef74e45e9421f4ba3a6914b806cac5d269d0cbb8d9983e681c8a4e8",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/allocator_colour_permutation.pnk",
+      "source_reference": "Reduced from the stateless guest's process_transaction by scripts/parity-reduce.py: 15840 lines to 2776 with the stub-other-functions pass, then to 20 lines in 1324 oracle calls. inst_select c temp (Set store exp) (word_instScript.sml:386-388) is Seq (inst_select_exp c temp temp (flatten_exp (pull_exp exp))) (Set store (Var temp)): it runs the expression selector unconditionally, so even Set store (Var v) becomes Move 0 [(temp, v)]; Set store (Var temp). Flapjack's wordInstSelectProgram had no Set case at all, so the store passed through untouched and that copy was never created. Full SSA then numbered every later name four lower than Cake's and the allocator saw one move fewer, which permuted the register colours -- the visible symptom here was the same bytes with slot 32 reloaded into cake x13 / fj x12 and so on. The throw path in this fixture is the smallest instance: Cake emits Inst (Const 137 0w); Move0 [(141,137)]; Set (Temp 0w) (Var 141) where Flapjack emitted const 137 0; set (temp 0) (var 137).",
+      "cake_sha256": "aa984a768fe54b226cdca51c0d3193aebefd2f44760d0e5e0cf0d45638a2ebb9",
+      "tracked_beads": []
     }
-
   ]
 }

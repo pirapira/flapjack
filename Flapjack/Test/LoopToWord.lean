@@ -64,7 +64,15 @@ def originalCompSetGlobal : WordProg Nat := .set (.temp 9) (.const 7)
 def originalCompFuncSkip : WordProg Nat := .skip
 def originalCompFuncAssign : WordProg Nat := .assign 4 (.const 3)
 def originalCompFuncSeqAssign : WordProg Nat :=
-  .seq (.assign 4 (.const 3)) (.assign 6 (.var 4))
+    .seq (.assign 4 (.const 3)) (.assign 6 (.var 4))
+/-! `loop_to_word$compile` lowers the two-result AddCarry primitive through
+    Cake's four-register scratch sequence.  These values are the direct
+    source-shaped result for a context that maps source slots to physical
+    Word registers. -/
+def originalAddCarry : WordProg Nat :=
+  .seq (.assign 1 (.var 6))
+    (.seq (.inst (.arith (.cakeAddCarry 3 2 4 1)))
+      (.seq (.assign 10 (.var 1)) (.assign 8 (.var 3))))
 def originalCompileProgEmpty : List (Nat × Nat × WordProg Nat) := []
 def originalCompileProgSingleton : List (Nat × Nat × WordProg Nat) :=
   [(7, 2, .skip)]
@@ -152,6 +160,11 @@ def sameNatSet (left right : List Nat) : Bool :=
 #guard wordMkNewCutset
     ({ vars := [(1, 3), (2, 4), (3, 5), (4, 6), (5, 7), (6, 8), (7, 9)] } : WordContext)
     [1, 2, 5, 3, 5, 6, 7, 4] == originalWordMkNewCutsetPatricia
+#guard sameWordProg
+    (loopToWordProg
+      ({ vars := [(2, 2), (3, 4), (4, 6), (5, 8), (6, 10)] } : WordContext)
+      (.primitive [5, 6] .addCarry [2, 3, 4]))
+    originalAddCarry
 
 example : findRegImm [] (.imm 5 : RegImm Nat) = originalFindRegImmImm := rfl
 example : findRegImm [] (.reg 11 : RegImm Nat) = originalFindRegImmReg := rfl

@@ -1,4 +1,5 @@
 import Flapjack.Word
+import Std.Data.TreeMap
 
 /-!
 # Cake's Word common-subexpression elimination
@@ -75,46 +76,61 @@ def wordCseIsCurrHeap : WordStore α → Bool
   | .currHeap => true
   | _ => false
 
+/-! Cake's `knowledge` keeps `to_canonical`, `to_latest` and `gets_mem` in
+`num_map`s and `instrs_mem`/`loads_mem` in balanced maps keyed by numeral
+lists (`word_cseScript.sml`), so every insert and lookup is logarithmic.
+Holding them as association lists made each insert rebuild the whole list and
+each lookup scan it, and `word_common_subexp_elim` was the largest
+non-allocator cost on the real guest: 1785 ms of a 1930 ms preprocess chain
+on its biggest function.
+
+Every key in these maps is unique -- the list form removed the old binding
+before consing the new one -- and they are only ever read back by key, so
+replacing the lists with trees changes no value the pass computes.  The
+whole-program byte comparison in the commit message is the evidence. -/
+abbrev WordCseRegMap := Std.TreeMap Nat Nat
+abbrev WordCseFactMap := Std.TreeMap (List Nat) Nat
+
 /-- Cake's `knowledge` record.  `toCanonical` and `toLatest` are the two
     register maps, `getsMem` records the register that already holds a store
     value, and `instrsMem`/`loadsMem` are the instruction and load fact
     tables.  Every key is a numeral hash, so the knowledge carries no word
     values. -/
 structure WordCseKnowledge where
-  toCanonical : List (Nat × Nat)
-  toLatest : List (Nat × Nat)
-  getsMem : List (Nat × Nat)
-  instrsMem : List (List Nat × Nat)
-  loadsMem : List (List Nat × Nat)
+  toCanonical : WordCseRegMap
+  toLatest : WordCseRegMap
+  getsMem : WordCseRegMap
+  instrsMem : WordCseFactMap
+  loadsMem : WordCseFactMap
 
 def wordCseEmpty : WordCseKnowledge :=
-  { toCanonical := [], toLatest := [], getsMem := [], instrsMem := [], loadsMem := [] }
+  { toCanonical := ∅, toLatest := ∅, getsMem := ∅, instrsMem := ∅, loadsMem := ∅ }
 
 /-- Replacement insert, Cake's `num_map` `insert`. -/
-def wordCseInsert (key value : Nat) (map : List (Nat × Nat)) : List (Nat × Nat) :=
-  (key, value) :: map.filter (fun entry => entry.1 != key)
+def wordCseInsert (key value : Nat) (map : WordCseRegMap) : WordCseRegMap :=
+  map.insert key value
 
 /-- Replacement insert for the balanced-map keys, which are numeral lists. -/
 def wordCseListInsert (key : List Nat) (value : Nat)
-    (map : List (List Nat × Nat)) : List (List Nat × Nat) :=
-  (key, value) :: map.filter (fun entry => entry.1 != key)
+    (map : WordCseFactMap) : WordCseFactMap :=
+  map.insert key value
 
-def wordCseListLookup (key : List Nat) (map : List (List Nat × Nat)) : Option Nat :=
-  (map.find? (fun entry => entry.1 == key)).map (fun entry => entry.2)
+def wordCseListLookup (key : List Nat) (map : WordCseFactMap) : Option Nat :=
+  map[key]?
 
 /-- Cake's `lookup_any`: a lookup with a default for missing keys. -/
-def wordCseLookupAny (key : Nat) (map : List (Nat × Nat)) (default : Nat) : Nat :=
-  (lookupNatInfo key map).getD default
+def wordCseLookupAny (key : Nat) (map : WordCseRegMap) (default : Nat) : Nat :=
+  (map[key]?).getD default
 
 /-- Cake's `map_insert` folds `insert` over the entries so the head of the
     list is inserted last and therefore wins. -/
-def wordCseMapInsert (entries : List (Nat × Nat)) (map : List (Nat × Nat)) :
-    List (Nat × Nat) :=
+def wordCseMapInsert (entries : List (Nat × Nat)) (map : WordCseRegMap) :
+    WordCseRegMap :=
   entries.foldr (fun entry accumulated => wordCseInsert entry.1 entry.2 accumulated) map
 
 /-- Cake's `keep_data canon write_to_reg = IS_NONE (lookup write_to_reg canon)`. -/
 def wordCseKeepData (data : WordCseKnowledge) (written : Nat) : Bool :=
-  (lookupNatInfo written data.toCanonical).isNone
+  (data.toCanonical[written]?).isNone
 
 /-- Cake's `invalidate_data`: writing a tracked register discards everything. -/
 def wordCseInvalidate (data : WordCseKnowledge) (written : Nat) : WordCseKnowledge :=
@@ -233,10 +249,21 @@ def wordCseMemOpToNum : WordMemOp → Nat
   | .store16 => 24
   | .store32 => 45
 
-/-- Cake's `loadToNumList`.  The port's memory carriers have no immediate
-    address offset, so the offset component is `0`. -/
+/-- Cake's `loadToNumList`.  `WordInst.mem` has no immediate address offset,
+    so the offset component is `0` there. -/
 def wordCseLoadToNumList (operator : WordMemOp) (address : Nat) : List Nat :=
   [wordCseMemOpToNum operator, address + 100, 0]
+
+/-- `loadToNumList` for the expression carrier.  Cake's `Addr n2 offset`
+    carries the offset into the hash; `WordInst.mem` cannot, so a load with a
+    non-zero offset is held as `.assign dest (.load (.op .add [.var n2,
+    .const offset]))` until `wordToStack` fuses it.  Hashing that carrier the
+    same way lets `word_cse` see those loads, which is how Cake shares a
+    repeated global read.  A zero offset hashes to the same key as the
+    instruction form, which is correct: they denote the same load. -/
+def wordCseLoadOffsetToNumList [WordCseHash α] (operator : WordMemOp)
+    (address : Nat) (offset : α) : List Nat :=
+  [wordCseMemOpToNum operator, address + 100, WordCseHash.hash offset]
 
 /-- Cake's `instToNumList`.  The `Const` hash deliberately omits the
     destination so that two constants with the same value share a key. -/
@@ -244,6 +271,8 @@ def wordCseInstToNumList [WordCseHash α] : WordInst α → List Nat
   | .const _ value => [2, WordCseHash.hash value]
   | .arith operation => 3 :: wordCseArithToNumList operation
   | .mem _ _ _ => [1]
+  | .memOffset operator _ address offset =>
+      wordCseLoadOffsetToNumList operator address offset
 
 def wordCseIsStore : WordMemOp → Bool
   | .store => true
@@ -295,7 +324,7 @@ def wordCseCanMemArith : WordArith α → Bool
 /-- Cake's `add_to_data_aux`/`add_to_load_aux`, shared by the instruction and
     load fact tables.  `table` is the fact map consulted for a repeated
     instruction and `insert` records the new fact when it is seen first. -/
-def wordCseAddToFact (data : WordCseKnowledge) (table : List (List Nat × Nat))
+def wordCseAddToFact (data : WordCseKnowledge) (table : WordCseFactMap)
     (register : Nat) (key : List Nat) (instruction : WordProg α)
     (insert : WordCseKnowledge → Nat → WordCseKnowledge) : WordProg α × WordCseKnowledge :=
   match wordCseListLookup key table with
@@ -375,7 +404,7 @@ def wordCseInst [WordCseHash α] (data : WordCseKnowledge) : WordInst α → Wor
       if wordCseIsStore operator then
         /- A store writes no register but writes memory, so all load facts
            are invalidated; the register-only facts survive. -/
-        (.inst (.mem operator destination address), { data with loadsMem := [] })
+        (.inst (.mem operator destination address), { data with loadsMem := ∅ })
       else
         let data := wordCseInvalidate data destination
         if destination % 2 == 0 || address % 2 == 0 || address = destination then
@@ -389,21 +418,33 @@ def wordCseInst [WordCseHash α] (data : WordCseKnowledge) : WordInst α → Wor
             (wordCseLoadToNumList operator canonicalAddress)
             (.inst (.mem operator destination address))
 
-/-- Cake's `bm_inter_eq`/`inter_eq`, first-order equality intersection. -/
-def wordCseInterEq (first second : List (Nat × Nat)) : List (Nat × Nat) :=
-  first.filter (fun entry => lookupNatInfo entry.1 second == some entry.2)
+  | .memOffset operator destination address offset =>
+      if wordCseIsStore operator then
+        (.inst (.memOffset operator destination address offset), { data with loadsMem := ∅ })
+      else
+        let data := wordCseInvalidate data destination
+        if destination % 2 == 0 || address % 2 == 0 || address = destination then
+          (.inst (.memOffset operator destination address offset), data)
+        else
+          let canonicalAddress := wordCseCanonicalRegs' destination data address
+          wordCseAddToLoad (wordCseRegisterRead data canonicalAddress) destination
+            (wordCseLoadOffsetToNumList operator canonicalAddress offset)
+            (.inst (.memOffset operator destination address offset))
 
-def wordCseListInterEq (first second : List (List Nat × Nat)) :
-    List (List Nat × Nat) :=
-  first.filter (fun entry => wordCseListLookup entry.1 second == some entry.2)
+/-- Cake's `bm_inter_eq`/`inter_eq`, first-order equality intersection. -/
+def wordCseInterEq (first second : WordCseRegMap) : WordCseRegMap :=
+  first.filter (fun key value => second[key]? == some value)
+
+def wordCseListInterEq (first second : WordCseFactMap) : WordCseFactMap :=
+  first.filter (fun key value => second[key]? == some value)
 
 /-- Cake's `merge_data`: the facts that hold after either branch survive, and
     `to_latest` is reset. -/
 def wordCseMergeData (first second : WordCseKnowledge) : WordCseKnowledge :=
   { toCanonical := wordCseInterEq first.toCanonical second.toCanonical
-    toLatest := []
+    toLatest := ∅
     getsMem := first.getsMem.filter
-      (fun entry => lookupNatInfo entry.1 second.getsMem == some entry.2)
+      (fun key value => second.getsMem[key]? == some value)
     instrsMem := wordCseListInterEq first.instrsMem second.instrsMem
     loadsMem := wordCseListInterEq first.loadsMem second.loadsMem }
 
@@ -414,13 +455,13 @@ def wordCseProg [WordCseHash α] : WordCseKnowledge → WordProg α → WordProg
   | data, .inst instruction => wordCseInst data instruction
   | data, .get destination store =>
       let data := wordCseInvalidate data destination
-      match lookupNatInfo (wordCseStoreCode store) data.getsMem with
+      match data.getsMem[wordCseStoreCode store]? with
       | none =>
           if destination % 2 == 0 then (.get destination store, data)
           else
             (.get destination store,
               { data with
-                  getsMem := (wordCseStoreCode store, destination) :: data.getsMem,
+                  getsMem := data.getsMem.insert (wordCseStoreCode store) destination,
                   toCanonical := wordCseInsert destination destination data.toCanonical,
                   toLatest := wordCseInsert destination destination data.toLatest })
       | some previous =>
@@ -434,16 +475,15 @@ def wordCseProg [WordCseHash α] : WordCseKnowledge → WordProg α → WordProg
   | data, .set store value =>
       if wordCseIsCurrHeap store then (.set store value, wordCseEmpty)
       else
-        let getsMem := data.getsMem.filter
-          (fun entry => entry.1 != wordCseStoreCode store)
+        let getsMem := data.getsMem.erase (wordCseStoreCode store)
         match value with
         | .var source =>
             if source % 2 == 0 then (.set store value, { data with getsMem := getsMem })
             else
               (.set store value,
                 { data with
-                    getsMem := (wordCseStoreCode store, wordCseCanonicalRegs data source) ::
-                      getsMem
+                    getsMem := getsMem.insert (wordCseStoreCode store)
+                      (wordCseCanonicalRegs data source)
                     toCanonical := wordCseInsert source
                       (wordCseLookupAny source data.toCanonical source) data.toCanonical })
         | _ => (.set store value, { data with getsMem := getsMem })
@@ -479,8 +519,24 @@ def wordCseProg [WordCseHash α] : WordCseKnowledge → WordProg α → WordProg
         (.locValue destination source)
         (fun data register => wordCseRecordInst data register [48, source])
   | data, .store address value =>
-      (.store address value, { data with loadsMem := [] })
-  | data, .assign name value => (.assign name value, data)
+      (.store address value, { data with loadsMem := ∅ })
+  | data, .assign name value =>
+      /- Instruction selection leaves a load whose address does not fit
+         `WordInst.mem` as this carrier.  `word_cse` used to pass it through
+         untouched, so a repeated load was never shared: reading one global
+         twice emitted the global-table load twice where Cake emits it once.
+         Treat the carrier exactly as the `.mem` load case does. -/
+      match value with
+      | .load (.op .add [.var address, .const offset]) =>
+          let data := wordCseInvalidate data name
+          if name % 2 == 0 || address % 2 == 0 || address = name then
+            (.assign name value, data)
+          else
+            let canonicalAddress := wordCseCanonicalRegs' name data address
+            wordCseAddToLoad (wordCseRegisterRead data canonicalAddress) name
+              (wordCseLoadOffsetToNumList .load canonicalAddress offset)
+              (.assign name value)
+      | _ => (.assign name value, data)
   | data, .raise exception => (.raise exception, data)
   | data, .return label values => (.return label values, data)
   | data, .tick => (.tick, data)
@@ -494,7 +550,7 @@ def wordCseProg [WordCseHash α] : WordCseKnowledge → WordProg α → WordProg
   | data, .storeConsts source bitmap codeLength dataLength constants =>
       let data := wordCseInvalidateRegs data [source, bitmap, codeLength, dataLength]
       (.storeConsts source bitmap codeLength dataLength constants,
-        { data with loadsMem := [] })
+        { data with loadsMem := ∅ })
   | data, .shareInst operator name address =>
       (.shareInst operator name address,
         if wordCseIsStore operator then data else wordCseInvalidate data name)

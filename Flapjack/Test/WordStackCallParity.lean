@@ -70,6 +70,18 @@ def callFrameFreeCountExact : Bool :=
 
 #guard callFrameFreeCountExact
 
+/-! Source-shaped `loop_to_word` calls carry Cake's link slot in their Word
+    argument list.  Cake's direct-tail `stack_free` still uses the direct-call
+    `stack_arg_count` formula, so an argument list below the ABI window frees
+    the complete current frame. -/
+def sourceTailCallFreeCountExact : Bool :=
+  wordStackSourceTailCallFreeCount
+      { locations := [], scratch := 31, stackBase := 0, abiFrameSlots := 5 } 5 == 6 &&
+    wordStackSourceTailCallFreeCount
+      { locations := [], scratch := 31, stackBase := 0, abiFrameSlots := 5 } 4 == 6
+
+#guard sourceTailCallFreeCountExact
+
 /-! Cake's `comp Return` frees a non-empty current frame after moving the
     returned ABI values.  The source-shaped port keeps `v1` in the values list,
     so one returned value in a two-word frame still frees both frame words. -/
@@ -121,6 +133,8 @@ def runChecks : IO Bool := do
         frameReservationExact),
       ("wordStackCallFreeCount matches stack_free for direct calls",
         callFrameFreeCountExact),
+      ("source-shaped tail calls include the Cake link slot",
+        sourceTailCallFreeCountExact),
       ("returns free the Cake current frame after ABI moves",
         returnFrameFreeExact),
       ("indirect calls take a register target from the last argument",

@@ -1,0 +1,49 @@
+fun 1 mpt_fail(node) {
+  return 0;
+}
+
+fun 1 node_new_leaf(node, a, b, c, d) {
+  return node;
+}
+
+fun 1 node_new_ext(node, a, b, c) {
+  return node;
+}
+
+fun 1 nibbles_concat(node, a, b, c, d) {
+  return node;
+}
+
+fun 1 alloc(node, size) {
+  return 0;
+}
+
+fun 1 _collapse_branch(node) {
+  var count = 0;
+  var idx = 0;
+  var i = 0;
+  while i < 16 {
+    if (lds 1 ((node) + 32 + (i) * 8)) != 0 {
+      count = count + 1;
+      idx = i;
+    }
+    i = i + 1;
+  }
+  var vl = lds 1 (node + 168);
+  if count == 0 {
+    if vl == 0 {
+      mpt_fail(12);
+    }
+    return node_new_leaf(node, 0, 0, lds 1 (node + 160), vl);
+  }
+  if count == 1 && vl == 0 {
+    var child = lds 1 ((node) + 32 + (idx) * 8);
+    return node_new_ext(node, idx, child, 0);
+  } else {
+    return node;
+  }
+}
+
+fun 1 main() {
+  return _collapse_branch(0);
+}

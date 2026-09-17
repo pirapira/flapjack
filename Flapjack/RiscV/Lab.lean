@@ -1,6 +1,7 @@
 import Flapjack.Lab
 import Flapjack.StackAlloc
 import Flapjack.StackAlloc.Runtime
+import Flapjack.StackRawCall
 import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.WordToStack
 import Flapjack.RiscV.CakeStackReseat
@@ -101,7 +102,7 @@ def labConditionPreludeCount (operator : Cmp)
   | .reg _ => match operator with | .test | .notTest => 1 | _ => 0
   | .imm value =>
       if value == 0 then
-        match operator with | .test | .notTest => 1 | _ => 0
+        match operator with | .test | .notTest => 1 | _ => 1
       else 1
 
 def labLineInstructionCount : LabLine (Word width) → Nat
@@ -133,11 +134,14 @@ def labLineInstructionCount : LabLine (Word width) → Nat
 def labFfiStubOffset [NeZero width] (context : WordFfiContext)
     (function : FunName) (position : Nat) : Option (Word width) := do
   let index ← lookupWordFfiIndex function context.services
-  /- CakeML emits FFI blocks in reverse `ffi_names` order.  The target
-     assembler therefore addresses service index `i` at the fixed prefix
-     distance `(3 + i) * ffi_offset`: two runtime blocks (cake_clear and
-     cake_exit), followed by the reversed service table. -/
-  let stubDistance := 3 + index
+  /- `context.services` is the source/discovery order.  Cake's internal
+     `ffi_names` list is the reverse of that order, and the exporter emits
+     `REVERSE ffi_names`, so the textual stubs are in source order.  From
+     `cake_main`, service `i` is therefore preceded by the remaining
+     services, followed by `cake_clear` and `cake_exit`: `(2 + N - i)`
+     16-byte blocks.  The previous `(3 + i)` formula happened to work for a
+     single service but targeted the wrong stub once several FFIs existed. -/
+  let stubDistance := 2 + (context.services.length - index)
   pure (0 - BitVec.ofNat width (position + stubDistance * 16))
 
 /-! In the compact linked image the FFI blocks are physically prepended to the
@@ -383,6 +387,27 @@ def labLocValueRegister (register : Nat) : Option (Fin 32) :=
   else
     labRegisterOfNat (portToStack register)
 
+/-! Cake's RISC-V encoder keeps an immediate comparison operand as an
+    explicit temporary, including the zero immediate.  The general evaluator
+    helper uses x0 for `Imm 0`, which is semantically equivalent but changes
+    the source-shaped artifact and the following label positions.  Preserve
+    Cake's `ORI temp, x0, 0` form at the Lab boundary; leave Test/NotTest on
+    the existing bit-test path. -/
+def labWordConditionOperands [NeZero width] (operator : Cmp) (condition : Nat)
+    (right : WordRegImm (Word width)) :
+    Option (Fin 32 × Fin 32 × List (Instruction width)) :=
+  match right with
+  | .imm value =>
+      if value == 0 then
+        match operator with
+        | .test | .notTest => wordConditionOperands operator condition right
+        | _ => do
+            let condition ← registerOfNat condition
+            pure (condition, 31, [.ori 31 0 (BitVec.ofNat width 0)])
+      else
+        wordConditionOperands operator condition right
+  | .reg _ => wordConditionOperands operator condition right
+
 def labCompileAsm [NeZero width] (context : WordFfiContext)
     (sectionId : Nat) (labels : List (Nat × Nat)) (position : Nat) :
     LabAsm (Word width) → Option (List (Instruction width))
@@ -407,7 +432,7 @@ def labCompileAsm [NeZero width] (context : WordFfiContext)
       let register ← labLocValueRegister register
       pure [.jalr zero register 0]
   | .jumpCmp operator condition right target => do
-      let (left, right, prelude) ← wordConditionOperands operator condition right
+      let (left, right, prelude) ← labWordConditionOperands operator condition right
       let target ← labResolveRef sectionId labels target
       let branchPosition := position + 4 * prelude.length
       let branch ← labJumpCmpInstructions operator left right target branchPosition
@@ -531,6 +556,8 @@ def labWordInstToWord [NeZero width] : WordInst Nat → WordInst (Word width)
   | .const destination value => .const destination (BitVec.ofNat width value)
   | .arith operation => .arith (labWordArithToWord operation)
   | .mem operator destination address => .mem operator destination address
+  | .memOffset operator destination address offset =>
+      .memOffset operator destination address (BitVec.ofNat width offset)
 
 def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
   | .word instruction => .word (labWordInstToWord instruction)
@@ -621,7 +648,7 @@ def labCompileAsmProgram [NeZero width] (context : WordFfiContext)
       let register ← labLocValueRegister register
       pure [.jalr zero register 0]
   | .jumpCmp operator condition right target => do
-      let (left, right, prelude) ← wordConditionOperands operator condition right
+      let (left, right, prelude) ← labWordConditionOperands operator condition right
       let target ← labResolveProgramRef labels target
       let branchPosition := position + 4 * prelude.length
       let branch ← labJumpCmpInstructions operator left right target branchPosition
@@ -788,7 +815,7 @@ def labCompileAsmWithHalt [NeZero width] (context : WordFfiContext)
       let register ← labLocValueRegister register
       pure [.jalr zero register 0]
   | .jumpCmp operator condition right target => do
-      let (left, right, prelude) ← wordConditionOperands operator condition right
+      let (left, right, prelude) ← labWordConditionOperands operator condition right
       let target ← labResolveProgramRef labels target
       let branchPosition := position + 4 * prelude.length
       let branch ← labJumpCmpInstructions operator left right target branchPosition
@@ -1258,6 +1285,7 @@ def compileStackProgramNatListToRiscV [NeZero width]
   match stackProgramsWithLongDivRuntime config programs with
   | none => none
   | some programs =>
+      let programs := stackRawCallPrograms programs
       compileLabProgram context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
@@ -1299,6 +1327,7 @@ def compileStackProgramNatListWithRaiseStubToRiscVCake [NeZero width]
   match stackProgramsWithLongDivRuntime config programs with
   | none => none
   | some programs =>
+      let programs := stackRawCallPrograms programs
       compileLabProgram context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
@@ -1322,6 +1351,7 @@ def compileStackProgramNatListLinkedWithRaiseStubToRiscVCake [NeZero width]
   match stackProgramsWithLongDivRuntime config programs with
   | none => none
   | some programs =>
+      let programs := stackRawCallPrograms programs
       compileLabProgramLinkedWithFfiStubs context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
@@ -1423,6 +1453,7 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscV
   match stackProgramsWithLongDivRuntime removeConfig programs with
   | none => none
   | some programs =>
+      let programs := stackRawCallPrograms programs
       compileLabProgramLinkedWithFfiStubsAndHalt context
         (((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
@@ -1460,6 +1491,14 @@ theorem compileLabSection_ffi [NeZero width] :
       ⟨2, [
         .labAsm (.callFfi "sum") [] 0]⟩ =
       some [.jal 0 (0 - BitVec.ofNat width 48)] := by
+  simp [compileLabSection, labCompileLines,
+    labCompileAsm, labFfiStubOffset, lookupWordFfiIndex]
+
+theorem compileLabSection_ffi_multiple_services [NeZero width] :
+    compileLabSection { services := [("first", 7), ("second", 8)] }
+      ⟨2, [
+        .labAsm (.callFfi "first") [] 0]⟩ =
+      some [.jal 0 (0 - BitVec.ofNat width 64)] := by
   simp [compileLabSection, labCompileLines,
     labCompileAsm, labFfiStubOffset, lookupWordFfiIndex]
 

@@ -14,6 +14,15 @@ open RiscV
       [BitVec.ofNat 8 0xB3, BitVec.ofNat 8 0xE0,
        BitVec.ofNat 8 0xD6, BitVec.ofNat 8 0x00]
 
+/- Direct StackLang calls name a callee by section with label zero, matching
+   Cake's `INL` call destination.  Keep that alias at the linked section
+   entry alongside the public function label. -/
+#guard
+  (labCollectProgramLabels 0
+    [(labSectionNatToWord (width := 64)
+      (labProgramToEntrySection 7 3 9 (.skip : StackProg Nat))) ]).head? =
+    some (7, 0, 0)
+
 example :
     RiscV.runtimeAssemblySymbolLines [] [] =
       ["    makesym(cml__Init_0, 0, 756)",

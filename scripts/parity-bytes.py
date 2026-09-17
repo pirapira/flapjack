@@ -126,7 +126,7 @@ def hexstr(data):
     return " ".join(f"{byte:02x}" for byte in data)
 
 
-def compare_section(name, cake_section, flap_section, owner, quiet):
+def compare_section(program, section, cake_section, flap_section, owner, quiet):
     """Compare one named section, including its offset and byte payload."""
     cake_base, cake_data = cake_section
     flap_base, flap_data = flap_section
@@ -135,32 +135,32 @@ def compare_section(name, cake_section, flap_section, owner, quiet):
 
     if not quiet:
         if cake_base != flap_base:
-            print(f"{owner} {name} layout mismatch")
+            print(f"{program}: {owner} {section} layout mismatch")
             print(f"  cake base: {cake_base}")
             print(f"  flapjack base: {flap_base}")
         if cake_data != flap_data:
-            print(f"{owner} {name} mismatch")
+            print(f"{program}: {owner} {section} mismatch")
             print(f"  cake     : {hexstr(cake_data)}")
             print(f"  flapjack : {hexstr(flap_data)}")
     return 1
 
 
-def compare_section_maps(name, cake_sections, flap_sections, owner, quiet):
+def compare_section_maps(program, cake_sections, flap_sections, owner, quiet):
     """Compare exact-name sections and report missing/extra symbols."""
     gaps = 0
     for section in sorted(cake_sections):
         if section not in flap_sections:
             gaps += 1
             if not quiet:
-                print(f"{owner} {section} missing in flapjack")
+                print(f"{program}: {owner} {section} missing in flapjack")
             continue
         gaps += compare_section(
-            name, cake_sections[section], flap_sections[section], owner, quiet
+            program, section, cake_sections[section], flap_sections[section], owner, quiet
         )
     for section in sorted(set(flap_sections) - set(cake_sections)):
         gaps += 1
         if not quiet:
-            print(f"{owner} {section} unexpected in flapjack")
+            print(f"{program}: {owner} {section} unexpected in flapjack")
     return gaps
 
 
@@ -198,6 +198,7 @@ def compare(path, cake, flapjack, quiet, reference=None):
         else:
             gaps += compare_section(
                 name,
+                "generated_main",
                 (cake_entry[1], cake_entry[2]),
                 (flap_entry[1], flap_entry[2]),
                 "generated_main",
@@ -216,6 +217,7 @@ def compare(path, cake, flapjack, quiet, reference=None):
             continue
         gaps += compare_section(
             name,
+            func,
             (cake_user[func][1], cake_user[func][2]),
             (flap_user[func][1], flap_user[func][2]),
             "user",

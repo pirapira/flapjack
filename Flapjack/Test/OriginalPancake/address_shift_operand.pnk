@@ -1,0 +1,10 @@
+fun 1 shifted_offset(1 k) { return lds 1 (1000 + (k - 1) * 8); }
+fun 1 shifted_value(1 k) { return (k - 1) * 8; }
+fun 1 nested_shift(1 k, 1 j) { return lds 1 (1000 + (k - 1) * 8 + j * 2); }
+fun 1 main() {
+  var 1 a = shifted_offset(4);
+  var 1 c = shifted_value(4);
+  var 1 d = nested_shift(4, 1);
+  @halt(@base, 0, @base, 0);
+  return a + c + d;
+}

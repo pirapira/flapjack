@@ -622,9 +622,22 @@ def make_case(mode, seed, index, corpus_root):
 # Minimization (line-level delta debugging, signature preserving).
 # ---------------------------------------------------------------------------
 
+def mismatch_key(comparison):
+    """Identify the observed disagreement, including acceptance class."""
+    return (comparison.get("class"), tuple(signatures_of(comparison)))
+
+
 def minimize_source(runner, source, comparison, workdir, max_steps=80):
-    """Drop lines while the exact mismatch-signature set persists."""
-    target = signatures_of(comparison)
+    """Drop lines while the exact non-empty mismatch and class persist.
+
+    An exact seed has no discrepancy to preserve.  In that case return it
+    unchanged: treating an empty signature set as interesting would otherwise
+    allow a valid, exact program to shrink into a rejected program while still
+    reporting ``signatures=[]``.
+    """
+    target = mismatch_key(comparison)
+    if not target[1]:
+        return source, 0
     lines = source.decode().splitlines(keepends=True)
 
     def still_mismatches(candidate):
@@ -633,7 +646,7 @@ def minimize_source(runner, source, comparison, workdir, max_steps=80):
         path = workdir / "min.pnk"
         path.write_bytes("".join(candidate).encode())
         result = runner.run(path, "".join(candidate).encode())
-        return signatures_of(compare_case(result)) == target
+        return mismatch_key(compare_case(result)) == target
 
     step = 0
     chunk = max(1, len(lines) // 2)

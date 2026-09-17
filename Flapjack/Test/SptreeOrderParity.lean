@@ -14,13 +14,22 @@ namespace Flapjack.Test.SptreeOrderParity
 open Flapjack
 
 def sptreeOrderGuard : Bool :=
-  NumSet.fromList [0, 4, 6, 12] == [0, 4, 12, 6] &&
+    NumSet.fromList [0, 4, 6, 12] == [0, 4, 12, 6] &&
     NumSet.fromList [0, 4, 8, 12, 16] == [0, 16, 8, 4, 12] &&
     NumSet.fromList [1, 2, 3, 4, 5] == [3, 1, 5, 4, 2] &&
     NumSet.fromList (List.range 13) ==
       [7, 3, 11, 1, 9, 5, 0, 8, 4, 12, 2, 10, 6]
 
 #guard sptreeOrderGuard
+
+/- This is the live set emitted by Cake's `apply_nummap_key` for the
+   collapse_branch loop after SSA renaming.  Keeping the concrete case here
+   prevents the allocator boundary from silently reverting to source-list
+   order, which changes the subsequent clash-tree numbering. -/
+def collapseBranchLoopOrderGuard : Bool :=
+  NumSet.fromList [57, 61, 65, 69, 73] == [65, 73, 57, 69, 61]
+
+#guard collapseBranchLoopOrderGuard
 
 /-- The enumeration is genuinely not ascending, and `ssa_reconcile` emits its
     parallel move in that order: with every target name defaulting to `0`, the
@@ -69,9 +78,24 @@ def wordSsaLoopSetupOrderGuard : Bool :=
 
 #guard wordSsaLoopSetupOrderGuard
 
+def wordSsaFfiOrderGuard : Bool :=
+  let state : WordSsaState :=
+    { current := [(0, 129), (8, 185), (4, 133), (12, 213),
+        (18, 137), (26, 209), (22, 141)], next := 237 }
+  match (wordSsaRenameProgram state
+      (.ffi "foo" 2 4 6 8 ([0, 4, 8, 12, 18, 22, 26], []) : WordProg Nat)).2 with
+  | .seq (.move 0 moves) _ =>
+      moves == [(239, 129), (243, 185), (247, 133), (251, 213),
+        (255, 137), (259, 209), (263, 141)]
+  | _ => false
+
+#guard wordSsaFfiOrderGuard
+
 def parityGuard : Bool :=
-  sptreeOrderGuard && wordSsaReconcileOrderGuard &&
-    wordSsaFixInconsistenciesOrderGuard && wordSsaLoopSetupOrderGuard
+  sptreeOrderGuard && collapseBranchLoopOrderGuard &&
+    wordSsaReconcileOrderGuard &&
+    wordSsaFixInconsistenciesOrderGuard && wordSsaLoopSetupOrderGuard &&
+    wordSsaFfiOrderGuard
 
 #guard parityGuard
 

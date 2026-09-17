@@ -34,6 +34,22 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+/-! Cake's `compile Dec` equation (`crep_to_loopScript.sml:167-175`) binds the
+    declaration to the fresh expression temporary, then inserts that temporary
+    into the continuation live set. -/
+def declarationContext : LoopContext Nat :=
+  { vars := [(1, 5)], functions := [], maxVar := 4, target := .rv64i }
+
+def declarationRenamingMatches : Bool :=
+  match compileCrepToLoop declarationContext []
+      (.dec 9 (.const 7) (.assign 9 (.var 9))) with
+  | .seq .skip
+      (.seq (.assign 5 (.const 7))
+        (.seq (.assign 5 (.var 5)) .skip)) => true
+  | _ => false
+
+#guard declarationRenamingMatches
+
 /-- Context used for the call-lowering characterization. Function `1` maps to
     loop label `3`, so the generated call targets `some 3`. -/
 def callContext : LoopContext Nat :=
@@ -135,14 +151,30 @@ def leanCompileShMemMapped : LoopProg Nat :=
 
 def shMemDestinationMappingMatches : Bool :=
   match leanCompileShMemMapped with
-  | .seq .skip (.shMem .store 8 (.var 1)) => true
+  | .seq (.shMem .store 8 (.var 0)) .skip => true
   | _ => false
 
 #guard shMemDestinationMappingMatches
 
+/- Cake's `Primitive` equation maps both destination and argument slots through
+   `ctxt.vars`; leaving the source numbers untouched shifts every subsequent
+   `ctxt.vars`; keeping source slots here changes the allocator input even when
+   the primitive itself is otherwise unchanged. -/
+def primitiveContext : LoopContext Nat :=
+  { vars := [(2, 8), (3, 9), (4, 10), (5, 11), (6, 12)],
+    functions := [], maxVar := 20, target := .rv64i }
+
+def primitiveMappingMatches : Bool :=
+  match compileCrepToLoop primitiveContext []
+      (.primitive [2, 3] .addCarry [4, 5, 6]) with
+  | .primitive [8, 9] .addCarry [10, 11, 12] => true
+  | _ => false
+
+#guard primitiveMappingMatches
+
 def assignDestinationMappingMatches : Bool :=
   match compileCrepToLoop shMemContext [] (.assign 3 (.var 1)) with
-  | .seq .skip (.assign 8 (.var 1)) => true
+  | .seq (.assign 8 (.var 0)) .skip => true
   | _ => false
 
 #guard assignDestinationMappingMatches
@@ -186,13 +218,15 @@ def comparisonWithoutLiveDropsIt : Bool :=
 #guard comparisonWithoutLiveDropsIt
 
 def runChecks : IO Bool := do
-  let results := [handlerlessCallCarriesRaiseHandler, handledCallCarriesRaiseHandler,
+  let results := [declarationRenamingMatches,
+    handlerlessCallCarriesRaiseHandler, handledCallCarriesRaiseHandler,
     callReturnDestinationMappingMatches,
     callReturnSourceVariableMaps,
     shMemDestinationMappingMatches, assignDestinationMappingMatches,
     comparisonKeepsIncomingLive,
     comparisonWithoutLiveDropsIt]
   let names := [
+    "crep_to_loop declaration renaming and live seed",
     "crep_to_loop default call handler",
     "crep_to_loop explicit call handler",
     "crep_to_loop call return destination mapping",

@@ -17,6 +17,25 @@ def crepInlineVariables : List Nat :=
 #guard crepNotBranchRet (.seq (.assign 1 (.const 0)) (.assign 2 (.const 0))
     : CrepProg Nat)
 
+def branchReturn : CrepProg Nat :=
+  .ite (.const 1) (.return [.const 1]) (.assign 2 (.const 0))
+
+def loopReturn : CrepProg Nat :=
+  .while (.const 1) (.return [.const 1])
+
+def handledCallReturn : CrepProg Nat :=
+  .call (some ([7], some (11, .return [.const 1]))) "callee" []
+
+/-! These cases mirror `crep_inlineScript.sml:68-78`: branching and handler
+    returns make `not_branch_ret` false, while calls without handlers remain
+    true. -/
+#guard !crepNotBranchRet branchReturn
+#guard !crepNotBranchRet loopReturn
+#guard !crepNotBranchRet handledCallReturn
+#guard crepNotBranchRet (.call none "callee" [] : CrepProg Nat)
+#guard crepNotBranchRet
+    (.call (some ([7], none)) "callee" [] : CrepProg Nat)
+
 def crepInlineUnreachable : CrepProg Nat × Option CrepEarlyExit :=
   crepUnreachElim
     (.seq (.return [.const 1]) (.assign 4 (.const 99)) : CrepProg Nat)

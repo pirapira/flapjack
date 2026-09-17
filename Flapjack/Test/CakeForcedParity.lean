@@ -18,9 +18,9 @@ def nested : WordProg Nat :=
   .seq addCarry (.mustTerminate longMul)
 
 def parityGuard : Bool :=
-  cakeGetForced addCarry == [(1, 3), (1, 4)] &&
+  cakeGetForced addCarry == [(1, 4), (1, 5)] &&
   cakeGetForced longMul == [(1, 3), (1, 4)] &&
-  cakeGetForced nested == [(1, 3), (1, 4), (1, 3), (1, 4)]
+  cakeGetForced nested == [(1, 4), (1, 5), (1, 3), (1, 4)]
 
 #guard parityGuard
 #eval parityGuard

@@ -128,4 +128,21 @@ example :
   simp [wordSsaRenameProgramWithLoops, wordSsaRead, wordSsaFresh, wordSsaSeq,
     lookupNatInfo]
 
+/- The carry refresh must update the original carry key, not the already-read
+   SSA value.  This is observable by the assignment immediately following the
+   fixed-register AddCarry protocol and is the Cake `ssa_cc_trans_inst`
+   source-shaped continuation. -/
+example :
+    (wordSsaRenameProgramWithLoops []
+      { current := [(1, 10), (2, 20), (3, 30), (4, 40)], next := 44 }
+      (.seq (.inst (.arith (.cakeAddCarry 3 2 4 1)))
+        (.assign 4 (.var 1)) : WordProg Nat)).2 =
+      (.seq
+        (.seq (.move 1 [(0, 10)])
+          (.seq (.inst (.arith (.cakeAddCarry 44 20 40 0)))
+            (.move 1 [(48, 0)])))
+        (.assign 52 (.var 48)) : WordProg Nat) := by
+  simp [wordSsaRenameProgramWithLoops, wordSsaRead, wordSsaFresh, wordSsaSeq,
+    wordSsaRenameExp, lookupNatInfo]
+
 end Flapjack

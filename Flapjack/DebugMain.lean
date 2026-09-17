@@ -70,8 +70,7 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   let k := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
   let state0 := RiscV.CakeRegAlloc.cakeInitRaState tree forced
     (RiscV.CakeRegAlloc.cakeGetStackOnly dead)
-  let spta := fun name =>
-    (lookupNatInfo name bij.toAllocator).getD 0
+  let spta := RiscV.CakeAlloc.spDefault bij.toAllocator
   let moves0 := moves.map (RiscV.CakeRegAlloc.cakeUpdateMove spta)
   let movesF := RiscV.CakeRegAlloc.filterReversed
     (fun move => RiscV.CakeRegAlloc.cakeFullConsistencyOk state0 k

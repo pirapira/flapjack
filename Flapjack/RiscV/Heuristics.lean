@@ -247,41 +247,36 @@ logarithmic, so a traversal is `O(n log n)` rather than cubic.
 the reference definitions, list order included. -/
 
 structure WordHeuristicCountMap where
-  /-- Key to its update stamp and counters. -/
-  entries : Std.TreeMap Nat (Nat × WordHeuristicCounts) := ∅
-  /-- Update stamp retained only to distinguish repeated tree updates. -/
-  order : Std.TreeMap Nat Nat := ∅
-  next : Nat := 0
+  /-- Key to its counters.  No insertion order is retained: the observable
+      order is reconstructed from the key set by `toNatInfoMap`, exactly as
+      Cake's `toAList` traversal reconstructs it from a Patricia tree. -/
+  entries : Std.TreeMap Nat WordHeuristicCounts := ∅
 
 namespace WordHeuristicCountMap
 
 def lookup (counts : WordHeuristicCountMap) (name : Nat) :
     Option WordHeuristicCounts :=
-  (counts.entries[name]?).map Prod.snd
+  counts.entries[name]?
 
 /-- `wordHeuristicUpdate`: bump one counter in the source map. -/
 def update (name : Nat) (update : WordHeuristicCounts → WordHeuristicCounts)
     (counts : WordHeuristicCountMap) : WordHeuristicCountMap :=
-  let previous := counts.entries[name]?
-  let value := (previous.map Prod.snd).getD wordHeuristicZero
-  let order := match previous with
-    | some (stamp, _) => counts.order.erase stamp
-    | none => counts.order
-  { entries := counts.entries.insert name (counts.next, update value)
-    order := order.insert counts.next name
-    next := counts.next + 1 }
+  { entries := counts.entries.alter name (fun previous =>
+      some (update (previous.getD wordHeuristicZero))) }
 
 /-- The association list the reference definition would have built: entries in
-    canonical Patricia traversal order for the current key set. -/
+    canonical Patricia traversal order for the current key set.  A `TreeMap`'s
+    `keys` are already distinct and ascending, so the quadratic membership
+    scan in `NumSet.fromList` has nothing to remove. -/
 def toNatInfoMap (counts : WordHeuristicCountMap) :
     NatInfoMap WordHeuristicCounts :=
-  (NumSet.fromList (counts.entries.toList.map Prod.fst)).filterMap (fun name =>
+  (NumSet.fromDistinctList counts.entries.keys).filterMap (fun name =>
     match counts.entries[name]? with
-    | some (_, value) => some (name, value)
+    | some value => some (name, value)
     | none => none)
 
 def keys (counts : WordHeuristicCountMap) : List Nat :=
-  NumSet.fromList (counts.entries.toList.map Prod.fst)
+  NumSet.fromDistinctList counts.entries.keys
 
 def addLhsConst (name : Nat) (counts : WordHeuristicCountMap) :
     WordHeuristicCountMap :=
@@ -309,12 +304,13 @@ end WordHeuristicCountMap
     observable key order is reconstructed by `toNatInfoMap`. -/
 def WordHeuristicCountMap.maxAll (left right : WordHeuristicCountMap) :
     WordHeuristicCountMap :=
-  (natEraseDups (left.keys ++ right.keys)).foldl
-    (fun result name =>
-      let leftValue := (left.lookup name).getD wordHeuristicZero
-      let rightValue := (right.lookup name).getD wordHeuristicZero
-      result.update name (fun _ => wordHeuristicMax leftValue rightValue))
-    {}
+  /- `wordHeuristicMax` is componentwise `max` and `wordHeuristicZero` is all
+     zeros, so a key present on only one side keeps its own value: the
+     reference's `max value wordHeuristicZero` is the identity.  That makes
+     the union a direct tree merge, rather than materializing both key lists
+     and rebuilding the map one `update` at a time. -/
+  { entries := Std.TreeMap.mergeWith (fun _ leftValue rightValue =>
+      wordHeuristicMax leftValue rightValue) left.entries right.entries }
 
 /-- The self-call list, carried with a set mirror of its own membership so
     that `wordHeuristicMergeCalls`'s `name ∈ calls` test is not linear.  The

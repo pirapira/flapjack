@@ -245,7 +245,9 @@
       "path": "Flapjack/Test/OriginalPancake/dec_temporary_cutset.pnk",
       "source_reference": "crep_to_loop$compile (Dec v e prog) (crep_to_loopScript.sml:409-415) extends the *incoming* live set for the body: fl = insert tmp () l, not the l' that compile_exp returned. compile_exp inserts its own temporaries (LoadByte, Load32, Cmp, Crepop) so that the code it emits can name them, but they are dead once the declared variable holds the value. Flapjack threaded the returned set instead, so every cutset inside a Dec body carried the initializer's temporaries: the Call cutset, the enclosing Loop entry set, and every If cutset. loop_live$shrink only intersects cutsets and a Loop whose Break restores the loop's entry set never shrinks below it, so the extra names survived to word_alloc and each one took a frame slot -- the cake_bitmaps frame word came out one to four powers of two too large, and the SSA copies of one value were given two different stack slots (a stack-to-stack move Cake does not emit). The four functions cover the four temporary-inserting compile_exp forms; main pins the whole-file layout.",
       "cake_sha256": "67e6c2ab94341a7caeeb2fcdf4193115aca4c228592907a25bb024b88fcbdf41",
-      "tracked_beads": []
+      "tracked_beads": [
+        "flapjack-8tb.4.8"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/nested_binop_immediate.pnk",

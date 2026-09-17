@@ -906,6 +906,21 @@ def sharedWordStoreOffsetPeephole : Bool :=
   | ⟨[.asm (.memOffset .store .add 10 12 40) [] 0], false, 0⟩ => true
   | _ => false
 
+def sharedWordStore8OffsetConfig : WordStackConfig :=
+  { locations := [(1, .register 10), (2, .register 11)]
+    scratch := 31
+    stackBase := 0
+    addressScratch := 29
+    specialScratch := 28
+    carryScratch := 27
+    abiBase := 10 }
+
+def sharedWordStore8OffsetLowering : Bool :=
+  match wordStackCompileSharedNat sharedWordStore8OffsetConfig .store8 1
+      (.op .add [.var 2, .const 32]) with
+  | some (.inst (.memOffset .store8 10 11 32)) => true
+  | _ => false
+
 /- `hello` remains a tracked end-to-end parity gap (`flapjack-8tb`).  Keep the
    predicate above visible during focused diagnostics, but do not make this
    known discrepancy a regression gate while the source-to-RISC-V pipeline is
@@ -929,6 +944,7 @@ def sharedWordStoreOffsetPeephole : Bool :=
 #guard relationalConditionExactParity
 #guard f01451ExactParity
 #guard sharedWordStoreOffsetPeephole
+#guard sharedWordStore8OffsetLowering
 #guard artifactAccepted
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches

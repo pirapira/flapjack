@@ -560,6 +560,14 @@
       "tracked_beads": [
         "flapjack-8tb.5.14"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/gh1039_handled_call_labels.pnk",
+      "source_reference": "Reduced GH #1039 source-call witness: loop_to_word comp starts the handled call's handler and return labels at the next local label and advances past both bodies, preserving Cake's source-shaped call metadata.",
+      "cake_sha256": "9c880978b9dc615908fb334036b1af189c63bb83df48cb879974468bb095283f",
+      "tracked_beads": [
+        "flapjack-5v3"
+      ]
     }
   ]
 }

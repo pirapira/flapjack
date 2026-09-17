@@ -1,0 +1,21 @@
+fun 1 eq6({1,1,1,1,1,1} a, {1,1,1,1,1,1} b) { return 0; }
+fun 1 spilled_load(1 r, 1 p) {
+  var {1,1,1,1,1,1} x = lds {1,1,1,1,1,1} p;
+  var {1,1,1,1,1,1} y = lds {1,1,1,1,1,1} (p + 48);
+  var {1,1,1,1,1,1} z = lds {1,1,1,1,1,1} (p + 96);
+  var 1 e = eq6(z, <1, 0, 0, 0, 0, 0>);
+  if e == 1 { return 0; }
+  st r, x;
+  st r + 48, y;
+  return 1;
+}
+fun 1 register_load(1 p) {
+  var 1 a = lds 1 (p + 48);
+  return a;
+}
+fun 1 main() {
+  var 1 a = spilled_load(1000, 1000);
+  var 1 b = register_load(1000);
+  @halt(@base, 0, @base, 0);
+  return a + b;
+}

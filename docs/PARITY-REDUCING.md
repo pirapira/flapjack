@@ -75,18 +75,25 @@ useful part of C-Reduce's workflow while keeping a deterministic, single-file
 reducer for Pancake.
 
 1. **strip comments** — `//` and `/* */` comments and blank lines.
-2. **delete-top-level** — delete balanced top-level declaration/statement
+2. **stub-other-functions** — for `--predicate section`, replace every
+   function except the target with a shape-correct zero-returning stub. The
+   callees stay declared and the target's calls still typecheck, so this is a
+   far larger jump than `delete-top-level` can make in one probe: on the
+   stateless guest it goes from 15840 lines to 2776 and drops the Flapjack
+   compile from 30 s to 3 s, which is the difference between a reduction that
+   finishes in minutes and one that runs for hours.
+3. **delete-top-level** — delete balanced top-level declaration/statement
    units using a coarse ddmin schedule. This keeps reductions of large guests
    practical by testing whole functions before probing individual lines.
-3. **delete-runs** — delete brace-balanced runs of lines, halving the chunk
+4. **delete-runs** — delete brace-balanced runs of lines, halving the chunk
    size in the usual ddmin schedule. A balanced run is a whole block or a
    smaller statement run, so this pass supplies finer granularity without a
    Pancake parser.
-4. **empty-bodies** — replace a function body with a bare `return 0;`.
-5. **simplify-expressions** — replace a parenthesised subexpression with `0` or
+5. **empty-bodies** — replace a function body with a bare `return 0;`.
+6. **simplify-expressions** — replace a parenthesised subexpression with `0` or
    `1`. Spans that follow an identifier are skipped, since those are call
    argument lists rather than expressions.
-6. **simplify-literals** — shrink an integer literal to `0`, to `1`, to its
+7. **simplify-literals** — shrink an integer literal to `0`, to `1`, to its
    absolute value, or to half its value.
 
 Candidate results are cached by source hash, so a pass that re-proposes a

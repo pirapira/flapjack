@@ -36,7 +36,10 @@ def wordCopyEmpty : WordCopyState :=
     classStore := [], classNext := 0 }
 
 def wordCopyLookup (state : WordCopyState) (name : Nat) : Nat :=
-  (lookupNatInfo name state.aliases).getD name
+  match lookupNatInfo name state.classOf with
+  | some classId =>
+      (lookupNatInfo classId state.classRep).getD name
+  | none => (lookupNatInfo name state.aliases).getD name
 
 def wordCopyUpdate (aliases : NatInfoMap Nat) (name value : Nat) : NatInfoMap Nat :=
   (name, value) :: aliases.filter (fun entry => entry.1 != name)
@@ -285,9 +288,9 @@ def wordCopyProg [WordCseHash α] :
       (.ite operator (wordCopyLookup state condition)
           (wordCopyRegImm state right) thenBranch elseBranch,
         wordCopyMerge thenState elseState)
-  | state, .loop liveIn body liveOut =>
+  | _state, .loop liveIn body liveOut =>
       let (body, _) := wordCopyProg wordCopyEmpty body
-      (.loop liveIn body liveOut, state)
+      (.loop liveIn body liveOut, wordCopyEmpty)
   | state, .mustTerminate body =>
       let (body, state) := wordCopyProg state body
       (.mustTerminate body, state)

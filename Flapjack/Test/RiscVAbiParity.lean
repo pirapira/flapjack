@@ -355,16 +355,16 @@ def tempStoreGetLowers : Bool :=
 
 #guard copyPropagationKeepsDestination
 
-/- A later copy through an already-populated class keeps Cake's existing
+/- A later copy through an already-populated class makes its destination the
    representative visible to subsequent moves. -/
-def copyPropagationPreservesPriorRepresentative : Bool :=
+def copyPropagationUsesLatestRepresentative : Bool :=
   match RiscV.wordCopyProp
       (.seq (.move 0 [(61, 45), (65, 45)])
         (.move 0 [(297, 65)]) : WordProg (Word 64)) with
-  | .seq _ (.move 0 [(297, 65)]) => true
+  | .seq _ (.move 0 [(297, 61)]) => true
   | _ => false
 
-#guard copyPropagationPreservesPriorRepresentative
+#guard copyPropagationUsesLatestRepresentative
 
 /- Cake's branch merge compares class identities, not only the visible
    representative.  Independently-created classes for the same names must

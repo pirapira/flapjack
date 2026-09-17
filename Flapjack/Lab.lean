@@ -147,8 +147,9 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
       ⟨[labJump sectionId (labFindLabel label breaks)], true, counter⟩
   | .continue label =>
       ⟨[labJump sectionId (labFindLabel label continues)], true, counter⟩
-  | .rawCall _target =>
-      ⟨[.labAsm (.jump ⟨sectionId, 1⟩) [] 0], true, counter⟩
+  | .rawCall target =>
+      let entryLabel := if target == stackRaiseStubLocation then 0 else 1
+      ⟨[.labAsm (.jump ⟨target, entryLabel⟩) [] 0], true, counter⟩
   | .jumpLower register target label =>
       ⟨[labJumpCmp .lower register (.reg target) label 0], false, counter⟩
   | .install _ _ _ _ returnAddress =>

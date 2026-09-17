@@ -438,6 +438,13 @@ def mapUpdateBoundedGuard : Bool :=
     cakeMapLookup updated 1 == some 1 &&
     inserted.length == 3 && cakeMapLookup inserted 2 == some 7
 
+/-- `word_alloc` passes `get_heuristics` costs keyed by source variables
+    directly to `reg_alloc`; the array adapter preserves those keys. -/
+def sourceSpillCostKeyGuard : Bool :=
+  let costs : Flapjack.NatInfoMap Nat := [(1, 10), (2, 1)]
+  let table := cakeSpillCostMap 3 costs
+  table.get 1 == some 10 && table.get 2 == some 1 && table.get 0 == none
+
 /-- Cake's `remove_dead (Move pri ls)` keeps the surviving move priority
     (`word_allocScript.sml:891-899`).  The priority orders the coalescing
     worklist (`sort_moves` sorts descending, `do_coalesce` consumes the first
@@ -497,7 +504,7 @@ def parityGuard : Bool :=
     qsortTiesTwoGuard && qsortTiesThreeGuard && qsortDescGuard &&
     stempBadColourTieGuard && raMovesStempGuard && raMovesStempHiGuard &&
     negFirstMatchProjectionGuard
-    && mapUpdateBoundedGuard && deadMovePriorityGuard
+    && mapUpdateBoundedGuard && sourceSpillCostKeyGuard && deadMovePriorityGuard
     && deadProgramPriorityGuard && cakeBijSetPatriciaGuard
     && sortMovesTailSplitGuard
 
@@ -524,7 +531,8 @@ def runChecks : IO Bool := do
     movesToSpOrderGuard,
     qsortTiesThreeGuard, qsortDescGuard, raMovesStempGuard,
     raMovesStempHiGuard, negFirstMatchProjectionGuard, mapUpdateBoundedGuard,
-    deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard]
+    deadMovePriorityGuard, deadProgramPriorityGuard, sortMovesTailSplitGuard,
+    sourceSpillCostKeyGuard]
   let names := [
     "get_stack_only move chain", "get_stack_only move from reg",
     "get_stack_only seq moves", "get_stack_only if merge",
@@ -545,7 +553,8 @@ def runChecks : IO Bool := do
     "reg_alloc moves stack temp", "reg_alloc moves stack temp high",
     "neg_first_match_col projection", "Cake map updates stay bounded",
     "remove_dead keeps move priority", "remove_dead_prog keeps entry priority",
-    "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle"]
+    "mk_bij uses Cake Patricia Set order", "sort_moves tail split oracle",
+    "source-keyed spill costs"]
   let mut all := true
   for (name, result) in names.zip results do
     if result then IO.println s!"PASS {name}" else IO.println s!"FAIL {name}"

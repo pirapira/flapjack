@@ -270,6 +270,9 @@ def toNatInfoMap {α : Type u} (m : CakeNodeMap α) : NatInfoMap α :=
 
 end CakeNodeMap
 
+def cakeSpillCostMap (nextNode : Nat) (costs : NatInfoMap Nat) : CakeNodeMap Nat :=
+  CakeNodeMap.ofNatInfoMap nextNode costs
+
 /-- The IRC allocator state (`ra_state`), represented functionally. -/
 structure CakeRaState where
   adjLists : CakeNodeMap (List Nat)
@@ -1128,17 +1131,10 @@ def cakeAllocateWordFunction [OfNat α 0] (parameters : List Nat) (program : Wor
   let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
   let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
   let bij := cakeMkBij tree
-  /- `lookup_any x scost 0` in `st_ex_list_MIN_cost`
-     (`reg_allocScript.sml:773-790`) reads an sptree, so the original's spill
-     scan is logarithmic per node.  Read the costs into the same node-indexed
-     field the rest of the allocator state uses; `cakeMapLookup` returns the
-     first binding for a key and `ofNatInfoMap` keeps that, so the values are
-     unchanged. -/
-  let scost := spillCosts.map (fun costs =>
-    CakeNodeMap.ofNatInfoMap bij.nextNode
-      (costs.filterMap (fun entry =>
-        (lookupNatInfo entry.1 bij.toAllocator).map
-          (fun node => (node, entry.2)))))
+  /- `word_alloc` passes this source-keyed sptree directly to `reg_alloc`.
+     Keep those keys intact; `CakeNodeMap` stores keys outside the allocator
+     array when necessary, matching `lookup_any` in `st_ex_list_MIN_cost`. -/
+  let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
   match cakeDoRegAlloc .irc scost k moves tree forced fs with
   | none => none
   | some colouring =>
@@ -1186,17 +1182,9 @@ def cakeWordStackVarCount [OfNat α 0] [OfNat α 1]
   let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
   let moves := wordMoves.map (fun m => (m.priority, (m.left, m.right)))
   let bij := cakeMkBij tree
-  /- `lookup_any x scost 0` in `st_ex_list_MIN_cost`
-     (`reg_allocScript.sml:773-790`) reads an sptree, so the original's spill
-     scan is logarithmic per node.  Read the costs into the same node-indexed
-     field the rest of the allocator state uses; `cakeMapLookup` returns the
-     first binding for a key and `ofNatInfoMap` keeps that, so the values are
-     unchanged. -/
-  let scost := spillCosts.map (fun costs =>
-    CakeNodeMap.ofNatInfoMap bij.nextNode
-      (costs.filterMap (fun entry =>
-        (lookupNatInfo entry.1 bij.toAllocator).map
-          (fun node => (node, entry.2)))))
+  /- Keep the source-keyed spill table intact, as `word_alloc` passes it
+     directly to `reg_alloc`; out-of-range keys live in `CakeNodeMap.outside`. -/
+  let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
   match cakeDoRegAlloc .irc scost k moves tree forced fs with
   | none => 0
   | some colouring =>

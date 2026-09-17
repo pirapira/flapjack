@@ -170,6 +170,17 @@ def shMemDestinationMappingMatches : Bool :=
 
 #guard shMemDestinationMappingMatches
 
+/- Cake's `ShMem` equation skips the statement when its destination source
+   variable is absent from `ctxt.vars` (`crep_to_loopScript.sml:214-220`). -/
+def shMemMissingLookupSkips : Bool :=
+  let missingContext : LoopContext Nat :=
+    { shMemContext with vars := [] }
+  match compileCrepToLoop missingContext [] (.shMem .store 3 (.var 1)) with
+  | .skip => true
+  | _ => false
+
+#guard shMemMissingLookupSkips
+
 /- Cake's `Primitive` equation maps both destination and argument slots through
    `ctxt.vars`; leaving the source numbers untouched shifts every subsequent
    `ctxt.vars`; keeping source slots here changes the allocator input even when

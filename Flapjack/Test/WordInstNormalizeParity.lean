@@ -242,6 +242,14 @@ def variableShiftSelectorMatches : Bool :=
         (.inst (.arith (.shift .asr 14 23 (.reg 24))))) => true
   | _ => false
 
+/-- Cake keeps the self-copy after a zero shift even when its temporary is
+    also the enclosing expression target. -/
+def zeroShiftSelfMoveMatches : Bool :=
+  match wordInstSelectAtom (α := Nat) 23
+      (.shift .lsr (.var 18) (.const 0)) with
+  | (.seq (.move 0 [(23, 18)]) (.move 0 [(23, 23)]), .var 23) => true
+  | _ => false
+
 def constantSelectorMatches : Bool :=
   match wordInstSelectProgram (α := Nat) 23
       (.assign 18 (.const 7)) with
@@ -331,6 +339,7 @@ def nestedAndWideConstantMaterializes : Bool :=
 #guard andZeroAmongConstantsCollapses
 #guard nestedSelectorBoundaryMatches
 #guard variableShiftSelectorMatches
+#guard zeroShiftSelfMoveMatches
 #guard constantSelectorMatches
 #guard loadSelectorMatches
 #guard nestedLoadSelectorMatches
@@ -358,6 +367,7 @@ def runChecks : IO Bool := do
     , ("the And zero annihilator wins among multiple constants", andZeroAmongConstantsCollapses)
     , ("the source selector boundary preserves Cake's nested expression shape", nestedSelectorBoundaryMatches)
     , ("a variable shift uses Cake's two operand moves and register shift", variableShiftSelectorMatches)
+    , ("a zero shift keeps Cake's selector self-copy", zeroShiftSelfMoveMatches)
     , ("a constant assignment becomes Cake's Const instruction", constantSelectorMatches)
     , ("a load materializes Cake's Mem instruction after its address move", loadSelectorMatches)
     , ("a nested load remains Cake's memory instruction", nestedLoadSelectorMatches)

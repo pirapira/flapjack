@@ -1520,11 +1520,53 @@ def wordStackCompileStoreNatNested (config : WordStackConfig) (address : WordExp
 
 def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
     (address : WordExp Nat) : Option (StackProg Nat) := do
-  let addressPrelude ← wordStackCompileExpToRegisterNat config config.addressScratch
-    (wordStackExpressionTemporaries config config.addressScratch) address
-  let body ← wordStackWritePhysicalNat config destination
-    (fun register => .inst (.mem .load register config.addressScratch))
-  pure (wordStackJoin addressPrelude body)
+  /- Cake's `word_to_stack` keeps `Addr base offset` through a load exactly as
+     it does through a store, so preserve the static displacement here too
+     instead of materialising the whole address in `addressScratch`.  The Lab
+     pass already recognises the const/arith/memory triple for loads as well
+     as stores and emits Cake's `memOffset`; the triple is built as the first
+     component of the sequence so that a spilled destination, whose write is
+     `Seq (body scratch) (StackStore scratch slot)`, still presents that
+     triple to the recogniser.
+
+     Without this a load whose destination is spilled came out as
+     `addi x23, base, off; ld scratch, 0(x23); sd scratch, slot(x24)` against
+     Cake's `ld scratch, off(base); sd scratch, slot(x24)` -- one instruction
+     more, and only for the spilled one, since every register-destination load
+     in the same run already fused.  `g1_double`, `swu_g1` and `ecp_add` in
+     the stateless-pancaketh guest are this shape. -/
+  let general : Option (StackProg Nat) := do
+    let addressPrelude ← wordStackCompileExpToRegisterNat config config.addressScratch
+      (wordStackExpressionTemporaries config config.addressScratch) address
+    let body ← wordStackWritePhysicalNat config destination
+      (fun register => .inst (.mem .load register config.addressScratch))
+    pure (wordStackJoin addressPrelude body)
+  match address with
+  | .op operator [.var base, .const offset] =>
+      let offsetFits :=
+        match operator with
+        | .add =>
+            offset < 2 ^ 11 ||
+              (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64)
+        | .sub => offset ≤ 2 ^ 11
+        | _ => false
+      match wordStackLocation config base with
+      | some (.register baseRegister) =>
+          if (operator == .add || operator == .sub) && offset = 0 then
+            wordStackWritePhysicalNat config destination
+              (fun register => .inst (.mem .load register baseRegister))
+          else if offsetFits && baseRegister != config.scratch then
+            /- `scratch` carries the displacement only until the `arith`
+               consumes it, so a spilled destination may reuse it for the
+               loaded value afterwards. -/
+            wordStackWritePhysicalNat config destination
+              (fun register =>
+                .seq (.seq (.const config.scratch offset)
+                    (.arith operator config.addressScratch baseRegister config.scratch))
+                  (.inst (.mem .load register config.addressScratch)))
+          else general
+      | _ => general
+  | _ => general
 
 def wordStackCompileSharedNat (config : WordStackConfig)
     (operator : WordMemOp) (destination : Nat) (address : WordExp Nat) :
@@ -2034,6 +2076,21 @@ def wordStackMovesToPhysical {α : Type} (config : WordStackConfig) :
   | sources, destination => do
       let moves ← wordStackPhysicalMovesTo config sources destination
       wordStackParallelLocationMove config moves
+
+/-! In Cake's source-shaped call lowering, `StackArgs` owns arguments beyond
+    the `k` register window.  Keep those overflow values out of the pre-call
+    register move; the stack-call fragment copies them after `stack_alloc`,
+    which is observable in the generated RISC-V for large calls. -/
+def wordStackMovesToPhysicalRegisterArgs {α : Type} (config : WordStackConfig)
+    (sources : List Nat) (destination : Nat) : Option (StackProg α) :=
+  wordStackMovesToPhysical config (sources.take config.abiRegisterCount) destination
+
+/-! Returning calls omit Cake's implicit link slot from their source list.
+    `StackArgs` nevertheless counts that slot, so only `k - 1` value
+    arguments belong in the pre-call register window. -/
+def wordStackMovesToPhysicalValueArgs {α : Type} (config : WordStackConfig)
+    (sources : List Nat) (destination : Nat) : Option (StackProg α) :=
+  wordStackMovesToPhysical config (sources.take (config.abiRegisterCount - 1)) destination
 
 /-! In the source-shaped Cake pipeline the four FFI arguments are the first
     four *stack* ABI registers (1--4), not the port's hardware-numbered 10--13

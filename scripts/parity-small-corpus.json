@@ -355,7 +355,7 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/wide_call_arguments.pnk",
-      "source_reference": "Reduced from the stateless guest's fp2_eq. Cake's call-argument arithmetic uses k, the reg_count word_to_stack$compile derives once as asm_conf.reg_count - (5 + LENGTH asm_conf.avoid_regs) = 22 on RISC-V (word_to_stackScript.sml:605), in stack_arg_count (274-279), StackArgs (287-292) and stack_free (281-283). WordStackConfig.abiRegisterCount is 12, so a call with twelve or more word arguments is treated as having stack-resident arguments that Cake keeps in registers: twelve_caller emits an extra st x29, 24(x24) and frees three frame words where Cake frees four. ten_caller pins the arity just below the threshold as exact. Owned by flapjack-01k, which also covers the acceptance half of the same divergence: at fourteen or more word arguments Flapjack fails outright with wordToStackFailure while Cake compiles, so this fixture deliberately stops at twelve.",
+      "source_reference": "Reduced from the stateless guest's fp2_eq. Cake puts call argument i in colour i+1 (colour 0 is the link register) and every colour below k is a machine register, with k = asm_conf.reg_count - (5 + LENGTH asm_conf.avoid_regs) = 22 on RISC-V (word_to_stackScript.sml:605); the window in argument-index space is therefore k-1 = 21. WordStackConfig.abiRegisterCount defaulted to 12, the x10--x21 span, so a call with twelve or more word arguments was treated as having stack-resident arguments Cake keeps in registers: twelve_caller emitted an extra st x29, 24(x24) and freed three frame words where Cake frees four, and at fourteen or more arguments wordStackPhysicalMovesToIndexed returned none and the whole compile failed. ten_caller pins the arity just below the old threshold; twelve_caller pins the shape that used to differ.",
       "cake_sha256": "4a764aa63931c5370ee06f957c7c45c3ad6264881e1a935657fb1157aee369fc",
       "tracked_beads": [
         "flapjack-01k"
@@ -368,6 +368,12 @@
       "tracked_beads": [
         "flapjack-8tb.4.6"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/spilled_load_offset.pnk",
+      "source_reference": "Reduced from the stateless guest's g1_double by scripts/parity-reduce.py. Cake's word_to_stack keeps Addr base offset through a load exactly as it does through a store, and the Lab pass recognises the const/arith/memory triple for loads as well as stores, emitting memOffset. wordStackCompileLoadNatNested had no Addr base offset case: it always materialised the whole address into addressScratch, so a load whose destination is spilled came out as addi x23, base, off; ld scratch, 0(x23); sd scratch, slot(x24) against Cake's ld scratch, off(base); sd scratch, slot(x24). Only the spilled destination was affected, because a register destination fuses through the statement-level path; register_load pins that half as exact, spilled_load the half that differed. Guest sections g1_double, swu_g1, ecp_add and g1_add were this shape.",
+      "cake_sha256": "136627fe4ef74e45e9421f4ba3a6914b806cac5d269d0cbb8d9983e681c8a4e8",
+      "tracked_beads": []
     }
   ]
 }

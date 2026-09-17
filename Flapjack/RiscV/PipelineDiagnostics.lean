@@ -326,6 +326,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
               abiBase := 1
               abiStride := 1
               callAbiBase := 0
+              /- The source-shaped call list includes Cake's link slot.  Its
+                 register window is the full Cake `k`, not the historical
+                 twelve-register value used by the generic RISC-V path. -/
               abiRegisterCount := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               abiFrameSlots := frameSlots
               frameOffset := if frameSlots = 0 then 0 else frameSlots + 1

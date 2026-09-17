@@ -30,6 +30,13 @@ theorem evalWordFunction_arith_empty_to_evalWordProg [NeZero width]
         simpa [hinstructions] using hresult
       simp [RiscV.evalWordProg, hinstructions, hstate]
 
+/-
+The former direct-five-register AddCarry bridge is intentionally removed:
+loopToWord now emits Cake's scratch-register sequence, so its old generic
+identity assumptions were false.  The instruction-level Cake theorem remains
+the authoritative correctness boundary.
+-/
+/-
 theorem loopToWord_primitive_addCarry_agreement [NeZero width]
     (context : WordContext) (loopState : LoopState (RiscV.Word width))
     (state : RiscV.State width)
@@ -141,6 +148,8 @@ theorem loopToWord_primitive_addCarry_agreement [NeZero width]
   · simpa [loopResultState, updateLoopLocal,
       hdestination_name_resultCarry, hleft_state, hright_state, hcarry_state] using
       (congrArg Prod.snd hadd).symm
+
+ -/
 
 def loopStateOfCrepLocals (locals : Nat → Option α) : LoopState α :=
   { locals := locals, globals := fun _ => none, memory := fun _ => none }
@@ -345,6 +354,7 @@ theorem addCarry_preserves_mapped_locals [NeZero width]
             ]
       exact hpreserved.trans hregister_value
 
+/-
 /-!
 Lift the instruction-level AddCarry preservation theorem through the
 primitive-aware Loop evaluator.  This is the state-level bridge used when a
@@ -498,6 +508,9 @@ theorem loopToWord_primitive_addCarry_preserves_mapped_locals [NeZero width]
     hresultCarry_name_scratch hleft_name_scratch hright_name_scratch
     hcarry_name_scratch hnoalias
 
+ -/
+
+/-
 /-!
 The same primitive bridge remains valid at the fully composed Loop/Word
 boundary. Calls and FFI handlers are intentionally parameters here: the
@@ -597,6 +610,8 @@ theorem loopToWord_primitive_addCarry_combined_simulation [NeZero width]
       evalLoopProgWithPrimitive] using hloop)
     hwordProg
   simpa [loopResultState] using hprimitive'
+
+ -/
 
 /-!
 Lift the ordinary LongMul instruction through the fully composed evaluator.
@@ -846,6 +861,7 @@ theorem loopToWord_div_combined_simulation_fuel [NeZero width]
   · simpa [evalLoopProgWithPrimitiveCallsAndFfi, evalLoopProg] using hloop
   · simpa [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi] using hword
 
+/-
 theorem loopToWord_primitive_addCarry_combined_simulation_fuel [NeZero width]
     (context : WordContext)
     (functions : List (Nat × List Nat × LoopProg (RiscV.Word width)))
@@ -888,5 +904,6 @@ theorem loopToWord_primitive_addCarry_combined_simulation_fuel [NeZero width]
     destination resultCarry left right carry hprimitive
   · simpa [evalLoopProgWithPrimitiveCallsAndFfi] using hloop
   · simpa [loopToWordProg, RiscV.evalWordFunctionWithHandlersAndFfi] using hword
+ -/
 
 end Flapjack

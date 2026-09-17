@@ -44,7 +44,7 @@ example :
     (body := handlerLoweringBody) (argumentMoves := .skip) (liveCode := .skip)
     (returnCode := .skip)
     (handlerCode := .seq .skip (.call none (.label 0) none))
-    (hargs := by
+    (_hargs := by
       simp [handlerLoweringConfig, wordStackMovesToPhysical,
         wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
         wordStackParallelLocationMove,

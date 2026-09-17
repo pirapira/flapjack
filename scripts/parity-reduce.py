@@ -166,6 +166,20 @@ def _mismatch(outcome, _seed):
     return outcome.get("status") == "compiled" and not outcome["identical"]
 
 
+@predicate("section")
+def _section(outcome, seed):
+    """Both accept and the named section (``--section``) still differs.
+
+    The `signature` predicate is the right default for a case with a handful
+    of differing sections, but an input such as the stateless guest differs in
+    hundreds at once; requiring all of them to survive prevents any reduction.
+    Naming one section reduces towards that section's discrepancy alone.
+    """
+    target = seed.get("_target_section")
+    return outcome.get("status") == "compiled" and \
+        target in outcome.get("differing_sections", [])
+
+
 @predicate("flapjack-reject")
 def _flapjack_reject(outcome, _seed):
     return outcome.get("cake_accepted") is True and \
@@ -494,6 +508,8 @@ def main(argv=None):
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--check-only", action="store_true",
                         help="report the seed's outcome and exit without reducing")
+    parser.add_argument("--section", default=None,
+                        help="section name required by --predicate section")
     parser.add_argument("--expect-sections", default=None,
                         help="comma-separated section names that must be the "
                              "differing set, or '-' for none; turns a "
@@ -511,8 +527,12 @@ def main(argv=None):
 
     workdir = Path(args.workdir) if args.workdir else Path(args.out) / ".work"
     workdir.mkdir(parents=True, exist_ok=True)
+    if args.predicate == "section" and not args.section:
+        print("--predicate section requires --section NAME", file=sys.stderr)
+        return 2
     oracle = Oracle(args.cake, args.flapjack, args.timeout, args.nice)
     seed_outcome = oracle.observe(source_path)
+    seed_outcome["_target_section"] = args.section
     seed_sections = seed_outcome.get("differing_sections", [])
     print("seed: status=%s cake_accepted=%s flapjack_accepted=%s differing=%d" % (
         seed_outcome.get("status"), seed_outcome.get("cake_accepted"),

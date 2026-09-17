@@ -100,7 +100,7 @@ example :
             (.stackStore 31 12))) : StackProg Nat) := by
   simp [wordStackArithInst, wordSpecialArithLocationsSafe,
     wordStackCakeAddCarryInst,
-    wordStackLongMulMoveToPhysical, wordStackLongMulMoveFromPhysical,
+    wordStackCakeMoveToPhysical,
     wordStackJoin, wordStackLocation, wordStackOffset, lookupNatInfo]
 
 example :

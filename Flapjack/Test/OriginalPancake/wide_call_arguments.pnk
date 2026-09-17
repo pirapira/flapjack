@@ -1,0 +1,18 @@
+fun 1 twelve({1,1,1,1,1,1} a, {1,1,1,1,1,1} b) { return 0; }
+fun 1 ten({1,1,1,1,1} a, {1,1,1,1,1} b) { return 0; }
+fun 1 ten_caller(1 p) {
+  var {1,1,1,1,1} x = lds {1,1,1,1,1} p;
+  var 1 e = ten(x, x);
+  var {1,1,1,1,1} y = lds {1,1,1,1,1} 0;
+  return ten(y, y);
+}
+fun 1 twelve_caller(1 p) {
+  var {1,1,1,1,1,1} x = lds {1,1,1,1,1,1} p;
+  var 1 e = twelve(x, x);
+  var {1,1,1,1,1,1} y = lds {1,1,1,1,1,1} 0;
+  return twelve(y, y);
+}
+fun 1 main() {
+  @halt(@base, 0, @base, 0);
+  return 0;
+}

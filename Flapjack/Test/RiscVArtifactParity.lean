@@ -829,6 +829,50 @@ def helloMainLengthGapTracked : Bool :=
       | _ => false
   | none => false
 
+/- The reduced allocator-colour witness is an original-Cake oracle regression.
+   Cake emits four stack words ([4,16]) and a 256-byte process_transaction
+   section; passing fresh SSA metadata into Word-to-Stack used to emit only
+   three stack words and 232 bytes.  The full byte comparison remains pinned
+   by scripts/parity-small-corpus.py. -/
+def allocatorColourSource : String :=
+  "exception BlockErr : 1;\n" ++
+    "fun {1,1} tx_chain_id(1 tx) {\n" ++
+    "  return <0, 0>;\n" ++
+    "}\n" ++
+    "fun 1 process_transaction(1 tx, 1 index, 1 pubkey) {\n" ++
+    "  var {1,1} cid = tx_chain_id(tx);\n" ++
+    "  if cid.0 != 0 {\n" ++
+    "    if cid.1 != 0 {\n" ++
+    "      throw BlockErr 0;\n" ++
+    "    }\n" ++
+    "  }\n" ++
+    "  var nal = 0;\n" ++
+    "  var i = 0;\n" ++
+    "  while i < nal {\n" ++
+    "  }\n" ++
+    "  if (lds 1 (tx + 0)) == 0 {\n" ++
+    "  } else {\n" ++
+    "  }\n" ++
+    "  return 0;\n" ++
+    "}\n"
+
+def allocatorColourCompileConfig : StackRemoveConfig :=
+  { artifactCompileConfig with jump := false }
+
+def allocatorColourRuntimeImage : Option (SourceRiscVRuntimeImage 64) :=
+  match compileFlapjackRiscVSourceRuntimeImageChecked (width := 64) .rv64i
+      (BitVec.ofNat 64 8) (BitVec.ofInt 64) [] allocatorColourCompileConfig
+      "main" allocatorColourSource with
+  | .ok image => some image
+  | .error _ => none
+
+def allocatorColourOracleShape : Bool :=
+  match allocatorColourRuntimeImage with
+  | some image =>
+      image.bitmaps.data == [4, 16] &&
+        (emittedSections image).any (fun entry => entry.2.2.length == 256)
+  | none => false
+
 /- Cake's `ShareInst Store (Op Add [base; Const offset])` reaches the final
    RISC-V emitter as one base+offset memory instruction.  Keep a direct Lab
    regression guard for the source-shaped lowering used by `hello`. -/
@@ -880,6 +924,7 @@ def sharedWordStoreOffsetPeephole : Bool :=
 #guard saturatedNestedExpressionLowers
 #guard saturatedRorChainLowers
 #guard saturatedNestedExpressionExact
+#guard allocatorColourOracleShape
 
 def runChecks : IO Bool := do
   let checks : List (String × Bool) :=

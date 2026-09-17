@@ -311,7 +311,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
       match RiscV.CakeRegAlloc.cakeAllocateWordFunctionAfterDead
           label wordParameters unallocatedBody with
       | none => .error (.allocationFailure label)
-      | some (_, renamedParameters, renamedProgram, allocation) =>
+      | some (_, _renamedParameters, renamedProgram, allocation) =>
           let frameSlots :=
             RiscV.cakeWordFrameSlots allocation wordParameters renamedProgram
           -- x23 stays clear of every Cake colour (x29 is colour 12 and can
@@ -339,12 +339,12 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
           let lower :=
             if frameSlots = 0 then
               RiscV.wordToStackFunctionWithParametersAndLocationBitmapsAfterDeadMovesWithSources
-                config renamedParameters wordRiscVAbiSourceRegister
+                config wordParameters wordRiscVAbiSourceRegister
                 RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
                 frameSlots (some 1) localState renamedProgram
             else
               RiscV.wordToStackFunctionWithCakeFrameAndLocationBitmapsAfterDeadMovesWithSources
-                config renamedParameters wordRiscVAbiSourceRegister
+                config wordParameters wordRiscVAbiSourceRegister
                 RiscV.CakeRegAlloc.cakeRiscVRegisterCount config.scratch
                 frameSlots (some 1) localState renamedProgram
           match lower with

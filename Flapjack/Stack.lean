@@ -119,6 +119,8 @@ def stackMapWordInst (map : Nat → Nat) : WordInst α → WordInst α
   | .arith operation => .arith (stackMapWordArith map operation)
   | .mem operator destination address =>
       .mem operator (map destination) (map address)
+  | .memOffset operator destination address offset =>
+      .memOffset operator (map destination) (map address) offset
 
 def stackMapCallTarget (map : Nat → Nat) : StackCallTarget → StackCallTarget
   | .label label => .label label

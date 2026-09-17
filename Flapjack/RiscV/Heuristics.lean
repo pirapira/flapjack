@@ -136,6 +136,12 @@ def wordHeuristicInst {α : Type} : WordInst α → NatInfoMap WordHeuristicCoun
           wordHeuristicAddLhsMem destination counts
       | .store | .store8 | .store16 | .store32 =>
           wordHeuristicAddRhsMem destination counts
+  | .memOffset operator destination _ _, counts =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 =>
+          wordHeuristicAddLhsMem destination counts
+      | .store | .store8 | .store16 | .store32 =>
+          wordHeuristicAddRhsMem destination counts
 
 def wordHeuristicMax (left right : WordHeuristicCounts) : WordHeuristicCounts :=
   { lhsConst := max left.lhsConst right.lhsConst
@@ -364,6 +370,10 @@ def wordHeuristicInstFast {α : Type} : WordInst α → WordHeuristicCountMap �
           | .imm _ => base
   | .const destination _, counts => counts.addLhsConst destination
   | .mem operator destination _, counts =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 => counts.addLhsMem destination
+      | .store | .store8 | .store16 | .store32 => counts.addRhsMem destination
+  | .memOffset operator destination _ _, counts =>
       match operator with
       | .load | .load8 | .load16 | .load32 => counts.addLhsMem destination
       | .store | .store8 | .store16 | .store32 => counts.addRhsMem destination

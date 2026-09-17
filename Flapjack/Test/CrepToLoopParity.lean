@@ -108,6 +108,20 @@ def handledCallCarriesRaiseHandler : Bool :=
 #guard callReturnSourceVariableMaps
 #guard handledCallCarriesRaiseHandler
 
+/-! Cake's RV64 `compile_crepop` places the long-multiply destination after the
+    argument temporaries and returns that destination as the expression result
+    (`crep_to_loopScript.sml:67-75`).  Its final live set inserts both
+    argument and result temporaries. -/
+def crepOpLongMulMatches : Bool :=
+  match loopCompileExp compileContext 5 []
+      (.crepOp .mul [.const 3, .const 4]) with
+  | { code := [.assign 5 (.const 3), .assign 6 (.const 4),
+      .arith (.longMul 7 7 5 6)], expression := .var 7,
+      nextTemp := 8, live := [5, 6, 7] } => true
+  | _ => false
+
+#guard crepOpLongMulMatches
+
 /-! Cake's `crep_to_loop$compile` resolves all four ExtCall operands through
 `ctxt.vars` (`crep_to_loopScript.sml:198-213`).  Keep both sides of that
 oracle explicit: a complete context emits the mapped FFI payload, while a
@@ -155,6 +169,17 @@ def shMemDestinationMappingMatches : Bool :=
   | _ => false
 
 #guard shMemDestinationMappingMatches
+
+/- Cake's `ShMem` equation skips the statement when its destination source
+   variable is absent from `ctxt.vars` (`crep_to_loopScript.sml:214-220`). -/
+def shMemMissingLookupSkips : Bool :=
+  let missingContext : LoopContext Nat :=
+    { shMemContext with vars := [] }
+  match compileCrepToLoop missingContext [] (.shMem .store 3 (.var 1)) with
+  | .skip => true
+  | _ => false
+
+#guard shMemMissingLookupSkips
 
 /- Cake's `Primitive` equation maps both destination and argument slots through
    `ctxt.vars`; leaving the source numbers untouched shifts every subsequent

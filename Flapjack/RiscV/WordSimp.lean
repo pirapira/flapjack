@@ -182,6 +182,7 @@ def wordSimpInstConstants {α : Type} (constants : NatInfoMap α) :
       wordSimpMapDelete constants destination
   | .const destination _ => wordSimpMapDelete constants destination
   | .mem _ destination _ => wordSimpMapDelete constants destination
+  | .memOffset _ destination _ _ => wordSimpMapDelete constants destination
 
 /-! `get_var_imm_cs` (`word_simpScript.sml:251-253`). -/
 def wordSimpGetVarImm [DecidableEq α] (constants : NatInfoMap α) :

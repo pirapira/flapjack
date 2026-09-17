@@ -300,6 +300,22 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/process_message_empty_catch.pnk",
+      "source_reference": "Reduced from the full guest process_message discrepancy: Cake's word_simp$simp_duplicate_if must recurse through a conditional branch and exception-handler Call before word_to_stack, eliminating the clobbering 0/1 comparison round trip.",
+      "cake_sha256": "a397ae67860df485ecf2195e5f1baee53b8695aef922ff244fd8834c17a12641",
+      "tracked_beads": [
+        "flapjack-8tb.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/process_message_negative_offset.pnk",
+      "source_reference": "Minimized process_message exception/global-spill oracle from the full-guest first-divergence reduction; guards Cake's negative Addr-offset instruction carrier through SSA, allocation, and Lab.",
+      "cake_sha256": "132beb4da1fae37a29415f7a38c71eef675d2fb6766ace599bcf58f6756791f2",
+      "tracked_beads": [
+        "flapjack-8tb.5"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/fp_pow4_copy_loop.pnk",
       "source_reference": "Cake word_copyScript.sml:377-380: copy_prop_prog resets the incoming equivalence state after a Loop. This isolates the fp_pow4 table/loop and call-result pressure that previously emitted a 20-byte surplus.",
       "cake_sha256": "b4e2f41c484dc86b90a267cd0980789a024e0836cfc19a29b923a196453c75b2",
@@ -370,6 +386,18 @@
       "source_reference": "Reduced from the stateless guest's process_transaction by scripts/parity-reduce.py: 15840 lines to 2776 with the stub-other-functions pass, then to 20 lines in 1324 oracle calls. inst_select c temp (Set store exp) (word_instScript.sml:386-388) is Seq (inst_select_exp c temp temp (flatten_exp (pull_exp exp))) (Set store (Var temp)): it runs the expression selector unconditionally, so even Set store (Var v) becomes Move 0 [(temp, v)]; Set store (Var temp). Flapjack's wordInstSelectProgram had no Set case at all, so the store passed through untouched and that copy was never created. Full SSA then numbered every later name four lower than Cake's and the allocator saw one move fewer, which permuted the register colours -- the visible symptom here was the same bytes with slot 32 reloaded into cake x13 / fj x12 and so on. The throw path in this fixture is the smallest instance: Cake emits Inst (Const 137 0w); Move0 [(141,137)]; Set (Temp 0w) (Var 141) where Flapjack emitted const 137 0; set (temp 0) (var 137).",
       "cake_sha256": "aa984a768fe54b226cdca51c0d3193aebefd2f44760d0e5e0cf0d45638a2ebb9",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/set_transient_storage_copy_class.pnk",
+      "source_reference": "Minimized set_transient_storage witness: Cake's word_copy preserves copy classes across a new HeapLength store class and rewrites the later argument through the current representative.",
+      "cake_sha256": "0d2162f9aadd130cdc573fff76bf9726907afd89706d4ef1d366f7225aef6da3",
+      "tracked_beads": ["flapjack-gs2"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/wide_add_constant.pnk",
+      "source_reference": "Minimal wide-positive Add witness: Cake's word_inst selector uses modular word negation before falling back to Const plus register Binop materialization (word_instScript.sml:262-275).",
+      "cake_sha256": "bc01978de8eae4443f100a437b65199c6d0e4cb9e32ce66e5d85fe0a740968af",
+      "tracked_beads": ["flapjack-pxn.9"]
     }
   ]
 }

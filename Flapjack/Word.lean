@@ -103,6 +103,10 @@ inductive WordInst (α : Type u) where
   | const (destination : Nat) (value : α)
   | arith (operation : WordArith α)
   | mem (operator : WordMemOp) (destination address : Nat)
+  /- Cake's `Mem` also carries an `Addr base offset`.  Keep the offset on the
+     selected instruction so SSA/allocation see the same instruction shape as
+     Cake; the backend lowers it to the target's offset memory instruction. -/
+  | memOffset (operator : WordMemOp) (destination address : Nat) (offset : α)
   deriving DecidableEq, Repr
 
 inductive WordProg (α : Type u) where

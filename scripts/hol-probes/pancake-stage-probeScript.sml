@@ -7,6 +7,7 @@
 *)
 load "bossLib";
 load "preamble";
+load "mlstringSyntax";
 load "panPtreeConversionTheory";
 load "pan_to_wordTheory";
 load "backend_passesTheory";
@@ -43,7 +44,14 @@ val simp = eval_term "stage=pan_simp"
   (mk_comb (``pan_simp$compile_prog``, ast));
 val structs = eval_term "stage=pan_structs"
   (mk_comb (``pan_structs$compile_top``, simp));
-val start_tm = ``«main»``;
+(* The ordinary compiler starts at `main`, but reduced parity witnesses often
+   contain only the function under investigation.  Let those witnesses select
+   their entry by name without changing the default compiler path. *)
+val start_name =
+  case OS.Process.getEnv "PANCAKE_STAGE_START" of
+      SOME name => name
+    | NONE => "main";
+val start_tm = mlstringSyntax.mk_mlstring start_name;
 val globals_term = list_mk_comb (``pan_globals$compile_top``, [structs, start_tm]);
 val _ = print ("globals_type=" ^ type_to_string (type_of globals_term) ^ "\n");
 val globals = eval_term "stage=pan_globals"

@@ -602,13 +602,15 @@ theorem compilePanToLoop_return_mul_const_correct
              (argsResult.nextTemp + 1))],
         expression := .var (argsResult.nextTemp + 1 + 1),
         nextTemp := argsResult.nextTemp + 1 + 1 + 1,
-        live := (argsResult.nextTemp + 1 + 1) :: argsResult.nextTemp ::
-          (argsResult.nextTemp + 1) :: argsResult.live } := by
+        live := insertNatSorted (argsResult.nextTemp + 1 + 1)
+          (loopListInsert [argsResult.nextTemp, argsResult.nextTemp + 1]
+            argsResult.live) } := by
     rw [loopCompileExp.eq_8 (context := loopContext)
       (tmp := loopContext.maxVar + 1) (live := live)
       (arguments := [.const left, .const right])
       (left := .const left) (right := .const right) hargsExpressions]
     rw [hargs]
+    simp [compileCrepOp]
   have hmulList :
       loopCompileExp.loopCompileExps loopContext (loopContext.maxVar + 1) live
         [.crepOp .mul [.const left, .const right]] =

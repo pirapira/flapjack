@@ -23,6 +23,12 @@ def parityGuard : Bool :=
       (.loop [1, 2, 3] (.break 0) [1, 2, 3] : LoopProg Nat) with
   | .loop [1, 2, 3] (.mark (.break 0)) [] => true
   | _ => false) &&
+  /- Cake's fixedpoint shrinks the body with the loop's outgoing live set,
+     not the union used only for break/continue context. -/
+  (match loopLiveOptimise
+      (.loop [1] (.assign 1 (.const 7)) [] : LoopProg Nat) with
+  | .loop [] (.mark .skip) [] => true
+  | _ => false) &&
   loopListDeleteSorted [7, 8] [1, 2, 3, 4, 5, 6, 7, 8, 7, 8] =
     [1, 2, 3, 4, 5, 6]
 

@@ -165,6 +165,13 @@ def allConstantOrFolds : Bool :=
   | .const value => value == 7
   | _ => false
 
+/-- Cake folds all-constant `And` operands before the enclosing expression is
+rebuilt; this avoids a duplicate constant materialization in seed-17 f00091. -/
+def allConstantAndFolds : Bool :=
+  match wordInstNormalizeExp (α := Nat) (.op .and [.const 1, .const 1]) with
+  | .const value => value == 1
+  | _ => false
+
 /-- `x - 8` is `x + (-8)` with the constant second, like Cake's `convert_sub`
 composed with the constant placement. -/
 def subtractionConstantSecond : Bool :=
@@ -314,6 +321,7 @@ def nestedAndWideConstantMaterializes : Bool :=
 #guard zeroConstantDropped
 #guard allConstantAddFolds
 #guard allConstantOrFolds
+#guard allConstantAndFolds
 #guard subtractionConstantSecond
 #guard subtractionOperandOrderMatches
 #guard subtractionSingletonPreserved
@@ -343,6 +351,7 @@ def runChecks : IO Bool := do
     , ("a zero constant is dropped like Cake reduce_const", zeroConstantDropped)
     , ("an all-constant addition folds to the constant", allConstantAddFolds)
     , ("an all-constant Or folds to Cake's non-zero constant", allConstantOrFolds)
+    , ("an all-constant And folds to Cake's non-zero constant", allConstantAndFolds)
     , ("the Or zero identity is dropped like Cake reduce_const", orZeroConstantDropped)
     , ("the Xor zero identity is dropped like Cake reduce_const", xorZeroConstantDropped)
     , ("the And zero fold collapses to the constant like Cake reduce_const", andZeroConstantCollapses)

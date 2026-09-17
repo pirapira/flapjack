@@ -65,19 +65,26 @@ seed that does not satisfy the predicate.
 
 ## Passes
 
-Each pass runs to a fixpoint; the whole sequence repeats until a full round
-changes nothing (`--max-rounds`, default 8).
+Each pass is greedy: as soon as a strictly smaller candidate still satisfies
+the predicate it becomes the current source, and the pass continues from that
+smaller source. Passes run to a fixpoint; the whole sequence repeats until a
+full round changes nothing (`--max-rounds`, default 8). This follows the
+useful part of C-Reduce's workflow while keeping a deterministic, single-file
+reducer for Pancake.
 
 1. **strip comments** — `//` and `/* */` comments and blank lines.
-2. **delete-runs** — delete brace-balanced runs of lines, halving the chunk
-   size in the usual ddmin schedule. A balanced run is exactly a top-level
-   declaration, a whole block, or a single statement, so this one pass covers
-   every granularity without a Pancake parser.
-3. **empty-bodies** — replace a function body with a bare `return 0;`.
-4. **simplify-expressions** — replace a parenthesised subexpression with `0` or
+2. **delete-top-level** — delete balanced top-level declaration/statement
+   units using a coarse ddmin schedule. This keeps reductions of large guests
+   practical by testing whole functions before probing individual lines.
+3. **delete-runs** — delete brace-balanced runs of lines, halving the chunk
+   size in the usual ddmin schedule. A balanced run is a whole block or a
+   smaller statement run, so this pass supplies finer granularity without a
+   Pancake parser.
+4. **empty-bodies** — replace a function body with a bare `return 0;`.
+5. **simplify-expressions** — replace a parenthesised subexpression with `0` or
    `1`. Spans that follow an identifier are skipped, since those are call
    argument lists rather than expressions.
-5. **simplify-literals** — shrink an integer literal to `0`, to `1`, to its
+6. **simplify-literals** — shrink an integer literal to `0`, to `1`, to its
    absolute value, or to half its value.
 
 Candidate results are cached by source hash, so a pass that re-proposes a

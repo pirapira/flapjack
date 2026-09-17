@@ -28,11 +28,12 @@ Reduction passes, each run to a fixpoint and then the whole sequence repeated
 until a full round changes nothing:
 
     1. strip comments and blank lines
-    2. delete brace-balanced line runs (top-level declarations, whole blocks,
-       and individual statements all fall out of this one), by halving chunk
-       sizes in the usual ddmin schedule
-    3. replace a function body with a bare ``return 0;``
-    4. simplify integer literals (to 0, to 1, drop the sign, halve)
+    2. delete balanced top-level declaration/statement units with a coarse
+       ddmin schedule
+    3. delete brace-balanced line runs for finer-grained block/statement
+       reduction
+    4. replace a function body with a bare ``return 0;``
+    5. simplify integer literals (to 0, to 1, drop the sign, halve)
 
 Outputs, under ``--out`` (default ``parity-reduction``)::
 
@@ -234,6 +235,13 @@ class Tester:
         return verdict
 
 
+def keep_smaller(tester, current, candidate):
+    """Greedily keep only a strictly smaller interesting candidate."""
+    if len(candidate.encode()) >= len(current.encode()):
+        return False
+    return tester.interesting(candidate)
+
+
 # ---------------------------------------------------------------------------
 # Reduction passes
 # ---------------------------------------------------------------------------
@@ -263,6 +271,66 @@ def brace_balanced(lines):
     return depth == 0
 
 
+def top_level_units(lines):
+    """Return balanced top-level declaration/statement spans.
+
+    Pancake declarations and function bodies are brace-delimited.  After the
+    comment-stripping pass, a run ending at brace depth zero is therefore a
+    safe coarse reduction unit: usually a whole function/global declaration,
+    and otherwise one top-level statement.  The oracle still validates every
+    candidate, so this deliberately remains a lexical splitter rather than a
+    second Pancake parser.
+    """
+    spans = []
+    start = None
+    depth = 0
+    for index, line in enumerate(lines):
+        if start is None:
+            if not line.strip():
+                continue
+            start = index
+        for character in line:
+            if character == "{":
+                depth += 1
+            elif character == "}":
+                depth -= 1
+        if depth == 0:
+            spans.append((start, index + 1))
+            start = None
+    if start is not None:
+        spans.append((start, len(lines)))
+    return spans
+
+
+def pass_delete_top_level(text, tester):
+    """Delete balanced top-level units with a coarse ddmin schedule."""
+    lines = text.splitlines()
+    removed = 0
+    spans = top_level_units(lines)
+    chunk = max(1, len(spans) // 2)
+    while chunk >= 1 and len(spans) >= 2:
+        progress = False
+        unit_start = 0
+        while unit_start + chunk <= len(spans):
+            first = spans[unit_start][0]
+            last = spans[unit_start + chunk - 1][1]
+            candidate_lines = lines[:first] + lines[last:]
+            candidate = "\n".join(candidate_lines) + "\n"
+            current = "\n".join(lines) + "\n"
+            if candidate_lines and keep_smaller(tester, current, candidate):
+                lines = candidate_lines
+                removed += chunk
+                spans = top_level_units(lines)
+                progress = True
+                continue
+            unit_start += chunk
+        if not progress:
+            if chunk == 1:
+                break
+            chunk = max(1, chunk // 2)
+    return "\n".join(lines) + "\n", removed
+
+
 def pass_delete_runs(text, tester):
     """ddmin over brace-balanced line runs.
 
@@ -280,12 +348,14 @@ def pass_delete_runs(text, tester):
             window = lines[start:start + chunk]
             if len(window) == chunk and brace_balanced(window):
                 candidate = lines[:start] + lines[start + chunk:]
-                if candidate and tester.interesting("\n".join(candidate) + "\n"):
+                current = "\n".join(lines) + "\n"
+                candidate_text = "\n".join(candidate) + "\n"
+                if candidate and keep_smaller(tester, current, candidate_text):
                     lines = candidate
                     removed += chunk
                     progress = True
                     continue
-            start += 1
+            start += chunk
         if not progress:
             chunk //= 2
     return "\n".join(lines) + "\n", removed
@@ -321,7 +391,9 @@ def pass_empty_bodies(text, tester):
             continue
         header = lines[index][:lines[index].index("{") + 1]
         candidate = lines[:index] + [header, "  return 0;", "}"] + lines[end + 1:]
-        if tester.interesting("\n".join(candidate) + "\n"):
+        current = "\n".join(lines) + "\n"
+        candidate_text = "\n".join(candidate) + "\n"
+        if keep_smaller(tester, current, candidate_text):
             lines = candidate
             replaced += 1
             index += 3
@@ -353,7 +425,7 @@ def pass_simplify_literals(text, tester):
                 continue
             for option in literal_candidates(value):
                 candidate = text[:match.start(1)] + str(option) + text[match.end(1):]
-                if tester.interesting(candidate):
+                if keep_smaller(tester, text, candidate):
                     text = candidate
                     simplified += 1
                     break
@@ -399,7 +471,7 @@ def pass_simplify_expressions(text, tester):
                 continue  # a call argument list, not an expression
             for replacement in ("0", "1"):
                 candidate = text[:start] + replacement + text[end:]
-                if tester.interesting(candidate):
+                if keep_smaller(tester, text, candidate):
                     text = candidate
                     simplified += 1
                     break
@@ -411,6 +483,7 @@ def pass_simplify_expressions(text, tester):
 
 
 PASSES = [
+    ("delete-top-level", pass_delete_top_level),
     ("delete-runs", pass_delete_runs),
     ("empty-bodies", pass_empty_bodies),
     ("simplify-expressions", pass_simplify_expressions),
@@ -420,7 +493,7 @@ PASSES = [
 
 def reduce_source(text, tester, max_rounds, verbose):
     stripped = strip_comments(text)
-    if tester.interesting(stripped):
+    if keep_smaller(tester, text, stripped):
         text = stripped
     counts = {name: 0 for name, _ in PASSES}
     rounds = 0

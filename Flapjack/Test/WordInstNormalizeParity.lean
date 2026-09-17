@@ -222,6 +222,26 @@ def andZeroAmongConstantsCollapses : Bool :=
   | .const value => value == 0
   | _ => false
 
+def nestedAndConstantFoldCollapses : Bool :=
+  match wordInstNormalizeExp (α := Nat)
+      (.op .and [.const 2, .const 1000, .var 14]) with
+  | .const value => value == 0
+  | _ => false
+
+def nestedAndWordConstantFoldCollapses : Bool :=
+  match wordInstNormalizeExp (α := RiscV.Word 64)
+      (.op .and [.const 2, .const 1000, .var 14]) with
+  | .const value => value == 0
+  | _ => false
+
+def nestedAndXorWordConstantFoldCollapses : Bool :=
+  match wordInstNormalizeExp (α := RiscV.Word 64)
+      (.op .xor
+        [.load (.op .add [.const 1008, .const 4]),
+         .op .and [.const 2, .const 1000, .var 14]]) with
+  | .load _ => true
+  | _ => false
+
 /-! Cake's `word_to_word$compile_single` passes the normalized Word program
     directly to `inst_select`; the source-facing flatten adapter must not
     insert a fresh assignment before this nested shift. -/
@@ -242,8 +262,8 @@ def variableShiftSelectorMatches : Bool :=
         (.inst (.arith (.shift .asr 14 23 (.reg 24))))) => true
   | _ => false
 
-/-- Cake keeps the self-copy after a zero shift even when its temporary is
-    also the enclosing expression target. -/
+/- Cake keeps the self-copy after a zero shift even when its temporary is
+   also the enclosing expression target. -/
 def zeroShiftSelfMoveMatches : Bool :=
   match wordInstSelectAtom (α := Nat) 23
       (.shift .lsr (.var 18) (.const 0)) with
@@ -318,6 +338,10 @@ def nestedAndWideConstantMaterializes : Bool :=
 
 #guard nestedAndImmediateMatches
 #guard nestedAndWideConstantMaterializes
+#guard zeroShiftSelfMoveMatches
+#guard nestedAndConstantFoldCollapses
+#guard nestedAndWordConstantFoldCollapses
+#guard nestedAndXorWordConstantFoldCollapses
 
 #guard twoVarOrderMatches
 #guard varConstOrderMatches
@@ -339,7 +363,6 @@ def nestedAndWideConstantMaterializes : Bool :=
 #guard andZeroAmongConstantsCollapses
 #guard nestedSelectorBoundaryMatches
 #guard variableShiftSelectorMatches
-#guard zeroShiftSelfMoveMatches
 #guard constantSelectorMatches
 #guard loadSelectorMatches
 #guard nestedLoadSelectorMatches

@@ -178,6 +178,12 @@ stage records first; the first divergence identifies the pass that should be
 ported or repaired. The HOL stage capture requires a built HOL4/CakeML tree,
 but final artifacts and the Lean dump remain available without it.
 
+For allocator discrepancies, set `PANCAKE_ALLOCATOR_PROBE=1` when running the
+HOL probe. By default it inspects `_collapse_branch`; set
+`PANCAKE_ALLOCATOR_FUNCTION=divmnu` (or another Word function name) to inspect
+that function's original post-cleanup allocator input, heuristics, and
+stack-only set without rendering allocator data for the whole program.
+
 For a larger campaign, preserve the complete finding directory produced by
 `parity-difffuzz.py --out ... --minimize` and then run `parity-debug.py` on its
 `case.min.pnk`. This keeps fuzzing, shrinking, stage inspection, and review

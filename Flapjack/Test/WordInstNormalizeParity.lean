@@ -156,6 +156,15 @@ def allConstantAddFolds : Bool :=
   | .const value => value == 0
   | _ => false
 
+/-! Cake's `word_inst$optimize_consts` folds non-zero constants too.  This is
+    the regression shape behind the seed-17 exception-handler fixture: leaving
+    `7 | 7` as an instruction shifts all subsequent SSA names and section
+    bases. -/
+def allConstantOrFolds : Bool :=
+  match wordInstNormalizeExp (α := Nat) (.op .or [.const 7, .const 7]) with
+  | .const value => value == 7
+  | _ => false
+
 /-- `x - 8` is `x + (-8)` with the constant second, like Cake's `convert_sub`
 composed with the constant placement. -/
 def subtractionConstantSecond : Bool :=
@@ -296,6 +305,7 @@ def nestedAndWideConstantMaterializes : Bool :=
 #guard foldTwoConstantsMatches
 #guard zeroConstantDropped
 #guard allConstantAddFolds
+#guard allConstantOrFolds
 #guard subtractionConstantSecond
 #guard subtractionOperandOrderMatches
 #guard subtractionSingletonPreserved
@@ -323,6 +333,7 @@ def runChecks : IO Bool := do
     , ("several constants fold into one value with the constant second", foldTwoConstantsMatches)
     , ("a zero constant is dropped like Cake reduce_const", zeroConstantDropped)
     , ("an all-constant addition folds to the constant", allConstantAddFolds)
+    , ("an all-constant Or folds to Cake's non-zero constant", allConstantOrFolds)
     , ("the Or zero identity is dropped like Cake reduce_const", orZeroConstantDropped)
     , ("the Xor zero identity is dropped like Cake reduce_const", xorZeroConstantDropped)
     , ("the And zero fold collapses to the constant like Cake reduce_const", andZeroConstantCollapses)

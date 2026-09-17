@@ -923,6 +923,56 @@ def wordStackSharedStoreInst {α : Type} (config : WordStackConfig) (operator : 
         (.seq (.stackLoad config.scratch (wordStackOffset config source))
           (.shMem operator config.scratch config.addressScratch)))
 
+def wordStackSharedLoadOffsetInst {α : Type} (config : WordStackConfig)
+    (operator : WordMemOp) (destination address : Nat) (offset : α) :
+    Option (StackProg α) := do
+  let destination ← wordStackLocation config destination
+  let address ← wordStackLocation config address
+  match destination, address with
+  | .register destination, .register address =>
+      pure (.shMemOffset operator destination address offset)
+  | .stack destination, .register address =>
+      pure (.seq (.shMemOffset operator config.scratch address offset)
+        (.stackStore config.scratch (wordStackOffset config destination)))
+  | .register destination, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.shMemOffset operator destination config.addressScratch offset))
+  | .stack destination, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.seq (.shMemOffset operator config.scratch config.addressScratch offset)
+          (.stackStore config.scratch (wordStackOffset config destination))))
+
+def wordStackSharedStoreOffsetInst {α : Type} (config : WordStackConfig)
+    (operator : WordMemOp) (source address : Nat) (offset : α) :
+    Option (StackProg α) := do
+  let source ← wordStackLocation config source
+  let address ← wordStackLocation config address
+  match source, address with
+  | .register source, .register address =>
+      pure (.shMemOffset operator source address offset)
+  | .stack source, .register address =>
+      pure (.seq (.stackLoad config.scratch (wordStackOffset config source))
+        (.shMemOffset operator config.scratch address offset))
+  | .register source, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.shMemOffset operator source config.addressScratch offset))
+  | .stack source, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch (wordStackOffset config address))
+        (.seq (.stackLoad config.scratch (wordStackOffset config source))
+          (.shMemOffset operator config.scratch config.addressScratch offset)))
+
+def wordStackSharedMemoryOffsetInst {α : Type} (config : WordStackConfig)
+    (operator : WordMemOp) (sourceOrDestination address : Nat) (offset : α) :
+    Option (StackProg α) :=
+  match operator with
+  | .load | .load8 | .load16 | .load32 =>
+      wordStackSharedLoadOffsetInst config operator sourceOrDestination address offset
+  | .store | .store8 | .store16 | .store32 =>
+      wordStackSharedStoreOffsetInst config operator sourceOrDestination address offset
+
 def wordStackSharedMemoryInst {α : Type} (config : WordStackConfig) (operator : WordMemOp)
     (sourceOrDestination address : Nat) : Option (StackProg α) :=
   match operator with
@@ -1683,20 +1733,39 @@ def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
 def wordStackCompileSharedNat (config : WordStackConfig)
     (operator : WordMemOp) (destination : Nat) (address : WordExp Nat) :
     Option (StackProg Nat) := do
+  let general : Option (StackProg Nat) := do
+    match address with
+    | .const _ | .var _ | .lookup _ =>
+        let (addressPrelude, addressRegister) ←
+          wordStackAtomNat config config.addressScratch address
+        let body ← wordStackWritePhysicalNat config destination
+          (fun register => .shMem operator register addressRegister)
+        pure (wordStackJoin addressPrelude body)
+    | _ =>
+        let addressPrelude ←
+          wordStackCompileExpToRegisterNat config config.addressScratch
+            (wordStackExpressionTemporaries config config.addressScratch) address
+        let body ← wordStackWritePhysicalNat config destination
+          (fun register => .shMem operator register config.addressScratch)
+        pure (wordStackJoin addressPrelude body)
   match address with
-  | .const _ | .var _ | .lookup _ =>
-      let (addressPrelude, addressRegister) ←
-        wordStackAtomNat config config.addressScratch address
-      let body ← wordStackWritePhysicalNat config destination
-        (fun register => .shMem operator register addressRegister)
-      pure (wordStackJoin addressPrelude body)
-  | _ =>
-      let addressPrelude ←
-        wordStackCompileExpToRegisterNat config config.addressScratch
-          (wordStackExpressionTemporaries config config.addressScratch) address
-      let body ← wordStackWritePhysicalNat config destination
-        (fun register => .shMem operator register config.addressScratch)
-      pure (wordStackJoin addressPrelude body)
+  | .op .add [.var base, .const offset] =>
+      let offsetFits :=
+        match operator with
+        | .load | .store | .load32 | .store32 | .load8 | .store8 =>
+            offset < 2 ^ 11 ||
+              (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64)
+        | .load16 | .store16 =>
+            (offset % 2 = 0) &&
+              (offset < 2 ^ 11 ||
+                (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64))
+      if offsetFits then
+        match wordStackSharedMemoryOffsetInst config operator destination base offset with
+        | some body => pure body
+        | none => general
+      else
+        general
+  | _ => general
 
 def wordStackCompileExpNat (config : WordStackConfig) (destination : Nat) :
     WordExp Nat → Option (StackProg Nat)

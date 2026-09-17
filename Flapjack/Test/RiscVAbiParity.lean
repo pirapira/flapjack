@@ -272,6 +272,25 @@ def dropConstsReversesArguments : Bool :=
 
 #guard dropConstsReversesArguments
 
+/-! Cake's `const_fp_loop` applies `const_fp_exp` to the address of every
+    shared-memory operation (`word_simpScript.sml:304-339`), while preserving
+    the store's constant environment and deleting a load's destination.  This
+    guard is the source-shaped regression for the remaining branch/allocator
+    parity fixtures. -/
+def sharedAddressConstFpProgram : WordProg (Word 64) :=
+  .seq (.assign 4 (.const 0))
+    (.seq (.shareInst .load 6 (.var 4))
+      (.shareInst .store 2 (.var 4)))
+
+def sharedAddressConstFpMatchesCake : Bool :=
+  match RiscV.wordConstFp sharedAddressConstFpProgram with
+  | .seq (.seq (.assign 4 (.const 0))
+      (.shareInst .load 6 (.const 0)))
+      (.shareInst .store 2 (.const 0)) => true
+  | _ => false
+
+#guard sharedAddressConstFpMatchesCake
+
 /-! ### Cake copy propagation representative
 
     Cake's `set_eq` (`compiler/backend/word_copyScript.sml:204-225`) inserts the

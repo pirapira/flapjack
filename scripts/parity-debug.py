@@ -7,7 +7,8 @@ HOL4 and CakeML are available, the script also evaluates the original
 loop_to_word`` stages.  Flapjack's matching pipeline is dumped by the
 ``flapjack-debug`` executable.  ``--minimize`` performs signature-preserving
 line delta debugging, so a smaller source is only accepted when it keeps the
-same observed disagreement.
+same observed disagreement.  When enabled, the minimized source is selected
+before the final assembly and stage dumps, so those dumps stay manageable.
 
 Example:
 
@@ -87,11 +88,37 @@ def main(argv=None):
 
     diffuzz = load_diffuzz()
     runner = diffuzz.Runner(args.cake, args.flapjack, args.nice, args.timeout)
-    result = runner.run(source, source_bytes)
+
+    # Establish the seed oracle result before shrinking.  With --minimize all
+    # subsequent evidence is generated from the smaller witness, rather than
+    # paying to render and inspect the original large artifact first.
+    seed_result = runner.run(source, source_bytes)
+    seed_comparison = diffuzz.compare_case(seed_result)
+    effective_source = source
+    effective_bytes = source_bytes
+    minimized_steps = None
+    if args.minimize:
+        workdir = out / ".minimize-work"
+        workdir.mkdir(exist_ok=True)
+        minimized, steps = diffuzz.minimize_source(
+            runner, source_bytes, seed_comparison, workdir)
+        write_bytes(out / "case.min.pnk", minimized)
+        effective_source = out / "case.min.pnk"
+        effective_bytes = minimized
+        minimized_steps = steps
+
+    result = runner.run(effective_source, effective_bytes)
     comparison = diffuzz.compare_case(result)
-    record = {"source": str(source), "comparison": comparison,
-              "commands": {key: value["command"] for key, value in result.items()},
-              "returncodes": {key: value["returncode"] for key, value in result.items()}}
+    record = {
+        "source": str(source),
+        "comparison_source": str(effective_source),
+        "seed_comparison": seed_comparison,
+        "comparison": comparison,
+        "commands": {key: value["command"] for key, value in result.items()},
+        "returncodes": {key: value["returncode"] for key, value in result.items()},
+    }
+    if minimized_steps is not None:
+        record["minimized"] = {"steps": minimized_steps, "bytes": len(effective_bytes)}
     write_bytes(out / "cake.S", result["cake"]["stdout"])
     write_bytes(out / "cake.err", result["cake"]["stderr"])
     write_bytes(out / "flapjack.S", result["flapjack"]["stdout"])
@@ -102,16 +129,7 @@ def main(argv=None):
     (out / "final.diff").write_text("".join(difflib.unified_diff(
         cake_lines, flap_lines, fromfile="cake.S", tofile="flapjack.S")))
 
-    stage_source = source
-    if args.minimize:
-        workdir = out / ".minimize-work"
-        workdir.mkdir(exist_ok=True)
-        minimized, steps = diffuzz.minimize_source(
-            runner, source_bytes, comparison, workdir)
-        write_bytes(out / "case.min.pnk", minimized)
-        record["minimized"] = {"steps": steps, "bytes": len(minimized)}
-        stage_source = out / "case.min.pnk"
-        (out / "comparison.json").write_text(json.dumps(record, indent=2) + "\n")
+    stage_source = effective_source
 
     if not args.no_stages:
         # Stage evidence must explain the witness that was reduced above.  In

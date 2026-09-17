@@ -179,7 +179,11 @@ python3 scripts/parity-debug.py CASE.pnk --out /tmp/debug --minimize \
 The function filter applies to the Lean dump; the Cake/HOL dump remains the
 complete probe output so that the surrounding pass context is not lost.
 
-The same command also captures intermediate values from both implementations:
+The same command also captures intermediate values from both implementations.
+With `--minimize`, it shrinks the source before producing the final assembly
+or intermediate-stage dumps; the original input is retained as `case.pnk`, and
+the witness used for the dumps is recorded as `comparison_source` in
+`comparison.json`.
 `flapjack-stages.txt` comes from `lake exe flapjack-debug`, while
 `cake-stages.txt` comes from the original HOL definitions through
 [`scripts/hol-probes/pancake-stage-probeScript.sml`](../scripts/hol-probes/pancake-stage-probeScript.sml).

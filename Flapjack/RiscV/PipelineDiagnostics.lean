@@ -331,6 +331,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
                  twelve-register value used by the generic RISC-V path. -/
               abiRegisterCount := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               abiFrameSlots := frameSlots
+              frameOffset := if frameSlots = 0 then 0 else frameSlots + 1
               sectionId := label
               handlerLabel := label }
           let localState : RiscV.WordStackBitmapState :=

@@ -588,6 +588,14 @@
       "tracked_beads": [
         "flapjack-pxn.9"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/secp256k1_recover.pnk",
+      "source_reference": "Minimized full-guest secp256k1_recover call-frame witness; source-shaped Cake uses 22 stack-register ABI slots and StackArgs without a second argument-move pass.",
+      "cake_sha256": "7d026bcdfb943080883abc49def4c23103ab692bda8504fa91b598cba3c434d8",
+      "tracked_beads": [
+        "flapjack-8tb.4.6"
+      ]
     }
   ]
 }

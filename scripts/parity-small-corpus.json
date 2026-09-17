@@ -294,6 +294,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/divmnu_copy_loop.pnk",
+      "source_reference": "Minimized full-guest divmnu witness; word_copy must reset copy state after Loop and resolve old members through Cake's class representative.",
+      "cake_sha256": "76d372a0ccac7e59715ec940f16d8f4e89ce676601b1c691f4546d8a2b38cb49",
+      "tracked_beads": [
+        "flapjack-8tb.4.6"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/gh1025_frame_bitmap.pnk",
       "source_reference": "GH #1025 differential-fuzz seed 11, f00010: loop/handler liveness must preserve Cake's five live frame words and bitmap vector [4,32,32,32,32,32]",
       "cake_sha256": "fee86f26b1438aa0586d1762200594116555eb70e27e4c8c041dad5cf3723c99",

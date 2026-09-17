@@ -1,0 +1,5 @@
+var 1 g = 7;
+fun 1 main() {
+  if g == 0 { return 0; }
+  else { g = 0; return main(); }
+}

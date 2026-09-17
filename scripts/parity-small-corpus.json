@@ -246,6 +246,12 @@
       "source_reference": "crep_to_loop$compile (Dec v e prog) (crep_to_loopScript.sml:409-415) extends the *incoming* live set for the body: fl = insert tmp () l, not the l' that compile_exp returned. compile_exp inserts its own temporaries (LoadByte, Load32, Cmp, Crepop) so that the code it emits can name them, but they are dead once the declared variable holds the value. Flapjack threaded the returned set instead, so every cutset inside a Dec body carried the initializer's temporaries: the Call cutset, the enclosing Loop entry set, and every If cutset. loop_live$shrink only intersects cutsets and a Loop whose Break restores the loop's entry set never shrinks below it, so the extra names survived to word_alloc and each one took a frame slot -- the cake_bitmaps frame word came out one to four powers of two too large, and the SSA copies of one value were given two different stack slots (a stack-to-stack move Cake does not emit). The four functions cover the four temporary-inserting compile_exp forms; main pins the whole-file layout.",
       "cake_sha256": "67e6c2ab94341a7caeeb2fcdf4193115aca4c228592907a25bb024b88fcbdf41",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_binop_immediate.pnk",
+      "source_reference": "inst_select_exp c tar temp (Op op [e1; Const w]) (word_instScript.sml:252-275) tests c.valid_imm (INL op) w for every operator; only the Sub retry with -w is Add-specific, and the remaining case materializes w into temp+1. Flapjack's expression-level selector tested the immediate for Add alone, so a nested x && 1w emitted ori t, x0, 1; and d, x, t where Cake emits andi d, x, 1 - one instruction more per occurrence. bit_test, or_immediate and xor_immediate cover the immediate path for And/Or/Xor; sub_immediate covers the Add/Sub retry; wide_mask and wide_or pin the no-immediate path, where the constant must still be materialized into temp+1 rather than left as an unfused expression - leaving it there makes the enclosing Shift miss its own immediate and cost two more instructions (guest bswap64, rmd_f).",
+      "cake_sha256": "1978fe507ca3dc7780fea4d42541eb6baaad3d2f91e713cb89ee5c280d24bb02",
+      "tracked_beads": []
     }
   ]
 }

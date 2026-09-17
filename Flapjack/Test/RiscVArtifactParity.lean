@@ -906,6 +906,14 @@ def sharedWordStoreOffsetPeephole : Bool :=
   | ⟨[.asm (.memOffset .store .add 10 12 40) [] 0], false, 0⟩ => true
   | _ => false
 
+/- Cake's shared-memory `Addr base offset` is distinct from ordinary memory;
+   the carrier reaches the matching architectural offset store directly. -/
+def sharedMemOffsetCarrierEncoding : Bool :=
+  match labCompilePlain (width := 64)
+      (.shareMemOffset .store8 10 11 (BitVec.ofNat 64 32)) with
+  | some [.storeByteOffset 10 11 (BitVec.ofNat 64 32)] => true
+  | _ => false
+
 /- `hello` remains a tracked end-to-end parity gap (`flapjack-8tb`).  Keep the
    predicate above visible during focused diagnostics, but do not make this
    known discrepancy a regression gate while the source-to-RISC-V pipeline is
@@ -929,6 +937,7 @@ def sharedWordStoreOffsetPeephole : Bool :=
 #guard relationalConditionExactParity
 #guard f01451ExactParity
 #guard sharedWordStoreOffsetPeephole
+#guard sharedMemOffsetCarrierEncoding
 #guard artifactAccepted
 #guard generatedMainBytesMatch
 #guard emittedLayoutMatches

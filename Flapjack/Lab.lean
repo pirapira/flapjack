@@ -52,6 +52,7 @@ inductive LabPlain (α : Type u) where
   | codeBufferWrite (address value : Nat)
   | dataBufferWrite (address value : Nat)
   | shareMem (operator : WordMemOp) (register address : Nat)
+  | shareMemOffset (operator : WordMemOp) (register address : Nat) (offset : α)
   /- CakeML's stack remover emits a base+offset memory operand
      (`Inst (Mem op r (Addr base offset))`) whenever the address is the store
      base or stack pointer plus a static displacement.  The port reconstructs
@@ -132,6 +133,8 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
   | .inst instruction => ⟨[.asm (.word instruction) [] 0], false, counter⟩
   | .shMem operator source address =>
       ⟨[.asm (.shareMem operator source address) [] 0], false, counter⟩
+  | .shMemOffset operator source address offset =>
+      ⟨[.asm (.shareMemOffset operator source address offset) [] 0], false, counter⟩
   | .arith operator destination left right =>
       ⟨[.asm (.arith operator destination left right) [] 0], false, counter⟩
   | .shift operator destination left right =>

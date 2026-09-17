@@ -308,6 +308,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/process_message_negative_offset.pnk",
+      "source_reference": "Minimized process_message exception/global-spill oracle from the full-guest first-divergence reduction; guards Cake's negative Addr-offset instruction carrier through SSA, allocation, and Lab.",
+      "cake_sha256": "132beb4da1fae37a29415f7a38c71eef675d2fb6766ace599bcf58f6756791f2",
+      "tracked_beads": [
+        "flapjack-8tb.5"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/fp_pow4_copy_loop.pnk",
       "source_reference": "Cake word_copyScript.sml:377-380: copy_prop_prog resets the incoming equivalence state after a Loop. This isolates the fp_pow4 table/loop and call-result pressure that previously emitted a 20-byte surplus.",
       "cake_sha256": "b4e2f41c484dc86b90a267cd0980789a024e0836cfc19a29b923a196453c75b2",

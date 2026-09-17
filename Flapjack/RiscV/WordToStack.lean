@@ -807,6 +807,58 @@ def wordStackMemoryInst {α : Type} (config : WordStackConfig) (operator : WordM
   | .store16 => wordStackStoreInst config operator sourceOrDestination address
   | .store32 => wordStackStoreInst config operator sourceOrDestination address
 
+/- Cake's selected `Mem ... (Addr base offset)` reaches StackLang with the
+   offset still attached to the instruction.  Spills only materialize the
+   base register; the offset remains available for the final Lab encoding. -/
+def wordStackLoadOffsetInst {α : Type} (config : WordStackConfig)
+    (operator : WordMemOp) (destination address : Nat) (offset : α) :
+    Option (StackProg α) := do
+  let destination ← wordStackLocation config destination
+  let address ← wordStackLocation config address
+  match destination, address with
+  | .register destination, .register address =>
+      pure (.inst (.memOffset operator destination address offset))
+  | .stack destination, .register address =>
+      pure (.seq (.inst (.memOffset operator config.scratch address offset))
+        (.stackStore config.scratch (wordStackOffset config destination)))
+  | .register destination, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.inst (.memOffset operator destination config.addressScratch offset)))
+  | .stack destination, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.seq (.inst (.memOffset operator config.scratch config.addressScratch offset))
+          (.stackStore config.scratch (wordStackOffset config destination))))
+
+def wordStackStoreOffsetInst {α : Type} (config : WordStackConfig)
+    (operator : WordMemOp) (source address : Nat) (offset : α) :
+    Option (StackProg α) := do
+  let source ← wordStackLocation config source
+  let address ← wordStackLocation config address
+  match source, address with
+  | .register source, .register address =>
+      pure (.inst (.memOffset operator source address offset))
+  | .stack source, .register address =>
+      pure (.seq (.stackLoad config.scratch (wordStackOffset config source))
+        (.inst (.memOffset operator config.scratch address offset)))
+  | .register source, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch
+          (wordStackOffset config address))
+        (.inst (.memOffset operator source config.addressScratch offset)))
+  | .stack source, .stack address =>
+      pure (.seq (.stackLoad config.addressScratch (wordStackOffset config address))
+        (.seq (.stackLoad config.scratch (wordStackOffset config source))
+          (.inst (.memOffset operator config.scratch config.addressScratch offset))))
+
+def wordStackMemoryOffsetInst {α : Type} (config : WordStackConfig)
+    (operator : WordMemOp) (sourceOrDestination address : Nat) (offset : α) :
+    Option (StackProg α) :=
+  match operator with
+  | .load => wordStackLoadOffsetInst config operator sourceOrDestination address offset
+  | .store => wordStackStoreOffsetInst config operator sourceOrDestination address offset
+  | .load8 | .load16 | .load32 | .store8 | .store16 | .store32 => none
+
 def wordStackStoreLocationsSafe (config : WordStackConfig) :
     WordLocation → WordLocation → Bool
   | .register _, .register _ => true
@@ -2157,6 +2209,8 @@ def wordToStackInst {α : Type} (config : WordStackConfig) : WordInst α → Opt
         (fun register => .inst (.const register value))
   | .mem operator sourceOrDestination address =>
       wordStackMemoryInst config operator sourceOrDestination address
+  | .memOffset operator sourceOrDestination address offset =>
+      wordStackMemoryOffsetInst config operator sourceOrDestination address offset
   | .arith operation => wordStackArithInst config operation
 
 /-! A compact executable semantics for the move fragment.  StackLang uses
@@ -3897,6 +3951,8 @@ def wordInstToNat : WordInst (Word width) → WordInst Nat
   | .const destination value => .const destination value.toNat
   | .arith operation => .arith (wordArithToNat operation)
   | .mem operator destination address => .mem operator destination address
+  | .memOffset operator destination address offset =>
+      .memOffset operator destination address offset.toNat
 
 /- SSA-generated calls carry their complete return continuation and, when
    present, their exception handler as nested Word programs.  Preserve both

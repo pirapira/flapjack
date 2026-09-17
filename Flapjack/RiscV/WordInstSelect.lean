@@ -29,6 +29,10 @@ inductive WordShiftImmediate where
 class WordInstSelectImmediate (α : Type u) where
   validBinOpImmediate : BinOp → α → Bool
   shiftImmediate : α → WordShiftImmediate
+  /- The current allocator bridge has an established expression-shaped path
+     for positive offset spill chains.  Negative RV offsets are the Cake
+     shape whose direct `Addr` carrier is required by the parity corpus. -/
+  negativeAddressOffset : α → Bool
 
 instance : WordInstSelectImmediate Nat where
   /- The source-facing pipeline carries RV64 words as `Nat` after the
@@ -42,6 +46,7 @@ instance : WordInstSelectImmediate Nat where
         value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
   shiftImmediate value :=
     if value < 64 then .valid value else .outOfRange
+  negativeAddressOffset value := value ≥ 2 ^ 63
 
 instance : WordInstSelectImmediate (BitVec width) where
   validBinOpImmediate operator value :=
@@ -55,6 +60,7 @@ instance : WordInstSelectImmediate (BitVec width) where
       .valid value.toNat
     else
       .outOfRange
+  negativeAddressOffset value := value.toNat ≥ 2 ^ (width - 1)
 
 def wordInstSelectMaximum : List Nat → Nat
   | [] => 0
@@ -207,9 +213,15 @@ def wordInstNormalizeExp [Sub α] [Add α] [DecidableEq α] [OfNat α 0] (expres
     unfused base-plus-offset expression is preserved for the later
     Word-to-Stack offset handling instead of pretending that `temp` holds the
     complete address. -/
-def wordInstSelectLoadTail (temp : Nat) (prelude : WordProg α)
+def wordInstSelectLoadTail [WordInstSelectImmediate α] (temp : Nat) (prelude : WordProg α)
     (selectedAddress : WordExp α) : WordProg α × WordExp α :=
   match selectedAddress with
+  | .op .add [.var address, .const offset] =>
+      if WordInstSelectImmediate.negativeAddressOffset offset then
+        (wordDeadSelectSeq prelude
+          (.inst (.memOffset .load temp address offset)), .var temp)
+      else
+        (wordDeadSelectSeq prelude (.assign temp (.load selectedAddress)), .var temp)
   | .var address =>
       (wordDeadSelectSeq prelude (.inst (.mem .load temp address)), .var temp)
   | _ => (wordDeadSelectSeq prelude (.assign temp (.load selectedAddress)), .var temp)
@@ -375,11 +387,17 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
       match value with
       | .lookup store => .get destination store
       | .load address =>
-          let (prelude, address) := wordInstSelectAddressAtom temp address
-          match address with
+          let (prelude, selectedAddress) := wordInstSelectAddressAtom temp address
+          match selectedAddress with
           | .var address =>
               wordDeadSelectSeq prelude (.inst (.mem .load destination address))
-          | _ => wordDeadSelectSeq prelude (.assign destination (.load address))
+          | .op .add [.var address, .const offset] =>
+              if WordInstSelectImmediate.negativeAddressOffset offset then
+                wordDeadSelectSeq prelude
+                  (.inst (.memOffset .load destination address offset))
+              else
+                wordDeadSelectSeq prelude (.assign destination (.load selectedAddress))
+          | _ => wordDeadSelectSeq prelude (.assign destination (.load selectedAddress))
       | .op operator [left, .const value] =>
           let (prelude, left) := wordInstSelectAtom temp left
           match left with
@@ -448,9 +466,9 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
       | .var source => .move 0 [(destination, source)]
       | value => .assign destination value
   | .store address value =>
-      let (prelude, address) :=
+      let (prelude, selectedAddress) :=
         wordInstSelectAddressAtom temp (wordInstNormalizeExp address)
-      match address with
+      match selectedAddress with
       | .var address =>
           /- Cake's selected Store is an actual WordLang Mem instruction
              addressed through the fresh temporary.  Keeping it as a
@@ -458,7 +476,13 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
              address expression away, which changes the allocator-visible
              move shape. -/
           wordDeadSelectSeq prelude (.inst (.mem .store value address))
-      | _ => wordDeadSelectSeq prelude (.store address value)
+      | .op .add [.var address, .const offset] =>
+          if WordInstSelectImmediate.negativeAddressOffset offset then
+            wordDeadSelectSeq prelude
+              (.inst (.memOffset .store value address offset))
+          else
+            wordDeadSelectSeq prelude (.store selectedAddress value)
+      | _ => wordDeadSelectSeq prelude (.store selectedAddress value)
   | .ite operator condition right thenBranch elseBranch =>
       .ite operator condition right
         (wordInstSelectProgram temp thenBranch)

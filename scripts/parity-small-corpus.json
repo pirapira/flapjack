@@ -460,6 +460,14 @@
       "tracked_beads": [
         "flapjack-8tb.5"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00014_loop_to_word_allocator.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness for flapjack-8tb.5.1: Cake's loop-to-word fallback maps the source local absent from assigned variables to Word register 0 before SSA/allocation; Flapjack now matches the allocator input and exact RISC-V bytes.",
+      "cake_sha256": "b09493d8e23e5be3ea9559b3aa013f94c079e2ae43957b25fbd1ef58c3509167",
+      "tracked_beads": [
+        "flapjack-8tb.5.1"
+      ]
     }
   ]
 }

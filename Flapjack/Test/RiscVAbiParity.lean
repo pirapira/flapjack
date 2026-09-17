@@ -231,6 +231,17 @@ def immediateCarrierLoweringShape : Bool :=
 
 #guard immediateCarrierLoweringShape
 
+/-! Cake's nested `inst_select_exp` path keeps a valid logical immediate in
+    `WordInst.Arith`, rather than materialising a constant register before the
+    operation (`word_instScript.sml:269-275`). -/
+def nestedImmediateCarrierShape : Bool :=
+  match wordStackCompileExpToRegisterNat immediateSelectionConfig 6 [11, 10]
+      (.op .and [.var 4, .const 1]) with
+  | some (.inst (.arith (.binOp .and 6 1 (.imm 1)))) => true
+  | _ => false
+
+#guard nestedImmediateCarrierShape
+
 /-! The two-register compensation introduces `Move 0 [(destination, left)]`
     before an in-place immediate operation.  Cake instead keeps the operand in
     the temporary chosen by `inst_select` and reads it while writing the
@@ -245,8 +256,8 @@ def immediateCompensationShape : Bool :=
   match wordToStackProgWordWithLocationBitmapsFused immediateSelectionConfig
       22 0 1 64 none (wordStackInitialBitmaps false)
       immediateCompensationWordProgram with
-  | some (.seq (.seq (.const constant value) (.arith .add destination left right)) _, _) =>
-      constant != destination && left != destination && right == constant && value == 1
+  | some (.seq (.inst (.arith (.binOp .add destination left (.imm value)))) .skip, _) =>
+      destination = 0 ∧ left = 1 ∧ value = 1
   | _ => false
 
 #guard immediateCompensationShape

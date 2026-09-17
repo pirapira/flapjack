@@ -188,7 +188,7 @@ def stackMapRegisters (map : Nat → Nat) : StackProg α → StackProg α
   | .install codeBuffer codeLength dataBuffer dataLength returnAddress =>
       .install (map codeBuffer) codeLength (map dataBuffer) dataLength
         (map returnAddress)
-  | .rawCall target => .rawCall (map target)
+  | .rawCall target => .rawCall target
   | .stackAlloc words => .stackAlloc words
   | .stackFree words => .stackFree words
   | .stackStore register offset => .stackStore (map register) offset

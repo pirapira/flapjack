@@ -556,6 +556,30 @@
       "tracked_beads": [
         "flapjack-pxn.1.3.98"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_immediate_carrier.pnk",
+      "source_reference": "Reduced AST-to-RISC-V carrier witness for flapjack-pxn.9: nested valid logical immediates remain Cake WordInst arithmetic carriers through Word-to-Stack.",
+      "cake_sha256": "1225202afdacdb58a8dbb56de9a0078ce373d6a2761e47fbc50ac1c8ed1fabd9",
+      "tracked_beads": [
+        "flapjack-pxn.9"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_shift_immediate_carrier.pnk",
+      "source_reference": "Reduced AST-to-RISC-V carrier witness for flapjack-pxn.9: a live constant shift remains Cake WordInst arithmetic with an immediate operand.",
+      "cake_sha256": "abb6652cd9aff37934daa9d8534fdf658fbbd3458c16f713c0db6912265ebd93",
+      "tracked_beads": [
+        "flapjack-pxn.9"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/nested_register_carrier.pnk",
+      "source_reference": "Reduced AST-to-RISC-V carrier witness for flapjack-pxn.9: a register-operand binary WordInst remains a generic StackLang instruction through Word-to-Stack.",
+      "cake_sha256": "0780052035fa8a392dfff9628017c06655c7a8ced08a8f723a68988e145c8b8f",
+      "tracked_beads": [
+        "flapjack-pxn.9"
+      ]
     }
   ]
 }

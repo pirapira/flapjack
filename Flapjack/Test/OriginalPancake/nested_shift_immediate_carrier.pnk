@@ -1,0 +1,7 @@
+fun 1 shift_value(1 x) {
+  return x << 3;
+}
+
+fun 1 main() {
+  return shift_value(7);
+}

@@ -128,11 +128,9 @@ def selectedBinaryGroundConfig : WordStackConfig :=
 def selectedBinaryCarrierLowering : Bool :=
   match
     wordToStackProgNat selectedBinaryGroundConfig
-      (.inst (.arith (.binOp .add 5 6 (.reg 7))) : WordProg Nat),
-    wordToStackProgNat selectedBinaryGroundConfig
-      (.assign 5 (.op .add [.var 6, .var 7])) with
-  | some (.arith .add 0 1 2), some (.arith .add 0 1 2) => true
-  | _, _ => false
+      (.inst (.arith (.binOp .add 5 6 (.reg 7))) : WordProg Nat) with
+  | some (.inst (.arith (.binOp .add 0 1 (.reg 2)))) => true
+  | _ => false
 
 #guard selectedBinaryCarrierLowering
 
@@ -231,6 +229,40 @@ def immediateCarrierLoweringShape : Bool :=
 
 #guard immediateCarrierLoweringShape
 
+/-! Cake's nested `inst_select_exp` path keeps a valid logical immediate in
+    `WordInst.Arith`, rather than materialising a constant register before the
+    operation (`word_instScript.sml:269-275`). -/
+def nestedImmediateCarrierShape : Bool :=
+  match wordStackCompileExpToRegisterNat immediateSelectionConfig 6 [11, 10]
+      (.op .and [.var 4, .const 1]) with
+  | some (.inst (.arith (.binOp .and 6 1 (.imm 1)))) => true
+  | _ => false
+
+#guard nestedImmediateCarrierShape
+
+def nestedImmediateShiftCarrierShape : Bool :=
+  match wordStackCompileExpToRegisterNat immediateSelectionConfig 6 [11, 10]
+      (.shift .lsl (.var 4) (.const 3)) with
+  | some (.inst (.arith (.shift .lsl 6 1 (.imm 3)))) => true
+  | _ => false
+
+#guard nestedImmediateShiftCarrierShape
+
+def immediateCarrierMachineShape : Bool :=
+  let state : WordStackMachineState 64 :=
+    { registers := fun register =>
+        if register = 4 then BitVec.ofNat 64 7 else 0
+      stack := fun _ => 0
+      stores := fun _ => 0
+      memory := fun _ => 0
+      sharedMemory := fun _ => 0 }
+  match evalWordStackMachine state
+      (.inst (.arith (.binOp .and 6 4 (.imm 1))) : StackProg Nat) with
+  | some result => result.registers 6 == BitVec.ofNat 64 1
+  | _ => false
+
+#guard immediateCarrierMachineShape
+
 /-! The two-register compensation introduces `Move 0 [(destination, left)]`
     before an in-place immediate operation.  Cake instead keeps the operand in
     the temporary chosen by `inst_select` and reads it while writing the
@@ -245,8 +277,8 @@ def immediateCompensationShape : Bool :=
   match wordToStackProgWordWithLocationBitmapsFused immediateSelectionConfig
       22 0 1 64 none (wordStackInitialBitmaps false)
       immediateCompensationWordProgram with
-  | some (.seq (.seq (.const constant value) (.arith .add destination left right)) _, _) =>
-      constant != destination && left != destination && right == constant && value == 1
+  | some (.seq (.inst (.arith (.binOp .add destination left (.imm value)))) .skip, _) =>
+      destination = 0 ∧ left = 1 ∧ value = 1
   | _ => false
 
 #guard immediateCompensationShape

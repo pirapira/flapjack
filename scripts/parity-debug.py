@@ -69,6 +69,8 @@ def main(argv=None):
     parser.add_argument("--hol", type=Path, default=DEFAULT_HOL)
     parser.add_argument("--nice", type=int, default=10)
     parser.add_argument("--timeout", type=int, default=60)
+    parser.add_argument("--function", dest="function_name",
+                        help="only dump this Flapjack source-level function")
     parser.add_argument("--minimize", action="store_true",
                         help="also write case.min.pnk preserving mismatch signatures")
     parser.add_argument("--no-stages", action="store_true",
@@ -115,7 +117,11 @@ def main(argv=None):
         # Stage evidence must explain the witness that was reduced above.  In
         # particular, do not spend time rendering the original full guest
         # after --minimize has already found a much smaller discrepancy.
-        debug = run([args.flapjack_debug, str(stage_source)], timeout=args.timeout)
+        debug_command = [args.flapjack_debug]
+        if args.function_name:
+            debug_command += ["--function", args.function_name]
+        debug_command.append(str(stage_source))
+        debug = run(debug_command, timeout=args.timeout)
         write_bytes(out / "flapjack-stages.txt", debug["stdout"])
         write_bytes(out / "flapjack-stages.err", debug["stderr"])
         hol_env = os.environ.copy()

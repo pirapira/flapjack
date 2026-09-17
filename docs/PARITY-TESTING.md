@@ -168,6 +168,17 @@ intent before being checked in. This is the repository's small, reproducible
 analogue of C-Reduce; it does not invoke arbitrary source transformations
 that might accidentally change the language category being tested.
 
+After shrinking, limit the Flapjack dump to one source-level function when the
+section name is already known:
+
+```sh
+python3 scripts/parity-debug.py CASE.pnk --out /tmp/debug --minimize \
+    --function _mpt_delete_node_body
+```
+
+The function filter applies to the Lean dump; the Cake/HOL dump remains the
+complete probe output so that the surrounding pass context is not lost.
+
 The same command also captures intermediate values from both implementations:
 `flapjack-stages.txt` comes from `lake exe flapjack-debug`, while
 `cake-stages.txt` comes from the original HOL definitions through

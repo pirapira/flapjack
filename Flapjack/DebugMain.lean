@@ -186,7 +186,21 @@ def dumpPipelineTarget (pipeline : FlapjackPipelineResult (RiscV.Word 64))
       | .ok (functions, bitmaps) =>
           emit "stage=target_allocated_unexpected" (functions, bitmaps)
 
-def dumpSource (source : String) (target : Option Nat := none) : IO UInt32 := do
+/-! Resolve a target by its source-level function name.  Labels are convenient
+    for generated helpers, but names are much more useful when comparing a
+    minimized witness with Cake's source-level stage probe. -/
+def dumpPipelineNamed (pipeline : FlapjackPipelineResult (RiscV.Word 64))
+    (targetName : String) : IO Unit := do
+  let sourceLoop := pipelineLoopFunctionsSource .rv64i stackFunctionFirstLabel
+    pipeline.crepe
+  let sourceWord := panToWordCompileProg sourceLoop
+  match pipeline.crepe.zip sourceWord |>.find?
+      (fun pair => pair.1.name == targetName) with
+  | none => emit "stage=target_name_not_found" targetName
+  | some (_, entry) => dumpPipelineTarget pipeline entry.1
+
+def dumpSource (source : String) (target : Option Nat := none)
+    (targetName : Option String := none) : IO UInt32 := do
   match Parser.parseTopDecs (BitVec.ofInt 64) source with
   | .error errors =>
       emit "stage=parse_error" errors
@@ -202,16 +216,18 @@ def dumpSource (source : String) (target : Option Nat := none) : IO UInt32 := do
          diagnostic dump with Pancake's synthetic `main = return 0` fallback. -/
       let pipeline := compileFlapjackTarget .rv64i (BitVec.ofNat 64 8)
         (fun value => BitVec.ofNat 64 value) declarations
-      match target with
-      | none => dumpPipeline pipeline
-      | some target => dumpPipelineTarget pipeline target
+      match target, targetName with
+      | some target, _ => dumpPipelineTarget pipeline target
+      | none, some targetName => dumpPipelineNamed pipeline targetName
+      | none, none => dumpPipeline pipeline
       return 0
 
 def usage : String :=
   "Usage: lake exe flapjack-debug [SOURCE.pnk]\n" ++
   "       lake exe flapjack-debug --label LABEL [SOURCE.pnk]\n" ++
+  "       lake exe flapjack-debug --function NAME [SOURCE.pnk]\n" ++
   "Read Pancake source from SOURCE.pnk or stdin and print intermediate stages.\n" ++
-  "With --label, render only the selected source Word function."
+  "With --label or --function, render only the selected source Word function."
 
 def main (arguments : List String) : IO UInt32 := do
   match arguments with
@@ -236,6 +252,11 @@ def main (arguments : List String) : IO UInt32 := do
           return 2
       | some label =>
           dumpSource (← IO.FS.readFile path) (some label)
+  | ["--function", name] =>
+      let stdin ← IO.getStdin
+      dumpSource (← stdin.readToEnd) none (some name)
+  | ["--function", name, path] =>
+      dumpSource (← IO.FS.readFile path) none (some name)
   | [path] =>
       dumpSource (← IO.FS.readFile path)
   | _ =>

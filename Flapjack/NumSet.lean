@@ -76,4 +76,25 @@ def fromList (set : List Nat) : List Nat :=
   let tree := (toSet set).foldr (fun key tree => insert key tree) .empty
   toAList tree 0 []
 
+/-- `fromList` for a list whose entries are already known to be distinct.
+    `toSet` is the identity on such a list -- it only removes duplicates, at
+    the cost of a membership scan per element -- so the Patricia
+    reconstruction can run on the input directly.  `NumSet.fromDistinctList_eq`
+    pins the two together. -/
+def fromDistinctList (set : List Nat) : List Nat :=
+  toAList (set.foldr (fun key tree => insert key tree) .empty) 0 []
+
+theorem toSet_eq_self_of_nodup : ∀ {names : List Nat}, names.Nodup →
+    toSet names = names
+  | [], _ => rfl
+  | name :: names, nodup => by
+      have tail : toSet names = names := toSet_eq_self_of_nodup nodup.of_cons
+      have notMem : name ∉ names := by
+        simpa using (List.nodup_cons.mp nodup).1
+      simp [toSet, insertList, tail, notMem]
+
+theorem fromDistinctList_eq {names : List Nat} (nodup : names.Nodup) :
+    fromDistinctList names = fromList names := by
+  simp [fromDistinctList, fromList, toSet_eq_self_of_nodup nodup]
+
 end Flapjack.NumSet

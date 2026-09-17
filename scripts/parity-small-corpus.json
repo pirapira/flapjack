@@ -428,6 +428,14 @@
       "source_reference": "Resolved flapjack-01k. Cake's StackArgs uses the caller's frame size f as the source displacement for stack_move; Flapjack now derives that same Cake frame size from abiFrameSlots at the WordToStack call boundary. The reduced spilled-base witness is byte-exact at 396 bytes, including the 112(x24) to 32(x24) pre-call copy.",
       "cake_sha256": "bcab84ac1a923c846aef8f3f40996dc885b6157fe4a7eeaacc5cd0a654b99090",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/loop_to_word_unbound_var.pnk",
+      "source_reference": "Minimized differential-fuzz witness: loop_to_word$find_var maps a source local absent from acc_vars to Word register 0. The source-shaped adapter previously retained the unbound local number, changing exception-handler allocator colours and equal-length RISC-V bytes.",
+      "cake_sha256": "c425e51ca0fad2926e92a1a53f6f4fb5ae4140d6577914b6e14d0fbce0b6c856",
+      "tracked_beads": [
+        "flapjack-8tb.4"
+      ]
     }
   ]
 }

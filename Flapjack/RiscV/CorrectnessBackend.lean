@@ -122,6 +122,26 @@ theorem wordProgToRiscV_sound_of_straightLine [NeZero width]
                   hd, ha] at h
               all_goals
                 simp [evalWordProg, executeInstructions, hd, ha, h]
+      | memOffset operator destination address offset =>
+          have hcompile' : (wordInstToInstruction (width := width)
+            (.memOffset operator destination address offset)).map
+              (fun instruction => [instruction]) = some code := by
+            simpa only [wordProgToRiscV] using hcompile
+          cases h : wordInstToInstruction (width := width)
+              (.memOffset operator destination address offset) with
+          | none => rw [h] at hcompile'; cases hcompile'
+          | some instruction =>
+              have hcode : [instruction] = code := by
+                have hcompile'' : some [instruction] = some code := by
+                  simpa [h] using hcompile'
+                exact Option.some.inj hcompile''
+              subst code
+              cases operator <;>
+                cases hd : registerOfNat destination <;>
+                cases ha : registerOfNat address <;>
+                simp [wordInstToInstruction, hd, ha] at h
+              all_goals
+                simp [evalWordProg, executeInstructions, hd, ha, h]
   | store address value =>
       have hcompile' : wordStoreToInstructions (width := width) address value = some code := by
         simpa only [wordProgToRiscV] using hcompile
@@ -212,6 +232,10 @@ theorem wordFunctionToRiscVWithCalls_agrees_straightLine [NeZero width]
           cases h : wordInstToInstruction (width := width)
               (.mem operator destination address) <;>
             simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
+      | memOffset operator destination address offset =>
+          cases h : wordInstToInstruction (width := width)
+              (.memOffset operator destination address offset) <;>
+            simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
   | store address value =>
       cases h : wordStoreToInstructions (width := width) address value <;>
         simp [wordFunctionToRiscVWithCalls, wordProgToRiscV, h]
@@ -251,6 +275,9 @@ theorem evalWordFunction_wordRiscVStraightLine_eq_evalWordProg [NeZero width]
       | const destination value =>
           simp [evalWordFunction, evalWordProg, Function.comp_def]
       | mem operator destination address =>
+          cases operator <;>
+            simp [evalWordFunction, evalWordProg, Function.comp_def]
+      | memOffset operator destination address offset =>
           cases operator <;>
             simp [evalWordFunction, evalWordProg, Function.comp_def]
   | store address value =>

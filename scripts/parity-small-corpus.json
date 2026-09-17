@@ -349,11 +349,9 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/many_word_parameters.pnk",
-      "source_reference": "Reduced from the full stateless guest (15840 lines -> 3) by scripts/parity-reduce.py. At exactly twelve word-sized formal parameters Flapjack reserves a stack frame and emits a stack-overflow check for a function that needs neither: cake emits ori a0,x0,0; ret (8 bytes), Flapjack emits addi x24,x24,-16; bltu x24,x25 -> handler; ori a0,x0,0; addi x24,x24,16; ret (28). Struct-vs-scalar does not matter, only the total word count: eleven_words is exact, twelve_words and twelve_scalars both differ. Pipeline.lean computes frameSlots = max allocation.nextSpill (wordParameters.length - cakeRiscVRegisterCount); cakeRiscVRegisterCount is 22 so the second term is 0 here, which leaves allocation.nextSpill, i.e. the Cake reg_alloc port spilling where Cake's does not. Cake's word_to_stack$compile_prog sets f = 0 when stack_var_count = 0, and it is 0 for this program.",
+      "source_reference": "Reduced from the full stateless guest (15840 lines -> 3) by scripts/parity-reduce.py. Cake's word_to_stack$compile_prog computes stack_arg_count = arg_count - reg_count (word_to_stackScript.sml:587-593) with the reg_count word_to_stack$compile computes once for the whole program (line 605): asm_conf.reg_count - (5 + LENGTH asm_conf.avoid_regs), which for RISC-V is cakeRiscVRegisterCount = 22. PipelineDiagnostics used a literal 12, so every function with twelve or more word parameters reserved a frame Cake does not: eleven_words was exact while twelve_words and twelve_scalars each gained an addi sp, a stack-overflow check and a matching addi around a body that is one ori. Struct-vs-scalar is irrelevant; only the total word count matters, which is why the fixture pins eleven words, twelve words as two structs, and twelve scalars.",
       "cake_sha256": "3227f03a0c73a19747b0ba3b0c6731e4f98b97250860f9386108c878a6c99e35",
-      "tracked_beads": [
-        "flapjack-gez"
-      ]
+      "tracked_beads": []
     }
   ]
 }

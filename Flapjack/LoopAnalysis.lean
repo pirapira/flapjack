@@ -261,7 +261,7 @@ def loopShrinkFixed (contexts : List (List Nat × List Nat))
   | fuel + 1, previous =>
       let (body', bodyLive) := loopShrink
         ((loopIntersectSorted liveIn previous, bodyEntryLive) :: contexts)
-        body bodyEntryLive
+        body loopLiveOut
       let current := loopIntersectSorted liveIn bodyLive
       if current = previous then
         some (.loop current body' loopLiveOut, current)

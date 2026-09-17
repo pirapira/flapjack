@@ -237,6 +237,9 @@ class Tester:
         self.seed_outcome = seed_outcome
         self.path = workdir / "candidate.pnk"
         self.cache = {}
+        #: Set for the `section` predicate so a pass can name the one function
+        #: the reduction has to preserve.
+        self.target_section = seed_outcome.get("_target_section")
         self.verbose = verbose
         self.accepted = 0
         self.rejected = 0
@@ -516,7 +519,127 @@ def pass_simplify_expressions(text, tester):
             return text, simplified
 
 
+FUNCTION_SIGNATURE = re.compile(
+    r"\s*fun\s+(\{.*\}|1)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+
+
+def zero_of_shape(shape):
+    """The literal of the given Pancake return shape with every field zero."""
+    shape = shape.strip()
+    if shape == "1":
+        return "0"
+    if not (shape.startswith("{") and shape.endswith("}")):
+        return None
+    parts, depth, current = [], 0, ""
+    for character in shape[1:-1]:
+        if character == "{":
+            depth += 1
+            current += character
+        elif character == "}":
+            depth -= 1
+            current += character
+        elif character == "," and depth == 0:
+            parts.append(current)
+            current = ""
+        else:
+            current += character
+    parts.append(current)
+    fields = [zero_of_shape(part) for part in parts]
+    if any(field is None for field in fields):
+        return None
+    return "<" + ", ".join(fields) + ">"
+
+
+def function_spans(lines):
+    """Yield (start, bodyLine, bodyColumn, end, name, shape) per function.
+
+    The body brace is the first `{` after the parameter list closes, so a
+    multi-line signature and a braced return shape are both handled.
+    """
+    index = 0
+    while index < len(lines):
+        if not re.match(r"\s*fun\s", lines[index]):
+            index += 1
+            continue
+        depth, started, body = 0, False, None
+        scan = index
+        while scan < len(lines) and body is None:
+            for column, character in enumerate(lines[scan]):
+                if character == "(":
+                    depth += 1
+                    started = True
+                elif character == ")":
+                    depth -= 1
+                elif character == "{" and started and depth == 0:
+                    body = (scan, column)
+                    break
+            scan += 1
+        if body is None:
+            index += 1
+            continue
+        bodyLine, bodyColumn = body
+        depth, end = 0, bodyLine
+        while end < len(lines):
+            segment = lines[end][bodyColumn:] if end == bodyLine else lines[end]
+            for character in segment:
+                if character == "{":
+                    depth += 1
+                elif character == "}":
+                    depth -= 1
+            if depth == 0:
+                break
+            end += 1
+        header = " ".join(" ".join(lines[index:bodyLine + 1]).split())
+        match = FUNCTION_SIGNATURE.match(header)
+        name = match.group(2) if match else None
+        shape = match.group(1) if match else None
+        yield (index, bodyLine, bodyColumn, end, name, shape)
+        index = end + 1
+
+
+def pass_stub_other_functions(text, tester):
+    """Replace every function except the target with a shape-correct stub.
+
+    A `--predicate section` reduction only cares about one function, and on a
+    large program almost all of the cost is compiling the rest.  Emptying every
+    other body in one step is a far larger jump than `delete-top-level` can
+    make, because the callees stay declared and the target's calls still
+    typecheck.  On the stateless guest this took 15840 lines to 2777 and the
+    Flapjack compile from 30 s to 3 s in a single probe.
+
+    Only runs for the `section` predicate, where the target is known.
+    """
+    target = getattr(tester, "target_section", None)
+    if not target:
+        return text, 0
+    lines = text.splitlines()
+    spans = list(function_spans(lines))
+    if len(spans) < 2:
+        return text, 0
+    rebuilt, index, stubbed = [], 0, 0
+    for start, bodyLine, bodyColumn, end, name, shape in spans:
+        rebuilt.extend(lines[index:start])
+        replacement = None
+        if name != target and shape is not None:
+            zero = zero_of_shape(shape)
+            if zero is not None:
+                replacement = lines[start:bodyLine] + \
+                    [lines[bodyLine][:bodyColumn + 1], "  return %s;" % zero, "}"]
+        if replacement is None:
+            rebuilt.extend(lines[start:end + 1])
+        else:
+            rebuilt.extend(replacement)
+            stubbed += 1
+        index = end + 1
+    rebuilt.extend(lines[index:])
+    candidate = "\n".join(rebuilt) + "\n"
+    if stubbed and tester.interesting(candidate):
+        return candidate, stubbed
+    return text, 0
+
+
 PASSES = [
+    ("stub-other-functions", pass_stub_other_functions),
     ("delete-top-level", pass_delete_top_level),
     ("delete-runs", pass_delete_runs),
     ("empty-bodies", pass_empty_bodies),

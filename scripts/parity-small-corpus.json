@@ -464,6 +464,15 @@
       "tracked_beads": [
         "flapjack-8tb.5.1"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00238_handler_const_or.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness: Cake's word_inst constant normalization folds the all-constant handler expression 7 | 7 before allocation; leaving the OR instruction shifts handler SSA names and the add1/main section bases by four bytes.",
+      "cake_sha256": "7f203681a00292fbe2e191a601cd5e0a8add5c59104415fe65efa852a7ec3fd6",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1",
+        "flapjack-pxn.8.5.10.3"
+      ]
     }
   ]
 }

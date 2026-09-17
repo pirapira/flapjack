@@ -1,0 +1,12 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+exception E : 1;
+fun 1 main() {
+  var 1 x = 0;
+  var 1 y72 = add1(0, 0);
+  try
+    x = add1(0, 0)
+  catch E => y72 {
+      @foo((((7 | 7) #>> 2) * 1), 0, 0, 0);
+  }
+  return 2;
+}

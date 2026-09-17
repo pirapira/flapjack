@@ -353,15 +353,16 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
           | .add =>
               value < 2 ^ 11 ||
                 (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64)
-          | .sub => value ≤ 2 ^ 11
+          | .sub => value != 0 && value ≤ 2 ^ 11
           | .and | .or | .xor => false
       let canFuseAliasedAdd :=
         scratch = destination && left = destination && operator = .add
       if canFuse || canFuseAliasedAdd then
-        if destination = left && value = 0 then
-          /- Cake's final Lab filter drops an arithmetic identity.  Keeping
-             this out of the line stream is important because otherwise the
-             encoder emits `addi rd, rd, 0` and label positions drift. -/
+        if operator = .add && destination = left && value = 0 then
+          /- Cake's lowering can leave a zero-add identity out of the line
+             stream when the preceding constant is fused.  A zero-sub is
+             different: Cake retains the register subtraction and its source
+             constant, so dropping that pair shifts every following label. -/
           ⟨[], false, counter⟩
         else
           if canFuseAliasedAdd then

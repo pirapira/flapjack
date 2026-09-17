@@ -71,14 +71,14 @@ def callFrameFreeCountExact : Bool :=
 #guard callFrameFreeCountExact
 
 /-! Source-shaped `loop_to_word` calls carry Cake's link slot in their Word
-    argument list.  The direct-tail free therefore uses `f - (args + 1)`;
-    the `_collapse_branch` oracle exercises the 5-argument and 4-argument
-    cases as frees of 0 and 1 respectively. -/
+    argument list.  Cake's direct-tail `stack_free` still uses the direct-call
+    `stack_arg_count` formula, so an argument list below the ABI window frees
+    the complete current frame. -/
 def sourceTailCallFreeCountExact : Bool :=
   wordStackSourceTailCallFreeCount
-      { locations := [], scratch := 31, stackBase := 0, abiFrameSlots := 5 } 5 == 0 &&
+      { locations := [], scratch := 31, stackBase := 0, abiFrameSlots := 5 } 5 == 6 &&
     wordStackSourceTailCallFreeCount
-      { locations := [], scratch := 31, stackBase := 0, abiFrameSlots := 5 } 4 == 1
+      { locations := [], scratch := 31, stackBase := 0, abiFrameSlots := 5 } 4 == 6
 
 #guard sourceTailCallFreeCountExact
 

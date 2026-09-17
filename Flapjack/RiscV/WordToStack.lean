@@ -2804,12 +2804,13 @@ def wordStackCallFreeCount (config : WordStackConfig) (argumentCount : Nat) : Na
   wordStackCakeFrameSize config - (argumentCount - config.abiRegisterCount)
 
 /-! The source-shaped `loop_to_word` call list already contains Cake's link
-    slot.  For a `Call NONE`, Cake's `StackArgs dest (LENGTH args + 1)` uses
-    that complete list when computing `stack_free`; do not apply the ordinary
-    hardware ABI-window subtraction a second time. -/
+    slot.  A direct `Call NONE` still uses Cake's ordinary
+    `stack_free (INL target) (LENGTH args) (k,f,f')`: the link slot is already
+    present in `arguments`, and `stack_arg_count (INL target)` subtracts only
+    the ABI register window.  Do not subtract the argument count again. -/
 def wordStackSourceTailCallFreeCount (config : WordStackConfig)
     (argumentCount : Nat) : Nat :=
-  wordStackCakeFrameSize config - (argumentCount + 1)
+  wordStackCallFreeCount config argumentCount
 
 def wordToStackProg {α : Type} [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
     [Div α] [Sub α] [AndOp α] [OrOp α] [HXor α α α] [ShiftLeft α]

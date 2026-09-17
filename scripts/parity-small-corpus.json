@@ -252,6 +252,14 @@
       "source_reference": "inst_select_exp c tar temp (Op op [e1; Const w]) (word_instScript.sml:252-275) tests c.valid_imm (INL op) w for every operator; only the Sub retry with -w is Add-specific, and the remaining case materializes w into temp+1. Flapjack's expression-level selector tested the immediate for Add alone, so a nested x && 1w emitted ori t, x0, 1; and d, x, t where Cake emits andi d, x, 1 - one instruction more per occurrence. bit_test, or_immediate and xor_immediate cover the immediate path for And/Or/Xor; sub_immediate covers the Add/Sub retry; wide_mask and wide_or pin the no-immediate path, where the constant must still be materialized into temp+1 rather than left as an unfused expression - leaving it there makes the enclosing Shift miss its own immediate and cost two more instructions (guest bswap64, rmd_f).",
       "cake_sha256": "1978fe507ca3dc7780fea4d42541eb6baaad3d2f91e713cb89ee5c280d24bb02",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/u256_add_carry.pnk",
+      "source_reference": "minimized source-to-RISC-V differential for CakeML AddCarry ABI temporary numbering (cml_u256_add_carry_57)",
+      "cake_sha256": "f117eaaae17df78521dd9f33f09e10042b09c94dda367d8dd8b0ed47f44a545d",
+      "tracked_beads": [
+        "flapjack-8tb.4.7"
+      ]
     }
   ]
 }

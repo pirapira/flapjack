@@ -452,7 +452,6 @@ def wordSsaRenameInst (state : WordSsaState) :
       | .cakeAddCarry destination sourceLeft sourceRight carry =>
           let sourceLeft := wordSsaRead state sourceLeft
           let sourceRight := wordSsaRead state sourceRight
-          let carry := wordSsaRead state carry
           let (state, freshDestination) := wordSsaFresh state destination
           let (state, freshCarry) := wordSsaFresh state carry
           (state, .arith (.cakeAddCarry freshDestination sourceLeft
@@ -767,8 +766,8 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
            an otherwise dead first AddCarry from being discarded. -/
         let sourceLeft := wordSsaRead state sourceLeft
         let sourceRight := wordSsaRead state sourceRight
-        let carry := wordSsaRead state carry
-        let moveIn : WordProg α := .move 1 [(0, carry)]
+        let carryValue := wordSsaRead state carry
+        let moveIn : WordProg α := .move 1 [(0, carryValue)]
         let (state, freshDestination) := wordSsaFresh state destination
         let (state, freshCarry) := wordSsaFresh state carry
         let addCarry : WordProg α :=

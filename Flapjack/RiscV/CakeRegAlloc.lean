@@ -873,14 +873,14 @@ def cakeDoStep (scost : Option (CakeNodeMap Nat)) (k : Nat)
   let (b1, s1) := cakeDoSimplify k state
   if b1 then (true, s1)
   else
-    let (b2, s2) := cakeDoCoalesce k state
+    let (b2, s2) := cakeDoCoalesce k s1
     if b2 then (true, s2)
     else
-      let (b3, s3) := cakeDoPrefreeze k state
+      let (b3, s3) := cakeDoPrefreeze k s2
       if b3 then (true, s3)
       else
-        let (b4, s4) := cakeDoFreeze k state
-        if b4 then (true, s4) else cakeDoSpill scost k state
+        let (b4, s4) := cakeDoFreeze k s3
+        if b4 then (true, s4) else cakeDoSpill scost k s4
 
 /-- `rpt_do_step` (`reg_allocScript.sml:860-868`). -/
 def cakeRptDoStep (scost : Option (CakeNodeMap Nat)) (k : Nat) :

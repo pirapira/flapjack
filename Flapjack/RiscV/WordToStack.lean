@@ -349,6 +349,18 @@ def wordStackLongMulMoveFromPhysical {α : Type} (config : WordStackConfig)
   | .stack slot =>
       pure (.stackStore source (wordStackOffset config slot))
 
+/- Cake's wReg1/wReg2 leave register-resident operands in place.  Only a
+   spilled operand is loaded into the corresponding temporary.  This small
+   distinction matters for Cake's four-register AddCarry: its carry operand
+   is a fixed SSA register and must not be copied through a third scratch
+   register. -/
+def wordStackCakeMoveToPhysical {α : Type} (config : WordStackConfig)
+    (source destination : Nat) : Option (StackProg α) := do
+  let location ← wordStackLocation config source
+  match location with
+  | .register _ => pure .skip
+  | .stack slot => pure (.stackLoad destination (wordStackOffset config slot))
+
 def wordStackLongMulInst {α : Type} (config : WordStackConfig)
     (operation : WordArith α) : Option (StackProg α) :=
   match operation with
@@ -506,9 +518,11 @@ def wordStackCakeAddCarryInst {α : Type} (config : WordStackConfig)
     (operation : WordArith α) : Option (StackProg α) :=
   match operation with
   | .cakeAddCarry destination sourceLeft sourceRight carry =>
-      /- The all-register case emits the architectural instruction directly and
-         needs no scratch register, so the guard only restricts the fallback
-         (see `wordStackAddCarryInst`). -/
+      /- The all-register case emits the architectural instruction directly.
+         For the mixed case, mirror Cake's `wReg1`/`wReg2`/`wRegWrite1`:
+         load only spilled operands, and retain the fixed SSA carry register.
+         The old path staged all four values, including carry, which produced
+         three extra moves in the full guest's first `u256_mul_full` AddCarry. -/
       match wordStackLocation config destination,
         wordStackLocation config sourceLeft,
         wordStackLocation config sourceRight,
@@ -517,6 +531,29 @@ def wordStackCakeAddCarryInst {α : Type} (config : WordStackConfig)
           some (.register sourceRight), some (.register carry) =>
           some (.inst (.arith (.cakeAddCarry destination sourceLeft
             sourceRight carry)))
+      | some destinationLocation, some sourceLeftLocation,
+          some sourceRightLocation, some (.register carry) => do
+          let destinationRegister := match destinationLocation with
+            | .register register => register
+            | .stack _ => config.scratch
+          let sourceLeftRegister := match sourceLeftLocation with
+            | .register register => register
+            | .stack _ => config.scratch
+          let sourceRightRegister := match sourceRightLocation with
+            | .register register => register
+            | .stack _ => config.addressScratch
+          let loadLeft ← wordStackCakeMoveToPhysical config sourceLeft config.scratch
+          let loadRight ← wordStackCakeMoveToPhysical config sourceRight config.addressScratch
+          let writeDestination := match destinationLocation with
+            | .register _ => (some (.skip : StackProg α))
+            | .stack slot => some (.stackStore config.scratch
+                (wordStackOffset config slot))
+          let writeDestination ← writeDestination
+          pure (wordStackJoin loadLeft
+            (wordStackJoin loadRight
+              (wordStackJoin
+                (.inst (.arith (.cakeAddCarry destinationRegister sourceLeftRegister
+                  sourceRightRegister carry))) writeDestination)))
       | _, _, _, _ =>
           let safe name := match wordStackLocation config name with
             | some location => wordStackAddCarryLocationSafe config location

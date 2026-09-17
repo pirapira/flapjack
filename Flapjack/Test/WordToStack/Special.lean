@@ -73,6 +73,21 @@ example :
     wordStackCakeAddCarryInst,
     wordStackLocation, lookupNatInfo]
 
+/- Cake's AddCarry keeps the fixed carry register in place while loading only
+   the spilled right operand through wReg2. -/
+example :
+    wordStackArithInst
+        { locations := [(0, .register 0), (1, .register 1),
+            (2, .stack 5), (3, .register 1)],
+          scratch := 22, stackBase := 10, addressScratch := 23,
+          specialScratch := 11, carryScratch := 10 }
+        (.cakeAddCarry 1 1 2 0) =
+      some (.seq (.stackLoad 23 15)
+        (.inst (.arith (.cakeAddCarry 1 1 23 0))) : StackProg Nat) := by
+    simp [wordStackArithInst, wordSpecialArithLocationsSafe,
+    wordStackCakeAddCarryInst, wordStackCakeMoveToPhysical,
+    wordStackJoin, wordStackLocation, wordStackOffset, lookupNatInfo]
+
 example :
     wordStackArithInst
         { locations := [(0, .stack 2), (1, .stack 3),

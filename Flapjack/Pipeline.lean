@@ -142,7 +142,8 @@ def pipelineLoopFunctionsSourceAux [OfNat α 0] [OfNat α 1]
           functions := functionInfos
           maxVar := function.params.length - 1
           target := architecture }
-      (label, function.params, oCompile context function.params function.body) ::
+      (label, List.range function.params.length,
+        oCompile context (List.range function.params.length) function.body) ::
         pipelineLoopFunctionsSourceAux architecture functionInfos (label + 1) functions
 
 def pipelineLoopFunctionsSource [OfNat α 0] [OfNat α 1]

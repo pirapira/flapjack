@@ -436,6 +436,28 @@
       "tracked_beads": [
         "flapjack-8tb.4"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00226_mks_out_of_range_shift.pnk",
+      "source_reference": "Minimized campaign-seed-17 finding f00226: Cake retains the zero source constant and register subtraction produced by a struct-constructor argument, while Flapjack's Lab fusion incorrectly dropped the pair and shifted the following function base.",
+      "cake_sha256": "a3ad0d2832df373ec4418997cb6a4cb4ef8a7d295e348466dd22f64c093db4a8",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/op_dispatch_label_stability.pnk",
+      "source_reference": "Reduced op_dispatch linked-label witness: Cake's post-target-lowering label iteration keeps the 28-function dispatch image byte-exact; the stable linked-label resolver is covered here while the larger op_dispatch-many residual remains owned by flapjack-8tb.5.",
+      "cake_sha256": "16336bc04b981030ccc17cff51dbd9628c556e2406e2eccb81a38c226b1f961a",
+      "tracked_beads": [
+        "flapjack-8tb.5"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00014_loop_to_word_allocator.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness for flapjack-8tb.5.1: Cake's loop-to-word fallback maps the source local absent from assigned variables to Word register 0 before SSA/allocation; Flapjack now matches the allocator input and exact RISC-V bytes.",
+      "cake_sha256": "b09493d8e23e5be3ea9559b3aa013f94c079e2ae43957b25fbd1ef58c3509167",
+      "tracked_beads": [
+        "flapjack-8tb.5.1"
+      ]
     }
   ]
 }

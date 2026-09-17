@@ -207,6 +207,14 @@ def andZeroConstantCollapses : Bool :=
   | .const value => value == 0
   | _ => false
 
+/-- Cake's zero annihilator still applies when another constant follows it,
+as in the reduced seed-17 witness `(x & 0) & 1`. -/
+def andZeroAmongConstantsCollapses : Bool :=
+  match wordInstNormalizeExp (α := Nat)
+      (.op .and [.var 3, .const 0, .const 1]) with
+  | .const value => value == 0
+  | _ => false
+
 /-! Cake's `word_to_word$compile_single` passes the normalized Word program
     directly to `inst_select`; the source-facing flatten adapter must not
     insert a fresh assignment before this nested shift. -/
@@ -312,6 +320,7 @@ def nestedAndWideConstantMaterializes : Bool :=
 #guard orZeroConstantDropped
 #guard xorZeroConstantDropped
 #guard andZeroConstantCollapses
+#guard andZeroAmongConstantsCollapses
 #guard nestedSelectorBoundaryMatches
 #guard variableShiftSelectorMatches
 #guard constantSelectorMatches
@@ -337,6 +346,7 @@ def runChecks : IO Bool := do
     , ("the Or zero identity is dropped like Cake reduce_const", orZeroConstantDropped)
     , ("the Xor zero identity is dropped like Cake reduce_const", xorZeroConstantDropped)
     , ("the And zero fold collapses to the constant like Cake reduce_const", andZeroConstantCollapses)
+    , ("the And zero annihilator wins among multiple constants", andZeroAmongConstantsCollapses)
     , ("the source selector boundary preserves Cake's nested expression shape", nestedSelectorBoundaryMatches)
     , ("a variable shift uses Cake's two operand moves and register shift", variableShiftSelectorMatches)
     , ("a constant assignment becomes Cake's Const instruction", constantSelectorMatches)

@@ -355,6 +355,18 @@ def tempStoreGetLowers : Bool :=
 
 #guard copyPropagationKeepsDestination
 
+/- A later copy through an already-populated class keeps Cake's existing
+   representative visible to subsequent moves.  Rewriting all old members
+   here changes the allocator's register colouring in div64by32. -/
+def copyPropagationPreservesPriorRepresentative : Bool :=
+  match RiscV.wordCopyProp
+      (.seq (.move 0 [(61, 45), (65, 45)])
+        (.move 0 [(297, 65)]) : WordProg (Word 64)) with
+  | .seq _ (.move 0 [(297, 65)]) => true
+  | _ => false
+
+#guard copyPropagationPreservesPriorRepresentative
+
 /-! ### Cake ABI argument overflow
 
     The original `format_var`/`wMoveSingle` materializes arguments past the

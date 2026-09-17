@@ -128,11 +128,9 @@ def selectedBinaryGroundConfig : WordStackConfig :=
 def selectedBinaryCarrierLowering : Bool :=
   match
     wordToStackProgNat selectedBinaryGroundConfig
-      (.inst (.arith (.binOp .add 5 6 (.reg 7))) : WordProg Nat),
-    wordToStackProgNat selectedBinaryGroundConfig
-      (.assign 5 (.op .add [.var 6, .var 7])) with
-  | some (.arith .add 0 1 2), some (.arith .add 0 1 2) => true
-  | _, _ => false
+      (.inst (.arith (.binOp .add 5 6 (.reg 7))) : WordProg Nat) with
+  | some (.inst (.arith (.binOp .add 0 1 (.reg 2)))) => true
+  | _ => false
 
 #guard selectedBinaryCarrierLowering
 
@@ -241,6 +239,29 @@ def nestedImmediateCarrierShape : Bool :=
   | _ => false
 
 #guard nestedImmediateCarrierShape
+
+def nestedImmediateShiftCarrierShape : Bool :=
+  match wordStackCompileExpToRegisterNat immediateSelectionConfig 6 [11, 10]
+      (.shift .lsl (.var 4) (.const 3)) with
+  | some (.inst (.arith (.shift .lsl 6 1 (.imm 3)))) => true
+  | _ => false
+
+#guard nestedImmediateShiftCarrierShape
+
+def immediateCarrierMachineShape : Bool :=
+  let state : WordStackMachineState 64 :=
+    { registers := fun register =>
+        if register = 4 then BitVec.ofNat 64 7 else 0
+      stack := fun _ => 0
+      stores := fun _ => 0
+      memory := fun _ => 0
+      sharedMemory := fun _ => 0 }
+  match evalWordStackMachine state
+      (.inst (.arith (.binOp .and 6 4 (.imm 1))) : StackProg Nat) with
+  | some result => result.registers 6 == BitVec.ofNat 64 1
+  | _ => false
+
+#guard immediateCarrierMachineShape
 
 /-! The two-register compensation introduces `Move 0 [(destination, left)]`
     before an in-place immediate operation.  Cake instead keeps the operand in

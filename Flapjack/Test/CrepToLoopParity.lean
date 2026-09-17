@@ -157,6 +157,7 @@ def shMemDestinationMappingMatches : Bool :=
 #guard shMemDestinationMappingMatches
 
 /- Cake's `Primitive` equation maps both destination and argument slots through
+   `ctxt.vars`; leaving the source numbers untouched shifts every subsequent
    `ctxt.vars`; keeping source slots here changes the allocator input even when
    the primitive itself is otherwise unchanged. -/
 def primitiveContext : LoopContext Nat :=

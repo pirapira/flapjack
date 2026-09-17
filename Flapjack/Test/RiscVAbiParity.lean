@@ -387,7 +387,6 @@ def copyMergeKeepsClassIdentity : Bool :=
   RiscV.wordCopyLookup (RiscV.wordCopyMerge left right) 2373 == 2373
 
 #guard copyMergeKeepsClassIdentity
-
 /-! ### Cake ABI argument overflow
 
     The original `format_var`/`wMoveSingle` materializes arguments past the

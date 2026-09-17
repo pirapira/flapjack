@@ -1,0 +1,13 @@
+fun 1 secp_accel_init_block(1 base, {1,1,1,1} modulus) {
+  st base + 0, base + 40;
+  st base + 8, base + 72;
+  st base + 16, base + 104;
+  st base + 24, base + 136;
+  st base + 32, base + 168;
+  st base + 104, <0, 0, 0, 0>;
+  st base + 136, modulus;
+  return 0;
+}
+fun 1 main() {
+  return secp_accel_init_block(0, <-4294968273, -1, -1, -1>);
+}

@@ -194,6 +194,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/secp_accel_init_block.pnk",
+      "source_reference": "Minimized from the full guest's secp_accel_init_block: Cake preserves static base-plus-offset stores and register-resident struct words through word_to_stack and Lab.",
+      "cake_sha256": "2cdf414cfa245f284a23ad93df8be7909c5a083c3fb4b924db9b9162766d34af",
+      "tracked_beads": [
+        "flapjack-8tb.4.6"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/parameter_reassignment.pnk",
       "source_reference": "cakeml/pancake/crep_to_loopScript.sml:158-162,236-241 (parameter vmap and reassignment); guards that assignments to a function parameter survive crep-to-loop lowering and live optimization.",
       "cake_sha256": "909228ec2ae5e41bdd400877abe193562e27d16e9c58fbec5585dbb409539087",

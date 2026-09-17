@@ -1415,9 +1415,21 @@ def wordStackCompileExpToRegisterNat (config : WordStackConfig)
             let constantRegister :=
               (available.filter (fun register => register != leftRegister)).head?.getD
                 config.addressScratch
-            pure (wordStackJoin leftPrelude
-              (wordStackJoin (.const constantRegister value)
-                (.arith operator target leftRegister constantRegister)))
+            if operator == .sub then
+              if value < 2 ^ 11 then
+                pure (wordStackJoin leftPrelude
+                  (.inst (.arith (.binOp operator target leftRegister (.imm value)))))
+              else
+                pure (wordStackJoin leftPrelude
+                  (wordStackJoin (.const constantRegister value)
+                    (.arith operator target leftRegister constantRegister)))
+            else if value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11 then
+              pure (wordStackJoin leftPrelude
+                (.inst (.arith (.binOp operator target leftRegister (.imm value)))))
+            else
+              pure (wordStackJoin leftPrelude
+                (wordStackJoin (.const constantRegister value)
+                  (.arith operator target leftRegister constantRegister)))
         | _ =>
             let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
             let rightTemporary := available.head?.getD config.addressScratch

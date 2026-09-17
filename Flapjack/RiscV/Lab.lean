@@ -556,6 +556,8 @@ def labWordInstToWord [NeZero width] : WordInst Nat → WordInst (Word width)
   | .const destination value => .const destination (BitVec.ofNat width value)
   | .arith operation => .arith (labWordArithToWord operation)
   | .mem operator destination address => .mem operator destination address
+  | .memOffset operator destination address offset =>
+      .memOffset operator destination address (BitVec.ofNat width offset)
 
 def labPlainNatToWord [NeZero width] : LabPlain Nat → LabPlain (Word width)
   | .word instruction => .word (labWordInstToWord instruction)

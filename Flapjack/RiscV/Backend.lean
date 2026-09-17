@@ -306,6 +306,15 @@ def wordInstToInstruction [NeZero width] :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (.storeWord source address)
+  | .memOffset .load destination address offset => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (.loadWordOffset destination address offset)
+  | .memOffset .store source address offset => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (.storeWordOffset source address offset)
+  | .memOffset _ _ _ _ => none
 
 def executeInstructions [NeZero width] (state : State width) :
     List (Instruction width) → State width
@@ -831,6 +840,10 @@ def evalWordFunction [NeZero width] (state : State width) :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (execute state (.loadWord destination address), [])
+  | .inst (.memOffset .load destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadWordOffset destination address offset), [])
   | .store address value => do
       let state ← evalWordShareInst state .store value address
       pure (state, [])
@@ -842,6 +855,10 @@ def evalWordFunction [NeZero width] (state : State width) :
       let source ← registerOfNat source
       let address ← registerOfNat address
       pure (execute state (.storeWord source address), [])
+  | .inst (.memOffset .store source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeWordOffset source address offset), [])
   | .shareInst operator name address => do
       let state ← evalWordShareInst state operator name address
       pure (state, [])

@@ -271,6 +271,8 @@ def wordCseInstToNumList [WordCseHash α] : WordInst α → List Nat
   | .const _ value => [2, WordCseHash.hash value]
   | .arith operation => 3 :: wordCseArithToNumList operation
   | .mem _ _ _ => [1]
+  | .memOffset operator _ address offset =>
+      wordCseLoadOffsetToNumList operator address offset
 
 def wordCseIsStore : WordMemOp → Bool
   | .store => true
@@ -415,6 +417,19 @@ def wordCseInst [WordCseHash α] (data : WordCseKnowledge) : WordInst α → Wor
           wordCseAddToLoad (wordCseRegisterRead data canonicalAddress) destination
             (wordCseLoadToNumList operator canonicalAddress)
             (.inst (.mem operator destination address))
+
+  | .memOffset operator destination address offset =>
+      if wordCseIsStore operator then
+        (.inst (.memOffset operator destination address offset), { data with loadsMem := ∅ })
+      else
+        let data := wordCseInvalidate data destination
+        if destination % 2 == 0 || address % 2 == 0 || address = destination then
+          (.inst (.memOffset operator destination address offset), data)
+        else
+          let canonicalAddress := wordCseCanonicalRegs' destination data address
+          wordCseAddToLoad (wordCseRegisterRead data canonicalAddress) destination
+            (wordCseLoadOffsetToNumList operator canonicalAddress offset)
+            (.inst (.memOffset operator destination address offset))
 
 /-- Cake's `bm_inter_eq`/`inter_eq`, first-order equality intersection. -/
 def wordCseInterEq (first second : WordCseRegMap) : WordCseRegMap :=

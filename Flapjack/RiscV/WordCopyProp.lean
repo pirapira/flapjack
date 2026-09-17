@@ -205,6 +205,14 @@ def wordCopyInst {α : Type} (state : WordCopyState) :
       | .store | .store8 | .store16 | .store32 =>
           (.mem operator (wordCopyLookup state destination)
             (wordCopyLookup state address), state)
+  | .memOffset operator destination address offset =>
+      match operator with
+      | .load | .load8 | .load16 | .load32 =>
+          (.memOffset operator destination (wordCopyLookup state address) offset,
+            wordCopyRemove state destination)
+      | .store | .store8 | .store16 | .store32 =>
+          (.memOffset operator (wordCopyLookup state destination)
+            (wordCopyLookup state address) offset, state)
 
 def wordCopyMerge (left right : WordCopyState) : WordCopyState :=
   { aliases := left.aliases.filter (fun entry =>

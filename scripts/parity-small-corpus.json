@@ -506,7 +506,7 @@
       "source_reference": "Reduced campaign-seed-17 witness for flapjack-8tb: Cake retains the zero source constant and register add before the following left shift; eliding the non-aliased zero-add pair shifts the main section and every downstream user-function base.",
       "cake_sha256": "dfa87853d0ec8ed93fcf1a845adac03d4429968b51ca50ef2568a1747b03ad1f",
       "tracked_beads": [
-        "flapjack-8tb"
+        "flapjack-8tb.5.8"
       ]
     }
   ]

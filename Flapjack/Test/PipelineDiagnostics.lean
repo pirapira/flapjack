@@ -155,6 +155,31 @@ def cakeAddCarryOps : WordProg Nat → List (Nat × Nat × Nat × Nat)
       | none => [])
   | _ => []
 
+/-! The checked-in HOL `longdiv_code_probe.out` also fixes the helper call
+    ABI, not just the AddCarry instructions.  In particular, LongDiv_code
+    passes its seven source words in the order `[0;11;6;10;10;4;2]`, while
+    LongDiv1_code uses the six-word recursive ABI `[0;2;4;6;8;10;12]`.
+    Keep these call shapes explicit so a future entry-slot or argument-order
+    change cannot silently invalidate the source-shaped runtime. -/
+def wordCallShapes : WordProg Nat → List (Option Nat × List Nat)
+  | .call _ target arguments _ => [(target, arguments)]
+  | .seq first second => wordCallShapes first ++ wordCallShapes second
+  | .ite _ _ _ thenBranch elseBranch =>
+      wordCallShapes thenBranch ++ wordCallShapes elseBranch
+  | .loop _ body _ => wordCallShapes body
+  | .mustTerminate body => wordCallShapes body
+  | _ => []
+
+def longDivHelperCallAbiExact : Bool :=
+  wordCallShapes (RiscV.cakeLongDivCode 64) ==
+      [(some RiscV.cakeLongDiv1Location, [0, 11, 6, 10, 10, 4, 2])] &&
+    wordCallShapes (RiscV.cakeLongDiv1Code 64) ==
+      [(some RiscV.cakeLongDiv1Location, [0, 2, 4, 6, 8, 10, 12]),
+       (some RiscV.cakeLongDiv1Location, [0, 2, 4, 6, 8, 10, 12]),
+       (some RiscV.cakeLongDiv1Location, [0, 2, 4, 6, 8, 10, 12])]
+
+#guard longDivHelperCallAbiExact
+
 #guard
   cakeAddCarryOps (RiscV.cakeLongDiv1Code 8) =
     [(10, 10, 16, 1), (12, 12, 14, 1)]

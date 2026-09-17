@@ -27,4 +27,9 @@ def parityGuard : Bool :=
 #eval parityGuard
 #guard parityGuard
 
+def largeLiveInFuelMatchesCake : Bool :=
+  loopFixedpointFuel (List.range 65) == 66
+
+#guard largeLiveInFuelMatchesCake
+
 end Flapjack.Test.LoopLiveCompParity

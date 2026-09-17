@@ -21,12 +21,19 @@ structure WordCopyState where
   /- `store_to_eq` (`word_copyScript.sml:40`): the equivalence class known to
      hold the value a store currently contains.  Cake keeps an internal class
      number here and resolves it through `from_eq`; the flattened port
-     representation already stores the visible representative, so this map
-     holds that representative directly. -/
+     representation stores the visible representative directly. -/
   storeToEq : NatInfoMap Nat
+  /- Cake's class identity is retained separately so branch merges do not
+     confuse independently-created classes with the same representative. -/
+  classOf : NatInfoMap Nat
+  classRep : NatInfoMap Nat
+  classStore : NatInfoMap Nat
+  classNext : Nat
   deriving Repr
 
-def wordCopyEmpty : WordCopyState := { aliases := [], storeToEq := [] }
+def wordCopyEmpty : WordCopyState :=
+  { aliases := [], storeToEq := [], classOf := [], classRep := [],
+    classStore := [], classNext := 0 }
 
 def wordCopyLookup (state : WordCopyState) (name : Nat) : Nat :=
   (lookupNatInfo name state.aliases).getD name
@@ -40,26 +47,35 @@ def wordCopyRemove (state : WordCopyState) (name : Nat) : WordCopyState :=
   if (lookupNatInfo name state.aliases).isSome then wordCopyEmpty else state
 
 /-! `set_eq` (`word_copyScript.sml:204-225`).  Cake's equivalence class is
-    represented by the *destination* of the copy: `set_eq cs x y` inserts `x`
-    (the destination) as the class of `y` (the source) and makes `x` the
-    representative, so later uses of the *source* become `x` while uses of `x`
-    stay.  The RISC-V oracle (`copy_prop_prog (Seq (Move 0 [(37,25)])
-    (Inst (Mem Store 33 (Addr 37 0)))) empty_eq`) keeps `Addr 37` and rewrites
-    a later `25` to `37`, which is what the allocator then coalesces. -/
+    represented by the *destination* of the copy. -/
 def wordCopySet (state : WordCopyState) (destination source : Nat) : WordCopyState :=
   if wordCopyIsAlloc destination && wordCopyIsAlloc source then
-    /- `wordCopyRemove` has already dropped the state when `destination` had a
-       class, so `destination` is its own representative here. -/
     let others := state.aliases.filter (fun entry =>
       entry.1 != destination && entry.1 != source)
-    { state with
-      aliases := (destination, destination) ::
-        (source, destination) ::
-        /- `set_eq` updates the class representative for the new copy but
-           leaves the existing `to_eq` entries intact.  Rewriting every old
-           member here makes a later move observe the new name where Cake's
-           `lookup_eq` still observes the prior representative. -/
-        others }
+    match lookupNatInfo source state.classOf with
+    | some classId =>
+        if (lookupNatInfo classId state.classRep).isSome then
+          { state with
+            aliases := (destination, destination) ::
+              (source, destination) :: others
+            classOf := wordCopyUpdate state.classOf destination classId
+            classRep := wordCopyUpdate state.classRep classId destination }
+        else
+          { state with
+            aliases := (destination, destination) ::
+              (source, destination) :: others
+            classOf := (destination, state.classNext) ::
+              (source, state.classNext) :: state.classOf
+            classRep := (state.classNext, destination) :: state.classRep
+            classNext := state.classNext + 1 }
+    | none =>
+        { state with
+          aliases := (destination, destination) ::
+            (source, destination) :: others
+          classOf := (destination, state.classNext) ::
+            (source, state.classNext) :: state.classOf
+          classRep := (state.classNext, destination) :: state.classRep
+          classNext := state.classNext + 1 }
   else state
 
 /- `lookup_store_eq` (`word_copyScript.sml:252-260`).  Cake resolves the
@@ -79,16 +95,35 @@ def wordCopyLookupStoreEq (state : WordCopyState) (store : Nat) : Option Nat :=
     singleton class and a name with one reuses it. -/
 def wordCopySetStoreEq (state : WordCopyState) (store name : Nat) : WordCopyState :=
   if wordCopyIsAlloc name then
-    match lookupNatInfo name state.aliases with
-    | some representative =>
-        { state with
-          storeToEq := (store, representative) ::
-            state.storeToEq.filter (fun entry => entry.1 != store) }
+    match lookupNatInfo name state.classOf with
+    | some classId =>
+        if (lookupNatInfo classId state.classRep).isSome then
+          { state with
+            storeToEq := (store, wordCopyLookup state name) ::
+              state.storeToEq.filter (fun entry => entry.1 != store)
+            classStore := (store, classId) ::
+              state.classStore.filter (fun entry => entry.1 != store) }
+        else
+          { state with
+            aliases := (name, name) ::
+              state.aliases.filter (fun entry => entry.1 != name)
+            storeToEq := (store, name) ::
+              state.storeToEq.filter (fun entry => entry.1 != store)
+            classOf := (name, state.classNext) :: state.classOf
+            classRep := (state.classNext, name) :: state.classRep
+            classStore := (store, state.classNext) ::
+              state.classStore.filter (fun entry => entry.1 != store)
+            classNext := state.classNext + 1 }
     | none =>
         { aliases := (name, name) ::
-            state.aliases.filter (fun entry => entry.1 != name),
+            state.aliases.filter (fun entry => entry.1 != name)
           storeToEq := (store, name) ::
-            state.storeToEq.filter (fun entry => entry.1 != store) }
+            state.storeToEq.filter (fun entry => entry.1 != store)
+          classOf := (name, state.classNext) :: state.classOf
+          classRep := (state.classNext, name) :: state.classRep
+          classStore := (store, state.classNext) ::
+            state.classStore.filter (fun entry => entry.1 != store)
+          classNext := state.classNext + 1 }
   else wordCopyEmpty
 
 def wordCopyExp (state : WordCopyState) : WordExp α → WordExp α
@@ -162,9 +197,23 @@ def wordCopyInst {α : Type} (state : WordCopyState) :
 
 def wordCopyMerge (left right : WordCopyState) : WordCopyState :=
   { aliases := left.aliases.filter (fun entry =>
-      lookupNatInfo entry.1 right.aliases == some entry.2),
+      lookupNatInfo entry.1 right.aliases == some entry.2 &&
+      match lookupNatInfo entry.1 left.classOf,
+        lookupNatInfo entry.1 right.classOf with
+      | some leftClass, some rightClass =>
+          leftClass == rightClass &&
+            lookupNatInfo leftClass left.classRep == some entry.2 &&
+            lookupNatInfo rightClass right.classRep == some entry.2
+      | _, _ => false),
     storeToEq := left.storeToEq.filter (fun entry =>
-      lookupNatInfo entry.1 right.storeToEq == some entry.2) }
+      lookupNatInfo entry.1 right.storeToEq == some entry.2),
+    classOf := left.classOf.filter (fun entry =>
+      lookupNatInfo entry.1 right.classOf == some entry.2),
+    classRep := left.classRep.filter (fun entry =>
+      lookupNatInfo entry.1 right.classRep == some entry.2),
+    classStore := left.classStore.filter (fun entry =>
+      lookupNatInfo entry.1 right.classStore == some entry.2),
+    classNext := max left.classNext right.classNext }
 
 def wordCopyMoves : WordCopyState → List (Nat × Nat) →
     List (Nat × Nat) × WordCopyState

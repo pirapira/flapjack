@@ -356,8 +356,7 @@ def tempStoreGetLowers : Bool :=
 #guard copyPropagationKeepsDestination
 
 /- A later copy through an already-populated class keeps Cake's existing
-   representative visible to subsequent moves.  Rewriting all old members
-   here changes the allocator's register colouring in div64by32. -/
+   representative visible to subsequent moves. -/
 def copyPropagationPreservesPriorRepresentative : Bool :=
   match RiscV.wordCopyProp
       (.seq (.move 0 [(61, 45), (65, 45)])
@@ -366,6 +365,28 @@ def copyPropagationPreservesPriorRepresentative : Bool :=
   | _ => false
 
 #guard copyPropagationPreservesPriorRepresentative
+
+/- Cake's branch merge compares class identities, not only the visible
+   representative.  Independently-created classes for the same names must
+   therefore not propagate a branch-local source across the merge. -/
+def copyMergeKeepsClassIdentity : Bool :=
+  let left : RiscV.WordCopyState :=
+    { aliases := [(2373, 2321), (2321, 2321)]
+      storeToEq := []
+      classOf := [(2373, 4), (2321, 4)]
+      classRep := [(4, 2321)]
+      classStore := []
+      classNext := 5 }
+  let right : RiscV.WordCopyState :=
+    { aliases := [(2373, 2321), (2321, 2321)]
+      storeToEq := []
+      classOf := [(2373, 5), (2321, 5)]
+      classRep := [(5, 2321)]
+      classStore := []
+      classNext := 6 }
+  RiscV.wordCopyLookup (RiscV.wordCopyMerge left right) 2373 == 2373
+
+#guard copyMergeKeepsClassIdentity
 
 /-! ### Cake ABI argument overflow
 

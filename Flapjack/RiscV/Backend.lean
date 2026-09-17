@@ -937,6 +937,14 @@ def evalWordProg [NeZero width] (state : State width) :
       let destination ← registerOfNat destination
       let address ← registerOfNat address
       pure (execute state (.loadWord destination address))
+  | .inst (.memOffset .load destination address offset) => do
+      let destination ← registerOfNat destination
+      let address ← registerOfNat address
+      pure (execute state (.loadWordOffset destination address offset))
+  | .inst (.memOffset .store source address offset) => do
+      let source ← registerOfNat source
+      let address ← registerOfNat address
+      pure (execute state (.storeWordOffset source address offset))
   | .shareInst operator name address =>
       evalWordShareInst state operator name address
   | .locValue destination source => do

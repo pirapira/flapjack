@@ -477,6 +477,22 @@
         "flapjack-pxn.8.5.10.1",
         "flapjack-pxn.8.5.10.3"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00017_nested_and_zero.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness: Cake's word_inst reduce_const And annihilates the nested expression (x & 0) & 1 before allocation; retaining both And instructions shifts the add1/main section bases by eight bytes.",
+      "cake_sha256": "93e2cb759be34ed6c343fbdd0d7afb919a02518edef32ea76fa5c13eaefcb243",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00091_nested_and_constants.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness: Cake's word_inst folds the all-constant expression 1 & 1 before combining it with the shifted load; retaining duplicate constant materialization shifts the add1/mks section bases by four bytes.",
+      "cake_sha256": "a8408a520d22b8d1a3cc63c4044bdf5e43eaab85e2d8b905d3512e33f6ed46b4",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1"
+      ]
     }
   ]
 }

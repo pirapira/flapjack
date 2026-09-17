@@ -119,10 +119,10 @@ def wordInstIsConstant : WordExp α → Bool
     to `Const 0w` for `And` (HOL probe labels `optimize_consts_or_zero`,
     `optimize_consts_xor_zero`, `optimize_consts_and_zero`, `norm_or_zero`,
     `norm_and_zero`), so the zero cases are reproduced here.  `wordInstFoldConstants`
-    uses the available `Or`/`Xor`/arithmetic operation classes for non-zero
-    folds too.  Generic `And` retains its zero-only behavior because this
-    normalization API intentionally does not require `Complement` on abstract
-    test words, and `op_consts` for empty operand lists remains a separate gap. -/
+    uses the available `And`/`Or`/`Xor`/arithmetic operation classes for
+    non-zero folds too.  Unlike the other operators, `And` folds its
+    non-empty constant list from the first operand, so no all-ones identity
+    is required; `op_consts` for empty operand lists remains a separate gap. -/
 def wordInstConstantValue : WordExp α → Option α
   | .const value => some value
   | _ => none
@@ -133,17 +133,18 @@ def wordInstConstantValue : WordExp α → Option α
     non-zero constant expressions such as `7 | 7` as an extra instruction.
     That extra instruction is observable in a call handler because it shifts
     every later SSA name and code section. -/
-def wordInstFoldConstants [Add α] [Sub α] [OrOp α]
+def wordInstFoldConstants [Add α] [Sub α] [AndOp α] [OrOp α]
     [HXor α α α] [OfNat α 0]
     (operator : BinOp) (values : List α) : Option α :=
   match operator, values with
   | .add, values => some (values.foldr (fun value rest => value + rest) 0)
+  | .and, value :: values => some (values.foldl (fun acc value => acc &&& value) value)
   | .or, values => some (values.foldr (fun value rest => value ||| rest) 0)
   | .xor, values => some (values.foldr (fun value rest => value ^^^ rest) 0)
   | .sub, [left, right] => some (left - right)
   | _, _ => none
 
-def wordInstConstantsToEnd [Add α] [Sub α] [OrOp α]
+def wordInstConstantsToEnd [Add α] [Sub α] [AndOp α] [OrOp α]
     [HXor α α α] [DecidableEq α] [OfNat α 0]
     (operator : BinOp) (expressions : List (WordExp α)) : List (WordExp α) :=
   let constants := expressions.filterMap wordInstConstantValue
@@ -152,14 +153,7 @@ def wordInstConstantsToEnd [Add α] [Sub α] [OrOp α]
   | [] => expressions.reverse
   | _ =>
       match wordInstFoldConstants operator constants with
-      | none =>
-          match operator with
-          | .and =>
-              if constants.all (fun value => value = 0) then
-                [.const 0]
-              else
-                constants.map (fun value => .const value) ++ others.reverse
-          | _ => constants.map (fun value => .const value) ++ others.reverse
+      | none => constants.map (fun value => .const value) ++ others.reverse
       | some folded =>
           if folded = 0 then
             match operator with
@@ -178,7 +172,7 @@ def wordInstConvertSub [Sub α] [OfNat α 0] : List (WordExp α) → WordExp α
   | [expression, .const value] => .op .add [.const (0 - value), expression]
   | expressions => .op .sub expressions
 
-def wordInstPullExp [Sub α] [Add α] [OrOp α] [HXor α α α]
+def wordInstPullExp [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     [DecidableEq α] [OfNat α 0] : WordExp α → WordExp α
   | .op operator [] => .op operator []
   | .op _ [expression] => wordInstPullExp expression
@@ -214,7 +208,7 @@ def wordInstFlattenExp : WordExp α → WordExp α
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial
 
-def wordInstNormalizeExp [Sub α] [Add α] [OrOp α] [HXor α α α]
+def wordInstNormalizeExp [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     [DecidableEq α] [OfNat α 0] (expression : WordExp α) : WordExp α :=
   wordInstFlattenExp (wordInstPullExp expression)
 
@@ -366,7 +360,7 @@ def wordInstSelectAddressAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [O
       (prelude, .op .add [selectedLeft, .const value])
   | _ => wordInstSelectAtom temp expression
 
-def wordInstSelectProgram [Sub α] [Add α] [OrOp α] [HXor α α α]
+def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]
     (temp : Nat) : WordProg α → WordProg α
@@ -525,7 +519,7 @@ def wordInstSelectProgram [Sub α] [Add α] [OrOp α] [HXor α α α]
 termination_by program => sizeOf program
 decreasing_by all_goals decreasing_trivial
 
-def wordInstSelectProgramFrom [Sub α] [Add α] [OrOp α] [HXor α α α]
+def wordInstSelectProgramFrom [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
     [DecidableEq α] [OfNat α 0] [OfNat α 1]
     [WordInstSelectImmediate α]
     (program : WordProg α) : WordProg α :=

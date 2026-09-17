@@ -43,13 +43,12 @@ theorem tailCallArgumentMoves :
     simp [wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
       tailCallTestConfig, wordStackLocation, lookupNatInfo]
   rw [wordStackMovesToPhysical, hmoves]
-  simp [tailCallTestConfig, hnodup, wordStackLocationMove,
+  simp [tailCallTestConfig, wordStackLocationMove,
     wordStackLocationMoveRemoveDestination,
     wordStackLocationMoveDestinations, wordStackParallelLocationMove,
-    wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
-    wordStackCakeSplitSource, wordStackCakeInitLast, wordStackCakeOptionMoveList,
+    wordStackCakeParallelOptionOrder,
     wordStackParallelLocationMoveAux, wordStackJoin, List.any_nil,
-    List.any_cons, List.filter_nil]
+    List.filter_nil]
 
 /-- Cake's `wMoveSingle` targets consecutive RISC-V ABI registers, so the
     second argument must land one register above the first.  The stride is

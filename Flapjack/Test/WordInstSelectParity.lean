@@ -21,7 +21,17 @@ def cakeLoadVarShape : Bool :=
   | .seq (.move 0 [(7, 13)]) (.inst (.mem .load 2 7)) => true
   | _ => false
 
+def cakeWideBinopStatementShape : Bool :=
+  match wordInstSelectProgram (α := Nat) 23
+      (.assign 5 (.op .and [.var 18, .const (2 ^ 60)])) with
+  | .seq (.move 0 [(23, 18)])
+      (.seq (.inst (.const 24 value))
+        (.inst (.arith (.binOp .and 5 23 (.reg 24))))) =>
+      value == 2 ^ 60
+  | _ => false
+
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
+#guard cakeWideBinopStatementShape
 
 end Flapjack.RiscV

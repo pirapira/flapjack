@@ -1,0 +1,15 @@
+fun 1 alloc(1 n) {
+  return 0;
+}
+var 1 ssz_offs = 0;
+fun 1 ssz_check_offsets(1 offs, 1 n, 1 fixed, 1 len) {
+  return 0;
+}
+fun 1 decode_payload(1 p, 1 len) {
+  if len <+ 0 {
+  }
+  var 1 pl = alloc(0);
+  st pl + 8, len;
+  ssz_check_offsets(ssz_offs, 4, 0, len);
+  return pl;
+}

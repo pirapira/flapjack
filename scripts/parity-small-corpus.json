@@ -340,6 +340,18 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/u256_mul_full_bitmap_wrap.pnk",
+      "source_reference": "Minimized differential-fuzz finding f00114: Cake wraps a bitmap table at sixteen `.quad` words per line; this reduced u256 carry program is the first source-level witness for exact bitmap-table formatting.",
+      "cake_sha256": "bb71197ed267e892be2dc6f2d02b9e77811ce320f55c64fd66d289cde298f0fd",
+      "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/decode_payload_op_curr_heap_copy.pnk",
+      "source_reference": "Minimized from the full stateless guest decode_payload P0 mismatch. Cake's word_copy preserves the copy class across OpCurrHeap while rewriting its source and removing only the destination class; this fixture pins the resulting exact RISC-V output.",
+      "cake_sha256": "d54dea259a7403b37f6b5ea6465907ed9523388f874c99ab7d8cbcee8a0543a7",
+      "tracked_beads": []
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/divmnu_copy_loop.pnk",
       "source_reference": "Minimized full-guest divmnu witness; word_copy must reset copy state after Loop and resolve old members through Cake's class representative.",
       "cake_sha256": "76d372a0ccac7e59715ec940f16d8f4e89ce676601b1c691f4546d8a2b38cb49",
@@ -383,15 +395,31 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/allocator_colour_permutation.pnk",
-      "source_reference": "Reduced from the stateless guest's process_transaction by scripts/parity-reduce.py: 15840 lines to 2776 with the stub-other-functions pass, then to 20 lines in 1324 oracle calls. inst_select c temp (Set store exp) (word_instScript.sml:386-388) is Seq (inst_select_exp c temp temp (flatten_exp (pull_exp exp))) (Set store (Var temp)): it runs the expression selector unconditionally, so even Set store (Var v) becomes Move 0 [(temp, v)]; Set store (Var temp). Flapjack's wordInstSelectProgram had no Set case at all, so the store passed through untouched and that copy was never created. Full SSA then numbered every later name four lower than Cake's and the allocator saw one move fewer, which permuted the register colours -- the visible symptom here was the same bytes with slot 32 reloaded into cake x13 / fj x12 and so on. The throw path in this fixture is the smallest instance: Cake emits Inst (Const 137 0w); Move0 [(141,137)]; Set (Temp 0w) (Var 141) where Flapjack emitted const 137 0; set (temp 0) (var 137).",
+      "source_reference": "Reduced from the stateless guest's process_transaction by scripts/parity-reduce.py: 15840 lines to 2776 with the stub-other-functions pass, then to 20 lines in 1324 oracle calls. The original Cake word allocator emits four stack slots and bitmap words [4,16] for this source. Flapjack previously passed fresh SSA parameter names into word_to_stack after Cake's dead/SSA cleanup, dropping one stack slot and producing a 232-byte section; passing the ABI parameter names at this boundary restores Cake's 256-byte section and exact bytes.",
       "cake_sha256": "aa984a768fe54b226cdca51c0d3193aebefd2f44760d0e5e0cf0d45638a2ebb9",
-      "tracked_beads": []
+      "tracked_beads": ["flapjack-8tb.4"]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/set_transient_storage_copy_class.pnk",
       "source_reference": "Minimized set_transient_storage witness: Cake's word_copy preserves copy classes across a new HeapLength store class and rewrites the later argument through the current representative.",
       "cake_sha256": "0d2162f9aadd130cdc573fff76bf9726907afd89706d4ef1d366f7225aef6da3",
-      "tracked_beads": ["flapjack-gs2"]
+      "tracked_beads": [
+        "flapjack-gs2"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/wide_add_constant.pnk",
+      "source_reference": "Minimal wide-positive Add witness: Cake's word_inst selector uses modular word negation before falling back to Const plus register Binop materialization (word_instScript.sml:262-275).",
+      "cake_sha256": "bc01978de8eae4443f100a437b65199c6d0e4cb9e32ce66e5d85fe0a740968af",
+      "tracked_beads": [
+        "flapjack-pxn.9"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/wide_call_arity.pnk",
+      "source_reference": "Acceptance regression lock for flapjack-01k. Cake compiles a call with fourteen or more word arguments; flapjack-compile used to fail outright with SourceRiscVImageError.loweringInFunction (PipelineRiscVLoweringError.wordToStackFailure), because WordStackConfig.abiRegisterCount defaulted to 12 -- the x10--x21 span -- while Cake's call-argument arithmetic uses k, the reg_count word_to_stack$compile derives once as asm_conf.reg_count - (5 + LENGTH asm_conf.avoid_regs) = 22 on RISC-V (word_to_stackScript.sml:605). wordStackPhysicalMovesToIndexed then returned none for an argument that would land past the end of the frame. Thirteen is the last arity that used to work and is kept as the control; fourteen, sixteen and twenty are inside the range that used to be rejected. Compiling this file with a binary built at fde32cd5 fails with wordToStackFailure 10 in call14; it is byte-identical to original Pancake now.",
+      "cake_sha256": "bd578347d18e31981cc17b5404657b8cb80b3071dad2521ff9fc08d49b50c001",
+      "tracked_beads": []
     }
   ]
 }

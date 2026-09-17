@@ -425,9 +425,12 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
       loopNestedSeq
         (result.code ++ loopAssignTemps names result.expressions ++ [.return names])
   | .shMem operator name address =>
-      let result := loopCompileExp context (context.maxVar + 1) live address
-      loopNestedSeq (result.code ++
-        [.shMem operator (findLoopVar context name) result.expression])
+      match lookupNatInfo name context.vars with
+      | some mappedName =>
+          let result := loopCompileExp context (context.maxVar + 1) live address
+          loopNestedSeq (result.code ++
+            [.shMem operator mappedName result.expression])
+      | none => .skip
   | .tick => .tick
 termination_by program => sizeOf program
 

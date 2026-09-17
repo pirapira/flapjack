@@ -50,13 +50,14 @@ example :
         nextLabel := 3 } := by
   simp [labFlatten]
 
-/- CakeML's final Lab filter removes a physical identity move.  This is the
-   concrete artifact-side counterpart of the Word-to-Stack parallel-move
-   identity case and must not leave a one-instruction hole in the section. -/
+/- CakeML retains an identity `or r r r` emitted by the stack lowering.  This
+   exact instruction matters because removing it changes section sizes and
+   every following label. -/
 example :
     labFlatten false 2 3 [] []
       (.arith .or 7 7 7 : StackProg Nat) =
-      { lines := [], terminal := false, nextLabel := 3 } := by
+      { lines := [.asm (.arith .or 7 7 7) [] 0], terminal := false,
+        nextLabel := 3 } := by
   simp [labFlatten]
 
 example :

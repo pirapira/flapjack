@@ -238,6 +238,7 @@ def compileStackProgramNatListToRiscVChecked [NeZero width]
   match stackProgramsWithLongDivRuntime config programs with
   | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
   | some programs =>
+      let programs := stackRawCallPrograms programs
       compileLabProgramChecked context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
@@ -287,6 +288,7 @@ def compileStackProgramNatListWithRaiseStubToRiscVCakeChecked [NeZero width]
   match stackProgramsWithLongDivRuntime config programs with
   | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
   | some programs =>
+      let programs := stackRawCallPrograms programs
       compileLabProgramChecked context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
@@ -311,6 +313,7 @@ def compileStackProgramNatListLinkedWithRaiseStubToRiscVCakeChecked [NeZero widt
   match stackProgramsWithLongDivRuntime config programs with
   | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
   | some programs =>
+      let programs := stackRawCallPrograms programs
       compileLabProgramLinkedChecked context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
@@ -366,6 +369,7 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscVCakeChecked
   match stackProgramsWithLongDivRuntime removeConfig programs with
   | none => .error { sectionId := 0, position := 0, feature := .loweringFailure }
   | some programs =>
+      let programs := stackRawCallPrograms programs
       match compileLabProgramLinkedWithPancakeRuntime context
           (((programs.map (fun (sectionId, program) =>
             if sectionId = cakeLongDiv1Location ||

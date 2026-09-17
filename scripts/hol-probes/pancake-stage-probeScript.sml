@@ -9,6 +9,8 @@ load "bossLib";
 load "preamble";
 load "panPtreeConversionTheory";
 load "pan_to_wordTheory";
+load "backend_passesTheory";
+load "riscv_targetTheory";
 open bossLib;
 open HolKernel Parse;
 open preamble;
@@ -52,3 +54,28 @@ val loop = eval_term "stage=crep_to_loop"
   (list_mk_comb (``crep_to_loop$compile_prog``, [``RISC_V``, crep]));
 val word = eval_term "stage=loop_to_word"
   (mk_comb (``loop_to_word$compile``, loop));
+
+(* Optional focused probe for comparing the inputs to word_alloc.  The
+   complete word program above is useful for ordinary stage debugging, but
+   allocator parity needs the original heuristic and stack-only inputs too.
+   Keep this opt-in because these terms can be large. *)
+val _ =
+  case OS.Process.getEnv "PANCAKE_ALLOCATOR_PROBE" of
+      NONE => ()
+    | SOME _ =>
+        let
+          val selected_word = list_mk_comb (``FILTER``,
+            [``(λ(name,params,prog). name = «_collapse_branch»)``, word])
+          val internal = eval_term "stage=word_internal_all"
+            (list_mk_comb (``backend_passes$word_internal_all``,
+              [``riscv_target$riscv_config``, ``[]``, ``LN``, selected_word]))
+          val (internal_word, _) = pairSyntax.dest_pair internal
+          val selected = list_mk_comb (``FILTER``,
+            [``(λ(name,params,prog). name = «_collapse_branch»)``, internal_word])
+          val input_term = list_mk_comb (``MAP``,
+            [``(λ(name,params,prog).
+                (name, word_alloc$get_heuristics 3 0 prog,
+                 word_alloc$get_stack_only prog))``, selected])
+        in
+          ignore (eval_term "stage=cake_word_heuristics" input_term)
+        end

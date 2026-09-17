@@ -96,7 +96,7 @@ example :
     globalCompileInitializers, pipelineCrepeContext, pipelineExceptionCodes,
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
     pipelineWordFunctions, pipelinePrependInitializers, pipelineInlineNames,
-    compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
+    compileToCrep, compileFunctionsSource, compileFunDeclSource, compileParamVars,
     compileProg, crepInlineTopRecursiveByNames, crepInlineTopRecursive,
     crepInlineFunctionsRecursive, crepInlineActiveNames,
     crepSimpFunctions
@@ -138,6 +138,27 @@ example :
        .function
         { name := "f", inline := false, exported := false, params := [],
           body := .return (.const 1), returnShape := .one }]) = false
+
+/-! Crepe primitives contain already-flattened variable names.  The original
+    `crep_to_loop` pass resolves both sides through the loop variable map; it
+    must not leave the Crepe names untouched (which can alias generated
+    temporaries and makes later dead-code analysis delete live arithmetic). -/
+def primitiveLoopContext : LoopContext Nat :=
+  { vars := [(10, 100), (11, 101), (12, 102), (13, 103)]
+    functions := []
+    maxVar := 0
+    target := .rv64i }
+
+example :
+      loopCompileProg primitiveLoopContext []
+        (.primitive [10] .addCarry [11, 12, 13]) =
+      .primitive [100] .addCarry [101, 102, 103] := by
+  simp [loopCompileProg, lookupLoopVars, lookupNatInfo, primitiveLoopContext]
+
+example :
+    loopCompileProg primitiveLoopContext []
+        (.primitive [10] .addCarry [11, 99, 13]) = .skip := by
+  simp [loopCompileProg, lookupLoopVars, lookupNatInfo, primitiveLoopContext]
 
 example :
     staticResultOk (staticCheck (α := Nat)

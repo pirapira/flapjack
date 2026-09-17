@@ -452,7 +452,6 @@ def wordSsaRenameInst (state : WordSsaState) :
       | .cakeAddCarry destination sourceLeft sourceRight carry =>
           let sourceLeft := wordSsaRead state sourceLeft
           let sourceRight := wordSsaRead state sourceRight
-          let carry := wordSsaRead state carry
           let (state, freshDestination) := wordSsaFresh state destination
           let (state, freshCarry) := wordSsaFresh state carry
           (state, .arith (.cakeAddCarry freshDestination sourceLeft
@@ -760,6 +759,21 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
         let movOut := .move 1 [(freshRight, 0), (freshLeft, 6)]
         (state, wordSsaSeq movIn
           (wordSsaSeq (.inst (.arith (.longMul 6 0 0 4))) movOut))
+    | .inst (.arith (.cakeAddCarry destination sourceLeft sourceRight carry)) =>
+        /- Cake's `ssa_cc_trans_inst` uses fixed carry register 0 for
+           AddCarry.  The move-in/move-out is semantically observable to the
+           dead pass: it keeps the source-shaped carry protocol and prevents
+           an otherwise dead first AddCarry from being discarded. -/
+        let sourceLeft := wordSsaRead state sourceLeft
+        let sourceRight := wordSsaRead state sourceRight
+        let carryValue := wordSsaRead state carry
+        let moveIn : WordProg α := .move 1 [(0, carryValue)]
+        let (state, freshDestination) := wordSsaFresh state destination
+        let (state, freshCarry) := wordSsaFresh state carry
+        let addCarry : WordProg α :=
+          .inst (.arith (.cakeAddCarry freshDestination sourceLeft sourceRight 0))
+        let moveOut : WordProg α := .move 1 [(freshCarry, 0)]
+        (state, wordSsaSeq moveIn (wordSsaSeq addCarry moveOut))
     | .inst instruction =>
         wordSsaRenameInstProgram state instruction
     | .get destination store =>
@@ -966,8 +980,13 @@ def wordSsaRenameProgramWithLoops [OfNat α 0] (frames : List WordSsaLoopFrame)
           wordSsaRenameProgramWithLoops (frame :: frames) entryState body
         let backMoves := wordSsaReconcileTo bodyState setupState liveIn.eraseDups
         let body := wordSsaSeq body backMoves
-        let program := .loop (liveIn.map (wordSsaRead setupState)) body
-          (liveOut.map (wordSsaRead setupState))
+        /- `apply_nummap_key` rebuilds the Cake num_map, so its `toAList`
+           order is the Patricia-tree order of the renamed keys rather than
+           the incoming list order.  This order reaches the clash tree and is
+           observable in exact RISC-V allocation. -/
+        let ssaLiveIn := NumSet.fromList (liveIn.map (wordSsaRead setupState))
+        let ssaLiveOut := NumSet.fromList (liveOut.map (wordSsaRead setupState))
+        let program := .loop ssaLiveIn body ssaLiveOut
         /- CakeML threads the loop body's fresh-name counter out of
            `ssa_cc_trans (Loop ...)`, so code after the loop never reuses a
            name that the body allocated.  Only `next` is taken from the body

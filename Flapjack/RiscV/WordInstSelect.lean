@@ -236,19 +236,41 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
   | .load address =>
       let (prelude, selectedAddress) := wordInstSelectAtom temp address
       wordInstSelectLoadTail temp prelude selectedAddress
-  | .op .add [left, .const value] =>
+  | .op operator [left, .const value] =>
+      /- `inst_select_exp c tar temp (Op op [e1; e2])` with `e2 = Const w`
+         (`word_instScript.sml:252-275`) tests `c.valid_imm (INL op) w` for
+         *every* operator, not only `Add`; the `Sub` retry with `-w` is the
+         only `Add`-specific step, and the remaining case materializes `w`
+         into `temp + 1`.  Restricting the immediate test to `Add` made a
+         nested `x && 1w` emit `ori t, x0, 1; and d, x, t` where Cake emits
+         `andi d, x, 1`, one instruction more per occurrence; the
+         statement-level selector below already agreed with Cake.
+
+         Only `Add` keeps the unfused `base + constant` expression instead of
+         Cake's materialization, because that carrier is what
+         `wordInstSelectAddressAtom` hands to Word-to-Stack for the memory
+         offset.  Every other operator takes Cake's `Const`/`Reg` pair, which
+         is also what this selector emitted before the immediate test was
+         generalized. -/
       let (prelude, selectedLeft) := wordInstSelectAtom temp left
+      let materialized : WordProg α × WordExp α :=
+        (wordDeadSelectSeq (wordDeadSelectSeq prelude (.inst (.const (temp + 1) value)))
+          (.inst (.arith (.binOp operator temp temp (.reg (temp + 1))))), .var temp)
       match selectedLeft with
-      | .var left =>
-          if WordInstSelectImmediate.validBinOpImmediate .add value then
+      | .var selected =>
+          if WordInstSelectImmediate.validBinOpImmediate operator value then
             (wordDeadSelectSeq prelude
-              (.inst (.arith (.binOp .add temp left (.imm value)))), .var temp)
-          else if WordInstSelectImmediate.validBinOpImmediate .sub (0 - value) then
-            (wordDeadSelectSeq prelude
-              (.inst (.arith (.binOp .sub temp left (.imm (0 - value))))), .var temp)
-          else
-            (prelude, .op .add [selectedLeft, .const value])
-      | _ => (prelude, .op .add [selectedLeft, .const value])
+              (.inst (.arith (.binOp operator temp selected (.imm value)))), .var temp)
+          else if operator = .add then
+            if WordInstSelectImmediate.validBinOpImmediate .sub (0 - value) then
+              (wordDeadSelectSeq prelude
+                (.inst (.arith (.binOp .sub temp selected (.imm (0 - value))))), .var temp)
+            else
+              (prelude, .op .add [selectedLeft, .const value])
+          else materialized
+      | _ =>
+          if operator = .add then (prelude, .op .add [selectedLeft, .const value])
+          else materialized
   | .op operator [left, right] =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right

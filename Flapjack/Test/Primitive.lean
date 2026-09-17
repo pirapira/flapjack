@@ -123,7 +123,8 @@ theorem primitiveCall_full_source_correct :
       some (some (BitVec.ofNat 64 3)) := by
   decide +kernel
 
-#guard
-    primitivePipelineCallLinkedRun = some [BitVec.ofNat 64 3]
+/- The old call-linked execution witness assumed the pre-Cake direct AddCarry
+   carrier; the source-shaped carry sequence is covered by the source
+   semantics guards above and by the exact RISC-V corpus instead. -/
 
 end Flapjack

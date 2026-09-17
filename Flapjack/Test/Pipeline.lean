@@ -245,7 +245,7 @@ example :
     globalCompileInitializers, pipelineCrepeContext, pipelineExceptionCodes,
     pipelineFunctionInfos, pipelineLoopFunctions, pipelineLoopFunctionsAux,
     pipelineWordFunctions, pipelinePrependInitializers, pipelineInlineNames,
-    compileToCrepe, compileFunctions, compileFunDecl, compileParamVars,
+    compileToCrep, compileFunctionsSource, compileFunDeclSource, compileParamVars,
     compileProg, crepInlineTopRecursiveByNames, crepInlineTopRecursive,
     crepInlineFunctionsRecursive, crepInlineActiveNames,
     crepSimpFunctions]
@@ -423,7 +423,9 @@ example :
 example :
     loopToWordProg ({ vars := [] } : WordContext)
       (.primitive [7, 8] .addCarry [2, 3, 4]) =
-      .inst (.arith (.addCarry 7 8 2 3 4)) := by
+      .seq (.assign 1 (.var 4))
+        (.seq (.inst (.arith (.cakeAddCarry 3 2 3 1)))
+          (.seq (.assign 8 (.var 1)) (.assign 7 (.var 3)))) := by
   simp [loopToWordProg, wordFindVar, lookupNatInfo]
 
 example [NeZero width] :

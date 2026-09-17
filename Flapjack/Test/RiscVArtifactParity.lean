@@ -71,7 +71,8 @@ fixture records the residual byte/layout difference as a tracked gap.
 namespace Flapjack.Test.RiscVArtifactParity
 
 open Flapjack Flapjack.RiscV
-open Flapjack.Test.OriginalPancakeProbes (decClock constReturn entryOrder nestedExpression)
+open Flapjack.Test.OriginalPancakeProbes
+  (decClock constReturn entryOrder nestedExpression setVar emptyLocals)
 
 /-- The checked source-facing pipeline configuration used by the compiler
 entry point, kept local so this parity test does not import the executable
@@ -270,6 +271,28 @@ gone). -/
 def entryOrderExactParity : Bool :=
   entryOrderEmittedSections == flapjackEntryOrderSections &&
     flapjackEntryOrderSections == cakeEntryOrderSections
+
+def setVarMainExactParity : Bool :=
+  match compileRuntimeImage setVar.source with
+  | some image =>
+      match emittedSections image with
+      | _ :: (_, _, mainBytes) :: _ =>
+          mainBytes ==
+            [0x13, 0x65, 0xB0, 0x00, 0x67, 0x80, 0x00, 0x00].map
+              (BitVec.ofNat 8)
+      | _ => false
+  | none => false
+
+def emptyLocalsMainExactParity : Bool :=
+  match compileRuntimeImage emptyLocals.source with
+  | some image =>
+      match emittedSections image with
+      | _ :: (_, _, mainBytes) :: _ =>
+          mainBytes ==
+            [0x6F, 0x00, 0x40, 0x00].map
+              (BitVec.ofNat 8)
+      | _ => false
+  | none => false
 
 /-! ## Cake return-register oracle (`flapjack-pxn.8.5.10.1.1`)
 
@@ -848,6 +871,8 @@ def sharedWordStoreOffsetPeephole : Bool :=
 #guard constReturnExactParity
 #guard entryOrderLayoutMatches
 #guard entryOrderExactParity
+#guard setVarMainExactParity
+#guard emptyLocalsMainExactParity
 #guard rorChainBudgetMatches
 #guard flattenRorChainProbeMatches
 #guard wideOpBudgetMatches
@@ -878,6 +903,10 @@ def runChecks : IO Bool := do
         entryOrderLayoutMatches),
       ("entry_order artifact is byte-identical to Cake",
         entryOrderExactParity),
+      ("set_var main section is byte-identical to Cake",
+        setVarMainExactParity),
+      ("empty_locals direct-call main is byte-identical to Cake",
+        emptyLocalsMainExactParity),
       ("nested_expression fixture accepted by the runtime-image entry point",
         nestedExpressionAccepted),
       ("nested_expression Word-to-Stack lowering uses the extended temp pool",

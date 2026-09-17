@@ -103,6 +103,7 @@ import Flapjack.Test.CrepPrimopParity
 import Flapjack.Test.CrepeLoadShapeParity
 import Flapjack.Test.CrepToLoopCutsetParity
 import Flapjack.Test.CrepToLoopParity
+import Flapjack.Test.CrepToLoopDecLive
 import Flapjack.Test.CakeRegAlloc
 import Flapjack.Test.CrepeNestedSeqParity
 import Flapjack.Test.CrepAssignedFreeVarsParity
@@ -195,6 +196,7 @@ import Flapjack.Test.CakeAllocatorCore
 import Flapjack.Test.CakeFramePolicy
 import Flapjack.Test.CakeFrameContainment
 import Flapjack.Test.WordStackCallParity
+import Flapjack.Test.StackRawCall
 import Flapjack.Test.WordInstNormalizeParity
 import Flapjack.Test.WordInstSelectParity
 import Flapjack.Test.CakeTailCallSsaParity
@@ -458,16 +460,10 @@ def sharedMemoryArtifactMatchesGolden : Bool :=
       Flapjack.Test.SourceGlobalParity.sharedMemorySource with
   | some bytes => bytes == sharedMemoryArtifactGolden
   | none => false
-/-! Port-internal regression pin for the existing shadowing fixture.
+/-! Source-entry regression for the existing shadowing fixture.
 
-This pins the bytes the port currently emits so that later edits cannot silently change
-this fixture's layout; it is NOT a claim of parity with the original CakeML artifact.
-Exact CakeML parity for the same source is still an open tracked gap
-(bead flapjack-pxn.8.5.10.2): the original emits generated_main 28 + main 4 + g 8 +
-f 144 = 184 bytes, while the port emits 224 after the Cake base+offset memory addressing
-mode was fused at the Lab boundary. The gap is asserted separately below
-(`shadowingArtifactGapTracked`) and tracked in scripts/parity-small-corpus.json.
-The Cake section goldens themselves stay pinned in SourceGlobalParity. -/
+The authoritative Cake comparison is the exact corpus manifest, which compares
+every section's base and bytes. -/
 def shadowingArtifactGolden : List (BitVec 8) :=
   [
     BitVec.ofNat 8 0x83, BitVec.ofNat 8 0x3E, BitVec.ofNat 8 0x85, BitVec.ofNat 8 0xFC, BitVec.ofNat 8 0x93, BitVec.ofNat 8 0x6F, BitVec.ofNat 8 0x30, BitVec.ofNat 8 0x00,
@@ -505,20 +501,6 @@ def shadowingArtifactMatchesGolden : Bool :=
   | some bytes => bytes == shadowingArtifactGolden
   | none => false
 
-/-- The original CakeML artifact for `shadowingSource`: generated_main 28 bytes,
-main 4 bytes, g 8 bytes and f 144 bytes (the Cake section goldens live in
-SourceGlobalParity). -/
-def cakeShadowTotalLength : Nat := 28 + 4 + 8 + 144
-
-/-- Tracked gap: the port's shadowing artifact is not yet byte-identical to the
-original CakeML artifact (port 336 bytes vs Cake 184). Recorded by bead
-flapjack-pxn.8.5.10.2 and in scripts/parity-small-corpus.json; this check can never
-accept the port output as matching the original. -/
-def shadowingArtifactGapTracked : Bool :=
-  match Flapjack.Test.SourceGlobalParity.compileSourceBytes
-      Flapjack.Test.SourceGlobalParity.shadowingSource with
-  | some bytes => bytes.length != cakeShadowTotalLength
-  | none => false
 /-! Exact source-entry golden for the existing global shared-load fixture. -/
 def globalSharedLoadArtifactGolden : List (BitVec 8) :=
   [
@@ -598,6 +580,8 @@ def main : IO Unit := do
     checkBool "Pancake RISC-V artifact envelope markers" ArtifactFormat.pancakeEnvelopeMatches,
     checkBool "Pancake RISC-V artifact prologue" ArtifactFormat.pancakePrologueMatches,
     Flapjack.Test.SourceGlobalParity.runChecks,
+    checkBool "shadowing global source remains accepted"
+      Flapjack.Test.SourceGlobalParity.shadowingBytesAccepted,
     Flapjack.Test.LoopToWord.runChecks,
     Flapjack.Test.LoopGetVarsParity.runChecks,
     Flapjack.Test.LoopSetGlobalsParity.runChecks,
@@ -656,6 +640,7 @@ def main : IO Unit := do
     Flapjack.Test.CrepeLoadShapeParity.runChecks,
     Flapjack.Test.CrepToLoopCutsetParity.runChecks,
     Flapjack.Test.CrepToLoopParity.runChecks,
+    Flapjack.Test.CrepToLoopDecLive.runChecks,
     Flapjack.Test.CakeRegAlloc.runChecks,
     Flapjack.Test.CrepeNestedSeqParity.runChecks,
     Flapjack.Test.CrepAssignedFreeVarsParity.runChecks,

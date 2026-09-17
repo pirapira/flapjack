@@ -81,10 +81,10 @@ def cakeGetStackOnly {α : Type u} (program : WordProg α) : List Nat :=
     edges for the carry and long-multiply instructions, then walks sequence,
     branch, call-handler, and loop bodies in reverse continuation order. -/
 def cakeForcedArith {α : Type u} : WordArith α → List (Nat × Nat)
-  | .addCarry destination _ sourceLeft sourceRight _ =>
-      getForcedAddCarry destination sourceLeft sourceRight
-  | .cakeAddCarry destination sourceLeft sourceRight _ =>
-      getForcedAddCarry destination sourceLeft sourceRight
+  | .addCarry destination _ _ sourceRight carryIn =>
+      getForcedAddCarry destination sourceRight carryIn
+  | .cakeAddCarry destination _ sourceRight carry =>
+      getForcedAddCarry destination sourceRight carry
   | .longMul destinationLeft _ sourceLeft sourceRight =>
       getForcedLongMul destinationLeft sourceLeft sourceRight
   | _ => []
@@ -269,6 +269,9 @@ def toNatInfoMap {α : Type u} (m : CakeNodeMap α) : NatInfoMap α :=
     (fun i => (m.get i).map (fun v => (i, v))) ++ m.outside
 
 end CakeNodeMap
+
+def cakeSpillCostMap (nextNode : Nat) (costs : NatInfoMap Nat) : CakeNodeMap Nat :=
+  CakeNodeMap.ofNatInfoMap nextNode costs
 
 /-- The IRC allocator state (`ra_state`), represented functionally. -/
 structure CakeRaState where
@@ -636,9 +639,11 @@ decreasing_by all_goals first | sizeOf_list_dec | decreasing_trivial
 /-- `revive_moves` (`reg_allocScript.sml:363-375`). -/
 def cakeReviveMoves (vs : List Nat) (state : CakeRaState) : CakeRaState :=
   let nbs := vs.map (fun v => cakeAdjSub state.adjLists v)
-  let (revived, unavail) := partitionReversed (fun m =>
+  /- `revive_moves` uses ordinary HOL `PARTITION`, not the state-execution
+     helper `st_ex_PARTITION`; its two buckets therefore preserve source
+     order before `sort_moves` is applied. -/
+  let (revived, unavail) := state.unavailMovesWl.partition (fun m =>
       nbs.any (cakeSortedMem m.2.1) || nbs.any (cakeSortedMem m.2.2))
-    state.unavailMovesWl
   { state with
     availMovesWl := cakeSMerge (cakeSortMoves revived) state.availMovesWl,
     unavailMovesWl := unavail }
@@ -675,7 +680,9 @@ def cakeDegOrInf (state : CakeRaState) (k x : Nat) : Nat :=
 def cakeBgOk (k x y : Nat) (state : CakeRaState) : Option (List Nat × List Nat) :=
   let adjX := cakeAdjSub state.adjLists x
   let adjY := cakeAdjSub state.adjLists y
-  let (case1, case2) := partitionReversed (fun v => cakeSortedMem v adjX) adjY
+  /- `bg_ok` starts with ordinary HOL `PARTITION`; only the subsequent
+     `st_ex_FILTER` calls reverse their result buckets. -/
+  let (case1, case2) := adjY.partition (fun v => cakeSortedMem v adjX)
   let case1 := filterReversed (fun v => cakeConsideredVar state k v) case1
   let case2 := filterReversed (fun v => cakeConsideredVar state k v) case2
   let case2degs := case2.map (fun v => cakeDegOrInf state k v)
@@ -866,14 +873,14 @@ def cakeDoStep (scost : Option (CakeNodeMap Nat)) (k : Nat)
   let (b1, s1) := cakeDoSimplify k state
   if b1 then (true, s1)
   else
-    let (b2, s2) := cakeDoCoalesce k state
+    let (b2, s2) := cakeDoCoalesce k s1
     if b2 then (true, s2)
     else
-      let (b3, s3) := cakeDoPrefreeze k state
+      let (b3, s3) := cakeDoPrefreeze k s2
       if b3 then (true, s3)
       else
-        let (b4, s4) := cakeDoFreeze k state
-        if b4 then (true, s4) else cakeDoSpill scost k state
+        let (b4, s4) := cakeDoFreeze k s3
+        if b4 then (true, s4) else cakeDoSpill scost k s4
 
 /-- `rpt_do_step` (`reg_allocScript.sml:860-868`). -/
 def cakeRptDoStep (scost : Option (CakeNodeMap Nat)) (k : Nat) :
@@ -1067,7 +1074,7 @@ def cakeDoRegAlloc (alg : CakeAlgorithm) (scost : Option (CakeNodeMap Nat))
     (forced : List (Nat × Nat)) (fs : List Nat) : Option (NatInfoMap Nat) :=
   let bij := cakeMkBij tree
   let state := cakeInitRaState tree forced fs
-  let spta := fun v => (cakeMapLookup bij.toAllocator v).getD 0
+  let spta := CakeAlloc.spDefault bij.toAllocator
   let moves0 := moves.map (cakeUpdateMove spta)
   let movesF := filterReversed (fun m => cakeFullConsistencyOk state k m.2.1 m.2.2) moves0
   let selMoves := match alg with
@@ -1128,17 +1135,10 @@ def cakeAllocateWordFunction [OfNat α 0] (parameters : List Nat) (program : Wor
   let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
   let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
   let bij := cakeMkBij tree
-  /- `lookup_any x scost 0` in `st_ex_list_MIN_cost`
-     (`reg_allocScript.sml:773-790`) reads an sptree, so the original's spill
-     scan is logarithmic per node.  Read the costs into the same node-indexed
-     field the rest of the allocator state uses; `cakeMapLookup` returns the
-     first binding for a key and `ofNatInfoMap` keeps that, so the values are
-     unchanged. -/
-  let scost := spillCosts.map (fun costs =>
-    CakeNodeMap.ofNatInfoMap bij.nextNode
-      (costs.filterMap (fun entry =>
-        (lookupNatInfo entry.1 bij.toAllocator).map
-          (fun node => (node, entry.2)))))
+  /- `word_alloc` passes this source-keyed sptree directly to `reg_alloc`.
+     Keep those keys intact; `CakeNodeMap` stores keys outside the allocator
+     array when necessary, matching `lookup_any` in `st_ex_list_MIN_cost`. -/
+  let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
   match cakeDoRegAlloc .irc scost k moves tree forced fs with
   | none => none
   | some colouring =>
@@ -1186,17 +1186,9 @@ def cakeWordStackVarCount [OfNat α 0] [OfNat α 1]
   let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
   let moves := wordMoves.map (fun m => (m.priority, (m.left, m.right)))
   let bij := cakeMkBij tree
-  /- `lookup_any x scost 0` in `st_ex_list_MIN_cost`
-     (`reg_allocScript.sml:773-790`) reads an sptree, so the original's spill
-     scan is logarithmic per node.  Read the costs into the same node-indexed
-     field the rest of the allocator state uses; `cakeMapLookup` returns the
-     first binding for a key and `ofNatInfoMap` keeps that, so the values are
-     unchanged. -/
-  let scost := spillCosts.map (fun costs =>
-    CakeNodeMap.ofNatInfoMap bij.nextNode
-      (costs.filterMap (fun entry =>
-        (lookupNatInfo entry.1 bij.toAllocator).map
-          (fun node => (node, entry.2)))))
+  /- Keep the source-keyed spill table intact, as `word_alloc` passes it
+     directly to `reg_alloc`; out-of-range keys live in `CakeNodeMap.outside`. -/
+  let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
   match cakeDoRegAlloc .irc scost k moves tree forced fs with
   | none => 0
   | some colouring =>

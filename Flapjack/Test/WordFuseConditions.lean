@@ -70,6 +70,57 @@ def skippedRoundTripFuses : Bool :=
 
 #guard skippedRoundTripFuses
 
+/-! The same materialize/copy/test shape inside a Loop is the case that
+    exercises the recursive descent of Cake's simp_duplicate_if. -/
+def loopRoundTrip : WordProg Nat :=
+  .loop []
+    (.seq
+      (.seq
+        (.seq (.assign 4 (.var 6)) (.assign 10 (.var 2)))
+        (.ite .less 4 (.reg 10)
+          (.assign 4 (.const 1)) (.assign 4 (.const 0))))
+      (.seq (.assign 8 (.var 4))
+        (.ite .notEqual 8 (.imm 0) (.break 0) .skip))) []
+
+def loopRoundTripFuses : Bool :=
+  !wordProgHasNotEqualZeroTest (wordFuseConditions loopRoundTrip)
+
+#guard loopRoundTripFuses
+
+def nestedLoopRoundTrip : WordProg Nat :=
+  .loop []
+    (.seq (.assign 4 (.var 6))
+      (.seq (.assign 10 (.var 2))
+        (.ite .less 4 (.reg 10)
+          (.seq (.assign 4 (.const 1))
+            (.seq .tick
+              (.seq (.assign 8 (.var 4))
+                (.ite .notEqual 8 (.imm 0) (.break 0) .skip))))
+          (.break 0)))) []
+
+def nestedLoopRoundTripFuses : Bool :=
+  !wordProgHasNotEqualZeroTest (wordFuseConditions nestedLoopRoundTrip)
+
+#guard nestedLoopRoundTripFuses
+
+def loopConditionMaterialization : WordProg Nat :=
+  .loop []
+    (.seq (.assign 4 (.var 6))
+      (.seq (.assign 10 (.var 2))
+        (.ite .less 4 (.reg 10)
+          (.seq
+            (.ite .notEqual 4 (.reg 10)
+              (.assign 4 (.const 1)) (.assign 4 (.const 0)))
+            (.seq .tick
+              (.seq (.assign 8 (.var 4))
+                (.ite .notEqual 8 (.imm 0) (.break 0) .skip))))
+          (.break 0)))) []
+
+def loopConditionMaterializationFuses : Bool :=
+  !wordProgHasNotEqualZeroTest (wordFuseConditions loopConditionMaterialization)
+
+#guard loopConditionMaterializationFuses
+
 def terminatingElseIsPushedOut : Bool :=
   match wordPushOutIf
       (.ite .less 1 (.reg 2) (.assign 3 (.var 4)) (.raise 0) : WordProg Nat) with
@@ -104,6 +155,11 @@ def runChecks : IO Bool := do
         fusedProgramUsesDirectBranch),
       ("fusion removes harmless source Seq/Skip wrappers",
         skippedRoundTripFuses),
+      ("fusion descends into Loop bodies", loopRoundTripFuses),
+      ("fusion descends into conditional Loop branches",
+        nestedLoopRoundTripFuses),
+      ("fusion handles materialized conditions in Loop branches",
+        loopConditionMaterializationFuses),
       ("Cake terminating conditional branches are pushed out",
         terminatingElseIsPushedOut),
       ("a clobbering materialisation uses Cake duplicate-if",

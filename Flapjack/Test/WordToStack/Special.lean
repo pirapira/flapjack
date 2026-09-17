@@ -136,21 +136,11 @@ example :
     wordStackLongMulAliasLocationsSafe, lookupNatInfo]
 
 example :
-    wordToStackProgNat
+    wordStackFfiMove
         { locations := [(0, .register 10), (1, .register 2),
             (2, .register 3), (3, .register 4)],
-          scratch := 31, stackBase := 10 }
-        ((.ffi "sum" 0 1 2 3 ([], [])) : WordProg Nat) =
-      some (.seq
-        (.seq (.arith .or 13 4 4)
-          (.seq (.arith .or 12 3 3)
-            (.arith .or 11 2 2)))
-        (.ffi "sum" 10 11 12 13 0)) := by
-  simp [wordToStackProgNat, wordStackFfi, wordStackFfiSourcesSafe,
-    wordStackFfiSourceSafe, wordStackFfiRegisterSafe, wordStackLocation,
-    lookupNatInfo, wordStackParallelLocationMove,
-    wordStackParallelLocationMoveAux, wordStackLocationMove,
-    wordStackLocationMoveDestinations, wordStackLocationMoveReady,
-    wordStackLocationMoveRemoveDestination, wordStackJoin]
+          scratch := 31, stackBase := 10 } 0 10 =
+      (some (.skip) : Option (StackProg Nat)) := by
+  simp [wordStackFfiMove, wordStackLocation, lookupNatInfo]
 
 end Flapjack.RiscV

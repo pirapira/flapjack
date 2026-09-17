@@ -1445,7 +1445,18 @@ def wordStackCompileExpToRegisterNat (config : WordStackConfig)
           (wordStackJoin left (.arith operator target target rightTarget)))
   | .shift operator left right => do
       if wordStackExpressionIsAtom left && wordStackExpressionIsAtom right then
-        if operator == .ror then
+        let immediate :=
+          match right with
+          | .const value => decide (value < 64)
+          | _ => false
+        if immediate then
+          let (leftPrelude, leftRegister) ← wordStackAtomNat config target left
+          match right with
+          | .const value =>
+              pure (wordStackJoin leftPrelude
+                (.inst (.arith (.shift operator target leftRegister (.imm value)))))
+          | _ => none
+        else if operator == .ror then
           let destinationRegister :=
             if target == config.scratch then
               (available.find? (fun register => register != config.scratch)).getD
@@ -2383,6 +2394,22 @@ def evalWordStackMachine [NeZero width]
       some (wordStackMachineWriteRegister state destination
         (wordStackMachineShift operator
           (state.registers left) (state.registers right)))
+  | .inst (.arith (.binOp operator destination sourceLeft (.reg sourceRight))) =>
+      some (wordStackMachineWriteRegister state destination
+        (wordStackMachineBinOp operator (state.registers sourceLeft)
+          (state.registers sourceRight)))
+  | .inst (.arith (.binOp operator destination sourceLeft (.imm value))) =>
+      some (wordStackMachineWriteRegister state destination
+        (wordStackMachineBinOp operator (state.registers sourceLeft)
+          (BitVec.ofNat width value)))
+  | .inst (.arith (.shift operator destination sourceLeft (.reg sourceRight))) =>
+      some (wordStackMachineWriteRegister state destination
+        (wordStackMachineShift operator (state.registers sourceLeft)
+          (state.registers sourceRight)))
+  | .inst (.arith (.shift operator destination sourceLeft (.imm value))) =>
+      some (wordStackMachineWriteRegister state destination
+        (wordStackMachineShift operator (state.registers sourceLeft)
+          (BitVec.ofNat width value)))
   | .inst (.arith (.longMul destinationLeft destinationRight sourceLeft sourceRight)) =>
       let left := state.registers sourceLeft
       let right := state.registers sourceRight

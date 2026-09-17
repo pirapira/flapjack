@@ -242,6 +242,29 @@ def nestedImmediateCarrierShape : Bool :=
 
 #guard nestedImmediateCarrierShape
 
+def nestedImmediateShiftCarrierShape : Bool :=
+  match wordStackCompileExpToRegisterNat immediateSelectionConfig 6 [11, 10]
+      (.shift .lsl (.var 4) (.const 3)) with
+  | some (.inst (.arith (.shift .lsl 6 1 (.imm 3)))) => true
+  | _ => false
+
+#guard nestedImmediateShiftCarrierShape
+
+def immediateCarrierMachineShape : Bool :=
+  let state : WordStackMachineState 64 :=
+    { registers := fun register =>
+        if register = 4 then BitVec.ofNat 64 7 else 0
+      stack := fun _ => 0
+      stores := fun _ => 0
+      memory := fun _ => 0
+      sharedMemory := fun _ => 0 }
+  match evalWordStackMachine state
+      (.inst (.arith (.binOp .and 6 4 (.imm 1))) : StackProg Nat) with
+  | some result => result.registers 6 == BitVec.ofNat 64 1
+  | _ => false
+
+#guard immediateCarrierMachineShape
+
 /-! The two-register compensation introduces `Move 0 [(destination, left)]`
     before an in-place immediate operation.  Cake instead keeps the operand in
     the temporary chosen by `inst_select` and reads it while writing the

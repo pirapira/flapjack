@@ -23,7 +23,8 @@ example :
       2 26 0 64 none handlerLoweringInitial
       (.call (some ([], ([], []), .skip, 0, 0)) (some 7) []
         (some (1, handlerLoweringBody, 30, 21))) =
-      some (wordToStackCallWithHandlerInSection false 7 0 0 31 .skip
+      some (wordToStackCallWithHandlerInSection false 7 0
+        (wordStackCallFrameOffset handlerLoweringConfig) 31 .skip
         (.seq .skip (.call none (.label 0) none))
           (wordStackReturnLabel handlerLoweringConfig
             (some ([], ([], []), .skip, 0, 0)))
@@ -61,6 +62,6 @@ example :
       simp [handlerLoweringConfig, handlerLoweringInitial,
         handlerLoweringBody, wordToStackProgNatWithBitmapBuilder,
         wordToStackProgNat, wordToStackRaise, stackRaiseStubLocation])
-  simpa [wordStackJoin, handlerLoweringConfig] using h
+  simpa [wordStackJoin, handlerLoweringConfig, wordStackCallFrameOffset] using h
 
 end Flapjack.RiscV

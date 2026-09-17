@@ -326,7 +326,9 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
               abiBase := 1
               abiStride := 1
               callAbiBase := 0
+              abiRegisterCount := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               abiFrameSlots := frameSlots
+              frameOffset := if frameSlots = 0 then 0 else frameSlots + 1
               sectionId := label
               handlerLabel := label }
           let localState : RiscV.WordStackBitmapState :=

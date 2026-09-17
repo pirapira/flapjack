@@ -380,6 +380,22 @@ def copyPropagationUsesLatestRepresentative : Bool :=
 
 #guard copyPropagationUsesLatestRepresentative
 
+/- Cake invalidates copy state after a shared-memory store, including copies
+   established before the branch containing that store. -/
+def copyPropagationInvalidatesShareStore : Bool :=
+  match RiscV.wordCopyProp
+      (.seq (.move 0 [(301, 297)])
+        (.seq (.ite .notLess 301 (.reg 309)
+          (.move 0 [(353, 321)])
+          (.seq (.move 0 [(341, 337)])
+            (.seq (.shareInst .store 341 (.var 345))
+              (.move 0 [(353, 349)]))))
+          (.move 0 [(381, 297)])) : WordProg (Word 64)) with
+  | .seq _ (.seq (.ite _ _ _ _ _) (.move 0 [(381, 297)])) => true
+  | _ => false
+
+#guard copyPropagationInvalidatesShareStore
+
 /- A representative update must rewrite all later members of the same Cake
    class, not only the most recently inserted alias.  This is the reduced
    shape of the fp_pow4 table setup: Cake changes the later 413 source from

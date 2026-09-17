@@ -438,11 +438,13 @@ def mapUpdateBoundedGuard : Bool :=
     inserted.length == 3 && cakeMapLookup inserted 2 == some 7
 
 /-- `word_alloc` passes `get_heuristics` costs keyed by source variables
-    directly to `reg_alloc`; the array adapter preserves those keys. -/
+    directly to `reg_alloc`; the array adapter preserves those keys, including
+    source names outside the dense allocator array. -/
 def sourceSpillCostKeyGuard : Bool :=
-  let costs : Flapjack.NatInfoMap Nat := [(1, 10), (2, 1)]
+  let costs : Flapjack.NatInfoMap Nat := [(1, 10), (2, 1), (5, 20)]
   let table := cakeSpillCostMap 3 costs
-  table.get 1 == some 10 && table.get 2 == some 1 && table.get 0 == none
+  table.get 1 == some 10 && table.get 2 == some 1 && table.get 5 == some 20 &&
+    table.get 0 == none
 
 /-- Cake's `remove_dead (Move pri ls)` keeps the surviving move priority
     (`word_allocScript.sml:891-899`).  The priority orders the coalescing

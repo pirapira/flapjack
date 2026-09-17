@@ -47,6 +47,7 @@ inductive StackProg (α : Type u) where
   | const (destination value : Nat)
   | inst (instruction : WordInst α)
   | shMem (operator : WordMemOp) (source address : Nat)
+  | shMemOffset (operator : WordMemOp) (source address : Nat) (offset : α)
   | get (destination : Nat) (store : StackStore)
   | set (store : StackStore) (source : Nat)
   | arith (operator : BinOp) (destination left right : Nat)
@@ -148,6 +149,8 @@ def stackMapRegisters (map : Nat → Nat) : StackProg α → StackProg α
   | .const destination value => .const (map destination) value
   | .inst instruction => .inst (stackMapWordInst map instruction)
   | .shMem operator source address => .shMem operator (map source) (map address)
+  | .shMemOffset operator source address offset =>
+      .shMemOffset operator (map source) (map address) offset
   | .get destination store => .get (map destination) store
   | .set store source => .set store (map source)
   | .arith operator destination left right =>

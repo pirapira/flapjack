@@ -1,0 +1,582 @@
+var 1 heap_ptr = 0;
+var 1 journal_n = 0;
+exception TrapErr : 1;
+fun 1 trap_with(1 code) {
+  !st8 2684420096 + 33, code;
+  !stw 2684420096 + 40, heap_ptr;
+  !stw 2684420096 + 48, journal_n;
+  @trap(@base, code, @base, 0);
+  throw TrapErr code;
+}
+fun 1 alloc(1 n) {
+  var p = heap_ptr;
+  var q = (p + n + 7) & (0 - 8);
+  if q >+ 2952790016 {
+    trap_with(1);
+  }
+  heap_ptr = q;
+  return p;
+}
+fun 1 heap_mark() {
+  return heap_ptr;
+}
+fun 1 heap_release(1 m) {
+  heap_ptr = m;
+  return 0;
+}
+fun 1 bswap64(1 x) {
+  x = ((x & 71777214294589695) << 8) | ((x >>> 8) & 71777214294589695);
+  x = ((x & 281470681808895) << 16) | ((x >>> 16) & 281470681808895);
+  return (x << 32) | (x >>> 32);
+}
+fun 1 st_be32(1 p, 1 v) {
+  st8 p, v >>> 24;
+  st8 p + 1, v >>> 16;
+  st8 p + 2, v >>> 8;
+  st8 p + 3, v;
+  return 0;
+}
+fun 1 st_be64(1 p, 1 v) {
+  if (p & 7) == 0 {
+    var 1 w = bswap64(v);
+    st p, w;
+    return 0;
+  }
+  st_be32(p, v >>> 32);
+  st_be32(p + 4, v);
+  return 0;
+}
+fun 1 max(1 a, 1 b) {
+  if a >+ b { return a; }
+  return b;
+}
+fun 1 u256_is_zero({1,1,1,1} a) {
+  if (a.0 | a.1 | a.2 | a.3) == 0 { return 1; }
+  return 0;
+}
+fun 1 u256_limb({1,1,1,1} a, 1 i) {
+  if i == 0 { return a.0; }
+  if i == 1 { return a.1; }
+  if i == 2 { return a.2; }
+  if i == 3 { return a.3; }
+  return 0;
+}
+fun 1 u256_bit({1,1,1,1} a, 1 t) {
+  if t >=+ 256 { return 0; }
+  var 1 l = u256_limb(a, t >>> 6);
+  return (l >>> (t & 63)) & 1;
+}
+fun 1 u256_eq({1,1,1,1} a, {1,1,1,1} b) {
+  if ((a.0 ^ b.0) | (a.1 ^ b.1) | (a.2 ^ b.2) | (a.3 ^ b.3)) == 0 { return 1; }
+  return 0;
+}
+fun 1 u256_lt({1,1,1,1} a, {1,1,1,1} b) {
+  if a.3 != b.3 { if a.3 <+ b.3 { return 1; } return 0; }
+  if a.2 != b.2 { if a.2 <+ b.2 { return 1; } return 0; }
+  if a.1 != b.1 { if a.1 <+ b.1 { return 1; } return 0; }
+  if a.0 <+ b.0 { return 1; }
+  return 0;
+}
+fun {1,1,1,1,1} u256_add_carry({1,1,1,1} a, {1,1,1,1} b) {
+  var {1,1} r0 = __add_with_carry__(a.0, b.0, 0);
+  var {1,1} r1 = __add_with_carry__(a.1, b.1, r0.1);
+  var {1,1} r2 = __add_with_carry__(a.2, b.2, r1.1);
+  var {1,1} r3 = __add_with_carry__(a.3, b.3, r2.1);
+  return <r0.0, r1.0, r2.0, r3.0, r3.1>;
+}
+fun {1,1,1,1} u256_sub({1,1,1,1} a, {1,1,1,1} b) {
+  var {1,1} r0 = __add_with_carry__(a.0, b.0 ^ (0 - 1), 1);
+  var {1,1} r1 = __add_with_carry__(a.1, b.1 ^ (0 - 1), r0.1);
+  var {1,1} r2 = __add_with_carry__(a.2, b.2 ^ (0 - 1), r1.1);
+  var {1,1} r3 = __add_with_carry__(a.3, b.3 ^ (0 - 1), r2.1);
+  return <r0.0, r1.0, r2.0, r3.0>;
+}
+fun {1,1} mul64x64(1 a, 1 b) {
+  var a0 = a & 4294967295;
+  var a1 = a >>> 32;
+  var b0 = b & 4294967295;
+  var b1 = b >>> 32;
+  var p00 = a0 * b0;
+  var p11 = a1 * b1;
+  var {1,1} mid = __add_with_carry__(a0 * b1, a1 * b0, 0);
+  var {1,1} lo = __add_with_carry__(p00, mid.0 << 32, 0);
+  var hi = p11 + (mid.0 >>> 32) + (mid.1 << 32) + lo.1;
+  return <lo.0, hi>;
+}
+fun 1 bit_length64(1 x) {
+  var n = 0;
+  if (x >>> 32) != 0 { n = n + 32; x = x >>> 32; }
+  if (x >>> 16) != 0 { n = n + 16; x = x >>> 16; }
+  if (x >>> 8) != 0 { n = n + 8; x = x >>> 8; }
+  if (x >>> 4) != 0 { n = n + 4; x = x >>> 4; }
+  if (x >>> 2) != 0 { n = n + 2; x = x >>> 2; }
+  if (x >>> 1) != 0 { n = n + 1; x = x >>> 1; }
+  return n + x;
+}
+fun 1 u256_bit_length({1,1,1,1} a) {
+  if a.3 != 0 { var 1 n3 = bit_length64(a.3); return 192 + n3; }
+  if a.2 != 0 { var 1 n2 = bit_length64(a.2); return 128 + n2; }
+  if a.1 != 0 { var 1 n1 = bit_length64(a.1); return 64 + n1; }
+  return bit_length64(a.0);
+}
+fun {1,1,1,1} u256_from_be(1 p, 1 n) {
+  if (n == 32) && ((p & 7) == 0) {
+    var 1 w = lds 1 p;
+    var 1 l3 = bswap64(w);
+    w = lds 1 (p + 8);
+    var 1 l2 = bswap64(w);
+    w = lds 1 (p + 16);
+    var 1 l1 = bswap64(w);
+    w = lds 1 (p + 24);
+    var 1 l0 = bswap64(w);
+    return <l0, l1, l2, l3>;
+  }
+  var l0 = 0;
+  var l1 = 0;
+  var l2 = 0;
+  var l3 = 0;
+  var i = 0;
+  while i <+ n {
+    var pos = n - 1 - i;
+    var byte = (ld8 (p + i)) << ((pos & 7) * 8);
+    var w = pos >>> 3;
+    if w == 0 { l0 = l0 | byte; }
+    if w == 1 { l1 = l1 | byte; }
+    if w == 2 { l2 = l2 | byte; }
+    if w == 3 { l3 = l3 | byte; }
+    i = i + 1;
+  }
+  return <l0, l1, l2, l3>;
+}
+fun 1 u256_to_be32({1,1,1,1} a, 1 out) {
+  if (out & 7) == 0 {
+    var 1 w = bswap64(a.3);
+    st out, w;
+    w = bswap64(a.2);
+    st out + 8, w;
+    w = bswap64(a.1);
+    st out + 16, w;
+    w = bswap64(a.0);
+    st out + 24, w;
+    return 0;
+  }
+  st_be64(out, a.3);
+  st_be64(out + 8, a.2);
+  st_be64(out + 16, a.1);
+  st_be64(out + 24, a.0);
+  return 0;
+}
+var 1 secp_accel_scratch = 0;
+fun 1 secp_accel_init_block(1 base, {1,1,1,1} modulus) {
+  st base + 0, base + 40;
+  st base + 8, base + 72;
+  st base + 16, base + 104;
+  st base + 24, base + 136;
+  st base + 32, base + 168;
+  st base + 104, <0, 0, 0, 0>;
+  st base + 136, modulus;
+  return 0;
+}
+fun 1 secp256k1_init() {
+  if secp_accel_scratch != 0 {
+    return 0;
+  }
+  secp_accel_scratch = alloc((2 * 200 + 80));
+  secp_accel_init_block(secp_accel_scratch + 0, <-4294968273, -1, -1, -1>);
+  secp_accel_init_block(secp_accel_scratch + 200, <-4624529908474429119, -4994812053365940165, -2, -1>);
+  return 0;
+}
+fun {1,1,1,1} secp_accel_modmul_p({1,1,1,1} a, {1,1,1,1} b) {
+  var 1 base = secp_accel_scratch + 0;
+  st base + 40, a;
+  st base + 72, b;
+  @arith256mod(base, 0, 0, 0);
+  return lds {1,1,1,1} (base + 168);
+}
+fun {1,1,1,1} secp_accel_modmul_n({1,1,1,1} a, {1,1,1,1} b) {
+  var 1 base = secp_accel_scratch + 200;
+  st base + 40, a;
+  st base + 72, b;
+  @arith256mod(base, 0, 0, 0);
+  return lds {1,1,1,1} (base + 168);
+}
+fun {1,1,1,1} fp_add({1,1,1,1} a, {1,1,1,1} b) {
+  var {1,1,1,1,1} s = u256_add_carry(a, b);
+  var {1,1,1,1} r = <s.0, s.1, s.2, s.3>;
+  if s.4 == 1 {
+    return u256_sub(r, <-4294968273, -1, -1, -1>);
+  }
+  var 1 lt = u256_lt(r, <-4294968273, -1, -1, -1>);
+  if lt == 0 {
+    return u256_sub(r, <-4294968273, -1, -1, -1>);
+  }
+  return r;
+}
+fun {1,1,1,1} fp_neg({1,1,1,1} a) {
+  var 1 z = u256_is_zero(a);
+  if z == 1 {
+    return <0, 0, 0, 0>;
+  }
+  return u256_sub(<-4294968273, -1, -1, -1>, a);
+}
+fun {1,1,1,1} fp_mul({1,1,1,1} a, {1,1,1,1} b) {
+  return secp_accel_modmul_p(a, b);
+}
+fun {1,1,1,1} fp_sqr({1,1,1,1} a) {
+  return secp_accel_modmul_p(a, a);
+}
+fun {1,1,1,1} secp_accel_fp_pow4({1,1,1,1} a, {1,1,1,1} e) {
+  var mark = heap_mark();
+  var 1 table = alloc(16 * 32);
+  var {1,1,1,1} t = a;
+  st table + 32, t;
+  var 1 d = 2;
+  while d <=+ 15 {
+    t = fp_mul(t, a);
+    st table + d * 32, t;
+    d = d + 1;
+  }
+  var {1,1,1,1} r = <1, 0, 0, 0>;
+  var 1 win = 64;
+  while win >+ 0 {
+    win = win - 1;
+    r = fp_sqr(r);
+    r = fp_sqr(r);
+    r = fp_sqr(r);
+    r = fp_sqr(r);
+    var 1 limb = win >>> 4;
+    var 1 shift = (win & 15) * 4;
+    var 1 ew = e.0;
+    if limb == 1 { ew = e.1; }
+    if limb == 2 { ew = e.2; }
+    if limb == 3 { ew = e.3; }
+    var 1 digit = (ew >>> shift) & 15;
+    if digit != 0 {
+      r = fp_mul(r, lds {1,1,1,1} (table + digit * 32));
+    }
+  }
+  heap_release(mark);
+  return r;
+}
+fun {1,1,1,1} fp_inv({1,1,1,1} a) {
+  return secp_accel_fp_pow4(a, <-4294968275, -1, -1, -1>);
+}
+fun {1,1,1,1} fp_sqrt({1,1,1,1} a) {
+  return secp_accel_fp_pow4(a, <-1073742068, -1, -1, 4611686018427387903>);
+}
+fun {1,1,1,1} fn_mul({1,1,1,1} a, {1,1,1,1} b) {
+  return secp_accel_modmul_n(a, b);
+}
+fun {1,1,1,1} secp_accel_fn_pow4({1,1,1,1} a, {1,1,1,1} e) {
+  var mark = heap_mark();
+  var 1 table = alloc(16 * 32);
+  var {1,1,1,1} t = a;
+  st table + 32, t;
+  var 1 d = 2;
+  while d <=+ 15 {
+    t = fn_mul(t, a);
+    st table + d * 32, t;
+    d = d + 1;
+  }
+  var {1,1,1,1} r = <1, 0, 0, 0>;
+  var 1 win = 64;
+  while win >+ 0 {
+    win = win - 1;
+    r = fn_mul(r, r);
+    r = fn_mul(r, r);
+    r = fn_mul(r, r);
+    r = fn_mul(r, r);
+    var 1 limb = win >>> 4;
+    var 1 shift = (win & 15) * 4;
+    var 1 ew = e.0;
+    if limb == 1 { ew = e.1; }
+    if limb == 2 { ew = e.2; }
+    if limb == 3 { ew = e.3; }
+    var 1 digit = (ew >>> shift) & 15;
+    if digit != 0 {
+      r = fn_mul(r, lds {1,1,1,1} (table + digit * 32));
+    }
+  }
+  heap_release(mark);
+  return r;
+}
+fun {1,1,1,1} fn_inv({1,1,1,1} a) {
+  return secp_accel_fn_pow4(a, <-4624529908474429121, -4994812053365940165, -2, -1>);
+}
+fun 1 ec_set_infinity(1 pt) {
+  st (pt), <1, 0, 0, 0>;
+  st ((pt) + 32), <1, 0, 0, 0>;
+  st ((pt) + 64), <0, 0, 0, 0>;
+  return 0;
+}
+fun 1 ec_set_affine(1 pt, {1,1,1,1} x, {1,1,1,1} y) {
+  st (pt), x;
+  st ((pt) + 32), y;
+  st ((pt) + 64), <1, 0, 0, 0>;
+  return 0;
+}
+fun 1 ec_is_infinity(1 pt) {
+  var {1,1,1,1} z = lds {1,1,1,1} ((pt) + 64);
+  return u256_is_zero(z);
+}
+fun 1 secp_accel_normalize(1 pt) {
+  var {1,1,1,1} z = lds {1,1,1,1} ((pt) + 64);
+  var {1,1,1,1} zi = fp_inv(z);
+  var {1,1,1,1} zi2 = fp_sqr(zi);
+  var {1,1,1,1} zi3 = fp_mul(zi2, zi);
+  var {1,1,1,1} x = lds {1,1,1,1} (pt);
+  var {1,1,1,1} y = lds {1,1,1,1} ((pt) + 32);
+  x = fp_mul(x, zi2);
+  y = fp_mul(y, zi3);
+  ec_set_affine(pt, x, y);
+  return 1;
+}
+fun 1 ec_double(1 pt) {
+  var {1,1,1,1} z = lds {1,1,1,1} ((pt) + 64);
+  var 1 zz = u256_is_zero(z);
+  if zz == 1 {
+    return 0;
+  }
+  var {1,1,1,1} y = lds {1,1,1,1} ((pt) + 32);
+  var 1 yz = u256_is_zero(y);
+  if yz == 1 {
+    ec_set_infinity(pt);
+    return 0;
+  }
+  var 1 affine = u256_eq(z, <1, 0, 0, 0>);
+  if affine == 0 {
+    secp_accel_normalize(pt);
+  }
+  @secpdbl(pt, 0, 0, 0);
+  st ((pt) + 64), <1, 0, 0, 0>;
+  return 0;
+}
+fun 1 ec_add_affine(1 pt, {1,1,1,1} ax, {1,1,1,1} ay) {
+  var {1,1,1,1} z1 = lds {1,1,1,1} ((pt) + 64);
+  var 1 zz = u256_is_zero(z1);
+  if zz == 1 {
+    ec_set_affine(pt, ax, ay);
+    return 0;
+  }
+  var 1 affine = u256_eq(z1, <1, 0, 0, 0>);
+  if affine == 0 {
+    secp_accel_normalize(pt);
+  }
+  var {1,1,1,1} x1 = lds {1,1,1,1} (pt);
+  var {1,1,1,1} y1 = lds {1,1,1,1} ((pt) + 32);
+  var 1 samex = u256_eq(x1, ax);
+  if samex == 1 {
+    var {1,1,1,1} ysum = fp_add(y1, ay);
+    var 1 ysz = u256_is_zero(ysum);
+    if ysz == 1 {
+      ec_set_infinity(pt);
+      return 0;
+    }
+    ec_double(pt);
+    return 0;
+  }
+  secp256k1_init();
+  st secp_accel_scratch + (2 * 200), ax;
+  st secp_accel_scratch + (2 * 200) + 32, ay;
+  st secp_accel_scratch + ((2 * 200) + 64), pt;
+  st secp_accel_scratch + ((2 * 200) + 64) + 8,
+      secp_accel_scratch + (2 * 200);
+  @secpadd(secp_accel_scratch + ((2 * 200) + 64), 0, 0, 0);
+  st ((pt) + 64), <1, 0, 0, 0>;
+  return 0;
+}
+fun 1 ec_mul2(1 out, {1,1,1,1} k1, {1,1,1,1} ax, {1,1,1,1} ay, {1,1,1,1} k2, {1,1,1,1} bx, {1,1,1,1} by) {
+  ec_set_infinity(out);
+  var 1 len1 = u256_bit_length(k1);
+  var 1 len2 = u256_bit_length(k2);
+  var 1 i = max(len1, len2);
+  if i == 0 {
+    return 0;
+  }
+  var mark = heap_mark();
+  var 1 table = alloc(16 * 96);
+  ec_set_infinity(table);
+  ec_set_affine(table + 4 * 96, ax, ay);
+  ec_set_affine(table + 8 * 96, ax, ay);
+  ec_double(table + 8 * 96);
+  ec_set_affine(table + 12 * 96, ax, ay);
+  ec_double(table + 12 * 96);
+  ec_add_affine(table + 12 * 96, ax, ay);
+  ec_set_affine(table + 96, bx, by);
+  ec_set_affine(table + 2 * 96, bx, by);
+  ec_double(table + 2 * 96);
+  ec_set_affine(table + 3 * 96, bx, by);
+  ec_double(table + 3 * 96);
+  ec_add_affine(table + 3 * 96, bx, by);
+  ec_set_affine(table + 5 * 96,
+                lds {1,1,1,1} (table + 4 * 96),
+                lds {1,1,1,1} ((table + 4 * 96) + 32));
+  ec_add_affine(table + 5 * 96,
+                lds {1,1,1,1} (table + 96),
+                lds {1,1,1,1} ((table + 96) + 32));
+  ec_set_affine(table + 6 * 96,
+                lds {1,1,1,1} (table + 4 * 96),
+                lds {1,1,1,1} ((table + 4 * 96) + 32));
+  ec_add_affine(table + 6 * 96,
+                lds {1,1,1,1} (table + 2 * 96),
+                lds {1,1,1,1} ((table + 2 * 96) + 32));
+  ec_set_affine(table + 7 * 96,
+                lds {1,1,1,1} (table + 4 * 96),
+                lds {1,1,1,1} ((table + 4 * 96) + 32));
+  ec_add_affine(table + 7 * 96,
+                lds {1,1,1,1} (table + 3 * 96),
+                lds {1,1,1,1} ((table + 3 * 96) + 32));
+  ec_set_affine(table + 9 * 96,
+                lds {1,1,1,1} (table + 8 * 96),
+                lds {1,1,1,1} ((table + 8 * 96) + 32));
+  ec_add_affine(table + 9 * 96,
+                lds {1,1,1,1} (table + 96),
+                lds {1,1,1,1} ((table + 96) + 32));
+  ec_set_affine(table + 10 * 96,
+                lds {1,1,1,1} (table + 8 * 96),
+                lds {1,1,1,1} ((table + 8 * 96) + 32));
+  ec_add_affine(table + 10 * 96,
+                lds {1,1,1,1} (table + 2 * 96),
+                lds {1,1,1,1} ((table + 2 * 96) + 32));
+  ec_set_affine(table + 11 * 96,
+                lds {1,1,1,1} (table + 8 * 96),
+                lds {1,1,1,1} ((table + 8 * 96) + 32));
+  ec_add_affine(table + 11 * 96,
+                lds {1,1,1,1} (table + 3 * 96),
+                lds {1,1,1,1} ((table + 3 * 96) + 32));
+  ec_set_affine(table + 13 * 96,
+                lds {1,1,1,1} (table + 12 * 96),
+                lds {1,1,1,1} ((table + 12 * 96) + 32));
+  ec_add_affine(table + 13 * 96,
+                lds {1,1,1,1} (table + 96),
+                lds {1,1,1,1} ((table + 96) + 32));
+  ec_set_affine(table + 14 * 96,
+                lds {1,1,1,1} (table + 12 * 96),
+                lds {1,1,1,1} ((table + 12 * 96) + 32));
+  ec_add_affine(table + 14 * 96,
+                lds {1,1,1,1} (table + 2 * 96),
+                lds {1,1,1,1} ((table + 2 * 96) + 32));
+  ec_set_affine(table + 15 * 96,
+                lds {1,1,1,1} (table + 12 * 96),
+                lds {1,1,1,1} ((table + 12 * 96) + 32));
+  ec_add_affine(table + 15 * 96,
+                lds {1,1,1,1} (table + 3 * 96),
+                lds {1,1,1,1} ((table + 3 * 96) + 32));
+  var 1 win = 128;
+  while win >+ 0 {
+    win = win - 1;
+    ec_double(out);
+    ec_double(out);
+    var 1 pos = win * 2;
+    var 1 high1 = u256_bit(k1, pos + 1);
+    var 1 wd1 = high1 * 2;
+    var 1 low1 = u256_bit(k1, pos);
+    wd1 = wd1 + low1;
+    var 1 high2 = u256_bit(k2, pos + 1);
+    var 1 wd2 = high2 * 2;
+    var 1 low2 = u256_bit(k2, pos);
+    wd2 = wd2 + low2;
+    var 1 digit = wd1 * 4 + wd2;
+    if digit != 0 {
+      var 1 entry = table + digit * 96;
+      var 1 entry_inf = ec_is_infinity(entry);
+      if entry_inf == 0 {
+        ec_add_affine(out, lds {1,1,1,1} (entry), lds {1,1,1,1} ((entry) + 32));
+      }
+    }
+  }
+  heap_release(mark);
+  return 0;
+}
+fun 1 ec_to_affine(1 pt) {
+  var {1,1,1,1} z = lds {1,1,1,1} ((pt) + 64);
+  var 1 zz = u256_is_zero(z);
+  if zz == 1 {
+    return 0;
+  }
+  var {1,1,1,1} zi = fp_inv(z);
+  var {1,1,1,1} zi2 = fp_sqr(zi);
+  var {1,1,1,1} zi3 = fp_mul(zi2, zi);
+  var {1,1,1,1} x = lds {1,1,1,1} (pt);
+  var {1,1,1,1} y = lds {1,1,1,1} ((pt) + 32);
+  x = fp_mul(x, zi2);
+  y = fp_mul(y, zi3);
+  ec_set_affine(pt, x, y);
+  return 1;
+}
+fun 1 secp256k1_decompress_r({1,1,1,1} r, 1 recid, 1 out) {
+  var {1,1,1,1} x = r;
+  if ((recid >>> 1) & 1) == 1 {
+    var {1,1,1,1,1} xs = u256_add_carry(r, <-4624529908474429119, -4994812053365940165, -2, -1>);
+    if xs.4 == 1 {
+      return 0;
+    }
+    x = <xs.0, xs.1, xs.2, xs.3>;
+  }
+  var 1 xlt = u256_lt(x, <-4294968273, -1, -1, -1>);
+  if xlt == 0 {
+    return 0;
+  }
+  var {1,1,1,1} rhs = fp_sqr(x);
+  rhs = fp_mul(rhs, x);
+  rhs = fp_add(rhs, <7, 0, 0, 0>);
+  var {1,1,1,1} y0 = fp_sqrt(rhs);
+  var {1,1,1,1} chk = fp_sqr(y0);
+  var 1 sq = u256_eq(chk, rhs);
+  if sq == 0 {
+    return 0;
+  }
+  var {1,1,1,1} y = y0;
+  if (y0.0 & 1) != (recid & 1) {
+    y = fp_neg(y0);
+  }
+  ec_set_affine(out, x, y);
+  return 1;
+}
+fun 1 secp256k1_recover(1 msg_hash, {1,1,1,1} r, {1,1,1,1} s, 1 recid, 1 out) {
+  var 1 rz = u256_is_zero(r);
+  if rz == 1 { return 0; }
+  var 1 rlt = u256_lt(r, <-4624529908474429119, -4994812053365940165, -2, -1>);
+  if rlt == 0 { return 0; }
+  var 1 sz = u256_is_zero(s);
+  if sz == 1 { return 0; }
+  var 1 slt = u256_lt(s, <-4624529908474429119, -4994812053365940165, -2, -1>);
+  if slt == 0 { return 0; }
+  var mark = heap_mark();
+  var pq = alloc(96);
+  var pr = alloc(96);
+  var 1 okr = secp256k1_decompress_r(r, recid, pr);
+  if okr == 0 {
+    heap_release(mark);
+    return 0;
+  }
+  var {1,1,1,1} rx = lds {1,1,1,1} (pr);
+  var {1,1,1,1} ry = lds {1,1,1,1} ((pr) + 32);
+  var {1,1,1,1} e = u256_from_be(msg_hash, 32);
+  var 1 elt = u256_lt(e, <-4624529908474429119, -4994812053365940165, -2, -1>);
+  if elt == 0 {
+    e = u256_sub(e, <-4624529908474429119, -4994812053365940165, -2, -1>);
+  }
+  var {1,1,1,1} rinv = fn_inv(r);
+  var {1,1,1,1} nege = <0, 0, 0, 0>;
+  var 1 ez = u256_is_zero(e);
+  if ez == 0 {
+    nege = u256_sub(<-4624529908474429119, -4994812053365940165, -2, -1>, e);
+  }
+  var {1,1,1,1} u1 = fn_mul(nege, rinv);
+  var {1,1,1,1} u2 = fn_mul(s, rinv);
+  ec_mul2(pq, u1, <6481385041966929816, 188021827762530521, 6170039885052185351, 8772561819708210092>, <-7185545363635252040, -209500633525038055, 6747795201694173352, 5204712524664259685>, u2, rx, ry);
+  var 1 ok = ec_to_affine(pq);
+  if ok == 1 {
+    var {1,1,1,1} qx = lds {1,1,1,1} (pq);
+    var {1,1,1,1} qy = lds {1,1,1,1} ((pq) + 32);
+    u256_to_be32(qx, out);
+    u256_to_be32(qy, out + 32);
+  }
+  heap_release(mark);
+  return ok;
+}
+fun 1 main() {
+  return 0;
+}
+

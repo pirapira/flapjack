@@ -43,6 +43,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/recursive_global_main.pnk",
+      "source_reference": "cakeml/pancake/pan_globalsScript.sml:224-257 (compile_top_def; initializer wrapper must tail-call the renamed recursive main)",
+      "cake_sha256": "309ed479d849d2d9b124e655a93f6246ada0e9c18ccfde97bcfbbdd9b5e3032a",
+      "tracked_beads": [
+        "flapjack-bq8"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/set_var.pnk",
       "source_reference": "cakeml/pancake/semantics/crepSemScript.sml:55-57 (set_var_def)",
       "cake_sha256": "14ee212eefbbc8ba96af33c6372dcde8bc6b2c4babe72779e3124f2df1cd21b1",
@@ -579,6 +587,14 @@
       "cake_sha256": "0780052035fa8a392dfff9628017c06655c7a8ced08a8f723a68988e145c8b8f",
       "tracked_beads": [
         "flapjack-pxn.9"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/secp256k1_recover.pnk",
+      "source_reference": "Minimized full-guest secp256k1_recover call-frame witness; source-shaped Cake uses 22 stack-register ABI slots and StackArgs without a second argument-move pass.",
+      "cake_sha256": "7d026bcdfb943080883abc49def4c23103ab692bda8504fa91b598cba3c434d8",
+      "tracked_beads": [
+        "flapjack-8tb.4.6"
       ]
     }
   ]

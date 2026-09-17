@@ -660,7 +660,7 @@ def compileFlapjack [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul α]
   let globals := globalCompileTop bytesInWord fromNat structured
   let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
   let declarations := pipelinePrependInitializers globals.initializers globals.declarations
-  let compiled := compileToCrepe crepeContext declarations
+  let compiled := compileToCrep crepeContext declarations
   let crepe := crepSimpFunctions fromNat
     (crepInlineTopRecursiveByNames (pipelineInlineNames declarations) compiled)
   let loop := pipelineLoopFunctions architecture 1 crepe
@@ -706,7 +706,7 @@ def compileFlapjackEntry [BEq α] [OfNat α 0] [OfNat α 1]
           returnShape := entry.returnShape }
       let globals := { globals with declarations := wrapper :: globals.declarations }
       let crepeContext := pipelineCrepeContext bytesInWord fromNat globals
-      let compiled := compileToCrepe crepeContext globals.declarations
+      let compiled := compileToCrep crepeContext globals.declarations
       let crepe := crepSimpFunctions fromNat
         (crepInlineTopRecursiveByNames (pipelineInlineNames globals.declarations) compiled)
       let loop := pipelineLoopFunctions architecture 1 crepe

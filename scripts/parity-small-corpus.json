@@ -258,6 +258,14 @@
       "source_reference": "word_simp$simp_duplicate_if (word_simpScript.sml:432-454) is structurally recursive and descends into Loop bodies, MustTerminate bodies and both sub-programs of a Call. Flapjack's executable version is fuel-driven and its wordProgFuel measure counted only Seq and If, so a whole while body was budgeted as one node and the recursion ran out of fuel part-way down it. A materialised comparison nested inside a loop body then kept its 0/1 round trip - bne; t := 0; jal; t := 1; beq t, 0 - where Cake folds the comparison straight into the branch: five instructions more per occurrence. break_then_more is the minimal shape (a comparison whose If is followed by further statements inside the loop); return_then_more is the guest's is_zero_bytes; nested_loop needs two levels of Loop descent; call_return_condition needs the Call return-program descent.",
       "cake_sha256": "391ccced1dbd1cf6d4a70968404e6a81e31a589f32385eb9b0771b2868eeeaa2",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/u256_add_carry.pnk",
+      "source_reference": "minimized source-to-RISC-V differential for CakeML AddCarry ABI temporary numbering (cml_u256_add_carry_57)",
+      "cake_sha256": "f117eaaae17df78521dd9f33f09e10042b09c94dda367d8dd8b0ed47f44a545d",
+      "tracked_beads": [
+        "flapjack-8tb.4.7"
+      ]
     }
   ]
 }

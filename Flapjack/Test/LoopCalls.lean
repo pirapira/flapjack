@@ -86,7 +86,7 @@ def addCarryCompileContext : CompileContext (RiscV.Word 64) :=
     bytesInWord := 8 }
 
 def addCarryLoopContext : LoopContext (RiscV.Word 64) :=
-  { vars := []
+  { vars := [(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)]
     functions := []
     maxVar := 1
     target := .rv64i }

@@ -31,6 +31,25 @@ example :
     wordStackLocation, wordStackOffset, wordStackJoin, lookupNatInfo]
 
 example :
+    wordStackParallelLocationMove (α := Nat)
+        { locations := [(0, .register 0), (1, .register 1),
+                        (2, .register 2), (5, .register 5),
+                        (7, .register 7)],
+          scratch := 31, addressScratch := 29, stackBase := 10 }
+        [(.register 0, .register 5), (.register 2, .register 7),
+         (.register 7, .register 7), (.register 5, .register 5),
+         (.register 1, .register 0)] =
+      some (.seq (.arith .or 1 0 0)
+        (.seq (.arith .or 0 5 5) (.arith .or 2 7 7)) : StackProg Nat) := by
+  simp [wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
+    wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
+    wordStackCakeSplitSource, wordStackCakeInitLast, wordStackCakeOptionMoveList,
+    wordStackLocationMoveDestinations, wordStackLocationMoveChain,
+    wordStackLocationMoveBySource, wordStackLocationMoveRemovePair,
+    wordStackLocationMoveRemoveDestination,
+    wordStackLocationMove, wordStackJoin]
+
+example :
     wordMoveToInstructions (width := 8) [(1, 2), (2, 1)] =
       some [.addi 31 2 0, .addi 2 1 0, .addi 1 31 0] := by
   decide +kernel

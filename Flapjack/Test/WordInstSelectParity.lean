@@ -10,6 +10,10 @@ def cakeLoadVarAddress : WordProg (BitVec 64) :=
   wordInstSelectProgram 7
     (.assign 2 (.load (.var 13)))
 
+def cakeNonImmediateAnd : WordProg (BitVec 64) :=
+  wordInstSelectProgram 7
+    (.assign 40 (.op .and [.var 2, .const (BitVec.ofNat 64 0xFFFFFFFF)]))
+
 def cakeLoadConstShape : Bool :=
   match cakeLoadConstAddress with
   | .seq (.inst (.const 7 value))
@@ -33,5 +37,12 @@ def cakeWideBinopStatementShape : Bool :=
 #guard cakeLoadConstShape
 #guard cakeLoadVarShape
 #guard cakeWideBinopStatementShape
+
+#guard match cakeNonImmediateAnd with
+  | .seq (.move 0 [(7, 2)])
+      (.seq (.inst (.const 8 value))
+        (.inst (.arith (.binOp .and 40 7 (.reg 8))))) =>
+      value == BitVec.ofNat 64 0xFFFFFFFF
+  | _ => false
 
 end Flapjack.RiscV

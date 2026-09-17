@@ -77,10 +77,6 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
           apply hnoSource move (by simp [hmove])
           rw [hsame]
           simp
-      have hheadReady :
-          wordStackLocationMoveReady (head.2 :: tail.map Prod.snd)
-              (head :: tail) = some head := by
-        simp [wordStackLocationMoveReady, hheadNotSource]
       have hheadNotTailDestination : ∀ move, move ∈ tail →
           move.1 ≠ head.1 := by
         intro move hmove heq
@@ -146,7 +142,7 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
       simp [wordStackParallelLocationMove,
         wordStackParallelLocationMoveAux,
         wordStackLocationMoveDestinations, hdestinations', hscratchBusy,
-        haddressScratchBusy, hheadReady, hremoved,
+        haddressScratchBusy, hheadNotSource, hremoved,
         wordStackSequentialLocationMove,
         htailAux]
 

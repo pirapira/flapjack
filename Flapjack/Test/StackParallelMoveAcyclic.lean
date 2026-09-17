@@ -39,7 +39,7 @@ example :
       [(.register 3, .register 1), (.register 1, .register 2)] =
       some (.seq (.arith .or 3 1 1) (.arith .or 1 2 2)) := by
   simp [wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
-    wordStackLocationMoveDestinations, wordStackLocationMoveReady,
+    wordStackLocationMoveDestinations,
     wordStackLocationMoveRemoveDestination, wordStackLocationMove,
     wordStackJoin, acyclicParallelConfig]
 
@@ -51,8 +51,9 @@ example :
       some (.seq (.arith .or 30 2 2)
         (.seq (.arith .or 2 1 1) (.arith .or 1 30 30))) := by
   simp [wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
-    wordStackLocationMoveDestinations, wordStackLocationMoveReady,
-    wordStackLocationMoveRemoveDestination, wordStackLocationMoveToScratch,
+    wordStackLocationMoveDestinations, wordStackLocationMoveChain,
+    wordStackLocationMoveBySource, wordStackLocationMoveRemovePair,
+    wordStackLocationMoveToScratch,
     wordStackLocationMoveFromScratch, wordStackLocationMove,
     wordStackJoin, acyclicParallelConfig]
 

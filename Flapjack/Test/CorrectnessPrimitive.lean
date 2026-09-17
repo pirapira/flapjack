@@ -9,8 +9,8 @@ allocation, making the required non-alias contracts executable.
 
 namespace Flapjack
 
-def primitiveLoopContext : LoopContext (RiscV.Word 64) :=
-  { vars := []
+def primitiveCorrectnessLoopContext : LoopContext (RiscV.Word 64) :=
+  { vars := [(2, 2), (3, 3), (4, 4), (5, 5), (6, 6)]
     functions := []
     maxVar := 0
     target := .rv64i }
@@ -325,10 +325,12 @@ example :
         else if name == 3 then some (BitVec.ofNat 64 2)
         else if name == 4 then some (BitVec.ofNat 64 0)
         else none))
-        (loopCompileProg primitiveLoopContext []
+        (loopCompileProg primitiveCorrectnessLoopContext []
           (.primitive [5, 6] .addCarry [2, 3, 4]))).map
         (fun result =>
           ((loopResultState result).locals, loopResultValues result)) := by
   apply crepToLoop_primitive_agreement
+  · simp [primitiveCorrectnessLoopContext, lookupLoopVars, lookupNatInfo]
+  · simp [primitiveCorrectnessLoopContext, lookupLoopVars, lookupNatInfo]
 
 end Flapjack

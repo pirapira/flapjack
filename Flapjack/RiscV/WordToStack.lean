@@ -1682,6 +1682,41 @@ def wordStackCakeOptionMoveList {α : Type} (config : WordStackConfig) :
 termination_by moves => sizeOf moves
 decreasing_by all_goals decreasing_trivial
 
+def wordStackLocationMoveBySource (source : WordLocation) :
+    List (WordLocation × WordLocation) → Option (WordLocation × WordLocation)
+  | [] => none
+  | move :: moves =>
+      if move.2 = source then some move
+      else wordStackLocationMoveBySource source moves
+termination_by moves => sizeOf moves
+decreasing_by all_goals decreasing_trivial
+
+def wordStackLocationMoveRemovePair (removed : WordLocation × WordLocation)
+    (moves : List (WordLocation × WordLocation)) :
+    List (WordLocation × WordLocation) :=
+  moves.filter (fun move => move != removed)
+
+def wordStackLocationMoveChain :
+    Nat → (WordLocation × WordLocation) →
+      List (WordLocation × WordLocation) →
+      List (WordLocation × WordLocation) → List WordLocation →
+      Option (List (WordLocation × WordLocation) ×
+        List (WordLocation × WordLocation) × Bool)
+  | 0, _, _, _, _ => none
+  | fuel + 1, current, moves, chain, seen =>
+      if current.1 ∈ seen then
+        some (chain ++ [current], moves, true)
+      else
+        let chain := chain ++ [current]
+        let seen := current.1 :: seen
+        match wordStackLocationMoveBySource current.1 moves with
+        | none => some (chain, moves, false)
+        | some next =>
+            wordStackLocationMoveChain fuel next
+              (wordStackLocationMoveRemovePair next moves) chain seen
+termination_by fuel => fuel
+decreasing_by all_goals simp_wf
+
 /-! Schedule a parallel move list over `WordLocation`s in the same order as
     CakeML's `parmove`.  A move whose destination is not a pending source
     cannot clobber a value needed by a remaining move, so it is safe to emit
@@ -1711,30 +1746,53 @@ def wordStackParallelLocationMoveAux {α : Type} (config : WordStackConfig) :
       let addressScratchBusy :=
         moves.any (fun (move : WordLocation × WordLocation) =>
           move.1 = WordLocation.register config.addressScratch)
-      if (moves.any stackToStack && scratchBusy) ||
-          (addressScratchBusy && (wordStackLocationMoveReady sources moves).isNone) then
+      let process : Option (StackProg α) :=
+        if !destinations.Nodup then
+          none
+        else if moves.isEmpty then
+          some .skip
+        else
+          match moves with
+          | [] => some .skip
+          | (destination, source) :: tail =>
+              if destination = source || destination ∉ sources then do
+                let last ← wordStackLocationMove config destination source
+                let rest ← wordStackParallelLocationMoveAux config fuel
+                  (wordStackLocationMoveRemoveDestination destination moves)
+                pure (wordStackJoin last rest)
+              else
+                match wordStackLocationMoveChain fuel (destination, source)
+                    tail [] [source] with
+                | some (chain, remaining, true) => do
+                    let save ← wordStackLocationMoveToScratch config source
+                    let cycleCode ← chain.tail.reverse.foldlM
+                      (fun code move => do
+                        let next ← wordStackLocationMove config move.1 move.2
+                        pure (wordStackJoin code next)) .skip
+                    let restore ← wordStackLocationMoveFromScratch config destination
+                    let rest ← wordStackParallelLocationMoveAux config fuel remaining
+                    pure (wordStackJoin save
+                      (wordStackJoin cycleCode (wordStackJoin restore rest)))
+                | some (chain, remaining, false) => do
+                    let chainCode ← chain.reverse.foldlM
+                      (fun code move => do
+                        let next ← wordStackLocationMove config move.1 move.2
+                        pure (wordStackJoin code next)) .skip
+                    let rest ← wordStackParallelLocationMoveAux config fuel remaining
+                    pure (wordStackJoin chainCode rest)
+                | none => do
+                    if config.scratch = config.addressScratch then none else
+                      let save ← wordStackLocationMoveToScratch config source
+                      let rest ← wordStackParallelLocationMoveAux config fuel
+                        (wordStackLocationMoveRemoveDestination destination moves)
+                      let restore ← wordStackLocationMoveFromScratch config destination
+                      pure (wordStackJoin save (wordStackJoin rest restore))
+      if moves.any stackToStack && scratchBusy then
         none
-      else if !destinations.Nodup then
-        none
-      else if moves.isEmpty then
-        some .skip
+      else if addressScratchBusy then
+        if (wordStackLocationMoveReady sources moves).isNone then none else process
       else
-        match wordStackLocationMoveReady sources moves with
-        | some (destination, source) => do
-            let last ← wordStackLocationMove config destination source
-            let rest ← wordStackParallelLocationMoveAux config fuel
-              (wordStackLocationMoveRemoveDestination destination moves)
-            pure (wordStackJoin last rest)
-        | none =>
-            match moves with
-            | [] => some .skip
-            | (destination, source) :: _ => do
-                if config.scratch = config.addressScratch then none else
-                  let save ← wordStackLocationMoveToScratch config source
-                  let rest ← wordStackParallelLocationMoveAux config fuel
-                    (wordStackLocationMoveRemoveDestination destination moves)
-                  let restore ← wordStackLocationMoveFromScratch config destination
-                  pure (wordStackJoin save (wordStackJoin rest restore))
+        process
 
 def wordStackParallelLocationMove {α : Type} (config : WordStackConfig)
     (moves : List (WordLocation × WordLocation)) : Option (StackProg α) :=

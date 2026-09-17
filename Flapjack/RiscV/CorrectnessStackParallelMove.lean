@@ -27,21 +27,13 @@ theorem wordStackParallelLocationMove_singleton
           by_cases hsame : destination = source
           · subst source
             simp [wordStackParallelLocationMove,
-              wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
-              wordStackCakeSplitSource, wordStackCakeInitLast,
-              wordStackCakeOptionMoveList,
               wordStackParallelLocationMoveAux,
               wordStackLocationMoveDestinations,
-              wordStackLocationMoveRemoveDestination, wordStackLocationMove,
-              wordStackJoin,
-              hdestinationScratch, hdestinationAddressScratch]
+              wordStackLocationMove]
           · have hsourceDestination : ¬source = destination := by
               intro h
               exact hsame h.symm
             simp [wordStackParallelLocationMove,
-              wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
-              wordStackCakeSplitSource, wordStackCakeInitLast,
-              wordStackCakeOptionMoveList,
               wordStackParallelLocationMoveAux,
               wordStackLocationMoveDestinations,
               wordStackLocationMoveRemoveDestination, wordStackLocationMove,
@@ -51,9 +43,6 @@ theorem wordStackParallelLocationMove_singleton
 
       | stack source =>
           simp [wordStackParallelLocationMove,
-            wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
-            wordStackCakeSplitSource, wordStackCakeInitLast,
-            wordStackCakeOptionMoveList,
             wordStackParallelLocationMoveAux,
             wordStackLocationMoveDestinations,
             wordStackLocationMoveRemoveDestination, wordStackLocationMove,
@@ -63,9 +52,6 @@ theorem wordStackParallelLocationMove_singleton
       cases source with
       | register source =>
           simp [wordStackParallelLocationMove,
-            wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
-            wordStackCakeSplitSource, wordStackCakeInitLast,
-            wordStackCakeOptionMoveList,
             wordStackParallelLocationMoveAux,
             wordStackLocationMoveDestinations,
             wordStackLocationMoveRemoveDestination, wordStackLocationMove,
@@ -75,21 +61,13 @@ theorem wordStackParallelLocationMove_singleton
           by_cases hsame : destination = source
           · subst source
             simp [wordStackParallelLocationMove,
-              wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
-              wordStackCakeSplitSource, wordStackCakeInitLast,
-              wordStackCakeOptionMoveList,
               wordStackParallelLocationMoveAux,
               wordStackLocationMoveDestinations,
-              wordStackLocationMoveRemoveDestination, wordStackLocationMove,
-              wordStackJoin,
-              hdestinationScratch, hdestinationAddressScratch]
+              wordStackLocationMove]
           · have hsourceDestination : ¬source = destination := by
               intro h
               exact hsame h.symm
             simp [wordStackParallelLocationMove,
-              wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
-              wordStackCakeSplitSource, wordStackCakeInitLast,
-              wordStackCakeOptionMoveList,
               wordStackParallelLocationMoveAux,
               wordStackLocationMoveDestinations,
               wordStackLocationMoveRemoveDestination, wordStackLocationMove,

@@ -41,12 +41,9 @@ example :
          (.register 1, .register 0)] =
       some (.seq (.arith .or 1 0 0)
         (.seq (.arith .or 0 5 5) (.arith .or 2 7 7)) : StackProg Nat) := by
-  simp [wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
+  simp [wordStackParallelLocationMove,
     wordStackCakeParallelOptionOrder, wordStackCakeParallelOptionOrderAux,
     wordStackCakeSplitSource, wordStackCakeInitLast, wordStackCakeOptionMoveList,
-    wordStackLocationMoveDestinations, wordStackLocationMoveChain,
-    wordStackLocationMoveBySource, wordStackLocationMoveRemovePair,
-    wordStackLocationMoveRemoveDestination,
     wordStackLocationMove, wordStackJoin]
 
 example :

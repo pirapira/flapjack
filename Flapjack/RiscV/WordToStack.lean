@@ -1797,9 +1797,12 @@ def wordStackParallelLocationMoveAux {α : Type} (config : WordStackConfig) :
 def wordStackParallelLocationMove {α : Type} (config : WordStackConfig)
     (moves : List (WordLocation × WordLocation)) : Option (StackProg α) :=
   let moves := moves.filter (fun move => move.1 != move.2)
-  match wordStackCakeParallelOptionOrder moves with
-  | some ordered => wordStackCakeOptionMoveList config ordered
-  | none => wordStackParallelLocationMoveAux config (moves.length + 1) moves
+  if moves.any (fun move => move.2 ∈ moves.map Prod.fst) then
+    match wordStackCakeParallelOptionOrder moves with
+    | some ordered => wordStackCakeOptionMoveList config ordered
+    | none => wordStackParallelLocationMoveAux config (moves.length + 1) moves
+  else
+    wordStackParallelLocationMoveAux config (moves.length + 1) moves
 
 def wordStackMoveList {α : Type} (config : WordStackConfig) :
     List (Nat × Nat) → Option (StackProg α) :=

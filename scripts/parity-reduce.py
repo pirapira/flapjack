@@ -545,21 +545,26 @@ here=$(cd "$(dirname "$0")" && pwd)
 source_file="${{1:-$here/case.min.pnk}}"
 exec python3 {repo}/scripts/parity-reduce.py "$source_file" \\
   --predicate {predicate} \\
-  --expect-sections {sections} \\
+{section_arg}  --expect-sections {sections} \\
   --check-only \\
   --cake "${{CAKE:-{cake}}}" \\
   --flapjack "${{FLAPJACK:-{flapjack}}}"
 """
 
 
-def write_outputs(out, text, report, cake, flapjack, predicate_name, sections):
+def write_outputs(out, text, report, cake, flapjack, predicate_name, sections,
+                  section_name=None):
     out.mkdir(parents=True, exist_ok=True)
     (out / "case.min.pnk").write_text(text)
     (out / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     replay = out / "replay.sh"
+    section_arg = ""
+    if predicate_name == "section":
+        section_arg = "  --section %s \\\n" % (section_name or sections[0])
     replay.write_text(REPLAY_TEMPLATE.format(
         cake=cake, flapjack=flapjack, repo=REPO_ROOT,
-        predicate=predicate_name, sections=",".join(sections) or "(none)"))
+        predicate=predicate_name, section_arg=section_arg,
+        sections=",".join(sections) or "(none)"))
     replay.chmod(0o755)
     return replay
 
@@ -665,7 +670,7 @@ def main(argv=None):
     }
     out = Path(args.out)
     replay = write_outputs(out, reduced, report, args.cake, args.flapjack,
-                           args.predicate, seed_sections)
+                           args.predicate, seed_sections, args.section)
     shutil.rmtree(workdir, ignore_errors=True)
 
     print("reduced %d -> %d bytes (%d -> %d lines) in %d oracle calls, %.1fs" % (

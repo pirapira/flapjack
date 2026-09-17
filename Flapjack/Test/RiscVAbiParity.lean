@@ -395,6 +395,18 @@ def copyPropagationCollapsesRepresentativeChain : Bool :=
 
 #guard copyPropagationCollapsesRepresentativeChain
 
+/- Cake's `copy_prop_prog (Loop ...)` resets the incoming copy state after
+   transforming the loop body (`word_copyScript.sml:377-380`). -/
+def copyPropagationClearsLoopState : Bool :=
+  match RiscV.wordCopyProp
+      (.seq (.move 0 [(61, 45), (65, 45)])
+        (.seq (.loop [] (.skip : WordProg (Word 64)) [])
+          (.move 0 [(297, 65)])) : WordProg (Word 64)) with
+  | .seq _ (.seq (.loop _ _ _) (.move 0 [(297, 65)])) => true
+  | _ => false
+
+#guard copyPropagationClearsLoopState
+
 /- Cake's branch merge compares class identities, not only the visible
    representative.  Independently-created classes for the same names must
    therefore not propagate a branch-local source across the merge. -/

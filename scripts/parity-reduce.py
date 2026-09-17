@@ -247,7 +247,15 @@ def keep_smaller(tester, current, candidate):
     """Greedily keep only a strictly smaller interesting candidate."""
     if len(candidate.encode()) >= len(current.encode()):
         return False
-    return tester.interesting(candidate)
+    if not tester.interesting(candidate):
+        return False
+    # Keep a valid checkpoint separate from ``candidate.pnk``.  The latter is
+    # overwritten before every oracle call, so a process killed during a
+    # rejected probe would otherwise leave only an invalid, non-resumable
+    # snapshot.  This checkpoint is deliberately in the reducer workdir and
+    # is removed with it after a successful run.
+    tester.path.with_name("accepted.pnk").write_text(candidate)
+    return True
 
 
 # ---------------------------------------------------------------------------

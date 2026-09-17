@@ -346,6 +346,12 @@
       "tracked_beads": []
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/decode_payload_op_curr_heap_copy.pnk",
+      "source_reference": "Minimized from the full stateless guest decode_payload P0 mismatch. Cake's word_copy preserves the copy class across OpCurrHeap while rewriting its source and removing only the destination class; this fixture pins the resulting exact RISC-V output.",
+      "cake_sha256": "d54dea259a7403b37f6b5ea6465907ed9523388f874c99ab7d8cbcee8a0543a7",
+      "tracked_beads": []
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/divmnu_copy_loop.pnk",
       "source_reference": "Minimized full-guest divmnu witness; word_copy must reset copy state after Loop and resolve old members through Cake's class representative.",
       "cake_sha256": "76d372a0ccac7e59715ec940f16d8f4e89ce676601b1c691f4546d8a2b38cb49",

@@ -358,7 +358,7 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
             (.storeByte addressTemp valueTemp)))
   | .storeGlob address value =>
       let result := loopCompileExp context (context.maxVar + 1) live value
-      .seq (loopNestedSeq result.code) (.setGlobal address result.expression)
+      loopNestedSeq (result.code ++ [.setGlobal address result.expression])
   | .seq first second => .seq (loopCompileProg context live first)
       (loopCompileProg context live second)
   | .ite condition thenBranch elseBranch =>

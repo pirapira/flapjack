@@ -866,10 +866,9 @@ def wordStackMemoryOffsetInst {α : Type} (config : WordStackConfig)
     (operator : WordMemOp) (sourceOrDestination address : Nat) (offset : α) :
     Option (StackProg α) :=
   match operator with
-  | .load | .load8 | .load16 | .load32 =>
-      wordStackLoadOffsetInst config operator sourceOrDestination address offset
-  | .store | .store8 | .store16 | .store32 =>
-      wordStackStoreOffsetInst config operator sourceOrDestination address offset
+  | .load => wordStackLoadOffsetInst config operator sourceOrDestination address offset
+  | .store => wordStackStoreOffsetInst config operator sourceOrDestination address offset
+  | .load8 | .load16 | .load32 | .store8 | .store16 | .store32 => none
 
 def wordStackStoreLocationsSafe (config : WordStackConfig) :
     WordLocation → WordLocation → Bool
@@ -1684,42 +1683,20 @@ def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
 def wordStackCompileSharedNat (config : WordStackConfig)
     (operator : WordMemOp) (destination : Nat) (address : WordExp Nat) :
     Option (StackProg Nat) := do
-  let general : Option (StackProg Nat) := do
-    match address with
-    | .const _ | .var _ | .lookup _ =>
-        let (addressPrelude, addressRegister) ←
-          wordStackAtomNat config config.addressScratch address
-        let body ← wordStackWritePhysicalNat config destination
-          (fun register => .shMem operator register addressRegister)
-        pure (wordStackJoin addressPrelude body)
-    | _ =>
-        let addressPrelude ←
-          wordStackCompileExpToRegisterNat config config.addressScratch
-            (wordStackExpressionTemporaries config config.addressScratch) address
-        let body ← wordStackWritePhysicalNat config destination
-          (fun register => .shMem operator register config.addressScratch)
-        pure (wordStackJoin addressPrelude body)
   match address with
-  | .op .add [.var base, .const offset] =>
-      let offsetFits :=
-        match operator with
-        | .load | .store | .load32 | .store32 =>
-            offset < 2 ^ 11 ||
-              (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64)
-        | .load16 | .store16 =>
-            (offset % 2 = 0) &&
-              (offset < 2 ^ 11 ||
-                (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64))
-        | .load8 | .store8 =>
-            offset < 2 ^ 11 ||
-              (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64)
-      if offsetFits then
-        match wordStackMemoryOffsetInst config operator destination base offset with
-        | some body => pure body
-        | none => general
-      else
-        general
-  | _ => general
+  | .const _ | .var _ | .lookup _ =>
+      let (addressPrelude, addressRegister) ←
+        wordStackAtomNat config config.addressScratch address
+      let body ← wordStackWritePhysicalNat config destination
+        (fun register => .shMem operator register addressRegister)
+      pure (wordStackJoin addressPrelude body)
+  | _ =>
+      let addressPrelude ←
+        wordStackCompileExpToRegisterNat config config.addressScratch
+          (wordStackExpressionTemporaries config config.addressScratch) address
+      let body ← wordStackWritePhysicalNat config destination
+        (fun register => .shMem operator register config.addressScratch)
+      pure (wordStackJoin addressPrelude body)
 
 def wordStackCompileExpNat (config : WordStackConfig) (destination : Nat) :
     WordExp Nat → Option (StackProg Nat)

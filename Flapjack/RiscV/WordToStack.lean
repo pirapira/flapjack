@@ -1607,15 +1607,41 @@ def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
           if (operator == .add || operator == .sub) && offset = 0 then
             wordStackWritePhysicalNat config destination
               (fun register => .inst (.mem .load register baseRegister))
-          else if offsetFits && baseRegister != config.scratch then
+          else if offsetFits then
             /- `scratch` carries the displacement only until the `arith`
                consumes it, so a spilled destination may reuse it for the
-               loaded value afterwards. -/
+               loaded value afterwards.  A base that *is* `scratch` cannot be
+               clobbered before the `arith` reads it -- that happens whenever
+               the base was itself reloaded from the frame -- so the constant
+               goes in `addressScratch`, which the `arith` then reads and
+               overwrites in one instruction.  The Lab recogniser accepts
+               both shapes and emits the same `memOffset`. -/
+            let offsetRegister :=
+              if baseRegister == config.scratch then config.addressScratch
+              else config.scratch
             wordStackWritePhysicalNat config destination
               (fun register =>
-                .seq (.seq (.const config.scratch offset)
-                    (.arith operator config.addressScratch baseRegister config.scratch))
+                .seq (.seq (.const offsetRegister offset)
+                    (.arith operator config.addressScratch baseRegister offsetRegister))
                   (.inst (.mem .load register config.addressScratch)))
+          else general
+      | some (.stack baseSlot) =>
+          /- Cake reloads a spilled base into the spare register and then
+             keeps the displacement on the memory instruction:
+             `ld scratch, slot(sp); ld dst, off(scratch)`.  Materializing the
+             whole address instead costs an `addi` per access, which is what
+             a call with twenty-six or more word arguments hits -- the base
+             is spilled there, so the register case above never fires. -/
+          if (operator == .add || operator == .sub) && offset = 0 then
+            general
+          else if offsetFits then do
+            let body ← wordStackWritePhysicalNat config destination
+              (fun register =>
+                .seq (.seq (.const config.addressScratch offset)
+                    (.arith operator config.addressScratch config.scratch
+                      config.addressScratch))
+                  (.inst (.mem .load register config.addressScratch)))
+            pure (.seq (.stackLoad config.scratch (wordStackOffset config baseSlot)) body)
           else general
       | _ => general
   | _ => general

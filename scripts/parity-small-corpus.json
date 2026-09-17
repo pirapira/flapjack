@@ -407,7 +407,9 @@
       "path": "Flapjack/Test/OriginalPancake/allocator_colour_permutation.pnk",
       "source_reference": "Reduced from the stateless guest's process_transaction by scripts/parity-reduce.py: 15840 lines to 2776 with the stub-other-functions pass, then to 20 lines in 1324 oracle calls. The original Cake word allocator emits four stack slots and bitmap words [4,16] for this source. Flapjack previously passed fresh SSA parameter names into word_to_stack after Cake's dead/SSA cleanup, dropping one stack slot and producing a 232-byte section; passing the ABI parameter names at this boundary restores Cake's 256-byte section and exact bytes.",
       "cake_sha256": "aa984a768fe54b226cdca51c0d3193aebefd2f44760d0e5e0cf0d45638a2ebb9",
-      "tracked_beads": ["flapjack-8tb.4"]
+      "tracked_beads": [
+        "flapjack-8tb.4"
+      ]
     },
     {
       "path": "Flapjack/Test/OriginalPancake/set_transient_storage_copy_class.pnk",
@@ -430,6 +432,14 @@
       "source_reference": "Acceptance regression lock for flapjack-01k. Cake compiles a call with fourteen or more word arguments; flapjack-compile used to fail outright with SourceRiscVImageError.loweringInFunction (PipelineRiscVLoweringError.wordToStackFailure), because WordStackConfig.abiRegisterCount defaulted to 12 -- the x10--x21 span -- while Cake's call-argument arithmetic uses k, the reg_count word_to_stack$compile derives once as asm_conf.reg_count - (5 + LENGTH asm_conf.avoid_regs) = 22 on RISC-V (word_to_stackScript.sml:605). wordStackPhysicalMovesToIndexed then returned none for an argument that would land past the end of the frame. Thirteen is the last arity that used to work and is kept as the control; fourteen, sixteen and twenty are inside the range that used to be rejected. Compiling this file with a binary built at fde32cd5 fails with wordToStackFailure 10 in call14; it is byte-identical to original Pancake now.",
       "cake_sha256": "bd578347d18e31981cc17b5404657b8cb80b3071dad2521ff9fc08d49b50c001",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/wide_call_spilled_base.pnk",
+      "source_reference": "flapjack-01k residual. Cake reloads a spilled address base into the spare register and keeps the displacement on the memory instruction -- ld scratch, slot(sp); ld dst, off(scratch) -- while wordStackCompileLoadNatNested only handled a base already in a register, so a spilled base fell back to materializing the whole address: ld x22, 24(x24); addi x23, x22, 192; ld x12, 0(x23). That cost one addi per access; spilled_base was 404 bytes against Cake's 396 and is 396 now. The file is still tracked because one instruction inside spilled_base differs: the pre-call stack-argument copy reads the wrong frame slot. Cake's StackArgs is stack_move n 0 f k (StackAlloc n) (word_to_stackScript.sml:287-292), whose source slot is start + f with f the caller's frame size; for this function Cake loads from 112(x24) and stores to 32(x24) where Flapjack loads from 56(x24). Flapjack models the same copy as a parallel move whose source is the allocator's slot for the argument, which is not Cake's start + f. Lengths agree, so only the slot number differs.",
+      "cake_sha256": "bcab84ac1a923c846aef8f3f40996dc885b6157fe4a7eeaacc5cd0a654b99090",
+      "tracked_beads": [
+        "flapjack-01k"
+      ]
     }
   ]
 }

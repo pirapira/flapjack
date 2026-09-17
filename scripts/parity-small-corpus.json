@@ -446,6 +446,12 @@
       "tracked_beads": [
         "flapjack-8tb.4"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00226_mks_out_of_range_shift.pnk",
+      "source_reference": "Minimized campaign-seed-17 finding f00226: Cake retains the zero source constant and register subtraction produced by a struct-constructor argument, while Flapjack's Lab fusion incorrectly dropped the pair and shifted the following function base.",
+      "cake_sha256": "a3ad0d2832df373ec4418997cb6a4cb4ef8a7d295e348466dd22f64c093db4a8",
+      "tracked_beads": []
     }
   ]
 }

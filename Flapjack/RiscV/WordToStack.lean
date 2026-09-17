@@ -69,6 +69,14 @@ def wordStackOffset (config : WordStackConfig) (slot : Nat) : Nat :=
 def wordStackCakeFrameSize (config : WordStackConfig) : Nat :=
   if config.abiFrameSlots = 0 then 0 else config.abiFrameSlots + 1
 
+/- Cake's `StackArgs` receives the caller's frame size `f`, not the public
+   `stack_var_count` (`f'`) occupancy.  Source-shaped pipeline configs record
+   the latter in `abiFrameSlots`; retain an explicitly supplied offset for the
+   older zero-frame callers. -/
+def wordStackCallFrameOffset (config : WordStackConfig) : Nat :=
+  if config.abiFrameSlots = 0 then config.frameOffset
+  else wordStackCakeFrameSize config
+
 /-! `format_var k` classifies the first `k` physical argument slots as
     registers and the remaining slots as frame variables.  `wMoveSingle`
     materializes a frame variable at `f - 1 - (r - k)`; this is the direct
@@ -3279,7 +3287,7 @@ def wordToStackProg {α : Type} [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul
       let returnCode ← wordStackReturnCode config returns
       let destinations := returns.map (fun result => result.1) |>.getD []
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
-        config.frameOffset config.scratch (wordStackReturnStackSuffix config destinations)
+        (wordStackCallFrameOffset config) config.scratch (wordStackReturnStackSuffix config destinations)
         returnCode
         config.returnLabel config.entryLabel
       pure (wordStackJoin argumentMoves callCode)
@@ -3290,7 +3298,7 @@ def wordToStackProg {α : Type} [BEq α] [OfNat α 0] [OfNat α 1] [Add α] [Mul
       let _destinations := returns.map (fun result => result.1) |>.getD []
       let handlerCode ← wordToStackProg config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
-        config.frameOffset config.scratch returnCode handlerCode
+        (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
         config.returnLabel config.entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config entryLabel) exception
@@ -3362,7 +3370,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let returnCode ← wordToStackProgNat config returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
-        config.frameOffset config.scratch (wordStackReturnStackSuffix config destinations)
+        (wordStackCallFrameOffset config) config.scratch (wordStackReturnStackSuffix config destinations)
         returnCode
         returnLabel entryLabel
       pure (wordStackJoin argumentMoves callCode)
@@ -3371,7 +3379,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let argumentMoves ← wordStackMovesToPhysical config arguments config.abiBase
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
-        config.frameOffset config.scratch .skip handlerCode
+        (wordStackCallFrameOffset config) config.scratch .skip handlerCode
         config.returnLabel config.entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
@@ -3383,7 +3391,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let returnCode ← wordToStackProgNat config returnProgram
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
-        config.frameOffset config.scratch returnCode handlerCode
+        (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
         returnLabel entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
@@ -3401,7 +3409,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch .skip handlerCode
+        (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch .skip handlerCode
         config.returnLabel config.entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
@@ -3412,7 +3420,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let argumentMoves ← wordStackMovesToPhysical config direct config.abiBase
       let returnCode ← wordToStackProgNat config returnProgram
       let callCode := wordToStackCallNoHandlerTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch
+        (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch
         (wordStackReturnStackSuffix config _destinations) returnCode
         returnLabel entryLabel
       pure (wordStackJoin argumentMoves (wordStackJoin targetLoad callCode))
@@ -3424,7 +3432,7 @@ def wordToStackProgNat [BEq Nat] (config : WordStackConfig) :
       let returnCode ← wordToStackProgNat config returnProgram
       let handlerCode ← wordToStackProgNat config body
       let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch returnCode handlerCode
+        (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
         returnLabel entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
@@ -3553,7 +3561,7 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
       let (handlerCode, state) ← wordToStackProgNatWithBitmapBuilder config
         bitmapBuilder registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
-        config.frameOffset config.scratch returnCode handlerCode
+        (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
         (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
@@ -3567,7 +3575,7 @@ def wordToStackProgNatWithBitmapBuilder [BEq Nat]
       let (returnCode, state) ← wordToStackProgNatWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
-        config.frameOffset config.scratch (wordStackReturnStackSuffix config destinations)
+        (wordStackCallFrameOffset config) config.scratch (wordStackReturnStackSuffix config destinations)
         returnCode
         returnLabel entryLabel
       pure (wordStackJoin argumentMoves (wordStackJoin liveCode callCode), state)
@@ -4185,7 +4193,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSectionAtRegisterCount config.perf target
-        arguments.length registerCount config.frameOffset config.scratch returnCode handlerCode
+        arguments.length registerCount (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
         returnLabel entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
@@ -4198,7 +4206,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let (returnCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
       let callCode := wordToStackCallNoHandler config.perf target arguments.length
-        config.frameOffset config.scratch (wordStackReturnStackSuffix config destinations)
+        (wordStackCallFrameOffset config) config.scratch (wordStackReturnStackSuffix config destinations)
         returnCode returnLabel entryLabel
       pure (wordStackJoin liveCode callCode, state)
   | .call none (some target) arguments none => do
@@ -4210,7 +4218,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSection config.perf target arguments.length
-        config.frameOffset config.scratch .skip handlerCode
+        (wordStackCallFrameOffset config) config.scratch .skip handlerCode
         config.returnLabel config.entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
@@ -4226,7 +4234,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch .skip handlerCode
+        (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch .skip handlerCode
         config.returnLabel config.entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception
@@ -4240,7 +4248,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let (returnCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state returnProgram
       let callCode := wordToStackCallNoHandlerTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch
+        (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch
         (wordStackReturnStackSuffix config destinations) returnCode
         returnLabel entryLabel
       pure (wordStackJoin targetLoad (wordStackJoin liveCode callCode), state)
@@ -4255,7 +4263,7 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
       let (handlerCode, state) ← wordToStackProgWordWithBitmapBuilder config bitmapBuilder
         registerCount bitmapRegister frameSlots wordBits storeConstsStub state body
       let callCode := wordToStackCallWithHandlerInSectionTarget config.perf target
-        (arguments.length - 1) config.frameOffset config.scratch returnCode handlerCode
+        (arguments.length - 1) (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
         returnLabel entryLabel
         (wordStackHandlerLabel config handlerLabel)
         (wordStackHandlerEntryLabel config handlerEntryLabel) exception

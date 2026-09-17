@@ -669,8 +669,14 @@ def main(argv=None):
         "tools": tool_versions(args.cake, args.flapjack),
     }
     out = Path(args.out)
+    # A section-focused reduction is intentionally allowed to discard all
+    # other guest mismatches.  The replay must therefore validate the reduced
+    # section set, not the seed guest's (often hundreds of) differing
+    # sections; otherwise the generated replay script rejects its own output.
+    replay_sections = final_outcome.get("differing_sections", []) \
+        if args.predicate == "section" else seed_sections
     replay = write_outputs(out, reduced, report, args.cake, args.flapjack,
-                           args.predicate, seed_sections, args.section)
+                           args.predicate, replay_sections, args.section)
     shutil.rmtree(workdir, ignore_errors=True)
 
     print("reduced %d -> %d bytes (%d -> %d lines) in %d oracle calls, %.1fs" % (

@@ -775,6 +775,29 @@ def relationalConditionExactParity : Bool :=
       | _ => false
   | none => false
 
+def f01451Source : String :=
+  "  var p = @base;\n" ++
+    "fun 1 main() {\n" ++
+    "  var a = ld8 p; var b = ld8 (p+1); var c = ld8 (p+2);\n" ++
+    "  var d = ld8 (p+3); var e = ld8 (p+4); var t1 = ld8 (p+5);\n" ++
+    "  var h = 0;\n" ++
+    "  h = ((t1 + (a + (b + (c + (d + e))))) << 1000) >>> 1;\n" ++
+    "  return h;\n" ++
+    "}"
+
+def cakeF01451MainBytes : List (BitVec 8) :=
+  [0x13, 0x65, 0x00, 0x00,
+   0x13, 0x55, 0x15, 0x00,
+   0x67, 0x80, 0x00, 0x00].map (BitVec.ofNat 8)
+
+def f01451ExactParity : Bool :=
+  match compileRuntimeImage f01451Source with
+  | some image =>
+      match emittedSections image with
+      | [(_, 1000, _), (_, 1028, main)] => main == cakeF01451MainBytes
+      | _ => false
+  | none => false
+
 /-- Source of the whole-artifact `hello.pnk` fixture (GitHub issue #1022 /
 bead `flapjack-8tb`). -/
 def helloSource : String :=
@@ -904,6 +927,7 @@ def sharedWordStoreOffsetPeephole : Bool :=
 #guard frameOccupancyP1BitmapsMatch
 #guard frameOccupancyP9BitmapsMatch
 #guard relationalConditionExactParity
+#guard f01451ExactParity
 #guard sharedWordStoreOffsetPeephole
 #guard artifactAccepted
 #guard generatedMainBytesMatch
@@ -981,7 +1005,9 @@ def runChecks : IO Bool := do
       ("frame-occupancy p9 exact vector gap is tracked, not accepted",
          frameOccupancyP9BitmapsMatch),
       ("relational condition direct-branch section is byte-identical to Cake",
-        relationalConditionExactParity) ]
+        relationalConditionExactParity),
+      ("f01451 out-of-range shift section is byte-identical to Cake",
+        f01451ExactParity) ]
   let mut ok := true
   for (name, result) in checks do
     if result then

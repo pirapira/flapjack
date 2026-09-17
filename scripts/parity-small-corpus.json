@@ -522,6 +522,14 @@
       "tracked_beads": [
         "flapjack-pxn.8.5.10.1"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f01451_out_of_range_shift.pnk",
+      "source_reference": "Reduced differential-fuzz witness f01451: Cake's word_inst inst_select_exp maps a constant shift amount at or above the 64-bit word width directly to Const 0; the post-SSA dead pass then removes the dead OpCurrHeap address computation.",
+      "cake_sha256": "edfa9984ab87d145e8fa3d8e4ac8759dc1a1be7fd567cf463460c724ca4e8a5c",
+      "tracked_beads": [
+        "flapjack-8tb.5.13"
+      ]
     }
   ]
 }

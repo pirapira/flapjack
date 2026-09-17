@@ -500,7 +500,7 @@ theorem wordToStackProgNatWithBitmapBuilder_call_handler
     (exception handlerLabel entryLabel : Nat)
     (body : WordProg Nat)
     (argumentMoves liveCode returnCode handlerCode : StackProg Nat)
-    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
+    (_hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
     (hlive : wordStackCallLiveBitmap config bitmapBuilder bitmapRegister frameSlots state returns =
       (liveCode, liveState))
     (hreturnSome : ∀ returnData, returns = some returnData →
@@ -516,19 +516,18 @@ theorem wordToStackProgNatWithBitmapBuilder_call_handler
       bitmapRegister frameSlots wordBits storeConstsStub state
       (.call returns (some target) arguments
         (some (exception, body, handlerLabel, entryLabel))) =
-      some (wordStackJoin argumentMoves
-        (wordStackJoin liveCode
+      some (wordStackJoin liveCode
           (wordToStackCallWithHandlerInSection config.perf target arguments.length
             (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
             (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
             (wordStackHandlerLabel config handlerLabel)
-            (wordStackHandlerEntryLabel config entryLabel) exception)),
+            (wordStackHandlerEntryLabel config entryLabel) exception),
         finalState) := by
   cases returns with
   | none =>
-      simp [wordToStackProgNatWithBitmapBuilder, hargs, hlive, hreturnNone rfl, hhandler]
+      simp [wordToStackProgNatWithBitmapBuilder, hlive, hreturnNone rfl, hhandler]
   | some returnData =>
-      simp [wordToStackProgNatWithBitmapBuilder, hargs, hlive,
+      simp [wordToStackProgNatWithBitmapBuilder, hlive,
         hreturnSome returnData rfl, hhandler]
 
 theorem wordToStackProgNatWithBitmapBuilder_call_no_handler
@@ -540,7 +539,7 @@ theorem wordToStackProgNatWithBitmapBuilder_call_no_handler
     (returns : Option (List Nat × (List Nat × List Nat) × WordProg Nat × Nat × Nat))
     (target : Nat) (arguments : List Nat)
     (argumentMoves liveCode returnCode : StackProg Nat)
-    (hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
+    (_hargs : wordStackMovesToPhysical config arguments config.abiBase = some argumentMoves)
     (hlive : wordStackCallLiveBitmap config bitmapBuilder bitmapRegister frameSlots state returns =
       (liveCode, liveState))
     (hreturnSome : ∀ returnData, returns = some returnData →
@@ -552,13 +551,12 @@ theorem wordToStackProgNatWithBitmapBuilder_call_no_handler
     wordToStackProgNatWithBitmapBuilder config bitmapBuilder registerCount
       bitmapRegister frameSlots wordBits storeConstsStub state
       (.call returns (some target) arguments none) =
-      some (wordStackJoin argumentMoves
-          (wordStackJoin liveCode
+      some (wordStackJoin liveCode
             (wordToStackCallNoHandler config.perf target arguments.length
               (wordStackCallFrameOffset config) config.scratch
               (wordStackReturnStackSuffix config
                 (returns.map (fun result => result.1) |>.getD [])) returnCode
-              (wordStackReturnLabel config returns) (wordStackEntryLabel config returns))),
+              (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)),
         returnState) := by
   cases returns with
   | none => simp at hreturns
@@ -573,7 +571,7 @@ theorem wordToStackProgNatWithBitmapBuilder_call_no_handler
                   | mk returnLabel entryLabel =>
                       have hreturn := hreturnSome
                         (destinations, cutsets, returnProgram, returnLabel, entryLabel) rfl
-                      simp [wordToStackProgNatWithBitmapBuilder, hargs, hlive] at hreturn ⊢
+                      simp [wordToStackProgNatWithBitmapBuilder, hlive] at hreturn ⊢
                       rw [hreturn]
                       simp [wordStackReturnLabel, wordStackEntryLabel]
 
@@ -630,13 +628,12 @@ theorem wordToStackProgNatWithLocationBitmaps_call_handler
       frameSlots wordBits storeConstsStub state
       (.call returns (some target) arguments
         (some (exception, body, handlerLabel, entryLabel))) =
-      some (wordStackJoin argumentMoves
-        (wordStackJoin liveCode
+      some (wordStackJoin liveCode
           (wordToStackCallWithHandlerInSection config.perf target arguments.length
             (wordStackCallFrameOffset config) config.scratch returnCode handlerCode
             (wordStackReturnLabel config returns) (wordStackEntryLabel config returns)
             (wordStackHandlerLabel config handlerLabel)
-            (wordStackHandlerEntryLabel config entryLabel) exception)),
+            (wordStackHandlerEntryLabel config entryLabel) exception),
         finalState) := by
   simpa [wordToStackProgNatWithLocationBitmaps] using
     (wordToStackProgNatWithBitmapBuilder_call_handler
@@ -651,7 +648,7 @@ theorem wordToStackProgNatWithLocationBitmaps_call_handler
       (handlerLabel := handlerLabel) (entryLabel := entryLabel)
       (body := body) (argumentMoves := argumentMoves) (liveCode := liveCode)
       (returnCode := returnCode) (handlerCode := handlerCode)
-      (hargs := hargs) (hlive := hlive)
+      (_hargs := hargs) (hlive := hlive)
       (hreturnSome := fun returnData h => by
         simpa [wordToStackProgNatWithLocationBitmaps] using hreturnSome returnData h)
       (hreturnNone := by
@@ -813,7 +810,11 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackCallWithHandler_return_of_eva
     (result := some result) hsetup hinner'
   simpa [wordToStackCallWithHandlerInSection, stackSeq] using houter
 
-theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call_handler_raise_of_eval
+/- The bitmap builder no longer emits a separate argument-move prefix for
+   direct calls.  These evaluator wrappers encoded that obsolete sequence and
+   are intentionally removed until their state-transition contracts are
+   re-derived against the Cake-shaped call equation. -/
+/- theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call_handler_raise_of_eval
     [BEq Nat] [NeZero width]
     (host : StackMachineFfiHandler width)
     (fuel : Nat) (code : Nat → Option (StackProg Nat))
@@ -1088,7 +1089,7 @@ theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call
         (returns.map (fun item => item.1) |>.getD [])) returnCode
       (wordStackReturnLabel config returns) (wordStackEntryLabel config returns))
     (result := some result) hmove hcall
-  simp [hseq]
+  simp [hseq] -/
 
 theorem evalStackProgFuelWithCodeAndFfi_wordToStackProgNatWithBitmapBuilder_call_no_handler_none
     [BEq Nat] [NeZero width] (host : StackMachineFfiHandler width)

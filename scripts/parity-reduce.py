@@ -147,6 +147,14 @@ def signature(outcome):
     return (tuple(outcome["differing_sections"]), outcome["entry_differs"])
 
 
+def section_summary(sections, limit=24):
+    """Keep large guest diagnostics readable while retaining the count."""
+    if len(sections) <= limit:
+        return ", ".join(sections)
+    shown = ", ".join(sections[:limit])
+    return "%s, ... (+%d more)" % (shown, len(sections) - limit)
+
+
 PREDICATES = {}
 
 
@@ -611,7 +619,7 @@ def main(argv=None):
         seed_outcome.get("status"), seed_outcome.get("cake_accepted"),
         seed_outcome.get("flapjack_accepted"), len(seed_sections)))
     if seed_sections:
-        print("seed differing sections: %s" % ", ".join(seed_sections))
+        print("seed differing sections: %s" % section_summary(seed_sections))
 
     if not PREDICATES[args.predicate](seed_outcome, seed_outcome):
         print("seed does not satisfy predicate %r; nothing to reduce"

@@ -555,29 +555,68 @@ def wordStackCakeAddCarryInst {α : Type} (config : WordStackConfig)
                 (.inst (.arith (.cakeAddCarry destinationRegister sourceLeftRegister
                   sourceRightRegister carry))) writeDestination)))
       | _, _, _, _ =>
-          let safe name := match wordStackLocation config name with
-            | some location => wordStackAddCarryLocationSafe config location
-            | none => false
-          if safe destination && safe sourceLeft && safe sourceRight && safe carry then do
-            let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
-              config.addressScratch
-            let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
-              config.specialScratch
-            let loadCarry ← wordStackLongMulMoveToPhysical config carry
-              config.carryScratch
-            let writeDestination ← wordStackLongMulMoveFromPhysical config destination
-              config.scratch
-            let writeCarry ← wordStackLongMulMoveFromPhysical config carry
-              config.carryScratch
-            pure (wordStackJoin loadLeft
-              (wordStackJoin loadRight
-                (wordStackJoin loadCarry
-                  (wordStackJoin
-                    (.inst (.arith (.cakeAddCarry config.scratch
-                      config.addressScratch config.specialScratch config.carryScratch)))
-                    (wordStackJoin writeDestination writeCarry)))))
-          else
-            none
+          match wordStackLocation config destination,
+            wordStackLocation config sourceLeft,
+            wordStackLocation config sourceRight,
+            wordStackLocation config carry with
+          | some destLocation, some leftLocation, some rightLocation,
+              some carryLocation =>
+              let dReg := match destLocation with
+                | .register register => register
+                | _ => config.scratch
+              let sLReg := match leftLocation with
+                | .register register => register
+                | _ => config.scratch
+              let sRReg := match rightLocation with
+                | .register register => register
+                | _ => config.addressScratch
+              match carryLocation with
+              | .register carryRegister =>
+                  do
+                    let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+                      sLReg
+                    let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+                      sRReg
+                    let writeDestination ← wordStackLongMulMoveFromPhysical config
+                      destination dReg
+                    let writeCarry ← wordStackLongMulMoveFromPhysical config carry
+                      carryRegister
+                    pure (wordStackJoin loadLeft
+                      (wordStackJoin loadRight
+                        (wordStackJoin
+                          (.inst (.arith (.cakeAddCarry dReg sLReg sRReg
+                            carryRegister)))
+                          (wordStackJoin writeDestination writeCarry))))
+              | _ =>
+                  let carryReg :=
+                    if sLReg != config.scratch && dReg != config.scratch then
+                      config.scratch
+                    else if sLReg != config.addressScratch &&
+                        dReg != config.addressScratch then
+                      config.addressScratch
+                    else config.scratch
+                  if dReg == carryReg || sLReg == carryReg || sRReg == carryReg then
+                    none
+                  else
+                    do
+                      let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+                        sLReg
+                      let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+                        sRReg
+                      let loadCarry ← wordStackLongMulMoveToPhysical config carry
+                        carryReg
+                      let writeDestination ← wordStackLongMulMoveFromPhysical config
+                        destination dReg
+                      let writeCarry ← wordStackLongMulMoveFromPhysical config carry
+                        carryReg
+                      pure (wordStackJoin loadLeft
+                        (wordStackJoin loadRight
+                          (wordStackJoin loadCarry
+                            (wordStackJoin
+                              (.inst (.arith (.cakeAddCarry dReg sLReg sRReg
+                                carryReg)))
+                              (wordStackJoin writeDestination writeCarry)))))
+          | _, _, _, _ => none
   | _ => none
 
 /-! CakeML's `LongDiv` uses a fixed four-register convention: the two-word

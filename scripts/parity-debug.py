@@ -100,6 +100,7 @@ def main(argv=None):
     (out / "final.diff").write_text("".join(difflib.unified_diff(
         cake_lines, flap_lines, fromfile="cake.S", tofile="flapjack.S")))
 
+    stage_source = source
     if args.minimize:
         workdir = out / ".minimize-work"
         workdir.mkdir(exist_ok=True)
@@ -107,19 +108,24 @@ def main(argv=None):
             runner, source_bytes, comparison, workdir)
         write_bytes(out / "case.min.pnk", minimized)
         record["minimized"] = {"steps": steps, "bytes": len(minimized)}
+        stage_source = out / "case.min.pnk"
         (out / "comparison.json").write_text(json.dumps(record, indent=2) + "\n")
 
     if not args.no_stages:
-        debug = run([args.flapjack_debug, str(source)], timeout=args.timeout)
+        # Stage evidence must explain the witness that was reduced above.  In
+        # particular, do not spend time rendering the original full guest
+        # after --minimize has already found a much smaller discrepancy.
+        debug = run([args.flapjack_debug, str(stage_source)], timeout=args.timeout)
         write_bytes(out / "flapjack-stages.txt", debug["stdout"])
         write_bytes(out / "flapjack-stages.err", debug["stderr"])
         hol_env = os.environ.copy()
-        hol_env["PANCAKE_SOURCE"] = str(source)
+        hol_env["PANCAKE_SOURCE"] = str(stage_source)
         hol = run([args.hol, "run", str(HOL_PROBE)], env=hol_env,
                   cwd=ROOT / "cakeml" / "pancake",
                   timeout=args.timeout)
         write_bytes(out / "cake-stages.txt", hol["stdout"])
         write_bytes(out / "cake-stages.err", hol["stderr"])
+        record["stage_source"] = str(stage_source)
         record["stage_commands"] = {"flapjack": debug["command"], "cake": hol["command"]}
         record["stage_returncodes"] = {"flapjack": debug["returncode"], "cake": hol["returncode"]}
         cake_stage_lines = hol["stdout"].decode("utf-8", "replace").splitlines(True)

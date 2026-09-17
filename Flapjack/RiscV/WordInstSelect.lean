@@ -377,8 +377,19 @@ def wordInstSelectProgram [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
       wordDeadSelectSeq (wordInstSelectProgram temp first)
         (wordInstSelectProgram temp second)
   | .shareInst operator name address =>
+      /- Cake's `ShareInst` selector uses the ordinary expression selector:
+         a positive constant displacement is materialised into the fixed
+         temporary before the shared-memory operation.  Keeping the
+         address-shaped selector here leaves `base + offset` in the carrier,
+         which changes allocator colours for looped input copies.  The
+         address-shaped path remains correct for ordinary loads/stores below,
+         where Word-to-Stack can consume the displacement. -/
       let (prelude, address) :=
-        wordInstSelectAddressAtom temp (wordInstNormalizeExp address)
+        match operator with
+        | .load | .load8 | .load16 | .load32 =>
+            wordInstSelectAtom temp (wordInstNormalizeExp address)
+        | .store | .store8 | .store16 | .store32 =>
+            wordInstSelectAddressAtom temp (wordInstNormalizeExp address)
       wordDeadSelectSeq prelude (.shareInst operator name address)
   | .set store value =>
       /- `inst_select c temp (Set store exp)` (`word_instScript.sml:386-388`)

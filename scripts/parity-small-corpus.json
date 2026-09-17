@@ -532,6 +532,14 @@
       "tracked_beads": [
         "flapjack-8tb.5.14"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/input_blob_load_selector.pnk",
+      "source_reference": "Reduced independent P0 witness flapjack-8tb.5.15: Cake's ShareInst Load materializes a non-address-sized base-plus-offset expression through the selector temporary before the shared load, preserving allocator-visible temporaries and exact RISC-V bytes.",
+      "cake_sha256": "319f18cd709b82c61c9c6a96f5d81293f798e4ae0e039fb1675b396dd5712406",
+      "tracked_beads": [
+        "flapjack-8tb.5.15"
+      ]
     }
   ]
 }

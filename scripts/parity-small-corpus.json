@@ -234,6 +234,14 @@
       ]
     },
     {
+      "path": "Flapjack/Test/OriginalPancake/collapse_branch_full.pnk",
+      "source_reference": "Minimized full source-to-RISC-V reproducer for Cake stack_rawcall cross-function tail lowering; RawCall must retain its callee section and enter at label 1.",
+      "cake_sha256": "30cd79da9679efb5515da0132ec35abd0314c8674353e9bee7bce052342f28e7",
+      "tracked_beads": [
+        "flapjack-8tb.4.9"
+      ]
+    },
+    {
       "path": "Flapjack/Test/OriginalPancake/global_load_sharing.pnk",
       "source_reference": "word_cse shares a repeated load through its loads_mem facts, keyed by loadToNumList over Addr n2 offset. WordInst.mem carries no offset, so instruction selection leaves such a load as .assign dest (.load (.op .add [.var n2, .const offset])) until wordToStack fuses it, and CSE passed that carrier through untouched - reading one global twice emitted the global-table load twice where Cake emits it once.",
       "cake_sha256": "c85b91a76947ae307977782dcbfd5468f3c811d71b029747c76480b13c62a50f",
@@ -299,6 +307,14 @@
       "cake_sha256": "d0d0e0cd32f85d749a52f22744a4ef7c2fcbc3be6e92b15c9ff067185851f95d",
       "tracked_beads": [
         "flapjack-8tb.4.7"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/divmnu_copy_loop.pnk",
+      "source_reference": "Minimized full-guest divmnu witness; word_copy must reset copy state after Loop and resolve old members through Cake's class representative.",
+      "cake_sha256": "76d372a0ccac7e59715ec940f16d8f4e89ce676601b1c691f4546d8a2b38cb49",
+      "tracked_beads": [
+        "flapjack-8tb.4.6"
       ]
     },
     {

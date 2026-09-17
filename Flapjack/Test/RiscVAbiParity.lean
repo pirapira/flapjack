@@ -291,6 +291,20 @@ def sharedAddressConstFpMatchesCake : Bool :=
 
 #guard sharedAddressConstFpMatchesCake
 
+/-! `const_fp_exp` treats an expression-level `Load` as opaque
+    (`word_simpScript.sml:191-212`): unlike `ShareInst Load`, it does not
+    propagate the constant environment into the load address.  This matters
+    for the initialisation order that the allocator sees. -/
+def loadAddressConstFpProgram : WordProg (Word 64) :=
+  .seq (.assign 4 (.const 0)) (.assign 6 (.load (.var 4)))
+
+def loadAddressConstFpIsOpaque : Bool :=
+  match RiscV.wordConstFp loadAddressConstFpProgram with
+  | .seq (.assign 4 (.const 0)) (.assign 6 (.load (.var 4))) => true
+  | _ => false
+
+#guard loadAddressConstFpIsOpaque
+
 /-! ### Cake copy propagation representative
 
     Cake's `set_eq` (`compiler/backend/word_copyScript.sml:204-225`) inserts the
@@ -355,16 +369,16 @@ def tempStoreGetLowers : Bool :=
 
 #guard copyPropagationKeepsDestination
 
-/- A later copy through an already-populated class keeps Cake's existing
+/- A later copy through an already-populated class makes its destination the
    representative visible to subsequent moves. -/
-def copyPropagationPreservesPriorRepresentative : Bool :=
+def copyPropagationUsesLatestRepresentative : Bool :=
   match RiscV.wordCopyProp
       (.seq (.move 0 [(61, 45), (65, 45)])
         (.move 0 [(297, 65)]) : WordProg (Word 64)) with
   | .seq _ (.move 0 [(297, 61)]) => true
   | _ => false
 
-#guard copyPropagationPreservesPriorRepresentative
+#guard copyPropagationUsesLatestRepresentative
 
 /- A representative update must rewrite all later members of the same Cake
    class, not only the most recently inserted alias.  This is the reduced

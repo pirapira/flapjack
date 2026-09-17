@@ -121,12 +121,14 @@ class Oracle:
         if cake_sections is None or flapjack_sections is None:
             outcome["status"] = "unparsed"
             return outcome
-        _, cake_entry, cake_user = PB.classify(cake_sections)
-        _, flapjack_entry, flapjack_user = PB.classify(flapjack_sections)
+        cake_runtime, cake_entry, cake_user = PB.classify(cake_sections)
+        flapjack_runtime, flapjack_entry, flapjack_user = PB.classify(flapjack_sections)
+        cake_comparable = comparable_sections(cake_runtime, cake_user)
+        flapjack_comparable = comparable_sections(flapjack_runtime, flapjack_user)
         differing = sorted(
-            name for name in set(cake_user) | set(flapjack_user)
-            if cake_user.get(name, (None, None, None))[2]
-            != flapjack_user.get(name, (None, None, None))[2])
+            name for name in set(cake_comparable) | set(flapjack_comparable)
+            if cake_comparable.get(name, (None, None, None))[2]
+            != flapjack_comparable.get(name, (None, None, None))[2])
         entry_differs = (cake_entry or (None, None, None))[2] != \
             (flapjack_entry or (None, None, None))[2]
         outcome.update({
@@ -153,6 +155,22 @@ def section_summary(sections, limit=24):
         return ", ".join(sections)
     shown = ", ".join(sections[:limit])
     return "%s, ... (+%d more)" % (shown, len(sections) - limit)
+
+
+def comparable_sections(runtime, user):
+    """Return normalized names for runtime and user sections.
+
+    Runtime names use a prefix so they cannot collide with user functions.
+    This lets the section predicate target the same runtime names reported by
+    the artifact comparator, for example
+    ``runtime:_mpt_delete_node_body``.
+    """
+    result = {
+        "runtime:" + PB.normalize(name): (name,) + data
+        for name, data in runtime.items()
+    }
+    result.update({PB.normalize(name): data for name, data in user.items()})
+    return result
 
 
 PREDICATES = {}

@@ -32,6 +32,7 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   let (label, arity, body) := entry
   let flattened := RiscV.wordFlattenProgramFrom body
   let constFp := RiscV.wordConstFp flattened
+  let duplicate := RiscV.wordSimpDuplicateIf constFp
   let fused := RiscV.wordFuseConditionsAndFold constFp
   let selected := RiscV.wordInstSelectProgramFrom fused
   /- Keep these labels for probe compatibility, but do not run the legacy
@@ -49,6 +50,7 @@ def dumpSourceWordPasses (entry : Nat × Nat × WordProg (RiscV.Word 64)) : IO U
   let dead := RiscV.wordRemoveDeadProgram unreach
   emit "stage=source_word_flattened" flattened
   emit "stage=source_word_const_fp" constFp
+  emit "stage=source_word_duplicate" duplicate
   emit "stage=source_word_fused" fused
   emit "stage=source_word_selected_passes" (label, arity, selected)
   emit "stage=source_word_dce" dce

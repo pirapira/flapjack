@@ -197,15 +197,121 @@ def wordDuplicateConditionsAux [BEq α] [OfNat α 0] [OfNat α 1]
                     wordDuplicateConditionsAux fuel normalize rest
               | _ => statement :: wordDuplicateConditionsAux fuel normalize rest
 
+/-! The full Cake `simp_duplicate_if` shape.  A materialised comparison can
+    be followed by a short straight-line continuation and a second `If` whose
+    result is determined by the first branch.  Cake hoists that second `If`
+    into both branches and reruns `const_fp`; this is what lets branch-local
+    assignments such as `t := 1` or `t := 0` eliminate the second test. -/
+def wordDestSeq : WordProg α → WordProg α × WordProg α
+  | .seq first second => (first, second)
+  | program => (.skip, program)
+
+def wordDestRaise : WordProg α → Option Nat
+  | .raise exception => some exception
+  | _ => none
+
+def wordHoistIfCandidate [Add α] [Sub α] [AndOp α] [OrOp α]
+    [HXor α α α] [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α]
+    [PanCmp α] [WordSimpShift α] [BEq α]
+    (operator : Cmp) (condition : Nat) (right : WordRegImm α)
+    (dummy : WordProg α)
+    (thenBranch elseBranch intermediate continuation : WordProg α) :
+    Option (WordProg α) :=
+  let thenProbe := wordConstFp (.seq (.seq thenBranch intermediate) dummy)
+  let elseProbe := wordConstFp (.seq (.seq elseBranch intermediate) dummy)
+  match wordDestRaise (wordDestSeq thenProbe).2,
+    wordDestRaise (wordDestSeq elseProbe).2 with
+  | some thenResult, some elseResult =>
+      if thenResult + elseResult == 3 then
+        some (wordConstFp (.ite operator condition right
+          (.seq (.seq thenBranch intermediate) continuation)
+          (.seq (.seq elseBranch intermediate) continuation)))
+      else none
+  | _, _ => none
+
+def wordTryIfHoist2 [Add α] [Sub α] [AndOp α] [OrOp α]
+    [HXor α α α] [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α]
+    [PanCmp α] [WordSimpShift α] [BEq α] :
+    Nat → WordProg α → WordProg α → WordProg α → WordProg α →
+      Option (WordProg α)
+  | 0, _, _, _, _ => none
+  | fuel + 1, program, intermediate, dummy, continuation =>
+      match program with
+      | .ite operator condition right thenBranch elseBranch =>
+          wordHoistIfCandidate operator condition right dummy thenBranch
+            elseBranch intermediate continuation
+      | .seq prefixProgram suffixProgram =>
+          match suffixProgram with
+          | .ite operator condition right thenBranch elseBranch =>
+              match wordHoistIfCandidate operator condition right dummy
+                thenBranch elseBranch intermediate continuation with
+              | some result => some (.seq prefixProgram result)
+              | none => none
+          | suffix =>
+              if wordConditionPrefixSafe suffix then
+                wordTryIfHoist2 fuel prefixProgram (.seq suffix intermediate)
+                  dummy continuation
+              else none
+      | _ => none
+
+def wordTryIfHoist1 [Add α] [Sub α] [AndOp α] [OrOp α]
+    [HXor α α α] [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α]
+    [PanCmp α] [WordSimpShift α] [BEq α]
+    (first second : WordProg α) : Option (WordProg α) :=
+  match second with
+  | .ite operator condition right _ _ =>
+      wordTryIfHoist2 8 first .skip
+        (.ite operator condition right (.raise 1) (.raise 2)) second
+  | _ => none
+
+def wordSimpDuplicateIfAux [Add α] [Sub α] [AndOp α] [OrOp α]
+    [HXor α α α] [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α]
+    [PanCmp α] [WordSimpShift α] [BEq α] :
+    Nat → WordProg α → WordProg α
+  | 0, program => program
+  | fuel + 1, .seq first second =>
+      let first := wordSimpDuplicateIfAux fuel first
+      let second := wordSimpDuplicateIfAux fuel second
+      match wordTryIfHoist1 first second with
+      | some result => wordProgStripSeqSkips result
+      | none => .seq first second
+  | fuel + 1, .ite operator condition right thenBranch elseBranch =>
+      .ite operator condition right
+        (wordSimpDuplicateIfAux fuel thenBranch)
+        (wordSimpDuplicateIfAux fuel elseBranch)
+  | fuel + 1, .loop liveIn body liveOut =>
+      .loop liveIn (wordSimpDuplicateIfAux fuel body) liveOut
+  | fuel + 1, .mustTerminate body =>
+      .mustTerminate (wordSimpDuplicateIfAux fuel body)
+  | fuel + 1, .call returns target arguments handler =>
+      let returns := returns.map (fun metadata =>
+        let (names, cutsets, returnProgram, firstLabel, secondLabel) := metadata
+        (names, cutsets, wordSimpDuplicateIfAux fuel returnProgram,
+          firstLabel, secondLabel))
+      let handler := handler.map (fun metadata =>
+        let (exception, handlerProgram, firstLabel, secondLabel) := metadata
+        (exception, wordSimpDuplicateIfAux fuel handlerProgram,
+          firstLabel, secondLabel))
+      .call returns target arguments handler
+  | _, program => program
+
+def wordSimpDuplicateIf [Add α] [Sub α] [AndOp α] [OrOp α]
+    [HXor α α α] [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α]
+    [PanCmp α] [WordSimpShift α] [BEq α] (program : WordProg α) :
+    WordProg α :=
+  wordSimpDuplicateIfAux (wordProgFuel program + 1) program
+
 def wordDuplicateConditions [BEq α] [OfNat α 0] [OfNat α 1]
     (program : WordProg α) : WordProg α :=
   wordListToProg
     (wordDuplicateConditionsAux (wordProgFuel program + 1) id (wordProgToList program))
 
 def wordDuplicateConditionsWithFold [Add α] [Sub α] [AndOp α] [OrOp α]
-    [HXor α α α] [Complement α] [DecidableEq α] [WordSimpShift α]
+    [HXor α α α] [Complement α] [DecidableEq α] [PanCmp α]
+    [WordSimpShift α]
     [BEq α] [OfNat α 0] [OfNat α 1]
     (program : WordProg α) : WordProg α :=
+  let program := wordSimpDuplicateIf program
   wordListToProg
     (wordDuplicateConditionsAux (wordProgFuel program + 1) wordConstFp
       (wordProgToList program))
@@ -294,7 +400,8 @@ def wordFuseConditions [BEq α] [OfNat α 0] [OfNat α 1]
       (wordProgToList duplicated))
 
 def wordFuseConditionsWithFold [Add α] [Sub α] [AndOp α] [OrOp α]
-    [HXor α α α] [Complement α] [DecidableEq α] [WordSimpShift α]
+    [HXor α α α] [Complement α] [DecidableEq α] [PanCmp α]
+    [WordSimpShift α]
     [BEq α] [OfNat α 0] [OfNat α 1]
     (program : WordProg α) : WordProg α :=
   let duplicated := wordDuplicateConditionsWithFold program
@@ -356,7 +463,7 @@ def wordPushOutIf (program : WordProg α) : WordProg α :=
     post-`const_fp` composition before instruction selection. -/
 def wordFuseConditionsAndFold [Add α] [Sub α] [AndOp α] [OrOp α]
     [HXor α α α] [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α]
-    [WordSimpShift α]
+    [PanCmp α] [WordSimpShift α]
     (program : WordProg α) : WordProg α :=
   wordPushOutIf (wordFuseConditionsWithFold program)
 

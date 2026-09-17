@@ -36,6 +36,35 @@ def wordSimpSmartSeq (first second : WordProg α) : WordProg α :=
   | .skip => second
   | _ => .seq first second
 
+/-! Cake's `Seq_assoc` (`word_simpScript.sml:21-38`) reassociates the
+    sequence spine to the left before the other simplifications inspect it.
+    The source lowering constructs right-associated sequences, so retaining
+    that shape prevents `simp_duplicate_if` from finding the same
+    prefix/continuation pair as Cake. -/
+def wordSimpSeqItems : WordProg α → List (WordProg α)
+  | .seq first second => wordSimpSeqItems first ++ wordSimpSeqItems second
+  | program => [program]
+
+def wordSimpLeftSeq : List (WordProg α) → WordProg α
+  | [] => .skip
+  | statement :: statements =>
+      statements.foldl wordSimpSmartSeq statement
+
+def wordSimpSeqAssoc : WordProg α → WordProg α
+  | .seq first second =>
+      let first := wordSimpSeqAssoc first
+      let second := wordSimpSeqAssoc second
+      wordSimpLeftSeq (wordSimpSeqItems first ++ wordSimpSeqItems second)
+  | .ite operator condition right thenBranch elseBranch =>
+      .ite operator condition right
+        (wordSimpSeqAssoc thenBranch) (wordSimpSeqAssoc elseBranch)
+  | .loop liveIn body liveOut =>
+      .loop liveIn (wordSimpSeqAssoc body) liveOut
+  | .mustTerminate body => .mustTerminate (wordSimpSeqAssoc body)
+  | program => program
+termination_by program => sizeOf program
+decreasing_by all_goals decreasing_trivial
+
 /-! `strip_const` (`word_simpScript.sml:131-138`). -/
 def wordSimpStripConst : List (WordExp α) → Option (List α)
   | [] => some []
@@ -156,6 +185,21 @@ def wordSimpGetVarImm [DecidableEq α] (constants : NatInfoMap α) :
   | .reg name => lookupNatInfo name constants
   | .imm value => some value
 
+/-! `asm$word_cmp` as used by `word_simp$const_fp`.  Comparisons in the Word
+    program are target-word comparisons: `Lower` is unsigned, `Less` is
+    signed, and `Test` checks whether the bitwise conjunction is zero. -/
+def wordSimpEvalCmp [BEq α] [OfNat α 0] [AndOp α] [PanCmp α]
+    (operator : Cmp) (left right : α) : Bool :=
+  match operator with
+  | .equal => left == right
+  | .notEqual => !(left == right)
+  | .lower => PanCmp.lower left right
+  | .less => PanCmp.less left right
+  | .notLower => !(PanCmp.lower left right)
+  | .notLess => !(PanCmp.less left right)
+  | .test => AndOp.and left right == 0
+  | .notTest => !(AndOp.and left right == 0)
+
 /-! `drop_consts` (`word_simpScript.sml:270-275`).  The recursion puts the
     remaining arguments before the current assignment, which reverses the
     order relative to the argument list. -/
@@ -167,12 +211,14 @@ def wordSimpDropConsts (constants : NatInfoMap α) : List Nat → WordProg α
       | some value =>
           wordSimpSmartSeq (wordSimpDropConsts constants names) (.assign name (.const value))
 
-/-! `const_fp_loop` (`word_simpScript.sml:277-339`).  The `If` case keeps both
-    branches instead of folding the comparison, because the generic carrier
-    has no word comparison; `wordFuseConditions` folds the decidable
-    duplicates later.  Every other case follows the original. -/
+/-! `const_fp_loop` (`word_simpScript.sml:277-339`).  When both sides of an
+    `If` comparison are known constants, Cake evaluates the comparison and
+    continues with the selected branch.  This branch-sensitive propagation is
+    important: after an outer comparison assigns a 0/1 result, nested tests of
+    that result are folded away. -/
 def wordConstFpLoop [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α] [WordSimpShift α] :
+    [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α] [PanCmp α]
+    [WordSimpShift α] :
     WordProg α → NatInfoMap α → WordProg α × NatInfoMap α
   | .skip, constants => (.skip, constants)
   | .move priority moves, constants =>
@@ -196,10 +242,17 @@ def wordConstFpLoop [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
       let (second, constants'') := wordConstFpLoop second constants'
       (.seq first second, constants'')
   | .ite operator condition right thenBranch elseBranch, constants =>
-      let (thenBranch, thenConstants) := wordConstFpLoop thenBranch constants
-      let (elseBranch, elseConstants) := wordConstFpLoop elseBranch constants
-      (.ite operator condition right thenBranch elseBranch,
-        wordSimpMapInterEq thenConstants elseConstants)
+      match lookupNatInfo condition constants, wordSimpGetVarImm constants right with
+      | some leftValue, some rightValue =>
+          if wordSimpEvalCmp operator leftValue rightValue then
+            wordConstFpLoop thenBranch constants
+          else
+            wordConstFpLoop elseBranch constants
+      | _, _ =>
+          let (thenBranch, thenConstants) := wordConstFpLoop thenBranch constants
+          let (elseBranch, elseConstants) := wordConstFpLoop elseBranch constants
+          (.ite operator condition right thenBranch elseBranch,
+            wordSimpMapInterEq thenConstants elseConstants)
   | .loop liveIn body liveOut, _ =>
       let (body, _) := wordConstFpLoop body []
       (.loop liveIn body liveOut, [])
@@ -257,8 +310,9 @@ decreasing_by all_goals decreasing_trivial
 
 /-- `const_fp` (`word_simpScript.sml:342-344`). -/
 def wordConstFp [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
-    [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α] [WordSimpShift α]
+    [Complement α] [OfNat α 1] [OfNat α 0] [DecidableEq α] [PanCmp α]
+    [WordSimpShift α]
     (program : WordProg α) : WordProg α :=
-  (wordConstFpLoop program []).1
+  (wordConstFpLoop (wordSimpSeqAssoc program) []).1
 
 end Flapjack.RiscV

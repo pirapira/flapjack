@@ -180,7 +180,11 @@ def wordInstPullExp [Sub α] [Add α] [AndOp α] [OrOp α] [HXor α α α]
       wordInstConvertSub (expressions.map wordInstPullExp)
   | .op operator expressions =>
       let expressions := expressions.map wordInstPullExp
-      .op operator (wordInstConstantsToEnd operator (wordInstPullOps operator expressions []))
+      let normalized := wordInstConstantsToEnd operator
+        (wordInstPullOps operator expressions [])
+      match normalized with
+      | [expression] => expression
+      | _ => .op operator normalized
   | .load address => .load (wordInstPullExp address)
   | .shift operator left right =>
       .shift operator (wordInstPullExp left) (wordInstPullExp right)

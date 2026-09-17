@@ -287,8 +287,18 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
            extends the context with `v |-> tmp`; using the source binder here
            leaves the Word stage with a different variable identity. -/
         (.seq (.assign result.nextTemp result.expression)
+          /- `fl = insert tmp () l` (`crep_to_loopScript.sml:414`) extends the
+             *incoming* live set, not the one `compile_exp` returned.  The
+             difference is the expression temporaries: `compile_exp` inserts
+             them (`LoadByte`, `Load32`, `Cmp`, `Crepop`) so that the code it
+             emits can name them, but they are dead once the declared variable
+             holds the value, and Cake does not carry them into the body.
+             Threading them on instead keeps them in every cutset the body
+             emits, which the later passes cannot recover: `loop_live$shrink`
+             only intersects cutsets, and a `Loop` whose `Break` restores the
+             loop's entry set never shrinks below it. -/
           (loopCompileProg nextContext
-            (insertNatSorted result.nextTemp result.live) body))
+            (insertNatSorted result.nextTemp live) body))
   | .assign name value =>
       let result := loopCompileExp context (context.maxVar + 1) live value
       match lookupNatInfo name context.vars with

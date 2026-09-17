@@ -240,6 +240,12 @@
       "source_reference": "inst_select_exp c tar temp (Load exp) (word_instScript.sml:234-245) splits on the address shape -- Op Add [exp'; Const w] keeps w for the Addr temp w displacement and selects only exp' -- and both recursive calls use the ordinary asm_config. Flapjack instead reconfigured the target with validBinOpImmediate := fun _ _ => false for the whole address, which also reached nested subexpressions: in lds 1 (table + (k - 1) * 8) the inner k - 1 came back as an expression rather than a register, so the Shift case could not use its immediate and materialized the shift amount into a second register. Cake emits addi/slli; Flapjack emitted ori/or/addi/sll. A global base is what exposes this, because a constant base normalizes to Op Add [shift; Const] and takes the displacement branch.",
       "cake_sha256": "1fb77c6e45299403b7c0b5755dd356c218bad3c6c2748094291c3b1dd248100e",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/dec_temporary_cutset.pnk",
+      "source_reference": "crep_to_loop$compile (Dec v e prog) (crep_to_loopScript.sml:409-415) extends the *incoming* live set for the body: fl = insert tmp () l, not the l' that compile_exp returned. compile_exp inserts its own temporaries (LoadByte, Load32, Cmp, Crepop) so that the code it emits can name them, but they are dead once the declared variable holds the value. Flapjack threaded the returned set instead, so every cutset inside a Dec body carried the initializer's temporaries: the Call cutset, the enclosing Loop entry set, and every If cutset. loop_live$shrink only intersects cutsets and a Loop whose Break restores the loop's entry set never shrinks below it, so the extra names survived to word_alloc and each one took a frame slot -- the cake_bitmaps frame word came out one to four powers of two too large, and the SSA copies of one value were given two different stack slots (a stack-to-stack move Cake does not emit). The four functions cover the four temporary-inserting compile_exp forms; main pins the whole-file layout.",
+      "cake_sha256": "67e6c2ab94341a7caeeb2fcdf4193115aca4c228592907a25bb024b88fcbdf41",
+      "tracked_beads": []
     }
   ]
 }

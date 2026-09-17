@@ -125,7 +125,11 @@ def wordSimpConstExp [Add α] [Sub α] [AndOp α] [OrOp α] [HXor α α α]
           | some value => .const value
           | none => .shift operator (.const left) (.const right)
       | _, _ => .shift operator left right
-  | .load address => .load (wordSimpConstExp constants address)
+  /- Cake's `const_fp_exp` has no `Load` clause (`word_simpScript.sml:191-212`),
+     so an expression-level load is opaque to constant propagation.  The
+     address is selected later, after this pass; descending here changes both
+     the live constant assignment and the emitted register allocation. -/
+  | .load address => .load address
   | expression => expression
 termination_by expression => sizeOf expression
 decreasing_by all_goals decreasing_trivial

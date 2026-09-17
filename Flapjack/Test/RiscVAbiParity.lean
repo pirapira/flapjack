@@ -291,6 +291,20 @@ def sharedAddressConstFpMatchesCake : Bool :=
 
 #guard sharedAddressConstFpMatchesCake
 
+/-! `const_fp_exp` treats an expression-level `Load` as opaque
+    (`word_simpScript.sml:191-212`): unlike `ShareInst Load`, it does not
+    propagate the constant environment into the load address.  This matters
+    for the initialisation order that the allocator sees. -/
+def loadAddressConstFpProgram : WordProg (Word 64) :=
+  .seq (.assign 4 (.const 0)) (.assign 6 (.load (.var 4)))
+
+def loadAddressConstFpIsOpaque : Bool :=
+  match RiscV.wordConstFp loadAddressConstFpProgram with
+  | .seq (.assign 4 (.const 0)) (.assign 6 (.load (.var 4))) => true
+  | _ => false
+
+#guard loadAddressConstFpIsOpaque
+
 /-! ### Cake copy propagation representative
 
     Cake's `set_eq` (`compiler/backend/word_copyScript.sml:204-225`) inserts the

@@ -107,7 +107,9 @@ def main(argv=None):
         effective_bytes = minimized
         minimized_steps = steps
 
-    result = runner.run(effective_source, effective_bytes)
+    result = seed_result
+    if args.minimize:
+        result = runner.run(effective_source, effective_bytes)
     comparison = diffuzz.compare_case(result)
     record = {
         "source": str(source),

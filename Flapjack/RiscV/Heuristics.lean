@@ -64,13 +64,13 @@ def wordHeuristicAddLhsRegs : List Nat → NatInfoMap WordHeuristicCounts →
     NatInfoMap WordHeuristicCounts
   | [], counts => counts
   | name :: names, counts =>
-      wordHeuristicAddLhsRegs names (wordHeuristicAddLhsReg name counts)
+      wordHeuristicAddLhsReg name (wordHeuristicAddLhsRegs names counts)
 
 def wordHeuristicAddRhsRegs : List Nat → NatInfoMap WordHeuristicCounts →
     NatInfoMap WordHeuristicCounts
   | [], counts => counts
   | name :: names, counts =>
-      wordHeuristicAddRhsRegs names (wordHeuristicAddRhsReg name counts)
+      wordHeuristicAddRhsReg name (wordHeuristicAddRhsRegs names counts)
 
 def wordHeuristicInst {α : Type} : WordInst α → NatInfoMap WordHeuristicCounts →
     NatInfoMap WordHeuristicCounts
@@ -158,11 +158,12 @@ def wordHeuristicAddCall (counts : NatInfoMap WordHeuristicCounts)
 
 def wordHeuristicMoves (moves : List (Nat × Nat))
     (counts : NatInfoMap WordHeuristicCounts) : NatInfoMap WordHeuristicCounts :=
-  match moves with
-  | [] => counts
-  | (left, right) :: moves =>
-      wordHeuristicMoves moves
-        (wordHeuristicAddLhsReg left (wordHeuristicAddRhsReg right counts))
+  /- Cake's `get_heu` uses `FOLDR add1_lhs_reg` over all move sources,
+     after `FOLDR add1_rhs_reg` over all move destinations.  Updating a
+     complete move pair at once changes the association-list order that is
+     later consumed by spill-cost lookup. -/
+  wordHeuristicAddLhsRegs (moves.map Prod.fst)
+    (wordHeuristicAddRhsRegs (moves.map Prod.snd) counts)
 
 def wordHeuristic (currentFunction : Nat) : WordProg α →
     NatInfoMap WordHeuristicCounts × List Nat →
@@ -370,11 +371,23 @@ def wordHeuristicInstFast {α : Type} : WordInst α → WordHeuristicCountMap �
       | .load | .load8 | .load16 | .load32 => counts.addLhsMem destination
       | .store | .store8 | .store16 | .store32 => counts.addRhsMem destination
 
-def wordHeuristicMovesFast : List (Nat × Nat) → WordHeuristicCountMap →
+def wordHeuristicAddLhsRegsFast : List Nat → WordHeuristicCountMap →
     WordHeuristicCountMap
   | [], counts => counts
-  | (left, right) :: moves, counts =>
-      wordHeuristicMovesFast moves ((counts.addRhsReg right).addLhsReg left)
+  | name :: names, counts =>
+      (wordHeuristicAddLhsRegsFast names counts).addLhsReg name
+
+def wordHeuristicAddRhsRegsFast : List Nat → WordHeuristicCountMap →
+    WordHeuristicCountMap
+  | [], counts => counts
+  | name :: names, counts =>
+      (wordHeuristicAddRhsRegsFast names counts).addRhsReg name
+
+def wordHeuristicMovesFast : List (Nat × Nat) → WordHeuristicCountMap →
+    WordHeuristicCountMap
+  | moves, counts =>
+      wordHeuristicAddLhsRegsFast (moves.map Prod.fst)
+        (wordHeuristicAddRhsRegsFast (moves.map Prod.snd) counts)
 
 /-- `wordHeuristic` over the hashed state.  Case for case the same traversal;
     only the counter representation differs. -/

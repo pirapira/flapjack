@@ -129,6 +129,10 @@ def fromNumSet (set : List Nat) : List Nat :=
   let tree := (toNumSet set).foldr (fun key tree => numSetInsert key tree) .empty
   numSetToAList tree 0 []
 
+def sourceFallbackContext : List Nat → List (Nat × Nat)
+  | [] => []
+  | name :: names => (name, 0) :: sourceFallbackContext names
+
 /-! List-backed port of `mk_new_cutset_def` from
     `loop_to_wordScript.sml:51-53`.  The source always retains register zero
     and maps each live source variable through `find_var` before rebuilding the
@@ -154,7 +158,9 @@ def loopToWordCompFunc [OfNat α 1] (name : Nat) (params : List Nat)
     (body : LoopProg α) : WordProg α :=
   let assigned := loopAccVars body []
   let variables := fromNumSet (differenceNumSet assigned (toNumSet params))
-  let context := makeCtxt 2 (params ++ variables) []
+  let maximum := (params ++ assigned).foldl max 0
+  let fallback := sourceFallbackContext (List.range (maximum + 1))
+  let context := makeCtxt 2 (params ++ variables) fallback
   (loopToWordProgWithLabels { vars := context } (name, 2) body).1
 
 /-! Port of `compile_prog_def` from `loop_to_wordScript.sml:171-174`.

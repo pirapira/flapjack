@@ -425,11 +425,9 @@
     },
     {
       "path": "Flapjack/Test/OriginalPancake/wide_call_spilled_base.pnk",
-      "source_reference": "flapjack-01k residual. Cake reloads a spilled address base into the spare register and keeps the displacement on the memory instruction -- ld scratch, slot(sp); ld dst, off(scratch) -- while wordStackCompileLoadNatNested only handled a base already in a register, so a spilled base fell back to materializing the whole address: ld x22, 24(x24); addi x23, x22, 192; ld x12, 0(x23). That cost one addi per access; spilled_base was 404 bytes against Cake's 396 and is 396 now. The file is still tracked because one instruction inside spilled_base differs: the pre-call stack-argument copy reads the wrong frame slot. Cake's StackArgs is stack_move n 0 f k (StackAlloc n) (word_to_stackScript.sml:287-292), whose source slot is start + f with f the caller's frame size; for this function Cake loads from 112(x24) and stores to 32(x24) where Flapjack loads from 56(x24). Flapjack models the same copy as a parallel move whose source is the allocator's slot for the argument, which is not Cake's start + f. Lengths agree, so only the slot number differs.",
+      "source_reference": "Resolved flapjack-01k. Cake's StackArgs uses the caller's frame size f as the source displacement for stack_move; Flapjack now derives that same Cake frame size from abiFrameSlots at the WordToStack call boundary. The reduced spilled-base witness is byte-exact at 396 bytes, including the 112(x24) to 32(x24) pre-call copy.",
       "cake_sha256": "bcab84ac1a923c846aef8f3f40996dc885b6157fe4a7eeaacc5cd0a654b99090",
-      "tracked_beads": [
-        "flapjack-01k"
-      ]
+      "tracked_beads": []
     }
   ]
 }

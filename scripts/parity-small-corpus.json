@@ -402,6 +402,12 @@
       "source_reference": "Minimized set_transient_storage witness: Cake's word_copy preserves copy classes across a new HeapLength store class and rewrites the later argument through the current representative.",
       "cake_sha256": "0d2162f9aadd130cdc573fff76bf9726907afd89706d4ef1d366f7225aef6da3",
       "tracked_beads": ["flapjack-gs2"]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/wide_add_constant.pnk",
+      "source_reference": "Minimal wide-positive Add witness: Cake's word_inst selector uses modular word negation before falling back to Const plus register Binop materialization (word_instScript.sml:262-275).",
+      "cake_sha256": "bc01978de8eae4443f100a437b65199c6d0e4cb9e32ce66e5d85fe0a740968af",
+      "tracked_beads": ["flapjack-pxn.9"]
     }
   ]
 }

@@ -29,6 +29,7 @@ inductive WordShiftImmediate where
 class WordInstSelectImmediate (α : Type u) where
   validBinOpImmediate : BinOp → α → Bool
   shiftImmediate : α → WordShiftImmediate
+  negateImmediate : α → α
   /- The current allocator bridge has an established expression-shaped path
      for positive offset spill chains.  Negative RV offsets are the Cake
      shape whose direct `Addr` carrier is required by the parity corpus. -/
@@ -46,6 +47,7 @@ instance : WordInstSelectImmediate Nat where
         value < 2 ^ 11 || value ≥ 2 ^ 64 - 2 ^ 11
   shiftImmediate value :=
     if value < 64 then .valid value else .outOfRange
+  negateImmediate value := (2 ^ 64 - value) % 2 ^ 64
   negativeAddressOffset value := value ≥ 2 ^ 63
 
 instance : WordInstSelectImmediate (BitVec width) where
@@ -60,6 +62,7 @@ instance : WordInstSelectImmediate (BitVec width) where
       .valid value.toNat
     else
       .outOfRange
+  negateImmediate value := 0 - value
   negativeAddressOffset value := value.toNat ≥ 2 ^ (width - 1)
 
 def wordInstSelectMaximum : List Nat → Nat
@@ -258,12 +261,9 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
          `andi d, x, 1`, one instruction more per occurrence; the
          statement-level selector below already agreed with Cake.
 
-         Only `Add` keeps the unfused `base + constant` expression instead of
-         Cake's materialization, because that carrier is what
-         `wordInstSelectAddressAtom` hands to Word-to-Stack for the memory
-         offset.  Every other operator takes Cake's `Const`/`Reg` pair, which
-         is also what this selector emitted before the immediate test was
-         generalized. -/
+         Address selection is handled separately by
+         `wordInstSelectAddressAtom`, so ordinary out-of-range operations take
+         Cake's `Const`/`Reg` materialization here. -/
       let (prelude, selectedLeft) := wordInstSelectAtom temp left
       let materialized : WordProg α × WordExp α :=
         (wordDeadSelectSeq (wordDeadSelectSeq prelude (.inst (.const (temp + 1) value)))
@@ -274,15 +274,15 @@ def wordInstSelectAtom [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat α
             (wordDeadSelectSeq prelude
               (.inst (.arith (.binOp operator temp selected (.imm value)))), .var temp)
           else if operator = .add then
-            if WordInstSelectImmediate.validBinOpImmediate .sub (0 - value) then
+            if WordInstSelectImmediate.validBinOpImmediate .sub
+                (WordInstSelectImmediate.negateImmediate value) then
               (wordDeadSelectSeq prelude
-                (.inst (.arith (.binOp .sub temp selected (.imm (0 - value))))), .var temp)
-            else
-              (prelude, .op .add [selectedLeft, .const value])
+                  (.inst (.arith (.binOp .sub temp selected
+                    (.imm (WordInstSelectImmediate.negateImmediate value))))), .var temp)
+            else materialized
           else materialized
       | _ =>
-          if operator = .add then (prelude, .op .add [selectedLeft, .const value])
-          else materialized
+          materialized
   | .op operator [left, right] =>
       let (leftPrelude, _) := wordInstSelectAtom temp left
       let (rightPrelude, _) := wordInstSelectAtom (temp + 1) right
@@ -406,9 +406,11 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
                 wordDeadSelectSeq prelude
                   (.inst (.arith (.binOp operator destination left (.imm value))))
               else if operator = .add &&
-                  WordInstSelectImmediate.validBinOpImmediate .sub (0 - value) then
+                  WordInstSelectImmediate.validBinOpImmediate .sub
+                    (WordInstSelectImmediate.negateImmediate value) then
                 wordDeadSelectSeq prelude
-                  (.inst (.arith (.binOp .sub destination left (.imm (0 - value)))))
+                  (.inst (.arith (.binOp .sub destination left
+                    (.imm (WordInstSelectImmediate.negateImmediate value)))))
               else
                 /- Cake's `inst_select_exp` materializes an out-of-range
                    constant in `temp + 1` and emits the register/register

@@ -552,6 +552,14 @@
       "tracked_beads": [
         "flapjack-8tb.5.13"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00228_copy_share_store.pnk",
+      "source_reference": "Reduced accepted-output witness f00228: Cake's word_copy removes the complete copy class after ShareInst Store, so a later CSE move remains 381 <- 297 instead of inheriting 301. This fixture pins the generic shared-store invalidation rule.",
+      "cake_sha256": "b633c0d91633d9d2b35144044a0acfdcaa8b341534591b001b5a084c99846ee5",
+      "tracked_beads": [
+        "flapjack-8tb.5.14"
+      ]
     }
   ]
 }

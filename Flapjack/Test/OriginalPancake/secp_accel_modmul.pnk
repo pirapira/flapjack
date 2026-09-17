@@ -1,0 +1,26 @@
+fun {1,1,1,1} secp_accel_modmul_at(1 base, {1,1,1,1} a, {1,1,1,1} b) {
+  st base + 40, a;
+  st base + 72, b;
+  @arith256mod(base, 0, 0, 0);
+  return lds {1,1,1,1} (base + 168);
+}
+
+fun {1,1,1,1} secp_accel_modmul_p({1,1,1,1} a, {1,1,1,1} b) {
+  var 1 base = 0;
+  st base + 40, a;
+  st base + 72, b;
+  @arith256mod(base, 0, 0, 0);
+  return lds {1,1,1,1} (base + 168);
+}
+
+fun {1,1,1,1} secp_accel_modmul_n({1,1,1,1} a, {1,1,1,1} b) {
+  var 1 base = 200;
+  st base + 40, a;
+  st base + 72, b;
+  @arith256mod(base, 0, 0, 0);
+  return lds {1,1,1,1} (base + 168);
+}
+
+fun 1 main() {
+  return 0;
+}

@@ -171,6 +171,43 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
       ⟨[.labAsm (.locValue register ⟨entry, label⟩) [] 0], false, counter⟩
   | .halt _register =>
       ⟨[.labAsm .halt [] 0], true, counter⟩
+  | .seq (.seq (.const scratch value) (.arith operator addressRegister base right))
+      (.seq (.arith .or copyDestination copySource copySource')
+        (.inst (.mem memoryOperator storedValue address))) =>
+      /- A source-shaped store may copy a register-resident value into the
+         value scratch after computing a static address.  Cake keeps the
+         original value register in its Addr-form memory instruction; remove
+         only this self-copy when it cannot alias the address scratch. -/
+      let offsetOperator :=
+        match operator with
+        | .add | .sub => true
+        | _ => false
+      let offsetFits :=
+        match operator with
+        | .add =>
+            value < 2 ^ 11 ||
+              (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64)
+        | .sub => value ≤ 2 ^ 11
+        | _ => false
+      let canFuse :=
+        right == scratch && addressRegister != copySource &&
+          copyDestination == scratch && copySource == copySource' &&
+          storedValue == scratch && offsetOperator && offsetFits
+      if canFuse then
+        ⟨[.asm (.memOffset memoryOperator operator copySource base value) [] 0],
+          false, counter⟩
+      else
+        let firstResult :=
+          labFlatten false sectionId counter continues breaks
+            (.seq (.const scratch value) (.arith operator addressRegister base right))
+        let secondResult :=
+          labFlatten false sectionId firstResult.nextLabel continues breaks
+            (.seq (.arith .or copyDestination copySource copySource')
+              (.inst (.mem memoryOperator storedValue address)))
+        let separator :=
+          if tail then [labLabel sectionId 1] else []
+        ⟨firstResult.lines ++ separator ++ secondResult.lines,
+          firstResult.terminal || secondResult.terminal, secondResult.nextLabel⟩
   | .get _ _ | .set _ _ | .opCurrHeap _ _ _
     | .storeConsts _ _ _ | .stackAlloc _ | .stackFree _ | .stackStore _ _
     | .stackStoreAny _ _

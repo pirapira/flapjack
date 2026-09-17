@@ -116,4 +116,16 @@ example :
     allocator and condition folder rely on the same classification here. -/
 example : wordProgWriteVars (.get 5 .currHeap : WordProg Nat) = [5] := rfl
 
+/- Cake's full SSA AddCarry protocol uses fixed register 0 for the carry
+   flag and refreshes the source carry after the instruction. -/
+example :
+    (wordSsaRenameProgramWithLoops []
+      { current := [(1, 10), (2, 20), (3, 30), (4, 40)], next := 44 }
+      (.inst (.arith (.cakeAddCarry 3 2 4 1)) : WordProg Nat)).2 =
+      (.seq (.move 1 [(0, 10)])
+        (.seq (.inst (.arith (.cakeAddCarry 44 20 40 0)))
+          (.move 1 [(48, 0)])) : WordProg Nat) := by
+  simp [wordSsaRenameProgramWithLoops, wordSsaRead, wordSsaFresh, wordSsaSeq,
+    lookupNatInfo]
+
 end Flapjack

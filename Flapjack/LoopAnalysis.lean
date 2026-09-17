@@ -58,6 +58,11 @@ def loopListDeleteSorted (names : List Nat) (live : List Nat) : List Nat :=
 def loopIntersectSorted (left right : List Nat) : List Nat :=
   left.filter (fun name => name ∈ right)
 
+/-! Cake's fixedpoint grows only within `liveIn`, so at most one strict growth
+    step is possible for each live name before the final stabilization check. -/
+def loopFixedpointFuel (liveIn : List Nat) : Nat :=
+  liveIn.length + 1
+
 /-! The `Call` equations of CakeML's `loop_live$shrink` use the arguments as
     reads and restrict a call's returned live set to the variables live after
     the call.  Keeping this as a separate helper makes the source equation
@@ -174,7 +179,7 @@ def loopShrinkLeaf : LoopProg α → List Nat → LoopProg α × List Nat
               (.loop liveIn fallback loopLiveOut, liveIn)
             else
               fixedpoint fuel current
-      fixedpoint 32 []
+      fixedpoint (loopFixedpointFuel liveIn) []
   | .call returns target arguments none, live =>
       loopShrinkCallNoHandler returns target arguments live
   | .call returns target arguments
@@ -225,7 +230,8 @@ def loopShrink (contexts : List (List Nat × List Nat)) :
   | .loop liveIn body liveOut, live =>
       let loopLiveOut := loopIntersectSorted liveOut live
       let bodyEntryLive := loopListInsert liveIn loopLiveOut
-      match loopShrinkFixed contexts liveIn body loopLiveOut bodyEntryLive 64 [] with
+      match loopShrinkFixed contexts liveIn body loopLiveOut bodyEntryLive
+          (loopFixedpointFuel liveIn) [] with
       | some result => result
       | none =>
           let (body', _) := loopShrink ((liveIn, loopLiveOut) :: contexts)

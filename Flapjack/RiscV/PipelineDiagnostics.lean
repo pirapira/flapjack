@@ -36,12 +36,23 @@ about to lower, which is the output of `word_alloc`;
 `cakeAllocateWordFunctionAfterDead` has already computed exactly that and
 returns it as `allocation.nextSpill`.  The original `compile_prog` separately
 accounts for the function's formal stack-argument area, not nested call
-argument lists, so no additional call-arity term belongs here. -/
+argument lists, so no additional call-arity term belongs here.
+
+`stack_arg_count = arg_count - reg_count` uses the same `reg_count`
+`word_to_stack$compile` computes once for the whole program
+(`word_to_stackScript.sml:605`): `asm_conf.reg_count - (5 + LENGTH
+asm_conf.avoid_regs)`, which for RISC-V is `cakeRiscVRegisterCount`.  A
+literal `12` here made every function with twelve or more word parameters
+reserve a frame Cake does not: `fun 1 f({1,1,1,1,1,1} a, {1,1,1,1,1,1} b)
+{ return 0; }` came out as an `addi sp`, a stack-overflow check and a
+matching `addi` around a body that is one `ori`.  `Pipeline.lean` already
+used `cakeRiscVRegisterCount` for the same term. -/
 def cakeWordFrameSlots [NeZero width] (allocation : WordSpillState)
     (wordParameters : List Nat)
     (_renamedProgram : WordProg (RiscV.Word width)) : Nat :=
   let cakeFrameSlots := allocation.nextSpill
-  max cakeFrameSlots (wordParameters.length - 12)
+  max cakeFrameSlots
+    (wordParameters.length - RiscV.CakeRegAlloc.cakeRiscVRegisterCount)
 
 def pipelineWordFunctionsToStackChecked [NeZero width] :
     List (Nat × List Nat × WordProg (Word width)) →
@@ -160,7 +171,7 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaChecked [NeZero width] :
           /- Cake reserves allocator spills and the function's formal
              arguments outside the physical ABI window. -/
           let frameSlots := max allocation.nextSpill
-            (wordParameters.length - 12)
+            (wordParameters.length - RiscV.CakeRegAlloc.cakeRiscVRegisterCount)
           -- x23 stays clear of every Cake colour (x29 is colour 12 and can
           -- hold a call argument), so the parallel-move source check never trips.
           let config : RiscV.WordStackConfig :=
@@ -314,12 +325,11 @@ def pipelineWordFunctionsAllocatedWithSpillsAndFullSsaAndBitmapsFromWordCheckedA
               carryScratch := RiscV.cakeCarryScratch
               abiBase := 1
               abiStride := 1
-              /- Cake's word_to_stack k is the 22-register window from
-                 riscv_target.reg_count - (5 + LENGTH avoid_regs), not the
-                 12 hardware argument registers.  The latter is only the
-                 historical hardware-numbered helper default. -/
-              abiRegisterCount := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               callAbiBase := 0
+              /- The source-shaped call list includes Cake's link slot.  Its
+                 register window is the full Cake `k`, not the historical
+                 twelve-register value used by the generic RISC-V path. -/
+              abiRegisterCount := RiscV.CakeRegAlloc.cakeRiscVRegisterCount
               abiFrameSlots := frameSlots
               sectionId := label
               handlerLabel := label }

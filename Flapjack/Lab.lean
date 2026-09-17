@@ -262,8 +262,15 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         match memoryOperator with
         | .load | .load8 | .load16 | .load32
         | .store | .store8 | .store16 | .store32 => true
+      /- The displacement normally lands in the scratch register, but a base
+         that *is* the scratch register cannot be clobbered before the
+         arithmetic reads it, so Word-to-Stack puts the constant in the
+         address register instead and the arithmetic reads and writes it in
+         one instruction.  Both shapes denote the same `Addr base value`, and
+         Cake writes both as one `memOffset`. -/
       let canFuse :=
-        right == scratch && address == addressRegister &&
+        (right == scratch || right == addressRegister) &&
+          address == addressRegister &&
           offsetOperator && offsetFits && memorySupported
       if canFuse then
         ⟨[.asm (.memOffset memoryOperator operator destination base value) [] 0],

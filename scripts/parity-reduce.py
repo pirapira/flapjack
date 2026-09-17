@@ -98,7 +98,7 @@ class Oracle:
                                   timeout=self.timeout)
 
     def compile_flapjack(self, path):
-        command = self._prefix() + [str(self.flapjack), str(path)]
+        command = self._prefix() + [str(self.flapjack), "--assembly", str(path)]
         return subprocess.run(command, capture_output=True, timeout=self.timeout)
 
     def observe(self, path):

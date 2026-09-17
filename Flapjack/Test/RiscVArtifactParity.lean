@@ -86,7 +86,7 @@ def artifactCompileConfig : StackRemoveConfig :=
     bytesInWord := 8
     stackBase := 25
     wordShift := 3
-    jump := true }
+    jump := false }
 
 /-- The fixture source, taken from the original-side probe fact so the two
 comparisons cannot drift apart. -/
@@ -821,34 +821,21 @@ def helloSource : String :=
 assembly oracle. -/
 def cakeHelloMainLength : Nat := 152
 
-/- Port-side layout pin for `hello.pnk`; Cake's oracle has a 152-byte `cml_main`
-section under `artifactCompileConfig`.  The port currently has a tracked
-source-to-RISC-V discrepancy here, so this remains diagnostic data rather than
-an asserted invariant. -/
-def flapjackHelloMainLength : Nat := 152
-
+/- Port-side layout pin for `hello.pnk`; with the same `jump := false`
+configuration used by `flapjack-compile`, the source-facing runtime image has
+Cake's 152-byte `cml_main` section. -/
 def helloRuntimeImage : Option (SourceRiscVRuntimeImage 64) :=
   compileRuntimeImage helloSource
 
-/- The whole-artifact comparison for `hello.pnk` remains a tracked gap.  The
-predicate is retained to expose section-layout progress, while the
-differential corpus is the source of truth until this fixture is exact. -/
+/- The source-string path emits the same section labels, bases, and lengths as
+the checked Cake artifact: a 4-byte generated entry at 1000 and a 152-byte
+`cml_main` at 1004. -/
 def helloEmittedSectionsMatch : Bool :=
   match helloRuntimeImage with
   | some image =>
       match emittedSections image with
       | [(3, 1000, generated), (4, 1004, main)] =>
-          generated.length == 4 && main.length == flapjackHelloMainLength
-      | _ => false
-  | none => false
-
-/- The original-length predicate remains useful for diagnostics because the
-whole-artifact comparison is stricter than section length alone. -/
-def helloMainLengthGapTracked : Bool :=
-  match helloRuntimeImage with
-  | some image =>
-      match emittedSections image with
-      | _ :: (_, _, main) :: _ => main.length != cakeHelloMainLength
+          generated.length == 4 && main.length == cakeHelloMainLength
       | _ => false
   | none => false
 
@@ -914,11 +901,7 @@ def sharedMemOffsetCarrierEncoding : Bool :=
   | some [.storeByteOffset 10 11 (BitVec.ofNat 64 32)] => true
   | _ => false
 
-/- `hello` remains a tracked end-to-end parity gap (`flapjack-8tb`).  Keep the
-   predicate above visible during focused diagnostics, but do not make this
-   known discrepancy a regression gate while the source-to-RISC-V pipeline is
-   being aligned. -/
-#eval helloEmittedSectionsMatch
+#guard helloEmittedSectionsMatch
 #guard nomainGlobalAccepted
 #guard nestedExpressionAccepted
 #guard nestedExpressionWordLoweringAccepted

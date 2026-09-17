@@ -36,10 +36,18 @@ def wordCopyEmpty : WordCopyState :=
     classStore := [], classNext := 0 }
 
 def wordCopyLookup (state : WordCopyState) (name : Nat) : Nat :=
+  /- Cake's `lookup_eq` resolves the class indirection first: `to_eq` maps
+     the name to an equivalence class and `from_eq` stores that class's
+     current representative.  The flattened alias table is still useful for
+     names outside a live class, but it must not shadow a representative
+     update.  Without this order, a later `set_eq` changed `classRep` while
+     old members continued to read their stale alias (the fp_pow4 chain
+     329 <- 305, 345 <- 329, 413 <- 329). -/
   match lookupNatInfo name state.classOf with
   | some classId =>
       (lookupNatInfo classId state.classRep).getD name
-  | none => (lookupNatInfo name state.aliases).getD name
+  | none =>
+      (lookupNatInfo name state.aliases).getD name
 
 def wordCopyUpdate (aliases : NatInfoMap Nat) (name value : Nat) : NatInfoMap Nat :=
   (name, value) :: aliases.filter (fun entry => entry.1 != name)

@@ -376,10 +376,20 @@ def wordInstSelectProgram [Sub α] [Add α] [DecidableEq α] [OfNat α 0] [OfNat
                 wordDeadSelectSeq prelude
                   (.inst (.arith (.binOp .sub destination left (.imm (0 - value)))))
               else
+                /- Cake's `inst_select_exp` materializes an out-of-range
+                   constant in `temp + 1` and emits the register/register
+                   instruction.  Leaving this as an expression defers the
+                   choice to Word-to-Stack and changes both allocator colours
+                   and the emitted RISC-V for wide masks. -/
                 wordDeadSelectSeq prelude
-                  (.assign destination (.op operator [.var left, .const value]))
+                  (wordDeadSelectSeq (.inst (.const (temp + 1) value))
+                    (.inst (.arith (.binOp operator destination left
+                      (.reg (temp + 1))))))
           | _ => wordDeadSelectSeq prelude
-              (.assign destination (.op operator [left, .const value]))
+              (wordDeadSelectSeq
+                (.inst (.const (temp + 1) value))
+                (.inst (.arith (.binOp operator destination temp
+                  (.reg (temp + 1))))))
       | .shift operator left (.const value) =>
           let (prelude, left) := wordInstSelectAtom temp left
           match left, WordInstSelectImmediate.shiftImmediate value with

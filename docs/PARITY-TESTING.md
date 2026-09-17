@@ -132,6 +132,22 @@ Minimized, replayable reproducers for the found mismatches are preserved under
 (one directory per owning bead). Do not put unbounded fuzzing into CI; the
 smoke corpus is the small deterministic check.
 
+## Reducing a discrepancy
+
+A discrepancy found on a large input is usually unreadable. Shrink it first
+with the delta-debugging reducer described in
+[`PARITY-REDUCING.md`](PARITY-REDUCING.md):
+
+```sh
+lake build flapjack-compile
+python3 scripts/parity-reduce.py CASE.pnk --out /tmp/reduction
+```
+
+It preserves the discrepancy the seed exhibits, writes the minimized source and
+a `replay.sh` that doubles as a regression check, and reimplements no part of
+the oracle. Keep reductions of large inputs outside the repository until they
+are reviewed as fixtures.
+
 ## Debugging a discrepancy
 
 Use [`scripts/parity-debug.py`](../scripts/parity-debug.py) for a single
@@ -152,15 +168,42 @@ intent before being checked in. This is the repository's small, reproducible
 analogue of C-Reduce; it does not invoke arbitrary source transformations
 that might accidentally change the language category being tested.
 
-The same command also captures intermediate values from both implementations:
+After shrinking, limit the Flapjack dump to one source-level function when the
+section name is already known:
+
+```sh
+python3 scripts/parity-debug.py CASE.pnk --out /tmp/debug --minimize \
+    --function _mpt_delete_node_body
+```
+
+The function filter applies to the Lean dump; the Cake/HOL dump remains the
+complete probe output so that the surrounding pass context is not lost.
+
+The same command also captures intermediate values from both implementations.
+With `--minimize`, it shrinks the source before producing the final assembly
+or intermediate-stage dumps; the original input is retained as `case.pnk`, and
+the witness used for the dumps is recorded as `comparison_source` in
+`comparison.json`.
 `flapjack-stages.txt` comes from `lake exe flapjack-debug`, while
 `cake-stages.txt` comes from the original HOL definitions through
 [`scripts/hol-probes/pancake-stage-probeScript.sml`](../scripts/hol-probes/pancake-stage-probeScript.sml).
+When `--minimize` is supplied, both stage dumps are run on the resulting
+`case.min.pnk`, not the original large input; `comparison.json` records that
+stage source explicitly.
 The stage sequence is the original `pan_simp`, `pan_structs`, `pan_globals`,
 `pan_to_crep`, `crep_to_loop`, and `loop_to_word` boundary. Compare matching
 stage records first; the first divergence identifies the pass that should be
 ported or repaired. The HOL stage capture requires a built HOL4/CakeML tree,
 but final artifacts and the Lean dump remain available without it.
+
+For allocator discrepancies, set `PANCAKE_ALLOCATOR_PROBE=1` when running the
+HOL probe. Set `PANCAKE_ALLOCATOR_LABEL=66` (or another numeric Word label)
+to inspect that function's original post-cleanup allocator input, heuristics,
+and stack-only set without rendering allocator data for the whole program.
+For any intermediate-stage investigation, also set `PANCAKE_STAGE_LABEL=258`
+(the numeric function label of interest). This filters the original
+`crep_to_loop` result before `loop_to_word`, avoiding multi-gigabyte dumps for
+large guests; it can be combined with the allocator probe.
 
 For a larger campaign, preserve the complete finding directory produced by
 `parity-difffuzz.py --out ... --minimize` and then run `parity-debug.py` on its

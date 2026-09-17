@@ -349,6 +349,18 @@ def wordStackLongMulMoveFromPhysical {α : Type} (config : WordStackConfig)
   | .stack slot =>
       pure (.stackStore source (wordStackOffset config slot))
 
+/- Cake's wReg1/wReg2 leave register-resident operands in place.  Only a
+   spilled operand is loaded into the corresponding temporary.  This small
+   distinction matters for Cake's four-register AddCarry: its carry operand
+   is a fixed SSA register and must not be copied through a third scratch
+   register. -/
+def wordStackCakeMoveToPhysical {α : Type} (config : WordStackConfig)
+    (source destination : Nat) : Option (StackProg α) := do
+  let location ← wordStackLocation config source
+  match location with
+  | .register _ => pure .skip
+  | .stack slot => pure (.stackLoad destination (wordStackOffset config slot))
+
 def wordStackLongMulInst {α : Type} (config : WordStackConfig)
     (operation : WordArith α) : Option (StackProg α) :=
   match operation with
@@ -506,9 +518,11 @@ def wordStackCakeAddCarryInst {α : Type} (config : WordStackConfig)
     (operation : WordArith α) : Option (StackProg α) :=
   match operation with
   | .cakeAddCarry destination sourceLeft sourceRight carry =>
-      /- The all-register case emits the architectural instruction directly and
-         needs no scratch register, so the guard only restricts the fallback
-         (see `wordStackAddCarryInst`). -/
+      /- The all-register case emits the architectural instruction directly.
+         For the mixed case, mirror Cake's `wReg1`/`wReg2`/`wRegWrite1`:
+         load only spilled operands, and retain the fixed SSA carry register.
+         The old path staged all four values, including carry, which produced
+         three extra moves in the full guest's first `u256_mul_full` AddCarry. -/
       match wordStackLocation config destination,
         wordStackLocation config sourceLeft,
         wordStackLocation config sourceRight,
@@ -517,30 +531,92 @@ def wordStackCakeAddCarryInst {α : Type} (config : WordStackConfig)
           some (.register sourceRight), some (.register carry) =>
           some (.inst (.arith (.cakeAddCarry destination sourceLeft
             sourceRight carry)))
+      | some destinationLocation, some sourceLeftLocation,
+          some sourceRightLocation, some (.register carry) => do
+          let destinationRegister := match destinationLocation with
+            | .register register => register
+            | .stack _ => config.scratch
+          let sourceLeftRegister := match sourceLeftLocation with
+            | .register register => register
+            | .stack _ => config.scratch
+          let sourceRightRegister := match sourceRightLocation with
+            | .register register => register
+            | .stack _ => config.addressScratch
+          let loadLeft ← wordStackCakeMoveToPhysical config sourceLeft config.scratch
+          let loadRight ← wordStackCakeMoveToPhysical config sourceRight config.addressScratch
+          let writeDestination := match destinationLocation with
+            | .register _ => (some (.skip : StackProg α))
+            | .stack slot => some (.stackStore config.scratch
+                (wordStackOffset config slot))
+          let writeDestination ← writeDestination
+          pure (wordStackJoin loadLeft
+            (wordStackJoin loadRight
+              (wordStackJoin
+                (.inst (.arith (.cakeAddCarry destinationRegister sourceLeftRegister
+                  sourceRightRegister carry))) writeDestination)))
       | _, _, _, _ =>
-          let safe name := match wordStackLocation config name with
-            | some location => wordStackAddCarryLocationSafe config location
-            | none => false
-          if safe destination && safe sourceLeft && safe sourceRight && safe carry then do
-            let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
-              config.addressScratch
-            let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
-              config.specialScratch
-            let loadCarry ← wordStackLongMulMoveToPhysical config carry
-              config.carryScratch
-            let writeDestination ← wordStackLongMulMoveFromPhysical config destination
-              config.scratch
-            let writeCarry ← wordStackLongMulMoveFromPhysical config carry
-              config.carryScratch
-            pure (wordStackJoin loadLeft
-              (wordStackJoin loadRight
-                (wordStackJoin loadCarry
-                  (wordStackJoin
-                    (.inst (.arith (.cakeAddCarry config.scratch
-                      config.addressScratch config.specialScratch config.carryScratch)))
-                    (wordStackJoin writeDestination writeCarry)))))
-          else
-            none
+          match wordStackLocation config destination,
+            wordStackLocation config sourceLeft,
+            wordStackLocation config sourceRight,
+            wordStackLocation config carry with
+          | some destLocation, some leftLocation, some rightLocation,
+              some carryLocation =>
+              let dReg := match destLocation with
+                | .register register => register
+                | _ => config.scratch
+              let sLReg := match leftLocation with
+                | .register register => register
+                | _ => config.scratch
+              let sRReg := match rightLocation with
+                | .register register => register
+                | _ => config.addressScratch
+              match carryLocation with
+              | .register carryRegister =>
+                  do
+                    let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+                      sLReg
+                    let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+                      sRReg
+                    let writeDestination ← wordStackLongMulMoveFromPhysical config
+                      destination dReg
+                    let writeCarry ← wordStackLongMulMoveFromPhysical config carry
+                      carryRegister
+                    pure (wordStackJoin loadLeft
+                      (wordStackJoin loadRight
+                        (wordStackJoin
+                          (.inst (.arith (.cakeAddCarry dReg sLReg sRReg
+                            carryRegister)))
+                          (wordStackJoin writeDestination writeCarry))))
+              | _ =>
+                  let carryReg :=
+                    if sLReg != config.scratch && dReg != config.scratch then
+                      config.scratch
+                    else if sLReg != config.addressScratch &&
+                        dReg != config.addressScratch then
+                      config.addressScratch
+                    else config.scratch
+                  if dReg == carryReg || sLReg == carryReg || sRReg == carryReg then
+                    none
+                  else
+                    do
+                      let loadLeft ← wordStackLongMulMoveToPhysical config sourceLeft
+                        sLReg
+                      let loadRight ← wordStackLongMulMoveToPhysical config sourceRight
+                        sRReg
+                      let loadCarry ← wordStackLongMulMoveToPhysical config carry
+                        carryReg
+                      let writeDestination ← wordStackLongMulMoveFromPhysical config
+                        destination dReg
+                      let writeCarry ← wordStackLongMulMoveFromPhysical config carry
+                        carryReg
+                      pure (wordStackJoin loadLeft
+                        (wordStackJoin loadRight
+                          (wordStackJoin loadCarry
+                            (wordStackJoin
+                              (.inst (.arith (.cakeAddCarry dReg sLReg sRReg
+                                carryReg)))
+                              (wordStackJoin writeDestination writeCarry)))))
+          | _, _, _, _ => none
   | _ => none
 
 /-! CakeML's `LongDiv` uses a fixed four-register convention: the two-word
@@ -1389,14 +1465,58 @@ def wordStackExpressionTemporariesExcluding (config : WordStackConfig)
 
 def wordStackCompileStoreNatNested (config : WordStackConfig) (address : WordExp Nat)
     (value : WordExp Nat) : Option (StackProg Nat) := do
-  let addressPrelude ← wordStackCompileExpToRegisterNat config config.addressScratch
-    (wordStackExpressionTemporaries config config.addressScratch) address
-  let valuePrelude ← wordStackCompileExpToRegisterNat config config.scratch
-    (wordStackExpressionTemporariesExcluding config config.scratch config.addressScratch)
-    value
-  pure (wordStackJoin addressPrelude
-    (wordStackJoin valuePrelude
-      (.inst (.mem .store config.scratch config.addressScratch))))
+  /- Cake's `word_to_stack` keeps `Addr base offset` through a store.  The
+     source-shaped Word expression presents the same address as `base + offset`;
+     preserve the static displacement here instead of materialising both the
+     address and a register-resident store value.  The Lab pass recognises the
+     const/add/store shape and emits the same `memOffset` instruction as Cake. -/
+  let general : Option (StackProg Nat) := do
+    let addressPrelude ← wordStackCompileExpToRegisterNat config config.addressScratch
+      (wordStackExpressionTemporaries config config.addressScratch) address
+    let valuePrelude ← wordStackCompileExpToRegisterNat config config.scratch
+      (wordStackExpressionTemporariesExcluding config config.scratch config.addressScratch)
+      value
+    pure (wordStackJoin addressPrelude
+      (wordStackJoin valuePrelude
+        (.inst (.mem .store config.scratch config.addressScratch))))
+  match address, value with
+  | .op operator [.var base, .const offset], .var valueName =>
+      let offsetFits :=
+        match operator with
+        | .add =>
+            offset < 2 ^ 11 ||
+              (offset ≥ 2 ^ 64 - 2 ^ 11 && offset < 2 ^ 64)
+        | .sub => offset ≤ 2 ^ 11
+        | _ => false
+      match wordStackLocation config base, wordStackLocation config valueName with
+      | some (.register baseRegister), some (.register valueRegister) =>
+          if (operator == .add || operator == .sub) && offset = 0 then
+            pure (.inst (.mem .store valueRegister baseRegister))
+          else if offsetFits && baseRegister != config.scratch &&
+              valueRegister != config.scratch && valueRegister != config.addressScratch then
+            pure (wordStackJoin
+              (.seq (.const config.scratch offset)
+                (.arith operator config.addressScratch baseRegister config.scratch))
+              (.inst (.mem .store valueRegister config.addressScratch)))
+          else
+            general
+      | _, _ => general
+  | .op operator [.var base, .const offset], _ =>
+      if (operator == .add || operator == .sub) && offset = 0 then
+        match wordStackLocation config base with
+        | some (.register baseRegister) =>
+            if baseRegister == config.scratch then
+              general
+            else
+              let valuePrelude ← wordStackCompileExpToRegisterNat config config.scratch
+                (wordStackExpressionTemporariesExcluding config config.scratch baseRegister)
+                value
+              pure (wordStackJoin valuePrelude
+                (.inst (.mem .store config.scratch baseRegister)))
+        | _ => general
+      else
+        general
+  | _, _ => general
 
 def wordStackCompileLoadNatNested (config : WordStackConfig) (destination : Nat)
     (address : WordExp Nat) : Option (StackProg Nat) := do
@@ -1591,6 +1711,132 @@ def wordStackLocationMoveReady (sources : List WordLocation) :
 termination_by moves => sizeOf moves
 decreasing_by all_goals decreasing_trivial
 
+def wordStackCakeSplitSource (source : Option WordLocation) :
+    List (Option WordLocation × Option WordLocation) →
+      Option (List (Option WordLocation × Option WordLocation) ×
+        (Option WordLocation × Option WordLocation) ×
+        List (Option WordLocation × Option WordLocation))
+  | [] => none
+  | move :: moves =>
+      if move.2 = source then
+        some ([], move, moves)
+      else
+        match wordStackCakeSplitSource source moves with
+        | none => none
+        | some (pre, matched, suffix) =>
+            some (move :: pre, matched, suffix)
+termination_by moves => sizeOf moves
+decreasing_by all_goals decreasing_trivial
+
+def wordStackCakeInitLast {α : Type} : List α → Option (List α × α)
+  | [] => none
+  | [value] => some ([], value)
+  | value :: values =>
+      match wordStackCakeInitLast values with
+      | none => none
+      | some (init, last) => some (value :: init, last)
+termination_by values => sizeOf values
+decreasing_by all_goals decreasing_trivial
+
+/-! Exact Cake `pmov` state transition, including the optional scratch moves
+    used for cycles. -/
+def wordStackCakeParallelOptionOrderAux :
+    Nat → List (Option WordLocation × Option WordLocation) →
+      List (Option WordLocation × Option WordLocation) →
+      List (Option WordLocation × Option WordLocation) →
+      Option (List (Option WordLocation × Option WordLocation))
+  | 0, _, _, _ => none
+  | fuel + 1, moves, [], output =>
+      match moves with
+      | [] => some output.reverse
+      | move :: rest =>
+          if move.2 = move.1 then
+            wordStackCakeParallelOptionOrderAux fuel rest [] output
+          else
+            wordStackCakeParallelOptionOrderAux fuel rest [move] output
+  | fuel + 1, moves, (destination, source) :: active, output =>
+      match wordStackCakeSplitSource destination moves with
+      | some (pre, matched, suffix) =>
+          wordStackCakeParallelOptionOrderAux fuel (pre ++ suffix)
+            (matched :: (destination, source) :: active) output
+      | none =>
+          match active with
+          | [] =>
+              wordStackCakeParallelOptionOrderAux fuel moves []
+                ((destination, source) :: output)
+          | _ =>
+              match wordStackCakeInitLast active with
+              | none => none
+              | some (init, (lastDestination, lastSource)) =>
+                  if lastSource = destination then
+                    wordStackCakeParallelOptionOrderAux fuel moves
+                      (init ++ [(lastDestination, none)])
+                      ((destination, source) :: (none, destination) :: output)
+                  else
+                    wordStackCakeParallelOptionOrderAux fuel moves active
+                      ((destination, source) :: output)
+termination_by fuel _ _ _ => fuel
+
+def wordStackCakeParallelOptionOrder
+    (moves : List (WordLocation × WordLocation)) :
+    Option (List (Option WordLocation × Option WordLocation)) :=
+  wordStackCakeParallelOptionOrderAux (3 * moves.length + 1)
+    (moves.map (fun move => (some move.1, some move.2))) [] []
+
+def wordStackCakeOptionMoveList {α : Type} (config : WordStackConfig) :
+    List (Option WordLocation × Option WordLocation) → Option (StackProg α)
+  | [] => some .skip
+  | (none, some source) :: moves => do
+      let first ← wordStackLocationMoveToScratch config source
+      let rest ← wordStackCakeOptionMoveList config moves
+      pure (wordStackJoin first rest)
+  | (some destination, some source) :: moves => do
+      let first ← wordStackLocationMove config destination source
+      let rest ← wordStackCakeOptionMoveList config moves
+      pure (wordStackJoin first rest)
+  | (some destination, none) :: moves => do
+      let first ← wordStackLocationMoveFromScratch config destination
+      let rest ← wordStackCakeOptionMoveList config moves
+      pure (wordStackJoin first rest)
+  | (none, none) :: _ => none
+termination_by moves => sizeOf moves
+decreasing_by all_goals decreasing_trivial
+
+def wordStackLocationMoveBySource (source : WordLocation) :
+    List (WordLocation × WordLocation) → Option (WordLocation × WordLocation)
+  | [] => none
+  | move :: moves =>
+      if move.2 = source then some move
+      else wordStackLocationMoveBySource source moves
+termination_by moves => sizeOf moves
+decreasing_by all_goals decreasing_trivial
+
+def wordStackLocationMoveRemovePair (removed : WordLocation × WordLocation)
+    (moves : List (WordLocation × WordLocation)) :
+    List (WordLocation × WordLocation) :=
+  moves.filter (fun move => move != removed)
+
+def wordStackLocationMoveChain :
+    Nat → (WordLocation × WordLocation) →
+      List (WordLocation × WordLocation) →
+      List (WordLocation × WordLocation) → List WordLocation →
+      Option (List (WordLocation × WordLocation) ×
+        List (WordLocation × WordLocation) × Bool)
+  | 0, _, _, _, _ => none
+  | fuel + 1, current, moves, chain, seen =>
+      if current.1 ∈ seen then
+        some (chain ++ [current], moves, true)
+      else
+        let chain := chain ++ [current]
+        let seen := current.1 :: seen
+        match wordStackLocationMoveBySource current.1 moves with
+        | none => some (chain, moves, false)
+        | some next =>
+            wordStackLocationMoveChain fuel next
+              (wordStackLocationMoveRemovePair next moves) chain seen
+termination_by fuel => fuel
+decreasing_by all_goals simp_wf
+
 /-! Schedule a parallel move list over `WordLocation`s in the same order as
     CakeML's `parmove`.  A move whose destination is not a pending source
     cannot clobber a value needed by a remaining move, so it is safe to emit
@@ -1620,34 +1866,63 @@ def wordStackParallelLocationMoveAux {α : Type} (config : WordStackConfig) :
       let addressScratchBusy :=
         moves.any (fun (move : WordLocation × WordLocation) =>
           move.1 = WordLocation.register config.addressScratch)
-      if (moves.any stackToStack && scratchBusy) ||
-          (addressScratchBusy && (wordStackLocationMoveReady sources moves).isNone) then
+      let process : Option (StackProg α) :=
+        if !destinations.Nodup then
+          none
+        else if moves.isEmpty then
+          some .skip
+        else
+          match moves with
+          | [] => some .skip
+          | (destination, source) :: tail =>
+              if destination = source || destination ∉ sources then do
+                let last ← wordStackLocationMove config destination source
+                let rest ← wordStackParallelLocationMoveAux config fuel
+                  (wordStackLocationMoveRemoveDestination destination moves)
+                pure (wordStackJoin last rest)
+              else
+                match wordStackLocationMoveChain fuel (destination, source)
+                    tail [] [source] with
+                | some (chain, remaining, true) => do
+                    let save ← wordStackLocationMoveToScratch config source
+                    let cycleCode ← chain.tail.reverse.foldlM
+                      (fun code move => do
+                        let next ← wordStackLocationMove config move.1 move.2
+                        pure (wordStackJoin code next)) .skip
+                    let restore ← wordStackLocationMoveFromScratch config destination
+                    let rest ← wordStackParallelLocationMoveAux config fuel remaining
+                    pure (wordStackJoin save
+                      (wordStackJoin cycleCode (wordStackJoin restore rest)))
+                | some (chain, remaining, false) => do
+                    let chainCode ← chain.reverse.foldlM
+                      (fun code move => do
+                        let next ← wordStackLocationMove config move.1 move.2
+                        pure (wordStackJoin code next)) .skip
+                    let rest ← wordStackParallelLocationMoveAux config fuel remaining
+                    pure (wordStackJoin chainCode rest)
+                | none => do
+                    if config.scratch = config.addressScratch then none else
+                      let save ← wordStackLocationMoveToScratch config source
+                      let rest ← wordStackParallelLocationMoveAux config fuel
+                        (wordStackLocationMoveRemoveDestination destination moves)
+                      let restore ← wordStackLocationMoveFromScratch config destination
+                      pure (wordStackJoin save (wordStackJoin rest restore))
+      if moves.any stackToStack && scratchBusy then
         none
-      else if !destinations.Nodup then
-        none
-      else if moves.isEmpty then
-        some .skip
+      else if addressScratchBusy then
+        if (wordStackLocationMoveReady sources moves).isNone then none else process
       else
-        match wordStackLocationMoveReady sources moves with
-        | some (destination, source) => do
-            let last ← wordStackLocationMove config destination source
-            let rest ← wordStackParallelLocationMoveAux config fuel
-              (wordStackLocationMoveRemoveDestination destination moves)
-            pure (wordStackJoin last rest)
-        | none =>
-            match moves with
-            | [] => some .skip
-            | (destination, source) :: _ => do
-                if config.scratch = config.addressScratch then none else
-                  let save ← wordStackLocationMoveToScratch config source
-                  let rest ← wordStackParallelLocationMoveAux config fuel
-                    (wordStackLocationMoveRemoveDestination destination moves)
-                  let restore ← wordStackLocationMoveFromScratch config destination
-                  pure (wordStackJoin save (wordStackJoin rest restore))
+        process
 
 def wordStackParallelLocationMove {α : Type} (config : WordStackConfig)
     (moves : List (WordLocation × WordLocation)) : Option (StackProg α) :=
-  wordStackParallelLocationMoveAux config (moves.length + 1) moves
+  let moves := moves.filter (fun move => move.1 != move.2)
+  if moves.any (fun move => move.2 ∈ moves.map Prod.fst) then
+    match wordStackCakeParallelOptionOrder moves with
+    | some ordered => wordStackCakeOptionMoveList config ordered
+    | none => wordStackParallelLocationMoveAux config (moves.length + 1) moves
+  else
+    wordStackParallelLocationMoveAux config (moves.length + 1) moves
 
 def wordStackMoveList {α : Type} (config : WordStackConfig) :
     List (Nat × Nat) → Option (StackProg α) :=
@@ -1712,13 +1987,17 @@ def wordStackPhysicalMovesToIndexed (config : WordStackConfig) :
   | _, [], _ => some []
   | index, source :: sources, base => do
       let source ← wordStackLocation config source
-      let destinationLocation :=
-        if config.abiFrameSlots = 0 then
-          .register (base + config.abiStride * index)
-        else
-          wordStackPhysicalLocation config index base
-      let rest ← wordStackPhysicalMovesToIndexed config (index + 1) sources base
-      pure ((destinationLocation, source) :: rest)
+      if config.abiFrameSlots ≠ 0 && index ≥ config.abiRegisterCount &&
+          index - config.abiRegisterCount ≥ wordStackCakeFrameSize config then
+        none
+      else
+        let destinationLocation :=
+          if config.abiFrameSlots = 0 then
+            .register (base + config.abiStride * index)
+          else
+            wordStackPhysicalLocation config index base
+        let rest ← wordStackPhysicalMovesToIndexed config (index + 1) sources base
+        pure ((destinationLocation, source) :: rest)
   termination_by _ sources _ => sizeOf sources
   decreasing_by all_goals decreasing_trivial
 
@@ -3684,6 +3963,22 @@ def wordToStackProgWordWithBitmapBuilder [BEq Nat] [NeZero width]
   | .seq first second =>
       let peephole : Option (StackProg Nat × WordStackBitmapState) :=
         match first, second with
+        | .move _ moves, .seq (.inst (.mem .store source address)) rest =>
+            match moves.find? (fun move => move.1 == address) with
+            | some (_, addressSource) =>
+                let remaining := moves.filter (fun move => move.1 != address)
+                if !(wordProgReadVars rest).contains address &&
+                    !remaining.any (fun move => move.1 == addressSource) then do
+                  let moveCode ← wordStackMoveList config remaining
+                  let storeCode ← wordToStackInst config
+                    (.mem .store source addressSource)
+                  let (restCode, state) ← wordToStackProgWordWithBitmapBuilder
+                    config bitmapBuilder registerCount bitmapRegister frameSlots
+                    wordBits storeConstsStub state rest
+                  pure (.seq moveCode (.seq storeCode restCode), state)
+                else
+                  none
+            | none => none
         | .move 0 [(destination, source)],
             .seq (.assign name (.op operator [.var left, .const value])) rest =>
             if name = destination && left = destination then

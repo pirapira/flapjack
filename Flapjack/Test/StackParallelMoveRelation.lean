@@ -35,7 +35,7 @@ example :
       [(.register 5, .register 6)] =
       some (.arith .or 5 6 6 : StackProg Nat) := by
   simp [wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
-    wordStackLocationMoveDestinations, wordStackLocationMoveReady,
+    wordStackLocationMoveDestinations,
     wordStackLocationMoveRemoveDestination, wordStackLocationMove,
     wordStackJoin, parallelMoveConfig]
 
@@ -51,7 +51,7 @@ example :
     (hsourceAddressScratch := by simp [parallelMoveConfig])
   simp [parallelMoveConfig, parallelMoveState, wordStackParallelLocationMove,
     wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
-    wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
+    wordStackLocationMoveRemoveDestination,
     wordStackLocationMove, wordStackJoin, evalWordStackMachine,
     wordStackMachineWriteRegister, wordStackMachineBinOp]
 
@@ -61,7 +61,7 @@ example :
   simp [entryMoveConfig, wordStackMovesFromPhysical,
     wordStackPhysicalMovesFrom, wordStackParallelLocationMove,
     wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
-    wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
+    wordStackLocationMoveRemoveDestination,
     wordStackLocationMove, wordStackJoin, wordStackLocation, lookupNatInfo]
 
 example :
@@ -80,7 +80,7 @@ example :
       wordStackPhysicalMovesFrom, wordStackLocation, lookupNatInfo,
       wordStackParallelLocationMove,
       wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
-      wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
+      wordStackLocationMoveRemoveDestination,
     wordStackLocationMove, wordStackJoin, evalWordStackMachine,
     wordStackMachineWriteRegister, wordStackMachineBinOp]
 
@@ -118,7 +118,7 @@ example :
       wordStackLocation, lookupNatInfo]
   · simp [entryMoveConfig, entryMoveState,
       wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
-      wordStackLocationMoveDestinations, wordStackLocationMoveReady,
+      wordStackLocationMoveDestinations,
       wordStackLocationMoveRemoveDestination, wordStackLocationMove,
       wordStackJoin, evalWordStackMachine,
       wordStackMachineWriteRegister, wordStackMachineBinOp]

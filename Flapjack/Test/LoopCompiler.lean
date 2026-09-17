@@ -153,12 +153,12 @@ example :
       loopCompileProg primitiveLoopContext []
         (.primitive [10] .addCarry [11, 12, 13]) =
       .primitive [100] .addCarry [101, 102, 103] := by
-  simp [loopCompileProg, lookupLoopVars, lookupNatInfo, primitiveLoopContext]
+  simp [loopCompileProg, lookupNatInfo, primitiveLoopContext]
 
 example :
     loopCompileProg primitiveLoopContext []
         (.primitive [10] .addCarry [11, 99, 13]) = .skip := by
-  simp [loopCompileProg, lookupLoopVars, lookupNatInfo, primitiveLoopContext]
+  simp [loopCompileProg, lookupNatInfo, primitiveLoopContext]
 
 example :
     staticResultOk (staticCheck (α := Nat)

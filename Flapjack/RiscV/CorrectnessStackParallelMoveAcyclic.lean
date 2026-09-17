@@ -46,10 +46,39 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
   induction moves with
   | nil =>
       simp only [wordStackParallelLocationMove,
+        wordStackCakeParallelOptionOrder,
         wordStackParallelLocationMoveAux]
       simp [wordStackLocationMoveDestinations,
         wordStackSequentialLocationMove]
   | cons head tail ih =>
+      have hfilterOf : ∀ xs : List (WordLocation × WordLocation),
+          (∀ move, move ∈ xs → move.1 ≠ move.2) →
+            List.filter (fun move => move.1 != move.2) xs = xs := by
+        intro xs hxs
+        induction xs with
+        | nil => rfl
+        | cons move xs ihxs =>
+            simp [hxs move (by simp),
+              ihxs (fun other hother => hxs other (by simp [hother]))]
+      have hanyOf : ∀ xs : List (WordLocation × WordLocation),
+          (∀ move, move ∈ xs → move.2 ∉ xs.map Prod.fst) →
+            xs.any (fun move => move.2 ∈ xs.map Prod.fst) = false := by
+        intro xs hxs
+        apply List.any_eq_false.mpr
+        intro move hmove
+        simpa using hxs move hmove
+      have hne : ∀ move, move ∈ head :: tail → move.1 ≠ move.2 := by
+        intro move hmove heq
+        apply hnoSource move hmove
+        exact List.mem_map.mpr ⟨move, hmove, heq⟩
+      have hfilter :
+          List.filter (fun move => move.1 != move.2) (head :: tail) =
+            head :: tail :=
+        hfilterOf (head :: tail) hne
+      have hdependency :
+          (head :: tail).any
+              (fun move => move.2 ∈ (head :: tail).map Prod.fst) = false :=
+        hanyOf (head :: tail) hnoSource
       have hdestinations' :
           (head.1 :: tail.map Prod.fst).Nodup := by
         simpa only [List.map_cons] using hdestinations
@@ -67,6 +96,15 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
           move.2 ≠ .register config.addressScratch := by
         intro move hmove
         exact hreserved move (by simp [hmove])
+      have htailNe : ∀ move, move ∈ tail → move.1 ≠ move.2 := by
+        intro move hmove
+        exact hne move (by simp [hmove])
+      have htailFilter :
+          List.filter (fun move => move.1 != move.2) tail = tail :=
+        hfilterOf tail htailNe
+      have htailDependency :
+          tail.any (fun move => move.2 ∈ tail.map Prod.fst) = false :=
+        hanyOf tail htailNoSource
       have hheadNotSource : head.1 ∉ head.2 :: tail.map Prod.snd := by
         intro hsource
         rcases List.mem_cons.mp hsource with hsame | hsource
@@ -77,10 +115,6 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
           apply hnoSource move (by simp [hmove])
           rw [hsame]
           simp
-      have hheadReady :
-          wordStackLocationMoveReady (head.2 :: tail.map Prod.snd)
-              (head :: tail) = some head := by
-        simp [wordStackLocationMoveReady, hheadNotSource]
       have hheadNotTailDestination : ∀ move, move ∈ tail →
           move.1 ≠ head.1 := by
         intro move hmove heq
@@ -141,13 +175,15 @@ theorem wordStackParallelLocationMove_acyclic_eq_sequential
       have htailResult := ih htailDestinations htailNoSource htailReserved
       have htailAux :
           wordStackParallelLocationMoveAux config (tail.length + 1) tail =
-            wordStackSequentialLocationMove (α := Nat) config tail := by
-        simpa [wordStackParallelLocationMove] using htailResult
-      simp [wordStackParallelLocationMove,
-        wordStackParallelLocationMoveAux,
+          wordStackSequentialLocationMove (α := Nat) config tail := by
+        rw [wordStackParallelLocationMove] at htailResult
+        rw [htailFilter] at htailResult
+        simpa [htailDependency] using htailResult
+      rw [wordStackParallelLocationMove]
+      rw [hfilter]
+      simp [hdependency, wordStackParallelLocationMoveAux,
         wordStackLocationMoveDestinations, hdestinations', hscratchBusy,
-        haddressScratchBusy, hheadReady, hremoved,
-        wordStackSequentialLocationMove,
-        htailAux]
+        haddressScratchBusy, hheadNotSource, hremoved,
+        wordStackSequentialLocationMove, htailAux]
 
 end Flapjack.RiscV

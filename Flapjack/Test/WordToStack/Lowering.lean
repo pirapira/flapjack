@@ -196,8 +196,9 @@ example :
     wordStackReturnFreeCount, wordStackCakeFrameSize, stackFreeIfNonzero,
     wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
     wordStackParallelLocationMove,
+    wordStackCakeParallelOptionOrder,
     wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
-    wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
+    wordStackLocationMoveRemoveDestination,
     wordStackLocationMove, wordStackLocation,
     wordStackOffset, lookupNatInfo, wordStackJoin]
 
@@ -445,8 +446,9 @@ example :
     wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
     wordStackMovesFromPhysical,
     wordStackPhysicalMovesFrom, wordStackParallelLocationMove,
+    wordStackCakeParallelOptionOrder,
     wordStackParallelLocationMoveAux, wordStackLocationMoveDestinations,
-    wordStackLocationMoveReady, wordStackLocationMoveRemoveDestination,
+    wordStackLocationMoveRemoveDestination,
     wordStackLocationMove,
     wordStackLocation, lookupNatInfo]
 
@@ -468,8 +470,10 @@ example :
       true := by
   simp [wordToStackProg, wordStackReturnCode, wordStackMovesToPhysical,
     wordStackPhysicalMovesTo, wordStackPhysicalMovesToIndexed,
-    wordStackParallelLocationMove, wordStackParallelLocationMoveAux,
-    wordStackLocationMoveDestinations, wordStackLocationMoveReady,
+    wordStackParallelLocationMove,
+    wordStackCakeParallelOptionOrder,
+    wordStackParallelLocationMoveAux,
+    wordStackLocationMoveDestinations,
     wordStackLocationMoveRemoveDestination, wordStackLocationMove,
     wordStackLocation, wordStackOffset,
     lookupNatInfo, wordToStackRaise,

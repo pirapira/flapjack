@@ -1,0 +1,16 @@
+fun {1,1} mul64x64(1 a, 1 b) {
+  var a0 = a & 4294967295;
+  var a1 = a >>> 32;
+  var b0 = b & 4294967295;
+  var b1 = b >>> 32;
+  var p00 = a0 * b0;
+  var p11 = a1 * b1;
+  var {1,1} mid = __add_with_carry__(a0 * b1, a1 * b0, 0);
+  var {1,1} lo = __add_with_carry__(p00, mid.0 << 32, 0);
+  var hi = p11 + (mid.0 >>> 32) + (mid.1 << 32) + lo.1;
+  return <lo.0, hi>;
+}
+fun 1 main() {
+  var {1,1} p = mul64x64(123456789, 987654321);
+  return p.0;
+}

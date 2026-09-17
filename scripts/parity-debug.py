@@ -7,7 +7,8 @@ HOL4 and CakeML are available, the script also evaluates the original
 loop_to_word`` stages.  Flapjack's matching pipeline is dumped by the
 ``flapjack-debug`` executable.  ``--minimize`` performs signature-preserving
 line delta debugging, so a smaller source is only accepted when it keeps the
-same observed disagreement.
+same observed disagreement.  When enabled, the minimized source is selected
+before the final assembly and stage dumps, so those dumps stay manageable.
 
 Example:
 
@@ -69,6 +70,8 @@ def main(argv=None):
     parser.add_argument("--hol", type=Path, default=DEFAULT_HOL)
     parser.add_argument("--nice", type=int, default=10)
     parser.add_argument("--timeout", type=int, default=60)
+    parser.add_argument("--function", dest="function_name",
+                        help="only dump this Flapjack source-level function")
     parser.add_argument("--minimize", action="store_true",
                         help="also write case.min.pnk preserving mismatch signatures")
     parser.add_argument("--no-stages", action="store_true",
@@ -85,11 +88,39 @@ def main(argv=None):
 
     diffuzz = load_diffuzz()
     runner = diffuzz.Runner(args.cake, args.flapjack, args.nice, args.timeout)
-    result = runner.run(source, source_bytes)
+
+    # Establish the seed oracle result before shrinking.  With --minimize all
+    # subsequent evidence is generated from the smaller witness, rather than
+    # paying to render and inspect the original large artifact first.
+    seed_result = runner.run(source, source_bytes)
+    seed_comparison = diffuzz.compare_case(seed_result)
+    effective_source = source
+    effective_bytes = source_bytes
+    minimized_steps = None
+    if args.minimize:
+        workdir = out / ".minimize-work"
+        workdir.mkdir(exist_ok=True)
+        minimized, steps = diffuzz.minimize_source(
+            runner, source_bytes, seed_comparison, workdir)
+        write_bytes(out / "case.min.pnk", minimized)
+        effective_source = out / "case.min.pnk"
+        effective_bytes = minimized
+        minimized_steps = steps
+
+    result = seed_result
+    if args.minimize:
+        result = runner.run(effective_source, effective_bytes)
     comparison = diffuzz.compare_case(result)
-    record = {"source": str(source), "comparison": comparison,
-              "commands": {key: value["command"] for key, value in result.items()},
-              "returncodes": {key: value["returncode"] for key, value in result.items()}}
+    record = {
+        "source": str(source),
+        "comparison_source": str(effective_source),
+        "seed_comparison": seed_comparison,
+        "comparison": comparison,
+        "commands": {key: value["command"] for key, value in result.items()},
+        "returncodes": {key: value["returncode"] for key, value in result.items()},
+    }
+    if minimized_steps is not None:
+        record["minimized"] = {"steps": minimized_steps, "bytes": len(effective_bytes)}
     write_bytes(out / "cake.S", result["cake"]["stdout"])
     write_bytes(out / "cake.err", result["cake"]["stderr"])
     write_bytes(out / "flapjack.S", result["flapjack"]["stdout"])
@@ -100,26 +131,27 @@ def main(argv=None):
     (out / "final.diff").write_text("".join(difflib.unified_diff(
         cake_lines, flap_lines, fromfile="cake.S", tofile="flapjack.S")))
 
-    if args.minimize:
-        workdir = out / ".minimize-work"
-        workdir.mkdir(exist_ok=True)
-        minimized, steps = diffuzz.minimize_source(
-            runner, source_bytes, comparison, workdir)
-        write_bytes(out / "case.min.pnk", minimized)
-        record["minimized"] = {"steps": steps, "bytes": len(minimized)}
-        (out / "comparison.json").write_text(json.dumps(record, indent=2) + "\n")
+    stage_source = effective_source
 
     if not args.no_stages:
-        debug = run([args.flapjack_debug, str(source)], timeout=args.timeout)
+        # Stage evidence must explain the witness that was reduced above.  In
+        # particular, do not spend time rendering the original full guest
+        # after --minimize has already found a much smaller discrepancy.
+        debug_command = [args.flapjack_debug]
+        if args.function_name:
+            debug_command += ["--function", args.function_name]
+        debug_command.append(str(stage_source))
+        debug = run(debug_command, timeout=args.timeout)
         write_bytes(out / "flapjack-stages.txt", debug["stdout"])
         write_bytes(out / "flapjack-stages.err", debug["stderr"])
         hol_env = os.environ.copy()
-        hol_env["PANCAKE_SOURCE"] = str(source)
+        hol_env["PANCAKE_SOURCE"] = str(stage_source)
         hol = run([args.hol, "run", str(HOL_PROBE)], env=hol_env,
                   cwd=ROOT / "cakeml" / "pancake",
                   timeout=args.timeout)
         write_bytes(out / "cake-stages.txt", hol["stdout"])
         write_bytes(out / "cake-stages.err", hol["stderr"])
+        record["stage_source"] = str(stage_source)
         record["stage_commands"] = {"flapjack": debug["command"], "cake": hol["command"]}
         record["stage_returncodes"] = {"flapjack": debug["returncode"], "cake": hol["returncode"]}
         cake_stage_lines = hol["stdout"].decode("utf-8", "replace").splitlines(True)

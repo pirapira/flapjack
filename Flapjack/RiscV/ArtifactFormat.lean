@@ -143,6 +143,15 @@ def crepeBitmapCallEntries : List (CompiledFunction α) → Nat
 
 def pancakeBitmapData (state : RiscV.WordStackBitmapState) : List Nat :=
   state.data
+
+/-! Cake's pretty-printer emits at most sixteen bitmap words per `.quad` line.
+    Keep the line wrapping in the artifact formatter as well as the word
+    values: the assembly frame is itself part of the RISC-V parity boundary. -/
+def assemblyBitmapLines (values : List Nat) : List String :=
+  (List.range ((values.length + 15) / 16)).map (fun line =>
+    "\t.quad " ++ String.intercalate ","
+      (((values.drop (line * 16)).take 16).map (fun value => s!"{value}")))
+
 def pancakePrologue : List String :=
   ["/* Preprocessor to get around Mac OS, Windows, and Linux differences in naming and calling conventions */",
    "", "#if defined(__APPLE__)", "# define cdecl(s) _##s", "#else",
@@ -203,8 +212,6 @@ def pancakeRuntimeAssembly
     (crepe : List (CompiledFunction (RiscV.Word 64)))
     (image : Flapjack.SourceRiscVRuntimeImage 64) : String :=
   let bytes := cakeRuntimeBytes ++ runtimeFunctionBytes image.sections
-  let bitmapWords := String.intercalate ","
-    ((pancakeBitmapData image.bitmaps).map (fun value => s!"{value}"))
   let ffiStubLines := image.ffiNames.flatMap (fun name =>
     [s!"cake_ffi{name}:", s!"     tail cdecl(ffi{name})", "     .p2align 4", ""])
   String.intercalate "\n"
@@ -212,8 +219,10 @@ def pancakeRuntimeAssembly
       ["", "     .file        \"cake.S\"", "", "     .data",
        "     .p2align 3", "cdecl(cml_heap): .quad 0",
        "cdecl(cml_stack): .quad 0", "cdecl(cml_stackend): .quad 0",
-        "     .p2align 3", "cake_bitmaps:", s!"\t.quad {bitmapWords}",
-        "     .globl cdecl(cake_bitmaps_buffer_begin)",
+       "     .p2align 3", "cake_bitmaps:"] ++
+      assemblyBitmapLines (pancakeBitmapData image.bitmaps) ++
+      [
+       "     .globl cdecl(cake_bitmaps_buffer_begin)",
         "cdecl(cake_bitmaps_buffer_begin):", "#if defined(EVAL)",
         "     .space DATA_BUFFER_SIZE", "#endif",
         "     .globl cdecl(cake_bitmaps_buffer_end)",

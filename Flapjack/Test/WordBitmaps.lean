@@ -10,6 +10,29 @@ def wordBitmapTestConfig : WordStackConfig :=
     stackBase := 10
     specialScratch := 28 }
 
+/- Cake's direct call destination already has its arguments in the ABI
+   carriers; the call helper owns the one `StackArgs` sequence. -/
+def wordBitmapCallConfig : WordStackConfig :=
+  { locations := [(1, .register 2)]
+    scratch := 31
+    stackBase := 10 }
+
+def wordBitmapCallProgram : WordProg Nat :=
+  .call (some ([], ([], []), .skip, 0, 0)) (some 7) [1] none
+
+example :
+    wordToStackProgNatWithBitmaps wordBitmapCallConfig 1 30 0 8 none
+      (wordStackInitialBitmaps false) wordBitmapCallProgram =
+      some (wordToStackCallNoHandler false 7 1
+        (wordStackCallFrameOffset wordBitmapCallConfig) 31 [] .skip 0 0,
+        wordStackInitialBitmaps false) := by
+  simp [wordToStackProgNatWithBitmaps, wordToStackProgNatWithBitmapBuilder,
+    wordToStackProgNat,
+    wordBitmapCallConfig, wordBitmapCallProgram, wordStackCallLiveBitmap,
+    wordStackBitmapWriteWithBuilder,
+    wordToStackCallNoHandler, wordStackCallFrameOffset, wordStackJoin,
+    stackSeq, stackArgs, stackMove, wordStackReturnStackSuffix]
+
 example :
     wordStackBitsToNat [true, false] = 5 := by
   rfl

@@ -30,6 +30,21 @@ def findLoopVar (context : LoopContext α) (name : Nat) : Nat :=
   | some value => value
   | none => 0
 
+/-! The Crepe primitive carries variable *names*, not expressions.  Cake's
+    `crep_to_loop$compile` resolves both destination and argument lists with
+    `FLOOKUP` and drops the statement if any name is absent.  Keeping an
+    option-valued helper here is important: using `findLoopVar`'s defensive
+    zero fallback would silently alias an unknown primitive operand with a
+    real local and changes liveness and emitted code. -/
+def lookupLoopVars (context : LoopContext α) : List Nat → Option (List Nat)
+  | [] => some []
+  | name :: names => do
+      let mapped ← lookupNatInfo name context.vars
+      let rest ← lookupLoopVars context names
+      pure (mapped :: rest)
+termination_by names => sizeOf names
+decreasing_by all_goals decreasing_trivial
+
 /-! Source-named port of `crep_to_loop$find_var` (`find_var_def`,
     `crep_to_loopScript.sml:20`). -/
 def crepFindVar (context : LoopContext α) (name : Nat) : Nat :=
@@ -305,7 +320,10 @@ def loopCompileProg [OfNat α 0] [OfNat α 1]
       | some mappedName =>
           loopNestedSeq (result.code ++ [.assign mappedName result.expression])
       | none => .skip
-  | .primitive names operator arguments => .primitive names operator arguments
+  | .primitive names operator arguments =>
+      match lookupLoopVars context names, lookupLoopVars context arguments with
+      | some names, some arguments => .primitive names operator arguments
+      | _, _ => .skip
   | .store address value =>
       let addressResult := loopCompileExp context (context.maxVar + 1) live address
       let valueResult := loopCompileExp context addressResult.nextTemp addressResult.live value

@@ -102,6 +102,12 @@ shape already tried costs nothing.
   reproduces and `3` once it is gone, so it doubles as a regression check.
   Pass another source as `$1` to check that one instead.
 
+While a long reduction is running, `.work/accepted.pnk` is a valid checkpoint
+containing the last accepted candidate. If an interactive session is
+interrupted, resume from that file; `candidate.pnk` may instead contain the
+probe that was in flight when the interruption happened and is not guaranteed
+to be valid.
+
 ## Worked example
 
 A fuzzer case from the seed-1 campaign

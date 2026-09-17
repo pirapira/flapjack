@@ -62,10 +62,12 @@ val _ =
       NONE => ()
     | SOME _ =>
         let
+          val selected = list_mk_comb (``FILTER``,
+            [``(λ(name,params,prog). name = «_collapse_branch»)``, word])
           val input_term = list_mk_comb (``MAP``,
             [``(λ(name,params,prog).
                 (name, word_alloc$get_heuristics 3 0 prog,
-                 word_alloc$get_stack_only prog))``, word])
+                 word_alloc$get_stack_only prog))``, selected])
         in
           ignore (eval_term "stage=cake_word_heuristics" input_term)
         end

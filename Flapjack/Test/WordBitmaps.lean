@@ -26,7 +26,12 @@ example :
       some (wordToStackCallNoHandler false 7 1
         (wordStackCallFrameOffset wordBitmapCallConfig) 31 [] .skip 0 0,
         wordStackInitialBitmaps false) := by
-  decide +kernel
+  simp [wordToStackProgNatWithBitmaps, wordToStackProgNatWithBitmapBuilder,
+    wordToStackProgNat,
+    wordBitmapCallConfig, wordBitmapCallProgram, wordStackCallLiveBitmap,
+    wordStackBitmapWriteWithBuilder,
+    wordToStackCallNoHandler, wordStackCallFrameOffset, wordStackJoin,
+    stackSeq, stackArgs, stackMove, wordStackReturnStackSuffix]
 
 example :
     wordStackBitsToNat [true, false] = 5 := by

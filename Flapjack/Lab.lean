@@ -351,8 +351,9 @@ def labFlatten (tail : Bool) (sectionId counter : Nat)
         scratch != destination && right == scratch &&
           match operator with
           | .add =>
-              value < 2 ^ 11 ||
-                (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64)
+              value != 0 &&
+                (value < 2 ^ 11 ||
+                  (value ≥ 2 ^ 64 - 2 ^ 11 && value < 2 ^ 64))
           | .sub => value != 0 && value ≤ 2 ^ 11
           | .and | .or | .xor => false
       let canFuseAliasedAdd :=

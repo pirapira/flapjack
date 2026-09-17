@@ -196,6 +196,7 @@ import Flapjack.Test.CakeAllocatorCore
 import Flapjack.Test.CakeFramePolicy
 import Flapjack.Test.CakeFrameContainment
 import Flapjack.Test.WordStackCallParity
+import Flapjack.Test.StackRawCall
 import Flapjack.Test.WordInstNormalizeParity
 import Flapjack.Test.WordInstSelectParity
 import Flapjack.Test.CakeTailCallSsaParity

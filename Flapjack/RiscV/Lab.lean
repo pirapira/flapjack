@@ -1,6 +1,7 @@
 import Flapjack.Lab
 import Flapjack.StackAlloc
 import Flapjack.StackAlloc.Runtime
+import Flapjack.StackRawCall
 import Flapjack.RiscV.Ffi
 import Flapjack.RiscV.WordToStack
 import Flapjack.RiscV.CakeStackReseat
@@ -1279,6 +1280,7 @@ def compileStackProgramNatListToRiscV [NeZero width]
   match stackProgramsWithLongDivRuntime config programs with
   | none => none
   | some programs =>
+      let programs := stackRawCallPrograms programs
       compileLabProgram context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
@@ -1320,6 +1322,7 @@ def compileStackProgramNatListWithRaiseStubToRiscVCake [NeZero width]
   match stackProgramsWithLongDivRuntime config programs with
   | none => none
   | some programs =>
+      let programs := stackRawCallPrograms programs
       compileLabProgram context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
@@ -1343,6 +1346,7 @@ def compileStackProgramNatListLinkedWithRaiseStubToRiscVCake [NeZero width]
   match stackProgramsWithLongDivRuntime config programs with
   | none => none
   | some programs =>
+      let programs := stackRawCallPrograms programs
       compileLabProgramLinkedWithFfiStubs context
         ((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||
@@ -1444,6 +1448,7 @@ def compileStackProgramNatListLinkedWithSimpleGcAndStoreConstsToRiscV
   match stackProgramsWithLongDivRuntime removeConfig programs with
   | none => none
   | some programs =>
+      let programs := stackRawCallPrograms programs
       compileLabProgramLinkedWithFfiStubsAndHalt context
         (((programs.map (fun (sectionId, program) =>
           if sectionId = cakeLongDiv1Location ||

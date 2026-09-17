@@ -9,6 +9,8 @@ load "bossLib";
 load "preamble";
 load "panPtreeConversionTheory";
 load "pan_to_wordTheory";
+load "backend_passesTheory";
+load "riscv_targetTheory";
 open bossLib;
 open HolKernel Parse;
 open preamble;
@@ -62,8 +64,14 @@ val _ =
       NONE => ()
     | SOME _ =>
         let
-          val selected = list_mk_comb (``FILTER``,
+          val selected_word = list_mk_comb (``FILTER``,
             [``(λ(name,params,prog). name = «_collapse_branch»)``, word])
+          val internal = eval_term "stage=word_internal_all"
+            (list_mk_comb (``backend_passes$word_internal_all``,
+              [``riscv_target$riscv_config``, ``[]``, ``LN``, selected_word]))
+          val (internal_word, _) = pairSyntax.dest_pair internal
+          val selected = list_mk_comb (``FILTER``,
+            [``(λ(name,params,prog). name = «_collapse_branch»)``, internal_word])
           val input_term = list_mk_comb (``MAP``,
             [``(λ(name,params,prog).
                 (name, word_alloc$get_heuristics 3 0 prog,

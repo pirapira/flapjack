@@ -60,6 +60,18 @@ example :
         nextLabel := 3 } := by
   simp [labFlatten]
 
+/- Cake retains the source constant and register add when a non-aliased
+   scratch is used for a zero immediate; only the aliased self-update is
+   eligible for the zero-add identity shortcut. -/
+example :
+    labFlatten false 2 3 [] []
+      (.seq (.const 11 0) (.arith .add 1 1 11) : StackProg Nat) =
+      { lines := [
+          .asm (.const 11 0) [] 0,
+          .asm (.arith .add 1 1 11) [] 0],
+        terminal := false, nextLabel := 3 } := by
+  simp [labFlatten]
+
 example :
     labProgramToSectionAfterStackRemove labStackRemoveConfig 2 3
       (.get 4 .heapLength : StackProg Nat) =

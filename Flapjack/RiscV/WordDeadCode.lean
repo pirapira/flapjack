@@ -317,16 +317,10 @@ def cakeAllocateWordFunctionAfterDead [OfNat α 0] [WordCseHash α] (currentFunc
   let (wordMoves, spillCosts) := wordGetHeuristics 3 currentFunction ssaProgram
   let moves := wordMoves.map (fun move => (move.priority, (move.left, move.right)))
   let bij := cakeMkBij tree
-  /- `lookup_any x scost 0` in `st_ex_list_MIN_cost`
-     (`reg_allocScript.sml:773-790`) reads an sptree; read the costs into the
-     same node-indexed field the allocator state uses so the spill scan is
-     not a linear lookup per node.  `ofNatInfoMap` keeps the first binding for
-     a key, which is what `cakeMapLookup` returned. -/
-  let scost := spillCosts.map (fun costs =>
-    CakeNodeMap.ofNatInfoMap bij.nextNode
-      (costs.filterMap (fun entry =>
-        (lookupNatInfo entry.1 bij.toAllocator).map
-          (fun node => (node, entry.2)))))
+  /- `word_alloc` passes this source-keyed sptree directly to `reg_alloc`.
+     Keep those keys intact; `CakeNodeMap` stores keys outside the allocator
+     array when necessary, matching `lookup_any` in `st_ex_list_MIN_cost`. -/
+  let scost := spillCosts.map (cakeSpillCostMap bij.nextNode)
   match cakeDoRegAlloc .irc scost cakeRiscVRegisterCount
       moves tree forced fs with
   | none => none

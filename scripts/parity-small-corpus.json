@@ -458,6 +458,48 @@
       "tracked_beads": [
         "flapjack-8tb.5.1"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00238_handler_const_or.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness: Cake's word_inst constant normalization folds the all-constant handler expression 7 | 7 before allocation; leaving the OR instruction shifts handler SSA names and the add1/main section bases by four bytes.",
+      "cake_sha256": "7f203681a00292fbe2e191a601cd5e0a8add5c59104415fe65efa852a7ec3fd6",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1",
+        "flapjack-pxn.8.5.10.3"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00017_nested_and_zero.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness: Cake's word_inst reduce_const And annihilates the nested expression (x & 0) & 1 before allocation; retaining both And instructions shifts the add1/main section bases by eight bytes.",
+      "cake_sha256": "93e2cb759be34ed6c343fbdd0d7afb919a02518edef32ea76fa5c13eaefcb243",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00091_nested_and_constants.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness: Cake's word_inst folds the all-constant expression 1 & 1 before combining it with the shifted load; retaining duplicate constant materialization shifts the add1/mks section bases by four bytes.",
+      "cake_sha256": "a8408a520d22b8d1a3cc63c4044bdf5e43eaab85e2d8b905d3512e33f6ed46b4",
+      "tracked_beads": [
+        "flapjack-pxn.8.5.10.1"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00325_zero_shift_self_move.pnk",
+      "source_reference": "Reduced campaign-seed-17 witness: Cake's word_inst keeps the self-copy emitted by a zero shift even when the selector temporary is also the shift target; dropping it shifts the subsequent SSA names and main instructions.",
+      "cake_sha256": "4e75debf6843a5b0ad4308f2261f7879401b1118731da23b737ff75ef9ee5f13",
+      "tracked_beads": [
+        "flapjack-8tb.5.7"
+      ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/f00356_zero_shift_self_move.pnk",
+      "source_reference": "Rebuilt differential-fuzz witness: Cake's word_inst selector preserves the zero-shift self-copy emitted by inst_select_exp, which changes allocator liveness and register colours in the surrounding loop/call frame.",
+      "cake_sha256": "7c7bb1966579fbcc7674f6b72e50763202e95fb5ab7ca012fcf8fe72aa477be2",
+      "tracked_beads": [
+        "flapjack-8tb.5.7",
+        "flapjack-8tb.4"
+      ]
     }
   ]
 }

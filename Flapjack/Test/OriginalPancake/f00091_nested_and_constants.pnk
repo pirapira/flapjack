@@ -1,0 +1,8 @@
+fun 1 add1(1 a, 1 b) { return a + b; }
+struct S { 1 f1, 1 f2 }
+fun S mks(1 a, 1 b) { return S <f1 = a, f2 = b>; }
+fun 1 main() {
+  var 1 y768 = 0;
+  var S s901 = mks(((1 & 1) & ((ld8 0) << 0)), y768);
+  return add1(2, 0);
+}

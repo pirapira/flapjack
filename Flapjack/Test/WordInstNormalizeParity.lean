@@ -156,6 +156,22 @@ def allConstantAddFolds : Bool :=
   | .const value => value == 0
   | _ => false
 
+/-! Cake's `word_inst$optimize_consts` folds non-zero constants too.  This is
+    the regression shape behind the seed-17 exception-handler fixture: leaving
+    `7 | 7` as an instruction shifts all subsequent SSA names and section
+    bases. -/
+def allConstantOrFolds : Bool :=
+  match wordInstNormalizeExp (α := Nat) (.op .or [.const 7, .const 7]) with
+  | .const value => value == 7
+  | _ => false
+
+/-- Cake folds all-constant `And` operands before the enclosing expression is
+rebuilt; this avoids a duplicate constant materialization in seed-17 f00091. -/
+def allConstantAndFolds : Bool :=
+  match wordInstNormalizeExp (α := Nat) (.op .and [.const 1, .const 1]) with
+  | .const value => value == 1
+  | _ => false
+
 /-- `x - 8` is `x + (-8)` with the constant second, like Cake's `convert_sub`
 composed with the constant placement. -/
 def subtractionConstantSecond : Bool :=
@@ -198,6 +214,14 @@ def andZeroConstantCollapses : Bool :=
   | .const value => value == 0
   | _ => false
 
+/-- Cake's zero annihilator still applies when another constant follows it,
+as in the reduced seed-17 witness `(x & 0) & 1`. -/
+def andZeroAmongConstantsCollapses : Bool :=
+  match wordInstNormalizeExp (α := Nat)
+      (.op .and [.var 3, .const 0, .const 1]) with
+  | .const value => value == 0
+  | _ => false
+
 /-! Cake's `word_to_word$compile_single` passes the normalized Word program
     directly to `inst_select`; the source-facing flatten adapter must not
     insert a fresh assignment before this nested shift. -/
@@ -216,6 +240,14 @@ def variableShiftSelectorMatches : Bool :=
   | .seq (.move 0 [(23, 18)])
       (.seq (.move 0 [(24, 22)])
         (.inst (.arith (.shift .asr 14 23 (.reg 24))))) => true
+  | _ => false
+
+/-- Cake keeps the self-copy after a zero shift even when its temporary is
+    also the enclosing expression target. -/
+def zeroShiftSelfMoveMatches : Bool :=
+  match wordInstSelectAtom (α := Nat) 23
+      (.shift .lsr (.var 18) (.const 0)) with
+  | (.seq (.move 0 [(23, 18)]) (.move 0 [(23, 23)]), .var 23) => true
   | _ => false
 
 def constantSelectorMatches : Bool :=
@@ -296,14 +328,18 @@ def nestedAndWideConstantMaterializes : Bool :=
 #guard foldTwoConstantsMatches
 #guard zeroConstantDropped
 #guard allConstantAddFolds
+#guard allConstantOrFolds
+#guard allConstantAndFolds
 #guard subtractionConstantSecond
 #guard subtractionOperandOrderMatches
 #guard subtractionSingletonPreserved
 #guard orZeroConstantDropped
 #guard xorZeroConstantDropped
 #guard andZeroConstantCollapses
+#guard andZeroAmongConstantsCollapses
 #guard nestedSelectorBoundaryMatches
 #guard variableShiftSelectorMatches
+#guard zeroShiftSelfMoveMatches
 #guard constantSelectorMatches
 #guard loadSelectorMatches
 #guard nestedLoadSelectorMatches
@@ -323,11 +359,15 @@ def runChecks : IO Bool := do
     , ("several constants fold into one value with the constant second", foldTwoConstantsMatches)
     , ("a zero constant is dropped like Cake reduce_const", zeroConstantDropped)
     , ("an all-constant addition folds to the constant", allConstantAddFolds)
+    , ("an all-constant Or folds to Cake's non-zero constant", allConstantOrFolds)
+    , ("an all-constant And folds to Cake's non-zero constant", allConstantAndFolds)
     , ("the Or zero identity is dropped like Cake reduce_const", orZeroConstantDropped)
     , ("the Xor zero identity is dropped like Cake reduce_const", xorZeroConstantDropped)
     , ("the And zero fold collapses to the constant like Cake reduce_const", andZeroConstantCollapses)
+    , ("the And zero annihilator wins among multiple constants", andZeroAmongConstantsCollapses)
     , ("the source selector boundary preserves Cake's nested expression shape", nestedSelectorBoundaryMatches)
     , ("a variable shift uses Cake's two operand moves and register shift", variableShiftSelectorMatches)
+    , ("a zero shift keeps Cake's selector self-copy", zeroShiftSelfMoveMatches)
     , ("a constant assignment becomes Cake's Const instruction", constantSelectorMatches)
     , ("a load materializes Cake's Mem instruction after its address move", loadSelectorMatches)
     , ("a nested load remains Cake's memory instruction", nestedLoadSelectorMatches)

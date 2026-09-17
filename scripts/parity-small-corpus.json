@@ -440,6 +440,14 @@
       "tracked_beads": [
         "flapjack-01k"
       ]
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/loop_to_word_unbound_var.pnk",
+      "source_reference": "Minimized differential-fuzz witness: loop_to_word$find_var maps a source local absent from acc_vars to Word register 0. The source-shaped adapter previously retained the unbound local number, changing exception-handler allocator colours and equal-length RISC-V bytes.",
+      "cake_sha256": "c425e51ca0fad2926e92a1a53f6f4fb5ae4140d6577914b6e14d0fbce0b6c856",
+      "tracked_beads": [
+        "flapjack-8tb.4"
+      ]
     }
   ]
 }

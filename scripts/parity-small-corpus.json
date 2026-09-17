@@ -364,6 +364,14 @@
       "source_reference": "Reduced from the stateless guest's g1_double by scripts/parity-reduce.py. Cake's word_to_stack keeps Addr base offset through a load exactly as it does through a store, and the Lab pass recognises the const/arith/memory triple for loads as well as stores, emitting memOffset. wordStackCompileLoadNatNested had no Addr base offset case: it always materialised the whole address into addressScratch, so a load whose destination is spilled came out as addi x23, base, off; ld scratch, 0(x23); sd scratch, slot(x24) against Cake's ld scratch, off(base); sd scratch, slot(x24). Only the spilled destination was affected, because a register destination fuses through the statement-level path; register_load pins that half as exact, spilled_load the half that differed. Guest sections g1_double, swu_g1, ecp_add and g1_add were this shape.",
       "cake_sha256": "136627fe4ef74e45e9421f4ba3a6914b806cac5d269d0cbb8d9983e681c8a4e8",
       "tracked_beads": []
+    },
+    {
+      "path": "Flapjack/Test/OriginalPancake/allocator_colour_permutation.pnk",
+      "source_reference": "Reduced from the stateless guest's process_transaction by scripts/parity-reduce.py: 15840 lines to 2776 with the stub-other-functions pass, then to 20 lines in 1324 oracle calls. Cake and Flapjack emit the SAME number of bytes for process_transaction here and spill the same values to the same frame slots -- instructions 4-7 store x1 to 32, x11 to 24, x10 to 16, x12 to 8 in both -- but reload them into a permutation of the same register set: slot 32 is cake x13 / fj x12, slot 24 is cake x1 / fj x7, slot 16 is cake x12 / fj x1, slot 8 is cake x7 / fj x6, and the call result is cake or x6,x10,x10 / fj or x13,x10,x10. So this is reg_alloc colour assignment, not lowering: assign_Atemps walks the pushed stack and then every node in index order, and a different visit order permutes the colours. The same divergence at guest scale forces extra stack-to-stack shuffles and is what makes process_transaction 248 bytes shorter than Cake's. Owned by flapjack-gs2.",
+      "cake_sha256": "aa984a768fe54b226cdca51c0d3193aebefd2f44760d0e5e0cf0d45638a2ebb9",
+      "tracked_beads": [
+        "flapjack-gs2"
+      ]
     }
   ]
 }

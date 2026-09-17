@@ -82,6 +82,18 @@ def runChecks : IO Bool := do
 #guard p1WordVariableNames == some [[0], [0, 2, 4], [0, 2, 4]]
 #guard p1CallCutsets == some [[], [[0]], []]
 
+def sourceFunctionParameters : List (Nat × List Nat × LoopProg Nat) :=
+  pipelineLoopFunctionsSource .rv64i 64
+    [{ name := "f", params := [10, 20], body := (.skip : CrepProg Nat),
+       returnShape := .one }]
+
+def sourceCompileProgParameterShape : Bool :=
+  match sourceFunctionParameters with
+  | [(64, [0, 1], _)] => true
+  | _ => false
+
+#guard sourceCompileProgParameterShape
+
 end Flapjack.Test.LoopToWordBoundaryParity
 
 /-! Oracle tests for the dense-even Word naming boundary at the allocator.
